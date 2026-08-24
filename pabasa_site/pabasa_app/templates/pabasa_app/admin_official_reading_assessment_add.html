@@ -19,6 +19,8 @@
   .item-box{min-height:96px;border:1px solid rgba(16,70,110,.12);border-radius:16px;padding:1rem;background:#fafdff}
   .item-input-row{display:flex;gap:.5rem;align-items:flex-start}
   .item-input-row textarea{min-height:52px;resize:vertical}
+  .story-qa-grid{display:grid;gap:1rem}
+  .story-qa-card{border:1px solid rgba(16,70,110,.12);border-radius:18px;padding:1rem;background:#f8fbff}
   .locked-hint{font-size:.88rem;color:#64748b}
 </style>
 
@@ -119,36 +121,122 @@
             {% if official_field_errors.sentences %}<div class="text-danger small mt-2">{{ official_field_errors.sentences }}</div>{% endif %}
           </div>
 
-          <div class="step-card locked p-3 mt-3" id="paragraphStep">
-            <div class="step-head mb-2">
-              <div class="step-kicker">Step 6</div>
-              <span class="step-state state-locked" id="paragraphState">Locked</span>
+      <div class="step-card locked p-3 mt-3" id="paragraphStep">
+        <div class="step-head mb-2">
+          <div class="step-kicker">Step 6</div>
+          <span class="step-state state-locked" id="paragraphState">Locked</span>
+        </div>
+        <label class="form-label fw-bold">Story Reading <span class="text-danger">*</span></label>
+        <div class="item-input-row mb-2">
+          <textarea id="paragraphTitleInput" class="form-control" placeholder="Story reading title..." disabled></textarea>
+        </div>
+        <div class="item-input-row mb-2">
+          <textarea id="paragraphContentInput" class="form-control" placeholder="Add story reading text..." disabled></textarea>
+          <button type="button" class="btn btn-primary" id="addParagraphBtn" style="min-width:52px" disabled><i class="bi bi-plus-lg"></i></button>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div class="locked-hint" id="paragraphProgress">Available after 3 sentences</div>
+        </div>
+        <div id="paragraphChips" class="item-box d-flex flex-wrap gap-2 align-content-start">
+          {% for item in reading_passages %}
+          <span class="item-chip" data-paragraph-chip="{{ forloop.counter0 }}">
+            <span>{{ item.title|default:'Untitled Story Reading' }}</span>
+            <span class="small fw-normal d-block" style="max-width:320px;white-space:normal;">{{ item.text|default:item.content|truncatechars:120 }}</span>
+            <button type="button" aria-label="Remove paragraph" data-remove-paragraph="{{ forloop.counter0 }}">&times;</button>
+          </span>
+          {% empty %}
+          <div class="text-center w-100 text-secondary py-3" id="paragraphEmpty">No story reading items added yet.</div>
+          {% endfor %}
+        </div>
+        <div class="story-qa-grid mt-4">
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="fw-bold text-secondary">Question and Answer Pairs</div>
+            <div class="locked-hint">All 6 pairs are required.</div>
+          </div>
+          <div class="story-qa-grid">
+            <div class="story-qa-card">
+              <div class="fw-bold mb-2">1</div>
+              <div class="row g-3">
+                <div class="col-12 col-md-6">
+                  <label class="form-label fw-bold">Question 1 <span class="text-danger">*</span></label>
+                  <textarea class="form-control" name="story_question_1" placeholder="Enter question 1..." rows="3" required></textarea>
+                </div>
+                <div class="col-12 col-md-6">
+                  <label class="form-label fw-bold">Answer 1 <span class="text-danger">*</span></label>
+                  <textarea class="form-control" name="story_answer_1" placeholder="Enter answer 1..." rows="3" required></textarea>
+                </div>
+              </div>
             </div>
-            <label class="form-label fw-bold">Paragraph <span class="text-danger">*</span></label>
-            <div class="item-input-row mb-2">
-              <textarea id="paragraphTitleInput" class="form-control" placeholder="Paragraph title..." disabled></textarea>
+            <div class="story-qa-card">
+              <div class="fw-bold mb-2">2</div>
+              <div class="row g-3">
+                <div class="col-12 col-md-6">
+                  <label class="form-label fw-bold">Question 2 <span class="text-danger">*</span></label>
+                  <textarea class="form-control" name="story_question_2" placeholder="Enter question 2..." rows="3" required></textarea>
+                </div>
+                <div class="col-12 col-md-6">
+                  <label class="form-label fw-bold">Answer 2 <span class="text-danger">*</span></label>
+                  <textarea class="form-control" name="story_answer_2" placeholder="Enter answer 2..." rows="3" required></textarea>
+                </div>
+              </div>
             </div>
-            <div class="item-input-row mb-2">
-              <textarea id="paragraphContentInput" class="form-control" placeholder="Add paragraph text..." disabled></textarea>
-              <button type="button" class="btn btn-primary" id="addParagraphBtn" style="min-width:52px" disabled><i class="bi bi-plus-lg"></i></button>
+            <div class="story-qa-card">
+              <div class="fw-bold mb-2">3</div>
+              <div class="row g-3">
+                <div class="col-12 col-md-6">
+                  <label class="form-label fw-bold">Question 3 <span class="text-danger">*</span></label>
+                  <textarea class="form-control" name="story_question_3" placeholder="Enter question 3..." rows="3" required></textarea>
+                </div>
+                <div class="col-12 col-md-6">
+                  <label class="form-label fw-bold">Answer 3 <span class="text-danger">*</span></label>
+                  <textarea class="form-control" name="story_answer_3" placeholder="Enter answer 3..." rows="3" required></textarea>
+                </div>
+              </div>
             </div>
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <div class="locked-hint" id="paragraphProgress">Available after 3 sentences</div>
+            <div class="story-qa-card">
+              <div class="fw-bold mb-2">4</div>
+              <div class="row g-3">
+                <div class="col-12 col-md-6">
+                  <label class="form-label fw-bold">Question 4 <span class="text-danger">*</span></label>
+                  <textarea class="form-control" name="story_question_4" placeholder="Enter question 4..." rows="3" required></textarea>
+                </div>
+                <div class="col-12 col-md-6">
+                  <label class="form-label fw-bold">Answer 4 <span class="text-danger">*</span></label>
+                  <textarea class="form-control" name="story_answer_4" placeholder="Enter answer 4..." rows="3" required></textarea>
+                </div>
+              </div>
             </div>
-            <div id="paragraphChips" class="item-box d-flex flex-wrap gap-2 align-content-start">
-              {% for item in reading_passages %}
-              <span class="item-chip" data-paragraph-chip="{{ forloop.counter0 }}">
-                <span>{{ item.title|default:'Untitled Paragraph' }}</span>
-                <span class="small fw-normal d-block" style="max-width:320px;white-space:normal;">{{ item.text|default:item.content|truncatechars:120 }}</span>
-                <button type="button" aria-label="Remove paragraph" data-remove-paragraph="{{ forloop.counter0 }}">&times;</button>
-              </span>
-              {% empty %}
-              <div class="text-center w-100 text-secondary py-3" id="paragraphEmpty">No paragraph items added yet.</div>
-              {% endfor %}
+            <div class="story-qa-card">
+              <div class="fw-bold mb-2">5</div>
+              <div class="row g-3">
+                <div class="col-12 col-md-6">
+                  <label class="form-label fw-bold">Question 5 <span class="text-danger">*</span></label>
+                  <textarea class="form-control" name="story_question_5" placeholder="Enter question 5..." rows="3" required></textarea>
+                </div>
+                <div class="col-12 col-md-6">
+                  <label class="form-label fw-bold">Answer 5 <span class="text-danger">*</span></label>
+                  <textarea class="form-control" name="story_answer_5" placeholder="Enter answer 5..." rows="3" required></textarea>
+                </div>
+              </div>
             </div>
-            {% if official_field_errors.passages %}<div class="text-danger small mt-2">{{ official_field_errors.passages }}</div>{% endif %}
+            <div class="story-qa-card">
+              <div class="fw-bold mb-2">6</div>
+              <div class="row g-3">
+                <div class="col-12 col-md-6">
+                  <label class="form-label fw-bold">Question 6 <span class="text-danger">*</span></label>
+                  <textarea class="form-control" name="story_question_6" placeholder="Enter question 6..." rows="3" required></textarea>
+                </div>
+                <div class="col-12 col-md-6">
+                  <label class="form-label fw-bold">Answer 6 <span class="text-danger">*</span></label>
+                  <textarea class="form-control" name="story_answer_6" placeholder="Enter answer 6..." rows="3" required></textarea>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+        {% if official_field_errors.passages %}<div class="text-danger small mt-2">{{ official_field_errors.passages }}</div>{% endif %}
+      </div>
+    </div>
       </div>
     </div>
 
@@ -185,7 +273,7 @@
           </select>
         </div>
       </div>
-      <div class="alert alert-info mb-0">The save button becomes available only after Title, Assessment Type, Word, Sentence, and Paragraph are completed.</div>
+      <div class="alert alert-info mb-0">The save button becomes available only after Title, Assessment Type, Word, Sentence, Story Reading, and all 6 Question and Answer pairs are completed.</div>
     </div>
 
     <div class="d-flex justify-content-end gap-2">
@@ -204,6 +292,7 @@
   const sentenceInput = document.getElementById('sentenceInput');
   const paragraphTitleInput = document.getElementById('paragraphTitleInput');
   const paragraphContentInput = document.getElementById('paragraphContentInput');
+  const storyQaInputs = Array.from(document.querySelectorAll('[name^="story_question_"], [name^="story_answer_"]'));
   const addWordBtn = document.getElementById('addWordBtn');
   const addSentenceBtn = document.getElementById('addSentenceBtn');
   const addParagraphBtn = document.getElementById('addParagraphBtn');
@@ -263,6 +352,7 @@
     const wordsReady = state.words.length >= 10;
     const sentencesReady = state.sentences.length >= 3;
     const passagesReady = sentencesReady && state.passages.length > 0;
+    const storyQaReady = storyQaInputs.every((input) => String(input.value || '').trim().length > 0);
     const materialsComplete = wordsReady && sentencesReady && passagesReady;
 
     assessmentTypeInput.disabled = !typeEnabled;
@@ -273,7 +363,7 @@
     paragraphTitleInput.disabled = !sentencesReady;
     paragraphContentInput.disabled = !sentencesReady;
     addParagraphBtn.disabled = !sentencesReady;
-    saveBtn.disabled = !(titleReady && typeReady && wordsReady && sentencesReady && passagesReady);
+    saveBtn.disabled = !(titleReady && typeReady && wordsReady && sentencesReady && passagesReady && storyQaReady);
 
     const wordCount = state.words.length;
     const sentenceCount = state.sentences.length;
@@ -283,13 +373,13 @@
     stepMaterials.className = `step-card ${typeReady ? (materialsComplete ? 'completed' : 'current') : 'locked'}`;
     wordStep.className = `step-card p-3 ${typeReady ? (wordsReady ? 'completed' : 'current') : 'locked'}`;
     sentenceStep.className = `step-card p-3 mt-3 ${wordsReady ? (sentencesReady ? 'completed' : 'current') : 'locked'}`;
-    paragraphStep.className = `step-card p-3 mt-3 ${sentencesReady ? (passagesReady ? 'completed' : 'current') : 'locked'}`;
+    paragraphStep.className = `step-card p-3 mt-3 ${sentencesReady ? (passagesReady && storyQaReady ? 'completed' : 'current') : 'locked'}`;
 
     typeState.className = `step-state ${titleReady ? (typeReady ? 'state-completed' : 'state-current') : 'state-locked'}`;
     materialsState.className = `step-state ${typeReady ? (materialsComplete ? 'state-completed' : 'state-current') : 'state-locked'}`;
     wordState.className = `step-state ${typeReady ? (wordsReady ? 'state-completed' : 'state-current') : 'state-locked'}`;
     sentenceState.className = `step-state ${wordsReady ? (sentencesReady ? 'state-completed' : 'state-current') : 'state-locked'}`;
-    paragraphState.className = `step-state ${sentencesReady ? (passagesReady ? 'state-completed' : 'state-current') : 'state-locked'}`;
+    paragraphState.className = `step-state ${sentencesReady ? (passagesReady && storyQaReady ? 'state-completed' : 'state-current') : 'state-locked'}`;
 
     stepTitle.querySelector('.step-state').className = `step-state ${titleReady ? 'state-completed' : 'state-current'}`;
     stepTitle.querySelector('.step-state').textContent = titleReady ? 'Completed' : 'Current';
@@ -297,21 +387,26 @@
     materialsState.textContent = typeReady ? (materialsComplete ? 'Completed' : 'Current') : 'Locked';
     wordState.textContent = typeReady ? (wordsReady ? 'Completed' : 'Current') : 'Locked';
     sentenceState.textContent = wordsReady ? (sentencesReady ? 'Completed' : 'Current') : 'Locked';
-    paragraphState.textContent = sentencesReady ? (passagesReady ? 'Completed' : 'Current') : 'Locked';
+    paragraphState.textContent = sentencesReady ? (passagesReady && storyQaReady ? 'Completed' : 'Current') : 'Locked';
 
-    wordProgress.textContent = wordCount >= 10 ? `${wordCount} / 10 words ✓` : `${wordCount} / 10 words`;
+    wordProgress.textContent = wordCount >= 10 ? `10 / 10 words ✓` : `${wordCount} / 10 words`;
     sentenceProgress.textContent = sentenceCount >= 3 ? `${sentenceCount} / 3 sentences ✓` : `${sentenceCount} / 3 sentences`;
     paragraphProgress.textContent = sentencesReady ? 'Paragraphs are now available' : 'Available after 3 sentences';
     materialsHint.textContent = !titleReady
       ? 'Choose the assessment type to unlock the reading materials editor.'
       : (materialsComplete
         ? 'All required reading materials have been completed.'
-        : 'Complete the Word, Sentence, and Paragraph requirements.');
+        : 'Complete the Word, Sentence, Story Reading, and Question and Answer requirements.');
   }
 
   function addWord() {
     const value = String(wordInput.value || '').trim();
     if (!value) return;
+    if (state.words.length >= 10) {
+      wordInput.value = '';
+      render();
+      return;
+    }
     state.words.push(value);
     wordInput.value = '';
     render();
@@ -381,6 +476,9 @@
         addParagraph();
       }
     });
+  });
+  storyQaInputs.forEach((input) => {
+    input.addEventListener('input', render);
   });
   document.getElementById('officialAssessmentForm').addEventListener('submit', (e) => {
     render();
