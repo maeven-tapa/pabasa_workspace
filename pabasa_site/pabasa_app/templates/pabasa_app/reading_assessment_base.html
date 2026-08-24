@@ -497,6 +497,10 @@
             display: none;
         }
 
+        .speech-panel.is-muted-state {
+            display: none;
+        }
+
         .speech-panel strong {
             color: var(--accent-deep);
             font-family: "Nunito", "Segoe UI", sans-serif;
@@ -570,6 +574,10 @@
             gap: 1rem;
             position: relative;
             z-index: 2;
+        }
+
+        .reader-footer.is-story-selecting {
+            grid-template-columns: auto 1fr auto;
         }
 
         .nav-btn {
@@ -1473,9 +1481,257 @@
             }
         }
 
-        @media (max-width: 760px) {
+        #storySelectionGrid,
+        #storySelectionGrid.story-selection-grid {
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            align-items: stretch !important;
+            gap: 1.5rem !important;
+            width: 100% !important;
+            margin-top: 1rem !important;
+            margin-bottom: 1.5rem !important;
+        }
+
+        .story-selection-panel {
+            display: grid;
+            gap: 1rem;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+            height: auto !important;
+            min-height: fit-content !important;
+            padding-bottom: 2.5rem !important;
+            overflow: visible !important;
+        }
+
+        .story-selection-head {
+            text-align: center;
+            max-width: 760px;
+            margin: 0 auto;
+        }
+
+        .story-selection-title,
+        .story-selection-state-title,
+        .story-question-title {
+            color: var(--ink);
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            margin: 0;
+        }
+
+        .story-selection-title {
+            font-size: clamp(1.25rem, 3vw, 1.8rem);
+        }
+
+        .story-selection-subtitle,
+        .story-selection-state-copy {
+            color: var(--muted);
+            font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+            font-size: 0.98rem;
+            margin: 0.35rem 0 0;
+        }
+
+        .story-choice-card {
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            height: 100% !important;
+            background: #ffffff !important;
+            border: 2px solid #e0e0e0 !important;
+            border-radius: 16px !important;
+            padding: 1.25rem !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+            min-width: 0 !important;
+            gap: 0.85rem !important;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .story-selection-state {
+            display: grid;
+            gap: 0.8rem;
+            padding: 1.1rem 1.15rem;
+            position: relative;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 253, 247, 0.94)) !important;
+            border: 2px solid #e0e0e0 !important;
+            border-radius: 16px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+        }
+
+        .story-choice-card::before,
+        .story-selection-state::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto auto 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(90deg, var(--warm), var(--accent));
+        }
+
+        .story-choice-card.is-selected {
+            border-color: #1f6f8b !important;
+            background-color: #f0f7f9 !important;
+        }
+
+        .story-choice-card.is-selected::before,
+        .story-selection-state::before {
+            background: linear-gradient(90deg, var(--leaf), var(--sun));
+        }
+
+        .story-choice-card h3 {
+            color: var(--ink);
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: clamp(1.05rem, 2vw, 1.3rem);
+            font-weight: 900;
+            line-height: 1.15;
+            margin: 0;
+        }
+
+        .story-choice-card p {
+            color: var(--muted);
+            font-size: 0.96rem;
+            line-height: 1.55;
+            margin: 0;
+        }
+
+        .story-choice-preview {
+            background: rgba(217, 238, 244, 0.28);
+            border-radius: 14px;
+            padding: 0.8rem 0.85rem;
+        }
+
+        .story-choice-actions {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            margin-top: 1rem !important;
+            width: 100% !important;
+            min-height: 75px;
+            flex-wrap: wrap;
+        }
+
+        .story-choice-actions .btn,
+        .story-selection-state-actions .btn {
+            width: 100% !important;
+            min-height: 44px !important;
+            border-radius: 12px !important;
+            font-weight: 700 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            padding: 0.8rem 1.15rem !important;
+            border-width: 2px !important;
+            line-height: 1 !important;
+        }
+
+        .story-choice-card .btn-primary,
+        .story-selection-state-actions .btn-primary {
+            background: var(--accent) !important;
+            border-color: var(--accent) !important;
+            box-shadow: 0 10px 20px rgba(31, 111, 139, 0.2) !important;
+            color: #fff !important;
+        }
+
+        .story-choice-card .btn-outline-secondary,
+        .story-selection-state-actions .btn-outline-secondary {
+            background: #fff !important;
+            border-color: rgba(31, 111, 139, 0.2) !important;
+            color: var(--accent-deep) !important;
+        }
+
+        .story-choice-card.is-selected .story-selected-btn {
+            opacity: 0.9;
+            cursor: default;
+        }
+
+        .story-choice-card .btn:hover,
+        .story-selection-state-actions .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .story-choice-selected-badge {
+            align-items: center;
+            background: rgba(122, 139, 95, 0.14);
+            border-radius: 999px;
+            color: var(--leaf);
+            display: inline-flex;
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: 0.75rem;
+            font-weight: 900;
+            gap: 0.35rem;
+            letter-spacing: 0.04em;
+            padding: 0.35rem 0.7rem;
+            text-transform: uppercase;
+            width: fit-content;
+        }
+
+        .story-selection-state-header {
+            display: grid;
+            gap: 0.35rem;
+        }
+
+        .story-selection-state-title {
+            font-size: clamp(1.2rem, 2.6vw, 1.6rem);
+        }
+
+        .story-selection-state-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.7rem;
+        }
+
+        .story-selection-state-actions .btn {
+            flex: 1 1 220px;
+        }
+
+        .assessment-card-wrapper,
+        .reader-container {
+            height: auto !important;
+            min-height: fit-content !important;
+            padding-bottom: 3.5rem !important;
+            overflow: visible !important;
+        }
+
+        .recording-controls button {
+            flex: 1 1 0;
+            min-width: 0;
+        }
+
+        .reader-shell:not(.is-story-ready) .recording-controls {
+            display: none;
+        }
+
+        .reader-shell:not(.is-story-ready) .nav-next {
+            display: none;
+        }
+
+        .reader-shell.is-story-ready .story-selection-panel,
+        .reader-shell.is-story-ready .story-selection-state {
+            display: none !important;
+        }
+
+        .reader-footer {
+            margin-top: 1.5rem !important;
+            padding-bottom: 1rem !important;
+        }
+
+        @media screen and (max-width: 768px) {
             .reader-top {
                 grid-template-columns: 1fr;
+            }
+
+            #storySelectionGrid,
+            #storySelectionGrid.story-selection-grid {
+                grid-template-columns: 1fr !important;
+                gap: 1rem !important;
+            }
+
+            .story-choice-actions {
+                min-height: 70px;
             }
 
             .test-meta {
@@ -1499,51 +1755,9 @@
                 gap: 0.5rem;
             }
 
-            .recording-controls button {
-                flex: 1 1 0;
-                min-width: 0;
-            }
-
-            #btnStartReading,
-            #btnStopReading,
-            #btnReadAloud {
-                padding: 0 0.75rem;
-                font-size: 0.9rem;
-                white-space: nowrap;
-            }
-
-            .reader-card {
-                min-height: calc(100vh - 300px);
-            }
-
-            .nav-prev,
-            .nav-next {
-                justify-self: stretch;
-                width: 100%;
-            }
-
-            .nav-prev { grid-area: back; }
-            .nav-next { grid-area: next; }
-
-            .mic-chip {
-                justify-content: center;
-            }
-
-            .content-word .reading-word {
-                font-size: clamp(2.8rem, 14vw, 5.2rem);
-            }
-
-            .completion-summary {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-
-            .completion-actions {
-                flex-direction: column;
-            }
-
-            .completion-actions button,
-            .completion-actions a {
-                width: 100%;
+            .story-choice-actions .btn,
+            .story-selection-state-actions .btn {
+                width: 100% !important;
             }
         }
 
@@ -1563,6 +1777,48 @@
             .summary-tile {
                 min-height: 104px;
             }
+        }
+
+        #btnStartReading,
+        #btnStopReading,
+        #btnReadAloud {
+            padding: 0 0.75rem;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .reader-card {
+            min-height: calc(100vh - 300px);
+        }
+
+        .nav-prev,
+        .nav-next {
+            justify-self: stretch;
+            width: 100%;
+        }
+
+        .nav-prev { grid-area: back; }
+        .nav-next { grid-area: next; }
+
+        .mic-chip {
+            justify-content: center;
+        }
+
+        .content-word .reading-word {
+            font-size: clamp(2.8rem, 14vw, 5.2rem);
+        }
+
+        .completion-summary {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .completion-actions {
+            flex-direction: column;
+        }
+
+        .completion-actions button,
+        .completion-actions a {
+            width: 100%;
         }
 
         /* Dark Theme Support */
@@ -1962,7 +2218,36 @@
                     <h2 class="reading-title" id="readingTitle" hidden></h2>
                     <h1 class="reading-word" id="readingWord">{% block initial_text %}{% endblock %}</h1>
                 </section>
-                <div class="speech-panel" id="speechPanel" hidden aria-hidden="true">
+                <section class="story-selection-panel d-none" id="storySelectionPanel" aria-live="polite" aria-atomic="true">
+                    <div class="story-selection-head">
+                        <h2 class="story-selection-title" id="storySelectionTitle">Choose a story</h2>
+                        <p class="story-selection-subtitle" id="storySelectionSubtitle">Tap one to begin your reading assessment.</p>
+                    </div>
+                    <div class="story-selection-grid" id="storySelectionGrid"></div>
+                </section>
+                <section class="story-selection-state d-none" id="storySelectionState" aria-live="polite" aria-atomic="true">
+                    <div class="story-selection-state-header">
+                        <p class="story-choice-selected-badge"><i class="bi bi-check2-circle" aria-hidden="true"></i> Selected story</p>
+                        <h2 class="story-selection-state-title" id="storySelectionStateTitle">Story ready</h2>
+                        <p class="story-selection-state-copy" id="storySelectionStateCopy">Your story is ready. Tap Start Reading when you are ready.</p>
+                    </div>
+                    <div class="story-selection-state-actions">
+                        <button class="btn btn-primary rounded-pill" id="storySelectionStartBtn" type="button">
+                            <i class="bi bi-play-fill" aria-hidden="true"></i> Start Reading
+                        </button>
+                        <button class="btn btn-outline-secondary rounded-pill" id="storySelectionChangeBtn" type="button">
+                            <i class="bi bi-arrow-left-right" aria-hidden="true"></i> Change Story
+                        </button>
+                    </div>
+                </section>
+                <section class="story-question-panel d-none" id="storyQuestionPanel" aria-live="polite" aria-atomic="true">
+                    <div class="story-question-head">
+                        <p class="eyebrow mb-1">Comprehension Questions</p>
+                        <h2 class="story-question-title" id="storyQuestionTitle">Answer the questions</h2>
+                    </div>
+                    <div class="story-question-list" id="storyQuestionList"></div>
+                </section>
+                <div class="speech-panel d-none" id="speechPanel" hidden aria-hidden="true">
                     <strong id="speechStatus">Ready to start reading</strong>
                     <span class="speech-transcript" id="speechTranscript">No words recognized yet. Keep reading clearly.</span>
                     <div class="raw-mic-output">
@@ -1974,18 +2259,18 @@
                     <button class="nav-btn nav-prev" id="prevBtn" type="button" aria-label="Previous item">Back</button>
                     
                     <div class="recording-controls">
-                        <button id="btnStartReading" class="btn btn-success rounded-pill px-4">
+                        <button id="btnStartReading" class="btn btn-success rounded-pill px-4 d-none" type="button">
                             <i class="bi bi-play-fill"></i> Start Reading
                         </button>
-                        <button id="btnStopReading" class="btn btn-danger rounded-pill px-4 d-none">
+                        <button id="btnStopReading" class="btn btn-danger rounded-pill px-4 d-none" type="button">
                             <i class="bi bi-stop-fill"></i> Finish Reading
                         </button>
-                        <button id="btnReadAloud" class="btn rounded-pill px-4" type="button">
+                        <button id="btnReadAloud" class="btn rounded-pill px-4 d-none" type="button">
                             <i class="bi bi-volume-up-fill"></i> Read Aloud
                         </button>
                     </div>
 
-                    <button class="nav-btn nav-next" id="nextBtn" type="button" aria-label="Next item">Next</button>
+                    <button class="nav-btn nav-next d-none" id="nextBtn" type="button" aria-label="Next item">Next</button>
                 </div>
             </article>
         </section>
@@ -2083,6 +2368,7 @@
     <script src="{% static 'pabasa_app/js/reading_level_utils.js' %}?v={% now 'U' %}"></script>
     <script>
         window.PABASA_USER_NAME = "{{ user_full_name|escapejs }}";
+        window.PABASA_USER_ID = "{{ request.session.user_id|default:'' }}";
         window.PABASA_USER_ROLE = "{{ nav_role }}";
         (() => {
             const button = document.getElementById('assessmentHelpBtn');

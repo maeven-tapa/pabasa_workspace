@@ -27,6 +27,18 @@
         const quitBtn = document.getElementById("quitBtn");
         const reviewBtn = document.getElementById("reviewBtn");
         const finishBtn = document.getElementById("finishBtn");
+        const storySelectionPanel = document.getElementById("storySelectionPanel");
+        const storySelectionGrid = document.getElementById("storySelectionGrid");
+        const storySelectionTitle = document.getElementById("storySelectionTitle");
+        const storySelectionSubtitle = document.getElementById("storySelectionSubtitle");
+        const storySelectionState = document.getElementById("storySelectionState");
+        const storySelectionStateTitle = document.getElementById("storySelectionStateTitle");
+        const storySelectionStateCopy = document.getElementById("storySelectionStateCopy");
+        const storySelectionStartBtn = document.getElementById("storySelectionStartBtn");
+        const storySelectionChangeBtn = document.getElementById("storySelectionChangeBtn");
+        const storyQuestionPanel = document.getElementById("storyQuestionPanel");
+        const storyQuestionTitle = document.getElementById("storyQuestionTitle");
+        const storyQuestionList = document.getElementById("storyQuestionList");
         const completionCount = document.getElementById("completionCount");
         const completionLevel = document.getElementById("completionLevel");
         const btnStartReading = document.getElementById("btnStartReading");
@@ -164,6 +176,10 @@
         let currentSyllableIndex = 0;
         let currentMaterialLanguage = "";
         let currentSttLanguageCode = "";
+        let currentAssessmentBranch = "words";
+        let currentStoryChoices = [];
+        let currentSelectedStory = null;
+        let currentStoryState = "story_selection";
         let syllableStitchingContext = "";
         let syllableStitchingContextAt = 0;
         const syllableStitchingWindowMs = 4000;
@@ -218,13 +234,14 @@
 
         function setSpeechDebugPanelVisible(isVisible) {
             const enabled = Boolean(isVisible);
+            speechPanel?.classList.toggle("d-none", !enabled);
             speechPanel?.toggleAttribute("hidden", !enabled);
             speechPanel?.setAttribute("aria-hidden", String(!enabled));
             if (speechDebugToggle) speechDebugToggle.checked = enabled;
             localStorage.setItem("pabasaShowSpeechDebugPanel", enabled ? "true" : "false");
         }
 
-        setSpeechDebugPanelVisible(localStorage.getItem("pabasaShowSpeechDebugPanel") === "true");
+        setSpeechDebugPanelVisible(false);
 
         function setMicDropdownOpen(isOpen) {
             if (!micDeviceDropdown || !micDeviceTrigger) return;
@@ -340,9 +357,272 @@
         const studentClassCodesKey = "pabasaStudentClassCodes";
         const readingsStorageKey = "pabasa_class_readings";
         const completedAssessmentIdsKey = "pabasa_completed_assessment_ids";
+        const studentEndStateKeyBase = "pabasa_student_end_assessment_state";
+        const studentEndStateVersion = "crla_grade2_v1";
 
         function getStoredData(key, fallback = []) {
             try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); } catch (e) { return fallback; }
+        }
+
+        function getStudentEndStateKey() {
+            const userId = String(window.PABASA_USER_ID || localStorage.getItem("pabasaUserId") || "").trim();
+            const materialKey = String(materialId || testCode || "assessment").trim();
+            return `${studentEndStateKeyBase}:${userId || "guest"}:${materialKey}`;
+        }
+
+        function readStudentEndState() {
+            try {
+                const raw = localStorage.getItem(getStudentEndStateKey());
+                if (!raw) return {};
+                const parsed = JSON.parse(raw);
+                return parsed && typeof parsed === "object" ? parsed : {};
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function writeStudentEndState(nextState) {
+            try {
+                localStorage.setItem(getStudentEndStateKey(), JSON.stringify({
+                    version: studentEndStateVersion,
+                    ...(nextState || {}),
+                    updated_at: new Date().toISOString(),
+                }));
+            } catch (error) {}
+        }
+
+        function updateStudentEndState(patch) {
+            const current = readStudentEndState();
+            writeStudentEndState({
+                ...current,
+                ...(patch || {}),
+            });
+        }
+
+        function clearStudentEndState() {
+            try {
+                localStorage.removeItem(getStudentEndStateKey());
+            } catch (error) {}
+        }
+
+        function normalizeStudentEndStatus(value) {
+            return String(value || "").trim().toLowerCase();
+        }
+
+        function getStudentEndStageFromScore(stageName, routingValue) {
+            const score = Number(routingValue);
+            if (stageName === "words") {
+                return Number.isFinite(score) && score <= 6 ? "sentences_low" : "sentences_high";
+            }
+            if (stageName === "sentences") {
+                return "story";
+            }
+            if (stageName === "story") {
+                if (!Number.isFinite(score)) return "completed";
+                return score < 25 ? "completed_high_emerging"
+                    : score <= 50 ? "completed_developing"
+                    : score <= 75 ? "completed_transitioning"
+                    : "completed_grade_level";
+            }
+            return "completed";
+        }
+
+        function getStoryClassificationFromResult(storyReadPercent, correctAnswers) {
+            const percent = Number(storyReadPercent);
+            const correct = Number(correctAnswers);
+            if (!Number.isFinite(percent) || !Number.isFinite(correct)) return "";
+            if (percent < 25 && correct === 0) return "High Emerging Reader";
+            if (percent >= 26 && percent <= 50 && correct >= 1 && correct <= 2) return "Developing Reader";
+            if (percent >= 51 && percent <= 75 && correct >= 3 && correct <= 4) return "Transitioning Reader";
+            if (percent >= 76 && percent <= 100 && correct >= 5 && correct <= 6) return "Reader at Grade Level";
+            if (percent < 25) return "High Emerging Reader";
+            if (percent <= 50) return "Developing Reader";
+            if (percent <= 75) return "Transitioning Reader";
+            return "Reader at Grade Level";
+        }
+
+        function getStoryChoicesFromAssessment() {
+            const passages = Array.isArray(officialAssessmentData?.passages) ? officialAssessmentData.passages : [];
+            return passages
+                .filter(item => item && typeof item === "object")
+                .map(item => ({
+                    title: String(item.title || "").trim(),
+                    content: String(item.content || "").trim(),
+                }))
+                .filter(item => item.title || item.content);
+        }
+
+        function shortStoryPreview(text) {
+            const source = String(text || "").trim().replace(/\s+/g, " ");
+            if (!source) return "No story content available.";
+            return source.length > 150 ? `${source.slice(0, 150)}...` : source;
+        }
+
+        function getStoryQuestionsForTitle(storyTitle) {
+            const normalizedTitle = String(storyTitle || "").trim().toLowerCase();
+            const grouped = Array.isArray(officialAssessmentData?.story_qas) ? officialAssessmentData.story_qas : [];
+            const questions = [];
+            grouped.forEach(entry => {
+                if (!entry || typeof entry !== "object") return;
+                const entryTitle = String(entry.story_title || entry.title || "").trim().toLowerCase();
+                if (entryTitle !== normalizedTitle) return;
+                const questionText = String(entry.question || "").trim();
+                const answerText = String(entry.answer || "").trim();
+                if (questionText) {
+                    questions.push({ question: questionText, answer: answerText });
+                }
+            });
+            return questions;
+        }
+
+        function hideStoryPanels() {
+            storySelectionPanel?.classList.add("d-none");
+            storySelectionState?.classList.add("d-none");
+            storyQuestionPanel?.classList.add("d-none");
+        }
+
+        function renderStoryQuestions(storyTitle) {
+            if (!storyQuestionPanel || !storyQuestionList) return;
+            const questions = getStoryQuestionsForTitle(storyTitle);
+            storyQuestionList.replaceChildren();
+            if (!questions.length) {
+                const empty = document.createElement("div");
+                empty.className = "story-question-empty";
+                empty.textContent = "No comprehension questions are attached to this story.";
+                storyQuestionList.appendChild(empty);
+            } else {
+                questions.forEach((item, index) => {
+                    const card = document.createElement("div");
+                    card.className = "story-question-card";
+                    const label = document.createElement("strong");
+                    label.textContent = `Question ${index + 1}`;
+                    const question = document.createElement("p");
+                    question.textContent = item.question;
+                    card.append(label, question);
+                    storyQuestionList.appendChild(card);
+                });
+            }
+            if (storyQuestionTitle) storyQuestionTitle.textContent = storyTitle || "Selected story";
+        }
+
+        function renderStorySelectionState() {
+            currentStoryState = "story_selection";
+            hideStoryPanels();
+            if (storySelectionPanel) storySelectionPanel.classList.remove("d-none");
+            if (readingWord) {
+                readingWord.hidden = true;
+                readingWord.textContent = "Choose a story to continue.";
+            }
+            if (readingTitle) readingTitle.hidden = true;
+            updateFooterForStoryState("story_selection");
+            if (storySelectionPanel) storySelectionPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+
+        function renderStoryReadyState(story) {
+            currentStoryState = "story_ready";
+            hideStoryPanels();
+            if (storySelectionState) storySelectionState.classList.remove("d-none");
+            if (storySelectionStateTitle) storySelectionStateTitle.textContent = story.title || "Selected story";
+            if (storySelectionStateCopy) storySelectionStateCopy.textContent = "Your story is ready. Tap Start Reading when you are ready.";
+            if (readingWord) {
+                readingWord.hidden = false;
+                readingWord.textContent = story.content || "Selected story has no content.";
+            }
+            if (readingTitle) {
+                readingTitle.hidden = false;
+                readingTitle.textContent = story.title || "";
+            }
+            updateFooterForStoryState("story_ready");
+        }
+
+        function renderStoryReadingState(story) {
+            currentStoryState = "story_reading";
+            hideStoryPanels();
+            if (readingWord) {
+                readingWord.hidden = false;
+                readingWord.textContent = story.content || "Selected story has no content.";
+            }
+            if (readingTitle) {
+                readingTitle.hidden = false;
+                readingTitle.textContent = story.title || "";
+            }
+            updateFooterForStoryState("story_reading");
+        }
+
+        function renderStoryComprehensionState(storyTitle) {
+            currentStoryState = "story_comprehension";
+            hideStoryPanels();
+            if (storyQuestionPanel) storyQuestionPanel.classList.remove("d-none");
+            renderStoryQuestions(storyTitle);
+            updateFooterForStoryState("story_comprehension");
+        }
+
+        function renderStorySelection() {
+            if (!storySelectionPanel || !storySelectionGrid) return;
+            const choices = currentStoryChoices.length ? currentStoryChoices : getStoryChoicesFromAssessment();
+            currentStoryChoices = choices;
+            storySelectionGrid.replaceChildren();
+            if (storySelectionTitle) storySelectionTitle.textContent = "Choose a story";
+            if (storySelectionSubtitle) storySelectionSubtitle.textContent = "Choose one story to begin.";
+            choices.forEach((story) => {
+                const card = document.createElement("article");
+                card.className = "story-choice-card";
+                const isSelected = currentSelectedStory && String(currentSelectedStory.title || "").trim().toLowerCase() === String(story.title || "").trim().toLowerCase();
+                if (isSelected) card.classList.add("is-selected");
+                const title = document.createElement("h3");
+                title.textContent = story.title || "Untitled story";
+                const previewWrap = document.createElement("div");
+                previewWrap.className = "story-choice-preview";
+                const snippet = document.createElement("p");
+                snippet.textContent = shortStoryPreview(story.content);
+                previewWrap.appendChild(snippet);
+                const actions = document.createElement("div");
+                actions.className = "story-choice-actions";
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = isSelected
+                    ? "btn btn-primary rounded-pill w-100 story-selected-btn"
+                    : "btn btn-outline-primary rounded-pill w-100";
+                button.textContent = isSelected ? "Story Selected" : "Choose Story";
+                button.disabled = Boolean(isSelected);
+                button.addEventListener("click", () => selectStoryChoice(story));
+                actions.appendChild(button);
+                card.append(title, previewWrap, actions);
+                storySelectionGrid.appendChild(card);
+            });
+            renderStorySelectionState();
+        }
+
+        function selectStoryChoice(story) {
+            const choice = story && typeof story === "object" ? story : null;
+            if (!choice || !choice.title) return;
+            currentSelectedStory = choice;
+            updateStudentEndState({
+                stage: "story_ready",
+                selected_story: choice.title,
+                selected_story_content: choice.content || "",
+            });
+            renderStoryReadyState(choice);
+        }
+
+        function updateFooterForStoryState(state) {
+            const nextState = String(state || "story_selection");
+            shell?.classList.toggle("is-story-ready", nextState !== "story_selection");
+            btnStartReading?.classList.toggle("d-none", nextState !== "story_ready");
+            btnStopReading?.classList.toggle("d-none", nextState !== "story_reading");
+            btnReadAloud?.classList.toggle("d-none", nextState !== "story_reading");
+            prevBtn?.classList.toggle("d-none", !["story_selection", "story_comprehension"].includes(nextState));
+            nextBtn?.classList.toggle("d-none", nextState !== "story_comprehension");
+
+            if (nextState === "story_selection" || nextState === "story_ready") {
+                speechPanel?.classList.add("d-none");
+                speechPanel?.setAttribute("hidden", "true");
+                speechPanel?.setAttribute("aria-hidden", "true");
+            } else {
+                speechPanel?.classList.remove("d-none");
+                speechPanel?.removeAttribute("hidden");
+                speechPanel?.setAttribute("aria-hidden", "false");
+            }
         }
 
         function hashString(value) {
@@ -590,6 +870,9 @@
 
         function loadItems() {
             const isOfficialAssessmentLaunch = Boolean(officialAssessmentId);
+            const persistedEndState = readStudentEndState();
+            const persistedStage = normalizeStudentEndStatus(persistedEndState.stage);
+            const persistedNextStage = normalizeStudentEndStatus(persistedEndState.next_stage);
             if (isOfficialAssessmentLaunch && officialAssessmentData) {
                 const officialTitle = String(
                     officialAssessmentData.official_title
@@ -612,13 +895,29 @@
                         officialPassages.push(combined);
                     });
                 }
-                const officialItemTypes = [
-                    ...new Array(Math.max(0, officialWords.length)).fill("word"),
-                    ...new Array(Math.max(0, officialSentences.length)).fill("sentence"),
-                    ...new Array(Math.max(0, officialPassages.length)).fill("paragraph"),
-                ];
-                const officialType = officialItemTypes[0] || "word";
-                items = [...officialWords, ...officialSentences, ...officialPassages];
+                const stageMap = {
+                    words: { items: officialWords, type: "word", label: "Words" },
+                    sentences_low: { items: officialSentences, type: "sentence", label: "Sentences — Low" },
+                    sentences_high: { items: officialSentences, type: "sentence", label: "Sentences — High" },
+                    story: { items: [], type: "paragraph", label: "Story Reading" },
+                };
+                let activeStage = "words";
+                if (stageMap[persistedNextStage]) {
+                    activeStage = persistedNextStage;
+                } else if (stageMap[persistedStage]) {
+                    activeStage = persistedStage;
+                } else if (persistedStage.startsWith("completed_")) {
+                    activeStage = persistedStage;
+                }
+                currentAssessmentBranch = activeStage;
+
+                if (stageMap[activeStage]) {
+                    items = stageMap[activeStage].items.slice();
+                    itemTypes = new Array(items.length).fill(stageMap[activeStage].type);
+                } else {
+                    items = [];
+                    itemTypes = [];
+                }
                 console.log("PABASA_OFFICIAL_TRACE", {
                     stage: "final_reader_assessment",
                     requested_assessment_type: testTitle,
@@ -628,19 +927,57 @@
                     selected_material_system_assessment_key: officialAssessmentData.system_assessment_key || "",
                     selected_material_is_official: true,
                     selected_material_is_system_owned: true,
+                    selected_assessment_branch: activeStage,
                     official_assessment_data: officialAssessmentData,
                     final_reader_assessment_title: officialTitle,
                     final_reader_assessment_id: officialAssessmentData.id || officialAssessmentId || "",
                     final_reader_item_count: items.length,
                 });
-                itemTypes = officialItemTypes.length ? officialItemTypes : new Array(items.length).fill(officialType);
                 itemPages = buildItemPages(items, itemTypes);
                 itemTitles = items.map((text, index) => extractItemTitle(text, itemTypes[index]));
                 pageCorrectWordCounts = items.map(() => []);
                 currentMaterialLanguage = officialLanguage || "";
                 correctWordCounts = new Array(items.length).fill(0);
+                currentStoryChoices = getStoryChoicesFromAssessment();
+                const persistedStoryTitle = String(persistedEndState.selected_story || "").trim().toLowerCase();
+                if (activeStage === "story") {
+                    const restoredStory = currentStoryChoices.find(item => String(item.title || "").trim().toLowerCase() === persistedStoryTitle);
+                    if (restoredStory) {
+                        currentSelectedStory = restoredStory;
+                        updateStudentEndState({
+                            stage: "story_ready",
+                            selected_story: restoredStory.title,
+                            selected_story_content: restoredStory.content || "",
+                        });
+                        renderStoryReadyState(restoredStory);
+                    } else {
+                        currentSelectedStory = null;
+                        renderStorySelection();
+                        return;
+                    }
+                }
+                if (items.length === 0 && activeStage.startsWith("completed_")) {
+                    shell.classList.add("is-complete");
+                    if (readingWord) {
+                        readingWord.textContent = persistedEndState.classification || "Assessment completed.";
+                    }
+                    if (readingTitle) readingTitle.hidden = true;
+                    if (completionLevel) completionLevel.textContent = persistedEndState.classification || "Completed";
+                    if (counter) counter.textContent = "Assessment completed";
+                    if (progressFill) progressFill.style.width = "100%";
+                    setCompletionLoadingState(false);
+                    return;
+                }
                 if (items.length === 0) {
-                    if (readingWord) readingWord.textContent = "No assessment items assigned.";
+                    if (activeStage === "story") {
+                        renderStorySelection();
+                        return;
+                    }
+                    if (readingWord) {
+                        readingWord.textContent = activeStage.startsWith("completed_")
+                            ? (persistedEndState.classification || "Assessment completed.")
+                            : "No assessment items assigned.";
+                    }
                     if (nextBtn) nextBtn.disabled = true;
                     return;
                 }
@@ -652,11 +989,13 @@
                     stage: "final_reader_render",
                     final_reader_assessment_title: officialTitle,
                     final_reader_assessment_id: officialAssessmentData.id || officialAssessmentId || "",
+                    final_reader_assessment_branch: activeStage,
                     final_reader_item_count: items.length,
                 });
                 if (counter) {
-                    const label = officialType === "sentence" ? "Sentence" : officialType === "paragraph" || officialType === "para" ? "Paragraph" : "Word";
-                    counter.textContent = `${label} 1/${items.length}`;
+                    counter.textContent = activeStage === "story"
+                        ? "Story Reading"
+                        : `${stageMap[activeStage]?.label || "Word"} 1/${items.length}`;
                 }
                 currentIndex = 0;
                 resetCurrentPageState();
@@ -1790,6 +2129,64 @@
             if (completionCount) completionCount.textContent = correctWordsRead();
             const completionSnapshot = calculateScores();
             latestScores = normalizeCompletionScores(latestScores || completionSnapshot, completionSnapshot);
+            const branchScore = Number(
+                latestScores.correct_words ??
+                latestScores.word_count ??
+                latestScores.items_completed ??
+                0
+            );
+            const branchState = {
+                version: studentEndStateVersion,
+                stage: currentAssessmentBranch,
+                branch: currentAssessmentBranch,
+                score: branchScore,
+                classification: "",
+                next_stage: "",
+            };
+            if (currentAssessmentBranch === "words") {
+                branchState.next_stage = branchScore <= 6 ? "sentences_low" : "sentences_high";
+            } else if (currentAssessmentBranch === "sentences_low" || currentAssessmentBranch === "sentences_high" || currentAssessmentBranch === "sentences") {
+                branchState.next_stage = "story";
+            } else if (currentAssessmentBranch === "story") {
+                const storyRead = Number(
+                    latestScores.story_read_percent ??
+                    latestScores.story_percent ??
+                    latestScores.read_percent ??
+                    latestScores.progress_percent ??
+                    (Number.isFinite(Number(latestScores.progress)) ? Number(latestScores.progress) * 100 : null) ??
+                    (items.length ? (Number(latestScores.items_completed ?? 0) / Math.max(1, items.length)) * 100 : null) ??
+                    0
+                );
+                const correctAnswers = Number(
+                    latestScores.correct_answers ??
+                    latestScores.comprehension_correct ??
+                    latestScores.correct_items ??
+                    latestScores.items_correct ??
+                    0
+                );
+                branchState.classification = getStoryClassificationFromResult(storyRead, correctAnswers);
+                branchState.next_stage = branchState.classification === "High Emerging Reader"
+                    ? "completed_high_emerging"
+                    : branchState.classification === "Developing Reader"
+                        ? "completed_developing"
+                        : branchState.classification === "Transitioning Reader"
+                            ? "completed_transitioning"
+                            : branchState.classification === "Reader at Grade Level"
+                                ? "completed_grade_level"
+                                : "";
+                branchState.story_read_percent = Number.isFinite(storyRead) ? storyRead : null;
+                branchState.correct_answers = Number.isFinite(correctAnswers) ? correctAnswers : null;
+            }
+            if (branchState.next_stage) {
+                branchState.stage = branchState.next_stage;
+                writeStudentEndState(branchState);
+            }
+            const nextStageUrlMap = {
+                sentences_low: `${window.location.origin}${window.location.pathname.replace(/reading_word_page|reading_sentence_page|reading_para_page/i, 'reading_sentence_page')}${window.location.search}`,
+                sentences_high: `${window.location.origin}${window.location.pathname.replace(/reading_word_page|reading_sentence_page|reading_para_page/i, 'reading_sentence_page')}${window.location.search}`,
+                story: `${window.location.origin}${window.location.pathname.replace(/reading_word_page|reading_sentence_page|reading_para_page/i, 'reading_para_page')}${window.location.search}`,
+            };
+            const nextStageUrl = nextStageUrlMap[branchState.next_stage] || "";
             const summary = document.getElementById("completionSummary") || document.querySelector(".completion-summary");
             const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
             if (summary) {
@@ -1800,7 +2197,15 @@
             if (disclaimer && (!isReviewMode && isFullCompletion && !completionSubmitted)) {
                 disclaimer.textContent = "Calculating your score breakdown...";
             }
-            if (completionLevel) completionLevel.textContent = resolveClassificationLabel(latestScores, mode.charAt(0).toUpperCase() + mode.slice(1));
+            if (completionLevel) {
+                if (currentAssessmentBranch === "words") {
+                    completionLevel.textContent = branchState.next_stage === "sentences_low"
+                        ? "Sentence Reading — Low"
+                        : "Sentence Reading — High";
+                } else {
+                    completionLevel.textContent = resolveClassificationLabel(latestScores, mode.charAt(0).toUpperCase() + mode.slice(1));
+                }
+            }
             
             // Add retake attempt information to the results title
             if (isRetakeMode && materialId) {
@@ -1817,6 +2222,13 @@
                     isFullCompletion,
                     completionSubmitted,
                 });
+                return;
+            }
+            if (nextStageUrl && !isReviewMode) {
+                traceEndSession('showCompletion.autoAdvance', { nextStageUrl, next_stage: branchState.next_stage });
+                setTimeout(() => {
+                    window.location.assign(nextStageUrl);
+                }, 350);
                 return;
             }
             completionSubmitted = true;
@@ -2542,6 +2954,21 @@
 
         const startReading = () => {
             if (isReviewMode) return;
+            if (currentStoryState === "story_ready" && currentSelectedStory) {
+                setCurrentItemMode("paragraph");
+                items = [currentSelectedStory.content || ""];
+                itemTypes = ["paragraph"];
+                itemPages = buildItemPages(items, itemTypes);
+                itemTitles = [currentSelectedStory.title];
+                pageCorrectWordCounts = items.map(() => []);
+                correctWordCounts = new Array(items.length).fill(0);
+                currentIndex = 0;
+                currentPageIndex = 0;
+                updateUI();
+                animateCurrentItem();
+                renderStoryReadingState(currentSelectedStory);
+                return;
+            }
             startAssessmentTimer();
             if (!isRecording) {
                 isRecording = true;
@@ -2574,11 +3001,25 @@
             }
             isRecording = false;
             stopSpeechRecognition();
+            if (currentStoryState === "story_reading" && currentSelectedStory) {
+                renderStoryComprehensionState(currentSelectedStory.title);
+                return;
+            }
             const reachedLastItem = items.length > 0 && currentIndex === items.length - 1;
             showCompletion(isAssistMode || reachedLastItem);
         };
 
         btnStartReading?.addEventListener("click", startReading);
+        storySelectionStartBtn?.addEventListener("click", startReading);
+        storySelectionChangeBtn?.addEventListener("click", () => {
+            currentSelectedStory = null;
+            updateStudentEndState({
+                stage: "story_selection",
+                selected_story: "",
+                selected_story_content: "",
+            });
+            renderStorySelection();
+        });
         btnStopReading?.addEventListener("click", stopReading);
 
         if (!isReviewMode && items.length) {
@@ -2969,10 +3410,18 @@
         }
 
         prevBtn?.addEventListener("click", () => { 
+            if (currentStoryState === "story_comprehension" && currentSelectedStory) {
+                renderStoryReadingState(currentSelectedStory);
+                return;
+            }
             goToPreviousPageOrItem();
         });
 
         nextBtn?.addEventListener("click", () => {
+            if (currentStoryState === "story_comprehension") {
+                showCompletion(true);
+                return;
+            }
             goToNextPageOrItem();
         });
 
@@ -2991,6 +3440,12 @@
 
             const isSpace = event.key === " " || event.key === "Spacebar" || event.code === "Space";
             if (isSpace) {
+                if (currentStoryState === "story_ready" && storySelectionStartBtn) {
+                    storySelectionStartBtn.click();
+                    event.preventDefault();
+                    return;
+                }
+
                 if (btnStartReading && !btnStartReading.classList.contains("d-none")) {
                     btnStartReading.click();
                     event.preventDefault();
