@@ -59,15 +59,29 @@
   </div>
 
   <div class="mt-4 bg-white border rounded-4 p-3">
-    <div class="small text-secondary fw-bold text-uppercase mb-2">Paragraphs</div>
+    <div class="small text-secondary fw-bold text-uppercase mb-2">Story Reading</div>
     <div class="d-grid gap-2">
       {% for item in reading_passages %}
       <div class="border rounded-3 p-3">
-        <div class="fw-bold">{{ item.title|default:"Untitled Paragraph" }}</div>
-        <div class="text-secondary">{{ item.text|default:'' }}</div>
+        <div class="fw-bold mb-2">{{ item.title|default:"Untitled Story" }}</div>
+        <div class="text-secondary mb-3" style="white-space: pre-wrap;">{{ item.text|default:'' }}</div>
+        {% if item.story_qas %}
+        <div class="d-grid gap-2">
+          {% for qa in item.story_qas %}
+          <div class="border rounded-3 p-3 bg-light">
+            <div class="fw-bold mb-1">Question {{ forloop.counter }}</div>
+            <div class="mb-2">{{ qa.question }}</div>
+            <div class="fw-bold mb-1">Answer {{ forloop.counter }}</div>
+            <div>{{ qa.answer }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-secondary">No question and answer pairs stored for this story.</div>
+        {% endif %}
       </div>
       {% empty %}
-      <span class="text-secondary">No paragraph items stored.</span>
+      <span class="text-secondary">No story reading items stored.</span>
       {% endfor %}
     </div>
   </div>

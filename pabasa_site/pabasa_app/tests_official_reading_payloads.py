@@ -30,3 +30,16 @@ class OfficialReadingPayloadTests(SimpleTestCase):
         self.assertEqual(sections["passages"][0]["title"], "Ang Pagong at ang Kuneho")
         self.assertEqual(sections["passages"][0]["content"], "Ang pagong at ang kuneho.")
         self.assertEqual(sections["items"], ["Binti", "Naglalaba si Tatay sa palanggana.", "Ang pagong at ang kuneho."])
+
+    def test_official_crla_story_qas_are_seeded_in_pairs_by_story(self):
+        from pabasa_app.management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
+
+        bosy_qas = OFFICIAL_CRLA_CONTENT["bosy_crla_pretest"]["story_qas"]
+        eosy_qas = OFFICIAL_CRLA_CONTENT["eosy_crla_posttest"]["story_qas"]
+
+        self.assertEqual(len(bosy_qas), 12)
+        self.assertEqual(len(eosy_qas), 12)
+        self.assertEqual(sum(1 for item in bosy_qas if item["story_title"] == "Isang Kakaibang Araw"), 6)
+        self.assertEqual(sum(1 for item in bosy_qas if item["story_title"] == "Ang Pagong at ang Kuneho"), 6)
+        self.assertEqual(sum(1 for item in eosy_qas if item["story_title"] == "Ang Pagong at ang Kuneho"), 6)
+        self.assertEqual(sum(1 for item in eosy_qas if item["story_title"] == "Isang Kakaibang Araw"), 6)

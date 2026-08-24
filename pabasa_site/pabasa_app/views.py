@@ -6657,17 +6657,86 @@ def _save_official_reading_assessment(request, material=None):
     words = _clean_list(content_items.get('words'))
     sentences = _clean_list(content_items.get('sentences'))
     passages = []
-    if isinstance(content_items.get('passages'), list):
+    story_qas = []
+    stories = content_items.get('stories')
+    grouped_story_qas = content_items.get('story_qas')
+    if isinstance(grouped_story_qas, list) and grouped_story_qas:
+        for story in grouped_story_qas:
+            if not isinstance(story, dict):
+                continue
+            story_title = str(story.get('story_title') or story.get('title') or '').strip()
+            questions = story.get('questions')
+            if not story_title or not isinstance(questions, list):
+                continue
+            for qa in questions:
+                if not isinstance(qa, dict):
+                    continue
+                question = str(qa.get('question') or '').strip()
+                answer = str(qa.get('answer') or '').strip()
+                if not question or not answer:
+                    continue
+                story_qas.append({
+                    'story_title': story_title,
+                    'question': question,
+                    'answer': answer,
+                })
+    elif isinstance(stories, list):
+        for story in stories:
+            if not isinstance(story, dict):
+                continue
+            story_title = str(story.get('title') or story.get('story_title') or '').strip()
+            if not story_title:
+                continue
+            questions = story.get('qas') if isinstance(story.get('qas'), list) else []
+            for qa in questions:
+                if not isinstance(qa, dict):
+                    continue
+                question = str(qa.get('question') or '').strip()
+                answer = str(qa.get('answer') or '').strip()
+                if not question or not answer:
+                    continue
+                story_qas.append({
+                    'story_title': story_title,
+                    'question': question,
+                    'answer': answer,
+                })
+    elif isinstance(content_items.get('passages'), list):
         for passage in content_items.get('passages'):
             if isinstance(passage, dict):
                 title_value = str(passage.get('title') or '').strip()
                 content_value = str(passage.get('text') or passage.get('content') or '').strip()
+                qas = passage.get('qas') if isinstance(passage.get('qas'), list) else []
                 if title_value or content_value:
                     passages.append({
                         'title': title_value,
                         'text': content_value,
                         'content': content_value,
                     })
+                for qa in qas:
+                    if not isinstance(qa, dict):
+                        continue
+                    question = str(qa.get('question') or '').strip()
+                    answer = str(qa.get('answer') or '').strip()
+                    if not title_value or not question or not answer:
+                        continue
+                    story_qas.append({
+                        'story_title': title_value,
+                        'question': question,
+                        'answer': answer,
+                    })
+
+    if not passages and isinstance(stories, list):
+        for story in stories:
+            if not isinstance(story, dict):
+                continue
+            title_value = str(story.get('title') or story.get('story_title') or '').strip()
+            content_value = str(story.get('content') or story.get('text') or '').strip()
+            if title_value or content_value:
+                passages.append({
+                    'title': title_value,
+                    'text': content_value,
+                    'content': content_value,
+                })
 
     if len(words) < 10:
         field_errors['words'] = 'Add at least 10 word items.'
@@ -6708,6 +6777,11 @@ def _save_official_reading_assessment(request, material=None):
             'words': words,
             'sentences': sentences,
             'passages': passages,
+            'story_qas': story_qas,
+            'stories': [{
+                'title': str(p.get('title') or '').strip(),
+                'content': str(p.get('text') or p.get('content') or '').strip(),
+            } for p in passages],
             'items': [*words, *sentences, *passage_texts],
         }
         if assessment_type == 'both':
@@ -6812,14 +6886,56 @@ def _official_assessment_detail_context(request, material):
     words = content_json.get('words') if isinstance(content_json, dict) and isinstance(content_json.get('words'), list) else []
     sentences = content_json.get('sentences') if isinstance(content_json, dict) and isinstance(content_json.get('sentences'), list) else []
     passages = content_json.get('passages') if isinstance(content_json, dict) and isinstance(content_json.get('passages'), list) else []
+    story_qas = content_json.get('story_qas') if isinstance(content_json, dict) and isinstance(content_json.get('story_qas'), list) else []
+    qas_by_story = {}
+    if story_qas and isinstance(story_qas[0], dict) and isinstance(story_qas[0].get('questions'), list):
+        for story in story_qas:
+            if not isinstance(story, dict):
+                continue
+            story_title = str(story.get('story_title') or story.get('title') or '').strip()
+            questions = story.get('questions') if isinstance(story.get('questions'), list) else []
+            if not story_title:
+                continue
+            for qa in questions:
+                if not isinstance(qa, dict):
+                    continue
+                question = str(qa.get('question') or '').strip()
+                answer = str(qa.get('answer') or '').strip()
+                if not question or not answer:
+                    continue
+                qas_by_story.setdefault(story_title, []).append({
+                    'question': question,
+                    'answer': answer,
+                })
+    else:
+        for qa in story_qas:
+            if not isinstance(qa, dict):
+                continue
+            story_title = str(qa.get('story_title') or '').strip()
+            question = str(qa.get('question') or '').strip()
+            answer = str(qa.get('answer') or '').strip()
+            if not story_title or not question or not answer:
+                continue
+            qas_by_story.setdefault(story_title, []).append({
+                'question': question,
+                'answer': answer,
+            })
     passages = [
         {
             'title': str(passage.get('title') or '').strip(),
             'text': str(passage.get('text') or passage.get('content') or '').strip(),
+            'story_qas': qas_by_story.get(str(passage.get('title') or '').strip(), []),
         }
         for passage in passages
         if isinstance(passage, dict)
     ]
+    if not passages and qas_by_story:
+        for story_title, qa_items in qas_by_story.items():
+            passages.append({
+                'title': story_title,
+                'text': '',
+                'story_qas': qa_items,
+            })
     return {
         'page_title': 'Official Reading Assessments',
         'admin_username': request.session.get('custom_id', ''),
@@ -6838,6 +6954,7 @@ def _official_assessment_detail_context(request, material):
         'reading_words': words,
         'reading_sentences': sentences,
         'reading_passages': passages,
+        'reading_story_qas': qas_by_story,
         'official_item_sections': _official_reading_item_sections(material),
         'school_year_value': str(content_json.get('school_year') or content_json.get('school_year_label') or _material_school_year_label(material) or '').strip(),
     }

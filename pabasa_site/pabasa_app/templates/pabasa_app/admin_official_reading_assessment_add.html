@@ -126,114 +126,12 @@
           <div class="step-kicker">Step 6</div>
           <span class="step-state state-locked" id="paragraphState">Locked</span>
         </div>
-        <label class="form-label fw-bold">Story Reading <span class="text-danger">*</span></label>
-        <div class="item-input-row mb-2">
-          <textarea id="paragraphTitleInput" class="form-control" placeholder="Story reading title..." disabled></textarea>
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+          <label class="form-label fw-bold mb-0">Story Reading <span class="text-danger">*</span></label>
+          <button type="button" class="btn btn-outline-primary btn-sm" id="addStoryBtn" disabled>+ Add Story</button>
         </div>
-        <div class="item-input-row mb-2">
-          <textarea id="paragraphContentInput" class="form-control" placeholder="Add story reading text..." disabled></textarea>
-          <button type="button" class="btn btn-primary" id="addParagraphBtn" style="min-width:52px" disabled><i class="bi bi-plus-lg"></i></button>
-        </div>
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <div class="locked-hint" id="paragraphProgress">Available after 3 sentences</div>
-        </div>
-        <div id="paragraphChips" class="item-box d-flex flex-wrap gap-2 align-content-start">
-          {% for item in reading_passages %}
-          <span class="item-chip" data-paragraph-chip="{{ forloop.counter0 }}">
-            <span>{{ item.title|default:'Untitled Story Reading' }}</span>
-            <span class="small fw-normal d-block" style="max-width:320px;white-space:normal;">{{ item.text|default:item.content|truncatechars:120 }}</span>
-            <button type="button" aria-label="Remove paragraph" data-remove-paragraph="{{ forloop.counter0 }}">&times;</button>
-          </span>
-          {% empty %}
-          <div class="text-center w-100 text-secondary py-3" id="paragraphEmpty">No story reading items added yet.</div>
-          {% endfor %}
-        </div>
-        <div class="story-qa-grid mt-4">
-          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-            <div class="fw-bold text-secondary">Question and Answer Pairs</div>
-            <div class="locked-hint">All 6 pairs are required.</div>
-          </div>
-          <div class="story-qa-grid">
-            <div class="story-qa-card">
-              <div class="fw-bold mb-2">1</div>
-              <div class="row g-3">
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-bold">Question 1 <span class="text-danger">*</span></label>
-                  <textarea class="form-control" name="story_question_1" placeholder="Enter question 1..." rows="3" required></textarea>
-                </div>
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-bold">Answer 1 <span class="text-danger">*</span></label>
-                  <textarea class="form-control" name="story_answer_1" placeholder="Enter answer 1..." rows="3" required></textarea>
-                </div>
-              </div>
-            </div>
-            <div class="story-qa-card">
-              <div class="fw-bold mb-2">2</div>
-              <div class="row g-3">
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-bold">Question 2 <span class="text-danger">*</span></label>
-                  <textarea class="form-control" name="story_question_2" placeholder="Enter question 2..." rows="3" required></textarea>
-                </div>
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-bold">Answer 2 <span class="text-danger">*</span></label>
-                  <textarea class="form-control" name="story_answer_2" placeholder="Enter answer 2..." rows="3" required></textarea>
-                </div>
-              </div>
-            </div>
-            <div class="story-qa-card">
-              <div class="fw-bold mb-2">3</div>
-              <div class="row g-3">
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-bold">Question 3 <span class="text-danger">*</span></label>
-                  <textarea class="form-control" name="story_question_3" placeholder="Enter question 3..." rows="3" required></textarea>
-                </div>
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-bold">Answer 3 <span class="text-danger">*</span></label>
-                  <textarea class="form-control" name="story_answer_3" placeholder="Enter answer 3..." rows="3" required></textarea>
-                </div>
-              </div>
-            </div>
-            <div class="story-qa-card">
-              <div class="fw-bold mb-2">4</div>
-              <div class="row g-3">
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-bold">Question 4 <span class="text-danger">*</span></label>
-                  <textarea class="form-control" name="story_question_4" placeholder="Enter question 4..." rows="3" required></textarea>
-                </div>
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-bold">Answer 4 <span class="text-danger">*</span></label>
-                  <textarea class="form-control" name="story_answer_4" placeholder="Enter answer 4..." rows="3" required></textarea>
-                </div>
-              </div>
-            </div>
-            <div class="story-qa-card">
-              <div class="fw-bold mb-2">5</div>
-              <div class="row g-3">
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-bold">Question 5 <span class="text-danger">*</span></label>
-                  <textarea class="form-control" name="story_question_5" placeholder="Enter question 5..." rows="3" required></textarea>
-                </div>
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-bold">Answer 5 <span class="text-danger">*</span></label>
-                  <textarea class="form-control" name="story_answer_5" placeholder="Enter answer 5..." rows="3" required></textarea>
-                </div>
-              </div>
-            </div>
-            <div class="story-qa-card">
-              <div class="fw-bold mb-2">6</div>
-              <div class="row g-3">
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-bold">Question 6 <span class="text-danger">*</span></label>
-                  <textarea class="form-control" name="story_question_6" placeholder="Enter question 6..." rows="3" required></textarea>
-                </div>
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-bold">Answer 6 <span class="text-danger">*</span></label>
-                  <textarea class="form-control" name="story_answer_6" placeholder="Enter answer 6..." rows="3" required></textarea>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <div class="locked-hint mb-3" id="paragraphProgress">Available after 3 sentences</div>
+        <div id="storyList" class="d-grid gap-3"></div>
         {% if official_field_errors.passages %}<div class="text-danger small mt-2">{{ official_field_errors.passages }}</div>{% endif %}
       </div>
     </div>
@@ -290,15 +188,10 @@
   const saveBtn = document.getElementById('saveBtn');
   const wordInput = document.getElementById('wordInput');
   const sentenceInput = document.getElementById('sentenceInput');
-  const paragraphTitleInput = document.getElementById('paragraphTitleInput');
-  const paragraphContentInput = document.getElementById('paragraphContentInput');
-  const storyQaInputs = Array.from(document.querySelectorAll('[name^="story_question_"], [name^="story_answer_"]'));
   const addWordBtn = document.getElementById('addWordBtn');
   const addSentenceBtn = document.getElementById('addSentenceBtn');
-  const addParagraphBtn = document.getElementById('addParagraphBtn');
   const wordChips = document.getElementById('wordChips');
   const sentenceChips = document.getElementById('sentenceChips');
-  const paragraphChips = document.getElementById('paragraphChips');
   const hidden = document.getElementById('contentItemsJson');
   const typeState = document.getElementById('typeState');
   const materialsState = document.getElementById('materialsState');
@@ -315,35 +208,136 @@
   const wordStep = document.getElementById('wordStep');
   const sentenceStep = document.getElementById('sentenceStep');
   const paragraphStep = document.getElementById('paragraphStep');
+  const storyList = document.getElementById('storyList');
+  const addStoryBtn = document.getElementById('addStoryBtn');
+  const form = document.getElementById('officialAssessmentForm');
 
-  const state = { words: [], sentences: [], passages: [] };
+  const state = { words: [], sentences: [], stories: [] };
   let typeCommitted = false;
+
   try {
     const initial = JSON.parse(hidden.value || '{}');
     if (initial && typeof initial === 'object') {
       if (Array.isArray(initial.words)) state.words = initial.words.filter(Boolean).map(v => String(v).trim()).filter(Boolean);
       if (Array.isArray(initial.sentences)) state.sentences = initial.sentences.filter(Boolean).map(v => String(v).trim()).filter(Boolean);
-      if (Array.isArray(initial.passages)) state.passages = initial.passages.filter(Boolean).map(v => ({
-        title: String(v?.title || '').trim(),
-        text: String(v?.text || v?.content || '').trim(),
-      })).filter(v => v.title || v.text);
+      if (Array.isArray(initial.stories)) {
+        state.stories = initial.stories.filter(Boolean).map((story) => ({
+          title: String(story?.title || story?.story_title || '').trim(),
+          content: String(story?.content || story?.text || story?.story_content || '').trim(),
+          qas: Array.isArray(story?.qas) ? story.qas : [],
+        }));
+      } else if (Array.isArray(initial.story_qas) && initial.story_qas.length && typeof initial.story_qas[0] === 'object' && Array.isArray(initial.story_qas[0].questions)) {
+        state.stories = initial.story_qas.filter(Boolean).map((story) => ({
+          title: String(story?.story_title || story?.title || '').trim(),
+          content: '',
+          qas: Array.isArray(story?.questions) ? story.questions : [],
+        })).filter((story) => story.title);
+      } else if (Array.isArray(initial.story_qas)) {
+        const grouped = new Map();
+        initial.story_qas.filter(Boolean).forEach((qa) => {
+          const storyTitle = String(qa?.story_title || '').trim();
+          const question = String(qa?.question || '').trim();
+          const answer = String(qa?.answer || '').trim();
+          if (!storyTitle || !question || !answer) return;
+          if (!grouped.has(storyTitle)) grouped.set(storyTitle, []);
+          grouped.get(storyTitle).push({ question, answer });
+        });
+        state.stories = Array.from(grouped.entries()).map(([title, qas]) => ({
+          title,
+          content: '',
+          qas: qas.slice(0, 6),
+        }));
+      } else if (Array.isArray(initial.passages)) {
+        state.stories = initial.passages.filter(Boolean).map((story) => ({
+          title: String(story?.title || '').trim(),
+          content: String(story?.text || story?.content || '').trim(),
+          qas: [],
+        })).filter((story) => story.title || story.content);
+      }
     }
   } catch (e) {}
 
   function syncHidden() {
-    hidden.value = JSON.stringify(state);
+    hidden.value = JSON.stringify({
+      words: state.words,
+      sentences: state.sentences,
+      stories: state.stories,
+      story_qas: state.stories.flatMap((story) => (story.qas || []).map((qa) => ({
+        story_title: String(story.title || '').trim(),
+        question: String(qa.question || '').trim(),
+        answer: String(qa.answer || '').trim(),
+      }))),
+    });
   }
-  function renderList(container, items, emptyText, removeAttr, factory) {
+  function renderList(container, items, emptyText, factory) {
     if (!items.length) {
       container.innerHTML = `<div class="text-center w-100 text-secondary py-3">${emptyText}</div>`;
       return;
     }
     container.innerHTML = items.map((item, index) => factory(item, index)).join('');
   }
+  function normalizeStories() {
+    state.stories = state.stories.map((story) => ({
+      title: String(story.title || '').trim(),
+      content: String(story.content || '').trim(),
+      qas: Array.from({ length: 6 }, (_, idx) => ({
+        question: String(story.qas?.[idx]?.question || '').trim(),
+        answer: String(story.qas?.[idx]?.answer || '').trim(),
+      })),
+    }));
+    if (!state.stories.length) {
+      state.stories.push({ title: '', content: '', qas: Array.from({ length: 6 }, () => ({ question: '', answer: '' })) });
+    }
+  }
+  function makeQaCard(storyIndex, qaIndex, qa) {
+    const n = qaIndex + 1;
+    return `<div class="story-qa-card">
+      <div class="fw-bold mb-2">${n}</div>
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <label class="form-label fw-bold">Question ${n} <span class="text-danger">*</span></label>
+          <textarea class="form-control" data-story-question="${storyIndex}-${qaIndex}" placeholder="Enter question ${n}..." rows="3" required>${qa.question || ''}</textarea>
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="form-label fw-bold">Answer ${n} <span class="text-danger">*</span></label>
+          <textarea class="form-control" data-story-answer="${storyIndex}-${qaIndex}" placeholder="Enter answer ${n}..." rows="3" required>${qa.answer || ''}</textarea>
+        </div>
+      </div>
+    </div>`;
+  }
+  function addStory() {
+    state.stories.push({ title: '', content: '', qas: Array.from({ length: 6 }, () => ({ question: '', answer: '' })) });
+    render();
+  }
   function render() {
-    renderList(wordChips, state.words, 'No word items added yet.', 'data-remove-word', (item, index) => `<span class="item-chip" data-word-chip="${index}">${item} <button type="button" aria-label="Remove word" data-remove-word="${index}">&times;</button></span>`);
-    renderList(sentenceChips, state.sentences, 'No sentence items added yet.', 'data-remove-sentence', (item, index) => `<span class="item-chip" data-sentence-chip="${index}">${item} <button type="button" aria-label="Remove sentence" data-remove-sentence="${index}">&times;</button></span>`);
-    renderList(paragraphChips, state.passages, 'No paragraph items added yet.', 'data-remove-paragraph', (item, index) => `<span class="item-chip" data-paragraph-chip="${index}"><span>${item.title || 'Untitled Paragraph'}</span><span class="small fw-normal d-block" style="max-width:320px;white-space:normal;">${item.text || ''}</span><button type="button" aria-label="Remove paragraph" data-remove-paragraph="${index}">&times;</button></span>`);
+    normalizeStories();
+    renderList(wordChips, state.words, 'No word items added yet.', (item, index) => `<span class="item-chip" data-word-chip="${index}">${item} <button type="button" aria-label="Remove word" data-remove-word="${index}">&times;</button></span>`);
+    renderList(sentenceChips, state.sentences, 'No sentence items added yet.', (item, index) => `<span class="item-chip" data-sentence-chip="${index}">${item} <button type="button" aria-label="Remove sentence" data-remove-sentence="${index}">&times;</button></span>`);
+    storyList.innerHTML = state.stories.map((story, storyIndex) => {
+      const qasHtml = story.qas.map((qa, qaIndex) => makeQaCard(storyIndex, qaIndex, qa)).join('');
+      return `<div class="story-qa-card" data-story-card="${storyIndex}">
+        <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+          <div>
+            <div class="fw-bold fs-5">Story Reading ${storyIndex + 1} <span class="text-danger">*</span></div>
+            <div class="locked-hint">Story content and all 6 pairs are required.</div>
+          </div>
+          ${state.stories.length > 1 ? `<button type="button" class="btn btn-outline-danger btn-sm" data-remove-story="${storyIndex}">Remove Story</button>` : ''}
+        </div>
+        <div class="item-input-row mb-3">
+          <textarea class="form-control" data-story-title="${storyIndex}" placeholder="Story reading title..." rows="2" required>${story.title || ''}</textarea>
+        </div>
+        <div class="item-input-row mb-3">
+          <textarea class="form-control" data-story-content="${storyIndex}" placeholder="Add story reading text..." rows="4" required>${story.content || ''}</textarea>
+        </div>
+        <div class="story-qa-grid mt-4">
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="fw-bold text-secondary">Question and Answer Pairs</div>
+            <div class="locked-hint">All 6 pairs are required.</div>
+          </div>
+          <div class="story-qa-grid">${qasHtml}</div>
+        </div>
+      </div>`;
+    }).join('');
     syncHidden();
 
     const titleReady = Boolean(titleInput.value.trim());
@@ -351,19 +345,21 @@
     const typeReady = typeEnabled && typeCommitted;
     const wordsReady = state.words.length >= 10;
     const sentencesReady = state.sentences.length >= 3;
-    const passagesReady = sentencesReady && state.passages.length > 0;
-    const storyQaReady = storyQaInputs.every((input) => String(input.value || '').trim().length > 0);
-    const materialsComplete = wordsReady && sentencesReady && passagesReady;
+    const storiesReady = sentencesReady && state.stories.length > 0 && state.stories.every((story) => {
+      const storyTitleReady = String(story.title || '').trim().length > 0;
+      const storyContentReady = String(story.content || '').trim().length > 0;
+      const qasReady = Array.isArray(story.qas) && story.qas.length === 6 && story.qas.every((qa) => String(qa.question || '').trim().length > 0 && String(qa.answer || '').trim().length > 0);
+      return storyTitleReady && storyContentReady && qasReady;
+    });
+    const materialsComplete = wordsReady && sentencesReady && storiesReady;
 
     assessmentTypeInput.disabled = !typeEnabled;
     wordInput.disabled = !typeReady;
     addWordBtn.disabled = !typeReady;
     sentenceInput.disabled = !wordsReady;
     addSentenceBtn.disabled = !wordsReady;
-    paragraphTitleInput.disabled = !sentencesReady;
-    paragraphContentInput.disabled = !sentencesReady;
-    addParagraphBtn.disabled = !sentencesReady;
-    saveBtn.disabled = !(titleReady && typeReady && wordsReady && sentencesReady && passagesReady && storyQaReady);
+    addStoryBtn.disabled = !sentencesReady;
+    saveBtn.disabled = !(titleReady && typeReady && wordsReady && sentencesReady && storiesReady);
 
     const wordCount = state.words.length;
     const sentenceCount = state.sentences.length;
@@ -373,13 +369,13 @@
     stepMaterials.className = `step-card ${typeReady ? (materialsComplete ? 'completed' : 'current') : 'locked'}`;
     wordStep.className = `step-card p-3 ${typeReady ? (wordsReady ? 'completed' : 'current') : 'locked'}`;
     sentenceStep.className = `step-card p-3 mt-3 ${wordsReady ? (sentencesReady ? 'completed' : 'current') : 'locked'}`;
-    paragraphStep.className = `step-card p-3 mt-3 ${sentencesReady ? (passagesReady && storyQaReady ? 'completed' : 'current') : 'locked'}`;
+    paragraphStep.className = `step-card p-3 mt-3 ${sentencesReady ? (storiesReady ? 'completed' : 'current') : 'locked'}`;
 
     typeState.className = `step-state ${titleReady ? (typeReady ? 'state-completed' : 'state-current') : 'state-locked'}`;
     materialsState.className = `step-state ${typeReady ? (materialsComplete ? 'state-completed' : 'state-current') : 'state-locked'}`;
     wordState.className = `step-state ${typeReady ? (wordsReady ? 'state-completed' : 'state-current') : 'state-locked'}`;
     sentenceState.className = `step-state ${wordsReady ? (sentencesReady ? 'state-completed' : 'state-current') : 'state-locked'}`;
-    paragraphState.className = `step-state ${sentencesReady ? (passagesReady && storyQaReady ? 'state-completed' : 'state-current') : 'state-locked'}`;
+    paragraphState.className = `step-state ${sentencesReady ? (storiesReady ? 'state-completed' : 'state-current') : 'state-locked'}`;
 
     stepTitle.querySelector('.step-state').className = `step-state ${titleReady ? 'state-completed' : 'state-current'}`;
     stepTitle.querySelector('.step-state').textContent = titleReady ? 'Completed' : 'Current';
@@ -387,108 +383,43 @@
     materialsState.textContent = typeReady ? (materialsComplete ? 'Completed' : 'Current') : 'Locked';
     wordState.textContent = typeReady ? (wordsReady ? 'Completed' : 'Current') : 'Locked';
     sentenceState.textContent = wordsReady ? (sentencesReady ? 'Completed' : 'Current') : 'Locked';
-    paragraphState.textContent = sentencesReady ? (passagesReady && storyQaReady ? 'Completed' : 'Current') : 'Locked';
+    paragraphState.textContent = sentencesReady ? (storiesReady ? 'Completed' : 'Current') : 'Locked';
 
     wordProgress.textContent = wordCount >= 10 ? `10 / 10 words ✓` : `${wordCount} / 10 words`;
     sentenceProgress.textContent = sentenceCount >= 3 ? `${sentenceCount} / 3 sentences ✓` : `${sentenceCount} / 3 sentences`;
-    paragraphProgress.textContent = sentencesReady ? 'Paragraphs are now available' : 'Available after 3 sentences';
-    materialsHint.textContent = !titleReady
-      ? 'Choose the assessment type to unlock the reading materials editor.'
-      : (materialsComplete
-        ? 'All required reading materials have been completed.'
-        : 'Complete the Word, Sentence, Story Reading, and Question and Answer requirements.');
+    paragraphProgress.textContent = sentencesReady ? 'Stories are now available' : 'Available after 3 sentences';
+    materialsHint.textContent = !titleReady ? 'Choose the assessment type to unlock the reading materials editor.' : (materialsComplete ? 'All required reading materials have been completed.' : 'Complete the Word, Sentence, Story Reading, and Question and Answer requirements.');
   }
-
-  function addWord() {
-    const value = String(wordInput.value || '').trim();
-    if (!value) return;
-    if (state.words.length >= 10) {
-      wordInput.value = '';
-      render();
-      return;
-    }
-    state.words.push(value);
-    wordInput.value = '';
-    render();
-  }
-  function addSentence() {
-    const value = String(sentenceInput.value || '').trim();
-    if (!value) return;
-    state.sentences.push(value);
-    sentenceInput.value = '';
-    render();
-  }
-  function addParagraph() {
-    const title = String(paragraphTitleInput.value || '').trim();
-    const text = String(paragraphContentInput.value || '').trim();
-    if (!title && !text) return;
-    state.passages.push({ title, text });
-    paragraphTitleInput.value = '';
-    paragraphContentInput.value = '';
-    render();
-  }
-
-  wordChips.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-remove-word]');
-    if (!btn) return;
-    state.words.splice(Number(btn.getAttribute('data-remove-word')), 1);
-    render();
-  });
-  sentenceChips.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-remove-sentence]');
-    if (!btn) return;
-    state.sentences.splice(Number(btn.getAttribute('data-remove-sentence')), 1);
-    render();
-  });
-  paragraphChips.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-remove-paragraph]');
-    if (!btn) return;
-    state.passages.splice(Number(btn.getAttribute('data-remove-paragraph')), 1);
-    render();
-  });
-
+  function addWord() { const value = String(wordInput.value || '').trim(); if (!value) return; if (state.words.length >= 10) { wordInput.value = ''; render(); return; } state.words.push(value); wordInput.value = ''; render(); }
+  function addSentence() { const value = String(sentenceInput.value || '').trim(); if (!value) return; state.sentences.push(value); sentenceInput.value = ''; render(); }
+  wordChips.addEventListener('click', (e) => { const btn = e.target.closest('[data-remove-word]'); if (!btn) return; state.words.splice(Number(btn.getAttribute('data-remove-word')), 1); render(); });
+  sentenceChips.addEventListener('click', (e) => { const btn = e.target.closest('[data-remove-sentence]'); if (!btn) return; state.sentences.splice(Number(btn.getAttribute('data-remove-sentence')), 1); render(); });
   addWordBtn.addEventListener('click', addWord);
   addSentenceBtn.addEventListener('click', addSentence);
-  addParagraphBtn.addEventListener('click', addParagraph);
+  addStoryBtn.addEventListener('click', addStory);
   titleInput.addEventListener('input', render);
-  assessmentTypeInput.addEventListener('change', () => {
-    if (!assessmentTypeInput.disabled && titleInput.value.trim()) {
-      typeCommitted = true;
-    }
+  assessmentTypeInput.addEventListener('change', () => { if (!assessmentTypeInput.disabled && titleInput.value.trim()) { typeCommitted = true; } render(); });
+  wordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addWord(); } });
+  sentenceInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addSentence(); } });
+  form.addEventListener('input', (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLTextAreaElement)) return;
+    const titleKey = target.getAttribute('data-story-title');
+    const contentKey = target.getAttribute('data-story-content');
+    const questionKey = target.getAttribute('data-story-question');
+    const answerKey = target.getAttribute('data-story-answer');
+    if (titleKey !== null) { const story = state.stories[Number(titleKey)]; if (story) story.title = target.value; }
+    else if (contentKey !== null) { const story = state.stories[Number(contentKey)]; if (story) story.content = target.value; }
+    else if (questionKey !== null) { const [storyIndex, qaIndex] = questionKey.split('-').map(Number); const story = state.stories[storyIndex]; if (story?.qas?.[qaIndex]) story.qas[qaIndex].question = target.value; }
+    else if (answerKey !== null) { const [storyIndex, qaIndex] = answerKey.split('-').map(Number); const story = state.stories[storyIndex]; if (story?.qas?.[qaIndex]) story.qas[qaIndex].answer = target.value; }
+    else return;
     render();
   });
-  wordInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      addWord();
-    }
-  });
-  sentenceInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      addSentence();
-    }
-  });
-  [paragraphTitleInput, paragraphContentInput].forEach((el) => {
-    el.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey && e.target === paragraphContentInput) {
-        e.preventDefault();
-        addParagraph();
-      }
-    });
-  });
-  storyQaInputs.forEach((input) => {
-    input.addEventListener('input', render);
-  });
-  document.getElementById('officialAssessmentForm').addEventListener('submit', (e) => {
-    render();
-    if (saveBtn.disabled) e.preventDefault();
-  });
-
-  if (titleInput.value.trim() && assessmentTypeInput.value.trim() && !assessmentTypeInput.disabled) {
-    typeCommitted = Boolean(assessmentTypeInput.dataset.prefilledCommitted === 'true');
-  }
+  form.addEventListener('click', (e) => { const btn = e.target.closest('[data-remove-story]'); if (!btn || state.stories.length <= 1) return; state.stories.splice(Number(btn.getAttribute('data-remove-story')), 1); render(); });
+  form.addEventListener('submit', (e) => { render(); if (saveBtn.disabled) e.preventDefault(); });
+  if (titleInput.value.trim() && assessmentTypeInput.value.trim() && !assessmentTypeInput.disabled) { typeCommitted = Boolean(assessmentTypeInput.dataset.prefilledCommitted === 'true'); }
   render();
 })();
 </script>
 {% endblock %}
+
