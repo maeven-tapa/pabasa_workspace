@@ -164,7 +164,7 @@ EMAIL_HOST_PASSWORD = 'sfsy zplk rmku bdxt'
 DEFAULT_FROM_EMAIL = 'pabasa.tupc@gmail.com'
 
 # Google Cloud Speech-to-Text settings used by the reading assessment UI.
-GOOGLE_STT_API_KEY = 'AIzaSyD1NqLTpMSzmkAdFX6UpcuJ-y4bT9mrXbk'
+GOOGLE_STT_API_KEY = 'AIzaSyDPMgJX8t195Z9bfoID2gwlG5oPhBVK_tk'
 GOOGLE_CLOUD_PROJECT_ID = 'direct-outlet-499701-p6'
 GOOGLE_STT_LOCATION = 'us'
 GOOGLE_STT_MODEL = 'latest_short'
