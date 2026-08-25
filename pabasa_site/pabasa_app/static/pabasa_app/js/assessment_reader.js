@@ -35,7 +35,14 @@
         const storyReadingProgress = document.getElementById("storyReadingProgress");
         const storyQuestionPanel = document.getElementById("storyQuestionPanel");
         const storyQuestionTitle = document.getElementById("storyQuestionTitle");
-        const storyQuestionList = document.getElementById("storyQuestionList");
+        const storyQuestionCounter = document.getElementById("storyQuestionCounter");
+        const storyQuestionProgressFill = document.getElementById("storyQuestionProgressFill");
+        const storyQuestionText = document.getElementById("storyQuestionText");
+        const storyAnswerText = document.getElementById("storyAnswerText");
+        const storyQuestionBackBtn = document.getElementById("storyQuestionBackBtn");
+        const storyQuestionNextBtn = document.getElementById("storyQuestionNextBtn");
+        const storyQuestionFinishBtn = document.getElementById("storyQuestionFinishBtn");
+        const storyQuestionCompletion = document.getElementById("storyQuestionCompletion");
         const completionCount = document.getElementById("completionCount");
         const completionLevel = document.getElementById("completionLevel");
         const btnStartReading = document.getElementById("btnStartReading");
@@ -180,6 +187,8 @@
         let currentStoryState = "story_selection";
         let currentAssessmentUiMode = "standard";
         let currentStorySegmentIndex = 0;
+        let currentStoryQuestions = [];
+        let currentStoryQuestionIndex = 0;
         let syllableStitchingContext = "";
         let syllableStitchingContextAt = 0;
         const syllableStitchingWindowMs = 4000;
@@ -236,7 +245,8 @@
             const enabled = Boolean(isVisible);
             const shouldRender = enabled
                 && !shell?.classList.contains("is-story-selection")
-                && !shell?.classList.contains("is-story-ready-state");
+                && !shell?.classList.contains("is-story-ready-state")
+                && !["story_comprehension", "story_complete"].includes(currentStoryState);
             speechPanel?.classList.toggle("d-none", !shouldRender);
             speechPanel?.toggleAttribute("hidden", !shouldRender);
             speechPanel?.setAttribute("aria-hidden", String(!shouldRender));
@@ -536,6 +546,74 @@
             return questions;
         }
 
+        function getVisibleStoryAnswerText() {
+            const transcript = String(speechTranscript?.textContent || "").trim();
+            if (!transcript || transcript === "No words recognized yet. Keep reading clearly.") return "";
+            return transcript;
+        }
+
+        function syncStoryAnswerText() {
+            if (!storyAnswerText) return;
+            const answer = getVisibleStoryAnswerText();
+            storyAnswerText.textContent = answer || "Your answer will appear here.";
+            storyAnswerText.classList.toggle("is-empty", !answer);
+        }
+
+        function updateStoryQuestionProgress() {
+            const total = Math.max(1, currentStoryQuestions.length || 6);
+            const current = Math.min(currentStoryQuestionIndex + 1, total);
+            if (storyQuestionCounter) {
+                storyQuestionCounter.textContent = `Question ${current} of ${total}`;
+            }
+            if (storyQuestionProgressFill) {
+                storyQuestionProgressFill.style.width = `${(current / total) * 100}%`;
+            }
+            if (storyQuestionBackBtn) {
+                storyQuestionBackBtn.disabled = currentStoryQuestionIndex <= 0;
+            }
+            if (storyQuestionNextBtn) {
+                const isLast = currentStoryQuestionIndex >= total - 1;
+                storyQuestionNextBtn.textContent = isLast ? "Finish" : "Next →";
+            }
+        }
+
+        function renderCurrentStoryQuestion() {
+            const question = currentStoryQuestions[currentStoryQuestionIndex] || null;
+            if (storyQuestionTitle) {
+                storyQuestionTitle.textContent = currentSelectedStory?.title || "Reading Comprehension";
+            }
+            if (storyQuestionText) {
+                storyQuestionText.textContent = question?.question || "No comprehension question is available for this story.";
+            }
+            syncStoryAnswerText();
+            updateStoryQuestionProgress();
+        }
+
+        function showStoryCompletionScreen() {
+            currentStoryState = "story_complete";
+            storyQuestionPanel?.classList.add("is-complete");
+            if (storyQuestionCompletion) storyQuestionCompletion.classList.remove("d-none");
+            storyQuestionPanel?.classList.remove("d-none");
+            [storyQuestionTitle, storyQuestionCounter, storyQuestionProgressFill, storyQuestionText, storyAnswerText, storyQuestionBackBtn, storyQuestionNextBtn].forEach((node) => {
+                if (node) {
+                    node.classList.add("d-none");
+                }
+            });
+            if (storyQuestionBackBtn) storyQuestionBackBtn.disabled = true;
+            if (storyQuestionNextBtn) storyQuestionNextBtn.disabled = true;
+            if (storyQuestionFinishBtn) storyQuestionFinishBtn.disabled = false;
+        }
+
+        function hideStoryCompletionScreen() {
+            storyQuestionPanel?.classList.remove("is-complete");
+            if (storyQuestionCompletion) storyQuestionCompletion.classList.add("d-none");
+            [storyQuestionTitle, storyQuestionCounter, storyQuestionProgressFill, storyQuestionText, storyAnswerText, storyQuestionBackBtn, storyQuestionNextBtn].forEach((node) => {
+                if (node) {
+                    node.classList.remove("d-none");
+                }
+            });
+        }
+
         function hideStoryPanels() {
             storySelectionPanel?.classList.add("d-none");
             storyQuestionPanel?.classList.add("d-none");
@@ -554,27 +632,12 @@
         }
 
         function renderStoryQuestions(storyTitle) {
-            if (!storyQuestionPanel || !storyQuestionList) return;
             const questions = getStoryQuestionsForTitle(storyTitle);
-            storyQuestionList.replaceChildren();
-            if (!questions.length) {
-                const empty = document.createElement("div");
-                empty.className = "story-question-empty";
-                empty.textContent = "No comprehension questions are attached to this story.";
-                storyQuestionList.appendChild(empty);
-            } else {
-                questions.forEach((item, index) => {
-                    const card = document.createElement("div");
-                    card.className = "story-question-card";
-                    const label = document.createElement("strong");
-                    label.textContent = `Question ${index + 1}`;
-                    const question = document.createElement("p");
-                    question.textContent = item.question;
-                    card.append(label, question);
-                    storyQuestionList.appendChild(card);
-                });
-            }
+            currentStoryQuestions = questions.length ? questions.slice(0, 6) : [];
+            currentStoryQuestionIndex = 0;
             if (storyQuestionTitle) storyQuestionTitle.textContent = storyTitle || "Selected story";
+            hideStoryCompletionScreen();
+            renderCurrentStoryQuestion();
         }
 
         function renderStorySelectionState() {
@@ -656,12 +719,18 @@
             currentAssessmentUiMode = "story";
             hideStoryPanels();
             if (storyQuestionPanel) storyQuestionPanel.classList.remove("d-none");
+            if (readingWord) {
+                readingWord.hidden = true;
+                readingWord.textContent = "";
+            }
+            if (readingTitle) readingTitle.hidden = true;
+            storyReadingProgress?.classList.add("d-none");
             renderStoryQuestions(storyTitle);
             btnStartReading?.classList.add("d-none");
             btnStopReading?.classList.add("d-none");
             btnReadAloud?.classList.add("d-none");
-            prevBtn?.classList.remove("d-none");
-            nextBtn?.classList.remove("d-none");
+            prevBtn?.classList.add("d-none");
+            nextBtn?.classList.add("d-none");
             updateFooterForStoryState("story_comprehension");
         }
 
@@ -754,6 +823,7 @@
             shell?.classList.toggle("is-story-ready", nextState !== "story_selection");
             shell?.classList.toggle("is-story-ready-state", nextState === "story_ready");
             shell?.classList.toggle("is-story-reading", nextState === "story_reading");
+            shell?.classList.toggle("is-story-comprehension", ["story_comprehension", "story_complete"].includes(nextState));
             if (nextState !== "story_reading") btnStartReading?.classList.remove("is-playing");
             if (nextState === "story_selection") {
                 btnStartReading?.classList.add("d-none");
@@ -778,8 +848,8 @@
                 btnStartReading?.classList.add("d-none");
                 btnStopReading?.classList.add("d-none");
                 btnReadAloud?.classList.add("d-none");
-                prevBtn?.classList.remove("d-none");
-                nextBtn?.classList.remove("d-none");
+                prevBtn?.classList.add("d-none");
+                nextBtn?.classList.add("d-none");
             }
 
             const debugEnabled = speechDebugToggle?.checked || localStorage.getItem("pabasaShowSpeechDebugPanel") === "true";
@@ -1776,6 +1846,9 @@
             if (status) status.textContent = message;
             if (speechTranscript) speechTranscript.textContent = transcriptText;
             if (readingHelperText) readingHelperText.textContent = transcriptText;
+            if (currentStoryState === "story_comprehension" || currentStoryState === "story_complete") {
+                syncStoryAnswerText();
+            }
         }
 
         function setRawMicInput(value) {
@@ -3775,6 +3848,28 @@
             window.location.assign('/dashboard/assessment/');
         }
 
+        storyQuestionBackBtn?.addEventListener("click", () => {
+            if (!currentStoryQuestions.length) return;
+            if (currentStoryQuestionIndex > 0) {
+                currentStoryQuestionIndex -= 1;
+                renderCurrentStoryQuestion();
+            }
+        });
+
+        storyQuestionNextBtn?.addEventListener("click", () => {
+            if (!currentStoryQuestions.length) return;
+            if (currentStoryQuestionIndex < currentStoryQuestions.length - 1) {
+                currentStoryQuestionIndex += 1;
+                renderCurrentStoryQuestion();
+                return;
+            }
+            showStoryCompletionScreen();
+        });
+
+        storyQuestionFinishBtn?.addEventListener("click", () => {
+            goBackToAssessments();
+        });
+
         prevBtn?.addEventListener("click", () => { 
             if (currentStoryState === "story_reading" && currentSelectedStory) {
                 if (currentPageIndex > 0) {
@@ -3788,7 +3883,10 @@
                 return;
             }
             if (currentStoryState === "story_comprehension" && currentSelectedStory) {
-                renderStoryReadingState(currentSelectedStory);
+                if (currentStoryQuestionIndex > 0) {
+                    currentStoryQuestionIndex -= 1;
+                    renderCurrentStoryQuestion();
+                }
                 return;
             }
             goToPreviousPageOrItem();
@@ -3809,7 +3907,7 @@
                 return;
             }
             if (currentStoryState === "story_comprehension") {
-                showCompletion(true);
+                storyQuestionNextBtn?.click();
                 return;
             }
             goToNextPageOrItem();

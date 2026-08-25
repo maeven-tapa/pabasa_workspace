@@ -2070,6 +2070,262 @@
             flex: 1 1 220px;
         }
 
+        #storyQuestionPanel {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .reader-shell.is-story-comprehension .read-helper,
+        .reader-shell.is-story-comprehension .speech-panel {
+            display: none !important;
+        }
+
+        #storyQuestionPanel .story-question-shell {
+            display: grid;
+            gap: 1rem;
+            margin-inline: auto;
+            max-width: 920px;
+            width: 100%;
+        }
+
+        #storyQuestionPanel .story-question-head {
+            display: grid;
+            gap: 0.35rem;
+            justify-items: center;
+            text-align: center;
+        }
+
+        #storyQuestionPanel .story-question-kicker {
+            margin: 0;
+            color: var(--accent-deep);
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: 0.76rem;
+            font-weight: 900;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        #storyQuestionPanel .story-question-titlebar {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+
+        #storyQuestionPanel .story-question-titlebar h2 {
+            margin: 0;
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: clamp(1.65rem, 4vw, 2.35rem);
+            font-weight: 900;
+            line-height: 1.15;
+            text-align: center;
+            width: 100%;
+        }
+
+        #storyQuestionPanel .story-question-counter {
+            display: inline-flex;
+            align-items: center;
+            min-height: 34px;
+            padding: 0.2rem 0.75rem;
+            border-radius: 999px;
+            background: rgba(31, 111, 139, 0.08);
+            border: 1px solid rgba(31, 111, 139, 0.12);
+            color: var(--accent-deep);
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: 0.82rem;
+            font-weight: 900;
+            white-space: nowrap;
+            justify-self: center;
+            opacity: 0.78;
+        }
+
+        #storyQuestionPanel .story-question-progress {
+            display: grid;
+            gap: 0.45rem;
+        }
+
+        #storyQuestionPanel .story-question-progress-track {
+            width: 100%;
+            height: 10px;
+            border-radius: 999px;
+            background: #edf1ec;
+            overflow: hidden;
+            border: 1px solid rgba(31, 111, 139, 0.12);
+        }
+
+        #storyQuestionPanel .story-question-progress-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, var(--warm), var(--accent));
+            transition: width 0.2s ease;
+        }
+
+        #storyQuestionPanel .story-question-card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,253,247,0.96));
+            border: 1px solid rgba(31, 111, 139, 0.12);
+            border-radius: 22px;
+            box-shadow: 0 14px 32px rgba(27, 26, 23, 0.08);
+            padding: 1.1rem 1.1rem 1rem;
+            display: grid;
+            gap: 0.85rem;
+            justify-items: center;
+            text-align: center;
+        }
+
+        #storyQuestionPanel .story-question-label {
+            margin: 0;
+            color: var(--leaf);
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: 0.74rem;
+            font-weight: 900;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        #storyQuestionPanel .story-question-body {
+            margin: 0;
+            color: var(--ink);
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: clamp(1.25rem, 2.5vw, 1.7rem);
+            font-weight: 800;
+            line-height: 1.35;
+            max-width: 760px;
+        }
+
+        #storyQuestionPanel .story-answer-card {
+            background: rgba(217, 238, 244, 0.36);
+            border: 1px solid rgba(31, 111, 139, 0.12);
+            border-radius: 18px;
+            padding: 0.95rem 1rem;
+            display: grid;
+            gap: 0.5rem;
+            justify-items: center;
+            text-align: center;
+        }
+
+        #storyQuestionPanel .story-answer-label {
+            margin: 0;
+            color: var(--accent-deep);
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: 0.78rem;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        #storyQuestionPanel .story-answer-text {
+            min-height: 64px;
+            border-radius: 14px;
+            background: #fff;
+            border: 1px dashed rgba(31, 111, 139, 0.2);
+            color: var(--ink);
+            font-size: 1rem;
+            line-height: 1.55;
+            padding: 0.9rem 1rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            width: 100%;
+        }
+
+        #storyQuestionPanel .story-answer-text.is-empty {
+            color: var(--muted);
+        }
+
+        #storyQuestionPanel .story-question-nav {
+            align-items: stretch;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.85rem;
+        }
+
+        #storyQuestionPanel .story-question-nav .btn,
+        #storyQuestionPanel .story-completion-card .btn {
+            min-height: 54px;
+            border-radius: 999px;
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-weight: 900;
+            font-size: 1rem;
+        }
+
+        #storyQuestionPanel .story-question-finish-reading-btn {
+            background: #20b957;
+            border: 0;
+            box-shadow: 0 8px 18px rgba(32, 185, 87, 0.2);
+            color: #fff;
+        }
+
+        #storyQuestionPanel .story-question-read-aloud-btn {
+            background: var(--accent);
+            border: 0;
+            color: #fff;
+        }
+
+        #storyQuestionPanel .story-question-finish-reading-btn:hover,
+        #storyQuestionPanel .story-question-read-aloud-btn:hover {
+            color: #fff;
+            filter: brightness(0.96);
+        }
+
+        #storyQuestionPanel .story-completion-card {
+            display: grid;
+            justify-items: center;
+            text-align: center;
+            gap: 1rem;
+            padding: 1.5rem 1.15rem;
+            background: linear-gradient(180deg, rgba(255,255,255,0.99), rgba(255,253,247,0.96));
+            border: 1px solid rgba(31, 111, 139, 0.12);
+            border-radius: 24px;
+            box-shadow: 0 14px 32px rgba(27, 26, 23, 0.08);
+        }
+
+        #storyQuestionPanel .story-completion-badge {
+            width: 76px;
+            height: 76px;
+            border-radius: 24px;
+            display: grid;
+            place-items: center;
+            background: rgba(122, 139, 95, 0.14);
+            color: var(--leaf);
+            font-size: 2rem;
+        }
+
+        #storyQuestionPanel .story-completion-card h3 {
+            margin: 0;
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: clamp(1.5rem, 3vw, 2.1rem);
+            font-weight: 900;
+            line-height: 1.15;
+        }
+
+        #storyQuestionPanel .story-completion-card p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 1rem;
+            max-width: 34rem;
+        }
+
+        #storyQuestionPanel.is-complete .story-question-card,
+        #storyQuestionPanel.is-complete .story-answer-card,
+        #storyQuestionPanel.is-complete .story-question-nav,
+        #storyQuestionPanel.is-complete .story-question-head {
+            display: none;
+        }
+
+        @media (max-width: 760px) {
+            #storyQuestionPanel .story-question-nav {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 460px) {
+            #storyQuestionPanel .story-question-nav {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .assessment-card-wrapper,
         .reader-container {
             height: auto !important;
@@ -2579,11 +2835,39 @@
                     <div class="story-selection-grid" id="storySelectionGrid"></div>
                 </section>
                 <section class="story-question-panel d-none" id="storyQuestionPanel" aria-live="polite" aria-atomic="true">
-                    <div class="story-question-head">
-                        <p class="eyebrow mb-1">Comprehension Questions</p>
-                        <h2 class="story-question-title" id="storyQuestionTitle">Answer the questions</h2>
+                    <div class="story-question-shell">
+                        <div class="story-question-head">
+                            <p class="story-question-kicker">READING COMPREHENSION</p>
+                            <div class="story-question-titlebar">
+                                <h2 class="story-question-title" id="storyQuestionTitle">Answer the questions</h2>
+                                <span class="story-question-counter" id="storyQuestionCounter">Question 1 of 6</span>
+                            </div>
+                            <div class="story-question-progress" aria-hidden="true">
+                                <div class="story-question-progress-track">
+                                    <div class="story-question-progress-fill" id="storyQuestionProgressFill"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="story-question-card">
+                            <p class="story-question-label">Question</p>
+                            <p class="story-question-body" id="storyQuestionText">Loading question...</p>
+                        </div>
+                        <div class="story-answer-card" aria-live="polite" aria-atomic="true">
+                            <p class="story-answer-label">Your answer</p>
+                            <div class="story-answer-text is-empty" id="storyAnswerText">Your answer will appear here.</div>
+                        </div>
+                        <div class="story-question-nav">
+                            <button class="btn btn-outline-secondary" id="storyQuestionBackBtn" type="button">← Back</button>
+                            <button class="btn story-question-finish-reading-btn" id="storyQuestionFinishReadingBtn" type="button">Finish Reading</button>
+                            <button class="btn story-question-read-aloud-btn" id="storyQuestionReadAloudBtn" type="button">🔊 Read Aloud</button>
+                            <button class="btn btn-primary" id="storyQuestionNextBtn" type="button">Next →</button>
+                        </div>
+                        <div class="story-completion-card d-none" id="storyQuestionCompletion">
+                            <h3>Great job!</h3>
+                            <p>You finished the comprehension questions.</p>
+                            <button class="btn btn-primary" id="storyQuestionFinishBtn" type="button">Finish Assessment →</button>
+                        </div>
                     </div>
-                    <div class="story-question-list" id="storyQuestionList"></div>
                 </section>
                 <div class="speech-panel d-none" id="speechPanel" hidden aria-hidden="true">
                     <strong id="speechStatus">Ready to start reading</strong>

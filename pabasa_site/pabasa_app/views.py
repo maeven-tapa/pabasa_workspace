@@ -8391,6 +8391,139 @@ def reading_word_page(request):
     return render(request, 'pabasa_app/reading_word_page.html', context)
 
 @xframe_options_sameorigin
+def picture_word_matching_page(request):
+    """Render the dedicated, non-oral Picture-Word Matching student activity."""
+    access_response = _enforce_student_access_for_request(request)
+    if access_response:
+        return access_response
+    _, material_id = _parse_prefixed_id(request.GET.get('id') or request.GET.get('material_id'))
+    material = Material.objects.filter(pk=material_id).first() if material_id else None
+    if not material or not _is_picture_word_matching_material(material):
+        return redirect('assessment')
+    content_json = material.content_json if isinstance(material.content_json, dict) else {}
+    # Backfill legacy shapes for display; new records are normalized before save.
+    content_json = _normalize_picture_word_matching_content(content_json)
+    student_user = User.objects.filter(id=request.session.get('user_id'), role='student').first()
+    completed_result = None
+    if student_user:
+        completed_result = material.assessment_results.filter(
+            student=student_user,
+            attempt_status='completed',
+        ).order_by('-completed_at', '-created_at', '-id').first()
+    completion_payload = None
+    if completed_result:
+        result_details = []
+        remarks = str(getattr(completed_result, 'remarks', '') or '')
+        result_prefix = 'PICTURE_WORD_MATCHING_RESULT:'
+        if remarks.startswith(result_prefix):
+            try:
+                saved_result = json.loads(remarks[len(result_prefix):])
+                if isinstance(saved_result, dict) and isinstance(saved_result.get('matches'), list):
+                    result_details = saved_result['matches']
+            except (TypeError, ValueError, json.JSONDecodeError):
+                result_details = []
+        total_items = int(getattr(completed_result, 'items_completed', 0) or len(content_json.get('items') or []))
+        correct_items = min(total_items, int(getattr(completed_result, 'correct_items', 0) or 0))
+        accuracy = getattr(completed_result, 'accuracy', None)
+        if accuracy is None:
+            accuracy = getattr(completed_result, 'total_score', None)
+        if accuracy is None:
+            accuracy = round((correct_items / total_items) * 100, 2) if total_items else 0
+        completion_payload = {
+            'completed': True,
+            'correct_items': correct_items,
+            'total_items': total_items,
+            'accuracy': accuracy,
+            'matches': result_details,
+        }
+    context = _dashboard_context(request)
+    context['picture_word_material_json'] = json.dumps({
+        'id': material.id,
+        'title': material.title or 'Picture-Word Matching',
+        'language': content_json.get('language') or getattr(material, 'language', '') or 'English',
+        'items': content_json.get('items') if isinstance(content_json.get('items'), list) else [],
+    }, default=str, separators=(',', ':'))
+    context['picture_word_completion_json'] = json.dumps(completion_payload or {}, default=str, separators=(',', ':'))
+    return render(request, 'pabasa_app/picture_word_matching_page.html', context)
+
+@xframe_options_sameorigin
+def syllable_blending_page(request):
+    """Dedicated no-keyboard Syllable Blending experience for students."""
+    access_response = _enforce_student_access_for_request(request)
+    if access_response:
+        return access_response
+    _, material_id = _parse_prefixed_id(request.GET.get('id') or request.GET.get('material_id'))
+    material = Material.objects.filter(pk=material_id).first() if material_id else None
+    if not _is_syllable_blending_material(material):
+        return redirect('assessment')
+    content = dict(material.content_json or {})
+    activity_id = str(content.get('activity_id') or '').strip().lower()
+    language = 'English' if str(content.get('language') or '').lower().startswith('eng') else 'Filipino'
+    activity_format = normalize_format(content.get('activity_format'))
+    activity_id_match = re.fullmatch(r'(filipino|english)_(syllable_combination|big_box)_(0[1-5])', activity_id)
+    has_complete_content = isinstance(content.get('items'), list) and len(content['items']) == 5
+    identity_matches = bool(
+        activity_id_match
+        and activity_id_match.group(1) == language.lower()
+        and activity_id_match.group(2) == activity_format
+    )
+    if not has_complete_content or not identity_matches:
+        return HttpResponse(
+            'This Syllable Blending activity is missing its assigned prebuilt content. Please ask your teacher to assign it again.',
+            status=400,
+            content_type='text/plain; charset=utf-8',
+        )
+    student_user = User.objects.filter(id=request.session.get('user_id'), role='student').first()
+    completion_payload = None
+    progress_payload = {}
+    if student_user:
+        completed_result = material.assessment_results.filter(
+            student=student_user, attempt_status='completed',
+        ).order_by('-completed_at', '-created_at', '-id').first()
+        if completed_result:
+            saved_responses = []
+            saved_discovered_words = []
+            saved_used_syllables = []
+            saved_discovery_attempts = []
+            remarks = str(getattr(completed_result, 'remarks', '') or '')
+            result_prefix = 'SYLLABLE_BLENDING_RESULT:'
+            if remarks.startswith(result_prefix):
+                try:
+                    saved_result = json.loads(remarks[len(result_prefix):])
+                    if isinstance(saved_result, dict) and isinstance(saved_result.get('responses'), list):
+                        saved_responses = saved_result['responses']
+                        saved_discovered_words = saved_result.get('discovered_words') if isinstance(saved_result.get('discovered_words'), list) else []
+                        saved_used_syllables = saved_result.get('used_syllables') if isinstance(saved_result.get('used_syllables'), list) else []
+                        saved_discovery_attempts = saved_result.get('discovery_attempts') if isinstance(saved_result.get('discovery_attempts'), list) else []
+                except (TypeError, ValueError, json.JSONDecodeError):
+                    saved_responses = []
+            total_items = int(getattr(completed_result, 'items_completed', 0) or len(content.get('items') or []))
+            correct_items = min(total_items, int(getattr(completed_result, 'correct_items', 0) or 0))
+            accuracy = getattr(completed_result, 'accuracy', None)
+            if accuracy is None:
+                accuracy = round((correct_items / total_items) * 100, 2) if total_items else 0
+            completion_payload = {
+                'completed': True, 'correct_items': correct_items, 'total_items': total_items,
+                'accuracy': accuracy, 'responses': saved_responses,
+                'discovered_words': saved_discovered_words,
+                'used_syllables': saved_used_syllables,
+                'discovery_attempts': saved_discovery_attempts,
+            }
+        state = _get_user_state(student_user)
+        progress_store = state.get('interactive_activity_progress') if isinstance(state, dict) else {}
+        if isinstance(progress_store, dict):
+            saved_progress = progress_store.get(str(material.id))
+            if isinstance(saved_progress, dict) and saved_progress.get('activity_type') == 'syllable_blending':
+                progress_payload = saved_progress
+    context = _dashboard_context(request)
+    context['syllable_blending_material_json'] = json.dumps({
+        'id': material.id, 'title': 'Syllable Blending', **content,
+    }, default=str, separators=(',', ':'))
+    context['syllable_blending_progress_json'] = json.dumps(progress_payload, default=str, separators=(',', ':'))
+    context['syllable_blending_completion_json'] = json.dumps(completion_payload or {}, default=str, separators=(',', ':'))
+    return render(request, 'pabasa_app/syllable_blending_page.html', context)
+
+@xframe_options_sameorigin
 def reading_sentence_page(request):
     access_response = _enforce_student_access_for_request(request)
     if access_response:
