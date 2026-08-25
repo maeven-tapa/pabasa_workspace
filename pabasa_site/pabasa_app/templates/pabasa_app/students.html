@@ -258,6 +258,25 @@
         padding-right: 8px;
     }
 
+    .crla-directory-controls {
+        align-items: end;
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: minmax(160px, 0.75fr) minmax(220px, 1fr) auto;
+        margin-bottom: 1rem;
+        padding: 0 8px;
+    }
+
+    .crla-directory-controls .student-filter-wrap { width: 100%; }
+    .crla-directory-controls .student-export-btn { min-height: 48px; }
+
+    @media (max-width: 767.98px) {
+        .crla-directory-controls {
+            align-items: stretch;
+            grid-template-columns: 1fr;
+        }
+    }
+
     .student-card-row {
         align-items: center;
         background: rgba(255, 255, 255, 0.94) !important;
@@ -606,7 +625,7 @@
         outline: none;
     }
 
-    .student-directory-controls .student-export-btn {
+    :is(.student-directory-controls, .crla-directory-controls) .student-export-btn {
         align-items: center;
         background: rgba(239, 248, 252, 0.95);
         border: 1px solid rgba(22, 95, 143, 0.18);
@@ -626,7 +645,7 @@
         white-space: nowrap;
     }
 
-    .student-directory-controls .student-export-btn:hover:not(:disabled) {
+    :is(.student-directory-controls, .crla-directory-controls) .student-export-btn:hover:not(:disabled) {
         background: rgba(226, 242, 248, 0.98);
         border-color: rgba(22, 95, 143, 0.28);
         box-shadow: 0 12px 24px rgba(15, 23, 42, 0.09);
@@ -634,24 +653,24 @@
         transform: translateY(-1px);
     }
 
-    .student-directory-controls .student-export-btn:focus-visible {
+    :is(.student-directory-controls, .crla-directory-controls) .student-export-btn:focus-visible {
         box-shadow: 0 0 0 0.2rem rgba(22, 95, 143, 0.2), 0 12px 24px rgba(15, 23, 42, 0.09);
         outline: none;
     }
 
-    .student-directory-controls .student-export-btn:active:not(:disabled) {
+    :is(.student-directory-controls, .crla-directory-controls) .student-export-btn:active:not(:disabled) {
         background: rgba(214, 235, 243, 0.98);
         box-shadow: 0 6px 12px rgba(15, 23, 42, 0.08);
         transform: translateY(0);
     }
 
-    .student-directory-controls .student-export-btn i {
+    :is(.student-directory-controls, .crla-directory-controls) .student-export-btn i {
         color: var(--dash-primary);
         font-size: 0.95rem;
         line-height: 1;
     }
 
-    .student-directory-controls .student-export-btn:disabled {
+    :is(.student-directory-controls, .crla-directory-controls) .student-export-btn:disabled {
         cursor: not-allowed;
         opacity: 0.7;
         box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
@@ -1247,11 +1266,35 @@
                             </button>
                         </div>
                     </div>
-                    <button type="button" class="btn btn-sm student-export-btn" id="exportStudentsBtn" disabled>
-                        <i class="bi bi-filetype-xlsx" aria-hidden="true"></i>
-                        <span>Export</span>
-                    </button>
                 </div>
+            </div>
+
+            <div class="crla-directory-controls" aria-label="CRLA result filters">
+                <div class="student-filter-wrap directory-select" id="termFilterWrap" data-default="1">
+                    <button type="button" class="student-filter-trigger" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="student-filter-trigger-text"><span class="student-filter-label">Term</span><span class="student-filter-value">Term 1</span></span>
+                        <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                    </button>
+                    <div class="student-filter-menu" role="listbox" aria-label="Select term">
+                        <button type="button" class="student-filter-option is-selected" role="option" aria-selected="true" data-value="1"><span class="student-filter-option-text"><span class="student-filter-option-title">Term 1</span></span><i class="bi bi-check2 student-filter-check" aria-hidden="true"></i></button>
+                        <button type="button" class="student-filter-option" role="option" aria-selected="false" data-value="2"><span class="student-filter-option-text"><span class="student-filter-option-title">Term 2</span></span><i class="bi bi-check2 student-filter-check" aria-hidden="true"></i></button>
+                        <button type="button" class="student-filter-option" role="option" aria-selected="false" data-value="3"><span class="student-filter-option-text"><span class="student-filter-option-title">Term 3</span></span><i class="bi bi-check2 student-filter-check" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <div class="student-filter-wrap directory-select" id="assessmentFilterWrap" data-default="pretest">
+                    <button type="button" class="student-filter-trigger" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="student-filter-trigger-text"><span class="student-filter-label">Assessment</span><span class="student-filter-value">Pre-Assessment</span></span>
+                        <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                    </button>
+                    <div class="student-filter-menu" role="listbox" aria-label="Select assessment">
+                        <button type="button" class="student-filter-option is-selected" role="option" aria-selected="true" data-value="pretest"><span class="student-filter-option-text"><span class="student-filter-option-title">Pre-Assessment</span></span><i class="bi bi-check2 student-filter-check" aria-hidden="true"></i></button>
+                        <button type="button" class="student-filter-option" role="option" aria-selected="false" data-value="midtest"><span class="student-filter-option-text"><span class="student-filter-option-title">Midline Assessment</span></span><i class="bi bi-check2 student-filter-check" aria-hidden="true"></i></button>
+                        <button type="button" class="student-filter-option" role="option" aria-selected="false" data-value="posttest"><span class="student-filter-option-text"><span class="student-filter-option-title">Post Assessment</span></span><i class="bi bi-check2 student-filter-check" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm student-export-btn" id="exportStudentsBtn" disabled>
+                    <i class="bi bi-filetype-xlsx" aria-hidden="true"></i><span>Export CRLA Result</span>
+                </button>
             </div>
 
             <div class="student-directory">
@@ -1436,6 +1479,7 @@ function normalizeStudentPayload(students) {
 
 let latestStudentDirectoryStudents = [];
 let latestStudentDirectoryTotal = 0;
+let studentDirectoryRequestId = 0;
 
 function getStudentDirectoryDisplayName(student) {
     const directName = String(student?.name || student?.full_name || student?.display_name || '').trim();
@@ -1915,9 +1959,11 @@ function exportVisibleStudentsWorkbook() {
         }
     }
 
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Student Directory');
+    const termLabel = document.querySelector('#termFilterWrap .student-filter-value')?.textContent?.trim() || 'Term';
+    const assessmentLabel = document.querySelector('#assessmentFilterWrap .student-filter-value')?.textContent?.trim() || 'Assessment';
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'CRLA Results');
     const stamp = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(workbook, `student-directory-${stamp}.xlsx`);
+    XLSX.writeFile(workbook, `crla-${termLabel}-${assessmentLabel}-${stamp}.xlsx`.toLowerCase().replace(/\s+/g, '-'));
 }
 
 function renderStudentDirectory(sourceStudents) {
@@ -2005,7 +2051,40 @@ function bindStudentDirectoryFilters() {
     const levelFilterTrigger = document.getElementById('readingLevelFilterTrigger');
     const levelFilterMenu = document.getElementById('readingLevelFilterMenu');
     const levelFilterValue = document.getElementById('readingLevelFilterValue');
-    const levelOptions = Array.from(document.querySelectorAll('.student-filter-option'));
+    const levelOptions = Array.from(document.querySelectorAll('#readingLevelFilterMenu .student-filter-option'));
+    document.querySelectorAll('.directory-select').forEach(wrap => {
+        const trigger = wrap.querySelector('.student-filter-trigger');
+        const value = wrap.querySelector('.student-filter-value');
+        const options = Array.from(wrap.querySelectorAll('.student-filter-option'));
+        if (!trigger || !value || wrap.dataset.autoFilterBound) return;
+        wrap.dataset.autoFilterBound = 'true';
+        wrap.dataset.value = wrap.dataset.default || '';
+        trigger.addEventListener('click', event => {
+            event.stopPropagation();
+            const willOpen = !wrap.classList.contains('is-open');
+            document.querySelectorAll('.directory-select.is-open').forEach(item => item.classList.remove('is-open'));
+            wrap.classList.toggle('is-open', willOpen);
+            trigger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        });
+        options.forEach(option => option.addEventListener('click', () => {
+            wrap.dataset.value = option.dataset.value || '';
+            value.textContent = option.querySelector('.student-filter-option-title')?.textContent?.trim() || '';
+            options.forEach(item => {
+                const selected = item === option;
+                item.classList.toggle('is-selected', selected);
+                item.setAttribute('aria-selected', selected ? 'true' : 'false');
+            });
+            wrap.classList.remove('is-open');
+            trigger.setAttribute('aria-expanded', 'false');
+            refreshStudentOverview();
+        }));
+        document.addEventListener('click', event => {
+            if (!wrap.contains(event.target)) {
+                wrap.classList.remove('is-open');
+                trigger.setAttribute('aria-expanded', 'false');
+            }
+        });
+    });
     if (searchInput && !searchInput.dataset.autoFilterBound) {
         searchInput.dataset.autoFilterBound = 'true';
         searchInput.addEventListener('input', function () {
@@ -2068,12 +2147,16 @@ function bindStudentDirectoryFilters() {
 
 // Fetch student data from the server API.
 async function refreshStudentOverview() {
+    const requestId = ++studentDirectoryRequestId;
     let apiStudents = null;
     let apiLevelCounts = null;
     let apiTotalStudents = null;
     let apiSucceeded = false;
     try {
-        const response = await fetch(`/dashboard/teacher/students-api/?ts=${Date.now()}`, {
+        const selectedTerm = document.getElementById('termFilterWrap')?.dataset.value || '1';
+        const selectedAssessment = document.getElementById('assessmentFilterWrap')?.dataset.value || 'pretest';
+        const params = new URLSearchParams({ term: selectedTerm, assessment: selectedAssessment, ts: Date.now() });
+        const response = await fetch(`/dashboard/teacher/students-api/?${params.toString()}`, {
             method: 'GET',
             credentials: 'same-origin',
             cache: 'no-store',
@@ -2086,6 +2169,7 @@ async function refreshStudentOverview() {
         
         if (response && response.ok) {
             const data = await response.json();
+            if (requestId !== studentDirectoryRequestId) return;
             if (data && data.success) {
                 if (Array.isArray(data.students)) {
                     apiStudents = data.students;
@@ -2100,8 +2184,11 @@ async function refreshStudentOverview() {
             }
         }
     } catch (error) {
+        if (requestId !== studentDirectoryRequestId) return;
         console.warn('Could not fetch students from API', error);
     }
+
+    if (requestId !== studentDirectoryRequestId) return;
     
     const studentsForUi = apiSucceeded ? normalizeStudentPayload(apiStudents) : [];
     const authoritativeTotal = Number.isFinite(Number(apiTotalStudents))

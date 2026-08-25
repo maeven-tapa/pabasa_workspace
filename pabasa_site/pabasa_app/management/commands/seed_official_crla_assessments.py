@@ -10,6 +10,7 @@ OFFICIAL_CRLA_CONTENT = {
         "title": "Beginning of School Year (BoSY) CRLA Pre-Test",
         "period": "bosy",
         "phase": "pretest",
+        "term": 1,
         "words": [
             "Binti", "Pito", "Tubig", "Pagod", "Kanta",
             "Regalo", "Butiki", "Halaman", "Malapot", "Gagamba",
@@ -98,6 +99,7 @@ OFFICIAL_CRLA_CONTENT = {
         "title": "Midline CRLA Mid-Test",
         "period": "midline",
         "phase": "midtest",
+        "term": 2,
         "words": [
             "Binti", "Pito", "Tubig", "Pagod", "Kanta",
             "Regalo", "Butiki", "Halaman", "Malapot", "Gagamba",
@@ -186,6 +188,7 @@ OFFICIAL_CRLA_CONTENT = {
         "title": "End of School Year (EoSY) CRLA Post-Test",
         "period": "eosy",
         "phase": "posttest",
+        "term": 3,
         "words": [
             "Binti", "Pito", "Tubig", "Pagod", "Kanta",
             "Regalo", "Butiki", "Halaman", "Malapot", "Gagamba",
@@ -361,6 +364,7 @@ class Command(BaseCommand):
             )
             content_json = {
                 "assessment_key": key,
+                "official_term": payload["term"],
                 "language": "Filipino",
                 "words": payload["words"],
                 "sentences": payload["sentences"],
@@ -375,6 +379,7 @@ class Command(BaseCommand):
                     "is_official_reading": True,
                     "system_assessment_period": payload["period"],
                     "system_assessment_phase": payload["phase"],
+                    "official_term": payload["term"],
                     "teacher": admin_user,
                     "section": None,
                     "code": payload["code"],
@@ -408,6 +413,7 @@ class Command(BaseCommand):
             obj.assessment_kind = "crla"
             obj.system_assessment_period = payload["period"]
             obj.system_assessment_phase = payload["phase"]
+            obj.official_term = payload["term"]
             obj.type = "assessment"
             obj.source_type = "shared"
             obj.status = "published"

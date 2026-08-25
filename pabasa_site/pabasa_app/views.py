@@ -1494,7 +1494,7 @@ def _aware_datetime_or_none(value):
     return parsed
 
 
-def _teacher_student_roster_payload(teacher_user, section=None):
+def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, crla_phase=None):
     sections = [section] if section else list(Section.objects.filter(teacher=teacher_user, is_active=True))
     level_counts = {
         'Low Emerging Readers': 0,
@@ -1563,9 +1563,20 @@ def _teacher_student_roster_payload(teacher_user, section=None):
     latest_scores = {}
     student_attempts = {}
     seen_attempt_keys = set()
+    active_calendar = _active_school_calendar() if crla_term and crla_phase else None
 
     if sections:
-        for assessment in Assessment.objects.filter(section__in=sections, is_active=True, source_assessment__isnull=True):
+        root_assessments = Assessment.objects.filter(
+            section__in=sections, is_active=True, source_assessment__isnull=True
+        ).select_related('material')
+        if crla_phase:
+            root_assessments = root_assessments.filter(
+                Q(system_assessment_phase=crla_phase) | Q(material__system_assessment_phase=crla_phase)
+            )
+
+        # Filtered CRLA views use the persisted child rows below. Those rows own
+        # the material and completion metadata; their parent generally does not.
+        for assessment in root_assessments if not (crla_term and crla_phase) else []:
             assessment_type = str(assessment.assessment_type or '').strip().lower()
             for attempt in assessment.get_attempts():
                 if not isinstance(attempt, dict) or attempt.get('status') != 'completed':
@@ -1641,7 +1652,16 @@ def _teacher_student_roster_payload(teacher_user, section=None):
             | Q(source_assessment__material__section__in=sections)
             | Q(source_assessment__material__assigned_sections__in=sections)
             | Q(source_assessment__material__courses__sections__in=sections)
-        ).select_related('source_assessment').distinct()
+        ).select_related(
+            'material', 'source_assessment', 'source_assessment__material'
+        ).distinct()
+        if crla_phase:
+            child_attempts = child_attempts.filter(
+                Q(system_assessment_phase=crla_phase)
+                | Q(material__system_assessment_phase=crla_phase)
+                | Q(source_assessment__system_assessment_phase=crla_phase)
+                | Q(source_assessment__material__system_assessment_phase=crla_phase)
+            )
 
         for attempt_row in child_attempts:
             sid_key = str(attempt_row.student_id or '').strip()
@@ -1666,6 +1686,15 @@ def _teacher_student_roster_payload(teacher_user, section=None):
             completed_dt = attempt_row.completed_at or attempt_row.updated_at or attempt_row.started_at or now
             if timezone.is_naive(completed_dt):
                 completed_dt = timezone.make_aware(completed_dt, timezone.get_default_timezone())
+            if crla_term:
+                completed_on = timezone.localtime(completed_dt).date()
+                attempt_term = (
+                    getattr(getattr(attempt_row, 'material', None), 'official_term', None)
+                    or getattr(getattr(getattr(attempt_row, 'source_assessment', None), 'material', None), 'official_term', None)
+                    or (_calendar_current_term(active_calendar, on_date=completed_on) if active_calendar else None)
+                )
+                if attempt_term != crla_term:
+                    continue
             score_value = _as_float(attempt_row.total_score, default=None)
             if score_value is None:
                 score_value = _as_float(attempt_row.accuracy, default=None)
@@ -1714,6 +1743,10 @@ def _teacher_student_roster_payload(teacher_user, section=None):
         if not user:
             continue
 
+        attempts = student_attempts.get(sid_key, [])
+        if crla_term and crla_phase and not attempts:
+            continue
+
         profile = {}
         if isinstance(user.tags, list):
             for tag in user.tags:
@@ -1722,7 +1755,6 @@ def _teacher_student_roster_payload(teacher_user, section=None):
                     break
 
         latest = latest_scores.get(sid_key, {})
-        attempts = student_attempts.get(sid_key, [])
         has_completed_assessment = bool(attempts)
         latest_reading_level_payload = _build_latest_reading_level_payload({
             'final_score': latest.get('total_score'),
@@ -16601,7 +16633,13 @@ def get_teacher_students_api(request):
     try:
         user_id = request.session.get('user_id')
         teacher = User.objects.get(id=user_id)
-        results, level_counts, dashboard_metrics = _teacher_student_roster_payload(teacher)
+        term_value = str(request.GET.get('term') or '').strip()
+        phase_value = str(request.GET.get('assessment') or '').strip().lower()
+        crla_term = int(term_value) if term_value in {'1', '2', '3'} else None
+        crla_phase = phase_value if phase_value in {'pretest', 'midtest', 'posttest'} else None
+        results, level_counts, dashboard_metrics = _teacher_student_roster_payload(
+            teacher, crla_term=crla_term, crla_phase=crla_phase
+        )
         return JsonResponse({
             'success': True,
             'students': results,
