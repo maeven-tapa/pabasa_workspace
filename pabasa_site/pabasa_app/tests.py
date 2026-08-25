@@ -27,7 +27,7 @@ from .reading_stt import (
     target_phrase_hints,
     target_aware_syllable_stitching,
     syllable_context_metrics,
-    transcribe_audio_bytes_v2_chirp3_streaming,
+    transcribe_audio_bytes_v2_chirp3,
     v1_model_for_language,
     word_numbers_in_transcript,
 )
@@ -2257,25 +2257,16 @@ class ReadingMatcherTests(TestCase):
         self.assertEqual(v1_model_for_language("latest_short", "en-PH"), "command_and_search")
         self.assertEqual(v1_model_for_language("latest_short", "fil-PH"), "")
 
-    @patch("pabasa_app.reading_stt.google_stt_streaming_client")
+    @patch("google.cloud.speech_v2.SpeechClient")
     @patch("pabasa_app.reading_stt.google_stt_credentials", return_value=object())
-    def test_chirp3_uses_streaming_recognition_and_returns_final_results(self, credentials, streaming_client):
-        client = streaming_client.return_value
-        client.streaming_recognize.return_value = [
-            SimpleNamespace(results=[
-                SimpleNamespace(
-                    alternatives=[SimpleNamespace(transcript="Magandang")],
-                    is_final=True,
-                ),
-                SimpleNamespace(
-                    alternatives=[SimpleNamespace(transcript="umaga")],
-                    is_final=True,
-                ),
-            ]),
-        ]
+    def test_chirp3_uses_synchronous_recognition_for_short_clips(self, credentials, speech_client):
+        client = speech_client.return_value
+        client.recognize.return_value = SimpleNamespace(results=[
+            SimpleNamespace(alternatives=[SimpleNamespace(transcript="Magandang umaga")]),
+        ])
 
-        transcript = transcribe_audio_bytes_v2_chirp3_streaming(
-            b"a" * 70_000,
+        transcript = transcribe_audio_bytes_v2_chirp3(
+            b"short reading clip",
             "fil-PH",
             "test-project",
             "us",
@@ -2283,12 +2274,12 @@ class ReadingMatcherTests(TestCase):
         )
 
         self.assertEqual(transcript, "Magandang umaga")
-        requests = list(client.streaming_recognize.call_args.kwargs["requests"])
-        self.assertEqual(requests[0].recognizer, "projects/test-project/locations/us/recognizers/_")
-        self.assertEqual(requests[0].streaming_config.config.model, "chirp_3")
-        self.assertEqual(requests[0].streaming_config.config.language_codes, ["fil-PH"])
-        self.assertEqual([len(request.audio) for request in requests[1:]], [25_600, 25_600, 18_800])
-        self.assertEqual(client.streaming_recognize.call_args.kwargs["timeout"], 25)
+        request = client.recognize.call_args.kwargs["request"]
+        self.assertEqual(request.recognizer, "projects/test-project/locations/us/recognizers/_")
+        self.assertEqual(request.config.model, "chirp_3")
+        self.assertEqual(request.config.language_codes, ["fil-PH"])
+        self.assertEqual(request.content, b"short reading clip")
+        self.assertEqual(client.recognize.call_args.kwargs["timeout"], 12)
 
     @patch("pabasa_app.reading_stt._post_google_tts", return_value="encoded-audio")
     def test_read_aloud_uses_filipino_voice_for_tagalog_locale(self, post_google_tts):
