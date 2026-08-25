@@ -65,6 +65,7 @@ from .reading_stt import (
     word_numbers_in_transcript,
 )
 from .hunt_scoring import classify_speech
+from .syllable_blending import activity_catalog, build_activity, normalize_format
 from .reader_classification import classify_student_account
 from .scoring import (
     ADAPTED_READING_LEVEL_DISCLAIMER,
@@ -540,6 +541,7 @@ def _template_reading_type(template_title):
         'Match the Letter to Its Sound': 'word',
         'Clap & Count Syllables': 'word',
         'Blend the Syllables': 'word',
+        'Syllable Blending': 'word',
         'Picture-Word Matching': 'word',
         'Decode the Word': 'word',
         'Word Meaning Match': 'word',
@@ -8299,6 +8301,16 @@ def _is_picture_word_matching_material(material):
     return 'picture_word_matching' in normalized
 
 
+def _is_syllable_blending_material(material):
+    if not material or not isinstance(getattr(material, 'content_json', None), dict):
+        return False
+    content = material.content_json
+    values = (content.get('template_title'), content.get('template_lesson'),
+              content.get('activity_type'), getattr(material, 'title', ''))
+    normalized = {re.sub(r'[^a-z0-9]+', '_', str(value or '').lower()).strip('_') for value in values}
+    return bool({'syllable_blending', 'blend_the_syllables'} & normalized)
+
+
 def _normalize_picture_word_matching_content(content_json):
     """Return a self-contained Picture-Word payload with durable static image URLs."""
     if not isinstance(content_json, dict):
@@ -8415,6 +8427,84 @@ def picture_word_matching_page(request):
     }, default=str, separators=(',', ':'))
     context['picture_word_completion_json'] = json.dumps(completion_payload or {}, default=str, separators=(',', ':'))
     return render(request, 'pabasa_app/picture_word_matching_page.html', context)
+
+
+@xframe_options_sameorigin
+def syllable_blending_page(request):
+    """Dedicated no-keyboard Syllable Blending experience for students."""
+    access_response = _enforce_student_access_for_request(request)
+    if access_response:
+        return access_response
+    _, material_id = _parse_prefixed_id(request.GET.get('id') or request.GET.get('material_id'))
+    material = Material.objects.filter(pk=material_id).first() if material_id else None
+    if not _is_syllable_blending_material(material):
+        return redirect('assessment')
+    content = dict(material.content_json or {})
+    activity_id = str(content.get('activity_id') or '').strip().lower()
+    language = 'English' if str(content.get('language') or '').lower().startswith('eng') else 'Filipino'
+    activity_format = normalize_format(content.get('activity_format'))
+    activity_id_match = re.fullmatch(r'(filipino|english)_(syllable_combination|big_box)_(0[1-5])', activity_id)
+    has_complete_content = isinstance(content.get('items'), list) and len(content['items']) == 5
+    identity_matches = bool(
+        activity_id_match
+        and activity_id_match.group(1) == language.lower()
+        and activity_id_match.group(2) == activity_format
+    )
+    if not has_complete_content or not identity_matches:
+        return HttpResponse(
+            'This Syllable Blending activity is missing its assigned prebuilt content. Please ask your teacher to assign it again.',
+            status=400,
+            content_type='text/plain; charset=utf-8',
+        )
+    student_user = User.objects.filter(id=request.session.get('user_id'), role='student').first()
+    completion_payload = None
+    progress_payload = {}
+    if student_user:
+        completed_result = material.assessment_results.filter(
+            student=student_user, attempt_status='completed',
+        ).order_by('-completed_at', '-created_at', '-id').first()
+        if completed_result:
+            saved_responses = []
+            saved_discovered_words = []
+            saved_used_syllables = []
+            saved_discovery_attempts = []
+            remarks = str(getattr(completed_result, 'remarks', '') or '')
+            result_prefix = 'SYLLABLE_BLENDING_RESULT:'
+            if remarks.startswith(result_prefix):
+                try:
+                    saved_result = json.loads(remarks[len(result_prefix):])
+                    if isinstance(saved_result, dict) and isinstance(saved_result.get('responses'), list):
+                        saved_responses = saved_result['responses']
+                        saved_discovered_words = saved_result.get('discovered_words') if isinstance(saved_result.get('discovered_words'), list) else []
+                        saved_used_syllables = saved_result.get('used_syllables') if isinstance(saved_result.get('used_syllables'), list) else []
+                        saved_discovery_attempts = saved_result.get('discovery_attempts') if isinstance(saved_result.get('discovery_attempts'), list) else []
+                except (TypeError, ValueError, json.JSONDecodeError):
+                    saved_responses = []
+            total_items = int(getattr(completed_result, 'items_completed', 0) or len(content.get('items') or []))
+            correct_items = min(total_items, int(getattr(completed_result, 'correct_items', 0) or 0))
+            accuracy = getattr(completed_result, 'accuracy', None)
+            if accuracy is None:
+                accuracy = round((correct_items / total_items) * 100, 2) if total_items else 0
+            completion_payload = {
+                'completed': True, 'correct_items': correct_items, 'total_items': total_items,
+                'accuracy': accuracy, 'responses': saved_responses,
+                'discovered_words': saved_discovered_words,
+                'used_syllables': saved_used_syllables,
+                'discovery_attempts': saved_discovery_attempts,
+            }
+        state = _get_user_state(student_user)
+        progress_store = state.get('interactive_activity_progress') if isinstance(state, dict) else {}
+        if isinstance(progress_store, dict):
+            saved_progress = progress_store.get(str(material.id))
+            if isinstance(saved_progress, dict) and saved_progress.get('activity_type') == 'syllable_blending':
+                progress_payload = saved_progress
+    context = _dashboard_context(request)
+    context['syllable_blending_material_json'] = json.dumps({
+        'id': material.id, 'title': 'Syllable Blending', **content,
+    }, default=str, separators=(',', ':'))
+    context['syllable_blending_progress_json'] = json.dumps(progress_payload, default=str, separators=(',', ':'))
+    context['syllable_blending_completion_json'] = json.dumps(completion_payload or {}, default=str, separators=(',', ':'))
+    return render(request, 'pabasa_app/syllable_blending_page.html', context)
 
 @xframe_options_sameorigin
 def reading_sentence_page(request):
@@ -9131,6 +9221,72 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
     if not is_practice:
         already_completed = _student_completed_assessment_before(assessment, material, student_user)
     is_picture_word_matching = str(activity_type or '').strip().lower() == 'picture_word_matching'
+    is_syllable_blending = str(activity_type or '').strip().lower() == 'syllable_blending'
+    if is_syllable_blending and bool(data.get('save_progress')):
+        if not material or not _is_syllable_blending_material(material):
+            return JsonResponse({'success': False, 'error': 'Invalid Syllable Blending material.'}, status=400)
+        raw_scores = data.get('scores') if isinstance(data.get('scores'), dict) else {}
+        submitted_responses = raw_scores.get('responses') if isinstance(raw_scores.get('responses'), list) else []
+        activity_items = (material.content_json or {}).get('items') or []
+        normalized_responses = []
+        for response in submitted_responses:
+            if not isinstance(response, dict):
+                continue
+            try:
+                item_index = int(response.get('item_index'))
+            except (TypeError, ValueError):
+                continue
+            if item_index < 0 or item_index >= len(activity_items):
+                continue
+            expected_answer = str((activity_items[item_index] or {}).get('answer') or '').strip()
+            normalized_responses.append({
+                'item_index': item_index,
+                'recognized_response': str(response.get('recognized_response') or '').strip()[:160],
+                'expected_answer': expected_answer,
+                'is_correct': bool(response.get('is_correct')),
+                'completed': bool(response.get('completed')),
+                'score': 1 if bool(response.get('is_correct')) else 0,
+            })
+        discovered_indexes = {
+            response['item_index'] for response in normalized_responses
+            if response['completed'] and response['is_correct']
+        }
+        discovered_words = [
+            str(item.get('answer') or '').strip() for index, item in enumerate(activity_items)
+            if index in discovered_indexes and isinstance(item, dict)
+        ]
+        used_syllables = list(dict.fromkeys(
+            str(syllable).strip() for index, item in enumerate(activity_items)
+            if index in discovered_indexes and isinstance(item, dict)
+            for syllable in (item.get('syllables') or []) if str(syllable).strip()
+        ))
+        submitted_attempts = raw_scores.get('discovery_attempts') if isinstance(raw_scores.get('discovery_attempts'), list) else []
+        discovery_attempts = []
+        valid_words = {str(item.get('answer') or '').strip().casefold() for item in activity_items if isinstance(item, dict)}
+        for attempt in submitted_attempts[-100:]:
+            if not isinstance(attempt, dict):
+                continue
+            matched_word = str(attempt.get('matched_word') or '').strip()
+            discovery_attempts.append({
+                'recognized_response': str(attempt.get('recognized_response') or '').strip()[:160],
+                'matched_word': matched_word if matched_word.casefold() in valid_words else '',
+                'is_correct': bool(attempt.get('is_correct')) and matched_word.casefold() in valid_words,
+                'is_duplicate': bool(attempt.get('is_duplicate')),
+            })
+        state = _get_user_state(student_user)
+        progress_store = state.get('interactive_activity_progress')
+        progress_store = dict(progress_store) if isinstance(progress_store, dict) else {}
+        progress_store[str(material.id)] = {
+            'activity_type': 'syllable_blending',
+            'responses': normalized_responses,
+            'discovered_words': discovered_words,
+            'used_syllables': used_syllables,
+            'discovery_attempts': discovery_attempts,
+            'updated_at': timezone.now().isoformat(),
+        }
+        state['interactive_activity_progress'] = progress_store
+        _set_user_state(student_user, state)
+        return JsonResponse({'success': True, 'saved': True, 'responses': normalized_responses})
     if is_picture_word_matching:
         if not material or not _is_picture_word_matching_material(material):
             return JsonResponse({'success': False, 'error': 'Invalid Picture-Word Matching material.'}, status=400)
@@ -9175,9 +9331,88 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 'matches': matching_details,
             }, separators=(',', ':')),
         }
+    elif is_syllable_blending:
+        if not material or not _is_syllable_blending_material(material):
+            return JsonResponse({'success': False, 'error': 'Invalid Syllable Blending material.'}, status=400)
+        raw_scores = data.get('scores') if isinstance(data.get('scores'), dict) else data
+        activity_items = (material.content_json or {}).get('items') or []
+        submitted = raw_scores.get('answers') if isinstance(raw_scores.get('answers'), list) else []
+        submitted_responses = raw_scores.get('responses') if isinstance(raw_scores.get('responses'), list) else []
+        responses_by_index = {}
+        for response in submitted_responses:
+            if not isinstance(response, dict):
+                continue
+            try:
+                response_index = int(response.get('item_index'))
+            except (TypeError, ValueError):
+                continue
+            if 0 <= response_index < len(activity_items):
+                responses_by_index[response_index] = response
+        normalized_responses = []
+        for index, item in enumerate(activity_items):
+            if not isinstance(item, dict) or index not in responses_by_index:
+                continue
+            response = responses_by_index[index]
+            expected_answer = str(item.get('answer') or '').strip()
+            submitted_answer = str(submitted[index] or '').strip() if index < len(submitted) else ''
+            is_correct_response = bool(response.get('is_correct')) and submitted_answer.casefold() == expected_answer.casefold()
+            normalized_responses.append({
+                'item_index': index,
+                'recognized_response': str(response.get('recognized_response') or '').strip()[:160],
+                'expected_answer': expected_answer,
+                'is_correct': is_correct_response,
+                'completed': bool(response.get('completed')) and is_correct_response,
+                'score': 1 if is_correct_response else 0,
+            })
+        discovered_indexes = {
+            response['item_index'] for response in normalized_responses
+            if response['completed'] and response['is_correct']
+        }
+        discovered_words = [
+            str(item.get('answer') or '').strip() for index, item in enumerate(activity_items)
+            if index in discovered_indexes and isinstance(item, dict)
+        ]
+        used_syllables = list(dict.fromkeys(
+            str(syllable).strip() for index, item in enumerate(activity_items)
+            if index in discovered_indexes and isinstance(item, dict)
+            for syllable in (item.get('syllables') or []) if str(syllable).strip()
+        ))
+        submitted_attempts = raw_scores.get('discovery_attempts') if isinstance(raw_scores.get('discovery_attempts'), list) else []
+        valid_words = {str(item.get('answer') or '').strip().casefold() for item in activity_items if isinstance(item, dict)}
+        discovery_attempts = []
+        for attempt in submitted_attempts[-100:]:
+            if not isinstance(attempt, dict):
+                continue
+            matched_word = str(attempt.get('matched_word') or '').strip()
+            discovery_attempts.append({
+                'recognized_response': str(attempt.get('recognized_response') or '').strip()[:160],
+                'matched_word': matched_word if matched_word.casefold() in valid_words else '',
+                'is_correct': bool(attempt.get('is_correct')) and matched_word.casefold() in valid_words,
+                'is_duplicate': bool(attempt.get('is_duplicate')),
+            })
+        correct_items = sum(
+            1 for index, item in enumerate(activity_items)
+            if isinstance(item, dict) and index < len(submitted)
+            and str(submitted[index] or '').strip().casefold() == str(item.get('answer') or '').strip().casefold()
+        )
+        total_items = len(activity_items)
+        objective_score = round((correct_items / total_items) * 100, 2) if total_items else 0
+        score_payload = {
+            'accuracy': objective_score, 'total_score': objective_score,
+            'correct_items': correct_items, 'items_completed': total_items,
+            'duration_seconds': max(0, int(raw_scores.get('duration_seconds') or 0)),
+            'passed': objective_score >= 75,
+            'remarks': 'SYLLABLE_BLENDING_RESULT:' + json.dumps({
+                'activity_type': 'syllable_blending', 'answers': submitted,
+                'responses': normalized_responses,
+                'discovered_words': discovered_words,
+                'used_syllables': used_syllables,
+                'discovery_attempts': discovery_attempts,
+            }, separators=(',', ':')),
+        }
     else:
         score_payload = _practice_score_payload(data) if is_practice else _assessment_score_payload(data)
-    if is_picture_word_matching and already_completed and not is_retake:
+    if (is_picture_word_matching or is_syllable_blending) and already_completed and not is_retake:
         existing_result = material.assessment_results.filter(
             student=student_user,
             attempt_status='completed',
@@ -9189,7 +9424,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             'items_completed': getattr(existing_result, 'items_completed', 0) or 0,
             'accuracy': getattr(existing_result, 'accuracy', 0) or 0,
         })
-    if not is_practice and not is_picture_word_matching:
+    if not is_practice and not is_picture_word_matching and not is_syllable_blending:
         account_assessment_type = (
             getattr(assessment, 'assessment_type', None)
             or assessment_type_hint
@@ -9275,7 +9510,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 student=student_user,
                 attempt_status='completed',
             ).order_by('-completed_at', '-created_at').select_related('source_assessment').first()
-        if not is_practice and not is_picture_word_matching:
+        if not is_practice and not is_picture_word_matching and not is_syllable_blending:
             _update_student_reading_profile(student_user, score_payload)
             _sync_assessment_workflow_state(student_user, score_payload=score_payload, assessment=assessment, material=material)
         if live_session or data.get('live_session_id'):
@@ -9296,6 +9531,15 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 student_id=getattr(student_user, 'id', None),
                 error=str(e),
             )
+
+    if is_syllable_blending and completed_result_row is not None and material:
+        state = _get_user_state(student_user)
+        progress_store = state.get('interactive_activity_progress')
+        if isinstance(progress_store, dict) and str(material.id) in progress_store:
+            progress_store = dict(progress_store)
+            progress_store.pop(str(material.id), None)
+            state['interactive_activity_progress'] = progress_store
+            _set_user_state(student_user, state)
 
     if live_session is None and data.get('live_session_id'):
         try:
@@ -10853,6 +11097,7 @@ def course_teacher_view(request):
     context.update({
         'crla_assessment_exists': bool(crla_existing),
         'crla_assessment_status_message': _crla_creation_block_message(teacher_user=teacher_user) if current_term == 2 or crla_existing else '',
+        'syllable_blending_catalog': activity_catalog(),
     })
     return render(request, 'pabasa_app/courses.html', context)
 
@@ -12099,8 +12344,15 @@ def _section_course_payload(section):
         'assigned_weeks_display': format_assigned_weeks_display(_material_week_values(material)),
         'source_type': material.source_type or 'personal',
         'material_source': material.source_type or 'personal',
-        'language': material.language or 'English',
+        'language': (material.content_json or {}).get('language') or material.language or 'English',
         'content_json': material.content_json or {},
+        'template_title': (material.content_json or {}).get('template_title') or '',
+        'template_lesson': (material.content_json or {}).get('template_lesson') or '',
+        'activity_type': (material.content_json or {}).get('activity_type') or '',
+        'activity_format': (material.content_json or {}).get('activity_format') or '',
+        'activity_id': (material.content_json or {}).get('activity_id') or '',
+        'selected_set_id': (material.content_json or {}).get('activity_id') or '',
+        'selected_set_name': (material.content_json or {}).get('activity_name') or '',
         'student_access': bool(material.student_access),
         'assessment_kind': _assessment_kind_value(material),
     } for material in materials_qs]
@@ -12429,9 +12681,10 @@ def get_teacher_courses_api(request):
                 is_shared_material = source_type == 'shared'
 
                 content_json = getattr(m, 'content_json', None) or {}
+                if not isinstance(content_json, dict):
+                    content_json = {}
                 language_value = ''
-                if isinstance(content_json, dict):
-                    language_value = str(content_json.get('language') or '').strip()
+                language_value = str(content_json.get('language') or '').strip()
                 if not language_value:
                     language_value = str(getattr(m, 'language', '') or '').strip()
                 if not language_value:
@@ -12467,6 +12720,13 @@ def get_teacher_courses_api(request):
                     'shared_owner_teacher_name': material_teacher_name if is_shared_material else None,
                     'language': language_value,
                     'content_json': content_json,
+                    'template_title': content_json.get('template_title') or '',
+                    'template_lesson': content_json.get('template_lesson') or '',
+                    'activity_type': content_json.get('activity_type') or '',
+                    'activity_format': content_json.get('activity_format') or '',
+                    'activity_id': content_json.get('activity_id') or '',
+                    'selected_set_id': content_json.get('activity_id') or '',
+                    'selected_set_name': content_json.get('activity_name') or '',
                     'student_access': bool(getattr(m, 'student_access', False)),
                     'assessment_kind': _assessment_kind_value(m),
                 })
@@ -13311,17 +13571,9 @@ def add_material_to_course(request):
             except Exception:
                 pass
 
-        source_type = getattr(material, 'source_type', 'personal') or 'personal'
         return JsonResponse({
             'success': True,
-            'material': {
-                'id': material.id,
-                'title': material.title,
-                'item_type': getattr(material, 'item_type', ''),
-                'source_type': source_type,
-                'material_source': source_type,
-                'is_shared_material': source_type == 'shared',
-            }
+            'material': _material_response_payload(material, section=course_section),
         })
     except Exception as e:
         logger.exception('Error adding material to course')
@@ -15206,9 +15458,19 @@ def _material_response_payload(material, tokens=None, section=None, is_shared_ma
     if not language_value:
         language_value = 'English'
 
+    template_title = str(content_json.get('template_title') or '').strip() if isinstance(content_json, dict) else ''
+    template_lesson = str(content_json.get('template_lesson') or '').strip() if isinstance(content_json, dict) else ''
+    activity_type = str(content_json.get('activity_type') or '').strip() if isinstance(content_json, dict) else ''
+    activity_format = str(content_json.get('activity_format') or '').strip() if isinstance(content_json, dict) else ''
+    activity_id = str(content_json.get('activity_id') or '').strip() if isinstance(content_json, dict) else ''
+    primary_section = section or getattr(material, 'section', None)
+
     return {
         'id': f"material-{material.id}",
         'raw_id': material.id,
+        'class_id': getattr(primary_section, 'id', None),
+        'section_id': getattr(primary_section, 'id', None),
+        'class_code': getattr(primary_section, 'class_code', '') or '',
         'code': material.code,
         'title': material.title,
         'item_type': material.item_type,
@@ -15229,6 +15491,14 @@ def _material_response_payload(material, tokens=None, section=None, is_shared_ma
         'assigned_weeks': _material_week_values(material),
         'assigned_weeks_display': format_assigned_weeks_display(_material_week_values(material)),
         'content_json': content_json,
+        'template_title': template_title,
+        'template_lesson': template_lesson,
+        'template_type': str(content_json.get('template_type') or template_title).strip() if isinstance(content_json, dict) else template_title,
+        'activity_type': activity_type,
+        'activity_format': activity_format,
+        'activity_id': activity_id,
+        'selected_set_id': activity_id,
+        'selected_set_name': str(content_json.get('activity_name') or '').strip() if isinstance(content_json, dict) else '',
         'randomize_order': bool(content_json.get('randomize_order')),
         'student_access': bool(getattr(material, 'student_access', False)),
         'assessment_kind': _assessment_kind_value(material),
@@ -15364,6 +15634,7 @@ def add_reading_material(request):
         requested_usage_type = (data.get('usage_type') or 'assessment').strip()        # practice | assessment | both
         requested_source_type = (data.get('source_type') or data.get('origin') or 'shared').strip().lower()
         source_type = requested_source_type if requested_source_type in ('personal', 'shared', 'template') else 'shared'
+        class_id_raw = data.get('class_id') or data.get('section_id')
         class_code   = (data.get('class_code') or '').strip()
         requested_assessment_kind = str(data.get('assessment_kind') or 'regular').strip().lower()
         assessment_kind = requested_assessment_kind if requested_assessment_kind in {'regular', 'crla'} else 'regular'
@@ -15385,6 +15656,28 @@ def add_reading_material(request):
             except Exception:
                 template_payload = {}
             if isinstance(template_payload, dict):
+                template_identity = str(
+                    template_payload.get('template_lesson') or template_payload.get('template_title')
+                    or data.get('template_lesson') or data.get('template_title') or ''
+                ).strip().lower()
+                if template_identity in {'syllable blending', 'blend the syllables'}:
+                    selected_language = data.get('language') or template_payload.get('language') or 'Filipino'
+                    selected_format = normalize_format(template_payload.get('activity_format'))
+                    selected_activity_id = str(template_payload.get('activity_id') or '').strip().lower()
+                    id_match = re.fullmatch(r'(filipino|english)_(syllable_combination|big_box)_(0[1-5])', selected_activity_id)
+                    expected_language = 'English' if str(selected_language).lower().startswith('eng') else 'Filipino'
+                    if not id_match or id_match.group(1) != expected_language.lower() or id_match.group(2) != selected_format:
+                        return JsonResponse({'success': False, 'errors': {
+                            'activity_id': 'Select one of the five prebuilt activities for the chosen language and format.'
+                        }}, status=400)
+                    template_payload.update(build_activity(expected_language, selected_format, int(id_match.group(3)) - 1))
+                    template_payload.update({
+                        'template_title': 'Syllable Blending',
+                        'template_lesson': 'Syllable Blending',
+                        'template_type': 'Syllable Blending',
+                        'template_source': 'template',
+                    })
+                    title = title or 'Syllable Blending'
                 def _template_item_text(item, template_title_value=''):
                     if not isinstance(item, dict):
                         return str(item).strip() if item is not None else ''
@@ -15395,6 +15688,8 @@ def add_reading_material(request):
                         return str(item.get('sentence') or '').strip()
                     if template_title_normalized in ('Fluency Reading', 'Story Reading', "5W's Story Questions", 'Retell the Story', 'Story Response'):
                         return str(item.get('storyText') or item.get('content') or item.get('paragraph') or '').strip()
+                    if template_title_normalized == 'Syllable Blending':
+                        return str(item.get('answer') or '').strip()
                     return str(item.get('text') or item.get('content') or item.get('title') or item.get('sentence') or item.get('paragraph') or item.get('word') or '').strip()
 
                 if isinstance(template_payload.get('items'), list):
@@ -15465,7 +15760,19 @@ def add_reading_material(request):
             return JsonResponse({'success': False, 'error': 'Teacher not found.'}, status=404)
 
         section = None
-        if class_code:
+        if class_id_raw:
+            _, class_id = _parse_prefixed_id(class_id_raw)
+            section = Section.objects.filter(
+                id=class_id,
+                teacher=teacher_user,
+                is_active=True,
+            ).first() if class_id else None
+            if not section:
+                return JsonResponse({'success': False, 'error': 'Class not found or does not belong to you.'}, status=404)
+            if class_code and str(section.class_code).strip().casefold() != class_code.casefold():
+                return JsonResponse({'success': False, 'error': 'The selected class identity does not match its class code.'}, status=400)
+            class_code = section.class_code
+        elif class_code:
             section = Section.objects.filter(
                 class_code=class_code,
                 teacher=teacher_user,

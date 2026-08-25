@@ -68,6 +68,7 @@ urlpatterns = [
     path('assessment/<int:assessment_id>/export-crla/', views.export_crla_assessment, name='export_crla_assessment'),
     path('dashboard/assessment/reading_ui/word/', views.reading_word_page, name='reading_word_page'),
     path('dashboard/assessment/activity/picture-word-matching/', views.picture_word_matching_page, name='picture_word_matching_page'),
+    path('dashboard/assessment/activity/syllable-blending/', views.syllable_blending_page, name='syllable_blending_page'),
     path('dashboard/assessment/reading_ui/sentence/', views.reading_sentence_page, name='reading_sentence_page'),
     path('dashboard/assessment/reading_ui/para/', views.reading_para_page, name='reading_para_page'),
     path('dashboard/assessment/reading_ui/vowel/', views.reading_vowel_page, name='reading_vowel_page'),

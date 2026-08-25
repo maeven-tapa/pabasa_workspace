@@ -8553,6 +8553,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     </div>
 </div>
 
+{{ syllable_blending_catalog|json_script:"syllable-blending-catalog" }}
 <script>
     // Get the current teacher's name from the page title or username
     let CURRENT_TEACHER_NAME = "Teacher";
@@ -8664,7 +8665,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const normalizeDisplayItem = (item) => {
             if (item === null || item === undefined) return '';
             if (typeof item === 'object') {
-                return item.content || item.text || item.word || item.sentence || item.paragraph || item.phrase || item.title || JSON.stringify(item);
+                return item.content || item.text || item.word || item.answer || item.sentence || item.paragraph || item.phrase || item.title || JSON.stringify(item);
             }
             const text = String(item).trim();
             if (!text) return '';
@@ -8704,7 +8705,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const normalizeDisplayItem = (item) => {
             if (item === null || item === undefined) return '';
             if (typeof item === 'object') {
-                return item.content || item.text || item.word || item.sentence || item.paragraph || item.phrase || item.title || JSON.stringify(item);
+                return item.content || item.text || item.word || item.answer || item.sentence || item.paragraph || item.phrase || item.title || JSON.stringify(item);
             }
             const text = String(item).trim();
             if (!text) return '';
@@ -9828,6 +9829,23 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         return (teacherCourses || []).find(c => String(c.id) === String(courseId));
     }
 
+    function resolveMaterialClassContext(targetId = null) {
+        const resolvedTargetId = String(targetId || window.courseAttachTarget || window.currentCourseId || '').trim();
+        const target = resolvedTargetId ? findCourseById(resolvedTargetId) : null;
+        const section = Array.isArray(target?.sections) ? target.sections[0] : null;
+        const sectionIdFromTarget = resolvedTargetId.startsWith('section-')
+            ? resolvedTargetId.slice('section-'.length)
+            : '';
+        const classId = String(section?.id || section?.section_id || sectionIdFromTarget || '').trim();
+        const classCode = String(section?.code || section?.class_code || target?.code || currentClassCode || '').trim();
+        return {
+            targetId: resolvedTargetId,
+            classId,
+            classCode,
+            course: target,
+        };
+    }
+
     function findCourseMaterial(course, materialId) {
         const rawId = rawRecordId(materialId);
         return (course?.materials || []).find(item => {
@@ -9948,12 +9966,20 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                         const typeLabel = getMaterialActivityName(m) || m.item_type || m.type || '';
                         const typeSlug = String(typeLabel || '').toLowerCase().replace(/\s+/g, '-');
+                        const isSyllableMaterial = ['syllable_blending', 'blend_the_syllables'].includes(String(typeLabel || m.content_json?.activity_type || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''));
+                        const syllableMeta = isSyllableMaterial
+                            ? [m.language || m.content_json?.language,
+                               (m.activity_format || m.content_json?.activity_format) === 'big_box' ? 'Big Box — Word Building' : 'Syllable Combination',
+                               m.selected_set_name || m.content_json?.activity_name]
+                                .filter(Boolean).map(escapeHtml).join(' · ')
+                            : '';
 
                         item.innerHTML = `
                             <div class="material-info">
                                 <p class="material-title">${m.title || 'Untitled material'}${renderSharedMaterialBadge(m)}</p>
                                 ${typeLabel ? `<span class="material-type-badge ${typeSlug}">${typeLabel}</span>` : ''}
                                 ${isAssessmentMaterial(m) ? getMaterialStudentAccessBadge(m) : ''}
+                                ${syllableMeta ? `<p class="material-preview mb-0">${syllableMeta}</p>` : ''}
                                 ${m.description ? `<p class="material-preview">${m.description}</p>` : ''}
                             </div>
                             <div class="material-actions">
@@ -10754,6 +10780,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 document.body.appendChild(modalEl);
             }
             modalEl.dataset.courseId = course.id;
+            const materialClassContext = resolveMaterialClassContext(course.id);
+            if (materialClassContext.classCode) currentClassCode = materialClassContext.classCode;
             try { if (typeof loadCourseOverview === 'function') loadCourseOverview(course.id); } catch (err) { console.warn('loadCourseOverview error', err); }
             try { if (typeof loadCourseAssessments === 'function') loadCourseAssessments(course.id); } catch (err) { console.warn('loadCourseAssessments error', err); }
             try { if (typeof loadCourseReports === 'function') loadCourseReports(course.id); } catch (err) { console.warn('loadCourseReports error', err); }
@@ -13586,7 +13614,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             'Sound Detective': { lesson: 'Phonological Awareness', hint: 'Identify and locate sounds inside words.', fields: [{ key: 'word', label: 'Word', type: 'text', placeholder: 'mata' }, { key: 'targetSound', label: 'Target sound', type: 'text', placeholder: '/m/' }, { key: 'position', label: 'Position of sound', type: 'select', options: ['Beginning', 'Middle', 'End'] }], addLabel: 'Add Item' },
             'Match the Letter to Its Sound': { lesson: 'Letter-Sound Correspondence', hint: 'Match each letter to the sound it makes.', fields: [{ key: 'letter', label: 'Letter', type: 'text' }, { key: 'sound', label: 'Sound', type: 'text' }], addLabel: 'Add Item' },
             'Clap & Count Syllables': { lesson: 'Syllable Awareness', hint: 'Count the syllables in each word.', fields: [{ key: 'word', label: 'Word', type: 'text' }, { key: 'syllables', label: 'Expected syllable count', type: 'number', min: 1 }], addLabel: 'Add Item' },
-            'Blend the Syllables': { lesson: 'Syllable Blending', hint: 'Combine syllables to form complete words.', fields: [{ key: 'syllables', label: 'Syllables', type: 'text', placeholder: 'ba + ha' }, { key: 'answer', label: 'Complete word', type: 'text', placeholder: 'baha' }], addLabel: 'Add Item' },
+            'Blend the Syllables': { lesson: 'Syllable Blending', hint: 'Choose a language and one ready-made activity format.', fields: [], addLabel: 'Pre-built content' },
+            'Syllable Blending': { lesson: 'Syllable Blending', hint: 'Choose a language and one ready-made activity format.', fields: [], addLabel: 'Pre-built content' },
             'Picture-Word Matching': { lesson: 'Word Recognition', hint: 'Choose a prescribed language and set, then preview the ready-made picture-word pairs.', fields: [], addLabel: 'Select Prescribed Set' },
             'Decode the Word': { lesson: 'Word Decoding', hint: 'Break a word into sounds and decode it.', fields: [{ key: 'word', label: 'Word', type: 'text' }, { key: 'prompt', label: 'Decoding prompt', type: 'text', placeholder: 'Say the sounds then blend them.' }], addLabel: 'Add Item' },
             'Word Meaning Match': { lesson: 'Vocabulary Development', hint: 'Connect words with meanings, pictures, or phrases.', fields: [{ key: 'word', label: 'Word', type: 'text' }, { key: 'meaning', label: 'Meaning / picture / phrase', type: 'text' }], addLabel: 'Add Item' },
@@ -13603,7 +13632,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             ['02', 'Sound Detective', 'Phonological Awareness'],
             ['03', 'Match the Letter to Its Sound', 'Letter-Sound Correspondence'],
             ['04', 'Clap & Count Syllables', 'Syllable Awareness'],
-            ['05', 'Blend the Syllables', 'Syllable Blending'],
+            ['05', 'Syllable Blending', 'Syllable Blending'],
             ['06', 'Picture-Word Matching', 'Word Recognition'],
             ['07', 'Decode the Word', 'Word Decoding'],
             ['08', 'Word Meaning Match', 'Vocabulary Development'],
@@ -13677,6 +13706,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const PICTURE_WORD_MATCHING_SET_KEYS = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
         const PICTURE_WORD_CUSTOM_MAX_ITEMS = 5;
         const PICTURE_WORD_CUSTOM_STORAGE_KEY = 'pabasa_picture_word_custom_selection';
+        const SYLLABLE_BLENDING_CATALOG = JSON.parse(document.getElementById('syllable-blending-catalog')?.textContent || '{}');
         const PICTURE_WORD_CUSTOM_EXTRA_ITEMS = [
             { image: 'Horse.png', englishWord: 'Horse', filipinoWord: 'Kabayo' },
             { image: 'Cow.png', englishWord: 'Cow', filipinoWord: 'Baka' },
@@ -14076,6 +14106,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return title === 'Picture-Word Matching';
         }
 
+        function isSyllableBlendingTemplate(title) {
+            return title === 'Syllable Blending' || title === 'Blend the Syllables';
+        }
+
         function normalizeSentenceReadingLanguage(language) {
             return language === 'Filipino' ? 'Tagalog' : language;
         }
@@ -14326,7 +14360,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 ? contentJson.items
                 : (Array.isArray(material?.items) ? material.items : []);
             const restoredLanguage = String(
-                material?.language
+                (isSyllableBlendingTemplate(templateTitle) ? contentJson.language : material?.language)
                 || contentJson.language
                 || (isSentenceReadingTemplate(templateTitle) ? 'Tagalog' : isStoryReadingTemplate(templateTitle) ? 'English' : 'English')
             ).trim() || 'English';
@@ -14380,6 +14414,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 pictureWordMatchingCustom: restoredPictureWordCustom,
                 sentenceReading: restoredSentenceSelection,
                 storyReading: restoredStoryReading,
+                activityFormat: isSyllableBlendingTemplate(templateTitle) ? (contentJson.activity_format || 'syllable_combination') : null,
+                selectedActivityId: isSyllableBlendingTemplate(templateTitle) ? (contentJson.activity_id || null) : null,
                 mode: 'edit'
             };
         }
@@ -15257,6 +15293,67 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 renderStoryReadingSelector(title);
                 return;
             }
+            if (isSyllableBlendingTemplate(title)) {
+                const currentFormat = activeTemplateActivity?.activityFormat || values.activity_format || 'syllable_combination';
+                if (activeTemplateActivity) activeTemplateActivity.activityFormat = currentFormat;
+                const language = activeTemplateActivity?.language === 'English' ? 'English' : 'Filipino';
+                const activities = SYLLABLE_BLENDING_CATALOG?.[language]?.[currentFormat] || [];
+                const formatLabel = currentFormat === 'big_box' ? 'Big Box — Word Building' : 'Syllable Combination';
+                templateDynamicFields.innerHTML = `
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-bold" for="syllableActivityTitle">Title <span class="text-danger">*</span></label>
+                            <input type="text" id="syllableActivityTitle" class="form-control" maxlength="200" value="${escapeAttr(activeTemplateActivity?.title || '')}" placeholder="Enter an activity title" autocomplete="off">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold" for="syllableActivityFormat">Activity Format <span class="text-danger">*</span></label>
+                            <select id="syllableActivityFormat" class="form-select">
+                                <option value="syllable_combination" ${currentFormat === 'syllable_combination' ? 'selected' : ''}>Syllable Combination</option>
+                                <option value="big_box" ${currentFormat === 'big_box' ? 'selected' : ''}>Big Box — Word Building</option>
+                            </select>
+                            <div class="form-text">Questions, syllables, choices, instructions, and answers are supplied by the system.</div>
+                        </div>
+                        <div class="col-12">
+                            <div class="border rounded-4 bg-light p-3 p-lg-4">
+                                <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                                    <div><h6 class="fw-bold mb-1">Prebuilt Activities</h6><div class="small text-muted">${escapeHtml(language)} · ${escapeHtml(formatLabel)}</div></div>
+                                    <span class="badge text-bg-primary">5 choices</span>
+                                </div>
+                                <div class="row g-3" id="syllablePrebuiltGrid">
+                                    ${activities.map(activity => {
+                                        const selected = activeTemplateActivity.selectedActivityId === activity.activity_id;
+                                        const preview = currentFormat === 'big_box'
+                                            ? `<div class="small fw-bold text-uppercase mb-1">Big Box</div><div class="small">${activity.syllable_pool.map(escapeHtml).join(' · ')}</div><div class="small mt-2">${activity.items.map(item => escapeHtml(item.answer)).join(', ')}</div>`
+                                            : activity.items.slice(0, 3).map(item => `<div class="small"><code>${escapeHtml(item.syllables[0])}</code> + <code>${escapeHtml(item.syllables[1])}</code> → <strong>${escapeHtml(item.answer)}</strong></div>`).join('');
+                                        return `<div class="col-12 col-xl-6"><div class="h-100 bg-white border rounded-3 p-3 ${selected ? 'border-primary shadow-sm' : ''}" data-syllable-card="${escapeAttr(activity.activity_id)}">
+                                            <div class="d-flex justify-content-between gap-2"><div><div class="fw-bold">Activity ${activity.set_number} — ${escapeHtml(activity.activity_name)}</div><div class="small text-muted">${currentFormat === 'big_box' ? '5 target words' : '5 items'}</div></div>${selected ? '<i class="bi bi-check-circle-fill text-primary fs-5"></i>' : ''}</div>
+                                            <div class="mt-3">${preview}</div>
+                                            <div class="collapse mt-3" id="preview_${escapeAttr(activity.activity_id)}"><div class="small border-top pt-2"><strong>Instruction:</strong> ${escapeHtml(activity.instruction)}<br>${activity.items.map((item, index) => `${index + 1}. ${escapeHtml(item.syllables.join(' + '))} → ${escapeHtml(item.answer)}`).join('<br>')}</div></div>
+                                            <div class="d-flex gap-2 mt-3"><button type="button" class="btn btn-sm btn-outline-secondary syllable-preview-btn" data-bs-toggle="collapse" data-bs-target="#preview_${escapeAttr(activity.activity_id)}">Preview</button><button type="button" class="btn btn-sm ${selected ? 'btn-primary' : 'btn-outline-primary'} syllable-select-btn" data-activity-id="${escapeAttr(activity.activity_id)}">${selected ? 'Selected' : 'Select'}</button></div>
+                                        </div></div>`;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                document.getElementById('syllableActivityFormat')?.addEventListener('change', event => {
+                    activeTemplateActivity.activityFormat = event.target.value;
+                    activeTemplateActivity.selectedActivityId = null;
+                    renderTemplateDynamicFields(title);
+                    renderTemplatePreview();
+                });
+                document.getElementById('syllableActivityTitle')?.addEventListener('input', event => {
+                    activeTemplateActivity.title = event.target.value;
+                    if (templateActivityTitle) templateActivityTitle.value = event.target.value;
+                    renderTemplatePreview();
+                });
+                templateDynamicFields.querySelectorAll('.syllable-select-btn').forEach(button => button.addEventListener('click', () => {
+                    activeTemplateActivity.selectedActivityId = button.dataset.activityId;
+                    renderTemplateDynamicFields(title);
+                    renderTemplatePreview();
+                }));
+                return;
+            }
             if (isPictureWordMatchingTemplate(title)) {
                 Array.from(document.querySelectorAll('input[name="templateLanguage"]')).forEach(input => {
                     input.disabled = false;
@@ -15297,7 +15394,18 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function renderTemplatePreview() {
             if (!templatePreviewPanel || !activeTemplateActivity) return;
-            const summary = getTemplateContentSelectionSummary();
+            const summary = isSyllableBlendingTemplate(activeTemplateActivity.templateTitle) ? (() => {
+                const isBigBox = activeTemplateActivity.activityFormat === 'big_box';
+                const isFilipino = activeTemplateActivity.language === 'Filipino';
+                const choices = SYLLABLE_BLENDING_CATALOG?.[activeTemplateActivity.language]?.[activeTemplateActivity.activityFormat] || [];
+                const selectedActivity = choices.find(activity => activity.activity_id === activeTemplateActivity.selectedActivityId);
+                return {
+                    title: selectedActivity ? `Activity ${selectedActivity.set_number} — ${selectedActivity.activity_name}` : 'Select a prebuilt activity',
+                    meta: `${activeTemplateActivity.language} · ${isBigBox ? 'Big Box — Word Building' : 'Syllable Combination'}`,
+                    body: selectedActivity ? selectedActivity.items.map(item => isBigBox ? item.answer : `${item.syllables.join(' + ')} → ${item.answer}`) : [],
+                    emptyMessage: 'Choose one of the five cards above.'
+                };
+            })() : getTemplateContentSelectionSummary();
             const weeks = getTemplateWeeks();
             const selectionSummary = isPictureWordMatchingTemplate(activeTemplateActivity.templateTitle)
                 ? {
@@ -15486,6 +15594,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 content: {},
                 items: []
             };
+            if (isSyllableBlendingTemplate(templateTitle)) {
+                activeTemplateActivity.activityFormat = 'syllable_combination';
+                activeTemplateActivity.selectedActivityId = null;
+                activeTemplateActivity.title = '';
+            }
             if (isPictureWordMatchingTemplate(templateTitle)) {
                 activeTemplateActivity.pictureWordMatching = Object.assign({}, normalizePictureWordMatchingSelection('A', templateLanguage), { mode: 'prescribed' });
                 activeTemplateActivity.pictureWordMatchingCustom = { items: [], searchQuery: '' };
@@ -15507,7 +15620,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             applyTemplateLanguageSelection(templateLanguage, templateTitle);
             setNodeVisibility(templateActivityGrid, false);
             setNodeVisibility(templateBuilderPanel, true);
-            if (templateActivityTitle) templateActivityTitle.value = '';
+            if (templateActivityTitle) {
+                templateActivityTitle.value = '';
+                templateActivityTitle.closest('.col-12')?.classList.toggle('d-none', isSyllableBlendingTemplate(templateTitle));
+            }
             renderTemplateDynamicFields(templateTitle);
             renderTemplateWeeks();
             renderTemplatePreview();
@@ -15541,7 +15657,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 syncSentenceReadingItems();
             }
             const language = getSelectedTemplateLanguage();
-            if (isPictureWordMatchingTemplate(activeTemplateActivity?.templateTitle)) {
+            if (isSyllableBlendingTemplate(activeTemplateActivity?.templateTitle)) {
+                content.language = language;
+                content.activity_format = activeTemplateActivity.activityFormat || 'syllable_combination';
+                content.activity_type = 'syllable_blending';
+                content.activity_id = activeTemplateActivity.selectedActivityId || '';
+            } else if (isPictureWordMatchingTemplate(activeTemplateActivity?.templateTitle)) {
                 const mode = activeTemplateActivity?.pictureWordMatching?.mode === 'custom' ? 'custom' : 'prescribed';
                 content.language = language || 'English';
                 if (mode === 'custom') {
@@ -15588,7 +15709,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 });
             }
             return {
-                title: (templateActivityTitle?.value || '').trim(),
+                title: isSyllableBlendingTemplate(activeTemplateActivity?.templateTitle)
+                    ? (document.getElementById('syllableActivityTitle')?.value || activeTemplateActivity?.title || '').trim()
+                    : (templateActivityTitle?.value || '').trim(),
                 language,
                 weeks: getTemplateWeeks(),
                 content
@@ -15599,6 +15722,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const def = getTemplateDefinition(activeTemplateActivity?.templateTitle);
             if (!values.title) return 'Activity Title is required.';
             if (!values.language) return 'Language is required.';
+            if (isSyllableBlendingTemplate(activeTemplateActivity?.templateTitle)) {
+                if (!['Filipino', 'English'].includes(values.language)) return 'Choose Filipino or English.';
+                if (!['syllable_combination', 'big_box'].includes(values.content?.activity_format)) return 'Choose an activity format.';
+                if (!values.content?.activity_id) return 'Select one of the five prebuilt activities.';
+                if (!values.weeks.length) return 'Select at least one week.';
+                return '';
+            }
             if (isSentenceReadingTemplate(activeTemplateActivity?.templateTitle)) {
                 if (!['Filipino', 'English'].includes(values.language)) return 'Sentence Reading language must be Filipino or English.';
                 if (!Array.isArray(values.content?.items) || !values.content.items.length) return 'Select at least one prescribed sentence item.';
@@ -15747,6 +15877,22 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         weeks: values.weeks || [],
                         items: Array.isArray(activeTemplateActivity?.items) ? activeTemplateActivity.items : [],
                     });
+                    if (isSyllableBlendingTemplate(activeTemplateActivity?.templateTitle)) {
+                        const selectedSet = (SYLLABLE_BLENDING_CATALOG?.[values.language]?.[values.content.activity_format] || [])
+                            .find(activity => activity.activity_id === values.content.activity_id);
+                        if (!selectedSet) throw new Error('The selected prebuilt activity could not be loaded. Please select it again.');
+                        Object.assign(contentPayload, selectedSet, {
+                            activity_type: 'syllable_blending',
+                            activity_format: values.content.activity_format,
+                            activity_id: values.content.activity_id,
+                            language: values.language,
+                            template_title: 'Syllable Blending',
+                            template_lesson: 'Syllable Blending',
+                            template_type: 'Syllable Blending',
+                            template_source: 'template',
+                            weeks: values.weeks || [],
+                        });
+                    }
                     if (isPictureWordMatchingTemplate(activeTemplateActivity?.templateTitle)) {
                         const mode = activeTemplateActivity?.pictureWordMatching?.mode === 'custom' ? 'custom' : 'prescribed';
                         if (mode === 'custom') {
@@ -15787,17 +15933,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     if (activeTemplateActivity?.phraseReading) {
                         contentPayload.phraseReading = activeTemplateActivity.phraseReading;
                     }
-                    const saveClassCode = currentClassCode || (() => {
-                        const attachedCourseId = Number(window.courseAttachTarget || window.currentCourseId || 0);
-                        const attachedCourse = attachedCourseId ? findCourseById(attachedCourseId) : null;
-                        return attachedCourse?.sections?.[0]?.code || '';
-                    })();
+                    const materialClassContext = resolveMaterialClassContext();
+                    const saveClassCode = materialClassContext.classCode;
                     const payload = {
                         title: values.title,
                         reading_type: getTemplateReadingType(activeTemplateActivity?.templateTitle),
                         content: JSON.stringify(contentPayload),
                         status: 'published',
                         usage_type: 'assessment',
+                        class_id: materialClassContext.classId || null,
                         class_code: saveClassCode,
                         scheduled_at: null,
                         assigned_week: values.weeks?.[0] || null,
@@ -15836,20 +15980,17 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const data = await response.json();
                     console.log('[CREATE ACTIVITY] Response body:', data);
                     if (!data.success) throw new Error(data.error || data.message || 'Save failed.');
-                    const stored = Object.assign({}, values, {
-                        assignOnly,
-                        savedAt: new Date().toISOString(),
-                        id: data.material?.id || `material-${Date.now()}`,
-                        source_type: 'template',
-                        material_id: data.material?.id || null,
-                        assigned_weeks: values.weeks || [],
-                    });
-                    createdTemplateActivities.unshift(stored);
+                    if (!data.material || typeof data.material !== 'object') {
+                        throw new Error('The activity was saved, but the server did not return the saved material. Please refresh Learning Materials.');
+                    }
+                    // Keep the server response authoritative. Reconstructing a reduced object here
+                    // drops template metadata and makes the activity disappear from downstream views.
+                    createdTemplateActivities.unshift(data.material);
                     try {
                         window.createdTemplateActivities = createdTemplateActivities;
                         localStorage.setItem('pabasa_created_template_activities', JSON.stringify(createdTemplateActivities));
                     } catch (e) { /* ignore */ }
-                    const attachCourseId = Number(window.courseAttachTarget || window.currentCourseId || 0);
+                    const attachCourseId = materialClassContext.targetId;
                     if (templateValidationError) templateValidationError.classList.add('d-none');
                     hideTemplateBuilder();
                     if (addMaterialModal) bootstrap.Modal.getOrCreateInstance(addMaterialModal).hide();
@@ -16888,6 +17029,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
                     } else if (activeTemplateActivity?.templateTitle === 'Picture-Word Matching') {
                         renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
+                    } else if (isSyllableBlendingTemplate(activeTemplateActivity?.templateTitle)) {
+                        activeTemplateActivity.selectedActivityId = null;
+                        renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
                     }
                     renderTemplatePreview();
                 });
@@ -17190,7 +17334,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     setNodeVisibility(templateActivityGrid, false);
                     setNodeVisibility(templateBuilderPanel, true);
                     applyTemplateLanguageSelection(activeTemplateActivity.language, activeTemplateActivity.templateTitle);
-                    if (templateActivityTitle) templateActivityTitle.value = activeTemplateActivity.title || '';
+                    if (templateActivityTitle) {
+                        templateActivityTitle.value = isSyllableBlendingTemplate(activeTemplateActivity.templateTitle) ? 'Syllable Blending' : (activeTemplateActivity.title || '');
+                        templateActivityTitle.closest('.col-12')?.classList.toggle('d-none', isSyllableBlendingTemplate(activeTemplateActivity.templateTitle));
+                    }
                     renderTemplateDynamicFields(activeTemplateActivity.templateTitle, activeTemplateActivity.content);
                     renderTemplateWeeks(activeTemplateActivity.weeks);
                     renderTemplatePreview();
@@ -18307,17 +18454,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                         }
                                     }
                                 } else {
-                                    // Determine class code for new material
-                                    let saveClassCode = currentClassCode;
-                                    // If no current class and we have courses with sections, auto-assign to first class
-                                    if (!saveClassCode && Array.isArray(teacherCourses) && teacherCourses.length > 0) {
-                                        for (const course of teacherCourses) {
-                                            if (Array.isArray(course.sections) && course.sections.length > 0) {
-                                                saveClassCode = course.sections[0].code || null;
-                                                if (saveClassCode) break;
-                                            }
-                                        }
-                                    }
+                                    // Resolve the exact class-backed card that opened this modal. Never
+                                    // fall back to the first class, which can persist material to the wrong section.
+                                    const materialClassContext = resolveMaterialClassContext();
+                                    const saveClassCode = materialClassContext.classCode || null;
                                     
                                     const postOpts = {
                                         method: 'POST',
@@ -18333,6 +18473,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                             content: content,
                                             status: status,
                                             usage_type: usageType,
+                                            class_id: materialClassContext.classId || null,
                                             class_code: saveClassCode,
                                             scheduled_at: schedule || null,
                                             assigned_week: assignedWeek,

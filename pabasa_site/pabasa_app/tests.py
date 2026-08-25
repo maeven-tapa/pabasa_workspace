@@ -5819,6 +5819,50 @@ class MaterialCreationTests(TestCase):
         self.assertEqual(payload["material"]["material_source"], "shared")
         self.assertTrue(payload["material"]["is_shared_material"])
 
+    def test_add_template_material_accepts_canonical_section_id(self):
+        teacher = User.objects.create(
+            custom_id="TCH-SECTION-ID", role="teacher", first_name="Class", last_name="Owner",
+            middle_initial="", suffix="", sex="female", birth_month=1, birth_day=1,
+            birth_year=1990, email="section-owner@example.com", password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        section = Section.objects.create(
+            class_code="CLS-SECTION-ID", class_name="Grade 2 - Mabini", header="Reading Class",
+            description="", teacher=teacher, subject="Filipino",
+        )
+        session = self.client.session
+        session.update({"user_id": teacher.id, "user_role": "teacher", "email": teacher.email})
+        session.save()
+        template_content = {
+            "template_title": "Picture-Word Matching",
+            "template_lesson": "Word Recognition",
+            "template_type": "Picture-Word Matching",
+            "template_source": "template",
+            "language": "Filipino",
+            "items": [{"word": "Aso"}],
+        }
+
+        response = self.client.post(
+            reverse("add_reading_material"),
+            json.dumps({
+                "title": "Picture words", "content": json.dumps(template_content),
+                "reading_type": "word", "status": "published", "source_type": "template",
+                "template_title": "Picture-Word Matching", "template_lesson": "Word Recognition",
+                "class_id": f"section-{section.id}", "class_code": section.class_code,
+                "assigned_weeks": ["Week 1"], "language": "Filipino",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()["material"]
+        material = Material.objects.get(id=payload["raw_id"])
+        self.assertEqual(material.section_id, section.id)
+        self.assertTrue(material.assigned_sections.filter(id=section.id).exists())
+        self.assertEqual(payload["class_id"], section.id)
+        self.assertEqual(payload["class_code"], section.class_code)
+        self.assertEqual(payload["content_json"]["template_title"], "Picture-Word Matching")
+
 
 class PracticeReaderMaterialTests(TestCase):
     def setUp(self):
