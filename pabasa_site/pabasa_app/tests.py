@@ -2257,10 +2257,10 @@ class ReadingMatcherTests(TestCase):
         self.assertEqual(v1_model_for_language("latest_short", "en-PH"), "command_and_search")
         self.assertEqual(v1_model_for_language("latest_short", "fil-PH"), "")
 
-    @patch("google.cloud.speech_v2.SpeechClient")
+    @patch("pabasa_app.reading_stt.google_stt_streaming_client")
     @patch("pabasa_app.reading_stt.google_stt_credentials", return_value=object())
-    def test_chirp3_uses_streaming_recognition_and_returns_final_results(self, credentials, speech_client):
-        client = speech_client.return_value
+    def test_chirp3_uses_streaming_recognition_and_returns_final_results(self, credentials, streaming_client):
+        client = streaming_client.return_value
         client.streaming_recognize.return_value = [
             SimpleNamespace(results=[
                 SimpleNamespace(

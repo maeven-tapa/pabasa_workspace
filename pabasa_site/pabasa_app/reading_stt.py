@@ -452,7 +452,7 @@ def transcribe_audio_bytes_v2_chirp3_streaming(
     client_options = None
     if location and location != "global":
         client_options = ClientOptions(api_endpoint=f"{location}-speech.googleapis.com")
-    client = SpeechClient(credentials=credentials, client_options=client_options)
+    client = google_stt_streaming_client(credentials, client_options)
 
     recognition_config = cloud_speech.RecognitionConfig(
         auto_decoding_config=cloud_speech.AutoDetectDecodingConfig(),
@@ -490,6 +490,22 @@ def transcribe_audio_bytes_v2_chirp3_streaming(
             else:
                 latest_interim = transcript
     return " ".join(final_transcripts or ([latest_interim] if latest_interim else [])).strip()
+
+
+def google_stt_streaming_client(credentials, client_options):
+    """Create a Chirp streaming client that accepts detailed API error metadata."""
+    from google.cloud.speech_v2 import SpeechClient
+    from google.cloud.speech_v2.services.speech.transports.grpc import SpeechGrpcTransport
+
+    endpoint = getattr(client_options, "api_endpoint", "") or "speech.googleapis.com"
+    channel = SpeechGrpcTransport.create_channel(
+        endpoint,
+        credentials=credentials,
+        # Google can return detailed recognition errors larger than gRPC's 16 KB
+        # default.  Retain them instead of converting the stream to a 429.
+        options=(("grpc.max_metadata_size", 64 * 1024),),
+    )
+    return SpeechClient(transport=SpeechGrpcTransport(channel=channel))
 
 
 def google_stt_credentials(service_account, credentials_file):
