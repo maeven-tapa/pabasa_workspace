@@ -2551,6 +2551,13 @@
             if (statusMessage) {
                 setSpeechStatus(statusMessage, detail, Boolean(isRecording && !isMuted));
             }
+            // A correct response pauses capture while it is processed. Once the
+            // next item is visible, resume a fresh recorder for that new context.
+            if (isRecording && !isMuted && !mediaRecorder && !stoppingSpeechRecognition) {
+                startSpeechChunkRecorder();
+            }
+            updateAssessmentNavigationButtons();
+            updateSpeechProcessingControls();
         }
 
         function showCompletion(isFullCompletion) {
