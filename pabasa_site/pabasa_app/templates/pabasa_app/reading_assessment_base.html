@@ -594,7 +594,7 @@
             font-size: clamp(0.85rem, 1.8vw, 1.3rem);
             line-height: 1.45;
             padding: clamp(1rem, 2.5vw, 2rem);
-            text-align: left;
+            text-align: justify;
         }
 
         .reader-footer {
@@ -737,6 +737,30 @@
         }
         #btnStartReading:hover { background: #15803d; transform: translateY(-2px); }
 
+        #btnStartReading.is-playing {
+            isolation: isolate;
+        }
+
+        #btnStartReading.is-playing::after {
+            border: 2px solid rgba(74, 222, 128, 0.72);
+            border-radius: inherit;
+            content: "";
+            inset: -3px;
+            opacity: 0;
+            pointer-events: none;
+            position: absolute;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: -1;
+        }
+
+        .reader-shell.is-story-reading.is-hearing #btnStartReading.is-playing {
+            animation: pabasaFinishReadingPulse 1.45s ease-in-out infinite;
+        }
+
+        .reader-shell.is-story-reading.is-hearing #btnStartReading.is-playing::after {
+            animation: pabasaFinishReadingGlow 1.45s ease-in-out infinite;
+        }
+
         #btnStopReading {
             background: var(--clay);
             box-shadow: 0 10px 20px rgba(185, 95, 68, 0.2);
@@ -789,6 +813,37 @@
         @keyframes pabasaListeningGlow {
             0%, 100% { opacity: 0.2; transform: scale(0.96); }
             45% { opacity: 0.86; transform: scale(1.12); }
+        }
+
+        @keyframes pabasaFinishReadingPulse {
+            0%, 100% {
+                background-color: #16a34a;
+                box-shadow: 0 10px 20px rgba(22, 163, 74, 0.24), 0 0 0 rgba(74, 222, 128, 0);
+                filter: brightness(1);
+            }
+            45% {
+                background-color: #22b653;
+                box-shadow: 0 12px 26px rgba(22, 163, 74, 0.5), 0 0 32px rgba(74, 222, 128, 0.72);
+                filter: brightness(1.12);
+            }
+            70% {
+                background-color: #19a94c;
+                box-shadow: 0 11px 23px rgba(22, 163, 74, 0.36), 0 0 20px rgba(74, 222, 128, 0.48);
+                filter: brightness(1.05);
+            }
+        }
+
+        @keyframes pabasaFinishReadingGlow {
+            0%, 100% { opacity: 0.15; transform: scale(0.98); }
+            45% { opacity: 0.9; transform: scale(1.1, 1.32); }
+            70% { opacity: 0.48; transform: scale(1.05, 1.18); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .reader-shell.is-story-reading.is-hearing #btnStartReading.is-playing,
+            .reader-shell.is-story-reading.is-hearing #btnStartReading.is-playing::after {
+                animation: none;
+            }
         }
 
         #btnToggleMic, #btnTestMic {
@@ -1549,6 +1604,153 @@
             overflow: visible !important;
         }
 
+        /* Story selection contains no reading or speech UI. Let the card and its
+           dotted inset wrap only the story choices instead of reserving the
+           shared reading-phase rows. */
+        .reader-shell.is-story-selection .reader-card {
+            grid-template-rows: auto;
+            min-height: 0;
+        }
+
+        .reader-shell.is-story-selection .read-helper,
+        .reader-shell.is-story-selection .word-stage,
+        .reader-shell.is-story-selection .speech-panel,
+        .reader-shell.is-story-selection .reader-footer {
+            display: none !important;
+        }
+
+        .reader-shell.is-story-selection .story-selection-panel {
+            padding-block: clamp(1.5rem, 3vw, 2.25rem) !important;
+        }
+
+        .reader-shell.is-story-selection #storySelectionGrid.story-selection-grid {
+            margin-bottom: 0 !important;
+        }
+
+        .story-ready-instruction,
+        .story-reading-progress {
+            color: var(--muted);
+            font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+            margin: 0;
+        }
+
+        .story-ready-instruction {
+            font-size: clamp(1rem, 1.8vw, 1.1rem);
+            line-height: 1.55;
+            max-width: 560px;
+        }
+
+        .story-reading-progress {
+            font-size: 0.9rem;
+            font-weight: 800;
+        }
+
+        .reader-shell.is-story-ready-state .reader-card,
+        .reader-shell.is-story-reading .reader-card {
+            grid-template-rows: auto auto;
+            min-height: 0;
+        }
+
+        .reader-shell.is-story-selection > .reader-stage > .reader-card,
+        .reader-shell.is-story-ready-state > .reader-stage > .reader-card,
+        .reader-shell.is-story-reading > .reader-stage > .reader-card {
+            --story-reading-border-inset: clamp(12px, 2vw, 18px);
+            outline: 2px dashed rgba(31, 111, 139, 0.18);
+            outline-offset: calc(0px - var(--story-reading-border-inset));
+            overflow: hidden;
+            position: relative;
+        }
+
+        .reader-shell.is-story-selection > .reader-stage > .reader-card::before,
+        .reader-shell.is-story-ready-state > .reader-stage > .reader-card::before,
+        .reader-shell.is-story-reading > .reader-stage > .reader-card::before {
+            border: 0 !important;
+            content: none !important;
+            display: none !important;
+        }
+
+        .reader-shell.is-story-ready-state .read-helper,
+        .reader-shell.is-story-reading .read-helper {
+            display: none;
+        }
+
+        .reader-shell.is-story-ready-state .word-stage,
+        .reader-shell.is-story-reading .word-stage {
+            align-content: start;
+            gap: 0.55rem;
+            margin-inline: auto;
+            max-width: 820px;
+            padding: clamp(1.25rem, 3vw, 2.25rem) clamp(0.5rem, 2vw, 1.25rem);
+        }
+
+        .reader-shell.is-story-ready-state .reading-title,
+        .reader-shell.is-story-reading .reading-title {
+            font-size: clamp(1.4rem, 2.8vw, 2rem);
+            line-height: 1.2;
+            margin: 0;
+            max-width: 760px;
+        }
+
+        .reader-shell.is-story-reading .reading-word {
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            box-shadow: none;
+            font-size: clamp(1.15rem, calc(1rem + 0.65vw), 1.65rem);
+            font-weight: 700;
+            letter-spacing: 0;
+            line-height: 1.7;
+            margin-top: clamp(0.75rem, 2vw, 1.25rem);
+            max-width: 760px;
+            padding: 0;
+            text-align: justify;
+            text-wrap: pretty;
+            width: 100%;
+        }
+
+        .reader-shell.is-story-ready-state .reader-footer {
+            grid-template-columns: 1fr;
+            grid-template-areas: "controls";
+            margin-top: 0 !important;
+        }
+
+        .reader-shell.is-story-ready-state .recording-controls,
+        .reader-shell.is-story-reading .recording-controls {
+            background: transparent;
+            max-width: none;
+            padding: 0;
+            width: auto;
+        }
+
+        .reader-shell.is-story-reading .reader-footer {
+            grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+            grid-template-areas: "back controls next";
+            margin-top: 0 !important;
+        }
+
+        @media (max-width: 560px) {
+            .reader-shell.is-story-reading .reader-card {
+                padding-inline: clamp(0.85rem, 4vw, 1.25rem);
+            }
+
+            .reader-shell.is-story-reading .reader-footer {
+                gap: 0.45rem;
+            }
+
+            .reader-shell.is-story-reading .recording-controls {
+                gap: 0.35rem;
+            }
+
+            .reader-shell.is-story-reading .nav-btn,
+            .reader-shell.is-story-reading #btnStartReading,
+            .reader-shell.is-story-reading #btnReadAloud {
+                font-size: 0.82rem;
+                min-height: 44px;
+                min-width: 0;
+                padding-inline: 0.7rem;
+            }
+        }
+
         .story-selection-head {
             text-align: center;
             max-width: 760px;
@@ -2100,6 +2302,11 @@
         body.dark-theme .reader-card::before {
             border-color: rgba(255, 255, 255, 0.05) !important;
         }
+        body.dark-theme .reader-shell.is-story-selection > .reader-stage > .reader-card,
+        body.dark-theme .reader-shell.is-story-ready-state > .reader-stage > .reader-card,
+        body.dark-theme .reader-shell.is-story-reading > .reader-stage > .reader-card {
+            outline-color: rgba(255, 255, 255, 0.05);
+        }
         body.dark-theme .reader-card::after,
         body.dark-theme .completion-card::after {
             color: rgba(125, 211, 252, 0.08) !important;
@@ -2334,6 +2541,8 @@
                 </div>
                 <section class="word-stage" aria-live="polite" aria-atomic="true">
                     <h2 class="reading-title" id="readingTitle" hidden></h2>
+                    <p class="story-ready-instruction d-none" id="storyReadyInstruction">Your story is ready. Tap Start Reading when you are ready.</p>
+                    <p class="story-reading-progress d-none" id="storyReadingProgress"></p>
                     <h1 class="reading-word" id="readingWord">{% block initial_text %}{% endblock %}</h1>
                 </section>
                 <section class="story-selection-panel d-none" id="storySelectionPanel" aria-live="polite" aria-atomic="true">
@@ -2342,21 +2551,6 @@
                         <p class="story-selection-subtitle" id="storySelectionSubtitle">Tap one to begin your reading assessment.</p>
                     </div>
                     <div class="story-selection-grid" id="storySelectionGrid"></div>
-                </section>
-                <section class="story-selection-state d-none" id="storySelectionState" aria-live="polite" aria-atomic="true">
-                    <div class="story-selection-state-header">
-                        <p class="story-choice-selected-badge"><i class="bi bi-check2-circle" aria-hidden="true"></i> Selected story</p>
-                        <h2 class="story-selection-state-title" id="storySelectionStateTitle">Story ready</h2>
-                        <p class="story-selection-state-copy" id="storySelectionStateCopy">Your story is ready. Tap Start Reading when you are ready.</p>
-                    </div>
-                    <div class="story-selection-state-actions">
-                        <button class="btn btn-primary rounded-pill" id="storySelectionStartBtn" type="button">
-                            <i class="bi bi-play-fill" aria-hidden="true"></i> Start Reading
-                        </button>
-                        <button class="btn btn-outline-secondary rounded-pill" id="storySelectionChangeBtn" type="button">
-                            <i class="bi bi-arrow-left-right" aria-hidden="true"></i> Change Story
-                        </button>
-                    </div>
                 </section>
                 <section class="story-question-panel d-none" id="storyQuestionPanel" aria-live="polite" aria-atomic="true">
                     <div class="story-question-head">

@@ -31,11 +31,8 @@
         const storySelectionGrid = document.getElementById("storySelectionGrid");
         const storySelectionTitle = document.getElementById("storySelectionTitle");
         const storySelectionSubtitle = document.getElementById("storySelectionSubtitle");
-        const storySelectionState = document.getElementById("storySelectionState");
-        const storySelectionStateTitle = document.getElementById("storySelectionStateTitle");
-        const storySelectionStateCopy = document.getElementById("storySelectionStateCopy");
-        const storySelectionStartBtn = document.getElementById("storySelectionStartBtn");
-        const storySelectionChangeBtn = document.getElementById("storySelectionChangeBtn");
+        const storyReadyInstruction = document.getElementById("storyReadyInstruction");
+        const storyReadingProgress = document.getElementById("storyReadingProgress");
         const storyQuestionPanel = document.getElementById("storyQuestionPanel");
         const storyQuestionTitle = document.getElementById("storyQuestionTitle");
         const storyQuestionList = document.getElementById("storyQuestionList");
@@ -181,6 +178,7 @@
         let currentSelectedStory = null;
         let currentStoryState = "story_selection";
         let currentAssessmentUiMode = "standard";
+        let currentStorySegmentIndex = 0;
         let syllableStitchingContext = "";
         let syllableStitchingContextAt = 0;
         const syllableStitchingWindowMs = 4000;
@@ -235,9 +233,12 @@
 
         function setSpeechDebugPanelVisible(isVisible, persist = true) {
             const enabled = Boolean(isVisible);
-            speechPanel?.classList.toggle("d-none", !enabled);
-            speechPanel?.toggleAttribute("hidden", !enabled);
-            speechPanel?.setAttribute("aria-hidden", String(!enabled));
+            const shouldRender = enabled
+                && !shell?.classList.contains("is-story-selection")
+                && !shell?.classList.contains("is-story-ready-state");
+            speechPanel?.classList.toggle("d-none", !shouldRender);
+            speechPanel?.toggleAttribute("hidden", !shouldRender);
+            speechPanel?.setAttribute("aria-hidden", String(!shouldRender));
             if (speechDebugToggle) speechDebugToggle.checked = enabled;
             if (persist) {
                 localStorage.setItem("pabasaShowSpeechDebugPanel", enabled ? "true" : "false");
@@ -506,8 +507,9 @@
 
         function hideStoryPanels() {
             storySelectionPanel?.classList.add("d-none");
-            storySelectionState?.classList.add("d-none");
             storyQuestionPanel?.classList.add("d-none");
+            storyReadyInstruction?.classList.add("d-none");
+            storyReadingProgress?.classList.add("d-none");
         }
 
         function updateStandardAssessmentControls() {
@@ -567,17 +569,17 @@
             currentStoryState = "story_ready";
             currentAssessmentUiMode = "story";
             hideStoryPanels();
-            if (storySelectionState) storySelectionState.classList.remove("d-none");
-            if (storySelectionStateTitle) storySelectionStateTitle.textContent = story.title || "Selected story";
-            if (storySelectionStateCopy) storySelectionStateCopy.textContent = "Your story is ready. Tap Start Reading when you are ready.";
             if (readingWord) {
-                readingWord.hidden = false;
-                readingWord.textContent = story.content || "Selected story has no content.";
+                readingWord.hidden = true;
+                const segments = splitTextIntoDisplayPages(story.content || "", "story");
+                currentStorySegmentIndex = Math.min(currentStorySegmentIndex, Math.max(0, segments.length - 1));
+                readingWord.textContent = "";
             }
             if (readingTitle) {
                 readingTitle.hidden = false;
                 readingTitle.textContent = story.title || "";
             }
+            storyReadyInstruction?.classList.remove("d-none");
             btnStartReading?.classList.remove("d-none");
             btnStopReading?.classList.add("d-none");
             btnReadAloud?.classList.add("d-none");
@@ -592,17 +594,29 @@
             hideStoryPanels();
             if (readingWord) {
                 readingWord.hidden = false;
-                readingWord.textContent = story.content || "Selected story has no content.";
+                readingWord.textContent = getCurrentDisplayText() || "Selected story has no content.";
             }
             if (readingTitle) {
                 readingTitle.hidden = false;
                 readingTitle.textContent = story.title || "";
             }
-            btnStartReading?.classList.add("d-none");
-            btnStopReading?.classList.remove("d-none");
+            if (storyReadingProgress) {
+                storyReadingProgress.textContent = `${currentPageIndex + 1} / ${getCurrentPageCount()}`;
+                storyReadingProgress.classList.remove("d-none");
+            }
+            btnStartReading?.classList.remove("d-none");
+            btnStopReading?.classList.add("d-none");
             btnReadAloud?.classList.remove("d-none");
-            prevBtn?.classList.add("d-none");
-            nextBtn?.classList.add("d-none");
+            prevBtn?.classList.remove("d-none");
+            nextBtn?.classList.remove("d-none");
+            if (prevBtn) prevBtn.disabled = currentPageIndex <= 0;
+            if (nextBtn) {
+                nextBtn.disabled = false;
+                nextBtn.textContent = "Next →";
+            }
+            if (prevBtn) prevBtn.textContent = "← Back";
+            if (counter) counter.textContent = `Story segment ${currentPageIndex + 1}/${getCurrentPageCount()}`;
+            if (progressFill) progressFill.style.width = `${((currentPageIndex + 1) / getCurrentPageCount()) * 100}%`;
             updateFooterForStoryState("story_reading");
         }
 
@@ -697,13 +711,19 @@
                 stage: "story_ready",
                 selected_story: choice.title,
                 selected_story_content: choice.content || "",
+                story_segment_index: 0,
             });
+            currentStorySegmentIndex = 0;
             renderStoryReadyState(choice);
         }
 
         function updateFooterForStoryState(state) {
             const nextState = String(state || "story_selection");
+            shell?.classList.toggle("is-story-selection", nextState === "story_selection");
             shell?.classList.toggle("is-story-ready", nextState !== "story_selection");
+            shell?.classList.toggle("is-story-ready-state", nextState === "story_ready");
+            shell?.classList.toggle("is-story-reading", nextState === "story_reading");
+            if (nextState !== "story_reading") btnStartReading?.classList.remove("is-playing");
             if (nextState === "story_selection") {
                 btnStartReading?.classList.add("d-none");
                 btnStopReading?.classList.add("d-none");
@@ -712,16 +732,17 @@
                 nextBtn?.classList.add("d-none");
             } else if (nextState === "story_ready") {
                 btnStartReading?.classList.remove("d-none");
+                if (btnStartReading) btnStartReading.innerHTML = '<i class="bi bi-play-fill"></i> Start Reading →';
                 btnStopReading?.classList.add("d-none");
                 btnReadAloud?.classList.add("d-none");
                 prevBtn?.classList.add("d-none");
                 nextBtn?.classList.add("d-none");
             } else if (nextState === "story_reading") {
-                btnStartReading?.classList.add("d-none");
-                btnStopReading?.classList.remove("d-none");
+                btnStartReading?.classList.remove("d-none");
+                btnStopReading?.classList.add("d-none");
                 btnReadAloud?.classList.remove("d-none");
-                prevBtn?.classList.add("d-none");
-                nextBtn?.classList.add("d-none");
+                prevBtn?.classList.remove("d-none");
+                nextBtn?.classList.remove("d-none");
             } else if (nextState === "story_comprehension") {
                 btnStartReading?.classList.add("d-none");
                 btnStopReading?.classList.add("d-none");
@@ -1056,7 +1077,7 @@
                     activeStage = persistedNextStage;
                 } else if (stageMap[persistedStage]) {
                     activeStage = persistedStage;
-                } else if (["story_selection", "story_ready"].includes(persistedStage)) {
+                } else if (["story_selection", "story_ready", "story_reading"].includes(persistedStage)) {
                     activeStage = "story";
                 } else if (persistedStage.startsWith("completed_")) {
                     activeStage = persistedStage;
@@ -1096,10 +1117,13 @@
                     const restoredStory = currentStoryChoices.find(item => String(item.title || "").trim().toLowerCase() === persistedStoryTitle);
                     if (restoredStory) {
                         currentSelectedStory = restoredStory;
+                        const persistedSegmentIndex = Number.parseInt(persistedEndState.story_segment_index, 10);
+                        currentStorySegmentIndex = Number.isFinite(persistedSegmentIndex) ? Math.max(0, persistedSegmentIndex) : 0;
                         updateStudentEndState({
                             stage: "story_ready",
                             selected_story: restoredStory.title,
                             selected_story_content: restoredStory.content || "",
+                            story_segment_index: currentStorySegmentIndex,
                         });
                         renderStoryReadyState(restoredStory);
                     } else {
@@ -2247,7 +2271,10 @@
             }
 
             if (btnStartReading) {
-                const isActiveReading = currentAssessmentUiMode === "standard" && isRecording;
+                const isActiveReading = isRecording && (
+                    currentAssessmentUiMode === "standard"
+                    || currentAssessmentUiMode === "story"
+                );
                 btnStartReading.innerHTML = isActiveReading
                     ? '<i class="bi bi-stop-fill"></i> Finish Reading'
                     : '<i class="bi bi-play-fill"></i> Start Reading';
@@ -3142,13 +3169,14 @@
                 pageCorrectWordCounts = items.map(() => []);
                 correctWordCounts = new Array(items.length).fill(0);
                 currentIndex = 0;
-                currentPageIndex = 0;
+                currentPageIndex = Math.min(currentStorySegmentIndex, Math.max(0, getCurrentPageCount() - 1));
                 updateUI();
                 animateCurrentItem();
-                renderStoryReadingState(currentSelectedStory);
-                return;
             }
-            if (currentAssessmentUiMode === "standard" && isRecording) {
+            if (
+                isRecording
+                && (currentAssessmentUiMode === "standard" || currentStoryState === "story_reading")
+            ) {
                 stopReading();
                 return;
             }
@@ -3168,6 +3196,14 @@
                 updateUI();
                 animateCurrentItem();
                 startSpeechRecognition();
+            }
+            if (currentSelectedStory && currentStoryState === "story_ready") {
+                updateStudentEndState({
+                    stage: "story_reading",
+                    selected_story: currentSelectedStory.title,
+                    story_segment_index: currentPageIndex,
+                });
+                renderStoryReadingState(currentSelectedStory);
             }
             console.log("PABASA: Assessment recording and timer started.");
         };
@@ -3194,16 +3230,6 @@
         };
 
         btnStartReading?.addEventListener("click", startReading);
-        storySelectionStartBtn?.addEventListener("click", startReading);
-        storySelectionChangeBtn?.addEventListener("click", () => {
-            currentSelectedStory = null;
-            updateStudentEndState({
-                stage: "story_selection",
-                selected_story: "",
-                selected_story_content: "",
-            });
-            renderStorySelection();
-        });
         btnStopReading?.addEventListener("click", stopReading);
 
         if (!isReviewMode && items.length) {
@@ -3595,6 +3621,17 @@
         }
 
         prevBtn?.addEventListener("click", () => { 
+            if (currentStoryState === "story_reading" && currentSelectedStory) {
+                if (currentPageIndex > 0) {
+                    currentPageIndex -= 1;
+                    currentStorySegmentIndex = currentPageIndex;
+                    updateStudentEndState({ stage: "story_reading", story_segment_index: currentPageIndex });
+                    updateUI();
+                    renderStoryReadingState(currentSelectedStory);
+                    animateCurrentItem();
+                }
+                return;
+            }
             if (currentStoryState === "story_comprehension" && currentSelectedStory) {
                 renderStoryReadingState(currentSelectedStory);
                 return;
@@ -3603,6 +3640,19 @@
         });
 
         nextBtn?.addEventListener("click", () => {
+            if (currentStoryState === "story_reading" && currentSelectedStory) {
+                if (currentPageIndex < getCurrentPageCount() - 1) {
+                    currentPageIndex += 1;
+                    currentStorySegmentIndex = currentPageIndex;
+                    updateStudentEndState({ stage: "story_reading", story_segment_index: currentPageIndex });
+                    updateUI();
+                    renderStoryReadingState(currentSelectedStory);
+                    animateCurrentItem();
+                } else {
+                    stopReading();
+                }
+                return;
+            }
             if (currentStoryState === "story_comprehension") {
                 showCompletion(true);
                 return;
@@ -3625,12 +3675,6 @@
 
             const isSpace = event.key === " " || event.key === "Spacebar" || event.code === "Space";
             if (isSpace) {
-                if (currentStoryState === "story_ready" && storySelectionStartBtn) {
-                    storySelectionStartBtn.click();
-                    event.preventDefault();
-                    return;
-                }
-
                 if (btnStartReading && !btnStartReading.classList.contains("d-none")) {
                     btnStartReading.click();
                     event.preventDefault();
