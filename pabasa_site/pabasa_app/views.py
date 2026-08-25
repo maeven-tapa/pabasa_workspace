@@ -65,7 +65,6 @@ from .reading_stt import (
     word_numbers_in_transcript,
 )
 from .hunt_scoring import classify_speech
-from .syllable_blending import activity_catalog, build_activity, normalize_format
 from .reader_classification import classify_student_account
 from .scoring import (
     ADAPTED_READING_LEVEL_DISCLAIMER,
@@ -541,7 +540,6 @@ def _template_reading_type(template_title):
         'Match the Letter to Its Sound': 'word',
         'Clap & Count Syllables': 'word',
         'Blend the Syllables': 'word',
-        'Syllable Blending': 'word',
         'Picture-Word Matching': 'word',
         'Decode the Word': 'word',
         'Word Meaning Match': 'word',
@@ -1206,6 +1204,46 @@ def _crla_grade2_next_stage(assessment_type, score_payload=None):
             return 'completed'
         return 'completed'
     return ''
+
+
+def _crla_grade2_part1_level(task1_score, total_score):
+    try:
+        task1 = int(float(task1_score))
+    except (TypeError, ValueError):
+        task1 = None
+    try:
+        total = int(float(total_score))
+    except (TypeError, ValueError):
+        total = None
+
+    if task1 is None or total is None:
+        return ''
+    if task1 < 7:
+        return 'Full Refresher' if total <= 10 else 'Moderate Refresher'
+    return 'Light Refresher' if total < 27 else 'Grade Ready'
+
+
+def _crla_grade2_part2_profile(correct_words_read, correct_answers):
+    try:
+        percent = float(correct_words_read)
+    except (TypeError, ValueError):
+        percent = None
+    try:
+        answers = int(float(correct_answers))
+    except (TypeError, ValueError):
+        answers = None
+
+    if percent is None or answers is None:
+        return ''
+    if percent <= 25:
+        return 'Low Emerging Reader'
+    if percent <= 50:
+        return 'High Emerging Reader' if answers == 0 else 'Developing Reader'
+    if percent < 76:
+        return 'Developing Reader' if answers <= 2 else 'Transitioning Reader'
+    if answers <= 4:
+        return 'Transitioning Reader'
+    return 'Reading At Grade Level'
 
 
 def _osps_multiplier(assessment_type):
@@ -1891,6 +1929,16 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
                 return None
         previous_correct_words = student_end_state.get('correct_words')
         submitted_correct_words = score_payload.get('correct_words') if score_payload.get('correct_words') is not None else score_payload.get('word_count')
+        task1_score = _safe_int(submitted_correct_words if submitted_correct_words is not None else previous_correct_words)
+        submitted_rhymes_score = _safe_int(score_payload.get('task2_rhymes_score'))
+        submitted_sentences_score = _safe_int(
+            score_payload.get('correct_sentences')
+            if score_payload.get('correct_sentences') is not None
+            else score_payload.get('sentence_count')
+            if score_payload.get('sentence_count') is not None
+            else score_payload.get('correct_items')
+        )
+        part1_total_score = _safe_int(score_payload.get('part1_total_score'))
         student_end_state.update({
             'assessment_type': assessment_type,
             'score': score_payload.get('final_score') or score_payload.get('total_score') or score_payload.get('overall_raw_score'),
@@ -1898,13 +1946,37 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
             'correct_sentences': score_payload.get('correct_sentences') if score_payload.get('correct_sentences') is not None else score_payload.get('sentence_count') if score_payload.get('sentence_count') is not None else score_payload.get('correct_items'),
             'classification': normalized_classification,
             'updated_at': timezone.now().isoformat(),
+            'task1_score': task1_score,
+            'task2_rhymes_score': submitted_rhymes_score,
+            'task2_sentences_score': submitted_sentences_score,
+            'part1_total_score': part1_total_score,
         })
         if assessment_type == 'word':
-            student_end_state['stage'] = workflow_stage or 'words'
-            student_end_state['next_stage'] = 'sentences_high' if workflow_stage == 'transition_to_sentence' else 'completed'
-            student_end_state['branch'] = 'words'
-            student_end_state['routing_score'] = _safe_int(student_end_state.get('correct_words'))
-            if workflow_stage == 'early_completed_words':
+            task1_score = _safe_int(previous_correct_words) or 0
+            rhymes_score = _safe_int(
+                score_payload.get('correct_words')
+                if score_payload.get('correct_words') is not None
+                else score_payload.get('word_count')
+                if score_payload.get('word_count') is not None
+                else score_payload.get('correct_items')
+            ) or 0
+            part1_total = task1_score + rhymes_score
+            student_end_state['stage'] = 'early_completed_words' if part1_total <= 10 else 'transition_to_story'
+            student_end_state['next_stage'] = 'completed' if part1_total <= 10 else 'story_selection'
+            student_end_state['branch'] = 'rhymes'
+            student_end_state['correct_words'] = task1_score
+            student_end_state['correct_sentences'] = None
+            student_end_state['routing_score'] = part1_total
+            student_end_state['score'] = part1_total
+            student_end_state['task2_sentences_score'] = None
+            student_end_state['task1_score'] = task1_score
+            student_end_state['task2_rhymes_score'] = rhymes_score
+            student_end_state['part1_total_score'] = part1_total
+            student_end_state['part1_reading_level'] = _crla_grade2_part1_level(
+                student_end_state.get('task1_score'),
+                student_end_state.get('part1_total_score'),
+            )
+            if part1_total <= 10:
                 student_end_state['classification'] = 'Low Emerging Reader'
                 state['reader_classification'] = 'Low Emerging Reader'
                 state['aral_eligible'] = bool(_aral_eligible_classification('Low Emerging Reader'))
@@ -1914,9 +1986,18 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
             student_end_state['branch'] = 'sentences'
             correct_words = _safe_int(student_end_state.get('correct_words')) or 0
             correct_sentences = _safe_int(student_end_state.get('correct_sentences')) or 0
+            part1_total = correct_words + correct_sentences if correct_words < 7 else correct_words + 10 + correct_sentences
             student_end_state['sentence_items_administered'] = _safe_int(score_payload.get('items_completed')) or 0
             student_end_state['cumulative_correct'] = correct_words + correct_sentences
-            student_end_state['routing_score'] = student_end_state['cumulative_correct']
+            student_end_state['routing_score'] = part1_total
+            student_end_state['score'] = part1_total
+            student_end_state['part1_reading_level'] = _crla_grade2_part1_level(
+                student_end_state.get('correct_words'),
+                part1_total,
+            )
+            student_end_state['task2_rhymes_score'] = None
+            student_end_state['task2_sentences_score'] = correct_sentences
+            student_end_state['part1_total_score'] = part1_total
             if workflow_stage == 'early_completed_sentences':
                 student_end_state['classification'] = 'High Emerging Reader'
                 state['reader_classification'] = 'High Emerging Reader'
@@ -1926,6 +2007,10 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
             student_end_state['next_stage'] = 'completed'
             student_end_state['branch'] = 'story'
             student_end_state['routing_score'] = score_payload.get('story_read_percent') or score_payload.get('story_percent') or score_payload.get('read_percent')
+            student_end_state['classification'] = _crla_grade2_part2_profile(
+                student_end_state.get('story_read_percent') or student_end_state.get('routing_score'),
+                score_payload.get('correct_answers') or score_payload.get('comprehension_correct') or score_payload.get('correct_items') or score_payload.get('items_correct'),
+            )
         state['student_end_assessment_state'] = student_end_state
 
     try:
@@ -3824,13 +3909,37 @@ def _dashboard_context(request, nav_role=None, extra=None):
         'active_teacher_class_count': len(joined_classes),
     }
     perf_mark('teacher_courses_start')
-    # Classes are the source of truth for the Courses page. Each active class
-    # is rendered as one course card; no separate Course row is created.
+    # Include teacher-created courses for server-side rendering to avoid
+    # a blank page while client-side JS fetches them.
     try:
         teacher_courses = []
         if user and (user.role in ['teacher', 'admin'] or effective_role in ['teacher', 'admin']):
-            class_qs = Section.objects.filter(teacher=user, is_active=True).order_by('-created_at')
-            teacher_courses = [_section_course_payload(section) for section in class_qs]
+            from .models import Course
+            qs = Course.objects.filter(teacher=user, is_active=True)
+            for c in qs:
+                sections_count = c.sections.count()
+                assessments_count = c.assessments.count()
+                materials_count = c.materials.count()
+                # Approximate student count by summing section student counts
+                students_count = 0
+                for s in c.sections.all():
+                    try:
+                        students_count += _section_student_count(s)
+                    except Exception:
+                        continue
+                teacher_courses.append({
+                    'id': c.id,
+                    'code': c.code,
+                    'title': c.title,
+                    'description': c.description,
+                    'metrics': {
+                        'sections': sections_count,
+                        'assessments': assessments_count,
+                        'materials': materials_count,
+                        'students': students_count,
+                        'average_progress': _compute_course_average_progress(c),
+                    }
+                })
     except Exception:
         teacher_courses = []
     context['teacher_courses'] = teacher_courses
@@ -8281,231 +8390,6 @@ def reading_word_page(request):
         })
     return render(request, 'pabasa_app/reading_word_page.html', context)
 
-
-def _is_picture_word_matching_material(material):
-    """Identify the interactive template without depending on its reading item type."""
-    if not material:
-        return False
-    content_json = getattr(material, 'content_json', None) or {}
-    if not isinstance(content_json, dict):
-        return False
-    candidates = (
-        content_json.get('template_title'), content_json.get('template_activity_name'),
-        content_json.get('template_type'), content_json.get('activity_type'),
-        getattr(material, 'title', ''),
-    )
-    normalized = {
-        re.sub(r'[^a-z0-9]+', '_', str(value or '').strip().lower()).strip('_')
-        for value in candidates
-    }
-    return 'picture_word_matching' in normalized
-
-
-def _is_syllable_blending_material(material):
-    if not material or not isinstance(getattr(material, 'content_json', None), dict):
-        return False
-    content = material.content_json
-    values = (content.get('template_title'), content.get('template_lesson'),
-              content.get('activity_type'), getattr(material, 'title', ''))
-    normalized = {re.sub(r'[^a-z0-9]+', '_', str(value or '').lower()).strip('_') for value in values}
-    return bool({'syllable_blending', 'blend_the_syllables'} & normalized)
-
-
-def _normalize_picture_word_matching_content(content_json):
-    """Return a self-contained Picture-Word payload with durable static image URLs."""
-    if not isinstance(content_json, dict):
-        return content_json
-    candidates = (
-        content_json.get('template_title'), content_json.get('template_activity_name'),
-        content_json.get('template_type'), content_json.get('activity_type'),
-    )
-    normalized_titles = {
-        re.sub(r'[^a-z0-9]+', '_', str(value or '').strip().lower()).strip('_')
-        for value in candidates
-    }
-    if 'picture_word_matching' not in normalized_titles:
-        return content_json
-
-    result = dict(content_json)
-    matching_config = result.get('pictureWordMatching')
-    matching_config = matching_config if isinstance(matching_config, dict) else {}
-    mode = str(matching_config.get('mode') or '').strip().lower()
-    configured_set = str(matching_config.get('setKey') or result.get('assessment_set') or '').strip()
-    language = str(result.get('language') or matching_config.get('language') or 'English').strip()
-    static_root = Path(settings.BASE_DIR) / 'pabasa_app' / 'static' / 'pabasa_app' / 'images' / 'picture_word'
-
-    normalized_items = []
-    for raw_item in result.get('items') or []:
-        if not isinstance(raw_item, dict):
-            continue
-        item = dict(raw_item)
-        raw_filename = str(item.get('image_asset') or item.get('sourceImage') or item.get('image') or '').strip()
-        filename = Path(raw_filename.replace('\\', '/')).name
-        raw_set = str(item.get('sourceSetKey') or item.get('set') or configured_set).strip()
-        set_key = re.sub(r'^set\s+', '', raw_set, flags=re.IGNORECASE).strip()
-        is_custom = mode == 'custom' or str(item.get('sourceType') or '').lower() == 'custom' or set_key.lower() == 'custom'
-        folder = 'Custom' if is_custom else f'Set {set_key}'
-
-        # Preserve the on-disk spelling for case-sensitive production servers.
-        asset_dir = static_root / folder
-        if filename and asset_dir.is_dir():
-            actual_name = next((entry.name for entry in asset_dir.iterdir() if entry.is_file() and entry.name.casefold() == filename.casefold()), None)
-            if actual_name:
-                filename = actual_name
-
-        relative_asset = f'pabasa_app/images/picture_word/{folder}/{filename}' if filename else ''
-        image_url = f"{settings.STATIC_URL.rstrip('/')}/{quote(relative_asset, safe='/')}" if relative_asset else ''
-        english_word = str(item.get('englishWord') or item.get('english_word') or item.get('word') or '').strip()
-        filipino_word = str(item.get('filipinoWord') or item.get('filipino_word') or item.get('word') or '').strip()
-        item.update({
-            'image': filename, 'image_asset': filename, 'sourceImage': filename,
-            'image_path': image_url, 'imagePreview': image_url,
-            'sourceSetKey': 'Custom' if is_custom else set_key,
-            'sourceType': 'custom' if is_custom else 'prescribed',
-            'set': 'Custom Set' if is_custom else f'Set {set_key}',
-            'englishWord': english_word, 'english_word': english_word,
-            'filipinoWord': filipino_word, 'filipino_word': filipino_word,
-            'word': filipino_word if language.lower().startswith('fil') else english_word,
-        })
-        normalized_items.append(item)
-    result['items'] = normalized_items
-    return result
-
-
-@xframe_options_sameorigin
-def picture_word_matching_page(request):
-    """Render the dedicated, non-oral Picture-Word Matching student activity."""
-    access_response = _enforce_student_access_for_request(request)
-    if access_response:
-        return access_response
-    _, material_id = _parse_prefixed_id(request.GET.get('id') or request.GET.get('material_id'))
-    material = Material.objects.filter(pk=material_id).first() if material_id else None
-    if not material or not _is_picture_word_matching_material(material):
-        return redirect('assessment')
-    content_json = material.content_json if isinstance(material.content_json, dict) else {}
-    # Backfill legacy shapes for display; new records are normalized before save.
-    content_json = _normalize_picture_word_matching_content(content_json)
-    student_user = User.objects.filter(id=request.session.get('user_id'), role='student').first()
-    completed_result = None
-    if student_user:
-        completed_result = material.assessment_results.filter(
-            student=student_user,
-            attempt_status='completed',
-        ).order_by('-completed_at', '-created_at', '-id').first()
-    completion_payload = None
-    if completed_result:
-        result_details = []
-        remarks = str(getattr(completed_result, 'remarks', '') or '')
-        result_prefix = 'PICTURE_WORD_MATCHING_RESULT:'
-        if remarks.startswith(result_prefix):
-            try:
-                saved_result = json.loads(remarks[len(result_prefix):])
-                if isinstance(saved_result, dict) and isinstance(saved_result.get('matches'), list):
-                    result_details = saved_result['matches']
-            except (TypeError, ValueError, json.JSONDecodeError):
-                result_details = []
-        total_items = int(getattr(completed_result, 'items_completed', 0) or len(content_json.get('items') or []))
-        correct_items = min(total_items, int(getattr(completed_result, 'correct_items', 0) or 0))
-        accuracy = getattr(completed_result, 'accuracy', None)
-        if accuracy is None:
-            accuracy = getattr(completed_result, 'total_score', None)
-        if accuracy is None:
-            accuracy = round((correct_items / total_items) * 100, 2) if total_items else 0
-        completion_payload = {
-            'completed': True,
-            'correct_items': correct_items,
-            'total_items': total_items,
-            'accuracy': accuracy,
-            'matches': result_details,
-        }
-    context = _dashboard_context(request)
-    context['picture_word_material_json'] = json.dumps({
-        'id': material.id,
-        'title': material.title or 'Picture-Word Matching',
-        'language': content_json.get('language') or getattr(material, 'language', '') or 'English',
-        'items': content_json.get('items') if isinstance(content_json.get('items'), list) else [],
-    }, default=str, separators=(',', ':'))
-    context['picture_word_completion_json'] = json.dumps(completion_payload or {}, default=str, separators=(',', ':'))
-    return render(request, 'pabasa_app/picture_word_matching_page.html', context)
-
-
-@xframe_options_sameorigin
-def syllable_blending_page(request):
-    """Dedicated no-keyboard Syllable Blending experience for students."""
-    access_response = _enforce_student_access_for_request(request)
-    if access_response:
-        return access_response
-    _, material_id = _parse_prefixed_id(request.GET.get('id') or request.GET.get('material_id'))
-    material = Material.objects.filter(pk=material_id).first() if material_id else None
-    if not _is_syllable_blending_material(material):
-        return redirect('assessment')
-    content = dict(material.content_json or {})
-    activity_id = str(content.get('activity_id') or '').strip().lower()
-    language = 'English' if str(content.get('language') or '').lower().startswith('eng') else 'Filipino'
-    activity_format = normalize_format(content.get('activity_format'))
-    activity_id_match = re.fullmatch(r'(filipino|english)_(syllable_combination|big_box)_(0[1-5])', activity_id)
-    has_complete_content = isinstance(content.get('items'), list) and len(content['items']) == 5
-    identity_matches = bool(
-        activity_id_match
-        and activity_id_match.group(1) == language.lower()
-        and activity_id_match.group(2) == activity_format
-    )
-    if not has_complete_content or not identity_matches:
-        return HttpResponse(
-            'This Syllable Blending activity is missing its assigned prebuilt content. Please ask your teacher to assign it again.',
-            status=400,
-            content_type='text/plain; charset=utf-8',
-        )
-    student_user = User.objects.filter(id=request.session.get('user_id'), role='student').first()
-    completion_payload = None
-    progress_payload = {}
-    if student_user:
-        completed_result = material.assessment_results.filter(
-            student=student_user, attempt_status='completed',
-        ).order_by('-completed_at', '-created_at', '-id').first()
-        if completed_result:
-            saved_responses = []
-            saved_discovered_words = []
-            saved_used_syllables = []
-            saved_discovery_attempts = []
-            remarks = str(getattr(completed_result, 'remarks', '') or '')
-            result_prefix = 'SYLLABLE_BLENDING_RESULT:'
-            if remarks.startswith(result_prefix):
-                try:
-                    saved_result = json.loads(remarks[len(result_prefix):])
-                    if isinstance(saved_result, dict) and isinstance(saved_result.get('responses'), list):
-                        saved_responses = saved_result['responses']
-                        saved_discovered_words = saved_result.get('discovered_words') if isinstance(saved_result.get('discovered_words'), list) else []
-                        saved_used_syllables = saved_result.get('used_syllables') if isinstance(saved_result.get('used_syllables'), list) else []
-                        saved_discovery_attempts = saved_result.get('discovery_attempts') if isinstance(saved_result.get('discovery_attempts'), list) else []
-                except (TypeError, ValueError, json.JSONDecodeError):
-                    saved_responses = []
-            total_items = int(getattr(completed_result, 'items_completed', 0) or len(content.get('items') or []))
-            correct_items = min(total_items, int(getattr(completed_result, 'correct_items', 0) or 0))
-            accuracy = getattr(completed_result, 'accuracy', None)
-            if accuracy is None:
-                accuracy = round((correct_items / total_items) * 100, 2) if total_items else 0
-            completion_payload = {
-                'completed': True, 'correct_items': correct_items, 'total_items': total_items,
-                'accuracy': accuracy, 'responses': saved_responses,
-                'discovered_words': saved_discovered_words,
-                'used_syllables': saved_used_syllables,
-                'discovery_attempts': saved_discovery_attempts,
-            }
-        state = _get_user_state(student_user)
-        progress_store = state.get('interactive_activity_progress') if isinstance(state, dict) else {}
-        if isinstance(progress_store, dict):
-            saved_progress = progress_store.get(str(material.id))
-            if isinstance(saved_progress, dict) and saved_progress.get('activity_type') == 'syllable_blending':
-                progress_payload = saved_progress
-    context = _dashboard_context(request)
-    context['syllable_blending_material_json'] = json.dumps({
-        'id': material.id, 'title': 'Syllable Blending', **content,
-    }, default=str, separators=(',', ':'))
-    context['syllable_blending_progress_json'] = json.dumps(progress_payload, default=str, separators=(',', ':'))
-    context['syllable_blending_completion_json'] = json.dumps(completion_payload or {}, default=str, separators=(',', ':'))
-    return render(request, 'pabasa_app/syllable_blending_page.html', context)
-
 @xframe_options_sameorigin
 def reading_sentence_page(request):
     access_response = _enforce_student_access_for_request(request)
@@ -8583,9 +8467,10 @@ def persist_student_end_assessment_state(request):
     except (TypeError, ValueError):
         return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
     allowed_stages = {
-        'transition_to_sentence', 'transition_to_story', 'story_selection',
+        'transition_to_rhymes', 'transition_to_sentence', 'transition_to_story', 'story_selection',
         'story_ready', 'early_completed_words', 'early_completed_sentences',
-        'completed',
+        'story_reading', 'completed',
+        'completed_high_emerging', 'completed_developing', 'completed_transitioning', 'completed_grade_level',
     }
     stage = str(payload.get('stage') or '').strip().lower()
     if stage not in allowed_stages:
@@ -9112,6 +8997,26 @@ def _build_live_session_completion_payload(session, student_user, student_state=
 
 
 def _complete_assessment_for_student(student_user, data=None, request=None, live_session=None, is_retake=False, attempt_number=0, activity_type='assessment', assist_context=None):
+    timing_started_at = time.perf_counter()
+    timing_last_mark = timing_started_at
+
+    def _log_completion_timing(stage):
+        nonlocal timing_last_mark
+        now = time.perf_counter()
+        logger.warning(
+            "PABASA_COMPLETION_TIMING %s",
+            {
+                'stage': stage,
+                'elapsed_ms': round((now - timing_last_mark) * 1000, 2),
+                'total_ms': round((now - timing_started_at) * 1000, 2),
+                'user_id': getattr(student_user, 'id', None),
+                'material_id': data.get('material_id') if isinstance(data, dict) else None,
+                'assessment_id': data.get('assessment_id') if isinstance(data, dict) else None,
+            },
+        )
+        timing_last_mark = now
+
+    _log_completion_timing('entry')
     data = dict(data or {})
     if live_session and not data.get('live_session_id'):
         data['live_session_id'] = live_session.id
@@ -9150,6 +9055,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
     a_prefix, a_id = _parse_prefixed_id(assessment_id)
     m_prefix, m_id = _parse_prefixed_id(material_id)
 
+    _log_completion_timing('assessment_lookup_start')
     if a_id and (a_prefix is None or a_prefix.startswith('assessment')):
         assessment = Assessment.objects.select_related('teacher').filter(id=a_id, source_assessment__isnull=True).first()
         if assessment:
@@ -9198,6 +9104,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 teacher_user = getattr(practice_obj, 'teacher', None)
         except Exception:
             practice_obj = None
+    _log_completion_timing('assessment_lookup_end')
 
     if not assessment and not material and not practice_obj:
         if live_session or data.get('live_session_id'):
@@ -9220,211 +9127,9 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
     already_completed = False
     if not is_practice:
         already_completed = _student_completed_assessment_before(assessment, material, student_user)
-    is_picture_word_matching = str(activity_type or '').strip().lower() == 'picture_word_matching'
-    is_syllable_blending = str(activity_type or '').strip().lower() == 'syllable_blending'
-    if is_syllable_blending and bool(data.get('save_progress')):
-        if not material or not _is_syllable_blending_material(material):
-            return JsonResponse({'success': False, 'error': 'Invalid Syllable Blending material.'}, status=400)
-        raw_scores = data.get('scores') if isinstance(data.get('scores'), dict) else {}
-        submitted_responses = raw_scores.get('responses') if isinstance(raw_scores.get('responses'), list) else []
-        activity_items = (material.content_json or {}).get('items') or []
-        normalized_responses = []
-        for response in submitted_responses:
-            if not isinstance(response, dict):
-                continue
-            try:
-                item_index = int(response.get('item_index'))
-            except (TypeError, ValueError):
-                continue
-            if item_index < 0 or item_index >= len(activity_items):
-                continue
-            expected_answer = str((activity_items[item_index] or {}).get('answer') or '').strip()
-            normalized_responses.append({
-                'item_index': item_index,
-                'recognized_response': str(response.get('recognized_response') or '').strip()[:160],
-                'expected_answer': expected_answer,
-                'is_correct': bool(response.get('is_correct')),
-                'completed': bool(response.get('completed')),
-                'score': 1 if bool(response.get('is_correct')) else 0,
-            })
-        discovered_indexes = {
-            response['item_index'] for response in normalized_responses
-            if response['completed'] and response['is_correct']
-        }
-        discovered_words = [
-            str(item.get('answer') or '').strip() for index, item in enumerate(activity_items)
-            if index in discovered_indexes and isinstance(item, dict)
-        ]
-        used_syllables = list(dict.fromkeys(
-            str(syllable).strip() for index, item in enumerate(activity_items)
-            if index in discovered_indexes and isinstance(item, dict)
-            for syllable in (item.get('syllables') or []) if str(syllable).strip()
-        ))
-        submitted_attempts = raw_scores.get('discovery_attempts') if isinstance(raw_scores.get('discovery_attempts'), list) else []
-        discovery_attempts = []
-        valid_words = {str(item.get('answer') or '').strip().casefold() for item in activity_items if isinstance(item, dict)}
-        for attempt in submitted_attempts[-100:]:
-            if not isinstance(attempt, dict):
-                continue
-            matched_word = str(attempt.get('matched_word') or '').strip()
-            discovery_attempts.append({
-                'recognized_response': str(attempt.get('recognized_response') or '').strip()[:160],
-                'matched_word': matched_word if matched_word.casefold() in valid_words else '',
-                'is_correct': bool(attempt.get('is_correct')) and matched_word.casefold() in valid_words,
-                'is_duplicate': bool(attempt.get('is_duplicate')),
-            })
-        state = _get_user_state(student_user)
-        progress_store = state.get('interactive_activity_progress')
-        progress_store = dict(progress_store) if isinstance(progress_store, dict) else {}
-        progress_store[str(material.id)] = {
-            'activity_type': 'syllable_blending',
-            'responses': normalized_responses,
-            'discovered_words': discovered_words,
-            'used_syllables': used_syllables,
-            'discovery_attempts': discovery_attempts,
-            'updated_at': timezone.now().isoformat(),
-        }
-        state['interactive_activity_progress'] = progress_store
-        _set_user_state(student_user, state)
-        return JsonResponse({'success': True, 'saved': True, 'responses': normalized_responses})
-    if is_picture_word_matching:
-        if not material or not _is_picture_word_matching_material(material):
-            return JsonResponse({'success': False, 'error': 'Invalid Picture-Word Matching material.'}, status=400)
-        raw_scores = data.get('scores') if isinstance(data.get('scores'), dict) else data
-        matching_content = material.content_json if isinstance(material.content_json, dict) else {}
-        matching_items = matching_content.get('items') if isinstance(matching_content.get('items'), list) else []
-        language = str(matching_content.get('language') or getattr(material, 'language', '') or 'English').strip().lower()
-        submitted_matches = raw_scores.get('matches') if isinstance(raw_scores.get('matches'), list) else []
-        submitted_by_index = {
-            int(match.get('picture_index')): str(match.get('selected_word') or '').strip()
-            for match in submitted_matches if isinstance(match, dict) and str(match.get('picture_index', '')).isdigit()
-        }
-        correct_items = 0
-        matching_details = []
-        for index, item in enumerate(matching_items):
-            if not isinstance(item, dict):
-                continue
-            correct_word = (
-                item.get('filipinoWord') or item.get('filipino_word') or item.get('word')
-                if language.startswith('fil') else
-                item.get('englishWord') or item.get('english_word') or item.get('word')
-            )
-            selected_word = submitted_by_index.get(index, '')
-            is_correct_match = str(correct_word or '').strip().casefold() == selected_word.casefold()
-            if is_correct_match:
-                correct_items += 1
-            matching_details.append({
-                'picture_index': index,
-                'selected_word': selected_word,
-                'correct_word': str(correct_word or '').strip(),
-                'is_correct': is_correct_match,
-            })
-        total_items = len(matching_items)
-        objective_score = round((correct_items / total_items) * 100, 2) if total_items else 0
-        score_payload = {
-            'accuracy': objective_score, 'total_score': objective_score,
-            'correct_items': correct_items, 'items_completed': total_items,
-            'duration_seconds': max(0, int(raw_scores.get('duration_seconds') or 0)),
-            'passed': objective_score >= 75,
-            'remarks': 'PICTURE_WORD_MATCHING_RESULT:' + json.dumps({
-                'activity_type': 'picture_word_matching',
-                'matches': matching_details,
-            }, separators=(',', ':')),
-        }
-    elif is_syllable_blending:
-        if not material or not _is_syllable_blending_material(material):
-            return JsonResponse({'success': False, 'error': 'Invalid Syllable Blending material.'}, status=400)
-        raw_scores = data.get('scores') if isinstance(data.get('scores'), dict) else data
-        activity_items = (material.content_json or {}).get('items') or []
-        submitted = raw_scores.get('answers') if isinstance(raw_scores.get('answers'), list) else []
-        submitted_responses = raw_scores.get('responses') if isinstance(raw_scores.get('responses'), list) else []
-        responses_by_index = {}
-        for response in submitted_responses:
-            if not isinstance(response, dict):
-                continue
-            try:
-                response_index = int(response.get('item_index'))
-            except (TypeError, ValueError):
-                continue
-            if 0 <= response_index < len(activity_items):
-                responses_by_index[response_index] = response
-        normalized_responses = []
-        for index, item in enumerate(activity_items):
-            if not isinstance(item, dict) or index not in responses_by_index:
-                continue
-            response = responses_by_index[index]
-            expected_answer = str(item.get('answer') or '').strip()
-            submitted_answer = str(submitted[index] or '').strip() if index < len(submitted) else ''
-            is_correct_response = bool(response.get('is_correct')) and submitted_answer.casefold() == expected_answer.casefold()
-            normalized_responses.append({
-                'item_index': index,
-                'recognized_response': str(response.get('recognized_response') or '').strip()[:160],
-                'expected_answer': expected_answer,
-                'is_correct': is_correct_response,
-                'completed': bool(response.get('completed')) and is_correct_response,
-                'score': 1 if is_correct_response else 0,
-            })
-        discovered_indexes = {
-            response['item_index'] for response in normalized_responses
-            if response['completed'] and response['is_correct']
-        }
-        discovered_words = [
-            str(item.get('answer') or '').strip() for index, item in enumerate(activity_items)
-            if index in discovered_indexes and isinstance(item, dict)
-        ]
-        used_syllables = list(dict.fromkeys(
-            str(syllable).strip() for index, item in enumerate(activity_items)
-            if index in discovered_indexes and isinstance(item, dict)
-            for syllable in (item.get('syllables') or []) if str(syllable).strip()
-        ))
-        submitted_attempts = raw_scores.get('discovery_attempts') if isinstance(raw_scores.get('discovery_attempts'), list) else []
-        valid_words = {str(item.get('answer') or '').strip().casefold() for item in activity_items if isinstance(item, dict)}
-        discovery_attempts = []
-        for attempt in submitted_attempts[-100:]:
-            if not isinstance(attempt, dict):
-                continue
-            matched_word = str(attempt.get('matched_word') or '').strip()
-            discovery_attempts.append({
-                'recognized_response': str(attempt.get('recognized_response') or '').strip()[:160],
-                'matched_word': matched_word if matched_word.casefold() in valid_words else '',
-                'is_correct': bool(attempt.get('is_correct')) and matched_word.casefold() in valid_words,
-                'is_duplicate': bool(attempt.get('is_duplicate')),
-            })
-        correct_items = sum(
-            1 for index, item in enumerate(activity_items)
-            if isinstance(item, dict) and index < len(submitted)
-            and str(submitted[index] or '').strip().casefold() == str(item.get('answer') or '').strip().casefold()
-        )
-        total_items = len(activity_items)
-        objective_score = round((correct_items / total_items) * 100, 2) if total_items else 0
-        score_payload = {
-            'accuracy': objective_score, 'total_score': objective_score,
-            'correct_items': correct_items, 'items_completed': total_items,
-            'duration_seconds': max(0, int(raw_scores.get('duration_seconds') or 0)),
-            'passed': objective_score >= 75,
-            'remarks': 'SYLLABLE_BLENDING_RESULT:' + json.dumps({
-                'activity_type': 'syllable_blending', 'answers': submitted,
-                'responses': normalized_responses,
-                'discovered_words': discovered_words,
-                'used_syllables': used_syllables,
-                'discovery_attempts': discovery_attempts,
-            }, separators=(',', ':')),
-        }
-    else:
-        score_payload = _practice_score_payload(data) if is_practice else _assessment_score_payload(data)
-    if (is_picture_word_matching or is_syllable_blending) and already_completed and not is_retake:
-        existing_result = material.assessment_results.filter(
-            student=student_user,
-            attempt_status='completed',
-        ).order_by('-completed_at', '-created_at', '-id').first()
-        return JsonResponse({
-            'success': True,
-            'already_completed': True,
-            'correct_items': getattr(existing_result, 'correct_items', 0) or 0,
-            'items_completed': getattr(existing_result, 'items_completed', 0) or 0,
-            'accuracy': getattr(existing_result, 'accuracy', 0) or 0,
-        })
-    if not is_practice and not is_picture_word_matching and not is_syllable_blending:
+    _log_completion_timing('score_calculation_start')
+    score_payload = _practice_score_payload(data) if is_practice else _assessment_score_payload(data)
+    if not is_practice:
         account_assessment_type = (
             getattr(assessment, 'assessment_type', None)
             or assessment_type_hint
@@ -9448,6 +9153,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         score_payload['adapted_level_score'] = adapted_level_payload.get('adapted_level_score')
         score_payload['adapted_reading_level'] = account_level or adapted_level_payload.get('adapted_reading_level')
         score_payload['adapted_reading_level_disclaimer'] = adapted_level_payload.get('adapted_reading_level_disclaimer')
+    _log_completion_timing('score_calculation_end')
     should_notify_assessment = (
         not is_practice
         and (is_retake or not already_completed)
@@ -9468,6 +9174,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             'items_completed': data.get('items_completed', 0),
             **score_payload,
         }
+        _log_completion_timing('attempt_payload_prepared')
         if is_practice:
             material_content = dict(getattr(material, 'content_json', None) or {}) if material else {}
             material_game_mode = str(material_content.get('mode') or attempt_payload.get('game_mode') or '').strip().lower()
@@ -9499,21 +9206,31 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             if material.teacher_id is None and teacher_user is not None:
                 material.teacher = teacher_user
                 material.save(update_fields=['teacher', 'updated_at'])
+                _log_completion_timing('assessment_teacher_save')
+            _log_completion_timing('assessment_record_attempt_start')
             material.record_assessment_result(student_user, **attempt_payload)
+            _log_completion_timing('assessment_record_attempt_end')
             completed_result_row = material.assessment_results.filter(
                 student=student_user,
                 attempt_status='completed',
             ).order_by('-completed_at', '-created_at').select_related('source_assessment').first()
         elif assessment:
+            _log_completion_timing('assessment_record_attempt_start')
             assessment.record_attempt(student_user, **attempt_payload)
+            _log_completion_timing('assessment_record_attempt_end')
             completed_result_row = assessment.attempt_rows.filter(
                 student=student_user,
                 attempt_status='completed',
             ).order_by('-completed_at', '-created_at').select_related('source_assessment').first()
-        if not is_practice and not is_picture_word_matching and not is_syllable_blending:
+        if not is_practice:
+            _log_completion_timing('student_profile_save_start')
             _update_student_reading_profile(student_user, score_payload)
+            _log_completion_timing('student_profile_save_end')
+            _log_completion_timing('crla_state_save_start')
             _sync_assessment_workflow_state(student_user, score_payload=score_payload, assessment=assessment, material=material)
+            _log_completion_timing('crla_state_save_end')
         if live_session or data.get('live_session_id'):
+            _log_completion_timing('live_session_sync_start')
             _trace_live_end_flow(
                 'complete_assessment_persisted',
                 live_session,
@@ -9522,6 +9239,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 final_score=score_payload.get('final_score'),
                 total_score=score_payload.get('total_score'),
             )
+            _log_completion_timing('live_session_sync_end')
     except Exception as e:
         logger.exception('Failed to persist assessment/practice attempt: %s', e)
         if live_session or data.get('live_session_id'):
@@ -9531,15 +9249,6 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 student_id=getattr(student_user, 'id', None),
                 error=str(e),
             )
-
-    if is_syllable_blending and completed_result_row is not None and material:
-        state = _get_user_state(student_user)
-        progress_store = state.get('interactive_activity_progress')
-        if isinstance(progress_store, dict) and str(material.id) in progress_store:
-            progress_store = dict(progress_store)
-            progress_store.pop(str(material.id), None)
-            state['interactive_activity_progress'] = progress_store
-            _set_user_state(student_user, state)
 
     if live_session is None and data.get('live_session_id'):
         try:
@@ -9635,15 +9344,6 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
     student_name = f"{student_user.first_name} {student_user.last_name}".strip() or student_user.custom_id
     class_name = _resolve_assessment_class_name(assessment=assessment, material=material, class_code=class_code)
 
-    if not is_practice and should_notify_assessment:
-        _notify_principal_performance_events(
-            student_user,
-            assessment=assessment,
-            material=material,
-            class_name=class_name,
-            score_payload=score_payload,
-        )
-
     email_subject = None
     if is_retake:
         title = "Student Retook an Assessment"
@@ -9658,101 +9358,137 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         title = "Student Completed an Assessment"
         notif_msg = _assessment_completion_message(student_name, title_text, class_name)
 
-    if is_practice:
-        _notify_admins(
-            title,
-            notif_msg,
-            "assessment",
-            reverse('admin_students'),
-            student_user,
-            send_email=False,
-        )
-    else:
-        teacher_recipients = []
-        if should_notify_assessment:
-            teacher_recipients = _teachers_for_assessment_completion(
-                assessment=assessment,
-                material=material,
-                student_user=student_user,
-            )
-
-        seen_teacher_ids = set()
-        for recipient in teacher_recipients:
-            if recipient.id in seen_teacher_ids:
-                continue
-            seen_teacher_ids.add(recipient.id)
-
-            if _assessment_completion_notif_exists(
-                recipient, student_user, notif_msg, is_retake=is_retake
-            ):
-                continue
-
-            current_email_body = None
-            if is_retake:
-                teacher_name = f"{recipient.first_name} {recipient.last_name}"
-                display_class = class_name or "a class"
-                current_email_body = (
-                    f"Hello {teacher_name},\n\n"
-                    f"This is to inform you that {student_name} has completed retake attempt {attempt_number} of 3 "
-                    f"for \"{title_text}\" in {display_class}.\n\n"
-                    "You may review the student's latest submission and performance through your PABASA dashboard.\n\n"
-                    "Thank you,\n\n"
-                    "The PABASA Team"
-                )
-
-            _create_notification(
-                recipient,
-                title,
-                notif_msg,
-                "assessment",
-                f"/dashboard/teacher/students/detail/?student_id={student_user.custom_id}",
-                student_user,
-                email_subject=email_subject,
-                email_body=current_email_body,
-            )
-
-        if should_notify_assessment:
-            _notify_admins(
-                title,
-                notif_msg,
-                "assessment",
-                reverse('admin_students'),
-                student_user,
-                send_email=False,
-            )
-            try:
-                auto_course = _resolve_course_for_assessment_completion(
+    def _run_completion_notifications():
+        notification_started_at = time.perf_counter()
+        try:
+            if not is_practice and should_notify_assessment:
+                _notify_principal_performance_events(
                     student_user,
+                    assessment=assessment,
                     material=material,
-                    assessment=completed_result_row or assessment,
-                    teacher_user=teacher_user,
+                    class_name=class_name,
+                    score_payload=score_payload,
                 )
-                if auto_course and completed_result_row:
-                    auto_send_result = _auto_send_regular_progress_update(
-                        student=student_user,
-                        course=auto_course,
-                        teacher_user=teacher_user or auto_course.teacher,
-                        assessment_result=completed_result_row,
+
+            if is_practice:
+                _notify_admins(
+                    title,
+                    notif_msg,
+                    "assessment",
+                    reverse('admin_students'),
+                    student_user,
+                    send_email=False,
+                )
+            else:
+                teacher_recipients = []
+                if should_notify_assessment:
+                    teacher_recipients = _teachers_for_assessment_completion(
+                        assessment=assessment,
+                        material=material,
+                        student_user=student_user,
                     )
-                    if not auto_send_result.get('success'):
-                        logger.info(
-                            'Auto regular progress update skipped for student %s: %s',
-                            student_user.id,
-                            auto_send_result.get('reason', 'unknown'),
+
+                seen_teacher_ids = set()
+                for recipient in teacher_recipients:
+                    if recipient.id in seen_teacher_ids:
+                        continue
+                    seen_teacher_ids.add(recipient.id)
+
+                    if _assessment_completion_notif_exists(
+                        recipient, student_user, notif_msg, is_retake=is_retake
+                    ):
+                        continue
+
+                    current_email_body = None
+                    if is_retake:
+                        teacher_name = f"{recipient.first_name} {recipient.last_name}"
+                        display_class = class_name or "a class"
+                        current_email_body = (
+                            f"Hello {teacher_name},\n\n"
+                            f"This is to inform you that {student_name} has completed retake attempt {attempt_number} of 3 "
+                            f"for \"{title_text}\" in {display_class}.\n\n"
+                            "You may review the student's latest submission and performance through your PABASA dashboard.\n\n"
+                            "Thank you,\n\n"
+                            "The PABASA Team"
                         )
-            except Exception:
-                logger.exception('Failed to auto-send regular progress update')
-    if assist_teacher_user and not is_practice:
-        _create_notification(
-            assist_teacher_user,
-            'Assist assessment completed',
-            f'Assisted assessment "{title_text}" was completed for {student_name}.',
-            'assessment',
-            f"/dashboard/teacher/students/detail/?student_id={student_user.custom_id}",
-            assist_teacher_user,
-            send_email=False,
-            force_in_app=True,
+
+                    _create_notification(
+                        recipient,
+                        title,
+                        notif_msg,
+                        "assessment",
+                        f"/dashboard/teacher/students/detail/?student_id={student_user.custom_id}",
+                        student_user,
+                        email_subject=email_subject,
+                        email_body=current_email_body,
+                    )
+
+                if should_notify_assessment:
+                    _notify_admins(
+                        title,
+                        notif_msg,
+                        "assessment",
+                        reverse('admin_students'),
+                        student_user,
+                        send_email=False,
+                    )
+
+            if assist_teacher_user and not is_practice:
+                _create_notification(
+                    assist_teacher_user,
+                    'Assist assessment completed',
+                    f'Assisted assessment "{title_text}" was completed for {student_name}.',
+                    'assessment',
+                    f"/dashboard/teacher/students/detail/?student_id={student_user.custom_id}",
+                    assist_teacher_user,
+                    send_email=False,
+                    force_in_app=True,
+                )
+        except Exception:
+            logger.exception('Failed to create assessment completion notifications')
+        finally:
+            logger.warning(
+                "PABASA_COMPLETION_TIMING %s",
+                {
+                    'stage': 'notification_async_total',
+                    'elapsed_ms': round((time.perf_counter() - notification_started_at) * 1000, 2),
+                    'user_id': getattr(student_user, 'id', None),
+                },
+            )
+
+    if is_practice or should_notify_assessment or (assist_teacher_user and not is_practice):
+        _log_completion_timing('notification_queued')
+        transaction.on_commit(
+            lambda: threading.Thread(target=_run_completion_notifications, daemon=True).start()
         )
+
+    if should_notify_assessment:
+        try:
+            _log_completion_timing('auto_progress_update_start')
+            auto_course = _resolve_course_for_assessment_completion(
+                student_user,
+                material=material,
+                assessment=completed_result_row or assessment,
+                teacher_user=teacher_user,
+            )
+            if auto_course and completed_result_row:
+                auto_send_result = _auto_send_regular_progress_update(
+                    student=student_user,
+                    course=auto_course,
+                    teacher_user=teacher_user or auto_course.teacher,
+                    assessment_result=completed_result_row,
+                )
+                if not auto_send_result.get('success'):
+                    logger.info(
+                        'Auto regular progress update skipped for student %s: %s',
+                        student_user.id,
+                        auto_send_result.get('reason', 'unknown'),
+                    )
+            _log_completion_timing('auto_progress_update_end')
+        except Exception:
+            logger.exception('Failed to auto-send regular progress update')
+            _log_completion_timing('auto_progress_update_error')
+    _log_completion_timing('response_construction_start')
     response_payload = {'success': True}
     if not is_practice:
         response_payload.update({
@@ -9779,6 +9515,8 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             'adapted_reading_level_disclaimer': score_payload.get('adapted_reading_level_disclaimer'),
             'reading_level': score_payload.get('adapted_reading_level'),
         })
+    _log_completion_timing('response_construction_end')
+    _log_completion_timing('total')
     if is_practice and material:
         response_payload.update({
             'material_id': f"practice-{material.id}" if material.type == 'practice' else f"material-{material.id}",
@@ -11097,7 +10835,6 @@ def course_teacher_view(request):
     context.update({
         'crla_assessment_exists': bool(crla_existing),
         'crla_assessment_status_message': _crla_creation_block_message(teacher_user=teacher_user) if current_term == 2 or crla_existing else '',
-        'syllable_blending_catalog': activity_catalog(),
     })
     return render(request, 'pabasa_app/courses.html', context)
 
@@ -12171,19 +11908,15 @@ def create_reading_class(request):
     """
     try:
         data = json.loads(request.body)
-        # The dashboard calls these values Grade and Section. They continue to
-        # use the existing columns so class management remains compatible.
-        class_name = data.get('grade', data.get('class_name', '')).strip()
+        class_name = data.get('class_name', '').strip()
         header = data.get('header', '').strip() or "Reading Class"
         description = data.get('description', '').strip()
         # 'grade_level' removed from Section model; ignore any incoming value
-        section_name = data.get('section', data.get('subject', '')).strip()
+        section_name = data.get('section', '').strip() or "N/A"
         requested_class_code = data.get('class_code', '').strip()
 
         if not class_name:
-            return JsonResponse({'success': False, 'error': 'Grade is required'}, status=400)
-        if not section_name:
-            return JsonResponse({'success': False, 'error': 'Section is required'}, status=400)
+            return JsonResponse({'success': False, 'error': 'Title is required'}, status=400)
 
         # Retrieve the teacher user for the logged-in user
         user_id = request.session.get('user_id')
@@ -12202,7 +11935,7 @@ def create_reading_class(request):
             class_name=class_name,
             header=header,
             description=description,
-            subject=section_name,
+            subject=data.get('subject', '').strip(),
         )
 
         teacher_user.add_tag(new_class.get_tag_label())
@@ -12219,9 +11952,7 @@ def create_reading_class(request):
             'success': True,
             'message': 'Classroom created successfully',
             'class_code': unique_code,
-            'class_name': new_class.class_name,
-            'grade': new_class.class_name,
-            'section': new_class.subject,
+            'class_name': new_class.class_name
         })
     except Exception as e:
         logger.error(f"Class creation error: {str(e)}", exc_info=True)
@@ -12290,111 +12021,6 @@ def class_management_view(request):
 
 
 # ===== Course APIs =====
-def _section_course_payload(section):
-    """Represent an active class as a course card without creating a Course."""
-    assessments_qs = Assessment.objects.filter(
-        teacher=section.teacher,
-        section=section,
-        source_assessment__isnull=True,
-        is_active=True,
-    ).exclude(status='archived').order_by('-created_at')
-
-    materials_qs = Material.objects.filter(
-        Q(section=section) | Q(assigned_sections=section),
-        is_active=True,
-    ).exclude(status='archived').distinct().order_by('-created_at')
-
-    practices_qs = Practice.objects.filter(
-        teacher=section.teacher,
-        section=section,
-        is_active=True,
-    ).exclude(status='archived').order_by('-created_at')
-
-    assessments = [{
-        'id': assessment.id,
-        'raw_id': assessment.id,
-        'action_id': f'assessment-{assessment.id}',
-        'code': assessment.code,
-        'title': assessment.title,
-        'assessment_type': assessment.assessment_type,
-        'level': assessment.get_assessment_type_display(),
-        'status': assessment.status,
-        'is_active': assessment.is_active,
-        'created_at': assessment.created_at.isoformat() if assessment.created_at else None,
-    } for assessment in assessments_qs]
-
-    materials = [{
-        'id': material.id,
-        'raw_id': material.id,
-        'action_id': f'material-{material.id}',
-        'record_kind': 'material',
-        'assessment_id': material.assessment_id,
-        'code': material.assessment.code if material.assessment else None,
-        'title': material.title,
-        'item_type': material.item_type,
-        'type': material.type,
-        'content': material.content_text or material.prompt_text,
-        'content_text': material.content_text or material.prompt_text,
-        'status': material.status,
-        'created_at': material.created_at.isoformat() if material.created_at else None,
-        'assigned_sections': [section.class_code],
-        'assigned_week': material.assigned_week,
-        'assigned_week_display': format_assigned_week_display(material.assigned_week),
-        'assigned_weeks': _material_week_values(material),
-        'assigned_weeks_display': format_assigned_weeks_display(_material_week_values(material)),
-        'source_type': material.source_type or 'personal',
-        'material_source': material.source_type or 'personal',
-        'language': (material.content_json or {}).get('language') or material.language or 'English',
-        'content_json': material.content_json or {},
-        'template_title': (material.content_json or {}).get('template_title') or '',
-        'template_lesson': (material.content_json or {}).get('template_lesson') or '',
-        'activity_type': (material.content_json or {}).get('activity_type') or '',
-        'activity_format': (material.content_json or {}).get('activity_format') or '',
-        'activity_id': (material.content_json or {}).get('activity_id') or '',
-        'selected_set_id': (material.content_json or {}).get('activity_id') or '',
-        'selected_set_name': (material.content_json or {}).get('activity_name') or '',
-        'student_access': bool(material.student_access),
-        'assessment_kind': _assessment_kind_value(material),
-    } for material in materials_qs]
-
-    practices = [{
-        'id': f'practice-{practice.id}',
-        'raw_id': practice.id,
-        'action_id': f'practice-{practice.id}',
-        'record_kind': 'practice',
-        'title': practice.title,
-        'status': practice.status,
-        'created_at': practice.created_at.isoformat() if practice.created_at else None,
-        'code': practice.code,
-    } for practice in practices_qs]
-
-    enrolled_students = section.get_enrolled_students(active_only=True)
-    return {
-        'id': f'section-{section.id}',
-        'section_id': section.id,
-        'source': 'class',
-        'code': section.class_code,
-        'title': section.class_name,
-        'description': section.subject or '',
-        'sections': [{
-            'id': section.id,
-            'code': section.class_code,
-            'name': section.class_name,
-        }],
-        'assessments': assessments,
-        'materials': materials,
-        'practices': practices,
-        'metrics': {
-            'sections': 1,
-            'assessments': len(assessments),
-            'materials': len(materials) + len(practices),
-            'students': len(enrolled_students),
-            'average_progress': 0,
-        },
-        'metadata': {'class_code': section.class_code},
-    }
-
-
 def _derive_attempt_completion_percentage(attempt):
     if not isinstance(attempt, dict):
         return 0.0
@@ -12526,18 +12152,10 @@ def get_teacher_courses_api(request):
             # including the current teacher's own shared resources.
             courses_qs = Course.objects.filter(is_active=True)
         else:
-            # Personal mode is class-backed. A class is the single source of
-            # truth and is represented as a course card without a Course row.
+            # Personal mode: return only current teacher's courses
             if not teacher_user:
                 return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
-            sections_qs = Section.objects.filter(
-                teacher=teacher_user,
-                is_active=True,
-            ).order_by('-created_at')
-            return JsonResponse({
-                'success': True,
-                'courses': [_section_course_payload(section) for section in sections_qs],
-            })
+            courses_qs = Course.objects.filter(teacher=teacher_user, is_active=True)
 
         courses_qs = courses_qs.select_related('teacher').prefetch_related(
             'sections', 'materials', 'assessments', 'assessments__materials'
@@ -12681,10 +12299,9 @@ def get_teacher_courses_api(request):
                 is_shared_material = source_type == 'shared'
 
                 content_json = getattr(m, 'content_json', None) or {}
-                if not isinstance(content_json, dict):
-                    content_json = {}
                 language_value = ''
-                language_value = str(content_json.get('language') or '').strip()
+                if isinstance(content_json, dict):
+                    language_value = str(content_json.get('language') or '').strip()
                 if not language_value:
                     language_value = str(getattr(m, 'language', '') or '').strip()
                 if not language_value:
@@ -12720,13 +12337,6 @@ def get_teacher_courses_api(request):
                     'shared_owner_teacher_name': material_teacher_name if is_shared_material else None,
                     'language': language_value,
                     'content_json': content_json,
-                    'template_title': content_json.get('template_title') or '',
-                    'template_lesson': content_json.get('template_lesson') or '',
-                    'activity_type': content_json.get('activity_type') or '',
-                    'activity_format': content_json.get('activity_format') or '',
-                    'activity_id': content_json.get('activity_id') or '',
-                    'selected_set_id': content_json.get('activity_id') or '',
-                    'selected_set_name': content_json.get('activity_name') or '',
                     'student_access': bool(getattr(m, 'student_access', False)),
                     'assessment_kind': _assessment_kind_value(m),
                 })
@@ -12821,27 +12431,12 @@ def get_teacher_assessments_api(request):
             source_assessment__isnull=True,
             is_active=True
         )
-        course = None
-        class_section = None
 
         if course_id is not None:
-            course_id_text = str(course_id)
-            if course_id_text.startswith('section-'):
-                section_id = course_id_text.removeprefix('section-')
-                class_section = Section.objects.filter(
-                    id=section_id,
-                    teacher=teacher_user,
-                    is_active=True,
-                ).first()
-                if not class_section:
-                    return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
-                assessments_qs = assessments_qs.filter(section=class_section)
-            else:
-                course = Course.objects.filter(id=course_id, is_active=True).select_related("teacher").first()
+            course = Course.objects.filter(id=course_id, is_active=True).select_related("teacher").first()
             if not course:
-                if class_section is None:
-                    return JsonResponse({'success': False, 'error': 'Course not found'}, status=404)
-            elif teacher_user.role != 'admin' and course.teacher_id != teacher_user.id:
+                return JsonResponse({'success': False, 'error': 'Course not found'}, status=404)
+            if teacher_user.role != 'admin' and course.teacher_id != teacher_user.id:
                 return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
 
             # Match the assessment scope serialized by get_teacher_courses_api:
@@ -12850,16 +12445,15 @@ def get_teacher_assessments_api(request):
             # this course's active sections. The course owner is intentionally
             # used instead of the session user so authorized administrators see
             # the same records without broadening access to unrelated courses.
-            if course:
-                course_owner = course.teacher
-                course_sections = course.sections.filter(is_active=True)
-                assessments_qs = Assessment.objects.filter(
-                    source_assessment__isnull=True,
-                    is_active=True
-                ).filter(
-                    Q(courses=course, teacher=course_owner) |
-                    Q(section__in=course_sections, teacher=course_owner)
-                ).distinct()
+            course_owner = course.teacher
+            course_sections = course.sections.filter(is_active=True)
+            assessments_qs = Assessment.objects.filter(
+                source_assessment__isnull=True,
+                is_active=True
+            ).filter(
+                Q(courses=course, teacher=course_owner) |
+                Q(section__in=course_sections, teacher=course_owner)
+            ).distinct()
 
         # Always exclude records explicitly marked as archived (status field)
         assessments_qs = assessments_qs.exclude(status__iexact='archived').prefetch_related('materials').order_by('-created_at').distinct()
@@ -12895,14 +12489,7 @@ def get_teacher_assessments_api(request):
         # Also include Materials that are marked as assessment-type (materials table)
         try:
             from .models import Material
-            if class_section is not None:
-                materials_qs = Material.objects.filter(
-                    Q(section=class_section) | Q(assigned_sections=class_section),
-                    teacher=teacher_user,
-                    type__in=['assessment', 'both'],
-                    is_active=True,
-                ).distinct()
-            elif course_id is not None and course:
+            if course_id is not None and course:
                 # Only include assessment materials owned by the requested
                 # course's teacher and attached to this course.
                 materials_qs = course.materials.filter(
@@ -13515,7 +13102,7 @@ def _compute_teacher_overview(teacher_user):
 @require_http_methods(["POST"])
 @login_required(role='teacher')
 def add_material_to_course(request):
-    """Attach an existing material to a class-backed or legacy course."""
+    """Attach an existing Material (and its Assessment, if any) to a Course owned by the teacher."""
     try:
         data = json.loads(request.body)
         course_id = data.get('course_id')
@@ -13526,18 +13113,8 @@ def add_material_to_course(request):
         if not teacher_user or teacher_user.role != 'teacher':
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
 
-        course_id_text = str(course_id or '')
-        class_section = None
-        course = None
-        if course_id_text.startswith('section-'):
-            class_section = Section.objects.filter(
-                id=course_id_text.removeprefix('section-'),
-                teacher=teacher_user,
-                is_active=True,
-            ).first()
-        else:
-            course = Course.objects.filter(id=course_id, teacher=teacher_user).first()
-        if not course and not class_section:
+        course = Course.objects.filter(id=course_id, teacher=teacher_user).first()
+        if not course:
             return JsonResponse({'success': False, 'error': 'Course not found or not owned by you'}, status=404)
 
         material = Material.objects.filter(id=material_id).first()
@@ -13551,9 +13128,8 @@ def add_material_to_course(request):
             if not (getattr(material, 'assessment', None) and material.assessment.teacher_id == teacher_user.id):
                 return JsonResponse({'success': False, 'error': 'You do not have permission to use this material'}, status=403)
 
-        if course:
-            course.materials.add(material)
-        course_section = class_section or course.sections.filter(is_active=True).first()
+        course.materials.add(material)
+        course_section = course.sections.filter(is_active=True).first()
         if course_section and material.section_id != course_section.id:
             material.section = course_section
             update_fields = ['section', 'updated_at']
@@ -13565,15 +13141,23 @@ def add_material_to_course(request):
         elif course_section and not material.assigned_sections.filter(id=course_section.id).exists():
             material.assigned_sections.add(course_section)
         # If material has an attached Assessment, also link it for convenience
-        if course and getattr(material, 'assessment', None):
+        if getattr(material, 'assessment', None):
             try:
                 course.assessments.add(material.assessment)
             except Exception:
                 pass
 
+        source_type = getattr(material, 'source_type', 'personal') or 'personal'
         return JsonResponse({
             'success': True,
-            'material': _material_response_payload(material, section=course_section),
+            'material': {
+                'id': material.id,
+                'title': material.title,
+                'item_type': getattr(material, 'item_type', ''),
+                'source_type': source_type,
+                'material_source': source_type,
+                'is_shared_material': source_type == 'shared',
+            }
         })
     except Exception as e:
         logger.exception('Error adding material to course')
@@ -13584,7 +13168,7 @@ def add_material_to_course(request):
 @require_http_methods(["POST"])
 @login_required(role='teacher')
 def remove_material_from_course(request):
-    """Detach a material from a class-backed or legacy course."""
+    """Detach a Material from a Course."""
     try:
         data = json.loads(request.body)
         course_id = data.get('course_id')
@@ -13595,33 +13179,17 @@ def remove_material_from_course(request):
         if not teacher_user or teacher_user.role != 'teacher':
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
 
-        course_id_text = str(course_id or '')
-        class_section = None
-        course = None
-        if course_id_text.startswith('section-'):
-            class_section = Section.objects.filter(
-                id=course_id_text.removeprefix('section-'),
-                teacher=teacher_user,
-                is_active=True,
-            ).first()
-        else:
-            course = Course.objects.filter(id=course_id, teacher=teacher_user).first()
-        if not course and not class_section:
+        course = Course.objects.filter(id=course_id, teacher=teacher_user).first()
+        if not course:
             return JsonResponse({'success': False, 'error': 'Course not found or not owned by you'}, status=404)
 
         material = Material.objects.filter(id=material_id).first()
         if not material:
             return JsonResponse({'success': False, 'error': 'Material not found'}, status=404)
 
-        if class_section:
-            material.assigned_sections.remove(class_section)
-            if material.section_id == class_section.id:
-                material.section = None
-                material.save(update_fields=['section', 'updated_at'])
-        else:
-            course.materials.remove(material)
+        course.materials.remove(material)
         # Also attempt to remove linked assessment if present
-        if course and getattr(material, 'assessment', None):
+        if getattr(material, 'assessment', None):
             try:
                 course.assessments.remove(material.assessment)
             except Exception:
@@ -13647,8 +13215,6 @@ def update_class_info(request):
         section.class_name = data.get('class_name', '').strip()
         # 'grade_level' and per-class 'section' fields removed from the model; only update fields that remain
         section.description = data.get('description', '').strip()
-        if 'section' in data or 'subject' in data:
-            section.subject = str(data.get('section', data.get('subject', ''))).strip()
         section.save()
         return JsonResponse({'success': True})
     except Exception as e:
@@ -15458,19 +15024,9 @@ def _material_response_payload(material, tokens=None, section=None, is_shared_ma
     if not language_value:
         language_value = 'English'
 
-    template_title = str(content_json.get('template_title') or '').strip() if isinstance(content_json, dict) else ''
-    template_lesson = str(content_json.get('template_lesson') or '').strip() if isinstance(content_json, dict) else ''
-    activity_type = str(content_json.get('activity_type') or '').strip() if isinstance(content_json, dict) else ''
-    activity_format = str(content_json.get('activity_format') or '').strip() if isinstance(content_json, dict) else ''
-    activity_id = str(content_json.get('activity_id') or '').strip() if isinstance(content_json, dict) else ''
-    primary_section = section or getattr(material, 'section', None)
-
     return {
         'id': f"material-{material.id}",
         'raw_id': material.id,
-        'class_id': getattr(primary_section, 'id', None),
-        'section_id': getattr(primary_section, 'id', None),
-        'class_code': getattr(primary_section, 'class_code', '') or '',
         'code': material.code,
         'title': material.title,
         'item_type': material.item_type,
@@ -15491,14 +15047,6 @@ def _material_response_payload(material, tokens=None, section=None, is_shared_ma
         'assigned_weeks': _material_week_values(material),
         'assigned_weeks_display': format_assigned_weeks_display(_material_week_values(material)),
         'content_json': content_json,
-        'template_title': template_title,
-        'template_lesson': template_lesson,
-        'template_type': str(content_json.get('template_type') or template_title).strip() if isinstance(content_json, dict) else template_title,
-        'activity_type': activity_type,
-        'activity_format': activity_format,
-        'activity_id': activity_id,
-        'selected_set_id': activity_id,
-        'selected_set_name': str(content_json.get('activity_name') or '').strip() if isinstance(content_json, dict) else '',
         'randomize_order': bool(content_json.get('randomize_order')),
         'student_access': bool(getattr(material, 'student_access', False)),
         'assessment_kind': _assessment_kind_value(material),
@@ -15634,7 +15182,6 @@ def add_reading_material(request):
         requested_usage_type = (data.get('usage_type') or 'assessment').strip()        # practice | assessment | both
         requested_source_type = (data.get('source_type') or data.get('origin') or 'shared').strip().lower()
         source_type = requested_source_type if requested_source_type in ('personal', 'shared', 'template') else 'shared'
-        class_id_raw = data.get('class_id') or data.get('section_id')
         class_code   = (data.get('class_code') or '').strip()
         requested_assessment_kind = str(data.get('assessment_kind') or 'regular').strip().lower()
         assessment_kind = requested_assessment_kind if requested_assessment_kind in {'regular', 'crla'} else 'regular'
@@ -15656,28 +15203,6 @@ def add_reading_material(request):
             except Exception:
                 template_payload = {}
             if isinstance(template_payload, dict):
-                template_identity = str(
-                    template_payload.get('template_lesson') or template_payload.get('template_title')
-                    or data.get('template_lesson') or data.get('template_title') or ''
-                ).strip().lower()
-                if template_identity in {'syllable blending', 'blend the syllables'}:
-                    selected_language = data.get('language') or template_payload.get('language') or 'Filipino'
-                    selected_format = normalize_format(template_payload.get('activity_format'))
-                    selected_activity_id = str(template_payload.get('activity_id') or '').strip().lower()
-                    id_match = re.fullmatch(r'(filipino|english)_(syllable_combination|big_box)_(0[1-5])', selected_activity_id)
-                    expected_language = 'English' if str(selected_language).lower().startswith('eng') else 'Filipino'
-                    if not id_match or id_match.group(1) != expected_language.lower() or id_match.group(2) != selected_format:
-                        return JsonResponse({'success': False, 'errors': {
-                            'activity_id': 'Select one of the five prebuilt activities for the chosen language and format.'
-                        }}, status=400)
-                    template_payload.update(build_activity(expected_language, selected_format, int(id_match.group(3)) - 1))
-                    template_payload.update({
-                        'template_title': 'Syllable Blending',
-                        'template_lesson': 'Syllable Blending',
-                        'template_type': 'Syllable Blending',
-                        'template_source': 'template',
-                    })
-                    title = title or 'Syllable Blending'
                 def _template_item_text(item, template_title_value=''):
                     if not isinstance(item, dict):
                         return str(item).strip() if item is not None else ''
@@ -15688,8 +15213,6 @@ def add_reading_material(request):
                         return str(item.get('sentence') or '').strip()
                     if template_title_normalized in ('Fluency Reading', 'Story Reading', "5W's Story Questions", 'Retell the Story', 'Story Response'):
                         return str(item.get('storyText') or item.get('content') or item.get('paragraph') or '').strip()
-                    if template_title_normalized == 'Syllable Blending':
-                        return str(item.get('answer') or '').strip()
                     return str(item.get('text') or item.get('content') or item.get('title') or item.get('sentence') or item.get('paragraph') or item.get('word') or '').strip()
 
                 if isinstance(template_payload.get('items'), list):
@@ -15760,19 +15283,7 @@ def add_reading_material(request):
             return JsonResponse({'success': False, 'error': 'Teacher not found.'}, status=404)
 
         section = None
-        if class_id_raw:
-            _, class_id = _parse_prefixed_id(class_id_raw)
-            section = Section.objects.filter(
-                id=class_id,
-                teacher=teacher_user,
-                is_active=True,
-            ).first() if class_id else None
-            if not section:
-                return JsonResponse({'success': False, 'error': 'Class not found or does not belong to you.'}, status=404)
-            if class_code and str(section.class_code).strip().casefold() != class_code.casefold():
-                return JsonResponse({'success': False, 'error': 'The selected class identity does not match its class code.'}, status=400)
-            class_code = section.class_code
-        elif class_code:
+        if class_code:
             section = Section.objects.filter(
                 class_code=class_code,
                 teacher=teacher_user,
@@ -15885,7 +15396,6 @@ def add_reading_material(request):
             if source_type == 'template' and isinstance(template_payload, dict):
                 template_content_json.update(template_payload)
                 template_content_json['instructions'] = instructions or str(template_payload.get('instructions') or '').strip()
-                template_content_json = _normalize_picture_word_matching_content(template_content_json)
 
             m = Material.objects.create(
                 assessment=None,
@@ -16263,6 +15773,7 @@ def delete_reading_material(request):
 @login_required()
 def record_assessment_completion(request):
     """Handles notification when student completes reading material."""
+    request_timing_start = time.perf_counter()
     try:
         logger.warning("DEBUG: record_assessment_completion HIT")
         data = json.loads(request.body)
@@ -16346,6 +15857,13 @@ def record_assessment_completion(request):
             user_id=getattr(student_user, 'id', None),
             response_status=getattr(response, 'status_code', None),
         )
+        logger.warning(
+            "PABASA_COMPLETION_TIMING %s",
+            {
+                'stage': 'record_assessment_completion_total',
+                'elapsed_ms': round((time.perf_counter() - request_timing_start) * 1000, 2),
+            },
+        )
         return response
     except Exception as e:
         _trace_live_end_flow(
@@ -16353,6 +15871,13 @@ def record_assessment_completion(request):
             None,
             user_id=request.session.get('user_id'),
             error=str(e),
+        )
+        logger.warning(
+            "PABASA_COMPLETION_TIMING %s",
+            {
+                'stage': 'record_assessment_completion_total',
+                'elapsed_ms': round((time.perf_counter() - request_timing_start) * 1000, 2),
+            },
         )
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 

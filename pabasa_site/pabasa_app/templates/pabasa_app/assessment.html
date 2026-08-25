@@ -983,8 +983,6 @@
 
                 const sortedWeeks = Object.keys(groups).sort((a, b) => assignedWeekSortValue(a) - assignedWeekSortValue(b));
                 const urlMap = { word: "{% url 'reading_word_page' %}", sentence: "{% url 'reading_sentence_page' %}", paragraph: "{% url 'reading_para_page' %}", vowel: "{% url 'reading_vowel_page' %}" };
-                const pictureWordMatchingUrl = "{% url 'picture_word_matching_page' %}";
-                const syllableBlendingUrl = "{% url 'syllable_blending_page' %}";
                 const iconMap = { word: 'bi-type', sentence: 'bi-chat-left-text', paragraph: 'bi-card-text', vowel: 'bi-soundwave' };
                 const labelMap = { word: 'Word Reading', sentence: 'Sentence Reading', paragraph: 'Paragraph Reading', vowel: 'Vowel Reading' };
                 const officialAssessmentId = "{{ crla_official_assessment_id|default:''|escapejs }}";
@@ -1047,7 +1045,7 @@
                     const officialLaunchPayload = buildOfficialAssessmentData(m);
                     const officialLaunchPayloadJson = JSON.stringify(officialLaunchPayload);
                     const isLocked = !Boolean(m.student_access);
-                    const generatedStartUrl = isLocked ? '#' : `${urlMap[m.category || m.item_type || 'word']}?test=${encodeURIComponent(m.title)}&code=${encodeURIComponent(m.code || classData.code)}&id=${encodeURIComponent(m.id)}${officialAssessmentId ? `&official_assessment_id=${encodeURIComponent(officialAssessmentId)}` : ''}${officialLaunchPayloadJson ? `&official_assessment_data=${encodeURIComponent(officialLaunchPayloadJson)}` : ''}&content=${encodeURIComponent(m.content || '')}&item_type=${encodeURIComponent(m.item_type || m.category || 'word')}&language=${encodeURIComponent(m.language || '')}`;
+                    const generatedStartUrl = isLocked ? '#' : `${urlMap[m.category || m.item_type || 'word']}?test=${encodeURIComponent(m.title)}&code=${encodeURIComponent(m.code || classData.code)}&id=${encodeURIComponent(m.id)}${officialAssessmentId ? `&official_assessment_id=${encodeURIComponent(officialAssessmentId)}` : ''}${officialLaunchPayloadJson ? `&official_assessment_data=${encodeURIComponent(officialLaunchPayloadJson)}` : ''}&content=${encodeURIComponent(m.content || '')}&item_type=${encodeURIComponent(m.item_type || m.category || 'word')}&language=${encodeURIComponent(m.language || '')}&crla_fresh=1`;
                     return `
                         <div class="assessment-card-shell ${isLocked ? 'is-locked' : ''}" data-official-assessment="true">
                             <a href="${generatedStartUrl}" class="assessment-type-link type-${m.category || m.item_type || 'word'} ${isLocked ? 'is-disabled is-locked' : ''}" data-class-code="${escapeHtml(classData.code)}" ${isLocked ? 'tabindex="-1" aria-disabled="true" onclick="return false;"' : ''}>
@@ -1122,6 +1120,7 @@
                             const officialAssessmentId = "{{ crla_official_assessment_id|default:''|escapejs }}";
                             const officialLaunchPayload = buildOfficialAssessmentData(m);
                             const officialLaunchPayloadJson = JSON.stringify(officialLaunchPayload);
+                            const generatedStartUrl = isLocked ? '#' : `${urlMap[m.category]}?test=${encodeURIComponent(m.title)}&code=${encodeURIComponent(m.code || classData.code)}&id=${encodeURIComponent(m.id)}${officialAssessmentId ? `&official_assessment_id=${encodeURIComponent(officialAssessmentId)}` : ''}${officialLaunchPayloadJson ? `&official_assessment_data=${encodeURIComponent(officialLaunchPayloadJson)}` : ''}&content=${encodeURIComponent(m.content || '')}&item_type=${encodeURIComponent(m.item_type || m.category || 'word')}&language=${encodeURIComponent(m.language || '')}&crla_fresh=1`;
                             const materialSourceType = String(m.source_type || m.material_source || '').trim().toLowerCase();
                             const templateActivityName = materialSourceType === 'template'
                                 ? String(
@@ -1133,17 +1132,6 @@
                                     || ''
                                 ).trim()
                                 : '';
-                            const isPictureWordMatching = [templateActivityName, m.content_json?.template_title,
-                                m.content_json?.template_activity_name, m.content_json?.activity_type, m.title]
-                                .some(value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === 'picture_word_matching');
-                            const isSyllableBlending = [templateActivityName, m.content_json?.template_title,
-                                m.content_json?.template_lesson, m.content_json?.activity_type, m.title]
-                                .some(value => ['syllable_blending','blend_the_syllables'].includes(String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')));
-                            const generatedStartUrl = isLocked ? '#' : (isSyllableBlending
-                                ? `${syllableBlendingUrl}?id=${encodeURIComponent(m.id)}`
-                                : isPictureWordMatching
-                                ? `${pictureWordMatchingUrl}?id=${encodeURIComponent(m.id)}`
-                                : `${urlMap[m.category]}?test=${encodeURIComponent(m.title)}&code=${encodeURIComponent(m.code || classData.code)}&id=${encodeURIComponent(m.id)}${officialAssessmentId ? `&official_assessment_id=${encodeURIComponent(officialAssessmentId)}` : ''}${officialLaunchPayloadJson ? `&official_assessment_data=${encodeURIComponent(officialLaunchPayloadJson)}` : ''}&content=${encodeURIComponent(m.content || '')}&item_type=${encodeURIComponent(m.item_type || m.category || 'word')}&language=${encodeURIComponent(m.language || '')}`);
                             console.log("PABASA_OFFICIAL_TRACE", {
                                 stage: "assessment_card_link",
                                 selected_material_id: mId || "",

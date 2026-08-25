@@ -338,7 +338,7 @@
 
             <div class="workflow-actions">
                 {% if stage == "assessment" %}
-                    <a class="btn btn-primary workflow-button primary" id="startCrlaAssessmentBtn" href="{% url 'reading_word_page' %}?official_assessment_id={{ crla_material_id|default:'' }}"><i class="bi bi-play-fill"></i> Start Assessment</a>
+                    <a class="btn btn-primary workflow-button primary" id="startCrlaAssessmentBtn" href="{% url 'reading_word_page' %}?official_assessment_id={{ crla_material_id|default:'' }}&amp;crla_fresh=1"><i class="bi bi-play-fill"></i> Start Assessment</a>
                 {% endif %}
                 <a class="workflow-button secondary" href="{% url 'dashboard' %}"><i class="bi bi-arrow-left"></i> Return to Dashboard</a>
             </div>
