@@ -347,7 +347,7 @@ def transcribe_audio_bytes_with_model(
     fallback_reason = ""
     if model == "chirp_3":
         try:
-            transcript = transcribe_audio_bytes_v2_chirp3(
+            transcript = transcribe_audio_bytes_v2_chirp3_streaming(
                 audio_bytes,
                 language_code,
                 project_id,
@@ -420,6 +420,75 @@ def transcribe_audio_bytes_v2_chirp3(
     if not alternatives:
         return ""
     return alternatives[0].transcript.strip()
+
+
+def transcribe_audio_bytes_v2_chirp3_streaming(
+    audio_bytes,
+    language_code,
+    project_id,
+    location,
+    credentials_file,
+    timeout_seconds=12,
+):
+    """Send a short browser-recorded clip to Chirp 3 using StreamingRecognize.
+
+    The browser posts frequent clips while a learner reads.  This function keeps
+    each request small and uses the Cloud STT streaming protocol, returning the
+    completed transcript for the existing scoring endpoint.
+    """
+    if not project_id:
+        raise RuntimeError("Set GOOGLE_CLOUD_PROJECT_ID in settings.py to use Chirp 3.")
+    if not audio_bytes:
+        return ""
+    try:
+        from google.api_core.client_options import ClientOptions
+        from google.cloud.speech_v2 import SpeechClient
+        from google.cloud.speech_v2.types import cloud_speech
+        from google.oauth2 import service_account
+    except ImportError as exc:
+        raise RuntimeError("Install google-cloud-speech to use Chirp 3.") from exc
+
+    credentials = google_stt_credentials(service_account, credentials_file)
+    client_options = None
+    if location and location != "global":
+        client_options = ClientOptions(api_endpoint=f"{location}-speech.googleapis.com")
+    client = SpeechClient(credentials=credentials, client_options=client_options)
+
+    recognition_config = cloud_speech.RecognitionConfig(
+        auto_decoding_config=cloud_speech.AutoDetectDecodingConfig(),
+        language_codes=[language_code],
+        model="chirp_3",
+    )
+    streaming_config = cloud_speech.StreamingRecognitionConfig(config=recognition_config)
+    recognizer = f"projects/{project_id}/locations/{location or 'global'}/recognizers/_"
+
+    def requests():
+        yield cloud_speech.StreamingRecognizeRequest(
+            recognizer=recognizer,
+            streaming_config=streaming_config,
+        )
+        # Google recommends a generator of small audio messages for streaming.
+        for start in range(0, len(audio_bytes), 32_000):
+            yield cloud_speech.StreamingRecognizeRequest(
+                audio=audio_bytes[start:start + 32_000],
+            )
+
+    final_transcripts = []
+    latest_interim = ""
+    responses = client.streaming_recognize(requests=requests(), timeout=timeout_seconds)
+    for response in responses:
+        for result in response.results:
+            if not result.alternatives:
+                continue
+            transcript = result.alternatives[0].transcript.strip()
+            if not transcript:
+                continue
+            if result.is_final:
+                final_transcripts.append(transcript)
+                latest_interim = ""
+            else:
+                latest_interim = transcript
+    return " ".join(final_transcripts or ([latest_interim] if latest_interim else [])).strip()
 
 
 def google_stt_credentials(service_account, credentials_file):

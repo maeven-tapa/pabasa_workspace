@@ -167,7 +167,8 @@ DEFAULT_FROM_EMAIL = 'pabasa.tupc@gmail.com'
 GOOGLE_STT_API_KEY = 'AIzaSyDPMgJX8t195Z9bfoID2gwlG5oPhBVK_tk'
 GOOGLE_CLOUD_PROJECT_ID = 'direct-outlet-499701-p6'
 GOOGLE_STT_LOCATION = 'us'
-GOOGLE_STT_MODEL = 'latest_short'
+# Chirp 3 is used through Speech-to-Text V2 StreamingRecognize for live reading.
+GOOGLE_STT_MODEL = 'chirp_3'
 GOOGLE_STT_CREDENTIALS_FILE = BASE_DIR / 'google-stt-service-account.json'
 PABASA_OVERRIDE_SECURITY_CODE = os.environ.get('PABASA_OVERRIDE_SECURITY_CODE', '')
 

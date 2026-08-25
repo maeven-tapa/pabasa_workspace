@@ -7,6 +7,7 @@ from django.utils import timezone
 from datetime import date, timedelta
 from io import BytesIO
 from pathlib import Path
+from types import SimpleNamespace
 import hashlib
 import json
 import os
@@ -26,6 +27,7 @@ from .reading_stt import (
     target_phrase_hints,
     target_aware_syllable_stitching,
     syllable_context_metrics,
+    transcribe_audio_bytes_v2_chirp3_streaming,
     v1_model_for_language,
     word_numbers_in_transcript,
 )
@@ -2254,6 +2256,38 @@ class ReadingMatcherTests(TestCase):
     def test_philippine_locales_use_supported_v1_models(self):
         self.assertEqual(v1_model_for_language("latest_short", "en-PH"), "command_and_search")
         self.assertEqual(v1_model_for_language("latest_short", "fil-PH"), "")
+
+    @patch("google.cloud.speech_v2.SpeechClient")
+    @patch("pabasa_app.reading_stt.google_stt_credentials", return_value=object())
+    def test_chirp3_uses_streaming_recognition_and_returns_final_results(self, credentials, speech_client):
+        client = speech_client.return_value
+        client.streaming_recognize.return_value = [
+            SimpleNamespace(results=[
+                SimpleNamespace(
+                    alternatives=[SimpleNamespace(transcript="Magandang")],
+                    is_final=True,
+                ),
+                SimpleNamespace(
+                    alternatives=[SimpleNamespace(transcript="umaga")],
+                    is_final=True,
+                ),
+            ]),
+        ]
+
+        transcript = transcribe_audio_bytes_v2_chirp3_streaming(
+            b"a" * 70_000,
+            "fil-PH",
+            "test-project",
+            "us",
+            "unused-service-account.json",
+        )
+
+        self.assertEqual(transcript, "Magandang umaga")
+        requests = list(client.streaming_recognize.call_args.kwargs["requests"])
+        self.assertEqual(requests[0].recognizer, "projects/test-project/locations/us/recognizers/_")
+        self.assertEqual(requests[0].streaming_config.config.model, "chirp_3")
+        self.assertEqual(requests[0].streaming_config.config.language_codes, ["fil-PH"])
+        self.assertEqual([len(request.audio) for request in requests[1:]], [32_000, 32_000, 6_000])
 
     @patch("pabasa_app.reading_stt._post_google_tts", return_value="encoded-audio")
     def test_read_aloud_uses_filipino_voice_for_tagalog_locale(self, post_google_tts):
