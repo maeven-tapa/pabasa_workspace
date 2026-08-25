@@ -468,9 +468,10 @@ def transcribe_audio_bytes_v2_chirp3_streaming(
             streaming_config=streaming_config,
         )
         # Google recommends a generator of small audio messages for streaming.
-        for start in range(0, len(audio_bytes), 32_000):
+        # StreamingRecognize accepts at most 25,600 bytes in one audio message.
+        for start in range(0, len(audio_bytes), 25_600):
             yield cloud_speech.StreamingRecognizeRequest(
-                audio=audio_bytes[start:start + 32_000],
+                audio=audio_bytes[start:start + 25_600],
             )
 
     final_transcripts = []
