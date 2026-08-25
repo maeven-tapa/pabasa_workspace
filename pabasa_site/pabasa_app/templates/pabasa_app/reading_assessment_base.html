@@ -721,6 +721,12 @@
             position: relative;
         }
 
+        .recording-controls button:disabled {
+            cursor: wait;
+            filter: grayscale(0.7);
+            opacity: 0.46;
+        }
+
         #btnStartReading, #btnStopReading, #btnReadAloud {
             min-height: 52px;
             padding: 0 1.55rem;

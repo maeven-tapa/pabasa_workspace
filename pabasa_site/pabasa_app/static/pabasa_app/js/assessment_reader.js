@@ -1933,7 +1933,7 @@
                 console.warn("PABASA: MediaRecorder error", event.error);
                 setSpeechStatus("Speech recorder error.", event.error?.message || "Please try starting again.");
             };
-            mediaRecorder.onstop = () => {
+            mediaRecorder.onstop = async () => {
                 const chunks = speechAudioChunks.slice();
                 const recorderMimeType = mediaRecorder?.mimeType || mimeType || "audio/webm";
                 speechAudioChunks = [];
@@ -1941,7 +1941,9 @@
 
                 if (chunks.length && isRecording && !isMuted && shouldSendAudioChunk() && isCurrentSpeechContext(recorderContext)) {
                     hasHeardSinceLastChunk = false;
-                    sendAudioChunk(new Blob(chunks, { type: recorderMimeType }), recorderContext);
+                    // Pause microphone capture until this spoken chunk has a final
+                    // Cloud response. This prevents overlapping, unscored speech.
+                    await sendAudioChunk(new Blob(chunks, { type: recorderMimeType }), recorderContext);
                 }
 
                 if (!stoppingSpeechRecognition && isRecording && !isMuted && !isAdvancingItem) {
@@ -1994,6 +1996,7 @@
             speechAudioChunks = [];
             hasHeardSinceLastChunk = false;
             shell?.classList.remove("is-recording", "is-hearing");
+            updateSpeechProcessingControls();
             setSpeechStatus("Speech check stopped.", spokenTranscript || "No speech transcript was captured.");
         }
 
@@ -2046,7 +2049,10 @@
                         const wasWaitingForSpeechResponse = hasHeardSinceLastChunk;
                         lastHeardAt = now;
                         hasHeardSinceLastChunk = true;
-                        if (!wasWaitingForSpeechResponse) updateAssessmentNavigationButtons();
+                        if (!wasWaitingForSpeechResponse) {
+                            updateAssessmentNavigationButtons();
+                            updateSpeechProcessingControls();
+                        }
                     }
                     shell?.classList.toggle("is-hearing", now - lastHeardAt < 240);
                     audioMeterFrame = window.requestAnimationFrame(tick);
@@ -2105,6 +2111,26 @@
             }
         }
 
+        function updateSpeechProcessingControls() {
+            const speechResponsePending = isSpeechResponsePending();
+            [btnStartReading, btnStopReading, btnReadAloud].forEach((button) => {
+                if (!button) return;
+                if (speechResponsePending) {
+                    if (!button.dataset.speechProcessingState) {
+                        button.dataset.speechProcessingState = button.disabled ? "already-disabled" : "locked";
+                    }
+                    button.disabled = true;
+                    button.setAttribute("aria-busy", "true");
+                    return;
+                }
+                if (button.dataset.speechProcessingState === "locked") {
+                    button.disabled = false;
+                }
+                delete button.dataset.speechProcessingState;
+                button.removeAttribute("aria-busy");
+            });
+        }
+
         function resetSyllableStitching() {
             syllableStitchingContext = "";
             syllableStitchingContextAt = 0;
@@ -2141,10 +2167,12 @@
             if (isSendingChunk) {
                 pendingAudioChunk = { blob, context };
                 updateAssessmentNavigationButtons();
+                updateSpeechProcessingControls();
                 return;
             }
             isSendingChunk = true;
             updateAssessmentNavigationButtons();
+            updateSpeechProcessingControls();
             const formData = new FormData();
             formData.append("audio", blob, `reading-${Date.now()}.${audioExtensionForBlob(blob)}`);
             formData.append("target_text", context.itemText);
@@ -2233,6 +2261,7 @@
                 } else {
                     pendingAudioChunk = null;
                     updateAssessmentNavigationButtons();
+                    updateSpeechProcessingControls();
                 }
             }
         }
@@ -2457,6 +2486,7 @@
             if (progressFill) progressFill.style.width = `${((currentIndex + 1) / items.length) * 100}%`;
             
             updateAssessmentNavigationButtons();
+            updateSpeechProcessingControls();
             if (nextBtn) {
                 const isLastPage = currentPageIndex >= getCurrentPageCount() - 1;
                 const onLastItem = currentIndex === items.length - 1;
@@ -3415,7 +3445,7 @@
         }
 
         const startReading = () => {
-            if (isReviewMode) return;
+            if (isReviewMode || isSpeechResponsePending()) return;
             if (currentStoryState === "story_ready" && currentSelectedStory) {
                 setCurrentItemMode("paragraph");
                 items = [currentSelectedStory.content || ""];
@@ -3465,7 +3495,7 @@
         };
 
         const stopReading = async () => {
-            if (isReviewMode) return;
+            if (isReviewMode || isSpeechResponsePending()) return;
             if (!isRecording) return;
             if (mediaRecorder && mediaRecorder.state === "recording") {
                 try {
@@ -3494,7 +3524,7 @@
         btnReadAloud?.addEventListener("click", readCurrentItemAloud);
 
         async function readCurrentItemAloud() {
-            if (!items[currentIndex] || isReadAloudLoading) return;
+            if (!items[currentIndex] || isReadAloudLoading || isSpeechResponsePending()) return;
             if (readAloudAudio && !readAloudAudio.paused) {
                 stopReadAloud();
                 return;
