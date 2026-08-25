@@ -364,6 +364,7 @@
         const completedAssessmentIdsKey = "pabasa_completed_assessment_ids";
         const studentEndStateKeyBase = "pabasa_student_end_assessment_state";
         const studentEndStateVersion = "crla_grade2_v1";
+        const studentEndStateResetKey = "pabasa_student_end_assessment_state_reset";
 
         function getStoredData(key, fallback = []) {
             try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); } catch (e) { return fallback; }
@@ -377,6 +378,10 @@
 
         function readStudentEndState() {
             try {
+                if (sessionStorage.getItem(studentEndStateResetKey) === "1") {
+                    sessionStorage.removeItem(studentEndStateResetKey);
+                    return {};
+                }
                 const raw = localStorage.getItem(getStudentEndStateKey());
                 if (!raw) {
                     const serverState = window.__PABASA_STUDENT_END_STATE__ || {};
@@ -421,6 +426,9 @@
         function clearStudentEndState() {
             try {
                 localStorage.removeItem(getStudentEndStateKey());
+            } catch (error) {}
+            try {
+                sessionStorage.setItem(studentEndStateResetKey, "1");
             } catch (error) {}
         }
 
@@ -3731,7 +3739,12 @@
             closePauseMenu();
         });
         quitBtn?.addEventListener("click", goBackToAssessments);
-        reviewBtn?.addEventListener("click", () => { location.reload(); });
+        reviewBtn?.addEventListener("click", () => {
+            clearStudentEndState();
+            const restartUrl = new URL(window.location.href);
+            restartUrl.searchParams.set("official_assessment_id", String(officialAssessmentId || materialId || "").trim());
+            window.location.assign(restartUrl.toString());
+        });
         finishBtn?.addEventListener("click", () => {
             const transitionUrl = finishBtn.dataset.transitionUrl || "";
             if (transitionUrl) {
