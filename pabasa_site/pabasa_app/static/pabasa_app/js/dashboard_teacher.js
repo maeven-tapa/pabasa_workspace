@@ -1,9 +1,6 @@
 (function () {
     document.addEventListener('DOMContentLoaded', function () {
         const createClassForm = document.getElementById("createClassForm");
-        const titleInput = document.getElementById("titleInput");
-        const subjectInput = document.getElementById("subjectInput");
-        const classDescriptionInput = document.getElementById("classDescriptionInput");
         const generatedClassCode = document.getElementById("generatedClassCode"); // This is for the create class form, not the stat card
         const regenerateCodeBtn = document.getElementById("regenerateCodeBtn");
         const classList = document.getElementById("classList");
@@ -384,22 +381,21 @@
             event.preventDefault();
 
             // Re-query form fields here to avoid stale/null references
-            const titleEl = document.getElementById("titleInput");
-            const subjectEl = document.getElementById("subjectInput");
-            const descEl = document.getElementById("classDescriptionInput");
+            const gradeEl = document.getElementById("gradeInput");
+            const sectionEl = document.getElementById("sectionInput");
             const codeEl = document.getElementById("generatedClassCode");
 
-            if (!titleEl || !subjectEl) {
+            if (!gradeEl || !sectionEl) {
                 alert("Form elements missing — please refresh the page and try again.");
                 return;
             }
 
-            const title = (titleEl?.value || '').trim();
-            const subject = subjectEl?.value || '';
+            const grade = (gradeEl.value || '').trim();
+            const section = (sectionEl.value || '').trim();
             const classCode = (codeEl?.textContent || '').trim();
 
-            if (!title || !subject) {
-                alert("Please provide a Title and select a Subject.");
+            if (!grade || !section) {
+                alert("Please provide a Grade and Section.");
                 return;
             }
 
@@ -408,8 +404,7 @@
                 return;
             }
 
-            const description = ((descEl?.value || '').trim()) || "Reading class workspace.";
-            const name = title;
+            const description = "";
 
             fetch('/dashboard/teacher/create-class/', {
                 method: 'POST',
@@ -419,9 +414,8 @@
                     'X-CSRFToken': document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
                 },
                 body: JSON.stringify({
-                    class_name: name,
-                    subject: subject,
-                    description: description,
+                    grade: grade,
+                    section: section,
                     class_code: classCode,
                 })
             })
@@ -442,7 +436,7 @@
                         "READ",
                         description,
                         data.class_code,
-                        subject,
+                        section,
                         "0",
                         "0",
                         "0",

@@ -3822,37 +3822,13 @@ def _dashboard_context(request, nav_role=None, extra=None):
         'active_teacher_class_count': len(joined_classes),
     }
     perf_mark('teacher_courses_start')
-    # Include teacher-created courses for server-side rendering to avoid
-    # a blank page while client-side JS fetches them.
+    # Classes are the source of truth for the Courses page. Each active class
+    # is rendered as one course card; no separate Course row is created.
     try:
         teacher_courses = []
         if user and (user.role in ['teacher', 'admin'] or effective_role in ['teacher', 'admin']):
-            from .models import Course
-            qs = Course.objects.filter(teacher=user, is_active=True)
-            for c in qs:
-                sections_count = c.sections.count()
-                assessments_count = c.assessments.count()
-                materials_count = c.materials.count()
-                # Approximate student count by summing section student counts
-                students_count = 0
-                for s in c.sections.all():
-                    try:
-                        students_count += _section_student_count(s)
-                    except Exception:
-                        continue
-                teacher_courses.append({
-                    'id': c.id,
-                    'code': c.code,
-                    'title': c.title,
-                    'description': c.description,
-                    'metrics': {
-                        'sections': sections_count,
-                        'assessments': assessments_count,
-                        'materials': materials_count,
-                        'students': students_count,
-                        'average_progress': _compute_course_average_progress(c),
-                    }
-                })
+            class_qs = Section.objects.filter(teacher=user, is_active=True).order_by('-created_at')
+            teacher_courses = [_section_course_payload(section) for section in class_qs]
     except Exception:
         teacher_courses = []
     context['teacher_courses'] = teacher_courses
@@ -11950,15 +11926,19 @@ def create_reading_class(request):
     """
     try:
         data = json.loads(request.body)
-        class_name = data.get('class_name', '').strip()
+        # The dashboard calls these values Grade and Section. They continue to
+        # use the existing columns so class management remains compatible.
+        class_name = data.get('grade', data.get('class_name', '')).strip()
         header = data.get('header', '').strip() or "Reading Class"
         description = data.get('description', '').strip()
         # 'grade_level' removed from Section model; ignore any incoming value
-        section_name = data.get('section', '').strip() or "N/A"
+        section_name = data.get('section', data.get('subject', '')).strip()
         requested_class_code = data.get('class_code', '').strip()
 
         if not class_name:
-            return JsonResponse({'success': False, 'error': 'Title is required'}, status=400)
+            return JsonResponse({'success': False, 'error': 'Grade is required'}, status=400)
+        if not section_name:
+            return JsonResponse({'success': False, 'error': 'Section is required'}, status=400)
 
         # Retrieve the teacher user for the logged-in user
         user_id = request.session.get('user_id')
@@ -11977,7 +11957,7 @@ def create_reading_class(request):
             class_name=class_name,
             header=header,
             description=description,
-            subject=data.get('subject', '').strip(),
+            subject=section_name,
         )
 
         teacher_user.add_tag(new_class.get_tag_label())
@@ -11994,7 +11974,9 @@ def create_reading_class(request):
             'success': True,
             'message': 'Classroom created successfully',
             'class_code': unique_code,
-            'class_name': new_class.class_name
+            'class_name': new_class.class_name,
+            'grade': new_class.class_name,
+            'section': new_class.subject,
         })
     except Exception as e:
         logger.error(f"Class creation error: {str(e)}", exc_info=True)
@@ -12063,6 +12045,104 @@ def class_management_view(request):
 
 
 # ===== Course APIs =====
+def _section_course_payload(section):
+    """Represent an active class as a course card without creating a Course."""
+    assessments_qs = Assessment.objects.filter(
+        teacher=section.teacher,
+        section=section,
+        source_assessment__isnull=True,
+        is_active=True,
+    ).exclude(status='archived').order_by('-created_at')
+
+    materials_qs = Material.objects.filter(
+        Q(section=section) | Q(assigned_sections=section),
+        is_active=True,
+    ).exclude(status='archived').distinct().order_by('-created_at')
+
+    practices_qs = Practice.objects.filter(
+        teacher=section.teacher,
+        section=section,
+        is_active=True,
+    ).exclude(status='archived').order_by('-created_at')
+
+    assessments = [{
+        'id': assessment.id,
+        'raw_id': assessment.id,
+        'action_id': f'assessment-{assessment.id}',
+        'code': assessment.code,
+        'title': assessment.title,
+        'assessment_type': assessment.assessment_type,
+        'level': assessment.get_assessment_type_display(),
+        'status': assessment.status,
+        'is_active': assessment.is_active,
+        'created_at': assessment.created_at.isoformat() if assessment.created_at else None,
+    } for assessment in assessments_qs]
+
+    materials = [{
+        'id': material.id,
+        'raw_id': material.id,
+        'action_id': f'material-{material.id}',
+        'record_kind': 'material',
+        'assessment_id': material.assessment_id,
+        'code': material.assessment.code if material.assessment else None,
+        'title': material.title,
+        'item_type': material.item_type,
+        'type': material.type,
+        'content': material.content_text or material.prompt_text,
+        'content_text': material.content_text or material.prompt_text,
+        'status': material.status,
+        'created_at': material.created_at.isoformat() if material.created_at else None,
+        'assigned_sections': [section.class_code],
+        'assigned_week': material.assigned_week,
+        'assigned_week_display': format_assigned_week_display(material.assigned_week),
+        'assigned_weeks': _material_week_values(material),
+        'assigned_weeks_display': format_assigned_weeks_display(_material_week_values(material)),
+        'source_type': material.source_type or 'personal',
+        'material_source': material.source_type or 'personal',
+        'language': material.language or 'English',
+        'content_json': material.content_json or {},
+        'student_access': bool(material.student_access),
+        'assessment_kind': _assessment_kind_value(material),
+    } for material in materials_qs]
+
+    practices = [{
+        'id': f'practice-{practice.id}',
+        'raw_id': practice.id,
+        'action_id': f'practice-{practice.id}',
+        'record_kind': 'practice',
+        'title': practice.title,
+        'status': practice.status,
+        'created_at': practice.created_at.isoformat() if practice.created_at else None,
+        'code': practice.code,
+    } for practice in practices_qs]
+
+    enrolled_students = section.get_enrolled_students(active_only=True)
+    return {
+        'id': f'section-{section.id}',
+        'section_id': section.id,
+        'source': 'class',
+        'code': section.class_code,
+        'title': section.class_name,
+        'description': section.subject or '',
+        'sections': [{
+            'id': section.id,
+            'code': section.class_code,
+            'name': section.class_name,
+        }],
+        'assessments': assessments,
+        'materials': materials,
+        'practices': practices,
+        'metrics': {
+            'sections': 1,
+            'assessments': len(assessments),
+            'materials': len(materials) + len(practices),
+            'students': len(enrolled_students),
+            'average_progress': 0,
+        },
+        'metadata': {'class_code': section.class_code},
+    }
+
+
 def _derive_attempt_completion_percentage(attempt):
     if not isinstance(attempt, dict):
         return 0.0
@@ -12194,10 +12274,18 @@ def get_teacher_courses_api(request):
             # including the current teacher's own shared resources.
             courses_qs = Course.objects.filter(is_active=True)
         else:
-            # Personal mode: return only current teacher's courses
+            # Personal mode is class-backed. A class is the single source of
+            # truth and is represented as a course card without a Course row.
             if not teacher_user:
                 return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
-            courses_qs = Course.objects.filter(teacher=teacher_user, is_active=True)
+            sections_qs = Section.objects.filter(
+                teacher=teacher_user,
+                is_active=True,
+            ).order_by('-created_at')
+            return JsonResponse({
+                'success': True,
+                'courses': [_section_course_payload(section) for section in sections_qs],
+            })
 
         courses_qs = courses_qs.select_related('teacher').prefetch_related(
             'sections', 'materials', 'assessments', 'assessments__materials'
@@ -12473,12 +12561,27 @@ def get_teacher_assessments_api(request):
             source_assessment__isnull=True,
             is_active=True
         )
+        course = None
+        class_section = None
 
         if course_id is not None:
-            course = Course.objects.filter(id=course_id, is_active=True).select_related("teacher").first()
+            course_id_text = str(course_id)
+            if course_id_text.startswith('section-'):
+                section_id = course_id_text.removeprefix('section-')
+                class_section = Section.objects.filter(
+                    id=section_id,
+                    teacher=teacher_user,
+                    is_active=True,
+                ).first()
+                if not class_section:
+                    return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
+                assessments_qs = assessments_qs.filter(section=class_section)
+            else:
+                course = Course.objects.filter(id=course_id, is_active=True).select_related("teacher").first()
             if not course:
-                return JsonResponse({'success': False, 'error': 'Course not found'}, status=404)
-            if teacher_user.role != 'admin' and course.teacher_id != teacher_user.id:
+                if class_section is None:
+                    return JsonResponse({'success': False, 'error': 'Course not found'}, status=404)
+            elif teacher_user.role != 'admin' and course.teacher_id != teacher_user.id:
                 return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
 
             # Match the assessment scope serialized by get_teacher_courses_api:
@@ -12487,15 +12590,16 @@ def get_teacher_assessments_api(request):
             # this course's active sections. The course owner is intentionally
             # used instead of the session user so authorized administrators see
             # the same records without broadening access to unrelated courses.
-            course_owner = course.teacher
-            course_sections = course.sections.filter(is_active=True)
-            assessments_qs = Assessment.objects.filter(
-                source_assessment__isnull=True,
-                is_active=True
-            ).filter(
-                Q(courses=course, teacher=course_owner) |
-                Q(section__in=course_sections, teacher=course_owner)
-            ).distinct()
+            if course:
+                course_owner = course.teacher
+                course_sections = course.sections.filter(is_active=True)
+                assessments_qs = Assessment.objects.filter(
+                    source_assessment__isnull=True,
+                    is_active=True
+                ).filter(
+                    Q(courses=course, teacher=course_owner) |
+                    Q(section__in=course_sections, teacher=course_owner)
+                ).distinct()
 
         # Always exclude records explicitly marked as archived (status field)
         assessments_qs = assessments_qs.exclude(status__iexact='archived').prefetch_related('materials').order_by('-created_at').distinct()
@@ -12531,7 +12635,14 @@ def get_teacher_assessments_api(request):
         # Also include Materials that are marked as assessment-type (materials table)
         try:
             from .models import Material
-            if course_id is not None and course:
+            if class_section is not None:
+                materials_qs = Material.objects.filter(
+                    Q(section=class_section) | Q(assigned_sections=class_section),
+                    teacher=teacher_user,
+                    type__in=['assessment', 'both'],
+                    is_active=True,
+                ).distinct()
+            elif course_id is not None and course:
                 # Only include assessment materials owned by the requested
                 # course's teacher and attached to this course.
                 materials_qs = course.materials.filter(
@@ -13144,7 +13255,7 @@ def _compute_teacher_overview(teacher_user):
 @require_http_methods(["POST"])
 @login_required(role='teacher')
 def add_material_to_course(request):
-    """Attach an existing Material (and its Assessment, if any) to a Course owned by the teacher."""
+    """Attach an existing material to a class-backed or legacy course."""
     try:
         data = json.loads(request.body)
         course_id = data.get('course_id')
@@ -13155,8 +13266,18 @@ def add_material_to_course(request):
         if not teacher_user or teacher_user.role != 'teacher':
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
 
-        course = Course.objects.filter(id=course_id, teacher=teacher_user).first()
-        if not course:
+        course_id_text = str(course_id or '')
+        class_section = None
+        course = None
+        if course_id_text.startswith('section-'):
+            class_section = Section.objects.filter(
+                id=course_id_text.removeprefix('section-'),
+                teacher=teacher_user,
+                is_active=True,
+            ).first()
+        else:
+            course = Course.objects.filter(id=course_id, teacher=teacher_user).first()
+        if not course and not class_section:
             return JsonResponse({'success': False, 'error': 'Course not found or not owned by you'}, status=404)
 
         material = Material.objects.filter(id=material_id).first()
@@ -13170,8 +13291,9 @@ def add_material_to_course(request):
             if not (getattr(material, 'assessment', None) and material.assessment.teacher_id == teacher_user.id):
                 return JsonResponse({'success': False, 'error': 'You do not have permission to use this material'}, status=403)
 
-        course.materials.add(material)
-        course_section = course.sections.filter(is_active=True).first()
+        if course:
+            course.materials.add(material)
+        course_section = class_section or course.sections.filter(is_active=True).first()
         if course_section and material.section_id != course_section.id:
             material.section = course_section
             update_fields = ['section', 'updated_at']
@@ -13183,7 +13305,7 @@ def add_material_to_course(request):
         elif course_section and not material.assigned_sections.filter(id=course_section.id).exists():
             material.assigned_sections.add(course_section)
         # If material has an attached Assessment, also link it for convenience
-        if getattr(material, 'assessment', None):
+        if course and getattr(material, 'assessment', None):
             try:
                 course.assessments.add(material.assessment)
             except Exception:
@@ -13210,7 +13332,7 @@ def add_material_to_course(request):
 @require_http_methods(["POST"])
 @login_required(role='teacher')
 def remove_material_from_course(request):
-    """Detach a Material from a Course."""
+    """Detach a material from a class-backed or legacy course."""
     try:
         data = json.loads(request.body)
         course_id = data.get('course_id')
@@ -13221,17 +13343,33 @@ def remove_material_from_course(request):
         if not teacher_user or teacher_user.role != 'teacher':
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
 
-        course = Course.objects.filter(id=course_id, teacher=teacher_user).first()
-        if not course:
+        course_id_text = str(course_id or '')
+        class_section = None
+        course = None
+        if course_id_text.startswith('section-'):
+            class_section = Section.objects.filter(
+                id=course_id_text.removeprefix('section-'),
+                teacher=teacher_user,
+                is_active=True,
+            ).first()
+        else:
+            course = Course.objects.filter(id=course_id, teacher=teacher_user).first()
+        if not course and not class_section:
             return JsonResponse({'success': False, 'error': 'Course not found or not owned by you'}, status=404)
 
         material = Material.objects.filter(id=material_id).first()
         if not material:
             return JsonResponse({'success': False, 'error': 'Material not found'}, status=404)
 
-        course.materials.remove(material)
+        if class_section:
+            material.assigned_sections.remove(class_section)
+            if material.section_id == class_section.id:
+                material.section = None
+                material.save(update_fields=['section', 'updated_at'])
+        else:
+            course.materials.remove(material)
         # Also attempt to remove linked assessment if present
-        if getattr(material, 'assessment', None):
+        if course and getattr(material, 'assessment', None):
             try:
                 course.assessments.remove(material.assessment)
             except Exception:
@@ -13257,6 +13395,8 @@ def update_class_info(request):
         section.class_name = data.get('class_name', '').strip()
         # 'grade_level' and per-class 'section' fields removed from the model; only update fields that remain
         section.description = data.get('description', '').strip()
+        if 'section' in data or 'subject' in data:
+            section.subject = str(data.get('section', data.get('subject', ''))).strip()
         section.save()
         return JsonResponse({'success': True})
     except Exception as e:

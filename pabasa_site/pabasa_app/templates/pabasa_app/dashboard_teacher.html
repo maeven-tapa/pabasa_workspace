@@ -1325,46 +1325,13 @@
                 {% csrf_token %}
 
                 <div class="teacher-field">
-                    <label for="titleInput">Title</label>
-                    <input type="text" class="form-control" id="titleInput" placeholder="Enter class title" required>
+                    <label for="gradeInput">Grade</label>
+                    <input type="text" class="form-control" id="gradeInput" placeholder="Enter grade" required>
                 </div>
 
                 <div class="teacher-field">
-                    <label for="subjectInput">Subject</label>
-                    <div class="subject-dropdown-wrap" id="subjectDropdownWrap">
-                        <button type="button" class="subject-dropdown-trigger" id="subjectDropdownTrigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="subjectDropdownMenu">
-                            <span class="subject-dropdown-trigger-text">
-                                <span class="subject-dropdown-value" id="subjectDropdownValue">Select Subject</span>
-                            </span>
-                            <i class="bi bi-chevron-down" aria-hidden="true"></i>
-                        </button>
-                        <div class="subject-dropdown-menu" id="subjectDropdownMenu" role="listbox" aria-label="Select subject">
-                            <button type="button" class="subject-dropdown-option" role="option" aria-selected="false" data-subject-value="English" data-subject-label="English">
-                                <span class="subject-dropdown-option-text">
-                                    <span class="subject-dropdown-option-title">English</span>
-                                    <span class="subject-dropdown-option-subtitle">Language and literacy</span>
-                                </span>
-                                <i class="bi bi-check2 subject-dropdown-check" aria-hidden="true"></i>
-                            </button>
-                            <button type="button" class="subject-dropdown-option" role="option" aria-selected="false" data-subject-value="Filipino" data-subject-label="Filipino">
-                                <span class="subject-dropdown-option-text">
-                                    <span class="subject-dropdown-option-title">Filipino</span>
-                                    <span class="subject-dropdown-option-subtitle">Mother tongue and reading</span>
-                                </span>
-                                <i class="bi bi-check2 subject-dropdown-check" aria-hidden="true"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <select class="form-control is-hidden-select" id="subjectInput" required tabindex="-1" aria-hidden="true">
-                        <option value="">Select Subject</option>
-                        <option value="English">English</option>
-                        <option value="Filipino">Filipino</option>
-                    </select>
-                </div>
-
-                <div class="teacher-field">
-                    <label for="classDescriptionInput">Description</label>
-                    <textarea class="form-control" id="classDescriptionInput" rows="3" placeholder="Describe the class purpose, focus, or any special notes..."></textarea>
+                    <label for="sectionInput">Section</label>
+                    <input type="text" class="form-control" id="sectionInput" placeholder="Enter section" required>
                 </div>
                 
                 <div class="generated-code">
@@ -1733,82 +1700,7 @@ async function loadPersistedStudents() {
     });
 }
 
-function initSubjectDropdown() {
-    const wrap = document.getElementById("subjectDropdownWrap");
-    const trigger = document.getElementById("subjectDropdownTrigger");
-    const triggerValue = document.getElementById("subjectDropdownValue");
-    const menu = document.getElementById("subjectDropdownMenu");
-    const subjectSelect = document.getElementById("subjectInput");
-
-    if (!wrap || !trigger || !triggerValue || !menu || !subjectSelect) return;
-
-    const options = Array.from(menu.querySelectorAll(".subject-dropdown-option"));
-
-    function setOpen(isOpen) {
-        wrap.classList.toggle("is-open", isOpen);
-        trigger.setAttribute("aria-expanded", isOpen ? "true" : "false");
-    }
-
-    function syncSelection(value) {
-        const normalized = String(value || "").trim();
-        const selectedOption = options.find(option => String(option.dataset.subjectValue || "") === normalized) || null;
-
-        subjectSelect.value = normalized;
-        triggerValue.textContent = selectedOption ? (selectedOption.dataset.subjectLabel || normalized) : "Select Subject";
-
-        options.forEach(option => {
-            const isSelected = String(option.dataset.subjectValue || "") === normalized;
-            option.classList.toggle("is-selected", isSelected);
-            option.setAttribute("aria-selected", isSelected ? "true" : "false");
-        });
-    }
-
-    syncSelection(subjectSelect.value);
-
-    trigger.addEventListener("click", () => {
-        setOpen(!wrap.classList.contains("is-open"));
-    });
-
-    options.forEach(option => {
-        option.addEventListener("click", () => {
-            syncSelection(option.dataset.subjectValue || "");
-            subjectSelect.dispatchEvent(new Event("change", { bubbles: true }));
-            setOpen(false);
-        });
-    });
-
-    subjectSelect.addEventListener("change", () => {
-        syncSelection(subjectSelect.value);
-    });
-
-    trigger.addEventListener("keydown", (event) => {
-        if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            setOpen(true);
-            options.find(option => option.classList.contains("is-selected"))?.focus();
-        }
-        if (event.key === "Escape") {
-            setOpen(false);
-        }
-    });
-
-    menu.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") {
-            event.preventDefault();
-            setOpen(false);
-            trigger.focus();
-        }
-    });
-
-    document.addEventListener("click", (event) => {
-        if (!wrap.contains(event.target)) {
-            setOpen(false);
-        }
-    });
-}
-
 document.addEventListener("DOMContentLoaded", async function() {
-    initSubjectDropdown();
     // Fetch authoritative student list from server and use it for dashboard statistics
     async function fetchAndUpdateStudents() {
         try {

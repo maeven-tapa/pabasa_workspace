@@ -6080,9 +6080,6 @@
 
 <!-- Courses (teacher created course groups) -->
 <section class="courses-home mb-4">
-    <div class="course-floating-action">
-        <button class="btn btn-primary workspace-action-btn" id="btnCreateCourse">+ Create Course</button>
-    </div>
     <div class="classes-grid" id="coursesGrid">
         {% if teacher_courses %}
             {% for course in teacher_courses %}
@@ -6090,16 +6087,14 @@
                     <div class="course-card-badges">
                         <span class="course-code-pill">{{ course.code }}</span>
                         <div class="course-card-header-actions">
-                            <button type="button" class="course-status-pill" title="Delete Course" onclick="event.stopPropagation(); window.confirmDeleteCourse('{{ course.id }}')" aria-label="Delete Course">
+                            <span class="course-status-pill" aria-label="Active class">
                                 <span class="course-status-pill-inner">
                                     <span class="course-status-icon" aria-hidden="true">
                                         <span class="course-status-dot"></span>
-                                        <i class="bi bi-trash3 course-status-trash-icon"></i>
                                     </span>
                                     <span class="course-status-label">Active</span>
-                                    <span class="course-status-delete-label">Delete</span>
                                 </span>
-                            </button>
+                            </span>
                         </div>
                     </div>
 
@@ -6107,7 +6102,7 @@
                         <span class="course-card-heading-icon" aria-hidden="true"><i class="bi bi-journal-bookmark-fill"></i></span>
                         <div>
                             <h3 class="course-card-title">{{ course.title }}</h3>
-                            <p class="course-card-subtitle">{{ course.description|default_if_none:"" }}{% if course.metrics %}{% with s=course.metrics.sections %}{% if s %}Reading Materials • {{ s }} section{% if s|add:-1 %}s{% endif %}{% endif %}{% endwith %}{% endif %}</p>
+                            <p class="course-card-subtitle">{% if course.description and course.description != "English" and course.description != "Filipino" %}{{ course.description }} - {% endif %}Learning Materials</p>
                         </div>
                     </div>
 
@@ -6161,7 +6156,7 @@
             <div class="empty-state">
                 <i class="bi bi-journal-bookmark"></i>
                 <h3>No Courses Yet</h3>
-                <p>Create a course to schedule assessments across multiple sections.</p>
+                <p>Create a class from the Teacher Dashboard to get started.</p>
             </div>
         {% endif %}
     </div>
@@ -8558,51 +8553,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     </div>
 </div>
 
-            <!-- Create Course Modal -->
-            <div class="modal fade" id="createCourseModal" tabindex="-1" aria-labelledby="createCourseModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered modal-lg">
-                    <div class="modal-content course-modal-content">
-                        <div class="modal-header course-modal-header">
-                            <h5 class="modal-title" id="createCourseModalLabel">Create Course</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body course-modal-body">
-                            <div class="course-sidebar">
-                                <div class="mb-2">
-                                    <strong>Course Info</strong>
-                                </div>
-                                <p class="small text-muted mb-3">Create the course first, then attach classes later if needed.</p>
-                                <div class="course-info-note rounded-3 p-3">
-                                    <div class="fw-semibold mb-1">Optional classes</div>
-                                    <div class="small text-muted mb-0">You can save an empty course and add students later from the course details.</div>
-                                </div>
-                            </div>
-                            <div class="course-tab-content">
-                                <form id="createCourseForm" onsubmit="return false;">
-                                    <div class="mb-3">
-                                        <label for="courseTitle" class="form-label">Title</label>
-                                        <input type="text" id="courseTitle" class="form-control" placeholder="e.g., Term 1 Reading 2026">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="courseDescription" class="form-label">Description</label>
-                                        <textarea id="courseDescription" class="form-control" rows="3" placeholder="Optional description"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="courseSectionsList" class="form-label">Classes</label>
-                                        <div class="small text-muted mb-2">Leave this blank if you want to add classes later.</div>
-                                        <div id="courseSectionsList" class="course-sections-list"></div>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="button" class="btn btn-primary" id="submitCreateCourse">Create Course</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
 <script>
     // Get the current teacher's name from the page title or username
     let CURRENT_TEACHER_NAME = "Teacher";
@@ -9695,7 +9645,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 <div class="empty-state">
                     <i class="bi bi-journal-bookmark"></i>
                     <h3>No Courses Yet</h3>
-                    <p>Create a course to schedule assessments across multiple sections.</p>
+                    <p>Create a class from the Teacher Dashboard to get started.</p>
                 </div>
             `;
             return;
@@ -9732,23 +9682,24 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const studentsCount = Number(metrics.students ?? 0);
             const averageProgress = Number(metrics.average_progress ?? 0);
             const averageProgressLabel = Number.isFinite(averageProgress) ? `${Math.round(averageProgress)}%` : '0%';
-            const subtitle = course.description || `Reading Materials • ${sectionsCount || 0} section${sectionsCount === 1 ? '' : 's'}`;
+            const section = String(course.description || '').trim();
+            const subtitle = section && !/^(english|filipino)$/i.test(section)
+                ? `${section} - Learning Materials`
+                : 'Learning Materials';
 
             return `
                 <article class="course-dashboard-card" data-course-id="${escapeHtml(course.id)}">
                     <div class="course-card-badges">
                         <span class="course-code-pill">${escapeHtml(course.code || 'Course')}</span>
                         <div class="course-card-header-actions">
-                            <button type="button" class="course-status-pill" title="Delete Course" onclick="event.stopPropagation(); window.confirmDeleteCourse(${JSON.stringify(course.id)})" aria-label="Delete Course">
+                            <span class="course-status-pill" aria-label="Active class">
                                 <span class="course-status-pill-inner">
                                     <span class="course-status-icon" aria-hidden="true">
                                         <span class="course-status-dot"></span>
-                                        <i class="bi bi-trash3 course-status-trash-icon"></i>
                                     </span>
                                     <span class="course-status-label">Active</span>
-                                    <span class="course-status-delete-label">Delete</span>
                                 </span>
-                            </button>
+                            </span>
                         </div>
                     </div>
 
@@ -11788,69 +11739,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 console.warn('setupCourseUpdates failed', e);
             }
         }
-
-        // Create Course modal handlers
-    document.getElementById('btnCreateCourse')?.addEventListener('click', async function() {
-        try {
-            // Refresh authoritative classes from server before rendering the modal
-            await loadTeacherClassesFromServer();
-
-            const container = document.getElementById('courseSectionsList');
-            container.innerHTML = '';
-
-            if (!teacherClasses || teacherClasses.length === 0) {
-                container.innerHTML = `<div class="text-muted small">You have no classes yet. <a href="/dashboard/teacher/">Create a class</a> to include sections in a course.</div>`;
-            } else {
-                (teacherClasses || []).forEach(cls => {
-                    // Fallback id: prefer numeric id, fall back to code (sanitize)
-                    const rawId = cls.id || cls.code || cls.class_code || '';
-                    const sid = String(rawId).replace(/[^a-zA-Z0-9_-]/g, '_') || '';
-                    const label = `${cls.name} (${cls.code})`;
-                    const html = `<label class="form-check course-section-pill mb-1" for="cs_${sid}"><input class="form-check-input course-section-checkbox" type="checkbox" value="${cls.id || cls.code}" id="cs_${sid}"><span class="form-check-label">${label}</span></label>`;
-                    container.insertAdjacentHTML('beforeend', html);
-                });
-            }
-
-            const modal = new bootstrap.Modal(document.getElementById('createCourseModal'));
-            modal.show();
-        } catch (e) {
-            console.warn('Failed to open create course modal', e);
-            showToast('Could not open Create Course — try refreshing the page', 'error');
-        }
-    });
-
-    document.getElementById('submitCreateCourse')?.addEventListener('click', async function() {
-        try {
-            const title = (document.getElementById('courseTitle')?.value || '').trim();
-            const description = (document.getElementById('courseDescription')?.value || '').trim();
-            if (!title) return showToast('Course title is required', 'error');
-
-            const checked = Array.from(document.querySelectorAll('.course-section-checkbox:checked')).map(el => el.value).filter(Boolean);
-            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
-
-            const resp = await fetch('/dashboard/teacher/create-course/', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                body: JSON.stringify({ title, description, sections: checked })
-            });
-            const data = await resp.json();
-            if (resp.ok && data.success) {
-                await refreshCourseCardsFromServer();
-                showToast('Course created successfully', 'success');
-                const modalEl = document.getElementById('createCourseModal');
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
-                // Open the newly created course detail so students tab can load immediately
-                try { openCourseDetail(data.course.id); } catch (err) { console.warn('Could not open course detail after create', err); }
-            } else {
-                showToast('Error creating course: ' + (data.error || 'Unknown'), 'error');
-            }
-        } catch (e) {
-            console.error('Create course failed', e);
-            showToast('Failed to create course', 'error');
-        }
-    });
 
     // Course-level add material handlers moved into modal flow (use Add Material modal)
     // Legacy inline course form handlers removed to avoid duplicate IDs.
@@ -17736,7 +17624,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
             // Set course attach target from the currently-open course modal
             const courseModalEl = document.getElementById('courseDetailModal');
-            window.courseAttachTarget = courseModalEl?.dataset?.courseId ? Number(courseModalEl.dataset.courseId) : null;
+            window.courseAttachTarget = courseModalEl?.dataset?.courseId || null;
 
             toggleAddScheduleField();
             // Apply course-specific constraints (hide practice options if teacher has none)
@@ -18620,7 +18508,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             function getClassCodeForRefresh() {
                                 if (currentClassCode) return currentClassCode;
                                 if (!window.courseAttachTarget) return null;
-                                const attachedCourse = (teacherCourses || []).find(c => Number(c.id) === Number(window.courseAttachTarget));
+                                const attachedCourse = (teacherCourses || []).find(c => String(c.id) === String(window.courseAttachTarget));
                                 if (!attachedCourse || !Array.isArray(attachedCourse.sections) || attachedCourse.sections.length === 0) return null;
                                 return attachedCourse.sections[0].code || null;
                             }
@@ -18668,13 +18556,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             if (window.courseAttachTarget && Array.isArray(createdIds) && createdIds.length > 0) {
                                 // Capture values now — the modal reset clears `window.courseAttachTarget` synchronously,
                                 // so stash the course id, CSRF token and created ids for the deferred task.
-                                const _attachCourseId = Number(window.courseAttachTarget);
+                                const _attachCourseId = String(window.courseAttachTarget);
                                 const _attachCsrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
                                 const _createdIdsSnapshot = Array.isArray(createdIds) ? createdIds.slice() : [];
 
                                 setTimeout(async () => {
                                     try {
-                                        const course = (teacherCourses || []).find(c => Number(c.id) === _attachCourseId);
+                                        const course = (teacherCourses || []).find(c => String(c.id) === _attachCourseId);
                                         for (const mid of _createdIdsSnapshot) {
                                             const attachResp = await fetch('/dashboard/teacher/course/add-material/', {
                                                 method: 'POST',
