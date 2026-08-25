@@ -826,7 +826,6 @@
         }
 
         .admin-stat-card:focus-visible,
-        .admin-stat-card:focus-within,
         .admin-section-card:focus-visible {
             border-color: rgba(46, 168, 229, 0.48);
             box-shadow: 0 0 0 3px rgba(46, 168, 229, 0.18), 0 16px 34px rgba(16, 70, 110, 0.13);
@@ -898,7 +897,9 @@
         }
 
         .admin-stat-card-trigger:focus-visible {
-            outline: none;
+            box-shadow: 0 0 0 3px rgba(46, 168, 229, 0.18);
+            outline: 2px solid rgba(46, 168, 229, 0.48);
+            outline-offset: 3px;
         }
 
         .admin-stat-card-trigger:active {
