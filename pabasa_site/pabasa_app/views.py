@@ -8303,6 +8303,143 @@ def reading_word_page(request):
         })
     return render(request, 'pabasa_app/reading_word_page.html', context)
 
+
+def _is_picture_word_matching_material(material):
+    """Identify the interactive template without depending on its reading item type."""
+    if not material:
+        return False
+    content_json = getattr(material, 'content_json', None) or {}
+    if not isinstance(content_json, dict):
+        return False
+    candidates = (
+        content_json.get('template_title'), content_json.get('template_activity_name'),
+        content_json.get('template_type'), content_json.get('activity_type'),
+        getattr(material, 'title', ''),
+    )
+    normalized = {
+        re.sub(r'[^a-z0-9]+', '_', str(value or '').strip().lower()).strip('_')
+        for value in candidates
+    }
+    return 'picture_word_matching' in normalized
+
+
+def _normalize_picture_word_matching_content(content_json):
+    """Return a self-contained Picture-Word payload with durable static image URLs."""
+    if not isinstance(content_json, dict):
+        return content_json
+    candidates = (
+        content_json.get('template_title'), content_json.get('template_activity_name'),
+        content_json.get('template_type'), content_json.get('activity_type'),
+    )
+    normalized_titles = {
+        re.sub(r'[^a-z0-9]+', '_', str(value or '').strip().lower()).strip('_')
+        for value in candidates
+    }
+    if 'picture_word_matching' not in normalized_titles:
+        return content_json
+
+    result = dict(content_json)
+    matching_config = result.get('pictureWordMatching')
+    matching_config = matching_config if isinstance(matching_config, dict) else {}
+    mode = str(matching_config.get('mode') or '').strip().lower()
+    configured_set = str(matching_config.get('setKey') or result.get('assessment_set') or '').strip()
+    language = str(result.get('language') or matching_config.get('language') or 'English').strip()
+    static_root = Path(settings.BASE_DIR) / 'pabasa_app' / 'static' / 'pabasa_app' / 'images' / 'picture_word'
+
+    normalized_items = []
+    for raw_item in result.get('items') or []:
+        if not isinstance(raw_item, dict):
+            continue
+        item = dict(raw_item)
+        raw_filename = str(item.get('image_asset') or item.get('sourceImage') or item.get('image') or '').strip()
+        filename = Path(raw_filename.replace('\\', '/')).name
+        raw_set = str(item.get('sourceSetKey') or item.get('set') or configured_set).strip()
+        set_key = re.sub(r'^set\s+', '', raw_set, flags=re.IGNORECASE).strip()
+        is_custom = mode == 'custom' or str(item.get('sourceType') or '').lower() == 'custom' or set_key.lower() == 'custom'
+        folder = 'Custom' if is_custom else f'Set {set_key}'
+
+        # Preserve the on-disk spelling for case-sensitive production servers.
+        asset_dir = static_root / folder
+        if filename and asset_dir.is_dir():
+            actual_name = next((entry.name for entry in asset_dir.iterdir() if entry.is_file() and entry.name.casefold() == filename.casefold()), None)
+            if actual_name:
+                filename = actual_name
+
+        relative_asset = f'pabasa_app/images/picture_word/{folder}/{filename}' if filename else ''
+        image_url = f"{settings.STATIC_URL.rstrip('/')}/{quote(relative_asset, safe='/')}" if relative_asset else ''
+        english_word = str(item.get('englishWord') or item.get('english_word') or item.get('word') or '').strip()
+        filipino_word = str(item.get('filipinoWord') or item.get('filipino_word') or item.get('word') or '').strip()
+        item.update({
+            'image': filename, 'image_asset': filename, 'sourceImage': filename,
+            'image_path': image_url, 'imagePreview': image_url,
+            'sourceSetKey': 'Custom' if is_custom else set_key,
+            'sourceType': 'custom' if is_custom else 'prescribed',
+            'set': 'Custom Set' if is_custom else f'Set {set_key}',
+            'englishWord': english_word, 'english_word': english_word,
+            'filipinoWord': filipino_word, 'filipino_word': filipino_word,
+            'word': filipino_word if language.lower().startswith('fil') else english_word,
+        })
+        normalized_items.append(item)
+    result['items'] = normalized_items
+    return result
+
+
+@xframe_options_sameorigin
+def picture_word_matching_page(request):
+    """Render the dedicated, non-oral Picture-Word Matching student activity."""
+    access_response = _enforce_student_access_for_request(request)
+    if access_response:
+        return access_response
+    _, material_id = _parse_prefixed_id(request.GET.get('id') or request.GET.get('material_id'))
+    material = Material.objects.filter(pk=material_id).first() if material_id else None
+    if not material or not _is_picture_word_matching_material(material):
+        return redirect('assessment')
+    content_json = material.content_json if isinstance(material.content_json, dict) else {}
+    # Backfill legacy shapes for display; new records are normalized before save.
+    content_json = _normalize_picture_word_matching_content(content_json)
+    student_user = User.objects.filter(id=request.session.get('user_id'), role='student').first()
+    completed_result = None
+    if student_user:
+        completed_result = material.assessment_results.filter(
+            student=student_user,
+            attempt_status='completed',
+        ).order_by('-completed_at', '-created_at', '-id').first()
+    completion_payload = None
+    if completed_result:
+        result_details = []
+        remarks = str(getattr(completed_result, 'remarks', '') or '')
+        result_prefix = 'PICTURE_WORD_MATCHING_RESULT:'
+        if remarks.startswith(result_prefix):
+            try:
+                saved_result = json.loads(remarks[len(result_prefix):])
+                if isinstance(saved_result, dict) and isinstance(saved_result.get('matches'), list):
+                    result_details = saved_result['matches']
+            except (TypeError, ValueError, json.JSONDecodeError):
+                result_details = []
+        total_items = int(getattr(completed_result, 'items_completed', 0) or len(content_json.get('items') or []))
+        correct_items = min(total_items, int(getattr(completed_result, 'correct_items', 0) or 0))
+        accuracy = getattr(completed_result, 'accuracy', None)
+        if accuracy is None:
+            accuracy = getattr(completed_result, 'total_score', None)
+        if accuracy is None:
+            accuracy = round((correct_items / total_items) * 100, 2) if total_items else 0
+        completion_payload = {
+            'completed': True,
+            'correct_items': correct_items,
+            'total_items': total_items,
+            'accuracy': accuracy,
+            'matches': result_details,
+        }
+    context = _dashboard_context(request)
+    context['picture_word_material_json'] = json.dumps({
+        'id': material.id,
+        'title': material.title or 'Picture-Word Matching',
+        'language': content_json.get('language') or getattr(material, 'language', '') or 'English',
+        'items': content_json.get('items') if isinstance(content_json.get('items'), list) else [],
+    }, default=str, separators=(',', ':'))
+    context['picture_word_completion_json'] = json.dumps(completion_payload or {}, default=str, separators=(',', ':'))
+    return render(request, 'pabasa_app/picture_word_matching_page.html', context)
+
 @xframe_options_sameorigin
 def reading_sentence_page(request):
     access_response = _enforce_student_access_for_request(request)
@@ -9017,8 +9154,66 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
     already_completed = False
     if not is_practice:
         already_completed = _student_completed_assessment_before(assessment, material, student_user)
-    score_payload = _practice_score_payload(data) if is_practice else _assessment_score_payload(data)
-    if not is_practice:
+    is_picture_word_matching = str(activity_type or '').strip().lower() == 'picture_word_matching'
+    if is_picture_word_matching:
+        if not material or not _is_picture_word_matching_material(material):
+            return JsonResponse({'success': False, 'error': 'Invalid Picture-Word Matching material.'}, status=400)
+        raw_scores = data.get('scores') if isinstance(data.get('scores'), dict) else data
+        matching_content = material.content_json if isinstance(material.content_json, dict) else {}
+        matching_items = matching_content.get('items') if isinstance(matching_content.get('items'), list) else []
+        language = str(matching_content.get('language') or getattr(material, 'language', '') or 'English').strip().lower()
+        submitted_matches = raw_scores.get('matches') if isinstance(raw_scores.get('matches'), list) else []
+        submitted_by_index = {
+            int(match.get('picture_index')): str(match.get('selected_word') or '').strip()
+            for match in submitted_matches if isinstance(match, dict) and str(match.get('picture_index', '')).isdigit()
+        }
+        correct_items = 0
+        matching_details = []
+        for index, item in enumerate(matching_items):
+            if not isinstance(item, dict):
+                continue
+            correct_word = (
+                item.get('filipinoWord') or item.get('filipino_word') or item.get('word')
+                if language.startswith('fil') else
+                item.get('englishWord') or item.get('english_word') or item.get('word')
+            )
+            selected_word = submitted_by_index.get(index, '')
+            is_correct_match = str(correct_word or '').strip().casefold() == selected_word.casefold()
+            if is_correct_match:
+                correct_items += 1
+            matching_details.append({
+                'picture_index': index,
+                'selected_word': selected_word,
+                'correct_word': str(correct_word or '').strip(),
+                'is_correct': is_correct_match,
+            })
+        total_items = len(matching_items)
+        objective_score = round((correct_items / total_items) * 100, 2) if total_items else 0
+        score_payload = {
+            'accuracy': objective_score, 'total_score': objective_score,
+            'correct_items': correct_items, 'items_completed': total_items,
+            'duration_seconds': max(0, int(raw_scores.get('duration_seconds') or 0)),
+            'passed': objective_score >= 75,
+            'remarks': 'PICTURE_WORD_MATCHING_RESULT:' + json.dumps({
+                'activity_type': 'picture_word_matching',
+                'matches': matching_details,
+            }, separators=(',', ':')),
+        }
+    else:
+        score_payload = _practice_score_payload(data) if is_practice else _assessment_score_payload(data)
+    if is_picture_word_matching and already_completed and not is_retake:
+        existing_result = material.assessment_results.filter(
+            student=student_user,
+            attempt_status='completed',
+        ).order_by('-completed_at', '-created_at', '-id').first()
+        return JsonResponse({
+            'success': True,
+            'already_completed': True,
+            'correct_items': getattr(existing_result, 'correct_items', 0) or 0,
+            'items_completed': getattr(existing_result, 'items_completed', 0) or 0,
+            'accuracy': getattr(existing_result, 'accuracy', 0) or 0,
+        })
+    if not is_practice and not is_picture_word_matching:
         account_assessment_type = (
             getattr(assessment, 'assessment_type', None)
             or assessment_type_hint
@@ -9104,7 +9299,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 student=student_user,
                 attempt_status='completed',
             ).order_by('-completed_at', '-created_at').select_related('source_assessment').first()
-        if not is_practice:
+        if not is_practice and not is_picture_word_matching:
             _update_student_reading_profile(student_user, score_payload)
             _sync_assessment_workflow_state(student_user, score_payload=score_payload, assessment=assessment, material=material)
         if live_session or data.get('live_session_id'):
@@ -15243,6 +15438,7 @@ def add_reading_material(request):
             if source_type == 'template' and isinstance(template_payload, dict):
                 template_content_json.update(template_payload)
                 template_content_json['instructions'] = instructions or str(template_payload.get('instructions') or '').strip()
+                template_content_json = _normalize_picture_word_matching_content(template_content_json)
 
             m = Material.objects.create(
                 assessment=None,

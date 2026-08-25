@@ -2795,6 +2795,15 @@
         margin: 0;
     }
 
+    .template-language-filter { align-items: center; background: rgba(255,255,255,.86); border: 1px solid rgba(31,111,139,.18); border-radius: 16px; display: inline-flex; gap: .35rem; margin: .85rem 0 0; padding: .35rem; }
+    .template-language-filter legend { color: #475569; float: none; font-size: .78rem; font-weight: 800; margin: 0 .35rem 0 .45rem; width: auto; }
+    .template-language-option { cursor: pointer; margin: 0; }
+    .template-language-option input { opacity: 0; pointer-events: none; position: absolute; }
+    .template-language-option span { border-radius: 11px; color: #475569; display: inline-block; font-size: .85rem; font-weight: 800; padding: .55rem .9rem; }
+    .template-language-option input:checked + span { background: #1f6f8b; box-shadow: 0 7px 16px rgba(31,111,139,.22); color: #fff; }
+    .template-language-option input:focus-visible + span { outline: 3px solid rgba(31,111,139,.28); outline-offset: 2px; }
+    .template-builder-language-toggle { margin: 0; }
+
     #templateActivityGrid {
         display: grid;
         gap: 1rem;
@@ -8114,17 +8123,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                                 <label class="form-label fw-bold" for="templateActivityTitle">Activity Title <span class="text-danger">*</span></label>
                                                 <input type="text" id="templateActivityTitle" class="form-control" placeholder="e.g., Animals Around Us">
                                             </div>
-                                            <div class="col-12 col-md-6">
-                                                <label class="form-label fw-bold d-block">Language <span class="text-danger">*</span></label>
-                                                <input type="hidden" id="templateLanguageHidden" name="templateLanguage" value="">
-                                                <div class="form-control border-light shadow-sm bg-light-subtle d-flex align-items-center justify-content-between" style="min-height: 44px; border-radius: 12px;">
-                                                    <span id="templateLanguageDisplay" class="text-dark"></span>
-                                                    <i class="bi bi-lock-fill text-muted ms-3" aria-hidden="true"></i>
-                                                </div>
-                                            </div>
                                             <div class="col-12">
-                                                <label class="form-label fw-bold" for="templateActivityInstructions">Instructions <span class="text-danger">*</span></label>
-                                                <textarea id="templateActivityInstructions" class="form-control" rows="4" placeholder="Match each picture with the correct word."></textarea>
+                                                <label class="form-label fw-bold d-block">Language <span class="text-danger">*</span></label>
+                                                <fieldset class="template-language-filter template-builder-language-toggle" aria-label="Activity language">
+                                                    <legend class="visually-hidden">Activity language</legend>
+                                                    <label class="template-language-option"><input type="radio" name="templateLanguage" value="Filipino" checked><span>Filipino</span></label>
+                                                    <label class="template-language-option"><input type="radio" name="templateLanguage" value="English"><span>English</span></label>
+                                                </fieldset>
+                                                <input type="hidden" id="templateLanguageHidden" value="Filipino">
                                             </div>
                                         </div>
 
@@ -13670,7 +13676,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const templateActivityContentHint = document.getElementById('templateActivityContentHint');
         const templateActivityForm = document.getElementById('templateActivityForm');
         const templateActivityTitle = document.getElementById('templateActivityTitle');
-        const templateActivityInstructions = document.getElementById('templateActivityInstructions');
         const templateDynamicFields = document.getElementById('templateDynamicFields');
         const templateWeeksGrid = document.getElementById('templateWeeksGrid');
         const templatePreviewPanel = document.getElementById('templatePreviewPanel');
@@ -14125,9 +14130,30 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             syncCourseMaterialDropdown(state.select);
         }
 
+        let selectedTemplateLanguage = 'Filipino';
+
+        function getSelectedTemplateLanguage() {
+            const checked = Array.from(document.querySelectorAll('input[name="templateLanguage"]')).find(input => input.checked);
+            return checked?.value === 'English' ? 'English' : 'Filipino';
+        }
+
+        function setSelectedTemplateLanguage(language, { render = true } = {}) {
+            selectedTemplateLanguage = String(language || '').trim() === 'English' ? 'English' : 'Filipino';
+            Array.from(document.querySelectorAll('input[name="templateLanguage"]')).forEach(input => {
+                input.checked = input.value === selectedTemplateLanguage;
+            });
+            if (render) renderTemplateLanding();
+        }
+
+        function templateSupportsLanguage(title, language) {
+            return ['Filipino', 'English'].includes(language);
+        }
+
         function renderTemplateLanding() {
             if (!templateActivityGrid) return;
-            templateActivityGrid.innerHTML = TEMPLATE_META.map(([num, title, lesson]) => `
+            const language = getSelectedTemplateLanguage();
+            selectedTemplateLanguage = language;
+            templateActivityGrid.innerHTML = TEMPLATE_META.filter(([, title]) => templateSupportsLanguage(title, language)).map(([num, title, lesson]) => `
                 <article class="template-card">
                     <div class="template-card-header">
                         <div class="template-card-number">${escapeHtml(num)}</div>
@@ -14171,6 +14197,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 ? normalizeSentenceReadingLanguage(language || 'Tagalog')
                 : (language || 'English');
             const resolvedLanguage = String(language || '').trim() || normalizedLanguage;
+            setSelectedTemplateLanguage(resolvedLanguage === 'Tagalog' ? 'Filipino' : resolvedLanguage, { render: false });
             if (templateLanguageHidden) templateLanguageHidden.value = resolvedLanguage;
             if (templateLanguageDisplay) templateLanguageDisplay.textContent = resolvedLanguage;
             if (activeTemplateActivity) {
@@ -14193,7 +14220,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function getPictureWordMatchingSelectedLanguage() {
             const raw = String(templateLanguageHidden?.value || activeTemplateActivity?.language || 'English');
-            return raw === 'Filipino' ? 'Filipino' : 'English';
+            return raw === 'English' ? 'English' : 'Filipino';
         }
 
         function getPictureWordMatchingSets() {
@@ -14237,7 +14264,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const normalizedSetKey = PICTURE_WORD_MATCHING_SYSTEM_SETS[setKey] ? setKey : 'A';
             return {
                 setKey: normalizedSetKey,
-                language: language === 'Filipino' ? 'Filipino' : 'English'
+                language: language === 'English' ? 'English' : 'Filipino'
             };
         }
 
@@ -14457,7 +14484,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 lesson: material?.template_lesson || material?.lesson || def.lesson || '',
                 title: material?.title || '',
                 language: restoredLanguage,
-                instructions: String(material?.instructions || contentJson.instructions || '').trim(),
                 weeks,
                 content: contentJson,
                 items: restoredItems,
@@ -15394,7 +15420,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             templatePreviewPanel.innerHTML = `
                 <div class="fw-bold mb-1">${escapeHtml(summary.title || activeTemplateActivity.title || 'Activity Preview')}</div>
                 <div class="small text-muted mb-2">${escapeHtml(summary.meta || `${activeTemplateActivity.language || ''} · ${activeTemplateActivity.lesson || ''}`)}</div>
-                ${activeTemplateActivity.instructions ? `<div class="mb-2">${escapeHtml(activeTemplateActivity.instructions)}</div>` : ''}
                 <div class="mb-2"><strong>Weeks:</strong> ${weeks.length ? weeks.map(escapeHtml).join(', ') : 'None selected'}</div>
                 ${summary.body.length ? `
                     <div class="mt-3">
@@ -15561,38 +15586,40 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function showTemplateBuilder(templateTitle) {
             const def = getTemplateDefinition(templateTitle);
+            setSelectedTemplateLanguage('Filipino', { render: false });
+            const templateLanguage = 'Filipino';
+            if (!templateSupportsLanguage(templateTitle, templateLanguage)) return;
             activeTemplateActivity = {
                 templateTitle,
                 lesson: def.lesson,
                 title: '',
-                language: 'English',
-                instructions: '',
+                language: templateLanguage,
                 weeks: [],
                 content: {},
                 items: []
             };
             if (isPictureWordMatchingTemplate(templateTitle)) {
-                activeTemplateActivity.pictureWordMatching = Object.assign({}, normalizePictureWordMatchingSelection('A', 'English'), { mode: 'prescribed' });
+                activeTemplateActivity.pictureWordMatching = Object.assign({}, normalizePictureWordMatchingSelection('A', templateLanguage), { mode: 'prescribed' });
                 activeTemplateActivity.pictureWordMatchingCustom = { items: [], searchQuery: '' };
             }
             if (isStoryReadingTemplate(templateTitle)) {
                 activeTemplateActivity.storyReading = {
-                    language: 'English',
+                    language: templateLanguage,
                     storyKey: 'story-1-ben-and-the-little-pet'
                 };
             }
             if (isSentenceReadingTemplate(templateTitle)) {
                 activeTemplateActivity.sentenceReading = {
-                    language: 'Tagalog',
-                    setKey: 'tagalog-sentence-1',
+                    language: normalizeSentenceReadingLanguage(templateLanguage),
+                    setKey: templateLanguage === 'Filipino' ? 'tagalog-sentence-1' : 'english-sentence-1',
                     selectedIndices: []
                 };
             }
             activeTemplateItemEditIndex = null;
+            applyTemplateLanguageSelection(templateLanguage, templateTitle);
             setNodeVisibility(templateActivityGrid, false);
             setNodeVisibility(templateBuilderPanel, true);
             if (templateActivityTitle) templateActivityTitle.value = '';
-            if (templateActivityInstructions) templateActivityInstructions.value = '';
             renderTemplateDynamicFields(templateTitle);
             renderTemplateWeeks();
             renderTemplatePreview();
@@ -15625,7 +15652,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (isSentenceReadingTemplate(activeTemplateActivity?.templateTitle)) {
                 syncSentenceReadingItems();
             }
-            const language = Array.from(document.querySelectorAll('input[name="templateLanguage"]')).find(input => input.checked)?.value || '';
+            const language = getSelectedTemplateLanguage();
             if (isPictureWordMatchingTemplate(activeTemplateActivity?.templateTitle)) {
                 const mode = activeTemplateActivity?.pictureWordMatching?.mode === 'custom' ? 'custom' : 'prescribed';
                 content.language = language || 'English';
@@ -15672,14 +15699,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     content[field.dataset.fieldKey] = field.type === 'file' ? (field.files?.[0]?.name || '') : field.value.trim();
                 });
             }
-            const normalizedLanguage = isStoryReadingTemplate(activeTemplateActivity?.templateTitle) && language === 'Filipino' ? 'English' : language;
-            const normalizedSentenceLanguage = isSentenceReadingTemplate(activeTemplateActivity?.templateTitle)
-                ? normalizeSentenceReadingLanguage(language)
-                : language;
             return {
                 title: (templateActivityTitle?.value || '').trim(),
-                language: isSentenceReadingTemplate(activeTemplateActivity?.templateTitle) ? normalizedSentenceLanguage : (isPhraseReadingTemplate(activeTemplateActivity?.templateTitle) && language === 'Filipino' ? 'Tagalog' : normalizedLanguage),
-                instructions: (templateActivityInstructions?.value || '').trim(),
+                language,
                 weeks: getTemplateWeeks(),
                 content
             };
@@ -15689,9 +15711,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const def = getTemplateDefinition(activeTemplateActivity?.templateTitle);
             if (!values.title) return 'Activity Title is required.';
             if (!values.language) return 'Language is required.';
-            if (!values.instructions) return 'Instructions are required.';
             if (isSentenceReadingTemplate(activeTemplateActivity?.templateTitle)) {
-                if (!['Tagalog', 'English'].includes(values.language)) return 'Sentence Reading currently has prescribed content only for Tagalog and English.';
+                if (!['Filipino', 'English'].includes(values.language)) return 'Sentence Reading language must be Filipino or English.';
                 if (!Array.isArray(values.content?.items) || !values.content.items.length) return 'Select at least one prescribed sentence item.';
             }
             if (isPictureWordMatchingTemplate(activeTemplateActivity?.templateTitle)) {
@@ -15835,7 +15856,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         template_lesson: activeTemplateActivity?.lesson || '',
                         template_type: activeTemplateActivity?.templateTitle || '',
                         template_source: 'template',
-                        instructions: values.instructions || '',
                         weeks: values.weeks || [],
                         items: Array.isArray(activeTemplateActivity?.items) ? activeTemplateActivity.items : [],
                     });
@@ -15851,9 +15871,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             contentPayload.assessment_set = 'custom';
                             contentPayload.items = selectedItems.map(item => ({
                                 image: item.image,
-                                word: item.englishWord,
+                                image_asset: item.image,
+                                image_path: getPictureWordMatchingPreviewImage(item, item.setKey),
+                                set: 'Custom Set',
+                                word: getPictureWordMatchingWord(item, values.language || 'English'),
                                 englishWord: item.englishWord,
+                                english_word: item.englishWord,
                                 filipinoWord: item.filipinoWord,
+                                filipino_word: item.filipinoWord,
                                 imagePreview: getPictureWordMatchingPreviewImage(item, item.setKey),
                                 sourceSetKey: item.setKey,
                                 sourceImage: item.image,
@@ -15896,7 +15921,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         source_material_id: null,
                         template_title: activeTemplateActivity?.templateTitle || '',
                         template_lesson: activeTemplateActivity?.lesson || '',
-                        instructions: values.instructions || '',
                     };
                     console.log('[CREATE ACTIVITY] Payload:', payload);
                     console.log('[CREATE ACTIVITY] POST URL:', '/dashboard/teacher/add-material/');
@@ -16958,9 +16982,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 }
             });
             templateActivityTitle?.addEventListener('input', renderTemplatePreview);
-            templateActivityInstructions?.addEventListener('input', renderTemplatePreview);
             Array.from(document.querySelectorAll('input[name="templateLanguage"]')).forEach(input => {
                 input.addEventListener('change', () => {
+                    if (!input.checked) return;
+                    selectedTemplateLanguage = input.value === 'English' ? 'English' : 'Filipino';
+                    if (!activeTemplateActivity) {
+                        renderTemplateLanding();
+                        return;
+                    }
+                    activeTemplateActivity.language = selectedTemplateLanguage;
+                    if (templateLanguageHidden) templateLanguageHidden.value = selectedTemplateLanguage;
                     if (activeTemplateActivity?.templateTitle === 'Phrase Reading Practice') {
                         renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
                     } else if (activeTemplateActivity?.templateTitle === 'Story Reading') {
@@ -17272,7 +17303,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     setNodeVisibility(templateBuilderPanel, true);
                     applyTemplateLanguageSelection(activeTemplateActivity.language, activeTemplateActivity.templateTitle);
                     if (templateActivityTitle) templateActivityTitle.value = activeTemplateActivity.title || '';
-                    if (templateActivityInstructions) templateActivityInstructions.value = activeTemplateActivity.instructions || '';
                     renderTemplateDynamicFields(activeTemplateActivity.templateTitle, activeTemplateActivity.content);
                     renderTemplateWeeks(activeTemplateActivity.weeks);
                     renderTemplatePreview();
