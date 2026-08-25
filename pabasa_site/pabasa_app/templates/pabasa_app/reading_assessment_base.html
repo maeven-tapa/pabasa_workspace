@@ -2256,6 +2256,7 @@
 <body data-student-theme="{{ student_theme_slug|default:'sky' }}">
     <script>
         window.__PABASA_OFFICIAL_ASSESSMENT__ = {{ crla_official_assessment_data_json|default:'null'|safe }};
+        window.__PABASA_STUDENT_END_STATE__ = {{ student_end_assessment_state_json|default:'{}'|safe }};
     </script>
     {% include "pabasa_app/partials/_forest_world.html" %}
     <script>
@@ -2458,8 +2459,8 @@
             <article class="completion-card">
                 <div class="completion-mark">A</div>
                 <div class="completion-kicker">Reading Assessment Results</div>
-                <h1>Assessment complete.</h1>
-                <p>You finished the reading set. Your teacher can now review the session and use it for your next practice step.</p>
+                <h1 id="completionTitle">Assessment complete.</h1>
+                <p id="completionMessage">You finished the reading set. Your teacher can now review the session and use it for your next practice step.</p>
                 <h2 class="completion-breakdown-title">Score Breakdown</h2>
                 <div class="completion-summary" id="completionSummary" aria-live="polite"></div>
                 <div class="completion-loading" id="completionLoadingState" aria-live="polite" aria-busy="true">

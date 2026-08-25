@@ -97,6 +97,7 @@ urlpatterns = [
     path('api/live-assessment/active-invitation/', views.live_assessment_active_invitation, name='live_assessment_active_invitation'),
     path('api/live-assessment/server-time/', views.live_assessment_server_time, name='live_assessment_server_time'),
     path('record-assessment-completion/', views.record_assessment_completion, name='record_assessment_completion'),
+    path('api/assessment/end-state/', views.persist_student_end_assessment_state, name='persist_student_end_assessment_state'),
     path('what-is-pabasa/', views.pabasa_info, name='pabasa_info'),
     path('about/', views.about, name='about'),
     path('faq/', views.faq, name='faq'),

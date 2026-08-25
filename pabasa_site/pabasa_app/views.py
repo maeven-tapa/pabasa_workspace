@@ -1162,12 +1162,23 @@ def _crla_grade2_next_stage(assessment_type, score_payload=None):
     if assessment_type == 'word':
         correct_words = _to_int(
             score_payload.get('correct_words')
-            or score_payload.get('word_count')
-            or score_payload.get('items_completed')
+            if score_payload.get('correct_words') is not None
+            else score_payload.get('word_count')
+            if score_payload.get('word_count') is not None
+            else score_payload.get('correct_items')
         )
-        return 'sentences_low' if correct_words is not None and int(correct_words) <= 6 else 'sentences_high'
+        return 'early_completed_words' if correct_words is not None and correct_words <= 6 else 'transition_to_sentence'
     if assessment_type == 'sentence':
-        return 'story'
+        correct_sentences = _to_int(
+            score_payload.get('correct_sentences')
+            if score_payload.get('correct_sentences') is not None
+            else score_payload.get('sentence_count')
+            if score_payload.get('sentence_count') is not None
+            else score_payload.get('correct_items')
+        )
+        correct_words = _to_int(score_payload.get('correct_words')) or 0
+        cumulative_correct = correct_words + (correct_sentences or 0)
+        return 'early_completed_sentences' if cumulative_correct <= 10 else 'transition_to_story'
     if assessment_type == 'paragraph':
         story_read_percent = _to_float(
             score_payload.get('story_read_percent')
@@ -1190,22 +1201,8 @@ def _crla_grade2_next_stage(assessment_type, score_payload=None):
             or score_payload.get('items_correct')
         )
         if not isinstance(story_read_percent, (int, float)) or not isinstance(correct_answers, int):
-            return 'completed_grade_level'
-        if story_read_percent < 25 and correct_answers == 0:
-            return 'completed_high_emerging'
-        if 26 <= story_read_percent <= 50 and 1 <= correct_answers <= 2:
-            return 'completed_developing'
-        if 51 <= story_read_percent <= 75 and 3 <= correct_answers <= 4:
-            return 'completed_transitioning'
-        if 76 <= story_read_percent <= 100 and 5 <= correct_answers <= 6:
-            return 'completed_grade_level'
-        if story_read_percent < 25:
-            return 'completed_high_emerging'
-        if story_read_percent <= 50:
-            return 'completed_developing'
-        if story_read_percent <= 75:
-            return 'completed_transitioning'
-        return 'completed_grade_level'
+            return 'completed'
+        return 'completed'
     return ''
 
 
@@ -1879,7 +1876,10 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
         student_end_state = state.get('student_end_assessment_state')
         if not isinstance(student_end_state, dict):
             student_end_state = {}
-        next_stage = _crla_grade2_next_stage(assessment_type, score_payload)
+        routing_payload = dict(score_payload)
+        if assessment_type == 'sentence' and routing_payload.get('correct_words') is None:
+            routing_payload['correct_words'] = student_end_state.get('correct_words')
+        workflow_stage = _crla_grade2_next_stage(assessment_type, routing_payload)
         def _safe_int(value):
             try:
                 if value in (None, ''):
@@ -1887,23 +1887,41 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
                 return int(float(value))
             except (TypeError, ValueError):
                 return None
+        previous_correct_words = student_end_state.get('correct_words')
+        submitted_correct_words = score_payload.get('correct_words') if score_payload.get('correct_words') is not None else score_payload.get('word_count')
         student_end_state.update({
             'assessment_type': assessment_type,
             'score': score_payload.get('final_score') or score_payload.get('total_score') or score_payload.get('overall_raw_score'),
-            'correct_words': score_payload.get('correct_words') or score_payload.get('word_count') or score_payload.get('items_completed'),
+            'correct_words': submitted_correct_words if submitted_correct_words is not None else previous_correct_words,
+            'correct_sentences': score_payload.get('correct_sentences') if score_payload.get('correct_sentences') is not None else score_payload.get('sentence_count') if score_payload.get('sentence_count') is not None else score_payload.get('correct_items'),
             'classification': normalized_classification,
             'updated_at': timezone.now().isoformat(),
-            'next_stage': next_stage,
         })
         if assessment_type == 'word':
-            student_end_state['stage'] = next_stage or 'words'
+            student_end_state['stage'] = workflow_stage or 'words'
+            student_end_state['next_stage'] = 'sentences_high' if workflow_stage == 'transition_to_sentence' else 'completed'
             student_end_state['branch'] = 'words'
             student_end_state['routing_score'] = _safe_int(student_end_state.get('correct_words'))
+            if workflow_stage == 'early_completed_words':
+                student_end_state['classification'] = 'Low Emerging Reader'
+                state['reader_classification'] = 'Low Emerging Reader'
+                state['aral_eligible'] = bool(_aral_eligible_classification('Low Emerging Reader'))
         elif assessment_type == 'sentence':
-            student_end_state['stage'] = next_stage or 'sentences'
+            student_end_state['stage'] = workflow_stage or 'sentences'
+            student_end_state['next_stage'] = 'story_selection' if workflow_stage == 'transition_to_story' else 'completed'
             student_end_state['branch'] = 'sentences'
+            correct_words = _safe_int(student_end_state.get('correct_words')) or 0
+            correct_sentences = _safe_int(student_end_state.get('correct_sentences')) or 0
+            student_end_state['sentence_items_administered'] = _safe_int(score_payload.get('items_completed')) or 0
+            student_end_state['cumulative_correct'] = correct_words + correct_sentences
+            student_end_state['routing_score'] = student_end_state['cumulative_correct']
+            if workflow_stage == 'early_completed_sentences':
+                student_end_state['classification'] = 'High Emerging Reader'
+                state['reader_classification'] = 'High Emerging Reader'
+                state['aral_eligible'] = bool(_aral_eligible_classification('High Emerging Reader'))
         elif assessment_type == 'paragraph':
-            student_end_state['stage'] = next_stage or 'story'
+            student_end_state['stage'] = 'completed'
+            student_end_state['next_stage'] = 'completed'
             student_end_state['branch'] = 'story'
             student_end_state['routing_score'] = score_payload.get('story_read_percent') or score_payload.get('story_percent') or score_payload.get('read_percent')
         state['student_end_assessment_state'] = student_end_state
@@ -8269,6 +8287,10 @@ def reading_word_page(request):
     if access_response:
         return access_response
     context = _dashboard_context(request)
+    context['student_end_assessment_state_json'] = json.dumps(
+        (_get_user_state(User.objects.filter(id=request.session.get('user_id')).first()).get('student_end_assessment_state') or {}),
+        default=str, separators=(',', ':'),
+    )
     official_assessment_id = request.GET.get('official_assessment_id') or request.GET.get('id') or ''
     _, material_id = _parse_prefixed_id(official_assessment_id)
     if material_id:
@@ -8287,6 +8309,10 @@ def reading_sentence_page(request):
     if access_response:
         return access_response
     context = _dashboard_context(request)
+    context['student_end_assessment_state_json'] = json.dumps(
+        (_get_user_state(User.objects.filter(id=request.session.get('user_id')).first()).get('student_end_assessment_state') or {}),
+        default=str, separators=(',', ':'),
+    )
     official_assessment_id = request.GET.get('official_assessment_id') or request.GET.get('id') or ''
     _, material_id = _parse_prefixed_id(official_assessment_id)
     if material_id:
@@ -8305,6 +8331,10 @@ def reading_para_page(request):
     if access_response:
         return access_response
     context = _dashboard_context(request)
+    context['student_end_assessment_state_json'] = json.dumps(
+        (_get_user_state(User.objects.filter(id=request.session.get('user_id')).first()).get('student_end_assessment_state') or {}),
+        default=str, separators=(',', ':'),
+    )
     official_assessment_id = request.GET.get('official_assessment_id') or request.GET.get('id') or ''
     _, material_id = _parse_prefixed_id(official_assessment_id)
     if material_id:
@@ -8334,6 +8364,42 @@ def reading_vowel_page(request):
             'crla_official_assessment_data_json': json.dumps(launch_data, default=str, separators=(',', ':')) if launch_data else '',
         })
     return render(request, 'pabasa_app/reading_vowel_page.html', context)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+def persist_student_end_assessment_state(request):
+    """Persist a CRLA transition without recording the whole assessment complete."""
+    if not _check_auth(request):
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+    student = User.objects.filter(id=request.session.get('user_id'), role='student').first()
+    if not student:
+        return JsonResponse({'success': False, 'error': 'Student not found'}, status=404)
+    try:
+        payload = json.loads(request.body or '{}')
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+    allowed_stages = {
+        'transition_to_sentence', 'transition_to_story', 'story_selection',
+        'story_ready', 'early_completed_words', 'early_completed_sentences',
+        'completed',
+    }
+    stage = str(payload.get('stage') or '').strip().lower()
+    if stage not in allowed_stages:
+        return JsonResponse({'success': False, 'error': 'Invalid assessment state'}, status=400)
+    allowed_fields = {
+        'version', 'material_id', 'stage', 'branch', 'next_stage', 'score', 'routing_score',
+        'correct_words', 'correct_sentences', 'sentence_items_administered',
+        'cumulative_correct', 'classification', 'selected_story',
+        'selected_story_content', 'story_read_percent', 'correct_answers',
+    }
+    saved = {key: payload.get(key) for key in allowed_fields if key in payload}
+    saved['stage'] = stage
+    saved['updated_at'] = timezone.now().isoformat()
+    state = _get_user_state(student)
+    state['student_end_assessment_state'] = saved
+    _set_user_state(student, state)
+    return JsonResponse({'success': True, 'student_end_assessment_state': saved})
 
 
 @csrf_protect

@@ -7,9 +7,9 @@ from pabasa_app.views import _sync_assessment_workflow_state
 
 
 class AssessmentWorkflowBranchingTests(SimpleTestCase):
-    def _run_sync(self, score_payload):
+    def _run_sync(self, score_payload, initial_end_state=None):
         student = SimpleNamespace(id=1, pk=1, reading_level="")
-        state = {}
+        state = {"student_end_assessment_state": dict(initial_end_state or {})} if initial_end_state else {}
 
         def fake_get_user_state(_student):
             return state
@@ -27,14 +27,17 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
 
         return state.get("student_end_assessment_state", {})
 
-    def test_word_branch_uses_correct_words_six_goes_to_sentences_low(self):
+    def test_six_words_stops_with_early_results(self):
         end_state = self._run_sync({
             "assessment_type": "word",
             "correct_words": 6,
             "final_score": 58,
             "total_score": 58,
         })
-        self.assertEqual(end_state.get("next_stage"), "sentences_low")
+        self.assertEqual(end_state.get("stage"), "early_completed_words")
+        self.assertEqual(end_state.get("next_stage"), "completed")
+        self.assertEqual(end_state.get("routing_score"), 6)
+        self.assertEqual(end_state.get("classification"), "Low Emerging Reader")
 
     def test_word_branch_uses_correct_words_seven_goes_to_sentences_high(self):
         end_state = self._run_sync({
@@ -44,7 +47,7 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
             "total_score": 58,
         })
         self.assertEqual(end_state.get("next_stage"), "sentences_high")
-        self.assertEqual(end_state.get("stage"), "sentences_high")
+        self.assertEqual(end_state.get("stage"), "transition_to_sentence")
 
     def test_word_branch_uses_correct_words_ten_goes_to_sentences_high(self):
         end_state = self._run_sync({
@@ -54,7 +57,7 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
             "total_score": 58,
         })
         self.assertEqual(end_state.get("next_stage"), "sentences_high")
-        self.assertEqual(end_state.get("stage"), "sentences_high")
+        self.assertEqual(end_state.get("stage"), "transition_to_sentence")
 
     def test_weighted_score_does_not_override_word_branch(self):
         end_state = self._run_sync({
@@ -67,15 +70,46 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
         })
         self.assertEqual(end_state.get("next_stage"), "sentences_high")
         self.assertEqual(end_state.get("correct_words"), 7)
-        self.assertEqual(end_state.get("stage"), "sentences_high")
+        self.assertEqual(end_state.get("stage"), "transition_to_sentence")
 
-    def test_sentence_branch_advances_to_story(self):
+    def test_seven_words_plus_three_sentences_is_ten_and_stops(self):
         end_state = self._run_sync({
             "assessment_type": "sentence",
-            "final_score": 12,
-            "total_score": 12,
-        })
-        self.assertEqual(end_state.get("next_stage"), "story")
+            "correct_sentences": 3,
+            "items_completed": 4,
+            "final_score": 58,
+        }, {"correct_words": 7, "stage": "sentences_high"})
+        self.assertEqual(end_state.get("stage"), "early_completed_sentences")
+        self.assertEqual(end_state.get("next_stage"), "completed")
+        self.assertEqual(end_state.get("routing_score"), 10)
+        self.assertEqual(end_state.get("correct_sentences"), 3)
+        self.assertEqual(end_state.get("sentence_items_administered"), 4)
+        self.assertEqual(end_state.get("classification"), "High Emerging Reader")
+
+    def test_seven_words_plus_four_sentences_is_eleven_and_transitions(self):
+        end_state = self._run_sync({
+            "assessment_type": "sentence",
+            "correct_sentences": 4,
+            "items_completed": 4,
+            "final_score": 40,
+        }, {"correct_words": 7, "stage": "sentences_high"})
+        self.assertEqual(end_state.get("stage"), "transition_to_story")
+        self.assertEqual(end_state.get("next_stage"), "story_selection")
+        self.assertEqual(end_state.get("routing_score"), 11)
+
+    def test_ten_words_plus_zero_sentences_stops_at_ten(self):
+        end_state = self._run_sync({
+            "assessment_type": "sentence", "correct_sentences": 0, "items_completed": 4,
+        }, {"correct_words": 10, "stage": "sentences_high"})
+        self.assertEqual(end_state.get("stage"), "early_completed_sentences")
+        self.assertEqual(end_state.get("cumulative_correct"), 10)
+
+    def test_ten_words_plus_one_sentence_transitions_at_eleven(self):
+        end_state = self._run_sync({
+            "assessment_type": "sentence", "correct_sentences": 1, "items_completed": 4,
+        }, {"correct_words": 10, "stage": "sentences_high"})
+        self.assertEqual(end_state.get("stage"), "transition_to_story")
+        self.assertEqual(end_state.get("cumulative_correct"), 11)
 
     def test_story_branch_uses_comprehension_and_reading_percentage(self):
         end_state = self._run_sync({
@@ -85,4 +119,29 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
             "final_score": 82,
             "total_score": 82,
         })
-        self.assertEqual(end_state.get("next_stage"), "completed_grade_level")
+        self.assertEqual(end_state.get("next_stage"), "completed")
+        self.assertEqual(end_state.get("stage"), "completed")
+
+    def test_pre_midline_and_post_use_the_same_word_threshold(self):
+        for phase in ("pretest", "midtest", "posttest"):
+            with self.subTest(phase=phase):
+                assessment = SimpleNamespace(assessment_kind="crla", system_assessment_phase=phase)
+                student = SimpleNamespace(id=1, pk=1, reading_level="")
+                state = {}
+                with patch("pabasa_app.views._get_user_state", return_value=state), \
+                     patch("pabasa_app.views._set_user_state", side_effect=lambda _student, value: state.update(value)), \
+                     patch("pabasa_app.views._aral_eligible_classification", return_value=False), \
+                     patch("pabasa_app.views._active_school_calendar", return_value=None), \
+                     patch("pabasa_app.views.timezone.now", return_value=SimpleNamespace(isoformat=lambda: "2026-08-24T00:00:00")):
+                    _sync_assessment_workflow_state(student, {"assessment_type": "word", "correct_words": 7}, assessment=assessment)
+                self.assertEqual(state["student_end_assessment_state"]["stage"], "transition_to_sentence")
+                with patch("pabasa_app.views._get_user_state", return_value=state), \
+                     patch("pabasa_app.views._set_user_state", side_effect=lambda _student, value: state.update(value)), \
+                     patch("pabasa_app.views._aral_eligible_classification", return_value=False), \
+                     patch("pabasa_app.views._active_school_calendar", return_value=None), \
+                     patch("pabasa_app.views.timezone.now", return_value=SimpleNamespace(isoformat=lambda: "2026-08-24T00:00:00")):
+                    _sync_assessment_workflow_state(student, {
+                        "assessment_type": "sentence", "correct_items": 4, "items_completed": 4,
+                    }, assessment=assessment)
+                self.assertEqual(state["student_end_assessment_state"]["cumulative_correct"], 11)
+                self.assertEqual(state["student_end_assessment_state"]["stage"], "transition_to_story")

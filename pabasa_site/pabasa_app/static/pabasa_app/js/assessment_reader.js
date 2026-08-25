@@ -377,7 +377,11 @@
         function readStudentEndState() {
             try {
                 const raw = localStorage.getItem(getStudentEndStateKey());
-                if (!raw) return {};
+                if (!raw) {
+                    const serverState = window.__PABASA_STUDENT_END_STATE__ || {};
+                    const serverMaterialId = String(serverState.material_id || "").trim();
+                    return !serverMaterialId || serverMaterialId === String(officialAssessmentId || materialId || "").trim() ? serverState : {};
+                }
                 const parsed = JSON.parse(raw);
                 return parsed && typeof parsed === "object" ? parsed : {};
             } catch (error) {
@@ -386,13 +390,23 @@
         }
 
         function writeStudentEndState(nextState) {
+            const savedState = {
+                version: studentEndStateVersion,
+                ...(nextState || {}),
+                material_id: String(officialAssessmentId || materialId || "").trim(),
+                updated_at: new Date().toISOString(),
+            };
             try {
-                localStorage.setItem(getStudentEndStateKey(), JSON.stringify({
-                    version: studentEndStateVersion,
-                    ...(nextState || {}),
-                    updated_at: new Date().toISOString(),
-                }));
+                localStorage.setItem(getStudentEndStateKey(), JSON.stringify(savedState));
             } catch (error) {}
+            if (officialAssessmentId && savedState.stage) {
+                fetch('/api/assessment/end-state/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(savedState),
+                }).catch(() => {});
+            }
         }
 
         function updateStudentEndState(patch) {
@@ -966,12 +980,50 @@
             items.forEach((_, index) => syncItemCorrectWordCount(index));
         }
 
+        function renderPersistedEndState(endState) {
+            const stage = normalizeStudentEndStatus(endState.stage);
+            if (!["transition_to_sentence", "transition_to_story", "early_completed_words", "early_completed_sentences", "completed"].includes(stage)) return false;
+            shell.classList.add("is-complete");
+            const title = document.getElementById("completionTitle");
+            const message = document.getElementById("completionMessage");
+            const summary = document.getElementById("completionSummary");
+            const score = Number(endState.routing_score ?? endState.score ?? 0);
+            const isWords = stage.endsWith("words");
+            const isEarly = stage.startsWith("early_completed_");
+            const taskCorrect = Number(isWords ? (endState.correct_words ?? score) : (endState.correct_sentences ?? 0));
+            const taskTotal = Number(isWords ? 10 : (endState.sentence_items_administered ?? 0));
+            if (title) title.textContent = isEarly ? "Assessment complete" : "🎉 Great job!";
+            if (message) message.textContent = stage === "transition_to_sentence"
+                ? "You completed Word Reading. You’re ready for Sentence Reading."
+                : stage === "transition_to_story"
+                    ? "You completed Sentence Reading. You’re ready for Story Reading."
+                    : isEarly
+                        ? `Your assessment ends here. You got ${taskCorrect}/${taskTotal} ${isWords ? "words" : "sentences"} correct.${isWords ? "" : ` ${score} correct items total.`}`
+                        : "You completed the reading assessment.";
+            if (summary && isEarly) {
+                summary.innerHTML = `<div data-score-tile class="completion-score-tile"><strong>${taskCorrect}/${taskTotal}</strong><span>${isWords ? "Words" : "Sentences"}</span></div>${isWords ? "" : `<div data-score-tile class="completion-score-tile"><strong>${score}</strong><span>Correct items total</span></div>`}<div data-score-tile class="completion-score-tile"><strong>${endState.classification || (isWords ? "Low Emerging Reader" : "High Emerging Reader")}</strong><span>Reading status</span></div>`;
+                summary.classList.add("is-visible");
+            }
+            if (finishBtn) {
+                finishBtn.dataset.transitionUrl = stage === "transition_to_sentence"
+                    ? `${window.location.origin}${window.location.pathname.replace(/reading_word_page|reading_sentence_page|reading_para_page/i, 'reading_sentence_page')}${window.location.search}`
+                    : stage === "transition_to_story"
+                        ? `${window.location.origin}${window.location.pathname.replace(/reading_word_page|reading_sentence_page|reading_para_page/i, 'reading_para_page')}${window.location.search}`
+                        : "";
+                finishBtn.textContent = stage === "transition_to_sentence" ? "Continue to Sentence Reading →" : stage === "transition_to_story" ? "Continue to Story Reading →" : "Back to Assessment";
+            }
+            reviewBtn?.classList.toggle("d-none", !isEarly && stage !== "completed");
+            setCompletionLoadingState(false);
+            return true;
+        }
+
         function loadItems() {
             const isOfficialAssessmentLaunch = Boolean(officialAssessmentId);
             const persistedEndState = readStudentEndState();
             const persistedStage = normalizeStudentEndStatus(persistedEndState.stage);
             const persistedNextStage = normalizeStudentEndStatus(persistedEndState.next_stage);
             if (isOfficialAssessmentLaunch && officialAssessmentData) {
+                if (renderPersistedEndState(persistedEndState)) return;
                 const officialTitle = String(
                     officialAssessmentData.official_title
                     || officialAssessmentData.title
@@ -1004,6 +1056,8 @@
                     activeStage = persistedNextStage;
                 } else if (stageMap[persistedStage]) {
                     activeStage = persistedStage;
+                } else if (["story_selection", "story_ready"].includes(persistedStage)) {
+                    activeStage = "story";
                 } else if (persistedStage.startsWith("completed_")) {
                     activeStage = persistedStage;
                 }
@@ -2250,12 +2304,11 @@
             if (completionCount) completionCount.textContent = correctWordsRead();
             const completionSnapshot = calculateScores();
             latestScores = normalizeCompletionScores(latestScores || completionSnapshot, completionSnapshot);
-            const branchScore = Number(
-                latestScores.correct_words ??
-                latestScores.word_count ??
-                latestScores.items_completed ??
-                0
-            );
+            const isSentenceBranch = ["sentences_low", "sentences_high", "sentences"].includes(currentAssessmentBranch);
+            const branchScore = Number(isSentenceBranch
+                ? (latestScores.correct_sentences ?? latestScores.sentence_count ?? latestScores.correct_items ?? 0)
+                : (latestScores.correct_words ?? latestScores.word_count ?? latestScores.correct_items ?? 0));
+            const previousEndState = readStudentEndState();
             const branchState = {
                 version: studentEndStateVersion,
                 stage: currentAssessmentBranch,
@@ -2265,9 +2318,22 @@
                 next_stage: "",
             };
             if (currentAssessmentBranch === "words") {
-                branchState.next_stage = branchScore <= 6 ? "sentences_low" : "sentences_high";
+                branchState.stage = branchScore <= 6 ? "early_completed_words" : "transition_to_sentence";
+                branchState.next_stage = branchScore <= 6 ? "completed" : "sentences_high";
+                branchState.correct_words = branchScore;
+                branchState.classification = branchScore <= 6 ? "Low Emerging Reader" : "";
             } else if (currentAssessmentBranch === "sentences_low" || currentAssessmentBranch === "sentences_high" || currentAssessmentBranch === "sentences") {
-                branchState.next_stage = "story";
+                const correctWords = Number(previousEndState.correct_words ?? 0);
+                const cumulativeCorrect = correctWords + branchScore;
+                branchState.stage = cumulativeCorrect <= 10 ? "early_completed_sentences" : "transition_to_story";
+                branchState.next_stage = cumulativeCorrect <= 10 ? "completed" : "story_selection";
+                branchState.correct_words = correctWords;
+                branchState.correct_sentences = branchScore;
+                branchState.sentence_items_administered = items.length;
+                branchState.cumulative_correct = cumulativeCorrect;
+                branchState.routing_score = cumulativeCorrect;
+                branchState.score = cumulativeCorrect;
+                branchState.classification = cumulativeCorrect <= 10 ? "High Emerging Reader" : "";
             } else if (currentAssessmentBranch === "story") {
                 const storyRead = Number(
                     latestScores.story_read_percent ??
@@ -2286,26 +2352,18 @@
                     0
                 );
                 branchState.classification = getStoryClassificationFromResult(storyRead, correctAnswers);
-                branchState.next_stage = branchState.classification === "High Emerging Reader"
-                    ? "completed_high_emerging"
-                    : branchState.classification === "Developing Reader"
-                        ? "completed_developing"
-                        : branchState.classification === "Transitioning Reader"
-                            ? "completed_transitioning"
-                            : branchState.classification === "Reader at Grade Level"
-                                ? "completed_grade_level"
-                                : "";
+                branchState.stage = "completed";
+                branchState.next_stage = "completed";
                 branchState.story_read_percent = Number.isFinite(storyRead) ? storyRead : null;
                 branchState.correct_answers = Number.isFinite(correctAnswers) ? correctAnswers : null;
             }
-            if (branchState.next_stage) {
-                branchState.stage = branchState.next_stage;
+            if (branchState.stage) {
                 writeStudentEndState(branchState);
             }
             const nextStageUrlMap = {
                 sentences_low: `${window.location.origin}${window.location.pathname.replace(/reading_word_page|reading_sentence_page|reading_para_page/i, 'reading_sentence_page')}${window.location.search}`,
                 sentences_high: `${window.location.origin}${window.location.pathname.replace(/reading_word_page|reading_sentence_page|reading_para_page/i, 'reading_sentence_page')}${window.location.search}`,
-                story: `${window.location.origin}${window.location.pathname.replace(/reading_word_page|reading_sentence_page|reading_para_page/i, 'reading_para_page')}${window.location.search}`,
+                story_selection: `${window.location.origin}${window.location.pathname.replace(/reading_word_page|reading_sentence_page|reading_para_page/i, 'reading_para_page')}${window.location.search}`,
             };
             const nextStageUrl = nextStageUrlMap[branchState.next_stage] || "";
             const summary = document.getElementById("completionSummary") || document.querySelector(".completion-summary");
@@ -2345,11 +2403,10 @@
                 });
                 return;
             }
-            if (nextStageUrl && !isReviewMode) {
-                traceEndSession('showCompletion.autoAdvance', { nextStageUrl, next_stage: branchState.next_stage });
-                setTimeout(() => {
-                    window.location.assign(nextStageUrl);
-                }, 350);
+            renderScoreSummary(latestScores);
+            renderPersistedEndState(branchState);
+            if (branchState.stage === "transition_to_sentence" || branchState.stage === "transition_to_story") {
+                traceEndSession('showCompletion.awaitContinue', { nextStageUrl, next_stage: branchState.next_stage });
                 return;
             }
             completionSubmitted = true;
@@ -2607,6 +2664,7 @@
                             completionLevel.textContent = classificationText || mode.charAt(0).toUpperCase() + mode.slice(1);
                         }
                         renderScoreSummary(latestScores);
+                        renderPersistedEndState(readStudentEndState());
                         const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
                         if (disclaimer) {
                             disclaimer.textContent = latestScores.adapted_reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || "Great job completing your reading assessment! Your results show your current reading performance. Keep practicing to improve your reading skills.";
@@ -3630,7 +3688,20 @@
         });
         quitBtn?.addEventListener("click", goBackToAssessments);
         reviewBtn?.addEventListener("click", () => { location.reload(); });
-        finishBtn?.addEventListener("click", goBackToAssessments);
+        finishBtn?.addEventListener("click", () => {
+            const transitionUrl = finishBtn.dataset.transitionUrl || "";
+            if (transitionUrl) {
+                const state = readStudentEndState();
+                if (state.stage === "transition_to_sentence") {
+                    writeStudentEndState({ ...state, stage: state.next_stage || "sentences_high" });
+                } else if (state.stage === "transition_to_story") {
+                    updateStudentEndState({ stage: "story_selection", next_stage: "story_selection" });
+                }
+                window.location.assign(transitionUrl);
+                return;
+            }
+            goBackToAssessments();
+        });
 
         if (isReviewMode) {
             [pauseBtn, btnStartReading, btnStopReading, btnToggleMic, btnTestMic].forEach((button) => button?.classList.add("d-none"));
