@@ -2192,7 +2192,9 @@
                 resetSyllableStitching();
             }
             const requestController = new AbortController();
-            const requestTimeout = window.setTimeout(() => requestController.abort(), 15000);
+            // The first Chirp request can include a cold OAuth/channel setup.
+            // Allow it to complete instead of cancelling it at the old 15-second cap.
+            const requestTimeout = window.setTimeout(() => requestController.abort(), 35000);
 
             try {
                 const response = await fetch("/api/reading/transcribe/", {

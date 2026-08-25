@@ -428,7 +428,7 @@ def transcribe_audio_bytes_v2_chirp3_streaming(
     project_id,
     location,
     credentials_file,
-    timeout_seconds=12,
+    timeout_seconds=25,
 ):
     """Send a short browser-recorded clip to Chirp 3 using StreamingRecognize.
 

@@ -2288,6 +2288,7 @@ class ReadingMatcherTests(TestCase):
         self.assertEqual(requests[0].streaming_config.config.model, "chirp_3")
         self.assertEqual(requests[0].streaming_config.config.language_codes, ["fil-PH"])
         self.assertEqual([len(request.audio) for request in requests[1:]], [25_600, 25_600, 18_800])
+        self.assertEqual(client.streaming_recognize.call_args.kwargs["timeout"], 25)
 
     @patch("pabasa_app.reading_stt._post_google_tts", return_value="encoded-audio")
     def test_read_aloud_uses_filipino_voice_for_tagalog_locale(self, post_google_tts):
