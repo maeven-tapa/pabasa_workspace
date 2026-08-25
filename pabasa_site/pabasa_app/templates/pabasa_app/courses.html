@@ -6828,6 +6828,7 @@
 .template-section-heading p { color: var(--activity-muted); font: 400 .86rem/1.45 "Quattrocento Sans", sans-serif; margin: .25rem 0 0; }
 .template-required { color: var(--activity-danger); }
 .template-information-grid { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1.6fr) minmax(210px, .7fr); }
+.template-information-grid.is-syllable-blending { grid-template-columns: minmax(0, 1fr); }
 .template-builder-panel .form-label { color: #334155 !important; font: 800 .86rem/1.3 "Nunito", sans-serif !important; margin-bottom: .42rem; }
 .template-builder-panel :is(.form-control, .form-select) {
     background-color: #fff; border: 1px solid #cbd8de !important; border-radius: 10px !important; box-shadow: none !important;
@@ -6867,7 +6868,6 @@
 .preview-sound-word { font: 900 1.55rem/1.3 "Nunito", sans-serif; letter-spacing: .04em; text-align: center; }
 .preview-sound-highlight { background: #dff1f4; border-bottom: 3px solid var(--activity-brand); color: var(--activity-brand-deep); padding: 0 .12em; }
 .preview-reading-card { background: #fff; border: 1px solid var(--activity-border); border-radius: 11px; font-size: 1.08rem; line-height: 1.85; padding: 1.25rem; }
-.preview-listen { align-items: center; background: #fff; border: 1px solid #b7d5de; border-radius: 9px; color: var(--activity-brand-deep); display: inline-flex; font: 800 .82rem/1 "Nunito", sans-serif; gap: .4rem; min-height: 38px; padding: .55rem .75rem; }
 .preview-lost-found { display: grid; gap: .8rem; grid-template-columns: 1fr 1fr; }
 .preview-lost-found > div { background: #fff; border: 1px solid var(--activity-border); border-radius: 11px; min-height: 130px; padding: 1rem; }
 .preview-lost-found h7 { color: var(--activity-muted); display: block; font: 900 .7rem/1 "Nunito",sans-serif; letter-spacing: .12em; margin-bottom: .85rem; text-transform: uppercase; }
@@ -6888,6 +6888,58 @@
 .template-btn-accent { border-color: #8db9c6; color: var(--activity-brand-deep); }
 .template-btn:disabled { background: #e7edef; border-color: #e7edef; color: #8a969d; cursor: not-allowed; opacity: 1; }
 .template-validation-message { align-items: center; color: var(--activity-danger); display: flex; font: 700 .84rem/1.4 "Quattrocento Sans", sans-serif; gap: .45rem; }
+.syllable-prebuilt-section { background: var(--activity-subtle); border: 1px solid var(--activity-border); border-radius: 14px; padding: clamp(1rem, 2vw, 1.35rem); }
+.syllable-prebuilt-header { align-items: flex-start; display: flex; gap: 1rem; justify-content: space-between; margin-bottom: 1rem; }
+.syllable-prebuilt-heading { color: var(--activity-ink); font: 800 1rem/1.3 "Nunito", sans-serif; letter-spacing: -.01em; margin: 0; }
+.syllable-prebuilt-meta { color: var(--activity-muted); font: 400 .84rem/1.45 "Quattrocento Sans", sans-serif; margin-top: .18rem; }
+.syllable-prebuilt-count { background: var(--activity-brand-soft); border: 1px solid #cce3e9; border-radius: 999px; color: var(--activity-brand-deep); flex: 0 0 auto; font: 800 .73rem/1 "Nunito", sans-serif; padding: .48rem .66rem; }
+.syllable-prebuilt-card { background: #fff; border: 1px solid var(--activity-border); border-radius: 12px; display: flex; flex-direction: column; height: 100%; padding: 1rem; transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease; }
+.syllable-prebuilt-card:hover { border-color: #a9c4cd; box-shadow: 0 7px 18px rgba(15,23,42,.07); transform: translateY(-1px); }
+.syllable-prebuilt-card.is-selected { background: var(--activity-brand-soft); border-color: #83b5c3; box-shadow: inset 3px 0 0 var(--activity-brand); }
+.syllable-prebuilt-card.is-selected:hover { box-shadow: inset 3px 0 0 var(--activity-brand), 0 7px 18px rgba(15,23,42,.06); }
+.syllable-prebuilt-card-header { align-items: flex-start; display: flex; gap: .75rem; justify-content: space-between; }
+.syllable-prebuilt-title { color: var(--activity-ink); font: 800 .94rem/1.35 "Nunito", sans-serif; letter-spacing: -.01em; margin: 0; }
+.syllable-prebuilt-detail { color: var(--activity-muted); font: 400 .8rem/1.4 "Quattrocento Sans", sans-serif; margin-top: .18rem; }
+.syllable-prebuilt-check { align-items: center; background: var(--activity-brand); border-radius: 50%; color: #fff; display: inline-flex; flex: 0 0 22px; font-size: .76rem; height: 22px; justify-content: center; }
+.syllable-prebuilt-sample { color: #46545d; display: grid; font: 500 .84rem/1.5 "Quattrocento Sans", sans-serif; gap: .24rem; margin-top: .85rem; }
+.syllable-prebuilt-sample code { background: #edf4f6; border-radius: 5px; color: var(--activity-brand-deep); font: 800 .78rem/1 "Nunito", monospace; padding: .2rem .34rem; }
+.syllable-prebuilt-sample strong { color: var(--activity-ink); font-weight: 700; }
+.syllable-prebuilt-sample-label { color: var(--activity-brand-deep); font: 800 .69rem/1.2 "Nunito", sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+.syllable-prebuilt-expanded { border-top: 1px solid var(--activity-border); color: #52616c; font: 400 .82rem/1.55 "Quattrocento Sans", sans-serif; margin-top: .85rem; padding-top: .75rem; }
+.syllable-prebuilt-actions { display: flex; gap: .5rem; margin-top: auto; padding-top: 1rem; }
+.syllable-choice-btn { align-items: center; border-radius: 9px !important; display: inline-flex; font: 800 .8rem/1 "Nunito", sans-serif; justify-content: center; min-height: 38px; padding: .58rem .8rem; transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease; }
+.syllable-preview-btn { background: #fff; border-color: #bdcbd1; color: #46545d; }
+.syllable-preview-btn:hover { background: var(--activity-subtle); border-color: #91a7b0; color: var(--activity-ink); }
+.syllable-select-btn { background: #fff; border-color: #8db9c6; color: var(--activity-brand-deep); flex: 1; }
+.syllable-select-btn:hover { background: var(--activity-brand-deep); border-color: var(--activity-brand-deep); color: #fff; }
+.syllable-select-btn.is-selected,
+.syllable-select-btn.is-selected:hover { background: var(--activity-brand); border-color: var(--activity-brand); color: #fff; cursor: default; }
+.syllable-choice-btn:disabled { background: #e7edef; border-color: #e7edef; color: #8a969d; cursor: not-allowed; opacity: 1; }
+.phrase-prescribed-shell { background: var(--activity-subtle); border: 1px solid var(--activity-border); border-radius: 14px; padding: clamp(1rem, 2vw, 1.35rem); }
+.phrase-prescribed-header { margin-bottom: 1rem; }
+.phrase-prescribed-eyebrow { color: var(--activity-brand); font: 800 .7rem/1.2 "Nunito", sans-serif; letter-spacing: .09em; text-transform: uppercase; }
+.phrase-prescribed-heading { color: var(--activity-ink); font: 800 1rem/1.3 "Nunito", sans-serif; letter-spacing: -.01em; margin: .28rem 0 0; }
+.phrase-prescribed-description { color: var(--activity-muted); font: 400 .85rem/1.5 "Quattrocento Sans", sans-serif; margin: .3rem 0 0; max-width: 680px; }
+.phrase-set-card { background: #fff; border: 1px solid var(--activity-border); border-radius: 12px; display: flex; flex-direction: column; height: 100%; padding: 1rem; transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease; }
+.phrase-set-card:hover { border-color: #a9c4cd; box-shadow: 0 7px 18px rgba(15,23,42,.07); transform: translateY(-1px); }
+.phrase-set-card.is-selected { background: var(--activity-brand-soft); border-color: #83b5c3; box-shadow: inset 3px 0 0 var(--activity-brand); }
+.phrase-set-card.is-selected:hover { box-shadow: inset 3px 0 0 var(--activity-brand), 0 7px 18px rgba(15,23,42,.06); }
+.phrase-set-title { color: var(--activity-ink); font: 800 .94rem/1.35 "Nunito", sans-serif; letter-spacing: -.01em; margin: 0; }
+.phrase-set-meta { color: var(--activity-muted); font: 400 .8rem/1.4 "Quattrocento Sans", sans-serif; margin-top: .18rem; }
+.phrase-set-sample { border-top: 1px solid #e7edef; color: #52616c; font: 400 .82rem/1.45 "Quattrocento Sans", sans-serif; margin-top: .75rem; padding-top: .65rem; }
+.phrase-set-sample span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.phrase-set-select-btn { align-items: center; align-self: flex-start; background: #fff; border: 1px solid #8db9c6; border-radius: 9px !important; color: var(--activity-brand-deep); display: inline-flex; flex: 0 0 auto; font: 800 .8rem/1 "Nunito", sans-serif; justify-content: center; min-height: 38px; min-width: 94px; padding: .58rem .8rem; transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease; }
+.phrase-set-select-btn:hover { background: var(--activity-brand-deep); border-color: var(--activity-brand-deep); color: #fff; }
+.phrase-set-select-btn.is-selected,
+.phrase-set-select-btn.is-selected:hover { background: var(--activity-brand); border-color: var(--activity-brand); color: #fff; cursor: default; }
+.phrase-set-select-btn:disabled { background: #e7edef; border-color: #e7edef; color: #8a969d; cursor: not-allowed; opacity: 1; }
+.phrase-selected-items { margin-top: 1rem; }
+.phrase-selected-items-header { align-items: flex-start; display: flex; gap: 1rem; justify-content: space-between; margin-bottom: .65rem; }
+.phrase-selected-items-title { color: var(--activity-ink); font: 800 .9rem/1.35 "Nunito", sans-serif; margin: 0; }
+.phrase-selected-items-help { color: var(--activity-muted); font: 400 .8rem/1.4 "Quattrocento Sans", sans-serif; text-align: right; }
+.phrase-selected-items-list { background: #fff; border: 1px solid var(--activity-border); border-radius: 11px; padding: .8rem 1rem; }
+.phrase-selected-items-list label { color: #3f4d56; font: 500 .86rem/1.45 "Quattrocento Sans", sans-serif; }
+.phrase-selected-items-list .phrase-select-all { color: var(--activity-ink); font: 800 .84rem/1.4 "Nunito", sans-serif; }
 @media (max-width: 767.98px) {
     .template-builder-header { align-items: flex-start; flex-direction: column; }
     .template-information-grid { grid-template-columns: 1fr; }
@@ -8239,14 +8291,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                         <section class="template-builder-section template-information-section" aria-labelledby="templateInformationHeading">
                                             <div class="template-section-heading">
                                                 <span class="template-section-index">01</span>
-                                                <div><h6 id="templateInformationHeading">Activity Information</h6><p>Name the material and choose the learner language.</p></div>
+                                                <div><h6 id="templateInformationHeading">Activity Information</h6><p id="templateInformationDescription">Name the material and choose the learner language.</p></div>
                                             </div>
                                             <div class="template-information-grid">
                                                 <div class="template-field template-title-field">
                                                     <label class="form-label" for="templateActivityTitle">Activity title <span class="template-required" aria-hidden="true">*</span></label>
                                                     <input type="text" id="templateActivityTitle" class="form-control" placeholder="e.g., Animals Around Us" aria-required="true">
                                                 </div>
-                                                <div class="template-field">
+                                                <div class="template-field" id="templateLanguageField">
                                                     <label class="form-label d-block">Language <span class="template-required" aria-hidden="true">*</span></label>
                                                     <fieldset class="template-language-filter template-builder-language-toggle" aria-label="Activity language">
                                                         <legend class="visually-hidden">Activity language</legend>
@@ -8288,7 +8340,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                             <div class="template-validation-message d-none" id="templateValidationError" role="alert"><i class="bi bi-exclamation-circle" aria-hidden="true"></i><span></span></div>
                                             <div class="template-action-buttons">
                                                 <button type="button" class="btn template-btn template-btn-secondary" id="templateCancelBtn">Cancel</button>
-                                                <button type="button" class="btn template-btn template-btn-secondary template-btn-accent" id="templateSaveAssignBtn">Save &amp; Assign</button>
                                                 <button type="button" class="btn template-btn template-btn-primary" id="templateSaveBtn"><i class="bi bi-check2" aria-hidden="true"></i><span>Save Activity</span></button>
                                             </div>
                                         </div>
@@ -13727,7 +13778,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const templatePreviewPanel = document.getElementById('templatePreviewPanel');
         const templateValidationError = document.getElementById('templateValidationError');
         const templateSaveBtn = document.getElementById('templateSaveBtn');
-        const templateSaveAssignBtn = document.getElementById('templateSaveAssignBtn');
         const templateCancelBtn = document.getElementById('templateCancelBtn');
         const otherMaterialView = document.getElementById('otherMaterialView');
         const otherMaterialTableWrapper = document.getElementById('otherMaterialTableWrapper');
@@ -14566,6 +14616,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 : null;
 
             return {
+                materialId: material?.raw_id ?? material?.material_id ?? material?.id ?? null,
                 templateTitle,
                 lesson: material?.template_lesson || material?.lesson || def.lesson || '',
                 title: material?.title || '',
@@ -14847,24 +14898,28 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 <div class="row g-3">
                     <div class="col-12">
                         ${sets.length ? `
-                            <div class="alert alert-info border-0 small mb-0">
-                                Select a prescribed phrase set. Teachers can choose content, but cannot create or edit the phrases.
-                            </div>
-                            <div class="small text-muted mb-2">Select a prescribed phrase set.</div>
-                            <div class="row g-3">
+                            <div class="phrase-prescribed-shell">
+                                <div class="phrase-prescribed-header">
+                                    <div class="phrase-prescribed-eyebrow">Prescribed Phrase Set</div>
+                                    <h6 class="phrase-prescribed-heading">Choose a ready-made phrase set</h6>
+                                    <p class="phrase-prescribed-description">Select a prescribed set, then choose the complete set or individual phrases. Prescribed phrases cannot be edited.</p>
+                                </div>
+                                <div class="row g-3">
                                 ${sets.map(set => `
                                     <div class="col-12 col-lg-6">
-                                        <div class="border rounded-3 p-3 h-100 ${selectedSet?.key === set.key ? 'border-primary bg-light' : ''}">
+                                        <div class="phrase-set-card ${selectedSet?.key === set.key ? 'is-selected' : ''}">
                                             <div class="d-flex align-items-start justify-content-between gap-3">
-                                                <div>
-                                                    <div class="fw-bold">${escapeHtml(set.label)}</div>
-                                                    <div class="text-muted small">${set.items.length} items</div>
+                                                <div class="min-w-0">
+                                                    <h6 class="phrase-set-title">${escapeHtml(set.label)}</h6>
+                                                    <div class="phrase-set-meta">${set.items.length} ready-made phrases</div>
                                                 </div>
-                                                <button type="button" class="btn btn-sm ${selectedSet?.key === set.key ? 'btn-primary' : 'btn-outline-primary'}" data-phrase-set-select="${escapeAttr(set.key)}">Select</button>
+                                                <button type="button" class="btn phrase-set-select-btn ${selectedSet?.key === set.key ? 'is-selected' : ''}" data-phrase-set-select="${escapeAttr(set.key)}" aria-pressed="${selectedSet?.key === set.key ? 'true' : 'false'}">${selectedSet?.key === set.key ? '<i class="bi bi-check2 me-1" aria-hidden="true"></i>Selected' : 'Select set'}</button>
                                             </div>
+                                            <div class="phrase-set-sample">${set.items.slice(0, 2).map(item => `<span>${escapeHtml(item)}</span>`).join('')}</div>
                                         </div>
                                     </div>
                                 `).join('')}
+                                </div>
                             </div>
                         ` : `
                             <div class="alert alert-warning border-0 small mb-0">
@@ -14873,13 +14928,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         `}
                     </div>
                     ${selectedSet ? `
-                        <div class="col-12">
-                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-                                <h6 class="mb-0 fw-bold">Selected Prescribed Items</h6>
-                                <small class="text-muted">Choose the whole set or individual items.</small>
+                        <div class="col-12 phrase-selected-items">
+                            <div class="phrase-selected-items-header">
+                                <h6 class="phrase-selected-items-title">Selected Prescribed Items</h6>
+                                <span class="phrase-selected-items-help">Choose the whole set or individual items.</span>
                             </div>
-                            <div class="border rounded-3 p-3 bg-white">
-                                <label class="d-flex align-items-center gap-2 py-1 fw-semibold">
+                            <div class="phrase-selected-items-list">
+                                <label class="phrase-select-all d-flex align-items-center gap-2 py-1">
                                     <input type="checkbox" class="form-check-input mt-0" data-phrase-select-all ${allSelected ? 'checked' : ''}>
                                     <span>Select All (${selectedSet.items.length} items)</span>
                                 </label>
@@ -15467,6 +15522,19 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         function renderTemplateDynamicFields(title, values = {}) {
             if (!templateDynamicFields) return;
             const def = getTemplateDefinition(title);
+            const informationGrid = document.querySelector('.template-information-grid');
+            const informationDescription = document.getElementById('templateInformationDescription');
+            const languageField = document.getElementById('templateLanguageField');
+            const previousSyllableTitleField = document.getElementById('syllableActivityTitleField');
+            previousSyllableTitleField?.remove();
+            if (informationGrid && languageField && !informationGrid.contains(languageField)) informationGrid.appendChild(languageField);
+            const isSyllableBuilder = isSyllableBlendingTemplate(title);
+            informationGrid?.classList.toggle('is-syllable-blending', isSyllableBuilder);
+            if (informationDescription) {
+                informationDescription.textContent = isSyllableBuilder
+                    ? 'Name the learning material for this activity.'
+                    : 'Name the material and choose the learner language.';
+            }
             const isEditMode = Boolean(window.__templateEditStateRestored || activeTemplateActivity?.mode === 'edit');
             if (templateBuilderTitle) templateBuilderTitle.textContent = isEditMode ? 'Edit Activity' : 'Create Activity';
             if (templateSaveBtn) {
@@ -15481,7 +15549,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     : 'Configure this learning activity before adding it to your learning materials.';
             }
             if (templateBuilderLessonPill) templateBuilderLessonPill.textContent = def.lesson;
-            if (templateActivityContentHint) templateActivityContentHint.textContent = def.hint;
+            if (templateActivityContentHint) {
+                templateActivityContentHint.textContent = isSyllableBuilder
+                    ? 'Choose the learner language and select a ready-made activity format.'
+                    : def.hint;
+            }
             updateStoryReadingLanguageAvailability();
             updateSentenceReadingLanguageAvailability();
             if (isPhraseReadingTemplate(title)) {
@@ -15504,10 +15576,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 const formatLabel = currentFormat === 'big_box' ? 'Big Box — Word Building' : 'Syllable Combination';
                 templateDynamicFields.innerHTML = `
                     <div class="row g-3">
-                        <div class="col-12">
+                        <div class="col-12" id="syllableActivityTitleField">
                             <label class="form-label fw-bold" for="syllableActivityTitle">Title <span class="text-danger">*</span></label>
                             <input type="text" id="syllableActivityTitle" class="form-control" maxlength="200" value="${escapeAttr(activeTemplateActivity?.title || '')}" placeholder="Enter an activity title" autocomplete="off">
                         </div>
+                        <div class="col-12" id="syllableLanguageFieldSlot"></div>
                         <div class="col-12">
                             <label class="form-label fw-bold" for="syllableActivityFormat">Activity Format <span class="text-danger">*</span></label>
                             <select id="syllableActivityFormat" class="form-select">
@@ -15517,28 +15590,32 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             <div class="form-text">Questions, syllables, choices, instructions, and answers are supplied by the system.</div>
                         </div>
                         <div class="col-12">
-                            <div class="border rounded-4 bg-light p-3 p-lg-4">
-                                <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
-                                    <div><h6 class="fw-bold mb-1">Prebuilt Activities</h6><div class="small text-muted">${escapeHtml(language)} · ${escapeHtml(formatLabel)}</div></div>
-                                    <span class="badge text-bg-primary">${activities.length} choice${activities.length === 1 ? '' : 's'}</span>
+                            <div class="syllable-prebuilt-section">
+                                <div class="syllable-prebuilt-header">
+                                    <div><h6 class="syllable-prebuilt-heading">Prebuilt Activities</h6><div class="syllable-prebuilt-meta">${escapeHtml(language)} · ${escapeHtml(formatLabel)}</div></div>
+                                    <span class="syllable-prebuilt-count">${activities.length} choice${activities.length === 1 ? '' : 's'}</span>
                                 </div>
                                 <div class="row g-3" id="syllablePrebuiltGrid">
                                     ${activities.length ? activities.map(activity => {
                                         const selected = activeTemplateActivity.selectedActivityId === activity.activity_id;
                                         const preview = currentFormat === 'big_box'
-                                            ? `<div class="small fw-bold text-uppercase mb-1">Big Box</div><div class="small">${activity.syllable_pool.map(escapeHtml).join(' · ')}</div><div class="small mt-2">${activity.items.map(item => escapeHtml(item.answer)).join(', ')}</div>`
-                                            : activity.items.slice(0, 3).map(item => `<div class="small"><code>${escapeHtml(item.syllables[0])}</code> + <code>${escapeHtml(item.syllables[1])}</code> → <strong>${escapeHtml(item.answer)}</strong></div>`).join('');
-                                        return `<div class="col-12 col-xl-6"><div class="h-100 bg-white border rounded-3 p-3 ${selected ? 'border-primary shadow-sm' : ''}" data-syllable-card="${escapeAttr(activity.activity_id)}">
-                                            <div class="d-flex justify-content-between gap-2"><div><div class="fw-bold">Activity ${activity.set_number} — ${escapeHtml(activity.activity_name)}</div><div class="small text-muted">${currentFormat === 'big_box' ? '5 target words' : '5 items'}</div></div>${selected ? '<i class="bi bi-check-circle-fill text-primary fs-5"></i>' : ''}</div>
-                                            <div class="mt-3">${preview}</div>
-                                            <div class="collapse mt-3" id="preview_${escapeAttr(activity.activity_id)}"><div class="small border-top pt-2"><strong>Instruction:</strong> ${escapeHtml(activity.instruction)}<br>${activity.items.map((item, index) => `${index + 1}. ${escapeHtml(item.syllables.join(' + '))} → ${escapeHtml(item.answer)}`).join('<br>')}</div></div>
-                                            <div class="d-flex gap-2 mt-3"><button type="button" class="btn btn-sm btn-outline-secondary syllable-preview-btn" data-bs-toggle="collapse" data-bs-target="#preview_${escapeAttr(activity.activity_id)}">Preview</button><button type="button" class="btn btn-sm ${selected ? 'btn-primary' : 'btn-outline-primary'} syllable-select-btn" data-activity-id="${escapeAttr(activity.activity_id)}">${selected ? 'Selected' : 'Select'}</button></div>
+                                            ? `<div class="syllable-prebuilt-sample-label">Big Box</div><div>${activity.syllable_pool.map(escapeHtml).join(' · ')}</div><div>${activity.items.map(item => escapeHtml(item.answer)).join(', ')}</div>`
+                                            : activity.items.slice(0, 3).map(item => `<div><code>${escapeHtml(item.syllables[0])}</code> + <code>${escapeHtml(item.syllables[1])}</code> → <strong>${escapeHtml(item.answer)}</strong></div>`).join('');
+                                        return `<div class="col-12 col-xl-6"><div class="syllable-prebuilt-card ${selected ? 'is-selected' : ''}" data-syllable-card="${escapeAttr(activity.activity_id)}">
+                                            <div class="syllable-prebuilt-card-header"><div><h6 class="syllable-prebuilt-title">Activity ${activity.set_number} — ${escapeHtml(activity.activity_name)}</h6><div class="syllable-prebuilt-detail">${currentFormat === 'big_box' ? '5 target words' : '5 items'}</div></div>${selected ? '<span class="syllable-prebuilt-check" aria-label="Selected"><i class="bi bi-check-lg" aria-hidden="true"></i></span>' : ''}</div>
+                                            <div class="syllable-prebuilt-sample">${preview}</div>
+                                            <div class="collapse" id="preview_${escapeAttr(activity.activity_id)}"><div class="syllable-prebuilt-expanded"><strong>Instruction:</strong> ${escapeHtml(activity.instruction)}<br>${activity.items.map((item, index) => `${index + 1}. ${escapeHtml(item.syllables.join(' + '))} → ${escapeHtml(item.answer)}`).join('<br>')}</div></div>
+                                            <div class="syllable-prebuilt-actions"><button type="button" class="btn syllable-choice-btn syllable-preview-btn" data-bs-toggle="collapse" data-bs-target="#preview_${escapeAttr(activity.activity_id)}">Preview</button><button type="button" class="btn syllable-choice-btn syllable-select-btn ${selected ? 'is-selected' : ''}" data-activity-id="${escapeAttr(activity.activity_id)}" aria-pressed="${selected ? 'true' : 'false'}">${selected ? '<i class="bi bi-check2 me-1" aria-hidden="true"></i>Selected' : 'Select'}</button></div>
                                         </div></div>`;
                                     }).join('') : `<div class="col-12"><div class="alert alert-warning mb-0" role="status"><i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>No prebuilt activities are available. Reload the page or contact an administrator.</div></div>`}
                                 </div>
                             </div>
                         </div>
                     </div>`;
+                const syllableTitleField = document.getElementById('syllableActivityTitleField');
+                const syllableLanguageFieldSlot = document.getElementById('syllableLanguageFieldSlot');
+                if (informationGrid && syllableTitleField) informationGrid.appendChild(syllableTitleField);
+                if (syllableLanguageFieldSlot && languageField) syllableLanguageFieldSlot.appendChild(languageField);
                 document.getElementById('syllableActivityFormat')?.addEventListener('change', event => {
                     activeTemplateActivity.activityFormat = event.target.value;
                     activeTemplateActivity.selectedActivityId = null;
@@ -15615,7 +15692,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
             const empty = message => `<div class="template-preview-empty"><i class="bi bi-stars" aria-hidden="true"></i><span>${escapeHtml(message)}</span></div>`;
             const cards = content => `<div class="preview-learning-grid">${content}</div>`;
-            const readButton = () => `<button type="button" class="preview-listen" aria-label="Listen to the reading"><i class="bi bi-volume-up" aria-hidden="true"></i>${language === 'English' ? 'Listen' : 'Pakinggan'}</button>`;
             let instruction = '';
             let previewBody = '';
 
@@ -15639,7 +15715,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 const selected = choices.find(activity => activity.activity_id === activeTemplateActivity.selectedActivityId);
                 if (selected) {
                     const first = selected.items?.[0] || {}; const pieces = first.syllables || selected.syllable_pool || [];
-                    previewBody = `<div class="preview-lost-found"><div><h7>Lost</h7><div class="preview-syllable-pieces">${pieces.map(piece => `<span class="preview-syllable-piece">${escapeHtml(piece)}</span>`).join('')}</div></div><div><h7>Found</h7><div class="preview-found-word">${escapeHtml(first.answer || '…')}</div><div class="mt-3">${readButton()}</div></div></div>`;
+                    previewBody = `<div class="preview-lost-found"><div><h7>Lost</h7><div class="preview-syllable-pieces">${pieces.map(piece => `<span class="preview-syllable-piece">${escapeHtml(piece)}</span>`).join('')}</div></div><div><h7>Found</h7><div class="preview-found-word">${escapeHtml(first.answer || '…')}</div></div></div>`;
                 } else previewBody = empty('Choose a prebuilt activity to see its Lost & Found experience.');
             } else if (isPictureWordMatchingTemplate(templateTitle)) {
                 instruction = learnerCopy.picture;
@@ -15654,11 +15730,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 previewBody = items.length ? cards(items.slice(0, 6).map(item => `<div class="preview-learning-card"><div class="preview-answer-token">${escapeHtml(item.word || '')}</div><div class="small text-muted mt-2">${escapeHtml(item.meaning || '')}</div></div>`).join('')) : empty('Add words and meanings to begin the preview.');
             } else if (isPhraseReadingTemplate(templateTitle) || isSentenceReadingTemplate(templateTitle)) {
                 instruction = isPhraseReadingTemplate(templateTitle) ? learnerCopy.phrase : learnerCopy.sentence;
-                previewBody = summary.body?.length ? `<div class="d-flex justify-content-end mb-2">${readButton()}</div><div class="preview-reading-card">${summary.body.slice(0, 8).map(line => `<div class="mb-2">${escapeHtml(String(line).replace(/^\d+\.\s*/, ''))}</div>`).join('')}</div>` : empty(summary.emptyMessage || 'Select reading content to begin the preview.');
+                previewBody = summary.body?.length ? `<div class="preview-reading-card">${summary.body.slice(0, 8).map(line => `<div class="mb-2">${escapeHtml(String(line).replace(/^\d+\.\s*/, ''))}</div>`).join('')}</div>` : empty(summary.emptyMessage || 'Select reading content to begin the preview.');
             } else if (templateTitle === 'Fluency Reading' || isStoryReadingTemplate(templateTitle)) {
                 instruction = templateTitle === 'Fluency Reading' ? learnerCopy.fluency : learnerCopy.story;
                 const passage = summary.body?.[0] || templateDynamicFields?.querySelector('[data-field-key="passage"]')?.value || '';
-                previewBody = passage ? `<div class="d-flex justify-content-end mb-2">${readButton()}</div><article class="preview-reading-card">${escapeHtml(passage)}</article>` : empty('Select or add a passage to begin the preview.');
+                previewBody = passage ? `<article class="preview-reading-card">${escapeHtml(passage)}</article>` : empty('Select or add a passage to begin the preview.');
             } else if (templateTitle === "5W's Story Questions") {
                 instruction = learnerCopy.questions;
                 const item = {}; templateDynamicFields?.querySelectorAll('.template-content-field').forEach(field => item[field.dataset.fieldKey] = field.value);
@@ -15688,22 +15764,29 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 <div class="row g-3">
                     <div class="col-12">
                         ${stories.length ? `
-                            <div class="alert alert-info border-0 small mb-0">
-                                Select a prescribed story. Teachers can choose content, but cannot create or edit the story.
-                            </div>
-                            <div class="small text-muted mb-2">Select a prescribed story.</div>
-                            ${stories.map(story => `
-                            <div class="border rounded-3 p-3 mb-3 ${selectedStory?.key === story.key ? 'border-primary bg-light' : ''}">
-                                <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
-                                    <div>
-                                        <div class="fw-bold">${escapeHtml(story.label)}</div>
-                                        <div class="text-muted small">${escapeHtml(language)}</div>
-                                        <div class="text-muted small">${story.sentences.length} sentences</div>
+                            <div class="phrase-prescribed-shell">
+                                <div class="phrase-prescribed-header">
+                                    <div class="phrase-prescribed-eyebrow">Prescribed Story Set</div>
+                                    <h6 class="phrase-prescribed-heading">Choose a ready-made story</h6>
+                                    <p class="phrase-prescribed-description">Select a prescribed story for this activity. Prescribed stories cannot be edited.</p>
+                                </div>
+                                <div class="row g-3">
+                                ${stories.map(story => `
+                                <div class="col-12 col-lg-6">
+                                    <div class="phrase-set-card ${selectedStory?.key === story.key ? 'is-selected' : ''}">
+                                        <div class="d-flex align-items-start justify-content-between gap-3">
+                                            <div class="min-w-0">
+                                                <h6 class="phrase-set-title">${escapeHtml(story.label)}</h6>
+                                                <div class="phrase-set-meta">${escapeHtml(language)} · ${story.sentences.length} sentences</div>
+                                            </div>
+                                            <button type="button" class="btn phrase-set-select-btn ${selectedStory?.key === story.key ? 'is-selected' : ''}" data-story-select="${escapeAttr(story.key)}" aria-pressed="${selectedStory?.key === story.key ? 'true' : 'false'}">${selectedStory?.key === story.key ? '<i class="bi bi-check2 me-1" aria-hidden="true"></i>Selected' : 'Use story'}</button>
+                                        </div>
+                                        <div class="phrase-set-sample"><span>${escapeHtml((story.sentences || [])[0] || '')}</span><span>${escapeHtml((story.sentences || [])[1] || '')}</span></div>
                                     </div>
-                                    <button type="button" class="btn btn-sm ${selectedStory?.key === story.key ? 'btn-primary' : 'btn-outline-primary'}" data-story-select="${escapeAttr(story.key)}">Select</button>
+                                </div>
+                                `).join('')}
                                 </div>
                             </div>
-                        `).join('')}
                         ` : `
                             <div class="alert alert-warning border-0 small mb-0">
                                 No prescribed content is set for this language yet.
@@ -15711,10 +15794,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         `}
                     </div>
                     ${selectedStory ? `
-                        <div class="col-12">
-                            <div class="border rounded-3 bg-white p-3">
-                                <div class="fw-bold mb-2">${escapeHtml(selectedStory.title)}</div>
-                                <div class="small text-muted mb-2">${escapeHtml(language)} · ${selectedStory.sentences.length} sentences</div>
+                        <div class="col-12 phrase-selected-items">
+                            <div class="phrase-selected-items-header">
+                                <h6 class="phrase-selected-items-title">Selected Prescribed Story</h6>
+                                <span class="phrase-selected-items-help">${escapeHtml(language)} · ${selectedStory.sentences.length} sentences</span>
+                            </div>
+                            <div class="phrase-selected-items-list">
+                                <h6 class="phrase-set-title mb-2">${escapeHtml(selectedStory.title)}</h6>
                                 <div class="mb-0 lh-lg">${escapeHtml(passageText)}</div>
                             </div>
                         </div>
@@ -15746,24 +15832,28 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 <div class="row g-3">
                     <div class="col-12">
                         ${sets.length ? `
-                            <div class="alert alert-info border-0 small mb-0">
-                                Select a prescribed sentence set. Teachers can choose content, but cannot create or edit the sentences.
-                            </div>
-                            <div class="small text-muted mb-2">Select a prescribed sentence set.</div>
-                            <div class="row g-3">
+                            <div class="phrase-prescribed-shell">
+                                <div class="phrase-prescribed-header">
+                                    <div class="phrase-prescribed-eyebrow">Prescribed Sentence Set</div>
+                                    <h6 class="phrase-prescribed-heading">Choose a ready-made sentence set</h6>
+                                    <p class="phrase-prescribed-description">Select a prescribed set, then choose the complete set or individual sentences. Prescribed sentences cannot be edited.</p>
+                                </div>
+                                <div class="row g-3">
                                 ${sets.map(set => `
                                     <div class="col-12 col-lg-6">
-                                        <div class="border rounded-3 p-3 h-100 ${selectedSet?.key === set.key ? 'border-primary bg-light' : ''}">
+                                        <div class="phrase-set-card ${selectedSet?.key === set.key ? 'is-selected' : ''}">
                                             <div class="d-flex align-items-start justify-content-between gap-3">
-                                                <div>
-                                                    <div class="fw-bold">${escapeHtml(set.label)}</div>
-                                                    <div class="text-muted small">${set.items.length} sentences</div>
+                                                <div class="min-w-0">
+                                                    <h6 class="phrase-set-title">${escapeHtml(set.label)}</h6>
+                                                    <div class="phrase-set-meta">${set.items.length} ready-made sentences</div>
                                                 </div>
-                                                <button type="button" class="btn btn-sm ${selectedSet?.key === set.key ? 'btn-primary' : 'btn-outline-primary'}" data-sentence-set-select="${escapeAttr(set.key)}">Select</button>
+                                                <button type="button" class="btn phrase-set-select-btn ${selectedSet?.key === set.key ? 'is-selected' : ''}" data-sentence-set-select="${escapeAttr(set.key)}" aria-pressed="${selectedSet?.key === set.key ? 'true' : 'false'}">${selectedSet?.key === set.key ? '<i class="bi bi-check2 me-1" aria-hidden="true"></i>Selected' : 'Use set'}</button>
                                             </div>
+                                            <div class="phrase-set-sample">${set.items.slice(0, 2).map(item => `<span>${escapeHtml(item)}</span>`).join('')}</div>
                                         </div>
                                     </div>
                                 `).join('')}
+                                </div>
                             </div>
                         ` : `
                             <div class="alert alert-warning border-0 small mb-0">
@@ -15772,13 +15862,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         `}
                     </div>
                     ${selectedSet ? `
-                        <div class="col-12">
-                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-                                <h6 class="mb-0 fw-bold">Selected Prescribed Items</h6>
-                                <small class="text-muted">Choose the whole set or individual items.</small>
+                        <div class="col-12 phrase-selected-items">
+                            <div class="phrase-selected-items-header">
+                                <h6 class="phrase-selected-items-title">Selected Prescribed Items</h6>
+                                <span class="phrase-selected-items-help">Choose the whole set or individual sentences.</span>
                             </div>
-                            <div class="border rounded-3 p-3 bg-white">
-                                <label class="d-flex align-items-center gap-2 py-1 fw-semibold">
+                            <div class="phrase-selected-items-list">
+                                <label class="phrase-select-all d-flex align-items-center gap-2 py-1">
                                     <input type="checkbox" class="form-check-input mt-0" data-sentence-select-all ${allSelected ? 'checked' : ''}>
                                     <span>Select All (${selectedSet.items.length} sentences)</span>
                                 </label>
@@ -16108,9 +16198,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             renderTemplatePreview();
         }
 
-        function saveTemplateActivity(assignOnly = false) {
+        function saveTemplateActivity() {
             const values = getTemplateFormValues();
-            console.log('[CREATE ACTIVITY] Save clicked', { assignOnly, values, activeTemplateActivity });
+            console.log('[CREATE ACTIVITY] Save clicked', { values, activeTemplateActivity });
             const error = validateTemplateActivityForm(values);
             if (templateValidationError) {
                 templateValidationError.textContent = error || '';
@@ -16209,9 +16299,18 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         template_title: activeTemplateActivity?.templateTitle || '',
                         template_lesson: activeTemplateActivity?.lesson || '',
                     };
+                    const isEditMode = activeTemplateActivity?.mode === 'edit';
+                    const existingMaterialId = activeTemplateActivity?.materialId;
+                    if (isEditMode && (existingMaterialId === null || existingMaterialId === undefined || existingMaterialId === '')) {
+                        throw new Error('The original activity could not be identified. Close this panel and try editing it again.');
+                    }
+                    if (isEditMode) payload.material_id = existingMaterialId;
+                    const saveUrl = isEditMode
+                        ? '/dashboard/teacher/update-material/'
+                        : '/dashboard/teacher/add-material/';
                     console.log('[CREATE ACTIVITY] Payload:', payload);
-                    console.log('[CREATE ACTIVITY] POST URL:', '/dashboard/teacher/add-material/');
-                    const response = await fetch('/dashboard/teacher/add-material/', {
+                    console.log('[CREATE ACTIVITY] POST URL:', saveUrl);
+                    const response = await fetch(saveUrl, {
                         method: 'POST',
                         credentials: 'same-origin',
                         headers: {
@@ -16240,7 +16339,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     }
                     // Keep the server response authoritative. Reconstructing a reduced object here
                     // drops template metadata and makes the activity disappear from downstream views.
-                    createdTemplateActivities.unshift(data.material);
+                    const savedMaterialId = data.material?.raw_id ?? data.material?.id ?? data.material?.material_id ?? existingMaterialId;
+                    if (isEditMode) {
+                        const existingIndex = createdTemplateActivities.findIndex(item => String(item?.raw_id ?? item?.id ?? item?.material_id ?? '') === String(savedMaterialId));
+                        if (existingIndex >= 0) createdTemplateActivities.splice(existingIndex, 1, data.material);
+                        else createdTemplateActivities.unshift(data.material);
+                    } else {
+                        createdTemplateActivities.unshift(data.material);
+                    }
                     try {
                         window.createdTemplateActivities = createdTemplateActivities;
                         localStorage.setItem('pabasa_created_template_activities', JSON.stringify(createdTemplateActivities));
@@ -16251,7 +16357,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     if (addMaterialModal) bootstrap.Modal.getOrCreateInstance(addMaterialModal).hide();
                     window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: data.material?.id || '', class_code: currentClassCode } }));
                     try {
-                        const createdMaterialId = data.material?.raw_id ?? data.material?.id ?? data.material?.material_id ?? null;
+                        const createdMaterialId = savedMaterialId;
                         if (attachCourseId && createdMaterialId !== null && createdMaterialId !== undefined && createdMaterialId !== '') {
                             const attachToken = await ensureCsrfToken();
                             const attachResp = await fetch('/dashboard/teacher/course/add-material/', {
@@ -17246,8 +17352,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 hideTemplateBuilder();
                 bootstrap.Modal.getInstance(addMaterialModal)?.hide();
             });
-            templateSaveBtn?.addEventListener('click', function () { saveTemplateActivity(false); });
-            templateSaveAssignBtn?.addEventListener('click', function () { saveTemplateActivity(true); });
+            templateSaveBtn?.addEventListener('click', function () { saveTemplateActivity(); });
             templateWeeksGrid?.addEventListener('change', function () {
                 updateTemplateChipStates();
                 renderTemplatePreview();
@@ -17297,7 +17402,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             });
             templateActivityForm?.addEventListener('submit', function (e) {
                 e.preventDefault();
-                saveTemplateActivity(false);
+                saveTemplateActivity();
             });
             otherMaterialSearchInput?.addEventListener('input', () => renderOtherMaterialPanel(addMaterialModeToggle?.classList.contains('active-template') ? 'template' : 'other'));
             otherMaterialAuthorSelect?.addEventListener('change', () => renderOtherMaterialPanel(addMaterialModeToggle?.classList.contains('active-template') ? 'template' : 'other'));

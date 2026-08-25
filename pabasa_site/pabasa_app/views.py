@@ -16079,6 +16079,7 @@ def teacher_update_material(request):
         _, material_id = _parse_prefixed_id(raw_id)
         
         user_id = request.session.get('user_id')
+        teacher_user = User.objects.filter(id=user_id).first()
         if not material_id:
             return JsonResponse({'success': False, 'error': 'Invalid material ID'}, status=400)
             
@@ -16114,6 +16115,15 @@ def teacher_update_material(request):
         if source_type in ('personal', 'shared', 'template'):
             material.source_type = source_type
 
+        template_payload = None
+        if material.source_type == 'template':
+            try:
+                template_payload = json.loads(content) if content else {}
+            except (TypeError, json.JSONDecodeError):
+                return JsonResponse({'success': False, 'error': 'Invalid template activity content.'}, status=400)
+            if not isinstance(template_payload, dict):
+                return JsonResponse({'success': False, 'error': 'Invalid template activity content.'}, status=400)
+
         if requested_assessment_kind == 'crla' and previous_assessment_kind != 'crla':
             crla_block = _crla_creation_block_message(teacher_user=teacher_user)
             if crla_block:
@@ -16135,11 +16145,11 @@ def teacher_update_material(request):
         
         material.is_active = (material.status in ['published', 'scheduled'])
         # current teacher for any potential Assessment creation
-        teacher_user = User.objects.filter(id=user_id).first()
         if material.teacher_id is None and teacher_user:
             material.teacher = teacher_user
 
-        language = _material_language_for_section(material)
+        submitted_language = str(data.get('language') or (template_payload or {}).get('language') or '').strip()
+        language = Material.normalize_language_value(submitted_language) if submitted_language else _material_language_for_section(material)
 
         # Handle schedule update
         if material.status == 'scheduled':
@@ -16157,7 +16167,38 @@ def teacher_update_material(request):
         else:
             material.scheduled_at = None
 
-        if content != material.content_text or requested_reading_type in {'word', 'sentence', 'paragraph'}:
+        if template_payload is not None:
+            template_title = str(data.get('template_title') or template_payload.get('template_title') or '').strip()
+            material.item_type = _template_reading_type(template_title)
+            template_payload.update({
+                'template_title': template_title,
+                'template_lesson': str(data.get('template_lesson') or template_payload.get('template_lesson') or '').strip(),
+                'template_type': str(template_payload.get('template_type') or template_title).strip(),
+                'template_source': 'template',
+                'language': language,
+                'assigned_weeks': list(material.assigned_weeks or []),
+                'randomize_order': randomize_order if randomize_order is not None else bool(template_payload.get('randomize_order')),
+            })
+            template_payload = _normalize_picture_word_matching_content(template_payload)
+            template_items = template_payload.get('items') if isinstance(template_payload.get('items'), list) else []
+
+            def _updated_template_item_text(item):
+                if not isinstance(item, dict):
+                    return str(item).strip() if item is not None else ''
+                if template_title == 'Phrase Reading Practice':
+                    return str(item.get('phrase') or '').strip()
+                if template_title == 'Sentence Reading Practice':
+                    return str(item.get('sentence') or '').strip()
+                if template_title in ('Fluency Reading', 'Story Reading', "5W's Story Questions", 'Retell the Story', 'Story Response'):
+                    return str(item.get('storyText') or item.get('content') or item.get('paragraph') or '').strip()
+                if template_title == 'Syllable Blending':
+                    return str(item.get('answer') or '').strip()
+                return str(item.get('text') or item.get('content') or item.get('title') or item.get('sentence') or item.get('paragraph') or item.get('word') or '').strip()
+
+            item_lines = [_updated_template_item_text(item) for item in template_items]
+            material.content_text = '\n'.join(line for line in item_lines if line) or material.title
+            material.content_json = template_payload
+        elif content != material.content_text or requested_reading_type in {'word', 'sentence', 'paragraph'}:
             material.content_text = content
             material.item_type = _detect_material_type(content, requested_reading_type)
             content_json = dict(material.content_json or {})
@@ -16205,7 +16246,12 @@ def teacher_update_material(request):
             overview = _compute_teacher_overview(teacher_user) if teacher_user else None
         except Exception:
             overview = None
-        return JsonResponse({'success': True, 'message': 'Material updated successfully', 'overview': overview})
+        return JsonResponse({
+            'success': True,
+            'message': 'Material updated successfully',
+            'material': _material_response_payload(material),
+            'overview': overview,
+        })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
