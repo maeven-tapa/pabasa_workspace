@@ -165,7 +165,7 @@ DEFAULT_FROM_EMAIL = 'pabasa.tupc@gmail.com'
 
 # Google Cloud Speech-to-Text settings used by the reading assessment UI.
 GOOGLE_STT_API_KEY = 'AIzaSyDPMgJX8t195Z9bfoID2gwlG5oPhBVK_tk'
-GOOGLE_CLOUD_PROJECT_ID = 'direct-outlet-499701-p6'
+GOOGLE_CLOUD_PROJECT_ID = 'project-2b0d295d-ee06-40a7-927'
 GOOGLE_STT_LOCATION = 'us'
 # Chirp 3 is used through Speech-to-Text V2 StreamingRecognize for live reading.
 GOOGLE_STT_MODEL = 'chirp_3'
