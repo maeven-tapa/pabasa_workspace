@@ -361,6 +361,22 @@ class Assessment(models.Model):
                 return value
         return default
 
+    @staticmethod
+    def _coerce_attempt_datetime(value):
+        if value in (None, ''):
+            return None
+        if isinstance(value, datetime):
+            return value
+        if isinstance(value, str):
+            try:
+                parsed_value = datetime.fromisoformat(value.replace('Z', '+00:00'))
+            except ValueError:
+                return None
+            if timezone.is_naive(parsed_value):
+                return timezone.make_aware(parsed_value, timezone.get_default_timezone())
+            return parsed_value
+        return None
+
     @property
     def content(self):
         first_material = self.materials.order_by('created_at').first()
@@ -430,13 +446,13 @@ class Assessment(models.Model):
         started_at = attempt_data.pop('started_at', None)
         if started_at is not None:
             try:
-                attempt_row.started_at = started_at
+                attempt_row.started_at = self._coerce_attempt_datetime(started_at) or started_at
             except Exception:
                 attempt_row.started_at = timezone.now()
         completed_at = attempt_data.pop('completed_at', None)
         if completed_at is not None:
             try:
-                attempt_row.completed_at = completed_at
+                attempt_row.completed_at = self._coerce_attempt_datetime(completed_at) or completed_at
             except Exception:
                 attempt_row.completed_at = timezone.now()
         for key, value in attempt_data.items():
@@ -546,8 +562,9 @@ class Assessment(models.Model):
         if attempt_number is None:
             attempt_number = self.get_student_attempt_count(student) + 1
 
-        started_at_value = attempt_data.pop('started_at', None) or timezone.now()
+        started_at_value = self._coerce_attempt_datetime(attempt_data.pop('started_at', None)) or timezone.now()
         completed_at_value = attempt_data.pop('completed_at', None)
+        completed_at_value = self._coerce_attempt_datetime(completed_at_value)
         attempt_row = Assessment.objects.create(
             title=self.title,
             code=self._build_attempt_code(group_assessment.code, attempt_number),

@@ -9250,7 +9250,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         }
         attempt_payload = {
             'status': 'completed',
-            'completed_at': timezone.now().isoformat(),
+            'completed_at': timezone.now(),
             'device_info': device_info,
             'game_mode': str(data.get('game_mode') or '').strip().lower(),
             'stars_earned': data.get('stars_earned', 0),

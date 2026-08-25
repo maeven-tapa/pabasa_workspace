@@ -364,6 +364,7 @@
         const completedAssessmentIdsKey = "pabasa_completed_assessment_ids";
         const studentEndStateKeyBase = "pabasa_student_end_assessment_state";
         const studentEndStateVersion = "crla_grade2_v1";
+        const studentEndStateResetKey = "pabasa_student_end_assessment_state_reset";
 
         function getStoredData(key, fallback = []) {
             try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); } catch (e) { return fallback; }
@@ -377,6 +378,10 @@
 
         function readStudentEndState() {
             try {
+                if (sessionStorage.getItem(studentEndStateResetKey) === "1") {
+                    sessionStorage.removeItem(studentEndStateResetKey);
+                    return {};
+                }
                 const raw = localStorage.getItem(getStudentEndStateKey());
                 if (!raw) {
                     const serverState = window.__PABASA_STUDENT_END_STATE__ || {};
@@ -421,6 +426,9 @@
         function clearStudentEndState() {
             try {
                 localStorage.removeItem(getStudentEndStateKey());
+            } catch (error) {}
+            try {
+                sessionStorage.setItem(studentEndStateResetKey, "1");
             } catch (error) {}
         }
 
@@ -1022,8 +1030,18 @@
                         ? `Your assessment ends here. You got ${taskCorrect}/${taskTotal} ${isWords ? "words" : "sentences"} correct.${isWords ? "" : ` ${score} correct items total.`}`
                         : "You completed the reading assessment.";
             if (summary && isEarly) {
-                summary.innerHTML = `<div data-score-tile class="completion-score-tile"><strong>${taskCorrect}/${taskTotal}</strong><span>${isWords ? "Words" : "Sentences"}</span></div>${isWords ? "" : `<div data-score-tile class="completion-score-tile"><strong>${score}</strong><span>Correct items total</span></div>`}<div data-score-tile class="completion-score-tile"><strong>${endState.classification || (isWords ? "Low Emerging Reader" : "High Emerging Reader")}</strong><span>Reading status</span></div>`;
-                summary.classList.add("is-visible");
+                buildCompletionSummary(summary, {
+                    word_count: taskCorrect,
+                    accuracy: taskTotal ? (taskCorrect / taskTotal) * 100 : null,
+                    final_score: score,
+                    total_score: score,
+                    duration_seconds: endState.duration_seconds ?? null,
+                    pronunciation_score: endState.pronunciation_score ?? null,
+                    classification: endState.classification || (isWords ? "Low Emerging Reader" : "High Emerging Reader"),
+                }, {
+                    readingType: isWords ? "Word" : "Sentence",
+                    classification: endState.classification || (isWords ? "Low Emerging Reader" : "High Emerging Reader"),
+                });
             }
             if (finishBtn) {
                 finishBtn.dataset.transitionUrl = stage === "transition_to_sentence"
@@ -1592,68 +1610,91 @@
             });
         }
 
-        function renderScoreSummary(scores) {
-            const summary = document.getElementById("completionSummary") || document.querySelector(".completion-summary");
-            const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
+        function createCompletionResultRow(label, value, valueClass = "") {
+            const row = document.createElement("div");
+            row.className = "completion-result-row";
+
+            const labelNode = document.createElement("span");
+            labelNode.className = "completion-result-label";
+            labelNode.textContent = label;
+
+            const valueNode = document.createElement("strong");
+            valueNode.className = `completion-result-value${valueClass ? ` ${valueClass}` : ""}`;
+            valueNode.textContent = value ?? "—";
+
+            row.append(labelNode, valueNode);
+            return row;
+        }
+
+        function buildCompletionSummary(summary, scores, options = {}) {
             if (!summary) return;
             const normalizedScores = normalizeCompletionScores(scores, {});
-            console.log("PABASA_COMPLETION_TRACE", {
-                stage: "renderScoreSummary",
-                score_keys: Object.keys(normalizedScores || {}),
-                scores: normalizedScores,
-            });
             summary.querySelectorAll("[data-score-tile]").forEach(tile => tile.remove());
             summary.classList.remove("is-visible");
-            const readingTypeLabel = String(mode || "word").charAt(0).toUpperCase() + String(mode || "word").slice(1);
+
+            const readingTypeLabel = String(options.readingType || mode || "word").charAt(0).toUpperCase() + String(options.readingType || mode || "word").slice(1);
             const wordCount = normalizedScores.word_count != null ? String(Math.round(normalizedScores.word_count)) : "—";
             const accuracyValue = normalizedScores.accuracy != null ? `${Math.round(normalizedScores.accuracy)}%` : "—";
             const durationValue = normalizedScores.duration_seconds != null ? formatDuration(normalizedScores.duration_seconds) : "—";
             const fluencyValue = normalizedScores.fluency_score != null ? `${Math.round(normalizedScores.fluency_score)}%` : "—";
             const pronunciationValue = normalizedScores.pronunciation_score != null ? `${Math.round(normalizedScores.pronunciation_score)}%` : "—";
             const finalScoreValue = normalizedScores.final_score != null ? `${Math.round(normalizedScores.final_score)}%` : normalizedScores.total_score != null ? `${Math.round(normalizedScores.total_score)}%` : "—";
-            const classificationValue = resolveClassificationLabel(normalizedScores) || "—";
-            const tiles = [
-                [wordCount, "correct words read"],
-                [readingTypeLabel, "reading type"],
-                [accuracyValue, "accuracy"],
-                [durationValue, "reading time"],
-                [fluencyValue, "fluency"],
-                [pronunciationValue, "pronunciation"],
-                [finalScoreValue, "final score"],
-                [classificationValue, "reading classification"],
+            const classificationValue = options.classification || resolveClassificationLabel(normalizedScores) || "—";
+
+            const columns = [
+                {
+                    title: "Results overview",
+                    rows: [
+                        ["Correct words read", wordCount],
+                        ["Accuracy", accuracyValue],
+                        ["Fluency", fluencyValue],
+                        ["Final score", finalScoreValue],
+                    ],
+                },
+                {
+                    title: "Reading details",
+                    rows: [
+                        ["Reading type", readingTypeLabel],
+                        ["Reading time", durationValue],
+                        ["Pronunciation", pronunciationValue],
+                        ["Reading classification", classificationValue],
+                    ],
+                },
             ];
-            tiles.forEach(([value, label]) => {
-                const tile = document.createElement("div");
-                tile.className = "summary-tile";
+
+            columns.forEach(({ title, rows }, index) => {
+                const tile = document.createElement("section");
+                tile.className = `completion-score-tile completion-score-tile--panel${index === 1 ? " completion-score-tile--status" : ""}`;
                 tile.dataset.scoreTile = "true";
-                const strong = document.createElement("strong");
-                strong.textContent = value;
-                if (label === "reading classification" && isAralEligibleClassification(value)) {
-                    const badge = document.createElement("span");
-                    badge.className = "badge bg-danger ms-2";
-                    badge.style.color = "#fff";
-                    badge.textContent = "ARAL";
-                    badge.title = "Eligible for ARAL Reading Intervention";
-                    badge.setAttribute("aria-label", "Eligible for ARAL Reading Intervention");
-                    strong.appendChild(badge);
-                }
-                const span = document.createElement("span");
-                span.textContent = label;
-                tile.append(strong, span);
-                const numericScore = Number.parseFloat(String(value).replace("%", ""));
-                if (String(value).includes("%") && Number.isFinite(numericScore)) {
-                    tile.classList.add("summary-tile--score");
-                    const progress = document.createElement("div");
-                    progress.className = "summary-score-progress";
-                    progress.setAttribute("aria-hidden", "true");
-                    const progressFill = document.createElement("span");
-                    progressFill.style.width = `${Math.max(0, Math.min(100, numericScore))}%`;
-                    progress.appendChild(progressFill);
-                    tile.appendChild(progress);
-                }
+
+                const heading = document.createElement("div");
+                heading.className = "completion-score-label";
+                heading.textContent = title;
+
+                const grid = document.createElement("div");
+                grid.className = "completion-result-grid";
+                rows.forEach(([label, value]) => {
+                    const valueClass = label === "Reading type" || label === "Reading classification" ? "completion-result-value--soft" : "";
+                    grid.appendChild(createCompletionResultRow(label, value, valueClass));
+                });
+
+                tile.append(heading, grid);
                 summary.appendChild(tile);
             });
+
+            summary.classList.add("is-visible");
+        }
+
+        function renderScoreSummary(scores) {
+            const summary = document.getElementById("completionSummary") || document.querySelector(".completion-summary");
+            const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
+            if (!summary) return;
+            buildCompletionSummary(summary, scores, {
+                readingType: mode || "word",
+                classification: resolveClassificationLabel(normalizeCompletionScores(scores, {})) || "—",
+            });
             if (disclaimer) {
+                const normalizedScores = normalizeCompletionScores(scores, {});
                 disclaimer.textContent = normalizedScores.adapted_reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || "Great job completing your reading assessment! Your results show your current reading performance. Keep practicing to improve your reading skills.";
             }
             setCompletionLoadingState(false);
@@ -3731,7 +3772,12 @@
             closePauseMenu();
         });
         quitBtn?.addEventListener("click", goBackToAssessments);
-        reviewBtn?.addEventListener("click", () => { location.reload(); });
+        reviewBtn?.addEventListener("click", () => {
+            clearStudentEndState();
+            const restartUrl = new URL(window.location.href);
+            restartUrl.searchParams.set("official_assessment_id", String(officialAssessmentId || materialId || "").trim());
+            window.location.assign(restartUrl.toString());
+        });
         finishBtn?.addEventListener("click", () => {
             const transitionUrl = finishBtn.dataset.transitionUrl || "";
             if (transitionUrl) {
