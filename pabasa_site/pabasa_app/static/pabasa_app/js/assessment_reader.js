@@ -250,6 +250,7 @@
             speechPanel?.classList.toggle("d-none", !shouldRender);
             speechPanel?.toggleAttribute("hidden", !shouldRender);
             speechPanel?.setAttribute("aria-hidden", String(!shouldRender));
+            shell?.classList.toggle("is-speech-debug-visible", shouldRender);
             if (speechDebugToggle) speechDebugToggle.checked = enabled;
             if (persist) {
                 localStorage.setItem("pabasaShowSpeechDebugPanel", enabled ? "true" : "false");

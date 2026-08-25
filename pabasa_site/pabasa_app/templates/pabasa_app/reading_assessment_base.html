@@ -508,7 +508,10 @@
             font-weight: 800;
             line-height: 1.45;
             margin-inline: auto;
+            max-height: 11.5rem;
             max-width: min(920px, 100%);
+            overflow-y: auto;
+            overscroll-behavior: contain;
             padding: 0.75rem 0.9rem;
             position: relative;
             text-align: center;
@@ -565,6 +568,8 @@
             font-family: "Nunito", "Segoe UI", sans-serif;
             font-size: 0.9rem;
             font-weight: 800;
+            max-height: 4.8rem;
+            overflow-y: auto;
             overflow-wrap: anywhere;
             white-space: pre-wrap;
         }
@@ -2562,6 +2567,12 @@
         }
 
         .content-word .reading-word {
+            font-size: clamp(4.4rem, 19vw, 8.4rem);
+        }
+
+        /* Keep debug output from competing with the learner's reading target.
+           When it is visible, restore the previous compact word size. */
+        .reader-shell.is-speech-debug-visible .content-word .reading-word {
             font-size: clamp(3.3rem, 16vw, 6.2rem);
         }
 
