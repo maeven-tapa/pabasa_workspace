@@ -295,6 +295,7 @@
         body.sidebar-collapsed .dashboard-sidebar .sidebar-subtext,
         body.sidebar-collapsed .dashboard-sidebar .sidebar-section-label,
         body.sidebar-collapsed .dashboard-sidebar .sidebar-logo-text,
+        body.sidebar-collapsed .dashboard-sidebar .pabasa-logo-letters,
         body.sidebar-collapsed .dashboard-sidebar .brand-note {
             width: 0 !important;
             max-width: 0 !important;
@@ -1364,10 +1365,12 @@
             align-items: center;
             color: #fff;
             display: flex;
-            gap: 0.85rem;
+            gap: 0;
+            justify-content: center;
             min-height: 58px;
             padding: 0.45rem 0.2rem;
             text-decoration: none;
+            width: 100%;
         }
 
         .sidebar-logo-link:hover,
@@ -1381,7 +1384,8 @@
             border-radius: 0;
             box-shadow: none;
             flex: 0 0 auto;
-            height: 54px;
+            /* Match the home-navbar mark so the bird and PABASA letters read as one logo. */
+            height: clamp(2rem, 2.7vw, 2.4rem);
             object-fit: contain;
             padding: 0;
             width: auto;
