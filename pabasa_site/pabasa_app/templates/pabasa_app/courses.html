@@ -6788,6 +6788,128 @@
     display: grid;
     gap: 0.75rem;
 }
+/* Unified Pabasa activity-authoring system */
+.template-builder-panel {
+    --activity-brand: #1f6f8b;
+    --activity-brand-deep: #15556c;
+    --activity-brand-soft: #eef7f9;
+    --activity-ink: #172033;
+    --activity-muted: #64748b;
+    --activity-border: #dbe4e8;
+    --activity-surface: #ffffff;
+    --activity-subtle: #f6f9fa;
+    --activity-danger: #b42318;
+    background: var(--activity-surface);
+    border: 1px solid var(--activity-border);
+    border-radius: 18px;
+    box-shadow: 0 14px 36px rgba(15, 23, 42, .07);
+    color: var(--activity-ink);
+    padding: clamp(1rem, 2.4vw, 1.75rem);
+}
+.template-builder-shell { gap: 1.4rem; }
+.template-back-button {
+    align-items: center; align-self: flex-start; background: transparent; border: 0; border-radius: 9px;
+    color: var(--activity-brand-deep); display: inline-flex; font: 800 .86rem/1 "Nunito", "Segoe UI", sans-serif;
+    margin: -.3rem 0 0 -.45rem; min-height: 40px; padding: .55rem .65rem; transition: background-color .16s ease, color .16s ease;
+}
+.template-back-button:hover { background: var(--activity-brand-soft); color: var(--activity-brand); }
+.template-back-button:focus-visible,
+.template-builder-panel :is(button, input, select, textarea):focus-visible { outline: 3px solid rgba(31,111,139,.24); outline-offset: 2px; }
+.template-builder-header { align-items: center; border-bottom: 1px solid var(--activity-border); padding-bottom: 1.3rem; }
+.template-builder-eyebrow { color: var(--activity-brand); display: block; font: 900 .72rem/1.2 "Nunito", sans-serif; letter-spacing: .1em; margin-bottom: .4rem; text-transform: uppercase; }
+.template-builder-heading h5 { color: var(--activity-ink); font: 900 clamp(1.35rem, 3vw, 1.7rem)/1.15 "Nunito", sans-serif; letter-spacing: -.025em; margin: 0; }
+.template-builder-heading p { color: var(--activity-muted); font: 400 .94rem/1.5 "Quattrocento Sans", "Segoe UI", sans-serif; margin: .45rem 0 0; max-width: 620px; }
+.template-builder-lesson-pill { background: var(--activity-brand-soft); border-color: #cce3e9; border-radius: 9px; color: var(--activity-brand-deep); font-size: .8rem; padding: .5rem .7rem; }
+.template-builder-form { gap: 0; }
+.template-builder-section { background: transparent; border: 0; border-bottom: 1px solid var(--activity-border); border-radius: 0; padding: 1.5rem 0; }
+.template-section-heading { align-items: flex-start; display: flex; gap: .8rem; margin-bottom: 1rem; }
+.template-section-index { align-items: center; background: var(--activity-brand-soft); border-radius: 8px; color: var(--activity-brand); display: inline-flex; flex: 0 0 34px; font: 900 .72rem/1 "Nunito", sans-serif; height: 30px; justify-content: center; letter-spacing: .05em; }
+.template-section-heading h6 { color: var(--activity-ink); font: 900 1rem/1.25 "Nunito", sans-serif; margin: 0; }
+.template-section-heading p { color: var(--activity-muted); font: 400 .86rem/1.45 "Quattrocento Sans", sans-serif; margin: .25rem 0 0; }
+.template-required { color: var(--activity-danger); }
+.template-information-grid { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1.6fr) minmax(210px, .7fr); }
+.template-builder-panel .form-label { color: #334155 !important; font: 800 .86rem/1.3 "Nunito", sans-serif !important; margin-bottom: .42rem; }
+.template-builder-panel :is(.form-control, .form-select) {
+    background-color: #fff; border: 1px solid #cbd8de !important; border-radius: 10px !important; box-shadow: none !important;
+    color: var(--activity-ink); font: 600 .95rem/1.4 "Quattrocento Sans", sans-serif; min-height: 44px; padding: .65rem .8rem !important;
+    transition: border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
+}
+.template-builder-panel textarea.form-control { min-height: 112px; resize: vertical; }
+.template-builder-panel :is(.form-control, .form-select):hover { border-color: #9eb5bf !important; }
+.template-builder-panel :is(.form-control, .form-select):focus { border-color: var(--activity-brand) !important; box-shadow: 0 0 0 3px rgba(31,111,139,.13) !important; }
+.template-builder-panel :is(.form-control, .form-select):disabled { background: #eef2f4; color: #84919a; cursor: not-allowed; }
+.template-builder-panel .form-text { color: var(--activity-muted); font-size: .82rem; margin-top: .4rem; }
+.template-language-filter { background: var(--activity-subtle); border: 1px solid var(--activity-border); border-radius: 10px; display: grid; gap: 3px; margin: 0; padding: 3px; width: 100%; grid-template-columns: 1fr 1fr; }
+.template-language-option span { border-radius: 7px; color: #52616c; display: block; font: 800 .86rem/1.2 "Nunito", sans-serif; padding: .64rem .8rem; text-align: center; transition: background-color .16s ease, color .16s ease, box-shadow .16s ease; }
+.template-language-option input:checked + span { background: #fff; box-shadow: 0 1px 4px rgba(15,23,42,.12); color: var(--activity-brand-deep); }
+.template-language-option input:focus-visible + span { outline: 3px solid rgba(31,111,139,.24); outline-offset: 1px; }
+.template-weeks-grid { gap: .55rem; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); }
+.template-week-chip { background: #fff; border-color: var(--activity-border); border-radius: 10px; font: 800 .85rem/1.2 "Nunito", sans-serif; min-height: 44px; padding: .55rem .7rem; transform: none; }
+.template-week-chip:hover { background: var(--activity-subtle); border-color: #9eb9c3; transform: none; }
+.template-week-chip.is-selected { background: var(--activity-brand-soft); border-color: var(--activity-brand); color: var(--activity-brand-deep); }
+.template-week-chip .form-check-input { accent-color: var(--activity-brand); }
+.template-preview-panel { background: var(--activity-subtle); border: 1px solid var(--activity-border); border-radius: 14px; color: var(--activity-ink); min-height: 260px; overflow: hidden; padding: 0; }
+.activity-preview-chrome { background: #fff; border-bottom: 1px solid var(--activity-border); display: flex; justify-content: space-between; gap: 1rem; padding: .8rem 1rem; }
+.activity-preview-label { align-items: center; color: var(--activity-brand-deep); display: inline-flex; font: 900 .72rem/1 "Nunito", sans-serif; gap: .4rem; letter-spacing: .08em; text-transform: uppercase; }
+.activity-preview-meta { color: var(--activity-muted); font-size: .78rem; text-align: right; }
+.activity-preview-stage { padding: clamp(1.1rem, 3vw, 2rem); }
+.activity-preview-title { color: var(--activity-ink); font: 900 clamp(1.2rem, 2.7vw, 1.55rem)/1.2 "Nunito", sans-serif; letter-spacing: -.02em; margin: 0; }
+.activity-preview-instruction { color: var(--activity-muted); font-size: .92rem; line-height: 1.5; margin: .35rem 0 1.25rem; }
+.activity-preview-content { margin-top: 1rem; }
+.activity-preview-empty { align-items: center; color: var(--activity-muted); display: flex; flex-direction: column; gap: .65rem; justify-content: center; min-height: 260px; padding: 2rem; text-align: center; }
+.activity-preview-empty i { color: #8eb3c0; font-size: 1.7rem; }
+.preview-learning-grid { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.preview-learning-card { background: #fff; border: 1px solid var(--activity-border); border-radius: 11px; padding: 1rem; }
+.preview-letter-pair { align-items: center; display: flex; gap: .8rem; justify-content: center; min-height: 88px; }
+.preview-letter-token { align-items: center; background: var(--activity-brand-soft); border: 1px solid #c7e2e8; border-radius: 10px; color: var(--activity-brand-deep); display: flex; font: 900 1.8rem/1 "Nunito", sans-serif; height: 58px; justify-content: center; min-width: 58px; padding: .4rem; }
+.preview-arrow { color: #8aa0aa; font-size: 1.1rem; }
+.preview-answer-token { color: var(--activity-ink); font: 900 1.2rem/1.2 "Nunito", sans-serif; }
+.preview-sound-word { font: 900 1.55rem/1.3 "Nunito", sans-serif; letter-spacing: .04em; text-align: center; }
+.preview-sound-highlight { background: #dff1f4; border-bottom: 3px solid var(--activity-brand); color: var(--activity-brand-deep); padding: 0 .12em; }
+.preview-reading-card { background: #fff; border: 1px solid var(--activity-border); border-radius: 11px; font-size: 1.08rem; line-height: 1.85; padding: 1.25rem; }
+.preview-listen { align-items: center; background: #fff; border: 1px solid #b7d5de; border-radius: 9px; color: var(--activity-brand-deep); display: inline-flex; font: 800 .82rem/1 "Nunito", sans-serif; gap: .4rem; min-height: 38px; padding: .55rem .75rem; }
+.preview-lost-found { display: grid; gap: .8rem; grid-template-columns: 1fr 1fr; }
+.preview-lost-found > div { background: #fff; border: 1px solid var(--activity-border); border-radius: 11px; min-height: 130px; padding: 1rem; }
+.preview-lost-found h7 { color: var(--activity-muted); display: block; font: 900 .7rem/1 "Nunito",sans-serif; letter-spacing: .12em; margin-bottom: .85rem; text-transform: uppercase; }
+.preview-syllable-pieces { display: flex; flex-wrap: wrap; gap: .45rem; }
+.preview-syllable-piece { background: var(--activity-brand-soft); border: 1px solid #c7e2e8; border-radius: 8px; color: var(--activity-brand-deep); font: 900 1rem/1 "Nunito",sans-serif; padding: .55rem .65rem; }
+.preview-found-word { color: var(--activity-brand-deep); font: 900 1.4rem/1.2 "Nunito", sans-serif; }
+.preview-writing-area { background: #fff; border: 1px solid var(--activity-border); border-radius: 11px; min-height: 130px; padding: 1rem; }
+.preview-writing-line { border-bottom: 1px solid #cbd8de; height: 34px; }
+.preview-question { background: #fff; border: 1px solid var(--activity-border); border-left: 4px solid var(--activity-brand); border-radius: 8px 11px 11px 8px; padding: 1rem; }
+.template-builder-actions { align-items: center; background: #fff; display: flex; gap: 1rem; justify-content: space-between; padding-top: 1.25rem; }
+.template-action-buttons { display: flex; flex-wrap: wrap; gap: .65rem; justify-content: flex-end; margin-left: auto; }
+.template-btn { align-items: center; border-radius: 10px !important; display: inline-flex; font: 900 .88rem/1 "Nunito", sans-serif; gap: .45rem; justify-content: center; min-height: 44px; padding: .68rem 1rem; transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .1s ease; }
+.template-btn:active { transform: translateY(1px); }
+.template-btn-primary { background: var(--activity-brand, #1f6f8b); border-color: var(--activity-brand, #1f6f8b); color: #fff; }
+.template-btn-primary:hover { background: var(--activity-brand-deep, #15556c); border-color: var(--activity-brand-deep, #15556c); color: #fff; }
+.template-btn-secondary { background: #fff; border-color: #bdcbd1; color: #46545d; }
+.template-btn-secondary:hover { background: var(--activity-subtle); border-color: #91a7b0; color: var(--activity-ink); }
+.template-btn-accent { border-color: #8db9c6; color: var(--activity-brand-deep); }
+.template-btn:disabled { background: #e7edef; border-color: #e7edef; color: #8a969d; cursor: not-allowed; opacity: 1; }
+.template-validation-message { align-items: center; color: var(--activity-danger); display: flex; font: 700 .84rem/1.4 "Quattrocento Sans", sans-serif; gap: .45rem; }
+@media (max-width: 767.98px) {
+    .template-builder-header { align-items: flex-start; flex-direction: column; }
+    .template-information-grid { grid-template-columns: 1fr; }
+    .template-builder-section { padding: 1.2rem 0; }
+    .preview-lost-found { grid-template-columns: 1fr; }
+    .template-builder-actions { align-items: stretch; flex-direction: column; }
+    .template-action-buttons { display: grid; grid-template-columns: 1fr; margin: 0; width: 100%; }
+    .template-action-buttons .template-btn-primary { grid-row: 1; }
+    .activity-preview-chrome { align-items: flex-start; flex-direction: column; }
+    .activity-preview-meta { text-align: left; }
+}
+body.dark-theme .template-builder-panel { --activity-ink:#e5edf0; --activity-muted:#9eacb4; --activity-border:#33434b; --activity-surface:#172126; --activity-subtle:#1e2b31; background:var(--activity-surface); }
+body.dark-theme .template-builder-panel :is(.form-control,.form-select), body.dark-theme .activity-preview-chrome, body.dark-theme .preview-learning-card, body.dark-theme .preview-reading-card, body.dark-theme .preview-lost-found > div, body.dark-theme .preview-writing-area, body.dark-theme .preview-question, body.dark-theme .template-builder-actions { background:#1b282e; color:var(--activity-ink); }
+#templateActivityGrid .template-card-actions .template-btn { border-radius: 10px !important; }
+#addMaterialModal.template-builder-active .modal-dialog { max-width: 1040px; }
+#addMaterialModal.template-builder-active > .modal-dialog > .modal-content > .modal-header,
+#addMaterialModal.template-builder-active #materialSourceSelectorPanel,
+#addMaterialModal.template-builder-active #otherMaterialPanel,
+#addMaterialModal.template-builder-active .personal-material-section,
+#addMaterialModal.template-builder-active > .modal-dialog > .modal-content > .modal-footer { display: none !important; }
+#addMaterialModal.template-builder-active .modal-body { padding-top: 1rem; }
+#addMaterialModal.template-builder-active #templateLandingPanel { display: block !important; }
 #addMaterialModal .teacher-field .form-label,
 #addMaterialModal .form-label {
     font-family: "Nunito", "Segoe UI", sans-serif;
@@ -8032,7 +8154,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     {% csrf_token %}
                     <div id="amValidationError" class="col-12 alert alert-danger d-none mb-0 rounded-3" role="alert"></div>
 
-                    <div class="col-12">
+                    <div class="col-12" id="materialSourceSelectorPanel">
                         <div class="d-flex justify-content-center py-3">
                             <div class="text-center w-100">
                                 <div class="fw-semibold">Reading Material Source</div>
@@ -8100,66 +8222,74 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <p>Choose an activity type to create learning material for your students.</p>
                             </div>
                             <div id="templateActivityGrid"></div>
-                            <div id="templateBuilderPanel" class="template-builder-panel d-none">
+                            <div id="templateBuilderPanel" class="template-builder-panel d-none" aria-labelledby="templateBuilderTitle">
                                 <div class="template-builder-shell">
-                                    <button type="button" class="btn btn-link px-0 text-decoration-none fw-bold" id="templateBackBtn">
+                                    <button type="button" class="template-back-button" id="templateBackBtn">
                                         <i class="bi bi-arrow-left me-1"></i>Back to Activity Templates
                                     </button>
                                     <div class="template-builder-header">
-                                        <div>
-                                            <h5 class="mb-1" id="templateBuilderTitle">Create Activity</h5>
-                                            <p class="mb-0 text-muted" id="templateBuilderSubtitle">Select a template to begin.</p>
+                                        <div class="template-builder-heading">
+                                            <span class="template-builder-eyebrow">Learning material</span>
+                                            <h5 id="templateBuilderTitle">Create Activity</h5>
+                                            <p id="templateBuilderSubtitle">Configure this learning activity before adding it to your learning materials.</p>
                                         </div>
                                         <div class="template-builder-lesson-pill" id="templateBuilderLessonPill"></div>
                                     </div>
                                     <form id="templateActivityForm" class="template-builder-form" novalidate>
-                                        <div class="row g-3">
-                                            <div class="col-12">
-                                                <label class="form-label fw-bold" for="templateActivityTitle">Activity Title <span class="text-danger">*</span></label>
-                                                <input type="text" id="templateActivityTitle" class="form-control" placeholder="e.g., Animals Around Us">
+                                        <section class="template-builder-section template-information-section" aria-labelledby="templateInformationHeading">
+                                            <div class="template-section-heading">
+                                                <span class="template-section-index">01</span>
+                                                <div><h6 id="templateInformationHeading">Activity Information</h6><p>Name the material and choose the learner language.</p></div>
                                             </div>
-                                            <div class="col-12">
-                                                <label class="form-label fw-bold d-block">Language <span class="text-danger">*</span></label>
-                                                <fieldset class="template-language-filter template-builder-language-toggle" aria-label="Activity language">
-                                                    <legend class="visually-hidden">Activity language</legend>
-                                                    <label class="template-language-option"><input type="radio" name="templateLanguage" value="Filipino" checked><span>Filipino</span></label>
-                                                    <label class="template-language-option"><input type="radio" name="templateLanguage" value="English"><span>English</span></label>
-                                                </fieldset>
-                                                <input type="hidden" id="templateLanguageHidden" value="Filipino">
+                                            <div class="template-information-grid">
+                                                <div class="template-field template-title-field">
+                                                    <label class="form-label" for="templateActivityTitle">Activity title <span class="template-required" aria-hidden="true">*</span></label>
+                                                    <input type="text" id="templateActivityTitle" class="form-control" placeholder="e.g., Animals Around Us" aria-required="true">
+                                                </div>
+                                                <div class="template-field">
+                                                    <label class="form-label d-block">Language <span class="template-required" aria-hidden="true">*</span></label>
+                                                    <fieldset class="template-language-filter template-builder-language-toggle" aria-label="Activity language">
+                                                        <legend class="visually-hidden">Activity language</legend>
+                                                        <label class="template-language-option"><input type="radio" name="templateLanguage" value="Filipino" checked><span>Filipino</span></label>
+                                                        <label class="template-language-option"><input type="radio" name="templateLanguage" value="English"><span>English</span></label>
+                                                    </fieldset>
+                                                    <input type="hidden" id="templateLanguageHidden" value="Filipino">
+                                                </div>
                                             </div>
-                                        </div>
+                                        </section>
 
-                                        <div class="template-builder-section">
-                                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-                                                <h6 class="mb-0 fw-bold">Activity Content</h6>
-                                                <small class="text-muted" id="templateActivityContentHint"></small>
+                                        <section class="template-builder-section" aria-labelledby="templateConfigurationHeading">
+                                            <div class="template-section-heading">
+                                                <span class="template-section-index">02</span>
+                                                <div><h6 id="templateConfigurationHeading">Activity Configuration</h6><p id="templateActivityContentHint"></p></div>
                                             </div>
                                             <div id="templateDynamicFields"></div>
-                                        </div>
+                                        </section>
 
-                                        <div class="template-builder-section">
-                                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-                                                <h6 class="mb-0 fw-bold">Assign to Week(s) <span class="text-danger">*</span></h6>
-                                                <small class="text-muted">Choose one or more weeks.</small>
+                                        <section class="template-builder-section" aria-labelledby="templateScheduleHeading">
+                                            <div class="template-section-heading">
+                                                <span class="template-section-index">03</span>
+                                                <div><h6 id="templateScheduleHeading">Learning Schedule <span class="template-required" aria-hidden="true">*</span></h6><p>Choose one or more weeks for this material.</p></div>
                                             </div>
                                             <div id="templateWeeksGrid" class="template-weeks-grid"></div>
-                                        </div>
+                                        </section>
 
-                                        <div class="template-builder-section">
-                                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-                                                <h6 class="mb-0 fw-bold">Preview Activity</h6>
+                                        <section class="template-builder-section template-preview-section" aria-labelledby="templatePreviewHeading">
+                                            <div class="template-section-heading">
+                                                <span class="template-section-index">04</span>
+                                                <div><h6 id="templatePreviewHeading">Learning Material Preview</h6><p>A learner-facing view of the activity you are creating.</p></div>
                                             </div>
-                                            <div id="templatePreviewPanel" class="template-preview-panel text-muted small">
-                                                Select content above to preview the activity.
+                                            <div id="templatePreviewPanel" class="template-preview-panel" aria-live="polite">
+                                                <div class="template-preview-empty"><i class="bi bi-layout-text-window" aria-hidden="true"></i><span>Select content above to preview the activity.</span></div>
                                             </div>
-                                        </div>
+                                        </section>
 
                                         <div class="template-builder-actions">
-                                            <div class="text-danger small fw-semibold d-none" id="templateValidationError"></div>
-                                            <div class="d-flex flex-column flex-sm-row gap-2 justify-content-end">
-                                                <button type="button" class="btn btn-outline-secondary" id="templateCancelBtn">Cancel</button>
-                                                <button type="button" class="btn btn-outline-primary" id="templateSaveAssignBtn">Save &amp; Assign</button>
-                                                <button type="button" class="btn btn-primary" id="templateSaveBtn">Save Activity</button>
+                                            <div class="template-validation-message d-none" id="templateValidationError" role="alert"><i class="bi bi-exclamation-circle" aria-hidden="true"></i><span></span></div>
+                                            <div class="template-action-buttons">
+                                                <button type="button" class="btn template-btn template-btn-secondary" id="templateCancelBtn">Cancel</button>
+                                                <button type="button" class="btn template-btn template-btn-secondary template-btn-accent" id="templateSaveAssignBtn">Save &amp; Assign</button>
+                                                <button type="button" class="btn template-btn template-btn-primary" id="templateSaveBtn"><i class="bi bi-check2" aria-hidden="true"></i><span>Save Activity</span></button>
                                             </div>
                                         </div>
                                     </form>
@@ -13624,7 +13754,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             'Fluency Reading': { lesson: 'Reading Fluency', hint: 'Provide passages for smooth, accurate reading.', fields: [{ key: 'passage', label: 'Reading passage', type: 'textarea' }], addLabel: 'Add Passage' },
             'Story Reading': { lesson: 'Story Reading', hint: 'Select a prescribed story for reading practice.', fields: [], addLabel: 'Select Story' },
             "5W's Story Questions": { lesson: 'Reading Comprehension', hint: 'Build questions around a story or passage.', fields: [{ key: 'story', label: 'Story/passage', type: 'textarea' }, { key: 'question', label: 'Question', type: 'text' }, { key: 'questionType', label: 'Question type / 5W category', type: 'select', options: ['Who', 'What', 'When', 'Where', 'Why', 'How'] }, { key: 'answer', label: 'Answer or answer choices', type: 'textarea' }], addLabel: 'Add Question' },
-            'Retell the Story': { lesson: 'Story Retelling', hint: 'Guide students to retell the story in their own words.', fields: [{ key: 'story', label: 'Story/passage', type: 'textarea' }, { key: 'instructions', label: 'Retelling instructions', type: 'textarea' }, { key: 'guideQuestions', label: 'Optional guide questions', type: 'textarea' }], addLabel: 'Add Prompt' },
+            'Retell the Story': { lesson: 'Story Retelling', hint: 'Guide students to retell the story in their own words.', fields: [{ key: 'story', label: 'Story/passage', type: 'textarea' }, { key: 'guideQuestions', label: 'Optional guide questions', type: 'textarea' }], addLabel: 'Add Prompt' },
             'Story Response': { lesson: 'Response to Story', hint: 'Prompt students for a response or reflection.', fields: [{ key: 'story', label: 'Story/passage', type: 'textarea' }, { key: 'prompt', label: 'Response question/prompt', type: 'textarea' }, { key: 'guidance', label: 'Optional response guidance', type: 'textarea' }], addLabel: 'Add Prompt' }
         };
         const TEMPLATE_META = [
@@ -13982,6 +14112,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             node.style.display = visible ? '' : 'none';
         }
 
+        function setTemplateBuilderActive(isActive) {
+            const active = Boolean(isActive);
+            addMaterialModal?.classList.toggle('template-builder-active', active);
+            addMaterialModal?.setAttribute('data-active-interface', active ? 'template-builder' : 'material-source');
+            if (!activeTemplateActivity && active) return;
+            if (templateActivityGrid) setNodeVisibility(templateActivityGrid, !active);
+            if (templateBuilderPanel) setNodeVisibility(templateBuilderPanel, active);
+        }
+
         function setCourseMaterialDropdownOpen(state, isOpen) {
             if (!state || (isOpen && state.trigger.disabled)) return;
             state.wrapper.classList.toggle('is-open', Boolean(isOpen));
@@ -14080,7 +14219,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     </div>
                     <p class="template-card-description">${escapeHtml((TEMPLATE_DEFINITIONS[title] || {}).hint || '')}</p>
                     <div class="template-card-actions">
-                        <button type="button" class="btn btn-primary template-create-btn" data-template-title="${escapeHtml(title)}">Create Activity</button>
+                        <button type="button" class="btn template-btn template-btn-primary template-create-btn" data-template-title="${escapeAttr(title)}" aria-label="Create ${escapeAttr(title)} activity">
+                            <i class="bi bi-plus-lg" aria-hidden="true"></i><span>Create Activity</span>
+                        </button>
                     </div>
                 </article>
             `).join('');
@@ -15272,10 +15413,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const def = getTemplateDefinition(title);
             const isEditMode = Boolean(window.__templateEditStateRestored || activeTemplateActivity?.mode === 'edit');
             if (templateBuilderTitle) templateBuilderTitle.textContent = isEditMode ? 'Edit Activity' : 'Create Activity';
+            if (templateSaveBtn) {
+                templateSaveBtn.innerHTML = isEditMode
+                    ? '<i class="bi bi-check2" aria-hidden="true"></i><span>Save Changes</span>'
+                    : '<i class="bi bi-plus-lg" aria-hidden="true"></i><span>Create Activity</span>';
+                templateSaveBtn.setAttribute('aria-label', isEditMode ? 'Save activity changes' : `Create ${title} activity`);
+            }
             if (templateBuilderSubtitle) {
                 templateBuilderSubtitle.textContent = isEditMode
-                    ? `${title} · Lesson: ${def.lesson} · Editing existing configuration`
-                    : `${title} · Lesson: ${def.lesson}`;
+                    ? `Review this ${title} activity and update its learning material configuration.`
+                    : 'Configure this learning activity before adding it to your learning materials.';
             }
             if (templateBuilderLessonPill) templateBuilderLessonPill.textContent = def.lesson;
             if (templateActivityContentHint) templateActivityContentHint.textContent = def.hint;
@@ -15317,10 +15464,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             <div class="border rounded-4 bg-light p-3 p-lg-4">
                                 <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
                                     <div><h6 class="fw-bold mb-1">Prebuilt Activities</h6><div class="small text-muted">${escapeHtml(language)} · ${escapeHtml(formatLabel)}</div></div>
-                                    <span class="badge text-bg-primary">5 choices</span>
+                                    <span class="badge text-bg-primary">${activities.length} choice${activities.length === 1 ? '' : 's'}</span>
                                 </div>
                                 <div class="row g-3" id="syllablePrebuiltGrid">
-                                    ${activities.map(activity => {
+                                    ${activities.length ? activities.map(activity => {
                                         const selected = activeTemplateActivity.selectedActivityId === activity.activity_id;
                                         const preview = currentFormat === 'big_box'
                                             ? `<div class="small fw-bold text-uppercase mb-1">Big Box</div><div class="small">${activity.syllable_pool.map(escapeHtml).join(' · ')}</div><div class="small mt-2">${activity.items.map(item => escapeHtml(item.answer)).join(', ')}</div>`
@@ -15331,7 +15478,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                             <div class="collapse mt-3" id="preview_${escapeAttr(activity.activity_id)}"><div class="small border-top pt-2"><strong>Instruction:</strong> ${escapeHtml(activity.instruction)}<br>${activity.items.map((item, index) => `${index + 1}. ${escapeHtml(item.syllables.join(' + '))} → ${escapeHtml(item.answer)}`).join('<br>')}</div></div>
                                             <div class="d-flex gap-2 mt-3"><button type="button" class="btn btn-sm btn-outline-secondary syllable-preview-btn" data-bs-toggle="collapse" data-bs-target="#preview_${escapeAttr(activity.activity_id)}">Preview</button><button type="button" class="btn btn-sm ${selected ? 'btn-primary' : 'btn-outline-primary'} syllable-select-btn" data-activity-id="${escapeAttr(activity.activity_id)}">${selected ? 'Selected' : 'Select'}</button></div>
                                         </div></div>`;
-                                    }).join('')}
+                                    }).join('') : `<div class="col-12"><div class="alert alert-warning mb-0" role="status"><i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>No prebuilt activities are available. Reload the page or contact an administrator.</div></div>`}
                                 </div>
                             </div>
                         </div>
@@ -15394,41 +15541,84 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function renderTemplatePreview() {
             if (!templatePreviewPanel || !activeTemplateActivity) return;
-            const summary = isSyllableBlendingTemplate(activeTemplateActivity.templateTitle) ? (() => {
-                const isBigBox = activeTemplateActivity.activityFormat === 'big_box';
-                const isFilipino = activeTemplateActivity.language === 'Filipino';
-                const choices = SYLLABLE_BLENDING_CATALOG?.[activeTemplateActivity.language]?.[activeTemplateActivity.activityFormat] || [];
-                const selectedActivity = choices.find(activity => activity.activity_id === activeTemplateActivity.selectedActivityId);
-                return {
-                    title: selectedActivity ? `Activity ${selectedActivity.set_number} — ${selectedActivity.activity_name}` : 'Select a prebuilt activity',
-                    meta: `${activeTemplateActivity.language} · ${isBigBox ? 'Big Box — Word Building' : 'Syllable Combination'}`,
-                    body: selectedActivity ? selectedActivity.items.map(item => isBigBox ? item.answer : `${item.syllables.join(' + ')} → ${item.answer}`) : [],
-                    emptyMessage: 'Choose one of the five cards above.'
-                };
-            })() : getTemplateContentSelectionSummary();
+            const templateTitle = activeTemplateActivity.templateTitle;
+            const language = activeTemplateActivity.language || 'Filipino';
+            const summary = getTemplateContentSelectionSummary();
             const weeks = getTemplateWeeks();
-            const selectionSummary = isPictureWordMatchingTemplate(activeTemplateActivity.templateTitle)
-                ? {
-                    summary: `Set ${activeTemplateActivity.pictureWordMatching?.setKey || 'A'} • ${activeTemplateActivity.pictureWordMatching?.language || getPictureWordMatchingSelectedLanguage()}`,
-                    emptyMessage: 'Select a prescribed picture-word set.'
-                }
-                : summary;
+            const items = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : [];
+            const title = (templateActivityTitle?.value || activeTemplateActivity.title || summary.title || templateTitle).trim();
+            const learnerCopy = language === 'English' ? {
+                letter: 'Match each letter with the sound it makes.', sound: 'Find the target sound in the word.', clap: 'Say each word. Clap once for every syllable.', blend: 'Blend the syllables to find the word.',
+                picture: 'Match each picture with the correct word.', decode: 'Say each sound, then blend the word.', meaning: 'Match the word with its meaning.', phrase: 'Read each phrase smoothly.', sentence: 'Read each sentence aloud.',
+                fluency: 'Read the passage clearly and at a steady pace.', story: 'Read the story carefully.', questions: 'Read the passage, then answer the question.', retell: 'Retell the story in your own words.', response: 'Write your response to the story.'
+            } : {
+                letter: 'Itugma ang bawat titik sa tunog nito.', sound: 'Hanapin ang target na tunog sa salita.', clap: 'Bigkasin ang salita. Pumalakpak sa bawat pantig.', blend: 'Pagsamahin ang mga pantig upang mabuo ang salita.',
+                picture: 'Itugma ang larawan sa tamang salita.', decode: 'Bigkasin ang bawat tunog, saka buuin ang salita.', meaning: 'Itugma ang salita sa kahulugan nito.', phrase: 'Basahin nang maayos ang bawat parirala.', sentence: 'Basahin nang malakas ang bawat pangungusap.',
+                fluency: 'Basahin nang malinaw at tuloy-tuloy ang talata.', story: 'Basahing mabuti ang kuwento.', questions: 'Basahin ang teksto at sagutin ang tanong.', retell: 'Isalaysay muli ang kuwento sa sariling salita.', response: 'Isulat ang iyong tugon sa kuwento.'
+            };
+
+            const empty = message => `<div class="template-preview-empty"><i class="bi bi-stars" aria-hidden="true"></i><span>${escapeHtml(message)}</span></div>`;
+            const cards = content => `<div class="preview-learning-grid">${content}</div>`;
+            const readButton = () => `<button type="button" class="preview-listen" aria-label="Listen to the reading"><i class="bi bi-volume-up" aria-hidden="true"></i>${language === 'English' ? 'Listen' : 'Pakinggan'}</button>`;
+            let instruction = '';
+            let previewBody = '';
+
+            if (templateTitle === 'Letter & Sound Matching' || templateTitle === 'Match the Letter to Its Sound') {
+                instruction = learnerCopy.letter;
+                previewBody = items.length ? cards(items.slice(0, 6).map(item => `<div class="preview-learning-card preview-letter-pair"><span class="preview-letter-token">${escapeHtml(item.letter || '?')}</span><i class="bi bi-arrow-left-right preview-arrow" aria-hidden="true"></i><span class="preview-answer-token">${escapeHtml(item.sound || '?')}</span></div>`).join('')) : empty('Add a letter and sound pair to begin the preview.');
+            } else if (templateTitle === 'Sound Detective') {
+                instruction = learnerCopy.sound;
+                previewBody = items.length ? cards(items.slice(0, 6).map(item => {
+                    const word = String(item.word || ''); const sound = String(item.targetSound || '').replaceAll('/', '');
+                    const safeSound = sound.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const marked = sound ? escapeHtml(word).replace(new RegExp(safeSound, 'i'), match => `<span class="preview-sound-highlight">${match}</span>`) : escapeHtml(word);
+                    return `<div class="preview-learning-card"><div class="preview-sound-word">${marked}</div><div class="small text-muted text-center mt-2">${escapeHtml(item.position || '')} sound · ${escapeHtml(item.targetSound || '')}</div></div>`;
+                }).join('')) : empty('Add a word and target sound to begin the preview.');
+            } else if (templateTitle === 'Clap & Count Syllables') {
+                instruction = learnerCopy.clap;
+                previewBody = items.length ? cards(items.slice(0, 6).map(item => `<div class="preview-learning-card text-center"><div class="preview-sound-word">${escapeHtml(item.word || '')}</div><div class="mt-3" aria-label="${escapeAttr(item.syllables || '')} syllables">${Array.from({length: Math.min(8, Number(item.syllables) || 0)}, () => '<i class="bi bi-circle-fill mx-1" style="font-size:.48rem;color:#1f6f8b" aria-hidden="true"></i>').join('')}</div></div>`).join('')) : empty('Add a word and its syllable count to begin the preview.');
+            } else if (isSyllableBlendingTemplate(templateTitle)) {
+                instruction = learnerCopy.blend;
+                const choices = SYLLABLE_BLENDING_CATALOG?.[language]?.[activeTemplateActivity.activityFormat] || [];
+                const selected = choices.find(activity => activity.activity_id === activeTemplateActivity.selectedActivityId);
+                if (selected) {
+                    const first = selected.items?.[0] || {}; const pieces = first.syllables || selected.syllable_pool || [];
+                    previewBody = `<div class="preview-lost-found"><div><h7>Lost</h7><div class="preview-syllable-pieces">${pieces.map(piece => `<span class="preview-syllable-piece">${escapeHtml(piece)}</span>`).join('')}</div></div><div><h7>Found</h7><div class="preview-found-word">${escapeHtml(first.answer || '…')}</div><div class="mt-3">${readButton()}</div></div></div>`;
+                } else previewBody = empty('Choose a prebuilt activity to see its Lost & Found experience.');
+            } else if (isPictureWordMatchingTemplate(templateTitle)) {
+                instruction = learnerCopy.picture;
+                const pictureItems = activeTemplateActivity.pictureWordMatching?.mode === 'custom' ? getPictureWordCustomSelection() : (activeTemplateActivity.items || []);
+                previewBody = pictureItems.length ? cards(pictureItems.slice(0, 6).map(item => { const image = getPictureWordMatchingPreviewImage(item, activeTemplateActivity.pictureWordMatching?.setKey); const word = getPictureWordMatchingWord(item, language); return `<div class="preview-learning-card text-center">${image ? `<img src="${escapeAttr(image)}" alt="" style="width:72px;height:72px;object-fit:contain">` : '<i class="bi bi-image fs-2 text-muted" aria-hidden="true"></i>'}<div class="preview-answer-token mt-2">${escapeHtml(word || item.word || '?')}</div></div>`; }).join('')) : empty('Choose a picture-word set to begin the preview.');
+            } else if (templateTitle === 'Decode the Word') {
+                instruction = learnerCopy.decode;
+                const values = {}; templateDynamicFields?.querySelectorAll('.template-content-field').forEach(field => values[field.dataset.fieldKey] = field.value);
+                previewBody = values.word ? `<div class="preview-learning-card text-center"><div class="preview-syllable-pieces justify-content-center">${Array.from(String(values.word)).map(char => `<span class="preview-syllable-piece">${escapeHtml(char)}</span>`).join('')}</div><div class="preview-found-word mt-4">${escapeHtml(values.word)}</div></div>` : empty('Enter a word to see the decoding task.');
+            } else if (templateTitle === 'Word Meaning Match') {
+                instruction = learnerCopy.meaning;
+                previewBody = items.length ? cards(items.slice(0, 6).map(item => `<div class="preview-learning-card"><div class="preview-answer-token">${escapeHtml(item.word || '')}</div><div class="small text-muted mt-2">${escapeHtml(item.meaning || '')}</div></div>`).join('')) : empty('Add words and meanings to begin the preview.');
+            } else if (isPhraseReadingTemplate(templateTitle) || isSentenceReadingTemplate(templateTitle)) {
+                instruction = isPhraseReadingTemplate(templateTitle) ? learnerCopy.phrase : learnerCopy.sentence;
+                previewBody = summary.body?.length ? `<div class="d-flex justify-content-end mb-2">${readButton()}</div><div class="preview-reading-card">${summary.body.slice(0, 8).map(line => `<div class="mb-2">${escapeHtml(String(line).replace(/^\d+\.\s*/, ''))}</div>`).join('')}</div>` : empty(summary.emptyMessage || 'Select reading content to begin the preview.');
+            } else if (templateTitle === 'Fluency Reading' || isStoryReadingTemplate(templateTitle)) {
+                instruction = templateTitle === 'Fluency Reading' ? learnerCopy.fluency : learnerCopy.story;
+                const passage = summary.body?.[0] || templateDynamicFields?.querySelector('[data-field-key="passage"]')?.value || '';
+                previewBody = passage ? `<div class="d-flex justify-content-end mb-2">${readButton()}</div><article class="preview-reading-card">${escapeHtml(passage)}</article>` : empty('Select or add a passage to begin the preview.');
+            } else if (templateTitle === "5W's Story Questions") {
+                instruction = learnerCopy.questions;
+                const item = {}; templateDynamicFields?.querySelectorAll('.template-content-field').forEach(field => item[field.dataset.fieldKey] = field.value);
+                previewBody = item.story || item.question ? `<article class="preview-reading-card mb-3">${escapeHtml(item.story || '')}</article><div class="preview-question"><strong>${escapeHtml(item.questionType || 'Question')}:</strong> ${escapeHtml(item.question || '')}<div class="preview-writing-line mt-3"></div></div>` : empty('Add a passage and question to begin the preview.');
+            } else if (templateTitle === 'Retell the Story' || templateTitle === 'Story Response') {
+                instruction = templateTitle === 'Retell the Story' ? learnerCopy.retell : learnerCopy.response;
+                const item = {}; templateDynamicFields?.querySelectorAll('.template-content-field').forEach(field => item[field.dataset.fieldKey] = field.value);
+                const prompt = item.prompt || item.guideQuestions || item.guidance || '';
+                previewBody = item.story || prompt ? `<article class="preview-reading-card mb-3">${escapeHtml(item.story || '')}</article>${prompt ? `<div class="preview-question mb-3">${escapeHtml(prompt)}</div>` : ''}<div class="preview-writing-area" aria-label="Learner writing area"><div class="preview-writing-line"></div><div class="preview-writing-line"></div><div class="preview-writing-line"></div></div>` : empty('Add the story and response prompt to begin the preview.');
+            } else {
+                previewBody = summary.body?.length ? cards(summary.body.map(line => `<div class="preview-learning-card">${escapeHtml(line)}</div>`).join('')) : empty(summary.emptyMessage || 'Add content to begin the preview.');
+            }
+
             templatePreviewPanel.innerHTML = `
-                <div class="fw-bold mb-1">${escapeHtml(summary.title || activeTemplateActivity.title || 'Activity Preview')}</div>
-                <div class="small text-muted mb-2">${escapeHtml(summary.meta || `${activeTemplateActivity.language || ''} · ${activeTemplateActivity.lesson || ''}`)}</div>
-                <div class="mb-2"><strong>Weeks:</strong> ${weeks.length ? weeks.map(escapeHtml).join(', ') : 'None selected'}</div>
-                ${summary.body.length ? `
-                    <div class="mt-3">
-                        <div class="fw-semibold mb-2">${isStoryReadingTemplate(activeTemplateActivity.templateTitle) ? 'Story' : isSentenceReadingTemplate(activeTemplateActivity.templateTitle) ? 'Sentences' : isPhraseReadingTemplate(activeTemplateActivity.templateTitle) ? 'Phrases' : 'Content'}</div>
-                        ${isStoryReadingTemplate(activeTemplateActivity.templateTitle)
-                            ? `<div class="bg-white border rounded-3 px-3 py-3 lh-lg">${escapeHtml(summary.body[0] || '')}</div>`
-                            : `<div class="d-grid gap-2">
-                                ${summary.body.map((line, index) => `<div class="bg-white border rounded-3 px-3 py-2">${escapeHtml(line) ? `${index + 1}. ${escapeHtml(line)}` : ''}</div>`).join('')}
-                            </div>
-                            ${isSentenceReadingTemplate(activeTemplateActivity.templateTitle) ? `<div class="small text-muted mt-2">${summary.body.length} sentence${summary.body.length === 1 ? '' : 's'} selected</div>` : ''}`
-                        }
-                    </div>
-                ` : `<div class="text-muted small">${escapeHtml(selectionSummary.emptyMessage)}</div>`}
+                <div class="activity-preview-chrome"><span class="activity-preview-label"><i class="bi bi-eye" aria-hidden="true"></i>Preview</span><span class="activity-preview-meta">${escapeHtml(language)}${weeks.length ? ` · ${weeks.map(escapeHtml).join(', ')}` : ' · No week selected'}</span></div>
+                <div class="activity-preview-stage"><h6 class="activity-preview-title">${escapeHtml(title || templateTitle)}</h6><p class="activity-preview-instruction">${escapeHtml(instruction || summary.meta || '')}</p><div class="activity-preview-content">${previewBody}</div></div>
             `;
         }
 
@@ -15582,6 +15772,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function showTemplateBuilder(templateTitle) {
             const def = getTemplateDefinition(templateTitle);
+            window.__templateEditStateRestored = false;
             setSelectedTemplateLanguage('Filipino', { render: false });
             const templateLanguage = 'Filipino';
             if (!templateSupportsLanguage(templateTitle, templateLanguage)) return;
@@ -15618,19 +15809,27 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
             activeTemplateItemEditIndex = null;
             applyTemplateLanguageSelection(templateLanguage, templateTitle);
-            setNodeVisibility(templateActivityGrid, false);
-            setNodeVisibility(templateBuilderPanel, true);
+            window.__addMaterialDefaultMode = 'template';
+            setTemplateBuilderActive(true);
             if (templateActivityTitle) {
                 templateActivityTitle.value = '';
-                templateActivityTitle.closest('.col-12')?.classList.toggle('d-none', isSyllableBlendingTemplate(templateTitle));
+                templateActivityTitle.closest('.template-title-field')?.classList.toggle('d-none', isSyllableBlendingTemplate(templateTitle));
             }
             renderTemplateDynamicFields(templateTitle);
             renderTemplateWeeks();
             renderTemplatePreview();
+            window.requestAnimationFrame(() => {
+                templateBuilderPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const firstField = isSyllableBlendingTemplate(templateTitle)
+                    ? document.getElementById('syllableActivityTitle')
+                    : templateActivityTitle;
+                firstField?.focus({ preventScroll: true });
+            });
         }
 
         function hideTemplateBuilder() {
             activeTemplateActivity = null;
+            setTemplateBuilderActive(false);
             setAddMaterialMode('template');
             if (templateActivityGrid) {
                 setNodeVisibility(templateActivityGrid, true);
@@ -16562,6 +16761,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             window._pendingSharedMaterialOrigin = false;
             window._pendingSharedMaterialSourceId = null;
             window.__templateEditStateRestored = false;
+            activeTemplateActivity = null;
+            activeTemplateItemEditIndex = null;
+            setTemplateBuilderActive(false);
 
             const addHeader = document.querySelector('#addMaterialModal .modal-header h4');
             if (addHeader) addHeader.textContent = 'Add Reading Material';
@@ -16614,6 +16816,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function setAddMaterialMode(mode) {
             if (!mode) return;
+            setTemplateBuilderActive(false);
             const showTemplate = mode === 'template';
             const showPersonal = mode === 'personal';
             const showOther = mode === 'other';
@@ -16660,7 +16863,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     setNodeVisibility(templateActivityGrid, true);
                     renderTemplateLanding();
                     requestAnimationFrame(() => {
-                        if (templateActivityGrid && addMaterialModeToggle?.classList.contains('active-template')) {
+                        if (templateActivityGrid && addMaterialModeToggle?.classList.contains('active-template') && !addMaterialModal?.classList.contains('template-builder-active')) {
                             setNodeVisibility(templateActivityGrid, true);
                             renderTemplateLanding();
                         }
@@ -17330,19 +17533,18 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     resetAddMaterialModalState({ clearEditing: false, clearAttachTarget: true });
                     activeTemplateActivity = restoreTemplateActivityState(material);
                     activeTemplateItemEditIndex = null;
+                    window.__addMaterialDefaultMode = 'template';
+                    window.__templateEditStateRestored = true;
                     setAddMaterialMode('template');
-                    setNodeVisibility(templateActivityGrid, false);
-                    setNodeVisibility(templateBuilderPanel, true);
+                    setTemplateBuilderActive(true);
                     applyTemplateLanguageSelection(activeTemplateActivity.language, activeTemplateActivity.templateTitle);
                     if (templateActivityTitle) {
                         templateActivityTitle.value = isSyllableBlendingTemplate(activeTemplateActivity.templateTitle) ? 'Syllable Blending' : (activeTemplateActivity.title || '');
-                        templateActivityTitle.closest('.col-12')?.classList.toggle('d-none', isSyllableBlendingTemplate(activeTemplateActivity.templateTitle));
+                        templateActivityTitle.closest('.template-title-field')?.classList.toggle('d-none', isSyllableBlendingTemplate(activeTemplateActivity.templateTitle));
                     }
                     renderTemplateDynamicFields(activeTemplateActivity.templateTitle, activeTemplateActivity.content);
                     renderTemplateWeeks(activeTemplateActivity.weeks);
                     renderTemplatePreview();
-                    window.__addMaterialDefaultMode = 'template';
-                    window.__templateEditStateRestored = true;
                     window._pendingSharedMaterialOrigin = false;
                     window._pendingSharedMaterialSourceId = null;
                     window.courseAttachTarget = null;
