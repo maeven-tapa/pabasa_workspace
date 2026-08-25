@@ -2271,40 +2271,155 @@
 
         #storyQuestionPanel .story-completion-card {
             display: grid;
-            justify-items: center;
             text-align: center;
-            gap: 1rem;
-            padding: 1.5rem 1.15rem;
-            background: linear-gradient(180deg, rgba(255,255,255,0.99), rgba(255,253,247,0.96));
-            border: 1px solid rgba(31, 111, 139, 0.12);
-            border-radius: 24px;
-            box-shadow: 0 14px 32px rgba(27, 26, 23, 0.08);
+            justify-items: center;
+            gap: 0.85rem;
+            width: min(100%, 680px);
+            margin-inline: auto;
+            padding: clamp(1rem, 2.2vw, 1.45rem) clamp(1.1rem, 2.8vw, 1.8rem);
+            background:
+                radial-gradient(circle at 12% 12%, rgba(247, 200, 106, 0.3), transparent 25%),
+                linear-gradient(145deg, rgba(217, 238, 244, 0.72), transparent 48%),
+                #fffdf7;
+            border: 1px solid rgba(31, 111, 139, 0.15);
+            border-radius: 30px;
+            box-shadow: 0 24px 54px rgba(27, 26, 23, 0.12);
         }
 
-        #storyQuestionPanel .story-completion-badge {
-            width: 76px;
-            height: 76px;
-            border-radius: 24px;
+        #storyQuestionPanel .story-results-mark {
+            width: 64px;
+            height: 64px;
+            border-radius: 20px;
             display: grid;
             place-items: center;
-            background: rgba(122, 139, 95, 0.14);
-            color: var(--leaf);
-            font-size: 2rem;
+            background: #1b1a17;
+            color: #f7c86a;
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: 1.7rem;
+            font-weight: 900;
+            box-shadow: 0 10px 22px rgba(27, 26, 23, 0.14);
         }
 
-        #storyQuestionPanel .story-completion-card h3 {
+        #storyQuestionPanel .story-results-kicker,
+        #storyQuestionPanel .story-results-section-title,
+        #storyQuestionPanel .story-results-summary-label {
+            color: var(--accent-deep);
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: 0.72rem;
+            font-weight: 900;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        #storyQuestionPanel .story-results-kicker {
+            padding: 0.42rem 0.8rem;
+            border: 1px solid rgba(31, 111, 139, 0.14);
+            border-radius: 999px;
+            background: rgba(217, 238, 244, 0.62);
+        }
+
+        #storyQuestionPanel .story-results-heading {
+            display: grid;
+            gap: 0.35rem;
+        }
+
+        #storyQuestionPanel .story-results-heading h3 {
             margin: 0;
             font-family: "Nunito", "Segoe UI", sans-serif;
-            font-size: clamp(1.5rem, 3vw, 2.1rem);
+            font-size: clamp(1.75rem, 4vw, 2.55rem);
             font-weight: 900;
             line-height: 1.15;
         }
 
-        #storyQuestionPanel .story-completion-card p {
+        #storyQuestionPanel .story-results-heading p {
             margin: 0;
             color: var(--muted);
-            font-size: 1rem;
+            font-size: 0.98rem;
             max-width: 34rem;
+        }
+
+        #storyQuestionPanel .story-results-section-title {
+            justify-self: stretch;
+            margin-top: 0.3rem;
+            padding-bottom: 0.45rem;
+            border-bottom: 1px solid rgba(31, 111, 139, 0.16);
+            text-align: left;
+        }
+
+        #storyQuestionPanel .story-results-summary {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.8rem;
+            width: 100%;
+        }
+
+        #storyQuestionPanel .story-results-summary-card {
+            display: grid;
+            gap: 0.4rem;
+            min-height: 96px;
+            padding: 0.8rem 0.9rem;
+            border-top: 4px solid var(--accent);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.82);
+            box-shadow: 0 9px 20px rgba(27, 26, 23, 0.06);
+            text-align: left;
+        }
+
+        #storyQuestionPanel .story-results-summary-card strong {
+            color: var(--ink);
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: 1.35rem;
+            font-weight: 900;
+        }
+
+        #storyQuestionPanel .story-results-summary-card small {
+            color: var(--muted);
+            font-size: 0.78rem;
+        }
+
+        #storyQuestionPanel .story-results-classification {
+            display: grid;
+            gap: 0.45rem;
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 1px solid rgba(122, 139, 95, 0.25);
+            border-radius: 18px;
+            background: rgba(236, 242, 229, 0.82);
+            text-align: left;
+        }
+
+        #storyQuestionPanel .story-results-classification h4 {
+            margin: 0.25rem 0 0;
+            color: var(--leaf);
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: 1.18rem;
+            font-weight: 900;
+        }
+
+        #storyQuestionPanel .story-results-classification p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.88rem;
+            line-height: 1.5;
+        }
+
+        #storyQuestionPanel .story-results-action {
+            width: 100%;
+            min-height: 50px;
+            margin-top: 0.05rem;
+            border: 0;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #879d68, #637b4f);
+            color: #fff;
+            box-shadow: 0 12px 24px rgba(99, 123, 79, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-weight: 900;
+        }
+
+        #storyQuestionPanel .story-results-action:hover {
+            background: linear-gradient(135deg, #93aa71, #6d8756);
+            color: #fff;
+            transform: translateY(-1px);
         }
 
         #storyQuestionPanel.is-complete .story-question-card,
@@ -2321,6 +2436,10 @@
         }
 
         @media (max-width: 460px) {
+            #storyQuestionPanel .story-results-summary {
+                grid-template-columns: 1fr;
+            }
+
             #storyQuestionPanel .story-question-nav {
                 grid-template-columns: 1fr;
             }
@@ -2734,6 +2853,278 @@
             background: rgba(34, 197, 94, 0.1);
             border-color: rgba(134, 239, 172, 0.18);
         }
+        /* CRLA comprehension completion is a standalone results view. */
+        .reader-shell:has(#storyQuestionPanel.is-complete) {
+            grid-template-rows: 1fr;
+            padding: clamp(0.75rem, 2vw, 1.5rem);
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) .reader-top,
+        .reader-shell:has(#storyQuestionPanel.is-complete) .read-helper,
+        .reader-shell:has(#storyQuestionPanel.is-complete) .word-stage,
+        .reader-shell:has(#storyQuestionPanel.is-complete) .speech-panel,
+        .reader-shell:has(#storyQuestionPanel.is-complete) .reader-footer {
+            display: none !important;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) .reader-stage {
+            min-height: 0;
+            height: 100%;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) .reader-card {
+            width: min(1120px, 100%);
+            min-height: 0;
+            height: min(560px, calc(100vh - 2rem));
+            display: block;
+            padding: 0;
+            background: transparent;
+            border: 0;
+            box-shadow: none;
+            overflow: visible;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) .reader-card::before,
+        .reader-shell:has(#storyQuestionPanel.is-complete) .reader-card::after {
+            display: none;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionPanel,
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionPanel .story-question-shell {
+            height: 100%;
+            width: 100%;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionPanel .story-question-shell {
+            max-width: 1120px;
+            display: flex;
+            align-items: center;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion {
+            grid-template-columns: minmax(190px, 0.72fr) minmax(260px, 1fr) minmax(260px, 1fr);
+            grid-template-rows: auto 1fr auto;
+            align-items: center;
+            column-gap: clamp(1.15rem, 3vw, 2.5rem);
+            row-gap: 0.55rem;
+            min-height: 0;
+            height: min(500px, calc(100vh - 3rem));
+            padding: clamp(1.25rem, 3vw, 2.2rem);
+            text-align: left;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-mark {
+            grid-column: 1;
+            grid-row: 1;
+            justify-self: start;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-kicker,
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-heading {
+            grid-column: 1;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-kicker {
+            grid-row: 2;
+            justify-self: start;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-heading {
+            grid-row: 3;
+            align-self: start;
+            justify-items: start;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-section-title,
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-summary {
+            grid-column: 2;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-section-title {
+            grid-row: 1;
+            align-self: end;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-summary {
+            grid-row: 2;
+            align-self: start;
+            grid-template-columns: 1fr;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-classification {
+            grid-column: 3;
+            grid-row: 1 / span 2;
+            align-self: center;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-action {
+            grid-column: 2 / 4;
+            grid-row: 3;
+            align-self: end;
+        }
+
+        @media (max-width: 760px) {
+            .reader-shell:has(#storyQuestionPanel.is-complete) .reader-card,
+            .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionPanel,
+            .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionPanel .story-question-shell {
+                height: auto;
+            }
+
+            .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto;
+                height: auto;
+                min-height: 0;
+                text-align: center;
+            }
+
+            .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-mark,
+            .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-kicker,
+            .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-heading,
+            .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-section-title,
+            .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-summary,
+            .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-classification,
+            .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-action {
+                grid-column: 1;
+                grid-row: auto;
+            }
+
+            .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-mark,
+            .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-kicker,
+            .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-heading {
+                justify-self: center;
+                text-align: center;
+                justify-items: center;
+            }
+
+            .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-summary {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        /* Keep the final CRLA result centered and compact on normal screens. */
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion {
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-template-rows: auto;
+            grid-template-areas:
+                "mark"
+                "kicker"
+                "heading"
+                "section"
+                "panels"
+                "action";
+            gap: 0.65rem;
+            width: min(900px, 100%);
+            height: auto;
+            max-height: calc(100vh - 2rem);
+            min-height: 0;
+            margin-inline: auto;
+            padding: clamp(1rem, 2.2vw, 1.55rem) clamp(1.1rem, 3vw, 2rem);
+            text-align: center;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-mark,
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-kicker,
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-heading,
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-section-title,
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-panels,
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-action {
+            grid-column: auto;
+            grid-row: auto;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-mark {
+            grid-area: mark;
+            justify-self: center;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-kicker {
+            grid-area: kicker;
+            justify-self: center;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-heading {
+            grid-area: heading;
+            justify-items: center;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-section-title {
+            grid-area: section;
+            margin-top: 0.15rem;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-panels {
+            grid-area: panels;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.85rem;
+            width: 100%;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-summary-card,
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-classification {
+            grid-column: auto;
+            grid-row: auto;
+            min-height: 132px;
+            padding: 0.9rem 1rem;
+            border-top: 4px solid var(--accent);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.86);
+            box-shadow: 0 9px 20px rgba(27, 26, 23, 0.06);
+            text-align: left;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-classification {
+            display: grid;
+            align-content: start;
+            gap: 0.45rem;
+            border-top-color: var(--leaf);
+            background: rgba(236, 242, 229, 0.72);
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding-top: 0.75rem;
+            color: var(--muted);
+            font-size: 0.86rem;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-row strong {
+            color: var(--ink);
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: 1.25rem;
+            font-weight: 900;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-classification p {
+            margin: 0.1rem 0 0;
+            color: var(--muted);
+            font-size: 0.82rem;
+            line-height: 1.45;
+        }
+
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-action {
+            grid-area: action;
+            width: 100%;
+            min-height: 48px;
+            margin-top: 0.1rem;
+            color: #fff;
+        }
+
+        @media (max-width: 600px) {
+            .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion {
+                max-height: none;
+            }
+
+            .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-panels {
+                grid-template-columns: 1fr;
+            }
+        }
+
 </style>
 <link rel="stylesheet" href="{% static 'pabasa_app/forest-theme.css' %}?v=storybook-forest-3">
 <link rel="stylesheet" href="{% static 'pabasa_app/treasure-theme.css' %}?v=storybook-treasure-1">
@@ -2863,9 +3254,28 @@
                             <button class="btn btn-primary" id="storyQuestionNextBtn" type="button">Next →</button>
                         </div>
                         <div class="story-completion-card d-none" id="storyQuestionCompletion">
-                            <h3>Great job!</h3>
-                            <p>You finished the comprehension questions.</p>
-                            <button class="btn btn-primary" id="storyQuestionFinishBtn" type="button">Finish Assessment →</button>
+                            <div class="story-results-mark" aria-hidden="true">A</div>
+                            <div class="story-results-kicker">Reading Assessment Results</div>
+                            <div class="story-results-heading">
+                                <h3>🎉 You did it!</h3>
+                                <p>Great work finishing your CRLA reading assessment. Every page you read helps you grow.</p>
+                            </div>
+
+                            <div class="story-results-section-title">Score Summary</div>
+                            <div class="story-results-panels" aria-label="Score summary">
+                                <div class="story-results-summary-card">
+                                    <span class="story-results-summary-label">Comprehension Score</span>
+                                    <div class="story-results-row"><span>Questions answered</span><strong>—</strong></div>
+                                    <div class="story-results-row"><span>Accuracy</span><strong>—</strong></div>
+                                </div>
+                                <section class="story-results-classification" aria-labelledby="storyResultsClassificationTitle">
+                                    <span class="story-results-summary-label">Reading Classification</span>
+                                    <div class="story-results-row"><span>Reading level</span><strong id="storyResultsClassificationTitle">—</strong></div>
+                                    <p>Your reading level will be shown here.</p>
+                                </section>
+                            </div>
+
+                            <button class="btn btn-primary story-results-action" id="storyQuestionFinishBtn" type="button">Back to Assessment <span aria-hidden="true">→</span></button>
                         </div>
                     </div>
                 </section>
