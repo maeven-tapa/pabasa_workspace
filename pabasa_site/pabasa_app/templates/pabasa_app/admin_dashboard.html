@@ -14,32 +14,137 @@
     </section>
 
     <section class="admin-stat-grid" aria-label="Admin summary">
-        <article class="admin-stat-card">
-            <span class="admin-stat-icon" aria-hidden="true"><i class="bi bi-mortarboard"></i></span>
-            <div>
-                <p>Active Students</p>
-                <strong>{{ stats.active_students }}</strong>
+        <article class="admin-stat-card admin-stat-card--activity">
+            <button type="button" class="admin-stat-card-trigger" aria-expanded="false" aria-controls="recentStudentsPreview">
+                <span class="admin-stat-icon" aria-hidden="true"><i class="bi bi-mortarboard"></i></span>
+                <span class="admin-stat-card-copy">
+                    <span class="admin-stat-label">Active Students</span>
+                    <strong>{{ stats.active_students }}</strong>
+                </span>
+                <span class="admin-stat-toggle" aria-hidden="true"><i class="bi bi-chevron-down"></i></span>
+            </button>
+            <div class="admin-stat-preview" id="recentStudentsPreview" aria-hidden="true">
+                <h4 class="admin-activity-title"><i class="bi bi-mortarboard" aria-hidden="true"></i>Recently Joined Students</h4>
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr><th>Student ID</th><th>Name</th><th>Joined</th></tr>
+                        </thead>
+                        <tbody>
+                            {% if activities.recent_students %}
+                                {% for student in activities.recent_students %}
+                                <tr>
+                                    <td>{{ student.custom_id }}</td>
+                                    <td>{{ student.first_name }} {{ student.last_name }}</td>
+                                    <td>{{ student.created_at|date:"M d, Y" }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                            <tr><td colspan="3" class="admin-empty-cell">No recent activity</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </article>
-        <article class="admin-stat-card">
-            <span class="admin-stat-icon" aria-hidden="true"><i class="bi bi-person-workspace"></i></span>
-            <div>
-                <p>Active Teachers</p>
-                <strong>{{ stats.active_teachers }}</strong>
+        <article class="admin-stat-card admin-stat-card--activity">
+            <button type="button" class="admin-stat-card-trigger" aria-expanded="false" aria-controls="recentTeachersPreview">
+                <span class="admin-stat-icon" aria-hidden="true"><i class="bi bi-person-workspace"></i></span>
+                <span class="admin-stat-card-copy">
+                    <span class="admin-stat-label">Active Teachers</span>
+                    <strong>{{ stats.active_teachers }}</strong>
+                </span>
+                <span class="admin-stat-toggle" aria-hidden="true"><i class="bi bi-chevron-down"></i></span>
+            </button>
+            <div class="admin-stat-preview" id="recentTeachersPreview" aria-hidden="true">
+                <h4 class="admin-activity-title"><i class="bi bi-person-workspace" aria-hidden="true"></i>Recently Joined Teachers</h4>
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr><th>Teacher ID</th><th>Name</th><th>Joined</th></tr>
+                        </thead>
+                        <tbody>
+                            {% if activities.recent_teachers %}
+                                {% for teacher in activities.recent_teachers %}
+                                <tr>
+                                    <td>{{ teacher.custom_id }}</td>
+                                    <td>{{ teacher.first_name }} {{ teacher.last_name }}</td>
+                                    <td>{{ teacher.created_at|date:"M d, Y" }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                            <tr><td colspan="3" class="admin-empty-cell">No recent activity</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </article>
-        <article class="admin-stat-card">
-            <span class="admin-stat-icon" aria-hidden="true"><i class="bi bi-door-open"></i></span>
-            <div>
-                <p>Active Classes</p>
-                <strong>{{ stats.active_classes }}</strong>
+        <article class="admin-stat-card admin-stat-card--activity">
+            <button type="button" class="admin-stat-card-trigger" aria-expanded="false" aria-controls="recentClassesPreview">
+                <span class="admin-stat-icon" aria-hidden="true"><i class="bi bi-door-open"></i></span>
+                <span class="admin-stat-card-copy">
+                    <span class="admin-stat-label">Active Classes</span>
+                    <strong>{{ stats.active_classes }}</strong>
+                </span>
+                <span class="admin-stat-toggle" aria-hidden="true"><i class="bi bi-chevron-down"></i></span>
+            </button>
+            <div class="admin-stat-preview" id="recentClassesPreview" aria-hidden="true">
+                <h4 class="admin-activity-title"><i class="bi bi-door-open" aria-hidden="true"></i>Recently Created Classes</h4>
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr><th>Class Code</th><th>Class Name</th><th>Created</th></tr>
+                        </thead>
+                        <tbody>
+                            {% if activities.recent_classes %}
+                                {% for class in activities.recent_classes %}
+                                <tr>
+                                    <td>{{ class.class_code }}</td>
+                                    <td>{{ class.class_name }}</td>
+                                    <td>{{ class.created_at|date:"M d, Y" }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                            <tr><td colspan="3" class="admin-empty-cell">No recent activity</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </article>
-        <article class="admin-stat-card">
-            <span class="admin-stat-icon" aria-hidden="true"><i class="bi bi-journal-text"></i></span>
-            <div>
-                <p>Active Materials</p>
-                <strong>{{ stats.active_materials }}</strong>
+        <article class="admin-stat-card admin-stat-card--activity">
+            <button type="button" class="admin-stat-card-trigger" aria-expanded="false" aria-controls="recentMaterialsPreview">
+                <span class="admin-stat-icon" aria-hidden="true"><i class="bi bi-journal-text"></i></span>
+                <span class="admin-stat-card-copy">
+                    <span class="admin-stat-label">Active Materials</span>
+                    <strong>{{ stats.active_materials }}</strong>
+                </span>
+                <span class="admin-stat-toggle" aria-hidden="true"><i class="bi bi-chevron-down"></i></span>
+            </button>
+            <div class="admin-stat-preview" id="recentMaterialsPreview" aria-hidden="true">
+                <h4 class="admin-activity-title"><i class="bi bi-journal-text" aria-hidden="true"></i>Recently Created Materials</h4>
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr><th>Title</th><th>Type</th><th>Status</th><th>Created</th></tr>
+                        </thead>
+                        <tbody>
+                            {% if activities.recent_materials %}
+                                {% for material in activities.recent_materials %}
+                                <tr>
+                                    <td>{{ material.title|default:"(Untitled)" }}</td>
+                                    <td><span class="badge bg-secondary">{{ material.item_type }}</span></td>
+                                    <td><span class="badge {% if material.status == 'published' %}bg-success{% elif material.status == 'draft' %}bg-warning{% else %}bg-info{% endif %}">{{ material.status }}</span></td>
+                                    <td>{{ material.created_at|date:"M d, Y" }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                            <tr><td colspan="4" class="admin-empty-cell">No recent activity</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </article>
         <article class="admin-stat-card">
@@ -84,135 +189,43 @@
         </article>
     </section>
 
-    <section>
-        <div class="admin-section-heading">
-            <i class="bi bi-clock-history" aria-hidden="true"></i>
-            <h3>Recent Activity</h3>
-        </div>
-
-        <div class="admin-activity-grid">
-            <article class="admin-panel admin-activity-card">
-                <h4 class="admin-activity-title"><i class="bi bi-mortarboard" aria-hidden="true"></i>Recently Joined Students</h4>
-                <div class="table-responsive">
-                    <table class="table align-middle">
-                        <thead>
-                            <tr>
-                                <th>Student ID</th>
-                                <th>Name</th>
-                                <th>Joined</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if activities.recent_students %}
-                                {% for student in activities.recent_students %}
-                                <tr>
-                                    <td>{{ student.custom_id }}</td>
-                                    <td>{{ student.first_name }} {{ student.last_name }}</td>
-                                    <td>{{ student.created_at|date:"M d, Y" }}</td>
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                            <tr>
-                                <td colspan="3" class="admin-empty-cell">No recent activity</td>
-                            </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
-            </article>
-
-            <article class="admin-panel admin-activity-card">
-                <h4 class="admin-activity-title"><i class="bi bi-person-workspace" aria-hidden="true"></i>Recently Joined Teachers</h4>
-                <div class="table-responsive">
-                    <table class="table align-middle">
-                        <thead>
-                            <tr>
-                                <th>Teacher ID</th>
-                                <th>Name</th>
-                                <th>Joined</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if activities.recent_teachers %}
-                                {% for teacher in activities.recent_teachers %}
-                                <tr>
-                                    <td>{{ teacher.custom_id }}</td>
-                                    <td>{{ teacher.first_name }} {{ teacher.last_name }}</td>
-                                    <td>{{ teacher.created_at|date:"M d, Y" }}</td>
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                            <tr>
-                                <td colspan="3" class="admin-empty-cell">No recent activity</td>
-                            </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
-            </article>
-
-            <article class="admin-panel admin-activity-card">
-                <h4 class="admin-activity-title"><i class="bi bi-door-open" aria-hidden="true"></i>Recently Created Classes</h4>
-                <div class="table-responsive">
-                    <table class="table align-middle">
-                        <thead>
-                            <tr>
-                                <th>Class Code</th>
-                                <th>Class Name</th>
-                                <th>Created</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if activities.recent_classes %}
-                                {% for class in activities.recent_classes %}
-                                <tr>
-                                    <td>{{ class.class_code }}</td>
-                                    <td>{{ class.class_name }}</td>
-                                    <td>{{ class.created_at|date:"M d, Y" }}</td>
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                            <tr>
-                                <td colspan="3" class="admin-empty-cell">No recent activity</td>
-                            </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
-            </article>
-
-            <article class="admin-panel admin-activity-card">
-                <h4 class="admin-activity-title"><i class="bi bi-journal-text" aria-hidden="true"></i>Recently Created Materials</h4>
-                <div class="table-responsive">
-                    <table class="table align-middle">
-                        <thead>
-                            <tr>
-                                <th>Title</th>
-                                <th>Type</th>
-                                <th>Status</th>
-                                <th>Created</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if activities.recent_materials %}
-                                {% for material in activities.recent_materials %}
-                                <tr>
-                                    <td>{{ material.title|default:"(Untitled)" }}</td>
-                                    <td><span class="badge bg-secondary">{{ material.item_type }}</span></td>
-                                    <td><span class="badge {% if material.status == 'published' %}bg-success{% elif material.status == 'draft' %}bg-warning{% else %}bg-info{% endif %}">{{ material.status }}</span></td>
-                                    <td>{{ material.created_at|date:"M d, Y" }}</td>
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                            <tr>
-                                <td colspan="4" class="admin-empty-cell">No recent activity</td>
-                            </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
-            </article>
-        </div>
-    </section>
 </div>
+
+<script>
+    (function () {
+        const activityCards = Array.from(document.querySelectorAll('.admin-stat-card--activity'));
+
+        function setExpanded(card, expanded) {
+            const trigger = card.querySelector('.admin-stat-card-trigger');
+            const preview = card.querySelector('.admin-stat-preview');
+            card.classList.toggle('is-expanded', expanded);
+            trigger.setAttribute('aria-expanded', String(expanded));
+            preview.setAttribute('aria-hidden', String(!expanded));
+        }
+
+        activityCards.forEach((card) => {
+            const trigger = card.querySelector('.admin-stat-card-trigger');
+            trigger.addEventListener('click', () => {
+                const shouldExpand = trigger.getAttribute('aria-expanded') !== 'true';
+                activityCards.forEach((otherCard) => setExpanded(otherCard, false));
+                setExpanded(card, shouldExpand);
+            });
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!event.target.closest('.admin-stat-card--activity')) {
+                activityCards.forEach((card) => setExpanded(card, false));
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key !== 'Escape') return;
+            const expandedCard = document.querySelector('.admin-stat-card--activity.is-expanded');
+            if (!expandedCard) return;
+            const trigger = expandedCard.querySelector('.admin-stat-card-trigger');
+            setExpanded(expandedCard, false);
+            trigger.focus();
+        });
+    }());
+</script>
 {% endblock %}
