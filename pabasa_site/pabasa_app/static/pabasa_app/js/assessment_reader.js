@@ -180,6 +180,7 @@
         let currentStoryChoices = [];
         let currentSelectedStory = null;
         let currentStoryState = "story_selection";
+        let currentAssessmentUiMode = "standard";
         let syllableStitchingContext = "";
         let syllableStitchingContextAt = 0;
         const syllableStitchingWindowMs = 4000;
@@ -232,16 +233,19 @@
             speechChunkMs = ["sentence", "paragraph"].includes(mode) ? 10000 : 2400;
         }
 
-        function setSpeechDebugPanelVisible(isVisible) {
+        function setSpeechDebugPanelVisible(isVisible, persist = true) {
             const enabled = Boolean(isVisible);
             speechPanel?.classList.toggle("d-none", !enabled);
             speechPanel?.toggleAttribute("hidden", !enabled);
             speechPanel?.setAttribute("aria-hidden", String(!enabled));
             if (speechDebugToggle) speechDebugToggle.checked = enabled;
-            localStorage.setItem("pabasaShowSpeechDebugPanel", enabled ? "true" : "false");
+            if (persist) {
+                localStorage.setItem("pabasaShowSpeechDebugPanel", enabled ? "true" : "false");
+            }
         }
 
-        setSpeechDebugPanelVisible(false);
+        const persistedSpeechDebugSetting = localStorage.getItem("pabasaShowSpeechDebugPanel");
+        setSpeechDebugPanelVisible(persistedSpeechDebugSetting === "true", false);
 
         function setMicDropdownOpen(isOpen) {
             if (!micDeviceDropdown || !micDeviceTrigger) return;
@@ -458,6 +462,17 @@
             return source.length > 150 ? `${source.slice(0, 150)}...` : source;
         }
 
+        function getStoryCardMeta(story) {
+            const title = String(story?.title || "").trim().toLowerCase();
+            if (title.includes("kakaibang") || title.includes("jeepney")) {
+                return { category: "Everyday", duration: "4 min read", level: "Level 1", thumbnail: "reading9.jpg" };
+            }
+            if (title.includes("pagong") || title.includes("kuneho")) {
+                return { category: "Fable", duration: "3 min read", level: "Level 1", thumbnail: "reading8.jpg" };
+            }
+            return { category: "Adventure", duration: "3 min read", level: "Level 1", thumbnail: "reading7.jpg" };
+        }
+
         function getStoryQuestionsForTitle(storyTitle) {
             const normalizedTitle = String(storyTitle || "").trim().toLowerCase();
             const grouped = Array.isArray(officialAssessmentData?.story_qas) ? officialAssessmentData.story_qas : [];
@@ -479,6 +494,16 @@
             storySelectionPanel?.classList.add("d-none");
             storySelectionState?.classList.add("d-none");
             storyQuestionPanel?.classList.add("d-none");
+        }
+
+        function updateStandardAssessmentControls() {
+            currentAssessmentUiMode = "standard";
+            btnStartReading?.classList.remove("d-none");
+            btnStopReading?.classList.add("d-none");
+            btnReadAloud?.classList.remove("d-none");
+            btnReadAloud?.classList.remove("is-playing");
+            prevBtn?.classList.remove("d-none");
+            nextBtn?.classList.remove("d-none");
         }
 
         function renderStoryQuestions(storyTitle) {
@@ -507,6 +532,7 @@
 
         function renderStorySelectionState() {
             currentStoryState = "story_selection";
+            currentAssessmentUiMode = "story";
             hideStoryPanels();
             if (storySelectionPanel) storySelectionPanel.classList.remove("d-none");
             if (readingWord) {
@@ -514,12 +540,18 @@
                 readingWord.textContent = "Choose a story to continue.";
             }
             if (readingTitle) readingTitle.hidden = true;
+            btnStartReading?.classList.add("d-none");
+            btnStopReading?.classList.add("d-none");
+            btnReadAloud?.classList.add("d-none");
+            prevBtn?.classList.add("d-none");
+            nextBtn?.classList.add("d-none");
             updateFooterForStoryState("story_selection");
             if (storySelectionPanel) storySelectionPanel.scrollIntoView({ behavior: "smooth", block: "start" });
         }
 
         function renderStoryReadyState(story) {
             currentStoryState = "story_ready";
+            currentAssessmentUiMode = "story";
             hideStoryPanels();
             if (storySelectionState) storySelectionState.classList.remove("d-none");
             if (storySelectionStateTitle) storySelectionStateTitle.textContent = story.title || "Selected story";
@@ -532,11 +564,17 @@
                 readingTitle.hidden = false;
                 readingTitle.textContent = story.title || "";
             }
+            btnStartReading?.classList.remove("d-none");
+            btnStopReading?.classList.add("d-none");
+            btnReadAloud?.classList.add("d-none");
+            prevBtn?.classList.add("d-none");
+            nextBtn?.classList.add("d-none");
             updateFooterForStoryState("story_ready");
         }
 
         function renderStoryReadingState(story) {
             currentStoryState = "story_reading";
+            currentAssessmentUiMode = "story";
             hideStoryPanels();
             if (readingWord) {
                 readingWord.hidden = false;
@@ -546,14 +584,25 @@
                 readingTitle.hidden = false;
                 readingTitle.textContent = story.title || "";
             }
+            btnStartReading?.classList.add("d-none");
+            btnStopReading?.classList.remove("d-none");
+            btnReadAloud?.classList.remove("d-none");
+            prevBtn?.classList.add("d-none");
+            nextBtn?.classList.add("d-none");
             updateFooterForStoryState("story_reading");
         }
 
         function renderStoryComprehensionState(storyTitle) {
             currentStoryState = "story_comprehension";
+            currentAssessmentUiMode = "story";
             hideStoryPanels();
             if (storyQuestionPanel) storyQuestionPanel.classList.remove("d-none");
             renderStoryQuestions(storyTitle);
+            btnStartReading?.classList.add("d-none");
+            btnStopReading?.classList.add("d-none");
+            btnReadAloud?.classList.add("d-none");
+            prevBtn?.classList.remove("d-none");
+            nextBtn?.classList.remove("d-none");
             updateFooterForStoryState("story_comprehension");
         }
 
@@ -569,6 +618,38 @@
                 card.className = "story-choice-card";
                 const isSelected = currentSelectedStory && String(currentSelectedStory.title || "").trim().toLowerCase() === String(story.title || "").trim().toLowerCase();
                 if (isSelected) card.classList.add("is-selected");
+                const meta = getStoryCardMeta(story);
+                const imageUrl = `/static/pabasa_app/images/${meta.thumbnail}`;
+                card.setAttribute("role", "button");
+                card.setAttribute("tabindex", "0");
+                card.setAttribute("aria-label", `Read story ${story.title || "Untitled story"}`);
+                card.addEventListener("click", () => selectStoryChoice(story));
+                card.addEventListener("keydown", (event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        selectStoryChoice(story);
+                    }
+                });
+                if (isSelected) card.setAttribute("aria-pressed", "true");
+                else card.setAttribute("aria-pressed", "false");
+
+                const banner = document.createElement("div");
+                banner.className = "story-choice-banner";
+                banner.style.backgroundImage = `linear-gradient(135deg, rgba(31,111,139,0.22), rgba(122,139,95,0.18)), url('${imageUrl}')`;
+
+                const badgeRow = document.createElement("div");
+                badgeRow.className = "story-choice-badges";
+                const categoryBadge = document.createElement("span");
+                categoryBadge.className = "story-choice-badge";
+                categoryBadge.textContent = meta.category;
+                const durationBadge = document.createElement("span");
+                durationBadge.className = "story-choice-badge";
+                durationBadge.textContent = meta.duration;
+                const levelBadge = document.createElement("span");
+                levelBadge.className = "story-choice-badge";
+                levelBadge.textContent = meta.level;
+                badgeRow.append(categoryBadge, durationBadge, levelBadge);
+
                 const title = document.createElement("h3");
                 title.textContent = story.title || "Untitled story";
                 const previewWrap = document.createElement("div");
@@ -580,14 +661,15 @@
                 actions.className = "story-choice-actions";
                 const button = document.createElement("button");
                 button.type = "button";
-                button.className = isSelected
-                    ? "btn btn-primary rounded-pill w-100 story-selected-btn"
-                    : "btn btn-outline-primary rounded-pill w-100";
-                button.textContent = isSelected ? "Story Selected" : "Choose Story";
+                button.className = "btn btn-primary rounded-pill w-100 story-selection-cta";
+                button.textContent = isSelected ? "Selected" : "Read Story →";
                 button.disabled = Boolean(isSelected);
-                button.addEventListener("click", () => selectStoryChoice(story));
+                button.addEventListener("click", (event) => {
+                    event.stopPropagation();
+                    selectStoryChoice(story);
+                });
                 actions.appendChild(button);
-                card.append(title, previewWrap, actions);
+                card.append(banner, badgeRow, title, previewWrap, actions);
                 storySelectionGrid.appendChild(card);
             });
             renderStorySelectionState();
@@ -608,20 +690,36 @@
         function updateFooterForStoryState(state) {
             const nextState = String(state || "story_selection");
             shell?.classList.toggle("is-story-ready", nextState !== "story_selection");
-            btnStartReading?.classList.toggle("d-none", nextState !== "story_ready");
-            btnStopReading?.classList.toggle("d-none", nextState !== "story_reading");
-            btnReadAloud?.classList.toggle("d-none", nextState !== "story_reading");
-            prevBtn?.classList.toggle("d-none", !["story_selection", "story_comprehension"].includes(nextState));
-            nextBtn?.classList.toggle("d-none", nextState !== "story_comprehension");
+            if (nextState === "story_selection") {
+                btnStartReading?.classList.add("d-none");
+                btnStopReading?.classList.add("d-none");
+                btnReadAloud?.classList.add("d-none");
+                prevBtn?.classList.add("d-none");
+                nextBtn?.classList.add("d-none");
+            } else if (nextState === "story_ready") {
+                btnStartReading?.classList.remove("d-none");
+                btnStopReading?.classList.add("d-none");
+                btnReadAloud?.classList.add("d-none");
+                prevBtn?.classList.add("d-none");
+                nextBtn?.classList.add("d-none");
+            } else if (nextState === "story_reading") {
+                btnStartReading?.classList.add("d-none");
+                btnStopReading?.classList.remove("d-none");
+                btnReadAloud?.classList.remove("d-none");
+                prevBtn?.classList.add("d-none");
+                nextBtn?.classList.add("d-none");
+            } else if (nextState === "story_comprehension") {
+                btnStartReading?.classList.add("d-none");
+                btnStopReading?.classList.add("d-none");
+                btnReadAloud?.classList.add("d-none");
+                prevBtn?.classList.remove("d-none");
+                nextBtn?.classList.remove("d-none");
+            }
 
+            const debugEnabled = speechDebugToggle?.checked || localStorage.getItem("pabasaShowSpeechDebugPanel") === "true";
+            setSpeechDebugPanelVisible(debugEnabled, false);
             if (nextState === "story_selection" || nextState === "story_ready") {
-                speechPanel?.classList.add("d-none");
-                speechPanel?.setAttribute("hidden", "true");
-                speechPanel?.setAttribute("aria-hidden", "true");
-            } else {
-                speechPanel?.classList.remove("d-none");
-                speechPanel?.removeAttribute("hidden");
-                speechPanel?.setAttribute("aria-hidden", "false");
+                if (readingHelperText) readingHelperText.textContent = "Choose a story to continue.";
             }
         }
 
@@ -1000,6 +1098,9 @@
                 currentIndex = 0;
                 resetCurrentPageState();
                 updateUI();
+                if (activeStage !== "story") {
+                    updateStandardAssessmentControls();
+                }
                 animateCurrentItem();
                 return;
             }
@@ -1026,6 +1127,7 @@
                             currentIndex = 0;
                             currentPageIndex = 0;
                             updateUI();
+                            updateStandardAssessmentControls();
                             animateCurrentItem();
                             return;
                         }
@@ -1056,6 +1158,7 @@
                     currentIndex = 0;
                     currentPageIndex = 0;
                     updateUI();
+                    updateStandardAssessmentControls();
                     animateCurrentItem();
                     return;
                 }
@@ -1134,6 +1237,7 @@
             currentIndex = 0;
             currentPageIndex = 0;
             updateUI();
+            updateStandardAssessmentControls();
             animateCurrentItem();
         }
 
@@ -2078,6 +2182,23 @@
                     nextBtn.textContent = "Next";
                 }
             }
+
+            if (currentAssessmentUiMode === "standard") {
+                btnStartReading?.classList.remove("d-none");
+                btnStopReading?.classList.add("d-none");
+                btnReadAloud?.classList.remove("d-none");
+                btnReadAloud?.classList.remove("is-playing");
+                prevBtn?.classList.remove("d-none");
+                nextBtn?.classList.remove("d-none");
+            }
+
+            if (btnStartReading) {
+                const isActiveReading = currentAssessmentUiMode === "standard" && isRecording;
+                btnStartReading.innerHTML = isActiveReading
+                    ? '<i class="bi bi-stop-fill"></i> Finish Reading'
+                    : '<i class="bi bi-play-fill"></i> Start Reading';
+                btnStartReading.classList.toggle("is-playing", isActiveReading);
+            }
         }
 
         function animateCurrentItem() {
@@ -2969,6 +3090,10 @@
                 renderStoryReadingState(currentSelectedStory);
                 return;
             }
+            if (currentAssessmentUiMode === "standard" && isRecording) {
+                stopReading();
+                return;
+            }
             startAssessmentTimer();
             if (!isRecording) {
                 isRecording = true;
@@ -2980,7 +3105,8 @@
                 hasHeardSinceLastChunk = false;
                 resetRawMicInput("Waiting for speech...");
                 btnStartReading?.classList.add("d-none");
-                btnStopReading?.classList.remove("d-none");
+                btnStopReading?.classList.add("d-none");
+                btnReadAloud?.classList.remove("is-playing");
                 updateUI();
                 animateCurrentItem();
                 startSpeechRecognition();
@@ -3063,6 +3189,7 @@
                 readAloudAudio.onended = stopReadAloud;
                 readAloudAudio.onerror = stopReadAloud;
                 if (btnReadAloud) btnReadAloud.innerHTML = '<i class="bi bi-stop-fill"></i> Stop Audio';
+                btnReadAloud?.classList.add("is-playing");
                 btnReadAloud?.removeAttribute("disabled");
                 await readAloudAudio.play();
             } catch (error) {
@@ -3137,7 +3264,7 @@
                 stopSpeechRecognition();
             }
         });
-        speechDebugToggle?.addEventListener("change", () => setSpeechDebugPanelVisible(speechDebugToggle.checked));
+        speechDebugToggle?.addEventListener("change", () => setSpeechDebugPanelVisible(speechDebugToggle.checked, true));
         micTestCloseBtn?.addEventListener("click", closeMicTestDialog);
         micTestOverlay?.addEventListener("click", (event) => {
             if (event.target === micTestOverlay) closeMicTestDialog();
