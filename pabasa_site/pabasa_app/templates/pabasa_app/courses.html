@@ -14337,7 +14337,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function normalizePictureWordCustomItem(item) {
             if (!item) return null;
-            const setKey = String(item.setKey || '').trim().toUpperCase();
+            const rawSetKey = String(item.setKey || '').trim();
+            const setKey = rawSetKey.toLowerCase() === 'custom' ? 'Custom' : rawSetKey.toUpperCase();
             const sourceSet = PICTURE_WORD_MATCHING_SYSTEM_SETS[setKey] || [];
             const image = String(item.image || '').trim();
             const sourceItem = sourceSet.find(entry => String(entry.image || '').trim() === image) || null;
@@ -14351,6 +14352,28 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return Array.isArray(activeTemplateActivity?.pictureWordMatchingCustom?.items)
                 ? activeTemplateActivity.pictureWordMatchingCustom.items
                 : [];
+        }
+
+        function getPictureWordPreviewItems() {
+            if (!activeTemplateActivity || !isPictureWordMatchingTemplate(activeTemplateActivity.templateTitle)) return [];
+            const language = getPictureWordMatchingSelectedLanguage();
+            if (getPictureWordMatchingMode() === 'custom') {
+                return getPictureWordCustomSelection().map(item => ({
+                    ...item,
+                    word: getPictureWordMatchingWord(item, language),
+                    previewImage: getPictureWordMatchingPreviewImage(item, item.setKey)
+                }));
+            }
+            const selection = normalizePictureWordMatchingSelection(
+                activeTemplateActivity.pictureWordMatching?.setKey || 'A',
+                language
+            );
+            return (PICTURE_WORD_MATCHING_SYSTEM_SETS[selection.setKey] || []).map(item => ({
+                ...item,
+                setKey: selection.setKey,
+                word: getPictureWordMatchingWord(item, selection.language),
+                previewImage: getPictureWordMatchingPreviewImage(item, selection.setKey)
+            }));
         }
 
         function setPictureWordCustomSelection(items) {
@@ -14913,8 +14936,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     if (modeButton) return;
                     const setButton = event.target.closest('[data-picture-word-set-select]');
                     if (setButton) {
-                        activeTemplateActivity.pictureWordMatching.mode = 'prescribed';
-                        activeTemplateActivity.pictureWordMatching = normalizePictureWordMatchingSelection(setButton.getAttribute('data-picture-word-set-select') || 'A', getPictureWordMatchingSelectedLanguage());
+                        activeTemplateActivity.pictureWordMatching = Object.assign(
+                            {},
+                            normalizePictureWordMatchingSelection(setButton.getAttribute('data-picture-word-set-select') || 'A', getPictureWordMatchingSelectedLanguage()),
+                            { mode: 'prescribed' }
+                        );
                         renderTemplateDynamicFields(title);
                         renderTemplatePreview();
                         return;
@@ -14984,10 +15010,33 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const sets = getPictureWordMatchingSets();
             templateDynamicFields.innerHTML = `
                 <style>
+                    .picture-word-mode-toggle {
+                        align-self: flex-start;
+                        padding: .25rem;
+                        border: 1px solid #cbd5e1;
+                        border-radius: .8rem;
+                        background: #f1f5f9;
+                        gap: .2rem;
+                    }
+                    .picture-word-mode-toggle .btn {
+                        border: 0;
+                        border-radius: .58rem !important;
+                        color: #475569;
+                        background: transparent;
+                        font-weight: 650;
+                        padding: .55rem 1rem;
+                    }
+                    .picture-word-mode-toggle .btn:hover {
+                        color: #174f64;
+                        background: #e2edf1;
+                    }
+                    .picture-word-mode-toggle .btn-check:focus-visible + .btn {
+                        box-shadow: 0 0 0 .2rem rgba(31,111,139,.22);
+                    }
                     .picture-word-mode-toggle .btn-check:checked + .btn {
-                        background: var(--bs-primary);
-                        border-color: var(--bs-primary);
+                        background: #1f6f8b;
                         color: #fff;
+                        box-shadow: 0 2px 7px rgba(31,111,139,.25);
                     }
                     .picture-word-custom-search {
                         border: 1px solid rgba(0,0,0,.12);
@@ -15091,8 +15140,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         display: flex;
                         flex-direction: column;
                         gap: 0.75rem;
+                        transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease, background-color .18s ease;
                     }
-                    .picture-word-card.is-selected { border-color: var(--bs-primary); box-shadow: 0 0 0 2px rgba(13,110,253,.12); background: rgba(13,110,253,.04); }
+                    .picture-word-card:hover { border-color: #80afbf; box-shadow: 0 .5rem 1.25rem rgba(15,23,42,.09); transform: translateY(-2px); }
+                    .picture-word-card.is-selected { border-color: #1f6f8b; box-shadow: 0 0 0 2px rgba(31,111,139,.14); background: #f0f8fa; }
+                    .picture-word-card.is-selected:hover { box-shadow: 0 0 0 2px rgba(31,111,139,.18), 0 .5rem 1.25rem rgba(15,23,42,.08); }
+                    .picture-word-set-button { border-color: #1f6f8b; color: #1f6f8b; font-weight: 650; }
+                    .picture-word-set-button:hover { border-color: #174f64; background: #174f64; color: #fff; }
+                    .picture-word-set-button.is-selected,
+                    .picture-word-set-button.is-selected:hover { border-color: #1f6f8b; background: #1f6f8b; color: #fff; cursor: default; }
                     .picture-word-card-images {
                         display: grid;
                         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -15189,7 +15245,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                     <div class="picture-word-card-words" title="${escapeAttr(items.map(item => getPictureWordMatchingWord(item, language)).join(' • '))}">
                                         ${escapeHtml(items.map(item => getPictureWordMatchingWord(item, language)).join(' • '))}
                                     </div>
-                                    <button type="button" class="btn btn-sm ${isSelected ? 'btn-primary' : 'btn-outline-primary'} w-100" data-picture-word-set-select="${escapeAttr(set.key)}">${isSelected ? 'Selected' : `Use Set ${set.key}`}</button>
+                                    <button type="button" class="btn btn-sm picture-word-set-button ${isSelected ? 'is-selected' : ''} w-100" data-picture-word-set-select="${escapeAttr(set.key)}" aria-pressed="${isSelected ? 'true' : 'false'}">${isSelected ? '<i class="bi bi-check2 me-1" aria-hidden="true"></i>Selected' : `Use Set ${set.key}`}</button>
                                 </article>
                             `;
                         }).join('')}
@@ -15587,8 +15643,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 } else previewBody = empty('Choose a prebuilt activity to see its Lost & Found experience.');
             } else if (isPictureWordMatchingTemplate(templateTitle)) {
                 instruction = learnerCopy.picture;
-                const pictureItems = activeTemplateActivity.pictureWordMatching?.mode === 'custom' ? getPictureWordCustomSelection() : (activeTemplateActivity.items || []);
-                previewBody = pictureItems.length ? cards(pictureItems.slice(0, 6).map(item => { const image = getPictureWordMatchingPreviewImage(item, activeTemplateActivity.pictureWordMatching?.setKey); const word = getPictureWordMatchingWord(item, language); return `<div class="preview-learning-card text-center">${image ? `<img src="${escapeAttr(image)}" alt="" style="width:72px;height:72px;object-fit:contain">` : '<i class="bi bi-image fs-2 text-muted" aria-hidden="true"></i>'}<div class="preview-answer-token mt-2">${escapeHtml(word || item.word || '?')}</div></div>`; }).join('')) : empty('Choose a picture-word set to begin the preview.');
+                const pictureItems = getPictureWordPreviewItems();
+                previewBody = pictureItems.length ? cards(pictureItems.slice(0, 6).map(item => { const image = item.previewImage; return `<div class="preview-learning-card text-center">${image ? `<img src="${escapeAttr(image)}" alt="${escapeAttr(item.word || '')}" style="width:72px;height:72px;object-fit:contain">` : '<i class="bi bi-image fs-2 text-muted" aria-hidden="true"></i>'}<div class="preview-answer-token mt-2">${escapeHtml(item.word || '?')}</div></div>`; }).join('')) : empty('Choose a picture-word set to begin the preview.');
             } else if (templateTitle === 'Decode the Word') {
                 instruction = learnerCopy.decode;
                 const values = {}; templateDynamicFields?.querySelectorAll('.template-content-field').forEach(field => values[field.dataset.fieldKey] = field.value);
