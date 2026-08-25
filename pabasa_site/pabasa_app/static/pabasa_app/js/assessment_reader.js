@@ -1065,6 +1065,7 @@
         }
 
         function goToPreviousPageOrItem() {
+            if (isSpeechResponsePending()) return;
             const totalPages = getCurrentPageCount();
             if (currentPageIndex > 0) {
                 currentPageIndex -= 1;
@@ -1078,6 +1079,7 @@
         }
 
         function goToNextPageOrItem() {
+            if (isSpeechResponsePending()) return;
             const totalPages = getCurrentPageCount();
             if (currentPageIndex < totalPages - 1) {
                 currentPageIndex += 1;
@@ -2041,8 +2043,10 @@
                     }
 
                     if (speechFrameCount >= 3) {
+                        const wasWaitingForSpeechResponse = hasHeardSinceLastChunk;
                         lastHeardAt = now;
                         hasHeardSinceLastChunk = true;
+                        if (!wasWaitingForSpeechResponse) updateAssessmentNavigationButtons();
                     }
                     shell?.classList.toggle("is-hearing", now - lastHeardAt < 240);
                     audioMeterFrame = window.requestAnimationFrame(tick);
@@ -2073,6 +2077,32 @@
 
         function shouldSendAudioChunk() {
             return !audioAnalyser || hasHeardSinceLastChunk || Date.now() - lastHeardAt < speechChunkMs + 700;
+        }
+
+        function isSpeechResponsePending() {
+            return Boolean(
+                !isReviewMode
+                && isRecording
+                && (hasHeardSinceLastChunk || isSendingChunk || pendingAudioChunk)
+            );
+        }
+
+        function updateAssessmentNavigationButtons() {
+            const speechResponsePending = isSpeechResponsePending();
+            const hasPreviousPage = currentPageIndex > 0;
+            const hasPreviousItem = currentIndex > 0;
+            const isLastPage = currentPageIndex >= getCurrentPageCount() - 1;
+            const onLastItem = currentIndex === items.length - 1;
+            if (prevBtn) {
+                prevBtn.disabled = speechResponsePending || (isReviewMode
+                    ? !(hasPreviousPage || hasPreviousItem)
+                    : (!isRecording || !(hasPreviousPage || hasPreviousItem)));
+            }
+            if (nextBtn) {
+                nextBtn.disabled = speechResponsePending || (isReviewMode
+                    ? (onLastItem && isLastPage)
+                    : (!isRecording || (onLastItem && isLastPage)));
+            }
         }
 
         function resetSyllableStitching() {
@@ -2110,9 +2140,11 @@
             if (!context.itemText || !isCurrentSpeechContext(context)) return;
             if (isSendingChunk) {
                 pendingAudioChunk = { blob, context };
+                updateAssessmentNavigationButtons();
                 return;
             }
             isSendingChunk = true;
+            updateAssessmentNavigationButtons();
             const formData = new FormData();
             formData.append("audio", blob, `reading-${Date.now()}.${audioExtensionForBlob(blob)}`);
             formData.append("target_text", context.itemText);
@@ -2200,6 +2232,7 @@
                     sendAudioChunk(nextChunk, nextContext);
                 } else {
                     pendingAudioChunk = null;
+                    updateAssessmentNavigationButtons();
                 }
             }
         }
@@ -2423,15 +2456,10 @@
             updateAssessmentHeaderLabel();
             if (progressFill) progressFill.style.width = `${((currentIndex + 1) / items.length) * 100}%`;
             
-            if (prevBtn) {
-                const hasPreviousPage = currentPageIndex > 0;
-                const hasPreviousItem = currentIndex > 0;
-                prevBtn.disabled = isReviewMode ? !(hasPreviousPage || hasPreviousItem) : (!isRecording || !(hasPreviousPage || hasPreviousItem));
-            }
+            updateAssessmentNavigationButtons();
             if (nextBtn) {
                 const isLastPage = currentPageIndex >= getCurrentPageCount() - 1;
                 const onLastItem = currentIndex === items.length - 1;
-                nextBtn.disabled = isReviewMode ? (onLastItem && isLastPage) : (!isRecording || (onLastItem && isLastPage));
                 if (isReviewMode && onLastItem && isLastPage) {
                     nextBtn.textContent = "Done";
                 } else if (isLastPage && getCurrentPageCount() > 1) {
