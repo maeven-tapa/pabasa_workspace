@@ -1280,9 +1280,8 @@
         <section class="class-workspace">
             <article class="class-banner" id="classBanner" data-header="">
                 <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
-                    <span class="dash-pill"><i class="bi bi-door-open"></i> Class code <strong id="activeClassCode">—</strong></span>
+                    <span class="dash-pill"><i class="bi bi-door-open"></i> Canonical class <strong id="activeClassCode">—</strong></span>
                     <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-secondary fw-bold" type="button" id="copyClassCodeBtn" style="display: none;"><i class="bi bi-copy me-1"></i>Copy Code</button>
                         <a id="manageClassLink" class="btn btn-sm btn-primary fw-bold" href="#" style="display: none;"><i class="bi bi-gear-fill me-1"></i>Manage Class</a>
                     </div>
                 </div>
@@ -1302,14 +1301,14 @@
                     <article class="teacher-panel h-100">
                         <div class="teacher-panel-head">
                             <div>
-                                <h3>Students Joined</h3>
-                                <p class="small text-secondary mb-0">Learners currently enrolled through the class code.</p>
+                                <h3>Enrolled Students</h3>
+                                <p class="small text-secondary mb-0">Learners assigned to this canonical Grade + Section.</p>
                             </div>
                             <a class="small fw-bold" href="{% url 'students' %}">View all</a>
                         </div>
                         <div class="student-row" id="dashboardStudentRow">
                             <div id="noStudentsMessage" style="text-align: center; padding: 2rem; color: var(--dash-muted); width: 100%;">
-                                <p class="small">No students joined yet. Students will appear here when they use your class code.</p>
+                                <p class="small">No students are enrolled in this Grade + Section yet.</p>
                             </div>
                         </div>
                     </article>

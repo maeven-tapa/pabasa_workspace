@@ -3839,8 +3839,8 @@ def verify_student_otp(request):
             return JsonResponse({'success': False, 'error': 'A student with this PABASA ID already exists. Please try again.'}, status=400)
 
         logger.debug("VERIFY STUDENT OTP AFTER USER CREATE user_id=%s custom_id=%s", user.id, user.custom_id)
-        # A canonical section represents the teacher's class.  Student signup
-        # never creates one: a missing class is a valid, unenrolled signup.
+        # Student signup resolves the existing canonical section above and
+        # never creates school structure or an alternate class.
         try:
             # Keep membership creation on the established Section API so
             # Enrollment, the legacy students JSON, and student tags stay synchronized.
@@ -12483,13 +12483,18 @@ def send_parent_email(request):
 
 @csrf_protect
 @require_http_methods(["POST"])
-@login_required(role='student') # Only students can join classes
-def join_class(request):
+@login_required(role='student')
+def disabled_code_membership(request):
     """
     Allows a student to join a class by storing membership in Section.students.
     Expects a JSON payload with 'class_code'.
     Returns full class data so frontend can render immediately from database.
     """
+    return JsonResponse(
+        {'success': False, 'error': 'Class membership is assigned through Grade + Section during signup.'},
+        status=410,
+    )
+
     try:
         data = json.loads(request.body)
         class_code = data.get('class_code', '').strip().upper()

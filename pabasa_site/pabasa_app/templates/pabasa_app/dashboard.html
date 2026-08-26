@@ -1811,12 +1811,13 @@
                 <span class="greeting-kicker">Friendly learning start</span>
             </div>
             <h2 data-dashboard-greeting>Good morning, friend 🌞</h2>
-            <p data-class-empty-note>Ready for a fun learning moment? Join a class and your dashboard will feel lively here.</p>
+            <p data-class-empty-note>Your assigned class is not available. Please contact your school administrator.</p>
             <p data-class-joined-note class="mb-0" style="display: none;">You’re all set. Pick a class and keep going.</p>
             <div class="spark-card" data-spark-card>Today’s Spark ✨ Read one short story</div>
             <div class="reward-pill" data-reward-pill style="display: none;"></div>
         </div>
 
+        {% comment %}Class membership is assigned from Grade + Section during signup.
         <article class="join-desk" data-join-desk>
             <div class="join-desk-head">
                 <span class="dash-pill"><i class="bi bi-door-open"></i> Add a class</span>
@@ -1840,6 +1841,7 @@
                 <p class="small mb-0">No class yet. That is okay—let’s add one when you’re ready.</p>
             </div>
         </article>
+        {% endcomment %}
     </div>
 
     <!-- Two-column layout: My Classes (left) and Progress/Achievements (right) -->
@@ -1940,6 +1942,7 @@
     </div>
 </section>
 
+{% comment %}Legacy class-code membership dialogs removed from rendered UI.
 <!-- Loading Modal -->
 <div class="modal fade" id="loadingModal" tabindex="-1" aria-labelledby="loadingModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
@@ -1955,6 +1958,8 @@
     </div>
 </div>
 
+<div class="modal fade student-calendar-modal" id="studentCalendarModal" tabindex="-1" aria-labelledby="studentCalendarModalLabel" aria-hidden="true">
+{% endcomment %}
 <div class="modal fade student-calendar-modal" id="studentCalendarModal" tabindex="-1" aria-labelledby="studentCalendarModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
@@ -2033,6 +2038,7 @@
     </div>
 </div>
 
+{% comment %}Legacy class-code validation dialog removed from rendered UI.
 <div class="modal fade" id="invalidClassCodeModal" tabindex="-1" aria-labelledby="invalidClassCodeModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-radius: 28px;">
@@ -2049,6 +2055,8 @@
         </div>
     </div>
 </div>
+
+{% endcomment %}
 
 <script>
     window.PABASA_USER_EMAIL = "{{ email|escapejs }}";
@@ -2087,8 +2095,8 @@
         };
 
         const dashboard = document.querySelector("[data-student-dashboard]");
-        const form = document.querySelector("[data-class-code-form]");
-        const classCodeInput = document.getElementById("classCode");
+        const form = null;
+        const classCodeInput = null;
         const classList = document.querySelector("[data-class-list]");
         const myClassesSection = document.querySelector(".my-classes-section");
         const emptyNote = document.querySelector("[data-class-empty-note]");
@@ -2139,7 +2147,7 @@
             }, 2600);
         };
 
-        if (!dashboard || !form || !classCodeInput || !classList) {
+        if (!dashboard || !classList) {
             perfLog("dashboard_domcontentloaded_exit_early");
             return;
         }
@@ -2294,9 +2302,6 @@
         });
 
         setGreeting();
-        if (classCodeInput) {
-            window.setTimeout(() => classCodeInput.focus(), 60);
-        }
 
         const getSavedCodes = () => {
             try {
@@ -2891,6 +2896,7 @@
             return setJoinedState([]);
         });
 
+        {% comment %}Legacy class-code submission removed.
         // Remove redundant input event listeners for auto-dashing, as base_dashboard.js will handle it.
         classCodeInput.addEventListener("input", (e) => { // Keep this listener to clear custom validity
             e.target.setCustomValidity("");
@@ -2994,6 +3000,7 @@
             showReward('You earned a sticker! 🎉');
         });
 
+        {% endcomment %}
         classList.addEventListener("click", (event) => {
             const menuButton = event.target.closest("[data-bs-toggle='dropdown']");
             if (menuButton) {

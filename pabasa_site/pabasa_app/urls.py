@@ -111,7 +111,6 @@ urlpatterns = [
     path('faq/', views.faq, name='faq'),
     path('terms/', views.terms, name='terms'),
     path('privacy/', views.privacy, name='privacy'),
-    path('api/join-class/', views.join_class, name='join_class'),
     path('dashboard/teacher/classes/', views.get_teacher_classes, name='get_teacher_classes'),
     path('dashboard/teacher/overview/', views.get_teacher_overview, name='get_teacher_overview'),
     # API: authoritative teacher student list (used by frontend JS)

@@ -115,6 +115,38 @@ class CanonicalSectionArchitectureTests(TestCase):
         self.assertEqual(response.status_code, 409)
         self.assertEqual(Section.objects.filter(grade_level__iexact="grade 2", section__iexact="a").count(), 1)
 
+    def test_legacy_class_code_join_route_is_removed(self):
+        response = self.client.post(
+            "/api/join-class/",
+            json.dumps({"class_code": self.section.class_code}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(Enrollment.objects.filter(student=self.student).exists())
+
+    def test_existing_enrollment_survives_without_join_route(self):
+        enrollment = Enrollment.objects.create(student=self.student, section=self.section)
+        self.client.post(
+            "/api/join-class/",
+            json.dumps({"class_code": self.section.class_code}),
+            content_type="application/json",
+        )
+        enrollment.refresh_from_db()
+        self.assertTrue(enrollment.is_active)
+
+    def test_student_dashboard_has_no_class_code_join_ui(self):
+        self.section.add_student(self.student)
+        session = self.client.session
+        session.update({"user_id": self.student.id, "user_role": "student", "email": self.student.email})
+        session.save()
+
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "/api/join-class/")
+        self.assertNotContains(response, "data-class-code-form")
+        self.assertContains(response, "My Classes")
+
 
 class StudentSignupAutomaticEnrollmentTests(TestCase):
     """OTP signup resolves the configured canonical class, whether or not a teacher is assigned yet."""
@@ -164,11 +196,13 @@ class StudentSignupAutomaticEnrollmentTests(TestCase):
 
     def test_matching_grade_and_section_enrolls_student_after_otp(self):
         teacher_class = self._create_teacher_class()
+        section_count = Section.objects.count()
 
         student = self._signup_and_verify()
 
         self.assertTrue(teacher_class.has_student(student))
         self.assertEqual(Enrollment.objects.filter(student=student, section=teacher_class).count(), 1)
+        self.assertEqual(Section.objects.count(), section_count)
 
     def test_unconfigured_section_is_rejected_before_otp(self):
         self._create_teacher_class()
@@ -218,11 +252,25 @@ class TeacherSignupCanonicalAssignmentTests(TestCase):
         with patch("pabasa_app.views.send_teacher_signup_otp_email"), patch(
             "pabasa_app.views.send_teacher_confirmation_email"
         ), patch("pabasa_app.views._notify_admins"), patch("pabasa_app.views._notify_principals"):
+            section_count = Section.objects.count()
             self.assertEqual(self.client.post(reverse("register_teacher"), payload).status_code, 200)
             response = self.client.post(reverse("verify_teacher_otp"), {"otp": self.client.session["pending_teacher_signup_otp"]})
         self.assertTrue(response.json()["success"])
         section.refresh_from_db()
         self.assertEqual(section.teacher.email, payload["email"])
+        self.assertEqual(Section.objects.count(), section_count)
+
+    def test_unconfigured_section_is_rejected_without_creating_one(self):
+        payload = {
+            "first_name": "Teacher", "last_name": "Missing", "email": "missing@example.com",
+            "password": "Teacher123", "confirm_password": "Teacher123", "sex": "female",
+            "birth_month": "1", "birth_day": "1", "birth_year": "1990",
+            "grade_level": "Grade 2", "section": "NOT-CONFIGURED",
+        }
+        section_count = Section.objects.count()
+        response = self.client.post(reverse("register_teacher"), payload)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(Section.objects.count(), section_count)
 
     def test_assigned_section_rejects_a_second_teacher_before_otp(self):
         teacher = make_user("TCH-EXISTING", "teacher", "existing@example.com")
