@@ -4,9 +4,18 @@ from django.contrib.auth.hashers import make_password
 from django.test import TestCase
 from django.utils import timezone
 from openpyxl import load_workbook
+import uuid
 
-from .models import Assessment, Material, Section, User
+from .models import Assessment, Material, School, Section, User
 from .utils.crla_export import _part_1_reading_level, export_crla_excel
+
+
+def test_section_create(**kwargs):
+    school = kwargs.pop("school", None)
+    if school is None:
+        suffix = uuid.uuid4().hex.upper()
+        school = School.objects.create(name=f"Fixture School {suffix}", code=f"FIXTURE-{suffix}")
+    return Section.objects.create(school=school, **kwargs)
 
 
 class CrlaExportResultTests(TestCase):
@@ -43,7 +52,7 @@ class CrlaExportResultTests(TestCase):
         admin = self.make_user("CRLA-ADMIN", "admin", "PABASA", "Admin")
         teacher = self.make_user("CRLA-TEACHER", "teacher", "Maria", "Santos", school="Mabini School")
         student = self.make_user("CRLA-STUDENT", "student", "Lina", "Reyes", lrn="123456789012")
-        section = Section.objects.create(
+        section = test_section_create(
             class_code="G2-RIZAL", class_name="Grade 2 Rizal", teacher=teacher,
             subject="Filipino", students=[{"student_id": student.id, "is_active": True}],
         )
@@ -102,7 +111,7 @@ class CrlaExportResultTests(TestCase):
     def test_low_emerging_branch_leaves_part_two_cells_blank(self):
         teacher = self.make_user("CRLA-T2", "teacher", "Ana", "Cruz")
         student = self.make_user("CRLA-S2", "student", "Nilo", "Dela Cruz")
-        section = Section.objects.create(
+        section = test_section_create(
             class_code="G2-BONI", class_name="Grade 2 Bonifacio", teacher=teacher,
             subject="Filipino", students=[{"student_id": student.id, "is_active": True}],
         )

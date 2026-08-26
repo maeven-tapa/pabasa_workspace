@@ -198,8 +198,6 @@ class Section(models.Model):
         School,
         on_delete=models.PROTECT,
         related_name="sections",
-        null=True,
-        blank=True,
     )
     class_code = models.CharField(max_length=20, unique=True)
     class_name = models.CharField(max_length=150)
@@ -240,13 +238,8 @@ class Section(models.Model):
         return f"{self.class_code} - {self.class_name}"
 
     def save(self, *args, **kwargs):
-        if not self.school_id:
-            # Keep legacy section creation isolated to the transitional default school.
-            default_school = School.objects.filter(name="Default School").first()
-            if not default_school:
-                default_school = School.objects.create(name="Default School", code="DEFAULT-SCHOOL")
-            if default_school:
-                self.school = default_school
+        if self.school_id is None:
+            raise ValidationError({"school": "A Section must belong to an explicit School."})
         super().save(*args, **kwargs)
 
     def clean(self):

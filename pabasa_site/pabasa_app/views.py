@@ -99,13 +99,6 @@ PRACTICE_ACTIVE_SESSION_KEY = "practice_active_session"
 SCHOOL_GRADE_LEVELS = tuple(f"Grade {number}" for number in range(1, 7))
 
 
-def _default_school():
-    school = School.objects.filter(name="Default School").first()
-    if school:
-        return school
-    return School.objects.create(name="Default School", code="DEFAULT-SCHOOL")
-
-
 def _real_active_schools():
     return School.objects.filter(
         status="active",
@@ -185,10 +178,12 @@ def _section_selection_context(role):
 def _signup_section_for_request(data, role):
     school = _active_signup_school(data.get('school_id'))
     if not school:
-        # Accept the old field only as a compatibility bridge; it still must
-        # resolve to a real active School and never to Default School.
         legacy_name = str(data.get('school') or '').strip()
-        school = _real_active_schools().filter(name__iexact=legacy_name).first() if legacy_name else None
+        school = School.objects.filter(
+            name__iexact=legacy_name,
+            status='active',
+            is_active=True,
+        ).exclude(name='Default School').first() if legacy_name else None
     if not school:
         return None, None, 'Choose an active School.'
 
@@ -5641,7 +5636,7 @@ def admin_school(request):
                 return redirect('admin_school')
             except IntegrityError:
                 context['error_message'] = 'A school with that name or code already exists.'
-    real_schools = School.objects.exclude(name='Default School').order_by('name')
+    real_schools = School.objects.filter(status='active', is_active=True).exclude(name='Default School').order_by('name')
     context.update({
         'schools': [_school_card_context(school) for school in real_schools],
     })

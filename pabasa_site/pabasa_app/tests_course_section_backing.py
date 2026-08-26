@@ -1,9 +1,18 @@
 import json
+import uuid
 
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Assessment, Course, Material, Section, User
+from .models import Assessment, Course, Material, School, Section, User
+
+
+def test_section_create(**kwargs):
+    school = kwargs.pop("school", None)
+    if school is None:
+        suffix = uuid.uuid4().hex.upper()
+        school = School.objects.create(name=f"Fixture School {suffix}", code=f"FIXTURE-{suffix}")
+    return Section.objects.create(school=school, **kwargs)
 
 
 class SectionBackedCoursesRegressionTests(TestCase):
@@ -15,7 +24,7 @@ class SectionBackedCoursesRegressionTests(TestCase):
             email="section-courses@example.com", password_hash="hashed-password",
             teacher_role="Teacher",
         )
-        self.section = Section.objects.create(
+        self.section = test_section_create(
             class_code="SEC-COURSES", class_name="Grade 2", header="Reading Class",
             description="", teacher=self.teacher, subject="English", is_active=True,
         )

@@ -44,7 +44,11 @@ if not student:
         email='trace-student@example.com',
         password_hash='pbkdf2_sha256$260000$dummy',
     )
+    school = teacher.school_record
+    if school is None:
+        raise ValueError("Trace setup requires teacher.school_record before creating a Section")
     section = Section.objects.create(
+        school=school,
         teacher=teacher,
         class_name='Trace Class',
         class_code='TRACE-100',

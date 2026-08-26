@@ -72,7 +72,11 @@ def ensure_student_and_section():
         )
     section = Section.objects.filter(class_code='DEBUG-CLASS').first()
     if not section:
+        school = teacher.school_record
+        if school is None:
+            raise ValueError("Debug setup requires teacher.school_record before creating a Section")
         section = Section.objects.create(
+            school=school,
             teacher=teacher,
             class_name='Debug Class',
             class_code='DEBUG-CLASS',

@@ -19,7 +19,7 @@ from pypdf import PdfReader
 from reportlab.pdfgen import canvas
 
 from .forms import AdminPracticeMaterialForm
-from .models import Material, User, Section, Assessment, Notification, Course, Note, LiveAssessmentSession, SchoolCalendar, CalendarEvent
+from .models import Material, User, Section, Assessment, Notification, Course, Note, LiveAssessmentSession, School, SchoolCalendar, CalendarEvent
 from .reading_stt import (
     ReadingMatcher,
     analyze_reading,
@@ -33,6 +33,14 @@ from .reading_stt import (
     word_numbers_in_transcript,
 )
 from .hunt_scoring import classify_speech, normalize_speech, stars_for_points
+
+
+def test_section_create(**kwargs):
+    school = kwargs.pop("school", None)
+    if school is None:
+        suffix = uuid.uuid4().hex.upper()
+        school = School.objects.create(name=f"Fixture School {suffix}", code=f"FIXTURE-{suffix}")
+    return Section.objects.create(school=school, **kwargs)
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
 from .management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
 from .views import _active_school_calendar, _apply_progression_unlock_override, _aral_eligible_classification, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _save_admin_practice_material, _sync_assessment_workflow_state, _official_crla_assessment_labels, _official_assessment_availability_for_student
@@ -56,7 +64,7 @@ class ClassMaterialsApiTests(TestCase):
             email="teacher1001@example.com",
             password_hash=make_password("teacher-password"),
         )
-        section = Section.objects.create(
+        section = test_section_create(
             teacher=teacher,
             class_name="Class A",
             class_code="CLS-A1001",
@@ -127,7 +135,7 @@ class ClassMaterialsApiTests(TestCase):
                 }
             },
         )
-        section = Section.objects.create(
+        section = test_section_create(
             teacher=teacher,
             class_name="Reading Class",
             class_code="READ-1002",
@@ -328,7 +336,7 @@ class SchoolCalendarAdminTests(TestCase):
             email="student1001@example.com",
             password_hash=make_password("student-password"),
         )
-        section = Section.objects.create(
+        section = test_section_create(
             teacher=teacher,
             class_name="Reading Class",
             class_code="READ-1001",
@@ -734,7 +742,7 @@ class AssessmentWorkflowStateTests(TestCase):
             password_hash=make_password("student-password"),
             preference={"reading_assessment_state": {}},
         )
-        section = Section.objects.create(
+        section = test_section_create(
             teacher=teacher,
             class_name="Reading Class",
             class_code="READ-2000",
@@ -899,7 +907,7 @@ class AssessmentWorkflowStateTests(TestCase):
             email="iris3@example.com",
             password_hash=make_password("student-password"),
         )
-        section = Section.objects.create(
+        section = test_section_create(
             teacher=teacher,
             class_name="Reading Class",
             class_code="READ-2003",
@@ -1025,7 +1033,7 @@ class AssessmentPageFlowTests(TestCase):
             password_hash=make_password("student-password"),
             preference={"reading_assessment_state": {"crla_pretest_completed": False, "crla_posttest_completed": False}},
         )
-        section = Section.objects.create(
+        section = test_section_create(
             teacher=teacher,
             class_name="Reading Class",
             class_code="READ-3101",
@@ -1114,7 +1122,7 @@ class AssessmentPageFlowTests(TestCase):
             password_hash=make_password("student-password"),
             preference={"reading_assessment_state": {"crla_pretest_completed": False, "crla_posttest_completed": False}},
         )
-        section = Section.objects.create(
+        section = test_section_create(
             teacher=teacher,
             class_name="Reading Class 2",
             class_code="READ-3102",
@@ -1226,7 +1234,7 @@ class AssessmentPageFlowTests(TestCase):
             password_hash=make_password("student-password"),
             preference={"reading_assessment_state": {"crla_pretest_completed": False, "crla_posttest_completed": False}},
         )
-        section = Section.objects.create(
+        section = test_section_create(
             teacher=teacher,
             class_name="Reading Class 3",
             class_code="READ-3103",
@@ -1332,7 +1340,7 @@ class AssessmentPageFlowTests(TestCase):
             password_hash=make_password("student-password"),
             preference={"reading_assessment_state": {"crla_pretest_completed": True, "crla_posttest_completed": False, "reader_classification": "Low Emerging Readers", "aral_eligible": True}},
         )
-        section = Section.objects.create(
+        section = test_section_create(
             teacher=teacher,
             class_name="Reading Class",
             class_code="READ-1004",
@@ -1445,7 +1453,7 @@ class AssessmentPageFlowTests(TestCase):
             email="student1005@example.com",
             password_hash=make_password("student-password"),
         )
-        section = Section.objects.create(
+        section = test_section_create(
             teacher=teacher,
             class_name="Reading Class",
             class_code="READ-1005",
@@ -1533,7 +1541,7 @@ class AssessmentPageFlowTests(TestCase):
             password_hash=make_password("student-password"),
             preference={"reading_assessment_state": {"crla_pretest_completed": True, "crla_posttest_completed": False, "reader_classification": "Low Emerging Readers", "aral_eligible": True, "current_phase": "materials"}},
         )
-        section = Section.objects.create(
+        section = test_section_create(
             teacher=teacher,
             class_name="Reading Class",
             class_code="READ-3102",
@@ -1622,7 +1630,7 @@ class AssessmentPageFlowTests(TestCase):
             password_hash=make_password("student-password"),
             preference={"reading_assessment_state": {"crla_pretest_completed": False, "crla_posttest_completed": False}},
         )
-        section = Section.objects.create(
+        section = test_section_create(
             teacher=teacher,
             class_name="Reading Class",
             class_code="READ-3103",
@@ -1711,7 +1719,7 @@ class AssessmentPageFlowTests(TestCase):
             password_hash=make_password("student-password"),
             preference={"reading_assessment_state": {"crla_pretest_completed": False, "crla_posttest_completed": False}},
         )
-        section = Section.objects.create(
+        section = test_section_create(
             teacher=teacher,
             class_name="Reading Class",
             class_code="READ-3104",
@@ -1803,7 +1811,7 @@ class AssessmentPageFlowTests(TestCase):
                 }
             },
         )
-        section = Section.objects.create(
+        section = test_section_create(
             teacher=teacher,
             class_name="Reading Class",
             class_code="READ-3105",
@@ -1932,7 +1940,7 @@ class AssessmentPageFlowTests(TestCase):
                 }
             },
         )
-        section = Section.objects.create(
+        section = test_section_create(
             teacher=teacher,
             class_name="Reading Class",
             class_code="READ-3001",
@@ -1993,7 +2001,7 @@ class AssessmentPageFlowTests(TestCase):
                 }
             },
         )
-        section = Section.objects.create(
+        section = test_section_create(
             teacher=teacher,
             class_name="Reading Class",
             class_code="READ-3002",
@@ -2054,7 +2062,7 @@ class AssessmentPageFlowTests(TestCase):
                 }
             },
         )
-        section = Section.objects.create(
+        section = test_section_create(
             teacher=teacher,
             class_name="Reading Class",
             class_code="READ-3002A",
@@ -2151,7 +2159,7 @@ class AssessmentPageFlowTests(TestCase):
                 }
             },
         )
-        section = Section.objects.create(
+        section = test_section_create(
             teacher=teacher,
             class_name="Reading Class",
             class_code="READ-3006",
@@ -2193,7 +2201,7 @@ class AssessmentPageFlowTests(TestCase):
             email="mina7@example.com",
             password_hash=make_password("student-password"),
         )
-        section = Section.objects.create(
+        section = test_section_create(
             teacher=teacher,
             class_name="Reading Class",
             class_code="READ-3007",
@@ -3642,7 +3650,7 @@ class PrincipalReportsPreviewTests(TestCase):
             password_hash=make_password("student-password"),
             grade_level="Grade 2",
         )
-        self.section = Section.objects.create(
+        self.section = test_section_create(
             class_code=f"G2-{unique_suffix}",
             class_name="Grade 2 Preview",
             header="Reading Class",
@@ -3770,7 +3778,7 @@ class LiveAssessmentStartTests(TestCase):
             password_hash=make_password("student-password"),
             grade_level="Grade 2",
         )
-        self.section = Section.objects.create(
+        self.section = test_section_create(
             class_code=f"LIV-{uuid.uuid4().hex[:6].upper()}",
             class_name="Live Assessment Class",
             header="Reading",
@@ -5166,7 +5174,7 @@ class MaterialCreationTests(TestCase):
             password_hash="hashed-password",
             teacher_role="Teacher",
         )
-        section = Section.objects.create(
+        section = test_section_create(
             class_code="CRS-1001",
             class_name="Course 1",
             header="Reading Class",
@@ -5301,7 +5309,7 @@ class MaterialCreationTests(TestCase):
             email="template.student@example.com",
             password_hash="hashed-password",
         )
-        section = Section.objects.create(
+        section = test_section_create(
             class_code="TPL-1001",
             class_name="Template Class",
             header="Reading Class",
@@ -5422,7 +5430,7 @@ class MaterialCreationTests(TestCase):
             password_hash="hashed-password",
             teacher_role="Teacher",
         )
-        section = Section.objects.create(
+        section = test_section_create(
             class_code="FCNG-648",
             class_name="API Class",
             header="Reading Class",
@@ -5486,7 +5494,7 @@ class MaterialCreationTests(TestCase):
             password_hash="hashed-password",
             teacher_role="Teacher",
         )
-        section = Section.objects.create(
+        section = test_section_create(
             class_code="LANG-1001",
             class_name="Language Class",
             header="Reading Class",
@@ -5620,7 +5628,7 @@ class MaterialCreationTests(TestCase):
             password_hash="hashed-password",
             teacher_role="Teacher",
         )
-        section = Section.objects.create(
+        section = test_section_create(
             class_code="DEL-1001",
             class_name="Delete Course Section",
             header="Reading Class",
@@ -5919,7 +5927,7 @@ class MaterialCreationTests(TestCase):
             password_hash="hashed-password",
             teacher_role="Teacher",
         )
-        section = Section.objects.create(
+        section = test_section_create(
             class_code="ATT-1001",
             class_name="Attach 1",
             header="Reading Class",
@@ -5977,7 +5985,7 @@ class MaterialCreationTests(TestCase):
             birth_year=1990, email="section-owner@example.com", password_hash="hashed-password",
             teacher_role="Teacher",
         )
-        section = Section.objects.create(
+        section = test_section_create(
             class_code="CLS-SECTION-ID", class_name="Grade 2 - Mabini", header="Reading Class",
             description="", teacher=teacher, subject="Filipino",
         )
@@ -6027,12 +6035,12 @@ class CanonicalSectionMaterialWorkflowTests(TestCase):
             sex="female", birth_month=1, birth_day=1, birth_year=1990,
             email="shared.teacher@example.com", password_hash=make_password("password"),
         )
-        self.section = Section.objects.create(
+        self.section = test_section_create(
             class_code="G2-BONIFACIO", class_name="Grade 2 - BONIFACIO",
             grade_level="Grade 2", section="BONIFACIO", teacher=self.teacher,
             subject="Filipino", is_active=True,
         )
-        self.other_section = Section.objects.create(
+        self.other_section = test_section_create(
             class_code="G2-MABINI", class_name="Grade 2 - MABINI",
             grade_level="Grade 2", section="MABINI", teacher=self.other_teacher,
             subject="Filipino", is_active=True,
@@ -7514,7 +7522,7 @@ class AssessmentCompletionNotificationTests(TestCase):
             email="principal9001@example.com",
             password_hash=make_password("principal-password"),
         )
-        self.section = Section.objects.create(
+        self.section = test_section_create(
             teacher=self.teacher,
             class_name="Class A",
             class_code="CLS-A9001",
@@ -8076,7 +8084,7 @@ class WeeklyDigestTests(TestCase):
             email="digest-student@example.com",
             password_hash=make_password("student-password"),
         )
-        self.section = Section.objects.create(
+        self.section = test_section_create(
             teacher=self.teacher,
             class_name="Digest Class",
             class_code="DIG-001",
@@ -8192,14 +8200,14 @@ class TeacherStudentsDirectoryTests(TestCase):
             email="single-student@example.com",
             password_hash=make_password("student-password"),
         )
-        self.section_a = Section.objects.create(
+        self.section_a = test_section_create(
             teacher=self.teacher,
             class_name="Reading One",
             class_code="READ-ONE",
             subject="Reading",
             is_active=True,
         )
-        self.section_b = Section.objects.create(
+        self.section_b = test_section_create(
             teacher=self.teacher,
             class_name="Reading Two",
             class_code="READ-TWO",
