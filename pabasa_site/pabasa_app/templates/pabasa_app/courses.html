@@ -6089,11 +6089,216 @@
     }
 </style>
 
-<!-- Courses (teacher created course groups) -->
+<style>
+    /* A single canonical Section is presented as a substantial centered card. */
+    .classes-grid.is-single-class {
+        align-items: center;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        justify-items: center;
+        min-height: clamp(520px, 68vh, 720px);
+        width: 100%;
+    }
+
+    .single-class-card {
+        background: var(--surface-glass);
+        border: 1px solid var(--surface-glass-border);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--dash-shadow);
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        max-width: 960px;
+        overflow: hidden;
+        padding: 0;
+        position: relative;
+        width: min(100%, 960px);
+        transition: border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
+    }
+
+    .single-class-card:hover {
+        border-color: rgba(31,111,139,0.2);
+        box-shadow: 0 22px 46px rgba(16,70,110,0.13);
+        transform: translateY(-3px);
+    }
+
+    .single-class-card::before {
+        background: var(--dash-primary);
+        content: "";
+        height: 4px;
+        inset: 0 0 auto;
+        opacity: 0.8;
+        position: absolute;
+    }
+
+    .single-class-details {
+        background: linear-gradient(135deg, rgba(31,111,139,0.09), rgba(255,255,255,0.2));
+        border-bottom: 1px solid rgba(31,111,139,0.09);
+        min-width: 0;
+        overflow: hidden;
+        padding: clamp(1.8rem, 3.5vw, 2.7rem);
+        position: relative;
+    }
+    .single-class-details::after {
+        border: 2px solid rgba(31,111,139,0.09);
+        border-radius: 8px 18px 18px 8px;
+        content: "";
+        height: 82px;
+        position: absolute;
+        right: clamp(1.25rem, 4vw, 3rem);
+        top: 50%;
+        transform: translateY(-50%) rotate(5deg);
+        width: 66px;
+        transition: border-color 220ms ease, transform 220ms ease;
+    }
+    .single-class-card:hover .single-class-details::after { border-color: rgba(31,111,139,0.16); transform: translateY(-50%) rotate(2deg); }
+    .single-class-literacy-motif { height: 100%; inset: 0; overflow: hidden; pointer-events: none; position: absolute; }
+    .single-class-literacy-motif span { color: rgba(31,111,139,0.1); font-family: "Nunito", sans-serif; font-weight: 900; position: absolute; }
+    .single-class-literacy-motif span:nth-child(1) { font-size: 1rem; right: 7.6rem; top: 1.15rem; transform: rotate(-9deg); }
+    .single-class-literacy-motif span:nth-child(2) { bottom: 1rem; font-size: 1.3rem; right: 2rem; transform: rotate(8deg); }
+    .single-class-literacy-motif span:nth-child(3) { background: rgba(245,184,0,0.24); border-radius: 50%; height: 7px; right: 6.7rem; top: 2.8rem; width: 7px; }
+    .single-class-details > :not(.single-class-literacy-motif) { position: relative; z-index: 1; }
+    .single-class-eyebrow { color: var(--dash-primary); font-size: 0.7rem; font-weight: 900; letter-spacing: 0.12em; margin: 0 0 0.55rem; text-transform: uppercase; }
+    .single-class-title {
+        color: var(--dash-ink);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: clamp(1.55rem, 2.6vw, 2.1rem);
+        font-weight: 900;
+        line-height: 1.12;
+        margin: 0;
+        max-width: calc(100% - 100px);
+    }
+    .single-class-meta { align-items: center; color: var(--dash-muted); display: flex; flex-wrap: wrap; font-size: 0.82rem; font-weight: 800; gap: 0.5rem; margin-top: 0.75rem; }
+    .single-class-meta .course-code-pill, .single-class-meta .course-status-pill { cursor: default; }
+    .single-class-meta .course-status-pill:hover {
+        background: rgba(22, 163, 74, 0.14);
+        border-color: rgba(22, 163, 74, 0.2);
+        box-shadow: none;
+        color: #15803d;
+        transform: none;
+    }
+    .single-class-meta .course-status-pill:hover .course-status-dot { opacity: 1; transform: none; }
+    .single-class-meta .course-status-pill:hover .course-status-label { max-width: 100%; opacity: 1; transform: none; }
+    .single-class-subtitle { color: var(--dash-ink-soft); margin: 0.65rem 0 0; }
+    .single-class-metrics { background: rgba(31,111,139,0.045); border-radius: var(--radius-lg); display: grid; grid-template-columns: repeat(3, minmax(110px, 1fr)); margin: clamp(1.4rem, 3vw, 2rem) clamp(1.4rem, 4vw, 3rem) 0; padding: 0.35rem; }
+    .single-class-metric {
+        border-right: 1px solid rgba(31,111,139,0.11);
+        min-width: 0;
+        padding: 1rem 1.2rem;
+        position: relative;
+        transition: background-color 180ms ease;
+    }
+    .single-class-metric:hover { background: rgba(255,255,255,0.58); }
+    .single-class-metric-icon { align-items: center; background: var(--dash-primary-soft); border-radius: 10px; color: var(--dash-primary); display: inline-flex; float: right; height: 30px; justify-content: center; width: 30px; }
+    .single-class-metric:nth-child(3) { border-right: 0; }
+    .single-class-metric strong { color: var(--dash-ink); display: block; font-size: 1.65rem; font-weight: 900; letter-spacing: -0.03em; line-height: 1; }
+    .single-class-metric span { color: var(--dash-ink); display: block; font-size: 0.78rem; font-weight: 900; margin-top: 0.4rem; }
+    .single-class-metric small { color: var(--dash-muted); display: block; font-size: 0.72rem; margin-top: 0.15rem; }
+    .single-class-metric-emphasis { color: var(--dash-primary-deep); font-weight: 800; }
+    .single-class-mobile-progress { display: none; }
+    .single-class-progress-area { margin: 1rem clamp(1.4rem, 4vw, 3rem) clamp(1.4rem, 3vw, 2rem); }
+    .single-class-progress-heading { align-items: baseline; display: flex; justify-content: space-between; }
+    .single-class-progress-heading span { color: var(--dash-ink); font-size: 0.9rem; font-weight: 900; }
+    .single-class-progress-heading strong { color: var(--dash-primary-deep); font-size: 1.35rem; font-weight: 900; }
+    .single-class-progress-state { color: var(--dash-primary-deep); font-size: 0.76rem; font-weight: 800; margin: 0.15rem 0 0; }
+    .single-class-progress { background: rgba(31,111,139,0.11); border: 1px solid rgba(31,111,139,0.08); border-radius: 999px; height: 11px; margin-top: 0.7rem; overflow: hidden; position: relative; }
+    .single-class-progress::after { background-image: radial-gradient(circle, rgba(31,111,139,0.24) 0 2px, transparent 2.5px); background-position: center; background-size: 25% 100%; content: ""; inset: 0; opacity: 0.45; pointer-events: none; position: absolute; }
+    .single-class-progress-bar { background: linear-gradient(90deg, var(--dash-primary), #38a887); border-radius: inherit; height: 100%; min-width: 0; position: relative; transition: width 360ms ease; z-index: 1; }
+    .single-class-progress-bar.has-progress::after { background: #fff; border: 2px solid var(--dash-primary); border-radius: 50%; box-shadow: 0 2px 7px rgba(15,78,100,0.2); content: ""; height: 13px; position: absolute; right: 0; top: 50%; transform: translate(25%,-50%); width: 13px; }
+    .single-class-progress-note { color: var(--dash-muted); font-size: 0.75rem; margin: 0.5rem 0 0; }
+    .single-class-footer { align-items: center; background: rgba(31,111,139,0.035); border-top: 1px solid rgba(31,111,139,0.08); display: flex; gap: 1rem; justify-content: space-between; padding: 1.15rem clamp(1.4rem, 4vw, 3rem); }
+    .single-class-footer-copy { min-width: 0; }
+    .single-class-footer-title { align-items: center; display: flex !important; gap: 0.5rem; }
+    .single-class-footer-title i { color: var(--dash-primary); }
+    .single-class-footer-copy strong { color: var(--dash-ink); display: block; font-size: 0.86rem; }
+    .single-class-footer-copy span { color: var(--dash-muted); display: block; font-size: 0.75rem; margin-top: 0.18rem; }
+    .single-class-action {
+        align-items: center;
+        background: var(--dash-primary);
+        border: 1px solid var(--dash-primary);
+        border-radius: var(--radius-md);
+        box-shadow: 0 10px 24px rgba(15,78,100,0.16);
+        color: #fff;
+        cursor: pointer;
+        display: inline-flex;
+        font-family: inherit;
+        font-weight: 900;
+        gap: 0.65rem;
+        justify-content: center;
+        min-height: 50px;
+        padding: 0.75rem 1.2rem;
+        white-space: nowrap;
+    }
+    .single-class-action:hover { background: var(--dash-primary-deep); }
+    .single-class-action i { transition: transform 180ms ease; }
+    .single-class-action:hover i { transform: translateX(4px); }
+    .single-class-action:focus-visible { outline: 3px solid rgba(56,189,248,0.4); outline-offset: 3px; }
+
+    body.dark-theme .single-class-card { background: #1e293b; border-color: rgba(255,255,255,0.1); }
+    body.dark-theme .single-class-title, body.dark-theme .single-class-metric strong, body.dark-theme .single-class-progress-heading span, body.dark-theme .single-class-progress-heading strong, body.dark-theme .single-class-footer-copy strong { color: #f8fafc; }
+    body.dark-theme .single-class-subtitle { color: #cbd5e1; }
+    body.dark-theme .single-class-details, body.dark-theme .single-class-footer, body.dark-theme .single-class-metrics { background: rgba(15,23,42,0.42); border-color: rgba(255,255,255,0.08); }
+    body.dark-theme .single-class-metric:hover { background: rgba(56,189,248,0.07); }
+    body.dark-theme .single-class-literacy-motif span { color: rgba(125,211,252,0.14); }
+    body.dark-theme .single-class-meta .course-status-pill:hover { background: rgba(34,197,94,0.12) !important; border-color: rgba(134,239,172,0.22) !important; color: #86efac !important; }
+
+    @media (max-width: 991.98px) {
+        .classes-grid.is-single-class { min-height: clamp(480px, 62vh, 640px); }
+        .single-class-card { width: min(100%, 820px); }
+    }
+    @media (max-width: 640px) {
+        .classes-grid.is-single-class { align-items: start; min-height: 0; }
+        .single-class-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .single-class-metric { border-bottom: 1px solid rgba(31,111,139,0.11); border-right: 0; padding: 0.9rem 0.7rem; }
+        .single-class-metric:nth-child(odd) { border-right: 1px solid rgba(31,111,139,0.11); }
+        .single-class-metric:nth-last-child(-n+2) { border-bottom: 0; }
+        .single-class-mobile-progress { display: block; }
+        .single-class-details::after { display: none; }
+        .single-class-title { max-width: none; }
+        .single-class-footer { align-items: stretch; flex-direction: column; }
+        .single-class-action { width: 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .single-class-card, .single-class-details::after, .single-class-action i, .single-class-progress-bar { transition: none; }
+        .single-class-card:hover { transform: none; }
+    }
+</style>
+
+<!-- Courses backed by the teacher's canonical Section assignments -->
 <section class="courses-home mb-4">
-    <div class="classes-grid" id="coursesGrid">
+    <div class="classes-grid{% if teacher_courses|length == 1 %} is-single-class{% endif %}" id="coursesGrid">
         {% if teacher_courses %}
             {% for course in teacher_courses %}
+                {% if teacher_courses|length == 1 %}
+                <article class="single-class-card" data-course-id="{{ course.id }}">
+                    <div class="single-class-details">
+                        <div class="single-class-literacy-motif" aria-hidden="true"><span>A</span><span>ba</span><span></span></div>
+                        <p class="single-class-eyebrow">Learning Materials</p>
+                        <h3 class="single-class-title">{{ course.title }}</h3>
+                        <div class="single-class-meta">
+                            {% if course.code %}<span class="course-code-pill">{{ course.code }}</span>{% endif %}
+                            <span class="course-status-pill" aria-label="Active class"><span class="course-status-pill-inner"><span class="course-status-icon" aria-hidden="true"><span class="course-status-dot"></span></span><span class="course-status-label">Active</span></span></span>
+                        </div>
+                        <p class="single-class-subtitle">{% if course.description and course.description != "English" and course.description != "Filipino" %}{{ course.description }} · {% endif %}Learning Materials</p>
+                    </div>
+                    <div class="single-class-metrics" aria-label="Class statistics">
+                        <div class="single-class-metric"><i class="bi bi-journals single-class-metric-icon" aria-hidden="true"></i><strong>{{ course.metrics.sections|default:0|stringformat:"02d" }}</strong><span>Sections</span><small>{{ course.metrics.sections|default:0 }} active section{{ course.metrics.sections|default:0|pluralize }}<br><b class="single-class-metric-emphasis">Class space ready</b></small></div>
+                        <div class="single-class-metric"><i class="bi bi-people single-class-metric-icon" aria-hidden="true"></i><strong>{{ course.metrics.students|default:0|stringformat:"02d" }}</strong><span>Learners</span><small>{{ course.metrics.students|default:0 }} enrolled<br><b class="single-class-metric-emphasis">{% if course.metrics.students|default:0 %}Ready to learn{% else %}Awaiting learners{% endif %}</b></small></div>
+                        <div class="single-class-metric"><i class="bi bi-book single-class-metric-icon" aria-hidden="true"></i><strong>{{ course.metrics.materials|default:0|stringformat:"02d" }}</strong><span>Materials</span><small>{{ course.metrics.materials|default:0 }} available<br><b class="single-class-metric-emphasis">{% if course.metrics.materials|default:0 %}Learning resources ready{% else %}Awaiting materials{% endif %}</b></small></div>
+                        <div class="single-class-metric single-class-mobile-progress"><strong>{{ course.metrics.average_progress|default:0|floatformat:0 }}%</strong><span>Progress</span><small>{% if course.metrics.average_progress|default:0 %}Underway{% else %}Getting started{% endif %}</small></div>
+                    </div>
+                    <div class="single-class-progress-area">
+                        <div class="single-class-progress-heading"><span>Average Progress</span><strong>{{ course.metrics.average_progress|default:0|floatformat:0 }}%</strong></div>
+                        <p class="single-class-progress-state">{% if course.metrics.average_progress|default:0 %}In progress{% else %}Getting started{% endif %}</p>
+                        <div class="single-class-progress" role="progressbar" aria-label="Average progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ course.metrics.average_progress|default:0|floatformat:0 }}"><div class="single-class-progress-bar{% if course.metrics.average_progress|default:0 %} has-progress{% endif %}" style="width: {{ course.metrics.average_progress|default:0 }}%;"></div></div>
+                        <p class="single-class-progress-note">{% if course.metrics.average_progress|default:0 %}Learner progress is underway—keep the reading journey going.{% else %}No learner progress yet—ready for the first step.{% endif %}</p>
+                    </div>
+                    <footer class="single-class-footer">
+                        <div class="single-class-footer-copy"><strong class="single-class-footer-title"><i class="bi bi-book-half" aria-hidden="true"></i> Reading activities &amp; materials</strong><span>{{ course.metrics.materials|default:0 }} material{{ course.metrics.materials|default:0|pluralize }} available for this class</span></div>
+                        <button class="single-class-action" type="button" data-open-course="{{ course.id }}" aria-label="Open Course">Open Course <i class="bi bi-arrow-right" aria-hidden="true"></i></button>
+                    </footer>
+                </article>
+                {% else %}
                 <article class="course-dashboard-card" data-course-id="{{ course.id }}">
                     <div class="course-card-badges">
                         <span class="course-code-pill">{{ course.code }}</span>
@@ -6150,6 +6355,7 @@
                         <span class="ccf-arrow"><i class="bi bi-arrow-right"></i></span>
                     </div>
                 </article>
+                {% endif %}
             {% endfor %}
             <script>
                 (function(){
@@ -6166,8 +6372,8 @@
         {% else %}
             <div class="empty-state">
                 <i class="bi bi-journal-bookmark"></i>
-                <h3>No Courses Yet</h3>
-                <p>Create a class from the Teacher Dashboard to get started.</p>
+                <h3>No class assigned yet.</h3>
+                <p>Please contact the administrator to be assigned to a class.</p>
             </div>
         {% endif %}
     </div>
@@ -9718,7 +9924,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         return false;
     }
 
-    // Render teacher-created courses
+    // Render canonical Section-backed course cards
     async function renderCourses() {
         const grid = document.getElementById('coursesGrid');
         if (!grid) return;
@@ -9731,8 +9937,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             grid.innerHTML = `
                 <div class="empty-state">
                     <i class="bi bi-journal-bookmark"></i>
-                    <h3>No Courses Yet</h3>
-                    <p>Create a class from the Teacher Dashboard to get started.</p>
+                    <h3>No class assigned yet.</h3>
+                    <p>Please contact the administrator to be assigned to a class.</p>
                 </div>
             `;
             return;
@@ -9761,6 +9967,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             grid.dataset.coursesHash = currentHash;
         } catch (e) { /* ignore and continue rendering */ }
 
+        grid.classList.toggle('is-single-class', teacherCourses.length === 1);
         grid.innerHTML = teacherCourses.map(course => {
             const metrics = course.metrics || {};
             const sectionsCount = Number(metrics.sections ?? 0);
@@ -9771,8 +9978,41 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const averageProgressLabel = Number.isFinite(averageProgress) ? `${Math.round(averageProgress)}%` : '0%';
             const section = String(course.description || '').trim();
             const subtitle = section && !/^(english|filipino)$/i.test(section)
-                ? `${section} - Learning Materials`
+                ? `${section} · Learning Materials`
                 : 'Learning Materials';
+
+            if (teacherCourses.length === 1) {
+                return `
+                    <article class="single-class-card" data-course-id="${escapeHtml(course.id)}">
+                        <div class="single-class-details">
+                            <div class="single-class-literacy-motif" aria-hidden="true"><span>A</span><span>ba</span><span></span></div>
+                            <p class="single-class-eyebrow">Learning Materials</p>
+                            <h3 class="single-class-title">${escapeHtml(course.title || 'Untitled Class')}</h3>
+                            <div class="single-class-meta">
+                                ${course.code ? `<span class="course-code-pill">${escapeHtml(course.code)}</span>` : ''}
+                                <span class="course-status-pill" aria-label="Active class"><span class="course-status-pill-inner"><span class="course-status-icon" aria-hidden="true"><span class="course-status-dot"></span></span><span class="course-status-label">Active</span></span></span>
+                            </div>
+                            <p class="single-class-subtitle">${escapeHtml(subtitle)}</p>
+                        </div>
+                        <div class="single-class-metrics" aria-label="Class statistics">
+                            <div class="single-class-metric"><i class="bi bi-journals single-class-metric-icon" aria-hidden="true"></i><strong>${String(sectionsCount).padStart(2, '0')}</strong><span>Sections</span><small>${sectionsCount} active section${sectionsCount === 1 ? '' : 's'}<br><b class="single-class-metric-emphasis">Class space ready</b></small></div>
+                            <div class="single-class-metric"><i class="bi bi-people single-class-metric-icon" aria-hidden="true"></i><strong>${String(studentsCount).padStart(2, '0')}</strong><span>Learners</span><small>${studentsCount} enrolled<br><b class="single-class-metric-emphasis">${studentsCount > 0 ? 'Ready to learn' : 'Awaiting learners'}</b></small></div>
+                            <div class="single-class-metric"><i class="bi bi-book single-class-metric-icon" aria-hidden="true"></i><strong>${String(materialsCount).padStart(2, '0')}</strong><span>Materials</span><small>${materialsCount} available<br><b class="single-class-metric-emphasis">${materialsCount > 0 ? 'Learning resources ready' : 'Awaiting materials'}</b></small></div>
+                            <div class="single-class-metric single-class-mobile-progress"><strong>${averageProgressLabel}</strong><span>Progress</span><small>${averageProgress > 0 ? 'Underway' : 'Getting started'}</small></div>
+                        </div>
+                        <div class="single-class-progress-area">
+                            <div class="single-class-progress-heading"><span>Average Progress</span><strong>${averageProgressLabel}</strong></div>
+                            <p class="single-class-progress-state">${averageProgress > 0 ? 'In progress' : 'Getting started'}</p>
+                            <div class="single-class-progress" role="progressbar" aria-label="Average progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Number.isFinite(averageProgress) ? Math.round(averageProgress) : 0}"><div class="single-class-progress-bar${averageProgress > 0 ? ' has-progress' : ''}" style="width: ${Number.isFinite(averageProgress) ? Math.max(0, Math.min(100, averageProgress)) : 0}%;"></div></div>
+                            <p class="single-class-progress-note">${averageProgress > 0 ? 'Learner progress is underway—keep the reading journey going.' : 'No learner progress yet—ready for the first step.'}</p>
+                        </div>
+                        <footer class="single-class-footer">
+                            <div class="single-class-footer-copy"><strong class="single-class-footer-title"><i class="bi bi-book-half" aria-hidden="true"></i> Reading activities &amp; materials</strong><span>${materialsCount} material${materialsCount === 1 ? '' : 's'} available for this class</span></div>
+                            <button class="single-class-action" type="button" data-open-course="${escapeHtml(course.id)}" aria-label="Open Course">Open Course <i class="bi bi-arrow-right" aria-hidden="true"></i></button>
+                        </footer>
+                    </article>
+                `;
+            }
 
             return `
                 <article class="course-dashboard-card" data-course-id="${escapeHtml(course.id)}">
