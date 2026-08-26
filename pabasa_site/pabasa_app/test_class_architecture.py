@@ -227,8 +227,9 @@ class SchoolScopedSectionIsolationTests(TestCase):
 
     def test_admin_school_list_hides_default_and_shows_school_card_details(self):
         principal = make_user("PRN-SCHOOL-SCOPE", "principal", "school-scope-principal@example.com")
-        principal.tags = [{"principal_school_info": {"name": self.school_a.name, "code": self.school_a.code}}]
-        principal.save(update_fields=["tags"])
+        principal.school_record = self.school_a
+        principal.school = self.school_a.name
+        principal.save(update_fields=["school_record", "school"])
 
         response = self.client.get(reverse("admin_school"))
 
@@ -239,6 +240,99 @@ class SchoolScopedSectionIsolationTests(TestCase):
         self.assertContains(response, "Active")
         self.assertContains(response, reverse("admin_school_detail", args=[self.school_a.id]))
         self.assertNotContains(response, "Default School")
+
+    def test_school_workspace_creates_and_displays_relational_principal(self):
+        with patch("pabasa_app.views._send_principal_credentials_email"):
+            response = self.client.post(
+                reverse("admin_school_detail", args=[self.school_a.id]),
+                {
+                    "action": "create_principal",
+                    "first_name": "Juan",
+                    "middle_initial": "D",
+                    "last_name": "Dela Cruz",
+                    "email": "juan.school-a@example.com",
+                    "contact_no": "09170000001",
+                    "school_id": str(self.school_b.id),
+                },
+            )
+        self.assertEqual(response.status_code, 302)
+        principal = User.objects.get(email="juan.school-a@example.com")
+        self.assertEqual(principal.role, "principal")
+        self.assertEqual(principal.school_record_id, self.school_a.id)
+        self.assertEqual(User.objects.filter(role="principal", school_record=self.school_b, is_archived=False).count(), 0)
+        self.assertContains(self.client.get(reverse("admin_school_detail", args=[self.school_a.id])), "Juan")
+        self.assertContains(self.client.get(reverse("admin_school")), "Juan")
+
+        edit_response = self.client.post(
+            reverse("admin_principal_edit", args=[principal.id]),
+            {
+                "first_name": "Juan Updated",
+                "last_name": "Dela Cruz",
+                "email": principal.email,
+                "contact_no": principal.contact_no,
+                "school_name": self.school_b.name,
+                "school_address": "Updated address",
+            },
+        )
+        self.assertEqual(edit_response.status_code, 302)
+        principal.refresh_from_db()
+        self.assertEqual(principal.school_record_id, self.school_a.id)
+
+    def test_one_active_principal_per_school_and_independent_other_school(self):
+        first = make_user("PRN-SCHOOL-A-1", "principal", "principal-a-1@example.com")
+        first.school_record = self.school_a
+        first.save(update_fields=["school_record"])
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            User.objects.create(
+                custom_id="PRN-SCHOOL-A-2", role="principal", first_name="Second", last_name="Principal",
+                middle_initial="", suffix="", sex="N/A", birth_month=1, birth_day=1, birth_year=1990,
+                email="principal-a-2@example.com", password_hash="hashed", school_record=self.school_a,
+            )
+        second = make_user("PRN-SCHOOL-B-1", "principal", "principal-b-1@example.com")
+        second.school_record = self.school_b
+        second.save(update_fields=["school_record"])
+        self.assertEqual(second.school_record_id, self.school_b.id)
+
+    def test_archived_principal_can_be_replaced_without_deleting_history(self):
+        principal = make_user("PRN-ARCHIVE-A", "principal", "principal-archive@example.com")
+        principal.school_record = self.school_a
+        principal.save(update_fields=["school_record"])
+        response = self.client.post(reverse("admin_principal_deactivate", args=[principal.id]))
+        self.assertEqual(response.status_code, 302)
+        principal.refresh_from_db()
+        self.assertTrue(principal.is_archived)
+        self.assertEqual(principal.school_record_id, self.school_a.id)
+        with patch("pabasa_app.views._send_principal_credentials_email"):
+            replacement = self.client.post(
+                reverse("admin_school_detail", args=[self.school_a.id]),
+                {
+                    "action": "create_principal",
+                    "first_name": "Replacement",
+                    "last_name": "Principal",
+                    "email": "replacement-principal@example.com",
+                    "contact_no": "09170000002",
+                },
+            )
+        self.assertEqual(replacement.status_code, 302)
+        self.assertEqual(
+            User.objects.get(email="replacement-principal@example.com").school_record_id,
+            self.school_a.id,
+        )
+
+    def test_archived_school_rejects_principal_creation(self):
+        self.school_a.archive()
+        response = self.client.post(
+            reverse("admin_school_detail", args=[self.school_a.id]),
+            {
+                "action": "create_principal",
+                "first_name": "Blocked",
+                "last_name": "Principal",
+                "email": "blocked-principal@example.com",
+                "contact_no": "09170000003",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(email="blocked-principal@example.com").exists())
 
 
 class SchoolAwareSignupTests(TestCase):

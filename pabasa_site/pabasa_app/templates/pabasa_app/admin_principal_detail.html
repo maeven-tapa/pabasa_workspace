@@ -51,7 +51,7 @@
                 <h3 class="h6 fw-bold mb-3">School Information</h3>
                 <dl class="row mb-0">
                     <dt class="col-sm-4 text-secondary">School Name</dt>
-                    <dd class="col-sm-8">{{ school_info.name|default:managed_user.school|default:"-" }}</dd>
+                    <dd class="col-sm-8">{% if managed_user.school_record %}{{ managed_user.school_record.name }}{% else %}{{ school_info.name|default:managed_user.school|default:"-" }}{% endif %}</dd>
                     <dt class="col-sm-4 text-secondary">Address</dt>
                     <dd class="col-sm-8">{{ school_info.address|default:"-" }}</dd>
                     <dt class="col-sm-4 text-secondary">School Email</dt>

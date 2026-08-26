@@ -105,6 +105,13 @@ class User(models.Model):
     class Meta:
         db_table = "users"
         ordering = ["last_name", "first_name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["school_record"],
+                condition=models.Q(role="principal", is_archived=False, school_record__isnull=False),
+                name="unique_active_principal_per_school",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.custom_id} - {self.last_name}, {self.first_name}"

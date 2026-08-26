@@ -48,7 +48,6 @@ OCR_ENGINE_UNAVAILABLE_MESSAGE = (
     'No OCR engine is currently configured. Image text extraction is temporarily unavailable.'
 )
 from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_items
-from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, ensure_default_principal_account
 from django.db import transaction
 import re
 import traceback
@@ -4018,9 +4017,6 @@ def login_user(request):
         custom_id = data.get('custom_id', '').strip().upper()
         password = data.get('password', '')
 
-        if custom_id == PRINCIPAL_DEFAULT_CUSTOM_ID:
-            ensure_default_principal_account()
-        
         if not custom_id or not password:
             return JsonResponse({'success': False, 'error': 'Custom ID and password are required'}, status=400)
         
@@ -5107,6 +5103,55 @@ def _send_principal_credentials_email(request, user, school_name):
     )
     send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
 
+
+def _active_principal_for_school(school):
+    return User.objects.filter(
+        role='principal', school_record=school, is_archived=False,
+    ).order_by('id').first()
+
+
+def _create_principal_account(request, school, first_name, middle_initial, last_name, suffix, email, contact_no, school_address='', logo_file=None):
+    if not school or school.status != 'active' or not school.is_active:
+        raise ValueError('A Principal can only be created for an active School.')
+    if _active_principal_for_school(school):
+        raise ValueError('This School already has an active Principal.')
+    if User.objects.filter(email__iexact=email).exists():
+        raise ValueError('An account with this email address already exists.')
+
+    custom_id = _generate_principal_custom_id(school.name)
+    logo_path = _save_principal_logo(logo_file, custom_id) if logo_file else ''
+    user = User.objects.create(
+        custom_id=custom_id,
+        role='principal',
+        first_name=first_name,
+        middle_initial=middle_initial[:1],
+        last_name=last_name,
+        suffix=suffix,
+        sex='N/A',
+        birth_month=1,
+        birth_day=1,
+        birth_year=timezone.now().year,
+        email=email,
+        contact_no=contact_no,
+        password_hash=make_password(PRINCIPAL_DEFAULT_PASSWORD),
+        school=school.name,
+        school_record=school,
+        profile_picture=logo_path,
+    )
+    _set_profile_dict(user, 'principal_school_info', {
+        'name': school.name,
+        'address': school_address,
+        'contact': contact_no,
+        'email': email,
+        'logo': logo_path,
+    })
+    _set_profile_dict(user, 'principal_profile_info', {
+        'position': 'Principal',
+        'full_name': _admin_user_full_name(user),
+    })
+    _send_principal_credentials_email(request, user, school.name)
+    return user
+
 @admin_required
 def admin_principals(request):
     context = _admin_context(request, 'Principals', [])
@@ -5169,44 +5214,31 @@ def admin_principals(request):
         try:
             with transaction.atomic():
                 first_name, last_name = _split_full_name(form_data['full_name'])
-                custom_id = _generate_principal_custom_id(form_data['school_name'])
-                logo_path = _save_principal_logo(logo_file, custom_id)
-                current_year = timezone.now().year
-                user = User.objects.create(
-                    custom_id=custom_id,
-                    role='principal',
-                    first_name=first_name,
-                    last_name=last_name,
-                    middle_initial='',
-                    suffix='',
-                    sex='N/A',
-                    birth_month=1,
-                    birth_day=1,
-                    birth_year=current_year,
-                    email=form_data['email'],
-                    contact_no=form_data['contact_no'],
-                    password_hash=make_password(PRINCIPAL_DEFAULT_PASSWORD),
-                    school=form_data['school_name'],
-                    profile_picture=logo_path,
+                school = School.objects.filter(
+                    name__iexact=form_data['school_name'],
+                    status='active',
+                    is_active=True,
+                ).first()
+                if not school:
+                    raise ValueError('Choose an existing active School.')
+                user = _create_principal_account(
+                    request,
+                    school,
+                    first_name,
+                    '',
+                    last_name,
+                    '',
+                    form_data['email'],
+                    form_data['contact_no'],
+                    form_data['school_address'],
+                    logo_file,
                 )
-                _set_profile_dict(user, 'principal_school_info', {
-                    'name': form_data['school_name'],
-                    'address': form_data['school_address'],
-                    'contact': form_data['contact_no'],
-                    'email': form_data['email'],
-                    'logo': logo_path,
-                })
-                _set_profile_dict(user, 'principal_profile_info', {
-                    'position': 'Principal',
-                    'full_name': form_data['full_name'],
-                })
-                _send_principal_credentials_email(request, user, form_data['school_name'])
 
             context['principal_success'] = 'Principal account created and credentials email sent.'
             context['created_principal'] = user
             context['created_principal_id'] = user.id
             context['created_principal_name'] = _admin_user_full_name(user)
-            context['created_school_name'] = form_data['school_name']
+            context['created_school_name'] = user.school_record.name
             context['form_data'] = {}
 
             principals = User.objects.filter(role='principal')
@@ -5371,7 +5403,7 @@ def admin_principal_edit(request, user_id):
 
     if request.method == 'POST':
         email = request.POST.get('email', '').strip().lower()
-        school_name = request.POST.get('school_name', '').strip()
+        school_name = user.school_record.name if user.school_record_id else request.POST.get('school_name', '').strip()
         school_address = request.POST.get('school_address', '').strip()
         contact_no = request.POST.get('contact_no', '').strip()
 
@@ -5400,7 +5432,7 @@ def admin_principal_edit(request, user_id):
             user.suffix = request.POST.get('suffix', '').strip()
             user.email = email
             user.contact_no = contact_no
-            user.school = school_name
+            user.school = user.school_record.name if user.school_record_id else school_name
             user.profile_picture = logo_path
             user.save(update_fields=['first_name', 'middle_initial', 'last_name', 'suffix', 'email', 'contact_no', 'school', 'profile_picture', 'updated_at'])
 
@@ -5562,6 +5594,10 @@ def admin_principal_deactivate(request, user_id):
 
     action = request.POST.get('action', 'deactivate').strip().lower()
     if action == 'reactivate' and user.is_archived:
+        if user.school_record_id and not user.school_record.is_active:
+            return redirect('admin_principal_detail', user_id=user.id)
+        if user.school_record_id and _active_principal_for_school(user.school_record):
+            return redirect('admin_principal_detail', user_id=user.id)
         user.is_archived = False
         user.archived_at = None
         user.save(update_fields=['is_archived', 'archived_at', 'updated_at'])
@@ -5594,24 +5630,14 @@ def admin_classes(request):
 
 
 def _school_card_context(school):
-    """Build display data without inventing a School-to-Principal relationship."""
-    principal_name = 'Not assigned'
-    school_name_key = str(school.name or '').strip().casefold()
-    school_code_key = str(school.code or '').strip().casefold()
-    for principal in _principal_users():
-        school_info = _get_profile_dict(principal, 'principal_school_info')
-        if not isinstance(school_info, dict):
-            continue
-        profile_name = str(school_info.get('name') or '').strip().casefold()
-        profile_code = str(school_info.get('code') or '').strip().casefold()
-        if (profile_name and profile_name == school_name_key) or (profile_code and profile_code == school_code_key):
-            principal_name = _admin_user_full_name(principal) or 'Not assigned'
-            break
+    """Build display data from the authoritative relational assignment."""
+    principal = _active_principal_for_school(school)
     return {
         'id': school.id,
         'name': school.name,
         'code': school.code or 'Not assigned',
-        'principal_name': principal_name,
+        'principal_name': _admin_user_full_name(principal) if principal else 'Not assigned',
+        'principal': principal,
         'status_label': school.get_status_display(),
         'is_active': school.is_active,
     }
@@ -5649,38 +5675,80 @@ def admin_school_detail(request, school_id):
     school = get_object_or_404(School, id=school_id)
     context = _admin_context(request, school.name, [])
     if request.method == 'POST':
-        grade = str(request.POST.get('grade_level') or '').strip()
-        section_name = str(request.POST.get('section') or '').strip()
-        if grade not in SCHOOL_GRADE_LEVELS or not section_name:
-            context['error_message'] = 'Choose a grade and provide a section name.'
-        else:
-            try:
-                with transaction.atomic():
-                    section = Section.objects.filter(
-                        school=school,
-                        grade_level__iexact=grade,
-                        section__iexact=section_name,
-                    ).first()
-                    if not section:
-                        Section.objects.create(
-                            school=school,
-                            grade_level=grade,
-                            section=section_name.upper(),
-                            class_name=f'{grade} - {section_name.upper()}',
-                            class_code=generate_unique_class_code(),
-                            subject='Reading',
-                            is_active=True,
+        if request.POST.get('action') == 'create_principal':
+            form_data = {
+                'first_name': request.POST.get('first_name', '').strip(),
+                'middle_initial': request.POST.get('middle_initial', '').strip(),
+                'last_name': request.POST.get('last_name', '').strip(),
+                'suffix': request.POST.get('suffix', '').strip(),
+                'email': request.POST.get('email', '').strip().lower(),
+                'contact_no': request.POST.get('contact_no', '').strip(),
+            }
+            context['principal_form_data'] = form_data
+            required = {
+                'First name': form_data['first_name'],
+                'Last name': form_data['last_name'],
+                'Email address': form_data['email'],
+                'Contact number': form_data['contact_no'],
+            }
+            missing = [label for label, value in required.items() if not value]
+            if missing:
+                context['principal_error'] = f"{', '.join(missing)} required."
+            else:
+                try:
+                    with transaction.atomic():
+                        locked_school = School.objects.select_for_update().get(pk=school.pk)
+                        principal = _create_principal_account(
+                            request,
+                            locked_school,
+                            form_data['first_name'],
+                            form_data['middle_initial'],
+                            form_data['last_name'],
+                            form_data['suffix'],
+                            form_data['email'],
+                            form_data['contact_no'],
                         )
-                        return redirect('admin_school_detail', school_id=school.id)
-                    context['error_message'] = f'{grade} - {section.section} already exists in {school.name}.'
-            except IntegrityError:
-                context['error_message'] = f'{grade} - {section_name} already exists in {school.name}.'
+                    return redirect('admin_school_detail', school_id=school.id)
+                except (ValueError, IntegrityError) as exc:
+                    context['principal_error'] = str(exc) if isinstance(exc, ValueError) else 'This School already has an active Principal.'
+            context['principal'] = _active_principal_for_school(school)
+        else:
+            context['principal_form_data'] = {}
+        if request.POST.get('action') != 'create_principal':
+            grade = str(request.POST.get('grade_level') or '').strip()
+            section_name = str(request.POST.get('section') or '').strip()
+            if grade not in SCHOOL_GRADE_LEVELS or not section_name:
+                context['error_message'] = 'Choose a grade and provide a section name.'
+            else:
+                try:
+                    with transaction.atomic():
+                        section = Section.objects.filter(
+                            school=school,
+                            grade_level__iexact=grade,
+                            section__iexact=section_name,
+                        ).first()
+                        if not section:
+                            Section.objects.create(
+                                school=school,
+                                grade_level=grade,
+                                section=section_name.upper(),
+                                class_name=f'{grade} - {section_name.upper()}',
+                                class_code=generate_unique_class_code(),
+                                subject='Reading',
+                                is_active=True,
+                            )
+                            return redirect('admin_school_detail', school_id=school.id)
+                        context['error_message'] = f'{grade} - {section.section} already exists in {school.name}.'
+                except IntegrityError:
+                    context['error_message'] = f'{grade} - {section_name} already exists in {school.name}.'
 
     grouped = {grade: [] for grade in SCHOOL_GRADE_LEVELS}
     for section in _school_sections_queryset(school):
         grouped.setdefault(section.grade_level, []).append(section)
     context.update({
         'school': school,
+        'principal': context.get('principal', _active_principal_for_school(school)),
+        'principal_form_data': context.get('principal_form_data', {}),
         'grades': SCHOOL_GRADE_LEVELS,
         'sections_by_grade': grouped,
     })
