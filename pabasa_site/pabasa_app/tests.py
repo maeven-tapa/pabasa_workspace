@@ -5309,22 +5309,9 @@ class MaterialCreationTests(TestCase):
             teacher=teacher,
             subject="Reading",
         )
-        section.students = [{
-            "student_id": student.id,
-            "custom_id": student.custom_id,
-            "first_name": student.first_name,
-            "last_name": student.last_name,
-            "email": student.email,
-            "is_active": True,
-        }]
-        section.save(update_fields=["students"])
-        course = Course.objects.create(
-            code="TPL-C1",
-            title="Template Course",
-            description="",
-            teacher=teacher,
-        )
-        course.sections.add(section)
+        section.add_student(student)
+        section_count = Section.objects.count()
+        course_count = Course.objects.count()
 
         teacher_session = self.client.session
         teacher_session["user_id"] = teacher.id
@@ -5376,15 +5363,20 @@ class MaterialCreationTests(TestCase):
 
         attach_response = self.client.post(
             reverse("add_material_to_course"),
-            json.dumps({"course_id": course.id, "material_id": material.id}),
+            json.dumps({"course_id": f"section-{section.id}", "material_id": material.id}),
             content_type="application/json",
         )
         self.assertEqual(attach_response.status_code, 200)
         self.assertTrue(attach_response.json()["success"])
+        self.assertEqual(Section.objects.count(), section_count)
+        self.assertEqual(Course.objects.count(), course_count)
 
         course_response = self.client.get(reverse("get_teacher_courses_api"))
         self.assertEqual(course_response.status_code, 200)
-        course_payload = next(item for item in course_response.json()["courses"] if item["id"] == course.id)
+        course_payload = next(
+            item for item in course_response.json()["courses"]
+            if item["id"] == f"section-{section.id}"
+        )
         course_material = next(item for item in course_payload["materials"] if item["id"] == material.id)
         self.assertEqual(course_material["source_type"], "template")
         self.assertEqual(course_material["assigned_weeks"], [3])
@@ -6021,6 +6013,180 @@ class MaterialCreationTests(TestCase):
         self.assertEqual(payload["class_id"], section.id)
         self.assertEqual(payload["class_code"], section.class_code)
         self.assertEqual(payload["content_json"]["template_title"], "Picture-Word Matching")
+
+
+class CanonicalSectionMaterialWorkflowTests(TestCase):
+    def setUp(self):
+        self.teacher = User.objects.create(
+            custom_id="TCH-CANONICAL", role="teacher", first_name="Canonical", last_name="Teacher",
+            sex="female", birth_month=1, birth_day=1, birth_year=1990,
+            email="canonical.teacher@example.com", password_hash=make_password("password"),
+        )
+        self.other_teacher = User.objects.create(
+            custom_id="TCH-SHARED", role="teacher", first_name="Shared", last_name="Teacher",
+            sex="female", birth_month=1, birth_day=1, birth_year=1990,
+            email="shared.teacher@example.com", password_hash=make_password("password"),
+        )
+        self.section = Section.objects.create(
+            class_code="G2-BONIFACIO", class_name="Grade 2 - BONIFACIO",
+            grade_level="Grade 2", section="BONIFACIO", teacher=self.teacher,
+            subject="Filipino", is_active=True,
+        )
+        self.other_section = Section.objects.create(
+            class_code="G2-MABINI", class_name="Grade 2 - MABINI",
+            grade_level="Grade 2", section="MABINI", teacher=self.other_teacher,
+            subject="Filipino", is_active=True,
+        )
+        self.student = User.objects.create(
+            custom_id="STU-BONIFACIO", role="student", first_name="Bonifacio", last_name="Student",
+            sex="male", birth_month=1, birth_day=1, birth_year=2016,
+            email="bonifacio.student@example.com", password_hash=make_password("password"),
+        )
+        self.outside_student = User.objects.create(
+            custom_id="STU-MABINI", role="student", first_name="Mabini", last_name="Student",
+            sex="female", birth_month=1, birth_day=1, birth_year=2016,
+            email="mabini.student@example.com", password_hash=make_password("password"),
+        )
+        self.section.add_student(self.student)
+        self.other_section.add_student(self.outside_student)
+        self._login(self.teacher)
+
+    def _login(self, user):
+        session = self.client.session
+        session.update({"user_id": user.id, "user_role": user.role, "custom_id": user.custom_id})
+        session.save()
+
+    def _create_material(self, source_type="personal", class_id=None):
+        data = {
+            "title": f"{source_type.title()} canonical reading",
+            "content": "Aso\nPusa",
+            "reading_type": "word",
+            "status": "published",
+            "source_type": source_type,
+            "language": "Filipino",
+        }
+        if class_id is not None:
+            data["class_id"] = f"section-{class_id}"
+            data["class_code"] = self.section.class_code
+        return self.client.post(
+            reverse("add_reading_material"), json.dumps(data), content_type="application/json",
+        )
+
+    def test_template_creation_targets_exact_existing_section_without_creating_section_or_course(self):
+        section_count = Section.objects.count()
+        course_count = Course.objects.count()
+        section_pk = self.section.pk
+        response = self.client.post(
+            reverse("add_reading_material"),
+            json.dumps({
+                "title": "Template canonical reading",
+                "content": json.dumps({
+                    "template_title": "Letter & Sound Matching", "template_lesson": "Lesson 1",
+                    "template_source": "template", "items": ["A", "B"],
+                }),
+                "reading_type": "word", "status": "published", "source_type": "template",
+                "template_title": "Letter & Sound Matching", "template_lesson": "Lesson 1",
+                "class_id": f"section-{self.section.pk}", "class_code": self.section.class_code,
+                "language": "Filipino",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        material = Material.objects.get(pk=response.json()["material"]["raw_id"])
+        self.assertEqual(material.section_id, section_pk)
+        self.assertEqual(list(material.assigned_sections.values_list("pk", flat=True)), [section_pk])
+        self.assertEqual(Section.objects.count(), section_count)
+        self.assertEqual(Course.objects.count(), course_count)
+        self.section.refresh_from_db()
+        self.assertEqual(self.section.pk, section_pk)
+
+    def test_personal_create_assign_reassign_and_edit_preserve_canonical_section(self):
+        section_count = Section.objects.count()
+        course_count = Course.objects.count()
+        create_response = self._create_material()
+        self.assertEqual(create_response.status_code, 200)
+        material = Material.objects.get(pk=create_response.json()["material"]["raw_id"])
+        self.assertEqual(material.teacher_id, self.teacher.id)
+        self.assertIsNone(material.section_id)
+
+        for _ in range(2):
+            assign_response = self.client.post(
+                reverse("add_material_to_course"),
+                json.dumps({"course_id": f"section-{self.section.pk}", "material_id": material.pk}),
+                content_type="application/json",
+            )
+            self.assertEqual(assign_response.status_code, 200)
+
+        material.refresh_from_db()
+        self.assertEqual(material.section_id, self.section.pk)
+        self.assertEqual(material.assigned_sections.filter(pk=self.section.pk).count(), 1)
+        assignment_ids = set(material.assigned_sections.values_list("pk", flat=True))
+
+        edit_response = self.client.post(
+            reverse("teacher_update_material"),
+            json.dumps({
+                "material_id": f"material-{material.pk}", "title": "Edited canonical reading",
+                "content": "Aso\nPusa\nIbon", "reading_type": "word", "status": "published",
+                "language": "Filipino",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(edit_response.status_code, 200)
+        material.refresh_from_db()
+        self.assertEqual(material.title, "Edited canonical reading")
+        self.assertEqual(set(material.assigned_sections.values_list("pk", flat=True)), assignment_ids)
+        self.assertEqual(Section.objects.count(), section_count)
+        self.assertEqual(Course.objects.count(), course_count)
+
+    def test_shared_material_assigns_to_existing_section_without_changing_owner(self):
+        shared = Material.objects.create(
+            teacher=self.other_teacher, title="Shared library reading", item_type="word",
+            content_text="Araw", content_json={"items": ["Araw"]}, type="assessment",
+            source_type="shared", status="published", is_active=True,
+        )
+        section_count = Section.objects.count()
+        response = self.client.post(
+            reverse("add_material_to_course"),
+            json.dumps({"course_id": f"section-{self.section.pk}", "material_id": shared.pk}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        shared.refresh_from_db()
+        self.assertEqual(shared.teacher_id, self.other_teacher.id)
+        self.assertTrue(shared.assigned_sections.filter(pk=self.section.pk).exists())
+        self.assertEqual(Section.objects.count(), section_count)
+        self.assertEqual(Course.objects.count(), 0)
+
+    def test_other_teachers_private_unassigned_material_cannot_be_assigned(self):
+        private = Material.objects.create(
+            teacher=self.other_teacher, title="Private reading", item_type="word",
+            content_text="Lihim", content_json={"items": ["Lihim"]}, type="assessment",
+            source_type="personal", status="published", is_active=True,
+        )
+        response = self.client.post(
+            reverse("add_material_to_course"),
+            json.dumps({"course_id": f"section-{self.section.pk}", "material_id": private.pk}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(private.assigned_sections.exists())
+
+    def test_only_students_enrolled_in_assigned_section_can_fetch_material(self):
+        material = Material.objects.create(
+            teacher=self.teacher, section=self.section, title="Bonifacio only", item_type="word",
+            content_text="Bayani", content_json={"items": ["Bayani"]}, type="assessment",
+            source_type="personal", status="published", is_active=True,
+        )
+        material.assigned_sections.add(self.section)
+
+        self._login(self.student)
+        response = self.client.get(reverse("get_class_materials"), {"class_code": self.section.class_code})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(any(item["raw_id"] == material.pk for item in response.json()["all_materials"]))
+
+        self._login(self.outside_student)
+        response = self.client.get(reverse("get_class_materials"), {"class_code": self.section.class_code})
+        self.assertEqual(response.status_code, 403)
 
 
 class PracticeReaderMaterialTests(TestCase):

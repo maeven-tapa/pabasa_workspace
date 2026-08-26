@@ -14224,12 +14224,11 @@ def add_material_to_course(request):
         if not material:
             return JsonResponse({'success': False, 'error': 'Material not found'}, status=404)
 
-        # Basic ownership check: allow shared library materials, unassigned
-        # materials, or materials owned through one of the teacher's sections.
-        if material.source_type != 'shared' and material.section and material.section.teacher_id != teacher_user.id:
-            # Also allow if the underlying assessment (if any) belongs to the teacher
-            if not (getattr(material, 'assessment', None) and material.assessment.teacher_id == teacher_user.id):
-                return JsonResponse({'success': False, 'error': 'You do not have permission to use this material'}, status=403)
+        # Shared-library records are intentionally reusable. Personal and
+        # template records must already belong to this teacher; being unassigned
+        # is not, by itself, permission to claim another teacher's material.
+        if material.source_type != 'shared' and not _teacher_can_access_material(teacher_user, material):
+            return JsonResponse({'success': False, 'error': 'You do not have permission to use this material'}, status=403)
 
         if course:
             course.materials.add(material)
@@ -14718,6 +14717,10 @@ def get_class_materials(request):
         teacher_user = User.objects.filter(id=user_id).first() if user_id else None
         # Requesting user (could be student or teacher) used to compute attempt counts
         request_user = User.objects.filter(id=user_id).first() if user_id else None
+        if request_user and request_user.role == 'student' and not section.has_student(request_user, active_only=True):
+            return JsonResponse({'success': False, 'error': 'You are not enrolled in this class'}, status=403)
+        if request_user and request_user.role == 'teacher' and section.teacher_id != request_user.id:
+            return JsonResponse({'success': False, 'error': 'Class access denied'}, status=403)
         effective_date = date.today()
         is_requesting_student = bool(request_user and request_user.role == 'student')
         # Archived records should not appear in class/course readings, even for the owning teacher.
