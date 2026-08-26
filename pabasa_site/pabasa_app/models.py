@@ -6,6 +6,38 @@ from django.utils import timezone
 from datetime import datetime
 
 
+def _configured_term_for_date(value, phase=''):
+    """Return the calendar-configured term containing ``value``."""
+    if not value:
+        return None
+    check_date = timezone.localtime(value).date() if isinstance(value, datetime) and timezone.is_aware(value) else (
+        value.date() if isinstance(value, datetime) else value
+    )
+    phase_event_types = {
+        'pretest': ('pre_assessment',),
+        'midtest': ('midline_assessment',),
+        'posttest': ('post_assessment',),
+    }
+    assessment_event = CalendarEvent.objects.filter(
+        start_date__lte=check_date,
+        end_date__gte=check_date,
+        event_type__in=phase_event_types.get(
+            str(phase or '').strip().lower(),
+            ('pre_assessment', 'midline_assessment', 'post_assessment'),
+        ),
+        school_calendar__is_active=True,
+    ).order_by('-school_calendar__updated_at', 'term', 'id').first()
+    if assessment_event:
+        return assessment_event.term
+    term_event = CalendarEvent.objects.filter(
+        start_date__lte=check_date,
+        end_date__gte=check_date,
+        event_type__in=('school_opening', 'school_closing'),
+        school_calendar__is_active=True,
+    ).order_by('-school_calendar__updated_at', 'term', 'id').first()
+    return term_event.term if term_event else None
+
+
 def default_unlocked_themes():
     return ["sky"]
 
@@ -299,6 +331,7 @@ class Assessment(models.Model):
     system_assessment_key = models.CharField(max_length=40, choices=SYSTEM_ASSESSMENT_CHOICES, blank=True, default="")
     system_assessment_period = models.CharField(max_length=10, blank=True, default="")
     system_assessment_phase = models.CharField(max_length=10, blank=True, default="")
+    official_term = models.PositiveSmallIntegerField(null=True, blank=True)
     assessment_type = models.CharField(max_length=20, choices=ASSESSMENT_TYPE_CHOICES)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='published')
     scheduled_at = models.DateTimeField(null=True, blank=True)  # When assessment becomes published
@@ -565,6 +598,10 @@ class Assessment(models.Model):
         started_at_value = self._coerce_attempt_datetime(attempt_data.pop('started_at', None)) or timezone.now()
         completed_at_value = attempt_data.pop('completed_at', None)
         completed_at_value = self._coerce_attempt_datetime(completed_at_value)
+        attempt_completed_at = completed_at_value or timezone.now()
+        official_term = _configured_term_for_date(attempt_completed_at, self.system_assessment_phase) if self.is_system_owned else None
+        if official_term is None:
+            official_term = getattr(self.material, 'official_term', None) if self.material_id else self.official_term
         attempt_row = Assessment.objects.create(
             title=self.title,
             code=self._build_attempt_code(group_assessment.code, attempt_number),
@@ -574,6 +611,11 @@ class Assessment(models.Model):
             teacher=self.teacher,
             section=self.section,
             is_active=self.is_active,
+            is_system_owned=self.is_system_owned,
+            system_assessment_key=self.system_assessment_key,
+            system_assessment_period=self.system_assessment_period,
+            system_assessment_phase=self.system_assessment_phase,
+            official_term=official_term,
             source_assessment=group_assessment,
             student=student,
             attempt_id=str(attempt_id),
@@ -1050,6 +1092,7 @@ class Material(models.Model):
         started_at_value = attempt_data.pop("started_at", None) or timezone.now()
         if isinstance(started_at_value, str):
             started_at_value = timezone.now()
+        result_completed_at = completed_at_value or (timezone.now() if status_value == "completed" else None)
 
         teacher = self.teacher or (self.section.teacher if self.section_id and self.section else None)
         if teacher is None and student is not None:
@@ -1084,6 +1127,9 @@ class Material(models.Model):
             system_assessment_period = "bosy"
         if self.is_system_owned and not system_assessment_phase:
             system_assessment_phase = "pretest"
+        official_term = _configured_term_for_date(result_completed_at, system_assessment_phase) if self.is_official_reading or self.is_system_owned else None
+        if official_term is None:
+            official_term = self.official_term
         
         # Ensure parent assessment exists for this material
         parent_assessment = self.assessment
@@ -1101,6 +1147,7 @@ class Material(models.Model):
                 system_assessment_key=self.system_assessment_key or "",
                 system_assessment_period=system_assessment_period,
                 system_assessment_phase=system_assessment_phase,
+                official_term=official_term,
                 assessment_type=self.item_type,
                 status=self.status,
                 scheduled_at=self.scheduled_at if self.status == "scheduled" else None,
@@ -1120,6 +1167,7 @@ class Material(models.Model):
             system_assessment_key=self.system_assessment_key or "",
             system_assessment_period=system_assessment_period,
             system_assessment_phase=system_assessment_phase,
+            official_term=official_term,
             assessment_type=self.item_type,
             status=self.status,
             scheduled_at=self.scheduled_at if self.status == "scheduled" else None,
@@ -1131,7 +1179,7 @@ class Material(models.Model):
             attempt_number=attempt_number,
             attempt_status=status_value,
             started_at=started_at_value,
-            completed_at=completed_at_value or (timezone.now() if status_value == "completed" else None),
+            completed_at=result_completed_at,
             is_active=True,
             source_assessment=parent_assessment,  # Link to parent assessment
         )

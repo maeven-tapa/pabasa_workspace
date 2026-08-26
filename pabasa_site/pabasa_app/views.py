@@ -1498,6 +1498,74 @@ def _aware_datetime_or_none(value):
     return parsed
 
 
+def _crla_attempt_phase_and_term(attempt, completed_on=None):
+    """Resolve CRLA identity from an attempt and its authoritative source material."""
+    source = getattr(attempt, 'source_assessment', None)
+    candidates = [attempt, getattr(attempt, 'material', None), source, getattr(source, 'material', None)]
+    if source is not None:
+        try:
+            candidates.extend(list(source.materials.all()))
+        except Exception:
+            pass
+    candidates = [candidate for candidate in candidates if candidate is not None]
+
+    phase_aliases = {
+        'pretest': 'pretest', 'pre_test': 'pretest', 'pre-assessment': 'pretest', 'pre_assessment': 'pretest',
+        'midtest': 'midtest', 'mid_test': 'midtest', 'midline': 'midtest', 'midline_assessment': 'midtest',
+        'posttest': 'posttest', 'post_test': 'posttest', 'post-assessment': 'posttest', 'post_assessment': 'posttest',
+    }
+    key_phases = {
+        'bosy_crla_pretest': 'pretest',
+        'midline_crla_midtest': 'midtest',
+        'eosy_crla_posttest': 'posttest',
+    }
+    period_phases = {'bosy': 'pretest', 'midline': 'midtest', 'eosy': 'posttest'}
+
+    phase = None
+    term = None
+    is_official = False
+    for candidate in candidates:
+        key = str(getattr(candidate, 'system_assessment_key', '') or '').strip().lower()
+        raw_phase = str(getattr(candidate, 'system_assessment_phase', '') or '').strip().lower()
+        period = str(getattr(candidate, 'system_assessment_period', '') or '').strip().lower()
+        assessment_kind = str(getattr(candidate, 'assessment_kind', '') or '').strip().lower()
+        candidate_official = bool(
+            getattr(candidate, 'is_official_reading', False)
+            or getattr(candidate, 'is_system_owned', False)
+            or assessment_kind == 'crla'
+            or key in OFFICIAL_CRLA_CONTENT
+        )
+        is_official = is_official or candidate_official
+        if not phase:
+            phase = phase_aliases.get(raw_phase) or key_phases.get(key) or period_phases.get(period)
+        # A result row owns the term in which it was taken. System CRLA
+        # materials are reusable across terms, so their stage must never be
+        # treated as a term number.
+        candidate_term = getattr(candidate, 'official_term', None)
+        if not term and candidate is attempt and candidate_term in {1, 2, 3}:
+            term = candidate_term
+
+    if is_official and not phase:
+        title = ' '.join(str(getattr(candidate, 'title', '') or '').lower() for candidate in candidates)
+        if 'midline' in title or 'mid-test' in title or 'mid test' in title:
+            phase = 'midtest'
+        elif 'post-test' in title or 'post test' in title or 'eosy' in title:
+            phase = 'posttest'
+        elif 'pre-test' in title or 'pre test' in title or 'bosy' in title:
+            phase = 'pretest'
+
+    if is_official and not term and completed_on:
+        calendar = _active_school_calendar(completed_on)
+        term = _calendar_current_term(calendar, on_date=completed_on) if calendar else None
+    if is_official and not term:
+        for candidate in candidates:
+            candidate_term = getattr(candidate, 'official_term', None)
+            if candidate_term in {1, 2, 3}:
+                term = candidate_term
+                break
+    return is_official, phase, term
+
+
 def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, crla_phase=None):
     sections = [section] if section else list(Section.objects.filter(teacher=teacher_user, is_active=True))
     level_counts = {
@@ -1567,7 +1635,6 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
     latest_scores = {}
     student_attempts = {}
     seen_attempt_keys = set()
-    active_calendar = _active_school_calendar() if crla_term and crla_phase else None
 
     if sections:
         root_assessments = Assessment.objects.filter(
@@ -1627,6 +1694,7 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
 
                 adapted_payload = _adapted_reading_level_from_attempts([attempt_payload])
                 latest_scores[sid_key] = {
+                    'assessment_id': assessment.id,
                     'completed_at_dt': completed_dt,
                     'completed_at': completed_dt.isoformat(),
                     'assessment_title': assessment.title,
@@ -1650,22 +1718,32 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
             attempt_status='completed',
             is_active=True,
             source_assessment__isnull=False,
-        ).filter(
-            Q(source_assessment__teacher=teacher_user)
-            | Q(source_assessment__section__in=sections)
-            | Q(source_assessment__material__section__in=sections)
-            | Q(source_assessment__material__assigned_sections__in=sections)
-            | Q(source_assessment__material__courses__sections__in=sections)
-        ).select_related(
-            'material', 'source_assessment', 'source_assessment__material'
-        ).distinct()
-        if crla_phase:
+        )
+        if crla_term and crla_phase:
+            # Official assessments are system-owned and normally have no class
+            # section. Privacy is enforced by student_id__in=user_ids above;
+            # filtering by source teacher/section would wrongly remove them.
             child_attempts = child_attempts.filter(
-                Q(system_assessment_phase=crla_phase)
-                | Q(material__system_assessment_phase=crla_phase)
-                | Q(source_assessment__system_assessment_phase=crla_phase)
-                | Q(source_assessment__material__system_assessment_phase=crla_phase)
+                Q(is_system_owned=True)
+                | Q(system_assessment_key__in=list(OFFICIAL_CRLA_CONTENT.keys()))
+                | Q(material__is_official_reading=True)
+                | Q(material__assessment_kind='crla')
+                | Q(source_assessment__is_system_owned=True)
+                | Q(source_assessment__system_assessment_key__in=list(OFFICIAL_CRLA_CONTENT.keys()))
+                | Q(source_assessment__materials__is_official_reading=True)
+                | Q(source_assessment__materials__assessment_kind='crla')
             )
+        else:
+            child_attempts = child_attempts.filter(
+                Q(source_assessment__teacher=teacher_user)
+                | Q(source_assessment__section__in=sections)
+                | Q(source_assessment__material__section__in=sections)
+                | Q(source_assessment__material__assigned_sections__in=sections)
+                | Q(source_assessment__material__courses__sections__in=sections)
+            )
+        child_attempts = child_attempts.select_related(
+            'material', 'source_assessment', 'source_assessment__material'
+        ).prefetch_related('source_assessment__materials').distinct()
 
         for attempt_row in child_attempts:
             sid_key = str(attempt_row.student_id or '').strip()
@@ -1690,14 +1768,12 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
             completed_dt = attempt_row.completed_at or attempt_row.updated_at or attempt_row.started_at or now
             if timezone.is_naive(completed_dt):
                 completed_dt = timezone.make_aware(completed_dt, timezone.get_default_timezone())
-            if crla_term:
+            if crla_term and crla_phase:
                 completed_on = timezone.localtime(completed_dt).date()
-                attempt_term = (
-                    getattr(getattr(attempt_row, 'material', None), 'official_term', None)
-                    or getattr(getattr(getattr(attempt_row, 'source_assessment', None), 'material', None), 'official_term', None)
-                    or (_calendar_current_term(active_calendar, on_date=completed_on) if active_calendar else None)
+                is_official, attempt_phase, attempt_term = _crla_attempt_phase_and_term(
+                    attempt_row, completed_on=completed_on
                 )
-                if attempt_term != crla_term:
+                if not is_official or attempt_phase != crla_phase or attempt_term != crla_term:
                     continue
             score_value = _as_float(attempt_row.total_score, default=None)
             if score_value is None:
@@ -1723,6 +1799,7 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
 
             adapted_payload = _adapted_reading_level_from_attempts([attempt_payload])
             latest_scores[sid_key] = {
+                'assessment_id': source.id if source else attempt_row.source_assessment_id,
                 'completed_at_dt': completed_dt,
                 'completed_at': completed_dt.isoformat(),
                 'assessment_title': getattr(source, 'title', '') or attempt_row.title,
@@ -1814,6 +1891,7 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
             'completed_at': latest.get('completed_at'),
             'assessment_title': latest.get('assessment_title'),
             'assessment_type': latest.get('assessment_type'),
+            'assessment_id': latest.get('assessment_id'),
             'has_completed_assessment': has_completed_assessment,
             'latest_score': latest_score,
             'last_active_at': last_active.isoformat() if last_active else None,
@@ -6692,7 +6770,7 @@ def _official_reading_completion_for_assessment(student, assessment_payload, sch
             'existing_record': None,
         }
 
-    term_value = getattr(material, 'official_term', None)
+    term_value = assessment_payload.get('term') or getattr(material, 'official_term', None)
     assessment_type_value = str(assessment_payload.get('assessment_type') or _official_reading_assessment_type(material) or '').strip().lower()
     subject_value = str(assessment_payload.get('subject') or _official_reading_subject(material) or '').strip().lower()
     language_value = str(assessment_payload.get('language') or getattr(material, 'language', '') or '').strip().lower()
@@ -6733,7 +6811,9 @@ def _official_reading_completion_for_assessment(student, assessment_payload, sch
             getattr(record, 'material', None) and getattr(record.material, 'language', '') or
             getattr(material, 'language', '') or ''
         ).strip().lower()
-        record_term = getattr(record.material, 'official_term', None) if getattr(record, 'material', None) else None
+        record_term = getattr(record, 'official_term', None)
+        if record_term is None and getattr(record, 'material', None):
+            record_term = getattr(record.material, 'official_term', None)
         if record_type == assessment_type_value and record_subject == subject_value and record_language == language_value and record_term == term_value:
             existing_record = record
             break
@@ -7130,8 +7210,13 @@ def _save_official_reading_assessment(request, material=None):
         target.type = 'assessment'
         target.assessment_kind = 'crla'
         target.assessment_set = 'crla'
-        target.system_assessment_phase = '' if assessment_type == 'both' else ('pretest' if assessment_type == 'pre_assessment' else 'posttest')
-        target.system_assessment_period = '' if assessment_type == 'both' else ('bosy' if assessment_type == 'pre_assessment' else 'eosy')
+        phase_by_type = {
+            'pre_assessment': ('bosy', 'pretest'),
+            'midline_assessment': ('midline', 'midtest'),
+            'post_assessment': ('eosy', 'posttest'),
+            'both': ('', ''),
+        }
+        target.system_assessment_period, target.system_assessment_phase = phase_by_type[assessment_type]
         target.source_type = 'personal'
         target.is_active = True
         target.content_text = '\n'.join([*words, *sentences, *passage_texts])
@@ -7167,15 +7252,19 @@ def _save_official_reading_assessment(request, material=None):
 
 def _official_material_phase(material):
     phase = str(getattr(material, 'system_assessment_phase', '') or '').strip().lower()
-    if phase in {'pretest', 'posttest'}:
+    if phase in {'pretest', 'midtest', 'posttest'}:
         return phase
     assessment_type = _official_reading_assessment_type(material)
-    return 'pretest' if assessment_type == 'pre_assessment' else 'posttest' if assessment_type == 'post_assessment' else ''
+    return {
+        'pre_assessment': 'pretest',
+        'midline_assessment': 'midtest',
+        'post_assessment': 'posttest',
+    }.get(assessment_type, '')
 
 
 def _archive_conflicting_official_materials(material):
     phase = _official_material_phase(material)
-    if phase not in {'pretest', 'posttest'} or not bool(getattr(material, 'is_active', False)):
+    if phase not in {'pretest', 'midtest', 'posttest'} or not bool(getattr(material, 'is_active', False)):
         return
     conflicting = _official_reading_materials_queryset().filter(system_assessment_phase=phase, is_active=True).exclude(pk=getattr(material, 'pk', None))
     conflicting.update(is_active=False)
@@ -8869,12 +8958,22 @@ def persist_student_end_assessment_state(request):
         'correct_words', 'correct_sentences', 'sentence_items_administered',
         'cumulative_correct', 'classification', 'selected_story',
         'selected_story_content', 'story_read_percent', 'correct_answers',
+        'task1_score', 'task2_rhymes_score', 'task2_sentences_score',
+        'part1_total_score', 'part1_reading_level',
+        'learner_experience', 'learner_experience_rating',
+        'total_words_read', 'duration_seconds', 'wpm', 'correct_words_percentage',
     }
     saved = {key: payload.get(key) for key in allowed_fields if key in payload}
     saved['stage'] = stage
     saved['updated_at'] = timezone.now().isoformat()
     state = _get_user_state(student)
     state['student_end_assessment_state'] = saved
+    _, saved_material_id = _parse_prefixed_id(saved.get('material_id'))
+    if saved_material_id:
+        result_states = state.get('crla_result_states')
+        result_states = dict(result_states) if isinstance(result_states, dict) else {}
+        result_states[str(saved_material_id)] = saved
+        state['crla_result_states'] = result_states
     next_url = ''
     terminal_stage = stage in {'early_completed_words', 'early_completed_sentences', 'completed'}
     final_classification = str(saved.get('classification') or '').strip()
@@ -13486,6 +13585,44 @@ def _teacher_can_access_material(teacher_user, material):
     return False
 
 
+def _teacher_can_export_directory_crla(teacher_user, assessment):
+    """Authorize a system CRLA export through the teacher's student roster."""
+    if not teacher_user or not assessment or getattr(teacher_user, 'role', None) not in {'teacher', 'admin'}:
+        return False
+    if getattr(teacher_user, 'role', None) == 'admin':
+        return True
+
+    material_qs = assessment.materials.all()
+    is_official_crla = bool(
+        getattr(assessment, 'is_system_owned', False)
+        or str(getattr(assessment, 'system_assessment_key', '') or '').strip().lower() in OFFICIAL_CRLA_CONTENT
+        or material_qs.filter(
+            Q(is_official_reading=True) | Q(is_system_owned=True) | Q(assessment_kind='crla')
+        ).exists()
+    )
+    if not is_official_crla:
+        return False
+
+    completed_student_ids = set(
+        Assessment.objects.filter(
+            Q(source_assessment=assessment) | Q(pk=assessment.pk, student__isnull=False),
+            attempt_status='completed',
+            student__isnull=False,
+            is_active=True,
+        ).values_list('student_id', flat=True)
+    )
+    if not completed_student_ids:
+        return False
+
+    completed_students = User.objects.filter(id__in=completed_student_ids, role='student')
+    teacher_sections = Section.objects.filter(teacher=teacher_user, is_active=True)
+    return any(
+        section.has_student(student, active_only=True)
+        for section in teacher_sections
+        for student in completed_students
+    )
+
+
 @require_http_methods(["GET"])
 def export_crla_assessment(request, assessment_id):
     """Download an assessment using the official Grade 2 Filipino CRLA template."""
@@ -13500,7 +13637,11 @@ def export_crla_assessment(request, assessment_id):
     if not assessment:
         return HttpResponse("Assessment not found.", status=404)
     root_assessment = assessment.source_assessment or assessment
-    if not _teacher_can_access_assessment(user, root_assessment):
+    is_directory_export = request.GET.get('source') == 'student-directory'
+    has_export_access = _teacher_can_access_assessment(user, root_assessment)
+    if is_directory_export and not has_export_access:
+        has_export_access = _teacher_can_export_directory_crla(user, root_assessment)
+    if not has_export_access:
         return HttpResponseForbidden("You do not have access to this assessment.")
 
     try:

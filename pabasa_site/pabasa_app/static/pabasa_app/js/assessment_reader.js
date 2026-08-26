@@ -836,6 +836,7 @@
 
         async function showStoryCompletionScreen() {
             currentStoryState = "story_complete";
+            const readingScores = calculateScores();
             const answered = currentStoryAnswers.filter(answer => String(answer || "").trim()).length;
             const correctAnswers = currentStoryResults.filter(result => result === true).length;
             const accuracy = answered ? Math.round((correctAnswers / answered) * 100) : 0;
@@ -879,6 +880,10 @@
                 stage: "completed",
                 selected_story: currentSelectedStory?.title || "",
                 story_read_percent: storyReadPercent,
+                correct_words_percentage: storyReadPercent,
+                total_words_read: correctWordsRead(),
+                duration_seconds: readingScores.duration_seconds ?? null,
+                wpm: readingScores.wpm ?? null,
                 correct_answers: correctAnswers,
                 classification,
             });

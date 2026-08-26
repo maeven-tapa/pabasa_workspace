@@ -87,7 +87,7 @@ def _attempt_sort_key(attempt):
 def _latest_attempts(assessment):
     attempts = (
         Assessment.objects.filter(source_assessment=assessment, student__isnull=False)
-        .select_related("student")
+        .select_related("student", "teacher", "section", "section__teacher", "material")
         .order_by("student_id", "attempt_number", "created_at", "id")
     )
     latest = {}
@@ -96,6 +96,129 @@ def _latest_attempts(assessment):
         if current is None or _attempt_sort_key(attempt) >= _attempt_sort_key(current):
             latest[attempt.student_id] = attempt
     return latest
+
+
+def _assigned_teacher(assessment, latest_attempts):
+    """Resolve the teacher from the persisted class/result assignment."""
+    if assessment.section_id and assessment.section:
+        return assessment.section.teacher
+
+    assigned = {}
+    for attempt in latest_attempts.values():
+        teacher = (
+            attempt.section.teacher
+            if attempt.section_id and attempt.section
+            else attempt.teacher
+        )
+        if teacher:
+            assigned[teacher.id] = teacher
+    if len(assigned) == 1:
+        return next(iter(assigned.values()))
+    if not assessment.is_system_owned and getattr(assessment.teacher, "role", None) == "teacher":
+        return assessment.teacher
+    return None
+
+
+def _state_material_id(value):
+    match = re.search(r"(\d+)$", str(value or "").strip())
+    return int(match.group(1)) if match else None
+
+
+def _assessment_material_ids(assessment, latest_attempts):
+    ids = set(assessment.materials.values_list("id", flat=True))
+    ids.update(attempt.material_id for attempt in latest_attempts.values() if attempt.material_id)
+    return ids
+
+
+def _student_end_state(student, material_ids):
+    preference = student.preference if isinstance(student.preference, dict) else {}
+    workflow = preference.get("reading_assessment_state")
+    workflow = workflow if isinstance(workflow, dict) else {}
+    result_states = workflow.get("crla_result_states")
+    result_states = result_states if isinstance(result_states, dict) else {}
+    for material_id in material_ids:
+        persisted = result_states.get(str(material_id))
+        if isinstance(persisted, dict):
+            return persisted
+    state = workflow.get("student_end_assessment_state")
+    state = state if isinstance(state, dict) else {}
+    state_material_id = _state_material_id(state.get("material_id"))
+    if material_ids and state_material_id not in material_ids:
+        return {}
+    return state
+
+
+def _reading_profile(part_1_total, percent, correct_answers, persisted=""):
+    if part_1_total is not None and part_1_total <= 10:
+        return "Low Emerging Reader"
+    if percent is not None and correct_answers is not None:
+        reading_band = 0 if percent <= 25 else 1 if percent <= 50 else 2 if percent <= 75 else 3
+        answer_band = 0 if correct_answers <= 0 else 1 if correct_answers <= 2 else 2 if correct_answers <= 4 else 3
+        return (
+            "High Emerging Reader",
+            "Developing Reader",
+            "Transitioning Reader",
+            "Reading At Grade Level",
+        )[min(reading_band, answer_band)]
+    normalized = str(persisted or "").strip().lower()
+    return {
+        "low emerging readers": "Low Emerging Reader",
+        "high emerging readers": "High Emerging Reader",
+        "developing readers": "Developing Reader",
+        "transitioning readers": "Transitioning Reader",
+        "readers at grade level": "Reading At Grade Level",
+    }.get(normalized, str(persisted or "").strip())
+
+
+def _part_1_reading_level(part_1_total):
+    if part_1_total is None:
+        return None
+    if part_1_total <= 10:
+        return "Full Refresher"
+    if part_1_total <= 16:
+        return "Moderate Refresher"
+    if part_1_total <= 26:
+        return "Light Refresher"
+    return "Grade Ready"
+
+
+def _observation_level(profile):
+    normalized = str(profile or "").strip().lower()
+    return {
+        "high emerging reader": "Level 1",
+        "developing reader": "Level 2",
+        "transitioning reader": "Level 3",
+        "reading at grade level": "Level 4",
+        "reader at grade level": "Level 4",
+    }.get(normalized)
+
+
+def _reading_profile_remark(profile):
+    """Return the prescribed remark for an already-derived CRLA profile."""
+    normalized = str(profile or "").strip().lower()
+    return {
+        "low emerging reader": "Needs intensive reading intervention",
+        "high emerging reader": "Needs intensive reading support",
+        "developing reader": "Needs targeted reading support",
+        "transitioning reader": "Needs continued reading practice",
+        "reading at grade level": "No additional intervention required",
+        "reader at grade level": "No additional intervention required",
+    }.get(normalized)
+
+
+def _story_number(state, assessment):
+    selected = str(state.get("selected_story") or "").strip()
+    if not selected:
+        return None
+    normalized = selected.casefold()
+    for material in assessment.materials.all():
+        content = material.content_json if isinstance(material.content_json, dict) else {}
+        passages = content.get("passages") if isinstance(content.get("passages"), list) else []
+        for index, passage in enumerate(passages[:2], start=1):
+            if isinstance(passage, dict) and str(passage.get("title") or "").strip().casefold() == normalized:
+                return index
+    match = re.search(r"(?:story|kuwento)\s*([12])", selected, re.IGNORECASE)
+    return int(match.group(1)) if match else None
 
 
 def _assessment_students(assessment, latest_attempts):
@@ -126,40 +249,39 @@ def _assessment_students(assessment, latest_attempts):
     return students
 
 
-def _observation_level(attempt):
-    if not attempt:
-        return None
-    score = _number(_first_value(attempt.fluency_score, attempt.total_score, attempt.accuracy))
-    if score is None:
-        return None
-    if score <= 25:
-        return "Level 1"
-    if score <= 50:
-        return "Level 2"
-    if score <= 75:
-        return "Level 3"
-    return "Level 4"
-
-
-def _student_values(student, attempt):
-    duration = _bounded_integer(getattr(attempt, "duration_seconds", None), 0, 24 * 60 * 60)
-    minutes, seconds = (divmod(duration, 60) if duration is not None else (None, None))
-
-    words_read = _bounded_integer(getattr(attempt, "word_count", None), 0, 100000)
-    accuracy = _number(getattr(attempt, "accuracy", None))
-    miscues = None
-    if words_read is not None and accuracy is not None and 0 < accuracy <= 100:
-        estimated_total = int(round(words_read / (accuracy / 100)))
-        miscues = max(0, estimated_total - words_read)
-
-    correct_items = _first_value(
-        getattr(attempt, "correct_items", None),
-        getattr(attempt, "items_completed", None),
+def _student_values(student, attempt, state, assessment):
+    duration = _bounded_integer(
+        _first_value(state.get("duration_seconds"), getattr(attempt, "duration_seconds", None)),
+        0,
+        24 * 60 * 60,
     )
-    total_score = getattr(attempt, "total_score", None)
-    task_1_score = _bounded_integer(correct_items, 0, 10)
-    if task_1_score is None and total_score is not None:
-        task_1_score = _bounded_integer(_number(total_score) / 10, 0, 10)
+    story_number = _story_number(state, assessment)
+    minutes, seconds = (divmod(duration, 60) if duration is not None and story_number == 2 else (None, None))
+
+    task_1_score = _bounded_integer(_first_value(state.get("task1_score"), state.get("correct_words")), 0, 10)
+    rhyme_score = _bounded_integer(state.get("task2_rhymes_score"), 0, 10)
+    sentence_score = _bounded_integer(_first_value(state.get("task2_sentences_score"), state.get("correct_sentences")), 0, 10)
+    if rhyme_score is None and state.get("branch") == "rhymes":
+        cumulative = _bounded_integer(state.get("cumulative_correct"), 0, 30)
+        if cumulative is not None and task_1_score is not None:
+            rhyme_score = max(0, cumulative - task_1_score)
+    # The established CRLA sentence branch advances qualifying learners past
+    # Rhymes with the same 10-point credit formerly encoded in the template's
+    # Column I formula. Export it explicitly so F + G + H always equals I.
+    if rhyme_score is None and sentence_score is not None and task_1_score is not None and task_1_score >= 7:
+        rhyme_score = 10
+    part_1_total = None
+    if task_1_score is not None and (rhyme_score is not None or sentence_score is not None):
+        part_1_total = task_1_score + (rhyme_score or 0) + (sentence_score or 0)
+
+    words_read = _bounded_integer(
+        _first_value(state.get("total_words_read"), getattr(attempt, "word_count", None)), 0, 100000
+    ) if story_number else None
+    percent = _number(
+        _first_value(state.get("story_read_percent"), state.get("correct_words_percentage"), getattr(attempt, "accuracy", None))
+    ) if story_number else None
+    correct_answers = _bounded_integer(state.get("correct_answers"), 0, 6) if story_number else None
+    profile = _reading_profile(part_1_total, percent, correct_answers, state.get("classification"))
 
     completed_at = None
     if attempt:
@@ -167,9 +289,9 @@ def _student_values(student, attempt):
         if completed_at:
             completed_at = timezone.localtime(completed_at).date() if timezone.is_aware(completed_at) else completed_at.date()
 
-    learner_rating = None
-    if total_score is not None:
-        learner_rating = _bounded_integer(math.ceil(max(0, _number(total_score) or 0) / 20), 1, 5)
+    learner_rating = _bounded_integer(
+        _first_value(state.get("learner_experience_rating"), state.get("learner_experience")), 1, 5
+    ) if story_number else None
 
     raw_sex = str(student.sex or "").strip().lower()
     sex = {"m": "Male", "male": "Male", "f": "Female", "female": "Female"}.get(raw_sex, "")
@@ -182,16 +304,22 @@ def _student_values(student, attempt):
         "sex": sex,
         "assessment_date": completed_at,
         "task_1_score": task_1_score,
-        "task_2l_score": None,
-        "task_2h_score": None,
-        "story_number": 1 if attempt else None,
-        "miscues": miscues,
+        "task_2l_score": rhyme_score,
+        "task_2h_score": sentence_score,
+        "part_1_total": part_1_total,
+        "part_1_reading_level": _part_1_reading_level(part_1_total),
+        "story_number": story_number,
+        "miscues": None,
+        "total_words_read": words_read,
         "reading_minutes": minutes,
         "reading_seconds": seconds,
-        "comprehension_score": _bounded_integer(correct_items, 0, 6),
+        "words_per_minute": _number(_first_value(state.get("wpm"), getattr(attempt, "wpm", None))) if story_number else None,
+        "correct_words_percentage": (percent / 100) if percent is not None else None,
+        "comprehension_score": correct_answers,
         "learner_experience_rating": learner_rating,
-        "observation_level": _observation_level(attempt),
-        "remarks": getattr(attempt, "remarks", "") if attempt else "",
+        "observation_level": _observation_level(profile),
+        "reading_profile": profile or None,
+        "remarks": _reading_profile_remark(profile),
     }
 
 
@@ -226,7 +354,8 @@ def export_crla_excel(assessment_id):
     if len(students) > (STUDENT_END_ROW - STUDENT_START_ROW + 1):
         raise ValueError("The official CRLA template supports at most 100 learners.")
 
-    teacher = assessment.teacher
+    teacher = _assigned_teacher(assessment, latest_attempts)
+    material_ids = _assessment_material_ids(assessment, latest_attempts)
     section = assessment.section
     male_count = sum(str(student.sex or "").strip().lower() == "male" for student in students)
     female_count = sum(str(student.sex or "").strip().lower() == "female" for student in students)
@@ -240,7 +369,7 @@ def export_crla_excel(assessment_id):
             "crla_assessment_period",
         ) or "BoSY",
         "school_id": _profile_value(teacher, "school_id", "schoolId"),
-        "school_name": teacher.school or "",
+        "school_name": getattr(teacher, "school", "") or "",
         "teacher": _full_name(teacher),
         "male_enrollment": male_count,
         "female_enrollment": female_count,
@@ -251,7 +380,12 @@ def export_crla_excel(assessment_id):
 
     for offset, student in enumerate(students):
         row = STUDENT_START_ROW + offset
-        values = _student_values(student, latest_attempts.get(student.id))
+        values = _student_values(
+            student,
+            latest_attempts.get(student.id),
+            _student_end_state(student, material_ids),
+            assessment,
+        )
         for field, column in STUDENT_COLUMNS.items():
             if column in FORMULA_COLUMNS:
                 raise RuntimeError(f"Refusing to overwrite formula column {column}.")

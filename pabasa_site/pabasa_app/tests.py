@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
@@ -8152,6 +8152,96 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(data["students"][0]["level"], "Pending")
         self.assertFalse(data["students"][0]["has_completed_assessment"])
 
+    def test_crla_directory_uses_enrollment_and_source_material_for_all_term_phase_filters(self):
+        system_owner = User.objects.create(
+            custom_id="ADM-CRLA-DIR", role="admin", first_name="CRLA", last_name="System",
+            middle_initial="", suffix="", sex="female", birth_month=1, birth_day=1,
+            birth_year=1990, email="crla-directory-system@example.com",
+            password_hash=make_password("system-password"),
+        )
+        root = Assessment.objects.create(
+            teacher=system_owner, section=None, title="Term 2 Midline CRLA",
+            code="CRLA-DIR-MID", assessment_type="paragraph", status="published",
+            is_active=True, is_system_owned=True, system_assessment_period="midline",
+            system_assessment_phase="midtest",
+        )
+        Material.objects.create(
+            assessment=root, teacher=system_owner, title=root.title, code="CRLA-DIR-MAT",
+            item_type="paragraph", type="assessment", assessment_kind="crla",
+            source_type="personal", status="published", is_active=True,
+            is_official_reading=True, is_system_owned=True, official_term=2,
+            system_assessment_period="midline", system_assessment_phase="midtest",
+        )
+        root.record_attempt(
+            self.student, status="completed", completed_at="2026-08-01T09:00:00+00:00",
+            total_score=75, accuracy=75,
+        )
+        # Legacy completed rows can lack copied CRLA metadata. The persisted
+        # source assessment/material remains authoritative.
+        Assessment.objects.filter(source_assessment=root, student=self.student).update(
+            is_system_owned=False, system_assessment_key='',
+            system_assessment_period='', system_assessment_phase='', material=None,
+        )
+
+        for term in (1, 2, 3):
+            for phase in ('pretest', 'midtest', 'posttest'):
+                response = self.client.get(
+                    reverse("get_teacher_students_api"),
+                    {"term": term, "assessment": phase},
+                )
+                self.assertEqual(response.status_code, 200)
+                students = response.json()["students"]
+                if (term, phase) == (2, 'midtest'):
+                    self.assertEqual([student["id"] for student in students], [self.student.id])
+                    self.assertEqual(students[0]["assessment_id"], root.id)
+                else:
+                    self.assertEqual(students, [])
+
+    def test_official_crla_attempts_persist_calendar_term_independently_from_stage(self):
+        calendar = SchoolCalendar.objects.create(
+            school_year='2026-2027', current_term=1, is_active=True,
+        )
+        system_owner = User.objects.create(
+            custom_id='ADM-CRLA-TERM', role='admin', first_name='CRLA', last_name='Owner',
+            middle_initial='', suffix='', sex='female', birth_month=1, birth_day=1,
+            birth_year=1990, email='crla-term-owner@example.com',
+            password_hash=make_password('system-password'),
+        )
+        phase_config = (
+            ('pretest', 'bosy', 'pre_assessment'),
+            ('midtest', 'midline', 'midline_assessment'),
+            ('posttest', 'eosy', 'post_assessment'),
+        )
+
+        expected = {}
+        for term in (1, 2, 3):
+            for offset, (phase, period, event_type) in enumerate(phase_config, start=1):
+                taken_on = date(2026, term + 7, offset)
+                CalendarEvent.objects.create(
+                    school_calendar=calendar, term=term, title=f'Term {term} {phase}',
+                    event_type=event_type, start_date=taken_on, end_date=taken_on,
+                    is_published=True,
+                )
+                material = Material.objects.create(
+                    teacher=system_owner, title=f'Term {term} {phase}',
+                    code=f'CRLA-T{term}-{phase}', item_type='paragraph', type='assessment',
+                    assessment_kind='crla', source_type='shared', status='published',
+                    is_active=True, is_official_reading=True, is_system_owned=True,
+                    system_assessment_period=period, system_assessment_phase=phase,
+                )
+                material.record_assessment_result(
+                    self.student, status='completed',
+                    completed_at=timezone.make_aware(datetime.combine(taken_on, datetime.min.time())),
+                    total_score=80,
+                )
+                result = Assessment.objects.get(material=material, student=self.student)
+                expected[(term, phase)] = result.official_term
+
+        self.assertEqual(
+            expected,
+            {(term, phase): term for term in (1, 2, 3) for phase, _, _ in phase_config},
+        )
+
     def test_teacher_course_assessments_api_includes_section_assigned_material_assessments(self):
         course = Course.objects.create(
             teacher=self.teacher,
@@ -8219,6 +8309,47 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "pabasa_app/js/students.js", html=False)
         self.assertNotContains(response, "Students directory: prefer server")
+
+    def test_students_export_card_reuses_existing_crla_export_endpoint(self):
+        response = self.client.get(reverse("students"))
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn('/assessment/${encodeURIComponent(assessmentId)}/export-crla/?source=student-directory', content)
+        self.assertNotIn('exportVisibleStudentsWorkbook', content)
+        self.assertNotIn('XLSX.writeFile', content)
+
+    def test_student_directory_can_download_system_crla_for_enrolled_completed_student(self):
+        system_owner = User.objects.create(
+            custom_id='ADM-CRLA-EXPORT', role='admin', first_name='CRLA', last_name='System',
+            middle_initial='', suffix='', sex='female', birth_month=1, birth_day=1,
+            birth_year=1990, email='crla-export-system@example.com',
+            password_hash=make_password('system-password'),
+        )
+        root = Assessment.objects.create(
+            teacher=system_owner, title='Official CRLA Post', code='CRLA-EXPORT-ROOT',
+            assessment_type='paragraph', status='published', is_active=True,
+            is_system_owned=True, system_assessment_key='eosy_crla_posttest',
+            system_assessment_period='eosy', system_assessment_phase='posttest',
+        )
+        root.record_attempt(
+            self.student, status='completed', completed_at=timezone.now(), total_score=80,
+        )
+
+        normal_response = self.client.get(reverse('export_crla_assessment', args=[root.id]))
+        self.assertEqual(normal_response.status_code, 403)
+
+        response = self.client.get(
+            reverse('export_crla_assessment', args=[root.id]),
+            {'source': 'student-directory'},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response['Content-Type'],
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        self.assertIn('attachment; filename="CRLA_', response['Content-Disposition'])
+        self.assertTrue(response.content.startswith(b'PK'))
 
     def test_course_detail_refresh_script_reloads_students_after_assessment_change(self):
         response = self.client.get(reverse("courses"))

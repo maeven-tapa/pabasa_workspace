@@ -22,14 +22,21 @@ STUDENT_COLUMNS = {
     "task_1_score": "F",
     "task_2l_score": "G",
     "task_2h_score": "H",
+    "part_1_total": "I",
+    "part_1_reading_level": "J",
     "story_number": "K",
     "miscues": "L",
+    "total_words_read": "M",
     "reading_minutes": "N",
     "reading_seconds": "O",
+    "words_per_minute": "P",
+    "correct_words_percentage": "Q",
     "comprehension_score": "R",
     "learner_experience_rating": "S",
     "observation_level": "T",
+    "reading_profile": "U",
     "remarks": "V",
 }
 
-FORMULA_COLUMNS = frozenset({"I", "J", "M", "P", "Q", "U"})
+# Result cells are populated by the exporter from persisted assessment data.
+FORMULA_COLUMNS = frozenset()
