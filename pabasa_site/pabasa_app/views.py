@@ -8434,15 +8434,23 @@ def reading_word_page(request):
     access_response = _enforce_student_access_for_request(request)
     if access_response:
         return access_response
+    canonical_response = _canonicalize_custom_material_reading_url(request)
+    if canonical_response:
+        return canonical_response
     context = _dashboard_context(request)
+    context.update(_custom_material_reading_context(request))
     context['student_end_assessment_state_json'] = json.dumps(
         (_get_user_state(User.objects.filter(id=request.session.get('user_id')).first()).get('student_end_assessment_state') or {}),
         default=str, separators=(',', ':'),
     )
-    official_assessment_id = request.GET.get('official_assessment_id') or request.GET.get('id') or ''
+    official_assessment_id = request.GET.get('official_assessment_id') or ''
     _, material_id = _parse_prefixed_id(official_assessment_id)
     if material_id:
-        material = Material.objects.filter(pk=material_id, is_official_reading=True).first()
+        material = Material.objects.filter(
+            pk=material_id,
+            is_official_reading=True,
+            assessment_kind='crla',
+        ).first()
         launch_data = _official_reading_launch_data(material) if material else {}
         context.update({
             'crla_official_assessment_id': material_id,
@@ -8450,6 +8458,80 @@ def reading_word_page(request):
             'crla_official_assessment_data_json': json.dumps(launch_data, default=str, separators=(',', ':')) if launch_data else '',
         })
     return render(request, 'pabasa_app/reading_word_page.html', context)
+
+
+def _canonicalize_custom_material_reading_url(request):
+    """Remove CRLA-only launch state when the persisted record is custom.
+
+    The material's database classification is authoritative.  This also cleans
+    links produced by cached/older frontend code without changing genuine
+    official CRLA launches.
+    """
+    prefix, material_id = _parse_prefixed_id(request.GET.get('id'))
+    if not material_id or prefix not in (None, 'material'):
+        return None
+
+    material = Material.objects.filter(pk=material_id).only(
+        'is_official_reading', 'assessment_kind'
+    ).first()
+    if not material or (
+        material.is_official_reading
+        and _assessment_kind_value(material) == 'crla'
+    ):
+        return None
+
+    crla_only_params = ('official_assessment_id', 'official_assessment_data', 'crla_fresh')
+    if not any(param in request.GET for param in crla_only_params):
+        return None
+
+    clean_query = request.GET.copy()
+    for param in crla_only_params:
+        clean_query.pop(param, None)
+    query_string = clean_query.urlencode()
+    return redirect(f"{request.path}?{query_string}" if query_string else request.path)
+
+
+def _custom_material_reading_context(request):
+    """Load an explicitly requested custom Material as the reader source.
+
+    Official CRLA state and custom material state intentionally use different
+    globals.  A missing official payload must never trigger selection of a
+    current/global CRLA assessment.
+    """
+    prefix, material_id = _parse_prefixed_id(request.GET.get('id'))
+    if not material_id or prefix not in (None, 'material'):
+        return {'custom_material_launch_data_json': 'null'}
+
+    material = Material.objects.filter(pk=material_id).first()
+    if not material or (
+        material.is_official_reading
+        and _assessment_kind_value(material) == 'crla'
+    ):
+        return {'custom_material_launch_data_json': 'null'}
+
+    content_json = material.content_json if isinstance(material.content_json, dict) else {}
+    content = material.content_text or material.prompt_text or ''
+    payload = {
+        'id': f'material-{material.id}',
+        'raw_id': material.id,
+        'title': material.title or request.GET.get('test') or 'Assessment',
+        # Preserve the class/launch code shown to the student. Material.code is
+        # an internal generated identifier for teacher-created materials.
+        'code': request.GET.get('code') or material.code or '',
+        'item_type': material.item_type or request.GET.get('item_type') or 'word',
+        'language': content_json.get('language') or material.language or request.GET.get('language') or '',
+        'content': content,
+        'content_json': content_json,
+        'items': content_json.get('items') if isinstance(content_json.get('items'), list) else [],
+        'source_type': material.source_type or 'personal',
+        'assessment_kind': _assessment_kind_value(material),
+        'is_official_reading': False,
+        'is_system_owned': bool(material.is_system_owned),
+    }
+    return {
+        'custom_material_launch_data': payload,
+        'custom_material_launch_data_json': json.dumps(payload, default=str, separators=(',', ':')),
+    }
 
 def _is_picture_word_matching_material(material):
     """Identify the interactive template without depending on its reading item type."""
@@ -8678,15 +8760,23 @@ def reading_sentence_page(request):
     access_response = _enforce_student_access_for_request(request)
     if access_response:
         return access_response
+    canonical_response = _canonicalize_custom_material_reading_url(request)
+    if canonical_response:
+        return canonical_response
     context = _dashboard_context(request)
+    context.update(_custom_material_reading_context(request))
     context['student_end_assessment_state_json'] = json.dumps(
         (_get_user_state(User.objects.filter(id=request.session.get('user_id')).first()).get('student_end_assessment_state') or {}),
         default=str, separators=(',', ':'),
     )
-    official_assessment_id = request.GET.get('official_assessment_id') or request.GET.get('id') or ''
+    official_assessment_id = request.GET.get('official_assessment_id') or ''
     _, material_id = _parse_prefixed_id(official_assessment_id)
     if material_id:
-        material = Material.objects.filter(pk=material_id, is_official_reading=True).first()
+        material = Material.objects.filter(
+            pk=material_id,
+            is_official_reading=True,
+            assessment_kind='crla',
+        ).first()
         launch_data = _official_reading_launch_data(material) if material else {}
         context.update({
             'crla_official_assessment_id': material_id,
@@ -8700,15 +8790,23 @@ def reading_para_page(request):
     access_response = _enforce_student_access_for_request(request)
     if access_response:
         return access_response
+    canonical_response = _canonicalize_custom_material_reading_url(request)
+    if canonical_response:
+        return canonical_response
     context = _dashboard_context(request)
+    context.update(_custom_material_reading_context(request))
     context['student_end_assessment_state_json'] = json.dumps(
         (_get_user_state(User.objects.filter(id=request.session.get('user_id')).first()).get('student_end_assessment_state') or {}),
         default=str, separators=(',', ':'),
     )
-    official_assessment_id = request.GET.get('official_assessment_id') or request.GET.get('id') or ''
+    official_assessment_id = request.GET.get('official_assessment_id') or ''
     _, material_id = _parse_prefixed_id(official_assessment_id)
     if material_id:
-        material = Material.objects.filter(pk=material_id, is_official_reading=True).first()
+        material = Material.objects.filter(
+            pk=material_id,
+            is_official_reading=True,
+            assessment_kind='crla',
+        ).first()
         launch_data = _official_reading_launch_data(material) if material else {}
         context.update({
             'crla_official_assessment_id': material_id,
@@ -8722,11 +8820,19 @@ def reading_vowel_page(request):
     access_response = _enforce_student_access_for_request(request)
     if access_response:
         return access_response
+    canonical_response = _canonicalize_custom_material_reading_url(request)
+    if canonical_response:
+        return canonical_response
     context = _dashboard_context(request)
-    official_assessment_id = request.GET.get('official_assessment_id') or request.GET.get('id') or ''
+    context.update(_custom_material_reading_context(request))
+    official_assessment_id = request.GET.get('official_assessment_id') or ''
     _, material_id = _parse_prefixed_id(official_assessment_id)
     if material_id:
-        material = Material.objects.filter(pk=material_id, is_official_reading=True).first()
+        material = Material.objects.filter(
+            pk=material_id,
+            is_official_reading=True,
+            assessment_kind='crla',
+        ).first()
         launch_data = _official_reading_launch_data(material) if material else {}
         context.update({
             'crla_official_assessment_id': material_id,
@@ -14480,6 +14586,7 @@ def get_class_materials(request):
                     'system_assessment_key': getattr(m, 'system_assessment_key', '') or '',
                     'is_official_reading': bool(getattr(m, 'is_official_reading', False)),
                     'is_system_owned': bool(getattr(m, 'is_system_owned', False)),
+                    'assessment_kind': _assessment_kind_value(m),
                     'assessment_id': m.assessment_id,
                     'code': m.assessment.code if m.assessment else None,
                     'title': title_value,

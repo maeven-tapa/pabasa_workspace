@@ -78,9 +78,12 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const officialAssessmentId = urlParams.get("official_assessment_id") || "";
-        let officialAssessmentData = window.__PABASA_OFFICIAL_ASSESSMENT__ || null;
-        let isOfficialAssessmentLaunch = Boolean(officialAssessmentId);
-        if (!officialAssessmentData) {
+        const customMaterialData = window.__PABASA_CUSTOM_MATERIAL__ || null;
+        let officialAssessmentData = officialAssessmentId
+            ? (window.__PABASA_OFFICIAL_ASSESSMENT__ || null)
+            : null;
+        const isOfficialAssessmentLaunch = Boolean(officialAssessmentId);
+        if (isOfficialAssessmentLaunch && !officialAssessmentData) {
             try {
                 const rawOfficialData = urlParams.get("official_assessment_data") || "";
                 if (rawOfficialData) officialAssessmentData = JSON.parse(rawOfficialData);
@@ -88,20 +91,21 @@
                 officialAssessmentData = null;
             }
         }
-        const testTitle = (officialAssessmentData && officialAssessmentData.official_title) || urlParams.get("test") || "Assessment";
-        const testCode = (officialAssessmentData && officialAssessmentData.official_code) || urlParams.get("code") || "TST-000";
+        const testTitle = (officialAssessmentData && officialAssessmentData.official_title) || customMaterialData?.title || urlParams.get("test") || "Assessment";
+        const testCode = (officialAssessmentData && officialAssessmentData.official_code) || customMaterialData?.code || urlParams.get("code") || "TST-000";
         const materialId = (
             (officialAssessmentData && (officialAssessmentData.id || officialAssessmentData.material_id)) ||
             officialAssessmentId ||
+            customMaterialData?.id ||
             urlParams.get("id") ||
             ""
         );
         const viewMode = urlParams.get("viewMode");
         const isAssistMode = urlParams.get("assist") === "1";
         const assistToken = urlParams.get("assist_token") || "";
-        const liveContent = urlParams.get("content") || "";
-        const liveItemType = (urlParams.get("item_type") || urlParams.get("type") || "").toLowerCase();
-        const liveLanguage = urlParams.get("language") || "";
+        const liveContent = customMaterialData?.content || urlParams.get("content") || "";
+        const liveItemType = (customMaterialData?.item_type || urlParams.get("item_type") || urlParams.get("type") || "").toLowerCase();
+        const liveLanguage = customMaterialData?.language || urlParams.get("language") || "";
         console.log("PABASA_OFFICIAL_TRACE", {
             stage: "reader_url_params",
             requested_assessment_type: urlParams.get("test") || "",
@@ -1472,7 +1476,6 @@
         }
 
         function loadItems() {
-            const isOfficialAssessmentLaunch = Boolean(officialAssessmentId);
             const requestedCrlaStage = normalizeStudentEndStatus(urlParams.get("crla_stage"));
             const persistedEndState = readStudentEndState();
             const persistedStage = normalizeStudentEndStatus(persistedEndState.stage);
@@ -1622,37 +1625,7 @@
             }
 
             if (!isOfficialAssessmentLaunch) {
-                const persistedRaw = sessionStorage.getItem('pabasa_crla_assessment_items');
-                if (persistedRaw) {
-                    try {
-                        const persistedItems = parsePersistedAssessmentItems(JSON.parse(persistedRaw));
-                        if (persistedItems.length > 0) {
-                            console.log("PABASA_OFFICIAL_TRACE", {
-                                stage: "legacy_persisted_fallback",
-                                persisted_items_count: persistedItems.length,
-                                requested_assessment_type: testTitle,
-                                requested_system_assessment_key: testCode,
-                            });
-                            items = persistedItems.map(item => item.text);
-                            itemTypes = persistedItems.map(item => item.type || mode);
-                            itemPages = buildItemPages(items, itemTypes);
-                            pageCorrectWordCounts = items.map(() => []);
-                            setCurrentItemMode(itemTypes[0] || mode);
-                            currentMaterialLanguage = liveLanguage || "";
-                            correctWordCounts = new Array(items.length).fill(0);
-                            currentIndex = 0;
-                            currentPageIndex = 0;
-                            updateUI();
-                            updateStandardAssessmentControls();
-                            animateCurrentItem();
-                            return;
-                        }
-                    } catch (error) {
-                        console.warn('PABASA: Unable to parse persisted assessment items', error);
-                    }
-                }
-
-                if (liveContent) {
+                if (customMaterialData || liveContent) {
                     console.log("PABASA_OFFICIAL_TRACE", {
                         stage: "live_content_fallback",
                         live_content_preview: String(liveContent).slice(0, 120),
@@ -1660,7 +1633,9 @@
                         requested_assessment_type: testTitle,
                         requested_system_assessment_key: testCode,
                     });
-                    items = parseLiveContent(liveContent, liveItemType || mode);
+                    items = customMaterialData
+                        ? parseItems(customMaterialData, liveItemType || mode)
+                        : parseLiveContent(liveContent, liveItemType || mode);
                     itemTypes = new Array(items.length).fill(String(liveItemType || mode || 'word').toLowerCase());
                     itemPages = buildItemPages(items, itemTypes);
                     pageCorrectWordCounts = items.map(() => []);

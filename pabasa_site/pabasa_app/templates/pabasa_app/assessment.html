@@ -1295,17 +1295,6 @@
                                 ? `<span class="assessment-time-score-badge"><i class="bi bi-stopwatch"></i> ${formatAssessmentDuration(completionSeconds)}</span>`
                                 : '';
 
-                            const officialAssessmentData = {
-                                id: m.id,
-                                title: m.title || '',
-                                code: m.code || '',
-                                system_assessment_key: m.system_assessment_key || '',
-                                item_type: m.item_type || '',
-                                content_json: m.content_json || {},
-                            };
-                            const officialAssessmentId = "{{ crla_official_assessment_id|default:''|escapejs }}";
-                            const officialLaunchPayload = buildOfficialAssessmentData(m);
-                            const officialLaunchPayloadJson = JSON.stringify(officialLaunchPayload);
                             const materialSourceType = String(m.source_type || m.material_source || '').trim().toLowerCase();
                             const templateActivityName = materialSourceType === 'template'
                                 ? String(
@@ -1327,16 +1316,16 @@
                                 ? `${syllableBlendingUrl}?id=${encodeURIComponent(m.id)}`
                                 : isPictureWordMatching
                                 ? `${pictureWordMatchingUrl}?id=${encodeURIComponent(m.id)}`
-                                : `${urlMap[m.category]}?test=${encodeURIComponent(m.title)}&code=${encodeURIComponent(m.code || classData.code)}&id=${encodeURIComponent(m.id)}${officialAssessmentId ? `&official_assessment_id=${encodeURIComponent(officialAssessmentId)}` : ''}${officialLaunchPayloadJson ? `&official_assessment_data=${encodeURIComponent(officialLaunchPayloadJson)}` : ''}&content=${encodeURIComponent(m.content || '')}&item_type=${encodeURIComponent(m.item_type || m.category || 'word')}&language=${encodeURIComponent(m.language || '')}&crla_fresh=1`);
+                                : `${urlMap[m.category]}?test=${encodeURIComponent(m.title)}&code=${encodeURIComponent(m.code || classData.code)}&id=${encodeURIComponent(m.id)}&content=${encodeURIComponent(m.content || '')}&item_type=${encodeURIComponent(m.item_type || m.category || 'word')}&language=${encodeURIComponent(m.language || '')}`);
                             console.log("PABASA_OFFICIAL_TRACE", {
                                 stage: "assessment_card_link",
                                 selected_material_id: mId || "",
                                 selected_material_title: m.title || "",
                                 selected_material_code: m.code || "",
                                 selected_material_system_assessment_key: m.system_assessment_key || "",
-                                official_assessment_id: officialAssessmentId || "",
-                                has_official_assessment_data: Boolean(officialLaunchPayloadJson),
-                                official_assessment_data: officialLaunchPayload,
+                                persisted_source_type: materialSourceType,
+                                is_official_reading: m.is_official_reading === true,
+                                is_system_owned: m.is_system_owned === true,
                                 generated_start_url: generatedStartUrl,
                                 class_code: classData.code,
                                 category: m.category,

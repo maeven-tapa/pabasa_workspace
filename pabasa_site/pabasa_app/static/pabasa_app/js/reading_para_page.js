@@ -33,11 +33,12 @@
     const officialAssessmentData = window.__PABASA_OFFICIAL_ASSESSMENT__ || null;
     const testTitle = (officialAssessmentData && officialAssessmentData.official_title) || params.get("test") || "Assessment";
     const testCode = (officialAssessmentData && officialAssessmentData.official_code) || params.get("code") || "TST-000";
+    const testLanguage = (officialAssessmentData && officialAssessmentData.language) || params.get("language") || "";
     const materialId = params.get("id");
     const viewMode = params.get("viewMode");
     const assistMode = params.get("assist") === "1";
     const assistToken = params.get("assist_token") || "";
-    if (testMeta) testMeta.textContent = testTitle + " - " + testCode;
+    if (testMeta) testMeta.textContent = testTitle + " - " + testCode + (testLanguage ? " · Language: " + testLanguage : "");
 
     function getStoredArray(key) {
         try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch (e) { return []; }

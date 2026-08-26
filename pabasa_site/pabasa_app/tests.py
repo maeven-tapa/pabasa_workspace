@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 import uuid
+from urllib.parse import parse_qs, urlparse
 from unittest.mock import patch
 
 from pypdf import PdfReader
@@ -426,7 +427,7 @@ class SchoolCalendarAdminTests(TestCase):
             title="Teacher Reading",
             item_type="word",
             content_text="alpha",
-            content_json={"items": ["alpha"]},
+            content_json={"items": ["alpha"], "language": "English"},
             assessment_kind="regular",
             assessment_set="word",
             type="assessment",
@@ -458,6 +459,12 @@ class SchoolCalendarAdminTests(TestCase):
         word_items = data['materials']['word']
         self.assertTrue(any(item['raw_id'] == teacher_material.id for item in word_items))
         self.assertTrue(any(item['title'] == 'Teacher Reading' for item in word_items))
+        teacher_item = next(item for item in word_items if item['raw_id'] == teacher_material.id)
+        self.assertEqual(teacher_item['language'], 'English')
+        self.assertEqual(teacher_item['source_type'], 'personal')
+        self.assertEqual(teacher_item['assessment_kind'], 'regular')
+        self.assertFalse(teacher_item['is_official_reading'])
+        self.assertFalse(teacher_item['is_system_owned'])
         self.assertFalse(any(item['raw_id'] == eosy.id for item in word_items))
         self.assertFalse(any(item['raw_id'] == bosy.id for item in word_items))
 
@@ -560,9 +567,134 @@ class AssessmentPageTemplateTests(TestCase):
         template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "assessment.html"
         content = template_path.read_text(encoding="utf-8")
 
-        self.assertIn('content={{ crla_assessment_content|urlencode }}', content)
-        self.assertIn('item_type=word', content)
-        self.assertIn('id={{ crla_material_id|default:\'\' }}', content)
+        official_card_source = content.split('const buildOfficialAssessmentCard =', 1)[1].split('const officialAssessmentsHtml =', 1)[0]
+        self.assertIn('official_assessment_id=', official_card_source)
+        self.assertIn('official_assessment_data=', official_card_source)
+        self.assertIn('crla_fresh=1', official_card_source)
+
+    def test_custom_material_card_does_not_add_crla_query_parameters(self):
+        template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "assessment.html"
+        content = template_path.read_text(encoding="utf-8")
+        custom_card_source = content.split('const materialSourceType =', 1)[1].split('renderedRows.push', 1)[0]
+
+        self.assertNotIn('official_assessment_id=', custom_card_source)
+        self.assertNotIn('official_assessment_data=', custom_card_source)
+        self.assertNotIn('crla_fresh', custom_card_source)
+
+
+class ReadingLaunchClassificationTests(TestCase):
+    def _login_student(self):
+        student = User.objects.create(
+            custom_id=f'STU-LAUNCH-{User.objects.count()}', role='student',
+            first_name='Sam', last_name='Reader', sex='Male',
+            birth_month=1, birth_day=1, birth_year=2015,
+            email=f'student-launch-{User.objects.count()}@example.com',
+            password_hash=make_password('password'),
+        )
+        session = self.client.session
+        session['user_id'] = student.id
+        session['user_role'] = student.role
+        session['custom_id'] = student.custom_id
+        session.save()
+        return student
+
+    def test_custom_material_launch_is_redirected_to_clean_non_crla_url(self):
+        material = Material.objects.create(
+            title='English Reading',
+            code='VFPN-455',
+            item_type='word',
+            content_text='Cat\nDog\nDove\nZebra\nMouse',
+            content_json={'items': ['Cat', 'Dog', 'Dove', 'Zebra', 'Mouse'], 'language': 'English'},
+            language='English',
+            type='assessment',
+            source_type='personal',
+            assessment_kind='regular',
+            is_official_reading=False,
+            is_system_owned=False,
+            student_access=True,
+        )
+        response = self.client.get(reverse('reading_word_page'), {
+            'test': material.title,
+            'code': material.code,
+            'id': f'material-{material.id}',
+            'official_assessment_id': '999',
+            'official_assessment_data': json.dumps({'official_title': 'Wrong CRLA title'}),
+            'crla_fresh': '1',
+            'content': material.content_text,
+            'item_type': material.item_type,
+            'language': material.language,
+        })
+
+        self.assertEqual(response.status_code, 302)
+        query = parse_qs(urlparse(response.url).query)
+        self.assertEqual(query['test'], ['English Reading'])
+        self.assertEqual(query['code'], ['VFPN-455'])
+        self.assertEqual(query['id'], [f'material-{material.id}'])
+        self.assertEqual(query['item_type'], ['word'])
+        self.assertEqual(query['language'], ['English'])
+        self.assertNotIn('official_assessment_id', query)
+        self.assertNotIn('official_assessment_data', query)
+        self.assertNotIn('crla_fresh', query)
+
+    def test_genuine_official_material_keeps_crla_query_parameters(self):
+        self._login_student()
+        material = Material.objects.create(
+            title='Official CRLA', code='CRLA-TEST', item_type='word',
+            content_text='Word', content_json={'items': ['Word']},
+            type='assessment', assessment_kind='crla', is_official_reading=True,
+            is_system_owned=True, student_access=True,
+        )
+        response = self.client.get(reverse('reading_word_page'), {
+            'id': f'material-{material.id}',
+            'official_assessment_id': str(material.id),
+            'official_assessment_data': '{}',
+            'crla_fresh': '1',
+        })
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_rendered_custom_reader_uses_persisted_material_and_has_no_official_payload(self):
+        self._login_student()
+        material = Material.objects.create(
+            title='English Reading', code='CUSTOM-INTERNAL', item_type='word',
+            content_text='Cat\nDog\nDove\nZebra\nMouse',
+            content_json={'items': ['Cat', 'Dog', 'Dove', 'Zebra', 'Mouse'], 'language': 'English'},
+            language='English', type='assessment', source_type='personal',
+            assessment_kind='regular', is_official_reading=False,
+            is_system_owned=False, student_access=True,
+        )
+
+        response = self.client.get(reverse('reading_word_page'), {
+            'test': 'Wrong URL title',
+            'code': 'VFPN-455',
+            'id': f'material-{material.id}',
+            'content': 'Wrong URL content',
+            'item_type': 'word',
+            'language': 'English',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.context['custom_material_launch_data']
+        self.assertEqual(payload['id'], f'material-{material.id}')
+        self.assertEqual(payload['title'], 'English Reading')
+        self.assertEqual(payload['code'], 'VFPN-455')
+        self.assertEqual(payload['language'], 'English')
+        self.assertEqual(payload['item_type'], 'word')
+        self.assertEqual(payload['items'], ['Cat', 'Dog', 'Dove', 'Zebra', 'Mouse'])
+        self.assertEqual(payload['content'], 'Cat\nDog\nDove\nZebra\nMouse')
+        self.assertFalse(payload['is_official_reading'])
+        self.assertNotIn('crla_official_assessment_data', response.context)
+        self.assertContains(response, 'window.__PABASA_OFFICIAL_ASSESSMENT__ = null;')
+        self.assertContains(response, 'window.__PABASA_CUSTOM_MATERIAL__ = {')
+        self.assertContains(response, 'Cat')
+
+    def test_reader_javascript_never_uses_cached_crla_items_for_custom_launch(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        custom_branch = content.split('if (!isOfficialAssessmentLaunch) {', 1)[1].split('// Prioritize the specific class code', 1)[0]
+
+        self.assertIn('customMaterialData || liveContent', custom_branch)
+        self.assertNotIn("sessionStorage.getItem('pabasa_crla_assessment_items')", custom_branch)
 
 
 class AssessmentWorkflowStateTests(TestCase):
