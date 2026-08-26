@@ -4345,16 +4345,35 @@ def teacher_signup(request):
     return render(request, 'pabasa_app/teacher_signup.html', {'signup_grades': SCHOOL_GRADE_LEVELS})
 
 def student_signup(request):
-    return render(request, 'pabasa_app/student_signup.html', {'signup_grades': SCHOOL_GRADE_LEVELS})
+    active_grade_levels = {
+        str(grade).strip().casefold()
+        for grade in Section.objects.filter(is_active=True).exclude(grade_level='').values_list('grade_level', flat=True).distinct()
+    }
+    signup_grades = [
+        {
+            'label': grade,
+            'value': grade,
+            'is_available': grade.strip().casefold() in active_grade_levels,
+        }
+        for grade in SCHOOL_GRADE_LEVELS
+    ]
+    return render(request, 'pabasa_app/student_signup.html', {
+        'signup_grades': signup_grades,
+    })
 
 @require_http_methods(["GET"])
 def student_signup_sections(request):
     grade = str(request.GET.get('grade_level', '')).strip()
     if grade not in SCHOOL_GRADE_LEVELS:
         return JsonResponse({'success': True, 'sections': []})
-    sections = list(Section.objects.filter(
-        grade_level__iexact=grade, is_active=True,
-    ).exclude(section='').order_by('section').values('id', 'section', 'class_name'))
+    sections = list(
+        Section.objects.filter(grade_level__iexact=grade)
+        .exclude(section='')
+        .order_by('section')
+        .values('id', 'section', 'class_name', 'is_active')
+    )
+    for section in sections:
+        section['is_available'] = bool(section.get('is_active'))
     return JsonResponse({'success': True, 'sections': sections})
 
 def dashboard(request):

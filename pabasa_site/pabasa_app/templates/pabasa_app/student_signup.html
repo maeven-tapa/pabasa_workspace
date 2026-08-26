@@ -59,6 +59,11 @@
         box-shadow: 0 0 0 0.2rem rgba(84, 194, 240, 0.2);
     }
 
+    .availability-option-locked {
+        color: #7a8087;
+        font-family: "Quattrocento Sans", "bootstrap-icons", sans-serif;
+    }
+
     .account-card .btn {
         min-height: 2.9rem;
         border-radius: 0.9rem;
@@ -572,14 +577,20 @@
                         <div class="form-text">Your 12-digit DepEd Learner Reference Number.</div>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Grade level</label>
+                        <label class="form-label" for="studentGradeLevel">Grade level</label>
                         <select class="form-select" name="grade_level" id="studentGradeLevel" required>
                             <option value="" selected disabled>Select Grade Level</option>
-                            {% for grade in signup_grades %}<option value="{{ grade }}">{{ grade }}</option>{% endfor %}
+                            {% for grade in signup_grades %}
+                                <option
+                                    value="{{ grade.value }}"
+                                    {% if not grade.is_available %}disabled class="availability-option-locked"{% endif %}>
+                                    {% if grade.is_available %}{{ grade.label }}{% else %}{{ grade.label }} &mdash; Not available &#xf47a;{% endif %}
+                                </option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Section</label>
+                        <label class="form-label" for="studentSection">Section</label>
                         <select class="form-select" name="section" id="studentSection" required disabled>
                             <option value="" selected disabled>Select Grade Level first</option>
                         </select>
@@ -752,9 +763,51 @@
         const privacyConsentCheckbox = form.querySelector('input[name="privacy_consent"]');
         const gradeSelect = form.querySelector('#studentGradeLevel');
         const sectionSelect = form.querySelector('#studentSection');
+        const sectionIsLockedText = (section) => `${section} \u2014 Not available \uf47a`;
+
+        const hasDisabledSelection = (select) => {
+            const selectedOption = select?.selectedOptions?.[0];
+            return Boolean(selectedOption?.disabled);
+        };
+
+        function renderSectionOptions(sections) {
+            if (!Array.isArray(sections) || sections.length === 0) {
+                sectionSelect.disabled = true;
+                sectionSelect.innerHTML = '<option value="" selected>No sections available</option>';
+                return;
+            }
+
+            const options = sections.map((s) => {
+                const label = String(s.section || '').trim();
+                const isAvailable = Boolean(s.is_available);
+                if (!label) {
+                    return '';
+                }
+                const option = document.createElement('option');
+                option.value = label;
+                option.textContent = isAvailable ? label : sectionIsLockedText(label);
+                if (!isAvailable) {
+                    option.disabled = true;
+                    option.className = 'availability-option-locked';
+                    option.setAttribute('aria-label', `${label} \u2014 Not available`);
+                }
+                return option.outerHTML;
+            }).join('');
+
+            sectionSelect.innerHTML = '<option value="" selected disabled>Select Section</option>' + options;
+            sectionSelect.disabled = false;
+        }
+
         gradeSelect?.addEventListener('change', async () => {
-            sectionSelect.disabled = true; sectionSelect.innerHTML = '<option value="" selected>Loading sections…</option>';
-            try { const response = await fetch('{% url "signup_sections" %}?grade_level=' + encodeURIComponent(gradeSelect.value)); const data = await response.json(); sectionSelect.innerHTML = '<option value="" selected disabled>Select Section</option>' + (data.sections || []).map(s => `<option value="${s.section}">${s.section}</option>`).join(''); sectionSelect.disabled = !(data.sections || []).length; } catch (_) { sectionSelect.innerHTML = '<option value="" selected>Unable to load sections</option>'; }
+            sectionSelect.disabled = true;
+            sectionSelect.innerHTML = '<option value="" selected>Loading sections…</option>';
+            try {
+                const response = await fetch('{% url "signup_sections" %}?grade_level=' + encodeURIComponent(gradeSelect.value));
+                const data = await response.json();
+                renderSectionOptions(data.sections || []);
+            } catch (_) {
+                sectionSelect.innerHTML = '<option value="" selected>Unable to load sections</option>';
+            }
         });
         
         const passwordRules = {
@@ -871,6 +924,12 @@
         form.addEventListener("submit", async (event) => {
             event.preventDefault();
             updateValidation();
+
+            if (hasDisabledSelection(gradeSelect) || hasDisabledSelection(sectionSelect)) {
+                errorMessage.textContent = 'Please select an available grade level and section.';
+                errorMessage.classList.remove("d-none");
+                return;
+            }
 
             if (!form.checkValidity()) {
                 form.reportValidity();
