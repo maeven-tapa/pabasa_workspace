@@ -5,6 +5,7 @@ from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.cache import never_cache
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.mail import EmailMultiAlternatives
 from django.core import signing
@@ -51,7 +52,7 @@ from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, ensure_default_principal
 from django.db import transaction
 import re
 import traceback
-from .models import User, Section, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent
+from .models import User, Section, Enrollment, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
 from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
 from .reading_stt import (
@@ -95,6 +96,16 @@ PRACTICE_LANGUAGE_CHOICES = [
 PRACTICE_LANGUAGE_SESSION_KEY = "practice_mode_language"
 PRACTICE_LANGUAGE_PREFERENCE_KEY = "practice_mode_language"
 PRACTICE_ACTIVE_SESSION_KEY = "practice_active_session"
+SCHOOL_GRADE_LEVELS = tuple(f"Grade {number}" for number in range(1, 7))
+
+
+def _active_canonical_section(grade_level, section_name):
+    """Resolve a selectable canonical class; signup never creates one."""
+    return Section.objects.filter(
+        grade_level__iexact=str(grade_level or '').strip(),
+        section__iexact=str(section_name or '').strip(),
+        is_active=True,
+    ).first()
 
 
 def _practice_language_value(value):
@@ -706,7 +717,7 @@ def _section_has_student(section, user, active_only=True):
 
 def _section_student_count(section):
     """Delegate to Section model method"""
-    return section.get_student_count()
+    return Enrollment.objects.filter(section=section, is_active=True).count()
 
 def _student_section_entry(user, joined_at=None, is_active=True):
     """DEPRECATED - this method is now on Section model"""
@@ -2998,6 +3009,12 @@ def generate_custom_id(role, grade_level=None):
     else:  # student
         prefix = _student_grade_prefix(grade_level)
         count = User.objects.filter(role='student', custom_id__startswith=f"{prefix}-").count() + 1
+        while count < 1000000:
+            candidate = f"{prefix}-{count:04d}"
+            if not User.objects.filter(custom_id=candidate).exists():
+                return candidate
+            count += 1
+        raise RuntimeError("Unable to allocate a unique student ID")
 
     return f"{prefix}-{count:04d}"
 
@@ -3110,6 +3127,8 @@ def _store_pending_teacher_signup(request, data):
         'contact_no': data.get('contact_no', ''),
         'teacher_role': data.get('teacher_role', ''),
         'school': data.get('school', ''),
+        'grade_level': data.get('grade_level', ''),
+        'section': data.get('section', ''),
         'department': data.get('department', ''),
     })
     _set_pending_data(request, 'pending_teacher_signup_otp', otp)
@@ -3516,12 +3535,18 @@ def register_teacher(request):
         data = request.POST
         
         # Validate required fields
-        required_fields = ['first_name', 'last_name', 'email', 'password', 'confirm_password', 
-                         'sex', 'birth_month', 'birth_day', 'birth_year']
+        required_fields = ['first_name', 'last_name', 'email', 'password', 'confirm_password',
+                         'sex', 'birth_month', 'birth_day', 'birth_year', 'grade_level', 'section']
         
         for field in required_fields:
             if not data.get(field):
                 return JsonResponse({'success': False, 'error': f'{field} is required'}, status=400)
+
+        canonical_section = _active_canonical_section(data.get('grade_level'), data.get('section'))
+        if not canonical_section:
+            return JsonResponse({'success': False, 'error': 'The selected grade and section are not available.'}, status=400)
+        if canonical_section.teacher_id:
+            return JsonResponse({'success': False, 'error': 'This section already has an assigned teacher. Please contact an administrator.'}, status=409)
         
         # Validate password match
         if data.get('password') != data.get('confirm_password'):
@@ -3560,12 +3585,17 @@ def register_student(request):
         )
         
         # Validate required fields
-        required_fields = ['first_name', 'last_name', 'email', 'password', 'confirm_password', 'lrn',
+        required_fields = ['first_name', 'last_name', 'email', 'password', 'confirm_password', 'lrn', 'grade_level', 'section',
                          'sex', 'birth_month', 'birth_day', 'birth_year']
         
         for field in required_fields:
             if not data.get(field):
                 return JsonResponse({'success': False, 'error': f'{field} is required'}, status=400)
+
+        grade_level = str(data.get('grade_level', '')).strip()
+        section_name = str(data.get('section', '')).strip()
+        if not _active_canonical_section(grade_level, section_name):
+            return JsonResponse({'success': False, 'error': 'The selected grade and section are not available.'}, status=400)
         
         # Validate password match
         if data.get('password') != data.get('confirm_password'):
@@ -3643,8 +3673,24 @@ def verify_teacher_otp(request):
             contact_no=pending['contact_no'],
             teacher_role=pending.get('teacher_role', ''),
             school=pending.get('school', ''),
+            section=pending.get('section', ''),
             department=pending.get('department', ''),
         )
+
+        # The selected Section already exists as the only canonical class.
+        with transaction.atomic():
+            canonical_section = _active_canonical_section(pending.get('grade_level'), pending.get('section'))
+            if not canonical_section:
+                user.delete()
+                _clear_pending_teacher_signup(request)
+                return JsonResponse({'success': False, 'error': 'The selected grade and section are no longer available.'}, status=400)
+            canonical_section = Section.objects.select_for_update().get(pk=canonical_section.pk)
+            if canonical_section.teacher_id:
+                user.delete()
+                _clear_pending_teacher_signup(request)
+                return JsonResponse({'success': False, 'error': 'This section was just assigned to another teacher. Please contact an administrator.'}, status=409)
+            canonical_section.teacher = user
+            canonical_section.save(update_fields=['teacher', 'updated_at'])
 
         teacher_code = custom_id
 
@@ -3728,6 +3774,8 @@ def verify_student_otp(request):
 
         pending_email = _normalize_registration_value(pending.get('email'))
         pending_lrn = _normalize_registration_value(pending.get('lrn'))
+        pending_grade = _normalize_registration_value(pending.get('grade_level'))
+        pending_section_name = _normalize_registration_value(pending.get('section'))
         logger.debug(
             "VERIFY STUDENT OTP PENDING email=%s lrn=%s grade_level=%s section=%s",
             pending_email,
@@ -3748,35 +3796,59 @@ def verify_student_otp(request):
             _clear_pending_student_signup(request)
             return JsonResponse({'success': False, 'error': 'LRN is already registered'}, status=400)
 
+        selected_section = _active_canonical_section(pending_grade, pending_section_name)
+        if not selected_section:
+            _clear_pending_student_signup(request)
+            return JsonResponse({'success': False, 'error': 'The selected grade and section are no longer available.'}, status=400)
+
         custom_id = generate_custom_id('student', pending.get('grade_level', ''))
         logger.debug("VERIFY STUDENT OTP BEFORE USER CREATE custom_id=%s email=%s grade_level=%s lrn_present=%s",
                      custom_id, pending.get('email'), pending.get('grade_level', ''), bool(lrn))
-        try:
-            user = User.objects.create(
-                custom_id=custom_id,
-                role='student',
-                first_name=pending['first_name'],
-                last_name=pending['last_name'],
-                email=pending['email'],
-                middle_initial=pending.get('middle_initial', ''),
-                suffix=pending.get('suffix', ''),
-                sex=pending['sex'],
-                birth_month=pending['birth_month'],
-                birth_day=pending['birth_day'],
-                birth_year=pending['birth_year'],
-                password_hash=pending['password_hash'],
-                contact_no=pending.get('contact_no', ''),
-                lrn=lrn or None,
-                grade_level=pending.get('grade_level', ''),
-                section=pending.get('section', ''),
-                reading_level=pending.get('reading_level', ''),
-            )
-        except IntegrityError as exc:
-            logger.exception("VERIFY STUDENT OTP IntegrityError during user create")
+        user = None
+        for _attempt in range(5):
+            try:
+                # Isolate a custom-ID collision so a retry remains valid even
+                # when this view is called inside an outer transaction (tests
+                # and integrations commonly do this).
+                with transaction.atomic():
+                    user = User.objects.create(
+                        custom_id=custom_id,
+                        role='student',
+                        first_name=pending['first_name'],
+                        last_name=pending['last_name'],
+                        email=pending['email'],
+                        middle_initial=pending.get('middle_initial', ''),
+                        suffix=pending.get('suffix', ''),
+                        sex=pending['sex'],
+                        birth_month=pending['birth_month'],
+                        birth_day=pending['birth_day'],
+                        birth_year=pending['birth_year'],
+                        password_hash=pending['password_hash'],
+                        contact_no=pending.get('contact_no', ''),
+                        lrn=lrn or None,
+                        grade_level=pending.get('grade_level', ''),
+                        section=pending.get('section', ''),
+                        reading_level=pending.get('reading_level', ''),
+                    )
+                break
+            except IntegrityError:
+                custom_id = generate_custom_id('student', pending.get('grade_level', ''))
+        if user is None:
+            logger.error("VERIFY STUDENT OTP could not allocate unique custom ID")
             _clear_pending_student_signup(request)
-            return JsonResponse({'success': False, 'error': 'Unable to create student account because the email, LRN, or custom ID already exists.'}, status=400)
+            return JsonResponse({'success': False, 'error': 'A student with this PABASA ID already exists. Please try again.'}, status=400)
 
         logger.debug("VERIFY STUDENT OTP AFTER USER CREATE user_id=%s custom_id=%s", user.id, user.custom_id)
+        # A canonical section represents the teacher's class.  Student signup
+        # never creates one: a missing class is a valid, unenrolled signup.
+        try:
+            # Keep membership creation on the established Section API so
+            # Enrollment, the legacy students JSON, and student tags stay synchronized.
+            selected_section.add_student(user)
+        except Exception:
+            logger.exception("VERIFY STUDENT OTP automatic enrollment failed user_id=%s section_id=%s", user.id, selected_section.id)
+            user.delete()
+            return JsonResponse({'success': False, 'error': 'Unable to enroll the student in the selected class.'}, status=400)
         try:
             send_student_confirmation_email(request, user)
         except Exception:
@@ -3976,26 +4048,13 @@ def _dashboard_context(request, nav_role=None, extra=None):
         perf_mark('student_sections_query_start')
 
         active_sections_count = Section.objects.filter(is_active=True).count()
-        custom_id = str(getattr(student_user, 'custom_id', '') or '').strip()
-
         perf_mark('student_sections_query_execute_start')
-        table_name = Section._meta.db_table
-        student_id_text = str(student_user.id)
-        where_clause = (
-            f"EXISTS ("
-            f"SELECT 1 FROM json_each(\"{table_name}\".students) AS student_entry "
-            f"WHERE (CAST(json_extract(student_entry.value, '$.student_id') AS TEXT) = %s "
-            f"OR json_extract(student_entry.value, '$.custom_id') = %s) "
-            f"AND (json_extract(student_entry.value, '$.is_active') IS NULL "
-            f"OR json_extract(student_entry.value, '$.is_active') = 1)"
-            f")"
-        )
-        params = [student_id_text, custom_id or student_id_text]
-
         student_sections = list(
-            Section.objects.filter(is_active=True)
-                .extra(where=[where_clause], params=params)
-                .order_by('class_name')
+            Section.objects.filter(
+                is_active=True,
+                enrollments__student=student_user,
+                enrollments__is_active=True,
+            ).distinct().order_by('class_name')
         )
         perf_log('student_sections_query_execute_complete', 'student_sections_query_execute_start', {
             'student_sections_count': len(student_sections),
@@ -4004,7 +4063,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
         perf_log('student_sections_query_complete', 'student_sections_query_start', {
             'active_sections_count': active_sections_count,
             'student_sections_count': len(student_sections),
-            'student_section_query': 'sqlite_json_each_active',
+            'student_section_query': 'enrollment_active',
         })
 
         perf_mark('joined_classes_start')
@@ -4283,10 +4342,20 @@ def privacy(request):
     return render(request, 'pabasa_app/privacy.html')
 
 def teacher_signup(request):
-    return render(request, 'pabasa_app/teacher_signup.html')
+    return render(request, 'pabasa_app/teacher_signup.html', {'signup_grades': SCHOOL_GRADE_LEVELS})
 
 def student_signup(request):
-    return render(request, 'pabasa_app/student_signup.html')
+    return render(request, 'pabasa_app/student_signup.html', {'signup_grades': SCHOOL_GRADE_LEVELS})
+
+@require_http_methods(["GET"])
+def student_signup_sections(request):
+    grade = str(request.GET.get('grade_level', '')).strip()
+    if grade not in SCHOOL_GRADE_LEVELS:
+        return JsonResponse({'success': True, 'sections': []})
+    sections = list(Section.objects.filter(
+        grade_level__iexact=grade, is_active=True,
+    ).exclude(section='').order_by('section').values('id', 'section', 'class_name'))
+    return JsonResponse({'success': True, 'sections': sections})
 
 def dashboard(request):
     logger.warning(
@@ -5298,6 +5367,66 @@ def admin_classes(request):
     """List all classes with search and filter options."""
     return render(request, 'pabasa_app/admin_classes.html', _admin_sections_context(request, 'Classes'))
 
+
+@admin_required
+@require_http_methods(["GET", "POST"])
+def admin_school(request):
+    """Configure canonical Grade + Section classes without touching their history."""
+    context = _admin_context(request, 'School', [])
+    if request.method == 'POST':
+        grade = str(request.POST.get('grade_level') or '').strip()
+        section_name = str(request.POST.get('section') or '').strip()
+        if grade not in SCHOOL_GRADE_LEVELS or not section_name:
+            context['error_message'] = 'Choose a grade and provide a section name.'
+        else:
+            try:
+                with transaction.atomic():
+                    section, created = Section.objects.get_or_create(
+                        grade_level__iexact=grade, section__iexact=section_name,
+                        defaults={
+                            'grade_level': grade, 'section': section_name.upper(),
+                            'class_name': f'{grade} - {section_name.upper()}',
+                            'class_code': generate_unique_class_code(), 'subject': 'Reading',
+                        },
+                    )
+                if not created:
+                    context['error_message'] = f'{grade} - {section.section} already exists.'
+                else:
+                    return redirect('admin_school')
+            except IntegrityError:
+                context['error_message'] = f'{grade} - {section_name} already exists.'
+    grouped = {grade: [] for grade in SCHOOL_GRADE_LEVELS}
+    for section in Section.objects.exclude(grade_level='').exclude(section='').order_by('grade_level', 'section'):
+        grouped.setdefault(section.grade_level, []).append(section)
+    context.update({'grades': SCHOOL_GRADE_LEVELS, 'sections_by_grade': grouped})
+    return render(request, 'pabasa_app/admin_school.html', context)
+
+
+@admin_required
+@require_http_methods(["POST"])
+def admin_school_section_update(request, section_id):
+    section = _get_managed_section(section_id)
+    if not section:
+        return redirect('admin_school')
+    action = str(request.POST.get('action') or '').strip().lower()
+    if action == 'rename':
+        name = str(request.POST.get('section') or '').strip().upper()
+        if name:
+            section.section = name
+            section.class_name = f'{section.grade_level} - {name}'
+            try:
+                section.full_clean()
+                section.save(update_fields=['section', 'class_name', 'updated_at'])
+            except (ValidationError, IntegrityError):
+                pass
+    elif action == 'deactivate':
+        section.is_active = False
+        section.save(update_fields=['is_active', 'updated_at'])
+    elif action == 'reactivate':
+        section.is_active = True
+        section.save(update_fields=['is_active', 'updated_at'])
+    return redirect('admin_school')
+
 def _get_managed_section(section_id):
     """Retrieve a section by ID. Returns None if not found."""
     try:
@@ -5427,7 +5556,6 @@ def _admin_deactivate_section(request, section_id):
     
     if action == 'deactivate' and section.is_active:
         section.is_active = False
-        section.deactivate_all_students()
         section.save()
     elif action == 'reactivate' and not section.is_active:
         section.is_active = True
@@ -12757,72 +12885,22 @@ def unenroll_class(request):
 @require_http_methods(["GET"])
 @login_required(role='teacher')
 def generate_class_code(request):
-    """Return a new unique class code for the create-class form."""
+    """Legacy endpoint retained only to explain the canonical class workflow."""
     return JsonResponse({
-        'success': True,
-        'class_code': generate_unique_class_code(),
-    })
+        'success': False,
+        'error': 'Classes are managed through Admin → School. Teachers are assigned to existing sections.',
+    }, status=410)
 
 
 @csrf_protect
 @require_http_methods(["POST"])
 @login_required(role='teacher')
 def create_reading_class(request):
-    """
-    Backend endpoint for creating a classroom.
-    Ensures that the class code is unique via database verification.
-    """
-    try:
-        data = json.loads(request.body)
-        class_name = data.get('class_name', '').strip()
-        header = data.get('header', '').strip() or "Reading Class"
-        description = data.get('description', '').strip()
-        # 'grade_level' removed from Section model; ignore any incoming value
-        section_name = data.get('section', '').strip() or "N/A"
-        requested_class_code = data.get('class_code', '').strip()
-
-        if not class_name:
-            return JsonResponse({'success': False, 'error': 'Title is required'}, status=400)
-
-        # Retrieve the teacher user for the logged-in user
-        user_id = request.session.get('user_id')
-        teacher_user = User.objects.filter(id=user_id).first()
-        if not teacher_user or teacher_user.role != 'teacher':
-            return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
-
-        try:
-            unique_code = resolve_class_code_for_creation(requested_class_code or None)
-        except ValueError as exc:
-            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
-
-        new_class = Section.objects.create(
-            teacher=teacher_user,
-            class_code=unique_code,
-            class_name=class_name,
-            header=header,
-            description=description,
-            subject=data.get('subject', '').strip(),
-        )
-
-        teacher_user.add_tag(new_class.get_tag_label())
-        _notify_principals(
-            'New class created',
-            f"{teacher_user.first_name} {teacher_user.last_name} created a new class: {new_class.class_name}.",
-            'info',
-            reverse('dashboard_principal'),
-            teacher_user,
-            send_email=False,
-        )
-
-        return JsonResponse({
-            'success': True,
-            'message': 'Classroom created successfully',
-            'class_code': unique_code,
-            'class_name': new_class.class_name
-        })
-    except Exception as e:
-        logger.error(f"Class creation error: {str(e)}", exc_info=True)
-        return JsonResponse({'success': False, 'error': 'Internal server error'}, status=500)
+    """Reject the retired teacher-owned class creation workflow."""
+    return JsonResponse({
+        'success': False,
+        'error': 'Classes are managed through Admin → School. Teachers can only be assigned to an existing section.',
+    }, status=410)
 
 @login_required(role='teacher')
 def class_management_view(request):
@@ -14456,10 +14534,9 @@ def get_teacher_classes(request):
                 'id': cls.id,
                 'code': cls.class_code,
                 'name': cls.class_name,
-                'subject': cls.subject,
-                'grade_level': getattr(cls, 'grade_level', '') if hasattr(cls, 'grade_level') else '',
-                'section': getattr(cls, 'section', '') if hasattr(cls, 'section') else '',
-                'description': cls.description,
+                'grade': cls.grade_level,
+                'grade_level': cls.grade_level,
+                'section': cls.section,
                 'header': cls.header,
                 'students': student_count,
                 'assessment_material_count': assessment_material_count,
@@ -14506,8 +14583,8 @@ def get_student_joined_classes(request):
                     'subject': section.subject or '',
                     'description': section.description or '',
                     'header': section.header or section.class_code[:4],
-                    'teacher_id': section.teacher.custom_id,
-                    'teacher_name': f"{section.teacher.first_name} {section.teacher.last_name}",
+                    'teacher_id': section.teacher.custom_id if section.teacher else None,
+                    'teacher_name': f"{section.teacher.first_name} {section.teacher.last_name}" if section.teacher else '',
                     'student_count': section.get_student_count(),
                     'created_at': section.created_at.isoformat(),
                 })
@@ -14878,93 +14955,11 @@ def get_class_materials(request):
 @require_http_methods(["POST"])
 @login_required(role='teacher')
 def delete_reading_class(request):
-    """
-    Backend endpoint for deleting a classroom.
-    Expects JSON: { class_code }
-    """
-    try:
-        data = json.loads(request.body)
-        class_code = data.get('class_code', '').strip()
-
-        if not class_code:
-            return JsonResponse({'success': False, 'error': 'Class code is required'}, status=400)
-
-        # Retrieve the teacher user for the logged-in user
-        user_id = request.session.get('user_id')
-        teacher_user = User.objects.filter(id=user_id).first()
-        if not teacher_user or teacher_user.role != 'teacher':
-            return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
-
-        # Find the section
-        section = Section.objects.filter(
-            teacher=teacher_user,
-            class_code=class_code,
-            is_active=True
-        ).first()
-
-        if not section:
-            return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
-
-        # Soft delete: capture affected students before deactivating
-        affected_student_ids = [
-            entry.get('student_id')
-            for entry in _section_students(section, active_only=True)
-            if entry.get('student_id')
-        ]
-        affected_students = list(User.objects.filter(id__in=affected_student_ids))
-
-        with transaction.atomic():
-            _deactivate_all_section_students(section)
-            section.is_active = False
-            section.save()
-            teacher_user.remove_tag(section.get_tag_label())
-
-            # Deactivate assessments and materials tied to this section
-            Assessment.objects.filter(section=section, is_active=True, source_assessment__isnull=True).update(is_active=False)
-            Material.objects.filter(section=section, is_active=True).update(is_active=False)
-
-            # Notify affected students (in-app + email)
-            teacher_name = f"{teacher_user.first_name} {teacher_user.last_name}" if teacher_user else 'Your teacher'
-            for student_user in affected_students:
-                try:
-                    title = 'Class removed by teacher'
-                    message = (
-                        f"{teacher_name} has removed the class '{section.class_name}'. "
-                        "Visit your account to completely remove the class."
-                    )
-                    Notification.objects.create(
-                        recipient=student_user,
-                        created_by=teacher_user,
-                        title=title,
-                        message=message,
-                        notification_type='warning',
-                        action_url=reverse('dashboard'),
-                    )
-
-                    # Best-effort email to student
-                    try:
-                        subject = f"Class removed: {section.class_name}"
-                        send_mail(subject, message, getattr(settings, 'DEFAULT_FROM_EMAIL', None), [student_user.email], fail_silently=True)
-                    except Exception:
-                        logger.exception('Failed to send class-deleted email to student %s', student_user.email)
-                except Exception:
-                    logger.exception('Failed to notify a student for class deletion')
-            _notify_admins(
-                'Teacher removed a class',
-                f"{teacher_user.first_name} {teacher_user.last_name} removed {section.class_name} ({section.class_code}).",
-                'warning',
-                reverse('admin_classes'),
-                teacher_user,
-            )
-
-        return JsonResponse({
-            'success': True,
-            'message': 'Class deleted successfully',
-            'class_code': class_code
-        })
-    except Exception as e:
-        logger.error(f"Class deletion error: {str(e)}", exc_info=True)
-        return JsonResponse({'success': False, 'error': 'Internal server error'}, status=500)
+    """Reject teacher changes to canonical Section lifecycle."""
+    return JsonResponse({
+        'success': False,
+        'error': 'Sections are managed through Admin → School. Contact an administrator to change a class.',
+    }, status=403)
 
 def _parse_selected_pages(raw_value, page_count):
     if page_count <= 1:

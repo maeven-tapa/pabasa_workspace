@@ -1,8 +1,5 @@
 (function () {
     document.addEventListener('DOMContentLoaded', function () {
-        const createClassForm = document.getElementById("createClassForm");
-        const generatedClassCode = document.getElementById("generatedClassCode"); // This is for the create class form, not the stat card
-        const regenerateCodeBtn = document.getElementById("regenerateCodeBtn");
         const classList = document.getElementById("classList");
         const classCountMirror = document.getElementById("classCountMirror"); // Renamed from classCount to target the 'Class' stat card
         const studentCountMirror = document.getElementById("studentCountMirror") || document.getElementById("profileTotalStudentsCount") || document.getElementById("totalStudentsJoined");
@@ -12,7 +9,6 @@
 
         const activeClassName = document.getElementById("activeClassName");
         const activeClassSubject = document.getElementById("activeClassSubject");
-        const activeClassDescription = document.getElementById("activeClassDescription");
         const activeClassCode = document.getElementById("activeClassCode");
         const activeStudentCount = document.getElementById("activeStudentCount");
         const activeAssessmentCount = document.getElementById("activeAssessmentCount");
@@ -26,37 +22,6 @@
 
         const teacherEmail = (window.PABASA_USER_EMAIL || localStorage.getItem("pabasaUserEmail") || '').trim();
         const scopedKey = teacherEmail ? `pabasa_teacher_classes_${teacherEmail}` : null;
-
-        async function fetchUniqueClassCode() {
-            const response = await fetch('/dashboard/teacher/generate-class-code/', {
-                method: 'GET',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            });
-            if (!response.ok) {
-                throw new Error(`Server returned ${response.status}`);
-            }
-            const data = await response.json();
-            if (!data.success || !data.class_code) {
-                throw new Error(data.error || 'Failed to generate class code');
-            }
-            return data.class_code;
-        }
-
-        async function setGeneratedCode() {
-            if (!generatedClassCode) {
-                return null;
-            }
-            generatedClassCode.textContent = '...';
-            try {
-                const code = await fetchUniqueClassCode();
-                generatedClassCode.textContent = code;
-                return code;
-            } catch (error) {
-                console.error('Error generating class code:', error);
-                generatedClassCode.textContent = '—';
-                return null;
-            }
-        }
 
         function updateClassCount() {
             if (classCountMirror && classList) {
@@ -168,12 +133,12 @@
                         updateBannerCountsFromClassData(classData);
                     }
 
-                    const card = createClassCard(
+                    const card = renderClassCard(
                         classData.name,
-                        classData.header || 'READ',
-                        classData.description || '',
+                        classData.header || 'Reading Class',
                         classData.code,
-                        classData.subject || '',
+                        classData.grade || classData.grade_level || '',
+                        classData.section || '',
                         String(classData.students || '0'), // Use accurate count from server
                         String(classData.assessment_material_count || 0),
                         String(classData.practice_material_count || 0),
@@ -229,19 +194,18 @@
             });
 
             const name = card.getAttribute("data-class-name") || "Reading Class";
-            const subject = card.getAttribute("data-subject") || "Reading";
+            const grade = card.getAttribute("data-grade") || "";
+            const section = card.getAttribute("data-section") || "";
             const code = card.getAttribute("data-code") || "READ-000";
             const header = card.getAttribute("data-header") || "READ";
-            const description = card.getAttribute("data-description") || "Class reading workspace.";
             const actualStudentCount = card.getAttribute("data-students") || "0";
             const actualAssessmentCount = card.getAttribute("data-assessment-count") || "0";
             const actualPracticeCount = card.getAttribute("data-practice-count") || "0";
 
             activeClassName.textContent = name;
-            activeClassSubject.textContent = subject;
-            activeClassDescription.textContent = description;
-            activeClassCode.textContent = code;
-            activeStudentCount.textContent = actualStudentCount;
+            if (activeClassSubject) activeClassSubject.textContent = [grade, section].filter(Boolean).join(" · ");
+            if (activeClassCode) activeClassCode.textContent = code;
+            if (activeStudentCount) activeStudentCount.textContent = actualStudentCount;
             if (activeAssessmentCount) activeAssessmentCount.textContent = actualAssessmentCount;
             if (activePracticeCount) activePracticeCount.textContent = actualPracticeCount;
             if (classBanner) classBanner.setAttribute("data-header", header);
@@ -297,14 +261,14 @@
             }
         }
 
-        function createClassCard(name, header, description, code, subject, students, assessmentCount, practiceCount, teacherEmailArg) {
+        function renderClassCard(name, header, code, grade, section, students, assessmentCount, practiceCount, teacherEmailArg) {
             const card = document.createElement("div");
             card.className = "class-card";
             card.setAttribute("data-class-name", name);
-            card.setAttribute("data-subject", subject || name);
+            card.setAttribute("data-grade", grade);
+            card.setAttribute("data-section", section);
             card.setAttribute("data-code", code);
             card.setAttribute("data-header", header);
-            card.setAttribute("data-description", description);
             card.setAttribute("aria-busy", "false");
 
             const email = teacherEmailArg || window.PABASA_USER_EMAIL || localStorage.getItem("pabasaUserEmail") || "";
@@ -324,26 +288,12 @@
             codePill.className = "class-code-pill";
             codePill.textContent = code;
 
-            const deleteBtn = document.createElement("button");
-            deleteBtn.className = "class-card-delete";
-            deleteBtn.type = "button";
-            deleteBtn.title = "Delete class";
-            deleteBtn.innerHTML = '<i class="bi bi-trash3"></i>';
-            deleteBtn.setAttribute("data-class-code", code);
-            deleteBtn.setAttribute("data-class-name", name);
-            deleteBtn.addEventListener("click", function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                showDeleteClassConfirmation(code, name);
-            });
-
             const meta = document.createElement("span");
             meta.className = "small text-secondary";
-            meta.textContent = (subject || name) + " • " + students + " students";
+            meta.textContent = [grade, section].filter(Boolean).join(" · ") + " • " + students + " students";
 
             head.appendChild(title);
             head.appendChild(codePill);
-            head.appendChild(deleteBtn);
             card.appendChild(head);
             card.appendChild(meta);
 
@@ -370,158 +320,6 @@
             });
         }
 
-        if (regenerateCodeBtn) {
-            regenerateCodeBtn.addEventListener("click", function () {
-                setGeneratedCode();
-            });
-        }
-
-        if (createClassForm) {
-        createClassForm.addEventListener("submit", function (event) {
-            event.preventDefault();
-
-            // Re-query form fields here to avoid stale/null references
-            const gradeEl = document.getElementById("gradeInput");
-            const sectionEl = document.getElementById("sectionInput");
-            const codeEl = document.getElementById("generatedClassCode");
-
-            if (!gradeEl || !sectionEl) {
-                alert("Form elements missing — please refresh the page and try again.");
-                return;
-            }
-
-            const grade = (gradeEl.value || '').trim();
-            const section = (sectionEl.value || '').trim();
-            const classCode = (codeEl?.textContent || '').trim();
-
-            if (!grade || !section) {
-                alert("Please provide a Grade and Section.");
-                return;
-            }
-
-            if (!classCode || classCode === '...' || classCode === '—') {
-                alert("Please wait for a class code to be generated, or click New Code.");
-                return;
-            }
-
-            const description = "";
-
-            fetch('/dashboard/teacher/create-class/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
-                },
-                body: JSON.stringify({
-                    grade: grade,
-                    section: section,
-                    class_code: classCode,
-                })
-            })
-            .then(async response => {
-                if (!response.ok) {
-                    const text = await response.text();
-                    throw new Error(`Server returned ${response.status}: ${text.substring(0, 100)}...`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    const currentTeacherEmail = window.PABASA_USER_EMAIL || localStorage.getItem("pabasaUserEmail") || "";
-                    // reuse the `description` captured from the form above
-                    // Update the dashboard UI in the background
-                    const card = createClassCard(
-                        data.class_name,
-                        "READ",
-                        description,
-                        data.class_code,
-                        section,
-                        "0",
-                        "0",
-                        "0",
-                        currentTeacherEmail
-                    );
-                    classList.prepend(card);
-                    selectClass(card);
-                    updateClassCount();
-
-                    // TRIGGER THE SUCCESS MODAL
-                    const nameDisplay = document.getElementById("createdClassName");
-                    if (nameDisplay) nameDisplay.textContent = data.class_name;
-                    
-                    const codeDisplay = document.getElementById("createdClassCode");
-                    if (codeDisplay) codeDisplay.textContent = data.class_code;
-
-                    setTimeout(() => {
-                        // Refresh authoritative saved classes so other pages (Courses) see the new class
-                        try { loadSavedClasses(); } catch (e) { console.warn('Could not refresh saved classes', e); }
-                        const successModalEl = document.getElementById('classCreatedModal');
-                        if (successModalEl) {
-                            const modal = bootstrap.Modal.getOrCreateInstance(successModalEl);
-                            modal.show();
-                        }
-                    }, 100);
-
-                    createClassForm.reset();
-                    setGeneratedCode();
-                } else {
-                    alert("Creation failed: " + (data.error || "Unknown error"));
-                    if ((data.error || '').toLowerCase().includes('class code')) {
-                        setGeneratedCode();
-                    }
-                }
-            })
-            .catch(error => {
-                console.error("Error creating classroom:", error);
-                alert("An error occurred while creating the classroom.");
-            });
-        });
-        }
-
-        // Success modal cleanup
-        const classCreatedModalEl = document.getElementById("classCreatedModal");
-        if (classCreatedModalEl) {
-            classCreatedModalEl.addEventListener("hidden.bs.modal", function () {
-                loadSavedClasses();
-            });
-        }
-
-        // Copy code button
-        const copyCreatedBtn = document.getElementById("copyCreatedClassCode");
-        if (copyCreatedBtn) {
-            copyCreatedBtn.addEventListener("click", function () {
-                const codeEl = document.getElementById("createdClassCode");
-                const code = codeEl ? codeEl.textContent : "";
-                if (navigator.clipboard && code) {
-                    navigator.clipboard.writeText(code).then(() => {
-                        const btn = this;
-                        const originalHTML = btn.innerHTML;
-                        
-                        btn.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Copied!';
-                        btn.classList.replace('btn-primary', 'btn-success');
-                        btn.style.boxShadow = '0 10px 15px -3px rgba(22, 163, 74, 0.3)';
-                        
-                        if (codeEl) {
-                            codeEl.style.color = '#15803d';
-                            codeEl.style.borderColor = '#22c55e';
-                        }
-                        
-                        setTimeout(() => {
-                            btn.innerHTML = originalHTML;
-                            btn.classList.replace('btn-success', 'btn-primary');
-                            btn.style.boxShadow = '';
-                            if (codeEl) {
-                                codeEl.style.color = '#1e293b';
-                                codeEl.style.borderColor = '#94a3b8';
-                            }
-                        }, 2000);
-                    }).catch(() => {
-                        alert('Failed to copy. Please try again.');
-                    });
-                }
-            });
-        }
 
         // Copy code handler for the active class banner (using event delegation to handle multiple buttons)
         if (classBanner) {
@@ -691,10 +489,9 @@
                             selectClass(firstCard);
                         } else {
                             activeClassName.textContent = "No class selected";
-                            activeClassSubject.textContent = "";
-                            activeClassDescription.textContent = "";
-                            activeClassCode.textContent = "";
-                            activeStudentCount.textContent = "0";
+                            if (activeClassSubject) activeClassSubject.textContent = "";
+                            if (activeClassCode) activeClassCode.textContent = "";
+                            if (activeStudentCount) activeStudentCount.textContent = "0";
                         }
                     }
 
@@ -726,9 +523,6 @@
         }
 
         loadSavedClasses();
-        if (createClassForm) {
-            setGeneratedCode();
-        }
 
         // Polling: refresh overview stats every 15s to keep counts fresh
         (function startOverviewPolling() {

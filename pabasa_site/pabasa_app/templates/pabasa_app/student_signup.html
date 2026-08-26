@@ -573,14 +573,15 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Grade level</label>
-                        <select class="form-select" name="grade_level" required>
+                        <select class="form-select" name="grade_level" id="studentGradeLevel" required>
                             <option value="" selected disabled>Select Grade Level</option>
-                            <option value="Grade 2">Grade 1</option>
-                            <option value="Grade 2">Grade 2</option>
-                            <option value="Grade 3">Grade 3</option>
-                            <option value="Grade 4">Grade 4</option>
-                            <option value="Grade 5">Grade 5</option>
-                            <option value="Grade 6">Grade 6</option>
+                            {% for grade in signup_grades %}<option value="{{ grade }}">{{ grade }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Section</label>
+                        <select class="form-select" name="section" id="studentSection" required disabled>
+                            <option value="" selected disabled>Select Grade Level first</option>
                         </select>
                     </div>
                     <div class="col-md-6">
@@ -749,6 +750,12 @@
         const passwordMatchError = form.querySelector("[data-password-match-error]");
         const passwordToggles = form.querySelectorAll("[data-password-toggle]");
         const privacyConsentCheckbox = form.querySelector('input[name="privacy_consent"]');
+        const gradeSelect = form.querySelector('#studentGradeLevel');
+        const sectionSelect = form.querySelector('#studentSection');
+        gradeSelect?.addEventListener('change', async () => {
+            sectionSelect.disabled = true; sectionSelect.innerHTML = '<option value="" selected>Loading sections…</option>';
+            try { const response = await fetch('{% url "signup_sections" %}?grade_level=' + encodeURIComponent(gradeSelect.value)); const data = await response.json(); sectionSelect.innerHTML = '<option value="" selected disabled>Select Section</option>' + (data.sections || []).map(s => `<option value="${s.section}">${s.section}</option>`).join(''); sectionSelect.disabled = !(data.sections || []).length; } catch (_) { sectionSelect.innerHTML = '<option value="" selected>Unable to load sections</option>'; }
+        });
         
         const passwordRules = {
             length: form.querySelector("[data-rule='length']"),

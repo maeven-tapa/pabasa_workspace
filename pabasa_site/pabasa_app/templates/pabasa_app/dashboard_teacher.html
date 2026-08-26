@@ -142,15 +142,15 @@
         border-radius: var(--radius-xl);
         box-shadow: var(--dash-shadow);
         display: grid;
-        gap: 1.5rem;
-        grid-template-columns: minmax(280px, 1fr) minmax(300px, 0.8fr);
+        align-items: center;
+        gap: clamp(1.25rem, 3vw, 2.5rem);
+        grid-template-columns: minmax(0, 3fr) minmax(240px, 2fr);
         overflow: hidden;
         padding: clamp(1.1rem, 3vw, 2rem);
         position: relative;
     }
 
-    .teacher-hero-copy,
-    .create-class-card {
+    .teacher-hero-copy {
         position: relative;
         z-index: 1;
     }
@@ -163,7 +163,7 @@
 
     .teacher-hero-copy h2 {
         font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: clamp(2rem, 4vw, 3.65rem);
+        font-size: clamp(2rem, 3.5vw, 3.3rem);
         font-weight: 900;
         letter-spacing: 0;
         line-height: 1.05;
@@ -227,29 +227,20 @@
         color: #fff;
     }
 
-    .create-class-card {
-        background: var(--surface-solid) !important;
-        border: 1px solid var(--dash-border);
-        border-radius: var(--radius-xl);
-        box-shadow: 0 18px 40px rgba(27, 26, 23, 0.1);
-        display: grid;
-        gap: 1rem;
-        padding: clamp(1rem, 2vw, 1.35rem);
-        position: relative;
+    .teacher-hero-illustration {
+        align-items: center;
+        display: flex;
+        justify-content: center;
+        min-width: 0;
+        padding: 0.25rem;
     }
 
-    .create-class-card::before {
-        border: 1px dashed rgba(31, 111, 139, 0.2);
-        border-radius: 20px;
-        content: "";
-        inset: 12px;
-        pointer-events: none;
-        position: absolute;
-    }
-
-    .create-class-form {
-        display: grid;
-        gap: 0.85rem;
+    .teacher-hero-illustration svg {
+        display: block;
+        height: auto;
+        max-height: 250px;
+        max-width: 100%;
+        width: min(100%, 330px);
     }
 
     .teacher-field {
@@ -265,29 +256,6 @@
         letter-spacing: 0.08em;
         margin: 0;
         text-transform: uppercase;
-    }
-
-    .create-class-card .dash-pill {
-        font-size: 0.76rem;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-    }
-
-    .create-class-card h3 {
-        font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: 1.1rem;
-        font-weight: 900;
-        line-height: 1.2;
-        letter-spacing: -0.01em;
-        color: var(--dash-primary-deep);
-    }
-
-    .create-class-card .text-secondary,
-    .create-class-card .small.text-secondary {
-        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
-        font-size: 0.92rem;
-        line-height: 1.55;
-        color: var(--dash-ink-soft) !important;
     }
 
     .teacher-field .form-control {
@@ -521,13 +489,6 @@
     .generated-code .btn {
         font-family: "Nunito", "Segoe UI", sans-serif;
         font-weight: 800;
-        letter-spacing: 0.01em;
-    }
-
-    .create-class-card > .btn.btn-primary {
-        font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: 0.96rem;
-        font-weight: 900;
         letter-spacing: 0.01em;
     }
 
@@ -927,87 +888,6 @@
         line-height: 1.5;
     }
 
-    #deleteClassModal .modal-title,
-    #classCreatedModal h3 {
-        font-family: "Nunito", "Segoe UI", sans-serif;
-        line-height: 1.15;
-        letter-spacing: -0.02em;
-        color: var(--dash-primary-deep);
-    }
-
-    #deleteClassModal .modal-title {
-        font-size: 1.2rem;
-        font-weight: 900;
-    }
-
-    #deleteClassModal .modal-body p,
-    #deleteClassModal .modal-body .text-danger,
-    #deleteClassModal .modal-body .text-muted,
-    #classCreatedModal .modal-body p,
-    #classCreatedModal .modal-body .text-secondary,
-    #classCreatedModal .modal-body .text-muted,
-    #classCreatedModal .modal-body .small {
-        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
-        line-height: 1.55;
-    }
-
-    #deleteClassModal .modal-body p {
-        font-size: 0.98rem;
-        color: var(--dash-text);
-    }
-
-    #deleteClassModal .modal-body .text-danger {
-        font-size: 0.9rem;
-        font-weight: 600;
-    }
-
-    #deleteClassModal .modal-footer .btn,
-    #classCreatedModal .modal-body .btn {
-        font-family: "Nunito", "Segoe UI", sans-serif;
-        font-weight: 800;
-        letter-spacing: 0.01em;
-    }
-
-    #classCreatedModal .modal-body h3 {
-        font-size: 1.45rem;
-        font-weight: 900;
-    }
-
-    #classCreatedModal .modal-body p.text-secondary {
-        font-size: 0.98rem;
-        color: var(--dash-ink-soft) !important;
-    }
-
-    #classCreatedModal .modal-body .p-3.bg-light {
-        background: #f8fafc !important;
-    }
-
-    #classCreatedModal .modal-body .p-3.bg-light .text-muted {
-        font-size: 0.72rem;
-        font-weight: 800;
-        letter-spacing: 0.08em;
-    }
-
-    #classCreatedModal .modal-body #createdClassName {
-        font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: 1.15rem;
-        font-weight: 900;
-        line-height: 1.2;
-        color: var(--dash-primary-deep);
-    }
-
-    #classCreatedModal .modal-body #createdClassCode {
-        font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: 1.75rem;
-        line-height: 1.1;
-        letter-spacing: 0.12em;
-    }
-
-    #classCreatedModal .modal-body .btn-primary,
-    #classCreatedModal .modal-body .btn-ghost {
-        min-height: 48px;
-    }
-
     @media (max-width: 1400px) {
         .class-detail-grid {
             grid-template-columns: 1fr;
@@ -1070,13 +950,29 @@
     }
 
     @media (max-width: 1100px) {
-        .teacher-hero,
         .teacher-board {
             grid-template-columns: 1fr;
+        }
+
+        .teacher-hero {
+            grid-template-columns: minmax(0, 1.2fr) minmax(220px, 1fr);
+        }
+
+        .teacher-hero-illustration svg {
+            max-height: 210px;
+            width: min(100%, 290px);
         }
     }
 
     @media (max-width: 720px) {
+        .teacher-hero {
+            grid-template-columns: 1fr;
+        }
+
+        .teacher-hero-illustration {
+            justify-content: flex-start;
+        }
+
         .teacher-stat-grid,
         .class-meta-row,
         .student-row {
@@ -1124,7 +1020,6 @@
     }
 
     body.dark-theme .teacher-hero,
-    body.dark-theme .create-class-card,
     body.dark-theme .teacher-stat-card,
     body.dark-theme .teacher-panel,
     body.dark-theme .class-card,
@@ -1132,8 +1027,7 @@
     body.dark-theme .student-card,
     body.dark-theme .post-card,
     body.dark-theme .modal-content,
-    body.dark-theme .modal-success-premium,
-    body.dark-theme #classCreatedModal .bg-light {
+    body.dark-theme .modal-success-premium {
         background: #1e293b !important;
         background-image: none !important;
         border-color: rgba(255, 255, 255, 0.1) !important;
@@ -1153,7 +1047,6 @@
     }
 
     body.dark-theme .teacher-hero-copy h2,
-    body.dark-theme .create-class-card h3,
     body.dark-theme .teacher-panel-head h3,
     body.dark-theme .class-banner h3,
     body.dark-theme .class-card-head strong,
@@ -1304,53 +1197,38 @@
 <section class="teacher-dashboard">
     <div class="teacher-hero">
         <div class="teacher-hero-copy">
-            <span class="teacher-kicker">Teacher workspace</span>
-            <h2>Create classes, monitor reading levels, and post reading work.</h2>
-            <p>Use this dashboard to create a class code, manage joined students, prepare materials, and monitor how students move across reading levels.</p>
+            <span class="teacher-kicker">Teacher Dashboard</span>
+            <h2>Manage reading progress and coursework in one place.</h2>
+            <p>Track student performance, assign materials, and review class activity.</p>
             <div class="teacher-quick-links">
                 <a class="primary" href="{% url 'courses' %}"><i class="bi bi-folder2-open"></i> Course</a>
                 <a id="quickLinkClass" href="{% url 'class_management' %}"><i class="bi bi-door-open"></i> Class</a>
                 <a href="{% url 'students' %}"><i class="bi bi-people"></i> Student Records</a>
             </div>
+            {% if not active_teacher_class_count %}
+            <p class="small text-secondary mb-0">No class assigned yet. Please contact the administrator to be assigned to a class.</p>
+            {% endif %}
         </div>
 
-        <article class="create-class-card">
-            <div>
-                <span class="dash-pill"><i class="bi bi-plus-lg"></i> Create a class</span>
-                <h3 class="mt-3 mb-1">Generate an invite code.</h3>
-                <p class="small text-secondary mb-0">Students use the generated code to join this class from their dashboard.</p>
-            </div>
-
-            <form class="create-class-form" id="createClassForm">
-                {% csrf_token %}
-
-                <div class="teacher-field">
-                    <label for="gradeInput">Grade</label>
-                    <input type="text" class="form-control" id="gradeInput" placeholder="Enter grade" required>
-                </div>
-
-                <div class="teacher-field">
-                    <label for="sectionInput">Section</label>
-                    <input type="text" class="form-control" id="sectionInput" placeholder="Enter section" required>
-                </div>
-                
-                <div class="generated-code">
-                    <div>
-                        <span>Generated Class Code</span>
-                        <strong id="generatedClassCode">...</strong>
-                    </div>
-
-                    <button
-                        id="regenerateCodeBtn"
-                        type="button"
-                        class="btn btn-secondary">
-                        <i class="bi bi-arrow-clockwise me-1"></i>
-                        New Code
-                    </button>
-                </div>
-                <button class="btn btn-primary" type="submit"><i class="bi bi-check2-circle me-1"></i>Create Class</button>
-            </form>
-        </article>
+        <div class="teacher-hero-illustration" aria-hidden="true">
+            <svg viewBox="0 0 360 270" fill="none" xmlns="http://www.w3.org/2000/svg" role="img">
+                <path d="M31 223C56 193 97 191 123 212C144 229 170 225 191 207C218 184 256 190 282 211C300 226 321 225 338 214" stroke="#C7E5EB" stroke-width="12" stroke-linecap="round"/>
+                <rect x="43" y="75" width="112" height="121" rx="19" fill="#E8F5F7"/>
+                <path d="M62 91C82 82 103 85 118 99V171C103 157 82 154 62 164V91Z" fill="white" stroke="#1F6F8B" stroke-width="5" stroke-linejoin="round"/>
+                <path d="M118 99C133 85 154 82 174 91V164C154 154 133 157 118 171V99Z" fill="#FFF8E8" stroke="#1F6F8B" stroke-width="5" stroke-linejoin="round"/>
+                <path d="M78 113H103M78 128H104M133 113H158M133 128H158" stroke="#9BCDD8" stroke-width="5" stroke-linecap="round"/>
+                <circle cx="250" cy="79" r="27" fill="#F8C76A"/>
+                <path d="M220 151C220 123 233 107 250 107C267 107 280 123 280 151V182H220V151Z" fill="#1F6F8B"/>
+                <path d="M238 119C245 127 255 127 263 119" stroke="white" stroke-width="5" stroke-linecap="round"/>
+                <path d="M200 180C208 150 229 140 250 140C271 140 292 150 300 180" fill="#F4A261"/>
+                <path d="M209 184H292" stroke="#1F6F8B" stroke-width="9" stroke-linecap="round"/>
+                <circle cx="202" cy="67" r="8" fill="#F4A261"/>
+                <circle cx="310" cy="111" r="7" fill="#9BCDD8"/>
+                <path d="M295 51L302 65L317 67L306 78L309 93L295 85L282 93L285 78L274 67L289 65L295 51Z" fill="#F8C76A"/>
+                <path d="M179 185C194 174 209 174 222 185" stroke="#F4A261" stroke-width="7" stroke-linecap="round"/>
+                <rect x="170" y="191" width="128" height="13" rx="6.5" fill="#9BCDD8"/>
+            </svg>
+        </div>
     </div>
 
     <div class="teacher-stat-grid" aria-label="Teacher dashboard statistics">
@@ -1411,7 +1289,6 @@
                 <div>
                     <p class="teacher-kicker mb-2" id="activeClassSubject"></p>
                     <h3 id="activeClassName">No class selected</h3>
-                    <p class="text-secondary mb-0" id="activeClassDescription"></p>
                 </div>
                 <div class="class-meta-row">
                     <div class="mini-metric"><strong id="activeStudentCount">0</strong><span class="small text-secondary">students joined</span></div>
@@ -1443,57 +1320,6 @@
     </div>
 </section>
 
-<!-- Delete Class Confirmation Modal -->
-<div class="modal fade" id="deleteClassModal" tabindex="-1" aria-labelledby="deleteClassModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h1 class="modal-title" id="deleteClassModalLabel">Delete Class?</h1>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete <strong id="deleteClassNameDisplay">this class</strong>?</p>
-                <p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle me-2"></i>This action cannot be undone. All class data and student enrollments will be removed.</p>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-ghost text-danger border-danger" id="confirmDeleteBtn">Delete Class</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Success Modal: Displayed after a class is created -->
-<div class="modal fade" id="classCreatedModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
-        <div class="modal-content border-0 shadow-lg modal-success-premium" style="border-radius: 32px;">
-            <div class="modal-body text-center p-4">
-                <div class="mb-3">
-                    <div class="text-white rounded-circle d-inline-flex align-items-center justify-content-center success-pulse" style="width: 70px; height: 70px; box-shadow: 0 8px 20px rgba(22, 163, 74, 0.25);">
-                        <i class="bi bi-check-lg fs-2"></i>
-                    </div>
-                </div>
-                <h3 class="mb-2">Class Created!</h3>
-                <p class="text-secondary mb-3">Your new reading workspace is ready for students to join.</p>
-                
-                <div class="p-3 bg-light rounded-4 mb-3" style="border: 1px solid rgba(0,0,0,0.03); background-color: #f8fafc !important;">
-                    <p class="small text-uppercase text-muted mb-2 ls-1">Class Name</p>
-                    <h5 id="createdClassName" class="mb-3">---</h5>
-                    
-                    <p class="small text-uppercase text-muted mb-2 ls-1">Invitation Code</p>
-                    <div id="createdClassCode" class="text-primary mb-0">---</div>
-                </div>
-
-                <div class="d-grid gap-2">
-                    <button type="button" class="btn btn-primary py-3 rounded-pill shadow-sm" id="copyCreatedClassCode">
-                        <i class="bi bi-copy me-2"></i>Copy Code & Close
-                    </button>
-                    <button type="button" class="btn btn-ghost text-secondary" data-bs-dismiss="modal">Dismiss</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 <script>
 // Update reading level statistics from the authoritative reading-level source
@@ -1767,5 +1593,5 @@ document.addEventListener("DOMContentLoaded", async function() {
     window.PABASA_USER_EMAIL = "{{ email|escapejs }}";
 </script>
 
-<script src="{% static 'pabasa_app/js/dashboard_teacher.js' %}?v=20260701-1"></script>
+<script src="{% static 'pabasa_app/js/dashboard_teacher.js' %}?v=20260826-1"></script>
 {% endblock %}

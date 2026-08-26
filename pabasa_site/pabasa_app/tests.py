@@ -2872,8 +2872,8 @@ class StudentSignupCustomIdTests(TestCase):
         session["pending_student_signup_otp_created"] = timezone.now().timestamp()
         session.save()
 
-    @patch("pabasa_site.pabasa_app.views._notify_admins")
-    @patch("pabasa_site.pabasa_app.views.send_student_confirmation_email")
+    @patch("pabasa_app.views._notify_admins")
+    @patch("pabasa_app.views.send_student_confirmation_email")
     def test_verify_student_otp_uses_selected_grade_for_custom_id_prefix(self, mock_email, mock_notify):
         self._set_pending_student_signup("Grade 6", "grade6@example.com")
 
@@ -2885,8 +2885,8 @@ class StudentSignupCustomIdTests(TestCase):
         self.assertEqual(body["custom_id"], "G6-0001")
         self.assertEqual(User.objects.get(email="grade6@example.com").custom_id, "G6-0001")
 
-    @patch("pabasa_site.pabasa_app.views._notify_admins")
-    @patch("pabasa_site.pabasa_app.views.send_student_confirmation_email")
+    @patch("pabasa_app.views._notify_admins")
+    @patch("pabasa_app.views.send_student_confirmation_email")
     def test_verify_student_otp_increments_custom_id_per_grade_prefix(self, mock_email, mock_notify):
         User.objects.create(
             custom_id="G3-0001",
@@ -3008,9 +3008,10 @@ class StudentSignupFlowTests(TestCase):
             "birth_day": "5",
             "birth_year": "2014",
             "grade_level": "Grade 3",
+            "section": "BONIFACIO",
         }
 
-    @patch("pabasa_site.pabasa_app.views.send_student_signup_otp_email")
+    @patch("pabasa_app.views.send_student_signup_otp_email")
     def test_new_student_signup_succeeds_and_creates_pending_otp(self, mock_email):
         response = self.client.post(reverse("register_student"), self.base_payload)
 
@@ -3023,7 +3024,7 @@ class StudentSignupFlowTests(TestCase):
         self.assertIn("pending_student_signup_otp", session)
         self.assertIn("pending_student_signup_otp_created", session)
 
-    @patch("pabasa_site.pabasa_app.views.send_student_signup_otp_email")
+    @patch("pabasa_app.views.send_student_signup_otp_email")
     def test_existing_email_blocks_registration(self, mock_email):
         User.objects.create(
             custom_id="STU-EXIST-1",
@@ -3048,7 +3049,7 @@ class StudentSignupFlowTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["error"], "Email already registered")
 
-    @patch("pabasa_site.pabasa_app.views.send_student_signup_otp_email")
+    @patch("pabasa_app.views.send_student_signup_otp_email")
     def test_existing_lrn_blocks_registration(self, mock_email):
         User.objects.create(
             custom_id="STU-EXIST-2",
@@ -3073,7 +3074,7 @@ class StudentSignupFlowTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["error"], "LRN is already registered")
 
-    @patch("pabasa_site.pabasa_app.views.send_student_signup_otp_email")
+    @patch("pabasa_app.views.send_student_signup_otp_email")
     def test_existing_custom_id_blocks_registration_via_otp_creation(self, mock_email):
         User.objects.create(
             custom_id="G3-0001",
@@ -3093,9 +3094,9 @@ class StudentSignupFlowTests(TestCase):
         payload = dict(self.base_payload)
         payload["email"] = "custom-check@example.com"
 
-        with patch("pabasa_site.pabasa_app.views.generate_custom_id", return_value="G3-0001"), patch(
-            "pabasa_site.pabasa_app.views.send_student_confirmation_email"
-        ), patch("pabasa_site.pabasa_app.views._notify_admins"):
+        with patch("pabasa_app.views.generate_custom_id", return_value="G3-0001"), patch(
+            "pabasa_app.views.send_student_confirmation_email"
+        ), patch("pabasa_app.views._notify_admins"):
             session = self.client.session
             session["pending_student_signup"] = {
                 "first_name": payload["first_name"],
@@ -3122,8 +3123,8 @@ class StudentSignupFlowTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("already exists", response.json()["error"])
 
-    @patch("pabasa_site.pabasa_app.views.send_student_confirmation_email")
-    @patch("pabasa_site.pabasa_app.views._notify_admins")
+    @patch("pabasa_app.views.send_student_confirmation_email")
+    @patch("pabasa_app.views._notify_admins")
     def test_verify_student_otp_succeeds_with_valid_pending_signup(self, mock_notify, mock_email):
         session = self.client.session
         session["pending_student_signup"] = {
@@ -7038,7 +7039,7 @@ class PrincipalNotificationTests(TestCase):
         self.assertEqual(result, 1)
         self.assertTrue(Notification.objects.filter(recipient=principal, title="School update").exists())
 
-    def test_create_reading_class_notifies_principal(self):
+    def test_teacher_cannot_create_a_canonical_section(self):
         principal = User.objects.create(
             custom_id=f"PRN-{uuid.uuid4().hex[:8].upper()}",
             role="principal",
@@ -7080,16 +7081,36 @@ class PrincipalNotificationTests(TestCase):
         response = self.client.post(
             reverse("create_reading_class"),
             json.dumps({
-                "class_name": "Grade 1A",
-                "header": "Reading Class",
-                "description": "New class",
-                "subject": "Reading",
+                "grade": "Grade 1",
+                "section": "A",
             }),
             content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(Notification.objects.filter(recipient=principal, title__icontains="new class").exists())
+        self.assertEqual(response.status_code, 410)
+        payload = response.json()
+        self.assertFalse(payload['success'])
+        self.assertIn('Admin', payload['error'])
+        self.assertFalse(Section.objects.filter(grade_level='Grade 1', section='A').exists())
+        self.assertFalse(Notification.objects.filter(recipient=principal, title__icontains="new class").exists())
+
+    def test_legacy_create_class_endpoint_rejects_any_payload(self):
+        teacher = User.objects.create(
+            custom_id=f"TCH-{uuid.uuid4().hex[:8].upper()}", role="teacher",
+            first_name="Teacher", last_name="Validation", middle_initial="", suffix="",
+            sex="female", birth_month=1, birth_day=1, birth_year=1990,
+            email="teacher-validation@example.com", password_hash=make_password("password"),
+            teacher_role="Teacher",
+        )
+        session = self.client.session
+        session.update({"user_id": teacher.id, "user_role": "teacher", "email": teacher.email})
+        session.save()
+        response = self.client.post(
+            reverse("create_reading_class"), json.dumps({"grade": "", "section": ""}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 410)
+        self.assertIn('Admin', response.json()['error'])
 
 
 class PreferenceDeliveryTests(TestCase):

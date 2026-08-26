@@ -54,6 +54,19 @@
         grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
     }
 
+    /* A canonical Section is the class card.  A single assigned class deserves
+       the center of the workspace instead of a narrow, left-aligned tile. */
+    .classes-grid:has(> .course-dashboard-card:only-child) {
+        grid-template-columns: minmax(360px, 620px);
+        justify-content: center;
+    }
+    .classes-grid:has(> .course-dashboard-card:only-child) .course-dashboard-card {
+        min-height: 380px;
+    }
+    @media (max-width: 575.98px) {
+        .classes-grid:has(> .course-dashboard-card:only-child) { grid-template-columns: minmax(0, 1fr); }
+    }
+
     .class-card-full {
         background: var(--surface-glass) !important;
         backdrop-filter: blur(12px) saturate(130%);
@@ -9529,7 +9542,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const practiceCountEl = document.getElementById('activePracticeCount');
 
         const className = classData?.name || 'Class';
-        const subject = classData?.subject || 'Subject not set';
+        const gradeAndSection = [classData?.grade || classData?.grade_level, classData?.section].filter(Boolean).join(' · ');
         const code = classData?.code || currentClassCode || '—';
         const studentCount = Number(classData?.students || 0);
         const assessmentCount = Number(classData?.assessment_material_count || classData?.assessment_count || 0);
@@ -9537,7 +9550,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const headerLabel = classData?.header || 'Reading Class';
 
         if (classNameEl) classNameEl.textContent = className;
-        if (subjectEl) subjectEl.textContent = subject;
+        if (subjectEl) subjectEl.textContent = gradeAndSection;
         if (infoEl) infoEl.textContent = `${headerLabel} · ${studentCount} student${studentCount === 1 ? '' : 's'} enrolled`;
         if (codeEl) codeEl.textContent = code;
         if (studentCountEl) studentCountEl.textContent = String(studentCount);
@@ -12733,7 +12746,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 <div class="class-card-header" onclick="openClassDetail('${cls.code}')" style="cursor: pointer;">
                     <span class="class-code-badge">${cls.code}</span>
                     <h3>${cls.name}</h3>
-                    <p class="class-description">${cls.description}</p>
+                    <p class="class-description">${[cls.grade || cls.grade_level, cls.section].filter(Boolean).join(' · ')}</p>
                 </div>
                 <div class="class-card-stats">
                     <div class="class-stat">
@@ -12892,7 +12905,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         modal.show();
 
         // Reset banner state immediately so stale counts never linger.
-        updateClassDetailBanner({ code: classCode, name: 'Loading class...', subject: 'Refreshing class data', students: 0, header: 'Reading Class' });
+        updateClassDetailBanner({ code: classCode, name: 'Loading class...', students: 0, header: 'Reading Class' });
 
         try {
             await loadTeacherClassesFromServer();
@@ -12911,7 +12924,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             currentClassData = classData;
             updateClassDetailBanner(classData);
         } else {
-            updateClassDetailBanner({ code: classCode, name: classCode, subject: 'Subject not set', students: 0, header: 'Reading Class' });
+            updateClassDetailBanner({ code: classCode, name: classCode, students: 0, header: 'Reading Class' });
         }
 
         // Load all content and then sync the banner from the latest course cache.

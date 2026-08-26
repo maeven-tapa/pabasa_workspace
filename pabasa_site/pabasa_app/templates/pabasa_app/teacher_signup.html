@@ -576,6 +576,16 @@
                             <option value="Salawag Elementary School">Salawag Elementary School</option>
                         </select>
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Grade level</label>
+                        <select class="form-select" name="grade_level" id="teacherGradeLevel" required><option value="" selected disabled>Select Grade Level</option>{% for grade in signup_grades %}<option value="{{ grade }}">{{ grade }}</option>{% endfor %}</select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Section</label>
+                        <select class="form-select" name="section" id="teacherSection" required disabled>
+                            <option value="" selected disabled>Select Grade Level first</option>
+                        </select>
+                    </div>
                     <div class="col-md-12">
                         <label class="form-label">Department</label>
                         <select class="form-select" name="department" required>
@@ -722,6 +732,12 @@
 <script>
     (() => {
         const form = document.getElementById("teacherSignupForm");
+        const gradeSelect = document.getElementById('teacherGradeLevel');
+        const sectionSelect = document.getElementById('teacherSection');
+        gradeSelect?.addEventListener('change', async () => {
+            sectionSelect.disabled = true; sectionSelect.innerHTML = '<option value="" selected>Loading sections…</option>';
+            try { const response = await fetch('{% url "signup_sections" %}?grade_level=' + encodeURIComponent(gradeSelect.value)); const data = await response.json(); sectionSelect.innerHTML = '<option value="" selected disabled>Select Section</option>' + (data.sections || []).map(s => `<option value="${s.section}">${s.section}</option>`).join(''); sectionSelect.disabled = !(data.sections || []).length; } catch (_) { sectionSelect.innerHTML = '<option value="" selected>Unable to load sections</option>'; }
+        });
         const result = document.getElementById("teacherGeneratedPabasaId");
         const pabasaIdOutput = result.querySelector("[data-pabasa-id-output]");
         const submitButton = form.querySelector("button[type='submit']");

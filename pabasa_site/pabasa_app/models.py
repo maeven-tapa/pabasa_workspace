@@ -1,7 +1,9 @@
 import uuid
 
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
-from django.db import models
+from django.db import models, transaction
+from django.db.models.functions import Lower
 from django.utils import timezone
 from datetime import datetime
 
@@ -155,11 +157,19 @@ class Section(models.Model):
     class_name = models.CharField(max_length=150)
     header = models.CharField(max_length=100, default="Reading Class")
     description = models.TextField(blank=True)
-    teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sections")
+    teacher = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name="sections",
+        null=True,
+        blank=True,
+    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     subject = models.CharField(max_length=50)
+    grade_level = models.CharField(max_length=20, blank=True)
+    section = models.CharField(max_length=50, blank=True)
 
     # Stores joined students as JSON entries:
     # {"student_id": ..., "custom_id": ..., "first_name": ..., "last_name": ..., "email": ..., "joined_at": ..., "is_active": ...}
@@ -168,50 +178,45 @@ class Section(models.Model):
     class Meta:
         db_table = "sections"
         ordering = ["class_name"]
+        constraints = [
+            models.UniqueConstraint(
+                Lower("grade_level"),
+                Lower("section"),
+                condition=models.Q(grade_level__gt="", section__gt=""),
+                name="unique_canonical_grade_section",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.class_code} - {self.class_name}"
+
+    def clean(self):
+        super().clean()
+        self.grade_level = (self.grade_level or "").strip()
+        self.section = (self.section or "").strip()
+        if self.teacher_id and self.teacher.role != "teacher":
+            raise ValidationError({"teacher": "Only a teacher account can be assigned to a section."})
 
     def get_tag_label(self):
         return f"{self.class_name} ({self.class_code})"
     
     # Enrollment Management Methods
     def get_enrolled_students(self, active_only=False):
-        """Get list of enrolled students, optionally filtering by active status"""
-        students = getattr(self, 'students', None) or []
-        if not isinstance(students, list):
-            return []
+        """Return student entries derived from relational enrollments."""
+        enrollments = self.enrollments.select_related("student").all()
         if active_only:
-            return [student for student in students if isinstance(student, dict) and student.get('is_active', True)]
-        return [student for student in students if isinstance(student, dict)]
+            enrollments = enrollments.filter(is_active=True)
+        return [self._get_student_entry(e.student, e.joined_at.isoformat() if e.joined_at else None, e.is_active) for e in enrollments]
     
     def has_student(self, user, active_only=True):
         """Check if user is enrolled in this section"""
         if not user or not user.id:
             return False
         
-        for entry in self.get_enrolled_students(active_only=active_only):
-            if not isinstance(entry, dict) or not entry:
-                continue
-            
-            # Try multiple matching strategies
-            student_id = entry.get('student_id')
-            custom_id = entry.get('custom_id')
-            
-            # Match by student_id (more reliable - explicit int conversion)
-            if student_id is not None:
-                try:
-                    if int(student_id) == int(user.id):
-                        return True
-                except (ValueError, TypeError):
-                    pass
-            
-            # Match by custom_id (backup - only if non-empty)
-            if custom_id and str(custom_id).strip():
-                if str(custom_id).strip() == str(user.custom_id).strip():
-                    return True
-        
-        return False
+        query = self.enrollments.filter(student_id=user.id)
+        if active_only:
+            query = query.filter(is_active=True)
+        return query.exists()
     
     def get_student_count(self):
         """Get count of actively enrolled students"""
@@ -236,36 +241,33 @@ class Section(models.Model):
     
     def add_student(self, user):
         """Enroll a student in this section. Returns True if successful, False if already enrolled."""
-        students = self.get_enrolled_students()
-        tag_label = self.get_tag_label()
-        for index, entry in enumerate(students):
-            if (str(entry.get('student_id')) == str(user.id) or 
-                entry.get('custom_id') == user.custom_id):
-                if entry.get('is_active', True):
-                    user.add_tag(tag_label)
-                    return False  # Already enrolled
-                # Re-activate if previously deactivated
-                entry.update(self._get_student_entry(user, entry.get('joined_at'), is_active=True))
-                students[index] = entry
-                self.students = students
-                self._save_enrollment()
-                # VERIFY the save committed to database
-                self.refresh_from_db()
-                if not self.has_student(user, active_only=True):
-                    raise Exception(f"Failed to re-enroll student {user.id} in section {self.class_code}")
-                user.add_tag(tag_label)
-                return True
-        
-        # Add new enrollment
-        students.append(self._get_student_entry(user))
-        self.students = students
-        self._save_enrollment()
-        # VERIFY the save committed to database
-        self.refresh_from_db()
-        if not self.has_student(user, active_only=True):
-            raise Exception(f"Failed to enroll student {user.id} in section {self.class_code}")
-        user.add_tag(tag_label)
-        return True
+        if not user or user.role != "student":
+            raise ValidationError("Only a student account can be enrolled in a section.")
+
+        with transaction.atomic():
+            enrollment, created = Enrollment.objects.get_or_create(
+                student=user,
+                section=self,
+                defaults={"is_active": True},
+            )
+            was_active = not created and enrollment.is_active
+            if not enrollment.is_active:
+                enrollment.is_active = True
+                enrollment.save(update_fields=["is_active"])
+
+            students = self.get_enrolled_students()
+            for index, entry in enumerate(students):
+                if (str(entry.get('student_id')) == str(user.id) or
+                        entry.get('custom_id') == user.custom_id):
+                    entry.update(self._get_student_entry(user, entry.get('joined_at'), is_active=True))
+                    students[index] = entry
+                    break
+            else:
+                students.append(self._get_student_entry(user, enrollment.joined_at.isoformat()))
+            self.students = students
+            self._save_enrollment()
+            user.add_tag(self.get_tag_label())
+            return not was_active
     
     def deactivate_student(self, user):
         """Deactivate a student's enrollment in this section. Returns True if changed."""
@@ -278,11 +280,17 @@ class Section(models.Model):
                 entry.get('is_active', True)):
                 entry['is_active'] = False
                 changed = True
+        enrollment_changed = Enrollment.objects.filter(
+            student=user,
+            section=self,
+            is_active=True,
+        ).update(is_active=False)
         if changed:
             self.students = students
             self._save_enrollment()
+        if changed or enrollment_changed:
             user.remove_tag(tag_label)
-        return changed
+        return bool(changed or enrollment_changed)
     
     def deactivate_all_students(self):
         """Deactivate all student enrollments in this section. Returns True if changed."""
@@ -296,12 +304,43 @@ class Section(models.Model):
                 changed = True
                 if entry.get('student_id'):
                     affected_student_ids.add(entry.get('student_id'))
+        relational_student_ids = set(
+            Enrollment.objects.filter(section=self, is_active=True).values_list("student_id", flat=True)
+        )
         if changed:
             self.students = students
             self._save_enrollment()
-            for student_user in User.objects.filter(id__in=affected_student_ids):
-                student_user.remove_tag(tag_label)
-        return changed
+        enrollment_changed = Enrollment.objects.filter(section=self, is_active=True).update(is_active=False)
+        for student_user in User.objects.filter(id__in=affected_student_ids | relational_student_ids):
+            student_user.remove_tag(tag_label)
+        return bool(changed or enrollment_changed)
+
+
+class Enrollment(models.Model):
+    """Relational source for a student's membership in a canonical section."""
+
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="enrollments")
+    section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name="enrollments")
+    joined_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "class_enrollments"
+        ordering = ["-joined_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["student", "section"],
+                name="unique_student_section_enrollment",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.student_id and self.student.role != "student":
+            raise ValidationError({"student": "Only a student account can be enrolled in a section."})
+
+    def __str__(self):
+        return f"{self.student.custom_id} in {self.section.class_code}"
 
 class Assessment(models.Model):
     SYSTEM_ASSESSMENT_CHOICES = [

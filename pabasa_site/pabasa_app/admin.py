@@ -2,6 +2,7 @@ from django.contrib import admin
 from .models import (
 	User,
 	Section,
+	Enrollment,
 	Assessment,
 	Practice,
 	Material,
@@ -37,7 +38,15 @@ class SectionAdmin(admin.ModelAdmin):
 	ordering = ("class_name",)
 
 	def student_count(self, obj):
-		return len([student for student in (obj.students or []) if student.get("is_active", True)])
+		return obj.enrollments.filter(is_active=True).count()
+
+
+@admin.register(Enrollment)
+class EnrollmentAdmin(admin.ModelAdmin):
+	list_display = ("student", "section", "is_active", "joined_at")
+	list_filter = ("is_active", "section")
+	search_fields = ("student__custom_id", "student__first_name", "student__last_name", "section__class_code")
+	ordering = ("-joined_at",)
 
 
 @admin.register(Assessment)
