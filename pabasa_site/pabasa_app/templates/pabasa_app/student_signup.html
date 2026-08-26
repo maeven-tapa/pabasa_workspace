@@ -802,7 +802,7 @@
             sectionSelect.disabled = true;
             sectionSelect.innerHTML = '<option value="" selected>Loading sections…</option>';
             try {
-                const response = await fetch('{% url "signup_sections" %}?grade_level=' + encodeURIComponent(gradeSelect.value));
+                const response = await fetch('{% url "signup_sections" %}?role=student&grade_level=' + encodeURIComponent(gradeSelect.value));
                 const data = await response.json();
                 renderSectionOptions(data.sections || []);
             } catch (_) {

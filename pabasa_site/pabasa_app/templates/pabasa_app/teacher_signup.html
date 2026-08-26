@@ -563,18 +563,6 @@
                         <input class="form-control" type="tel" name="contact_no" placeholder="09XXXXXXXXX">
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Teacher Role</label>
-                        <select class="form-select" name="teacher_role" required>
-                            <option value="" selected disabled>Select Teacher Role</option>
-                            <option value="Grade 1 Teacher">Grade 1 Teacher</option>
-                            <option value="Grade 2 Teacher">Grade 2 Teacher</option>
-                            <option value="Grade 3 Teacher">Grade 3 Teacher</option>
-                            <option value="Grade 4 Teacher">Grade 4 Teacher</option>
-                            <option value="Grade 5 Teacher">Grade 5 Teacher</option>
-                            <option value="Grade 6 Teacher">Grade 6 Teacher</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
                         <label class="form-label">School</label>
                         <select class="form-select" name="school" required>
                             <option value="" selected disabled>Select School</option>
@@ -779,7 +767,7 @@
             sectionSelect.disabled = true;
             sectionSelect.innerHTML = '<option value="" selected>Loading sections…</option>';
             try {
-                const response = await fetch('{% url "signup_sections" %}?grade_level=' + encodeURIComponent(gradeSelect.value));
+                const response = await fetch('{% url "signup_sections" %}?role=teacher&grade_level=' + encodeURIComponent(gradeSelect.value));
                 const data = await response.json();
                 renderSectionOptions(data.sections || []);
             } catch (_) {

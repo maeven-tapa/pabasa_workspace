@@ -196,6 +196,66 @@ class Section(models.Model):
         self.section = (self.section or "").strip()
         if self.teacher_id and self.teacher.role != "teacher":
             raise ValidationError({"teacher": "Only a teacher account can be assigned to a section."})
+        if self.teacher_id and self.teacher.is_archived:
+            raise ValidationError({"teacher": "Archived teachers cannot be assigned to an active section."})
+
+    @property
+    def student_count(self):
+        return self.get_student_count()
+
+    def active_teacher_name(self):
+        if not self.has_active_teacher():
+            return ""
+        return f"{self.teacher.first_name} {self.teacher.last_name}".strip()
+
+    def has_active_teacher(self):
+        """Return whether this Section has an active teacher assignment."""
+        return bool(
+            self.teacher_id
+            and self.teacher
+            and self.teacher.role == "teacher"
+            and not self.teacher.is_archived
+        )
+
+    def teacher_is_available(self):
+        return not self.has_active_teacher()
+
+    def sync_legacy_student_fields(self):
+        students = self.get_enrolled_students()
+        self.students = students
+        self._save_enrollment()
+
+    def assign_teacher(self, teacher_user, replace_existing=False):
+        if not teacher_user or teacher_user.role != "teacher":
+            raise ValidationError({"teacher": "Only a teacher account can be assigned to a section."})
+        if teacher_user.is_archived:
+            raise ValidationError({"teacher": "Archived teachers cannot be assigned to a section."})
+
+        with transaction.atomic():
+            locked_self = Section.objects.select_for_update().get(pk=self.pk)
+            conflicting = Section.objects.select_for_update().filter(teacher=teacher_user).exclude(pk=locked_self.pk).first()
+            if conflicting:
+                raise ValidationError({"teacher": "This teacher is already assigned to another active section."})
+
+            current_teacher = locked_self.teacher
+            if locked_self.has_active_teacher() and locked_self.teacher_id != teacher_user.id and not replace_existing:
+                raise ValidationError({"teacher": "This section already has an assigned teacher."})
+
+            locked_self.teacher = teacher_user
+            locked_self.save(update_fields=["teacher", "updated_at"])
+            self.teacher = teacher_user
+            return current_teacher
+
+    def unassign_teacher(self):
+        if not self.teacher_id:
+            # The instance may predate a concurrent assignment or a prior
+            # assign_teacher() call that updated the database row.
+            self.refresh_from_db(fields=["teacher"])
+        if not self.teacher_id:
+            return False
+        self.teacher = None
+        self.save(update_fields=["teacher", "updated_at"])
+        return True
 
     def get_tag_label(self):
         return f"{self.class_name} ({self.class_code})"
@@ -245,6 +305,8 @@ class Section(models.Model):
             raise ValidationError("Only a student account can be enrolled in a section.")
 
         with transaction.atomic():
+            Section.objects.select_for_update().get(pk=self.pk)
+            Enrollment.objects.select_for_update().filter(student=user, is_active=True).exclude(section=self).update(is_active=False)
             enrollment, created = Enrollment.objects.get_or_create(
                 student=user,
                 section=self,
@@ -266,8 +328,23 @@ class Section(models.Model):
                 students.append(self._get_student_entry(user, enrollment.joined_at.isoformat()))
             self.students = students
             self._save_enrollment()
+            user.grade_level = self.grade_level
+            user.section = self.section
+            user.save(update_fields=["grade_level", "section", "updated_at"])
             user.add_tag(self.get_tag_label())
             return not was_active
+
+    def move_student(self, user, destination_section):
+        if not user or user.role != "student":
+            raise ValidationError("Only a student account can be moved between sections.")
+        if not destination_section or destination_section.pk == self.pk:
+            return False
+        with transaction.atomic():
+            source_section = Section.objects.select_for_update().get(pk=self.pk)
+            target_section = Section.objects.select_for_update().get(pk=destination_section.pk)
+            source_section.deactivate_student(user)
+            target_section.add_student(user)
+        return True
     
     def deactivate_student(self, user):
         """Deactivate a student's enrollment in this section. Returns True if changed."""
@@ -338,6 +415,8 @@ class Enrollment(models.Model):
         super().clean()
         if self.student_id and self.student.role != "student":
             raise ValidationError({"student": "Only a student account can be enrolled in a section."})
+        if self.section_id and not self.section.is_active:
+            raise ValidationError({"section": "Cannot enroll a student in an inactive section."})
 
     def __str__(self):
         return f"{self.student.custom_id} in {self.section.class_code}"
