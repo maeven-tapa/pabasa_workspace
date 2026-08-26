@@ -152,7 +152,48 @@ class HuntStarAward(models.Model):
         ]
 
 
+class School(models.Model):
+    STATUS_CHOICES = [
+        ("active", "Active"),
+        ("archived", "Archived"),
+    ]
+
+    name = models.CharField(max_length=200, unique=True)
+    code = models.CharField(max_length=50, unique=True, blank=True, default="")
+    address = models.TextField(blank=True, default="")
+    contact_information = models.TextField(blank=True, default="")
+    logo = models.CharField(max_length=255, blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="active")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "schools"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    def archive(self):
+        self.status = "archived"
+        self.is_active = False
+        self.save(update_fields=["status", "is_active", "updated_at"])
+
+    def reactivate(self):
+        self.status = "active"
+        self.is_active = True
+        self.save(update_fields=["status", "is_active", "updated_at"])
+
+
 class Section(models.Model):
+    school = models.ForeignKey(
+        School,
+        on_delete=models.PROTECT,
+        related_name="sections",
+        null=True,
+        blank=True,
+    )
     class_code = models.CharField(max_length=20, unique=True)
     class_name = models.CharField(max_length=150)
     header = models.CharField(max_length=100, default="Reading Class")
@@ -180,15 +221,26 @@ class Section(models.Model):
         ordering = ["class_name"]
         constraints = [
             models.UniqueConstraint(
+                "school",
                 Lower("grade_level"),
                 Lower("section"),
                 condition=models.Q(grade_level__gt="", section__gt=""),
-                name="unique_canonical_grade_section",
+                name="unique_school_canonical_grade_section",
             ),
         ]
 
     def __str__(self):
         return f"{self.class_code} - {self.class_name}"
+
+    def save(self, *args, **kwargs):
+        if not self.school_id:
+            # Keep legacy section creation isolated to the transitional default school.
+            default_school = School.objects.filter(name="Default School").first()
+            if not default_school:
+                default_school = School.objects.create(name="Default School", code="DEFAULT-SCHOOL")
+            if default_school:
+                self.school = default_school
+        super().save(*args, **kwargs)
 
     def clean(self):
         super().clean()

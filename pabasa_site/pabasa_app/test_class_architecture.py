@@ -5,7 +5,7 @@ from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Assessment, Enrollment, Section, User
+from .models import Assessment, Enrollment, School, Section, User
 
 
 def make_user(custom_id, role, email):
@@ -146,6 +146,72 @@ class CanonicalSectionArchitectureTests(TestCase):
         self.assertNotContains(response, "/api/join-class/")
         self.assertNotContains(response, "data-class-code-form")
         self.assertContains(response, "My Classes")
+
+
+class SchoolScopedSectionIsolationTests(TestCase):
+    def setUp(self):
+        self.admin = make_user("ADM-SCHOOL-SCOPE", "admin", "school-scope-admin@example.com")
+        self.student = make_user("STU-SCHOOL-SCOPE", "student", "school-scope-student@example.com")
+        self.school_a = School.objects.create(name="School A", code="SCHOOL-A")
+        self.school_b = School.objects.create(name="School B", code="SCHOOL-B")
+        session = self.client.session
+        session.update({
+            "user_id": self.admin.id,
+            "user_role": "admin",
+            "email": self.admin.email,
+        })
+        session.save()
+
+    def _create_rizal(self, school):
+        return self.client.post(
+            reverse("admin_school_detail", args=[school.id]),
+            {"grade_level": "Grade 2", "section": "Rizal"},
+        )
+
+    def test_same_grade_and_section_can_exist_in_two_schools(self):
+        response_a = self._create_rizal(self.school_a)
+        response_b = self._create_rizal(self.school_b)
+
+        self.assertEqual(response_a.status_code, 302)
+        self.assertEqual(response_b.status_code, 302)
+        sections = Section.objects.filter(grade_level="Grade 2", section="RIZAL")
+        self.assertEqual(sections.count(), 2)
+        self.assertSetEqual(set(sections.values_list("school_id", flat=True)), {self.school_a.id, self.school_b.id})
+
+        section_a = sections.get(school=self.school_a)
+        section_b = sections.get(school=self.school_b)
+        page_a = self.client.get(reverse("admin_school_detail", args=[self.school_a.id]))
+        page_b = self.client.get(reverse("admin_school_detail", args=[self.school_b.id]))
+        self.assertEqual(
+            [section.id for section in page_a.context["sections_by_grade"]["Grade 2"]],
+            [section_a.id],
+        )
+        self.assertEqual(
+            [section.id for section in page_b.context["sections_by_grade"]["Grade 2"]],
+            [section_b.id],
+        )
+
+        duplicate_a = self._create_rizal(self.school_a)
+        duplicate_b = self._create_rizal(self.school_b)
+        self.assertEqual(duplicate_a.status_code, 200)
+        self.assertEqual(duplicate_b.status_code, 200)
+        self.assertContains(duplicate_a, "already exists in School A")
+        self.assertContains(duplicate_b, "already exists in School B")
+        self.assertEqual(Section.objects.filter(grade_level="Grade 2", section="RIZAL").count(), 2)
+
+        section_b.add_student(self.student)
+        self.assertEqual(section_a.get_student_count(), 0)
+        self.assertEqual(section_b.get_student_count(), 1)
+
+        self.client.post(
+            reverse("admin_school_section_update", args=[section_a.id]),
+            {"action": "deactivate"},
+        )
+        section_a.refresh_from_db()
+        section_b.refresh_from_db()
+        self.assertFalse(section_a.is_active)
+        self.assertTrue(section_b.is_active)
+        self.assertEqual(section_b.get_student_count(), 1)
 
 
 class StudentSignupAutomaticEnrollmentTests(TestCase):

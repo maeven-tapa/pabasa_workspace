@@ -52,7 +52,7 @@ from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, ensure_default_principal
 from django.db import transaction
 import re
 import traceback
-from .models import User, Section, Enrollment, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent
+from .models import User, School, Section, Enrollment, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
 from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
 from .reading_stt import (
@@ -99,6 +99,13 @@ PRACTICE_ACTIVE_SESSION_KEY = "practice_active_session"
 SCHOOL_GRADE_LEVELS = tuple(f"Grade {number}" for number in range(1, 7))
 
 
+def _default_school():
+    school = School.objects.filter(name="Default School").first()
+    if school:
+        return school
+    return School.objects.create(name="Default School", code="DEFAULT-SCHOOL")
+
+
 def _active_canonical_section(grade_level, section_name):
     """Resolve a selectable canonical class; signup never creates one."""
     return Section.objects.filter(
@@ -109,7 +116,7 @@ def _active_canonical_section(grade_level, section_name):
 
 
 def _signup_section_queryset(role, grade_level=None):
-    qs = Section.objects.filter(is_active=True).select_related('teacher').order_by('grade_level', 'section')
+    qs = Section.objects.filter(is_active=True).select_related('teacher', 'school').order_by('grade_level', 'section')
     if grade_level:
         qs = qs.filter(grade_level__iexact=str(grade_level).strip())
     if role == 'teacher':
@@ -123,6 +130,8 @@ def _section_signup_payload(section):
     teacher = getattr(section, 'teacher', None)
     return {
         'id': section.id,
+        'school_id': section.school_id,
+        'school_name': section.school.name if section.school else '',
         'grade_level': section.grade_level,
         'section': section.section,
         'class_name': section.class_name,
@@ -148,6 +157,10 @@ def _section_selection_context(role):
         for grade in SCHOOL_GRADE_LEVELS
     ]
     return signup_grades, grade_map
+
+
+def _school_sections_queryset(school):
+    return Section.objects.filter(school=school).select_related('teacher', 'school').order_by('grade_level', 'section', 'class_name')
 
 
 def _practice_language_value(value):
@@ -5507,8 +5520,33 @@ def admin_classes(request):
 @admin_required
 @require_http_methods(["GET", "POST"])
 def admin_school(request):
-    """Configure canonical Grade + Section classes without touching their history."""
-    context = _admin_context(request, 'School', [])
+    """List schools and create new ones."""
+    context = _admin_context(request, 'Schools', [])
+    if request.method == 'POST':
+        school_name = str(request.POST.get('school_name') or '').strip()
+        school_code = str(request.POST.get('school_code') or '').strip()
+        if not school_name:
+            context['error_message'] = 'School name is required.'
+        else:
+            try:
+                School.objects.create(
+                    name=school_name,
+                    code=school_code or slugify(school_name).upper(),
+                )
+                return redirect('admin_school')
+            except IntegrityError:
+                context['error_message'] = 'A school with that name or code already exists.'
+    context.update({
+        'schools': School.objects.all().order_by('name'),
+    })
+    return render(request, 'pabasa_app/admin_school.html', context)
+
+
+@admin_required
+@require_http_methods(["GET", "POST"])
+def admin_school_detail(request, school_id):
+    school = get_object_or_404(School, id=school_id)
+    context = _admin_context(request, school.name, [])
     if request.method == 'POST':
         grade = str(request.POST.get('grade_level') or '').strip()
         section_name = str(request.POST.get('section') or '').strip()
@@ -5517,27 +5555,34 @@ def admin_school(request):
         else:
             try:
                 with transaction.atomic():
-                    section = Section.objects.filter(grade_level__iexact=grade, section__iexact=section_name).first()
-                    created = False
+                    section = Section.objects.filter(
+                        school=school,
+                        grade_level__iexact=grade,
+                        section__iexact=section_name,
+                    ).first()
                     if not section:
-                        section = Section.objects.create(
+                        Section.objects.create(
+                            school=school,
                             grade_level=grade,
                             section=section_name.upper(),
                             class_name=f'{grade} - {section_name.upper()}',
                             class_code=generate_unique_class_code(),
                             subject='Reading',
+                            is_active=True,
                         )
-                        created = True
-                if not created:
-                    context['error_message'] = f'{grade} - {section.section} already exists.'
-                else:
-                    return redirect('admin_school')
+                        return redirect('admin_school_detail', school_id=school.id)
+                    context['error_message'] = f'{grade} - {section.section} already exists in {school.name}.'
             except IntegrityError:
-                context['error_message'] = f'{grade} - {section_name} already exists.'
+                context['error_message'] = f'{grade} - {section_name} already exists in {school.name}.'
+
     grouped = {grade: [] for grade in SCHOOL_GRADE_LEVELS}
-    for section in Section.objects.exclude(grade_level='').exclude(section='').order_by('grade_level', 'section'):
+    for section in _school_sections_queryset(school):
         grouped.setdefault(section.grade_level, []).append(section)
-    context.update({'grades': SCHOOL_GRADE_LEVELS, 'sections_by_grade': grouped})
+    context.update({
+        'school': school,
+        'grades': SCHOOL_GRADE_LEVELS,
+        'sections_by_grade': grouped,
+    })
     return render(request, 'pabasa_app/admin_school.html', context)
 
 
@@ -5572,6 +5617,8 @@ def admin_school_section_update(request, section_id):
                 section.assign_teacher(teacher, replace_existing=bool(request.POST.get('replace_teacher')))
             except ValidationError:
                 pass
+    if section.school_id:
+        return redirect('admin_school_detail', school_id=section.school_id)
     return redirect('admin_school')
 
 def _get_managed_section(section_id):
