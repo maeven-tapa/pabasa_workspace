@@ -684,7 +684,6 @@
 
     body.dark-theme #addMaterialModal .modal-content,
     body.dark-theme #materialUploadSelectModal .modal-content,
-    body.dark-theme #addCourseStudentModal .modal-content,
     body.dark-theme #editMaterialModal .modal-content,
     body.dark-theme #viewMaterialModal .modal-content,
     body.dark-theme #deleteConfirmModal .modal-content,
@@ -5427,7 +5426,6 @@
     }
 
     body.dark-theme #addMaterialModal .modal-content,
-    body.dark-theme #addCourseStudentModal .modal-content,
     body.dark-theme #viewMaterialModal .modal-content {
         background: rgba(15, 23, 42, 0.98) !important;
         border-color: rgba(255, 255, 255, 0.12) !important;
@@ -6133,7 +6131,7 @@
 
                     <div class="course-card-divider" aria-hidden="true"></div>
 
-                    <div class="course-card-footer" role="button" onclick="openCourseDetail('{{ course.id }}')" aria-label="Open Course">
+                    <div class="course-card-footer" role="button" data-open-course="{{ course.id }}" aria-label="Open Course">
                         <span class="ccf-icon"><i class="bi bi-book"></i></span>
                         <span class="ccf-label">Open Course</span>
                         <span class="ccf-arrow"><i class="bi bi-arrow-right"></i></span>
@@ -6447,7 +6445,6 @@
                                             </div>
                                             <div class="students-header-actions">
                                                 <span class="students-count-pill" id="studentsCountPill">0 enrolled</span>
-                                                <button class="btn btn-sm btn-primary" id="btnAddStudentToCourse">Add Student</button>
                                             </div>
                                         </div>
 
@@ -6563,108 +6560,6 @@
             </div>
 
 <!-- Modals moved to bottom to prevent nesting issues -->
-<style>
-/* Keep Add Student modal centered above the Course Details overlay */
-#addCourseStudentModal {
-    --bs-modal-zindex: 1065;
-}
-#addCourseStudentModal .modal-dialog {
-    margin: 1.75rem auto;
-    max-height: calc(100% - 3.5rem);
-}
-#addCourseStudentModal .modal-content {
-    max-height: calc(100vh - 3.5rem);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-#addCourseStudentModal .modal-body {
-    display: block;
-    grid-template-columns: none;
-    max-height: none;
-    overflow-y: auto;
-    min-height: 0;
-    padding: 1.25rem 1.5rem;
-}
-.course-student-add-loading-modal {
-    align-items: center;
-    background: rgba(15, 23, 42, 0.48);
-    bottom: 0;
-    display: none;
-    justify-content: center;
-    left: 0;
-    padding: 1rem;
-    position: fixed;
-    right: 0;
-    top: 0;
-    z-index: 3000;
-}
-.course-student-add-loading-modal.is-visible {
-    display: flex;
-}
-.course-student-add-loading-dialog {
-    background: rgba(255, 255, 255, 0.96);
-    border-radius: 20px;
-    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
-    max-width: 420px;
-    padding: 2rem;
-    text-align: center;
-    width: min(100%, 420px);
-}
-    @media (max-width: 575.98px) {
-        #addCourseStudentModal .modal-dialog {
-            margin: 0.5rem auto;
-            max-width: calc(100% - 1rem);
-        }
-    }
-</style>
-<!-- Modal: Add Students to Course -->
-<div class="modal fade" id="addCourseStudentModal" tabindex="-1" aria-labelledby="addCourseStudentModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-        <div class="modal-content course-modal-content">
-            <div class="modal-header course-modal-header">
-                <h5 class="modal-title" id="addCourseStudentModalLabel">Add Students to Course</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div id="addCourseStudentCourseFallback" class="mb-3 d-none"></div>
-                <div class="card rounded-4 p-3">
-                    <div class="table-responsive">
-                        <table class="table table-borderless align-middle mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th style="width:32px">
-                                                <div class="form-check add-course-select-all" style="margin-top:-6px; display:flex; align-items:center; gap:0.4rem;">
-                                                    <input class="form-check-input" type="checkbox" id="addCourseSelectAll" title="Select all">
-                                                    <label class="form-check-label ms-1" for="addCourseSelectAll" style="user-select:none; font-size:0.9rem;">Select All</label>
-                                                </div>
-                                            </th>
-                                            <th>Name</th>
-                                            <th>Email</th>
-                                            <th>Grade</th>
-                                        </tr>
-                                    </thead>
-                            <tbody id="addCourseStudentsTableBody">
-                                <!-- Intentionally empty: client will populate available registered students here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="addCourseStudentModalAddSelected">Add Student</button>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="course-student-add-loading-modal" id="addCourseStudentLoadingModal" role="dialog" aria-modal="true" aria-live="polite" aria-labelledby="addCourseStudentLoadingTitle">
-    <div class="course-student-add-loading-dialog">
-        <div class="spinner-border text-primary mb-3" role="status" aria-label="Loading"></div>
-        <h5 class="fw-bold mb-2" id="addCourseStudentLoadingTitle">Adding student to class</h5>
-        <p class="text-muted mb-0">Please wait while the selected student is being added.</p>
-    </div>
-</div>
 <!-- Modal for Adding Materials -->
 <style>
 /* Precise Add Material modal styles (matches provided screenshots) */
@@ -7906,10 +7801,6 @@ body.dark-theme #courseDetailModal .modal-content,
 body.dark-theme #courseDetailModal .modal-header,
 body.dark-theme #courseDetailModal .modal-body,
 body.dark-theme #courseDetailModal .modal-footer,
-body.dark-theme #addCourseStudentModal .modal-content,
-body.dark-theme #addCourseStudentModal .modal-header,
-body.dark-theme #addCourseStudentModal .modal-body,
-body.dark-theme #addCourseStudentModal .modal-footer,
 body.dark-theme #addMaterialModal .modal-content,
 body.dark-theme #addMaterialModal .modal-header,
 body.dark-theme #addMaterialModal .modal-body,
@@ -7928,8 +7819,6 @@ body.dark-theme #liveAssessmentLoadingModal .modal-content {
     color: #e2e8f0 !important;
 }
 
-body.dark-theme #addCourseStudentModal .card,
-body.dark-theme #addCourseStudentModal .table-responsive,
 body.dark-theme #addMaterialModal .upload-material-panel,
 body.dark-theme #addMaterialModal .other-material-panel,
 body.dark-theme #addMaterialModal #itemChipsContainer,
@@ -7945,8 +7834,7 @@ body.dark-theme #assistTransitionModal .modal-header,
 body.dark-theme #assistTransitionModal .modal-body,
 body.dark-theme #assistTransitionModal .modal-footer,
 body.dark-theme #assistLoadingModal .modal-content,
-body.dark-theme #assistLoadingModal .modal-body,
-body.dark-theme .course-student-add-loading-dialog {
+body.dark-theme #assistLoadingModal .modal-body {
     background: #0f172a !important;
     border-color: rgba(148, 163, 184, 0.18) !important;
     color: #e2e8f0 !important;
@@ -8032,7 +7920,6 @@ body.dark-theme #addMaterialModal .material-source-toggle button.active {
 }
 
 body.dark-theme #addMaterialModal .modal-header h4,
-body.dark-theme #addCourseStudentModal .modal-title,
 body.dark-theme #materialUploadSelectModal .modal-title,
 body.dark-theme #viewMaterialModal .modal-title,
 body.dark-theme #editMaterialModal .modal-title,
@@ -8045,8 +7932,6 @@ body.dark-theme #addMaterialModal .form-control,
 body.dark-theme #addMaterialModal .form-select,
 body.dark-theme #addMaterialModal textarea,
 body.dark-theme #addMaterialModal .input-group-text,
-body.dark-theme #addCourseStudentModal .form-control,
-body.dark-theme #addCourseStudentModal .form-select,
 body.dark-theme #materialUploadSelectModal .form-control,
 body.dark-theme #materialUploadSelectModal .form-select {
     background: #020617 !important;
@@ -8073,13 +7958,11 @@ body.dark-theme #addMaterialModal .custom-device-dropdown > select.custom-device
 body.dark-theme #addMaterialModal .teacher-field .form-label,
 body.dark-theme #addMaterialModal .form-label,
 body.dark-theme #addMaterialModal .text-dark,
-body.dark-theme #addCourseStudentModal label,
 body.dark-theme #materialUploadSelectModal label {
     color: #f8fafc !important;
 }
 
 body.dark-theme #addMaterialModal .text-muted,
-body.dark-theme #addCourseStudentModal .text-muted,
 body.dark-theme #materialUploadSelectModal .text-muted,
 body.dark-theme #liveAssessmentLoadingModal .text-muted {
     color: #94a3b8 !important;
@@ -8099,7 +7982,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .badge.item-chip-badge:hov
 }
 
 body.dark-theme #addMaterialModal .modal-header > .btn-close,
-body.dark-theme #addCourseStudentModal .modal-header > .btn-close,
 body.dark-theme #materialUploadSelectModal .modal-header > .btn-close,
 body.dark-theme #viewMaterialModal .modal-header > .btn-close,
 body.dark-theme #editMaterialModal .modal-header > .btn-close,
@@ -8124,7 +8006,6 @@ body.dark-theme #liveAssessmentLoadingModal .modal-header > .btn-close {
 }
 
 body.dark-theme #addMaterialModal .modal-header > .btn-close:hover,
-body.dark-theme #addCourseStudentModal .modal-header > .btn-close:hover,
 body.dark-theme #materialUploadSelectModal .modal-header > .btn-close:hover,
 body.dark-theme #viewMaterialModal .modal-header > .btn-close:hover,
 body.dark-theme #editMaterialModal .modal-header > .btn-close:hover,
@@ -8771,6 +8652,17 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 </script>
 
 <script>
+    // Handle both server-rendered and dynamically rendered course cards without
+    // relying on a global function for an inline onclick attribute.
+    document.addEventListener('click', function(event) {
+        const courseTrigger = event.target.closest('[data-open-course]');
+        if (!courseTrigger) return;
+
+        event.preventDefault();
+        const courseId = courseTrigger.dataset.openCourse;
+        if (courseId) openCourseDetail(courseId);
+    });
+
     // Load teacher classes (prefer server, fallback to localStorage)
     let teacherClasses = [];
     const teacherClassesKey = () => {
@@ -9920,7 +9812,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                     <div class="course-card-divider" aria-hidden="true"></div>
 
-                    <div class="course-card-footer" role="button" onclick="openCourseDetail(${JSON.stringify(course.id)})" aria-label="Open Course">
+                    <div class="course-card-footer" role="button" data-open-course="${escapeHtml(course.id)}" aria-label="Open Course">
                         <span class="ccf-icon"><i class="bi bi-book"></i></span>
                         <span class="ccf-label">Open Course</span>
                         <span class="ccf-arrow"><i class="bi bi-arrow-right"></i></span>
@@ -10003,8 +9895,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     function rawRecordId(value) {
         return String(value || '').replace(/^[a-z]+-/i, '');
     }
-
-    window.openCourseDetail = openCourseDetail;
 
     function findCourseById(courseId) {
         return (teacherCourses || []).find(c => String(c.id) === String(courseId));
@@ -11714,11 +11604,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     <div class="students-empty-card">
                         <i class="bi bi-people"></i>
                         <h6 class="mb-2">No students match this view yet</h6>
-                        <p class="text-muted mb-0">Try a different search or add a new student to this course.</p>
-                        <button type="button" class="btn btn-sm btn-primary" id="studentsEmptyAddBtn">Add Student</button>
+                        <p class="text-muted mb-0">Try a different search or change the status filter.</p>
                     </div>
                 `;
-                document.getElementById('studentsEmptyAddBtn')?.addEventListener('click', () => document.getElementById('btnAddStudentToCourse')?.click());
                 return;
             }
 
@@ -12287,71 +12175,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     document.addEventListener('DOMContentLoaded', function() {
         setupCourseReadingsHandlers();
     });
-    
-    // Wire students pane actions
+
+    // Existing course student-progress actions use this delegated click event.
     document.addEventListener('click', function(e) {
-        if (e.target.closest('#btnAddStudentToCourse')) {
-            e.preventDefault();
-            const courseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
-            const modalEl = document.getElementById('addCourseStudentModal');
-            if (modalEl) {
-                const tbody = document.getElementById('addCourseStudentsTableBody');
-                if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Loading available students...</td></tr>`;
-                showStackedModal(modalEl);
-                // Populate available students not already in course
-                (async function populateAddStudents() {
-                    try {
-                        // Fetch authoritative teacher students
-                        const res = await fetch('/dashboard/teacher/students-api/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                        let students = [];
-                        if (res.ok) {
-                            const data = await res.json();
-                            if (data && data.success && Array.isArray(data.students)) students = data.students;
-                        }
-
-                        // Determine students already in this course
-                        const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
-                        const courseCodes = (course?.sections || []).map(s => s.code).filter(Boolean);
-                        const courseNames = (course?.sections || []).map(s => s.name).filter(Boolean);
-                        const directStudentIds = new Set((Array.isArray(course?.metadata?.student_ids) ? course.metadata.student_ids : []).map(id => String(id)));
-
-                        // Fetch students not currently in any of the course sections or directly attached to the course
-                        const available = students.filter(s => {
-                            const codes = Array.isArray(s.class_codes) ? s.class_codes : [];
-                            const classes = Array.isArray(s.classes) ? s.classes : [];
-                            const inCourse = codes.some(c => courseCodes.includes(c)) || classes.some(n => courseNames.includes(n)) || directStudentIds.has(String(s.id));
-                            return !inCourse;
-                        });
-
-                        const tbodyEl = document.getElementById('addCourseStudentsTableBody');
-                        if (!tbodyEl) return;
-                        tbodyEl.innerHTML = '';
-                        if (available.length === 0) {
-                            tbodyEl.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">No available students to add.</td></tr>`;
-                            return;
-                        }
-
-                        available.forEach((s, idx) => {
-                            const tr = document.createElement('tr');
-                            tr.innerHTML = `
-                                <td><div class="form-check"><input class="form-check-input add-course-student-checkbox" type="checkbox" id="add_std_${idx}" value="${s.id || s.custom_id || ''}"></div></td>
-                                <td><strong>${s.name}</strong><div class="small text-muted">${(s.classes || []).join(', ')}</div></td>
-                                <td>${s.email || '<span class="text-danger">No email</span>'}</td>
-                                <td>${s.level || ''}</td>
-                            `;
-                            tbodyEl.appendChild(tr);
-                        });
-                    } catch (err) {
-                        console.warn('populateAddStudents failed', err);
-                        const tbodyEl = document.getElementById('addCourseStudentsTableBody');
-                        if (tbodyEl) tbodyEl.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Failed to load students.</td></tr>`;
-                    }
-                })();
-            } else {
-                try { if (typeof loadCourseStudents === 'function') loadCourseStudents(courseId); } catch (err) { console.warn('loadCourseStudents fallback failed', err); }
-            }
-        }
-
         function progressStudentMatches(attempt, studentId, studentName) {
             if (!attempt) return false;
             const attemptStudentId = attempt.student_id ?? attempt.studentId ?? attempt.user_id ?? '';
@@ -13484,116 +13310,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         instance.show();
         return instance;
     }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        const addCourseStudentModal = document.getElementById('addCourseStudentModal');
-        if (addCourseStudentModal) {
-            ensureModalOnBody(addCourseStudentModal);
-            // Wire select-all behavior for the Add Students table
-            const tbody = document.getElementById('addCourseStudentsTableBody');
-            const selectAll = document.getElementById('addCourseSelectAll');
-            if (selectAll && tbody && !tbody.dataset.selectBound) {
-                // When header checkbox changes, toggle all row checkboxes
-                selectAll.addEventListener('change', function() {
-                    const checked = !!this.checked;
-                    Array.from(tbody.querySelectorAll('.add-course-student-checkbox')).forEach(cb => cb.checked = checked);
-                });
-
-                // Delegate change events from tbody to keep header checkbox in sync
-                tbody.addEventListener('change', function(e) {
-                    if (!e.target || !e.target.classList) return;
-                    if (!e.target.classList.contains('add-course-student-checkbox')) return;
-                    const all = Array.from(tbody.querySelectorAll('.add-course-student-checkbox'));
-                    if (all.length === 0) return selectAll.checked = false;
-                    selectAll.checked = all.every(cb => cb.checked);
-                });
-
-                tbody.dataset.selectBound = '1';
-            }
-        }
-    });
-
-    // Add selected students from Add Students modal into the course (use teacher_add_student endpoint)
-    document.getElementById('addCourseStudentModalAddSelected')?.addEventListener('click', async function() {
-        const modal = document.getElementById('addCourseStudentModal');
-        const addButton = this;
-        const courseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
-        if (!courseId) return showToast('Course not identified', 'error');
-
-        const checkboxes = Array.from(document.querySelectorAll('#addCourseStudentsTableBody .add-course-student-checkbox:checked'));
-        if (checkboxes.length === 0) return showToast('Select at least one student to add', 'error');
-
-        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
-        const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
-        const targetSections = (course?.sections || []).map(s => s.code).filter(Boolean);
-        const targetClassCode = targetSections[0] || null;
-        const directCourseId = !targetClassCode ? String(courseId) : null;
-
-        const loadingModalEl = document.getElementById('addCourseStudentLoadingModal');
-        const loadingDialogEl = loadingModalEl?.querySelector('.course-student-add-loading-dialog');
-        const loadingNodes = loadingDialogEl ? Array.from(loadingDialogEl.childNodes) : [];
-        const courseInlineHost = document.getElementById('courseInlineDialogHost');
-        const courseMainContent = document.getElementById('courseMainContent');
-        const courseSidebar = document.getElementById('courseSidebar');
-        const added = [];
-
-        const showInlineStudentLoading = () => {
-            if (!courseInlineHost || !loadingNodes.length) return;
-            courseMainContent?.classList.add('d-none');
-            courseSidebar?.classList.add('d-none');
-            courseInlineHost.classList.remove('d-none');
-            loadingNodes.forEach(node => courseInlineHost.appendChild(node));
-        };
-        const hideInlineStudentLoading = () => {
-            if (loadingDialogEl) loadingNodes.forEach(node => loadingDialogEl.appendChild(node));
-            courseInlineHost?.classList.add('d-none');
-            courseMainContent?.classList.remove('d-none');
-            courseSidebar?.classList.remove('d-none');
-        };
-
-        addButton.disabled = true;
-        try { bootstrap.Modal.getInstance(modal)?.hide(); } catch(e){}
-        showInlineStudentLoading();
-
-        try {
-            for (const cb of checkboxes) {
-                const studentId = cb.value;
-                try {
-                    const res = await fetch('/dashboard/teacher/add-student-to-class/', {
-                        method: 'POST',
-                        credentials: 'same-origin',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                        body: JSON.stringify(targetClassCode
-                            ? { class_code: targetClassCode, student_id: studentId }
-                            : { course_id: directCourseId, student_id: studentId })
-                    });
-                    const data = await res.json();
-                    if (res.ok && data.success) {
-                        added.push(studentId);
-                    } else {
-                        console.warn('Failed to add student', studentId, data);
-                    }
-                } catch (err) {
-                    console.error('Error adding student', studentId, err);
-                }
-            }
-
-            hideInlineStudentLoading();
-
-            if (added.length > 0) {
-                if (typeof showToast === 'function') showToast(`${added.length} student(s) added to course.`, 'success'); else alert(`${added.length} student(s) added to course.`);
-                setTimeout(() => window.location.reload(), 1200);
-            } else {
-                if (typeof showToast === 'function') showToast('No students were added.', 'error'); else alert('No students were added.');
-                addButton.disabled = false;
-            }
-        } catch (err) {
-            hideInlineStudentLoading();
-            addButton.disabled = false;
-            console.error('Error adding selected students', err);
-            if (typeof showToast === 'function') showToast('Unable to add the selected student. Please try again.', 'error'); else alert('Unable to add the selected student. Please try again.');
-        }
-    });
 
     function showSuccessModal(title, message) {
         document.getElementById('successTitle').textContent = title;
