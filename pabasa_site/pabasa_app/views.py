@@ -4342,7 +4342,19 @@ def privacy(request):
     return render(request, 'pabasa_app/privacy.html')
 
 def teacher_signup(request):
-    return render(request, 'pabasa_app/teacher_signup.html', {'signup_grades': SCHOOL_GRADE_LEVELS})
+    active_grade_levels = {
+        str(grade).strip().casefold()
+        for grade in Section.objects.filter(is_active=True).exclude(grade_level='').values_list('grade_level', flat=True).distinct()
+    }
+    signup_grades = [
+        {
+            'label': grade,
+            'value': grade,
+            'is_available': grade.strip().casefold() in active_grade_levels,
+        }
+        for grade in SCHOOL_GRADE_LEVELS
+    ]
+    return render(request, 'pabasa_app/teacher_signup.html', {'signup_grades': signup_grades})
 
 def student_signup(request):
     active_grade_levels = {

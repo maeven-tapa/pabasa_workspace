@@ -59,6 +59,11 @@
         box-shadow: 0 0 0 0.2rem rgba(84, 194, 240, 0.2);
     }
 
+    .availability-option-locked {
+        color: #7a8087;
+        font-family: "Quattrocento Sans", "bootstrap-icons", sans-serif;
+    }
+
     .account-card .btn {
         min-height: 2.9rem;
         border-radius: 0.9rem;
@@ -578,7 +583,14 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Grade level</label>
-                        <select class="form-select" name="grade_level" id="teacherGradeLevel" required><option value="" selected disabled>Select Grade Level</option>{% for grade in signup_grades %}<option value="{{ grade }}">{{ grade }}</option>{% endfor %}</select>
+                        <select class="form-select" name="grade_level" id="teacherGradeLevel" required>
+                            <option value="" selected disabled>Select Grade Level</option>
+                            {% for grade in signup_grades %}
+                                <option value="{{ grade.value }}" {% if not grade.is_available %}disabled class="availability-option-locked"{% endif %}>
+                                    {% if grade.is_available %}{{ grade.label }}{% else %}{{ grade.label }} &mdash; not available &#xf47a;{% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Section</label>
@@ -734,9 +746,45 @@
         const form = document.getElementById("teacherSignupForm");
         const gradeSelect = document.getElementById('teacherGradeLevel');
         const sectionSelect = document.getElementById('teacherSection');
+        const sectionIsLockedText = (section) => `${section} \u2014 not available \uf47a`;
+        const hasDisabledSelection = (select) => Boolean(select?.selectedOptions?.[0]?.disabled);
+
+        function renderSectionOptions(sections) {
+            if (!Array.isArray(sections) || sections.length === 0) {
+                sectionSelect.disabled = true;
+                sectionSelect.innerHTML = '<option value="" selected>No sections available</option>';
+                return;
+            }
+
+            const options = sections.map((section) => {
+                const label = String(section.section || '').trim();
+                if (!label) return '';
+
+                const option = document.createElement('option');
+                option.value = label;
+                option.textContent = section.is_available ? label : sectionIsLockedText(label);
+                if (!section.is_available) {
+                    option.disabled = true;
+                    option.className = 'availability-option-locked';
+                    option.setAttribute('aria-label', `${label} \u2014 not available`);
+                }
+                return option.outerHTML;
+            }).join('');
+
+            sectionSelect.innerHTML = '<option value="" selected disabled>Select Section</option>' + options;
+            sectionSelect.disabled = false;
+        }
+
         gradeSelect?.addEventListener('change', async () => {
-            sectionSelect.disabled = true; sectionSelect.innerHTML = '<option value="" selected>Loading sections…</option>';
-            try { const response = await fetch('{% url "signup_sections" %}?grade_level=' + encodeURIComponent(gradeSelect.value)); const data = await response.json(); sectionSelect.innerHTML = '<option value="" selected disabled>Select Section</option>' + (data.sections || []).map(s => `<option value="${s.section}">${s.section}</option>`).join(''); sectionSelect.disabled = !(data.sections || []).length; } catch (_) { sectionSelect.innerHTML = '<option value="" selected>Unable to load sections</option>'; }
+            sectionSelect.disabled = true;
+            sectionSelect.innerHTML = '<option value="" selected>Loading sections…</option>';
+            try {
+                const response = await fetch('{% url "signup_sections" %}?grade_level=' + encodeURIComponent(gradeSelect.value));
+                const data = await response.json();
+                renderSectionOptions(data.sections || []);
+            } catch (_) {
+                sectionSelect.innerHTML = '<option value="" selected>Unable to load sections</option>';
+            }
         });
         const result = document.getElementById("teacherGeneratedPabasaId");
         const pabasaIdOutput = result.querySelector("[data-pabasa-id-output]");
@@ -884,6 +932,12 @@
         form.addEventListener("submit", async (event) => {
             event.preventDefault();
             updateValidation();
+
+            if (hasDisabledSelection(gradeSelect) || hasDisabledSelection(sectionSelect)) {
+                errorMessage.textContent = 'Please select an available grade level and section.';
+                errorMessage.classList.remove("d-none");
+                return;
+            }
 
             if (!form.checkValidity()) {
                 form.reportValidity();
