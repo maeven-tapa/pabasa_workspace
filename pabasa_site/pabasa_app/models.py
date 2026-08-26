@@ -74,6 +74,13 @@ class User(models.Model):
     # Teacher-specific fields
     teacher_role = models.CharField(max_length=50, blank=True, null=True)
     school = models.CharField(max_length=150, blank=True, null=True)
+    school_record = models.ForeignKey(
+        "School",
+        on_delete=models.PROTECT,
+        related_name="users",
+        null=True,
+        blank=True,
+    )
     department = models.CharField(max_length=100, blank=True, null=True)
     # Student-specific fields
     lrn = models.CharField(

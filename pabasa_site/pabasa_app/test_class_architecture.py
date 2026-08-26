@@ -213,6 +213,141 @@ class SchoolScopedSectionIsolationTests(TestCase):
         self.assertTrue(section_b.is_active)
         self.assertEqual(section_b.get_student_count(), 1)
 
+    def test_admin_school_list_hides_default_and_shows_school_card_details(self):
+        principal = make_user("PRN-SCHOOL-SCOPE", "principal", "school-scope-principal@example.com")
+        principal.tags = [{"principal_school_info": {"name": self.school_a.name, "code": self.school_a.code}}]
+        principal.save(update_fields=["tags"])
+
+        response = self.client.get(reverse("admin_school"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.school_a.name)
+        self.assertContains(response, self.school_a.code)
+        self.assertContains(response, "Principal Account")
+        self.assertContains(response, "Active")
+        self.assertContains(response, reverse("admin_school_detail", args=[self.school_a.id]))
+        self.assertNotContains(response, "Default School")
+
+
+class SchoolAwareSignupTests(TestCase):
+    def setUp(self):
+        self.school_a = School.objects.create(name="Signup School A", code="SIGNUP-A")
+        self.school_b = School.objects.create(name="Signup School B", code="SIGNUP-B")
+        self.teacher = make_user("TCH-SIGNUP-SCOPE", "teacher", "signup-existing-teacher@example.com")
+        self.teacher_b = make_user("TCH-SIGNUP-SCOPE-B", "teacher", "signup-existing-teacher-b@example.com")
+        self.teacher_section = Section.objects.create(
+            class_code="SIGNUP-A-1",
+            class_name="Grade 2 - Rizal",
+            grade_level="Grade 2",
+            section="Rizal",
+            school=self.school_a,
+            teacher=self.teacher,
+            subject="Reading",
+        )
+        self.student_section = Section.objects.create(
+            class_code="SIGNUP-B-1",
+            class_name="Grade 2 - Rizal",
+            grade_level="Grade 2",
+            section="Rizal",
+            school=self.school_b,
+            subject="Reading",
+        )
+
+    def _registration_payload(self, section, email, **extra):
+        payload = {
+            "first_name": "Signup",
+            "last_name": "User",
+            "email": email,
+            "password": "Signup123",
+            "confirm_password": "Signup123",
+            "sex": "female",
+            "birth_month": "1",
+            "birth_day": "5",
+            "birth_year": "1990",
+            "school_id": str(section.school_id),
+            "grade_level": section.grade_level,
+            "section": str(section.id),
+            "department": "Mathematics",
+        }
+        payload.update(extra)
+        return payload
+
+    def test_signup_sections_are_school_scoped_and_default_is_hidden(self):
+        response = self.client.get(
+            reverse("signup_sections"),
+            {"role": "student", "school_id": self.school_b.id},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["grades"], ["Grade 2"])
+        self.assertEqual([item["id"] for item in response.json()["sections"]], [self.student_section.id])
+
+        teacher_response = self.client.get(
+            reverse("signup_sections"),
+            {"role": "teacher", "school_id": self.school_a.id, "grade_level": "Grade 2"},
+        )
+        self.assertEqual(teacher_response.json()["sections"], [])
+        page = self.client.get(reverse("teacher_signup"))
+        self.assertContains(page, self.school_a.name)
+        self.assertContains(page, self.school_b.name)
+        self.assertNotContains(page, "Default School")
+
+    def test_teacher_signup_rejects_cross_school_section_and_assigns_correct_school(self):
+        payload = self._registration_payload(self.student_section, "signup-teacher@example.com")
+        payload["school_id"] = str(self.school_a.id)
+        response = self.client.post(reverse("register_teacher"), payload)
+        self.assertEqual(response.status_code, 400)
+
+        available = Section.objects.create(
+            class_code="SIGNUP-A-2",
+            class_name="Grade 2 - Aquino",
+            grade_level="Grade 2",
+            section="Aquino",
+            school=self.school_a,
+            subject="Reading",
+        )
+        payload = self._registration_payload(available, "signup-teacher-valid@example.com")
+        with patch("pabasa_app.views.send_teacher_signup_otp_email"):
+            response = self.client.post(reverse("register_teacher"), payload)
+        self.assertEqual(response.status_code, 200)
+        otp = self.client.session["pending_teacher_signup_otp"]
+        with patch("pabasa_app.views.send_teacher_confirmation_email"), patch("pabasa_app.views._notify_admins"), patch("pabasa_app.views._notify_principals"):
+            response = self.client.post(reverse("verify_teacher_otp"), {"otp": otp})
+        self.assertEqual(response.status_code, 200)
+        created = User.objects.get(email="signup-teacher-valid@example.com")
+        self.assertEqual(created.school_record_id, self.school_a.id)
+        self.assertEqual(created.section, available.section)
+        available.refresh_from_db()
+        self.assertEqual(available.teacher_id, created.id)
+
+    def test_student_signup_accepts_occupied_section_and_rejects_cross_school_section(self):
+        occupied = Section.objects.create(
+            class_code="SIGNUP-B-2",
+            class_name="Grade 2 - Aquino",
+            grade_level="Grade 2",
+            section="Aquino",
+            school=self.school_b,
+            teacher=self.teacher_b,
+            subject="Reading",
+        )
+        payload = self._registration_payload(occupied, "signup-student-cross@example.com", lrn="123456789012")
+        payload["school_id"] = str(self.school_a.id)
+        response = self.client.post(reverse("register_student"), payload)
+        self.assertEqual(response.status_code, 400)
+
+        payload = self._registration_payload(self.student_section, "signup-student-valid@example.com", lrn="123456789013")
+        with patch("pabasa_app.views.send_student_signup_otp_email"):
+            response = self.client.post(reverse("register_student"), payload)
+        self.assertEqual(response.status_code, 200)
+        otp = self.client.session["pending_student_signup_otp"]
+        with patch("pabasa_app.views.send_student_confirmation_email"), patch("pabasa_app.views._notify_admins"):
+            response = self.client.post(reverse("verify_student_otp"), {"otp": otp})
+        self.assertEqual(response.status_code, 200)
+        created = User.objects.get(email="signup-student-valid@example.com")
+        self.assertEqual(created.school_record_id, self.school_b.id)
+        self.assertEqual(created.section, self.student_section.section)
+        self.assertTrue(Enrollment.objects.filter(student=created, section=self.student_section, is_active=True).exists())
+
+
 
 class StudentSignupAutomaticEnrollmentTests(TestCase):
     """OTP signup resolves the configured canonical class, whether or not a teacher is assigned yet."""

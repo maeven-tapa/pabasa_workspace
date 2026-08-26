@@ -106,17 +106,40 @@ def _default_school():
     return School.objects.create(name="Default School", code="DEFAULT-SCHOOL")
 
 
-def _active_canonical_section(grade_level, section_name):
-    """Resolve a selectable canonical class; signup never creates one."""
-    return Section.objects.filter(
-        grade_level__iexact=str(grade_level or '').strip(),
-        section__iexact=str(section_name or '').strip(),
+def _real_active_schools():
+    return School.objects.filter(
+        status="active",
         is_active=True,
-    ).first()
+    ).exclude(name="Default School").order_by("name", "id")
 
 
-def _signup_section_queryset(role, grade_level=None):
+def _active_signup_school(school_id):
+    if not str(school_id or '').strip().isdigit():
+        return None
+    return _real_active_schools().filter(pk=int(school_id)).first()
+
+
+def _active_canonical_section(grade_level, section_name, school=None, section_id=None):
+    """Resolve a selectable canonical class; signup never creates one."""
+    filters = {'is_active': True}
+    if grade_level:
+        filters['grade_level__iexact'] = str(grade_level).strip()
+    if section_id:
+        filters['pk'] = section_id
+    else:
+        filters['section__iexact'] = str(section_name or '').strip()
+    queryset = Section.objects.filter(**filters)
+    if school is not None:
+        queryset = queryset.filter(school=school)
+    return queryset.select_related('school', 'teacher').first()
+
+
+def _signup_section_queryset(role, school=None, grade_level=None):
     qs = Section.objects.filter(is_active=True).select_related('teacher', 'school').order_by('grade_level', 'section')
+    if school is not None:
+        qs = qs.filter(school=school)
+    else:
+        qs = qs.filter(school__status='active', school__is_active=True).exclude(school__name='Default School')
     if grade_level:
         qs = qs.filter(grade_level__iexact=str(grade_level).strip())
     if role == 'teacher':
@@ -157,6 +180,34 @@ def _section_selection_context(role):
         for grade in SCHOOL_GRADE_LEVELS
     ]
     return signup_grades, grade_map
+
+
+def _signup_section_for_request(data, role):
+    school = _active_signup_school(data.get('school_id'))
+    if not school:
+        # Accept the old field only as a compatibility bridge; it still must
+        # resolve to a real active School and never to Default School.
+        legacy_name = str(data.get('school') or '').strip()
+        school = _real_active_schools().filter(name__iexact=legacy_name).first() if legacy_name else None
+    if not school:
+        return None, None, 'Choose an active School.'
+
+    grade = str(data.get('grade_level') or '').strip()
+    section_value = str(data.get('section') or '').strip()
+    if grade not in SCHOOL_GRADE_LEVELS or not section_value:
+        return school, None, 'Choose a valid Grade Level and Section.'
+    section_id = int(section_value) if section_value.isdigit() else None
+    section = _active_canonical_section(
+        grade,
+        section_value if section_id is None else '',
+        school=school,
+        section_id=section_id,
+    )
+    if not section:
+        return school, None, 'The selected Section does not belong to that School and Grade Level.'
+    if role == 'teacher' and section.has_active_teacher():
+        return school, None, 'This Section already has an assigned Teacher.'
+    return school, section, None
 
 
 def _school_sections_queryset(school):
@@ -3184,6 +3235,7 @@ def _store_pending_teacher_signup(request, data):
         # derive or accept a redundant role during the new signup flow.
         'teacher_role': '',
         'school': data.get('school', ''),
+        'school_id': data.get('school_id', ''),
         'grade_level': data.get('grade_level', ''),
         'section': data.get('section', ''),
         'department': data.get('department', ''),
@@ -3210,6 +3262,7 @@ def _store_pending_student_signup(request, data):
         'lrn': data.get('lrn', '').strip(),
         'grade_level': data.get('grade_level', ''),
         'section': data.get('section', ''),
+        'school_id': data.get('school_id', ''),
         'reading_level': data.get('reading_level', ''),
     })
     _set_pending_data(request, 'pending_student_signup_otp', otp)
@@ -3593,15 +3646,15 @@ def register_teacher(request):
         
         # Validate required fields
         required_fields = ['first_name', 'last_name', 'email', 'password', 'confirm_password',
-                         'sex', 'birth_month', 'birth_day', 'birth_year', 'grade_level', 'section']
+                         'sex', 'birth_month', 'birth_day', 'birth_year', 'school_id', 'grade_level', 'section']
         
         for field in required_fields:
             if not data.get(field):
                 return JsonResponse({'success': False, 'error': f'{field} is required'}, status=400)
 
-        canonical_section = _active_canonical_section(data.get('grade_level'), data.get('section'))
-        if not canonical_section:
-            return JsonResponse({'success': False, 'error': 'The selected grade and section are not available.'}, status=400)
+        school, canonical_section, signup_error = _signup_section_for_request(data, 'teacher')
+        if signup_error:
+            return JsonResponse({'success': False, 'error': signup_error}, status=400)
         if canonical_section.has_active_teacher():
             return JsonResponse({'success': False, 'error': 'This section already has an assigned teacher. Please contact an administrator.'}, status=409)
         
@@ -3642,7 +3695,7 @@ def register_student(request):
         )
         
         # Validate required fields
-        required_fields = ['first_name', 'last_name', 'email', 'password', 'confirm_password', 'lrn', 'grade_level', 'section',
+        required_fields = ['first_name', 'last_name', 'email', 'password', 'confirm_password', 'lrn', 'school_id', 'grade_level', 'section',
                          'sex', 'birth_month', 'birth_day', 'birth_year']
         
         for field in required_fields:
@@ -3651,8 +3704,9 @@ def register_student(request):
 
         grade_level = str(data.get('grade_level', '')).strip()
         section_name = str(data.get('section', '')).strip()
-        if not _active_canonical_section(grade_level, section_name):
-            return JsonResponse({'success': False, 'error': 'The selected grade and section are not available.'}, status=400)
+        school, selected_section, signup_error = _signup_section_for_request(data, 'student')
+        if signup_error:
+            return JsonResponse({'success': False, 'error': signup_error}, status=400)
         
         # Validate password match
         if data.get('password') != data.get('confirm_password'):
@@ -3713,6 +3767,11 @@ def verify_teacher_otp(request):
             _clear_pending_teacher_signup(request)
             return JsonResponse({'success': False, 'error': 'Email already registered'}, status=400)
 
+        school, canonical_section, signup_error = _signup_section_for_request(pending, 'teacher')
+        if signup_error:
+            _clear_pending_teacher_signup(request)
+            return JsonResponse({'success': False, 'error': 'The selected School and Section are no longer available.'}, status=400)
+
         custom_id = generate_custom_id('teacher')
         user = User.objects.create(
             custom_id=custom_id,
@@ -3731,25 +3790,25 @@ def verify_teacher_otp(request):
             # Legacy compatibility only. The authoritative assignment is the
             # selected canonical Section linked below.
             teacher_role='',
-            school=pending.get('school', ''),
-            section=pending.get('section', ''),
+            school=school.name,
+            school_record=school,
+            section=canonical_section.section,
             department=pending.get('department', ''),
         )
 
         # The selected Section already exists as the only canonical class.
         with transaction.atomic():
-            canonical_section = _active_canonical_section(pending.get('grade_level'), pending.get('section'))
-            if not canonical_section:
-                user.delete()
-                _clear_pending_teacher_signup(request)
-                return JsonResponse({'success': False, 'error': 'The selected grade and section are no longer available.'}, status=400)
             canonical_section = Section.objects.select_for_update().get(pk=canonical_section.pk)
             if canonical_section.has_active_teacher():
                 user.delete()
                 _clear_pending_teacher_signup(request)
                 return JsonResponse({'success': False, 'error': 'This section was just assigned to another teacher. Please contact an administrator.'}, status=409)
-            canonical_section.teacher = user
-            canonical_section.save(update_fields=['teacher', 'updated_at'])
+            try:
+                canonical_section.assign_teacher(user)
+            except ValidationError:
+                user.delete()
+                _clear_pending_teacher_signup(request)
+                return JsonResponse({'success': False, 'error': 'This Section was just assigned to another Teacher.'}, status=409)
 
         teacher_code = custom_id
 
@@ -3855,8 +3914,8 @@ def verify_student_otp(request):
             _clear_pending_student_signup(request)
             return JsonResponse({'success': False, 'error': 'LRN is already registered'}, status=400)
 
-        selected_section = _active_canonical_section(pending_grade, pending_section_name)
-        if not selected_section:
+        school, selected_section, signup_error = _signup_section_for_request(pending, 'student')
+        if signup_error:
             _clear_pending_student_signup(request)
             return JsonResponse({'success': False, 'error': 'The selected grade and section are no longer available.'}, status=400)
 
@@ -3884,9 +3943,11 @@ def verify_student_otp(request):
                         birth_year=pending['birth_year'],
                         password_hash=pending['password_hash'],
                         contact_no=pending.get('contact_no', ''),
+                        school=school.name,
+                        school_record=school,
                         lrn=lrn or None,
                         grade_level=pending.get('grade_level', ''),
-                        section=pending.get('section', ''),
+                        section=selected_section.section,
                         reading_level=pending.get('reading_level', ''),
                     )
                 break
@@ -4401,23 +4462,31 @@ def privacy(request):
     return render(request, 'pabasa_app/privacy.html')
 
 def teacher_signup(request):
-    signup_grades, _ = _section_selection_context('teacher')
-    return render(request, 'pabasa_app/teacher_signup.html', {'signup_grades': signup_grades})
+    return render(request, 'pabasa_app/teacher_signup.html', {
+        'signup_grades': [],
+        'signup_schools': _real_active_schools(),
+    })
 
 def student_signup(request):
-    signup_grades, _ = _section_selection_context('student')
     return render(request, 'pabasa_app/student_signup.html', {
-        'signup_grades': signup_grades,
+        'signup_grades': [],
+        'signup_schools': _real_active_schools(),
     })
 
 @require_http_methods(["GET"])
 def student_signup_sections(request):
     grade = str(request.GET.get('grade_level', '')).strip()
-    if grade not in SCHOOL_GRADE_LEVELS:
+    if grade and grade not in SCHOOL_GRADE_LEVELS:
         return JsonResponse({'success': True, 'sections': []})
     role = str(request.GET.get('role', 'student')).strip().lower()
-    sections = [_section_signup_payload(section) for section in _signup_section_queryset(role, grade)]
-    return JsonResponse({'success': True, 'sections': sections})
+    if role not in {'teacher', 'student'}:
+        return JsonResponse({'success': True, 'grades': [], 'sections': []})
+    school = _active_signup_school(request.GET.get('school_id'))
+    if not school:
+        return JsonResponse({'success': True, 'grades': [], 'sections': []})
+    sections = [_section_signup_payload(section) for section in _signup_section_queryset(role, school=school, grade_level=grade or None)]
+    grades = sorted({section['grade_level'] for section in sections if section.get('grade_level')})
+    return JsonResponse({'success': True, 'grades': grades, 'sections': sections})
 
 def dashboard(request):
     logger.warning(
@@ -5396,13 +5465,19 @@ def _admin_edit_user(request, user_id, role):
                 context = _admin_user_template_context(request, user, 'Edit Teacher')
                 context['error_message'] = 'Choose a valid grade level and section.'
                 context['available_sections'] = _signup_section_queryset('teacher')
-                context['all_sections_by_grade'] = {grade: list(_signup_section_queryset('teacher', grade)) for grade in SCHOOL_GRADE_LEVELS}
+                context['all_sections_by_grade'] = {grade: list(_signup_section_queryset('teacher', grade_level=grade)) for grade in SCHOOL_GRADE_LEVELS}
                 return render(request, 'pabasa_app/admin_user_edit.html', context, status=400)
             if not destination_section:
                 context = _admin_user_template_context(request, user, 'Edit Teacher')
                 context['error_message'] = 'The selected section is unavailable.'
                 context['available_sections'] = _signup_section_queryset('teacher')
-                context['all_sections_by_grade'] = {grade: list(_signup_section_queryset('teacher', grade)) for grade in SCHOOL_GRADE_LEVELS}
+                context['all_sections_by_grade'] = {grade: list(_signup_section_queryset('teacher', grade_level=grade)) for grade in SCHOOL_GRADE_LEVELS}
+                return render(request, 'pabasa_app/admin_user_edit.html', context, status=400)
+            if user.school_record_id and destination_section.school_id != user.school_record_id:
+                context = _admin_user_template_context(request, user, 'Edit Teacher')
+                context['error_message'] = 'A Teacher can only be assigned within the Teacher\'s School.'
+                context['available_sections'] = _signup_section_queryset('teacher', school=user.school_record)
+                context['all_sections_by_grade'] = {grade: list(_signup_section_queryset('teacher', school=user.school_record, grade_level=grade)) for grade in SCHOOL_GRADE_LEVELS}
                 return render(request, 'pabasa_app/admin_user_edit.html', context, status=400)
             with transaction.atomic():
                 destination_section = Section.objects.select_for_update().get(pk=destination_section.pk)
@@ -5420,7 +5495,7 @@ def _admin_edit_user(request, user_id, role):
                         context['pending_destination_section_id'] = destination_section.id
                         context['warning_destination_grade_level'] = destination_section.grade_level
                         context['available_sections'] = _signup_section_queryset('teacher')
-                        context['all_sections_by_grade'] = {grade: list(_signup_section_queryset('teacher', grade)) for grade in SCHOOL_GRADE_LEVELS}
+                        context['all_sections_by_grade'] = {grade: list(_signup_section_queryset('teacher', grade_level=grade)) for grade in SCHOOL_GRADE_LEVELS}
                         context['school_grades'] = SCHOOL_GRADE_LEVELS
                         return render(request, 'pabasa_app/admin_user_edit.html', context, status=409)
                     destination_section.unassign_teacher()
@@ -5432,13 +5507,19 @@ def _admin_edit_user(request, user_id, role):
                 context = _admin_user_template_context(request, user, 'Edit Student')
                 context['error_message'] = 'Choose a valid grade level and section.'
                 context['available_sections'] = _signup_section_queryset('student')
-                context['all_sections_by_grade'] = {grade: list(_signup_section_queryset('student', grade)) for grade in SCHOOL_GRADE_LEVELS}
+                context['all_sections_by_grade'] = {grade: list(_signup_section_queryset('student', grade_level=grade)) for grade in SCHOOL_GRADE_LEVELS}
                 return render(request, 'pabasa_app/admin_user_edit.html', context, status=400)
             if not destination_section:
                 context = _admin_user_template_context(request, user, 'Edit Student')
                 context['error_message'] = 'The selected section is unavailable.'
                 context['available_sections'] = _signup_section_queryset('student')
-                context['all_sections_by_grade'] = {grade: list(_signup_section_queryset('student', grade)) for grade in SCHOOL_GRADE_LEVELS}
+                context['all_sections_by_grade'] = {grade: list(_signup_section_queryset('student', grade_level=grade)) for grade in SCHOOL_GRADE_LEVELS}
+                return render(request, 'pabasa_app/admin_user_edit.html', context, status=400)
+            if user.school_record_id and destination_section.school_id != user.school_record_id:
+                context = _admin_user_template_context(request, user, 'Edit Student')
+                context['error_message'] = 'A Student can only be enrolled within the Student\'s School.'
+                context['available_sections'] = _signup_section_queryset('student', school=user.school_record)
+                context['all_sections_by_grade'] = {grade: list(_signup_section_queryset('student', school=user.school_record, grade_level=grade)) for grade in SCHOOL_GRADE_LEVELS}
                 return render(request, 'pabasa_app/admin_user_edit.html', context, status=400)
             current_enrollment = Enrollment.objects.filter(student=user, is_active=True).select_related('section').first()
             if current_enrollment and current_enrollment.section_id == destination_section.id:
@@ -5462,7 +5543,7 @@ def _admin_edit_user(request, user_id, role):
 
     context = _admin_user_template_context(request, user, f'Edit {role.title()}')
     context['available_sections'] = _signup_section_queryset(role)
-    context['all_sections_by_grade'] = {grade: list(_signup_section_queryset(role, grade)) for grade in SCHOOL_GRADE_LEVELS}
+    context['all_sections_by_grade'] = {grade: list(_signup_section_queryset(role, grade_level=grade)) for grade in SCHOOL_GRADE_LEVELS}
     context['school_grades'] = SCHOOL_GRADE_LEVELS
     context['current_section_id'] = getattr(context.get('current_section'), 'id', None) if context.get('current_section') else None
     return render(request, 'pabasa_app/admin_user_edit.html', context)
@@ -5517,6 +5598,30 @@ def admin_classes(request):
     return render(request, 'pabasa_app/admin_classes.html', _admin_sections_context(request, 'Classes'))
 
 
+def _school_card_context(school):
+    """Build display data without inventing a School-to-Principal relationship."""
+    principal_name = 'Not assigned'
+    school_name_key = str(school.name or '').strip().casefold()
+    school_code_key = str(school.code or '').strip().casefold()
+    for principal in _principal_users():
+        school_info = _get_profile_dict(principal, 'principal_school_info')
+        if not isinstance(school_info, dict):
+            continue
+        profile_name = str(school_info.get('name') or '').strip().casefold()
+        profile_code = str(school_info.get('code') or '').strip().casefold()
+        if (profile_name and profile_name == school_name_key) or (profile_code and profile_code == school_code_key):
+            principal_name = _admin_user_full_name(principal) or 'Not assigned'
+            break
+    return {
+        'id': school.id,
+        'name': school.name,
+        'code': school.code or 'Not assigned',
+        'principal_name': principal_name,
+        'status_label': school.get_status_display(),
+        'is_active': school.is_active,
+    }
+
+
 @admin_required
 @require_http_methods(["GET", "POST"])
 def admin_school(request):
@@ -5536,8 +5641,9 @@ def admin_school(request):
                 return redirect('admin_school')
             except IntegrityError:
                 context['error_message'] = 'A school with that name or code already exists.'
+    real_schools = School.objects.exclude(name='Default School').order_by('name')
     context.update({
-        'schools': School.objects.all().order_by('name'),
+        'schools': [_school_card_context(school) for school in real_schools],
     })
     return render(request, 'pabasa_app/admin_school.html', context)
 

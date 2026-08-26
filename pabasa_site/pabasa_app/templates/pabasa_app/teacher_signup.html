@@ -564,9 +564,9 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">School</label>
-                        <select class="form-select" name="school" required>
+                        <select class="form-select" name="school_id" id="teacherSchool" required>
                             <option value="" selected disabled>Select School</option>
-                            <option value="Salawag Elementary School">Salawag Elementary School</option>
+                            {% for school in signup_schools %}<option value="{{ school.id }}">{{ school.name }}</option>{% endfor %}
                         </select>
                     </div>
                     <div class="col-md-6">
@@ -749,7 +749,7 @@
                 if (!label) return '';
 
                 const option = document.createElement('option');
-                option.value = label;
+                option.value = section.id;
                 option.textContent = section.is_available ? label : sectionIsLockedText(label);
                 if (!section.is_available) {
                     option.disabled = true;
@@ -763,11 +763,30 @@
             sectionSelect.disabled = false;
         }
 
+        const schoolSelect = document.getElementById('teacherSchool');
+        function renderGradeOptions(grades) {
+            gradeSelect.innerHTML = '<option value="" selected disabled>Select Grade Level</option>' +
+                (grades || []).map((grade) => `<option value="${grade}">${grade}</option>`).join('');
+            gradeSelect.disabled = !(grades && grades.length);
+        }
+        schoolSelect?.addEventListener('change', async () => {
+            gradeSelect.disabled = true;
+            sectionSelect.disabled = true;
+            renderGradeOptions([]);
+            sectionSelect.innerHTML = '<option value="" selected disabled>Select Grade Level first</option>';
+            try {
+                const response = await fetch('{% url "signup_sections" %}?role=teacher&school_id=' + encodeURIComponent(schoolSelect.value));
+                const data = await response.json();
+                renderGradeOptions(data.grades || []);
+            } catch (_) {
+                gradeSelect.innerHTML = '<option value="" selected>Unable to load grades</option>';
+            }
+        });
         gradeSelect?.addEventListener('change', async () => {
             sectionSelect.disabled = true;
             sectionSelect.innerHTML = '<option value="" selected>Loading sections…</option>';
             try {
-                const response = await fetch('{% url "signup_sections" %}?role=teacher&grade_level=' + encodeURIComponent(gradeSelect.value));
+                const response = await fetch('{% url "signup_sections" %}?role=teacher&school_id=' + encodeURIComponent(schoolSelect.value) + '&grade_level=' + encodeURIComponent(gradeSelect.value));
                 const data = await response.json();
                 renderSectionOptions(data.sections || []);
             } catch (_) {
