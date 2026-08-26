@@ -34,6 +34,7 @@ import threading
 import uuid
 import zipfile
 import csv
+import unicodedata
 from io import BytesIO
 from datetime import date, timedelta
 
@@ -235,6 +236,10 @@ def _aral_eligible_classification(label):
         "high emerging readers",
         "developing readers",
         "transitioning readers",
+        "low emerging reader",
+        "high emerging reader",
+        "developing reader",
+        "transitioning reader",
         "low emerging",
         "high emerging",
         "developing",
@@ -1237,15 +1242,14 @@ def _crla_grade2_part2_profile(correct_words_read, correct_answers):
 
     if percent is None or answers is None:
         return ''
-    if percent <= 25:
-        return 'Low Emerging Reader'
-    if percent <= 50:
-        return 'High Emerging Reader' if answers == 0 else 'Developing Reader'
-    if percent < 76:
-        return 'Developing Reader' if answers <= 2 else 'Transitioning Reader'
-    if answers <= 4:
-        return 'Transitioning Reader'
-    return 'Reading At Grade Level'
+    reading_band = 0 if percent <= 25 else 1 if percent <= 50 else 2 if percent <= 75 else 3
+    comprehension_band = 0 if answers <= 0 else 1 if answers <= 2 else 2 if answers <= 4 else 3
+    return (
+        'High Emerging Reader',
+        'Developing Reader',
+        'Transitioning Reader',
+        'Reading at Grade Level',
+    )[min(reading_band, comprehension_band)]
 
 
 def _osps_multiplier(assessment_type):
@@ -2045,6 +2049,26 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
                 student_end_state.get('story_read_percent') or student_end_state.get('routing_score'),
                 score_payload.get('correct_answers') or score_payload.get('comprehension_correct') or score_payload.get('correct_items') or score_payload.get('items_correct'),
             )
+
+        terminal_stage = student_end_state.get('stage') in {
+            'early_completed_words', 'early_completed_sentences', 'completed',
+        }
+        final_classification = str(student_end_state.get('classification') or '').strip()
+        if terminal_stage and final_classification:
+            state['reader_classification'] = final_classification
+            state['aral_eligible'] = bool(_aral_eligible_classification(final_classification))
+            if assessment_kind == 'crla':
+                state['aral_status'] = 'active' if state['aral_eligible'] else 'ineligible'
+                if assessment_phase:
+                    crla_windows = state.get('crla_windows') if isinstance(state.get('crla_windows'), dict) else {}
+                    current_window = crla_windows.get(assessment_phase) if isinstance(crla_windows.get(assessment_phase), dict) else {}
+                    current_window.update({
+                        'completed': True,
+                        'classification': final_classification,
+                        'aral_eligible': bool(state['aral_eligible']),
+                    })
+                    crla_windows[assessment_phase] = current_window
+                    state['crla_windows'] = crla_windows
         state['student_end_assessment_state'] = student_end_state
 
     try:
@@ -8284,6 +8308,33 @@ def assessment(request):
         )
     except Exception as exc:
         logger.warning("PABASA_OFFICIAL_TRACE workflow_launch_context logging_failed=%s", exc)
+
+    show_classification_card = (
+        stage == 'original'
+        and str(request.GET.get('show_classification') or '').strip().lower() in {'1', 'true', 'yes'}
+        and bool(state.get('reader_classification'))
+    )
+    classification_result = None
+    if show_classification_card and user:
+        classification_result = Assessment.objects.filter(
+            Q(material__is_official_reading=True) | Q(source_assessment__is_system_owned=True),
+            student=user,
+            attempt_status='completed',
+        ).order_by('-completed_at', '-updated_at', '-created_at', '-id').first()
+
+    classification_score = getattr(classification_result, 'total_score', None)
+    context['show_classification_card'] = show_classification_card
+    context['classification_card'] = {
+        'level': state.get('reader_classification') or '',
+        'remarks': str(getattr(classification_result, 'remarks', '') or '').strip(),
+        'performance_interpretation': (
+            performance_interpretation(classification_score)
+            if classification_score is not None else ''
+        ),
+        'disclaimer': ADAPTED_READING_LEVEL_DISCLAIMER if classification_result else '',
+        'aral_eligible': eligible,
+    }
+
     if stage == 'unavailable':
         context['workflow_title'] = 'CRLA Assessment Currently Unavailable'
         context['workflow_subtitle'] = 'No active CRLA assessment window'
@@ -8718,8 +8769,152 @@ def persist_student_end_assessment_state(request):
     saved['updated_at'] = timezone.now().isoformat()
     state = _get_user_state(student)
     state['student_end_assessment_state'] = saved
+    next_url = ''
+    terminal_stage = stage in {'early_completed_words', 'early_completed_sentences', 'completed'}
+    final_classification = str(saved.get('classification') or '').strip()
+    _, material_id = _parse_prefixed_id(saved.get('material_id'))
+    material = Material.objects.filter(pk=material_id, is_official_reading=True).first() if material_id else None
+    if terminal_stage and final_classification and material:
+        if stage == 'completed':
+            _sync_assessment_workflow_state(student, score_payload={
+                'assessment_type': 'paragraph',
+                'story_read_percent': saved.get('story_read_percent'),
+                'correct_answers': saved.get('correct_answers'),
+                'crla_classification': final_classification,
+                'classification': final_classification,
+            }, material=material)
+            state = _get_user_state(student)
+            final_classification = str(state.get('reader_classification') or final_classification).strip()
+        else:
+            state['reader_classification'] = final_classification
+            state['aral_eligible'] = bool(_aral_eligible_classification(final_classification))
+            state['aral_status'] = 'active' if state['aral_eligible'] else 'ineligible'
+            state['current_phase'] = 'materials' if state['aral_eligible'] else 'complete'
+        eligible = bool(_aral_eligible_classification(final_classification))
+        if eligible:
+            next_url = f"{reverse('assessment')}?workflow=original"
     _set_user_state(student, state)
-    return JsonResponse({'success': True, 'student_end_assessment_state': saved})
+    return JsonResponse({
+        'success': True,
+        'student_end_assessment_state': saved,
+        'reader_classification': state.get('reader_classification'),
+        'next_url': next_url or None,
+    })
+
+
+_STORY_ANSWER_FILLER_WORDS = {
+    'ang', 'ay', 'ito', 'iyon', 'iyong', 'lang', 'mga', 'naman',
+    'ng', 'nga', 'ni', 'po', 'raw', 'rin', 'si', 'sina', 'talaga', 'yung',
+    'the', 'a', 'an', 'is', 'was', 'were', 'please',
+}
+
+
+def _story_answer_tokens(value):
+    """Return comparison tokens while ignoring punctuation and polite filler."""
+    normalized = unicodedata.normalize('NFKD', str(value or '').casefold())
+    normalized = ''.join(character for character in normalized if not unicodedata.combining(character))
+    return [
+        token for token in re.findall(r"[a-z0-9]+", normalized)
+        if token not in _STORY_ANSWER_FILLER_WORDS
+    ]
+
+
+def story_answer_matches(expected_answer, submitted_answer):
+    """Match the essential information in an answer, rather than its exact wording."""
+    expected_tokens = _story_answer_tokens(expected_answer)
+    submitted_tokens = set(_story_answer_tokens(submitted_answer))
+    if not expected_tokens or not submitted_tokens:
+        return False
+    essential_tokens = set(expected_tokens)
+    matched = essential_tokens & submitted_tokens
+    required = len(essential_tokens) if len(essential_tokens) <= 3 else math.ceil(len(essential_tokens) * 0.6)
+    return len(matched) >= required
+
+
+def _official_story_questions(material, story_title):
+    content = material.content_json if isinstance(material.content_json, dict) else {}
+    story_qas = content.get('story_qas') if isinstance(content.get('story_qas'), list) else []
+    wanted_title = str(story_title or '').strip().casefold()
+    questions = []
+    for entry in story_qas:
+        if not isinstance(entry, dict):
+            continue
+        entry_title = str(entry.get('story_title') or entry.get('title') or '').strip().casefold()
+        if entry_title != wanted_title:
+            continue
+        nested = entry.get('questions') if isinstance(entry.get('questions'), list) else [entry]
+        for item in nested:
+            if isinstance(item, dict) and str(item.get('question') or '').strip() and str(item.get('answer') or '').strip():
+                questions.append(item)
+    return questions
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+def check_story_answer_api(request):
+    """Validate a comprehension answer without exposing the stored answer."""
+    if not _check_auth(request):
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+    try:
+        payload = json.loads(request.body or '{}')
+        material_id = int(payload.get('material_id'))
+        question_index = int(payload.get('question_index'))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+    submitted_answer = str(payload.get('answer') or '').strip()
+    story_title = str(payload.get('story_title') or '').strip()
+    if not submitted_answer or not story_title or question_index < 0:
+        return JsonResponse({'success': False, 'error': 'Story, question, and answer are required'}, status=400)
+    material = Material.objects.filter(pk=material_id, is_official_reading=True).first()
+    if not material:
+        return JsonResponse({'success': False, 'error': 'Assessment not found'}, status=404)
+    questions = _official_story_questions(material, story_title)
+    if question_index >= len(questions):
+        return JsonResponse({'success': False, 'error': 'Question not found'}, status=404)
+    is_correct = story_answer_matches(questions[question_index].get('answer'), submitted_answer)
+    return JsonResponse({'success': True, 'is_correct': is_correct})
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+def transcribe_story_answer_api(request):
+    """Transcribe one spoken comprehension-answer chunk using server-side context."""
+    if not _check_auth(request):
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+    audio = request.FILES.get('audio')
+    story_title = str(request.POST.get('story_title') or '').strip()
+    try:
+        material_id = int(request.POST.get('material_id'))
+        question_index = int(request.POST.get('question_index'))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+    if not audio or not story_title or question_index < 0:
+        return JsonResponse({'success': False, 'error': 'Audio and question details are required'}, status=400)
+    material = Material.objects.filter(pk=material_id, is_official_reading=True).first()
+    if not material:
+        return JsonResponse({'success': False, 'error': 'Assessment not found'}, status=404)
+    questions = _official_story_questions(material, story_title)
+    if question_index >= len(questions):
+        return JsonResponse({'success': False, 'error': 'Question not found'}, status=404)
+    expected_answer = str(questions[question_index].get('answer') or '').strip()
+    language_code = language_code_for(material.language or '', 'paragraph')
+    api_key = getattr(settings, 'GOOGLE_STT_API_KEY', '').strip()
+    project_id = getattr(settings, 'GOOGLE_CLOUD_PROJECT_ID', '').strip()
+    location = getattr(settings, 'GOOGLE_STT_LOCATION', 'global').strip()
+    model = getattr(settings, 'GOOGLE_STT_MODEL', 'chirp_3').strip()
+    credentials_file = str(getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', '') or '')
+    try:
+        transcript, model_used, _ = transcribe_audio_bytes_with_model(
+            audio.read(), api_key, language_code=language_code,
+            phrase_hints=target_phrase_hints(expected_answer, language_code), model=model,
+            project_id=project_id, location=location,
+            mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
+            credentials_file=credentials_file,
+        )
+        return JsonResponse({'success': True, 'transcript': str(transcript or '').strip(), 'stt_model': model_used})
+    except Exception as exc:
+        logger.exception('Story answer transcription failed')
+        return JsonResponse({'success': False, 'error': str(exc)}, status=502)
 
 
 @csrf_protect
@@ -9935,6 +10130,25 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
     _log_completion_timing('response_construction_start')
     response_payload = {'success': True}
     if not is_practice:
+        persisted_workflow_state = _get_user_state(student_user)
+        persisted_end_state = persisted_workflow_state.get('student_end_assessment_state') if isinstance(persisted_workflow_state, dict) else {}
+        if not isinstance(persisted_end_state, dict):
+            persisted_end_state = {}
+        terminal_crla_stage = persisted_end_state.get('stage') in {
+            'early_completed_words', 'early_completed_sentences', 'completed',
+        }
+        final_reader_classification = str(
+            persisted_workflow_state.get('reader_classification')
+            or persisted_end_state.get('classification')
+            or score_payload.get('crla_classification')
+            or score_payload.get('classification')
+            or ''
+        ).strip()
+        is_crla_target = bool(
+            str(getattr(assessment, 'assessment_kind', '') or '').strip().lower() == 'crla'
+            or str(getattr(material, 'assessment_kind', '') or '').strip().lower() == 'crla'
+            or getattr(material, 'is_official_reading', False)
+        )
         response_payload.update({
             'student_id': student_user.id,
             'custom_id': student_user.custom_id,
@@ -9946,8 +10160,8 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             'final_score': score_payload.get('final_score'),
             'total_score': score_payload.get('total_score'),
             'osps_multiplier': score_payload.get('osps_multiplier'),
-            'crla_classification': score_payload.get('crla_classification'),
-            'classification': score_payload.get('classification'),
+            'crla_classification': final_reader_classification or score_payload.get('crla_classification'),
+            'classification': final_reader_classification or score_payload.get('classification'),
             'performance_interpretation': score_payload.get('performance_interpretation'),
             'wpm': score_payload.get('wpm'),
             'duration_seconds': score_payload.get('duration_seconds'),
@@ -9959,6 +10173,8 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             'adapted_reading_level_disclaimer': score_payload.get('adapted_reading_level_disclaimer'),
             'reading_level': score_payload.get('adapted_reading_level'),
         })
+        if is_crla_target and terminal_crla_stage and _aral_eligible_classification(final_reader_classification):
+            response_payload['next_url'] = f"{reverse('assessment')}?workflow=original"
     _log_completion_timing('response_construction_end')
     _log_completion_timing('total')
     if is_practice and material:

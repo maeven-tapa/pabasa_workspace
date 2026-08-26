@@ -39,6 +39,9 @@
         const storyQuestionProgressFill = document.getElementById("storyQuestionProgressFill");
         const storyQuestionText = document.getElementById("storyQuestionText");
         const storyAnswerText = document.getElementById("storyAnswerText");
+        const storyAnswerFeedback = document.getElementById("storyAnswerFeedback");
+        const storyQuestionFinishReadingBtn = document.getElementById("storyQuestionFinishReadingBtn");
+        const storyQuestionReadAloudBtn = document.getElementById("storyQuestionReadAloudBtn");
         const storyQuestionBackBtn = document.getElementById("storyQuestionBackBtn");
         const storyQuestionNextBtn = document.getElementById("storyQuestionNextBtn");
         const storyQuestionFinishBtn = document.getElementById("storyQuestionFinishBtn");
@@ -188,6 +191,16 @@
         let currentAssessmentUiMode = "standard";
         let currentStorySegmentIndex = 0;
         let currentStoryQuestions = [];
+        let currentStoryAnswers = [];
+        let currentStoryResults = [];
+        let storyAnswerRecorder = null;
+        let storyAnswerStream = null;
+        let storyAnswerRecording = false;
+        let storyAnswerUploadChain = Promise.resolve();
+        let storyAnswerRecordingToken = 0;
+        let storyBrowserRecognition = null;
+        let storyBrowserFinalTranscript = "";
+        let storyAnswerValidationPending = false;
         let currentStoryQuestionIndex = 0;
         let syllableStitchingContext = "";
         let syllableStitchingContextAt = 0;
@@ -418,32 +431,35 @@
                 localStorage.setItem(getStudentEndStateKey(), JSON.stringify(savedState));
             } catch (error) {}
             if (savedState.stage) {
-                fetch('/api/assessment/end-state/', {
+                return fetch('/api/assessment/end-state/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
                     credentials: 'same-origin',
                     body: JSON.stringify(savedState),
                 }).then(async response => {
+                    const result = await response.json().catch(() => ({}));
                     if (!response.ok) {
-                        const body = await response.text().catch(() => '');
                         console.warn('PABASA: Failed to persist CRLA end state', {
                             status: response.status,
                             stage: savedState.stage,
-                            response: body,
+                            response: result,
                         });
                     }
+                    return response.ok ? result : null;
                 }).catch((error) => {
                     console.warn('PABASA: CRLA end-state request failed', {
                         stage: savedState.stage,
                         message: String(error?.message || error),
                     });
+                    return null;
                 });
             }
+            return Promise.resolve(null);
         }
 
         function updateStudentEndState(patch) {
             const current = readStudentEndState();
-            writeStudentEndState({
+            return writeStudentEndState({
                 ...current,
                 ...(patch || {}),
             });
@@ -495,11 +511,14 @@
             const percent = Number(storyReadPercent);
             const correct = Number(correctAnswers);
             if (!Number.isFinite(percent) || !Number.isFinite(correct)) return "";
-            if (percent <= 25) return "Low Emerging Reader";
-            if (percent <= 50) return correct === 0 ? "High Emerging Reader" : "Developing Reader";
-            if (percent < 76) return correct <= 2 ? "Developing Reader" : "Transitioning Reader";
-            if (correct <= 4) return "Transitioning Reader";
-            return "Reading At Grade Level";
+            const readingBand = percent <= 25 ? 0 : percent <= 50 ? 1 : percent <= 75 ? 2 : 3;
+            const comprehensionBand = correct <= 0 ? 0 : correct <= 2 ? 1 : correct <= 4 ? 2 : 3;
+            return [
+                "High Emerging Reader",
+                "Developing Reader",
+                "Transitioning Reader",
+                "Reading at Grade Level",
+            ][Math.min(readingBand, comprehensionBand)];
         }
 
         function getStoryChoicesFromAssessment() {
@@ -538,26 +557,29 @@
                 if (!entry || typeof entry !== "object") return;
                 const entryTitle = String(entry.story_title || entry.title || "").trim().toLowerCase();
                 if (entryTitle !== normalizedTitle) return;
-                const questionText = String(entry.question || "").trim();
-                const answerText = String(entry.answer || "").trim();
-                if (questionText) {
-                    questions.push({ question: questionText, answer: answerText });
-                }
+                const entries = Array.isArray(entry.questions) ? entry.questions : [entry];
+                entries.forEach(item => {
+                    if (!item || typeof item !== "object") return;
+                    const questionText = String(item.question || "").trim();
+                    if (questionText) questions.push({ question: questionText });
+                });
             });
             return questions;
         }
 
         function getVisibleStoryAnswerText() {
-            const transcript = String(speechTranscript?.textContent || "").trim();
-            if (!transcript || transcript === "No words recognized yet. Keep reading clearly.") return "";
-            return transcript;
+            return String(currentStoryAnswers[currentStoryQuestionIndex] || "").trim();
         }
 
         function syncStoryAnswerText() {
             if (!storyAnswerText) return;
-            const answer = getVisibleStoryAnswerText();
-            storyAnswerText.textContent = answer || "Your answer will appear here.";
+            const answer = currentStoryAnswers[currentStoryQuestionIndex] || "";
+            storyAnswerText.textContent = answer || "Your spoken answer will appear here.";
             storyAnswerText.classList.toggle("is-empty", !answer);
+            if (storyAnswerFeedback) {
+                storyAnswerFeedback.textContent = "";
+                storyAnswerFeedback.classList.add("d-none");
+            }
         }
 
         function updateStoryQuestionProgress() {
@@ -574,6 +596,7 @@
             }
             if (storyQuestionNextBtn) {
                 const isLast = currentStoryQuestionIndex >= total - 1;
+                storyQuestionNextBtn.disabled = currentStoryResults[currentStoryQuestionIndex] === null;
                 storyQuestionNextBtn.textContent = isLast ? "Finish" : "Next →";
             }
         }
@@ -588,10 +611,241 @@
             }
             syncStoryAnswerText();
             updateStoryQuestionProgress();
+            if (storyQuestionFinishReadingBtn) {
+                storyQuestionFinishReadingBtn.disabled = false;
+                storyQuestionFinishReadingBtn.textContent = "Start Reading";
+            }
         }
 
-        function showStoryCompletionScreen() {
+        function appendStoryAnswerTranscript(transcript, questionIndex) {
+            const detected = String(transcript || "").trim();
+            if (!detected) return;
+            const previous = String(currentStoryAnswers[questionIndex] || "").trim();
+            currentStoryAnswers[questionIndex] = [previous, detected].filter(Boolean).join(" ");
+            if (questionIndex === currentStoryQuestionIndex && storyAnswerText) {
+                storyAnswerText.textContent = currentStoryAnswers[questionIndex];
+                storyAnswerText.classList.remove("is-empty");
+            }
+        }
+
+        async function uploadStoryAnswerChunk(blob, questionIndex, recordingToken) {
+            if (!blob?.size || recordingToken !== storyAnswerRecordingToken) return;
+            const formData = new FormData();
+            formData.append("audio", blob, `story-answer.${audioExtensionForBlob(blob)}`);
+            formData.append("material_id", materialId);
+            formData.append("story_title", currentSelectedStory?.title || "");
+            formData.append("question_index", String(questionIndex));
+            const response = await fetch("/api/assessment/story-answer/transcribe/", {
+                method: "POST", credentials: "same-origin",
+                headers: { "X-CSRFToken": getCsrfToken() }, body: formData,
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.error || "Speech recognition failed");
+            appendStoryAnswerTranscript(result.transcript, questionIndex);
+        }
+
+        async function checkStoryAnswerTranscript(answer, questionIndex) {
+            const response = await fetch("/api/assessment/story-answer/check/", {
+                method: "POST", credentials: "same-origin",
+                headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrfToken() },
+                body: JSON.stringify({
+                    material_id: materialId,
+                    story_title: currentSelectedStory?.title || "",
+                    question_index: questionIndex,
+                    answer,
+                }),
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.error || "Answer check failed");
+            return Boolean(result.is_correct);
+        }
+
+        async function validateLiveStoryAnswer(answer, questionIndex, recordingToken) {
+            const spokenAnswer = String(answer || "").trim();
+            if (!spokenAnswer || storyAnswerValidationPending || !storyAnswerRecording) return;
+            storyAnswerValidationPending = true;
+            try {
+                const isCorrect = await checkStoryAnswerTranscript(spokenAnswer, questionIndex);
+                if (recordingToken !== storyAnswerRecordingToken || questionIndex !== currentStoryQuestionIndex) return;
+                if (isCorrect) {
+                    currentStoryAnswers[questionIndex] = spokenAnswer;
+                    currentStoryResults[questionIndex] = true;
+                    storyAnswerFeedback.textContent = "Correct answer detected. Submitting…";
+                    storyAnswerFeedback.classList.remove("d-none");
+                    await finishStoryAnswerRecording(true);
+                    return;
+                }
+                storyBrowserFinalTranscript = "";
+                currentStoryAnswers[questionIndex] = "";
+                if (storyAnswerText) {
+                    storyAnswerText.textContent = "Your spoken answer will appear here.";
+                    storyAnswerText.classList.add("is-empty");
+                }
+                storyAnswerFeedback.textContent = "Try again. Listening for your answer…";
+                storyAnswerFeedback.classList.remove("d-none");
+            } catch (error) {
+                console.warn("PABASA: Live story answer validation failed", error);
+                storyAnswerFeedback.textContent = "We could not check that answer yet. Please say it again.";
+                storyAnswerFeedback.classList.remove("d-none");
+            } finally {
+                storyAnswerValidationPending = false;
+            }
+        }
+
+        async function startStoryAnswerRecording() {
+            if (storyAnswerRecording || !currentStoryQuestions.length) return;
+            const BrowserSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!BrowserSpeechRecognition && (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder)) {
+                storyAnswerFeedback.textContent = "Speech recognition is unavailable in this browser.";
+                storyAnswerFeedback.classList.remove("d-none");
+                return;
+            }
+            const questionIndex = currentStoryQuestionIndex;
+            const recordingToken = ++storyAnswerRecordingToken;
+            storyAnswerValidationPending = false;
+            currentStoryAnswers[questionIndex] = "";
+            currentStoryResults[questionIndex] = null;
+            syncStoryAnswerText();
+            try {
+                if (BrowserSpeechRecognition) {
+                    storyBrowserFinalTranscript = "";
+                    storyBrowserRecognition = new BrowserSpeechRecognition();
+                    storyBrowserRecognition.lang = /filipino|fil\b/i.test(currentMaterialLanguage || "") ? "fil-PH" : "en-US";
+                    storyBrowserRecognition.continuous = true;
+                    storyBrowserRecognition.interimResults = true;
+                    storyBrowserRecognition.onresult = event => {
+                        let interimTranscript = "";
+                        let receivedFinalResult = false;
+                        for (let index = event.resultIndex; index < event.results.length; index += 1) {
+                            const detected = String(event.results[index][0]?.transcript || "").trim();
+                            if (event.results[index].isFinal) {
+                                storyBrowserFinalTranscript = [storyBrowserFinalTranscript, detected].filter(Boolean).join(" ");
+                                receivedFinalResult = true;
+                            } else {
+                                interimTranscript = [interimTranscript, detected].filter(Boolean).join(" ");
+                            }
+                        }
+                        const visibleTranscript = [storyBrowserFinalTranscript, interimTranscript].filter(Boolean).join(" ").trim();
+                        currentStoryAnswers[questionIndex] = visibleTranscript;
+                        if (questionIndex === currentStoryQuestionIndex && storyAnswerText) {
+                            storyAnswerText.textContent = visibleTranscript || "Listening…";
+                            storyAnswerText.classList.toggle("is-empty", !visibleTranscript);
+                        }
+                        if (receivedFinalResult) {
+                            validateLiveStoryAnswer(storyBrowserFinalTranscript, questionIndex, recordingToken);
+                        }
+                    };
+                    storyBrowserRecognition.onerror = event => {
+                        if (event.error === "no-speech" && storyAnswerRecording) return;
+                        storyAnswerFeedback.textContent = event.error === "not-allowed"
+                            ? "Please allow microphone access, then try again."
+                            : "Speech recognition had trouble. Tap Start Reading and try again.";
+                        storyAnswerFeedback.classList.remove("d-none");
+                    };
+                    storyBrowserRecognition.onend = () => {
+                        if (storyAnswerRecording && storyBrowserRecognition) {
+                            try { storyBrowserRecognition.start(); } catch (error) {}
+                        }
+                    };
+                    storyAnswerRecording = true;
+                    storyBrowserRecognition.start();
+                    storyQuestionFinishReadingBtn.textContent = "Finish Reading";
+                    storyQuestionFinishReadingBtn.classList.add("is-recording");
+                    storyQuestionBackBtn.disabled = true;
+                    storyQuestionNextBtn.disabled = true;
+                    storyAnswerFeedback.textContent = "Listening… Speak your answer clearly.";
+                    storyAnswerFeedback.classList.remove("d-none");
+                    return;
+                }
+                storyAnswerStream = await navigator.mediaDevices.getUserMedia(microphoneConstraints());
+                const mimeType = pickAudioMimeType();
+                storyAnswerRecorder = new MediaRecorder(storyAnswerStream, mimeType ? { mimeType } : undefined);
+                storyAnswerUploadChain = Promise.resolve();
+                storyAnswerRecorder.ondataavailable = event => {
+                    if (!event.data?.size) return;
+                    storyAnswerUploadChain = storyAnswerUploadChain
+                        .then(() => uploadStoryAnswerChunk(event.data, questionIndex, recordingToken))
+                        .catch(error => {
+                            console.warn("PABASA: Story answer recognition failed", error);
+                            storyAnswerFeedback.textContent = "We could not recognize that speech. Please try again.";
+                            storyAnswerFeedback.classList.remove("d-none");
+                        });
+                };
+                storyAnswerRecorder.start();
+                storyAnswerRecording = true;
+                storyQuestionFinishReadingBtn.textContent = "Finish Reading";
+                storyQuestionFinishReadingBtn.classList.add("is-recording");
+                storyQuestionBackBtn.disabled = true;
+                storyQuestionNextBtn.disabled = true;
+                storyAnswerFeedback.textContent = "Listening… Speak your answer clearly.";
+                storyAnswerFeedback.classList.remove("d-none");
+            } catch (error) {
+                storyAnswerStream?.getTracks().forEach(track => track.stop());
+                storyAnswerStream = null;
+                storyAnswerFeedback.textContent = "Please allow microphone access, then try again.";
+                storyAnswerFeedback.classList.remove("d-none");
+            }
+        }
+
+        async function finishStoryAnswerRecording(alreadyValidated = false) {
+            if (!storyAnswerRecording) return;
+            const questionIndex = currentStoryQuestionIndex;
+            storyAnswerRecording = false;
+            storyQuestionFinishReadingBtn.disabled = true;
+            storyQuestionFinishReadingBtn.textContent = "Checking…";
+            if (storyBrowserRecognition) {
+                try { storyBrowserRecognition.stop(); } catch (error) {}
+                storyBrowserRecognition = null;
+                await new Promise(resolve => window.setTimeout(resolve, 350));
+            }
+            const stopped = new Promise(resolve => {
+                if (!storyAnswerRecorder || storyAnswerRecorder.state === "inactive") return resolve();
+                storyAnswerRecorder.addEventListener("stop", resolve, { once: true });
+                storyAnswerRecorder.requestData();
+                storyAnswerRecorder.stop();
+            });
+            await stopped;
+            storyAnswerStream?.getTracks().forEach(track => track.stop());
+            storyAnswerStream = null;
+            storyAnswerRecorder = null;
+            await storyAnswerUploadChain;
+            const answer = String(currentStoryAnswers[questionIndex] || "").trim();
+            if (answer && alreadyValidated) {
+                currentStoryResults[questionIndex] = true;
+                storyAnswerFeedback.textContent = "Correct answer captured. You may continue.";
+            } else if (answer) {
+                try {
+                    currentStoryResults[questionIndex] = await checkStoryAnswerTranscript(answer, questionIndex);
+                    storyAnswerFeedback.textContent = "Answer captured. You may continue.";
+                } catch (error) {
+                    storyAnswerFeedback.textContent = "We could not evaluate that answer. Please try again.";
+                }
+            } else {
+                storyAnswerFeedback.textContent = "No speech was detected. Tap Start Reading and try again.";
+            }
+            storyAnswerFeedback.classList.remove("d-none");
+            storyQuestionFinishReadingBtn.disabled = false;
+            storyQuestionFinishReadingBtn.textContent = "Start Reading";
+            storyQuestionFinishReadingBtn.classList.remove("is-recording");
+            updateStoryQuestionProgress();
+        }
+
+        async function showStoryCompletionScreen() {
             currentStoryState = "story_complete";
+            const answered = currentStoryAnswers.filter(answer => String(answer || "").trim()).length;
+            const correctAnswers = currentStoryResults.filter(result => result === true).length;
+            const accuracy = answered ? Math.round((correctAnswers / answered) * 100) : 0;
+            const totalStoryWords = Math.max(1, readableWordCount(currentSelectedStory?.content || ""));
+            const storyReadPercent = Math.min(100, Math.round((correctWordsRead() / totalStoryWords) * 100));
+            const classification = getStoryClassificationFromResult(storyReadPercent, correctAnswers);
+            latestScores = {
+                correct_answers: correctAnswers,
+                comprehension_correct: correctAnswers,
+                correct_items: correctAnswers,
+                total_items: currentStoryQuestions.length,
+                accuracy,
+                story_read_percent: storyReadPercent,
+            };
             storyQuestionPanel?.classList.add("is-complete");
             if (storyQuestionCompletion) storyQuestionCompletion.classList.remove("d-none");
             storyQuestionPanel?.classList.remove("d-none");
@@ -603,6 +857,30 @@
             if (storyQuestionBackBtn) storyQuestionBackBtn.disabled = true;
             if (storyQuestionNextBtn) storyQuestionNextBtn.disabled = true;
             if (storyQuestionFinishBtn) storyQuestionFinishBtn.disabled = false;
+            const classificationValue = document.getElementById("storyResultsClassificationTitle");
+            if (classificationValue) classificationValue.textContent = classification || "Completed";
+            const resultMessages = {
+                "High Emerging Reader": "Great work finishing your CRLA reading assessment. Keep practicing—you’re making progress with every page you read.",
+                "Developing Reader": "Great work finishing your CRLA reading assessment. Keep reading and practicing to build your skills even further.",
+                "Transitioning Reader": "Great work finishing your CRLA reading assessment. You’re making great progress—keep reading to strengthen your skills.",
+                "Reading at Grade Level": "Excellent work finishing your CRLA reading assessment. Keep reading and challenging yourself with new stories!",
+                "Reader at Grade Level": "Excellent work finishing your CRLA reading assessment. Keep reading and challenging yourself with new stories!",
+            };
+            const resultsMessage = document.getElementById("storyResultsMessage");
+            if (resultsMessage) {
+                resultsMessage.textContent = resultMessages[classification]
+                    || "Great work finishing your CRLA reading assessment. Keep reading and practicing to build your skills even further.";
+            }
+            const persistedState = await updateStudentEndState({
+                stage: "completed",
+                selected_story: currentSelectedStory?.title || "",
+                story_read_percent: storyReadPercent,
+                correct_answers: correctAnswers,
+                classification,
+            });
+            if (!isAssistMode && persistedState?.next_url) {
+                window.location.assign(persistedState.next_url);
+            }
         }
 
         function hideStoryCompletionScreen() {
@@ -636,6 +914,8 @@
             const questions = getStoryQuestionsForTitle(storyTitle);
             currentStoryQuestions = questions.length ? questions.slice(0, 6) : [];
             currentStoryQuestionIndex = 0;
+            currentStoryAnswers = new Array(currentStoryQuestions.length).fill("");
+            currentStoryResults = new Array(currentStoryQuestions.length).fill(null);
             if (storyQuestionTitle) storyQuestionTitle.textContent = storyTitle || "Selected story";
             hideStoryCompletionScreen();
             renderCurrentStoryQuestion();
@@ -663,6 +943,8 @@
         function renderStoryReadyState(story) {
             currentStoryState = "story_ready";
             currentAssessmentUiMode = "story";
+            if (recognitionActive) stopSpeechRecognition();
+            isRecording = false;
             hideStoryPanels();
             if (readingWord) {
                 readingWord.hidden = true;
@@ -676,6 +958,13 @@
             }
             storyReadyInstruction?.classList.remove("d-none");
             btnStartReading?.classList.remove("d-none");
+            if (btnStartReading) {
+                btnStartReading.disabled = false;
+                btnStartReading.innerHTML = '<i class="bi bi-play-fill"></i> Start Reading';
+                btnStartReading.classList.remove("is-playing");
+                btnStartReading.removeAttribute("aria-busy");
+                delete btnStartReading.dataset.speechProcessingState;
+            }
             btnStopReading?.classList.add("d-none");
             btnReadAloud?.classList.add("d-none");
             prevBtn?.classList.add("d-none");
@@ -3040,6 +3329,9 @@
                             totalScore: latestScores?.final_score ?? latestScores?.total_score,
                         }
                     }));
+                    if (!isAssistMode && d.next_url) {
+                        window.location.assign(d.next_url);
+                    }
                     return d;
                 }).catch(e => {
                     traceEndSession('showCompletion.recordAssessmentCompletion.error', { message: String(e.message || e) });
@@ -3457,6 +3749,7 @@
         const startReading = () => {
             if (isReviewMode || isSpeechResponsePending()) return;
             if (currentStoryState === "story_ready" && currentSelectedStory) {
+                currentStoryState = "story_reading";
                 setCurrentItemMode("paragraph");
                 items = [currentSelectedStory.content || ""];
                 itemTypes = ["paragraph"];
@@ -3493,7 +3786,7 @@
                 animateCurrentItem();
                 startSpeechRecognition();
             }
-            if (currentSelectedStory && currentStoryState === "story_ready") {
+            if (currentSelectedStory && currentStoryState === "story_reading") {
                 updateStudentEndState({
                     stage: "story_reading",
                     selected_story: currentSelectedStory.title,
@@ -3894,7 +4187,8 @@
             pauseOverlay?.classList.add("d-none");
         }
 
-        function goBackToAssessments() {
+        function goBackToAssessments(showClassification = false) {
+            const shouldShowClassification = showClassification === true;
             if (isAssistMode && window.parent && window.parent !== window) {
                 window.parent.postMessage({
                     type: "pabasa-assist-returning",
@@ -3913,7 +4207,12 @@
                 }
                 return;
             }
-            window.location.assign('/dashboard/assessment/');
+            const assessmentUrl = new URL('/dashboard/assessment/', window.location.origin);
+            if (shouldShowClassification) {
+                assessmentUrl.searchParams.set('workflow', 'original');
+                assessmentUrl.searchParams.set('show_classification', '1');
+            }
+            window.location.assign(assessmentUrl.toString());
         }
 
         storyQuestionBackBtn?.addEventListener("click", () => {
@@ -3924,8 +4223,14 @@
             }
         });
 
+        storyQuestionFinishReadingBtn?.addEventListener("click", () => {
+            if (storyAnswerRecording) finishStoryAnswerRecording();
+            else startStoryAnswerRecording();
+        });
+
         storyQuestionNextBtn?.addEventListener("click", () => {
             if (!currentStoryQuestions.length) return;
+            if (currentStoryResults[currentStoryQuestionIndex] === null) return;
             if (currentStoryQuestionIndex < currentStoryQuestions.length - 1) {
                 currentStoryQuestionIndex += 1;
                 renderCurrentStoryQuestion();
@@ -3935,7 +4240,7 @@
         });
 
         storyQuestionFinishBtn?.addEventListener("click", () => {
-            goBackToAssessments();
+            goBackToAssessments(true);
         });
 
         prevBtn?.addEventListener("click", () => { 
@@ -4072,7 +4377,7 @@
                 window.location.assign(transitionUrl);
                 return;
             }
-            goBackToAssessments();
+            goBackToAssessments(true);
         });
 
         if (isReviewMode) {

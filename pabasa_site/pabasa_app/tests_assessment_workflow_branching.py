@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from django.test import SimpleTestCase
 
-from pabasa_app.views import _sync_assessment_workflow_state
+from pabasa_app.views import _aral_eligible_classification, _sync_assessment_workflow_state
 
 
 class AssessmentWorkflowBranchingTests(SimpleTestCase):
@@ -182,6 +182,38 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
         })
         self.assertEqual(end_state.get("next_stage"), "completed")
         self.assertEqual(end_state.get("stage"), "completed")
+
+    def test_all_terminal_reader_classifications_route_by_final_label(self):
+        expected = {
+            "Low Emerging Reader": True,
+            "High Emerging Reader": True,
+            "Developing Reader": True,
+            "Transitioning Reader": True,
+            "Reader at Grade Level": False,
+        }
+        for classification, should_route in expected.items():
+            with self.subTest(classification=classification):
+                self.assertEqual(_aral_eligible_classification(classification), should_route)
+
+    def test_story_terminal_classification_becomes_persisted_workflow_classification(self):
+        student = SimpleNamespace(id=1, pk=1, reading_level="")
+        state = {}
+        assessment = SimpleNamespace(assessment_kind="crla", system_assessment_phase="pretest")
+        with patch("pabasa_app.views._get_user_state", return_value=state), \
+             patch("pabasa_app.views._set_user_state", side_effect=lambda _student, value: state.update(value)), \
+             patch("pabasa_app.views._active_school_calendar", return_value=None), \
+             patch("pabasa_app.views.timezone.now", return_value=SimpleNamespace(isoformat=lambda: "2026-08-24T00:00:00")):
+            _sync_assessment_workflow_state(student, {
+                "assessment_type": "paragraph",
+                "story_read_percent": 70,
+                "correct_answers": 4,
+                "crla_classification": "Readers at Grade Level",
+            }, assessment=assessment)
+
+        self.assertEqual(state["reader_classification"], "Transitioning Reader")
+        self.assertTrue(state["aral_eligible"])
+        self.assertEqual(state["aral_status"], "active")
+        self.assertEqual(state["crla_windows"]["pretest"]["classification"], "Transitioning Reader")
 
     def test_pre_midline_and_post_use_the_same_word_threshold(self):
         for phase in ("pretest", "midtest", "posttest"):

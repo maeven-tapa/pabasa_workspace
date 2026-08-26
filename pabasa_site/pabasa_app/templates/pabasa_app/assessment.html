@@ -524,6 +524,135 @@
     .dash-pill i {
         display: none;
     }
+
+    .assessment-result-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1080;
+        display: grid;
+        place-items: center;
+        padding: 1rem;
+        background: rgba(16, 70, 110, 0.38);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+    }
+
+    .assessment-result-card.status-ticket {
+        width: min(620px, 100%);
+        max-height: calc(100vh - 2rem);
+        overflow-y: auto;
+        gap: 1rem;
+        padding: clamp(1.25rem, 3vw, 1.75rem);
+        border-radius: 22px;
+        text-align: center;
+    }
+
+    .assessment-result-heading {
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 0.85rem;
+    }
+
+    .assessment-result-heading .prep-icon {
+        flex: 0 0 auto;
+    }
+
+    .assessment-result-heading h2 {
+        margin: 0.15rem 0 0;
+        color: var(--dash-text);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: clamp(1.3rem, 3vw, 1.65rem);
+        font-weight: 900;
+        line-height: 1.2;
+    }
+
+    .assessment-result-level {
+        display: grid;
+        gap: 0.3rem;
+        padding: 0.9rem 1rem;
+        border: 1px solid rgba(16, 70, 110, 0.14);
+        border-radius: 16px;
+        background: var(--dash-primary-soft, #e8f4f8);
+        text-align: center;
+    }
+
+    .assessment-result-level strong {
+        color: var(--dash-primary-deep);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.2rem;
+        font-weight: 900;
+    }
+
+    .assessment-result-details {
+        display: grid;
+        gap: 0.8rem;
+        margin: 0;
+    }
+
+    .assessment-result-details div {
+        display: grid;
+        gap: 0.2rem;
+        justify-items: center;
+    }
+
+    .assessment-result-details dt {
+        color: var(--dash-muted);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.74rem;
+        font-weight: 800;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+    }
+
+    .assessment-result-details dd,
+    .assessment-result-disclaimer {
+        margin: 0;
+        color: var(--dash-ink-soft);
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-size: 0.92rem;
+        line-height: 1.55;
+    }
+
+    .assessment-result-disclaimer {
+        padding-top: 0.8rem;
+        border-top: 1px solid rgba(16, 70, 110, 0.1);
+        font-size: 0.82rem;
+    }
+
+    .assessment-result-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.75rem;
+    }
+
+    .assessment-result-actions .btn {
+        min-height: 48px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        border-radius: 14px;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-weight: 800;
+    }
+
+    body.dark-theme .assessment-result-card.status-ticket,
+    body.dark-theme .assessment-result-level {
+        background: #1e293b;
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    body.dark-theme .assessment-result-heading h2,
+    body.dark-theme .assessment-result-level strong {
+        color: #f8fafc;
+    }
+
+    body.dark-theme .assessment-result-details dd,
+    body.dark-theme .assessment-result-disclaimer {
+        color: #cbd5e1;
+    }
 </style>
 {% endblock %}
 
@@ -549,6 +678,61 @@
     <div class="subject-grid" id="subjectGrid"></div>
 
 </section>
+
+{% if show_classification_card %}
+<section class="assessment-result-overlay" role="dialog" aria-modal="true" aria-labelledby="assessmentResultTitle">
+    <article class="status-ticket assessment-result-card">
+        <header class="assessment-result-heading">
+            <span class="prep-icon" aria-hidden="true"><i class="bi {% if classification_card.aral_eligible %}bi-compass{% else %}bi-award{% endif %}"></i></span>
+            <div>
+                <span class="ticket-label">Reading Classification</span>
+                <h2 id="assessmentResultTitle">
+                    {% if classification_card.aral_eligible %}Your next reading step{% else %}Congratulations! You are reading at your grade level.{% endif %}
+                </h2>
+            </div>
+        </header>
+
+        <div class="assessment-result-level">
+            <span class="ticket-label">Reading Classification Level</span>
+            <strong>{{ classification_card.level }}</strong>
+        </div>
+
+        {% if classification_card.remarks or classification_card.performance_interpretation %}
+        <dl class="assessment-result-details">
+            {% if classification_card.remarks %}
+            <div>
+                <dt>Remarks</dt>
+                <dd>{{ classification_card.remarks }}</dd>
+            </div>
+            {% endif %}
+            {% if classification_card.performance_interpretation %}
+            <div>
+                <dt>Performance interpretation</dt>
+                <dd>{{ classification_card.performance_interpretation }}</dd>
+            </div>
+            {% endif %}
+        </dl>
+        {% endif %}
+
+        {% if classification_card.disclaimer %}
+        <p class="assessment-result-disclaimer" id="assessmentResultDisclaimer">{{ classification_card.disclaimer }}</p>
+        {% endif %}
+
+        <div class="assessment-result-actions">
+            {% if classification_card.aral_eligible %}
+            <form method="post" action="{% url 'activate_aral_intervention' %}" class="d-inline-flex">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-right-circle"></i> Continue to Intervention</button>
+            </form>
+            <a class="btn btn-outline-primary" href="{% url 'practice' %}"><i class="bi bi-journal-text"></i> Go to Practice</a>
+            {% else %}
+            <a class="btn btn-outline-primary" href="{% url 'dashboard' %}"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+            <a class="btn btn-primary" href="{% url 'practice' %}"><i class="bi bi-journal-text"></i> Go to Practice</a>
+            {% endif %}
+        </div>
+    </article>
+</section>
+{% endif %}
 
 <script>
     // --- Assessment click tracking and recent class order logic ---

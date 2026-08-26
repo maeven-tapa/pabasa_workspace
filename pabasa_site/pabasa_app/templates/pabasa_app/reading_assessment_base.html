@@ -1566,6 +1566,7 @@
             position: relative;
         }
 
+
         .completion-score-tile--panel::before {
             background: linear-gradient(90deg, var(--accent), var(--leaf));
             content: "";
@@ -2243,6 +2244,13 @@
 
         #storyQuestionPanel .story-answer-text.is-empty {
             color: var(--muted);
+        }
+
+        #storyQuestionPanel .story-answer-feedback {
+            color: #b45309;
+            font-size: 0.9rem;
+            font-weight: 800;
+            margin: 0;
         }
 
         #storyQuestionPanel .story-question-nav {
@@ -3074,8 +3082,9 @@
         .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-panels {
             grid-area: panels;
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: minmax(0, 620px);
             gap: 0.85rem;
+            justify-content: center;
             width: 100%;
         }
 
@@ -3094,27 +3103,21 @@
 
         .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-classification {
             display: grid;
-            align-content: start;
-            gap: 0.45rem;
+            align-content: center;
+            justify-items: center;
+            gap: 0.7rem;
             border-top-color: var(--leaf);
             background: rgba(236, 242, 229, 0.72);
+            text-align: center;
         }
 
-        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            padding-top: 0.75rem;
-            color: var(--muted);
-            font-size: 0.86rem;
-        }
-
-        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-row strong {
+        .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-classification strong {
             color: var(--ink);
             font-family: "Nunito", "Segoe UI", sans-serif;
             font-size: 1.25rem;
             font-weight: 900;
+            line-height: 1.3;
+            text-align: center;
         }
 
         .reader-shell:has(#storyQuestionPanel.is-complete) #storyQuestionCompletion .story-results-classification p {
@@ -3262,11 +3265,12 @@
                         </div>
                         <div class="story-answer-card" aria-live="polite" aria-atomic="true">
                             <p class="story-answer-label">Your answer</p>
-                            <div class="story-answer-text is-empty" id="storyAnswerText">Your answer will appear here.</div>
+                            <div class="story-answer-text is-empty" id="storyAnswerText">Your spoken answer will appear here.</div>
+                            <p class="story-answer-feedback d-none" id="storyAnswerFeedback" role="status"></p>
                         </div>
                         <div class="story-question-nav">
                             <button class="btn btn-outline-secondary" id="storyQuestionBackBtn" type="button">← Back</button>
-                            <button class="btn story-question-finish-reading-btn" id="storyQuestionFinishReadingBtn" type="button">Finish Reading</button>
+                            <button class="btn story-question-finish-reading-btn" id="storyQuestionFinishReadingBtn" type="button">Start Reading</button>
                             <button class="btn story-question-read-aloud-btn" id="storyQuestionReadAloudBtn" type="button">🔊 Read Aloud</button>
                             <button class="btn btn-primary" id="storyQuestionNextBtn" type="button">Next →</button>
                         </div>
@@ -3275,20 +3279,14 @@
                             <div class="story-results-kicker">Reading Assessment Results</div>
                             <div class="story-results-heading">
                                 <h3>🎉 You did it!</h3>
-                                <p>Great work finishing your CRLA reading assessment. Every page you read helps you grow.</p>
+                                <p id="storyResultsMessage">Great work finishing your CRLA reading assessment.</p>
                             </div>
 
                             <div class="story-results-section-title">Score Summary</div>
                             <div class="story-results-panels" aria-label="Score summary">
-                                <div class="story-results-summary-card">
-                                    <span class="story-results-summary-label">Comprehension Score</span>
-                                    <div class="story-results-row"><span>Questions answered</span><strong>—</strong></div>
-                                    <div class="story-results-row"><span>Accuracy</span><strong>—</strong></div>
-                                </div>
                                 <section class="story-results-classification" aria-labelledby="storyResultsClassificationTitle">
-                                    <span class="story-results-summary-label">Reading Classification</span>
-                                    <div class="story-results-row"><span>Reading level</span><strong id="storyResultsClassificationTitle">—</strong></div>
-                                    <p>Your reading level will be shown here.</p>
+                                    <span class="story-results-summary-label">Reader Classification</span>
+                                    <strong id="storyResultsClassificationTitle">—</strong>
                                 </section>
                             </div>
 
@@ -3412,6 +3410,7 @@
                 </div>
             </article>
         </section>
+
     </main>
 
     <script src="{% static 'pabasa_app/js/reading_level_utils.js' %}?v={% now 'U' %}"></script>
