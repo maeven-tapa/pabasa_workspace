@@ -59,6 +59,10 @@
         box-shadow: 0 0 0 0.2rem rgba(84, 194, 240, 0.2);
     }
 
+    #studentLrn::placeholder {
+        font-size: 0.72rem;
+    }
+
     .availability-option-locked {
         color: #7a8087;
         font-family: "Quattrocento Sans", "bootstrap-icons", sans-serif;
@@ -572,9 +576,8 @@
                         <label class="form-label" for="studentLrn">LRN Number</label>
                         <input class="form-control" id="studentLrn" type="text" name="lrn"
                                inputmode="numeric" autocomplete="off" maxlength="12"
-                               pattern="[0-9]{12}" placeholder="Enter 12-digit LRN"
+                               pattern="[0-9]{12}" placeholder="Enter your 12-digit DepEd Learner Reference Number"
                                title="Enter exactly 12 digits." required>
-                        <div class="form-text">Your 12-digit DepEd Learner Reference Number.</div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label" for="studentSchool">School</label>
