@@ -8519,11 +8519,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             </div>
 
                             <div class="teacher-field">
-                                <label class="form-label fw-bold small text-dark mb-1">Language</label>
-                                <div class="form-control border-light shadow-sm bg-light-subtle d-flex align-items-center justify-content-between" style="min-height: 44px; border-radius: 12px;">
-                                    <span id="materialLanguageDisplay" class="text-dark"></span>
-                                    <i class="bi bi-lock-fill text-muted ms-3" aria-hidden="true"></i>
-                                </div>
+                                <label class="form-label fw-bold small text-dark mb-1" for="materialLanguage">Language</label>
+                                <select id="materialLanguage" class="form-select border-light shadow-sm" data-course-material-dropdown required>
+                                    <option value="">Select language</option>
+                                    <option value="English">English</option>
+                                    <option value="Filipino">Filipino</option>
+                                </select>
                             </div>
 
                             <div class="teacher-field">
@@ -13708,7 +13709,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const addItemBtn = document.getElementById('addItemBtn');
         const addedItemsList = document.getElementById('addedItemsList');
         const materialTypeSelect = document.getElementById('materialType');
-        const materialLanguageDisplay = document.getElementById('materialLanguageDisplay');
+        const materialLanguageSelect = document.getElementById('materialLanguage');
         const publicationStatusSelect = document.getElementById('publicationStatus');
         const randomizeOrderCheckbox = document.getElementById('randomizeOrderToggle');
         const materialAssessmentKindInput = document.getElementById('materialAssessmentKind');
@@ -16916,13 +16917,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return '';
         }
 
-        function syncMaterialLanguageDisplay() {
-            if (!materialLanguageDisplay) return;
+        function syncMaterialLanguageSelection(material = null) {
+            if (!materialLanguageSelect) return;
+            const savedLanguage = material ? getMaterialLanguageDisplayValue(material, '') : '';
             const courseModal = document.getElementById('courseDetailModal');
             const hasOpenCourse = Boolean(String(courseModal?.dataset?.courseId || '').trim());
-            materialLanguageDisplay.textContent = hasOpenCourse
+            const contextualLanguage = hasOpenCourse
                 ? getCurrentOpenCourseLanguageValue()
                 : getCurrentClassLanguageValue();
+            materialLanguageSelect.value = savedLanguage || materialLanguageSelect.value || contextualLanguage || '';
+            syncCourseMaterialDropdown(materialLanguageSelect);
         }
 
         function countPeriodSeparatedSentences(value) {
@@ -17157,7 +17161,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             setAssessmentKind('regular');
             buildAssignedWeekOptions('assignedWeek', null);
             syncCourseMaterialDropdowns();
-            syncMaterialLanguageDisplay();
+            syncMaterialLanguageSelection();
             window._pendingSharedMaterialOrigin = false;
             window._pendingSharedMaterialSourceId = null;
             window.__templateEditStateRestored = false;
@@ -17190,7 +17194,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 }
                 setAddMaterialMode(window.__addMaterialDefaultMode || 'template');
                 window.__addMaterialDefaultMode = window.__addMaterialDefaultMode || 'template';
-                syncMaterialLanguageDisplay();
+                syncMaterialLanguageSelection();
             });
         }
 
@@ -17528,7 +17532,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 publicationStatusSelect.value = (material.status || 'published').toString().toLowerCase();
                 syncCourseMaterialDropdown(publicationStatusSelect);
             }
-            syncMaterialLanguageDisplay();
+            syncMaterialLanguageSelection(material);
             buildAssignedWeekOptions('assignedWeek', material.assigned_week || material.assignedWeek || material.week || null);
 
             if (publicationStatusSelect && scheduleFieldDiv && scheduleDateTimeInput) {
@@ -17981,7 +17985,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 try { materialTypeSelect.value = material.type || material.usage || material.usage_type || 'practice'; } catch (e) { /* ignore */ }
                 try { publicationStatusSelect.value = material.status || 'published'; } catch (e) { /* ignore */ }
                 if (publicationStatusSelect) syncCourseMaterialDropdown(publicationStatusSelect);
-                syncMaterialLanguageDisplay();
+                syncMaterialLanguageSelection(material);
                 setAssessmentKind(material.assessment_kind || 'regular');
                 if (randomizeOrderCheckbox) randomizeOrderCheckbox.checked = Boolean(material.content_json && material.content_json.randomize_order);
                 buildAssignedWeekOptions('assignedWeek', material.assigned_week || material.assignedWeek || null);
@@ -18371,7 +18375,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const modalEl = document.getElementById('addMaterialModal');
             if (!modalEl) return;
             resetAddMaterialModalState();
-            syncMaterialLanguageDisplay();
+            syncMaterialLanguageSelection();
 
             // Set course attach target from the currently-open course modal
             const courseModalEl = document.getElementById('courseDetailModal');
@@ -18386,7 +18390,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             const handleAddMaterialShown = function() {
                 modalEl.removeEventListener('shown.bs.modal', handleAddMaterialShown);
-                syncMaterialLanguageDisplay();
+                syncMaterialLanguageSelection();
             };
             modalEl.addEventListener('shown.bs.modal', handleAddMaterialShown);
             modal.show();
@@ -18664,7 +18668,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         // Title
                         if (materialTitleInput) materialTitleInput.value = material.title || '';
 
-                        syncMaterialLanguageDisplay();
+                        syncMaterialLanguageSelection(material);
 
                         // Items -> populate currentItemsList used by the Add modal chips UI
                         try {
@@ -18678,7 +18682,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         try { materialTypeSelect.value = material.type || 'practice'; } catch (e) { /* ignore */ }
                         try { publicationStatusSelect.value = material.status || 'published'; } catch (e) { /* ignore */ }
                         if (publicationStatusSelect) syncCourseMaterialDropdown(publicationStatusSelect);
-                        syncMaterialLanguageDisplay();
+                        syncMaterialLanguageSelection(material);
                         buildAssignedWeekOptions('assignedWeek', material.assigned_week);
 
                         if ((material.status || '').toLowerCase() === 'scheduled' && material.schedule) {
@@ -18965,6 +18969,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         const status  = publicationStatusSelect ? publicationStatusSelect.value   : 'published';
                         const schedule = scheduleDateTimeInput  ? scheduleDateTimeInput.value      : '';
                         const usageType = 'assessment';
+                        const language = materialLanguageSelect ? materialLanguageSelect.value.trim() : '';
                         const sourceType = (editingCard?.dataset?.sourceType || (window._pendingSharedMaterialOrigin ? 'shared' : 'personal')).toString().trim().toLowerCase() === 'shared' ? 'shared' : 'personal';
                         const randomizeOrder = randomizeOrderCheckbox ? Boolean(randomizeOrderCheckbox.checked) : false;
                         const assessmentKind = getSelectedAssessmentKind();
@@ -18975,7 +18980,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                         // ── Clear previous validation state ──────────────────────
                         if (errorBanner) errorBanner.classList.add('d-none');
-                        [materialTitleInput, scheduleDateTimeInput].forEach(function (el) {
+                        [materialTitleInput, materialLanguageSelect, scheduleDateTimeInput].forEach(function (el) {
                             if (el) el.classList.remove('is-invalid');
                         });
                         if (itemInput) itemInput.classList.remove('is-invalid');
@@ -18989,6 +18994,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         if (currentItemsList.length === 0) {
                             errors.push('Please add at least one reading item to the table.');
                             if (itemInput) itemInput.classList.add('is-invalid');
+                        }
+                        if (!language) {
+                            errors.push('Please select a language.');
+                            if (materialLanguageSelect) materialLanguageSelect.classList.add('is-invalid');
                         }
                         if (status === 'scheduled' && !schedule) {
                             errors.push('Schedule date & time is required when status is Scheduled.');
@@ -19043,7 +19052,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                                 'X-CSRFToken': csrfToken,
                                                 'X-Requested-With': 'XMLHttpRequest'
                                             },
-                                            body: JSON.stringify({ material_id: editingMaterialId, title: title, reading_type: readingType, content: content, status: status, usage_type: usageType, class_code: currentClassCode, scheduled_at: schedule || null, assigned_week: assignedWeek, randomize_order: randomizeOrder, assessment_kind: assessmentKind, source_type: sourceType })
+                                            body: JSON.stringify({ material_id: editingMaterialId, title: title, reading_type: readingType, content: content, status: status, usage_type: usageType, class_code: currentClassCode, scheduled_at: schedule || null, assigned_week: assignedWeek, language: language, randomize_order: randomizeOrder, assessment_kind: assessmentKind, source_type: sourceType })
                                         };
                                         apiResponse = await fetch('/dashboard/teacher/update-material/', opts);
                                         if (apiResponse.status === 403) {
@@ -19081,6 +19090,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                             class_code: saveClassCode,
                                             scheduled_at: schedule || null,
                                             assigned_week: assignedWeek,
+                                            language: language,
                                             randomize_order: randomizeOrder,
                                             assessment_kind: assessmentKind,
                                             source_type: sourceType,

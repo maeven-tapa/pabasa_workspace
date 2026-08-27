@@ -17119,6 +17119,7 @@ def add_reading_material(request):
                 prompt_text=(tokens[0] if tokens else material_title) or material_title,
                 content_text=content,
                 content_json=template_content_json,
+                language=language,
                 type=usage_type,
                 assessment_kind=assessment_kind,
                 source_type=source_type,
@@ -17248,6 +17249,7 @@ def teacher_update_material(request):
 
         submitted_language = str(data.get('language') or (template_payload or {}).get('language') or '').strip()
         language = Material.normalize_language_value(submitted_language) if submitted_language else _material_language_for_section(material)
+        material.language = language
 
         # Handle schedule update
         if material.status == 'scheduled':
