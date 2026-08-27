@@ -126,7 +126,8 @@ class CanonicalSectionArchitectureTests(TestCase):
             json.dumps({"grade": "grade 2", "section": "a"}),
             content_type="application/json",
         )
-        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.status_code, 410)
+        self.assertIn("managed through Admin", response.json()["error"])
         self.assertEqual(Section.objects.filter(grade_level__iexact="grade 2", section__iexact="a").count(), 1)
 
     def test_legacy_class_code_join_route_is_removed(self):
@@ -881,6 +882,12 @@ class StudentSignupAutomaticEnrollmentTests(TestCase):
     def _signup_and_verify(self, grade_level="Grade 2", section_name="BONIFACIO"):
         self.student_number += 1
         suffix = self.student_number
+        selected_section = Section.objects.get(
+            school=self.school,
+            grade_level__iexact=grade_level,
+            section__iexact=section_name,
+            is_active=True,
+        )
         payload = {
             "first_name": "Student",
             "last_name": f"{suffix}",
@@ -888,8 +895,9 @@ class StudentSignupAutomaticEnrollmentTests(TestCase):
             "password": "Student123",
             "confirm_password": "Student123",
             "lrn": f"1234567890{suffix:02d}",
+            "school_id": str(self.school.id),
             "grade_level": grade_level,
-            "section": section_name,
+            "section": str(selected_section.id),
             "sex": "female",
             "birth_month": "1",
             "birth_day": "5",
@@ -904,7 +912,9 @@ class StudentSignupAutomaticEnrollmentTests(TestCase):
             response = self.client.post(reverse("verify_student_otp"), {"otp": otp})
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["success"])
-        return User.objects.get(email=payload["email"])
+        student = User.objects.get(email=payload["email"])
+        self.assertEqual(student.school_record_id, self.school.id)
+        return student
 
     def test_matching_grade_and_section_enrolls_student_after_otp(self):
         teacher_class = self._create_teacher_class()
@@ -963,7 +973,8 @@ class TeacherSignupCanonicalAssignmentTests(TestCase):
             "first_name": "Teacher", "last_name": "Bonifacio", "email": "teacher-signup@example.com",
             "password": "Teacher123", "confirm_password": "Teacher123", "sex": "female",
             "birth_month": "1", "birth_day": "1", "birth_year": "1990",
-            "grade_level": "Grade 2", "section": "BONIFACIO",
+            "school_id": str(self.school.id),
+            "grade_level": "Grade 2", "section": str(section.id),
         }
         with patch("pabasa_app.views.send_teacher_signup_otp_email"), patch(
             "pabasa_app.views.send_teacher_confirmation_email"
@@ -974,7 +985,14 @@ class TeacherSignupCanonicalAssignmentTests(TestCase):
         self.assertTrue(response.json()["success"])
         section.refresh_from_db()
         self.assertEqual(section.teacher.email, payload["email"])
+        self.assertEqual(section.teacher.school_record_id, self.school.id)
+        self.assertEqual(section.teacher.section, section.section)
         self.assertEqual(Section.objects.count(), section_count)
+        available = self.client.get(
+            reverse("signup_sections"),
+            {"role": "teacher", "school_id": self.school.id, "grade_level": section.grade_level},
+        )
+        self.assertNotIn(section.id, [item["id"] for item in available.json()["sections"]])
 
     def test_unconfigured_section_is_rejected_without_creating_one(self):
         payload = {
@@ -990,7 +1008,7 @@ class TeacherSignupCanonicalAssignmentTests(TestCase):
 
     def test_assigned_section_rejects_a_second_teacher_before_otp(self):
         teacher = make_user("TCH-EXISTING", "teacher", "existing@example.com")
-        Section.objects.create(school=self.school, class_code="G2-RIZAL", class_name="Grade 2 - RIZAL", grade_level="Grade 2", section="RIZAL", teacher=teacher, subject="Reading")
-        payload = {"first_name": "Teacher", "last_name": "Second", "email": "second@example.com", "password": "Teacher123", "confirm_password": "Teacher123", "sex": "female", "birth_month": "1", "birth_day": "1", "birth_year": "1990", "grade_level": "Grade 2", "section": "RIZAL"}
+        section = Section.objects.create(school=self.school, class_code="G2-RIZAL", class_name="Grade 2 - RIZAL", grade_level="Grade 2", section="RIZAL", teacher=teacher, subject="Reading")
+        payload = {"first_name": "Teacher", "last_name": "Second", "email": "second@example.com", "password": "Teacher123", "confirm_password": "Teacher123", "sex": "female", "birth_month": "1", "birth_day": "1", "birth_year": "1990", "school_id": str(self.school.id), "grade_level": "Grade 2", "section": str(section.id)}
         response = self.client.post(reverse("register_teacher"), payload)
         self.assertEqual(response.status_code, 409)

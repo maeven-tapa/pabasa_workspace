@@ -203,8 +203,6 @@ def _signup_section_for_request(data, role):
     )
     if not section:
         return school, None, 'The selected Section does not belong to that School and Grade Level.'
-    if role == 'teacher' and section.has_active_teacher():
-        return school, None, 'This Section already has an assigned Teacher.'
     return school, section, None
 
 
