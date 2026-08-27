@@ -508,15 +508,18 @@
                     <div class="signup-step is-active" data-signup-step="0">
                     <div class="col-md-4">
                         <label class="form-label">First name</label>
-                        <input class="form-control" type="text" name="first_name" placeholder="Enter First name" required>
+                        <input class="form-control" type="text" name="first_name" placeholder="Enter First name"
+                               pattern="[A-Za-z]+" title="Use letters only." data-letters-only required>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Middle Initial</label>
-                        <input class="form-control" type="text" name="middle_initial" maxlength="1" placeholder="M">
+                        <input class="form-control" type="text" name="middle_initial" maxlength="1" placeholder="M"
+                               pattern="[A-Za-z]" title="Use a letter only." data-letters-only>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Last name</label>
-                        <input class="form-control" type="text" name="last_name" placeholder="Enter Last name" required>
+                        <input class="form-control" type="text" name="last_name" placeholder="Enter Last name"
+                               pattern="[A-Za-z]+" title="Use letters only." data-letters-only required>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Suffix</label>
@@ -776,7 +779,14 @@
         const birthMonthInput = form.querySelector('#studentBirthMonth');
         const birthDayInput = form.querySelector('#studentBirthDay');
         const birthYearInput = form.querySelector('#studentBirthYear');
+        const letterOnlyInputs = form.querySelectorAll('[data-letters-only]');
         const sectionIsLockedText = (section) => `${section} \u2014 Not available \uf47a`;
+
+        letterOnlyInputs.forEach((input) => {
+            input.addEventListener('input', () => {
+                input.value = input.value.replace(/[^A-Za-z]/g, '');
+            });
+        });
 
         const syncBirthDayLimit = () => {
             const month = Number(birthMonthInput.value);
