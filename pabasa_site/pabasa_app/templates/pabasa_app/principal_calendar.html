@@ -1,18 +1,29 @@
 {% extends "pabasa_app/principal_base.html" %}
 {% block extra_head %}<style>.pc-card{background:#fff;border:1px solid #d7e5ef;border-radius:22px;padding:1rem;overflow:hidden}.pc-toolbar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:1rem}.pc-nav{display:flex;gap:.4rem}.pc-nav button,.pc-filter button{border:1px solid #cfe0ec;background:#fff;border-radius:999px;padding:.4rem .7rem;font-weight:800;color:#10466e}.pc-filter{justify-self:end;display:flex;gap:2px;padding:3px;border:1px solid #d7e5ef;border-radius:999px}.pc-filter button{border:0}.pc-filter .active{background:#10466e;color:#fff}.pc-month{font-size:1.15rem;font-weight:900;color:#10466e}.pc-grid{border:1px solid #d7e5ef;border-radius:12px;overflow:hidden;margin-top:1rem}.pc-weekday,.pc-days,.pc-lanes{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}.pc-weekday{background:#eaf4fb}.pc-weekday div{text-align:center;font-weight:900;color:#10466e;padding:.65rem;border-right:1px solid #d7e5ef}.pc-week{position:relative;border-top:1px solid #d7e5ef}.pc-day{height:2.4rem;padding:.5rem;border-right:1px solid #d7e5ef}.pc-day:last-child{border-right:0}.pc-num{font-weight:900;color:#10466e}.pc-lanes{position:relative;padding:.25rem 0 .45rem;min-height:2.2rem}.pc-bar{height:1.35rem;margin:0 2px;border-radius:999px;padding:.2rem .45rem;color:#fff;font-size:.7rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;z-index:2}.pc-bar.local{background:#35b96b}.pc-bar.global{background:var(--bar-color,#3b82f6)}@media(max-width:700px){.pc-toolbar{grid-template-columns:1fr}.pc-month,.pc-filter{justify-self:start}.pc-day{height:2.1rem;padding:.35rem}.pc-bar{font-size:.6rem}}
-</style>{% endblock %}
-{% block content %}<main class="container-fluid py-4"><div class="d-flex justify-content-between align-items-center mb-3"><h1>Calendar</h1>{% if school %}<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#principalEventModal">+ Add Event</button>{% endif %}</div><section class="pc-card"><h2 class="h5 fw-bold text-primary">▦ School Calendar</h2><div class="text-muted mb-3">School Year: <strong>{{ student_calendar_school_year }}</strong> · <strong>{{ student_calendar_current_term }}</strong></div><div class="pc-toolbar"><div class="pc-nav"><button id="principalPrev">Previous</button><button id="principalToday">Today</button><button id="principalNext">Next</button></div><div class="pc-month" id="principalMonthLabel"></div><div class="pc-filter"><button class="active" data-principal-filter="global">System-wide</button><button data-principal-filter="school">School</button></div></div><div id="principalMonthGrid" class="pc-grid"></div></section></main>{% endblock %}
+</style><style>.pc-bar.school{background:#d97706}</style>{% endblock %}
+{% block content %}<main class="container-fluid py-4"><div class="d-flex justify-content-between align-items-center mb-3"><h1>Calendar</h1>{% if school %}<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#principalEventModal">+ Add Event</button>{% endif %}</div><section class="pc-card"><h2 class="h5 fw-bold text-primary">▦ School Calendar</h2><div class="text-muted mb-3">School Year: <strong>{{ student_calendar_school_year }}</strong> · <strong>{{ student_calendar_current_term }}</strong></div><div class="pc-toolbar"><div class="pc-nav"><button id="principalPrev">Previous</button><button id="principalToday">Today</button><button id="principalNext">Next</button></div><div class="pc-month" id="principalMonthLabel"></div><div class="pc-filter"><button class="active" data-principal-filter="global">System-wide</button><button data-principal-filter="school">School</button></div></div><div id="principalMonthGrid" class="pc-grid"></div></section></main>
+{% endblock %}
+{% block modals %}{% if school %}<div class="modal fade" id="principalEventModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Add School Event</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><form id="principalEventForm" method="post">{% csrf_token %}<div class="modal-body"><div class="mb-3"><label class="form-label" for="principalEventTitle">Title</label><input class="form-control" id="principalEventTitle" name="title" required></div><div class="row g-3"><div class="col-6"><label class="form-label" for="principalEventStart">Start Date</label><input class="form-control" id="principalEventStart" name="start_date" type="date" required></div><div class="col-6"><label class="form-label" for="principalEventEnd">End Date</label><input class="form-control" id="principalEventEnd" name="end_date" type="date"></div></div><div class="mt-3"><label class="form-label" for="principalEventDescription">Description</label><textarea class="form-control" id="principalEventDescription" name="description" rows="3"></textarea></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Save</button></div></form></div></div></div>{% endif %}{% endblock %}
 {% block page_scripts %}<script>
 (function () {
   function init() {
     const grid = document.getElementById('principalMonthGrid');
     const label = document.getElementById('principalMonthLabel');
     if (!grid || !label) return;
-    const events = {{ student_calendar_events_json|default:'[]'|safe }};
+    let events = {{ student_calendar_events_json|default:'[]'|safe }};
     let cursor = new Date();
     cursor.setDate(1);
     let scope = 'global';
     const colors = {school_opening:'#22c55e', pre_assessment:'#3b82f6', midline_assessment:'#14b8a6', post_assessment:'#a855f7', school_closing:'#ef4444', holiday:'#f59e0b', examination:'#f97316', other:'#6b7280'};
+    function parseDateOnly(value) {
+      if (!value) return null;
+      const parts = String(value).slice(0, 10).split('-').map(Number);
+      if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+    function dateKey(date) {
+      return date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate();
+    }
     function draw() {
       const y = cursor.getFullYear(), m = cursor.getMonth();
       const first = new Date(y, m, 1).getDay();
@@ -24,19 +35,35 @@
         const ws = new Date(y, m, 1 - first + w * 7);
         const we = new Date(y, m, 7 - first + w * 7);
         const segments = events.filter(e => e.scope === scope).map(e => {
-          const start = new Date((e.start_date || e.start).slice(0, 10) + 'T00:00:00');
-          const end = new Date((e.end_date || e.end || e.start).slice(0, 10) + 'T00:00:00');
-          if (end < ws || start > we) return null;
-          const a = start > ws ? start : ws, b = end < we ? end : we;
-          return {event:e, column:a.getDay() + 1, span:Math.round((b-a) / 86400000) + 1};
-        }).filter(Boolean);
+          const start = parseDateOnly(e.start_date || e.start);
+          const end = parseDateOnly(e.end_date || e.end || e.start);
+          if (!start || !end) return null;
+          const a = dateKey(start) > dateKey(ws) ? start : ws;
+          const b = dateKey(end) < dateKey(we) ? end : we;
+          if (dateKey(a) > dateKey(b)) return null;
+          const column = a.getDay() + 1;
+          const span = Math.round((b-a) / 86400000) + 1;
+          return {event:e, column, span, endColumn:column + span - 1};
+        }).filter(Boolean).sort((left, right) => left.column - right.column || left.endColumn - right.endColumn);
+        const lanes = [];
+        segments.forEach(segment => {
+          let laneIndex = lanes.findIndex(lane => lane.every(existing => segment.endColumn < existing.column || existing.endColumn < segment.column));
+          if (laneIndex < 0) {
+            laneIndex = lanes.length;
+            lanes.push([]);
+          }
+          lanes[laneIndex].push(segment);
+          segment.lane = laneIndex + 1;
+        });
         html += '<div class="pc-week"><div class="pc-days">';
         for (let c = 0; c < 7; c += 1) {
-          const n = w * 7 + c - first + 1;
-          html += '<div class="pc-day">' + (n >= 1 && n <= days ? '<div class="pc-num">' + n + '</div>' : '') + '</div>';
+          const cell = new Date(y, m, 1 - first + w * 7 + c);
+          const n = cell.getDate();
+          const muted = cell.getMonth() !== m;
+          html += '<div class="pc-day">' + '<div class="pc-num" style="opacity:' + (muted ? '.45' : '1') + '">' + n + '</div>' + '</div>';
         }
-        html += '</div><div class="pc-lanes" style="grid-template-rows:repeat(' + Math.max(segments.length, 1) + ',1.35rem)">';
-        segments.forEach((s, i) => { html += '<div class="pc-bar ' + scope + '" style="grid-column:' + s.column + '/span ' + s.span + ';grid-row:' + (i + 1) + ';--bar-color:' + (colors[s.event.event_type] || '#6b7280') + '">' + s.event.title + '</div>'; });
+        html += '</div><div class="pc-lanes" style="grid-template-rows:repeat(' + Math.max(lanes.length, 1) + ',1.35rem)">';
+        segments.forEach(s => { html += '<div class="pc-bar ' + scope + '" style="grid-column:' + s.column + '/span ' + s.span + ';grid-row:' + s.lane + ';--bar-color:' + (colors[s.event.event_type] || '#6b7280') + '">' + s.event.title + '</div>'; });
         html += '</div></div>';
       }
       grid.innerHTML = html;
@@ -45,6 +72,20 @@
     document.getElementById('principalNext').onclick = () => { cursor.setMonth(cursor.getMonth() + 1); draw(); };
     document.getElementById('principalToday').onclick = () => { cursor = new Date(); cursor.setDate(1); draw(); };
     document.querySelectorAll('[data-principal-filter]').forEach(button => button.onclick = () => { scope = button.dataset.principalFilter; document.querySelectorAll('[data-principal-filter]').forEach(b => b.classList.toggle('active', b === button)); draw(); });
+    const eventForm = document.getElementById('principalEventForm');
+    if (eventForm) eventForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const response = await fetch(window.location.href, {method:'POST', body:new FormData(eventForm), headers:{'Accept':'application/json'}});
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || 'Unable to save event.');
+      if (data.event) events = events.concat(data.event);
+      scope = 'school';
+      document.querySelectorAll('[data-principal-filter]').forEach(button => button.classList.toggle('active', button.dataset.principalFilter === scope));
+      const modal = document.getElementById('principalEventModal');
+      if (modal && window.bootstrap) bootstrap.Modal.getOrCreateInstance(modal).hide();
+      eventForm.reset();
+      draw();
+    });
     draw();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, {once:true}); else init();

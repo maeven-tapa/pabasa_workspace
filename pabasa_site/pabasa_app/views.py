@@ -6943,8 +6943,8 @@ def admin_school_calendar(request):
             fixed_titles = {
                 'start_of_classes': 'Start of Classes',
                 'end_of_classes': 'End of Classes',
-                'school_opening': 'School Opening',
-                'school_closing': 'School Closing',
+                'school_opening': 'Opening Block',
+                'school_closing': 'End-of-Term Block',
                 'pre_assessment': 'Pre-Assessment Week',
                 'midline_assessment': 'Midline Assessment Week',
                 'post_assessment': 'Post-Assessment Week',
