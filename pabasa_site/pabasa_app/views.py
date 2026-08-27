@@ -83,6 +83,7 @@ from .scoring import (
     calculate_fluency_score,
     clamp_score,
     crla_classification,
+    crla_task1_next_task,
     derive_classification_equivalents,
     normalize_adapted_level_score,
     normalize_assessment_type,
@@ -1288,7 +1289,11 @@ def _crla_grade2_next_stage(assessment_type, score_payload=None):
             if score_payload.get('word_count') is not None
             else score_payload.get('correct_items')
         )
-        return 'early_completed_words' if correct_words is not None and correct_words <= 6 else 'transition_to_sentence'
+        return (
+            'transition_to_rhymes'
+            if crla_task1_next_task(correct_words) == 'Task 2L / Rhymes'
+            else 'transition_to_sentence'
+        )
     if assessment_type == 'sentence':
         correct_sentences = _to_int(
             score_payload.get('correct_sentences')
@@ -1338,10 +1343,16 @@ def _crla_grade2_part1_level(task1_score, total_score):
         total = None
 
     if task1 is None or total is None:
-        return ''
-    if task1 < 7:
-        return 'Full Refresher' if total <= 10 else 'Moderate Refresher'
-    return 'Light Refresher' if total < 27 else 'Grade Ready'
+        return 'NOT AVAILABLE'
+    if total <= 10:
+        return 'Full Refresher'
+    if total <= 16:
+        return 'Moderate Refresher'
+    if total <= 26:
+        return 'Light Refresher'
+    if total <= 30:
+        return 'Grade Ready'
+    return 'NOT AVAILABLE'
 
 
 def _crla_grade2_part2_profile(correct_words_read, correct_answers):
@@ -1355,15 +1366,18 @@ def _crla_grade2_part2_profile(correct_words_read, correct_answers):
         answers = None
 
     if percent is None or answers is None:
-        return ''
-    reading_band = 0 if percent <= 25 else 1 if percent <= 50 else 2 if percent <= 75 else 3
-    comprehension_band = 0 if answers <= 0 else 1 if answers <= 2 else 2 if answers <= 4 else 3
-    return (
-        'High Emerging Reader',
-        'Developing Reader',
-        'Transitioning Reader',
-        'Reading at Grade Level',
-    )[min(reading_band, comprehension_band)]
+        return 'NOT AVAILABLE'
+    if percent < 25 and answers == 0:
+        return 'Low Emerging Reader'
+    if 26 <= percent <= 50 and 1 <= answers <= 2:
+        return 'High Emerging Reader'
+    if 51 <= percent <= 75 and 3 <= answers <= 4:
+        return 'Developing Reader'
+    if 76 <= percent < 100 and 5 <= answers <= 6:
+        return 'Transitioning Reader'
+    if percent == 100 and answers >= 5:
+        return 'Reading At Grade Level'
+    return 'NOT AVAILABLE'
 
 
 def _osps_multiplier(assessment_type):
@@ -2184,8 +2198,35 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
             'part1_total_score': part1_total_score,
         })
         if assessment_type == 'word':
-            task1_score = _safe_int(previous_correct_words) or 0
-            rhymes_score = _safe_int(
+            explicit_rhymes_score = score_payload.get('task2_rhymes_score')
+            is_task2l = explicit_rhymes_score is not None or (
+                isinstance(score_payload.get('crla_score_data'), dict)
+                and 'l' in str(score_payload['crla_score_data'].get('task2_type') or '').lower()
+            )
+            if not is_task2l:
+                task1_score = task1_score or 0
+                student_end_state['stage'] = 'transition_to_rhymes' if task1_score <= 6 else 'transition_to_sentence'
+                student_end_state['next_stage'] = 'rhymes' if task1_score <= 6 else 'sentences'
+                student_end_state['branch'] = 'rhymes' if task1_score <= 6 else 'sentences'
+                student_end_state['correct_words'] = task1_score
+                student_end_state['task1_score'] = task1_score
+                student_end_state['task2_rhymes_score'] = None
+                student_end_state['task2_sentences_score'] = None
+                student_end_state['part1_total_score'] = None
+                student_end_state['part1_reading_level'] = 'Low Emerging Reader' if task1_score <= 6 else 'NOT AVAILABLE'
+                student_end_state['classification'] = 'Low Emerging Reader' if task1_score <= 6 else ''
+                student_end_state['routing_score'] = task1_score
+                student_end_state['score'] = task1_score
+                state['student_end_assessment_state'] = student_end_state
+                state['current_phase'] = 'complete'
+                return _set_user_state(student_user, state)
+            crla_data = score_payload.get('crla_score_data') if isinstance(score_payload.get('crla_score_data'), dict) else {}
+            task1_score = _safe_int(previous_correct_words)
+            if task1_score is None:
+                task1_score = _safe_int(crla_data.get('task1_score'))
+            if task1_score is None:
+                task1_score = _safe_int(submitted_correct_words) or 0
+            rhymes_score = _safe_int(explicit_rhymes_score) if explicit_rhymes_score is not None else _safe_int(
                 score_payload.get('correct_words')
                 if score_payload.get('correct_words') is not None
                 else score_payload.get('word_count')
@@ -2218,7 +2259,7 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
             student_end_state['branch'] = 'sentences'
             correct_words = _safe_int(student_end_state.get('correct_words')) or 0
             correct_sentences = _safe_int(student_end_state.get('correct_sentences')) or 0
-            part1_total = correct_words + correct_sentences if correct_words < 7 else correct_words + 10 + correct_sentences
+            part1_total = correct_words + correct_sentences
             student_end_state['sentence_items_administered'] = _safe_int(score_payload.get('items_completed')) or 0
             student_end_state['cumulative_correct'] = correct_words + correct_sentences
             student_end_state['routing_score'] = part1_total
@@ -2238,6 +2279,14 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
             student_end_state['stage'] = 'completed'
             student_end_state['next_stage'] = 'completed'
             student_end_state['branch'] = 'story'
+            for field in (
+                'story_number', 'selected_story', 'story_total_words', 'total_story_words',
+                'words_read', 'total_words_read', 'miscues', 'duration_seconds', 'wpm',
+                'comprehension_total', 'total_questions', 'comprehension_correct',
+                'correct_answers', 'passage_accuracy_percent', 'story_read_percent',
+            ):
+                if score_payload.get(field) is not None:
+                    student_end_state[field] = score_payload.get(field)
             student_end_state['routing_score'] = score_payload.get('story_read_percent') or score_payload.get('story_percent') or score_payload.get('read_percent')
             student_end_state['classification'] = _crla_grade2_part2_profile(
                 student_end_state.get('story_read_percent') or student_end_state.get('routing_score'),
@@ -9674,7 +9723,10 @@ def persist_student_end_assessment_state(request):
         'task1_score', 'task2_rhymes_score', 'task2_sentences_score',
         'part1_total_score', 'part1_reading_level',
         'learner_experience', 'learner_experience_rating',
-        'total_words_read', 'duration_seconds', 'wpm', 'correct_words_percentage',
+        'total_words_read', 'story_total_words', 'total_story_words', 'words_read',
+        'miscues', 'duration_seconds', 'wpm', 'correct_words_percentage',
+        'comprehension_total', 'total_questions', 'comprehension_correct', 'correct_answers',
+        'passage_accuracy_percent', 'story_number', 'selected_story_content',
     }
     saved = {key: payload.get(key) for key in allowed_fields if key in payload}
     saved['stage'] = stage
@@ -9706,6 +9758,11 @@ def persist_student_end_assessment_state(request):
         else:
             state['reader_classification'] = final_classification
             state['aral_eligible'] = bool(_aral_eligible_classification(final_classification))
+            # Completing an eligible CRLA assessment opens a pending
+            # classification workflow.  Preserve that state through the final
+            # save below; navigating to practice must not mark it complete.
+            if state['aral_eligible']:
+                state['classification_workflow_status'] = 'pending'
             state['aral_status'] = 'active' if state['aral_eligible'] else 'ineligible'
             state['current_phase'] = 'materials' if state['aral_eligible'] else 'complete'
         eligible = bool(_aral_eligible_classification(final_classification))
@@ -10479,6 +10536,13 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         str(activity_type or '').strip().lower() == 'clap_count_syllables'
         or bool(material and _is_clap_count_material(material))
     )
+    is_crla_assessment = bool(
+        data.get('crla_score_data')
+        or getattr(material, 'assessment_kind', '') == 'crla'
+        or getattr(material, 'is_official_reading', False)
+        or getattr(assessment, 'is_system_owned', False)
+        or 'crla' in str(getattr(assessment, 'system_assessment_key', '') or '').lower()
+    )
     if is_syllable_blending and bool(data.get('save_progress')):
         if not material or not _is_syllable_blending_material(material):
             return JsonResponse({'success': False, 'error': 'Invalid Syllable Blending material.'}, status=400)
@@ -10711,7 +10775,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             'items_completed': getattr(existing_result, 'items_completed', 0) or 0,
             'accuracy': getattr(existing_result, 'accuracy', 0) or 0,
         })
-    if not is_practice and not is_picture_word_matching and not is_syllable_blending:
+    if not is_practice and not is_picture_word_matching and not is_syllable_blending and not is_crla_assessment:
         account_assessment_type = (
             getattr(assessment, 'assessment_type', None)
             or assessment_type_hint
@@ -10815,7 +10879,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 student=student_user,
                 attempt_status='completed',
             ).order_by('-completed_at', '-created_at').select_related('source_assessment').first()
-        if not is_practice and not is_picture_word_matching and not is_syllable_blending and not is_clap_count_syllables:
+        if not is_practice and not is_picture_word_matching and not is_syllable_blending and not is_clap_count_syllables and not is_crla_assessment:
             _log_completion_timing('student_profile_save_start')
             _update_student_reading_profile(student_user, score_payload)
             _log_completion_timing('student_profile_save_end')

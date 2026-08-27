@@ -27,10 +27,11 @@ class StoryAnswerMeaningMatchTests(SimpleTestCase):
 class StoryReadingClassificationTests(SimpleTestCase):
     def test_classifies_each_reading_and_comprehension_band(self):
         cases = (
-            (24, 0, 'High Emerging Reader'),
-            (50, 2, 'Developing Reader'),
-            (75, 4, 'Transitioning Reader'),
-            (100, 6, 'Reading at Grade Level'),
+            (24, 0, 'Low Emerging Reader'),
+            (50, 2, 'High Emerging Reader'),
+            (75, 4, 'Developing Reader'),
+            (76, 5, 'Transitioning Reader'),
+            (100, 6, 'Reading At Grade Level'),
         )
         for reading_percent, correct_answers, expected in cases:
             with self.subTest(reading_percent=reading_percent, correct_answers=correct_answers):
@@ -40,6 +41,6 @@ class StoryReadingClassificationTests(SimpleTestCase):
                 )
 
     def test_uses_lower_band_when_reading_and_comprehension_differ(self):
-        self.assertEqual(_crla_grade2_part2_profile(90, 0), 'High Emerging Reader')
-        self.assertEqual(_crla_grade2_part2_profile(20, 6), 'High Emerging Reader')
-        self.assertEqual(_crla_grade2_part2_profile(80, 3), 'Transitioning Reader')
+        self.assertEqual(_crla_grade2_part2_profile(90, 0), 'NOT AVAILABLE')
+        self.assertEqual(_crla_grade2_part2_profile(20, 6), 'NOT AVAILABLE')
+        self.assertEqual(_crla_grade2_part2_profile(80, 3), 'NOT AVAILABLE')

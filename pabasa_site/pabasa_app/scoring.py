@@ -5,12 +5,14 @@ from typing import Any, Dict, Optional
 
 
 CRLA_CLASSIFICATIONS = [
-    (90, "Readers at Grade Level"),
-    (80, "Transitioning Readers"),
-    (70, "Developing Readers"),
-    (60, "High Emerging Readers"),
-    (0, "Low Emerging Readers"),
+    (90, "Reading At Grade Level"),
+    (80, "Transitioning Reader"),
+    (70, "Developing Reader"),
+    (60, "High Emerging Reader"),
+    (0, "Low Emerging Reader"),
 ]
+
+CRLA_TASK1_ITEM_COUNT = 10
 
 PHIL_IRI_CLASSIFICATION_MAP = {
     "Low Emerging Readers": "Frustration",
@@ -28,19 +30,10 @@ PABASA_LEVEL_MAP = {
     "Readers at Grade Level": "Expert Reader",
 }
 
-OSPS_MULTIPLIERS = {
-    "vowel": 0.85,
-    "word": 0.90,
-    "sentence": 0.95,
-    "paragraph": 1.00,
-}
-
-ADAPTED_READING_LEVEL_MULTIPLIERS = {
-    "vowel": 0.85,
-    "word": 0.90,
-    "sentence": 0.95,
-    "paragraph": 1.00,
-}
+# Kept as compatibility constants for callers that imported these names.  CRLA
+# scoring never applies activity multipliers.
+OSPS_MULTIPLIERS = {"vowel": 1.0, "word": 1.0, "sentence": 1.0, "paragraph": 1.0}
+ADAPTED_READING_LEVEL_MULTIPLIERS = {"vowel": 1.0, "word": 1.0, "sentence": 1.0, "paragraph": 1.0}
 
 ADAPTED_READING_LEVEL_DISCLAIMER = (
     "Great job completing your reading assessment!"
@@ -62,6 +55,8 @@ def normalize_assessment_type(assessment_type: Any) -> str:
         "consonant-vowel": "vowel",
         "consonant_vowel": "vowel",
         "vowel consonant": "vowel",
+        "para": "paragraph",
+        "story": "paragraph",
     }
     if normalized_type in aliases:
         return aliases[normalized_type]
@@ -119,6 +114,102 @@ def crla_classification(total_score: Any) -> str:
         if score >= threshold:
             return label
     return CRLA_CLASSIFICATIONS[-1][1]
+
+
+def crla_task1_next_task(correct_words: Any) -> str:
+    """Return the official Part 1 branch after the ten-word task."""
+    score = _coerce_int(correct_words) or 0
+    return "Task 2L / Rhymes" if score <= 6 else "Task 2H / Sentences"
+
+
+def crla_part1_total(task1_score: Any, task2l_score: Any = None, task2h_score: Any = None) -> int:
+    """Sum Task 1 and exactly one applicable Task 2 raw correct count."""
+    task1 = max(0, _coerce_int(task1_score) or 0)
+    task2l = _coerce_int(task2l_score)
+    task2h = _coerce_int(task2h_score)
+    if task2l is not None and task2h is not None:
+        raise ValueError("Only one of Task 2L or Task 2H may apply to a CRLA Part 1 result.")
+    task2 = task2l if task2l is not None else task2h
+    return task1 + max(0, task2 or 0)
+
+
+def crla_part1_classification(part1_total_score: Any) -> str:
+    """Return the initial CRLA level from the raw Part 1 total."""
+    total = max(0, _coerce_int(part1_total_score) or 0)
+    if total <= 10:
+        return "Full Refresher"
+    if total <= 16:
+        return "Moderate Refresher"
+    if total <= 26:
+        return "Light Refresher"
+    if total <= 30:
+        return "Grade Ready"
+    return "NOT AVAILABLE"
+
+
+def crla_part2_profile(total_story_words: Any, words_read: Any, miscues: Any,
+                       duration_seconds: Any, comprehension_correct: Any) -> Dict[str, Any]:
+    """Derive CRLA Part 2 evidence and classification without weighting it."""
+    total_words = max(0, _coerce_int(total_story_words) or 0)
+    read = max(0, _coerce_int(words_read) or 0)
+    error_count = max(0, _coerce_int(miscues) or 0)
+    duration = max(0.0, _coerce_float(duration_seconds) or 0.0)
+    correct_words = max(0, min(read, read - error_count))
+    passage_accuracy_percent = round((correct_words / total_words) * 100, 2) if total_words else None
+    words_read_percent = round((min(read, total_words) / total_words) * 100, 2) if total_words else 0.0
+    wpm = round(correct_words / (duration / 60.0), 2) if duration else 0.0
+    answers = _coerce_int(comprehension_correct)
+    reading_band = None
+    if passage_accuracy_percent is not None:
+        reading_band = (0 if passage_accuracy_percent < 25 else 1 if passage_accuracy_percent <= 50
+                        else 2 if passage_accuracy_percent <= 75 else 3)
+    comprehension_band = None if answers is None else (0 if answers <= 0 else 1 if answers <= 2 else 2 if answers <= 4 else 3)
+    classification = "NOT AVAILABLE"
+    if passage_accuracy_percent is not None and answers is not None:
+        if passage_accuracy_percent < 25 and answers == 0:
+            classification = "Low Emerging Reader"
+        elif 26 <= passage_accuracy_percent <= 50 and 1 <= answers <= 2:
+            classification = "High Emerging Reader"
+        elif 51 <= passage_accuracy_percent <= 75 and 3 <= answers <= 4:
+            classification = "Developing Reader"
+        elif 76 <= passage_accuracy_percent < 100 and 5 <= answers <= 6:
+            classification = "Transitioning Reader"
+        elif passage_accuracy_percent == 100 and answers >= 5:
+            classification = "Reading At Grade Level"
+    final_band = min(reading_band, comprehension_band) if reading_band is not None and comprehension_band is not None else None
+    return {
+        "total_story_words": total_words, "words_read": read, "miscues": error_count,
+        "duration_seconds": duration, "wpm": wpm, "correct_word_percent": passage_accuracy_percent,
+        "passage_accuracy_percent": passage_accuracy_percent, "words_read_percent": words_read_percent,
+        "comprehension_correct": answers, "classification": classification,
+        "reading_band": reading_band, "comprehension_band": comprehension_band,
+        "final_part2_band": final_band,
+    }
+
+
+def normalize_crla_score_data(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Keep the raw CRLA audit fields stable across browser and server stages."""
+    source = data if isinstance(data, dict) else {}
+    aliases = {
+        "task1_total_words": ("task1_total_words", "target_word_count"),
+        # A story's generic correct_words is its passage aggregate, not Task 1.
+        "task1_correct_words": ("task1_correct_words", "task1_score"),
+        "task1_score": ("task1_score", "task1_correct_words"),
+        "task2_type": ("task2_type",), "task2_score": ("task2_score",),
+        "part1_total_score": ("part1_total_score",), "story_number": ("story_number",),
+        "story_total_words": ("story_total_words", "total_story_words"),
+        "words_read": ("words_read", "total_words_read"), "miscues": ("miscues",),
+        "duration_seconds": ("duration_seconds",), "wpm": ("wpm",),
+        "comprehension_total": ("comprehension_total", "total_questions"),
+        "comprehension_correct": ("comprehension_correct", "correct_answers"),
+        "passage_accuracy_percent": ("passage_accuracy_percent", "story_read_percent"),
+        "crla_classification": ("crla_classification", "classification"),
+    }
+    normalized = {}
+    for key, keys in aliases.items():
+        value = next((source.get(alias) for alias in keys if source.get(alias) not in (None, "")), None)
+        normalized[key] = value
+    return normalized
 
 
 def normalize_classification_label(value: Any) -> Optional[str]:
@@ -215,10 +306,9 @@ def adapted_reading_level_from_attempts(attempts: Optional[list[Dict[str, Any]]]
             total_score = attempt.get("total_score")
         if total_score is None:
             continue
-        multiplier = ADAPTED_READING_LEVEL_MULTIPLIERS.get(assessment_type)
-        if multiplier is None:
+        if assessment_type not in ADAPTED_READING_LEVEL_MULTIPLIERS:
             continue
-        level_scores.append(normalize_adapted_level_score(total_score) * multiplier)
+        level_scores.append(normalize_adapted_level_score(total_score))
 
     if not level_scores:
         return {
@@ -266,6 +356,17 @@ def build_assessment_score_payload(data: Dict[str, Any]) -> Dict[str, Any]:
         raw_metrics = {}
 
     payload = raw if isinstance(raw, dict) else {}
+    crla_score_data = data.get("crla_score_data")
+    if not isinstance(crla_score_data, dict):
+        crla_score_data = payload.get("crla_score_data")
+    crla_input = dict(payload) if isinstance(payload, dict) else {}
+    crla_input.update(data)
+    if isinstance(crla_score_data, dict):
+        crla_input.update(crla_score_data)
+    is_crla_attempt = bool(crla_score_data)
+    crla_score_data = normalize_crla_score_data(crla_input) if is_crla_attempt else {}
+    if is_crla_attempt:
+        crla_score_data["task1_total_words"] = CRLA_TASK1_ITEM_COUNT
     correct_items = _coerce_int(data.get("correct_items"))
     if correct_items is None:
         correct_items = _coerce_int(payload.get("correct_items", raw_metrics.get("correct_items")))
@@ -356,15 +457,49 @@ def build_assessment_score_payload(data: Dict[str, Any]) -> Dict[str, Any]:
             incoming_time_score = None
         time_score_value = derived_time_score if derived_time_score > 0 else (incoming_time_score if incoming_time_score is not None else 0.0)
 
-    overall_raw_score = int(round(
-        (clamp_score(accuracy) * 0.70)
-        + (clamp_score(fluency_score) * 0.15)
-        + (clamp_score(pronunciation_score) * 0.10)
-        + (time_score_value * 0.05)
-    ))
-    multiplier = osps_multiplier(assessment_type)
-    final_score = int(round(overall_raw_score * multiplier))
-    classification = payload.get("crla_classification") or payload.get("classification") or crla_classification(final_score)
+    # CRLA Part 1 is a count of correct responses.  A completed word task is
+    # Task 1 (0-10); sentence/rhyme scores are likewise raw correct-item
+    # counts.  When the reader supplies an accumulated Part 1 total, that is
+    # the authoritative score.  Part 2 retains its independent profile.
+    if assessment_type == "word":
+        task_score = max(0, correct_words)
+    else:
+        task_score = max(0, correct_items if correct_items is not None else correct_words)
+    part1_total = _coerce_int(data.get("part1_total_score"))
+    if part1_total is None:
+        part1_total = _coerce_int(payload.get("part1_total_score"))
+    if part1_total is None and is_crla_attempt:
+        part1_total = _coerce_int(crla_score_data.get("part1_total_score"))
+    if part1_total is None and is_crla_attempt and crla_score_data.get("task2_score") is not None:
+        part1_total = crla_part1_total(
+            crla_score_data.get("task1_score"),
+            crla_score_data.get("task2_score") if "l" in str(crla_score_data.get("task2_type") or "").lower() else None,
+            crla_score_data.get("task2_score") if "h" in str(crla_score_data.get("task2_type") or "").lower() else None,
+        )
+    if part1_total is not None and assessment_type != "paragraph":
+        overall_raw_score = max(0, part1_total)
+    elif assessment_type in {"word", "sentence", "vowel"}:
+        overall_raw_score = task_score
+    else:
+        overall_raw_score = max(0, correct_words)
+    final_score = overall_raw_score
+    if part1_total is not None:
+        classification = crla_part1_classification(final_score)
+    elif assessment_type == "paragraph":
+        total_story_words = crla_score_data.get("story_total_words") or data.get("total_story_words", payload.get("total_story_words", target_word_count))
+        words_read = crla_score_data.get("words_read") or data.get("words_read", payload.get("words_read", correct_words + incorrect_words))
+        miscues = crla_score_data.get("miscues") if crla_score_data.get("miscues") is not None else data.get("miscues", payload.get("miscues", incorrect_words))
+        comprehension = crla_score_data.get("comprehension_correct")
+        if comprehension is None:
+            comprehension = data.get("correct_answers", payload.get("correct_answers"))
+        part2_profile = crla_part2_profile(total_story_words, words_read, miscues, duration_seconds, comprehension)
+        classification = part2_profile["classification"]
+    elif is_crla_attempt:
+        # A Task 1-only record must not be assigned a generic percentage-based
+        # reader classification before its applicable Task 2 is completed.
+        classification = ""
+    else:
+        classification = payload.get("crla_classification") or payload.get("classification") or crla_classification(final_score)
     performance_interpretation_value = payload.get("performance_interpretation") or performance_interpretation(final_score)
     adapted_level_payload = adapted_reading_level_from_attempts([
         {"overall_raw_score": overall_raw_score, "assessment_type": assessment_type}
@@ -376,9 +511,12 @@ def build_assessment_score_payload(data: Dict[str, Any]) -> Dict[str, Any]:
         "pronunciation_score": pronunciation_score,
         "time_score": time_score_value,
         "overall_raw_score": overall_raw_score,
+        "crla_task_score": task_score,
+        "part1_total_score": part1_total,
+        "crla_score_data": crla_score_data,
         "final_score": final_score,
         "total_score": final_score,
-        "osps_multiplier": multiplier,
+        "osps_multiplier": 1.0,
         "crla_classification": classification,
         "classification": classification,
         "performance_interpretation": performance_interpretation_value,
@@ -419,3 +557,14 @@ def _coerce_float(value: Any) -> Optional[float]:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _part2_classification(reading_percent: Any, correct_answers: Any) -> str:
+    try:
+        percent = float(reading_percent)
+        answers = int(float(correct_answers))
+    except (TypeError, ValueError):
+        return "High Emerging Reader"
+    reading_band = 0 if percent <= 25 else 1 if percent <= 50 else 2 if percent <= 75 else 3
+    comprehension_band = 0 if answers <= 0 else 1 if answers <= 2 else 2 if answers <= 4 else 3
+    return ("High Emerging Reader", "Developing Reader", "Transitioning Reader", "Reading at Grade Level")[min(reading_band, comprehension_band)]

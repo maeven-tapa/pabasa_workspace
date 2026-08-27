@@ -1,12 +1,61 @@
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.test import SimpleTestCase
 
 from pabasa_app.views import _aral_eligible_classification, _sync_assessment_workflow_state
+from pabasa_app.scoring import build_assessment_score_payload
 
 
 class AssessmentWorkflowBranchingTests(SimpleTestCase):
+    def test_story_correct_words_cannot_become_task1(self):
+        payload = build_assessment_score_payload({
+            "assessment_type": "paragraph",
+            "crla_score_data": {
+                "story_total_words": 221,
+                "words_read": 49,
+                "miscues": 0,
+                "duration_seconds": 120,
+                "comprehension_total": 6,
+                "comprehension_correct": 0,
+            },
+            "correct_words": 49,
+        })
+        self.assertIsNone(payload["crla_score_data"]["task1_score"])
+        self.assertEqual(payload["crla_classification"], "Low Emerging Reader")
+
+    def test_crla_task1_always_reports_official_ten_items(self):
+        payload = build_assessment_score_payload({
+            "assessment_type": "word",
+            "target_word_count": 221,
+            "correct_words": 7,
+            "crla_score_data": {"target_word_count": 221},
+        })
+        self.assertEqual(payload["crla_score_data"]["task1_total_words"], 10)
+
+    def test_crla_task1_count_stays_ten_when_paragraph_payload_carries_story_length(self):
+        payload = build_assessment_score_payload({
+            "assessment_type": "paragraph",
+            "correct_words": 13,
+            "target_word_count": 95,
+            "crla_score_data": {
+                "task1_score": 13,
+                "task1_total_words": 95,
+                "story_total_words": 95,
+            },
+        })
+        self.assertEqual(payload["crla_score_data"]["task1_total_words"], 10)
+
+    def test_story_segment_completion_advances_before_final_completion(self):
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        handler = source.split("function handleSpeechResult", 1)[1].split("function renderSyllableDisplay", 1)[0]
+        self.assertIn('if (currentStoryState === "story_reading")', handler)
+        self.assertIn("currentPageIndex < getCurrentPageCount() - 1", handler)
+        self.assertIn('renderStoryComprehensionState(currentSelectedStory.title)', source)
+        completion = source.split("async function showStoryCompletionScreen", 1)[1].split("function hideStoryCompletionScreen", 1)[0]
+        self.assertIn("await showCompletion(true);", completion)
+
     def _run_sync(self, score_payload, initial_end_state=None):
         student = SimpleNamespace(id=1, pk=1, reading_level="")
         state = {"student_end_assessment_state": dict(initial_end_state or {})} if initial_end_state else {}
@@ -34,8 +83,8 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
             "final_score": 58,
             "total_score": 58,
         })
-        self.assertEqual(end_state.get("stage"), "early_completed_words")
-        self.assertEqual(end_state.get("next_stage"), "completed")
+        self.assertEqual(end_state.get("stage"), "transition_to_rhymes")
+        self.assertEqual(end_state.get("next_stage"), "rhymes")
         self.assertEqual(end_state.get("routing_score"), 6)
         self.assertEqual(end_state.get("classification"), "Low Emerging Reader")
 
@@ -76,7 +125,7 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
             "final_score": 58,
             "total_score": 58,
         })
-        self.assertEqual(end_state.get("next_stage"), "sentences_high")
+        self.assertEqual(end_state.get("next_stage"), "sentences")
         self.assertEqual(end_state.get("stage"), "transition_to_sentence")
 
     def test_word_branch_uses_correct_words_ten_goes_to_sentences_high(self):
@@ -86,7 +135,7 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
             "final_score": 58,
             "total_score": 58,
         })
-        self.assertEqual(end_state.get("next_stage"), "sentences_high")
+        self.assertEqual(end_state.get("next_stage"), "sentences")
         self.assertEqual(end_state.get("stage"), "transition_to_sentence")
 
     def test_high_branch_persists_workbook_fields(self):
@@ -100,8 +149,8 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
         self.assertEqual(end_state.get("task1_score"), 8)
         self.assertIsNone(end_state.get("task2_rhymes_score"))
         self.assertEqual(end_state.get("task2_sentences_score"), 6)
-        self.assertEqual(end_state.get("part1_total_score"), 24)
-        self.assertEqual(end_state.get("part1_reading_level"), "Light Refresher")
+        self.assertEqual(end_state.get("part1_total_score"), 14)
+        self.assertEqual(end_state.get("part1_reading_level"), "Moderate Refresher")
 
     def test_weighted_score_does_not_override_word_branch(self):
         end_state = self._run_sync({
@@ -109,10 +158,9 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
             "correct_words": 7,
             "word_count": 7,
             "final_score": 58,
-            "total_score": 58,
             "overall_raw_score": 58,
         })
-        self.assertEqual(end_state.get("next_stage"), "sentences_high")
+        self.assertEqual(end_state.get("next_stage"), "sentences")
         self.assertEqual(end_state.get("correct_words"), 7)
         self.assertEqual(end_state.get("stage"), "transition_to_sentence")
 
@@ -161,7 +209,7 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
             "correct_sentences": 10,
             "items_completed": 4,
         }, {"correct_words": 7, "stage": "sentences_high"})
-        self.assertEqual(ready.get("part1_total_score"), 27)
+        self.assertEqual(ready.get("part1_total_score"), 17)
         self.assertEqual(ready.get("part1_reading_level"), "Grade Ready")
 
         maximum = self._run_sync({
@@ -169,7 +217,7 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
             "correct_sentences": 10,
             "items_completed": 4,
         }, {"correct_words": 10, "stage": "sentences_high"})
-        self.assertEqual(maximum.get("part1_total_score"), 30)
+        self.assertEqual(maximum.get("part1_total_score"), 20)
         self.assertEqual(maximum.get("part1_reading_level"), "Grade Ready")
 
     def test_story_branch_uses_comprehension_and_reading_percentage(self):
@@ -182,6 +230,39 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
         })
         self.assertEqual(end_state.get("next_stage"), "completed")
         self.assertEqual(end_state.get("stage"), "completed")
+
+    def test_story_branch_persists_all_part_two_values(self):
+        end_state = self._run_sync({
+            "assessment_type": "paragraph",
+            "story_number": 2,
+            "selected_story": "Ang Pagong at ang Kuneho",
+            "story_total_words": 126,
+            "total_story_words": 126,
+            "words_read": 93,
+            "total_words_read": 93,
+            "miscues": 4,
+            "duration_seconds": 126,
+            "wpm": 44.29,
+            "comprehension_total": 6,
+            "total_questions": 6,
+            "comprehension_correct": 4,
+            "correct_answers": 4,
+            "story_read_percent": 73.81,
+        })
+        for field, expected in {
+            "story_total_words": 126,
+            "total_story_words": 126,
+            "words_read": 93,
+            "total_words_read": 93,
+            "miscues": 4,
+            "duration_seconds": 126,
+            "wpm": 44.29,
+            "comprehension_total": 6,
+            "total_questions": 6,
+            "comprehension_correct": 4,
+            "correct_answers": 4,
+        }.items():
+            self.assertEqual(end_state.get(field), expected, field)
 
     def test_all_terminal_reader_classifications_route_by_final_label(self):
         expected = {
@@ -210,10 +291,10 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
                 "crla_classification": "Readers at Grade Level",
             }, assessment=assessment)
 
-        self.assertEqual(state["reader_classification"], "Transitioning Reader")
+        self.assertEqual(state["reader_classification"], "Developing Reader")
         self.assertTrue(state["aral_eligible"])
         self.assertEqual(state["aral_status"], "active")
-        self.assertEqual(state["crla_windows"]["pretest"]["classification"], "Transitioning Reader")
+        self.assertEqual(state["crla_windows"]["pretest"]["classification"], "Developing Reader")
 
     def test_pre_midline_and_post_use_the_same_word_threshold(self):
         for phase in ("pretest", "midtest", "posttest"):

@@ -845,12 +845,17 @@
             const storyReadPercent = Math.min(100, Math.round((correctWordsRead() / totalStoryWords) * 100));
             const classification = getStoryClassificationFromResult(storyReadPercent, correctAnswers);
             latestScores = {
+                ...readingScores,
                 correct_answers: correctAnswers,
                 comprehension_correct: correctAnswers,
                 correct_items: correctAnswers,
                 total_items: currentStoryQuestions.length,
                 accuracy,
                 story_read_percent: storyReadPercent,
+                total_story_words: totalStoryWords,
+                words_read: correctWordsRead(),
+                miscues: Math.max(0, totalStoryWords - correctWordsRead()),
+                total_questions: currentStoryQuestions.length,
             };
             storyQuestionPanel?.classList.add("is-complete");
             if (storyQuestionCompletion) storyQuestionCompletion.classList.remove("d-none");
@@ -883,11 +888,19 @@
                 story_read_percent: storyReadPercent,
                 correct_words_percentage: storyReadPercent,
                 total_words_read: correctWordsRead(),
+                total_story_words: totalStoryWords,
+                miscues: Math.max(0, totalStoryWords - correctWordsRead()),
                 duration_seconds: readingScores.duration_seconds ?? null,
                 wpm: readingScores.wpm ?? null,
                 correct_answers: correctAnswers,
+                total_questions: currentStoryQuestions.length,
+                comprehension_correct: correctAnswers,
+                comprehension_total: currentStoryQuestions.length,
+                story_total_words: totalStoryWords,
+                words_read: correctWordsRead(),
                 classification,
             });
+            await showCompletion(true);
             if (!isAssistMode && persistedState?.next_url) {
                 window.location.assign(persistedState.next_url);
             }
@@ -1803,8 +1816,10 @@
             const task1 = Number(task1Score);
             const total = Number(totalScore);
             if (!Number.isFinite(task1) || !Number.isFinite(total)) return "";
-            if (task1 < 7) return total <= 10 ? "Full Refresher" : "Moderate Refresher";
-            return total < 27 ? "Light Refresher" : "Grade Ready";
+            if (total <= 10) return "Full Refresher";
+            if (total <= 16) return "Moderate Refresher";
+            if (total <= 26) return "Light Refresher";
+            return "Grade Ready";
         }
 
         function calculateScores() {
@@ -1950,6 +1965,40 @@
                 duration_seconds: source.duration_seconds ?? fallback.duration_seconds ?? null,
                 target_word_count: source.target_word_count ?? fallback.target_word_count ?? null,
                 wpm: source.wpm ?? fallback.wpm ?? null,
+            };
+        }
+
+        function buildCrlaScoreData(scores) {
+            const endState = readStudentEndState() || {};
+            const source = { ...endState, ...(scores || {}) };
+            const task1Score = source.task1_score ?? source.correct_words ?? source.word_count ?? null;
+            const task2Score = source.task2_score
+                ?? source.task2_rhymes_score
+                ?? source.task2_sentences_score
+                ?? null;
+            const storyTotalWords = source.total_story_words ?? source.story_total_words ?? null;
+            const wordsRead = source.words_read ?? source.total_words_read ?? null;
+            const miscues = source.miscues ?? null;
+            const passageAccuracy = source.passage_accuracy_percent
+                ?? source.story_read_percent
+                ?? (storyTotalWords && wordsRead != null ? Math.round((Math.max(0, wordsRead - (miscues || 0)) / storyTotalWords) * 10000) / 100 : null);
+            return {
+                task1_total_words: 10,
+                task1_correct_words: task1Score,
+                task1_score: task1Score,
+                task2_type: source.task2_type ?? (source.task2_rhymes_score != null ? "Task 2L / Rhymes" : source.task2_sentences_score != null ? "Task 2H / Sentences" : null),
+                task2_score: task2Score,
+                part1_total_score: source.part1_total_score ?? null,
+                story_number: source.story_number ?? currentSelectedStory?.key ?? null,
+                story_total_words: storyTotalWords,
+                words_read: wordsRead,
+                miscues,
+                duration_seconds: source.duration_seconds ?? null,
+                wpm: source.wpm ?? null,
+                comprehension_total: source.comprehension_total ?? source.total_questions ?? null,
+                comprehension_correct: source.comprehension_correct ?? source.correct_answers ?? null,
+                passage_accuracy_percent: passageAccuracy,
+                crla_classification: null,
             };
         }
 
@@ -2635,6 +2684,26 @@
                 isAdvancingItem = true;
                 pendingAudioChunk = null;
                 setSpeechStatus("Great job! You finished this item.", transcript ? `Words: ${transcript}` : "", true);
+                if (currentStoryState === "story_reading") {
+                    traceEndSession('handleSpeechResult.storySegmentComplete', {
+                        currentPageIndex,
+                        pageCount: getCurrentPageCount(),
+                    });
+                    window.setTimeout(() => {
+                        if (!isRecording || context.version !== itemResultVersion) return;
+                        if (currentPageIndex < getCurrentPageCount() - 1) {
+                            currentPageIndex += 1;
+                            currentStorySegmentIndex = currentPageIndex;
+                            updateStudentEndState({ stage: "story_reading", story_segment_index: currentPageIndex });
+                            updateUI();
+                            renderStoryReadingState(currentSelectedStory);
+                            animateCurrentItem();
+                        } else {
+                            stopReading();
+                        }
+                    }, 700);
+                    return;
+                }
                 if (currentIndex >= items.length - 1) {
                     isRecording = false;
                     stopSpeechRecognition();
@@ -2931,24 +3000,28 @@
             } else if (currentAssessmentBranch === "sentences_low" || currentAssessmentBranch === "sentences_high" || currentAssessmentBranch === "sentences") {
                 const correctWords = Number(previousEndState.correct_words ?? 0);
                 const cumulativeCorrect = correctWords + branchScore;
-                const part1Total = correctWords < 7 ? cumulativeCorrect : correctWords + 10 + branchScore;
-                branchState.stage = cumulativeCorrect <= 10 ? "early_completed_sentences" : "transition_to_story";
-                branchState.next_stage = cumulativeCorrect <= 10 ? "completed" : "story_selection";
+                const part1Total = cumulativeCorrect;
+                branchState.stage = part1Total <= 10 ? "early_completed_sentences" : "transition_to_story";
+                branchState.next_stage = part1Total <= 10 ? "completed" : "story_selection";
                 branchState.correct_words = correctWords;
                 branchState.correct_sentences = branchScore;
                 branchState.sentence_items_administered = items.length;
                 branchState.cumulative_correct = cumulativeCorrect;
                 branchState.routing_score = part1Total;
                 branchState.score = part1Total;
-                branchState.classification = cumulativeCorrect <= 10 ? "High Emerging Reader" : "";
+                branchState.classification = part1Total <= 10 ? "High Emerging Reader" : "";
                 branchState.branch = "sentences";
                 branchState.task1_score = correctWords;
                 branchState.task2_rhymes_score = null;
                 branchState.task2_sentences_score = branchScore;
                 branchState.part1_total_score = part1Total;
-                branchState.part1_reading_level = correctWords < 7
-                    ? (part1Total <= 10 ? "Full Refresher" : "Moderate Refresher")
-                    : (part1Total < 27 ? "Light Refresher" : "Grade Ready");
+                branchState.part1_reading_level = part1Total <= 10
+                    ? "Full Refresher"
+                    : part1Total <= 16
+                        ? "Moderate Refresher"
+                        : part1Total <= 26
+                            ? "Light Refresher"
+                            : "Grade Ready";
             } else if (currentAssessmentBranch === "story") {
                 const storyRead = Number(
                     latestScores.story_read_percent ??
@@ -2970,7 +3043,17 @@
                 branchState.stage = "completed";
                 branchState.next_stage = "completed";
                 branchState.story_read_percent = Number.isFinite(storyRead) ? storyRead : null;
+                branchState.story_total_words = latestScores.total_story_words ?? null;
+                branchState.total_story_words = latestScores.total_story_words ?? null;
+                branchState.words_read = latestScores.words_read ?? null;
+                branchState.total_words_read = latestScores.words_read ?? null;
+                branchState.miscues = latestScores.miscues ?? null;
+                branchState.duration_seconds = latestScores.duration_seconds ?? null;
+                branchState.wpm = latestScores.wpm ?? null;
                 branchState.correct_answers = Number.isFinite(correctAnswers) ? correctAnswers : null;
+                branchState.comprehension_correct = Number.isFinite(correctAnswers) ? correctAnswers : null;
+                branchState.comprehension_total = latestScores.total_questions ?? currentStoryQuestions.length;
+                branchState.total_questions = latestScores.total_questions ?? currentStoryQuestions.length;
             }
             if (!isMyMaterials && branchState.stage) {
                 writeStudentEndState(branchState);
@@ -3135,6 +3218,7 @@
                 const completionSnapshot = calculateScores();
                 latestScores = normalizeCompletionScores(latestScores || completionSnapshot, completionSnapshot);
                 const completionMetrics = normalizeCompletionScores(completionSnapshot || {}, {});
+                const crlaScoreData = buildCrlaScoreData(latestScores);
                 const payload = {
                     material_id: materialId,
                     activity_type: 'assessment',
@@ -3155,6 +3239,8 @@
                     needs_manual_review: completionMetrics.needs_manual_review ?? false,
                     wpm: completionMetrics.wpm ?? 0,
                     accuracy: completionMetrics.accuracy ?? null,
+                    part1_total_score: crlaScoreData.part1_total_score,
+                    crla_score_data: crlaScoreData,
                     scores: {
                         ...(completionMetrics),
                         correct_words: completionMetrics.correct_words ?? completionMetrics.word_count ?? 0,
@@ -3170,6 +3256,8 @@
                         needs_manual_review: completionMetrics.needs_manual_review ?? false,
                         wpm: completionMetrics.wpm ?? 0,
                         accuracy: completionMetrics.accuracy ?? null,
+                        part1_total_score: crlaScoreData.part1_total_score,
+                        crla_score_data: crlaScoreData,
                     },
                     raw_metrics: {
                         correct_words: completionMetrics.correct_words ?? completionMetrics.word_count ?? 0,
@@ -3780,6 +3868,7 @@
                 correctWordCounts = new Array(items.length).fill(0);
                 currentIndex = 0;
                 currentPageIndex = Math.min(currentStorySegmentIndex, Math.max(0, getCurrentPageCount() - 1));
+                startTime = null;
                 updateUI();
                 animateCurrentItem();
             }
@@ -3832,6 +3921,22 @@
             isRecording = false;
             stopSpeechRecognition();
             if (currentStoryState === "story_reading" && currentSelectedStory) {
+                const readingScores = calculateScores();
+                const totalStoryWords = readableWordCount(currentSelectedStory.content || "");
+                const wordsRead = correctWordsRead();
+                await updateStudentEndState({
+                    stage: "story_reading",
+                    selected_story: currentSelectedStory.title,
+                    story_total_words: totalStoryWords,
+                    total_story_words: totalStoryWords,
+                    words_read: wordsRead,
+                    total_words_read: wordsRead,
+                    miscues: Math.max(0, totalStoryWords - wordsRead),
+                    duration_seconds: readingScores.duration_seconds,
+                    wpm: readingScores.wpm,
+                    comprehension_total: currentStoryQuestions.length,
+                    total_questions: currentStoryQuestions.length,
+                });
                 renderStoryComprehensionState(currentSelectedStory.title);
                 return;
             }
@@ -3842,7 +3947,7 @@
         btnStartReading?.addEventListener("click", startReading);
         btnStopReading?.addEventListener("click", stopReading);
 
-        if (!isReviewMode && items.length) {
+        if (!isReviewMode && items.length && currentAssessmentUiMode !== "story") {
             startAssessmentTimer();
         }
         btnReadAloud?.addEventListener("click", readCurrentItemAloud);

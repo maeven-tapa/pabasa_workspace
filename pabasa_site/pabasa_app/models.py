@@ -554,6 +554,9 @@ class Assessment(models.Model):
     stars_earned = models.PositiveIntegerField(default=0)
     items_completed = models.PositiveIntegerField(default=0)
     correct_items = models.PositiveIntegerField(null=True, blank=True)
+    # Immutable-at-completion CRLA task and Part 2 inputs.  This is kept
+    # separate from legacy aggregate score columns so an attempt is auditable.
+    crla_score_data = models.JSONField(default=dict, blank=True)
 
     @property
     def attempt_history(self):
@@ -648,6 +651,7 @@ class Assessment(models.Model):
             'stars_earned': self.stars_earned,
             'items_completed': self.items_completed,
             'correct_items': self.correct_items,
+            'crla_score_data': self.crla_score_data,
         }
 
     def _sync_attempt_count(self):
@@ -714,6 +718,8 @@ class Assessment(models.Model):
                 attempt_row.items_completed = value
             elif key == 'correct_items':
                 attempt_row.correct_items = value
+            elif key == 'crla_score_data':
+                attempt_row.crla_score_data = value if isinstance(value, dict) else {}
             elif key == 'remarks':
                 attempt_row.remarks = str(value or '')
             elif key == 'attempt_id':
