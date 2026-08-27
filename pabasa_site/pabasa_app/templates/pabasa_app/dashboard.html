@@ -1859,6 +1859,7 @@
             <article class="student-calendar-widget">
                 <div class="student-calendar-head">
                     <span class="dash-pill"><i class="bi bi-calendar3"></i> School Calendar</span>
+                    <style>.calendar-filter{display:inline-flex;gap:2px;padding:3px;border:1px solid rgba(16,70,110,.12);border-radius:999px;background:rgba(16,70,110,.035)}.calendar-filter button{appearance:none;border:0;background:transparent;color:#64788a;border-radius:999px;padding:.32rem .62rem;font-size:.7rem;font-weight:800;cursor:pointer}.calendar-filter button:hover{background:rgba(16,70,110,.08);color:#10466e}.calendar-filter button:focus-visible{outline:2px solid #2ea8e5;outline-offset:1px}.calendar-filter button.active{background:#10466e;color:#fff;box-shadow:0 2px 6px rgba(16,70,110,.18)}@media(max-width:576px){.calendar-filter{max-width:100%;overflow-x:auto}}</style><div class="calendar-filter" role="group"><button type="button" class="active" data-student-calendar-filter="all">All</button><button type="button" data-student-calendar-filter="global">System-wide</button><button type="button" data-student-calendar-filter="school">School</button></div>
                     <h3>{{ month_year_label|default:"Current Month" }}</h3>
                     <div class="student-calendar-meta">
                         <div>School Year: <strong>{{ student_calendar_school_year|default:"Not set" }}</strong></div>
@@ -2218,9 +2219,11 @@
             student_calendar_events_count: studentCalendarEvents.length,
         });
 
+        let studentCalendarFilter = 'all';
+        document.querySelectorAll('[data-student-calendar-filter]').forEach((button) => button.addEventListener('click', () => { studentCalendarFilter = button.dataset.studentCalendarFilter; document.querySelectorAll('[data-student-calendar-filter]').forEach((item) => item.classList.toggle('active', item === button)); renderExpandedCalendar(currentMonthDate); }));
         const getEventsForDay = (date) => {
             const iso = localIsoDate(date);
-            return studentCalendarEvents.filter((event) => {
+            return studentCalendarEvents.filter((event) => studentCalendarFilter === 'all' || (studentCalendarFilter === 'global' && event.scope === 'global') || (studentCalendarFilter === 'school' && event.scope === 'school')).filter((event) => {
                 const start = parseIsoDate(event.start);
                 const end = parseIsoDate(event.end_date || event.end || event.start);
                 if (!start || !end) return false;

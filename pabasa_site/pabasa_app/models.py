@@ -1395,6 +1395,9 @@ class SchoolCalendar(models.Model):
 
 
 class CalendarEvent(models.Model):
+    SCOPE_GLOBAL = "global"
+    SCOPE_SCHOOL = "school"
+    SCOPE_CHOICES = [(SCOPE_GLOBAL, "Global"), (SCOPE_SCHOOL, "School-local")]
     EVENT_TYPE_CHOICES = [
         ("start_of_classes", "Start of Classes"),
         ("end_of_classes", "End of Classes"),
@@ -1413,6 +1416,11 @@ class CalendarEvent(models.Model):
         on_delete=models.CASCADE,
         related_name="events",
     )
+    scope = models.CharField(max_length=10, choices=SCOPE_CHOICES, default=SCOPE_GLOBAL)
+    school = models.ForeignKey(
+        "School", null=True, blank=True, on_delete=models.PROTECT,
+        related_name="calendar_events",
+    )
     term = models.PositiveSmallIntegerField(
         choices=SchoolCalendar.TERM_CHOICES,
         default=1,
@@ -1429,6 +1437,12 @@ class CalendarEvent(models.Model):
     class Meta:
         db_table = "calendar_events"
         ordering = ["start_date", "end_date"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(models.Q(scope="global", school__isnull=True) | models.Q(scope="school", school__isnull=False)),
+                name="calendar_event_scope_school_consistent",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.school_calendar.school_year} - {self.get_event_type_display()}"
