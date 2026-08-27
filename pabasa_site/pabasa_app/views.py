@@ -4486,6 +4486,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
                 _calendar_event_payload(event) | {
                     'title': _calendar_fixed_title(event.event_type, event.title),
                     'event_type_label': _calendar_event_type_label(event.event_type),
+                    **({'scope': event.scope or CalendarEvent.SCOPE_GLOBAL, 'school_id': event.school_id} if nav_role == 'teacher' else {}),
                 }
                 for event in CalendarEvent.objects.filter(school_calendar=active_school_calendar).filter(event_filter).order_by('start_date', 'end_date', 'created_at')
             ]
