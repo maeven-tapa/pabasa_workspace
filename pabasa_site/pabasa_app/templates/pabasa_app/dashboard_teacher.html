@@ -129,14 +129,12 @@
 
     .teacher-stat-card small { color: var(--dash-ink-soft); }
 
-    .teacher-dashboard {
-        display: grid;
-        gap: 1.15rem;
-    }
+    .teacher-dashboard { display: grid; gap: 1.15rem; }
+    @media (min-width: 992px) { .teacher-dashboard { padding-bottom:25px; } }
 
     .teacher-dashboard-columns { display:grid; grid-template-columns:minmax(0,1fr) minmax(290px,360px); gap:1.15rem; align-items:start; }
     .teacher-dashboard-main { min-width:0; display:grid; gap:1.15rem; }
-    .teacher-calendar-card { background:#fff; border:1px solid rgba(16,70,110,.1); border-radius:22px; padding:1rem; box-shadow:0 12px 28px rgba(16,70,110,.08); position:sticky; top:1rem; }
+    .teacher-calendar-card { background:#fff; border:1px solid rgba(16,70,110,.1); border-radius:22px; padding:1rem; box-shadow:0 12px 28px rgba(16,70,110,.08); position:sticky; top:1rem; display:flex; flex-direction:column; }
     .teacher-calendar-head { display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-bottom:.7rem; }
     .teacher-calendar-head h3 { margin:0; color:#10466e; font-size:1.05rem; font-weight:900; }
     .teacher-calendar-meta { color:#6b7d8f; font-size:.78rem; margin-bottom:.7rem; }
@@ -149,8 +147,8 @@
     .teacher-calendar-nav { display:flex; gap:.35rem; margin-bottom:.7rem; }
     .teacher-calendar-nav button { border:1px solid #cfe0ec; background:#fff; border-radius:999px; color:#10466e; padding:.32rem .55rem; font-size:.72rem; font-weight:800; }
     .teacher-calendar-month { color:#10466e; font-size:1.05rem; font-weight:900; margin-bottom:.55rem; }
-    .teacher-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); border:1px solid rgba(16,70,110,.08); border-radius:10px; overflow:hidden; }
-    .teacher-calendar-grid > div { min-width:0; min-height:2.8rem; border-right:1px solid rgba(16,70,110,.08); border-bottom:1px solid rgba(16,70,110,.08); padding:.25rem; }
+    .teacher-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); grid-template-rows:1.55rem repeat(6,minmax(0,1fr)); height:18.35rem; border:1px solid rgba(16,70,110,.08); border-radius:10px; overflow:hidden; }
+    .teacher-calendar-grid > div { min-width:0; min-height:0; border-right:1px solid rgba(16,70,110,.08); border-bottom:1px solid rgba(16,70,110,.08); padding:.25rem; }
     .teacher-calendar-grid > div:nth-child(7n) { border-right:0; }
     .teacher-calendar-weekday { min-height:auto!important; text-align:center; color:#6b7d8f; font-size:.62rem; font-weight:900; padding:.35rem .1rem!important; background:#f6fbfe; }
     .teacher-calendar-day-number { color:#10466e; font-size:.7rem; font-weight:900; }
@@ -159,6 +157,24 @@
     .teacher-calendar-event { display:block; height:4px; margin-top:.3rem; border-radius:999px; background:#3b82f6; }
     .teacher-calendar-event.school { background:#d97706; }
     .teacher-calendar-expand { width:100%; margin-top:.8rem; }
+    .teacher-calendar-column { min-width:0; }
+    .teacher-upcoming-card { background:#fff; border:1px solid rgba(16,70,110,.1); border-radius:22px; padding:1rem; box-shadow:0 12px 28px rgba(16,70,110,.08); margin-top:1.15rem; display:flex; flex-direction:column; }
+    .teacher-upcoming-head { margin-bottom:.75rem; }
+    .teacher-upcoming-head h3 { margin:0; color:#10466e; font-size:1.1rem; font-weight:900; }
+    .teacher-upcoming-head p { color:#6b7d8f; font-size:.85rem; margin:.2rem 0 0; }
+    .teacher-upcoming-table { width:100%; table-layout:fixed; border-collapse:collapse; font-size:.85rem; }
+    .teacher-upcoming-table th { color:#6b7d8f; font-size:.78rem; font-weight:800; text-align:left; padding:.4rem .25rem; border-bottom:1px solid #d7e5ef; }
+    .teacher-upcoming-table td { color:#29465a; padding:.62rem .25rem; border-bottom:1px solid rgba(16,70,110,.08); vertical-align:top; overflow-wrap:anywhere; }
+    .teacher-upcoming-table th:first-child,.teacher-upcoming-table td:first-child { width:38%; }
+    .teacher-upcoming-table th:last-child,.teacher-upcoming-table td:last-child { width:62%; }
+    .teacher-upcoming-table tbody tr { height:3.55rem; }
+    .teacher-upcoming-table tbody td { height:3.55rem; }
+    .teacher-upcoming-content { min-height:11.2rem; }
+    .teacher-upcoming-empty { color:#6b7d8f; font-size:.85rem; margin:0; padding:.3rem 0; min-height:11.2rem; }
+    .teacher-upcoming-pagination { align-items:center; display:flex; justify-content:center; gap:.2rem; margin-top:.7rem; min-height:2rem; }
+    .teacher-upcoming-pagination button { background:transparent; border:0; border-radius:8px; color:#10466e; font-size:.85rem; font-weight:900; min-width:1.9rem; padding:.3rem .4rem; }
+    .teacher-upcoming-pagination button.active { background:#10466e; color:#fff; }
+    .teacher-upcoming-pagination button:disabled { color:#b8c5ce; cursor:not-allowed; }
     .teacher-calendar-expanded .modal-dialog { max-width:1100px; }
     .teacher-calendar-expanded .modal-dialog { width:min(1100px,calc(100vw - 48px)); }
     .teacher-calendar-expanded .modal-content { height:min(760px,calc(100vh - 48px)); max-height:calc(100vh - 48px); }
@@ -177,7 +193,7 @@
     .teacher-gantt-day.adjacent .teacher-gantt-day-number { opacity:.45; }
     .teacher-gantt-lanes { position:relative; padding:.25rem 0 .45rem; min-height:2.2rem; }
     .teacher-gantt-bar { height:1.35rem; margin:0 2px; border-radius:999px; padding:.2rem .45rem; color:#fff; font-size:.7rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; z-index:2; }
-    @media (max-width: 991.98px) { .teacher-dashboard-columns { grid-template-columns:1fr; } .teacher-calendar-card { position:static; } }
+    @media (max-width: 991.98px) { .teacher-dashboard-columns { grid-template-columns:1fr; } .teacher-calendar-card { position:static; } .teacher-calendar-grid { height:auto; grid-template-rows:none; } .teacher-calendar-grid > div { min-height:2.8rem; } .teacher-upcoming-empty { min-height:0; } }
     @media (max-width: 575.98px) { .teacher-calendar-expanded .modal-dialog { width:calc(100vw - 1rem); margin:.5rem auto; } .teacher-calendar-expanded .modal-content { height:calc(100vh - 1rem); max-height:calc(100vh - 1rem); } }
 
     .teacher-hero {
@@ -563,6 +579,7 @@
         padding: 1rem;
         width: 100%;
     }
+    @media (min-width: 992px) { .class-workspace { align-content:start; gap:.7rem; padding:.8rem; } .class-detail-grid .teacher-panel { align-content:start; } }
     .class-workspace > .class-banner {
         border: 0;
         box-shadow: none;
@@ -580,6 +597,7 @@
     .class-detail-grid > div { height: 100%; min-width: 0; }
     .class-detail-grid .teacher-panel { height: 100%; }
     .teacher-dashboard-main { min-width: 0; width: 100%; }
+    @media (min-width: 992px) { .class-workspace { align-self:start; display:flex; flex-direction:column; } .class-workspace > .class-banner { flex:0 0 auto; width:100%; } .class-workspace > .class-detail-grid { align-self:stretch; display:flex; flex:1 1 auto; height:auto; min-height:0; width:100%; } .class-detail-grid > div { display:flex; flex:1 1 auto; height:auto; min-height:0; width:100%; } .class-detail-grid .teacher-panel { align-self:stretch; display:grid; flex:1 1 auto; height:auto; min-height:0; margin-bottom:0; grid-template-rows:auto minmax(0,1fr) auto; } }
     .class-workspace {
         grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
         min-width: 0;
@@ -946,9 +964,10 @@
 
     .student-row {
         grid-template-columns: 1fr;
-        max-height: 420px;
-        overflow-y: auto;
-        padding-right: 8px;
+        gap: .45rem;
+        min-height: 0;
+        overflow: hidden;
+        padding-right: 0;
     }
 
     .student-card,
@@ -957,8 +976,22 @@
         border: 1px solid var(--dash-border);
         border-radius: var(--radius-lg);
         box-shadow: 0 10px 24px rgba(15,78,100,0.06);
-        padding: 0.85rem;
+        padding: 0.45rem 0.65rem;
     }
+
+    .student-card { align-items:center; display:flex; gap:.6rem; min-height:2.35rem; overflow:hidden; }
+    .post-card { padding:0.85rem; }
+    .student-card .student-avatar { flex:0 0 auto; }
+    .student-card .student-inline-details { align-items:center; display:flex; gap:.5rem; min-width:0; width:100%; }
+    .student-card .student-inline-details strong { flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .student-card .student-inline-details .student-separator { color:#b5c3cb; flex:0 0 auto; }
+    .student-card .student-inline-details .student-email { color:var(--dash-muted); flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .student-pagination { align-items:center; display:flex; gap:.2rem; justify-content:center; min-height:2rem; margin-top:.35rem; }
+    .student-pagination button { background:transparent; border:0; border-radius:8px; color:#10466e; font-size:.85rem; font-weight:900; min-width:1.9rem; padding:.3rem .4rem; }
+    .student-pagination button.active { background:#10466e; color:#fff; }
+    .student-pagination button:disabled { color:#b8c5ce; cursor:not-allowed; }
+    @media (max-width: 575.98px) { .student-card .student-inline-details { align-items:flex-start; flex-direction:column; gap:.05rem; } .student-card .student-separator { display:none; } .student-card .student-email { max-width:100%; } }
+    @media (max-width: 991.98px) { .class-workspace { height:auto !important; } .class-detail-grid .teacher-panel { height:auto !important; grid-template-rows:none; } }
 
     .student-card {
         align-items: center;
@@ -1360,7 +1393,6 @@
 <section class="teacher-dashboard">
     <div class="teacher-hero">
         <div class="teacher-hero-copy">
-            <span class="teacher-kicker">Teacher Dashboard</span>
             <h2>Manage reading progress and coursework in one place.</h2>
             <p>Track student performance, assign materials, and review class activity.</p>
             <div class="teacher-quick-links">
@@ -1465,22 +1497,24 @@
                         <div class="teacher-panel-head">
                             <div>
                                 <h3>Enrolled Students</h3>
-                                <p class="small text-secondary mb-0">Learners assigned to this canonical Grade + Section.</p>
+                                <p class="small text-secondary mb-0">Students assigned to your advisory class.</p>
                             </div>
                             <a class="small fw-bold" href="{% url 'students' %}">View all</a>
                         </div>
-                        <div class="student-row" id="dashboardStudentRow">
+                <div class="student-row" id="dashboardStudentRow">
                             <div id="noStudentsMessage" style="text-align: center; padding: 2rem; color: var(--dash-muted); width: 100%;">
                                 <p class="small">No students are enrolled in this Grade + Section yet.</p>
                             </div>
-                        </div>
-                    </article>
+                </div>
+                <div class="student-pagination" id="studentPagination" aria-label="Enrolled students pages"></div>
+            </article>
                 </div>
             </div>
 
         </section>
     </div>
     </div>
+    <div class="teacher-calendar-column">
     <aside class="teacher-calendar-card" aria-label="School Calendar">
         <div class="teacher-calendar-head"><h3><i class="bi bi-calendar3"></i> School Calendar</h3></div>
         <div class="teacher-calendar-filter" role="group" aria-label="Calendar filter"><button type="button" class="active" data-teacher-calendar-filter="global">System-wide</button><button type="button" data-teacher-calendar-filter="school">School</button></div>
@@ -1489,6 +1523,12 @@
         <div class="teacher-calendar-grid" id="teacherCalendarGrid"></div>
         <button type="button" class="btn btn-primary teacher-calendar-expand" data-bs-toggle="modal" data-bs-target="#teacherCalendarExpanded">Expand Calendar</button>
     </aside>
+    <section class="teacher-upcoming-card" aria-labelledby="teacherUpcomingTitle">
+        <div class="teacher-upcoming-head"><h3 id="teacherUpcomingTitle">Upcoming This Week</h3><p>For your advisory class</p></div>
+        <div id="teacherUpcomingContent" class="teacher-upcoming-content"></div>
+        <div class="teacher-upcoming-pagination" id="teacherUpcomingPagination" aria-label="Upcoming activities pages"></div>
+    </section>
+    </div>
     </div>
 </section>
 
@@ -1545,6 +1585,27 @@
         }
     }
     function draw() { drawCompact(); drawExpanded(); }
+    function drawUpcoming() {
+        const content = document.getElementById('teacherUpcomingContent');
+        const pagination = document.getElementById('teacherUpcomingPagination');
+        if (!content || !pagination) return;
+        const monday = new Date(today); monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+        const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+        const weekEvents = events.filter(event => { const start=parseDate(event.start_date||event.start); const end=parseDate(event.end_date||event.end||event.start)||start; return start&&end&&key(end)>=key(monday)&&key(start)<=key(sunday); }).sort((a,b)=>key(parseDate(a.start_date||a.start))-key(parseDate(b.start_date||b.start)));
+        const pageSize=3, pageCount=Math.ceil(weekEvents.length/pageSize), page=Math.min(Number(pagination.dataset.page||1),Math.max(pageCount,1));
+        pagination.dataset.page=page;
+        if (!weekEvents.length) { content.innerHTML='<p class="teacher-upcoming-empty">No upcoming activities this week.</p>'; pagination.innerHTML=''; return; }
+        const escapeHtml=value=>String(value||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+        const formatDate=value=>parseDate(value).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+        const formatDateRange=event=>{const start=parseDate(event.start_date||event.start), end=parseDate(event.end_date||event.end||event.start)||start; return key(start)===key(end)?formatDate(event.start_date||event.start):formatDate(event.start_date||event.start)+' – '+formatDate(event.end_date||event.end);};
+        const pageRows=weekEvents.slice((page-1)*pageSize,page*pageSize);
+        while (pageRows.length < pageSize) pageRows.push(null);
+        content.innerHTML='<table class="teacher-upcoming-table"><thead><tr><th>Date</th><th>Activity</th></tr></thead><tbody>'+pageRows.map(event=>event?'<tr><td>'+formatDateRange(event)+'</td><td>'+escapeHtml(event.title||'Untitled activity')+'</td></tr>':'<tr aria-hidden="true"><td>&nbsp;</td><td>&nbsp;</td></tr>').join('')+'</tbody></table>';
+        if (pageCount<=1) { pagination.innerHTML=''; return; }
+        pagination.innerHTML='<button type="button" data-upcoming-page="prev" aria-label="Previous page">‹</button>'+Array.from({length:pageCount},(_,i)=>'<button type="button" class="'+(i+1===page?'active':'')+'" data-upcoming-page="'+(i+1)+'">'+(i+1)+'</button>').join('')+'<button type="button" data-upcoming-page="next" aria-label="Next page">›</button>';
+        pagination.querySelector('[data-upcoming-page="prev"]').disabled=page===1; pagination.querySelector('[data-upcoming-page="next"]').disabled=page===pageCount;
+        pagination.querySelectorAll('button').forEach(button=>button.onclick=()=>{const target=button.dataset.upcomingPage; pagination.dataset.page=target==='prev'?page-1:target==='next'?page+1:target; drawUpcoming();});
+    }
     document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('[data-teacher-calendar-filter]').forEach(button => button.onclick = () => { filter=button.dataset.teacherCalendarFilter; document.querySelectorAll('[data-teacher-calendar-filter]').forEach(item=>item.classList.toggle('active',item===button)); draw(); });
         document.querySelectorAll('[data-teacher-expanded-filter]').forEach(button => button.onclick = () => { filter=button.dataset.teacherExpandedFilter; document.querySelectorAll('[data-teacher-expanded-filter]').forEach(item=>item.classList.toggle('active',item===button)); document.querySelectorAll('[data-teacher-calendar-filter]').forEach(item=>item.classList.toggle('active',item.dataset.teacherCalendarFilter===filter)); draw(); });
@@ -1552,6 +1613,7 @@
         document.getElementById('teacherCalendarExpanded').addEventListener('shown.bs.modal', drawExpanded);
         window.addEventListener('resize', drawExpanded);
         draw();
+        drawUpcoming();
     });
 }());
 </script>
@@ -1645,6 +1707,17 @@ function updateDashboardStatistics(providedStudents = null, providedLevelCounts 
 }
 
 // Load and display student cards
+function syncClassCardToRightColumn() {
+    const classCard = document.querySelector('.class-workspace');
+    const upcomingCard = document.querySelector('.teacher-upcoming-card');
+    if (!classCard) return;
+    if (window.innerWidth >= 992 && upcomingCard) {
+        const classRect = classCard.getBoundingClientRect();
+        const upcomingRect = upcomingCard.getBoundingClientRect();
+        classCard.style.height = `${Math.max(0, upcomingRect.bottom - classRect.top)}px`;
+    } else classCard.style.height = '';
+}
+
 async function loadPersistedStudents() {
     const studentRow = document.getElementById("dashboardStudentRow");
     if (!studentRow) return;
@@ -1713,6 +1786,8 @@ async function loadPersistedStudents() {
         }
         // Clear existing student cards
         studentRow.querySelectorAll(".student-card").forEach(card => card.remove());
+        const studentPagination = document.getElementById('studentPagination');
+        if (studentPagination) studentPagination.innerHTML = '';
         return;
     }
 
@@ -1731,10 +1806,17 @@ async function loadPersistedStudents() {
         }
     });
 
-    // Clear existing student cards (but not the no students message)
+    // Render a compact, fixed-size page of student rows without changing enrollment data.
     studentRow.querySelectorAll(".student-card").forEach(card => card.remove());
-    
-    dedupedStudents.forEach(studentData => {
+    const studentPagination = document.getElementById('studentPagination');
+    let studentPage = Number(studentPagination?.dataset.page || 1);
+    const studentPageSize = 5;
+    const studentPageCount = Math.ceil(dedupedStudents.length / studentPageSize);
+    studentPage = Math.min(studentPage, Math.max(studentPageCount, 1));
+    const renderStudentPage = () => {
+        studentRow.querySelectorAll('.student-card').forEach(card => card.remove());
+        const pageStudents = dedupedStudents.slice((studentPage - 1) * studentPageSize, studentPage * studentPageSize);
+        pageStudents.forEach(studentData => {
         const levelClass = {
             "Low Emerging Readers": "level-low",
             "High Emerging Readers": "level-high",
@@ -1754,12 +1836,20 @@ async function loadPersistedStudents() {
         studentCard.className = "student-card";
         studentCard.innerHTML = `
             <span class="student-avatar">${initials}</span>
-            <div class="min-width-0"><strong class="d-block text-truncate">${studentData.name}</strong><div class="small text-secondary text-truncate">${studentData.email || 'No email captured'}</div></div>
+            <div class="student-inline-details"><strong>${studentData.name}</strong><span class="student-separator">|</span><span class="student-email">${studentData.email || 'No email captured'}</span></div>
         `;
         
         studentRow.appendChild(studentCard);
         console.log("✓ Added student to dashboard:", studentData.name);
-    });
+        });
+        if (!studentPagination) return;
+        studentPagination.dataset.page = studentPage;
+        studentPagination.innerHTML = '<button type="button" data-student-page="prev" aria-label="Previous page">‹</button>' + Array.from({length: studentPageCount}, (_, index) => '<button type="button" class="' + (index + 1 === studentPage ? 'active' : '') + '" data-student-page="' + (index + 1) + '">' + (index + 1) + '</button>').join('') + '<button type="button" data-student-page="next" aria-label="Next page">›</button>';
+        studentPagination.querySelector('[data-student-page="prev"]').disabled = studentPage === 1;
+        studentPagination.querySelector('[data-student-page="next"]').disabled = studentPage === studentPageCount;
+        studentPagination.querySelectorAll('button').forEach(button => button.onclick = () => { const target = button.dataset.studentPage; studentPage = target === 'prev' ? studentPage - 1 : target === 'next' ? studentPage + 1 : Number(target); renderStudentPage(); });
+    };
+    renderStudentPage();
 }
 
 document.addEventListener("DOMContentLoaded", async function() {
@@ -1802,6 +1892,8 @@ document.addEventListener("DOMContentLoaded", async function() {
 
     await fetchAndUpdateStudents();
     loadPersistedStudents();
+    syncClassCardToRightColumn();
+    window.addEventListener('resize', syncClassCardToRightColumn);
 
     // Reload when localStorage changes (in another tab)
     window.addEventListener("storage", function(e) {
