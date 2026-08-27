@@ -758,6 +758,7 @@
             <nav class="principal-sidebar-nav mt-2">
                 <div class="principal-nav-label">Main</div>
                 <a class="principal-nav-link {% if request.resolver_match.url_name == 'dashboard_principal' %}active{% endif %}" href="{% url 'dashboard_principal' %}"><i class="bi bi-grid"></i>Dashboard</a>
+                <a class="principal-nav-link {% if request.resolver_match.url_name == 'principal_school_workspace' or request.resolver_match.url_name == 'principal_section_detail' %}active{% endif %}" href="{% url 'principal_school_workspace' %}"><i class="bi bi-building"></i>School Workspace</a>
                 <a class="principal-nav-link {% if request.resolver_match.url_name == 'principal_performance' %}active{% endif %}" href="{% url 'principal_performance' %}"><i class="bi bi-graph-up"></i>Performance</a>
                 <a class="principal-nav-link {% if request.resolver_match.url_name == 'principal_assessments' %}active{% endif %}" href="{% url 'principal_assessments' %}"><i class="bi bi-journal-check"></i>Assessments</a>
                 <a class="principal-nav-link {% if request.resolver_match.url_name == 'principal_reports' %}active{% endif %}" href="{% url 'principal_reports' %}"><i class="bi bi-file-earmark-pdf"></i>Reports</a>

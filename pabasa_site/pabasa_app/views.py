@@ -16,7 +16,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.urls import reverse
 from django.db import IntegrityError, transaction, OperationalError, connection
-from django.db.models import Q
+from django.db.models import Count, Prefetch, Q
 from django.utils.text import slugify
 from functools import wraps
 from urllib.parse import quote, urlparse
@@ -18981,6 +18981,47 @@ def principal_required(view_func):
         request.session['user_role'] = user.role
         return view_func(request, *args, **kwargs)
     return wrapper
+
+
+def _principal_school_user(request):
+    return User.objects.select_related('school_record').filter(
+        id=request.session.get('user_id'), role='principal', is_archived=False
+    ).first()
+
+
+@principal_required
+@require_http_methods(["GET"])
+def principal_school_workspace(request):
+    user = _principal_school_user(request)
+    if not user:
+        return HttpResponseForbidden('Principal access required.')
+    school = user.school_record
+    grouped = {grade: [] for grade in SCHOOL_GRADE_LEVELS}
+    if school:
+        sections = Section.objects.filter(school_id=school.id).select_related('teacher').annotate(
+            active_student_count=Count('enrollments', filter=Q(enrollments__is_active=True), distinct=True)
+        ).order_by('grade_level', 'section', 'class_name')
+        for section in sections:
+            grouped.setdefault(section.grade_level or 'Unspecified', []).append(section)
+    context = _principal_context(request, 'School Workspace')
+    context.update({'school': school, 'sections_by_grade': grouped, 'has_sections': any(grouped.values())})
+    return render(request, 'pabasa_app/principal_school_workspace.html', context)
+
+
+@principal_required
+@require_http_methods(["GET"])
+def principal_section_detail(request, section_id):
+    user = _principal_school_user(request)
+    if not user:
+        return HttpResponseForbidden('Principal access required.')
+    section = get_object_or_404(
+        Section.objects.select_related('school', 'teacher').prefetch_related(
+            Prefetch('enrollments', queryset=Enrollment.objects.filter(is_active=True).select_related('student').order_by('student__last_name', 'student__first_name'), to_attr='active_enrollments')
+        ), pk=section_id, school_id=user.school_record_id
+    )
+    context = _principal_context(request, 'Section Details')
+    context.update({'school': user.school_record, 'section': section, 'enrollments': section.active_enrollments})
+    return render(request, 'pabasa_app/principal_section_detail.html', context)
 
 @principal_required
 def dashboard_principal(request):

@@ -211,6 +211,8 @@ urlpatterns = [
     
     # Principal Dashboard Routes
     path('dashboard/principal/', views.dashboard_principal, name='dashboard_principal'),
+    path('dashboard/principal/school/', views.principal_school_workspace, name='principal_school_workspace'),
+    path('dashboard/principal/school/sections/<int:section_id>/', views.principal_section_detail, name='principal_section_detail'),
     path('dashboard/principal/performance/', views.principal_performance, name='principal_performance'),
     path('dashboard/principal/assessments/', views.principal_assessments, name='principal_assessments'),
     path('dashboard/principal/reports/', views.principal_reports, name='principal_reports'),
