@@ -10539,6 +10539,12 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             practice_obj = None
     _log_completion_timing('assessment_lookup_end')
 
+    is_practice = (
+        activity_type == 'practice'
+        or practice_obj is not None
+        or (material and material.type == 'practice')
+    )
+
     if not assessment and not material and not practice_obj:
         if live_session or data.get('live_session_id'):
             _trace_live_end_flow(
@@ -10550,13 +10556,18 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             )
         return JsonResponse({'success': False, 'error': 'No assessment_id or material_id provided.'}, status=400)
 
+    if not is_practice and not _student_can_complete_assessment(
+        student_user,
+        assessment=assessment,
+        material=material,
+    ):
+        return JsonResponse(
+            {'success': False, 'error': 'You are not authorized to complete this assessment.'},
+            status=403,
+        )
+
     class_code = data.get('class_code')
     assessment_type_hint = data.get('assessment_type') or data.get('type') or data.get('mode') or ''
-    is_practice = (
-        activity_type == 'practice'
-        or practice_obj is not None
-        or (material and material.type == 'practice')
-    )
     already_completed = False
     if not is_practice:
         already_completed = _student_completed_assessment_before(assessment, material, student_user)
@@ -11589,6 +11600,59 @@ def _resolve_assist_token(token, max_age=60 * 60 * 4):
         'material': material,
         'course': course,
     }
+
+
+def _student_can_complete_assessment(student_user, assessment=None, material=None):
+    """Authorize a student completion against active Section relationships."""
+    if assessment is not None and assessment.source_assessment_id is not None:
+        return False
+    if not student_user or getattr(student_user, 'role', None) != 'student':
+        return False
+
+    assessment = (assessment.source_assessment or assessment) if assessment else None
+    linked_material = material or getattr(assessment, 'material', None)
+    if assessment and assessment.source_assessment_id is not None:
+        return False
+
+    active_sections = Section.objects.filter(
+        is_active=True,
+        enrollments__student=student_user,
+        enrollments__is_active=True,
+    ).distinct()
+    if not active_sections.exists():
+        return False
+
+    official = bool(
+        (assessment and (
+            assessment.is_system_owned
+            or bool(str(assessment.system_assessment_key or '').strip())
+        ))
+        or (linked_material and (
+            linked_material.is_official_reading
+            or linked_material.is_system_owned
+            or bool(str(linked_material.system_assessment_key or '').strip())
+            or linked_material.assessment_kind == 'crla'
+        ))
+    )
+    if official:
+        availability = _official_assessment_availability_for_student(student_user)
+        return bool(availability.get('available'))
+
+    if assessment and assessment.section_id:
+        if active_sections.filter(pk=assessment.section_id).exists():
+            return True
+
+    if linked_material:
+        material_sections = active_sections.filter(
+            Q(pk=linked_material.section_id)
+            | Q(assigned_materials=linked_material)
+            | Q(materials=linked_material)
+            | Q(courses__materials=linked_material)
+        )
+        if material_sections.exists():
+            return True
+
+    return False
 
 
 @csrf_protect
