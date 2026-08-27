@@ -2885,11 +2885,6 @@
 
         // Initialize with database classes
         fetchStudentClassesFromDatabase().then(initialCodes => {
-            const legacyCode = window.localStorage.getItem(legacyClassCodeKey);
-            if (!initialCodes.length && legacyCode) {
-                initialCodes.push(legacyCode.toUpperCase());
-                initialCodes = [...new Set(initialCodes)];
-            }
             return setJoinedState(initialCodes);
         }).catch(error => {
             console.error('Failed to initialize student classes:', error);

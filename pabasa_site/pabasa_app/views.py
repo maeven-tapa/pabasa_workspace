@@ -5959,6 +5959,7 @@ def _admin_section_template_context(request, section, page_title):
     """Build context for section detail and edit templates."""
     student_count = section.get_student_count()
     enrolled_students = section.get_enrolled_students(active_only=True)
+    enrollments = section.enrollments.filter(is_active=True).select_related('student').order_by('student__last_name', 'student__first_name')
     
     context = _admin_context(request, page_title, [])
     context.update({
@@ -5968,6 +5969,7 @@ def _admin_section_template_context(request, section, page_title):
         'enrolled_students': enrolled_students,
         'teacher_name': section.active_teacher_name(),
         'status': 'Active' if section.is_active else 'Archived',
+        'enrollments': enrollments,
     })
     return context
 
@@ -5984,6 +5986,11 @@ def admin_class_detail(request, section_id):
 @require_http_methods(["GET", "POST"])
 def admin_class_edit(request, section_id):
     """Edit class information."""
+    if request.method == 'GET':
+        section = _get_managed_section(section_id)
+        if not section:
+            return redirect('admin_classes')
+        return render(request, 'pabasa_app/admin_section_management.html', _admin_section_template_context(request, section, 'Section Management'))
     return _admin_edit_section(request, section_id)
 
 def _admin_edit_section(request, section_id):
@@ -13513,17 +13520,15 @@ def create_reading_class(request):
 def class_management_view(request):
     """View to manage specific class details and student enrollment"""
     class_code = request.GET.get('code', '').strip()
-    if not class_code:
-        return redirect('dashboard_teacher')
-
     user_id = request.session.get('user_id')
     teacher_user = User.objects.filter(id=user_id).first()
     if not teacher_user:
         return redirect('auth')
 
-    section = Section.objects.filter(class_code=class_code, teacher=teacher_user, is_active=True).first()
+    assigned = Section.objects.filter(teacher=teacher_user, is_active=True).order_by('class_name', 'id')
+    section = assigned.filter(class_code=class_code).first() if class_code else assigned.first()
     if not section:
-        return redirect('dashboard_teacher')
+        return render(request, 'pabasa_app/teacher_no_section.html', _dashboard_context(request, 'teacher', {'page_title': 'Class'}))
 
     # Fetch all active classes for the switcher dropdown and dedupe by class code
     all_sections_qs = Section.objects.filter(teacher=teacher_user, is_active=True).order_by('class_name', 'class_code')
