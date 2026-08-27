@@ -316,6 +316,11 @@
         display: block;
     }
 
+    .password-match-feedback-spacer {
+        display: block;
+        visibility: hidden;
+    }
+
     .privacy-step-document {
         padding: 0.25rem 0 1rem;
         color: #334155;
@@ -624,6 +629,7 @@
                             <input class="form-control" type="password" name="password" placeholder="Create a password" autocomplete="new-password" required>
                             <button class="password-toggle-btn" type="button" data-password-toggle data-target="password" aria-pressed="false" aria-label="Show password">Show</button>
                         </div>
+                        <div class="field-feedback password-match-feedback-spacer" aria-hidden="true">Passwords must match.</div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Confirm password</label>
@@ -849,9 +855,10 @@
             const year = Number(birthYearInput.value);
             if (!month) return;
 
-            // Date.UTC correctly handles February in leap years. Until a year
-            // is entered, February 29 remains available for leap-year birthdays.
-            const maximumDay = month === 2 && !year ? 29 : new Date(Date.UTC(year || 2000, month, 0)).getUTCDate();
+            // Use the current year until a birth year is entered; Date.UTC
+            // correctly handles February in leap years (2026 has 28 days).
+            const effectiveYear = year || new Date().getFullYear();
+            const maximumDay = new Date(Date.UTC(effectiveYear, month, 0)).getUTCDate();
             birthDayInput.max = String(maximumDay);
 
             if (Number(birthDayInput.value) > maximumDay) {
