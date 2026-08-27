@@ -381,7 +381,7 @@ var getStudentClassData = window.getStudentClassData = function() {
         const role = getRole();
         if (role !== 'teacher' && role !== 'admin') return;
 
-        // Determine the best available class code
+        // Determine the best available active Section from the existing teacher cache.
         let code = overrideCode || localStorage.getItem("pabasa_last_active_class_code");
         if (!code) {
             const activeCodeEl = document.getElementById('activeClassCode');
@@ -390,10 +390,23 @@ var getStudentClassData = window.getStudentClassData = function() {
 
         if (!code || code === '—') return;
 
+        let sectionId = '';
+        try {
+            const email = (window.PABASA_USER_EMAIL || localStorage.getItem('pabasaUserEmail') || '').trim();
+            const cachedKey = email ? `pabasa_teacher_classes_${email}` : 'pabasa_teacher_classes';
+            const cachedClasses = JSON.parse(localStorage.getItem(cachedKey) || '[]');
+            const activeClass = Array.isArray(cachedClasses)
+                ? cachedClasses.find(cls => String(cls.code) === String(code))
+                : null;
+            sectionId = activeClass?.id || activeClass?.section_id || '';
+        } catch (e) { /* retain the compatibility URL when cache data is unavailable */ }
+
         // Target all possible management links (Sidebar, Quick Links, Workspace Buttons)
         const targets = document.querySelectorAll('#sidebarClassLink, #quickLinkClass, #manageClassLink, .btn-class-manage');
         targets.forEach(link => {
-            link.href = `/dashboard/teacher/manage/?code=${code}`;
+            link.href = sectionId
+                ? `/dashboard/teacher/manage/?section_id=${encodeURIComponent(sectionId)}`
+                : `/dashboard/teacher/manage/?code=${encodeURIComponent(code)}`;
         });
     }
 

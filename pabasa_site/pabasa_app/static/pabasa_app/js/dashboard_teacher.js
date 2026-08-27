@@ -142,7 +142,8 @@
                         String(classData.students || '0'), // Use accurate count from server
                         String(classData.assessment_material_count || 0),
                         String(classData.practice_material_count || 0),
-                        classTeacherEmail
+                        classTeacherEmail,
+                        classData.id
                     );
 
                     classList.appendChild(card);
@@ -197,6 +198,7 @@
             const grade = card.getAttribute("data-grade") || "";
             const section = card.getAttribute("data-section") || "";
             const code = card.getAttribute("data-code") || "READ-000";
+            const sectionId = card.getAttribute("data-section-id") || "";
             const header = card.getAttribute("data-header") || "READ";
             const actualStudentCount = card.getAttribute("data-students") || "0";
             const actualAssessmentCount = card.getAttribute("data-assessment-count") || "0";
@@ -218,7 +220,9 @@
             const classManagementUrls = document.querySelectorAll('#sidebarClassLink, #manageClassLink, #quickLinkClass, .workspace-card .btn-class, [data-manage-class-btn]');
             classManagementUrls.forEach(link => {
                 if (link.tagName === 'A') {
-                    link.href = `/dashboard/teacher/manage/?code=${code}`;
+                    link.href = sectionId
+                        ? `/dashboard/teacher/manage/?section_id=${encodeURIComponent(sectionId)}`
+                        : `/dashboard/teacher/manage/?code=${encodeURIComponent(code)}`;
                     link.style.display = "inline-flex";
                 }
             });
@@ -261,13 +265,14 @@
             }
         }
 
-        function renderClassCard(name, header, code, grade, section, students, assessmentCount, practiceCount, teacherEmailArg) {
+        function renderClassCard(name, header, code, grade, section, students, assessmentCount, practiceCount, teacherEmailArg, sectionIdArg) {
             const card = document.createElement("div");
             card.className = "class-card";
             card.setAttribute("data-class-name", name);
             card.setAttribute("data-grade", grade);
             card.setAttribute("data-section", section);
             card.setAttribute("data-code", code);
+            if (sectionIdArg) card.setAttribute("data-section-id", sectionIdArg);
             card.setAttribute("data-header", header);
             card.setAttribute("aria-busy", "false");
 

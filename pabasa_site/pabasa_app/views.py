@@ -13332,7 +13332,7 @@ def disabled_code_membership(request):
 
         logger.info(f"Student {student_user.custom_id} successfully joined class {class_code}")
         student_name = f"{student_user.first_name} {student_user.last_name}"
-        class_url = f"{reverse('class_management')}?code={section.class_code}"
+        class_url = f"{reverse('class_management')}?section_id={section.id}"
         _create_notification(
             section.teacher,
             'Student Enrolled in a Class',
@@ -13653,7 +13653,7 @@ def unenroll_class(request):
                 title=title,
                 message=message,
                 notification_type='info',
-                action_url=f"{reverse('class_management')}?code={section.class_code}",
+                action_url=f"{reverse('class_management')}?section_id={section.id}",
             )
             _notify_admins(
                 'Student unenrolled from a class',
@@ -13702,6 +13702,7 @@ def create_reading_class(request):
 @login_required(role='teacher')
 def class_management_view(request):
     """View to manage specific class details and student enrollment"""
+    section_id = request.GET.get('section_id', '').strip()
     class_code = request.GET.get('code', '').strip()
     user_id = request.session.get('user_id')
     teacher_user = User.objects.filter(id=user_id).first()
@@ -13709,7 +13710,16 @@ def class_management_view(request):
         return redirect('auth')
 
     assigned = Section.objects.filter(teacher=teacher_user, is_active=True).order_by('class_name', 'id')
-    section = assigned.filter(class_code=class_code).first() if class_code else assigned.first()
+    section = None
+    if section_id:
+        try:
+            section = assigned.filter(pk=int(section_id)).first()
+        except (TypeError, ValueError):
+            section = None
+    elif class_code:
+        section = assigned.filter(class_code=class_code).first()
+    else:
+        section = assigned.first()
     if not section:
         return render(request, 'pabasa_app/teacher_no_section.html', _dashboard_context(request, 'teacher', {'page_title': 'Class'}))
 
@@ -15171,7 +15181,7 @@ def teacher_add_student(request):
                     'Student Enrolled in a Class',
                     f'• {student_name} joined {section.class_name}.',
                     'success',
-                    f"{reverse('class_management')}?code={section.class_code}",
+                    f"{reverse('class_management')}?section_id={section.id}",
                     section.teacher,
                 )
                 _notify_admins(

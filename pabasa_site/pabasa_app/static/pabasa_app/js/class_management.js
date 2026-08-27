@@ -75,7 +75,8 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.add-student-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const studentId = this.dataset.studentId;
-            const classCode = new URLSearchParams(window.location.search).get('code');
+            const params = new URLSearchParams(window.location.search);
+            const classCode = params.get('code') || document.querySelector('.class-switcher-option.is-selected')?.dataset.classCode;
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
             const clickedButton = this;
             const addStudentModalEl = document.getElementById('addStudentModal');

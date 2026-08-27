@@ -1051,6 +1051,7 @@
                         class="class-switcher-option {% if s.class_code == section.class_code %}is-selected{% endif %}"
                         role="option"
                         aria-selected="{% if s.class_code == section.class_code %}true{% else %}false{% endif %}"
+                        data-section-id="{{ s.id }}"
                         data-class-code="{{ s.class_code }}"
                         data-class-name="{{ s.class_name|escape }}"
                     >
@@ -1274,10 +1275,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     options.forEach((option) => {
         option.addEventListener('click', function () {
+            const sectionId = this.dataset.sectionId;
             const classCode = this.dataset.classCode;
             const className = this.dataset.className || classCode;
             valueEl.textContent = classCode;
-            window.location.href = '?code=' + encodeURIComponent(classCode);
+            window.location.href = '?section_id=' + encodeURIComponent(sectionId);
         });
     });
 
