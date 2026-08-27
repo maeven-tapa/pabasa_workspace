@@ -4464,7 +4464,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
         ),
     })
     perf_mark('student_calendar_start')
-    if nav_role == 'student':
+    if nav_role in ('student', 'teacher'):
         print("BEFORE _selected_school_calendar")
         active_school_calendar, _, _ = _selected_school_calendar(request)
         print("AFTER _selected_school_calendar")
@@ -4478,12 +4478,16 @@ def _dashboard_context(request, nav_role=None, extra=None):
         student_calendar_events = []
         if active_school_calendar:
             print("BEFORE student_calendar_events_query")
+            audience_school = getattr(user, 'school_record', None)
+            event_filter = Q(scope=CalendarEvent.SCOPE_GLOBAL) | Q(scope__in=['', None], school__isnull=True)
+            if audience_school:
+                event_filter |= Q(scope=CalendarEvent.SCOPE_SCHOOL, school=audience_school)
             student_calendar_events = [
                 _calendar_event_payload(event) | {
                     'title': _calendar_fixed_title(event.event_type, event.title),
                     'event_type_label': _calendar_event_type_label(event.event_type),
                 }
-                for event in CalendarEvent.objects.filter(school_calendar=active_school_calendar).order_by('start_date', 'end_date', 'created_at')
+                for event in CalendarEvent.objects.filter(school_calendar=active_school_calendar).filter(event_filter).order_by('start_date', 'end_date', 'created_at')
             ]
             print("AFTER student_calendar_events_query")
         context['active_school_calendar'] = active_school_calendar
@@ -4503,6 +4507,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
         context['today'] = calendar_widget.get('today')
         print("CONTEXT_KEY_DONE", "today")
         context['month_weeks'] = calendar_widget.get('month_weeks')
+        context['calendar_weekday_labels'] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
         print("CONTEXT_KEY_DONE", "month_weeks")
         context['calendar_legend'] = calendar_widget.get('calendar_legend')
         print("CONTEXT_KEY_DONE", "calendar_legend")
@@ -6688,7 +6693,9 @@ def _selected_school_calendar(request=None):
 def _calendar_context(request):
     selected_calendar, calendars, active_calendar = _selected_school_calendar(request)
 
-    events = CalendarEvent.objects.filter(school_calendar=selected_calendar).order_by('start_date', 'end_date', 'created_at')
+    events = CalendarEvent.objects.filter(school_calendar=selected_calendar).filter(
+        Q(scope=CalendarEvent.SCOPE_GLOBAL) | Q(scope__in=['', None], school__isnull=True)
+    ).order_by('start_date', 'end_date', 'created_at')
     current_term = _calendar_current_term(selected_calendar)
     instructional_events = _calendar_instructional_events(selected_calendar, events)
     calendar_events_json = [
@@ -19377,3 +19384,55 @@ def principal_settings(request):
         'browser_device': browser_device,
     })
     return render(request, 'pabasa_app/principal_settings.html', context)
+@principal_required
+@require_http_methods(["GET", "POST", "PUT", "PATCH", "DELETE"])
+def principal_calendar(request):
+    """School-local calendar management; global events are always read-only."""
+    principal = _principal_school_user(request)
+    school = principal.school_record if principal else None
+    if request.method == "GET":
+        qs = CalendarEvent.objects.filter(Q(scope=CalendarEvent.SCOPE_GLOBAL) | Q(scope__in=["", None], school__isnull=True) | Q(scope=CalendarEvent.SCOPE_SCHOOL, school=school)).order_by("start_date", "end_date")
+        events = [_calendar_event_payload(e) | {"scope": e.scope or CalendarEvent.SCOPE_GLOBAL, "school_id": e.school_id} for e in qs]
+        if request.GET.get("format") == "json" or request.headers.get("Accept", "").startswith("application/json"):
+            return JsonResponse({"events": events})
+        active_calendar, _, _ = _selected_school_calendar(request)
+        widget = _calendar_month_view(active_calendar)
+        return render(request, "pabasa_app/principal_calendar.html", {"events": events, "events_json": json.dumps(events), "school": school, "active_school_calendar": active_calendar, "student_calendar_school_year": _calendar_school_year_label(active_calendar), "student_calendar_current_term": f"Term {active_calendar.current_term}" if active_calendar else "Not set", "calendar_weekday_labels": ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], "student_calendar_events_json": json.dumps(events), **widget})
+    if request.method == "POST":
+        try:
+            if not school:
+                return JsonResponse({"success": False, "error": "School not assigned. Local events cannot be created."}, status=403)
+            if getattr(school, "status", "active") == "archived" or not getattr(school, "is_active", True):
+                return JsonResponse({"success": False, "error": "Archived schools cannot create new local events."}, status=403)
+            data = request.POST
+            title = str(data.get("title", "")).strip()
+            start_date = str(data.get("start_date", "")).strip()
+            if not title:
+                return JsonResponse({"success": False, "error": "Event Title is required."}, status=400)
+            if not start_date:
+                return JsonResponse({"success": False, "error": "Start Date is required."}, status=400)
+            # Reuse the canonical Admin/Student calendar resolver (which uses
+            # school-year bounds and falls back to the configured calendar),
+            # rather than assuming is_active is authoritative.
+            calendar, _, _ = _selected_school_calendar(request)
+            if not calendar:
+                return JsonResponse({"success": False, "error": "No active school calendar is configured."}, status=409)
+            event = CalendarEvent(school_calendar=calendar, scope=CalendarEvent.SCOPE_SCHOOL, school=school, title=title, event_type="other", term=calendar.current_term or 1, start_date=start_date, end_date=str(data.get("end_date") or start_date), description=data.get("description", ""), is_published=True)
+            event.full_clean()
+            event.save()
+            return JsonResponse({"success": True, "event": _calendar_event_payload(event) | {"scope": event.scope, "school_id": event.school_id}}, status=201)
+        except ValidationError as exc:
+            logger.warning("Principal calendar event validation failed: %s", exc.message_dict if hasattr(exc, 'message_dict') else exc.messages)
+            return JsonResponse({"success": False, "error": "The event details are invalid. Please check the dates and try again."}, status=400)
+        except Exception as exc:
+            logger.exception("Principal calendar event creation failed type=%s", type(exc).__name__)
+            return JsonResponse({"success": False, "error": "Unable to save the school event right now."}, status=500)
+    event_id = request.POST.get("event_id") or request.GET.get("event_id")
+    event = CalendarEvent.objects.filter(pk=event_id, scope=CalendarEvent.SCOPE_SCHOOL, school=school).first()
+    if not event:
+        return JsonResponse({"success": False, "error": "Event not found or not owned by your school."}, status=404)
+    if request.method == "DELETE":
+        event.delete(); return JsonResponse({"success": True})
+    for field in ("title", "event_type", "start_date", "end_date", "description"):
+        if field in request.POST: setattr(event, field, request.POST[field])
+    event.save(); return JsonResponse({"success": True})

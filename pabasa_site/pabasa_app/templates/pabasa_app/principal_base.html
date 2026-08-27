@@ -735,6 +735,7 @@
             }
         }
     </style>
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
     <aside class="principal-sidebar offcanvas offcanvas-start" tabindex="-1" id="principalSidebar" aria-label="Principal sidebar" data-bs-scroll="true" data-bs-backdrop="true">
@@ -759,6 +760,7 @@
                 <div class="principal-nav-label">Main</div>
                 <a class="principal-nav-link {% if request.resolver_match.url_name == 'dashboard_principal' %}active{% endif %}" href="{% url 'dashboard_principal' %}"><i class="bi bi-grid"></i>Dashboard</a>
                 <a class="principal-nav-link {% if request.resolver_match.url_name == 'principal_school_workspace' or request.resolver_match.url_name == 'principal_section_detail' %}active{% endif %}" href="{% url 'principal_school_workspace' %}"><i class="bi bi-building"></i>School Workspace</a>
+                <a class="principal-nav-link {% if request.resolver_match.url_name == 'principal_calendar' %}active{% endif %}" href="{% url 'principal_calendar' %}"><i class="bi bi-calendar3"></i>Calendar</a>
                 <a class="principal-nav-link {% if request.resolver_match.url_name == 'principal_performance' %}active{% endif %}" href="{% url 'principal_performance' %}"><i class="bi bi-graph-up"></i>Performance</a>
                 <a class="principal-nav-link {% if request.resolver_match.url_name == 'principal_assessments' %}active{% endif %}" href="{% url 'principal_assessments' %}"><i class="bi bi-journal-check"></i>Assessments</a>
                 <a class="principal-nav-link {% if request.resolver_match.url_name == 'principal_reports' %}active{% endif %}" href="{% url 'principal_reports' %}"><i class="bi bi-file-earmark-pdf"></i>Reports</a>
@@ -800,6 +802,8 @@
         </section>
     </main>
 
+    {% block modals %}{% endblock %}
+
     <div class="modal fade principal-logout-modal" id="principalLogoutModal" tabindex="-1" aria-labelledby="principalLogoutModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -820,6 +824,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script src="{% static 'pabasa_app/js/notifications_shared.js' %}"></script>
+    {% block page_scripts %}{% endblock %}
     <script>
         function getCsrfToken() {
             const tokenInput = document.querySelector('[name=csrfmiddlewaretoken]');

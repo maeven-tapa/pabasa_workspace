@@ -1231,7 +1231,10 @@
         </div>
     </div>
 
-    <div class="teacher-stat-grid" aria-label="Teacher dashboard statistics">
+    <div class="row g-4 align-items-start mt-1">
+        <div class="col-lg-8">
+            <div class="teacher-stat-grid" aria-label="Teacher dashboard statistics">
+
         <article class="teacher-stat-card" data-mark="Cl">
             <span>Class</span>
             <strong id="classCountMirror">{{ active_teacher_class_count }}</strong>
@@ -1262,6 +1265,9 @@
             <strong id="dashGradeLevelCount">0</strong>
             <small class="text-success">Meets expectation</small>
         </article>
+            </div>
+        </div>
+        <div class="col-lg-4">{% include "pabasa_app/partials/compact_calendar.html" with readonly=True %}</div>
     </div>
 
     <div class="teacher-board">

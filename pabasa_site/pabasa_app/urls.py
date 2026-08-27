@@ -217,4 +217,5 @@ urlpatterns = [
     path('dashboard/principal/assessments/', views.principal_assessments, name='principal_assessments'),
     path('dashboard/principal/reports/', views.principal_reports, name='principal_reports'),
     path('dashboard/principal/settings/', views.principal_settings, name='principal_settings'),
+    path('dashboard/principal/calendar/', views.principal_calendar, name='principal_calendar'),
 ]
