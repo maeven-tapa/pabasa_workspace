@@ -31,6 +31,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         const testTitle = urlParams.get("test") || "Assessment";
         const testCode = urlParams.get("code") || "TST-000";
+        const sectionId = urlParams.get("section_id") || "";
         const materialId = urlParams.get("id");
         const viewMode = urlParams.get("viewMode");
         if (testMeta) testMeta.textContent = `${testTitle} - ${testCode}`;
@@ -41,8 +42,8 @@
         let isMuted = false;
         let startTime = null;
 
-        const studentClassCodesKey = "pabasaStudentClassCodes";
-        const readingsStorageKey = "pabasa_class_readings";
+        const studentClassCodesKey = "pabasaStudentSectionIds";
+        const readingsStorageKey = "pabasa_section_readings";
 
         function getStoredData(key, fallback = []) {
             try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); } catch (e) { return fallback; }
@@ -58,15 +59,15 @@
         }
 
         function loadItems() {
-            // Prioritize the specific class code from the URL to prevent mixing materials from other classes
-            const targetCode = (testCode && testCode !== "TST-000") ? testCode.toUpperCase() : null;
-            let codes = targetCode ? [targetCode] : getStoredData(studentClassCodesKey, []).map(c => String(c).toUpperCase());
+            // Prioritize the canonical Section ID from the URL to prevent mixing materials.
+            const targetSectionId = sectionId || null;
+            let codes = targetSectionId ? [targetSectionId] : getStoredData(studentClassCodesKey, []).map(String);
 
             const readings = getStoredData(readingsStorageKey, {});
             
             // Create normalized map for case-insensitive class code lookups
             const readingsMap = {};
-            Object.keys(readings).forEach(key => readingsMap[key.toUpperCase()] = readings[key]);
+            Object.keys(readings).forEach(key => readingsMap[String(key)] = readings[key]);
 
             let aggregatedItems = [];
             codes.forEach(code => {

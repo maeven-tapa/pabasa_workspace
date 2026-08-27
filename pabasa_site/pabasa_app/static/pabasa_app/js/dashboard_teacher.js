@@ -9,6 +9,7 @@
 
         const activeClassName = document.getElementById("activeClassName");
         const activeClassSubject = document.getElementById("activeClassSubject");
+        const activeClassSectionId = document.getElementById("activeClassSectionId");
         const activeClassCode = document.getElementById("activeClassCode");
         const activeStudentCount = document.getElementById("activeStudentCount");
         const activeAssessmentCount = document.getElementById("activeAssessmentCount");
@@ -143,7 +144,7 @@
                         String(classData.assessment_material_count || 0),
                         String(classData.practice_material_count || 0),
                         classTeacherEmail,
-                        classData.id
+                        classData.section_id || classData.id
                     );
 
                     classList.appendChild(card);
@@ -206,6 +207,7 @@
 
             activeClassName.textContent = name;
             if (activeClassSubject) activeClassSubject.textContent = [grade, section].filter(Boolean).join(" · ");
+            if (activeClassSectionId) activeClassSectionId.textContent = sectionId || "—";
             if (activeClassCode) activeClassCode.textContent = code;
             if (activeStudentCount) activeStudentCount.textContent = actualStudentCount;
             if (activeAssessmentCount) activeAssessmentCount.textContent = actualAssessmentCount;
@@ -432,7 +434,7 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
                 },
-                body: JSON.stringify({ class_code: classCode })
+                body: JSON.stringify({ section_id: findClassCardByCode(classCode)?.getAttribute('data-section-id') })
             })
             .then(response => response.json())
             .then(data => {

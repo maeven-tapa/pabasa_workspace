@@ -473,12 +473,12 @@ function initProfilePage() {
             : 0;
 
         // Ensure flattened materials are also filtered to active classes
-        const activeClassCodes = classes.map(function(c) { return (c.code || c.class_code || "").toString().toUpperCase(); }).filter(Boolean);
+        const activeSectionIds = classes.map(function(c) { return String(c.id || c.section_id || ""); }).filter(Boolean);
         const flattenedMaterials = getStoredArray("pabasa_materials").filter(function(m) {
             if (!m) return false;
             if (!m.classCode && !m.class) return true; // keep global materials
-            const mCode = (m.classCode || m.class || "").toString().toUpperCase();
-            return activeClassCodes.length === 0 || activeClassCodes.includes(mCode);
+            const mSectionId = String(m.section_id || m.sectionId || "");
+            return activeSectionIds.length === 0 || activeSectionIds.includes(mSectionId);
         });
 
         return {

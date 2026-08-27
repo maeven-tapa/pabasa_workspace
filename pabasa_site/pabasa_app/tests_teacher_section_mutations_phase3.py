@@ -144,7 +144,7 @@ class TeacherSectionMutationsPhase3Tests(TestCase):
         inactive.refresh_from_db()
         self.assertEqual(inactive.class_name, "Inactive Section")
 
-    def test_legacy_class_code_fallback_is_teacher_scoped(self):
+    def test_class_code_only_mutations_are_rejected(self):
         self._login(self.teacher_a)
 
         own_response = self._post("update_class_info", {
@@ -156,7 +156,7 @@ class TeacherSectionMutationsPhase3Tests(TestCase):
             "student_id": self.student.id,
         })
 
-        self.assertEqual(own_response.status_code, 200)
-        self.assertTrue(own_response.json()["success"])
+        self.assertEqual(own_response.status_code, 404)
+        self.assertFalse(own_response.json()["success"])
         self.assertEqual(other_response.status_code, 404)
         self.assertFalse(Enrollment.objects.filter(student=self.student, section=self.section_b).exists())

@@ -8313,7 +8313,7 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(len(data["students"]), 1)
         self.assertEqual(data["students"][0]["custom_id"], self.student.custom_id)
         self.assertCountEqual(data["students"][0]["classes"], ["Reading One", "Reading Two"])
-        self.assertCountEqual(data["students"][0]["class_codes"], ["READ-ONE", "READ-TWO"])
+        self.assertCountEqual(data["students"][0]["section_ids"], [self.section_a.id, self.section_b.id])
 
     def test_teacher_overview_counts_unique_students_across_classes(self):
         response = self.client.get(reverse("get_teacher_overview"))

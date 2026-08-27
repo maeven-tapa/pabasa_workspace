@@ -149,7 +149,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Determine correct base URL based on designation
         const baseUrl = (usage === 'assessment' || usage === 'both') ? '/dashboard/assessment' : '/dashboard/practice';
-        window.location.href = `${baseUrl}/${type}/?section_id=${encodeURIComponent(sectionId)}&code=${encodeURIComponent(classCode)}&test=${encodeURIComponent(selectedMaterialData.title)}&id=${selectedMaterialData.materialId}&viewMode=${viewMode}`;
+        window.location.href = `${baseUrl}/${type}/?section_id=${encodeURIComponent(sectionId)}&test=${encodeURIComponent(selectedMaterialData.title)}&id=${selectedMaterialData.materialId}&viewMode=${viewMode}`;
     }
 
     // --- Click Handler for Marking as Read & Navigation ---

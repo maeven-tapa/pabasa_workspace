@@ -784,7 +784,8 @@
         const readingsStorageKey = "pabasa_section_readings";
         const completedAssessmentIdsKey = "pabasa_completed_assessment_ids";
         const materialTypes = ["word", "sentence", "paragraph", "vowel"];
-        const selectedClassCode = (new URLSearchParams(window.location.search).get("code") || "").trim().toUpperCase();
+        const requestedSectionId = (new URLSearchParams(window.location.search).get("section_id") || "").trim();
+        const selectedSectionId = requestedSectionId;
 
         const escapeHtml = (value) => {
             const div = document.createElement("div");
@@ -841,9 +842,8 @@
 
         const fetchMaterialsFromDatabase = async (sectionId, classCode) => {
             try {
-                const selector = sectionId
-                    ? `section_id=${encodeURIComponent(sectionId)}`
-                    : `class_code=${encodeURIComponent(classCode)}`;
+                if (!sectionId) return null;
+                const selector = `section_id=${encodeURIComponent(sectionId)}`;
                 const response = await fetch(`/api/class/materials/?${selector}`);
                 const data = await response.json();
                 if (data.success) {
@@ -857,7 +857,7 @@
                     });
                     console.log("PABASA_OFFICIAL_TRACE", {
                         stage: "fetch_materials_response",
-                        class_code: classCode,
+                        section_id: sectionId,
                         official_keys: officialKeys,
                         word_titles: (data.materials?.word || []).map((material) => material?.title || ""),
                     });
@@ -886,6 +886,9 @@
         };
 
         const getJoinedCodes = () => {
+            if (requestedSectionId && /^\d+$/.test(requestedSectionId)) {
+                return [requestedSectionId];
+            }
             const sectionIds = getStoredArray(studentClassCodesKey).filter(Boolean);
             const legacySectionId = window.localStorage.getItem(legacyStudentClassCodeKey);
             if (!sectionIds.length && legacySectionId) {
@@ -1121,13 +1124,13 @@
                 }
             };
 
-            const getClassSortPriority = (classCode) => {
-                const normalizedClassCode = String(classCode || '').toUpperCase();
-                if (selectedClassCode && normalizedClassCode === selectedClassCode) {
+            const getClassSortPriority = (sectionId) => {
+                const normalizedSectionId = String(sectionId || '');
+                if (selectedSectionId && normalizedSectionId === selectedSectionId) {
                     return -1;
                 }
                 const recentOrder = getRecentClassOrder();
-                const index = recentOrder.findIndex((code) => String(code).toUpperCase() === normalizedClassCode);
+                const index = recentOrder.findIndex((id) => String(id) === normalizedSectionId);
                 return index >= 0 ? index : Number.MAX_SAFE_INTEGER;
             };
 
@@ -1137,8 +1140,8 @@
 
             const classMaterials = await getAssessmentMaterials();
             if (!classMaterials.length) {
-                const emptyTitle = selectedClassCode ? "Class not available" : "No classes joined yet";
-                const emptyMessage = selectedClassCode
+                const emptyTitle = selectedSectionId ? "Class not available" : "No classes joined yet";
+                const emptyMessage = selectedSectionId
                     ? "This class is not currently joined on your dashboard."
                     : "Join a class from your dashboard to start your reading assessments.";
                 grid.innerHTML = `
@@ -1151,8 +1154,8 @@
             }
 
             const orderedClassMaterials = [...classMaterials].sort((a, b) => {
-                const aPriority = getClassSortPriority(a.classData?.code);
-                const bPriority = getClassSortPriority(b.classData?.code);
+                const aPriority = getClassSortPriority(a.classData?.section_id || a.classData?.id);
+                const bPriority = getClassSortPriority(b.classData?.section_id || b.classData?.id);
                 return aPriority - bPriority;
             });
 
@@ -1239,7 +1242,7 @@
                     const officialLaunchPayloadJson = JSON.stringify(officialLaunchPayload);
                     const isLocked = !Boolean(m.student_access);
                     const sectionId = m.section_id || classData.id || classData.section_id || '';
-                    const generatedStartUrl = isLocked ? '#' : `${urlMap[m.category || m.item_type || 'word']}?test=${encodeURIComponent(m.title)}&section_id=${encodeURIComponent(sectionId)}&code=${encodeURIComponent(m.code || classData.code)}&id=${encodeURIComponent(m.id)}${officialAssessmentId ? `&official_assessment_id=${encodeURIComponent(officialAssessmentId)}` : ''}${officialLaunchPayloadJson ? `&official_assessment_data=${encodeURIComponent(officialLaunchPayloadJson)}` : ''}&content=${encodeURIComponent(m.content || '')}&item_type=${encodeURIComponent(m.item_type || m.category || 'word')}&language=${encodeURIComponent(m.language || '')}&crla_fresh=1`;
+                    const generatedStartUrl = isLocked ? '#' : `${urlMap[m.category || m.item_type || 'word']}?test=${encodeURIComponent(m.title)}&section_id=${encodeURIComponent(sectionId)}&id=${encodeURIComponent(m.id)}${officialAssessmentId ? `&official_assessment_id=${encodeURIComponent(officialAssessmentId)}` : ''}${officialLaunchPayloadJson ? `&official_assessment_data=${encodeURIComponent(officialLaunchPayloadJson)}` : ''}&content=${encodeURIComponent(m.content || '')}&item_type=${encodeURIComponent(m.item_type || m.category || 'word')}&language=${encodeURIComponent(m.language || '')}&crla_fresh=1`;
                     return `
                         <div class="assessment-card-shell ${isLocked ? 'is-locked' : ''}" data-official-assessment="true">
                             <a href="${generatedStartUrl}" class="assessment-type-link type-${m.category || m.item_type || 'word'} ${isLocked ? 'is-disabled is-locked' : ''}" data-section-id="${escapeHtml(classData.id || classData.section_id || '')}" data-class-code="${escapeHtml(classData.code)}" ${isLocked ? 'tabindex="-1" aria-disabled="true" onclick="return false;"' : ''}>
@@ -1329,7 +1332,7 @@
                                 ? `${syllableBlendingUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
                                 : isPictureWordMatching
                                 ? `${pictureWordMatchingUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
-                                : `${urlMap[m.category]}?test=${encodeURIComponent(m.title)}&section_id=${encodeURIComponent(sectionId)}&code=${encodeURIComponent(m.code || classData.code)}&id=${encodeURIComponent(m.id)}&content=${encodeURIComponent(m.content || '')}&item_type=${encodeURIComponent(m.item_type || m.category || 'word')}&language=${encodeURIComponent(m.language || '')}`);
+                                : `${urlMap[m.category]}?test=${encodeURIComponent(m.title)}&section_id=${encodeURIComponent(sectionId)}&id=${encodeURIComponent(m.id)}&content=${encodeURIComponent(m.content || '')}&item_type=${encodeURIComponent(m.item_type || m.category || 'word')}&language=${encodeURIComponent(m.language || '')}`);
                             console.log("PABASA_OFFICIAL_TRACE", {
                                 stage: "assessment_card_link",
                                 selected_material_id: mId || "",
@@ -1340,7 +1343,7 @@
                                 is_official_reading: m.is_official_reading === true,
                                 is_system_owned: m.is_system_owned === true,
                                 generated_start_url: generatedStartUrl,
-                                class_code: classData.code,
+                                section_id: classData.id || classData.section_id,
                                 category: m.category,
                             });
                             renderedRows.push(`

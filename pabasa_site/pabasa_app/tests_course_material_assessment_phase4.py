@@ -162,7 +162,7 @@ class CourseMaterialAssessmentPhase4Tests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(assessment.id, {item["id"] for item in response.json()["assessments"]})
 
-    def test_legacy_class_code_fallback_remains_teacher_scoped(self):
+    def test_class_code_only_material_creation_is_rejected(self):
         self._login(self.teacher_a)
 
         own_response = self._post("add_reading_material", {
@@ -182,8 +182,8 @@ class CourseMaterialAssessmentPhase4Tests(TestCase):
             "class_code": self.section_b.class_code,
         })
 
-        self.assertEqual(own_response.status_code, 200)
-        self.assertEqual(foreign_response.status_code, 404)
+        self.assertEqual(own_response.status_code, 400)
+        self.assertEqual(foreign_response.status_code, 400)
 
     def test_student_material_visibility_is_unchanged(self):
         material = self._material(self.teacher_a, self.section_a, title="Visible Material", source_type="personal")

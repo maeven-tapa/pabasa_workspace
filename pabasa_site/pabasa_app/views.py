@@ -1161,7 +1161,7 @@ def _notify_principal_performance_events(student_user, assessment=None, material
     return []
 
 
-def _resolve_assessment_class_name(assessment=None, material=None, section_id=None, class_code=None, student_user=None):
+def _resolve_assessment_class_name(assessment=None, material=None, section_id=None, student_user=None):
     """Resolve a human-readable class name for assessment completion alerts."""
     authorized_sections = Section.objects.filter(is_active=True)
     if student_user and getattr(student_user, 'role', None) == 'student':
@@ -1190,11 +1190,6 @@ def _resolve_assessment_class_name(assessment=None, material=None, section_id=No
         ).first()
         if assigned:
             return assigned.class_name
-    if not section_id and class_code:
-        # Transitional compatibility only; relational membership remains authoritative.
-        section = authorized_sections.filter(class_code__iexact=str(class_code).strip()).first()
-        if section:
-            return section.class_name
     return None
 
 def _teachers_for_assessment_completion(assessment=None, material=None, student_user=None):
@@ -1745,7 +1740,7 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
             if sid is None:
                 logger.warning(
                     "Skipping enrolled student without a resolvable student_id/custom_id in section %s",
-                    current_section.class_code,
+                    current_section.id,
                 )
                 continue
 
@@ -1758,7 +1753,7 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
                     'email': entry.get('email', ''),
                     'custom_id': entry.get('custom_id', ''),
                     'classes': [current_section.class_name],
-                    'class_codes': [current_section.class_code],
+                    'section_ids': [current_section.id],
                     'joined_at': joined_at,
                     'joined_at_display': _format_joined_date(joined_at),
                 }
@@ -1766,8 +1761,8 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
                 student_data = student_map[sid_key]
                 if current_section.class_name not in student_data['classes']:
                     student_data['classes'].append(current_section.class_name)
-                if current_section.class_code not in student_data['class_codes']:
-                    student_data['class_codes'].append(current_section.class_code)
+                if current_section.id not in student_data['section_ids']:
+                    student_data['section_ids'].append(current_section.id)
                 existing_joined = _aware_datetime_or_none(student_data.get('joined_at'))
                 current_joined = _aware_datetime_or_none(joined_at)
                 if current_joined and (not existing_joined or current_joined < existing_joined):
@@ -3225,21 +3220,6 @@ def generate_unique_class_code():
         if not Section.objects.filter(class_code=code).exists():
             return code
         # If exists, the loop continues to generate a fresh candidate
-
-
-def resolve_class_code_for_creation(provided_code=None):
-    """
-    Return a unique class code for a new section.
-    Uses the teacher-provided code when valid and available; otherwise generates one.
-    """
-    if provided_code:
-        code = normalize_class_code(provided_code)
-        if not is_valid_class_code_format(code):
-            raise ValueError('Invalid class code format. Expected 4 letters, a dash, then 3 numbers (e.g., ABCD-123).')
-        if Section.objects.filter(class_code__iexact=code).exists():
-            raise ValueError('Class code already exists. Please generate a new code.')
-        return code
-    return generate_unique_class_code()
 
 
 def generate_unique_course_code():
@@ -9011,7 +8991,6 @@ def assessment(request):
         launch_url = (
             f"{reverse('reading_word_page')}?test={quote(material.title or 'Reading Assessment')}"
             f"&section_id={getattr(launch_section, 'id', '') or ''}"
-            f"&code={quote(getattr(material, 'code', '') or 'ASSESS')}"
             f"&id={material.id}"
             f"&content={quote(content_text)}"
             f"&item_type={quote(item_type)}"
@@ -9377,7 +9356,7 @@ def _custom_material_reading_context(request):
         'title': material.title or request.GET.get('test') or 'Assessment',
         # Preserve the class/launch code shown to the student. Material.code is
         # an internal generated identifier for teacher-created materials.
-        'code': request.GET.get('code') or material.code or '',
+        'code': material.code or '',
         'item_type': material.item_type or request.GET.get('item_type') or 'word',
         'language': content_json.get('language') or material.language or request.GET.get('language') or '',
         'content': content,
@@ -10600,7 +10579,6 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         )
 
     section_id = data.get('section_id')
-    class_code = data.get('class_code')
     assessment_type_hint = data.get('assessment_type') or data.get('type') or data.get('mode') or ''
     already_completed = False
     if not is_practice:
@@ -11088,7 +11066,6 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         assessment=assessment,
         material=material,
         section_id=section_id,
-        class_code=class_code,
         student_user=student_user,
     )
 
@@ -11605,7 +11582,6 @@ def _build_assist_assessment_url(material, student_user, course, teacher_user, s
         'id': str(material.id),
         'test': (material.title or material.prompt_text or 'Assessment').strip() or 'Assessment',
         'section_id': section.id if section else '',
-        'code': section.class_code if section else (material.code or (course.code if course else 'ASSIST')),
         'content': content,
         'item_type': item_type or 'word',
         'language': language,
@@ -13328,81 +13304,6 @@ def disabled_code_membership(request):
         status=410,
     )
 
-    try:
-        data = json.loads(request.body)
-        class_code = data.get('class_code', '').strip().upper()
-
-        if not class_code:
-            return JsonResponse({'success': False, 'error': 'Class code is required'}, status=400)
-
-        user_id = request.session.get('user_id')
-        student_user = User.objects.filter(id=user_id).first()
-
-        if not student_user:
-            return JsonResponse({'success': False, 'error': 'Student not found or inactive'}, status=404)
-
-        section = Section.objects.filter(class_code__iexact=class_code, is_active=True).first()
-
-        if not section:
-            return JsonResponse({'success': False, 'error': 'Invalid class code.'}, status=404)
-
-        if _section_has_student(section, student_user):
-            student_user.add_tag(section.get_tag_label())
-            return JsonResponse({'success': False, 'error': 'You have already joined this class.'}, status=409)
-
-        # Attempt to add student (will raise exception if verification fails)
-        _add_student_to_section(section, student_user)
-        
-        # Refresh section from database to ensure we have latest data
-        section.refresh_from_db()
-        
-        # Verify student was actually added
-        if not section.has_student(student_user, active_only=True):
-            raise Exception(f"Student {student_user.id} was not enrolled in section {class_code}")
-
-        # Prepare full class data for frontend
-        class_data = {
-            'code': section.class_code,
-            'name': section.class_name,
-            'subject': section.subject or '',
-            'description': section.description or '',
-            'header': section.header or section.class_code[:4],
-            'teacher_id': section.teacher.custom_id,
-            'teacher_name': f"{section.teacher.first_name} {section.teacher.last_name}",
-        }
-
-        logger.info(f"Student {student_user.custom_id} successfully joined class {class_code}")
-        student_name = f"{student_user.first_name} {student_user.last_name}"
-        class_url = f"{reverse('class_management')}?section_id={section.id}"
-        _create_notification(
-            section.teacher,
-            'Student Enrolled in a Class',
-            f'• {student_name} joined {section.class_name}.',
-            'success',
-            class_url,
-            student_user,
-        )
-        _notify_admins(
-            'Student joined a class',
-            f'{student_name} joined {section.class_name} ({section.class_code}).',
-            'info',
-            reverse('admin_class_detail', args=[section.id]),
-            student_user,
-        )
-        
-        return JsonResponse({
-            'success': True,
-            'message': f'Successfully joined class {class_code}',
-            'class_data': class_data
-        })
-
-    except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'error': 'Invalid JSON payload'}, status=400)
-    except Exception as e:
-        logger.error(f"Error joining class: {e}", exc_info=True)
-        return JsonResponse({'success': False, 'error': 'Failed to join class. Please try again.'}, status=500)
-
-
 @csrf_protect
 @require_http_methods(["POST"])
 @login_required(role='teacher')
@@ -13665,16 +13566,19 @@ def unenroll_class(request):
     """Student unenroll endpoint: deactivates the student entry inside Section.students."""
     try:
         data = json.loads(request.body)
-        class_code = data.get('class_code', '').strip().upper()
-        if not class_code:
-            return JsonResponse({'success': False, 'error': 'Class code is required'}, status=400)
+        section_id = data.get('section_id')
+        if not section_id:
+            return JsonResponse({'success': False, 'error': 'section_id is required'}, status=400)
 
         user_id = request.session.get('user_id')
         student_user = User.objects.filter(id=user_id).first()
         if not student_user:
             return JsonResponse({'success': False, 'error': 'Student not found'}, status=404)
 
-        section = Section.objects.filter(class_code=class_code).first()
+        try:
+            section = Section.objects.filter(pk=int(section_id), is_active=True).first()
+        except (TypeError, ValueError):
+            section = None
         if not section:
             return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
 
@@ -13744,7 +13648,6 @@ def create_reading_class(request):
 def class_management_view(request):
     """View to manage specific class details and student enrollment"""
     section_id = request.GET.get('section_id', '').strip()
-    class_code = request.GET.get('code', '').strip()
     user_id = request.session.get('user_id')
     teacher_user = User.objects.filter(id=user_id).first()
     if not teacher_user:
@@ -13757,23 +13660,17 @@ def class_management_view(request):
             section = assigned.filter(pk=int(section_id)).first()
         except (TypeError, ValueError):
             section = None
-    elif class_code:
-        section = assigned.filter(class_code=class_code).first()
+    elif 'code' in request.GET:
+        # Retired class-code navigation is intentionally rejected without resolving a Section.
+        section = None
     else:
         section = assigned.first()
     if not section:
         return render(request, 'pabasa_app/teacher_no_section.html', _dashboard_context(request, 'teacher', {'page_title': 'Class'}))
 
-    # Fetch all active classes for the switcher dropdown and dedupe by class code
-    all_sections_qs = Section.objects.filter(teacher=teacher_user, is_active=True).order_by('class_name', 'class_code')
-    all_sections = []
-    seen_class_codes = set()
-    for item in all_sections_qs:
-        class_code_key = (item.class_code or '').strip().upper()
-        if not class_code_key or class_code_key in seen_class_codes:
-            continue
-        seen_class_codes.add(class_code_key)
-        all_sections.append(item)
+    all_sections = list(Section.objects.filter(
+        teacher=teacher_user, is_active=True
+    ).order_by('class_name', 'id'))
 
     roster_students, _, _ = _teacher_student_roster_payload(teacher_user, section=section)
     students_table = []
@@ -14940,8 +14837,7 @@ def create_course(request):
                     if isinstance(sid, int) or str(sid).isdigit():
                         sec = authorized_sections.filter(id=int(sid)).first()
                     else:
-                        # Transitional compatibility for callers not yet migrated.
-                        sec = authorized_sections.filter(class_code__iexact=str(sid).strip()).first()
+                        sec = None
                     if sec:
                         course.sections.add(sec)
                 except Exception:
@@ -15225,7 +15121,6 @@ def update_class_info(request):
         if not teacher_user:
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=403)
         section_id = str(data.get('section_id') or '').strip()
-        class_code = str(data.get('class_code') or '').strip()
         assigned_sections = Section.objects.filter(teacher=teacher_user, is_active=True)
         section = None
         if section_id:
@@ -15233,8 +15128,6 @@ def update_class_info(request):
                 section = assigned_sections.filter(pk=int(section_id)).first()
             except (TypeError, ValueError):
                 section = None
-        elif class_code:
-            section = assigned_sections.filter(class_code__iexact=class_code).first()
         if not section: return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
         section.class_name = data.get('class_name', '').strip()
         # 'grade_level' and per-class 'section' fields removed from the model; only update fields that remain
@@ -15252,7 +15145,6 @@ def teacher_add_student(request):
     try:
         data = json.loads(request.body)
         section_id = str(data.get('section_id') or '').strip()
-        class_code = str(data.get('class_code') or '').strip()
         course_id = data.get('course_id')
         student_id = data.get('student_id')
         
@@ -15265,14 +15157,12 @@ def teacher_add_student(request):
                 section = assigned_sections.filter(pk=int(section_id)).first()
             except (TypeError, ValueError):
                 section = None
-        elif class_code:
-            section = assigned_sections.filter(class_code__iexact=class_code).first()
         student = User.objects.filter(id=student_id, role='student').first()
         
         if not student:
             return JsonResponse({'success': False, 'error': 'Class or Student not found'}, status=404)
 
-        if (section_id or class_code) and not section:
+        if section_id and not section:
             return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
 
         if section:
@@ -15356,7 +15246,6 @@ def teacher_remove_student(request):
     try:
         data = json.loads(request.body)
         section_id = str(data.get('section_id') or '').strip()
-        class_code = str(data.get('class_code') or '').strip()
         course_id = data.get('course_id')
         student_id_val = data.get('student_id')
         
@@ -15369,15 +15258,13 @@ def teacher_remove_student(request):
                 section = assigned_sections.filter(pk=int(section_id)).first()
             except (TypeError, ValueError):
                 section = None
-        elif class_code:
-            section = assigned_sections.filter(class_code__iexact=class_code).first()
         # Match by internal database ID or the custom Pabasa ID
         student = User.objects.filter(Q(id=student_id_val) | Q(custom_id=student_id_val), role='student').first()
         
         if not student:
             return JsonResponse({'success': False, 'error': 'Student not found'}, status=404)
 
-        if (section_id or class_code) and not section:
+        if section_id and not section:
             return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
 
         if section:
@@ -15457,6 +15344,7 @@ def get_teacher_classes(request):
             practice_material_count += _systemwide_practice_queryset().filter(is_active=True).count()
             class_list.append({
                 'id': cls.id,
+                'section_id': cls.id,
                 'code': cls.class_code,
                 'name': cls.class_name,
                 'grade': cls.grade_level,
@@ -15593,13 +15481,12 @@ def get_class_materials(request):
     """
     Returns all materials (assessments) for a class, organized by reading type.
     Accessible by both teachers (owners) and students (enrolled in class).
-    Query params: section_id (preferred), class_code (temporary compatibility fallback)
+    Query params: section_id
     Returns: { 'success': True, 'materials': { word: [...], sentence: [...], paragraph: [...] } }
     """
     try:
         section_id = (request.GET.get('section_id') or '').strip()
-        class_code = (request.GET.get('class_code') or '').strip()
-        if not section_id and not class_code:
+        if not section_id:
             return JsonResponse({'success': False, 'error': 'section_id parameter required'}, status=400)
 
         user_id = request.session.get('user_id')
@@ -15607,16 +15494,10 @@ def get_class_materials(request):
         if not request_user or request_user.role not in {'student', 'teacher'}:
             return JsonResponse({'success': False, 'error': 'Class access denied'}, status=403)
 
-        section = None
-        if section_id:
-            try:
-                section = Section.objects.filter(pk=int(section_id), is_active=True).first()
-            except (TypeError, ValueError):
-                return JsonResponse({'success': False, 'error': 'Invalid section_id'}, status=400)
-        elif class_code:
-            # Temporary compatibility path. The code only identifies a candidate;
-            # relational ownership below remains mandatory before any data query.
-            section = Section.objects.filter(class_code__iexact=class_code, is_active=True).first()
+        try:
+            section = Section.objects.filter(pk=int(section_id), is_active=True).first()
+        except (TypeError, ValueError):
+            return JsonResponse({'success': False, 'error': 'Invalid section_id'}, status=400)
         
         if not section:
             return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
@@ -15882,7 +15763,7 @@ def get_class_materials(request):
                 materials.setdefault(item_type, []).append(item)
             all_materials_flat.append(item)
         
-        logger.debug(f"Retrieved materials for class {class_code}: {sum(len(m) for m in materials.values())} total")
+        logger.debug(f"Retrieved materials for section {section.id}: {sum(len(m) for m in materials.values())} total")
         
         return JsonResponse({
             'success': True,
@@ -17201,8 +17082,7 @@ def add_reading_material(request):
         requested_usage_type = (data.get('usage_type') or 'assessment').strip()        # practice | assessment | both
         requested_source_type = (data.get('source_type') or data.get('origin') or 'shared').strip().lower()
         source_type = requested_source_type if requested_source_type in ('personal', 'shared', 'template') else 'shared'
-        section_id_raw = data.get('section_id') or data.get('class_id')
-        class_code   = (data.get('class_code') or '').strip()
+        section_id_raw = data.get('section_id')
         requested_assessment_kind = str(data.get('assessment_kind') or 'regular').strip().lower()
         assessment_kind = requested_assessment_kind if requested_assessment_kind in {'regular', 'crla'} else 'regular'
         scheduled_at_str = (data.get('scheduled_at') or '').strip()
@@ -17306,7 +17186,7 @@ def add_reading_material(request):
         user_id = request.session.get('user_id')
         teacher_user = User.objects.filter(id=user_id).first()
 
-        logger.debug(f"add_reading_material received: title={title}, status={status}, class_code={class_code}, source_type={source_type}")
+        logger.debug(f"add_reading_material received: title={title}, status={status}, section_id={section_id_raw}, source_type={source_type}")
 
         # ── server-side validation ──────────────────────────────────────────
         errors = {}
@@ -17350,16 +17230,8 @@ def add_reading_material(request):
             ).first() if class_id else None
             if not section:
                 return JsonResponse({'success': False, 'error': 'Class not found or does not belong to you.'}, status=404)
-            class_code = section.class_code
-        elif class_code:
-            # Transitional compatibility for callers not yet migrated.
-            section = Section.objects.filter(
-                class_code__iexact=class_code,
-                teacher=teacher_user,
-                is_active=True
-            ).first()
-            if not section:
-                return JsonResponse({'success': False, 'error': 'Class not found or does not belong to you.'}, status=404)
+        else:
+            return JsonResponse({'success': False, 'error': 'section_id is required.'}, status=400)
         submitted_language = str(
             data.get('language')
             or (template_payload.get('language') if isinstance(template_payload, dict) else '')
@@ -17505,10 +17377,10 @@ def add_reading_material(request):
             _queue_material_creation_followups(m, section, teacher_user, status, source_type)
 
             logger.info(
-                'add_reading_material completed in %.3f seconds for title=%s class=%s source_type=%s status=%s',
+                'add_reading_material completed in %.3f seconds for title=%s section=%s source_type=%s status=%s',
                 time.perf_counter() - perf_start,
                 title,
-                class_code,
+                section.id if section else None,
                 source_type,
                 status,
             )
@@ -17921,7 +17793,6 @@ def record_assessment_completion(request):
                 'assessment_id': data.get('assessment_id') if isinstance(data, dict) else None,
                 'official_assessment_id': data.get('official_assessment_id') if isinstance(data, dict) else None,
                 'assessment_type': data.get('assessment_type') if isinstance(data, dict) else None,
-                'class_code': data.get('class_code') if isinstance(data, dict) else None,
                 'has_scores': isinstance(data.get('scores'), dict) if isinstance(data, dict) else False,
             },
         )
@@ -17962,7 +17833,6 @@ def record_assessment_completion(request):
                 'assessment_id': data.get('assessment_id'),
                 'official_assessment_id': data.get('official_assessment_id'),
                 'assessment_type': data.get('assessment_type'),
-                'class_code': data.get('class_code'),
                 'score_keys': sorted(list((data.get('scores') or {}).keys())) if isinstance(data.get('scores'), dict) else [],
             },
         )
@@ -18145,7 +18015,7 @@ def get_teacher_students_api(request):
                 if sid is None:
                     logger.warning(
                         "Skipping enrolled student without a resolvable student_id/custom_id in section %s",
-                        section.class_code,
+                        section.id,
                     )
                     continue
 
@@ -18158,25 +18028,18 @@ def get_teacher_students_api(request):
                         'email': entry.get('email', ''),
                         'custom_id': entry.get('custom_id', ''),
                         'classes': [section.class_name],
-                        'class_codes': [section.class_code]
+                        'section_ids': [section.id]
                     }
                 else:
                     if section.class_name not in student_map[sid_key]['classes']:
                         student_map[sid_key]['classes'].append(section.class_name)
-                    if section.class_code not in student_map[sid_key]['class_codes']:
-                        student_map[sid_key]['class_codes'].append(section.class_code)
+                    if section.id not in student_map[sid_key]['section_ids']:
+                        student_map[sid_key]['section_ids'].append(section.id)
         
         user_ids = [sdata['id'] for sdata in student_map.values()]
         users = User.objects.filter(id__in=user_ids).in_bulk()
         latest_scores = {}
-        teacher_sections = Section.objects.filter(
-            class_code__in=[
-                code
-                for sdata in student_map.values()
-                for code in sdata.get('class_codes', [])
-            ],
-            is_active=True,
-        )
+        teacher_sections = sections
         for assessment in Assessment.objects.filter(section__in=teacher_sections, is_active=True, source_assessment__isnull=True):
             attempts = assessment.get_attempts()
             for attempt in attempts:

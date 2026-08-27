@@ -3152,8 +3152,8 @@
                     const currentSeenIds = JSON.parse(localStorage.getItem('pabasa_seen_material_ids') || '[]').map(id => String(id).trim());
                     const seenSet = new Set(currentSeenIds);
 
-                    Object.keys(readings).forEach(function (classCode) {
-                        const classMaterials = readings[classCode] || {};
+                    Object.keys(readings).forEach(function (sectionKey) {
+                        const classMaterials = readings[sectionKey] || {};
                         ['word', 'sentence', 'paragraph', 'story'].forEach(function (type) {
                             const keys = [type, type + 's', type === 'story' ? 'stories' : null].filter(Boolean);
                             keys.forEach(function (key) {
@@ -3190,7 +3190,7 @@
             const notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
             notifications.unshift({
                 id: Date.now() + Math.random(),
-                classCode: testCode,
+                sectionId: sectionId || null,
                 title: 'Student Completed an Assessment',
                 message: `• ${studentName} completed the assessment "${testTitle}" in ${className}.`,
                 timestamp: Date.now(),
@@ -3276,7 +3276,6 @@
                         needs_manual_review: completionMetrics.needs_manual_review ?? false,
                     },
                 };
-                if (!sectionId && testCode) payload.class_code = testCode;
                 if (isRetakeMode) {
                     payload.is_retake = true;
                     const retakeCounts = JSON.parse(localStorage.getItem('pabasa_retake_counts') || '{}');
@@ -3611,7 +3610,6 @@
                         needs_manual_review: completionMetrics.needs_manual_review ?? false,
                     },
                 };
-                if (!sectionId && testCode) completionPayload.class_code = testCode;
                 if (isRetakeMode && materialId) {
                     const retakeCounts = JSON.parse(localStorage.getItem('pabasa_retake_counts') || '{}');
                     completionPayload.attempt_number = retakeCounts[String(materialId).trim()] || 1;

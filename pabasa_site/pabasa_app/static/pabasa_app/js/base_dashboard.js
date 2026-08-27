@@ -398,9 +398,9 @@ var getStudentClassData = window.getStudentClassData = function() {
             const cachedKey = email ? `pabasa_teacher_sections_${email}` : 'pabasa_teacher_sections';
             const cachedClasses = JSON.parse(localStorage.getItem(cachedKey) || '[]');
             const activeClass = Array.isArray(cachedClasses)
-                ? cachedClasses.find(cls => String(cls.id || cls.section_id) === String(sectionId))
+                ? cachedClasses.find(cls => String(cls.section_id || cls.id) === String(sectionId))
                 : null;
-            sectionId = activeClass?.id || activeClass?.section_id || sectionId;
+            sectionId = activeClass?.section_id || activeClass?.id || sectionId;
         } catch (e) { /* retain the compatibility URL when cache data is unavailable */ }
 
         // Target all possible management links (Sidebar, Quick Links, Workspace Buttons)
@@ -571,7 +571,7 @@ var getStudentClassData = window.getStudentClassData = function() {
 
                         // If no class is currently active in storage, use the first one from the server
                         if (data.classes.length > 0 && !localStorage.getItem("pabasa_last_active_section_id")) {
-                            localStorage.setItem("pabasa_last_active_section_id", data.classes[0].id || data.classes[0].section_id);
+                            localStorage.setItem("pabasa_last_active_section_id", data.classes[0].section_id || data.classes[0].id);
                         }
                         updateTeacherSidebar(localStorage.getItem("pabasa_last_active_section_id"));
 
@@ -631,7 +631,7 @@ var getStudentClassData = window.getStudentClassData = function() {
                         elapsed_ms: Math.round((performance.now() - studentBootstrapStartedAt) * 100) / 100,
                         classes_count: data.classes.length,
                     });
-                    const studentSectionIds = data.classes.map(cls => cls.id || cls.section_id).filter(Boolean).map(String);
+                    const studentSectionIds = data.classes.map(cls => cls.section_id || cls.id).filter(Boolean).map(String);
                     localStorage.setItem("pabasaStudentSectionIds", JSON.stringify(studentSectionIds));
                     localStorage.setItem("pabasa_student_joined_sections", JSON.stringify(data.classes));
                     localStorage.setItem("pabasaStudentSectionJoined", studentSectionIds.length > 0 ? "1" : "0");
@@ -639,7 +639,7 @@ var getStudentClassData = window.getStudentClassData = function() {
                     // Update class metadata to ensure names are available for dynamic alerts
                     const metadata = JSON.parse(localStorage.getItem("pabasa_section_metadata") || "{}");
                     data.classes.forEach(cls => {
-                        metadata[String(cls.id || cls.section_id)] = {
+                        metadata[String(cls.section_id || cls.id)] = {
                             name: cls.name || "Reading Class", 
                             subject: cls.subject || "Reading" 
                         };
@@ -653,13 +653,11 @@ var getStudentClassData = window.getStudentClassData = function() {
                         const materialFetchStartedAt = performance.now();
                         console.warn('PABASA_FRONTEND_PROFILE', {
                             stage: 'student_bootstrap_class_materials_fetch_start',
-                            class_code: cls.code,
+                            section_id: cls.section_id || cls.id,
                             timestamp: Math.round(materialFetchStartedAt * 100) / 100,
                         });
                         try {
-                            const materialSelector = cls.id || cls.section_id
-                                ? `section_id=${encodeURIComponent(cls.id || cls.section_id)}`
-                                : `class_code=${encodeURIComponent(cls.code)}`;
+                            const materialSelector = `section_id=${encodeURIComponent(cls.section_id || cls.id)}`;
                             const materialResponse = await fetch(`/api/class/materials/?${materialSelector}`);
                             const responseDoneAt = performance.now();
                             let materialJsonStartedAt = performance.now();
@@ -667,7 +665,7 @@ var getStudentClassData = window.getStudentClassData = function() {
                             const materialJsonDoneAt = performance.now();
                             console.warn('PABASA_FRONTEND_PROFILE', {
                                 stage: 'student_bootstrap_class_materials_fetch_complete',
-                            class_code: cls.code,
+                                section_id: cls.section_id || cls.id,
                                 elapsed_fetch_ms: Math.round((responseDoneAt - materialFetchStartedAt) * 100) / 100,
                                 json_parse_ms: Math.round((materialJsonDoneAt - materialJsonStartedAt) * 100) / 100,
                                 status: materialResponse.status,
@@ -675,7 +673,7 @@ var getStudentClassData = window.getStudentClassData = function() {
                                 materials_count: Array.isArray(materialData?.materials) ? materialData.materials.length : null,
                             });
                             if (materialData.success) {
-                                readings[String(cls.id || cls.section_id)] = materialData.materials;
+                                readings[String(cls.section_id || cls.id)] = materialData.materials;
                             }
                         } catch (e) {
                             console.error(`Error fetching materials for class ${cls.code}:`, e);

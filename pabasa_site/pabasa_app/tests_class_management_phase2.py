@@ -71,13 +71,14 @@ class ClassManagementPhase2Tests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No Section Assigned")
 
-    def test_legacy_code_opens_own_section(self):
+    def test_legacy_code_is_rejected(self):
         self._login(self.teacher_a)
 
         response = self.client.get(reverse("class_management"), {"code": self.section_a.class_code})
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, self.section_a.class_name)
+        self.assertContains(response, "No Section Assigned")
+        self.assertNotContains(response, self.section_b.class_name)
 
     def test_legacy_code_cannot_open_another_teachers_section(self):
         self._login(self.teacher_a)
@@ -96,4 +97,3 @@ class ClassManagementPhase2Tests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No Section Assigned")
-

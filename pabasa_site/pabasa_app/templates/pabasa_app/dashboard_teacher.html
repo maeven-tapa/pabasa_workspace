@@ -1365,7 +1365,7 @@
             <p>Track student performance, assign materials, and review class activity.</p>
             <div class="teacher-quick-links">
                 <a class="primary" href="{% url 'courses' %}"><i class="bi bi-folder2-open"></i> Course</a>
-                <a id="quickLinkClass" href="{% url 'class_management' %}"><i class="bi bi-door-open"></i> Class</a>
+                <a id="quickLinkClass" href="{% url 'class_management' %}{% if joined_classes.0.section_id %}?section_id={{ joined_classes.0.section_id }}{% endif %}"><i class="bi bi-door-open"></i> Class</a>
                 <a href="{% url 'students' %}"><i class="bi bi-people"></i> Student Records</a>
             </div>
             {% if not active_teacher_class_count %}
@@ -1445,6 +1445,7 @@
 
         <section class="class-workspace">
             <article class="class-banner" id="classBanner" data-header="">
+                <span id="activeClassSectionId" class="visually-hidden">—</span>
                 <span id="activeClassCode" class="visually-hidden">—</span>
                 <div class="class-title-row">
                     <h3 id="activeClassName">No class selected</h3>
@@ -1564,10 +1565,10 @@ function updateDashboardStatistics(providedStudents = null, providedLevelCounts 
         : [];
 
     // Determine currently selected class (if any) and filter students accordingly
-    const activeCodeEl = document.getElementById('activeClassCode');
-    const activeCode = activeCodeEl ? (activeCodeEl.textContent || '').trim() : '';
-    const students = (activeCode && activeCode !== "—") 
-        ? studentsAll.filter(s => (s.class_codes && s.class_codes.includes(activeCode)) || s.class === (document.getElementById('activeClassName')?.textContent || '').trim())
+    const activeSectionIdEl = document.getElementById('activeClassSectionId');
+    const activeSectionId = activeSectionIdEl ? (activeSectionIdEl.textContent || '').trim() : '';
+    const students = (activeSectionId && activeSectionId !== "—")
+        ? studentsAll.filter(s => Array.isArray(s.section_ids) && s.section_ids.map(String).includes(String(activeSectionId)))
         : studentsAll.slice();
 
     const levelCounts = {
@@ -1648,9 +1649,9 @@ async function loadPersistedStudents() {
     const studentRow = document.getElementById("dashboardStudentRow");
     if (!studentRow) return;
 
-    const activeClassCodeEl = document.getElementById('activeClassCode');
+    const activeClassSectionIdEl = document.getElementById('activeClassSectionId');
     const activeClassNameEl = document.getElementById('activeClassName');
-    const selectedClassCode = activeClassCodeEl ? (activeClassCodeEl.textContent || '').trim() : '';
+    const selectedSectionId = activeClassSectionIdEl ? (activeClassSectionIdEl.textContent || '').trim() : '';
     const selectedClassName = activeClassNameEl ? (activeClassNameEl.textContent || '').trim() : '';
     
     // Use the server-backed authoritative student list for preview.
@@ -1673,7 +1674,7 @@ async function loadPersistedStudents() {
                     name: s.name || '',
                     class: Array.isArray(s.classes) ? s.classes.join(', ') : (s.class || ''),
                     classes: Array.isArray(s.classes) ? s.classes : (s.class ? [s.class] : []),
-                    class_codes: Array.isArray(s.class_codes) ? s.class_codes : [],
+                    section_ids: Array.isArray(s.section_ids) ? s.section_ids : [],
                     level: s.reading_level || s.level || s.adapted_reading_level || '',
                     wpm: s.wpm || '0',
                     accuracy: s.accuracy || '0',
@@ -1691,12 +1692,12 @@ async function loadPersistedStudents() {
 
     // If a class is selected, only show students enrolled in that class.
     let studentsToShow = students;
-    if (selectedClassCode || selectedClassName) {
+    if (selectedSectionId || selectedClassName) {
         studentsToShow = students.filter(s => {
-            const studentClasses = Array.isArray(s.class_codes) ? s.class_codes : [];
+            const studentSections = Array.isArray(s.section_ids) ? s.section_ids.map(String) : [];
             const studentClassNames = Array.isArray(s.classes) ? s.classes : (s.class ? [s.class] : []);
             return (
-                (selectedClassCode && studentClasses.includes(selectedClassCode)) ||
+                (selectedSectionId && studentSections.includes(String(selectedSectionId))) ||
                 (selectedClassName && studentClassNames.includes(selectedClassName)) ||
                 (selectedClassName && s.class === selectedClassName)
             );
@@ -1706,8 +1707,8 @@ async function loadPersistedStudents() {
     if (!studentsToShow || studentsToShow.length === 0) {
         if (noStudentsMsg) {
             noStudentsMsg.style.display = "block";
-            noStudentsMsg.innerHTML = selectedClassName || selectedClassCode
-                ? `<p class="small mb-0">No students are enrolled in ${selectedClassName || selectedClassCode} yet.</p>`
+            noStudentsMsg.innerHTML = selectedClassName
+                ? `<p class="small mb-0">No students are enrolled in ${selectedClassName} yet.</p>`
                 : `<p class="small mb-0">Select a class to see enrolled students.</p>`;
         }
         // Clear existing student cards
@@ -1783,7 +1784,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                         name: s.name || '',
                         class: Array.isArray(s.classes) ? s.classes.join(', ') : (s.class || ''),
                         classes: Array.isArray(s.classes) ? s.classes : (s.class ? [s.class] : []),
-                        class_codes: Array.isArray(s.class_codes) ? s.class_codes : [],
+                        section_ids: Array.isArray(s.section_ids) ? s.section_ids : [],
                         level: s.reading_level || s.level || s.adapted_reading_level || '',
                         accuracy: s.accuracy || '0',
                         wpm: s.wpm || '0',
@@ -1828,5 +1829,5 @@ document.addEventListener("DOMContentLoaded", async function() {
     window.PABASA_USER_EMAIL = "{{ email|escapejs }}";
 </script>
 
-<script src="{% static 'pabasa_app/js/dashboard_teacher.js' %}?v=20260826-1"></script>
+<script src="{% static 'pabasa_app/js/dashboard_teacher.js' %}?v=20260828-regression-1"></script>
 {% endblock %}

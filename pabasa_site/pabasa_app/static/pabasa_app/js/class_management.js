@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.addEventListener('click', function() {
             const studentId = this.dataset.studentId;
             const params = new URLSearchParams(window.location.search);
-            const classCode = params.get('code') || document.querySelector('.class-switcher-option.is-selected')?.dataset.classCode;
+            const sectionId = params.get('section_id') || document.querySelector('.class-switcher-option.is-selected')?.dataset.sectionId;
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
             const clickedButton = this;
             const addStudentModalEl = document.getElementById('addStudentModal');
@@ -92,9 +92,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const payload = {
                 student_id: studentId,
-                section_id: params.get('section_id') || document.querySelector('.class-switcher-option.is-selected')?.dataset.sectionId
+                section_id: sectionId
             };
-            if (classCode) payload.class_code = classCode;
 
             fetch('/dashboard/teacher/add-student-to-class/', {
                 method: 'POST',
@@ -114,8 +113,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 if (data.success) {
                     // Notify other modules to refresh authoritative data without forcing a full reload
-                    try { window.dispatchEvent(new CustomEvent('studentAdded', { detail: { student_id: studentId, class_code: classCode } })); } catch (e) { console.warn(e); }
-                    try { window.dispatchEvent(new CustomEvent('pabasa:teacher-classes-updated', { detail: { class_code: classCode } })); } catch (e) { console.warn(e); }
+                    try { window.dispatchEvent(new CustomEvent('studentAdded', { detail: { student_id: studentId, section_id: sectionId } })); } catch (e) { console.warn(e); }
+                    try { window.dispatchEvent(new CustomEvent('pabasa:teacher-classes-updated', { detail: { section_id: sectionId } })); } catch (e) { console.warn(e); }
 
                     if (typeof showToast === 'function') showToast('Student added successfully.', 'success'); else try{ alert('Student added successfully.'); }catch(e){}
                     setTimeout(() => window.location.reload(), 1200);

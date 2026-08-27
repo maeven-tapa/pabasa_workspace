@@ -1048,9 +1048,9 @@
                     {% for s in sections %}
                     <button
                         type="button"
-                        class="class-switcher-option {% if s.class_code == section.class_code %}is-selected{% endif %}"
+                        class="class-switcher-option {% if s.id == section.id %}is-selected{% endif %}"
                         role="option"
-                        aria-selected="{% if s.class_code == section.class_code %}true{% else %}false{% endif %}"
+                        aria-selected="{% if s.id == section.id %}true{% else %}false{% endif %}"
                         data-section-id="{{ s.id }}"
                         data-class-code="{{ s.class_code }}"
                         data-class-name="{{ s.class_name|escape }}"
@@ -1082,7 +1082,6 @@
             <form id="updateClassForm" class="class-form">
                 {% csrf_token %}
                 <input type="hidden" name="section_id" value="{{ section.id }}">
-                <input type="hidden" name="class_code" value="{{ section.class_code }}">
 
                 <div class="form-group col-span-8">
                     <label for="className">Title / Class Name</label>

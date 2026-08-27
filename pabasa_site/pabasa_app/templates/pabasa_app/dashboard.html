@@ -2131,7 +2131,7 @@
         const loadingModalElement = document.getElementById('loadingModal');
         const expandCalendarBtn = document.querySelector("[data-expand-calendar]");
         const calendarMonthTitle = document.getElementById("studentCalendarModalLabel");
-        let pendingUnenrollCode = "";
+        let pendingUnenrollSectionId = "";
 
         const setGreeting = () => {
             const hour = new Date().getHours();
@@ -2620,10 +2620,10 @@
                 });
                 const data = await response.json();
                 if (data.success && Array.isArray(data.classes)) {
-                    // Create map of code -> class details from database
+                    // Create map of Section ID -> class details from database
                     const classMap = {};
                     data.classes.forEach(cls => {
-                        classMap[String(cls.code).toUpperCase()] = cls;
+                        classMap[String(cls.section_id || cls.id)] = cls;
                     });
                     return classMap;
                 }
@@ -2644,20 +2644,20 @@
             const readings = JSON.parse(localStorage.getItem("pabasa_section_readings") || "{}");
             const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
 
-            // Create normalized map for case-insensitive class code lookups
+            // Section-keyed material cache; class_code is display-only.
             const readingsMap = {};
-            Object.keys(readings).forEach(key => { readingsMap[key.toUpperCase()] = readings[key]; });
+            Object.keys(readings).forEach(key => { readingsMap[String(key)] = readings[key]; });
 
             const validClasses = codes
-                .map((code) => {
-                    let classData = classDetailsMap[String(code).toUpperCase()];
+                .map((sectionId) => {
+                    let classData = classDetailsMap[String(sectionId)];
                     if (!classData) {
-                        // Not found in database — could have been removed by the teacher
-                        const upperCode = String(code).toUpperCase();
-                        if (!readingsMap[upperCode]) return null; // If no readings for this code, treat as invalid
+                        // Not found in database — could have been removed by the teacher.
+                        if (!readingsMap[String(sectionId)]) return null;
                         classData = {
-                            code: upperCode,
-                            name: `Removed class ${upperCode}`,
+                            id: sectionId,
+                            section_id: sectionId,
+                            name: 'Removed class',
                             subject: "Reading",
                             student_count: 0,
                             header: upperCode.substring(0,3),
@@ -2675,7 +2675,7 @@
                     let currentLesson = null;
                     let hasUnreadMaterial = false;
 
-                    const classReadings = readingsMap[classData.code.toUpperCase()] || {};
+                    const classReadings = readingsMap[String(classData.section_id || classData.id)] || {};
 
                     ['word', 'sentence', 'paragraph', 'story'].forEach(type => {
                         [type, type + 's', type === 'story' ? 'stories' : null].filter(Boolean).forEach(key => {
@@ -2728,11 +2728,11 @@
                 .filter(Boolean);
 
             if (validClasses.length !== codes.length) {
-                saveCodes(validClasses.map((classData) => classData.code));
+                saveCodes(validClasses.map((classData) => String(classData.section_id || classData.id || '')).filter(Boolean));
             }
 
             classList.innerHTML = validClasses.map((classData) => `
-                <article class="class-card${(classData.progress || 0) < 100 && (classData.practiceCount || classData.assessmentCount) ? ' is-ready' : ''}${classData.currentLesson ? ' has-current-lesson' : ''}" data-class-card data-section-id="${escapeHtml(classData.id || classData.section_id || '')}" data-class-card-code="${escapeHtml(classData.code)}">
+                <article class="class-card${(classData.progress || 0) < 100 && (classData.practiceCount || classData.assessmentCount) ? ' is-ready' : ''}${classData.currentLesson ? ' has-current-lesson' : ''}" data-class-card data-section-id="${escapeHtml(classData.section_id || classData.id || '')}" data-class-card-code="${escapeHtml(classData.code)}">
                     <div class="class-card-bg-icon">
                         <i class="bi ${
                             (classData.subject || '').toLowerCase().includes('english') ? 'bi-alphabet-uppercase' : 
@@ -2746,7 +2746,7 @@
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li>
-                                <button class="dropdown-item text-danger" type="button" data-unenroll-code="${escapeHtml(classData.code)}">
+                <button class="dropdown-item text-danger" type="button" data-unenroll-section-id="${escapeHtml(classData.section_id || classData.id || '')}" data-unenroll-class-code="${escapeHtml(classData.code || '')}">
                                     <i class="bi bi-box-arrow-left me-2"></i>Unenroll
                                 </button>
                             </li>
@@ -2782,7 +2782,7 @@
                         ` : ''}
                     </div>
                     <div class="class-card-actions">
-                        <button class="continue-learning-btn" type="button" data-continue-learning data-section-id="${escapeHtml(classData.id || classData.section_id || '')}" data-class-code="${escapeHtml(classData.code)}">
+                        <button class="continue-learning-btn" type="button" data-continue-learning data-section-id="${escapeHtml(classData.section_id || classData.id || '')}" data-class-code="${escapeHtml(classData.code)}">
                             <i class="bi bi-play-circle me-1"></i>Continue Learning
                         </button>
                     </div>
@@ -2884,8 +2884,11 @@
                     classes_count: Array.isArray(data?.classes) ? data.classes.length : null,
                 });
                 if (data.success && Array.isArray(data.classes)) {
-                    // Convert class objects to just codes for backward compatibility
-                    return data.classes.map(cls => cls.code);
+                    // Keep the relational Section ID as the only technical identity.
+                    return data.classes
+                        .map(cls => cls.section_id || cls.id)
+                        .filter(Boolean)
+                        .map(sectionId => String(sectionId));
                 }
                 return [];
             } catch (error) {
@@ -2907,8 +2910,8 @@
         };
 
         // Initialize with database classes
-        fetchStudentClassesFromDatabase().then(initialCodes => {
-            return setJoinedState(initialCodes);
+        fetchStudentClassesFromDatabase().then(initialSectionIds => {
+            return setJoinedState(initialSectionIds);
         }).catch(error => {
             console.error('Failed to initialize student classes:', error);
             return setJoinedState([]);
@@ -3026,12 +3029,12 @@
                 return;
             }
 
-            const unenrollButton = event.target.closest("[data-unenroll-code]");
+            const unenrollButton = event.target.closest("[data-unenroll-section-id]");
             if (unenrollButton) {
                 event.stopPropagation();
-                const code = unenrollButton.dataset.unenrollCode;
-                pendingUnenrollCode = code;
-                unenrollClassCode.textContent = code;
+                const sectionId = unenrollButton.dataset.unenrollSectionId;
+                pendingUnenrollSectionId = sectionId;
+                unenrollClassCode.textContent = unenrollButton.dataset.unenrollClassCode || 'this class';
                 bootstrap.Modal.getOrCreateInstance(unenrollModalElement).show();
                 return;
             }
@@ -3058,7 +3061,7 @@
         });
 
         confirmUnenrollButton.addEventListener("click", async () => {
-            if (!pendingUnenrollCode) return;
+            if (!pendingUnenrollSectionId) return;
 
             // Hide confirmation modal and show unenrolling loading modal
             bootstrap.Modal.getOrCreateInstance(unenrollModalElement).hide();
@@ -3066,7 +3069,7 @@
             unenrollingModal.show();
 
             // Find teacher class name for local student list cleanup
-            const teacherClass = findTeacherClass(pendingUnenrollCode) || { name: null };
+            const teacherClass = (getTeacherClasses().find(c => String(c.id || c.section_id) === String(pendingUnenrollSectionId)) || { name: null });
 
             // Get CSRF token from cookies
             const csrfToken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1] || '';
@@ -3080,7 +3083,7 @@
                         'Content-Type': 'application/json',
                         'X-CSRFToken': csrfToken
                     },
-                    body: JSON.stringify({ class_code: pendingUnenrollCode })
+                    body: JSON.stringify({ section_id: pendingUnenrollSectionId })
                 });
                 perfLog("fetch_unenroll_class_complete", {
                     elapsed_fetch_ms: Math.round((performance.now() - unenrollFetchStartedAt) * 100) / 100,
@@ -3102,7 +3105,7 @@
                 }
 
                 // Remove from local saved codes and update UI
-                const remainingCodes = getSavedCodes().filter((savedCode) => savedCode !== pendingUnenrollCode);
+                const remainingCodes = getSavedCodes().filter((savedSectionId) => String(savedSectionId) !== String(pendingUnenrollSectionId));
                 await setJoinedState(remainingCodes);
 
                 // Cleanup simulated teacher student list in localStorage if present
@@ -3118,13 +3121,13 @@
                         let notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
                         notifications.unshift({
                             id: Date.now() + Math.random(),
-                            classCode: pendingUnenrollCode,
+                            sectionId: pendingUnenrollSectionId,
                             title: 'Student Unenrolled',
-                            message: `Hi, Teacher! ${studentName || 'A student'} has unenrolled from your class ${teacherClass.name || pendingUnenrollCode}.`,
+                            message: `Hi, Teacher! ${studentName || 'A student'} has unenrolled from your class ${teacherClass.name || 'your class'}.`,
                             timestamp: Date.now(),
                             read: false,
                             role: 'teacher',
-                            recipientEmail: (findTeacherClass(pendingUnenrollCode) || {}).teacher_email || null
+                            recipientEmail: teacherClass.teacher_email || null
                         });
                         localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0,100)));
                         window.dispatchEvent(new Event('pabasa:notifications-updated'));
@@ -3140,7 +3143,7 @@
                 console.error('Network error when unenrolling', e);
                 showErrorToast && showErrorToast('Network error. Please try again.');
             } finally {
-                pendingUnenrollCode = "";
+                pendingUnenrollSectionId = "";
                 bootstrap.Modal.getOrCreateInstance(unenrollingModalElement).hide();
             }
         });

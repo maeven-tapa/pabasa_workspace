@@ -1,4 +1,4 @@
-﻿{% extends "pabasa_app/base_dashboard.html" %}
+{% extends "pabasa_app/base_dashboard.html" %}
 {% load static %}
 
 {% block extra_head %}
@@ -9243,8 +9243,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
     async function refreshAssessmentMaterialViews() {
         try {
-            if (typeof currentClassCode !== 'undefined' && currentClassCode && typeof loadReadings === 'function') {
-                await loadReadings(currentClassCode);
+            if (typeof currentSectionId !== 'undefined' && currentSectionId && typeof loadReadings === 'function') {
+                await loadReadings(currentSectionId);
             }
         } catch (e) {
             console.warn('Could not refresh class readings after student access change', e);
@@ -9705,8 +9705,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const key = teacherClassesKey();
                     if (key) localStorage.setItem(key, JSON.stringify(teacherClasses));
                     console.log('✓ Loaded classes from server:', teacherClasses.length);
-                    if (currentClassCode) {
-                        const currentClass = teacherClasses.find(c => String(c.code) === String(currentClassCode));
+                    if (currentSectionId) {
+                        const currentClass = teacherClasses.find(c => String(c.id || c.section_id) === String(currentSectionId));
                         currentClassData = currentClass || currentClassData;
                         if (currentClass) {
                             updateClassDetailBanner(currentClass);
@@ -9752,7 +9752,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         const className = classData?.name || 'Class';
         const gradeAndSection = [classData?.grade || classData?.grade_level, classData?.section].filter(Boolean).join(' · ');
-        const code = classData?.code || currentClassCode || '—';
+        const code = classData?.code || '—';
         const studentCount = Number(classData?.students || 0);
         const assessmentCount = Number(classData?.assessment_material_count || classData?.assessment_count || 0);
         const practiceCount = Number(classData?.practice_material_count || classData?.practice_count || 0);
@@ -10164,7 +10164,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             ? resolvedTargetId.slice('section-'.length)
             : '';
         const classId = String(section?.id || section?.section_id || sectionIdFromTarget || '').trim();
-        const classCode = String(section?.code || section?.class_code || target?.code || currentClassCode || '').trim();
+        const classCode = String(section?.code || section?.class_code || target?.code || currentSectionId || '').trim();
         return {
             targetId: resolvedTargetId,
             classId,
@@ -10945,7 +10945,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                                     // Notify other modules and refresh authoritative data
                                     try {
-                                        window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: mid, class_code: currentClassCode } }));
+                                        window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: mid, section_id: getTeacherSectionId(currentSectionId) } }));
                                     } catch (e) { console.warn('Could not dispatch pabasa:materials-updated', e); }
 
                                     try {
@@ -10962,8 +10962,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                         }
                                     } catch (err) { console.warn('Could not refresh teacher overview after update', err); }
 
-                                    if (typeof loadReadings === 'function' && typeof currentClassCode !== 'undefined' && currentClassCode) {
-                                        try { await loadReadings(currentClassCode); } catch (e) { /* ignore */ }
+                                    if (typeof loadReadings === 'function' && typeof currentSectionId !== 'undefined' && currentSectionId) {
+                                        try { await loadReadings(currentSectionId); } catch (e) { /* ignore */ }
                                     }
                                 } else {
                                     showToast('Could not update material: ' + (d.error || 'Unknown'), 'error');
@@ -11060,7 +11060,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                         } catch (e) { /* ignore */ }
 
                                         // Notify other modules and refresh authoritative data
-                                        try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: mid, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated', e); }
+                                        try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: mid, section_id: getTeacherSectionId(currentSectionId) } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated', e); }
 
                                         try {
                                             if (typeof refreshTeacherData === 'function') {
@@ -11076,8 +11076,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                             }
                                         } catch (err) { console.warn('Could not refresh teacher overview after delete', err); }
 
-                                        if (typeof loadReadings === 'function' && typeof currentClassCode !== 'undefined' && currentClassCode) {
-                                            try { await loadReadings(currentClassCode); } catch (e) { /* ignore */ }
+                                        if (typeof loadReadings === 'function' && typeof currentSectionId !== 'undefined' && currentSectionId) {
+                                            try { await loadReadings(currentSectionId); } catch (e) { /* ignore */ }
                                         }
                                         if (typeof loadCourseReadings === 'function') {
                                             try { await loadCourseReadings(activeCourse.id); } catch (e) { /* ignore */ }
@@ -11108,7 +11108,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
             modalEl.dataset.courseId = course.id;
             const materialClassContext = resolveMaterialClassContext(course.id);
-            if (materialClassContext.classCode) currentClassCode = materialClassContext.classCode;
+            if (materialClassContext.classId) currentSectionId = materialClassContext.classId;
             try { if (typeof loadCourseOverview === 'function') loadCourseOverview(course.id); } catch (err) { console.warn('loadCourseOverview error', err); }
             try { if (typeof loadCourseAssessments === 'function') loadCourseAssessments(course.id); } catch (err) { console.warn('loadCourseAssessments error', err); }
             try { if (typeof loadCourseReports === 'function') loadCourseReports(course.id); } catch (err) { console.warn('loadCourseReports error', err); }
@@ -11194,7 +11194,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                                 }
                                             } catch (e) { /* ignore */ }
 
-                                            try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { assessment_id: assessmentId, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated', e); }
+                                            try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { assessment_id: assessmentId, section_id: getTeacherSectionId(currentSectionId) } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated', e); }
 
                                             try {
                                                 if (typeof refreshTeacherData === 'function') {
@@ -11210,8 +11210,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                                 }
                                             } catch (err) { console.warn('Could not refresh teacher overview after assessment archive', err); }
 
-                                            if (typeof loadReadings === 'function' && typeof currentClassCode !== 'undefined' && currentClassCode) {
-                                                try { await loadReadings(currentClassCode); } catch (e) { /* ignore */ }
+                                            if (typeof loadReadings === 'function' && typeof currentSectionId !== 'undefined' && currentSectionId) {
+                                                try { await loadReadings(currentSectionId); } catch (e) { /* ignore */ }
                                             }
                                             if (typeof loadCourseReadings === 'function') {
                                                 try { await loadCourseReadings(activeCourse.id); } catch (e) { /* ignore */ }
@@ -11484,13 +11484,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         function getCourseSectionMatchers(course) {
             const sections = Array.isArray(course?.sections) ? course.sections : [];
             const normalize = value => String(value || '').trim().toLowerCase();
-            const sectionCodes = new Set(sections.map(s => normalize(s.code || s.id)).filter(Boolean));
+            const sectionIds = new Set(sections.map(s => normalize(s.id)).filter(Boolean));
             const sectionNames = new Set(sections.map(s => normalize(s.name)).filter(Boolean));
-            return { normalize, sectionCodes, sectionNames };
+            return { normalize, sectionIds, sectionNames };
         }
 
         async function fetchStudentsForCourse(course) {
-            const { normalize, sectionCodes, sectionNames } = getCourseSectionMatchers(course);
+            const { normalize, sectionIds, sectionNames } = getCourseSectionMatchers(course);
 
             const res = await fetch('/dashboard/teacher/students-api/', {
                 method: 'GET',
@@ -11508,11 +11508,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
             const seen = new Set();
             return data.students.filter(s => {
-                const codes = Array.isArray(s.class_codes) ? s.class_codes : [s.class_code, s.code].filter(Boolean);
+                const ids = Array.isArray(s.section_ids) ? s.section_ids : [];
                 const classes = Array.isArray(s.classes) ? s.classes : [s.class, s.class_name].filter(Boolean);
-                const byCode = codes.some(c => sectionCodes.has(normalize(c)));
+                const bySection = ids.some(id => sectionIds.has(normalize(id)));
                 const byName = classes.some(n => sectionNames.has(normalize(n)));
-                if (!byCode && !byName) return false;
+                if (!bySection && !byName) return false;
 
                 const key = String(s.id || s.custom_id || s.email || s.name || '').trim().toLowerCase();
                 if (key && seen.has(key)) return false;
@@ -11868,7 +11868,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
             grid.innerHTML = sorted.map(student => {
                 const studentName = String(student?.name || `${student?.first_name || ''} ${student?.last_name || ''}`.trim() || 'Unnamed Student').trim();
-                const matchCode = (Array.isArray(student?.class_codes) ? student.class_codes.find(c => student._courseSectionCodes?.includes(c)) : null) || (Array.isArray(student?.class_codes) && student.class_codes[0]) || '';
+                const matchSectionId = (Array.isArray(student?.section_ids) ? student.section_ids.find(id => student._courseSectionIds?.includes(String(id))) : null) || (Array.isArray(student?.section_ids) && student.section_ids[0]) || '';
                 const sectionLabel = [
                     ...(Array.isArray(student?.classes) ? student.classes : []),
                     student?.class_name || student?.class || student?.section || ''
@@ -11883,7 +11883,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 const wpmValue = Number(student?.wpm);
                 const accuracyWidth = Number.isNaN(accuracyValue) ? 0 : Math.max(0, Math.min(100, accuracyValue));
                 const wpmWidth = Number.isNaN(wpmValue) ? 0 : Math.max(0, Math.min(100, wpmValue));
-                const removeHandler = `window.removeStudentFromCourse(${JSON.stringify(String(student?.id || student?.custom_id || ''))}, ${JSON.stringify(matchCode)}, ${JSON.stringify(studentName)}, ${JSON.stringify(String(document.getElementById('courseDetailModal')?.dataset?.courseId || ''))})`;
+                const removeHandler = `window.removeStudentFromCourse(${JSON.stringify(String(student?.id || student?.custom_id || ''))}, ${JSON.stringify(String(matchSectionId || ''))}, ${JSON.stringify(studentName)}, ${JSON.stringify(String(document.getElementById('courseDetailModal')?.dataset?.courseId || ''))})`;
                 return `
                     <article class="student-card-modern">
                         <div class="student-card-head">
@@ -11959,7 +11959,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
                 if (!course) return;
 
-                const sectionCodes = (course.sections || []).map(s => s.code).filter(Boolean);
+                const sectionIds = (course.sections || []).map(s => String(s.id)).filter(Boolean);
                 const sectionNames = (course.sections || []).map(s => s.name).filter(Boolean);
                 const directStudentIds = new Set((Array.isArray(course?.metadata?.student_ids) ? course.metadata.student_ids : []).map(id => String(id)));
                 const grid = document.getElementById('courseStudentsGrid');
@@ -11979,13 +11979,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 }
 
                 const courseStudents = students.filter(s => {
-                    const codes = Array.isArray(s.class_codes) ? s.class_codes : [];
+                    const ids = Array.isArray(s.section_ids) ? s.section_ids.map(String) : [];
                     const classes = Array.isArray(s.classes) ? s.classes : [];
-                    const byCode = codes.some(c => sectionCodes.includes(c));
+                    const bySection = ids.some(id => sectionIds.includes(id));
                     const byName = classes.some(n => sectionNames.includes(n));
                     const byDirectCourse = directStudentIds.has(String(s.id));
-                    return (byCode || byName || byDirectCourse);
-                }).map(student => ({ ...student, _courseSectionCodes: sectionCodes }));
+                    return (bySection || byName || byDirectCourse);
+                }).map(student => ({ ...student, _courseSectionIds: sectionIds }));
 
                 currentCourseStudents = courseStudents;
                 currentStudentSearch = '';
@@ -12137,12 +12137,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
     }
 
-    function syncClassAssessmentsFromCourses(classCode) {
-        if (!classCode || !Array.isArray(teacherCourses)) return;
+    function syncClassAssessmentsFromCourses(sectionId) {
+        if (!sectionId || !Array.isArray(teacherCourses)) return;
         const seen = new Set();
         const synced = [];
         teacherCourses.forEach(course => {
-            const belongsToClass = Array.isArray(course.sections) && course.sections.some(s => String(s.code || '').toUpperCase() === String(classCode).toUpperCase());
+            const belongsToClass = Array.isArray(course.sections) && course.sections.some(s => String(s.id || s.section_id) === String(sectionId));
             if (!belongsToClass || !Array.isArray(course.assessments)) return;
             course.assessments.forEach(assessment => {
                 const key = String(assessment.id);
@@ -12160,21 +12160,21 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 });
             });
         });
-        classAssessments[sectionCacheKey(classCode)] = synced;
+        classAssessments[sectionCacheKey(sectionId)] = synced;
     }
 
-    function syncClassBannerMaterialCounts(classCode) {
+    function syncClassBannerMaterialCounts(sectionId) {
         const assessmentEl = document.getElementById('activeAssessmentCount');
         const practiceEl = document.getElementById('activePracticeCount');
-        const normalizedCode = String(classCode || '').trim().toUpperCase();
+        const normalizedSectionId = String(sectionId || '').trim();
 
         let assessmentCount = 0;
         let practiceCount = 0;
 
-        if (normalizedCode && Array.isArray(teacherCourses)) {
+        if (normalizedSectionId && Array.isArray(teacherCourses)) {
             teacherCourses.forEach(course => {
                 const courseSections = Array.isArray(course.sections) ? course.sections : [];
-                const belongsToClass = courseSections.some(section => String(section.code || '').trim().toUpperCase() === normalizedCode);
+                const belongsToClass = courseSections.some(section => String(section.id || section.section_id) === normalizedSectionId);
                 if (!belongsToClass) return;
 
                 assessmentCount += activeRecords(course.assessments || []).length;
@@ -12189,16 +12189,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     async function refreshOpenCourseAfterAssessmentChange(options = {}) {
         const courseModal = document.getElementById('courseDetailModal');
         const openCourseId = options.courseId || courseModal?.dataset?.courseId || null;
-        const classCode = options.classCode || currentClassCode || null;
+        const sectionId = options.sectionId || currentSectionId || null;
 
         try { await loadTeacherCoursesFromServer(); } catch (e) { console.warn('Could not reload courses after assessment change', e); }
         try { if (typeof renderCourses === 'function') await renderCourses(); } catch (e) { console.warn('Could not render courses after assessment change', e); }
 
-        if (classCode) {
-            try { syncClassAssessmentsFromCourses(classCode); } catch (e) { console.warn('Could not sync class assessments after assessment change', e); }
-            try { if (typeof loadAssessments === 'function') loadAssessments(classCode); } catch (e) { console.warn('Could not refresh class assessments after assessment change', e); }
-            try { if (typeof loadReadings === 'function') await loadReadings(classCode); } catch (e) { console.warn('Could not refresh class readings after assessment change', e); }
-            try { syncClassBannerMaterialCounts(classCode); } catch (e) { console.warn('Could not sync class banner counts after assessment change', e); }
+        if (sectionId) {
+            try { syncClassAssessmentsFromCourses(sectionId); } catch (e) { console.warn('Could not sync class assessments after assessment change', e); }
+            try { if (typeof loadAssessments === 'function') loadAssessments(sectionId); } catch (e) { console.warn('Could not refresh class assessments after assessment change', e); }
+            try { if (typeof loadReadings === 'function') await loadReadings(sectionId); } catch (e) { console.warn('Could not refresh class readings after assessment change', e); }
+            try { syncClassBannerMaterialCounts(sectionId); } catch (e) { console.warn('Could not sync class banner counts after assessment change', e); }
         }
 
         if (openCourseId && courseModal && courseModal.classList.contains('show')) {
@@ -12655,7 +12655,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             try {
                 const openCourseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
                 if (openCourseId) {
-                    await refreshOpenCourseAfterAssessmentChange({ courseId: openCourseId, classCode: e.detail?.class_code || currentClassCode });
+                    await refreshOpenCourseAfterAssessmentChange({ courseId: openCourseId, sectionId: e.detail?.section_id || currentSectionId });
                 }
             } catch (err) {
                 console.warn('Could not refresh open course after materials-updated event', err);
@@ -12689,8 +12689,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                     // Refresh per-class readings counts for the active class (if any)
                     try {
-                        if (typeof loadReadings === 'function' && typeof currentClassCode !== 'undefined' && currentClassCode) {
-                            await loadReadings(currentClassCode);
+                        if (typeof loadReadings === 'function' && typeof currentSectionId !== 'undefined' && currentSectionId) {
+                            await loadReadings(currentSectionId);
                         }
                     } catch (e) { /* ignore loadReadings errors */ }
 
@@ -12717,28 +12717,25 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     }
 
     // Fetch materials from database API instead of localStorage
-    async function fetchMaterialsFromDatabase(sectionId, classCode) {
+    async function fetchMaterialsFromDatabase(sectionId) {
         const normalizedSectionId = String(sectionId || '').trim();
-        const normalizedClassCode = String(classCode || '').trim();
-        // Guard: don't call API when classCode is falsy or explicitly 'null'/'undefined'
-        if ((!normalizedSectionId && !normalizedClassCode) || normalizedClassCode.toLowerCase() === 'null' || normalizedClassCode.toLowerCase() === 'undefined') {
-            console.warn('fetchMaterialsFromDatabase called without a valid Section ID or classCode:', { sectionId, classCode });
+        if (!normalizedSectionId) {
+            console.warn('fetchMaterialsFromDatabase called without a valid Section ID:', { sectionId });
             return null;
         }
 
         try {
-            const query = normalizedSectionId
-                ? `section_id=${encodeURIComponent(normalizedSectionId)}`
-                : `class_code=${encodeURIComponent(normalizedClassCode)}`;
+            if (!normalizedSectionId) return null;
+            const query = `section_id=${encodeURIComponent(normalizedSectionId)}`;
             const response = await fetch(`/api/class/materials/?${query}`);
-            console.log('[materials trace] API request', { sectionId: normalizedSectionId, classCode: normalizedClassCode, url: `/api/class/materials/?${query}` });
+            console.log('[materials trace] API request', { sectionId: normalizedSectionId, url: `/api/class/materials/?${query}` });
             if (!response.ok) {
-                console.warn(`Failed to fetch materials for class ${classCode}:`, response.status);
+                console.warn(`Failed to fetch materials for section ${normalizedSectionId}:`, response.status);
                 return null;
             }
             const data = await response.json();
             console.log('[materials trace] API response', {
-                classCode: normalizedClassCode,
+                sectionId: normalizedSectionId,
                 success: data?.success,
                 hehehehExists: JSON.stringify(data || '').includes('heheheh'),
                 payload: data
@@ -12753,7 +12750,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 };
                 const flat = [...materials.word, ...materials.sentence, ...materials.paragraph, ...materials.vowel];
                 console.log('[materials trace] course.materials candidate from API', {
-                    classCode,
+                    sectionId: normalizedSectionId,
                     hehehehExists: flat.some(item => String(item.title || '').trim().toLowerCase() === 'heheheh'),
                     sourceTypes: flat.map(item => String(item.source_type || item.material_source || '').trim().toLowerCase()).filter(Boolean)
                 });
@@ -12765,7 +12762,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
             return null;
         } catch (error) {
-            console.warn(`Error fetching materials for class ${normalizedClassCode || normalizedSectionId}:`, error);
+            console.warn(`Error fetching materials for section ${normalizedSectionId}:`, error);
             return null;
         }
     }
@@ -12793,12 +12790,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         localStorage.setItem(readingsStorageKey, JSON.stringify(classReadings));
 
         const flatMaterials = [];
-        Object.entries(classReadings).forEach(([classCode, readings]) => {
+        Object.entries(classReadings).forEach(([sectionId, readings]) => {
             ['word', 'sentence', 'paragraph', 'vowel'].forEach(readingType => {
                 (readings[readingType] || []).forEach(reading => {
                     flatMaterials.push({
                         ...reading,
-                        classCode,
+                        sectionId,
                         readingType
                     });
                 });
@@ -12867,13 +12864,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         });
     }
 
-    function sectionCacheKey(classCodeOrId) {
-        const match = (teacherClasses || []).find(c => String(c.id || c.section_id) === String(classCodeOrId) || String(c.code || '').toUpperCase() === String(classCodeOrId || '').toUpperCase());
-        return String(match?.id || match?.section_id || classCodeOrId || '');
+    function sectionCacheKey(sectionId) {
+        const match = (teacherClasses || []).find(c => String(c.id || c.section_id) === String(sectionId || ''));
+        return String(match?.id || match?.section_id || sectionId || '');
     }
 
-    function ensureClassReadings(classCodeOrId) {
-        const sectionKey = sectionCacheKey(classCodeOrId);
+    function ensureClassReadings(sectionId) {
+        const sectionKey = sectionCacheKey(sectionId);
         if (!classReadings[sectionKey]) {
             classReadings[sectionKey] = { word: [], sentence: [], paragraph: [], vowel: [] };
         }
@@ -12898,8 +12895,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 'X-CSRFToken': document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
             },
             body: JSON.stringify({
-                section_id: getTeacherSectionId(currentClassCode) || null,
-                class_code: currentClassCode,
+                section_id: getTeacherSectionId(currentSectionId),
                 student_id: studentId
             })
         })
@@ -12907,7 +12903,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         .then(data => {
             if (data.success) {
                 showToast(`${studentName} removed from class.`, 'success');
-                const classData = teacherClasses.find(c => c.code === currentClassCode);
+                const classData = teacherClasses.find(c => c.code === currentSectionId);
                 try {
                     const students = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]');
                     const updated = students.filter(s => !((s.pabasa_id === studentId || s.id === studentId || s.name === studentName) && s.class === classData.name));
@@ -12941,8 +12937,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         },
                         body: JSON.stringify(hasSections
                             ? {
-                                section_id: (course?.sections || []).find(s => String(s.code || '').toUpperCase() === String(sectionCode || currentClassCode || '').toUpperCase())?.id || getTeacherSectionId(sectionCode || currentClassCode) || null,
-                                class_code: sectionCode || currentClassCode,
+                                section_id: (course?.sections || []).find(s => String(s.code || '').toUpperCase() === String(sectionCode || currentSectionId || '').toUpperCase())?.id || getTeacherSectionId(sectionCode || currentSectionId) || null,
                                 student_id: studentId
                             }
                             : { course_id: courseId, student_id: studentId })
@@ -12971,12 +12966,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
     const classAssessments = {};
 
-    let currentClassCode = null;
+    let currentSectionId = null;
     let currentClassData = null;
 
-    function getTeacherSectionId(classCode) {
-        const match = (teacherClasses || []).find(cls => String(cls.code || '').toUpperCase() === String(classCode || '').toUpperCase());
-        return match?.id || match?.section_id || '';
+    function getTeacherSectionId(sectionId) {
+        const match = (teacherClasses || []).find(cls => String(cls.id || cls.section_id) === String(sectionId || ''));
+        return match?.id || match?.section_id || sectionId || '';
     }
 
     function getStudentCountForClass(className) {
@@ -13009,7 +13004,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         grid.innerHTML = teacherClasses.map(cls => `
             <article class="class-card-full" data-class-code="${cls.code}">
                 <button class="class-card-delete-btn" type="button" data-class-code="${cls.code}" title="Delete class" onclick="event.stopPropagation();"><i class="bi bi-trash3"></i></button>
-                <div class="class-card-header" onclick="openClassDetail('${cls.code}')" style="cursor: pointer;">
+                <div class="class-card-header" onclick="openClassDetail('${cls.id}')" style="cursor: pointer;">
                     <span class="class-code-badge">${cls.code}</span>
                     <h3>${cls.name}</h3>
                     <p class="class-description">${[cls.grade || cls.grade_level, cls.section].filter(Boolean).join(' · ')}</p>
@@ -13025,7 +13020,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     </div>
                 </div>
                 <div class="class-card-actions">
-                    <button class="btn btn-primary" type="button" style="cursor: pointer;" onclick="event.stopPropagation(); openClassDetail('${cls.code}');">
+                    <button class="btn btn-primary" type="button" style="cursor: pointer;" onclick="event.stopPropagation(); openClassDetail('${cls.id}');">
                         <i class="bi bi-arrow-right me-2"></i>Open Class
                     </button>
                 </div>
@@ -13095,7 +13090,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
             },
-            body: JSON.stringify({ class_code: classCode })
+            body: JSON.stringify({ section_id: getTeacherSectionId(classCode) })
         })
         .then(response => response.json())
         .then(data => {
@@ -13163,8 +13158,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
 
 
-    window.openClassDetail = async function(classCode) {
-        currentClassCode = classCode;
+    window.openClassDetail = async function(sectionId) {
+        currentSectionId = String(sectionId || '');
         currentClassData = null;
 
         const modalEl = document.getElementById('classDetailModal');
@@ -13172,7 +13167,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         modal.show();
 
         // Reset banner state immediately so stale counts never linger.
-        updateClassDetailBanner({ code: classCode, name: 'Loading class...', students: 0, header: 'Reading Class' });
+        updateClassDetailBanner({ name: 'Loading class...', students: 0, header: 'Reading Class' });
 
         try {
             await loadTeacherClassesFromServer();
@@ -13186,23 +13181,23 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             console.warn('Could not refresh teacher courses before opening class detail', e);
         }
 
-        const classData = (teacherClasses || []).find(c => String(c.code) === String(classCode));
+        const classData = (teacherClasses || []).find(c => String(c.id || c.section_id) === String(currentSectionId));
         if (classData) {
             currentClassData = classData;
             updateClassDetailBanner(classData);
         } else {
-            updateClassDetailBanner({ code: classCode, name: classCode, students: 0, header: 'Reading Class' });
+            updateClassDetailBanner({ name: 'Reading Class', students: 0, header: 'Reading Class' });
         }
 
         // Load all content and then sync the banner from the latest course cache.
-        if (classCode) {
-            await loadReadings(classCode);
+        if (currentSectionId) {
+            await loadReadings(currentSectionId);
         }
-        loadAssessments(classCode);
+        loadAssessments(currentSectionId);
         // Students tab removed from class modal — do not load student list here
-        loadReports(classCode);
-        setupUpdates(classCode);
-        syncClassBannerMaterialCounts(classCode);
+        loadReports(currentSectionId);
+        setupUpdates(currentSectionId);
+        syncClassBannerMaterialCounts(currentSectionId);
     };
 
     function formatDueDate(value) {
@@ -13293,8 +13288,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
     /* Students UI removed from class modal; student management remains in Class module */
 
-    function loadReports(classCode) {
-        const classData = teacherClasses.find(c => c.code === classCode);
+    function loadReports(sectionId) {
+        const classData = teacherClasses.find(c => String(c.section_id || c.id) === String(sectionId || ''));
         if (!classData) return;
         
         const allStudents = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
@@ -13362,8 +13357,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         document.getElementById("reportNoChangeCount").textContent = Math.floor(count * 0.3);
     }
 
-    function setupUpdates(classCode) {
-        const classData = teacherClasses.find(c => c.code === classCode);
+    function setupUpdates(sectionId) {
+        const classData = teacherClasses.find(c => String(c.section_id || c.id) === String(sectionId || ''));
         if (!classData) return;
 
         const messageArea = document.getElementById("parentUpdateMessage");
@@ -13694,7 +13689,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     }
 
     function getAnnouncementStorageKey() {
-        return currentClassCode ? `pabasa_announcements_${currentClassCode}` : null;
+        return currentSectionId ? `pabasa_announcements_${currentSectionId}` : null;
     }
 
     function updateStoredAnnouncement(announcementId, updater) {
@@ -16616,7 +16611,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     if (templateValidationError) templateValidationError.classList.add('d-none');
                     hideTemplateBuilder();
                     if (addMaterialModal) bootstrap.Modal.getOrCreateInstance(addMaterialModal).hide();
-                    window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: data.material?.id || '', class_code: currentClassCode } }));
+                    window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: data.material?.id || '', section_id: getTeacherSectionId(currentSectionId) } }));
                     try {
                         const createdMaterialId = savedMaterialId;
                         if (attachCourseId && createdMaterialId !== null && createdMaterialId !== undefined && createdMaterialId !== '') {
@@ -16640,7 +16635,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             console.log('[CREATE ACTIVITY] Attach response:', attachResp.status, attachData);
                             if (attachResp.ok && attachData.success) {
                                 try { await refreshCourseCardsFromServer(); } catch (e) { console.warn('Could not refresh course cards after template attach', e); }
-                                try { await refreshOpenCourseAfterAssessmentChange({ courseId: attachCourseId, classCode: currentClassCode }); } catch (e) { console.warn('Could not refresh open course after template attach', e); }
+                                try { await refreshOpenCourseAfterAssessmentChange({ courseId: attachCourseId, sectionId: currentSectionId }); } catch (e) { console.warn('Could not refresh open course after template attach', e); }
                                 const openCourseModal = document.getElementById('courseDetailModal');
                                 if (openCourseModal && openCourseModal.classList.contains('show')) {
                                     try { await openCourseDetail(attachCourseId); } catch (e) { console.warn('Could not reopen course after template attach', e); }
@@ -16901,7 +16896,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const stateSubject = String(currentClassData?.subject || '').trim();
             if (stateSubject) return stateSubject;
 
-            const normalizedCode = String(currentClassCode || '').trim().toUpperCase();
+            const normalizedCode = String(currentSectionId || '').trim().toUpperCase();
             if (normalizedCode && Array.isArray(teacherClasses)) {
                 const classData = teacherClasses.find(item => String(item?.code || '').trim().toUpperCase() === normalizedCode);
                 const subject = String(classData?.subject || '').trim();
@@ -18576,20 +18571,18 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
 
         // Fix: Make global so Open Class logic can see the unified version
-        window.loadReadings = async function(classCode) {
+        window.loadReadings = async function(sectionId) {
             let readings = { word: [], sentence: [], paragraph: [], vowel: [] };
             
-                // First, try to fetch from database API (skip if no classCode provided)
-                const classData = (teacherClasses || []).find(cls => String(cls.code) === String(classCode));
-                const dbMaterials = await fetchMaterialsFromDatabase(classData?.id, classCode);
+                // Section ID is the only technical selector for database and cache access.
+                const dbMaterials = await fetchMaterialsFromDatabase(sectionId, null);
                 if (dbMaterials) {
                     readings = dbMaterials;
-                    console.log(`✓ Loaded materials from database for class ${classCode}`);
+                    console.log(`✓ Loaded materials from database for section ${sectionId}`);
                 } else {
-                    // Fallback to localStorage if API fails or was skipped
-                    const stored = ensureClassReadings(classCode);
+                    const stored = ensureClassReadings(sectionId);
                     readings = stored;
-                    console.warn(`⚠ Using localStorage materials for class ${classCode || '<none>'} (database fetch skipped/failed)`);
+                    console.warn(`⚠ Using localStorage materials for section ${sectionId || '<none>'} (database fetch skipped/failed)`);
                 }
 
             // Combine all materials into a single array
@@ -18600,13 +18593,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 ...(readings.vowel || [])
             ]);
             console.log('[materials trace] loadReadings combined', {
-                classCode,
+                sectionId,
                 hehehehExists: allMaterials.some(item => String(item.title || '').trim().toLowerCase() === 'heheheh'),
                 count: allMaterials.length
             });
 
             // Ensure renderAllReadingsList is available (may be defined later)
-            try { syncClassBannerMaterialCounts(classCode); } catch (e) { console.warn('Failed to sync banner counts from live class data', e); }
+            try { syncClassBannerMaterialCounts(sectionId); } catch (e) { console.warn('Failed to sync banner counts from live class data', e); }
 
             (function waitAndRender() {
                 if (typeof window.renderAllReadingsList === 'function') {
@@ -18637,8 +18630,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     function getMaterialById(materialId) {
                         const renderedMaterial = findRenderedReadingMaterial(e.target.closest('.material-card-modern'), materialId);
                         if (renderedMaterial) return renderedMaterial;
-                        if (!currentClassCode) return null;
-                        const readings = ensureClassReadings(currentClassCode);
+                        if (!currentSectionId) return null;
+                        const readings = ensureClassReadings(currentSectionId);
                         // Search in all possible singular/plural keys
                         for (const key of ['word', 'sentence', 'paragraph', 'words', 'sentences', 'paragraphs']) {
                             if (readings[key]) {
@@ -18837,8 +18830,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 if (data.success) {
                                     if (archivedAssessmentId) markAssessmentArchivedLocally(archivedAssessmentId);
                                     // Clear from local storage cache as well
-                                    if (currentClassCode && String(materialId)) {
-                                        const readings = ensureClassReadings(currentClassCode);
+                                    if (currentSectionId && String(materialId)) {
+                                        const readings = ensureClassReadings(currentSectionId);
                                         for (const key in readings) {
                                             if (Array.isArray(readings[key])) {
                                                 readings[key] = readings[key].filter(m => String(m.id) !== String(materialId));
@@ -18850,7 +18843,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                     card.style.opacity = '0.5';
                                     card.style.pointerEvents = 'none';
                                     showSuccessModal('Deleted', `"${title}" has been removed.`);
-                                    setTimeout(() => { if (currentClassCode) loadReadings(currentClassCode); }, 300);
+                                    setTimeout(() => { if (currentSectionId) loadReadings(currentSectionId); }, 300);
                                     const openCourseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
                                     if (openCourseId && typeof loadCourseReadings === 'function') {
                                         try { await loadCourseReadings(openCourseId); } catch (e) { /* ignore */ }
@@ -18864,7 +18857,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                         }
                                     } catch (e) { /* ignore */ }
 
-                                    try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: materialId, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after delete', e); }
+                                    try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: materialId, section_id: getTeacherSectionId(currentSectionId) } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after delete', e); }
 
                                     try {
                                         if (typeof refreshTeacherData === 'function') {
@@ -18937,7 +18930,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             if (data.success) {
                                 bootstrap.Modal.getInstance(document.getElementById('editMaterialModal')).hide();
                                 showSuccessModal('Updated', `"${newTitle}" has been updated`);
-                                if (currentClassCode) loadReadings(currentClassCode);
+                                if (currentSectionId) loadReadings(currentSectionId);
                                 // Persist overview returned by backend (if any) so other tabs update immediately
                                 try {
                                     if (data && data.overview) {
@@ -18948,7 +18941,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 } catch (err4) { /* ignore */ }
 
                                 // Notify other modules to refresh after material update
-                                try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: materialId, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after update', e); }
+                                try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: materialId, section_id: getTeacherSectionId(currentSectionId) } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after update', e); }
 
                                 try {
                                     if (typeof refreshTeacherData === 'function') {
@@ -19044,7 +19037,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         // ── Disable button / loading state ───────────────────────
                         submitMaterialBtn.disabled = true;
                         submitMaterialBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Creating...';
-                        console.log('[AddMaterial] Saving to database:', { title, reading_type: readingType, status, class_code: currentClassCode, assessment_kind: assessmentKind });
+                        console.log('[AddMaterial] Saving to database:', { title, reading_type: readingType, status, section_id: getTeacherSectionId(currentSectionId), assessment_kind: assessmentKind });
 
                         try { // Use readingType from modal select
                             // ── Step 1: Save to backend database via API ──────────
@@ -19079,7 +19072,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                                 'X-CSRFToken': csrfToken,
                                                 'X-Requested-With': 'XMLHttpRequest'
                                             },
-                                            body: JSON.stringify({ material_id: editingMaterialId, title: title, reading_type: readingType, content: content, status: status, usage_type: usageType, section_id: getTeacherSectionId(currentClassCode) || null, scheduled_at: schedule || null, assigned_week: assignedWeek, language: language, randomize_order: randomizeOrder, assessment_kind: assessmentKind, source_type: sourceType })
+                                            body: JSON.stringify({ material_id: editingMaterialId, title: title, reading_type: readingType, content: content, status: status, usage_type: usageType, section_id: getTeacherSectionId(currentSectionId) || null, scheduled_at: schedule || null, assigned_week: assignedWeek, language: language, randomize_order: randomizeOrder, assessment_kind: assessmentKind, source_type: sourceType })
                                         };
                                         apiResponse = await fetch('/dashboard/teacher/update-material/', opts);
                                         if (apiResponse.status === 403) {
@@ -19181,7 +19174,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                             language: savedMaterial.language || '',
                                             content_json: savedMaterial.content_json || (savedMaterial.content_json ? savedMaterial.content_json : {})
                                         });
-                                        const readings = ensureClassReadings(currentClassCode || '');
+                                        const readings = ensureClassReadings(currentSectionId || '');
                                         ['word', 'sentence', 'paragraph', 'vowel'].forEach(typeKey => {
                                             const list = readings[typeKey] || [];
                                             const index = list.findIndex(item => String(item.id) === String(editingMaterialId) || String(item.raw_id) === String(editingMaterialId));
@@ -19195,8 +19188,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                                 try { showSuccessModal('Updated', `"${title}" has been updated.`); } catch (e) { console.warn('Could not show update success modal', e); }
                                 try {
-                                    if (currentClassCode) {
-                                        await loadReadings(currentClassCode);
+                                    if (currentSectionId) {
+                                        await loadReadings(currentSectionId);
                                     }
                                 } catch (e) { console.warn('Could not reload readings after update', e); }
 
@@ -19209,7 +19202,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                     }
                                 } catch (e) { /* ignore */ }
 
-                                try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: editingMaterialId, class_code: currentClassCode } })); } catch (e) { /* ignore */ }
+                                try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: editingMaterialId, section_id: getTeacherSectionId(currentSectionId) } })); } catch (e) { /* ignore */ }
 
                                 try {
                                     if (typeof refreshTeacherData === 'function') {
@@ -19285,7 +19278,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             }
 
                             function getClassCodeForRefresh() {
-                                if (currentClassCode) return currentClassCode;
+                                if (currentSectionId) return currentSectionId;
                                 if (!window.courseAttachTarget) return null;
                                 const attachedCourse = (teacherCourses || []).find(c => String(c.id) === String(window.courseAttachTarget));
                                 if (!attachedCourse || !Array.isArray(attachedCourse.sections) || attachedCourse.sections.length === 0) return null;
@@ -19308,8 +19301,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             }
 
                             const refreshClassCode = getClassCodeForRefresh();
-                            if (refreshClassCode && !currentClassCode) {
-                                currentClassCode = refreshClassCode;
+                            if (refreshClassCode && !currentSectionId) {
+                                currentSectionId = refreshClassCode;
                             }
                             // If still no refresh class code but we used "Other" materials, find first available class
                             let effectiveRefreshCode = refreshClassCode;
@@ -19318,7 +19311,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                     if (Array.isArray(course.sections) && course.sections.length > 0) {
                                         effectiveRefreshCode = course.sections[0].code || null;
                                         if (effectiveRefreshCode) {
-                                            currentClassCode = effectiveRefreshCode;
+                                            currentSectionId = effectiveRefreshCode;
                                             break;
                                         }
                                     }
@@ -19376,7 +19369,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                             }
                                         }
                                         try { await refreshCourseCardsFromServer(); } catch (e) { /* ignore */ }
-                                        try { await refreshOpenCourseAfterAssessmentChange({ courseId: _attachCourseId, classCode: currentClassCode }); } catch (e) { console.warn('Could not refresh course after material attach', e); }
+                                        try { await refreshOpenCourseAfterAssessmentChange({ courseId: _attachCourseId, sectionId: currentSectionId }); } catch (e) { console.warn('Could not refresh course after material attach', e); }
 
                                         const cModal = document.getElementById('courseDetailModal');
                                         if (cModal && cModal.classList.contains('show')) {
@@ -19431,7 +19424,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                     detail: {
                                         material_ids: createdIds,
                                         material: apiData.material || null,
-                                        class_code: currentClassCode || null
+                section_id: getTeacherSectionId(currentSectionId) || null
                                     }
                                 }));
                             } catch (e) {
@@ -19547,7 +19540,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                     const card = actionBtn.closest('.assessment-card');
                     const assessmentId = Number(card.dataset.assessmentId);
-                    const assessments = classAssessments[currentClassCode] || [];
+                    const assessments = classAssessments[currentSectionId] || [];
                     const assessment = assessments.find(item => item.id === assessmentId);
                     if (!assessment) return;
 
@@ -19563,14 +19556,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                     if (actionBtn.dataset.assessmentAction === 'delete') {
                         showDeleteConfirmModal(`Delete "${assessment.title}"?`, () => {
-                            classAssessments[currentClassCode] = assessments.filter(item => item.id !== assessmentId);
-                            loadAssessments(currentClassCode);
+                            classAssessments[currentSectionId] = assessments.filter(item => item.id !== assessmentId);
+                            loadAssessments(currentSectionId);
 
                             // Remove from any teacher-created courses that reference this class
                             try {
                                 if (Array.isArray(teacherCourses)) {
                                     teacherCourses.forEach(course => {
-                                        if (Array.isArray(course.sections) && course.sections.some(s => String(s.code || '').toUpperCase() === String(currentClassCode || '').toUpperCase())) {
+                                        if (Array.isArray(course.sections) && course.sections.some(s => String(s.code || '').toUpperCase() === String(currentSectionId || '').toUpperCase())) {
                                             course.assessments = (course.assessments || []).filter(a => Number(a.id) !== assessmentId);
                                         }
                                     });
@@ -19588,7 +19581,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             } catch (e) { console.warn('Could not update teacherCourses after assessment delete', e); }
 
                             // Notify other modules
-                            try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { assessment_id: assessmentId, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after delete', e); }
+                            try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { assessment_id: assessmentId, section_id: getTeacherSectionId(currentSectionId) } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after delete', e); }
                         });
                     }
                 });
@@ -19603,17 +19596,17 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const minutes = Number(document.getElementById('assessmentMinutes').value);
                     const dueDate = document.getElementById('assessmentDueDate').value;
 
-                    if (!title || items < 1 || minutes < 1 || !currentClassCode) {
+                    if (!title || items < 1 || minutes < 1 || !currentSectionId) {
                         showSuccessModal('Missing Details', 'Add a title, item count, and time limit.');
                         return;
                     }
 
-                    if (!classAssessments[currentClassCode]) {
-                        classAssessments[currentClassCode] = [];
+                    if (!classAssessments[currentSectionId]) {
+                        classAssessments[currentSectionId] = [];
                     }
 
                     if (editingAssessmentId) {
-                        const assessment = classAssessments[currentClassCode].find(item => item.id === editingAssessmentId);
+                        const assessment = classAssessments[currentSectionId].find(item => item.id === editingAssessmentId);
                         if (assessment) {
                             assessment.title = title;
                             assessment.level = level;
@@ -19627,7 +19620,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         try {
                             if (Array.isArray(teacherCourses)) {
                                 teacherCourses.forEach(course => {
-                                    if (Array.isArray(course.sections) && course.sections.some(s => String(s.code || '').toUpperCase() === String(currentClassCode || '').toUpperCase())) {
+                                    if (Array.isArray(course.sections) && course.sections.some(s => String(s.code || '').toUpperCase() === String(currentSectionId || '').toUpperCase())) {
                                         course.assessments = (course.assessments || []).map(a => {
                                             if (Number(a.id) === Number(editingAssessmentId)) {
                                                 return Object.assign({}, a, { title, level, items, minutes, dueDate });
@@ -19649,7 +19642,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             }
                         } catch (e) { console.warn('Could not propagate assessment edit to teacherCourses', e); }
 
-                        try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { assessment_id: editingAssessmentId, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after edit', e); }
+                        try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { assessment_id: editingAssessmentId, section_id: getTeacherSectionId(currentSectionId) } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after edit', e); }
                     } else {
                         // Create new assessment object and add to classAssessments
                         const newAssessment = {
@@ -19662,7 +19655,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             completed: 0,
                             average: 0
                         };
-                        classAssessments[currentClassCode].push(newAssessment);
+                        classAssessments[currentSectionId].push(newAssessment);
                         showSuccessModal('Added', `"${title}" was added.`);
 
                         // Update any teacher-created courses that include this class (so Course modal updates in real-time)
@@ -19670,7 +19663,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             if (Array.isArray(teacherCourses)) {
                                 const affectedCourseIds = [];
                                 teacherCourses.forEach(course => {
-                                    if (Array.isArray(course.sections) && course.sections.some(s => String(s.code || '').toUpperCase() === String(currentClassCode || '').toUpperCase())) {
+                                    if (Array.isArray(course.sections) && course.sections.some(s => String(s.code || '').toUpperCase() === String(currentSectionId || '').toUpperCase())) {
                                         course.assessments = course.assessments || [];
                                         // push a shallow copy to avoid shared refs
                                         course.assessments.push(Object.assign({}, newAssessment));
@@ -19694,11 +19687,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         } catch (e) { console.warn('Could not update teacherCourses after assessment create', e); }
 
                         // Notify other modules and refresh authoritative data
-                        try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { assessment_id: newAssessment.id, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after create', e); }
+                        try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { assessment_id: newAssessment.id, section_id: getTeacherSectionId(currentSectionId) } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after create', e); }
                     }
 
                     bootstrap.Modal.getInstance(modalEl).hide();
-                    loadAssessments(currentClassCode);
+                    loadAssessments(currentSectionId);
                 });
             }
         }
@@ -19725,7 +19718,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 exportExcelBtn.dataset.bound = 'true';
                 exportExcelBtn.addEventListener("click", function(e) {
                     e.preventDefault();
-                    const classData = teacherClasses.find(c => c.code === currentClassCode);
+                    const classData = teacherClasses.find(c => c.code === currentSectionId);
                     const allStudents = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
                     const classStudents = allStudents.filter(s => s.class === classData.name && s.name !== "Jay Park");
                     
@@ -19773,7 +19766,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             form.addEventListener("submit", async function(e) {
                 e.preventDefault();
                 const rawMessage = document.getElementById("parentUpdateMessage").value;
-                const classData = teacherClasses.find(c => c.code === currentClassCode);
+                const classData = teacherClasses.find(c => c.code === currentSectionId);
                 if (!classData) return;
 
                 const allStudents = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");

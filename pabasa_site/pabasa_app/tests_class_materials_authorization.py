@@ -105,12 +105,12 @@ class ClassMaterialsAuthorizationTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
 
-    def test_class_code_fallback_still_requires_relational_authorization(self):
+    def test_class_code_only_request_is_rejected(self):
         Enrollment.objects.create(student=self.student_a, section=self.section_a, is_active=True)
         self._login(self.student_a)
 
         own_response = self.client.get(reverse("get_class_materials"), {"class_code": self.section_a.class_code})
         foreign_response = self.client.get(reverse("get_class_materials"), {"class_code": self.section_b.class_code})
 
-        self.assertEqual(own_response.status_code, 200)
-        self.assertEqual(foreign_response.status_code, 403)
+        self.assertEqual(own_response.status_code, 400)
+        self.assertEqual(foreign_response.status_code, 400)
