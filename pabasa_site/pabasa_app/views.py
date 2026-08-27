@@ -8173,12 +8173,16 @@ def admin_official_reading_assessment_delete(request, material_id):
 def _practice_difficulty_values():
     return [value for value, _label in AdminPracticeMaterialForm.DIFFICULTY_CHOICES]
 
+def _systemwide_practice_queryset():
+    return Material.objects.filter(
+        type='practice', section__isnull=True, teacher__isnull=True,
+        is_system_owned=True, source_type='shared',
+    )
+
 def _admin_practice_queryset():
     # Practice library content is stored in the Material table.
-    return Material.objects.filter(
-        section__isnull=True,
+    return _systemwide_practice_queryset().filter(
         difficulty_level__in=_practice_difficulty_values(),
-        type='practice',
     )
 
 def _get_admin_practice_material(practice_id):
@@ -8304,8 +8308,7 @@ def _practice_game_progression(mode, student_user=None, language=None):
     difficulty_keys = _practice_progression_difficulty_keys()
     materials_by_slot = {}
 
-    for material in Material.objects.filter(
-        type='practice',
+    for material in _systemwide_practice_queryset().filter(
         is_active=True,
         status='published',
         content_json__mode=normalized_mode,
@@ -8661,7 +8664,9 @@ def _save_admin_practice_material(form, material=None, request=None):
     material_obj.status = cleaned['status']
     material_obj.difficulty_level = cleaned['difficulty_level']
     material_obj.section = None
-    material_obj.source_type = 'personal'
+    material_obj.teacher = None
+    material_obj.is_system_owned = True
+    material_obj.source_type = 'shared'
     material_obj.is_active = material_obj.status in ['published', 'scheduled']
     material_obj.save()
     return material_obj
@@ -10045,9 +10050,7 @@ def reading_read_aloud_api(request):
 
 def _student_practice_queryset(request):
     selected_language = _practice_selected_language(request)
-    return Material.objects.filter(
-        section__isnull=True,
-        type='practice',
+    return _systemwide_practice_queryset().filter(
         is_active=True,
         status='published',
         difficulty_level__in=_practice_difficulty_values(),
@@ -15255,11 +15258,7 @@ def get_teacher_classes(request):
                 Q(section__isnull=True, teacher__role='admin'),
                 is_active=True,
             ).count()
-            practice_material_count += Material.objects.filter(
-                section__isnull=True,
-                type='practice',
-                is_active=True,
-            ).count()
+            practice_material_count += _systemwide_practice_queryset().filter(is_active=True).count()
             class_list.append({
                 'id': cls.id,
                 'code': cls.class_code,
