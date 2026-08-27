@@ -544,6 +544,93 @@
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
+    /* Keep the existing data/script hooks while making the canonical class
+       and enrollment content the main teacher dashboard board. */
+    .teacher-dashboard-main > .row { display: contents; }
+    .teacher-dashboard-main > .row > .col-lg-8 { display: contents; }
+    .teacher-board { display: block; }
+    .teacher-board > .teacher-panel:first-child { display: none; }
+    /* Keep the lower dashboard content inside one left-column card. */
+    .class-workspace {
+        background: var(--surface-glass);
+        border: 1px solid var(--surface-glass-border);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--dash-shadow);
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr);
+        min-width: 0;
+        padding: 1rem;
+        width: 100%;
+    }
+    .class-workspace > .class-banner {
+        border: 0;
+        box-shadow: none;
+        grid-column: 1;
+        min-width: 0;
+        padding: .25rem;
+    }
+    .class-workspace > .class-detail-grid {
+        align-self: stretch;
+        display: block;
+        grid-column: 2;
+        grid-row: 1;
+        min-width: 0;
+    }
+    .class-detail-grid > div { height: 100%; min-width: 0; }
+    .class-detail-grid .teacher-panel { height: 100%; }
+    .teacher-dashboard-main { min-width: 0; width: 100%; }
+    .class-workspace {
+        grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
+        min-width: 0;
+        width: 100%;
+    }
+    .class-workspace > .class-detail-grid,
+    .class-workspace > .class-detail-grid > div,
+    .class-workspace > .class-detail-grid .teacher-panel {
+        min-width: 0;
+        width: 100%;
+    }
+    .student-row { min-width: 0; width: 100%; }
+    .class-workspace {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto;
+    }
+    .class-workspace > .class-banner,
+    .class-workspace > .class-detail-grid {
+        grid-column: 1;
+        grid-row: auto;
+    }
+    .class-title-row {
+        align-items: center;
+        display: flex;
+        gap: 1rem;
+        justify-content: space-between;
+        min-width: 0;
+    }
+    .class-title-row h3 { min-width: 0; }
+    .class-banner .class-meta-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .teacher-board {
+        display: block;
+        grid-column: 1 / -1;
+        min-width: 0;
+        width: 100%;
+    }
+    .class-workspace {
+        align-items: start;
+        grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
+        grid-template-rows: auto;
+        min-width: 0;
+        width: 100%;
+    }
+    .class-workspace > .class-banner,
+    .class-workspace > .class-detail-grid {
+        min-width: 0;
+        width: 100%;
+    }
+
     .teacher-stat-card {
         background: var(--surface-solid) !important;
         border: 1px solid var(--dash-border);
@@ -551,7 +638,7 @@
         box-shadow: 0 12px 28px rgba(16,40,64,0.07);
         display: grid;
         gap: 0.35rem;
-        min-height: 126px;
+        min-height: 146px;
         padding: 1rem;
         position: relative;
         overflow: hidden;
@@ -593,9 +680,10 @@
     }
 
     .teacher-board {
-        display: grid;
+        display: block;
         gap: 1rem;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+        min-width: 0;
+        width: 100%;
     }
 
     .teacher-panel {
@@ -1008,6 +1096,11 @@
             max-height: 210px;
             width: min(100%, 290px);
         }
+
+        .class-workspace { grid-template-columns: 1fr; }
+        .class-workspace > .class-banner,
+        .class-workspace > .class-detail-grid { grid-column: 1; grid-row: auto; }
+        .class-workspace { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 720px) {
@@ -1028,6 +1121,30 @@
         .generated-code {
             grid-template-columns: 1fr;
         }
+    }
+
+    /* The class section is a single full-width card; only its metrics use columns. */
+    .teacher-dashboard-main,
+    .teacher-board,
+    .class-workspace {
+        min-width: 0;
+        width: 100%;
+    }
+    .class-workspace {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto auto;
+    }
+    .class-workspace > .class-banner,
+    .class-workspace > .class-detail-grid {
+        grid-column: 1;
+        grid-row: auto;
+        width: 100%;
+    }
+    .class-detail-grid,
+    .class-detail-grid > div,
+    .class-detail-grid .teacher-panel {
+        width: 100%;
+        min-width: 0;
     }
 
     .modal-success-premium {
@@ -1279,8 +1396,6 @@
 
     <div class="teacher-dashboard-columns">
     <div class="teacher-dashboard-main">
-    <div class="row g-4 align-items-start mt-1">
-        <div class="col-lg-8">
             <div class="teacher-stat-grid" aria-label="Teacher dashboard statistics">
 
         <article class="teacher-stat-card" data-mark="Cl">
@@ -1314,8 +1429,6 @@
             <small class="text-success">Meets expectation</small>
         </article>
             </div>
-        </div>
-    </div>
 
     <div class="teacher-board">
         <aside class="teacher-panel">
@@ -1332,16 +1445,12 @@
 
         <section class="class-workspace">
             <article class="class-banner" id="classBanner" data-header="">
-                <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
-                    <span class="dash-pill"><i class="bi bi-door-open"></i> Canonical class <strong id="activeClassCode">—</strong></span>
-                    <div class="d-flex gap-2">
-                        <a id="manageClassLink" class="btn btn-sm btn-primary fw-bold" href="#" style="display: none;"><i class="bi bi-gear-fill me-1"></i>Manage Class</a>
-                    </div>
-                </div>
-                <div>
-                    <p class="teacher-kicker mb-2" id="activeClassSubject"></p>
+                <span id="activeClassCode" class="visually-hidden">—</span>
+                <div class="class-title-row">
                     <h3 id="activeClassName">No class selected</h3>
+                    <a id="manageClassLink" class="btn btn-sm btn-primary fw-bold" href="#" style="display: none;"><i class="bi bi-gear-fill me-1"></i>Manage Class</a>
                 </div>
+                <p class="visually-hidden" id="activeClassSubject"></p>
                 <div class="class-meta-row">
                     <div class="mini-metric"><strong id="activeStudentCount">0</strong><span class="small text-secondary">students joined</span></div>
                     <div class="mini-metric"><strong id="activeAssessmentCount">0</strong><span class="small text-secondary">assessment materials</span></div>
