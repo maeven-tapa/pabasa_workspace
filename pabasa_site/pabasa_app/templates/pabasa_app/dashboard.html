@@ -603,6 +603,49 @@
         padding: 1.1rem;
     }
 
+    /* Student calendar mirrors the finalized Teacher calendar presentation. */
+    .student-calendar-card { background:#fff; border:1px solid rgba(16,70,110,.1); border-radius:22px; padding:1rem; box-shadow:0 12px 28px rgba(16,70,110,.08); }
+    .student-calendar-head { display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-bottom:.7rem; }
+    .student-calendar-filter { display:flex; gap:2px; padding:3px; border:1px solid rgba(16,70,110,.12); border-radius:999px; background:rgba(16,70,110,.035); margin-bottom:.8rem; }
+    .student-calendar-filter button { flex:1 1 50%; min-width:0; border:0; border-radius:999px; background:transparent; color:#64788a; padding:.35rem .75rem; font-size:.72rem; font-weight:800; white-space:nowrap; }
+    .student-calendar-filter button.active { background:#10466e; color:#fff; }
+    .student-calendar-month { color:#10466e; font-size:1.05rem; font-weight:900; margin-bottom:.55rem; }
+    .student-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); border:1px solid rgba(16,70,110,.08); border-radius:10px; overflow:hidden; }
+    .student-calendar-grid > div { min-width:0; min-height:2.8rem; border-right:1px solid rgba(16,70,110,.08); border-bottom:1px solid rgba(16,70,110,.08); padding:.25rem; }
+    .student-calendar-grid > div:nth-child(7n) { border-right:0; }
+    .student-calendar-weekday { min-height:auto!important; text-align:center; color:#6b7d8f; font-size:.62rem; font-weight:900; padding:.35rem .1rem!important; background:#f6fbfe; }
+    .student-calendar-day-number { color:#10466e; font-size:.7rem; font-weight:900; }
+    .student-calendar-day.is-adjacent .student-calendar-day-number { opacity:.4; }
+    .student-calendar-day.is-today { background:#eef9ff; }
+    .student-calendar-event { display:block; height:4px; margin-top:.3rem; border-radius:999px; background:#3b82f6; }
+    .student-calendar-event.school { background:#d97706; }
+    .student-calendar-expand { width:100%; margin-top:.8rem; }
+    .student-calendar-expanded .modal-dialog { max-width:1100px; width:min(1100px,calc(100vw - 48px)); }
+    .student-calendar-expanded .modal-content { height:min(760px,calc(100vh - 48px)); max-height:calc(100vh - 48px); }
+    .student-calendar-expanded .modal-body { display:flex; flex-direction:column; min-height:0; overflow-y:auto; }
+    .student-expanded-toolbar { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:1rem; }
+    .student-expanded-toolbar .student-calendar-filter { justify-self:end; margin:0; }
+    .student-expanded-nav { display:flex; gap:.35rem; }
+    .student-gantt { border:1px solid #d7e5ef; border-radius:12px; overflow:hidden; height:auto; min-height:0; flex:1 1 auto; align-self:stretch; }
+    .student-gantt-weekday,.student-gantt-days,.student-gantt-lanes { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); }
+    .student-gantt-weekday { background:#eaf4fb; }
+    .student-gantt-weekday div { text-align:center; font-weight:900; color:#10466e; padding:.65rem; border-right:1px solid #d7e5ef; }
+    .student-gantt-week { border-top:1px solid #d7e5ef; }
+    .student-gantt-day { height:2.4rem; padding:.5rem; border-right:1px solid #d7e5ef; }
+    .student-gantt-day-number { font-weight:900; color:#10466e; }
+    .student-gantt-day.adjacent .student-gantt-day-number { opacity:.45; }
+    .student-gantt-lanes { position:relative; padding:.25rem 0 .45rem; min-height:2.2rem; }
+    .student-gantt-bar { height:1.35rem; margin:0 2px; border-radius:999px; padding:.2rem .45rem; color:#fff; font-size:.7rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; z-index:2; }
+    @media (max-width:575.98px) { .student-calendar-expanded .modal-dialog { width:calc(100vw - 1rem); margin:.5rem auto; } .student-calendar-expanded .modal-content { height:calc(100vh - 1rem); max-height:calc(100vh - 1rem); } }
+
+    /* Keep the copied Teacher calendar structure above Student dashboard layout rules. */
+    .student-calendar-card { display:block !important; min-width:0 !important; width:100% !important; }
+    .student-calendar-card .student-calendar-head { display:flex !important; align-items:center !important; justify-content:space-between !important; width:100% !important; }
+    .student-calendar-card .student-calendar-filter { display:flex !important; width:100% !important; }
+    .student-calendar-card .student-calendar-grid { display:grid !important; grid-template-columns:repeat(7,minmax(0,1fr)) !important; width:100% !important; min-width:0 !important; }
+    .student-calendar-card .student-calendar-grid > div { min-width:0 !important; width:auto !important; }
+    .student-calendar-card .student-calendar-meta { display:block !important; width:100% !important; }
+
     .student-calendar-modal-shell {
         display: grid;
         gap: 1rem;
@@ -1856,18 +1899,15 @@
 
         <!-- Right Column: Calendar, Progress and Achievements -->
         <div class="right-column">
-            <article class="student-calendar-widget">
+            <article class="student-calendar-card">
                 <div class="student-calendar-head">
-                    <span class="dash-pill"><i class="bi bi-calendar3"></i> School Calendar</span>
-                    <style>.calendar-filter{display:inline-flex;gap:2px;padding:3px;border:1px solid rgba(16,70,110,.12);border-radius:999px;background:rgba(16,70,110,.035)}.calendar-filter button{appearance:none;border:0;background:transparent;color:#64788a;border-radius:999px;padding:.32rem .62rem;font-size:.7rem;font-weight:800;cursor:pointer}.calendar-filter button:hover{background:rgba(16,70,110,.08);color:#10466e}.calendar-filter button:focus-visible{outline:2px solid #2ea8e5;outline-offset:1px}.calendar-filter button.active{background:#10466e;color:#fff;box-shadow:0 2px 6px rgba(16,70,110,.18)}@media(max-width:576px){.calendar-filter{max-width:100%;overflow-x:auto}}</style><div class="calendar-filter" role="group"><button type="button" class="active" data-student-calendar-filter="all">All</button><button type="button" data-student-calendar-filter="global">System-wide</button><button type="button" data-student-calendar-filter="school">School</button></div>
-                    <h3>{{ month_year_label|default:"Current Month" }}</h3>
-                    <div class="student-calendar-meta">
-                        <div>School Year: <strong>{{ student_calendar_school_year|default:"Not set" }}</strong></div>
-                        <div>Current Term: <strong>{{ student_calendar_current_term|default:"Not set" }}</strong></div>
-                    </div>
+                    <h3><i class="bi bi-calendar3"></i> School Calendar</h3>
+                    <div class="student-calendar-filter" role="group"><button type="button" class="active" data-student-calendar-filter="global">System-wide</button><button type="button" data-student-calendar-filter="school">School</button></div>
                 </div>
+                <div class="student-calendar-month" id="studentCalendarMonth"></div>
+                <div class="student-calendar-meta">School Year: <strong>{{ student_calendar_school_year|default:"Not set" }}</strong> · <strong>{{ student_calendar_current_term|default:"Not set" }}</strong></div>
 
-                <div class="student-calendar-grid" aria-label="Current month calendar" aria-readonly="true">
+                <div class="student-calendar-grid" id="studentCalendarGrid" aria-label="Current month calendar" aria-readonly="true">
                     <div class="student-calendar-weekdays" aria-hidden="true">
                         <div class="student-calendar-weekday">Sun</div>
                         <div class="student-calendar-weekday">Mon</div>
@@ -1877,29 +1917,9 @@
                         <div class="student-calendar-weekday">Fri</div>
                         <div class="student-calendar-weekday">Sat</div>
                     </div>
-                    {% if month_weeks %}
-                        {% for week in month_weeks %}
-                            <div class="student-calendar-week">
-                                {% for day in week %}
-                                    <div class="student-calendar-day{% if not day.day %} is-empty{% endif %}{% if day.day == today.day and day.day %} is-today{% endif %}">
-                                        {% if day.day %}
-                                            <div class="student-calendar-day-number">{{ day.day }}</div>
-                                            <div class="student-calendar-events">
-                                                {% for event in day.events %}
-                                                    <div class="student-calendar-event" data-event-type="{{ event.event_type }}" title="{{ event.title }} ({{ event.start_date }} - {{ event.end_date }})">{{ event.title }}</div>
-                                                {% endfor %}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <p class="student-calendar-empty">No active school calendar is available yet.</p>
-                    {% endif %}
                 </div>
 
-                <button type="button" class="student-calendar-expand-btn" data-expand-calendar>
+                <button type="button" class="btn btn-primary student-calendar-expand" data-bs-toggle="modal" data-bs-target="#studentCalendarModal">
                     <i class="bi bi-arrows-fullscreen me-2"></i>Expand Calendar
                 </button>
             </article>
@@ -1959,7 +1979,7 @@
     </div>
 </div>
 
-<div class="modal fade student-calendar-modal" id="studentCalendarModal" tabindex="-1" aria-labelledby="studentCalendarModalLabel" aria-hidden="true">
+<div class="modal fade student-calendar-modal student-calendar-expanded" id="studentCalendarModal" tabindex="-1" aria-labelledby="studentCalendarModalLabel" aria-hidden="true">
 {% endcomment %}
 <div class="modal fade student-calendar-modal" id="studentCalendarModal" tabindex="-1" aria-labelledby="studentCalendarModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
@@ -1968,25 +1988,15 @@
                 <div class="student-calendar-expanded-head">
                     <div class="student-calendar-expanded-meta">
                         <span class="dash-pill"><i class="bi bi-calendar3"></i> School Calendar</span>
-                        <h4 class="mb-0" id="studentCalendarModalLabel">{{ month_year_label|default:"Current Month" }}</h4>
-                        <div class="student-calendar-meta">
-                            <div>School Year: <strong>{{ student_calendar_school_year|default:"Not set" }}</strong></div>
-                            <div>Current Term: <strong>{{ student_calendar_current_term|default:"Not set" }}</strong></div>
-                        </div>
+                        <h4 class="mb-0" id="studentCalendarModalLabel">School Calendar</h4>
                     </div>
-                    <div class="student-calendar-nav">
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-calendar-nav="prev">Previous</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-calendar-nav="today">Today</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-calendar-nav="next">Next</button>
-                        <button type="button" class="student-calendar-close-btn" data-bs-dismiss="modal" aria-label="Close">
-                            <i class="bi bi-x-lg"></i>
-                        </button>
-                    </div>
+                    <button type="button" class="student-calendar-close-btn" data-bs-dismiss="modal" aria-label="Close"><i class="bi bi-x-lg"></i></button>
                 </div>
             </div>
             <div class="modal-body">
                 <div class="student-calendar-modal-shell">
                     <div class="student-calendar-expanded-grid">
+                        <div class="student-expanded-toolbar mb-3"><div class="student-expanded-nav"><button type="button" class="btn btn-sm btn-outline-primary" data-calendar-nav="prev">Previous</button><button type="button" class="btn btn-sm btn-outline-primary" data-calendar-nav="today">Today</button><button type="button" class="btn btn-sm btn-outline-primary" data-calendar-nav="next">Next</button></div><strong id="studentCalendarExpandedMonth"></strong><div class="student-calendar-filter" role="group" aria-label="Expanded calendar filter"><button type="button" class="active" data-student-calendar-filter="global">System-wide</button><button type="button" data-student-calendar-filter="school">School</button></div></div>
                         <div class="student-calendar-expanded-calendar" data-student-calendar-expanded aria-label="Expanded current month calendar" aria-readonly="true"></div>
                     </div>
                     <div class="student-calendar-footer">
@@ -2219,8 +2229,8 @@
             student_calendar_events_count: studentCalendarEvents.length,
         });
 
-        let studentCalendarFilter = 'all';
-        document.querySelectorAll('[data-student-calendar-filter]').forEach((button) => button.addEventListener('click', () => { studentCalendarFilter = button.dataset.studentCalendarFilter; document.querySelectorAll('[data-student-calendar-filter]').forEach((item) => item.classList.toggle('active', item === button)); renderExpandedCalendar(currentMonthDate); }));
+        let studentCalendarFilter = 'global';
+        document.querySelectorAll('[data-student-calendar-filter]').forEach((button) => button.addEventListener('click', () => { studentCalendarFilter = button.dataset.studentCalendarFilter; document.querySelectorAll('[data-student-calendar-filter]').forEach((item) => item.classList.toggle('active', item === button)); renderStudentCompactCalendar(); renderExpandedCalendar(currentMonthDate); }));
         const getEventsForDay = (date) => {
             const iso = localIsoDate(date);
             return studentCalendarEvents.filter((event) => studentCalendarFilter === 'all' || (studentCalendarFilter === 'global' && event.scope === 'global') || (studentCalendarFilter === 'school' && event.scope === 'school')).filter((event) => {
@@ -2232,59 +2242,67 @@
             });
         };
 
+        const renderStudentCompactCalendar = () => {
+            const grid = document.getElementById('studentCalendarGrid');
+            const month = document.getElementById('studentCalendarMonth');
+            if (!grid || !month) return;
+            month.textContent = formatMonthLabel(currentMonthDate);
+            const first = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), 1).getDay();
+            const days = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 0).getDate();
+            let html = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(day => '<div class="student-calendar-weekday">'+day+'</div>').join('');
+            for (let i = 0; i < Math.ceil((first + days) / 7) * 7; i += 1) {
+                const day = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), i - first + 1);
+                const adjacent = day.getMonth() !== currentMonthDate.getMonth();
+                const bars = getEventsForDay(day).map(event => '<span class="student-calendar-event '+(event.scope === 'school' ? 'school' : '')+'" style="background:'+(event.scope === 'school' ? '#d97706' : (eventColors[event.event_type]?.swatch || '#6b7280'))+'" title="'+String(event.title || '').replace(/"/g, '&quot;')+'"></span>').join('');
+                html += '<div class="student-calendar-day '+(adjacent ? 'is-adjacent' : '')+(localIsoDate(day) === localIsoDate(new Date()) ? ' is-today' : '')+'"><div class="student-calendar-day-number">'+day.getDate()+'</div>'+bars+'</div>';
+            }
+            grid.innerHTML = html;
+        };
+
         const renderExpandedCalendar = (date) => {
             if (!studentCalendarExpanded) return;
-            const monthLabel = formatMonthLabel(date);
-            if (calendarMonthTitle) {
-                calendarMonthTitle.textContent = monthLabel;
+            document.getElementById('studentCalendarExpandedMonth').textContent = formatMonthLabel(date);
+            const first = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+            const days = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+            let html = '<div class="student-gantt-weekday">'+['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(day => '<div>'+day+'</div>').join('')+'</div>';
+            for (let week = 0; week < Math.ceil((first + days) / 7); week += 1) {
+                const weekStart = new Date(date.getFullYear(), date.getMonth(), 1 - first + week * 7);
+                const weekEnd = new Date(date.getFullYear(), date.getMonth(), 7 - first + week * 7);
+                const segments = studentCalendarEvents.filter(event => event.scope === studentCalendarFilter).map(event => {
+                    const start = parseIsoDate(event.start_date || event.start);
+                    const end = parseIsoDate(event.end_date || event.end || event.start);
+                    if (!start || !end) return null;
+                    const a = start > weekStart ? start : weekStart;
+                    const b = end < weekEnd ? end : weekEnd;
+                    if (a > b) return null;
+                    const column = a.getDay() + 1;
+                    const span = Math.round((b - a) / 86400000) + 1;
+                    return {event, column, span, endColumn: column + span - 1};
+                }).filter(Boolean).sort((a,b) => a.column - b.column || a.endColumn - b.endColumn);
+                const lanes = [];
+                segments.forEach(segment => { let lane = lanes.findIndex(items => items.every(existing => segment.endColumn < existing.column || existing.endColumn < segment.column)); if (lane < 0) { lane = lanes.length; lanes.push([]); } lanes[lane].push(segment); segment.lane = lane + 1; });
+                html += '<div class="student-gantt-week"><div class="student-gantt-days">';
+                for (let column = 0; column < 7; column += 1) { const day = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + column); html += '<div class="student-gantt-day '+(day.getMonth() !== date.getMonth() ? 'adjacent' : '')+'"><div class="student-gantt-day-number">'+day.getDate()+'</div></div>'; }
+                html += '</div><div class="student-gantt-lanes" style="grid-template-rows:repeat('+Math.max(lanes.length, 1)+',1.35rem)">';
+                segments.forEach(segment => { const color = segment.event.scope === 'school' ? '#d97706' : (eventColors[segment.event.event_type]?.swatch || '#6b7280'); html += '<div class="student-gantt-bar" title="'+String(segment.event.title || '').replace(/"/g, '&quot;')+'" style="grid-column:'+segment.column+'/span '+segment.span+';grid-row:'+segment.lane+';background:'+color+'">'+escapeHtml(segment.event.title || '')+'</div>'; });
+                html += '</div></div>';
             }
-            const weeks = buildMonthGrid(date);
-            const today = new Date();
-            const todayIso = localIsoDate(today);
-            studentCalendarExpanded.innerHTML = `
-                <div class="student-calendar-weekdays" aria-hidden="true">
-                    <div class="student-calendar-weekday">Sun</div>
-                    <div class="student-calendar-weekday">Mon</div>
-                    <div class="student-calendar-weekday">Tue</div>
-                    <div class="student-calendar-weekday">Wed</div>
-                    <div class="student-calendar-weekday">Thu</div>
-                    <div class="student-calendar-weekday">Fri</div>
-                    <div class="student-calendar-weekday">Sat</div>
-                </div>
-                ${weeks.map((week) => `
-                    <div class="student-calendar-week">
-                        ${week.map((day) => {
-                            if (!day) {
-                                return '<div class="student-calendar-day is-empty"></div>';
-                            }
-                            const iso = localIsoDate(day);
-                            const dayEvents = getEventsForDay(day);
-                            return `
-                                <div class="student-calendar-day${iso === todayIso ? ' is-today' : ''}">
-                                    <div class="student-calendar-day-number">${day.getDate()}</div>
-                                    <div class="student-calendar-events">
-                                        ${dayEvents.map((event) => {
-                                            const color = eventColors[event.event_type] || eventColors.other;
-                                            return `<div class="student-calendar-event" data-event-type="${event.event_type}" title="${escapeHtml(`${event.title} (${event.start_date} - ${event.end_date})`)}" style="background:${color.bg};">${escapeHtml(event.title)}</div>`;
-                                        }).join('')}
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                `).join('')}
-            `;
+            studentCalendarExpanded.innerHTML = html;
+            const weeks = studentCalendarExpanded.querySelectorAll('.student-gantt-week');
+            if (weeks.length && studentCalendarExpanded.clientHeight) { const height = Math.max(0, (studentCalendarExpanded.clientHeight - studentCalendarExpanded.querySelector('.student-gantt-weekday').offsetHeight) / weeks.length); weeks.forEach(week => { week.style.height = height + 'px'; }); }
         };
 
         const shiftExpandedMonth = (delta) => {
             currentMonthDate.setMonth(currentMonthDate.getMonth() + delta);
             renderExpandedCalendar(currentMonthDate);
+            renderStudentCompactCalendar();
         };
 
         const resetExpandedMonth = () => {
             const now = new Date();
             currentMonthDate.setFullYear(now.getFullYear(), now.getMonth(), 1);
             renderExpandedCalendar(currentMonthDate);
+            renderStudentCompactCalendar();
         };
 
         studentCalendarModalElement?.addEventListener('show.bs.modal', () => {
@@ -2303,6 +2321,8 @@
         expandCalendarBtn?.addEventListener('click', () => {
             studentCalendarModal?.show();
         });
+
+        renderStudentCompactCalendar();
 
         setGreeting();
 
