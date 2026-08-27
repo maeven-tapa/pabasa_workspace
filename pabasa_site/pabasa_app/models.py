@@ -1462,6 +1462,13 @@ class Course(models.Model):
     code = models.CharField(max_length=40, unique=True)
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
+    school = models.ForeignKey(
+        School,
+        on_delete=models.PROTECT,
+        related_name="courses",
+        null=True,
+        blank=True,
+    )
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name="courses")
     sections = models.ManyToManyField("Section", related_name="courses", blank=True)
     # assessments and materials are attached directly to Course
@@ -1475,6 +1482,17 @@ class Course(models.Model):
     class Meta:
         db_table = "courses"
         ordering = ["-created_at"]
+
+    def clean(self):
+        super().clean()
+        if self.school_id and self.teacher_id and self.teacher.school_record_id != self.school_id:
+            raise ValidationError({"school": "Course school must match the teacher's school."})
+        if self.pk and self.school_id:
+            invalid_sections = self.sections.filter(
+                ~models.Q(school_id=self.school_id) | ~models.Q(teacher_id=self.teacher_id)
+            )
+            if invalid_sections.exists():
+                raise ValidationError({"sections": "All Course sections must belong to the Course school."})
 
     def __str__(self):
         return f"{self.code} - {self.title}"

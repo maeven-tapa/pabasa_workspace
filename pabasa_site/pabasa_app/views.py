@@ -3234,6 +3234,26 @@ def generate_unique_course_code():
         if not Course.objects.filter(code=code).exists():
             return code
 
+def _teacher_course_scope(teacher_user, include_legacy=False):
+    """Courses visible to a teacher; legacy NULL-school rows are owner-only."""
+    if not teacher_user:
+        return Course.objects.none()
+    if not teacher_user.school_record_id:
+        return Course.objects.filter(school__isnull=True, teacher=teacher_user) if include_legacy else Course.objects.none()
+    scoped = Course.objects.filter(school_id=teacher_user.school_record_id)
+    if include_legacy:
+        scoped = scoped | Course.objects.filter(
+            school__isnull=True, teacher=teacher_user,
+        )
+    return scoped.distinct()
+
+def _teacher_owns_course(course, teacher_user, allow_legacy=True):
+    return bool(
+        course and teacher_user and course.teacher_id == teacher_user.id and
+        (course.school_id == teacher_user.school_record_id or
+         (allow_legacy and course.school_id is None))
+    )
+
 # ===== Pending Signup/Reset Session Management (Temporary Storage) =====
 # Note: These store temporary data during signup/password reset flows.
 # Session is appropriate for temporary, short-lived data (OTPs, form data).
@@ -11554,7 +11574,7 @@ def _resolve_assist_token(token, max_age=60 * 60 * 4):
     course = Course.objects.filter(id=payload.get('course_id')).first() if payload.get('course_id') else None
     if not student_user or not teacher_user or not material:
         return None
-    if course and teacher_user.role != 'admin' and course.teacher_id != teacher_user.id:
+    if course and teacher_user.role != 'admin' and not _teacher_owns_course(course, teacher_user):
         return None
     sections = course.sections.filter(is_active=True) if course else Section.objects.filter(is_active=True, teacher=teacher_user)
     allowed = any(section.has_student(student_user, active_only=True) for section in sections)
@@ -11581,7 +11601,7 @@ def get_assist_students(request):
     material = Material.objects.filter(id=request.GET.get('material_id')).first()
     if not teacher_user or not course or not material:
         return JsonResponse({'success': False, 'error': 'Course or material not found'}, status=404)
-    if teacher_user.role != 'admin' and course.teacher_id != teacher_user.id:
+    if teacher_user.role != 'admin' and not _teacher_owns_course(course, teacher_user):
         return JsonResponse({'success': False, 'error': 'Course access denied'}, status=403)
     if not course.materials.filter(id=material.id).exists():
         return JsonResponse({'success': False, 'error': 'Material is not assigned to this course'}, status=403)
@@ -11627,7 +11647,7 @@ def start_assist_assessment(request):
     student_user = User.objects.filter(id=data.get('student_id'), role='student', is_archived=False).first()
     if not teacher_user or not course or not material or not student_user:
         return JsonResponse({'success': False, 'error': 'Unable to start assisted assessment'}, status=404)
-    if teacher_user.role != 'admin' and course.teacher_id != teacher_user.id:
+    if teacher_user.role != 'admin' and not _teacher_owns_course(course, teacher_user):
         return JsonResponse({'success': False, 'error': 'Course access denied'}, status=403)
     if not course.materials.filter(id=material.id).exists():
         return JsonResponse({'success': False, 'error': 'Material is not assigned to this course'}, status=403)
@@ -11787,7 +11807,7 @@ def start_live_assessment(request):
     course = None
     if course_id:
         course = Course.objects.filter(id=course_id).first()
-        if course and teacher_user.role != 'admin' and course.teacher_id != teacher_user.id:
+        if course and teacher_user.role != 'admin' and not _teacher_owns_course(course, teacher_user):
             return JsonResponse({'success': False, 'error': 'Course access denied'}, status=403)
 
     material = None
@@ -13877,7 +13897,7 @@ def get_teacher_courses_api(request):
         if shared:
             # Shared mode feeds the Others library. Include all active courses,
             # including the current teacher's own shared resources.
-            courses_qs = Course.objects.filter(is_active=True)
+            courses_qs = _teacher_course_scope(teacher_user).filter(is_active=True)
         else:
             # Personal mode is Section-backed; no legacy Course row is required.
             if not teacher_user:
@@ -14756,6 +14776,8 @@ def create_course(request):
         teacher_user = User.objects.filter(id=request.session.get('user_id')).first()
         if not teacher_user or teacher_user.role != 'teacher':
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
+        if not teacher_user.school_record_id:
+            return JsonResponse({'success': False, 'error': 'Your teacher account has no school assignment.'}, status=400)
 
         code = generate_unique_course_code()
         course = Course.objects.create(
@@ -14763,6 +14785,7 @@ def create_course(request):
             title=title,
             description=description,
             teacher=teacher_user,
+            school=teacher_user.school_record,
         )
         _notify_principals(
             'New course created',
@@ -14777,9 +14800,9 @@ def create_course(request):
             for sid in section_ids:
                 try:
                     if isinstance(sid, int) or str(sid).isdigit():
-                        sec = Section.objects.filter(id=int(sid), teacher=teacher_user).first()
+                        sec = Section.objects.filter(id=int(sid), teacher=teacher_user, school=teacher_user.school_record, is_active=True).first()
                     else:
-                        sec = Section.objects.filter(class_code=str(sid).strip(), teacher=teacher_user).first()
+                        sec = Section.objects.filter(class_code=str(sid).strip(), teacher=teacher_user, school=teacher_user.school_record, is_active=True).first()
                     if sec:
                         course.sections.add(sec)
                 except Exception:
@@ -14813,7 +14836,7 @@ def delete_course(request):
         if not teacher_user or teacher_user.role != 'teacher':
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
 
-        course = Course.objects.filter(id=course_id, teacher=teacher_user, is_active=True).first()
+        course = _teacher_course_scope(teacher_user, include_legacy=True).filter(id=course_id, teacher=teacher_user, is_active=True).first()
         if not course:
             return JsonResponse({'success': False, 'error': 'Course not found or not owned by you'}, status=404)
 
@@ -14924,7 +14947,7 @@ def add_material_to_course(request):
                 teacher=teacher_user, is_active=True,
             ).first()
         else:
-            course = Course.objects.filter(id=course_id, teacher=teacher_user).first()
+            course = _teacher_course_scope(teacher_user, include_legacy=True).filter(id=course_id, teacher=teacher_user).first()
         if not course and not class_section:
             return JsonResponse({'success': False, 'error': 'Course not found or not owned by you'}, status=404)
 
@@ -14999,7 +15022,7 @@ def remove_material_from_course(request):
                 teacher=teacher_user, is_active=True,
             ).first()
         else:
-            course = Course.objects.filter(id=course_id, teacher=teacher_user).first()
+            course = _teacher_course_scope(teacher_user, include_legacy=True).filter(id=course_id, teacher=teacher_user).first()
         if not course and not class_section:
             return JsonResponse({'success': False, 'error': 'Course not found or not owned by you'}, status=404)
 
@@ -15097,7 +15120,7 @@ def teacher_add_student(request):
         if not course_id or not teacher_user or teacher_user.role != 'teacher':
             return JsonResponse({'success': False, 'error': 'Course or Student not found'}, status=404)
 
-        course = Course.objects.filter(id=course_id, teacher=teacher_user, is_active=True).first()
+        course = _teacher_course_scope(teacher_user, include_legacy=True).filter(id=course_id, teacher=teacher_user, is_active=True).first()
         if not course:
             return JsonResponse({'success': False, 'error': 'Course not found'}, status=404)
 
@@ -15175,7 +15198,7 @@ def teacher_remove_student(request):
         if not course_id:
             return JsonResponse({'success': False, 'error': 'Course not found'}, status=404)
 
-        course = Course.objects.filter(id=course_id, teacher=teacher_user, is_active=True).first()
+        course = _teacher_course_scope(teacher_user, include_legacy=True).filter(id=course_id, teacher=teacher_user, is_active=True).first()
         if not course:
             return JsonResponse({'success': False, 'error': 'Course not found'}, status=404)
 

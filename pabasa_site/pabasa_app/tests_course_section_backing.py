@@ -17,12 +17,14 @@ def test_section_create(**kwargs):
 
 class SectionBackedCoursesRegressionTests(TestCase):
     def setUp(self):
+        self.school = School.objects.create(name="Section Course School", code="SCS-001")
         self.teacher = User.objects.create(
             custom_id="TCH-SECTION-COURSES", role="teacher",
             first_name="Section", last_name="Owner", middle_initial="", suffix="",
             sex="female", birth_month=1, birth_day=1, birth_year=1990,
             email="section-courses@example.com", password_hash="hashed-password",
             teacher_role="Teacher",
+            school_record=self.school,
         )
         self.section = test_section_create(
             class_code="SEC-COURSES", class_name="Grade 2", header="Reading Class",
@@ -56,16 +58,22 @@ class SectionBackedCoursesRegressionTests(TestCase):
             sex="female", birth_month=1, birth_day=1, birth_year=1990,
             email="shared-courses@example.com", password_hash="hashed-password",
             teacher_role="Teacher",
+            school_record=self.school,
         )
         shared_course = Course.objects.create(
             code="SHARED-COURSE", title="Shared Course", teacher=other_teacher,
         )
+        self.assertIsNone(shared_course.school_id)
+        self.assertEqual(shared_course.teacher.school_record_id, self.school.id)
+        self.assertFalse(shared_course.sections.exists())
 
         response = self.client.get(reverse("get_teacher_courses_api"), {"shared": "true"})
 
         self.assertEqual(response.status_code, 200)
         ids = {course["id"] for course in response.json()["courses"]}
-        self.assertIn(shared_course.id, ids)
+        # NULL-school legacy Courses remain owner-compatible but are excluded
+        # from school-wide/shared discovery.
+        self.assertNotIn(shared_course.id, ids)
         self.assertNotIn(f"section-{self.section.id}", ids)
 
     def test_section_identifier_scopes_assessments(self):
