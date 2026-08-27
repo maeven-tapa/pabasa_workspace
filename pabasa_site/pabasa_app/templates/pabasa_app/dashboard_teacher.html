@@ -134,6 +134,52 @@
         gap: 1.15rem;
     }
 
+    .teacher-dashboard-columns { display:grid; grid-template-columns:minmax(0,1fr) minmax(290px,360px); gap:1.15rem; align-items:start; }
+    .teacher-dashboard-main { min-width:0; display:grid; gap:1.15rem; }
+    .teacher-calendar-card { background:#fff; border:1px solid rgba(16,70,110,.1); border-radius:22px; padding:1rem; box-shadow:0 12px 28px rgba(16,70,110,.08); position:sticky; top:1rem; }
+    .teacher-calendar-head { display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-bottom:.7rem; }
+    .teacher-calendar-head h3 { margin:0; color:#10466e; font-size:1.05rem; font-weight:900; }
+    .teacher-calendar-meta { color:#6b7d8f; font-size:.78rem; margin-bottom:.7rem; }
+    .teacher-calendar-filter { display:flex; gap:2px; padding:3px; border:1px solid rgba(16,70,110,.12); border-radius:999px; background:rgba(16,70,110,.035); margin-bottom:.8rem; }
+    .teacher-calendar-filter button { flex:0 0 auto; min-width:7.4rem; border:0; border-radius:999px; background:transparent; color:#64788a; padding:.35rem .75rem; font-size:.72rem; font-weight:800; white-space:nowrap; }
+    .teacher-calendar-filter button[data-teacher-calendar-filter="school"], .teacher-calendar-filter button[data-teacher-expanded-filter="school"] { min-width:5.2rem; }
+    .teacher-calendar-filter button.active { background:#10466e; color:#fff; }
+    .teacher-calendar-card .teacher-calendar-filter { width:100%; }
+    .teacher-calendar-card .teacher-calendar-filter button { flex:1 1 50%; min-width:0; text-align:center; }
+    .teacher-calendar-nav { display:flex; gap:.35rem; margin-bottom:.7rem; }
+    .teacher-calendar-nav button { border:1px solid #cfe0ec; background:#fff; border-radius:999px; color:#10466e; padding:.32rem .55rem; font-size:.72rem; font-weight:800; }
+    .teacher-calendar-month { color:#10466e; font-size:1.05rem; font-weight:900; margin-bottom:.55rem; }
+    .teacher-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); border:1px solid rgba(16,70,110,.08); border-radius:10px; overflow:hidden; }
+    .teacher-calendar-grid > div { min-width:0; min-height:2.8rem; border-right:1px solid rgba(16,70,110,.08); border-bottom:1px solid rgba(16,70,110,.08); padding:.25rem; }
+    .teacher-calendar-grid > div:nth-child(7n) { border-right:0; }
+    .teacher-calendar-weekday { min-height:auto!important; text-align:center; color:#6b7d8f; font-size:.62rem; font-weight:900; padding:.35rem .1rem!important; background:#f6fbfe; }
+    .teacher-calendar-day-number { color:#10466e; font-size:.7rem; font-weight:900; }
+    .teacher-calendar-day.is-adjacent .teacher-calendar-day-number { opacity:.4; }
+    .teacher-calendar-day.is-today { background:#eef9ff; }
+    .teacher-calendar-event { display:block; height:4px; margin-top:.3rem; border-radius:999px; background:#3b82f6; }
+    .teacher-calendar-event.school { background:#d97706; }
+    .teacher-calendar-expand { width:100%; margin-top:.8rem; }
+    .teacher-calendar-expanded .modal-dialog { max-width:1100px; }
+    .teacher-calendar-expanded .modal-dialog { width:min(1100px,calc(100vw - 48px)); }
+    .teacher-calendar-expanded .modal-content { height:min(760px,calc(100vh - 48px)); max-height:calc(100vh - 48px); }
+    .teacher-calendar-expanded .modal-body { display:flex; flex-direction:column; min-height:0; overflow-y:auto; }
+    .teacher-expanded-toolbar { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:1rem; }
+    .teacher-expanded-toolbar .teacher-calendar-filter { justify-self:end; margin:0; }
+    .teacher-expanded-nav { display:flex; gap:.35rem; }
+    .teacher-gantt { border:1px solid #d7e5ef; border-radius:12px; overflow:hidden; }
+    .teacher-calendar-expanded .teacher-gantt { height:auto; min-height:0; flex:1 1 auto; align-self:stretch; }
+    .teacher-gantt-weekday,.teacher-gantt-days,.teacher-gantt-lanes { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); }
+    .teacher-gantt-weekday { background:#eaf4fb; }
+    .teacher-gantt-weekday div { text-align:center; font-weight:900; color:#10466e; padding:.65rem; border-right:1px solid #d7e5ef; }
+    .teacher-gantt-week { border-top:1px solid #d7e5ef; }
+    .teacher-gantt-day { height:2.4rem; padding:.5rem; border-right:1px solid #d7e5ef; }
+    .teacher-gantt-day-number { font-weight:900; color:#10466e; }
+    .teacher-gantt-day.adjacent .teacher-gantt-day-number { opacity:.45; }
+    .teacher-gantt-lanes { position:relative; padding:.25rem 0 .45rem; min-height:2.2rem; }
+    .teacher-gantt-bar { height:1.35rem; margin:0 2px; border-radius:999px; padding:.2rem .45rem; color:#fff; font-size:.7rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; z-index:2; }
+    @media (max-width: 991.98px) { .teacher-dashboard-columns { grid-template-columns:1fr; } .teacher-calendar-card { position:static; } }
+    @media (max-width: 575.98px) { .teacher-calendar-expanded .modal-dialog { width:calc(100vw - 1rem); margin:.5rem auto; } .teacher-calendar-expanded .modal-content { height:calc(100vh - 1rem); max-height:calc(100vh - 1rem); } }
+
     .teacher-hero {
         background: var(--surface-glass) !important;
         backdrop-filter: blur(12px) saturate(130%);
@@ -1231,6 +1277,8 @@
         </div>
     </div>
 
+    <div class="teacher-dashboard-columns">
+    <div class="teacher-dashboard-main">
     <div class="row g-4 align-items-start mt-1">
         <div class="col-lg-8">
             <div class="teacher-stat-grid" aria-label="Teacher dashboard statistics">
@@ -1267,7 +1315,6 @@
         </article>
             </div>
         </div>
-        <div class="col-lg-4">{% include "pabasa_app/partials/compact_calendar.html" with readonly=True %}</div>
     </div>
 
     <div class="teacher-board">
@@ -1323,7 +1370,81 @@
 
         </section>
     </div>
+    </div>
+    <aside class="teacher-calendar-card" aria-label="School Calendar">
+        <div class="teacher-calendar-head"><h3><i class="bi bi-calendar3"></i> School Calendar</h3></div>
+        <div class="teacher-calendar-filter" role="group" aria-label="Calendar filter"><button type="button" class="active" data-teacher-calendar-filter="global">System-wide</button><button type="button" data-teacher-calendar-filter="school">School</button></div>
+        <div class="teacher-calendar-month" id="teacherCalendarMonth"></div>
+        <div class="teacher-calendar-meta">School Year: <strong>{{ student_calendar_school_year|default:"Not set" }}</strong> · <strong>{{ student_calendar_current_term|default:"Not set" }}</strong></div>
+        <div class="teacher-calendar-grid" id="teacherCalendarGrid"></div>
+        <button type="button" class="btn btn-primary teacher-calendar-expand" data-bs-toggle="modal" data-bs-target="#teacherCalendarExpanded">Expand Calendar</button>
+    </aside>
+    </div>
 </section>
+
+<div class="modal fade teacher-calendar-expanded" id="teacherCalendarExpanded" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-xl"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">School Calendar</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><div class="teacher-expanded-toolbar mb-3"><div class="teacher-expanded-nav"><button type="button" class="btn btn-sm btn-outline-primary" id="teacherExpandedPrev">Previous</button><button type="button" class="btn btn-sm btn-outline-primary" id="teacherExpandedToday">Today</button><button type="button" class="btn btn-sm btn-outline-primary" id="teacherExpandedNext">Next</button></div><strong id="teacherExpandedMonth"></strong><div class="teacher-calendar-filter" role="group" aria-label="Expanded calendar filter"><button type="button" class="active" data-teacher-expanded-filter="global">System-wide</button><button type="button" data-teacher-expanded-filter="school">School</button></div></div><div class="teacher-gantt" id="teacherExpandedGrid"></div></div></div></div></div>
+
+<script>
+(function () {
+    const events = {{ student_calendar_events_json|default:'[]'|safe }};
+    const today = new Date({{ today.year }}, {{ today.month|add:'-1' }}, {{ today.day }});
+    let cursor = new Date(today.getFullYear(), today.getMonth(), 1);
+    let filter = 'global';
+    const colors = {school_opening:'#22c55e', pre_assessment:'#3b82f6', midline_assessment:'#14b8a6', post_assessment:'#a855f7', school_closing:'#ef4444', holiday:'#f59e0b', examination:'#f97316', other:'#6b7280'};
+    const parseDate = value => { const p = String(value || '').slice(0, 10).split('-').map(Number); return p.length === 3 && p.every(Number.isFinite) ? new Date(p[0], p[1] - 1, p[2]) : null; };
+    const key = date => date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate();;
+    const visibleEvents = () => events.filter(event => event.scope === filter);
+    const eventContains = (event, date) => { const start = parseDate(event.start_date || event.start); const end = parseDate(event.end_date || event.end || event.start); return start && end && key(start) <= key(date) && key(date) <= key(end); };
+    function drawCompact() {
+        const grid = document.getElementById('teacherCalendarGrid'); if (!grid) return;
+        document.getElementById('teacherCalendarMonth').textContent = cursor.toLocaleDateString(undefined, {month:'long', year:'numeric'});
+        const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1).getDay();
+        const days = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
+        let html = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(day => '<div class="teacher-calendar-weekday">'+day+'</div>').join('');
+        for (let i = 0; i < Math.ceil((first + days) / 7) * 7; i += 1) {
+            const date = new Date(cursor.getFullYear(), cursor.getMonth(), i - first + 1);
+            const adjacent = date.getMonth() !== cursor.getMonth();
+            const bars = visibleEvents().filter(event => eventContains(event, date)).map(event => '<span class="teacher-calendar-event '+(event.scope === 'school' ? 'school' : '')+'" style="background:'+(event.scope === 'school' ? '#d97706' : (colors[event.event_type] || '#6b7280'))+'" title="'+String(event.title || '').replace(/"/g, '&quot;')+'"></span>').join('');
+            html += '<div class="teacher-calendar-day '+(adjacent ? 'is-adjacent' : '')+(key(date) === key(today) ? ' is-today' : '')+'"><div class="teacher-calendar-day-number">'+date.getDate()+'</div>'+bars+'</div>';
+        }
+        grid.innerHTML = html;
+    }
+    function drawExpanded() {
+        const grid = document.getElementById('teacherExpandedGrid'); if (!grid) return;
+        document.getElementById('teacherExpandedMonth').textContent = cursor.toLocaleDateString(undefined, {month:'long', year:'numeric'});
+        const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1).getDay();
+        const days = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
+        let html = '<div class="teacher-gantt-weekday">'+['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(day => '<div>'+day+'</div>').join('')+'</div>';
+        for (let week = 0; week < Math.ceil((first + days) / 7); week += 1) {
+            const weekStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1 - first + week * 7);
+            const weekEnd = new Date(cursor.getFullYear(), cursor.getMonth(), 7 - first + week * 7);
+            const segments = visibleEvents().map(event => { const start=parseDate(event.start_date||event.start), end=parseDate(event.end_date||event.end||event.start); if(!start||!end) return null; const a=key(start)>key(weekStart)?start:weekStart, b=key(end)<key(weekEnd)?end:weekEnd; if(key(a)>key(b)) return null; const column=a.getDay()+1, span=Math.round((b-a)/86400000)+1; return {event,column,span,endColumn:column+span-1}; }).filter(Boolean).sort((a,b)=>a.column-b.column||a.endColumn-b.endColumn);
+            const lanes=[]; segments.forEach(segment => { let lane=lanes.findIndex(items=>items.every(existing=>segment.endColumn<existing.column||existing.endColumn<segment.column)); if(lane<0){lane=lanes.length;lanes.push([]);} lanes[lane].push(segment); segment.lane=lane+1; });
+            html += '<div class="teacher-gantt-week"><div class="teacher-gantt-days">';
+            for(let column=0;column<7;column+=1){const date=new Date(weekStart.getFullYear(),weekStart.getMonth(),weekStart.getDate()+column);html+='<div class="teacher-gantt-day '+(date.getMonth()!==cursor.getMonth()?'adjacent':'')+'"><div class="teacher-gantt-day-number">'+date.getDate()+'</div></div>';}
+            html += '</div><div class="teacher-gantt-lanes" style="grid-template-rows:repeat('+Math.max(lanes.length,1)+',1.35rem)">';
+            segments.forEach(segment => { html += '<div class="teacher-gantt-bar" style="grid-column:'+segment.column+'/span '+segment.span+';grid-row:'+segment.lane+';background:'+(segment.event.scope==='school'?'#d97706':(colors[segment.event.event_type]||'#6b7280'))+'">'+segment.event.title+'</div>'; });
+            html += '</div></div>';
+        }
+        grid.innerHTML = html;
+        const header = grid.querySelector('.teacher-gantt-weekday');
+        const weeks = grid.querySelectorAll('.teacher-gantt-week');
+        if (header && weeks.length && grid.clientHeight) {
+            const weekHeight = Math.max(0, (grid.clientHeight - header.offsetHeight) / weeks.length);
+            weeks.forEach(week => { week.style.height = weekHeight + 'px'; });
+        }
+    }
+    function draw() { drawCompact(); drawExpanded(); }
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('[data-teacher-calendar-filter]').forEach(button => button.onclick = () => { filter=button.dataset.teacherCalendarFilter; document.querySelectorAll('[data-teacher-calendar-filter]').forEach(item=>item.classList.toggle('active',item===button)); draw(); });
+        document.querySelectorAll('[data-teacher-expanded-filter]').forEach(button => button.onclick = () => { filter=button.dataset.teacherExpandedFilter; document.querySelectorAll('[data-teacher-expanded-filter]').forEach(item=>item.classList.toggle('active',item===button)); document.querySelectorAll('[data-teacher-calendar-filter]').forEach(item=>item.classList.toggle('active',item.dataset.teacherCalendarFilter===filter)); draw(); });
+        document.getElementById('teacherExpandedPrev').onclick=()=>{cursor.setMonth(cursor.getMonth()-1);draw();}; document.getElementById('teacherExpandedToday').onclick=()=>{cursor=new Date(today.getFullYear(),today.getMonth(),1);draw();}; document.getElementById('teacherExpandedNext').onclick=()=>{cursor.setMonth(cursor.getMonth()+1);draw();};
+        document.getElementById('teacherCalendarExpanded').addEventListener('shown.bs.modal', drawExpanded);
+        window.addEventListener('resize', drawExpanded);
+        draw();
+    });
+}());
+</script>
 
 
 <script>
