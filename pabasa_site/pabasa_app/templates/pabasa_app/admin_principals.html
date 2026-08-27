@@ -75,6 +75,16 @@
     </div>
     {% endif %}
 
+    {% if principal_warning and created_principal %}
+    <div class="alert alert-warning d-flex align-items-start gap-3" role="alert">
+        <span class="fs-4 mt-1"><i class="bi bi-exclamation-triangle-fill"></i></span>
+        <div>
+            <p class="mb-1 fw-bold">Principal account created</p>
+            <p class="mb-0">{{ principal_warning }}</p>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="principal-table-card">
         <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-3">
             <div>
@@ -180,28 +190,32 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form method="post" enctype="multipart/form-data" id="principalAccountForm">
+                <form method="post" id="principalAccountForm">
                     {% csrf_token %}
                     <div class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label fw-bold" for="fullName">Full Name</label>
-                            <input class="form-control" id="fullName" name="full_name" type="text" value="{{ form_data.full_name }}" required>
+                        <div class="col-12 col-md-5">
+                            <label class="form-label fw-bold" for="principalFirstName">First Name</label>
+                            <input class="form-control" id="principalFirstName" name="first_name" type="text" value="{{ form_data.first_name }}" required>
+                        </div>
+
+                        <div class="col-6 col-md-2">
+                            <label class="form-label fw-bold" for="principalMiddleInitial">Middle Initial</label>
+                            <input class="form-control" id="principalMiddleInitial" name="middle_initial" type="text" maxlength="1" value="{{ form_data.middle_initial }}">
+                        </div>
+
+                        <div class="col-12 col-md-5">
+                            <label class="form-label fw-bold" for="principalLastName">Last Name</label>
+                            <input class="form-control" id="principalLastName" name="last_name" type="text" value="{{ form_data.last_name }}" required>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-bold" for="principalSuffix">Suffix <span class="text-secondary fw-normal">(optional)</span></label>
+                            <input class="form-control" id="principalSuffix" name="suffix" type="text" maxlength="10" value="{{ form_data.suffix }}" placeholder="e.g. Jr., Sr., III">
                         </div>
 
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-bold" for="schoolName">School Name</label>
                             <input class="form-control" id="schoolName" name="school_name" type="text" value="{{ form_data.school_name }}" required>
-                        </div>
-
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-bold" for="schoolLogo">School Logo</label>
-                            <input class="form-control" id="schoolLogo" name="school_logo" type="file" accept="image/*" required>
-                            <div class="form-text">Used as the official school logo for generated principal reports and documents.</div>
-                        </div>
-
-                        <div class="col-12">
-                            <label class="form-label fw-bold" for="schoolAddress">School Address</label>
-                            <textarea class="form-control" id="schoolAddress" name="school_address" rows="3" required>{{ form_data.school_address }}</textarea>
                         </div>
 
                         <div class="col-12 col-md-6">
@@ -211,7 +225,7 @@
 
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-bold" for="contactNumber">Contact Number</label>
-                            <input class="form-control" id="contactNumber" name="contact_no" type="tel" value="{{ form_data.contact_no }}" required>
+                            <input class="form-control" id="contactNumber" name="contact_no" type="tel" value="{{ form_data.contact_no }}">
                         </div>
                     </div>
                 </form>

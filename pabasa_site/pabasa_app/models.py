@@ -1,5 +1,6 @@
 import uuid
 
+from django.contrib.auth.hashers import check_password, make_password
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models, transaction
@@ -66,6 +67,7 @@ class User(models.Model):
     email = models.EmailField(unique=True)
     contact_no = models.CharField(max_length=20, blank=True, null=True)
     password_hash = models.CharField(max_length=255)
+    must_change_password = models.BooleanField(default=False)
     profile_picture = models.CharField(max_length=255, blank=True, null=True)
     tags = models.JSONField(default=list, blank=True)
     preference = models.JSONField(default=dict, blank=True)
@@ -115,6 +117,12 @@ class User(models.Model):
 
     def __str__(self):
         return f"{self.custom_id} - {self.last_name}, {self.first_name}"
+
+    def set_password(self, raw_password):
+        self.password_hash = make_password(raw_password)
+
+    def check_password(self, raw_password):
+        return check_password(raw_password, self.password_hash)
 
     def _get_tags_list(self):
         tags = getattr(self, 'tags', None) or []

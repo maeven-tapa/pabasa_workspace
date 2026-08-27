@@ -8,7 +8,7 @@
                 <i class="bi bi-arrow-left me-1"></i>Back
             </a>
             <h2 class="h4 fw-bold mb-1">Edit {{ managed_user_name|default:managed_user.custom_id }}</h2>
-            <p class="text-secondary mb-0">PABASA ID: {{ managed_user.custom_id }}</p>
+            <p class="text-secondary mb-0">Principal ID: {{ managed_user.custom_id }}</p>
         </div>
     </div>
 
@@ -16,33 +16,37 @@
     <div class="alert alert-danger" role="alert">{{ error_message }}</div>
     {% endif %}
 
-    <form method="post" enctype="multipart/form-data">
+    <form method="post">
         {% csrf_token %}
         <h3 class="h6 fw-bold mb-3">Principal Details</h3>
         <div class="row g-3 mb-4">
-            <div class="col-12 col-md-6">
-                <label class="form-label fw-bold" for="firstName">First name</label>
+            <div class="col-12 col-md-5">
+                <label class="form-label fw-bold" for="firstName">First Name</label>
                 <input class="form-control" id="firstName" type="text" name="first_name" value="{{ managed_user.first_name }}" required>
             </div>
-            <div class="col-12 col-md-3">
-                <label class="form-label fw-bold" for="middleInitial">Middle initial</label>
+            <div class="col-6 col-md-2">
+                <label class="form-label fw-bold" for="middleInitial">Middle Name</label>
                 <input class="form-control" id="middleInitial" type="text" name="middle_initial" maxlength="1" value="{{ managed_user.middle_initial }}">
             </div>
-            <div class="col-12 col-md-6">
-                <label class="form-label fw-bold" for="lastName">Last name</label>
+            <div class="col-12 col-md-3">
+                <label class="form-label fw-bold" for="lastName">Last Name</label>
                 <input class="form-control" id="lastName" type="text" name="last_name" value="{{ managed_user.last_name }}" required>
             </div>
-            <div class="col-12 col-md-3">
-                <label class="form-label fw-bold" for="suffix">Suffix</label>
-                <input class="form-control" id="suffix" type="text" name="suffix" value="{{ managed_user.suffix }}">
-            </div>
-            <div class="col-12 col-md-6">
-                <label class="form-label fw-bold" for="position">Position</label>
-                <input class="form-control" id="position" type="text" name="position" value="{{ principal_profile_info.position|default:'Principal' }}">
+            <div class="col-6 col-md-2">
+                <label class="form-label fw-bold" for="suffix">Suffix <span class="text-secondary fw-normal">(optional)</span></label>
+                <input class="form-control" id="suffix" type="text" name="suffix" maxlength="10" value="{{ managed_user.suffix }}" placeholder="e.g. III">
             </div>
             <div class="col-12 col-md-6">
                 <label class="form-label fw-bold" for="email">Email</label>
                 <input class="form-control" id="email" type="email" name="email" value="{{ managed_user.email }}" required>
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label fw-bold" for="contactNo">Contact Number <span class="text-secondary fw-normal">(optional)</span></label>
+                <input class="form-control" id="contactNo" type="tel" name="contact_no" value="{{ managed_user.contact_no|default:'' }}">
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label fw-bold" for="position">Position</label>
+                <input class="form-control" id="position" type="text" name="position" value="{{ principal_profile_info.position|default:'Principal' }}">
             </div>
         </div>
 
@@ -50,20 +54,16 @@
         <div class="row g-3">
             <div class="col-12 col-md-6">
                 <label class="form-label fw-bold" for="schoolName">School Name</label>
-                <input class="form-control" id="schoolName" type="text" name="school_name" value="{% if managed_user.school_record %}{{ managed_user.school_record.name }}{% else %}{{ school_info.name|default:managed_user.school }}{% endif %}" {% if managed_user.school_record %}readonly{% endif %} required>
+                <input class="form-control" id="schoolName" type="text" value="{% if managed_user.school_record %}{{ managed_user.school_record.name }}{% else %}{{ managed_user.school }}{% endif %}" readonly>
             </div>
             <div class="col-12 col-md-6">
-                <label class="form-label fw-bold" for="contactNo">Contact Number</label>
-                <input class="form-control" id="contactNo" type="tel" name="contact_no" value="{{ school_info.contact|default:managed_user.contact_no }}" required>
+                <label class="form-label fw-bold" for="schoolCode">School ID / School Code</label>
+                <input class="form-control" id="schoolCode" type="text" value="{% if managed_user.school_record %}{{ managed_user.school_record.code|default:'Not configured' }}{% else %}Not configured{% endif %}" readonly>
             </div>
             <div class="col-12">
                 <label class="form-label fw-bold" for="schoolAddress">School Address</label>
-                <textarea class="form-control" id="schoolAddress" name="school_address" rows="3" required>{{ school_info.address }}</textarea>
-            </div>
-            <div class="col-12">
-                <label class="form-label fw-bold" for="schoolLogo">School Logo</label>
-                <input class="form-control" id="schoolLogo" name="school_logo" type="file" accept="image/*">
-                <div class="form-text">Leave blank to keep the current school logo.</div>
+                <textarea class="form-control" id="schoolAddress" rows="3" readonly>{% if managed_user.school_record %}{{ managed_user.school_record.address|default:'Not configured' }}{% else %}Not configured{% endif %}</textarea>
+                <div class="form-text">School ownership and School information are read-only here.</div>
             </div>
         </div>
 
