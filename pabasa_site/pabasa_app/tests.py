@@ -3668,6 +3668,9 @@ class PrincipalReportsPreviewTests(TestCase):
                 "is_active": True,
             }],
         )
+        self.principal.school_record = self.section.school
+        self.principal.save(update_fields=["school_record"])
+        User.objects.filter(id__in=[self.teacher.id, self.student.id]).update(school_record=self.section.school)
         self.assessment = Assessment.objects.create(
             title="Preview Assessment",
             code="ASM-PRV1",

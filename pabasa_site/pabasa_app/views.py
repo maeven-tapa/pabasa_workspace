@@ -18123,17 +18123,47 @@ def _parse_attempt_timestamp(value):
 
 
 def _principal_analytics(user):
+    is_principal = bool(user and user.role == 'principal')
+    principal_school = user.school_record if is_principal and user.school_record_id else None
+
     students_qs = User.objects.filter(role='student', is_archived=False)
     teachers_qs = User.objects.filter(role='teacher', is_archived=False)
     sections = Section.objects.filter(is_active=True).select_related('teacher')
-    assessments = Assessment.objects.filter(is_active=True, source_assessment__isnull=True).select_related('section', 'teacher')
+    assessments = Assessment.objects.filter(
+        is_active=True,
+        source_assessment__isnull=True,
+    ).select_related('section', 'teacher')
+
+    if is_principal:
+        if principal_school is None:
+            # A Principal without relational School ownership must never fall
+            # back to the legacy school label or to global querysets.
+            students_qs = students_qs.none()
+            teachers_qs = teachers_qs.none()
+            sections = sections.none()
+            assessments = assessments.none()
+        else:
+            students_qs = students_qs.filter(school_record=principal_school)
+            teachers_qs = teachers_qs.filter(school_record=principal_school)
+            sections = sections.filter(school=principal_school)
+            assessments = assessments.filter(
+                Q(section__school=principal_school)
+                | Q(section__isnull=True, teacher__school_record=principal_school)
+            ).distinct()
 
     school_info = _get_profile_dict(user, 'principal_school_info') if user else {}
-    school_name = (
-        (school_info.get('name') if isinstance(school_info, dict) else None)
-        or getattr(user, 'school', None)
-        or 'Salawag Elementary School'
-    )
+    if is_principal:
+        school_name = principal_school.name if principal_school else 'School not assigned'
+        school_logo = principal_school.logo if principal_school else ''
+    else:
+        school_name = (
+            (school_info.get('name') if isinstance(school_info, dict) else None)
+            or getattr(user, 'school', None)
+            or 'Salawag Elementary School'
+        )
+        school_logo = school_info.get('logo') if isinstance(school_info, dict) else ''
+
+    scoped_student_ids = set(students_qs.values_list('id', flat=True))
 
     student_grade_map = {}
     grade_students = {}
@@ -18196,9 +18226,12 @@ def _principal_analytics(user):
             sid = attempt.get('student_id')
             if sid:
                 try:
-                    participants.add(int(sid))
+                    sid_int = int(sid)
                 except (TypeError, ValueError):
                     continue
+                if is_principal and sid_int not in scoped_student_ids:
+                    continue
+                participants.add(sid_int)
 
             status = str(attempt.get('status') or '').lower()
             if status == 'completed' and sid:
@@ -18247,7 +18280,13 @@ def _principal_analytics(user):
                 if grade_label and grade_label in grade_data and sid_int not in grade_data[grade_label]['completed_student_ids']:
                     grade_data[grade_label]['in_progress_student_ids'].add(sid_int)
 
-        expected_students = assessment.section.get_student_count() if assessment.section else len(participants)
+        if assessment.section and is_principal:
+            expected_students = assessment.section.enrollments.filter(
+                is_active=True,
+                student_id__in=scoped_student_ids,
+            ).count()
+        else:
+            expected_students = assessment.section.get_student_count() if assessment.section else len(participants)
         completion_rate = _pct(len(completed_students), expected_students if expected_students else len(participants))
 
         status_raw = str(assessment.status or '').lower()
@@ -18278,6 +18317,9 @@ def _principal_analytics(user):
             type_bucket['score_sum'] += sum(completed_scores)
             type_bucket['score_count'] += len(completed_scores)
 
+        teacher_is_in_scope = not is_principal or (
+            assessment.teacher_id and assessment.teacher.school_record_id == getattr(principal_school, 'id', None)
+        )
         assessment_rows.append({
             'id': assessment.id,
             'title': assessment.title,
@@ -18291,20 +18333,31 @@ def _principal_analytics(user):
             'completion_rate': completion_rate,
             'avg_score': avg_score,
             'code': assessment.code,
-            'teacher_name': f"{assessment.teacher.first_name} {assessment.teacher.last_name}".strip(),
+            'teacher_name': (
+                f"{assessment.teacher.first_name} {assessment.teacher.last_name}".strip()
+                if teacher_is_in_scope else 'Unassigned'
+            ),
             'updated_at': assessment.updated_at,
         })
 
         attempts_for_students = assessment.get_attempts()
         if attempts_for_students:
-            student_ids = {
-                int(attempt.get('student_id'))
-                for attempt in attempts_for_students
-                if attempt and attempt.get('student_id')
-            }
+            student_ids = set()
+            for attempt in attempts_for_students:
+                if not attempt or not attempt.get('student_id'):
+                    continue
+                try:
+                    sid_int = int(attempt.get('student_id'))
+                except (TypeError, ValueError):
+                    continue
+                if not is_principal or sid_int in scoped_student_ids:
+                    student_ids.add(sid_int)
             students_map = {
                 student.id: student
-                for student in User.objects.filter(id__in=student_ids)
+                for student in (
+                    students_qs.filter(id__in=student_ids)
+                    if is_principal else User.objects.filter(id__in=student_ids)
+                )
             }
             attempt_counts = {}
             for idx, attempt in enumerate(attempts_for_students, start=1):
@@ -18315,6 +18368,8 @@ def _principal_analytics(user):
                     sid_int = int(sid)
                 except (TypeError, ValueError):
                     sid_int = None
+                if is_principal and sid_int not in scoped_student_ids:
+                    continue
                 attempt_counts[sid_int] = attempt_counts.get(sid_int, 0) + 1
                 student = students_map.get(sid_int)
                 student_name = ''
@@ -18436,7 +18491,7 @@ def _principal_analytics(user):
 
     return {
         'school_name': school_name,
-        'school_logo': school_info.get('logo') if isinstance(school_info, dict) else '',
+        'school_logo': school_logo,
         'total_students': total_students,
         'total_teachers': total_teachers,
         'total_sections': sections.count(),
@@ -18911,10 +18966,12 @@ def principal_required(view_func):
     def wrapper(request, *args, **kwargs):
         if not _check_auth(request):
             return redirect('auth')
-        # For now, we'll allow admin or principal role to access
-        # Update this when principal authentication is fully implemented
-        if request.session.get('user_role') not in ['admin', 'principal']:
+        user = User.objects.filter(id=request.session.get('user_id'), is_archived=False).first()
+        if not user or user.role not in ['admin', 'principal']:
             return redirect('auth')
+        # Use the persisted role for authorization. This prevents a crafted or
+        # stale session role from opening Principal pages as another account.
+        request.session['user_role'] = user.role
         return view_func(request, *args, **kwargs)
     return wrapper
 
