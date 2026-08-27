@@ -316,9 +316,8 @@
         display: block;
     }
 
-    .password-match-feedback-spacer {
-        display: block;
-        visibility: hidden;
+    .signup-step[data-signup-step="2"] > .password-input-column {
+        align-self: start;
     }
 
     .privacy-step-document {
@@ -623,15 +622,14 @@
                     </div>
                     </div>
                     <div class="signup-step" data-signup-step="2">
-                    <div class="col-md-6">
+                    <div class="col-md-6 password-input-column">
                         <label class="form-label">Password</label>
                         <div class="password-field">
                             <input class="form-control" type="password" name="password" placeholder="Create a password" autocomplete="new-password" required>
                             <button class="password-toggle-btn" type="button" data-password-toggle data-target="password" aria-pressed="false" aria-label="Show password">Show</button>
                         </div>
-                        <div class="field-feedback password-match-feedback-spacer" aria-hidden="true">Passwords must match.</div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-6 password-input-column">
                         <label class="form-label">Confirm password</label>
                         <div class="password-field">
                             <input class="form-control" type="password" name="confirm_password" placeholder="Confirm password" autocomplete="new-password" required>
