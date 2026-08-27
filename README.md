@@ -73,6 +73,21 @@ frontend components, browser media features, and cloud speech processing.
 - The repository's `Dockerfile`, `Procfile`, and `Aptfile` support DigitalOcean and
   compatible Linux deployment environments.
 
+### Email Configuration
+
+Local development uses Django's in-memory email backend unless SMTP is explicitly
+enabled. Copy `.env.example` to `.env` and configure the Gmail SMTP variables when
+real delivery is required. The local `.env` file is ignored by Git.
+
+Gmail delivery uses `smtp.gmail.com` on port `587` with STARTTLS
+(`EMAIL_USE_TLS=true`, `EMAIL_USE_SSL=false`). Use a Gmail App Password in
+`EMAIL_HOST_PASSWORD`; do not use or commit the account's normal password.
+`DEFAULT_FROM_EMAIL` should normally match `EMAIL_HOST_USER`.
+
+Production defaults to Django's SMTP backend when `DJANGO_ENV=production` and
+refuses to start if the required SMTP identity or password is missing. The network
+or hosting provider must also permit outbound TCP connections to port 587.
+
 ## 📬 Contact
 For any inquiries about this repository, please contact any of the team members listed above.
 

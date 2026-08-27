@@ -14,27 +14,34 @@
             <a class="btn btn-outline-primary" href="{% url 'admin_principal_edit' managed_user.id %}">
                 <i class="bi bi-pencil me-1"></i>Edit
             </a>
+            <button class="btn btn-outline-warning" type="button" data-bs-toggle="modal" data-bs-target="#resetPrincipalPasswordModal" {% if managed_user.is_archived %}disabled{% endif %}>
+                <i class="bi bi-key me-1"></i>Reset Principal Password
+            </button>
             <button class="btn btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deactivatePrincipalModal" {% if managed_user.is_archived %}disabled{% endif %}>
                 <i class="bi bi-person-x me-1"></i>Deactivate
             </button>
         </div>
     </div>
 
+    {% for message in messages %}
+    <div class="alert {% if message.tags == 'warning' %}alert-warning{% else %}alert-success{% endif %}" role="alert">{{ message }}</div>
+    {% endfor %}
+
     <div class="row g-3">
         <div class="col-12 col-lg-6">
             <div class="border rounded-3 p-3 bg-white h-100">
-                <h3 class="h6 fw-bold mb-3">Principal Profile</h3>
+                <h3 class="h6 fw-bold mb-3">Principal Details</h3>
                 <dl class="row mb-0">
-                    <dt class="col-sm-4 text-secondary">Name</dt>
-                    <dd class="col-sm-8">{{ managed_user_name|default:"-" }}</dd>
-                    <dt class="col-sm-4 text-secondary">PABASA ID</dt>
+                    <dt class="col-sm-4 text-secondary">Principal ID</dt>
                     <dd class="col-sm-8">{{ managed_user.custom_id }}</dd>
+                    <dt class="col-sm-4 text-secondary">Name</dt>
+                    <dd class="col-sm-8">{{ managed_user.first_name }}{% if managed_user.middle_initial %} {{ managed_user.middle_initial }}.{% endif %} {{ managed_user.last_name }}</dd>
+                    <dt class="col-sm-4 text-secondary">Suffix</dt>
+                    <dd class="col-sm-8">{{ managed_user.suffix|default:"Not set" }}</dd>
                     <dt class="col-sm-4 text-secondary">Email</dt>
-                    <dd class="col-sm-8">{{ managed_user.email|default:"-" }}</dd>
-                    <dt class="col-sm-4 text-secondary">Contact</dt>
-                    <dd class="col-sm-8">{{ managed_user.contact_no|default:"-" }}</dd>
-                    <dt class="col-sm-4 text-secondary">Position</dt>
-                    <dd class="col-sm-8">{{ principal_profile_info.position|default:"Principal" }}</dd>
+                    <dd class="col-sm-8">{{ managed_user.email|default:"Not set" }}</dd>
+                    <dt class="col-sm-4 text-secondary">Contact Number</dt>
+                    <dd class="col-sm-8">{{ managed_user.contact_no|default:"Not set" }}</dd>
                     <dt class="col-sm-4 text-secondary">Status</dt>
                     <dd class="col-sm-8 mb-0">
                         {% if managed_user.is_archived %}
@@ -51,22 +58,37 @@
                 <h3 class="h6 fw-bold mb-3">School Information</h3>
                 <dl class="row mb-0">
                     <dt class="col-sm-4 text-secondary">School Name</dt>
-                    <dd class="col-sm-8">{% if managed_user.school_record %}{{ managed_user.school_record.name }}{% else %}{{ school_info.name|default:managed_user.school|default:"-" }}{% endif %}</dd>
-                    <dt class="col-sm-4 text-secondary">Address</dt>
-                    <dd class="col-sm-8">{{ school_info.address|default:"-" }}</dd>
-                    <dt class="col-sm-4 text-secondary">School Email</dt>
-                    <dd class="col-sm-8">{{ school_info.email|default:managed_user.email|default:"-" }}</dd>
-                    <dt class="col-sm-4 text-secondary">School Contact</dt>
-                    <dd class="col-sm-8">{{ school_info.contact|default:managed_user.contact_no|default:"-" }}</dd>
-                    <dt class="col-sm-4 text-secondary">Logo</dt>
-                    <dd class="col-sm-8 mb-0">
-                        {% if school_info.logo %}
-                        <span class="badge rounded-pill text-bg-light">Uploaded</span>
-                        {% else %}
-                        <span class="text-secondary">-</span>
-                        {% endif %}
-                    </dd>
+                    <dd class="col-sm-8">{% if managed_user.school_record %}{{ managed_user.school_record.name }}{% else %}{{ managed_user.school|default:"Not configured" }}{% endif %}</dd>
+                    <dt class="col-sm-4 text-secondary">School ID / School Code</dt>
+                    <dd class="col-sm-8">{% if managed_user.school_record %}{{ managed_user.school_record.code|default:"Not configured" }}{% else %}Not configured{% endif %}</dd>
+                    <dt class="col-sm-4 text-secondary">School Address</dt>
+                    <dd class="col-sm-8 mb-0">{% if managed_user.school_record %}{{ managed_user.school_record.address|default:"Not configured" }}{% else %}Not configured{% endif %}</dd>
                 </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="resetPrincipalPasswordModal" tabindex="-1" aria-labelledby="resetPrincipalPasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+                <h5 class="modal-title" id="resetPrincipalPasswordModalLabel">Reset Principal Password?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">This replaces the current password with a newly generated temporary password.</p>
+                <p class="text-secondary mb-0">The temporary password is sent only to the Principal's saved email. If SMTP is unavailable, it cannot be displayed or recovered by Admin.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'admin_principal_reset_password' managed_user.id %}" id="resetPrincipalPasswordForm">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning" id="resetPrincipalPasswordButton">
+                        <span data-reset-label>Reset Principal Password</span>
+                        <span class="d-none" data-reset-loading><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Resetting...</span>
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -93,4 +115,24 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('resetPrincipalPasswordForm');
+    const button = document.getElementById('resetPrincipalPasswordButton');
+    if (!form || !button) return;
+
+    form.addEventListener('submit', function (event) {
+        if (!form.checkValidity()) return;
+        if (form.dataset.submitting === 'true') {
+            event.preventDefault();
+            return;
+        }
+        form.dataset.submitting = 'true';
+        button.disabled = true;
+        button.querySelector('[data-reset-label]').classList.add('d-none');
+        button.querySelector('[data-reset-loading]').classList.remove('d-none');
+    });
+});
+</script>
 {% endblock %}

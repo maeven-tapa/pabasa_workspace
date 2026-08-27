@@ -7,9 +7,11 @@ from django.views.decorators.cache import never_cache
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.contrib.auth.hashers import make_password, check_password
+from django.contrib.auth.password_validation import validate_password
 from django.core.mail import EmailMultiAlternatives
 from django.core import signing
 from django.contrib.auth import authenticate, login
+from django.contrib import messages
 from django.core.mail import send_mail
 from django.conf import settings
 from django.urls import reverse
@@ -30,6 +32,7 @@ from html import escape
 import random
 import traceback
 import ssl
+from smtplib import SMTPException
 import time
 import threading
 import uuid
@@ -4028,7 +4031,7 @@ def login_user(request):
             return JsonResponse({'success': False, 'error': 'Invalid custom ID or password'}, status=401)
         
         # Verify password
-        if not check_password(password, user.password_hash):
+        if not user.check_password(password):
             return JsonResponse({'success': False, 'error': 'Invalid custom ID or password'}, status=401)
 
         if getattr(user, 'is_archived', False):
@@ -4057,7 +4060,9 @@ def login_user(request):
         if user.role == 'admin':
             redirect_url = '/dashboard/admin/'
         elif user.role == 'principal':
-            redirect_url = '/dashboard/principal/'
+            redirect_url = reverse(
+                'principal_change_temporary_password' if user.must_change_password else 'dashboard_principal'
+            )
         elif user.role == 'teacher':
             redirect_url = '/dashboard/teacher/'
         else:
@@ -4074,6 +4079,51 @@ def login_user(request):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_protect
+@require_http_methods(["GET", "POST"])
+def principal_change_temporary_password(request):
+    if not _check_auth(request) or request.session.get('user_role') != 'principal':
+        return redirect('auth')
+
+    user = User.objects.filter(
+        id=request.session.get('user_id'),
+        role='principal',
+        is_archived=False,
+    ).first()
+    if not user:
+        request.session.flush()
+        return redirect('auth')
+    if not user.must_change_password:
+        return redirect('dashboard_principal')
+
+    context = {'principal_id': user.custom_id}
+    if request.method == 'POST':
+        new_password = request.POST.get('new_password', '')
+        confirm_password = request.POST.get('confirm_password', '')
+
+        if not new_password or not confirm_password:
+            context['error_message'] = 'New Password and Confirm New Password are required.'
+        elif new_password != confirm_password:
+            context['error_message'] = 'New Password and Confirm New Password do not match.'
+        elif user.check_password(new_password):
+            context['error_message'] = 'Choose a new private password instead of the temporary password.'
+        else:
+            try:
+                validate_password(new_password, user=user)
+            except ValidationError as exc:
+                context['password_errors'] = exc.messages
+            else:
+                user.set_password(new_password)
+                user.must_change_password = False
+                user.save(update_fields=['password_hash', 'must_change_password', 'updated_at'])
+                request.session.cycle_key()
+                request.session['login_at'] = timezone.now().isoformat()
+                request.session.modified = True
+                return redirect('dashboard_principal')
+
+    return render(request, 'pabasa_app/principal_change_temporary_password.html', context)
 
 def logout_user(request):
     """Logout user and destroy session"""
@@ -5039,7 +5089,6 @@ def admin_students(request):
 def admin_teachers(request):
     return render(request, 'pabasa_app/admin_teachers.html', _admin_users_context(request, 'teacher', 'Teachers'))
 
-PRINCIPAL_DEFAULT_PASSWORD = 'Principal@123'
 PRINCIPAL_LOGOS_DIR = settings.BASE_DIR / 'pabasa_app' / 'static' / 'pabasa_app' / 'uploads' / 'school_logos'
 PRINCIPAL_LOGOS_STATIC_PREFIX = 'pabasa_app/uploads/school_logos'
 
@@ -5065,14 +5114,6 @@ def _generate_principal_custom_id(school_name):
         candidate = f'{prefix}{next_number:03d}'
     return candidate
 
-def _split_full_name(full_name):
-    parts = [part for part in (full_name or '').strip().split() if part]
-    if not parts:
-        return '', ''
-    if len(parts) == 1:
-        return parts[0], parts[0]
-    return ' '.join(parts[:-1]), parts[-1]
-
 def _save_principal_logo(logo_file, custom_id):
     allowed_extensions = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
     file_ext = (logo_file.name.rsplit('.', 1)[-1] if '.' in logo_file.name else '').lower()
@@ -5087,22 +5128,58 @@ def _save_principal_logo(logo_file, custom_id):
             target.write(chunk)
     return f'{PRINCIPAL_LOGOS_STATIC_PREFIX}/{filename}'
 
-def _send_principal_credentials_email(request, user, school_name):
+def _principal_temporary_password(last_name):
+    surname = unicodedata.normalize('NFKD', str(last_name or '').strip())
+    normalized_surname = ''.join(
+        character for character in surname.upper()
+        if character.isascii() and character.isalnum()
+    )
+    if not normalized_surname:
+        raise ValueError('Principal surname must contain at least one letter or number.')
+    return f'{normalized_surname}123'
+
+
+def _send_principal_credentials_email(request, user, school_name, temporary_password, *, is_reset=False):
     auth_url = request.build_absolute_uri(reverse('auth'))
-    subject = 'Your PABASA Principal Account is Ready'
+    subject = 'Your PABASA Principal Temporary Password' if is_reset else 'Your PABASA Principal Account is Ready'
+    account_message = (
+        'An Administrator reset your PABASA Principal account password.'
+        if is_reset else
+        'A PABASA Principal account has been created for you.'
+    )
     message = (
         f"Hello {user.first_name} {user.last_name},\n\n"
-        "A PABASA Principal account has been created for you.\n\n"
+        f"{account_message}\n\n"
         f"Full Name: {user.first_name} {user.last_name}\n"
         f"School Name: {school_name}\n"
         f"PABASA ID / Username: {user.custom_id}\n"
-        f"Default Password: {PRINCIPAL_DEFAULT_PASSWORD}\n\n"
+        f"Temporary Password: {temporary_password}\n\n"
         "Log in using the existing PABASA login page:\n"
         f"{auth_url}\n\n" 
-        "After logging in, you will be redirected to the Principal Dashboard.\n\n"
+        "After logging in, you will be required to create a new private password before continuing.\n\n"
         "Thank you,\nPABASA Team"
     )
     send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
+
+
+def _try_send_principal_credentials_email(request, user, school_name, temporary_password, *, is_reset=False):
+    """Send credentials without turning a completed account creation into a failure."""
+    try:
+        _send_principal_credentials_email(
+            request,
+            user,
+            school_name,
+            temporary_password,
+            is_reset=is_reset,
+        )
+    except (SMTPException, OSError) as exc:
+        logger.warning(
+            'Principal credentials email delivery failed for user_id=%s (%s)',
+            user.id,
+            type(exc).__name__,
+        )
+        return False
+    return True
 
 
 def _active_principal_for_school(school):
@@ -5111,7 +5188,7 @@ def _active_principal_for_school(school):
     ).order_by('id').first()
 
 
-def _create_principal_account(request, school, first_name, middle_initial, last_name, suffix, email, contact_no, school_address='', logo_file=None):
+def _create_principal_account(request, school, first_name, middle_initial, last_name, suffix, email, contact_no):
     if not school or school.status != 'active' or not school.is_active:
         raise ValueError('A Principal can only be created for an active School.')
     if _active_principal_for_school(school):
@@ -5120,8 +5197,8 @@ def _create_principal_account(request, school, first_name, middle_initial, last_
         raise ValueError('An account with this email address already exists.')
 
     custom_id = _generate_principal_custom_id(school.name)
-    logo_path = _save_principal_logo(logo_file, custom_id) if logo_file else ''
-    user = User.objects.create(
+    temporary_password = _principal_temporary_password(last_name)
+    user = User(
         custom_id=custom_id,
         role='principal',
         first_name=first_name,
@@ -5134,24 +5211,17 @@ def _create_principal_account(request, school, first_name, middle_initial, last_
         birth_year=timezone.now().year,
         email=email,
         contact_no=contact_no,
-        password_hash=make_password(PRINCIPAL_DEFAULT_PASSWORD),
         school=school.name,
         school_record=school,
-        profile_picture=logo_path,
+        must_change_password=True,
     )
-    _set_profile_dict(user, 'principal_school_info', {
-        'name': school.name,
-        'address': school_address,
-        'contact': contact_no,
-        'email': email,
-        'logo': logo_path,
-    })
+    user.set_password(temporary_password)
+    user.save()
     _set_profile_dict(user, 'principal_profile_info', {
         'position': 'Principal',
         'full_name': _admin_user_full_name(user),
     })
-    _send_principal_credentials_email(request, user, school.name)
-    return user
+    return user, temporary_password
 
 @admin_required
 def admin_principals(request):
@@ -5163,7 +5233,6 @@ def admin_principals(request):
         'form_data': {},
         'created_principal': None,
         'created_principal_id': None,
-        'default_password': PRINCIPAL_DEFAULT_PASSWORD,
         'search_query': search_query,
         'status_filter': status_filter,
     })
@@ -5183,27 +5252,25 @@ def admin_principals(request):
 
     if request.method == 'POST':
         form_data = {
-            'full_name': request.POST.get('full_name', '').strip(),
+            'first_name': request.POST.get('first_name', '').strip(),
+            'middle_initial': request.POST.get('middle_initial', '').strip()[:1],
+            'last_name': request.POST.get('last_name', '').strip(),
+            'suffix': request.POST.get('suffix', '').strip(),
             'school_name': request.POST.get('school_name', '').strip(),
-            'school_address': request.POST.get('school_address', '').strip(),
             'email': request.POST.get('email', '').strip().lower(),
             'contact_no': request.POST.get('contact_no', '').strip(),
         }
         context['form_data'] = form_data
-        logo_file = request.FILES.get('school_logo')
         errors = []
 
         for label, value in [
-            ('Full name', form_data['full_name']),
+            ('First name', form_data['first_name']),
+            ('Last name', form_data['last_name']),
             ('School name', form_data['school_name']),
-            ('School address', form_data['school_address']),
             ('Email address', form_data['email']),
-            ('Contact number', form_data['contact_no']),
         ]:
             if not value:
                 errors.append(f'{label} is required.')
-        if not logo_file:
-            errors.append('School logo is required.')
         if form_data['email'] and User.objects.filter(email__iexact=form_data['email']).exists():
             errors.append('An account with this email address already exists.')
 
@@ -5214,7 +5281,6 @@ def admin_principals(request):
 
         try:
             with transaction.atomic():
-                first_name, last_name = _split_full_name(form_data['full_name'])
                 school = School.objects.filter(
                     name__iexact=form_data['school_name'],
                     status='active',
@@ -5222,20 +5288,27 @@ def admin_principals(request):
                 ).first()
                 if not school:
                     raise ValueError('Choose an existing active School.')
-                user = _create_principal_account(
+                user, temporary_password = _create_principal_account(
                     request,
                     school,
-                    first_name,
-                    '',
-                    last_name,
-                    '',
+                    form_data['first_name'],
+                    form_data['middle_initial'],
+                    form_data['last_name'],
+                    form_data['suffix'],
                     form_data['email'],
                     form_data['contact_no'],
-                    form_data['school_address'],
-                    logo_file,
                 )
 
-            context['principal_success'] = 'Principal account created and credentials email sent.'
+            email_sent = _try_send_principal_credentials_email(
+                request,
+                user,
+                user.school_record.name,
+                temporary_password,
+            )
+            if email_sent:
+                context['principal_success'] = 'Principal account created successfully. Login credentials were sent to the Principal\'s email.'
+            else:
+                context['principal_warning'] = 'Principal account created successfully, but the credentials email could not be sent. Please verify the email configuration or resend the credentials later.'
             context['created_principal'] = user
             context['created_principal_id'] = user.id
             context['created_principal_name'] = _admin_user_full_name(user)
@@ -5404,8 +5477,7 @@ def admin_principal_edit(request, user_id):
 
     if request.method == 'POST':
         email = request.POST.get('email', '').strip().lower()
-        school_name = user.school_record.name if user.school_record_id else request.POST.get('school_name', '').strip()
-        school_address = request.POST.get('school_address', '').strip()
+        school_name = user.school_record.name if user.school_record_id else (user.school or '').strip()
         contact_no = request.POST.get('contact_no', '').strip()
 
         context = _admin_user_template_context(request, user, 'Edit Principal')
@@ -5414,19 +5486,14 @@ def admin_principal_edit(request, user_id):
         if not request.POST.get('first_name', '').strip() or not request.POST.get('last_name', '').strip():
             context['error_message'] = 'First name and last name are required.'
             return render(request, 'pabasa_app/admin_principal_edit.html', context, status=400)
-        if not email or not school_name or not school_address or not contact_no:
-            context['error_message'] = 'School name, school address, email, and contact number are required.'
+        if not email or not school_name:
+            context['error_message'] = 'School ownership and email are required.'
             return render(request, 'pabasa_app/admin_principal_edit.html', context, status=400)
         if User.objects.filter(email__iexact=email).exclude(id=user.id).exists():
             context['error_message'] = 'Email is already used by another account.'
             return render(request, 'pabasa_app/admin_principal_edit.html', context, status=400)
 
         try:
-            logo_file = request.FILES.get('school_logo')
-            logo_path = school_info.get('logo') or user.profile_picture or ''
-            if logo_file:
-                logo_path = _save_principal_logo(logo_file, user.custom_id)
-
             user.first_name = request.POST.get('first_name', '').strip()
             user.middle_initial = request.POST.get('middle_initial', '').strip()[:1]
             user.last_name = request.POST.get('last_name', '').strip()
@@ -5434,21 +5501,12 @@ def admin_principal_edit(request, user_id):
             user.email = email
             user.contact_no = contact_no
             user.school = user.school_record.name if user.school_record_id else school_name
-            user.profile_picture = logo_path
-            user.save(update_fields=['first_name', 'middle_initial', 'last_name', 'suffix', 'email', 'contact_no', 'school', 'profile_picture', 'updated_at'])
+            user.save(update_fields=['first_name', 'middle_initial', 'last_name', 'suffix', 'email', 'contact_no', 'school', 'updated_at'])
 
-            school_info.update({
-                'name': school_name,
-                'address': school_address,
-                'contact': contact_no,
-                'email': email,
-                'logo': logo_path,
-            })
             profile_info.update({
                 'position': request.POST.get('position', '').strip() or 'Principal',
                 'full_name': _admin_user_full_name(user),
             })
-            _set_profile_dict(user, 'principal_school_info', school_info)
             _set_profile_dict(user, 'principal_profile_info', profile_info)
             return redirect('admin_principal_detail', user_id=user.id)
         except ValueError as exc:
@@ -5458,6 +5516,48 @@ def admin_principal_edit(request, user_id):
     context = _admin_user_template_context(request, user, 'Edit Principal')
     context.update({'school_info': school_info, 'principal_profile_info': profile_info})
     return render(request, 'pabasa_app/admin_principal_edit.html', context)
+
+
+@admin_required
+@require_http_methods(["POST"])
+def admin_principal_reset_password(request, user_id):
+    user = _get_managed_user(user_id, 'principal')
+    if not user:
+        return redirect('admin_principals')
+    if user.is_archived:
+        messages.warning(request, 'An inactive Principal account cannot have its password reset.')
+        return redirect('admin_principal_detail', user_id=user.id)
+
+    with transaction.atomic():
+        locked_user = User.objects.select_for_update().select_related('school_record').get(
+            id=user.id,
+            role='principal',
+        )
+        temporary_password = _principal_temporary_password(locked_user.last_name)
+        locked_user.set_password(temporary_password)
+        locked_user.must_change_password = True
+        locked_user.save(update_fields=['password_hash', 'must_change_password', 'updated_at'])
+
+    school_name = locked_user.school_record.name if locked_user.school_record_id else (locked_user.school or '')
+    email_sent = _try_send_principal_credentials_email(
+        request,
+        locked_user,
+        school_name,
+        temporary_password,
+        is_reset=True,
+    )
+    if email_sent:
+        messages.success(
+            request,
+            "Principal password reset successfully. The temporary credentials were sent to the Principal's email.",
+        )
+    else:
+        messages.warning(
+            request,
+            'Principal password reset successfully, but the temporary credentials email could not be sent. '
+            'SMTP configuration is required before the Principal can receive the new password.',
+        )
+    return redirect('admin_principal_detail', user_id=locked_user.id)
 
 def _admin_edit_user(request, user_id, role):
     user = _get_managed_user(user_id, role)
@@ -5690,7 +5790,6 @@ def admin_school_detail(request, school_id):
                 'First name': form_data['first_name'],
                 'Last name': form_data['last_name'],
                 'Email address': form_data['email'],
-                'Contact number': form_data['contact_no'],
             }
             missing = [label for label, value in required.items() if not value]
             if missing:
@@ -5699,7 +5798,7 @@ def admin_school_detail(request, school_id):
                 try:
                     with transaction.atomic():
                         locked_school = School.objects.select_for_update().get(pk=school.pk)
-                        principal = _create_principal_account(
+                        principal, temporary_password = _create_principal_account(
                             request,
                             locked_school,
                             form_data['first_name'],
@@ -5708,6 +5807,23 @@ def admin_school_detail(request, school_id):
                             form_data['suffix'],
                             form_data['email'],
                             form_data['contact_no'],
+                        )
+                    email_sent = _try_send_principal_credentials_email(
+                        request,
+                        principal,
+                        locked_school.name,
+                        temporary_password,
+                    )
+                    if email_sent:
+                        messages.success(
+                            request,
+                            "Principal account created successfully. Login credentials were sent to the Principal's email.",
+                        )
+                    else:
+                        messages.warning(
+                            request,
+                            'Principal account created successfully, but the credentials email could not be sent. '
+                            'Please verify the email configuration or resend the credentials later.',
                         )
                     return redirect('admin_school_detail', school_id=school.id)
                 except (ValueError, IntegrityError) as exc:

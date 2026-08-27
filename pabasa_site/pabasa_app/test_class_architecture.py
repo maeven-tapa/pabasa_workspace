@@ -1,6 +1,8 @@
 import json
+import socket
 from unittest.mock import patch
 
+from django.contrib.auth.hashers import check_password, make_password
 from django.db import IntegrityError, transaction
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -164,8 +166,13 @@ class SchoolScopedSectionIsolationTests(TestCase):
     def setUp(self):
         self.admin = make_user("ADM-SCHOOL-SCOPE", "admin", "school-scope-admin@example.com")
         self.student = make_user("STU-SCHOOL-SCOPE", "student", "school-scope-student@example.com")
-        self.school_a = School.objects.create(name="School A", code="SCHOOL-A")
-        self.school_b = School.objects.create(name="School B", code="SCHOOL-B")
+        self.school_a = School.objects.create(
+            name="School A",
+            code="SCHOOL-A",
+            address="123 School A Road",
+            logo="schools/existing-a.png",
+        )
+        self.school_b = School.objects.create(name="School B", code="SCHOOL-B", address="")
         session = self.client.session
         session.update({
             "user_id": self.admin.id,
@@ -277,6 +284,401 @@ class SchoolScopedSectionIsolationTests(TestCase):
         self.assertEqual(edit_response.status_code, 302)
         principal.refresh_from_db()
         self.assertEqual(principal.school_record_id, self.school_a.id)
+
+    def test_principal_form_has_optional_suffix_contact_and_loading_guard(self):
+        response = self.client.get(reverse("admin_school_detail", args=[self.school_a.id]))
+
+        self.assertContains(response, "School Information")
+        self.assertContains(response, self.school_a.name)
+        self.assertContains(response, self.school_a.code)
+        self.assertContains(response, self.school_a.address)
+        self.assertContains(response, 'name="suffix"')
+        self.assertContains(response, 'Suffix <span class="text-muted">(optional)</span>')
+        self.assertContains(response, 'name="contact_no" type="tel" class="form-control"')
+        self.assertNotContains(response, 'name="contact_no" type="tel" class="form-control" value="" required')
+        self.assertContains(response, 'id="createPrincipalLoadingModal"')
+        self.assertContains(response, 'Creating Principal Account')
+        self.assertContains(response, 'form.dataset.submitting')
+        self.assertContains(response, 'submitButton.disabled = true')
+        self.assertContains(response, 'if (!form.checkValidity()) return')
+        self.assertNotContains(response, 'name="school_logo"')
+
+        global_create_page = self.client.get(reverse("admin_principals"))
+        self.assertNotContains(global_create_page, 'name="school_logo"')
+
+    def test_principal_creation_accepts_blank_suffix_and_contact(self):
+        with patch("pabasa_app.views._send_principal_credentials_email") as send_email:
+            response = self.client.post(
+                reverse("admin_school_detail", args=[self.school_a.id]),
+                {
+                    "action": "create_principal",
+                    "first_name": "Blank",
+                    "last_name": "Optional",
+                    "suffix": "",
+                    "email": "blank-optionals@example.com",
+                    "contact_no": "",
+                },
+                follow=True,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        principal = User.objects.get(email="blank-optionals@example.com")
+        self.assertEqual(principal.suffix, "")
+        self.assertEqual(principal.contact_no, "")
+        self.assertEqual(principal.school_record_id, self.school_a.id)
+        self.assertTrue(principal.must_change_password)
+        self.assertTrue(principal.check_password("OPTIONAL123"))
+        self.assertNotEqual(principal.password_hash, "OPTIONAL123")
+        self.assertContains(response, "Principal account created successfully")
+        self.assertContains(response, "Login credentials were sent")
+        self.assertContains(response, "Blank Optional")
+        send_email.assert_called_once()
+        self.assertEqual(send_email.call_args.args[3], "OPTIONAL123")
+
+    def test_global_principal_creation_needs_no_logo_and_does_not_copy_school_address(self):
+        with patch("pabasa_app.views._send_principal_credentials_email"):
+            response = self.client.post(
+                reverse("admin_principals"),
+                {
+                    "first_name": "Global",
+                    "middle_initial": "",
+                    "last_name": "Dela Cruz",
+                    "suffix": "",
+                    "school_name": self.school_a.name,
+                    "email": "global-principal@example.com",
+                    "contact_no": "",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        principal = User.objects.get(email="global-principal@example.com")
+        self.assertEqual(principal.school_record_id, self.school_a.id)
+        self.assertTrue(principal.must_change_password)
+        self.assertTrue(principal.check_password("DELACRUZ123"))
+        self.assertFalse(principal.profile_picture)
+        self.assertNotIn("principal_school_info", principal.preference)
+        self.assertNotIn(self.school_a.address, str(principal.tags))
+
+    def test_smtp_failure_keeps_principal_and_shows_warning(self):
+        with patch(
+            "pabasa_app.views._send_principal_credentials_email",
+            side_effect=socket.gaierror(11001, "getaddrinfo failed"),
+        ):
+            response = self.client.post(
+                reverse("admin_school_detail", args=[self.school_a.id]),
+                {
+                    "action": "create_principal",
+                    "first_name": "Mail",
+                    "last_name": "Unavailable",
+                    "suffix": "III",
+                    "email": "smtp-unavailable@example.com",
+                    "contact_no": "",
+                },
+                follow=True,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        principal = User.objects.get(email="smtp-unavailable@example.com")
+        self.assertEqual(principal.suffix, "III")
+        self.assertEqual(principal.contact_no, "")
+        self.assertEqual(principal.school_record_id, self.school_a.id)
+        self.assertTrue(principal.must_change_password)
+        self.assertContains(response, "Mail Unavailable III")
+        self.assertContains(response, "credentials email could not be sent")
+
+    def test_second_active_principal_is_rejected_by_school_workspace(self):
+        first = make_user("PRN-SCHOOL-A-ENDPOINT", "principal", "endpoint-first@example.com")
+        first.school_record = self.school_a
+        first.school = self.school_a.name
+        first.save(update_fields=["school_record", "school"])
+
+        with patch("pabasa_app.views._send_principal_credentials_email") as send_email:
+            response = self.client.post(
+                reverse("admin_school_detail", args=[self.school_a.id]),
+                {
+                    "action": "create_principal",
+                    "first_name": "Second",
+                    "last_name": "Blocked",
+                    "email": "endpoint-second@example.com",
+                    "contact_no": "",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "already has an active Principal")
+        self.assertFalse(User.objects.filter(email="endpoint-second@example.com").exists())
+        self.assertEqual(User.objects.filter(role="principal", school_record=self.school_a, is_archived=False).count(), 1)
+        send_email.assert_not_called()
+
+    def test_principal_edit_preserves_school_and_accepts_suffix_and_blank_contact(self):
+        principal = make_user("PRN-EDIT-OPTIONALS", "principal", "edit-optionals@example.com")
+        principal.school_record = self.school_a
+        principal.school = self.school_a.name
+        principal.contact_no = "09170000000"
+        principal.profile_picture = "pabasa_app/uploads/school_logos/legacy.png"
+        principal.preference = {
+            "principal_school_info": {
+                "name": "Legacy School Name",
+                "address": "Legacy copied address",
+                "logo": "pabasa_app/uploads/school_logos/legacy.png",
+            }
+        }
+        principal.save(update_fields=["school_record", "school", "contact_no", "profile_picture", "preference"])
+
+        edit_page = self.client.get(reverse("admin_principal_edit", args=[principal.id]))
+        self.assertContains(edit_page, 'name="suffix"')
+        self.assertContains(edit_page, self.school_a.code)
+        self.assertContains(edit_page, self.school_a.address)
+        self.assertContains(edit_page, 'id="schoolName" type="text"')
+        self.assertNotContains(edit_page, 'name="school_logo"')
+
+        response = self.client.post(
+            reverse("admin_principal_edit", args=[principal.id]),
+            {
+                "first_name": "Edited",
+                "last_name": "Principal",
+                "suffix": "III",
+                "email": principal.email,
+                "contact_no": "",
+                "school_name": self.school_b.name,
+                "school_address": "Updated address",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        principal.refresh_from_db()
+        self.assertEqual(principal.suffix, "III")
+        self.assertEqual(principal.contact_no, "")
+        self.assertEqual(principal.school_record_id, self.school_a.id)
+        self.assertEqual(principal.profile_picture, "pabasa_app/uploads/school_logos/legacy.png")
+        self.assertEqual(principal.preference["principal_school_info"]["logo"], "pabasa_app/uploads/school_logos/legacy.png")
+        self.school_a.refresh_from_db()
+        self.assertEqual(self.school_a.logo, "schools/existing-a.png")
+
+    def test_principal_detail_uses_relational_school_information(self):
+        principal = make_user("PRN-DETAIL-SCHOOL", "principal", "detail-school@example.com")
+        principal.first_name = "Detail"
+        principal.last_name = "Principal"
+        principal.suffix = "III"
+        principal.contact_no = ""
+        principal.school_record = self.school_a
+        principal.school = self.school_a.name
+        principal.preference = {
+            "principal_school_info": {
+                "address": "Wrong legacy address",
+                "contact": "09179999999",
+            }
+        }
+        principal.save()
+
+        response = self.client.get(reverse("admin_principal_detail", args=[principal.id]))
+        content = response.content.decode()
+        principal_section = content.split("Principal Details", 1)[1].split("School Information", 1)[0]
+        school_section = content.split("School Information", 1)[1].split('</div>', 1)[0]
+
+        self.assertContains(response, self.school_a.code)
+        self.assertContains(response, self.school_a.address)
+        self.assertNotContains(response, "Wrong legacy address")
+        self.assertIn("Contact Number", principal_section)
+        self.assertNotIn("Contact Number", school_section)
+        self.assertIn("Suffix", principal_section)
+        self.assertIn("III", principal_section)
+
+    def test_principal_password_reset_preserves_identity_and_sends_new_temporary_password(self):
+        principal = make_user("PRN-RESET-SUCCESS", "principal", "reset-success@example.com")
+        principal.school_record = self.school_a
+        principal.school = self.school_a.name
+        principal.password_hash = make_password("OldPrincipalPassword!1")
+        principal.save(update_fields=["school_record", "school", "password_hash"])
+        original_hash = principal.password_hash
+        original_count = User.objects.filter(role="principal").count()
+
+        with patch("pabasa_app.views._send_principal_credentials_email") as send_email:
+            response = self.client.post(
+                reverse("admin_principal_reset_password", args=[principal.id]),
+                follow=True,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Principal password reset successfully")
+        self.assertContains(response, 'id="resetPrincipalPasswordForm"')
+        self.assertContains(response, "form.dataset.submitting")
+        self.assertContains(response, "button.disabled = true")
+        principal.refresh_from_db()
+        self.assertNotEqual(principal.password_hash, original_hash)
+        self.assertTrue(principal.must_change_password)
+        self.assertFalse(check_password("OldPrincipalPassword!1", principal.password_hash))
+        self.assertEqual(principal.custom_id, "PRN-RESET-SUCCESS")
+        self.assertEqual(principal.email, "reset-success@example.com")
+        self.assertEqual(principal.school_record_id, self.school_a.id)
+        self.assertEqual(User.objects.filter(role="principal").count(), original_count)
+        send_email.assert_called_once()
+        temporary_password = send_email.call_args.args[3]
+        self.assertEqual(temporary_password, "ACCOUNT123")
+        self.assertTrue(check_password(temporary_password, principal.password_hash))
+        self.assertNotEqual(principal.password_hash, temporary_password)
+        self.assertTrue(send_email.call_args.kwargs["is_reset"])
+        self.assertNotContains(response, temporary_password)
+        self.assertNotIn(temporary_password, str(response.redirect_chain))
+        self.assertNotIn(temporary_password, str(principal.tags))
+        self.assertNotIn(temporary_password, str(principal.preference))
+
+    def test_principal_temporary_password_normalizes_surname_and_ignores_suffix(self):
+        from pabasa_app.views import _principal_temporary_password
+
+        self.assertEqual(_principal_temporary_password("Santos"), "SANTOS123")
+        self.assertEqual(_principal_temporary_password("Dela Cruz"), "DELACRUZ123")
+        self.assertEqual(_principal_temporary_password("De Leon"), "DELEON123")
+        self.assertEqual(_principal_temporary_password("Dela-Cruz, Jr."), "DELACRUZJR123")
+
+        with patch("pabasa_app.views.send_mail") as send_email:
+            self.client.post(
+                reverse("admin_school_detail", args=[self.school_a.id]),
+                {
+                    "action": "create_principal",
+                    "first_name": "Suffix",
+                    "last_name": "Santos",
+                    "suffix": "III",
+                    "email": "suffix-password@example.com",
+                    "contact_no": "",
+                },
+            )
+
+        principal = User.objects.get(email="suffix-password@example.com")
+        self.assertEqual(principal.suffix, "III")
+        self.assertTrue(principal.check_password("SANTOS123"))
+        self.assertFalse(principal.check_password("SANTOSIII123"))
+        email_message = send_email.call_args.args[1]
+        self.assertIn("Temporary Password: SANTOS123", email_message)
+        self.assertNotIn("SANTOSIII123", email_message)
+
+    def test_principal_must_change_temporary_password_before_dashboard_access(self):
+        principal = make_user("PRN-TEMP-LOGIN", "principal", "temp-login@example.com")
+        principal.first_name = "Temporary"
+        principal.last_name = "Dela Cruz"
+        principal.school_record = self.school_a
+        principal.school = self.school_a.name
+        principal.must_change_password = True
+        principal.set_password("DELACRUZ123")
+        principal.save()
+
+        login_response = self.client.post(
+            reverse("login_user"),
+            {"custom_id": principal.custom_id, "password": "DELACRUZ123"},
+        )
+        self.assertEqual(login_response.status_code, 200)
+        self.assertTrue(login_response.json()["success"])
+        self.assertEqual(
+            login_response.json()["redirect_url"],
+            reverse("principal_change_temporary_password"),
+        )
+
+        change_page = self.client.get(reverse("principal_change_temporary_password"))
+        self.assertContains(change_page, "New Password")
+        self.assertContains(change_page, "Confirm New Password")
+        self.assertRedirects(
+            self.client.get(reverse("dashboard_principal")),
+            reverse("principal_change_temporary_password"),
+        )
+        self.assertRedirects(
+            self.client.get(reverse("principal_settings")),
+            reverse("principal_change_temporary_password"),
+        )
+
+        mismatch = self.client.post(
+            reverse("principal_change_temporary_password"),
+            {"new_password": "NewPrivatePassword!908", "confirm_password": "DifferentPassword!908"},
+        )
+        self.assertContains(mismatch, "do not match")
+        principal.refresh_from_db()
+        self.assertTrue(principal.must_change_password)
+
+        same_temporary = self.client.post(
+            reverse("principal_change_temporary_password"),
+            {"new_password": "DELACRUZ123", "confirm_password": "DELACRUZ123"},
+        )
+        self.assertContains(same_temporary, "instead of the temporary password")
+
+        weak = self.client.post(
+            reverse("principal_change_temporary_password"),
+            {"new_password": "short", "confirm_password": "short"},
+        )
+        self.assertContains(weak, "too short")
+
+        old_session_key = self.client.session.session_key
+        new_private_password = "NewPrivatePassword!908"
+        changed = self.client.post(
+            reverse("principal_change_temporary_password"),
+            {"new_password": new_private_password, "confirm_password": new_private_password},
+        )
+        self.assertRedirects(changed, reverse("dashboard_principal"))
+        principal.refresh_from_db()
+        self.assertFalse(principal.must_change_password)
+        self.assertTrue(principal.check_password(new_private_password))
+        self.assertFalse(principal.check_password("DELACRUZ123"))
+        self.assertNotEqual(self.client.session.session_key, old_session_key)
+        self.assertEqual(self.client.get(reverse("dashboard_principal")).status_code, 200)
+
+        self.client.get(reverse("logout"))
+        old_login = self.client.post(
+            reverse("login_user"),
+            {"custom_id": principal.custom_id, "password": "DELACRUZ123"},
+        )
+        self.assertEqual(old_login.status_code, 401)
+        new_login = self.client.post(
+            reverse("login_user"),
+            {"custom_id": principal.custom_id, "password": new_private_password},
+        )
+        self.assertEqual(new_login.json()["redirect_url"], reverse("dashboard_principal"))
+
+    def test_teacher_and_student_login_redirects_are_unchanged(self):
+        for role, custom_id, expected_url in [
+            ("teacher", "TCH-4321", "/dashboard/teacher/"),
+            ("student", "G2-4321", "/dashboard/"),
+        ]:
+            user = make_user(custom_id, role, f"{role}-login@example.com")
+            user.set_password("ExistingPassword!908")
+            user.save(update_fields=["password_hash", "updated_at"])
+            response = self.client.post(
+                reverse("login_user"),
+                {"custom_id": custom_id, "password": "ExistingPassword!908"},
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["redirect_url"], expected_url)
+            self.client.get(reverse("logout"))
+
+    def test_smtp_failure_after_password_reset_is_nonfatal_and_not_logged_with_password(self):
+        principal = make_user("PRN-RESET-SMTP", "principal", "reset-smtp@example.com")
+        principal.school_record = self.school_a
+        principal.school = self.school_a.name
+        principal.save(update_fields=["school_record", "school"])
+        original_hash = principal.password_hash
+
+        with patch(
+            "pabasa_app.views._send_principal_credentials_email",
+            side_effect=socket.gaierror(11001, "getaddrinfo failed"),
+        ) as send_email, patch("pabasa_app.views.logger.warning") as warning_log:
+            response = self.client.post(
+                reverse("admin_principal_reset_password", args=[principal.id]),
+                follow=True,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "temporary credentials email could not be sent")
+        self.assertContains(response, "SMTP configuration is required")
+        principal.refresh_from_db()
+        self.assertNotEqual(principal.password_hash, original_hash)
+        self.assertTrue(principal.must_change_password)
+        self.assertEqual(principal.school_record_id, self.school_a.id)
+        self.assertEqual(User.objects.filter(email=principal.email).count(), 1)
+        warning_log.assert_called_once()
+        temporary_password = send_email.call_args.args[3]
+        logged_values = " ".join(str(value) for value in warning_log.call_args.args)
+        self.assertNotIn(temporary_password, logged_values)
+        self.assertNotContains(response, temporary_password)
+        self.assertNotIn(temporary_password, str(response.redirect_chain))
+        self.assertNotIn(temporary_password, str(principal.tags))
+        self.assertNotIn(temporary_password, str(principal.preference))
 
     def test_one_active_principal_per_school_and_independent_other_school(self):
         first = make_user("PRN-SCHOOL-A-1", "principal", "principal-a-1@example.com")

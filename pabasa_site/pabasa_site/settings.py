@@ -13,8 +13,13 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = BASE_DIR.parent
+load_dotenv(PROJECT_ROOT / '.env')
 
 
 # Quick-start development settings - unsuitable for production
@@ -24,6 +29,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-c8tcixn4vam*#z1*^d+9x6ddm89ph_+z%5+jce14vgdr@#*y5t'
 
 # SECURITY WARNING: don't run with debug turned on in production!
+def _bool_env(name, default=False):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    normalized = value.strip().lower()
+    if normalized in {'1', 'true', 'yes', 'on'}:
+        return True
+    if normalized in {'0', 'false', 'no', 'off'}:
+        return False
+    raise ImproperlyConfigured(f'{name} must be true or false.')
+
+
+DJANGO_ENV = os.environ.get('DJANGO_ENV', 'development').strip().lower()
 DEBUG = True
 
 def _csv_env(name):
@@ -73,6 +91,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'pabasa_app.middleware.PrincipalPasswordChangeMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -149,19 +168,53 @@ SITE_URL = os.environ.get('SITE_URL', 'https://tupcpabasa.app')
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 
-if os.environ.get('DJANGO_ENV', '').lower() == 'production':
+if DJANGO_ENV == 'production':
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_SSL_REDIRECT = True
 
-# Email settings for Gmail
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'pabasa.tupc@gmail.com'
-EMAIL_HOST_PASSWORD = 'sfsy zplk rmku bdxt'
-DEFAULT_FROM_EMAIL = 'pabasa.tupc@gmail.com'
+# Email settings. Gmail SMTP over STARTTLS is the existing production provider.
+# Development defaults to the in-memory backend so a missing/blocked SMTP
+# connection is never mistaken for a configured local dependency. Set
+# EMAIL_BACKEND to the SMTP backend explicitly when testing real delivery.
+SMTP_EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+DEVELOPMENT_EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND',
+    SMTP_EMAIL_BACKEND if DJANGO_ENV == 'production' else DEVELOPMENT_EMAIL_BACKEND,
+).strip()
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com').strip()
+try:
+    EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+except ValueError as exc:
+    raise ImproperlyConfigured('EMAIL_PORT must be an integer.') from exc
+EMAIL_USE_TLS = _bool_env('EMAIL_USE_TLS', True)
+EMAIL_USE_SSL = _bool_env('EMAIL_USE_SSL', False)
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '').strip()
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'webmaster@localhost').strip()
+try:
+    EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', '15'))
+except ValueError as exc:
+    raise ImproperlyConfigured('EMAIL_TIMEOUT must be an integer.') from exc
+
+if EMAIL_USE_TLS and EMAIL_USE_SSL:
+    raise ImproperlyConfigured('EMAIL_USE_TLS and EMAIL_USE_SSL cannot both be enabled.')
+
+if EMAIL_BACKEND == SMTP_EMAIL_BACKEND:
+    missing_email_settings = [
+        name for name, value in {
+            'EMAIL_HOST': EMAIL_HOST,
+            'EMAIL_HOST_USER': EMAIL_HOST_USER,
+            'EMAIL_HOST_PASSWORD': EMAIL_HOST_PASSWORD,
+            'DEFAULT_FROM_EMAIL': DEFAULT_FROM_EMAIL,
+        }.items() if not value
+    ]
+    if missing_email_settings:
+        raise ImproperlyConfigured(
+            'SMTP email is enabled but required settings are missing: '
+            + ', '.join(missing_email_settings)
+        )
 
 # Google Cloud Speech-to-Text settings used by the reading assessment UI.
 GOOGLE_STT_API_KEY = 'AIzaSyDPMgJX8t195Z9bfoID2gwlG5oPhBVK_tk'
