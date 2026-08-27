@@ -529,7 +529,7 @@
                     <!-- All fields below are unchanged from original -->
                     <div class="col-md-4">
                         <label class="form-label">Birth month</label>
-                        <select class="form-select" name="birth_month" required>
+                        <select class="form-select" name="birth_month" id="studentBirthMonth" required>
                             <option value="" selected disabled>Month</option>
                             <option value="1">January</option>
                             <option value="2">February</option>
@@ -547,11 +547,11 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Birth day</label>
-                        <input class="form-control" type="number" name="birth_day" placeholder="Day" min="1" max="31" oninput="if(this.value.length > 2) this.value = this.value.slice(0, 2);" required>
+                        <input class="form-control" type="number" name="birth_day" id="studentBirthDay" placeholder="Day" min="1" max="31" oninput="if(this.value.length > 2) this.value = this.value.slice(0, 2);" required>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Birth year</label>
-                        <input class="form-control" type="number" name="birth_year" placeholder="Year" min="1900" max="2100" oninput="if(this.value.length > 4) this.value = this.value.slice(0, 4);" required>
+                        <input class="form-control" type="number" name="birth_year" id="studentBirthYear" placeholder="Year" min="1900" max="2100" oninput="if(this.value.length > 4) this.value = this.value.slice(0, 4);" required>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Sex</label>
@@ -770,7 +770,28 @@
         const privacyConsentCheckbox = form.querySelector('input[name="privacy_consent"]');
         const gradeSelect = form.querySelector('#studentGradeLevel');
         const sectionSelect = form.querySelector('#studentSection');
+        const birthMonthInput = form.querySelector('#studentBirthMonth');
+        const birthDayInput = form.querySelector('#studentBirthDay');
+        const birthYearInput = form.querySelector('#studentBirthYear');
         const sectionIsLockedText = (section) => `${section} \u2014 Not available \uf47a`;
+
+        const syncBirthDayLimit = () => {
+            const month = Number(birthMonthInput.value);
+            const year = Number(birthYearInput.value);
+            if (!month) return;
+
+            // Date.UTC also correctly handles February in leap years. Until a
+            // year is entered, permit February 29 so a future leap year remains valid.
+            const maximumDay = month === 2 && !year ? 29 : new Date(Date.UTC(year || 2000, month, 0)).getUTCDate();
+            birthDayInput.max = String(maximumDay);
+
+            if (Number(birthDayInput.value) > maximumDay) {
+                birthDayInput.value = String(maximumDay);
+            }
+        };
+
+        birthMonthInput.addEventListener('change', syncBirthDayLimit);
+        birthYearInput.addEventListener('input', syncBirthDayLimit);
 
         const hasDisabledSelection = (select) => {
             const selectedOption = select?.selectedOptions?.[0];
