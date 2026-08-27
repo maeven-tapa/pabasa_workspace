@@ -27,6 +27,10 @@ function initProfilePage() {
     const editBtn = document.getElementById("editAccountDetailsBtn");
     const actions = document.getElementById("accountDetailsActions");
     const profileSummaryCard = document.querySelector(".profile-summary");
+    const teacherEditModal = document.getElementById("teacherEditModal");
+    if (teacherEditModal && teacherEditModal.parentElement !== document.body) {
+        document.body.appendChild(teacherEditModal);
+    }
     const profileUsername = JSON.parse(document.getElementById("profileUsername")?.textContent || "\"user\"");
     const profileFullName = JSON.parse(document.getElementById("profileFullName")?.textContent || '""');
     const profileEmail = JSON.parse(document.getElementById("profileEmail")?.textContent || "\"\"");
@@ -97,6 +101,13 @@ function initProfilePage() {
         accountFields.forEach(function (field) {
             field.disabled = !editing;
         });
+        if (teacherEditModal) {
+            // Teacher editing is modal-only; keep the profile card unchanged.
+            profileSummaryCard?.classList.remove("is-editing");
+            editBtn.classList.remove("d-none");
+            actions.classList.toggle("d-none", !editing);
+            return;
+        }
         profileSummaryCard?.classList.toggle("is-editing", editing);
         editBtn.classList.toggle("d-none", editing);
         actions.classList.toggle("d-none", !editing);
@@ -111,6 +122,9 @@ function initProfilePage() {
             if (firstField) {
                 firstField.focus();
             }
+            if (teacherEditModal && window.bootstrap?.Modal) {
+                window.bootstrap.Modal.getOrCreateInstance(teacherEditModal).show();
+            }
         });
 
         form.addEventListener("reset", function () {
@@ -120,7 +134,7 @@ function initProfilePage() {
                 // Reset restores the original values without kicking the
                 // student out of the edit screen. Closing the modal returns
                 // the form to its non-editing state.
-                setEditMode(Boolean(studentEditModal?.classList.contains("show")));
+                setEditMode(Boolean(studentEditModal?.classList.contains("show") || teacherEditModal?.classList.contains("show")));
             }, 0);
         });
 
@@ -156,10 +170,13 @@ function initProfilePage() {
                 if (studentEditModal && window.bootstrap?.Modal) {
                     window.bootstrap.Modal.getInstance(studentEditModal)?.hide();
                 }
+                if (teacherEditModal && window.bootstrap?.Modal) {
+                    window.bootstrap.Modal.getInstance(teacherEditModal)?.hide();
+                }
                 form.reset();
                 
                 // Update the display with new values
-                const fullNameDisplay = document.querySelector(".profile-main-content h2");
+                const fullNameDisplay = document.querySelector(".teacher-hero-name") || document.querySelector(".profile-main-content h2");
                 if (fullNameDisplay && data.full_name) {
                     fullNameDisplay.textContent = data.full_name;
                 }
@@ -173,6 +190,13 @@ function initProfilePage() {
             });
         });
     }
+
+    teacherEditModal?.addEventListener("shown.bs.modal", function () {
+        form?.querySelector("[data-account-details-field]")?.focus();
+    });
+    teacherEditModal?.addEventListener("hidden.bs.modal", function () {
+        setEditMode(false);
+    });
 
     function showToast(message, type = "success") {
         let toastContainer = document.getElementById("pabasaToastContainer");

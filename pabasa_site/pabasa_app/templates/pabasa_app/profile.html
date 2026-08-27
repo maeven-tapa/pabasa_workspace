@@ -582,6 +582,25 @@
         justify-content: center;
     }
 
+    body.dashboard-body:not(:has(.player-profile)) .profile-card-spacing .profile-section-card:hover::before {
+        opacity: 0;
+    }
+
+    #teacherEditModal .modal-dialog { max-width: 680px; }
+    #teacherEditModal .modal-content { border: 0; border-radius: 24px; overflow: hidden; }
+    #teacherEditModal .modal-body { max-height: min(70vh, 680px); overflow-y: auto; padding: 1.35rem; }
+    #teacherEditModal .profile-edit-grid { display: grid; }
+    @media (max-width: 600px) {
+        #teacherEditModal .modal-dialog { margin: .75rem; }
+        #teacherEditModal .modal-body { max-height: calc(100vh - 150px); }
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-main-content h2.profile-section-title {
+        font-size: 1.12rem;
+        line-height: 1.15;
+        margin: 0 0 1rem;
+    }
+
     .profile-info-row {
         display: flex;
         justify-content: space-between;
@@ -665,6 +684,14 @@
     }
 
     @media (min-width: 992px) {
+        body.dashboard-body:not(:has(.player-profile)) .profile-main {
+            align-items: stretch;
+        }
+
+        body.dashboard-body:not(:has(.player-profile)) .profile-card-spacing {
+            grid-template-rows: minmax(0, 1fr);
+        }
+
         .profile-main {
             grid-template-columns: 350px 1fr; /* Slightly wider left column to reduce compression */
             gap: 2rem;
@@ -1333,6 +1360,14 @@
         gap: .45rem;
     }
 
+    .teacher-hero-meta .profile-status-badge {
+        margin-top: 0;
+    }
+
+    .teacher-hero-meta .teacher-hero-pill {
+        margin-top: 0;
+    }
+
     .teacher-hero-pill {
         align-items: center;
         background: rgba(255,255,255,.72);
@@ -1563,11 +1598,10 @@
             <div class="teacher-hero-greeting">Hello, Teacher</div>
             <h2 class="teacher-hero-name">{{ full_name }}</h2>
             <div class="teacher-hero-meta">
-                <span>{{ role_display }}</span>
+                <span class="teacher-hero-pill"><i class="bi bi-people-fill"></i> {{ teacher_grade_section|default:"Not set" }} Advisee</span>
                 <span aria-hidden="true">&bull;</span>
-                <span>{{ account_status_label|default:"Active" }} Teacher</span>
+                <span class="profile-status-badge {{ account_status_class|default:'status-active' }}" title="{{ account_status_tooltip|default:'' }}">{{ account_status_label|default:"Active" }} Teacher</span>
             </div>
-            <div class="teacher-hero-pill"><i class="bi bi-people-fill"></i> <span id="profileHeroActiveClassesCount">{{ teacher_active_classes|default:"0" }}</span> active classes</div>
         </div>
     </header>
     {% endif %}
@@ -1626,8 +1660,7 @@
                         <div class="profile-avatar-lg" id="profileAvatarDisplay" aria-label="{{ full_name }} profile initials">{{ initials }}</div>
                         {% endif %}
                         <div class="profile-main-content">
-                            <h2>{{ full_name }}</h2>
-                            <div class="profile-role">{{ role_display }}</div>
+                            <h2 class="{% if nav_role == 'teacher' %}profile-section-title{% endif %}">{% if nav_role == 'teacher' %}<i class="bi bi-person-lines-fill"></i>{% endif %}{% if nav_role == 'teacher' %}About You{% else %}{{ full_name }}{% endif %}</h2>
                             <div class="profile-details-mini">
                                 <div>
                                     <span class="profile-detail-icon"><i class="bi bi-envelope"></i></span>
@@ -1689,6 +1722,12 @@
                                     </span>
                                 </div>
                                 {% endif %}
+                                {% if nav_role == 'teacher' %}
+                                <div>
+                                    <span class="profile-detail-icon"><i class="bi bi-building"></i></span>
+                                    <span class="profile-detail-text"><span class="label">School</span><span class="value">{{ school_name|default:"Not set" }}</span></span>
+                                </div>
+                                {% endif %}
                                 <div>
                                     <span class="profile-detail-icon"><i class="bi bi-telephone"></i></span>
                                     <span class="profile-detail-text">
@@ -1697,13 +1736,13 @@
                                     </span>
                                 </div>
                             </div>
-                            <div class="profile-status-badge {{ account_status_class|default:'status-active' }}" title="{{ account_status_tooltip|default:'' }}">{{ account_status_label|default:"Active" }} {% if nav_role == 'teacher' %}Teacher{% else %}Student{% endif %}</div>
                         </div>
                     </div>
 
                     <hr class="profile-form-divider my-3" style="border-color: rgba(27, 26, 23, 0.08);">
 
                     <div class="d-grid gap-3">
+                        {% if nav_role == 'teacher' %}<div class="modal fade" id="teacherEditModal" tabindex="-1" aria-labelledby="teacherEditModalLabel" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="teacherEditModalLabel"><i class="bi bi-person-gear me-2"></i>Edit Teacher Profile</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body">{% endif %}
                         <form class="d-grid gap-3" action="#" method="post" id="accountDetailsForm">
                             {% csrf_token %}
                             <input type="hidden" name="save_account_details" value="true">
@@ -1792,6 +1831,7 @@
                                 <button class="btn btn-outline-secondary" type="reset">Reset</button>
                             </div>
                         </form>
+                        {% if nav_role == 'teacher' %}</div></div></div></div>{% endif %}
                         <button class="btn btn-outline-primary w-100" id="editAccountDetailsBtn" type="button">Edit Profile</button>
                     </div>
                 </div>

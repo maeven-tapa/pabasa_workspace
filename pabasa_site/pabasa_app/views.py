@@ -13004,7 +13004,9 @@ def profile(request):
     selected_avatar_slug = user.animal_avatar if user.animal_avatar in STUDENT_AVATAR_BY_SLUG else 'owl'
     selected_avatar = STUDENT_AVATAR_BY_SLUG[selected_avatar_slug]
     teacher_active_classes = 0
+    teacher_assigned_section = None
     if user.role == 'teacher':
+        teacher_assigned_section = Section.objects.filter(teacher=user, is_active=True).select_related('school').first()
         teacher_active_classes = Section.objects.filter(teacher=user, is_active=True).count()
     
     # Get user bio from tags (profile information)
@@ -13188,7 +13190,12 @@ def profile(request):
         'birthday_display': birthday_display,
         'grade_level': user.grade_level or '',
         'section_name': user.section or '',
-        'school_name': user.school or '',
+        'school_name': user.school_record.name if user.role == 'teacher' and user.school_record_id else (user.school or ''),
+        'teacher_grade_section': (
+            f'{teacher_assigned_section.grade_level} – {teacher_assigned_section.section}'
+            if teacher_assigned_section and teacher_assigned_section.grade_level and teacher_assigned_section.section
+            else (teacher_assigned_section.class_name if teacher_assigned_section else '')
+        ),
         'reading_level': user.reading_level or '',
         'contact_number': user.contact_no or '',
         'notification_settings': _notification_settings_for_user(user),
