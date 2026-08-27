@@ -173,48 +173,14 @@ if DJANGO_ENV == 'production':
     CSRF_COOKIE_SECURE = True
     SECURE_SSL_REDIRECT = True
 
-# Email settings. Gmail SMTP over STARTTLS is the existing production provider.
-# Development defaults to the in-memory backend so a missing/blocked SMTP
-# connection is never mistaken for a configured local dependency. Set
-# EMAIL_BACKEND to the SMTP backend explicitly when testing real delivery.
-SMTP_EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-DEVELOPMENT_EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
-EMAIL_BACKEND = os.environ.get(
-    'EMAIL_BACKEND',
-    SMTP_EMAIL_BACKEND if DJANGO_ENV == 'production' else DEVELOPMENT_EMAIL_BACKEND,
-).strip()
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com').strip()
-try:
-    EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
-except ValueError as exc:
-    raise ImproperlyConfigured('EMAIL_PORT must be an integer.') from exc
-EMAIL_USE_TLS = _bool_env('EMAIL_USE_TLS', True)
-EMAIL_USE_SSL = _bool_env('EMAIL_USE_SSL', False)
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '').strip()
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'webmaster@localhost').strip()
-try:
-    EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', '15'))
-except ValueError as exc:
-    raise ImproperlyConfigured('EMAIL_TIMEOUT must be an integer.') from exc
-
-if EMAIL_USE_TLS and EMAIL_USE_SSL:
-    raise ImproperlyConfigured('EMAIL_USE_TLS and EMAIL_USE_SSL cannot both be enabled.')
-
-if EMAIL_BACKEND == SMTP_EMAIL_BACKEND:
-    missing_email_settings = [
-        name for name, value in {
-            'EMAIL_HOST': EMAIL_HOST,
-            'EMAIL_HOST_USER': EMAIL_HOST_USER,
-            'EMAIL_HOST_PASSWORD': EMAIL_HOST_PASSWORD,
-            'DEFAULT_FROM_EMAIL': DEFAULT_FROM_EMAIL,
-        }.items() if not value
-    ]
-    if missing_email_settings:
-        raise ImproperlyConfigured(
-            'SMTP email is enabled but required settings are missing: '
-            + ', '.join(missing_email_settings)
-        )
+# Email settings for Gmail
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'pabasa.tupc@gmail.com'
+EMAIL_HOST_PASSWORD = 'sfsy zplk rmku bdxt'
+DEFAULT_FROM_EMAIL = 'pabasa.tupc@gmail.com'
 
 # Google Cloud Speech-to-Text settings used by the reading assessment UI.
 GOOGLE_STT_API_KEY = 'AIzaSyDPMgJX8t195Z9bfoID2gwlG5oPhBVK_tk'
