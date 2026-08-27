@@ -317,7 +317,7 @@
     }
 
     .privacy-step-document {
-        padding: 1rem 0;
+        padding: 0.25rem 0 1rem;
         color: #334155;
         font-size: 0.95rem;
         line-height: 1.7;
@@ -508,15 +508,18 @@
                     <div class="signup-step is-active" data-signup-step="0">
                     <div class="col-md-4">
                         <label class="form-label">First name</label>
-                        <input class="form-control" type="text" name="first_name" placeholder="Enter First Name" required>
+                        <input class="form-control" type="text" name="first_name" placeholder="Enter First Name"
+                               pattern="[A-Za-z]+" title="Use letters only." data-letters-only required>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Middle Initial</label>
-                        <input class="form-control" type="text" name="middle_initial" maxlength="1" placeholder="M">
+                        <input class="form-control" type="text" name="middle_initial" maxlength="1" placeholder="M"
+                               pattern="[A-Za-z]" title="Use a letter only." data-letters-only>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Last name</label>
-                        <input class="form-control" type="text" name="last_name" placeholder="Enter Last Name" required>
+                        <input class="form-control" type="text" name="last_name" placeholder="Enter Last Name"
+                               pattern="[A-Za-z]+" title="Use letters only." data-letters-only required>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Suffix</label>
@@ -542,7 +545,7 @@
                         </div>
                         <div class="birth-field birth-month-field">
                             <label class="form-label">Birth month</label>
-                            <select class="form-select" name="birth_month" required>
+                            <select class="form-select" name="birth_month" id="teacherBirthMonth" required>
                                 <option value="" selected disabled>Month</option>
                                 <option value="1">January</option>
                                 <option value="2">February</option>
@@ -560,11 +563,11 @@
                         </div>
                         <div class="birth-field birth-day-field">
                             <label class="form-label">Birth day</label>
-                            <input class="form-control" type="number" name="birth_day" placeholder="Day" min="1" max="31" oninput="if(this.value.length > 2) this.value = this.value.slice(0, 2);" required>
+                            <input class="form-control" type="number" name="birth_day" id="teacherBirthDay" placeholder="Day" min="1" max="31" oninput="if(this.value.length > 2) this.value = this.value.slice(0, 2);" required>
                         </div>
                         <div class="birth-field birth-year-field">
                             <label class="form-label">Birth year</label>
-                            <input class="form-control" type="number" name="birth_year" placeholder="Year" min="1900" max="2100" oninput="if(this.value.length > 4) this.value = this.value.slice(0, 4);" required>
+                            <input class="form-control" type="number" name="birth_year" id="teacherBirthYear" placeholder="Year" min="1900" max="2100" oninput="if(this.value.length > 4) this.value = this.value.slice(0, 4);" required>
                         </div>
                     </div>
                     </div>
@@ -825,11 +828,39 @@
         const confirmPasswordInput = form.elements.confirm_password;
         const passwordMatchError = form.querySelector("[data-password-match-error]");
         const privacyConsentCheckbox = form.querySelector('input[name="privacy_consent"]');
+        const birthMonthInput = form.querySelector('#teacherBirthMonth');
+        const birthDayInput = form.querySelector('#teacherBirthDay');
+        const birthYearInput = form.querySelector('#teacherBirthYear');
+        const letterOnlyInputs = form.querySelectorAll('[data-letters-only]');
         const passwordRules = {
             length: form.querySelector("[data-rule='length']"),
             uppercase: form.querySelector("[data-rule='uppercase']"),
             number: form.querySelector("[data-rule='number']"),
         };
+
+        letterOnlyInputs.forEach((input) => {
+            input.addEventListener('input', () => {
+                input.value = input.value.replace(/[^A-Za-z]/g, '');
+            });
+        });
+
+        const syncBirthDayLimit = () => {
+            const month = Number(birthMonthInput.value);
+            const year = Number(birthYearInput.value);
+            if (!month) return;
+
+            // Date.UTC correctly handles February in leap years. Until a year
+            // is entered, February 29 remains available for leap-year birthdays.
+            const maximumDay = month === 2 && !year ? 29 : new Date(Date.UTC(year || 2000, month, 0)).getUTCDate();
+            birthDayInput.max = String(maximumDay);
+
+            if (Number(birthDayInput.value) > maximumDay) {
+                birthDayInput.value = String(maximumDay);
+            }
+        };
+
+        birthMonthInput.addEventListener('change', syncBirthDayLimit);
+        birthYearInput.addEventListener('input', syncBirthDayLimit);
 
         const setStep = (stepIndex) => {
             currentStep = Math.max(0, Math.min(stepIndex, steps.length - 1));
