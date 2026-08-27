@@ -3661,22 +3661,30 @@ def register_teacher(request):
         if data.get('password') != data.get('confirm_password'):
             return JsonResponse({'success': False, 'error': 'Passwords do not match'}, status=400)
         
+        email = _normalize_registration_value(data.get('email'))
         # Check if email already exists
-        if User.objects.filter(email=data.get('email')).exists():
+        if User.objects.filter(email__iexact=email).exists():
             return JsonResponse({'success': False, 'error': 'Email already registered'}, status=400)
         
         # Create pending signup and send OTP
-        otp = _store_pending_teacher_signup(request, data)
-        send_teacher_signup_otp_email(request, data.get('email'), otp, data.get('first_name'))
+        signup_data = data.copy()
+        signup_data['email'] = email
+        otp = _store_pending_teacher_signup(request, signup_data)
+        try:
+            send_teacher_signup_otp_email(request, email, otp, data.get('first_name'))
+        except Exception:
+            logger.exception("Teacher signup OTP email delivery failed for recipient=%s", email)
+            return JsonResponse({'success': False, 'error': 'We could not send the verification email. Please try again.'}, status=503)
 
         return JsonResponse({
             'success': True,
             'message': 'OTP sent to your email. Enter it below to finish registration.',
-            'email': data.get('email')
+            'email': email
         })
     
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    except Exception:
+        logger.exception("Teacher signup OTP request failed")
+        return JsonResponse({'success': False, 'error': 'Unable to start registration right now. Please try again.'}, status=400)
 
 @csrf_protect
 @require_http_methods(["POST"])
@@ -3725,19 +3733,27 @@ def register_student(request):
         if User.objects.filter(email__iexact=raw_email, is_archived=False).exists():
             return JsonResponse({'success': False, 'error': 'Email already registered'}, status=400)
         
-        # Store pending signup and send OTP email (student must verify OTP to complete)
-        otp = _store_pending_student_signup(request, data)
-        logger.debug("STUDENT REGISTRATION PENDING CREATED otp=%s session_keys=%s", otp, sorted(list(request.session.keys())))
-        send_student_signup_otp_email(request, raw_email, otp, data.get('first_name'))
+        # Store the canonical recipient so verification and confirmation use
+        # exactly the address to which the OTP was delivered.
+        signup_data = data.copy()
+        signup_data['email'] = raw_email
+        otp = _store_pending_student_signup(request, signup_data)
+        logger.debug("STUDENT REGISTRATION PENDING CREATED session_keys=%s", sorted(list(request.session.keys())))
+        try:
+            send_student_signup_otp_email(request, raw_email, otp, data.get('first_name'))
+        except Exception:
+            logger.exception("Student signup OTP email delivery failed for recipient=%s", raw_email)
+            return JsonResponse({'success': False, 'error': 'We could not send the verification email. Please try again.'}, status=503)
 
         return JsonResponse({
             'success': True,
             'message': 'OTP sent to your email. Enter it below to finish registration.',
-            'email': data.get('email')
+            'email': raw_email
         })
     
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    except Exception:
+        logger.exception("Student signup OTP request failed")
+        return JsonResponse({'success': False, 'error': 'Unable to start registration right now. Please try again.'}, status=400)
 
 @csrf_protect
 @require_http_methods(["POST"])
@@ -3852,7 +3868,11 @@ def resend_teacher_signup_otp(request):
         request.session['pending_teacher_signup_otp_created'] = time.time()
         request.session.modified = True
 
-        send_teacher_signup_otp_email(request, pending['email'], otp, pending['first_name'])
+        try:
+            send_teacher_signup_otp_email(request, pending['email'], otp, pending['first_name'])
+        except Exception:
+            logger.exception("Teacher signup OTP resend failed for recipient=%s", pending['email'])
+            return JsonResponse({'success': False, 'error': 'We could not send the new verification email. Please try again.'}, status=503)
         return JsonResponse({'success': True, 'message': 'A new OTP has been sent to your email.'})
 
     except Exception as e:
@@ -4007,7 +4027,11 @@ def resend_student_signup_otp(request):
         request.session['pending_student_signup_otp_created'] = time.time()
         request.session.modified = True
 
-        send_student_signup_otp_email(request, pending['email'], otp, pending['first_name'])
+        try:
+            send_student_signup_otp_email(request, pending['email'], otp, pending['first_name'])
+        except Exception:
+            logger.exception("Student signup OTP resend failed for recipient=%s", pending['email'])
+            return JsonResponse({'success': False, 'error': 'We could not send the new verification email. Please try again.'}, status=503)
         return JsonResponse({'success': True, 'message': 'A new OTP has been sent to your email.'})
 
     except Exception as e:
