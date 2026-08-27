@@ -15454,26 +15454,45 @@ def get_teacher_overview(request):
 
 
 @require_http_methods(["GET"])
+@login_required()
 def get_class_materials(request):
     """
     Returns all materials (assessments) for a class, organized by reading type.
     Accessible by both teachers (owners) and students (enrolled in class).
-    Query params: class_code (required)
+    Query params: section_id (preferred), class_code (temporary compatibility fallback)
     Returns: { 'success': True, 'materials': { word: [...], sentence: [...], paragraph: [...] } }
     """
     try:
-        class_code = request.GET.get('class_code', '').strip()
-        if not class_code:
-            return JsonResponse({'success': False, 'error': 'class_code parameter required'}, status=400)
-        
-        # Get the section (class) by code
-        section = Section.objects.filter(
-            class_code__iexact=class_code,
-            is_active=True
-        ).first()
+        section_id = (request.GET.get('section_id') or '').strip()
+        class_code = (request.GET.get('class_code') or '').strip()
+        if not section_id and not class_code:
+            return JsonResponse({'success': False, 'error': 'section_id parameter required'}, status=400)
+
+        user_id = request.session.get('user_id')
+        request_user = User.objects.filter(id=user_id, is_archived=False).first()
+        if not request_user or request_user.role not in {'student', 'teacher'}:
+            return JsonResponse({'success': False, 'error': 'Class access denied'}, status=403)
+
+        section = None
+        if section_id:
+            try:
+                section = Section.objects.filter(pk=int(section_id), is_active=True).first()
+            except (TypeError, ValueError):
+                return JsonResponse({'success': False, 'error': 'Invalid section_id'}, status=400)
+        elif class_code:
+            # Temporary compatibility path. The code only identifies a candidate;
+            # relational ownership below remains mandatory before any data query.
+            section = Section.objects.filter(class_code__iexact=class_code, is_active=True).first()
         
         if not section:
             return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
+
+        if request_user.role == 'student':
+            if not section.has_student(request_user, active_only=True):
+                return JsonResponse({'success': False, 'error': 'You are not enrolled in this class'}, status=403)
+        elif request_user.role == 'teacher':
+            if section.teacher_id != request_user.id:
+                return JsonResponse({'success': False, 'error': 'Class access denied'}, status=403)
         
         # Include materials directly linked to section, assigned via ManyToMany,
         # or attached to a Course that includes this section.
@@ -15507,14 +15526,8 @@ def get_class_materials(request):
             Q(section__isnull=True, teacher=section.teacher) |
             Q(section__isnull=True, teacher__role='admin')
         ).order_by('-created_at')
-        user_id = request.session.get('user_id')
-        teacher_user = User.objects.filter(id=user_id).first() if user_id else None
+        teacher_user = request_user if request_user.role == 'teacher' else None
         # Requesting user (could be student or teacher) used to compute attempt counts
-        request_user = User.objects.filter(id=user_id).first() if user_id else None
-        if request_user and request_user.role == 'student' and not section.has_student(request_user, active_only=True):
-            return JsonResponse({'success': False, 'error': 'You are not enrolled in this class'}, status=403)
-        if request_user and request_user.role == 'teacher' and section.teacher_id != request_user.id:
-            return JsonResponse({'success': False, 'error': 'Class access denied'}, status=403)
         effective_date = date.today()
         is_requesting_student = bool(request_user and request_user.role == 'student')
         # Archived records should not appear in class/course readings, even for the owning teacher.

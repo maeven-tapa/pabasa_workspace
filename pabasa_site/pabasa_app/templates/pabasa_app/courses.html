@@ -12264,10 +12264,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const sectionCodes = (course.sections || []).map(s => s.code).filter(Boolean);
             const aggregated = { word: [], sentence: [], paragraph: [], vowel: [] };
             const stored = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}');
-            for (const code of sectionCodes) {
+            for (const section of (course.sections || [])) {
+                const code = section.code;
+                if (!code) continue;
                 let r = null;
                 try {
-                    r = (typeof fetchMaterialsFromDatabase === 'function') ? await fetchMaterialsFromDatabase(code) : null;
+                    r = (typeof fetchMaterialsFromDatabase === 'function') ? await fetchMaterialsFromDatabase(section.id || section.section_id, code) : null;
                 } catch (e) {
                     console.warn('Could not fetch course readings from database for class', code, e);
                 }
@@ -12715,23 +12717,28 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     }
 
     // Fetch materials from database API instead of localStorage
-    async function fetchMaterialsFromDatabase(classCode) {
+    async function fetchMaterialsFromDatabase(sectionId, classCode) {
+        const normalizedSectionId = String(sectionId || '').trim();
+        const normalizedClassCode = String(classCode || '').trim();
         // Guard: don't call API when classCode is falsy or explicitly 'null'/'undefined'
-        if (!classCode || String(classCode).toLowerCase() === 'null' || String(classCode).toLowerCase() === 'undefined') {
-            console.warn('fetchMaterialsFromDatabase called without a valid classCode:', classCode);
+        if ((!normalizedSectionId && !normalizedClassCode) || normalizedClassCode.toLowerCase() === 'null' || normalizedClassCode.toLowerCase() === 'undefined') {
+            console.warn('fetchMaterialsFromDatabase called without a valid Section ID or classCode:', { sectionId, classCode });
             return null;
         }
 
         try {
-            const response = await fetch(`/api/class/materials/?class_code=${encodeURIComponent(classCode)}`);
-            console.log('[materials trace] API request', { classCode, url: `/api/class/materials/?class_code=${encodeURIComponent(classCode)}` });
+            const query = normalizedSectionId
+                ? `section_id=${encodeURIComponent(normalizedSectionId)}`
+                : `class_code=${encodeURIComponent(normalizedClassCode)}`;
+            const response = await fetch(`/api/class/materials/?${query}`);
+            console.log('[materials trace] API request', { sectionId: normalizedSectionId, classCode: normalizedClassCode, url: `/api/class/materials/?${query}` });
             if (!response.ok) {
                 console.warn(`Failed to fetch materials for class ${classCode}:`, response.status);
                 return null;
             }
             const data = await response.json();
             console.log('[materials trace] API response', {
-                classCode,
+                classCode: normalizedClassCode,
                 success: data?.success,
                 hehehehExists: JSON.stringify(data || '').includes('heheheh'),
                 payload: data
@@ -12751,14 +12758,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     sourceTypes: flat.map(item => String(item.source_type || item.material_source || '').trim().toLowerCase()).filter(Boolean)
                 });
                 // Fix: Sync local cache variable so View/Edit handlers find the data
-                if (classCode) {
-                    classReadings[classCode] = materials;
+                if (normalizedClassCode) {
+                    classReadings[normalizedClassCode] = materials;
                 }
                 return materials;
             }
             return null;
         } catch (error) {
-            console.warn(`Error fetching materials for class ${classCode}:`, error);
+            console.warn(`Error fetching materials for class ${normalizedClassCode || normalizedSectionId}:`, error);
             return null;
         }
     }
@@ -13014,7 +13021,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         
         // Update reading counts from database for each class asynchronously
         const countPromises = (teacherClasses || []).map(async (cls) => {
-            const materials = await fetchMaterialsFromDatabase(cls.code);
+            const materials = await fetchMaterialsFromDatabase(cls.id, cls.code);
             if (!materials) return;
             const totalCount = materials.word.length + materials.sentence.length + materials.paragraph.length;
             const countElement = document.querySelector(`[data-readings-count="${cls.code}"] strong`);
@@ -18554,7 +18561,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             let readings = { word: [], sentence: [], paragraph: [], vowel: [] };
             
                 // First, try to fetch from database API (skip if no classCode provided)
-                const dbMaterials = await fetchMaterialsFromDatabase(classCode);
+                const classData = (teacherClasses || []).find(cls => String(cls.code) === String(classCode));
+                const dbMaterials = await fetchMaterialsFromDatabase(classData?.id, classCode);
                 if (dbMaterials) {
                     readings = dbMaterials;
                     console.log(`✓ Loaded materials from database for class ${classCode}`);
