@@ -12892,6 +12892,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 'X-CSRFToken': document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
             },
             body: JSON.stringify({
+                section_id: getTeacherSectionId(currentClassCode) || null,
                 class_code: currentClassCode,
                 student_id: studentId
             })
@@ -12933,7 +12934,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             'X-CSRFToken': document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
                         },
                         body: JSON.stringify(hasSections
-                            ? { class_code: sectionCode || currentClassCode, student_id: studentId }
+                            ? {
+                                section_id: (course?.sections || []).find(s => String(s.code || '').toUpperCase() === String(sectionCode || currentClassCode || '').toUpperCase())?.id || getTeacherSectionId(sectionCode || currentClassCode) || null,
+                                class_code: sectionCode || currentClassCode,
+                                student_id: studentId
+                            }
                             : { course_id: courseId, student_id: studentId })
                     });
                     const data = await response.json();
@@ -12962,6 +12967,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
     let currentClassCode = null;
     let currentClassData = null;
+
+    function getTeacherSectionId(classCode) {
+        const match = (teacherClasses || []).find(cls => String(cls.code || '').toUpperCase() === String(classCode || '').toUpperCase());
+        return match?.id || match?.section_id || '';
+    }
 
     function getStudentCountForClass(className) {
         try {

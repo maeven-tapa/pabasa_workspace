@@ -90,13 +90,19 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             try { bootstrap.Modal.getInstance(addStudentModalEl)?.hide(); } catch (e) { console.warn(e); }
 
+            const payload = {
+                student_id: studentId,
+                section_id: params.get('section_id') || document.querySelector('.class-switcher-option.is-selected')?.dataset.sectionId
+            };
+            if (classCode) payload.class_code = classCode;
+
             fetch('/dashboard/teacher/add-student-to-class/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken
                 },
-                body: JSON.stringify({ student_id: studentId, class_code: classCode })
+                body: JSON.stringify(payload)
             })
             .then(res => res.json())
             .then(data => {

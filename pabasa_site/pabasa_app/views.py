@@ -15136,7 +15136,21 @@ def update_class_info(request):
     """API to update class metadata"""
     try:
         data = json.loads(request.body)
-        section = Section.objects.filter(class_code=data.get('class_code'), teacher_id=request.session.get('user_id')).first()
+        user_id = request.session.get('user_id')
+        teacher_user = User.objects.filter(id=user_id, role='teacher').first()
+        if not teacher_user:
+            return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=403)
+        section_id = str(data.get('section_id') or '').strip()
+        class_code = str(data.get('class_code') or '').strip()
+        assigned_sections = Section.objects.filter(teacher=teacher_user, is_active=True)
+        section = None
+        if section_id:
+            try:
+                section = assigned_sections.filter(pk=int(section_id)).first()
+            except (TypeError, ValueError):
+                section = None
+        elif class_code:
+            section = assigned_sections.filter(class_code__iexact=class_code).first()
         if not section: return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
         section.class_name = data.get('class_name', '').strip()
         # 'grade_level' and per-class 'section' fields removed from the model; only update fields that remain
@@ -15153,17 +15167,29 @@ def teacher_add_student(request):
     """Backend endpoint for teachers to manually enroll a student"""
     try:
         data = json.loads(request.body)
-        class_code = data.get('class_code')
+        section_id = str(data.get('section_id') or '').strip()
+        class_code = str(data.get('class_code') or '').strip()
         course_id = data.get('course_id')
         student_id = data.get('student_id')
         
         user_id = request.session.get('user_id')
-        teacher_user = User.objects.filter(id=user_id).first()
-        section = Section.objects.filter(class_code=class_code, teacher_id=user_id).first() if class_code else None
+        teacher_user = User.objects.filter(id=user_id, role='teacher').first()
+        assigned_sections = Section.objects.filter(teacher=teacher_user, is_active=True) if teacher_user else Section.objects.none()
+        section = None
+        if section_id:
+            try:
+                section = assigned_sections.filter(pk=int(section_id)).first()
+            except (TypeError, ValueError):
+                section = None
+        elif class_code:
+            section = assigned_sections.filter(class_code__iexact=class_code).first()
         student = User.objects.filter(id=student_id, role='student').first()
         
         if not student:
             return JsonResponse({'success': False, 'error': 'Class or Student not found'}, status=404)
+
+        if (section_id or class_code) and not section:
+            return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
 
         if section:
             if section.add_student(student):
@@ -15245,18 +15271,30 @@ def teacher_remove_student(request):
     """Backend endpoint for teachers to remove a student from a class"""
     try:
         data = json.loads(request.body)
-        class_code = data.get('class_code')
+        section_id = str(data.get('section_id') or '').strip()
+        class_code = str(data.get('class_code') or '').strip()
         course_id = data.get('course_id')
         student_id_val = data.get('student_id')
         
         user_id = request.session.get('user_id')
-        teacher_user = User.objects.filter(id=user_id).first()
-        section = Section.objects.filter(class_code=class_code, teacher=teacher_user, is_active=True).first() if class_code else None
+        teacher_user = User.objects.filter(id=user_id, role='teacher').first()
+        assigned_sections = Section.objects.filter(teacher=teacher_user, is_active=True) if teacher_user else Section.objects.none()
+        section = None
+        if section_id:
+            try:
+                section = assigned_sections.filter(pk=int(section_id)).first()
+            except (TypeError, ValueError):
+                section = None
+        elif class_code:
+            section = assigned_sections.filter(class_code__iexact=class_code).first()
         # Match by internal database ID or the custom Pabasa ID
         student = User.objects.filter(Q(id=student_id_val) | Q(custom_id=student_id_val), role='student').first()
         
         if not student:
             return JsonResponse({'success': False, 'error': 'Student not found'}, status=404)
+
+        if (section_id or class_code) and not section:
+            return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
 
         if section:
             if section.deactivate_student(student):

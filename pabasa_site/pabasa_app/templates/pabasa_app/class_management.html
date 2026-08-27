@@ -1081,6 +1081,7 @@
 
             <form id="updateClassForm" class="class-form">
                 {% csrf_token %}
+                <input type="hidden" name="section_id" value="{{ section.id }}">
                 <input type="hidden" name="class_code" value="{{ section.class_code }}">
 
                 <div class="form-group col-span-8">
