@@ -372,6 +372,7 @@ def _reader_assessment_state(student):
         'reader_classification': classification,
         'aral_eligible': bool(eligible),
         'aral_status': str(state.get('aral_status') or ('active' if state.get('current_phase') == 'materials' and eligible else 'pending')).strip().lower(),
+        'classification_workflow_status': state.get('classification_workflow_status') or '',
         'pre_test_completed': bool(state.get('crla_pretest_completed')),
         'post_test_completed': bool(state.get('crla_posttest_completed')),
         'current_phase': state.get('current_phase') or ('materials' if eligible else 'pretest'),
@@ -2092,6 +2093,8 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
 
     state['reader_classification'] = normalized_classification
     state['aral_eligible'] = bool(_aral_eligible_classification(normalized_classification))
+    if state['aral_eligible']:
+        state['classification_workflow_status'] = 'pending'
 
     assessment_kind = ''
     assessment_phase = ''
@@ -9005,10 +9008,12 @@ def assessment(request):
     except Exception as exc:
         logger.warning("PABASA_OFFICIAL_TRACE workflow_launch_context logging_failed=%s", exc)
 
+    classification_triggered = str(request.GET.get('show_classification') or '').strip().lower() in {'1', 'true', 'yes'}
     show_classification_card = (
         stage == 'original'
-        and str(request.GET.get('show_classification') or '').strip().lower() in {'1', 'true', 'yes'}
         and bool(state.get('reader_classification'))
+        and state.get('classification_workflow_status') != 'completed'
+        and (classification_triggered or state.get('classification_workflow_status') == 'pending')
     )
     classification_result = None
     if show_classification_card and user:
@@ -9020,13 +9025,19 @@ def assessment(request):
 
     classification_score = getattr(classification_result, 'total_score', None)
     context['show_classification_card'] = show_classification_card
+    formal_performance = performance_interpretation(classification_score) if classification_score is not None else ('Needs Intensive Support' if eligible else '')
+    friendly_performance = {
+        'needs intensive support': ('Keep Practicing 💪', 'You’re getting better every time!'),
+        'needs support': ('Keep Going! 🌟', 'You’re getting better every time!'),
+        'developing': ('You’re Making Progress! 🌱', 'You’re getting better every time!'),
+        'on track': ('You’re Doing Great! ⭐', 'Keep practicing your reading!'),
+        'advanced': ('Amazing Reading! 🏆', 'Keep practicing your reading!'),
+    }.get(str(formal_performance or '').strip().lower(), ('Keep Practicing 💪', 'You’re getting better every time!'))
+    classification_label = str(state.get('reader_classification') or '').strip()
     context['classification_card'] = {
-        'level': state.get('reader_classification') or '',
-        'remarks': str(getattr(classification_result, 'remarks', '') or '').strip(),
-        'performance_interpretation': (
-            performance_interpretation(classification_score)
-            if classification_score is not None else ''
-        ),
+        'level': classification_label[:-1] if classification_label.endswith(' Readers') else classification_label,
+        'performance_interpretation': friendly_performance[0] if eligible else '',
+        'performance_message': friendly_performance[1] if eligible else '',
         'disclaimer': ADAPTED_READING_LEVEL_DISCLAIMER if classification_result else '',
         'aral_eligible': eligible,
     }
@@ -9122,6 +9133,7 @@ def activate_aral_intervention(request):
     state['aral_eligible'] = True
     state['aral_status'] = 'active'
     state['current_phase'] = 'materials'
+    state['classification_workflow_status'] = 'completed'
     _set_user_state(student_user, state)
     return redirect(f"{reverse('assessment')}?workflow=original")
 

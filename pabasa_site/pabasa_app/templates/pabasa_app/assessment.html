@@ -528,17 +528,25 @@
     .assessment-result-overlay {
         position: fixed;
         inset: 0;
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
         z-index: 1080;
-        display: grid;
-        place-items: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         padding: 1rem;
+        box-sizing: border-box;
         background: rgba(16, 70, 110, 0.38);
         backdrop-filter: blur(5px);
         -webkit-backdrop-filter: blur(5px);
     }
 
     .assessment-result-card.status-ticket {
+        align-self: center;
+        margin: 0;
         width: min(620px, 100%);
+        box-sizing: border-box;
         max-height: calc(100vh - 2rem);
         overflow-y: auto;
         gap: 1rem;
@@ -567,6 +575,12 @@
         line-height: 1.2;
     }
 
+    .assessment-result-subtitle {
+        margin: 0.35rem 0 0;
+        color: var(--dash-ink-soft);
+        font-size: 0.95rem;
+    }
+
     .assessment-result-level {
         display: grid;
         gap: 0.3rem;
@@ -580,8 +594,9 @@
     .assessment-result-level strong {
         color: var(--dash-primary-deep);
         font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: 1.2rem;
+        font-size: clamp(1.65rem, 5vw, 2.35rem);
         font-weight: 900;
+        line-height: 1.1;
     }
 
     .assessment-result-details {
@@ -685,32 +700,25 @@
         <header class="assessment-result-heading">
             <span class="prep-icon" aria-hidden="true"><i class="bi {% if classification_card.aral_eligible %}bi-compass{% else %}bi-award{% endif %}"></i></span>
             <div>
-                <span class="ticket-label">Reading Classification</span>
+                <span class="ticket-label">CRLA Assessment</span>
                 <h2 id="assessmentResultTitle">
-                    {% if classification_card.aral_eligible %}Your next reading step{% else %}Congratulations! You are reading at your grade level.{% endif %}
+                    🎉 You Did It!
                 </h2>
+                <p class="assessment-result-subtitle">Here’s how you did:</p>
             </div>
         </header>
 
         <div class="assessment-result-level">
-            <span class="ticket-label">Reading Classification Level</span>
-            <strong>{{ classification_card.level }}</strong>
+            <span class="ticket-label">Your Reading Level</span>
+            <strong>{{ classification_card.level }} {% if classification_card.aral_eligible %}🌱{% endif %}</strong>
         </div>
 
-        {% if classification_card.remarks or classification_card.performance_interpretation %}
+        {% if classification_card.performance_interpretation %}
         <dl class="assessment-result-details">
-            {% if classification_card.remarks %}
             <div>
-                <dt>Remarks</dt>
-                <dd>{{ classification_card.remarks }}</dd>
+                <dt>{{ classification_card.performance_interpretation }}</dt>
+                <dd>{{ classification_card.performance_message }}</dd>
             </div>
-            {% endif %}
-            {% if classification_card.performance_interpretation %}
-            <div>
-                <dt>Performance interpretation</dt>
-                <dd>{{ classification_card.performance_interpretation }}</dd>
-            </div>
-            {% endif %}
         </dl>
         {% endif %}
 
@@ -722,12 +730,12 @@
             {% if classification_card.aral_eligible %}
             <form method="post" action="{% url 'activate_aral_intervention' %}" class="d-inline-flex">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-right-circle"></i> Continue to Intervention</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-right-circle"></i> Keep Learning →</button>
             </form>
-            <a class="btn btn-outline-primary" href="{% url 'practice' %}"><i class="bi bi-journal-text"></i> Go to Practice</a>
+            <a class="btn btn-outline-primary" href="{% url 'practice' %}"><i class="bi bi-journal-text"></i> Practice Reading</a>
             {% else %}
             <a class="btn btn-outline-primary" href="{% url 'dashboard' %}"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
-            <a class="btn btn-primary" href="{% url 'practice' %}"><i class="bi bi-journal-text"></i> Go to Practice</a>
+            <a class="btn btn-primary" href="{% url 'practice' %}"><i class="bi bi-journal-text"></i> Practice Reading</a>
             {% endif %}
         </div>
     </article>
