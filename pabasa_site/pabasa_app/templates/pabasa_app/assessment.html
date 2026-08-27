@@ -1169,6 +1169,7 @@
                 const urlMap = { word: "{% url 'reading_word_page' %}", sentence: "{% url 'reading_sentence_page' %}", paragraph: "{% url 'reading_para_page' %}", vowel: "{% url 'reading_vowel_page' %}" };
                 const pictureWordMatchingUrl = "{% url 'picture_word_matching_page' %}";
                 const syllableBlendingUrl = "{% url 'syllable_blending_page' %}";
+                const clapCountSyllablesUrl = "{% url 'clap_count_syllables_page' %}";
                 const iconMap = { word: 'bi-type', sentence: 'bi-chat-left-text', paragraph: 'bi-card-text', vowel: 'bi-soundwave' };
                 const labelMap = { word: 'Word Reading', sentence: 'Sentence Reading', paragraph: 'Paragraph Reading', vowel: 'Vowel Reading' };
                 const officialAssessmentId = "{{ crla_official_assessment_id|default:''|escapejs }}";
@@ -1312,7 +1313,11 @@
                             const isSyllableBlending = [templateActivityName, m.content_json?.template_title,
                                 m.content_json?.template_lesson, m.content_json?.activity_type, m.title]
                                 .some(value => ['syllable_blending', 'blend_the_syllables'].includes(String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')));
-                            const generatedStartUrl = isLocked ? '#' : (isSyllableBlending
+                            const isClapCountSyllables = [templateActivityName, m.content_json?.template_title, m.content_json?.activity_type]
+                                .some(value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === 'clap_count_syllables');
+                            const generatedStartUrl = isLocked ? '#' : (isClapCountSyllables
+                                ? `${clapCountSyllablesUrl}?id=${encodeURIComponent(m.id)}`
+                                : isSyllableBlending
                                 ? `${syllableBlendingUrl}?id=${encodeURIComponent(m.id)}`
                                 : isPictureWordMatching
                                 ? `${pictureWordMatchingUrl}?id=${encodeURIComponent(m.id)}`

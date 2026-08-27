@@ -6975,6 +6975,7 @@
 .activity-preview-empty i { color: #8eb3c0; font-size: 1.7rem; }
 .preview-learning-grid { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 .preview-learning-card { background: #fff; border: 1px solid var(--activity-border); border-radius: 11px; padding: 1rem; }
+.clap-preview-card{max-width:620px;margin:0 auto;padding:clamp(1.25rem,4vw,2.25rem);border:1px solid #d4e8e8;border-radius:28px;background:#fffdf8;text-align:center;box-shadow:0 14px 32px rgba(24,83,104,.12)}.clap-preview-progress{display:flex;align-items:center;justify-content:space-between;gap:1rem;color:#65787e;font-size:.78rem;font-weight:800}.clap-preview-word{display:flex;align-items:center;justify-content:center;min-height:120px;padding:1rem clamp(1rem,5vw,2.5rem);color:#0f5369;font-size:clamp(2.4rem,9vw,5.3rem);font-weight:900;line-height:1;letter-spacing:.025em;white-space:nowrap;overflow:hidden}.clap-preview-listen,.clap-preview-clap,.clap-preview-reset,.clap-preview-done,.clap-preview-nav{border-radius:999px;font:inherit;font-weight:800;cursor:pointer}.clap-preview-listen{border:1px solid #b9dfe5;background:#edf9fb;color:#0f5369;padding:.5rem .9rem}.clap-preview-prompt{margin:1.2rem 0 .8rem;font-size:1.1rem;font-weight:850}.clap-preview-clap{min-width:190px;border:2px solid #68b5c0;background:linear-gradient(135deg,#e7f8fa,#dff3f7);color:#0f5369;padding:.8rem 1.2rem;box-shadow:0 5px 0 #a8d8dc}.clap-preview-actions,.clap-preview-navigation{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:.75rem;margin-top:1rem}.clap-preview-reset,.clap-preview-nav{border:1px solid #cadbda;background:#fff;color:#52666b;padding:.55rem 1rem}.clap-preview-done{border:1px solid #176d88;background:#176d88;color:#fff;padding:.55rem 1rem}.clap-preview-status{min-height:1.4rem;margin-top:.9rem;color:#65787e;font-size:.84rem;font-weight:750}.clap-preview-nav:disabled{opacity:.45;cursor:not-allowed}@media(max-width:575px){.clap-preview-card{padding:1rem;border-radius:20px}.clap-preview-word{min-height:92px;font-size:clamp(2rem,13vw,4rem);padding-inline:.5rem}}
 .preview-letter-pair { align-items: center; display: flex; gap: .8rem; justify-content: center; min-height: 88px; }
 .preview-letter-token { align-items: center; background: var(--activity-brand-soft); border: 1px solid #c7e2e8; border-radius: 10px; color: var(--activity-brand-deep); display: flex; font: 900 1.8rem/1 "Nunito", sans-serif; height: 58px; justify-content: center; min-width: 58px; padding: .4rem; }
 .preview-arrow { color: #8aa0aa; font-size: 1.1rem; }
@@ -8835,6 +8836,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 </div>
 
 {{ syllable_blending_catalog|json_script:"syllable-blending-catalog" }}
+{{ clap_count_word_bank|json_script:"clap-count-word-bank" }}
 <script>
     // Get the current teacher's name from the page title or username
     let CURRENT_TEACHER_NAME = "Teacher";
@@ -13762,7 +13764,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             'Letter & Sound Matching': { lesson: 'Phonics', hint: 'Match letters with their corresponding sounds.', fields: [{ key: 'letter', label: 'Letter', type: 'text', placeholder: 'Letter A' }, { key: 'sound', label: 'Corresponding sound', type: 'text', placeholder: '/a/' }], addLabel: 'Add Item' },
             'Sound Detective': { lesson: 'Phonological Awareness', hint: 'Identify and locate sounds inside words.', fields: [{ key: 'word', label: 'Word', type: 'text', placeholder: 'mata' }, { key: 'targetSound', label: 'Target sound', type: 'text', placeholder: '/m/' }, { key: 'position', label: 'Position of sound', type: 'select', options: ['Beginning', 'Middle', 'End'] }], addLabel: 'Add Item' },
             'Match the Letter to Its Sound': { lesson: 'Letter-Sound Correspondence', hint: 'Match each letter to the sound it makes.', fields: [{ key: 'letter', label: 'Letter', type: 'text' }, { key: 'sound', label: 'Sound', type: 'text' }], addLabel: 'Add Item' },
-            'Clap & Count Syllables': { lesson: 'Syllable Awareness', hint: 'Count the syllables in each word.', fields: [{ key: 'word', label: 'Word', type: 'text' }, { key: 'syllables', label: 'Expected syllable count', type: 'number', min: 1 }], addLabel: 'Add Item' },
+            'Clap & Count Syllables': { lesson: 'Syllable Awareness', hint: 'Choose a language, system word set, and words for clapping practice.', fields: [], addLabel: 'Select Words' },
             'Blend the Syllables': { lesson: 'Syllable Blending', hint: 'Choose a language and one ready-made activity format.', fields: [], addLabel: 'Pre-built content' },
             'Syllable Blending': { lesson: 'Syllable Blending', hint: 'Choose a language and one ready-made activity format.', fields: [], addLabel: 'Pre-built content' },
             'Picture-Word Matching': { lesson: 'Word Recognition', hint: 'Choose a prescribed language and set, then preview the ready-made picture-word pairs.', fields: [], addLabel: 'Select Prescribed Set' },
@@ -13856,6 +13858,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const PICTURE_WORD_CUSTOM_MAX_ITEMS = 5;
         const PICTURE_WORD_CUSTOM_STORAGE_KEY = 'pabasa_picture_word_custom_selection';
         const SYLLABLE_BLENDING_CATALOG = JSON.parse(document.getElementById('syllable-blending-catalog')?.textContent || '{}');
+        const CLAP_COUNT_WORD_BANK = JSON.parse(document.getElementById('clap-count-word-bank')?.textContent || '{}');
         const PICTURE_WORD_CUSTOM_EXTRA_ITEMS = [
             { image: 'Horse.png', englishWord: 'Horse', filipinoWord: 'Kabayo' },
             { image: 'Cow.png', englishWord: 'Cow', filipinoWord: 'Baka' },
@@ -14454,6 +14457,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return title === 'Syllable Blending' || title === 'Blend the Syllables';
         }
 
+        function isClapCountTemplate(title) { return title === 'Clap & Count Syllables'; }
+
         function normalizeSentenceReadingLanguage(language) {
             return language === 'Filipino' ? 'Tagalog' : language;
         }
@@ -14791,6 +14796,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 pictureWordMatchingCustom: restoredPictureWordCustom,
                 sentenceReading: restoredSentenceSelection,
                 storyReading: restoredStoryReading,
+                clapCount: isClapCountTemplate(templateTitle) ? {
+                    wordSet: String(contentJson.word_set || ''),
+                    selectedWordIds: Array.isArray(contentJson.selected_word_ids) ? contentJson.selected_word_ids : [],
+                    numberOfWords: Number(contentJson.number_of_words) || 10,
+                    randomizeOrder: Boolean(contentJson.randomize_order),
+                    allowRetry: contentJson.allow_retry !== false
+                } : null,
                 activityFormat: isSyllableBlendingTemplate(templateTitle) ? (contentJson.activity_format || 'syllable_combination') : null,
                 selectedActivityId: isSyllableBlendingTemplate(templateTitle) ? (contentJson.activity_id || null) : null,
                 mode: 'edit'
@@ -15608,6 +15620,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 ? (activeTemplateActivity.phraseReading?.language || activeTemplateActivity.language || 'Tagalog')
                 : activeTemplateActivity.language || '';
 
+            if (isClapCountTemplate(templateTitle)) {
+                const config = activeTemplateActivity.clapCount || {};
+                const words = (CLAP_COUNT_WORD_BANK?.[language]?.words || []).filter(word => (config.selectedWordIds || []).includes(word.id));
+                return {title: activeTemplateActivity.title || 'Clap & Count Syllables', meta: `${language} · Syllable Awareness`, body: words.map(word => `${word.word} — ${word.syllable_count} syllables`), emptyMessage: 'Choose a word set and select words.'};
+            }
+
             if (isPhraseReadingTemplate(templateTitle)) {
                 const selectedSet = getPhraseReadingSets(language).find(set => set.key === activeTemplateActivity.phraseReading?.setKey) || null;
                 const items = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : [];
@@ -15681,6 +15699,23 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             };
         }
 
+        function renderClapCountSelector() {
+            const language = activeTemplateActivity.language === 'English' ? 'English' : 'Filipino';
+            const catalog = CLAP_COUNT_WORD_BANK[language] || {sets:[],words:[]};
+            const config = activeTemplateActivity.clapCount || (activeTemplateActivity.clapCount={wordSet:'',selectedWordIds:[],numberOfWords:10,randomizeOrder:true,allowRetry:true});
+            if (!catalog.sets.some(set=>set.id===config.wordSet)) { config.wordSet=''; config.selectedWordIds=[]; }
+            const words = catalog.words.filter(word=>word.set===config.wordSet);
+            config.selectedWordIds = config.selectedWordIds.filter(id=>words.some(word=>word.id===id));
+            const selectedCount=config.selectedWordIds.length;
+            templateDynamicFields.innerHTML=`<div class="row g-3"><div class="col-12"><label class="form-label fw-bold" for="clapWordSet">Word Set <span class="text-danger">*</span></label><select class="form-select" id="clapWordSet"><option value="">Choose a word set</option>${catalog.sets.map(set=>`<option value="${escapeAttr(set.id)}" ${set.id===config.wordSet?'selected':''}>${escapeHtml(set.name)}</option>`).join('')}</select></div>${config.wordSet?`<div class="col-12"><div class="d-flex justify-content-between align-items-center mb-2"><strong>Select Words</strong><span id="clapSelectedCount">${selectedCount} selected</span></div><label class="mb-3"><input type="checkbox" id="clapSelectAll" ${words.length&&selectedCount===words.length?'checked':''}> Select All</label><div class="row g-3">${words.map(word=>`<div class="col-6 col-lg-4"><label class="card h-100 p-3 text-center justify-content-center ${config.selectedWordIds.includes(word.id)?'border-primary':''}" style="cursor:pointer;min-height:120px"><strong>${escapeHtml(word.word)}</strong><span class="small text-muted mt-1">${word.syllable_count} syllable${word.syllable_count===1?'':'s'}</span><input class="mt-2 clap-word-check" type="checkbox" value="${escapeAttr(word.id)}" ${config.selectedWordIds.includes(word.id)?'checked':''}></label></div>`).join('')}</div></div><div class="col-md-4"><label class="form-label fw-bold" for="clapNumber">Number of words</label><select id="clapNumber" class="form-select">${Array.from({length:Math.max(1,selectedCount)},(_,i)=>i+1).map(n=>`<option value="${n}" ${Math.min(config.numberOfWords,Math.max(1,selectedCount))===n?'selected':''}>${n}</option>`).join('')}</select></div><div class="col-md-4 d-flex align-items-end"><label class="form-check"><input class="form-check-input" id="clapRandomize" type="checkbox" ${config.randomizeOrder?'checked':''}><span class="form-check-label">Randomize word order</span></label></div><div class="col-md-4 d-flex align-items-end"><label class="form-check"><input class="form-check-input" id="clapRetry" type="checkbox" ${config.allowRetry?'checked':''}><span class="form-check-label">Allow retry</span></label></div>`:''}</div>`;
+            document.getElementById('clapWordSet').onchange=e=>{config.wordSet=e.target.value;config.selectedWordIds=[];config.previewIndex=0;renderClapCountSelector();renderTemplatePreview()};
+            document.getElementById('clapSelectAll')?.addEventListener('change',e=>{config.selectedWordIds=e.target.checked?words.map(w=>w.id):[];config.previewIndex=0;renderClapCountSelector();renderTemplatePreview()});
+            document.querySelectorAll('.clap-word-check').forEach(box=>box.onchange=()=>{config.selectedWordIds=Array.from(document.querySelectorAll('.clap-word-check:checked')).map(el=>el.value);config.numberOfWords=Math.min(config.numberOfWords||10,Math.max(1,config.selectedWordIds.length));config.previewIndex=0;renderClapCountSelector();renderTemplatePreview()});
+            document.getElementById('clapNumber')?.addEventListener('change',e=>{config.numberOfWords=Number(e.target.value);config.previewIndex=0;renderTemplatePreview()});
+            document.getElementById('clapRandomize')?.addEventListener('change',e=>config.randomizeOrder=e.target.checked);
+            document.getElementById('clapRetry')?.addEventListener('change',e=>config.allowRetry=e.target.checked);
+        }
+
         function renderTemplateDynamicFields(title, values = {}) {
             if (!templateDynamicFields) return;
             const def = getTemplateDefinition(title);
@@ -15721,6 +15756,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (isPhraseReadingTemplate(title)) {
                 updatePhraseReadingLanguageAvailability();
             }
+            if (isClapCountTemplate(title)) { renderClapCountSelector(); return; }
             if (isPhraseReadingTemplate(title)) {
                 renderPhraseReadingSelector(title);
                 return;
@@ -15870,7 +15906,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 }).join('')) : empty('Add a word and target sound to begin the preview.');
             } else if (templateTitle === 'Clap & Count Syllables') {
                 instruction = learnerCopy.clap;
-                previewBody = items.length ? cards(items.slice(0, 6).map(item => `<div class="preview-learning-card text-center"><div class="preview-sound-word">${escapeHtml(item.word || '')}</div><div class="mt-3" aria-label="${escapeAttr(item.syllables || '')} syllables">${Array.from({length: Math.min(8, Number(item.syllables) || 0)}, () => '<i class="bi bi-circle-fill mx-1" style="font-size:.48rem;color:#1f6f8b" aria-hidden="true"></i>').join('')}</div></div>`).join('')) : empty('Add a word and its syllable count to begin the preview.');
+                const clapConfig = activeTemplateActivity.clapCount || {};
+                const setWords = (CLAP_COUNT_WORD_BANK?.[language]?.words || []).filter(word => word.set === clapConfig.wordSet);
+                const selectedIds = new Set(clapConfig.selectedWordIds || []);
+                const configuredWords = (selectedIds.size ? setWords.filter(word => selectedIds.has(word.id)) : setWords).slice(0, Number(clapConfig.numberOfWords) || setWords.length);
+                const previewIndex = Math.min(Math.max(0, Number(clapConfig.previewIndex) || 0), Math.max(0, configuredWords.length - 1));
+                clapConfig.previewIndex = previewIndex;
+                const previewWord = configuredWords[previewIndex];
+                previewBody = previewWord ? `<div class="clap-preview-card" data-clap-preview><div class="clap-preview-progress"><span>Clap &amp; Count</span><span>${previewIndex + 1} / ${configuredWords.length}</span></div><div class="clap-preview-word" data-clap-preview-word>${escapeHtml(previewWord.word || '')}</div><button class="clap-preview-listen" data-clap-preview-listen type="button">🔊 Listen to the word</button><p class="clap-preview-prompt">Clap each syllable!</p><button class="clap-preview-clap" data-clap-preview-clap type="button">👏 Tap to Clap</button><div class="clap-preview-status" data-clap-preview-status>Find the word's rhythm!</div><div class="clap-preview-actions"><button class="clap-preview-reset" data-clap-preview-reset type="button">Reset</button><button class="clap-preview-done" data-clap-preview-done type="button">Done Clapping →</button></div>${configuredWords.length > 1 ? `<div class="clap-preview-navigation"><button class="clap-preview-nav" data-clap-preview-prev type="button" ${previewIndex === 0 ? 'disabled' : ''}>← Previous Word</button><button class="clap-preview-nav" data-clap-preview-next type="button" ${previewIndex === configuredWords.length - 1 ? 'disabled' : ''}>Next Word →</button></div>` : ''}</div>` : empty('Choose a word set to preview the learner activity.');
             } else if (isSyllableBlendingTemplate(templateTitle)) {
                 instruction = learnerCopy.blend;
                 const choices = SYLLABLE_BLENDING_CATALOG?.[language]?.[activeTemplateActivity.activityFormat] || [];
@@ -15914,6 +15957,23 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 <div class="activity-preview-chrome"><span class="activity-preview-label"><i class="bi bi-eye" aria-hidden="true"></i>Preview</span><span class="activity-preview-meta">${escapeHtml(language)}${weeks.length ? ` · ${weeks.map(escapeHtml).join(', ')}` : ' · No week selected'}</span></div>
                 <div class="activity-preview-stage"><h6 class="activity-preview-title">${escapeHtml(title || templateTitle)}</h6><p class="activity-preview-instruction">${escapeHtml(instruction || summary.meta || '')}</p><div class="activity-preview-content">${previewBody}</div></div>
             `;
+            if (templateTitle === 'Clap & Count Syllables') {
+                const config = activeTemplateActivity.clapCount || {};
+                let previewClaps = 0;
+                const wordNode = templatePreviewPanel.querySelector('[data-clap-preview-word]');
+                if (wordNode) { const available = wordNode.clientWidth - 32; wordNode.style.fontSize = '84px'; const naturalWidth = wordNode.scrollWidth; if (naturalWidth > available) wordNode.style.fontSize = `${Math.max(24, 84 * available / naturalWidth)}px`; }
+                const status = templatePreviewPanel.querySelector('[data-clap-preview-status]');
+                const updateStatus = message => { if (status) status.textContent = message; };
+                templatePreviewPanel.querySelector('[data-clap-preview-listen]')?.addEventListener('click', () => {
+                    const word = templatePreviewPanel.querySelector('[data-clap-preview-word]')?.textContent?.trim();
+                    if (word && 'speechSynthesis' in window) { speechSynthesis.cancel(); const utterance = new SpeechSynthesisUtterance(word); utterance.lang = language === 'Filipino' ? 'fil-PH' : 'en-US'; speechSynthesis.speak(utterance); }
+                });
+                templatePreviewPanel.querySelector('[data-clap-preview-clap]')?.addEventListener('click', () => { previewClaps += 1; updateStatus(`${previewClaps} clap${previewClaps === 1 ? '' : 's'}`); });
+                templatePreviewPanel.querySelector('[data-clap-preview-reset]')?.addEventListener('click', () => { previewClaps = 0; updateStatus("Find the word's rhythm!"); });
+                templatePreviewPanel.querySelector('[data-clap-preview-done]')?.addEventListener('click', () => { updateStatus(previewClaps ? `You clapped ${previewClaps} time${previewClaps === 1 ? '' : 's'}.` : 'Tap to clap before finishing.'); });
+                templatePreviewPanel.querySelector('[data-clap-preview-prev]')?.addEventListener('click', () => { config.previewIndex = Math.max(0, (Number(config.previewIndex) || 0) - 1); renderTemplatePreview(); });
+                templatePreviewPanel.querySelector('[data-clap-preview-next]')?.addEventListener('click', () => { config.previewIndex = (Number(config.previewIndex) || 0) + 1; renderTemplatePreview(); });
+            }
         }
 
         function renderStoryReadingSelector(title) {
@@ -16098,6 +16158,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 activeTemplateActivity.selectedActivityId = null;
                 activeTemplateActivity.title = '';
             }
+            if (isClapCountTemplate(templateTitle)) {
+                activeTemplateActivity.clapCount = {wordSet:'',selectedWordIds:[],numberOfWords:10,randomizeOrder:true,allowRetry:true};
+            }
             if (isPictureWordMatchingTemplate(templateTitle)) {
                 activeTemplateActivity.pictureWordMatching = Object.assign({}, normalizePictureWordMatchingSelection('A', templateLanguage), { mode: 'prescribed' });
                 activeTemplateActivity.pictureWordMatchingCustom = { items: [], searchQuery: '' };
@@ -16164,7 +16227,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 syncSentenceReadingItems();
             }
             const language = getSelectedTemplateLanguage();
-            if (isSyllableBlendingTemplate(activeTemplateActivity?.templateTitle)) {
+            if (isClapCountTemplate(activeTemplateActivity?.templateTitle)) {
+                const config=activeTemplateActivity.clapCount||{};
+                Object.assign(content,{language,activity_type:'clap_count_syllables',word_set:config.wordSet||'',selected_word_ids:config.selectedWordIds||[],number_of_words:Number(config.numberOfWords)||0,randomize_order:Boolean(config.randomizeOrder),allow_retry:Boolean(config.allowRetry)});
+            } else if (isSyllableBlendingTemplate(activeTemplateActivity?.templateTitle)) {
                 content.language = language;
                 content.activity_format = activeTemplateActivity.activityFormat || 'syllable_combination';
                 content.activity_type = 'syllable_blending';
@@ -16229,6 +16295,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const def = getTemplateDefinition(activeTemplateActivity?.templateTitle);
             if (!values.title) return 'Activity Title is required.';
             if (!values.language) return 'Language is required.';
+            if (isClapCountTemplate(activeTemplateActivity?.templateTitle)) {
+                if (!values.content?.word_set) return 'Word set is required.';
+                if (!Array.isArray(values.content?.selected_word_ids)||!values.content.selected_word_ids.length) return 'Select at least one word.';
+                if (values.content.number_of_words<1||values.content.number_of_words>values.content.selected_word_ids.length) return 'Number of words cannot exceed the selected words.';
+                if (!values.weeks.length) return 'Select at least one week.';
+                return '';
+            }
             if (isSyllableBlendingTemplate(activeTemplateActivity?.templateTitle)) {
                 if (!['Filipino', 'English'].includes(values.language)) return 'Choose Filipino or English.';
                 if (!['syllable_combination', 'big_box'].includes(values.content?.activity_format)) return 'Choose an activity format.';
@@ -16400,6 +16473,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             weeks: values.weeks || [],
                         });
                     }
+                    if (isClapCountTemplate(activeTemplateActivity?.templateTitle)) {
+                        Object.assign(contentPayload, values.content, {activity_type:'clap_count_syllables',language:values.language,template_title:'Clap & Count Syllables',template_lesson:'Syllable Awareness',template_type:'Clap & Count Syllables',template_source:'template',items:[]});
+                    }
                     if (isPictureWordMatchingTemplate(activeTemplateActivity?.templateTitle)) {
                         const mode = activeTemplateActivity?.pictureWordMatching?.mode === 'custom' ? 'custom' : 'prescribed';
                         if (mode === 'custom') {
@@ -16454,7 +16530,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         assigned_week: values.weeks?.[0] || null,
                         assigned_weeks: values.weeks || [],
                         language: values.language,
-                        randomize_order: false,
+                        randomize_order: isClapCountTemplate(activeTemplateActivity?.templateTitle) ? Boolean(values.content?.randomize_order) : false,
                         assessment_kind: 'regular',
                         source_type: 'template',
                         source_material_id: null,
@@ -17557,6 +17633,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
                     } else if (isSyllableBlendingTemplate(activeTemplateActivity?.templateTitle)) {
                         activeTemplateActivity.selectedActivityId = null;
+                        renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
+                    } else if (isClapCountTemplate(activeTemplateActivity?.templateTitle)) {
+                        activeTemplateActivity.clapCount = {wordSet:'',selectedWordIds:[],numberOfWords:10,randomizeOrder:true,allowRetry:true};
                         renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
                     }
                     renderTemplatePreview();

@@ -67,6 +67,7 @@ from .reading_stt import (
 )
 from .hunt_scoring import classify_speech
 from .syllable_blending import activity_catalog, build_activity, normalize_format
+from .clap_count_word_bank import score_displayed_words, word_bank_catalog, validate_configuration
 from .reader_classification import classify_student_account
 from .scoring import (
     ADAPTED_READING_LEVEL_DISCLAIMER,
@@ -9143,6 +9144,62 @@ def _is_syllable_blending_material(material):
     return bool({'syllable_blending', 'blend_the_syllables'} & normalized)
 
 
+def _is_clap_count_material(material):
+    content = getattr(material, 'content_json', None) if material else None
+    if not isinstance(content, dict):
+        return False
+    values = (content.get('template_title'), content.get('template_lesson'), content.get('activity_type'))
+    normalized = {re.sub(r'[^a-z0-9]+', '_', str(value or '').lower()).strip('_') for value in values}
+    return 'clap_count_syllables' in normalized
+
+
+@xframe_options_sameorigin
+def clap_count_syllables_page(request):
+    access_response = _enforce_student_access_for_request(request)
+    if access_response:
+        return access_response
+    _, material_id = _parse_prefixed_id(request.GET.get('id') or request.GET.get('material_id'))
+    material = Material.objects.filter(pk=material_id).first() if material_id else None
+    if not material or not _is_clap_count_material(material):
+        return redirect('assessment')
+    content = dict(material.content_json or {})
+    try:
+        items = validate_configuration(content)
+    except ValueError as exc:
+        return HttpResponse(str(exc), status=400, content_type='text/plain; charset=utf-8')
+    student_user = User.objects.filter(id=request.session.get('user_id'), role='student').first()
+    completed_result = None
+    if student_user:
+        completed_result = material.assessment_results.filter(
+            student=student_user, attempt_status='completed',
+        ).order_by('-completed_at', '-created_at', '-id').first()
+    completion_payload = None
+    if completed_result:
+        saved_answers = []
+        remarks = str(getattr(completed_result, 'remarks', '') or '')
+        result_prefix = 'CLAP_COUNT_SYLLABLES_RESULT:'
+        if remarks.startswith(result_prefix):
+            try:
+                saved_answers = (json.loads(remarks[len(result_prefix):]) or {}).get('answers') or []
+            except (TypeError, ValueError, json.JSONDecodeError):
+                saved_answers = []
+        completion_payload = {
+            'completed': True,
+            'correct_items': int(getattr(completed_result, 'correct_items', 0) or 0),
+            'total_items': int(getattr(completed_result, 'items_completed', 0) or len(items)),
+            'accuracy': getattr(completed_result, 'accuracy', None) or getattr(completed_result, 'total_score', 0) or 0,
+            'answers': saved_answers,
+        }
+    context = _dashboard_context(request)
+    context['clap_count_material_json'] = json.dumps({
+        'id': material.id, 'title': material.title, 'language': content['language'],
+        'items': items, 'randomize_order': bool(content.get('randomize_order')),
+        'allow_retry': bool(content.get('allow_retry', True)),
+    }, default=str, separators=(',', ':'))
+    context['clap_count_completion_json'] = json.dumps(completion_payload or {}, default=str, separators=(',', ':'))
+    return render(request, 'pabasa_app/clap_count_syllables_page.html', context)
+
+
 def _normalize_picture_word_matching_content(content_json):
     """Return a self-contained Picture-Word payload with durable static image URLs."""
     if not isinstance(content_json, dict):
@@ -10254,12 +10311,19 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
     _log_completion_timing('score_calculation_start')
     is_picture_word_matching = str(activity_type or '').strip().lower() == 'picture_word_matching'
     is_syllable_blending = str(activity_type or '').strip().lower() == 'syllable_blending'
+    is_clap_count_syllables = (
+        str(activity_type or '').strip().lower() == 'clap_count_syllables'
+        or bool(material and _is_clap_count_material(material))
+    )
     if is_syllable_blending and bool(data.get('save_progress')):
         if not material or not _is_syllable_blending_material(material):
             return JsonResponse({'success': False, 'error': 'Invalid Syllable Blending material.'}, status=400)
         raw_scores = data.get('scores') if isinstance(data.get('scores'), dict) else {}
         submitted_responses = raw_scores.get('responses') if isinstance(raw_scores.get('responses'), list) else []
-        activity_items = (material.content_json or {}).get('items') or []
+        try:
+            activity_items = validate_configuration(dict(material.content_json or {}))
+        except ValueError:
+            activity_items = []
         normalized_responses = []
         for response in submitted_responses:
             if not isinstance(response, dict):
@@ -10367,7 +10431,10 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         if not material or not _is_syllable_blending_material(material):
             return JsonResponse({'success': False, 'error': 'Invalid Syllable Blending material.'}, status=400)
         raw_scores = data.get('scores') if isinstance(data.get('scores'), dict) else data
-        activity_items = (material.content_json or {}).get('items') or []
+        try:
+            activity_items = validate_configuration(dict(material.content_json or {}))
+        except ValueError:
+            activity_items = []
         submitted = raw_scores.get('answers') if isinstance(raw_scores.get('answers'), list) else []
         submitted_responses = raw_scores.get('responses') if isinstance(raw_scores.get('responses'), list) else []
         responses_by_index = {}
@@ -10442,9 +10509,33 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 'discovery_attempts': discovery_attempts,
             }, separators=(',', ':')),
         }
+    elif is_clap_count_syllables:
+        if not material or not _is_clap_count_material(material):
+            return JsonResponse({'success': False, 'error': 'Invalid Clap & Count material.'}, status=400)
+        raw_scores = data.get('scores') if isinstance(data.get('scores'), dict) else {}
+        submitted_answers = raw_scores.get('answers') if isinstance(raw_scores.get('answers'), list) else []
+        try:
+            activity_items = validate_configuration(dict(material.content_json or {}))
+        except ValueError:
+            activity_items = []
+        resolved_score = score_displayed_words(activity_items, submitted_answers)
+        normalized_answers = resolved_score['answers']
+        correct_items = resolved_score['correct_items']
+        total_items = resolved_score['items_completed']
+        objective_score = resolved_score['accuracy']
+        score_payload = {
+            'accuracy': objective_score, 'total_score': objective_score,
+            'correct_items': correct_items, 'items_completed': total_items,
+            'duration_seconds': max(0, int(raw_scores.get('duration_seconds') or 0)),
+            'passed': objective_score >= 75,
+            'remarks': 'CLAP_COUNT_SYLLABLES_RESULT:' + json.dumps({
+                'activity_type': 'clap_count_syllables', 'answers': normalized_answers,
+                'attempts': resolved_score['attempts'],
+            }, separators=(',', ':')),
+        }
     else:
         score_payload = _practice_score_payload(data) if is_practice else _assessment_score_payload(data)
-    if (is_picture_word_matching or is_syllable_blending) and already_completed and not is_retake:
+    if (is_picture_word_matching or is_syllable_blending or is_clap_count_syllables) and already_completed and not is_retake:
         existing_result = material.assessment_results.filter(
             student=student_user,
             attempt_status='completed',
@@ -10535,7 +10626,18 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 material.save(update_fields=['teacher', 'updated_at'])
                 _log_completion_timing('assessment_teacher_save')
             _log_completion_timing('assessment_record_attempt_start')
-            material.record_assessment_result(student_user, **attempt_payload)
+            if is_clap_count_syllables:
+                # Lock this material row while checking/creating so concurrent final submits
+                # cannot create more than one completed result for this student/material.
+                with transaction.atomic():
+                    locked_material = Material.objects.select_for_update().get(pk=material.pk)
+                    completed_result_row = locked_material.assessment_results.filter(
+                        student=student_user, attempt_status='completed',
+                    ).order_by('-completed_at', '-created_at', '-id').first()
+                    if completed_result_row is None:
+                        locked_material.record_assessment_result(student_user, **attempt_payload)
+            else:
+                material.record_assessment_result(student_user, **attempt_payload)
             _log_completion_timing('assessment_record_attempt_end')
             completed_result_row = material.assessment_results.filter(
                 student=student_user,
@@ -10549,7 +10651,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 student=student_user,
                 attempt_status='completed',
             ).order_by('-completed_at', '-created_at').select_related('source_assessment').first()
-        if not is_practice and not is_picture_word_matching and not is_syllable_blending:
+        if not is_practice and not is_picture_word_matching and not is_syllable_blending and not is_clap_count_syllables:
             _log_completion_timing('student_profile_save_start')
             _update_student_reading_profile(student_user, score_payload)
             _log_completion_timing('student_profile_save_end')
@@ -10850,6 +10952,8 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             'student_id': student_user.id,
             'custom_id': student_user.custom_id,
             'accuracy': score_payload.get('accuracy'),
+            'correct_items': score_payload.get('correct_items'),
+            'items_completed': score_payload.get('items_completed'),
             'fluency_score': score_payload.get('fluency_score'),
             'pronunciation_score': score_payload.get('pronunciation_score'),
             'time_score': score_payload.get('time_score'),
@@ -12193,6 +12297,7 @@ def course_teacher_view(request):
         'crla_assessment_exists': bool(crla_existing),
         'crla_assessment_status_message': _crla_creation_block_message(teacher_user=teacher_user) if current_term == 2 or crla_existing else '',
         'syllable_blending_catalog': activity_catalog(),
+        'clap_count_word_bank': word_bank_catalog(),
     })
     return render(request, 'pabasa_app/courses.html', context)
 
@@ -16661,6 +16766,20 @@ def add_reading_material(request):
                         'template_source': 'template',
                     })
                     title = title or 'Syllable Blending'
+                if template_identity in {'syllable awareness', 'clap & count syllables', 'clap count syllables'}:
+                    try:
+                        bank_items = validate_configuration(template_payload)
+                    except ValueError as exc:
+                        return JsonResponse({'success': False, 'errors': {'content': str(exc)}}, status=400)
+                    limit = int(template_payload.get('number_of_words'))
+                    template_payload.update({
+                        'template_title': 'Clap & Count Syllables', 'template_lesson': 'Syllable Awareness',
+                        'template_type': 'Clap & Count Syllables', 'template_source': 'template',
+                        'activity_type': 'clap_count_syllables', 'items': bank_items[:limit],
+                        'randomize_order': bool(template_payload.get('randomize_order')),
+                        'allow_retry': bool(template_payload.get('allow_retry', True)),
+                    })
+                    title = title or 'Clap & Count Syllables'
                 def _template_item_text(item, template_title_value=''):
                     if not isinstance(item, dict):
                         return str(item).strip() if item is not None else ''
@@ -17042,6 +17161,13 @@ def teacher_update_material(request):
                 'assigned_weeks': list(material.assigned_weeks or []),
                 'randomize_order': randomize_order if randomize_order is not None else bool(template_payload.get('randomize_order')),
             })
+            if template_title == 'Clap & Count Syllables':
+                try:
+                    bank_items = validate_configuration(template_payload)
+                except ValueError as exc:
+                    return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+                template_payload['items'] = bank_items[:int(template_payload['number_of_words'])]
+                template_payload['activity_type'] = 'clap_count_syllables'
             template_payload = _normalize_picture_word_matching_content(template_payload)
             template_items = template_payload.get('items') if isinstance(template_payload.get('items'), list) else []
 
