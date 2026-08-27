@@ -9196,14 +9196,20 @@ def _custom_material_reading_context(request):
     """
     prefix, material_id = _parse_prefixed_id(request.GET.get('id'))
     if not material_id or prefix not in (None, 'material'):
-        return {'custom_material_launch_data_json': 'null'}
+        return {
+            'custom_material_launch_data_json': 'null',
+            'is_my_materials_completion': False,
+        }
 
     material = Material.objects.filter(pk=material_id).first()
     if not material or (
         material.is_official_reading
         and _assessment_kind_value(material) == 'crla'
     ):
-        return {'custom_material_launch_data_json': 'null'}
+        return {
+            'custom_material_launch_data_json': 'null',
+            'is_my_materials_completion': False,
+        }
 
     content_json = material.content_json if isinstance(material.content_json, dict) else {}
     content = material.content_text or material.prompt_text or ''
@@ -9227,6 +9233,7 @@ def _custom_material_reading_context(request):
     return {
         'custom_material_launch_data': payload,
         'custom_material_launch_data_json': json.dumps(payload, default=str, separators=(',', ':')),
+        'is_my_materials_completion': _assessment_kind_value(material) == 'regular',
     }
 
 def _is_picture_word_matching_material(material):

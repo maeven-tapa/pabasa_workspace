@@ -1415,6 +1415,17 @@
             transform: translateY(0);
         }
 
+        .completion-summary--my-materials {
+            grid-template-columns: minmax(0, 560px);
+            justify-content: center;
+            margin-inline: auto;
+            width: 100%;
+        }
+
+        .completion-summary--my-materials .completion-result-grid {
+            grid-template-rows: repeat(3, minmax(32px, auto));
+        }
+
         .completion-loading {
             background: rgba(255, 255, 255, 0.64);
             border: 1px solid rgba(27, 26, 23, 0.07);
@@ -2596,6 +2607,17 @@
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
+        /* This must follow the general results refinement above so its
+           two-column CRLA rule cannot pull the single My Materials tile left. */
+        .completion-summary.completion-summary--my-materials {
+            grid-template-columns: minmax(0, 560px);
+            justify-content: center;
+            justify-items: stretch;
+            margin-left: auto;
+            margin-right: auto;
+            width: 100%;
+        }
+
         .completion-actions {
             flex-direction: column;
         }
@@ -3157,6 +3179,7 @@
     <script>
         window.__PABASA_OFFICIAL_ASSESSMENT__ = {{ crla_official_assessment_data_json|default:'null'|safe }};
         window.__PABASA_CUSTOM_MATERIAL__ = {{ custom_material_launch_data_json|default:'null'|safe }};
+        window.__PABASA_MY_MATERIALS__ = {% if is_my_materials_completion %}true{% else %}false{% endif %};
         window.__PABASA_STUDENT_END_STATE__ = {{ student_end_assessment_state_json|default:'{}'|safe }};
     </script>
     {% include "pabasa_app/partials/_forest_world.html" %}
@@ -3387,12 +3410,13 @@
 
         <section class="completion-page" id="completionPage" aria-live="polite" aria-atomic="true">
             <article class="completion-card">
-                <div class="completion-mark">A</div>
-                <div class="completion-kicker">Reading Assessment Results</div>
-                <h1 id="completionTitle">Assessment complete.</h1>
-                <p id="completionMessage">You finished the reading set. Your teacher can now review the session and use it for your next practice step.</p>
-                <h2 class="completion-breakdown-title">Score Breakdown</h2>
-                <div class="completion-summary" id="completionSummary" aria-live="polite"></div>
+                <div class="completion-mark">{% if is_my_materials_completion %}✓{% else %}A{% endif %}</div>
+                <div class="completion-kicker">{% if is_my_materials_completion %}My Materials{% else %}Reading Assessment Results{% endif %}</div>
+                <h1 id="completionTitle">{% if is_my_materials_completion %}Reading complete!{% else %}Assessment complete.{% endif %}</h1>
+                <p id="completionMessage">{% if is_my_materials_completion %}You finished this material. Here is how your reading went.{% else %}You finished the reading set. Your teacher can now review the session and use it for your next practice step.{% endif %}</p>
+                <h2 class="completion-breakdown-title">{% if is_my_materials_completion %}Your Results{% else %}Score Breakdown{% endif %}</h2>
+                <div class="completion-summary{% if is_my_materials_completion %} completion-summary--my-materials{% endif %}" id="completionSummary" aria-live="polite"></div>
+                {% if not is_my_materials_completion %}
                 <div class="completion-loading" id="completionLoadingState" aria-live="polite" aria-busy="true">
                     <div class="completion-loading-heading">
                         <span class="completion-loading-spinner" aria-hidden="true"></span>
@@ -3404,10 +3428,11 @@
                         <span class="completion-loading-bar"></span>
                     </div>
                 </div>
-                <p class="completion-disclaimer is-encouragement" id="completionReadingLevelDisclaimer" aria-live="polite">Great job completing your reading assessment! Your results show your current reading performance. Keep practicing to improve your reading skills.</p>
+                {% endif %}
+                <p class="completion-disclaimer is-encouragement" id="completionReadingLevelDisclaimer" aria-live="polite">{% if is_my_materials_completion %}Great job finishing this material! Keep practicing to grow your reading skills.{% else %}Great job completing your reading assessment! Your results show your current reading performance. Keep practicing to improve your reading skills.{% endif %}</p>
                 <div class="completion-actions">
-                    <button class="completion-secondary" id="reviewBtn" type="button">Start Again</button>
-                    <button class="completion-primary" id="finishBtn" type="button">Back to Assessment</button>
+                    <button class="completion-secondary" id="reviewBtn" type="button">{% if is_my_materials_completion %}Try Again{% else %}Start Again{% endif %}</button>
+                    <button class="completion-primary" id="finishBtn" type="button">{% if is_my_materials_completion %}Done / Back to Materials{% else %}Back to Assessment{% endif %}</button>
                 </div>
             </article>
         </section>

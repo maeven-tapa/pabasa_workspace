@@ -704,6 +704,73 @@ class ReadingLaunchClassificationTests(TestCase):
         self.assertIn('customMaterialData || liveContent', custom_branch)
         self.assertNotIn("sessionStorage.getItem('pabasa_crla_assessment_items')", custom_branch)
 
+    def test_regular_materials_render_my_materials_completion_shell_for_each_reading_type(self):
+        self._login_student()
+        reader_names = {
+            'word': 'reading_word_page',
+            'sentence': 'reading_sentence_page',
+            'paragraph': 'reading_para_page',
+        }
+
+        for item_type, reader_name in reader_names.items():
+            with self.subTest(item_type=item_type):
+                material = Material.objects.create(
+                    title=f'{item_type.title()} Material',
+                    code=f'REG-{item_type.upper()}',
+                    item_type=item_type,
+                    content_text='One two three',
+                    content_json={'items': ['One two three'], 'language': 'English'},
+                    language='English', type='assessment', source_type='personal',
+                    assessment_kind='regular', is_official_reading=False,
+                    is_system_owned=False, student_access=True,
+                )
+                response = self.client.get(reverse(reader_name), {
+                    'id': str(material.id),
+                    'test': material.title,
+                    'item_type': item_type,
+                })
+
+                self.assertEqual(response.status_code, 200)
+                self.assertTrue(response.context['is_my_materials_completion'])
+                self.assertContains(response, 'window.__PABASA_MY_MATERIALS__ = true;')
+                self.assertContains(response, '<div class="completion-kicker">My Materials</div>', html=True)
+                self.assertContains(response, '>Try Again<', count=1)
+                self.assertContains(response, '>Done / Back to Materials<', count=1)
+                self.assertNotContains(response, '<div class="completion-kicker">Reading Assessment Results</div>', html=True)
+                self.assertNotContains(response, '>Score Breakdown<')
+                self.assertNotContains(response, 'Calculating your score breakdown')
+                self.assertNotContains(response, '>Continue to Sentence Reading')
+
+    def test_official_crla_keeps_formal_completion_shell(self):
+        self._login_student()
+        material = Material.objects.create(
+            title='Official CRLA Completion', code='CRLA-COMPLETION', item_type='word',
+            content_text='One two three', content_json={'items': ['One', 'two', 'three']},
+            type='assessment', assessment_kind='crla', is_official_reading=True,
+            is_system_owned=True, student_access=True,
+        )
+        response = self.client.get(reverse('reading_word_page'), {
+            'id': f'material-{material.id}',
+            'official_assessment_id': str(material.id),
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context.get('is_my_materials_completion', False))
+        self.assertContains(response, 'window.__PABASA_MY_MATERIALS__ = false;')
+        self.assertContains(response, '<div class="completion-kicker">Reading Assessment Results</div>', html=True)
+        self.assertContains(response, '>Score Breakdown<', count=1)
+        self.assertNotContains(response, '<div class="completion-kicker">My Materials</div>', html=True)
+
+    def test_completion_javascript_selects_card_from_persisted_material_context(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+
+        self.assertIn('const isMyMaterials = window.__PABASA_MY_MATERIALS__ === true;', content)
+        self.assertIn('renderMyMaterialsCompletion(latestScores);', content)
+        self.assertIn('if (!isMyMaterials && branchState.stage)', content)
+        self.assertIn('const shouldShowClassification = !isMyMaterials && showClassification === true;', content)
+        self.assertNotIn('urlParams.get("source") === "my_materials"', content)
+
 
 class AssessmentWorkflowStateTests(TestCase):
     def _student_session(self, student):

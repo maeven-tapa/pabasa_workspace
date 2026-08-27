@@ -77,6 +77,7 @@
         }
 
         const urlParams = new URLSearchParams(window.location.search);
+        const isMyMaterials = window.__PABASA_MY_MATERIALS__ === true;
         const officialAssessmentId = urlParams.get("official_assessment_id") || "";
         const customMaterialData = window.__PABASA_CUSTOM_MATERIAL__ || null;
         let officialAssessmentData = officialAssessmentId
@@ -2108,6 +2109,38 @@
             setCompletionLoadingState(false);
         }
 
+        function renderMyMaterialsCompletion(scores) {
+            const summary = document.getElementById("completionSummary") || document.querySelector(".completion-summary");
+            const feedback = document.getElementById("completionReadingLevelDisclaimer");
+            if (!summary) return;
+
+            const normalizedScores = normalizeCompletionScores(scores, calculateScores());
+            const correctWords = Math.max(0, Math.round(Number(normalizedScores.correct_words) || 0));
+            const totalWords = Math.max(correctWords, Math.round(Number(normalizedScores.target_word_count) || 0));
+            const accuracy = totalWords ? Math.round((correctWords / totalWords) * 100) : 0;
+            const feedbackRules = mode === "paragraph"
+                ? [[90, "Excellent reading! Keep it up!"], [75, "Great job! Your reading is getting stronger."], [60, "Good effort! Keep practicing."], [0, "Nice try! Every reading helps you improve."]]
+                : mode === "sentence"
+                    ? [[90, "Amazing reading! Keep it up!"], [75, "Great reading! You are doing well."], [50, "Nice try! Keep practicing."], [0, "Keep going! Practice makes progress."]]
+                    : [[90, "Excellent! Keep up the great reading!"], [75, "Great job! You are doing well."], [50, "Good try! Keep practicing."], [0, "Keep going! You can do it!"]];
+
+            summary.querySelectorAll("[data-score-tile]").forEach(tile => tile.remove());
+            const tile = document.createElement("section");
+            tile.className = "completion-score-tile completion-score-tile--panel";
+            tile.dataset.scoreTile = "true";
+            const grid = document.createElement("div");
+            grid.className = "completion-result-grid";
+            grid.append(
+                createCompletionResultRow("Correct Words", `${correctWords} / ${totalWords}`),
+                createCompletionResultRow("Accuracy", `${accuracy}%`),
+                createCompletionResultRow("Reading Time", formatDuration(normalizedScores.duration_seconds))
+            );
+            tile.appendChild(grid);
+            summary.appendChild(tile);
+            if (feedback) feedback.textContent = feedbackRules.find(([minimum]) => accuracy >= minimum)[1];
+            setCompletionLoadingState(false, { minDurationMs: 0 });
+        }
+
         function setSpeechStatus(message, detail = "", listening = false) {
             const panel = document.getElementById("speechPanel");
             const status = document.getElementById("speechStatus");
@@ -2939,7 +2972,7 @@
                 branchState.story_read_percent = Number.isFinite(storyRead) ? storyRead : null;
                 branchState.correct_answers = Number.isFinite(correctAnswers) ? correctAnswers : null;
             }
-            if (branchState.stage) {
+            if (!isMyMaterials && branchState.stage) {
                 writeStudentEndState(branchState);
             }
             const nextStageUrlMap = {
@@ -2954,11 +2987,11 @@
                 summary.querySelectorAll("[data-score-tile]").forEach(tile => tile.remove());
                 summary.classList.remove("is-visible");
             }
-            setCompletionLoadingState(!isReviewMode && isFullCompletion && !completionSubmitted);
-            if (disclaimer && (!isReviewMode && isFullCompletion && !completionSubmitted)) {
+            setCompletionLoadingState(!isMyMaterials && !isReviewMode && isFullCompletion && !completionSubmitted);
+            if (!isMyMaterials && disclaimer && (!isReviewMode && isFullCompletion && !completionSubmitted)) {
                 disclaimer.textContent = "Calculating your score breakdown...";
             }
-            if (completionLevel) {
+            if (!isMyMaterials && completionLevel) {
                 if (currentAssessmentBranch === "words") {
                     completionLevel.textContent = branchState.next_stage === "rhymes"
                         ? "Rhymes"
@@ -2985,9 +3018,13 @@
                 });
                 return;
             }
-            renderScoreSummary(latestScores);
-            renderPersistedEndState(branchState);
-            if (branchState.stage === "transition_to_rhymes" || branchState.stage === "transition_to_sentence" || branchState.stage === "transition_to_story") {
+            if (isMyMaterials) {
+                renderMyMaterialsCompletion(latestScores);
+            } else {
+                renderScoreSummary(latestScores);
+                renderPersistedEndState(branchState);
+            }
+            if (!isMyMaterials && (branchState.stage === "transition_to_rhymes" || branchState.stage === "transition_to_sentence" || branchState.stage === "transition_to_story")) {
                 traceEndSession('showCompletion.awaitContinue', { nextStageUrl, next_stage: branchState.next_stage });
                 return;
             }
@@ -3249,14 +3286,18 @@
                         backendScores.adapted_reading_level_disclaimer = d?.adapted_reading_level_disclaimer ?? backendScores.adapted_reading_level_disclaimer ?? null;
                         latestScores = backendScores;
                         if (completionCount) completionCount.textContent = latestScores.word_count != null ? String(Math.round(latestScores.word_count)) : "";
-                        if (completionLevel) {
+                        if (!isMyMaterials && completionLevel) {
                             const classificationText = backendScores.crla_classification || backendScores.classification || backendScores.adapted_reading_level || backendScores.reading_level || resolveClassificationLabel(backendScores, mode.charAt(0).toUpperCase() + mode.slice(1));
                             completionLevel.textContent = classificationText || mode.charAt(0).toUpperCase() + mode.slice(1);
                         }
-                        renderScoreSummary(latestScores);
-                        renderPersistedEndState(readStudentEndState());
+                        if (isMyMaterials) {
+                            renderMyMaterialsCompletion(latestScores);
+                        } else {
+                            renderScoreSummary(latestScores);
+                            renderPersistedEndState(readStudentEndState());
+                        }
                         const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
-                        if (disclaimer) {
+                        if (!isMyMaterials && disclaimer) {
                             disclaimer.textContent = latestScores.adapted_reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || "Great job completing your reading assessment! Your results show your current reading performance. Keep practicing to improve your reading skills.";
                         }
                         if (isCurrentLiveAssessment()) {
@@ -4168,7 +4209,7 @@
         }
 
         function goBackToAssessments(showClassification = false) {
-            const shouldShowClassification = showClassification === true;
+            const shouldShowClassification = !isMyMaterials && showClassification === true;
             if (isAssistMode && window.parent && window.parent !== window) {
                 window.parent.postMessage({
                     type: "pabasa-assist-returning",
@@ -4338,9 +4379,11 @@
         });
         quitBtn?.addEventListener("click", goBackToAssessments);
         reviewBtn?.addEventListener("click", () => {
-            clearStudentEndState();
+            if (!isMyMaterials) clearStudentEndState();
             const restartUrl = new URL(window.location.href);
-            restartUrl.searchParams.set("official_assessment_id", String(officialAssessmentId || materialId || "").trim());
+            if (!isMyMaterials) {
+                restartUrl.searchParams.set("official_assessment_id", String(officialAssessmentId || materialId || "").trim());
+            }
             window.location.assign(restartUrl.toString());
         });
         finishBtn?.addEventListener("click", () => {
