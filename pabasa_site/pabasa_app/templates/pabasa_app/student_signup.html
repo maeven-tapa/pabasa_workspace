@@ -810,9 +810,10 @@
             const year = Number(birthYearInput.value);
             if (!month) return;
 
-            // Date.UTC also correctly handles February in leap years. Until a
-            // year is entered, permit February 29 so a future leap year remains valid.
-            const maximumDay = month === 2 && !year ? 29 : new Date(Date.UTC(year || 2000, month, 0)).getUTCDate();
+            // Use the current year until a birth year is entered; Date.UTC
+            // correctly handles February in leap years (2026 has 28 days).
+            const effectiveYear = year || new Date().getFullYear();
+            const maximumDay = new Date(Date.UTC(effectiveYear, month, 0)).getUTCDate();
             birthDayInput.max = String(maximumDay);
 
             if (Number(birthDayInput.value) > maximumDay) {
