@@ -24,9 +24,9 @@
     let isMuted = false;
     let completionSavePromise = Promise.resolve();
 
-    const studentClassCodesKey = "pabasaStudentClassCodes";
-    const legacyStudentClassCodeKey = "pabasaStudentClassCode";
-    const readingsStorageKey = "pabasa_class_readings";
+    const studentClassCodesKey = "pabasaStudentSectionIds";
+    const legacyStudentClassCodeKey = "pabasaStudentSectionId";
+    const readingsStorageKey = "pabasa_section_readings";
     const mode = 'sentence';
 
     const params = new URLSearchParams(window.location.search);
@@ -35,6 +35,7 @@
     const testCode = (officialAssessmentData && officialAssessmentData.official_code) || params.get("code") || "TST-000";
     const testLanguage = (officialAssessmentData && officialAssessmentData.language) || params.get("language") || "";
     const materialId = params.get("id");
+    const sectionId = params.get("section_id") || "";
     const viewMode = params.get("viewMode");
     const assistMode = params.get("assist") === "1";
     const assistToken = params.get("assist_token") || "";
@@ -109,8 +110,8 @@
     }
 
     function loadItems() {
-        const targetCode = (testCode && testCode !== "TST-000") ? testCode.toUpperCase() : null;
-        let codes = targetCode ? [targetCode] : getStoredArray(studentClassCodesKey).filter(Boolean).map(c => String(c).toUpperCase());
+        const targetSectionId = sectionId || null;
+        let codes = targetSectionId ? [targetSectionId] : getStoredArray(studentClassCodesKey).filter(Boolean).map(String);
 
         const readings = getStoredObject(readingsStorageKey);
 
@@ -192,8 +193,8 @@
 
         // Notify admin that activity finished
         const studentName = window.PABASA_USER_NAME || window.localStorage.getItem("pabasaUserName") || "A student";
-        const metadata = JSON.parse(localStorage.getItem("pabasa_class_metadata") || "{}");
-        const classInfo = metadata[testCode.toUpperCase()] || {};
+        const metadata = JSON.parse(localStorage.getItem("pabasa_section_metadata") || "{}");
+        const classInfo = metadata[String(sectionId)] || {};
         const className = classInfo.name || "your class";
 
         let notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');

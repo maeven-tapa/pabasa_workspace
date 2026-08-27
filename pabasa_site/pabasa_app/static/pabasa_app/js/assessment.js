@@ -51,9 +51,9 @@ document.addEventListener("DOMContentLoaded", function () {
         let codes = [];
 
         try {
-            codes = JSON.parse(localStorage.getItem("pabasaStudentClassCodes") || "[]");
+            codes = JSON.parse(localStorage.getItem("pabasaStudentSectionIds") || "[]");
 
-            const legacy = localStorage.getItem("pabasaStudentClassCode");
+            const legacy = localStorage.getItem("pabasaStudentSectionId");
             if (
                 legacy &&
                 !codes.some(
@@ -63,7 +63,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 codes.push(legacy);
             }
         } catch (e) {
-            const legacy = localStorage.getItem("pabasaStudentClassCode");
+            const legacy = localStorage.getItem("pabasaStudentSectionId");
             if (legacy) codes = [legacy];
         }
 
@@ -76,7 +76,7 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        const readingsByClass = JSON.parse(localStorage.getItem("pabasa_class_readings") || "{}");
+        const readingsByClass = JSON.parse(localStorage.getItem("pabasa_section_readings") || "{}");
         const readingsMap = {};
         Object.keys(readingsByClass).forEach(key => { readingsMap[key.toUpperCase()] = readingsByClass[key]; });
 
@@ -385,7 +385,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // Listen for enrollment updates to keep the UI in sync
     window.addEventListener("pabasa:student-class-updated", updateClassStatusUI);
     window.addEventListener("storage", (e) => {
-        const updateKeys = ["pabasaStudentClassJoined", "pabasaStudentClassCodes", "pabasa_assessments_completed"];
+        const updateKeys = ["pabasaStudentSectionJoined", "pabasaStudentSectionIds", "pabasa_assessments_completed"];
         if (updateKeys.includes(e.key)) updateClassStatusUI();
     });
 });

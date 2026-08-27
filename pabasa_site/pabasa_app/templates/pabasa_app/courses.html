@@ -8889,7 +8889,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     let teacherClasses = [];
     const teacherClassesKey = () => {
         const email = (window.PABASA_USER_EMAIL || '').trim();
-        return email ? `pabasa_teacher_classes_${email}` : null;
+        return email ? `pabasa_teacher_sections_${email}` : null;
     };
 
     // Courses created by teacher (grouping for per-section scheduling)
@@ -12160,7 +12160,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 });
             });
         });
-        classAssessments[classCode] = synced;
+        classAssessments[sectionCacheKey(classCode)] = synced;
     }
 
     function syncClassBannerMaterialCounts(classCode) {
@@ -12263,7 +12263,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             // Collect section codes
             const sectionCodes = (course.sections || []).map(s => s.code).filter(Boolean);
             const aggregated = { word: [], sentence: [], paragraph: [], vowel: [] };
-            const stored = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}');
+            const stored = JSON.parse(localStorage.getItem('pabasa_section_readings') || '{}');
             for (const section of (course.sections || [])) {
                 const code = section.code;
                 if (!code) continue;
@@ -12478,7 +12478,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             activeRecords(course?.materials || []).forEach(addMaterialTask);
 
             let storedReadings = {};
-            try { storedReadings = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}'); } catch (e) { storedReadings = {}; }
+            try { storedReadings = JSON.parse(localStorage.getItem('pabasa_section_readings') || '{}'); } catch (e) { storedReadings = {}; }
             (course?.sections || []).forEach(section => {
                 const code = section.code || section.class_code || '';
                 const readings = classReadings[code] || storedReadings[code] || storedReadings[String(code).toUpperCase()] || storedReadings[String(code).toLowerCase()] || {};
@@ -12702,7 +12702,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             setInterval(poll, INTERVAL_MS);
         })();
 
-    const readingsStorageKey = 'pabasa_class_readings';
+    const readingsStorageKey = 'pabasa_section_readings';
     const flatMaterialsStorageKey = 'pabasa_materials';
     const overviewStatsStorageKey = 'pabasa_teacher_overview_stats';
 
@@ -12758,8 +12758,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     sourceTypes: flat.map(item => String(item.source_type || item.material_source || '').trim().toLowerCase()).filter(Boolean)
                 });
                 // Fix: Sync local cache variable so View/Edit handlers find the data
-                if (normalizedClassCode) {
-                    classReadings[normalizedClassCode] = materials;
+                if (normalizedSectionId) {
+                    classReadings[normalizedSectionId] = materials;
                 }
                 return materials;
             }
@@ -12867,16 +12867,22 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         });
     }
 
-    function ensureClassReadings(classCode) {
-        if (!classReadings[classCode]) {
-            classReadings[classCode] = { word: [], sentence: [], paragraph: [], vowel: [] };
+    function sectionCacheKey(classCodeOrId) {
+        const match = (teacherClasses || []).find(c => String(c.id || c.section_id) === String(classCodeOrId) || String(c.code || '').toUpperCase() === String(classCodeOrId || '').toUpperCase());
+        return String(match?.id || match?.section_id || classCodeOrId || '');
+    }
+
+    function ensureClassReadings(classCodeOrId) {
+        const sectionKey = sectionCacheKey(classCodeOrId);
+        if (!classReadings[sectionKey]) {
+            classReadings[sectionKey] = { word: [], sentence: [], paragraph: [], vowel: [] };
         }
         ['word', 'sentence', 'paragraph', 'vowel'].forEach(readingType => {
-            if (!Array.isArray(classReadings[classCode][readingType])) {
-                classReadings[classCode][readingType] = [];
+            if (!Array.isArray(classReadings[sectionKey][readingType])) {
+                classReadings[sectionKey][readingType] = [];
             }
         });
-        return classReadings[classCode];
+        return classReadings[sectionKey];
     }
 
     // Reading materials for each class, persisted for dashboard/profile counts.
@@ -13099,7 +13105,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 
                 // Update localStorage for classes
                 const _email = (window.PABASA_USER_EMAIL || '').trim();
-                if (_email) localStorage.setItem(`pabasa_teacher_classes_${_email}`, JSON.stringify(teacherClasses));
+                if (_email) localStorage.setItem(`pabasa_teacher_sections_${_email}`, JSON.stringify(teacherClasses));
 
                 // Remove students associated with this class from localStorage
                 try {
@@ -13114,10 +13120,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                 // Remove class readings/materials from localStorage
                 try {
-                    const readings = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}');
-                    if (readings && readings[classCode]) {
-                        delete readings[classCode];
-                        localStorage.setItem('pabasa_class_readings', JSON.stringify(readings));
+                    const readings = JSON.parse(localStorage.getItem('pabasa_section_readings') || '{}');
+                    const sectionKey = sectionCacheKey(classCode);
+                    if (readings && readings[sectionKey]) {
+                        delete readings[sectionKey];
+                        localStorage.setItem('pabasa_section_readings', JSON.stringify(readings));
                     }
                     const flat = JSON.parse(localStorage.getItem('pabasa_materials') || '[]');
                     const filteredFlat = flat.filter(m => (m.classCode || '') !== classCode);
@@ -13219,7 +13226,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
     function loadAssessments(classCode) {
         const grid = document.getElementById('assessmentGrid');
-        const assessments = classAssessments[classCode] || [];
+        const assessments = classAssessments[sectionCacheKey(classCode)] || [];
         if (!grid) return;
 
         if (assessments.length === 0) {

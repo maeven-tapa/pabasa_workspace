@@ -228,10 +228,10 @@ document.addEventListener("DOMContentLoaded", function () {
         try {
             // Prefer the teacher-scoped key and migrate legacy data when possible.
             const email = (window.PABASA_USER_EMAIL || localStorage.getItem('pabasaUserEmail') || '').trim();
-            const scopedKey = email ? `pabasa_teacher_classes_${email}` : 'pabasa_teacher_classes';
+            const scopedKey = email ? `pabasa_teacher_sections_${email}` : 'pabasa_teacher_sections';
             // Try scoped key first, then legacy unscoped key as a fallback.
             let raw = localStorage.getItem(scopedKey);
-            if (!raw) raw = localStorage.getItem('pabasa_teacher_classes') || '[]';
+            if (!raw) raw = localStorage.getItem('pabasa_teacher_sections') || '[]';
             const saved = JSON.parse(raw || '[]');
 
             // If we pulled data from the legacy unscoped key and we have an email-scoped key, migrate it.

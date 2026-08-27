@@ -21,7 +21,7 @@
         }
 
         const teacherEmail = (window.PABASA_USER_EMAIL || localStorage.getItem("pabasaUserEmail") || '').trim();
-        const scopedKey = teacherEmail ? `pabasa_teacher_classes_${teacherEmail}` : null;
+        const scopedKey = teacherEmail ? `pabasa_teacher_sections_${teacherEmail}` : null;
 
         function updateClassCount() {
             if (classCountMirror && classList) {
@@ -69,8 +69,8 @@
             // Migrate legacy unscoped classes into the teacher-scoped key when possible
             try {
                 if (teacherEmail) {
-                    const legacy = localStorage.getItem('pabasa_teacher_classes');
-                    const scopedKey = `pabasa_teacher_classes_${teacherEmail}`;
+                    const legacy = localStorage.getItem('pabasa_teacher_sections');
+                    const scopedKey = `pabasa_teacher_sections_${teacherEmail}`;
                     if (legacy && !localStorage.getItem(scopedKey)) {
                         localStorage.setItem(scopedKey, legacy);
                     }
@@ -80,13 +80,13 @@
             }
 
             // Remove global unscoped key to avoid ambiguity
-            try { localStorage.removeItem('pabasa_teacher_classes'); } catch (e) {}
+            try { localStorage.removeItem('pabasa_teacher_sections'); } catch (e) {}
 
             // Remove any other teacher-scoped keys that do not belong to the current user
             Object.keys(localStorage).forEach(function (key) {
                 if (
-                    key.startsWith('pabasa_teacher_classes_') &&
-                    key !== `pabasa_teacher_classes_${teacherEmail}`
+                    key.startsWith('pabasa_teacher_sections_') &&
+                    key !== `pabasa_teacher_sections_${teacherEmail}`
                 ) {
                     localStorage.removeItem(key);
                 }
@@ -220,15 +220,13 @@
             const classManagementUrls = document.querySelectorAll('#sidebarClassLink, #manageClassLink, #quickLinkClass, .workspace-card .btn-class, [data-manage-class-btn]');
             classManagementUrls.forEach(link => {
                 if (link.tagName === 'A') {
-                    link.href = sectionId
-                        ? `/dashboard/teacher/manage/?section_id=${encodeURIComponent(sectionId)}`
-                        : `/dashboard/teacher/manage/?code=${encodeURIComponent(code)}`;
+                    if (sectionId) link.href = `/dashboard/teacher/manage/?section_id=${encodeURIComponent(sectionId)}`;
                     link.style.display = "inline-flex";
                 }
             });
 
             // Persist the active class so the sidebar stays updated on other pages
-            localStorage.setItem("pabasa_last_active_class_code", code);
+            if (sectionId) localStorage.setItem("pabasa_last_active_section_id", sectionId);
             window.dispatchEvent(new Event("pabasa:teacher-class-selected"));
 
             // Refresh student directory to show students for the selected class (if present)
@@ -468,10 +466,11 @@
 
                     // Remove class readings/materials from localStorage
                     try {
-                        const readings = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}');
-                        if (readings && readings[classCode]) {
-                            delete readings[classCode];
-                            localStorage.setItem('pabasa_class_readings', JSON.stringify(readings));
+                        const readings = JSON.parse(localStorage.getItem('pabasa_section_readings') || '{}');
+                        const sectionId = cardToRemove?.getAttribute('data-section-id');
+                        if (readings && sectionId && readings[sectionId]) {
+                            delete readings[sectionId];
+                            localStorage.setItem('pabasa_section_readings', JSON.stringify(readings));
                         }
 
                         // Also update flattened materials list if present

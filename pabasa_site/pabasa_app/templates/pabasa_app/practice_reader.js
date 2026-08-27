@@ -28,9 +28,9 @@
     const materialId = urlParams.get("id");
     const testTitle = urlParams.get("test");
 
-    const studentClassCodesKey = "pabasaStudentClassCodes";
-    const legacyStudentClassCodeKey = "pabasaStudentClassCode";
-    const readingsStorageKey = "pabasa_class_readings";
+    const studentClassCodesKey = "pabasaStudentSectionIds";
+    const legacyStudentClassCodeKey = "pabasaStudentSectionId";
+    const readingsStorageKey = "pabasa_section_readings";
 
     function getStoredArray(key) {
         try {

@@ -3,17 +3,20 @@
  * These are defined at the very top and attached to window to prevent ReferenceErrors 
  * in inline scripts (like the dashboard page).
  */
-var getStudentClassData = window.getStudentClassData = function() {
-    let codes = [];
+var getStudentSectionData = window.getStudentSectionData = function() {
+    let sectionIds = [];
     try {
-        codes = JSON.parse(localStorage.getItem("pabasaStudentClassCodes") || "[]");
-        const legacy = localStorage.getItem("pabasaStudentClassCode");
-        if (legacy && !codes.some(c => String(c).toUpperCase() === String(legacy).toUpperCase())) codes.push(legacy);
+        sectionIds = JSON.parse(localStorage.getItem("pabasaStudentSectionIds") || "[]");
     } catch(e) {
-        const legacy = localStorage.getItem("pabasaStudentClassCode");
-        if (legacy) codes = [legacy];
+        sectionIds = [];
     }
-    return [...new Set(codes.filter(Boolean).map(c => String(c).toUpperCase()))];
+    return [...new Set(sectionIds.filter(value => /^\d+$/.test(String(value))).map(value => String(value)))];
+};
+
+// Compatibility helper for display-only legacy consumers. It never reads old
+// class-code storage and therefore cannot grant access to a Section.
+var getStudentClassData = window.getStudentClassData = function() {
+    return getStudentSectionData();
 };
 
 /**
@@ -377,28 +380,27 @@ var getStudentClassData = window.getStudentClassData = function() {
         return role;
     }
 
-    function updateTeacherSidebar(overrideCode = null) {
+    function updateTeacherSidebar(overrideSectionId = null) {
         const role = getRole();
         if (role !== 'teacher' && role !== 'admin') return;
 
         // Determine the best available active Section from the existing teacher cache.
-        let code = overrideCode || localStorage.getItem("pabasa_last_active_class_code");
-        if (!code) {
-            const activeCodeEl = document.getElementById('activeClassCode');
-            if (activeCodeEl && activeCodeEl.textContent !== '—') code = activeCodeEl.textContent.trim();
+        let sectionId = overrideSectionId || localStorage.getItem("pabasa_last_active_section_id");
+        if (!sectionId) {
+            const activeSectionIdEl = document.getElementById('activeSectionId');
+            if (activeSectionIdEl && activeSectionIdEl.textContent !== '—') sectionId = activeSectionIdEl.textContent.trim();
         }
 
-        if (!code || code === '—') return;
+        if (!sectionId || sectionId === '—') return;
 
-        let sectionId = '';
         try {
             const email = (window.PABASA_USER_EMAIL || localStorage.getItem('pabasaUserEmail') || '').trim();
-            const cachedKey = email ? `pabasa_teacher_classes_${email}` : 'pabasa_teacher_classes';
+            const cachedKey = email ? `pabasa_teacher_sections_${email}` : 'pabasa_teacher_sections';
             const cachedClasses = JSON.parse(localStorage.getItem(cachedKey) || '[]');
             const activeClass = Array.isArray(cachedClasses)
-                ? cachedClasses.find(cls => String(cls.code) === String(code))
+                ? cachedClasses.find(cls => String(cls.id || cls.section_id) === String(sectionId))
                 : null;
-            sectionId = activeClass?.id || activeClass?.section_id || '';
+            sectionId = activeClass?.id || activeClass?.section_id || sectionId;
         } catch (e) { /* retain the compatibility URL when cache data is unavailable */ }
 
         // Target all possible management links (Sidebar, Quick Links, Workspace Buttons)
@@ -406,7 +408,7 @@ var getStudentClassData = window.getStudentClassData = function() {
         targets.forEach(link => {
             link.href = sectionId
                 ? `/dashboard/teacher/manage/?section_id=${encodeURIComponent(sectionId)}`
-                : `/dashboard/teacher/manage/?code=${encodeURIComponent(code)}`;
+                : `/dashboard/teacher/manage/?section_id=${encodeURIComponent(sectionId)}`;
         });
     }
 
@@ -568,10 +570,10 @@ var getStudentClassData = window.getStudentClassData = function() {
                         if (studentCountEl) studentCountEl.textContent = String(totalStudents);
 
                         // If no class is currently active in storage, use the first one from the server
-                        if (data.classes.length > 0 && !localStorage.getItem("pabasa_last_active_class_code")) {
-                            localStorage.setItem("pabasa_last_active_class_code", data.classes[0].code);
+                        if (data.classes.length > 0 && !localStorage.getItem("pabasa_last_active_section_id")) {
+                            localStorage.setItem("pabasa_last_active_section_id", data.classes[0].id || data.classes[0].section_id);
                         }
-                        updateTeacherSidebar(localStorage.getItem("pabasa_last_active_class_code"));
+                        updateTeacherSidebar(localStorage.getItem("pabasa_last_active_section_id"));
 
                         // Authoritative sync for stats cards
                         fetch('/dashboard/teacher/overview/')
@@ -629,22 +631,22 @@ var getStudentClassData = window.getStudentClassData = function() {
                         elapsed_ms: Math.round((performance.now() - studentBootstrapStartedAt) * 100) / 100,
                         classes_count: data.classes.length,
                     });
-                    const studentClassCodes = data.classes.map(cls => cls.code);
-                    localStorage.setItem("pabasaStudentClassCodes", JSON.stringify(studentClassCodes));
-                    localStorage.setItem("pabasa_student_joined_classes", JSON.stringify(data.classes));
-                    localStorage.setItem("pabasaStudentClassJoined", studentClassCodes.length > 0 ? "1" : "0");
+                    const studentSectionIds = data.classes.map(cls => cls.id || cls.section_id).filter(Boolean).map(String);
+                    localStorage.setItem("pabasaStudentSectionIds", JSON.stringify(studentSectionIds));
+                    localStorage.setItem("pabasa_student_joined_sections", JSON.stringify(data.classes));
+                    localStorage.setItem("pabasaStudentSectionJoined", studentSectionIds.length > 0 ? "1" : "0");
 
                     // Update class metadata to ensure names are available for dynamic alerts
-                    const metadata = JSON.parse(localStorage.getItem("pabasa_class_metadata") || "{}");
+                    const metadata = JSON.parse(localStorage.getItem("pabasa_section_metadata") || "{}");
                     data.classes.forEach(cls => {
-                        metadata[cls.code.toUpperCase()] = { 
+                        metadata[String(cls.id || cls.section_id)] = {
                             name: cls.name || "Reading Class", 
                             subject: cls.subject || "Reading" 
                         };
                     });
-                    localStorage.setItem("pabasa_class_metadata", JSON.stringify(metadata));
+                    localStorage.setItem("pabasa_section_metadata", JSON.stringify(metadata));
 
-                    // Fetch materials for each joined class to keep pabasa_class_readings up-to-date
+                    // Fetch materials for each joined Section to keep the section-keyed cache up-to-date.
                     const readings = {};
                     const materialsLoopStartedAt = performance.now();
                     for (const cls of data.classes) {
@@ -665,7 +667,7 @@ var getStudentClassData = window.getStudentClassData = function() {
                             const materialJsonDoneAt = performance.now();
                             console.warn('PABASA_FRONTEND_PROFILE', {
                                 stage: 'student_bootstrap_class_materials_fetch_complete',
-                                class_code: cls.code,
+                            class_code: cls.code,
                                 elapsed_fetch_ms: Math.round((responseDoneAt - materialFetchStartedAt) * 100) / 100,
                                 json_parse_ms: Math.round((materialJsonDoneAt - materialJsonStartedAt) * 100) / 100,
                                 status: materialResponse.status,
@@ -673,7 +675,7 @@ var getStudentClassData = window.getStudentClassData = function() {
                                 materials_count: Array.isArray(materialData?.materials) ? materialData.materials.length : null,
                             });
                             if (materialData.success) {
-                                readings[cls.code.toUpperCase()] = materialData.materials;
+                                readings[String(cls.id || cls.section_id)] = materialData.materials;
                             }
                         } catch (e) {
                             console.error(`Error fetching materials for class ${cls.code}:`, e);
@@ -684,7 +686,7 @@ var getStudentClassData = window.getStudentClassData = function() {
                         elapsed_ms: Math.round((performance.now() - materialsLoopStartedAt) * 100) / 100,
                         classes_count: data.classes.length,
                     });
-                    localStorage.setItem("pabasa_class_readings", JSON.stringify(readings));
+                    localStorage.setItem("pabasa_section_readings", JSON.stringify(readings));
                     
                     // Trigger updates for any components relying on these local storage keys
                     window.dispatchEvent(new CustomEvent('pabasa:student-class-updated', { bubbles: true }));
@@ -808,7 +810,7 @@ var getStudentClassData = window.getStudentClassData = function() {
         return;
     }
 
-    const classJoinedKey = "pabasaStudentClassJoined";
+    const classJoinedKey = "pabasaStudentSectionJoined";
 
     function classIsJoined() {
         // Teachers and Admins should always bypass the "student class required" lock
@@ -870,21 +872,21 @@ var getStudentClassData = window.getStudentClassData = function() {
                 link.classList.remove("is-locked");
                 let targetHref = link.dataset.lockedHref;
                 
-                // Automatically append class code for classroom-specific links
+                // Automatically append the canonical Section ID for classroom-specific links.
                 if (link.hasAttribute('data-append-class-code')) {
-                    let primaryCode = null;
+                    let primarySectionId = null;
                     try {
-                        const codes = JSON.parse(localStorage.getItem("pabasaStudentClassCodes") || "[]");
-                        primaryCode = codes[0] || localStorage.getItem("pabasaStudentClassCode");
+                        const sectionIds = JSON.parse(localStorage.getItem("pabasaStudentSectionIds") || "[]");
+                        primarySectionId = sectionIds[0] || localStorage.getItem("pabasaStudentSectionId");
                     } catch(e) {
-                        primaryCode = localStorage.getItem("pabasaStudentClassCode");
+                        primarySectionId = localStorage.getItem("pabasaStudentSectionId");
                     }
 
-                    if (primaryCode) {
+                    if (primarySectionId) {
                         const separator = targetHref.includes('?') ? '&' : '?';
-                        targetHref = `${targetHref}${separator}code=${primaryCode}`;
+                        targetHref = `${targetHref}${separator}section_id=${encodeURIComponent(primarySectionId)}`;
                     } else {
-                        console.warn("PABASA Sidebar: Link requires class code but none found in localStorage.");
+                        console.warn("PABASA Sidebar: Link requires a Section ID but none found in localStorage.");
                     }
                 }
                 
@@ -924,7 +926,7 @@ var getStudentClassData = window.getStudentClassData = function() {
     updateLockedLinks();
 
     window.addEventListener("storage", function (event) {
-        const classKeys = [classJoinedKey, "pabasaStudentClassCode", "pabasaStudentClassCodes"];
+        const classKeys = [classJoinedKey, "pabasaStudentSectionId", "pabasaStudentSectionIds"];
         if (classKeys.includes(event.key)) {
             updateLockedLinks();
         }
@@ -942,15 +944,15 @@ var getStudentClassData = window.getStudentClassData = function() {
         const userRole = window.PABASA_USER_ROLE || window.localStorage.getItem("pabasaUserRole");
         if (userRole !== "student") return;
 
-        const isJoined = window.localStorage.getItem("pabasaStudentClassJoined") === "1";
+        const isJoined = window.localStorage.getItem("pabasaStudentSectionJoined") === "1";
         if (!isJoined) return;
 
         const studentCodes = getStudentClassData();
-        const readings = JSON.parse(localStorage.getItem("pabasa_class_readings") || "{}");
+        const readings = JSON.parse(localStorage.getItem("pabasa_section_readings") || "{}");
         const readingsMap = {};
         Object.keys(readings).forEach(key => readingsMap[key.toUpperCase()] = readings[key]);
 
-        const metadata = JSON.parse(localStorage.getItem("pabasa_class_metadata") || "{}");
+        const metadata = JSON.parse(localStorage.getItem("pabasa_section_metadata") || "{}");
         const metadataMap = {};
         Object.keys(metadata).forEach(key => metadataMap[key.toUpperCase()] = metadata[key]);
 
@@ -1061,7 +1063,7 @@ var getStudentClassData = window.getStudentClassData = function() {
         checkStudentJoinNotifications();
 
         const userRole = window.PABASA_USER_ROLE || window.localStorage.getItem("pabasaUserRole") || "";
-        const isStudent = window.localStorage.getItem("pabasaStudentClassJoined") === "1";
+        const isStudent = window.localStorage.getItem("pabasaStudentSectionJoined") === "1";
 
         if (!isStudent && userRole === 'teacher') {
             const notifFetchStartedAt = performance.now();
@@ -1106,7 +1108,7 @@ var getStudentClassData = window.getStudentClassData = function() {
 
         const studentCodes = getStudentClassData();
 
-        const readings = JSON.parse(localStorage.getItem("pabasa_class_readings") || "{}");
+        const readings = JSON.parse(localStorage.getItem("pabasa_section_readings") || "{}");
         // Normalize readings map for case-insensitive class code lookups
         const readingsMap = {};
         Object.keys(readings).forEach(key => {
@@ -1186,7 +1188,7 @@ var getStudentClassData = window.getStudentClassData = function() {
     setInterval(updateSidebarBadges, 5000);
 
     window.addEventListener("storage", function (event) {
-        const badgeKeys = ['pabasa_class_readings', 'pabasa_seen_material_ids', 'pabasaStudentClassCodes'];
+        const badgeKeys = ['pabasa_section_readings', 'pabasa_seen_material_ids', 'pabasaStudentSectionIds'];
         if (badgeKeys.includes(event.key)) {
             updateSidebarBadges();
         }
@@ -1209,9 +1211,9 @@ var getStudentClassData = window.getStudentClassData = function() {
      */
     function markCompletedMaterials() {
         // Combine local `pabasa_seen_material_ids` (client-side) with server-side
-        // attempt indicators returned via `pabasa_class_readings` (`attempt_count`).
+        // attempt indicators returned via `pabasa_section_readings` (`attempt_count`).
         const seenIdsLocal = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
-        const classReadings = JSON.parse(localStorage.getItem("pabasa_class_readings") || "{}");
+        const classReadings = JSON.parse(localStorage.getItem("pabasa_section_readings") || "{}");
         const serverSeenSet = new Set();
         try {
             const studentCodes = getStudentClassData();

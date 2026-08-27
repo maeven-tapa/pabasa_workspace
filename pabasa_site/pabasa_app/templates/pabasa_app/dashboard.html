@@ -2123,9 +2123,9 @@
         const unenrollingModalElement = document.getElementById("unenrollingModal");
         const studentCalendarModalElement = document.getElementById("studentCalendarModal");
         const studentCalendarExpanded = document.querySelector("[data-student-calendar-expanded]");
-        const classJoinedKey = "pabasaStudentClassJoined";
-        const classCodesKey = "pabasaStudentClassCodes";
-        const legacyClassCodeKey = "pabasaStudentClassCode";
+        const classJoinedKey = "pabasaStudentSectionJoined";
+        const classCodesKey = "pabasaStudentSectionIds";
+        const legacyClassCodeKey = "pabasaStudentSectionId";
         const teacherClassesKey = null;
 
         const loadingModalElement = document.getElementById('loadingModal');
@@ -2346,7 +2346,7 @@
                 const classes = [];
 
                 Object.keys(localStorage).forEach((key) => {
-                    if (key.startsWith('pabasa_teacher_classes_')) {
+                    if (key.startsWith('pabasa_teacher_sections_')) {
                         try {
                             const parsed = JSON.parse(
                                 localStorage.getItem(key) || '[]'
@@ -2446,7 +2446,7 @@
         // Calculate reading progress and determine unlocked achievements
         const calculateProgress = () => {
             try {
-                const readings = JSON.parse(localStorage.getItem("pabasa_class_readings") || "{}");
+                const readings = JSON.parse(localStorage.getItem("pabasa_section_readings") || "{}");
                 const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
                 
                 let totalAssessments = 0;
@@ -2641,7 +2641,7 @@
                 codes_count: codes.length,
             });
             const classDetailsMap = await fetchClassDetailsFromDatabase(codes);
-            const readings = JSON.parse(localStorage.getItem("pabasa_class_readings") || "{}");
+            const readings = JSON.parse(localStorage.getItem("pabasa_section_readings") || "{}");
             const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
 
             // Create normalized map for case-insensitive class code lookups
@@ -2732,7 +2732,7 @@
             }
 
             classList.innerHTML = validClasses.map((classData) => `
-                <article class="class-card${(classData.progress || 0) < 100 && (classData.practiceCount || classData.assessmentCount) ? ' is-ready' : ''}${classData.currentLesson ? ' has-current-lesson' : ''}" data-class-card data-class-card-code="${escapeHtml(classData.code)}">
+                <article class="class-card${(classData.progress || 0) < 100 && (classData.practiceCount || classData.assessmentCount) ? ' is-ready' : ''}${classData.currentLesson ? ' has-current-lesson' : ''}" data-class-card data-section-id="${escapeHtml(classData.id || classData.section_id || '')}" data-class-card-code="${escapeHtml(classData.code)}">
                     <div class="class-card-bg-icon">
                         <i class="bi ${
                             (classData.subject || '').toLowerCase().includes('english') ? 'bi-alphabet-uppercase' : 
@@ -2782,7 +2782,7 @@
                         ` : ''}
                     </div>
                     <div class="class-card-actions">
-                        <button class="continue-learning-btn" type="button" data-continue-learning data-class-code="${escapeHtml(classData.code)}">
+                        <button class="continue-learning-btn" type="button" data-continue-learning data-section-id="${escapeHtml(classData.id || classData.section_id || '')}" data-class-code="${escapeHtml(classData.code)}">
                             <i class="bi bi-play-circle me-1"></i>Continue Learning
                         </button>
                     </div>
@@ -3039,9 +3039,9 @@
             const continueButton = event.target.closest("[data-continue-learning]");
             if (continueButton) {
                 event.stopPropagation();
-                const code = continueButton.dataset.classCode;
-                if (code) {
-                    window.location.href = `{% url 'assessment' %}?code=${encodeURIComponent(code)}`;
+                const sectionId = continueButton.dataset.sectionId;
+                if (sectionId) {
+                    window.location.href = `{% url 'assessment' %}?section_id=${encodeURIComponent(sectionId)}`;
                 }
                 return;
             }
@@ -3051,9 +3051,9 @@
                 return;
             }
 
-            const code = card.dataset.classCardCode;
-            if (code) {
-                window.location.href = `{% url 'assessment' %}?code=${encodeURIComponent(code)}`;
+            const sectionId = card.dataset.sectionId;
+            if (sectionId) {
+                window.location.href = `{% url 'assessment' %}?section_id=${encodeURIComponent(sectionId)}`;
             }
         });
 
@@ -3146,7 +3146,7 @@
         });
 
         window.addEventListener("storage", (event) => {
-            if ([teacherClassesKey, "pabasa_class_readings", "pabasa_seen_material_ids"].includes(event.key)) {
+            if ([teacherClassesKey, "pabasa_section_readings", "pabasa_seen_material_ids"].includes(event.key)) {
                 setJoinedState(getSavedCodes());
             }
         });

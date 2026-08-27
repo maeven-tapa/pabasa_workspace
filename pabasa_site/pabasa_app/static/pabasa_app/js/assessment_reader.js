@@ -390,8 +390,8 @@
             return cookieToken || document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
         }
 
-        const studentClassCodesKey = "pabasaStudentClassCodes";
-        const readingsStorageKey = "pabasa_class_readings";
+        const studentClassCodesKey = "pabasaStudentSectionIds";
+        const readingsStorageKey = "pabasa_section_readings";
         const completedAssessmentIdsKey = "pabasa_completed_assessment_ids";
         const studentEndStateKeyBase = "pabasa_student_end_assessment_state";
         const studentEndStateVersion = "crla_grade2_v1";
@@ -1675,22 +1675,21 @@
                 }
             }
 
-            // Prioritize the specific class code from the URL to prevent mixing materials from other classes
-            const targetCode = (testCode && testCode !== "TST-000") ? testCode.toUpperCase() : null;
-            let codes = targetCode ? [targetCode] : getStoredData(studentClassCodesKey, []).map(c => String(c).toUpperCase());
+            // Prioritize the canonical Section ID from the URL to prevent mixing materials from other Sections.
+            const targetSectionId = sectionId || null;
+            let codes = targetSectionId ? [targetSectionId] : getStoredData(studentClassCodesKey, []).map(String);
 
             const readings = getStoredData(readingsStorageKey, {});
             
-            // Create normalized map for case-insensitive class code lookups
+            // Section-keyed cache; class_code remains display metadata only.
             const readingsMap = {};
-            Object.keys(readings).forEach(key => readingsMap[key.toUpperCase()] = readings[key]);
+            Object.keys(readings).forEach(key => readingsMap[String(key)] = readings[key]);
 
             let aggregatedItems = [];
             let aggregatedTypes = [];
             currentMaterialLanguage = "";
             codes.forEach(code => {
-                const upperCode = String(code).toUpperCase();
-                const classReadings = readingsMap[upperCode];
+                const classReadings = readingsMap[String(code)];
                 if (!classReadings) return;
                 
                 [mode, mode + 's'].forEach(m => {
@@ -3147,7 +3146,7 @@
 
                 // Also mark linked practice materials (type 'practice' or 'both') that share the same id or title
                 try {
-                    const readings = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}');
+                    const readings = JSON.parse(localStorage.getItem('pabasa_section_readings') || '{}');
                     const normalizedId = materialId ? String(materialId).trim() : null;
                     const normalizedTitle = testTitle || null;
                     const currentSeenIds = JSON.parse(localStorage.getItem('pabasa_seen_material_ids') || '[]').map(id => String(id).trim());
@@ -3185,8 +3184,8 @@
 
             // Emit an immediate in-app notification for the admin so the bell updates even before a full page reload.
             const studentName = window.PABASA_USER_NAME || window.localStorage.getItem('pabasaUserName') || 'A student';
-            const metadata = JSON.parse(localStorage.getItem('pabasa_class_metadata') || '{}');
-            const classInfo = metadata[String(testCode).toUpperCase()] || {};
+            const metadata = JSON.parse(localStorage.getItem('pabasa_section_metadata') || '{}');
+            const classInfo = metadata[String(sectionId)] || {};
             const className = classInfo.name || 'your class';
             const notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
             notifications.unshift({

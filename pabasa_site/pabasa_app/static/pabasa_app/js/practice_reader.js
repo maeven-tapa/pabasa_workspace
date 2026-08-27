@@ -2416,7 +2416,7 @@
         const practiceTitle = (matchingMaterial && matchingMaterial.title) || fallbackTitle;
         const tCode = urlParams.get("code") || "GENERAL";
         
-        const metadata = JSON.parse(localStorage.getItem("pabasa_class_metadata") || "{}");
+        const metadata = JSON.parse(localStorage.getItem("pabasa_section_metadata") || "{}");
         const classInfo = metadata[tCode.toUpperCase()] || {};
         const className = classInfo.name || "your class";
 

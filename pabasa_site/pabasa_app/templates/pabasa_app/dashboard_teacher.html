@@ -1625,12 +1625,12 @@ function updateDashboardStatistics(providedStudents = null, providedLevelCounts 
         // If server hasn't populated it yet (value is 0), compute local fallback
         const currentVal = parseInt(classCountMirrorEl.textContent || "0", 10) || 0;
         if (currentVal <= 0) {
-            // Aggregate any pabasa_teacher_classes* keys
+            // Aggregate any user-scoped Section cache keys
             let count = 0;
             try {
                 Object.keys(localStorage).forEach(function (k) {
                     if (!k || typeof k !== 'string') return;
-                    if (k.startsWith('pabasa_teacher_classes')) {
+                    if (k.startsWith('pabasa_teacher_sections')) {
                         try {
                             const parsed = JSON.parse(localStorage.getItem(k) || '[]');
                             if (Array.isArray(parsed)) count = Math.max(count, parsed.length);

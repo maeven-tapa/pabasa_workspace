@@ -749,14 +749,14 @@
         const link = e.target.closest('.assessment-type-link');
         if (!link) return;
 
-        const classCode = link.getAttribute('data-class-code');
+        const sectionId = link.getAttribute('data-section-id');
         const subjectGrid = document.getElementById('subjectGrid');
-        if (classCode && subjectGrid) {
-            const orderKey = 'pabasa_recently_accessed_class_codes';
+        if (sectionId && subjectGrid) {
+            const orderKey = 'pabasa_recently_accessed_section_ids';
             try {
                 const current = JSON.parse(localStorage.getItem(orderKey) || '[]');
-                const normalized = String(classCode).toUpperCase();
-                const filtered = current.filter((code) => String(code).toUpperCase() !== normalized);
+                const normalized = String(sectionId);
+                const filtered = current.filter((id) => String(id) !== normalized);
                 filtered.push(normalized);
                 localStorage.setItem(orderKey, JSON.stringify(filtered));
             } catch (error) {
@@ -777,11 +777,11 @@
     }
 
     (async () => {
-        const studentClassCodesKey = "pabasaStudentClassCodes";
-        const legacyStudentClassCodeKey = "pabasaStudentClassCode";
-        const teacherClassesKey = "pabasa_teacher_classes";
-        const studentClassesKey = "pabasa_student_joined_classes";
-        const readingsStorageKey = "pabasa_class_readings";
+        const studentClassCodesKey = "pabasaStudentSectionIds";
+        const legacyStudentClassCodeKey = "pabasaStudentSectionId";
+        const teacherClassesKey = "pabasa_teacher_sections";
+        const studentClassesKey = "pabasa_student_joined_sections";
+        const readingsStorageKey = "pabasa_section_readings";
         const completedAssessmentIdsKey = "pabasa_completed_assessment_ids";
         const materialTypes = ["word", "sentence", "paragraph", "vowel"];
         const selectedClassCode = (new URLSearchParams(window.location.search).get("code") || "").trim().toUpperCase();
@@ -863,19 +863,19 @@
                     });
                     // Sync to localStorage for components like sidebar badges
                     const readings = getStoredObject(readingsStorageKey);
-                    readings[classCode.toUpperCase()] = {
+                    readings[String(sectionId)] = {
                         materials: data.materials,
                         official_assessments: data.official_assessments || [],
                     };
                     localStorage.setItem(readingsStorageKey, JSON.stringify(readings));
 
                     // Store class metadata to ensure titles match what the teacher set
-                    const metadata = getStoredObject("pabasa_class_metadata");
-                    metadata[classCode.toUpperCase()] = { 
+                    const metadata = getStoredObject("pabasa_section_metadata");
+                    metadata[String(sectionId)] = {
                         name: data.class_name || "Reading Class", 
                         subject: data.subject || "Reading" 
                     };
-                    localStorage.setItem("pabasa_class_metadata", JSON.stringify(metadata));
+                    localStorage.setItem("pabasa_section_metadata", JSON.stringify(metadata));
                     
                     return data.materials;
                 }
@@ -886,19 +886,12 @@
         };
 
         const getJoinedCodes = () => {
-            const codes = getStoredArray(studentClassCodesKey).filter(Boolean);
-            const legacyCode = window.localStorage.getItem(legacyStudentClassCodeKey);
-            if (!codes.length && legacyCode) {
-                codes.push(legacyCode);
+            const sectionIds = getStoredArray(studentClassCodesKey).filter(Boolean);
+            const legacySectionId = window.localStorage.getItem(legacyStudentClassCodeKey);
+            if (!sectionIds.length && legacySectionId) {
+                sectionIds.push(legacySectionId);
             }
-            const normalizedCodes = codes.map((code) => String(code).toUpperCase());
-            if (selectedClassCode && normalizedCodes.includes(selectedClassCode)) {
-                return [selectedClassCode];
-            }
-            if (selectedClassCode) {
-                return [];
-            }
-            return normalizedCodes;
+            return sectionIds.map((id) => String(id)).filter((id) => /^\d+$/.test(id));
         };
 
             const getAssessmentMaterials = async () => {
@@ -908,33 +901,34 @@
             const allKnownClasses = [...teacherClasses, ...studentClasses];
             
             // Autoritative sync: Fetch materials from DB for each joined class
-            for (const code of joinedCodes) {
-                const knownClass = allKnownClasses.find((item) => String(item.code || "").toUpperCase() === String(code).toUpperCase());
-                await fetchMaterialsFromDatabase(knownClass?.id || knownClass?.section_id || '', code);
+            for (const sectionId of joinedCodes) {
+                const knownClass = allKnownClasses.find((item) => String(item.id || item.section_id) === String(sectionId));
+                await fetchMaterialsFromDatabase(sectionId, knownClass?.code || '');
             }
 
-            const metadataMap = getStoredObject("pabasa_class_metadata");
+            const metadataMap = getStoredObject("pabasa_section_metadata");
 
             const readingsByClass = getStoredObject(readingsStorageKey);
 
             const readingsMap = {};
             Object.keys(readingsByClass).forEach(key => {
-                readingsMap[key.toUpperCase()] = readingsByClass[key];
+                readingsMap[String(key)] = readingsByClass[key];
             });
 
-            return joinedCodes.map((code) => {
-                const upperCode = String(code).toUpperCase();
-                const meta = metadataMap[upperCode] || {};
+            return joinedCodes.map((sectionId) => {
+                const meta = metadataMap[String(sectionId)] || {};
                 
                 // Find the class details from synchronized joined classes or cached metadata
-                const foundClass = allKnownClasses.find((item) => String(item.code || "").toUpperCase() === upperCode);
+                const foundClass = allKnownClasses.find((item) => String(item.id || item.section_id) === String(sectionId));
                 const classData = foundClass || { 
-                    code: upperCode, 
+                    id: sectionId,
+                    section_id: sectionId,
+                    code: meta.code || "",
                     name: meta.name || "Reading Class", 
                     subject: meta.subject || "Reading" 
                 };
                 
-                const readings = readingsMap[upperCode] || {};
+                const readings = readingsMap[String(sectionId)] || {};
                 const materials = {};
                 const officialAssessments = Array.isArray(readings.official_assessments) ? readings.official_assessments : [];
                 const officialAssessmentKeys = new Set(
@@ -1121,7 +1115,7 @@
 
             const getRecentClassOrder = () => {
                 try {
-                    return JSON.parse(localStorage.getItem('pabasa_recently_accessed_class_codes') || '[]');
+                    return JSON.parse(localStorage.getItem('pabasa_recently_accessed_section_ids') || '[]');
                 } catch (error) {
                     return [];
                 }
@@ -1248,7 +1242,7 @@
                     const generatedStartUrl = isLocked ? '#' : `${urlMap[m.category || m.item_type || 'word']}?test=${encodeURIComponent(m.title)}&section_id=${encodeURIComponent(sectionId)}&code=${encodeURIComponent(m.code || classData.code)}&id=${encodeURIComponent(m.id)}${officialAssessmentId ? `&official_assessment_id=${encodeURIComponent(officialAssessmentId)}` : ''}${officialLaunchPayloadJson ? `&official_assessment_data=${encodeURIComponent(officialLaunchPayloadJson)}` : ''}&content=${encodeURIComponent(m.content || '')}&item_type=${encodeURIComponent(m.item_type || m.category || 'word')}&language=${encodeURIComponent(m.language || '')}&crla_fresh=1`;
                     return `
                         <div class="assessment-card-shell ${isLocked ? 'is-locked' : ''}" data-official-assessment="true">
-                            <a href="${generatedStartUrl}" class="assessment-type-link type-${m.category || m.item_type || 'word'} ${isLocked ? 'is-disabled is-locked' : ''}" data-class-code="${escapeHtml(classData.code)}" ${isLocked ? 'tabindex="-1" aria-disabled="true" onclick="return false;"' : ''}>
+                            <a href="${generatedStartUrl}" class="assessment-type-link type-${m.category || m.item_type || 'word'} ${isLocked ? 'is-disabled is-locked' : ''}" data-section-id="${escapeHtml(classData.id || classData.section_id || '')}" data-class-code="${escapeHtml(classData.code)}" ${isLocked ? 'tabindex="-1" aria-disabled="true" onclick="return false;"' : ''}>
                                 <div class="type-meta">
                                     <span class="type-icon"><i class="bi bi-shield-check"></i></span>
                                     <div class="type-info">
@@ -1351,7 +1345,7 @@
                             });
                             renderedRows.push(`
                                 <div class="assessment-card-shell ${isLocked ? 'is-locked' : ''}">
-                                    <a href="${generatedStartUrl}" class="assessment-type-link type-${m.category} ${isDone ? 'is-done' : ''} ${isLocked ? 'is-disabled is-locked' : ''}" data-class-code="${escapeHtml(classData.code)}" ${isLocked ? 'tabindex="-1" aria-disabled="true" onclick="return false;"' : ''}>
+                                    <a href="${generatedStartUrl}" class="assessment-type-link type-${m.category} ${isDone ? 'is-done' : ''} ${isLocked ? 'is-disabled is-locked' : ''}" data-section-id="${escapeHtml(classData.id || classData.section_id || '')}" data-class-code="${escapeHtml(classData.code)}" ${isLocked ? 'tabindex="-1" aria-disabled="true" onclick="return false;"' : ''}>
                                         <div class="type-meta">
                                             <span class="type-icon"><i class="bi ${iconMap[m.category]}"></i></span>
                                             <div class="type-info">

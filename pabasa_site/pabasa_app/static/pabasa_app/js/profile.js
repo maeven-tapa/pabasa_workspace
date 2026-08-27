@@ -359,18 +359,18 @@ function initProfilePage() {
     }
 
     function countClassReadings() {
-        const readingsByClass = getStoredValue("pabasa_class_readings", {});
+        const readingsByClass = getStoredValue("pabasa_section_readings", {});
         if (!readingsByClass || typeof readingsByClass !== "object" || Array.isArray(readingsByClass)) {
             return 0;
         }
 
         // Only count readings for classes that still appear in stored teacher classes
-        const activeClassCodes = getStoredArray("pabasa_teacher_classes").map(function(c){
-            try { return (c.code || c.class_code || "").toString().toUpperCase(); } catch (e) { return ""; }
+        const activeSectionIds = getStoredArray("pabasa_teacher_sections").map(function(c){
+            try { return String(c.id || c.section_id || ""); } catch (e) { return ""; }
         }).filter(Boolean);
 
         return Object.keys(readingsByClass).reduce(function (total, classCodeKey) {
-            if (activeClassCodes.length > 0 && !activeClassCodes.includes(classCodeKey.toUpperCase())) {
+            if (activeSectionIds.length > 0 && !activeSectionIds.includes(String(classCodeKey))) {
                 // skip readings for classes that are no longer active
                 return total;
             }
@@ -407,7 +407,7 @@ function initProfilePage() {
 
     function getTeacherClassesCacheKey() {
         const emailForCache = (window.PABASA_USER_EMAIL || localStorage.getItem('pabasaUserEmail') || '').trim();
-        return emailForCache ? `pabasa_teacher_classes_${emailForCache}` : 'pabasa_teacher_classes';
+        return emailForCache ? `pabasa_teacher_sections_${emailForCache}` : 'pabasa_teacher_sections';
     }
 
     function refreshTeacherClassesCache(options) {
@@ -601,19 +601,19 @@ function initProfilePage() {
     function updateStudentProgress() {
         try {
             // Get class codes with case-insensitive deduplication
-            const codesArray = getStoredArray("pabasaStudentClassCodes").map(c => String(c).toUpperCase());
-            const legacyCode = window.pabasaStore.get("pabasaStudentClassCode");
-            if (legacyCode && !codesArray.includes(legacyCode.toUpperCase())) {
-                codesArray.push(legacyCode.toUpperCase());
+            const codesArray = getStoredArray("pabasaStudentSectionIds").map(String);
+            const legacyCode = window.pabasaStore.get("pabasaStudentSectionId");
+            if (legacyCode && !codesArray.includes(String(legacyCode))) {
+                codesArray.push(String(legacyCode));
             }
             const studentCodes = codesArray.filter(Boolean);
 
             const seenIds = getStoredArray("pabasa_seen_material_ids").map(id => String(id).trim());
-            const readings = getStoredValue("pabasa_class_readings", {});
+            const readings = getStoredValue("pabasa_section_readings", {});
             
             // Build a normalized lookup map
             const readingsMap = {};
-            Object.keys(readings).forEach(k => readingsMap[k.toUpperCase()] = readings[k]);
+            Object.keys(readings).forEach(k => readingsMap[String(k)] = readings[k]);
 
             let totalAvailable = 0;
             let completedCount = 0;
@@ -719,7 +719,7 @@ function initProfilePage() {
     }
 
     function updateDashboardClassStats() {
-        const readings = getStoredValue("pabasa_class_readings", {});
+        const readings = getStoredValue("pabasa_section_readings", {});
         
         // Normalize readings map for case-insensitive class code lookups
         const readingsMap = {};
@@ -1101,10 +1101,10 @@ function initProfilePage() {
             const k = event.key || "";
             // Trigger overview updates when any teacher classes key or related collections change
             if (
-                k === "pabasa_teacher_classes" ||
-                k.startsWith && typeof k.startsWith === 'function' && k.startsWith('pabasa_teacher_classes') ||
+                k === "pabasa_teacher_sections" ||
+                k.startsWith && typeof k.startsWith === 'function' && k.startsWith('pabasa_teacher_sections') ||
                 k === "pabasa_added_students" ||
-                k === "pabasa_class_readings" ||
+                k === "pabasa_section_readings" ||
                 k === "pabasa_materials" ||
                 k === "pabasa_teacher_overview_stats" || // This key is for overall stats, not individual reports
                 k === "pabasa_parent_notice_history" || // Listen for changes in report history
@@ -1116,9 +1116,9 @@ function initProfilePage() {
             // Student progress and dashboard stats react to these keys
             if (
                 k === "pabasa_seen_material_ids" ||
-                k === "pabasa_class_readings" ||
-                k === "pabasaStudentClassCodes" ||
-                k === "pabasaStudentClassCode" ||
+                k === "pabasa_section_readings" ||
+                k === "pabasaStudentSectionIds" ||
+                k === "pabasaStudentSectionId" ||
                 k === "pabasa_added_students" ||
                 k === "pabasa_total_stars" ||
                 k === "pabasa_assessments_completed" ||
@@ -1158,7 +1158,7 @@ function initProfilePage() {
         // Do a quick authoritative refresh from server so same-tab updates are instant
         try {
             const emailForCache = (window.PABASA_USER_EMAIL || localStorage.getItem('pabasaUserEmail') || '').trim();
-            const scopedClassesKey = emailForCache ? `pabasa_teacher_classes_${emailForCache}` : 'pabasa_teacher_classes';
+            const scopedClassesKey = emailForCache ? `pabasa_teacher_sections_${emailForCache}` : 'pabasa_teacher_sections';
 
             fetch('/dashboard/teacher/overview/', {
                 method: 'GET',

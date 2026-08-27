@@ -2230,13 +2230,13 @@
             // 1. Identify all joined classes
             let joinedCodes = [];
             try {
-                joinedCodes = JSON.parse(localStorage.getItem("pabasaStudentClassCodes") || "[]").map(c => c.toUpperCase());
-                const legacy = localStorage.getItem("pabasaStudentClassCode");
+                joinedCodes = JSON.parse(localStorage.getItem("pabasaStudentSectionIds") || "[]").map(String);
+                const legacy = localStorage.getItem("pabasaStudentSectionId");
                 if (legacy && !joinedCodes.includes(legacy.toUpperCase())) joinedCodes.push(legacy.toUpperCase());
             } catch(e) {}
 
             // 2. Fetch master data from storage
-            const readings = JSON.parse(localStorage.getItem("pabasa_class_readings") || "{}");
+            const readings = JSON.parse(localStorage.getItem("pabasa_section_readings") || "{}");
             const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
             const readingsMap = {};
             Object.keys(readings).forEach(key => { readingsMap[key.toUpperCase()] = readings[key]; });
@@ -2291,7 +2291,7 @@
 
         document.addEventListener('DOMContentLoaded', updateStudentProgress);
         window.addEventListener('storage', (e) => {
-            if (['pabasa_class_readings', 'pabasa_seen_material_ids', 'pabasaStudentClassCodes', 'pabasa_added_students'].includes(e.key)) updateStudentProgress();
+            if (['pabasa_section_readings', 'pabasa_seen_material_ids', 'pabasaStudentSectionIds', 'pabasa_added_students'].includes(e.key)) updateStudentProgress();
         });
     })();
 </script>

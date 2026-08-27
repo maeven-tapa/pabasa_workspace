@@ -45,12 +45,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // --- Student Materials View & NEW Badge Logic ---
     const urlParams = new URLSearchParams(window.location.search);
-    const classCode = urlParams.get('code');
     const sectionId = urlParams.get('section_id') || '';
-    if (!classCode) return;
+    const classCode = urlParams.get('code') || '';
+    if (!sectionId) return;
 
     function loadReadings() {
-        const readings = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}');
+        const readings = JSON.parse(localStorage.getItem('pabasa_section_readings') || '{}');
         
         // Normalize readings map for case-insensitive class code lookups
         const readingsMap = {};
@@ -58,7 +58,7 @@ document.addEventListener("DOMContentLoaded", function () {
             readingsMap[key.toUpperCase()] = readings[key];
         });
 
-        const classData = readingsMap[classCode.toUpperCase()];
+        const classData = readingsMap[String(sectionId)];
         if (!classData) return;
 
         const seenIds = JSON.parse(localStorage.getItem('pabasa_seen_material_ids') || '[]').map(id => String(id).trim());
@@ -128,8 +128,8 @@ document.addEventListener("DOMContentLoaded", function () {
         // Notify teacher that activity started
         if (viewMode === 'initial') {
             const studentName = window.PABASA_USER_NAME || "A student";
-            const teacherClasses = JSON.parse(localStorage.getItem('pabasa_teacher_classes') || '[]');
-            const cls = teacherClasses.find(c => c.code === classCode);
+            const teacherClasses = JSON.parse(localStorage.getItem('pabasa_student_joined_sections') || '[]');
+            const cls = teacherClasses.find(c => String(c.id || c.section_id) === String(sectionId));
             const teacherEmail = cls ? cls.teacherEmail : null;
 
             let notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
@@ -187,7 +187,7 @@ document.addEventListener("DOMContentLoaded", function () {
     window.addEventListener("pabasa:notifications-updated", loadReadings);
 
     window.addEventListener("storage", (e) => {
-        if (e.key === 'pabasa_seen_material_ids' || e.key === 'pabasa_class_readings') loadReadings();
+        if (e.key === 'pabasa_seen_material_ids' || e.key === 'pabasa_section_readings') loadReadings();
     });
 
     // REAL-TIME: Auto-refresh the list every 5 seconds to catch scheduled materials becoming live

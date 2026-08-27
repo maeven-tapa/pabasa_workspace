@@ -1256,16 +1256,16 @@
             localStorage.setItem(assignmentsKey, JSON.stringify(assignments));
         }
 
-        function getClassAssignmentIds(classCode, materialType) {
+        function getClassAssignmentIds(sectionId, materialType) {
             const assignments = getAssignments();
-            return assignments[classCode] && Array.isArray(assignments[classCode][materialType])
-                ? assignments[classCode][materialType]
+            return assignments[String(sectionId)] && Array.isArray(assignments[String(sectionId)][materialType])
+                ? assignments[String(sectionId)][materialType]
                 : [];
         }
 
         function getAssignedClassCount(material) {
             return getTeacherClasses().filter(classData => {
-                return getClassAssignmentIds(classData.code, material.type).includes(material.id);
+                return getClassAssignmentIds(classData.id || classData.section_id, material.type).includes(material.id);
             }).length;
         }
 
@@ -1280,12 +1280,12 @@
                     const email = (window.PABASA_USER_EMAIL || '').trim();
                     if (email) {
                         localStorage.setItem(
-                            `pabasa_teacher_classes_${email}`,
+                            `pabasa_teacher_sections_${email}`,
                             JSON.stringify(data.classes)
                         );
                     }
                     // Remove the legacy shared key so it can never leak
-                    localStorage.removeItem('pabasa_teacher_classes');
+                    localStorage.removeItem('pabasa_teacher_sections');
                 }
                 renderMaterials();
             })
@@ -1387,7 +1387,7 @@
             try {
                 const email = (window.PABASA_USER_EMAIL || '').trim();
                 if (!email) return [];
-                const raw = localStorage.getItem(`pabasa_teacher_classes_${email}`) || '[]';
+                const raw = localStorage.getItem(`pabasa_teacher_sections_${email}`) || '[]';
                 return JSON.parse(raw);
             } catch (e) {
                 return [];
@@ -1406,7 +1406,7 @@
                     <div class="materials-class-grid">
                         ${teacherClasses.map(classData => {
                             const assignedCount = visibleMaterials.filter(material => {
-                                return getClassAssignmentIds(classData.code, material.type).includes(material.id);
+                                return getClassAssignmentIds(classData.id || classData.section_id, material.type).includes(material.id);
                             }).length;
                             return `
                                 <article class="materials-class-card">
@@ -1531,18 +1531,19 @@
 
         function showAssignMaterial(material) {
             const teacherClasses = getTeacherClasses();
-            const assignedCodes = new Set(teacherClasses
-                .filter(classData => getClassAssignmentIds(classData.code, material.type).includes(material.id))
-                .map(classData => classData.code));
+            const assignedSectionIds = new Set(teacherClasses
+                .filter(classData => getClassAssignmentIds(classData.id || classData.section_id, material.type).includes(material.id))
+                .map(classData => String(classData.id || classData.section_id)));
 
             document.getElementById("assignMaterialId").value = material.id;
             document.getElementById("assignMaterialModalLabel").textContent = `Assign ${material.title}`;
             document.getElementById("assignMaterialMeta").textContent = `${typeLabels[material.type]} material - choose classes`;
             document.getElementById("assignmentClassList").innerHTML = teacherClasses.map((classData, index) => {
                 const code = classData.code || `READ-${index}`;
+                const sectionId = classData.id || classData.section_id;
                 return `
                     <label class="assignment-option" for="assignClass${index}">
-                        <input class="form-check-input" id="assignClass${index}" type="checkbox" value="${escapeHtml(code)}" ${assignedCodes.has(code) ? "checked" : ""}>
+                        <input class="form-check-input" id="assignClass${index}" type="checkbox" value="${escapeHtml(sectionId)}" data-section-id="${escapeHtml(sectionId)}" data-class-code="${escapeHtml(code)}" ${assignedSectionIds.has(String(sectionId)) ? "checked" : ""}>
                         <span>
                             <strong>${escapeHtml(classData.name || "Reading Class")}</strong>
                             <span class="small text-secondary">${escapeHtml(code)} &bull; ${escapeHtml(classData.students || "0")} students</span>
@@ -1757,25 +1758,26 @@
             const material = findMaterial(document.getElementById("assignMaterialId").value);
             if (!material) return;
 
-            const selectedCodes = new Set(Array.from(document.querySelectorAll("#assignmentClassList input:checked")).map(input => input.value));
+            const selectedSectionIds = new Set(Array.from(document.querySelectorAll("#assignmentClassList input:checked")).map(input => input.value));
             const assignments = getAssignments();
 
             getTeacherClasses().forEach(classData => {
-                const classCode = classData.code || "READ-000";
-                assignments[classCode] = assignments[classCode] || { word: [], sentence: [], paragraph: [] };
-                assignments[classCode][material.type] = Array.isArray(assignments[classCode][material.type])
-                    ? assignments[classCode][material.type].filter(id => id !== material.id)
+                const sectionId = String(classData.id || classData.section_id || '');
+                if (!sectionId) return;
+                assignments[sectionId] = assignments[sectionId] || { word: [], sentence: [], paragraph: [] };
+                assignments[sectionId][material.type] = Array.isArray(assignments[sectionId][material.type])
+                    ? assignments[sectionId][material.type].filter(id => id !== material.id)
                     : [];
 
-                if (selectedCodes.has(classCode)) {
-                    assignments[classCode][material.type].push(material.id);
+                if (selectedSectionIds.has(sectionId)) {
+                    assignments[sectionId][material.type].push(material.id);
                 }
             });
 
             saveAssignments(assignments);
             assignModal.hide();
             renderMaterials();
-            showStatusPopup("Assignments Saved", `"${material.title}" was assigned to ${selectedCodes.size} class${selectedCodes.size === 1 ? "" : "es"}.`);
+            showStatusPopup("Assignments Saved", `"${material.title}" was assigned to ${selectedSectionIds.size} class${selectedSectionIds.size === 1 ? "" : "es"}.`);
         });
 
         document.getElementById("editMaterialForm").addEventListener("submit", event => {
@@ -1838,11 +1840,11 @@
 
         (function purgeForeignClassKeys() {
             const me = (window.PABASA_USER_EMAIL || '').trim();
-            localStorage.removeItem('pabasa_teacher_classes');
+            localStorage.removeItem('pabasa_teacher_sections');
             Object.keys(localStorage).forEach(function(k) {
                 if (
-                    k.startsWith('pabasa_teacher_classes_') &&
-                    k !== `pabasa_teacher_classes_${me}`
+                    k.startsWith('pabasa_teacher_sections_') &&
+                    k !== `pabasa_teacher_sections_${me}`
                 ) {
                     localStorage.removeItem(k);
                 }

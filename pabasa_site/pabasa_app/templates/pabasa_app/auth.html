@@ -309,10 +309,10 @@
                     localStorage.setItem("pabasaCurrentUserId", data.custom_id);
 
                     // Clear old teacher class cache before switching accounts
-                    localStorage.removeItem("pabasa_teacher_classes");
+                    localStorage.removeItem("pabasa_teacher_sections");
 
                     if (data.email) {
-                        localStorage.removeItem(`pabasa_teacher_classes_${data.email}`);
+                        localStorage.removeItem(`pabasa_teacher_sections_${data.email}`);
                     }
 
                     // Save current user email

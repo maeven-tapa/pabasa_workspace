@@ -4345,6 +4345,8 @@ def _dashboard_context(request, nav_role=None, extra=None):
         perf_mark('joined_classes_start')
         for cls in student_sections:
             joined_classes.append({
+                'id': cls.id,
+                'section_id': cls.id,
                 'code': cls.class_code,
                 'name': cls.class_name,
                 'student_count': _section_student_count(cls),
@@ -4358,6 +4360,8 @@ def _dashboard_context(request, nav_role=None, extra=None):
         classes = Section.objects.filter(teacher=user, is_active=True).order_by('class_name')
         for cls in classes:
             joined_classes.append({
+                'id': cls.id,
+                'section_id': cls.id,
                 'code': cls.class_code,
                 'name': cls.class_name,
                 'student_count': _section_student_count(cls),
@@ -15499,6 +15503,8 @@ def get_student_joined_classes(request):
             # Check if student is actively enrolled in this section
             if section.has_student(student_user, active_only=True):
                 joined_classes.append({
+                    'id': section.id,
+                    'section_id': section.id,
                     'code': section.class_code,
                     'name': section.class_name,
                     'subject': section.subject or '',
