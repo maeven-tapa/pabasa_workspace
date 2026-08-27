@@ -839,9 +839,12 @@
             } catch (error) { return {}; }
         };
 
-        const fetchMaterialsFromDatabase = async (classCode) => {
+        const fetchMaterialsFromDatabase = async (sectionId, classCode) => {
             try {
-                const response = await fetch(`/api/class/materials/?class_code=${encodeURIComponent(classCode)}`);
+                const selector = sectionId
+                    ? `section_id=${encodeURIComponent(sectionId)}`
+                    : `class_code=${encodeURIComponent(classCode)}`;
+                const response = await fetch(`/api/class/materials/?${selector}`);
                 const data = await response.json();
                 if (data.success) {
                     const officialKeys = [];
@@ -900,15 +903,16 @@
 
             const getAssessmentMaterials = async () => {
             const joinedCodes = getJoinedCodes();
-            
-            // Autoritative sync: Fetch materials from DB for each joined class
-            for (const code of joinedCodes) {
-                await fetchMaterialsFromDatabase(code);
-            }
-
             const teacherClasses = getStoredArray(teacherClassesKey);
             const studentClasses = getStoredArray(studentClassesKey);
             const allKnownClasses = [...teacherClasses, ...studentClasses];
+            
+            // Autoritative sync: Fetch materials from DB for each joined class
+            for (const code of joinedCodes) {
+                const knownClass = allKnownClasses.find((item) => String(item.code || "").toUpperCase() === String(code).toUpperCase());
+                await fetchMaterialsFromDatabase(knownClass?.id || knownClass?.section_id || '', code);
+            }
+
             const metadataMap = getStoredObject("pabasa_class_metadata");
 
             const readingsByClass = getStoredObject(readingsStorageKey);
@@ -1240,7 +1244,8 @@
                     const officialLaunchPayload = buildOfficialAssessmentData(m);
                     const officialLaunchPayloadJson = JSON.stringify(officialLaunchPayload);
                     const isLocked = !Boolean(m.student_access);
-                    const generatedStartUrl = isLocked ? '#' : `${urlMap[m.category || m.item_type || 'word']}?test=${encodeURIComponent(m.title)}&code=${encodeURIComponent(m.code || classData.code)}&id=${encodeURIComponent(m.id)}${officialAssessmentId ? `&official_assessment_id=${encodeURIComponent(officialAssessmentId)}` : ''}${officialLaunchPayloadJson ? `&official_assessment_data=${encodeURIComponent(officialLaunchPayloadJson)}` : ''}&content=${encodeURIComponent(m.content || '')}&item_type=${encodeURIComponent(m.item_type || m.category || 'word')}&language=${encodeURIComponent(m.language || '')}&crla_fresh=1`;
+                    const sectionId = m.section_id || classData.id || classData.section_id || '';
+                    const generatedStartUrl = isLocked ? '#' : `${urlMap[m.category || m.item_type || 'word']}?test=${encodeURIComponent(m.title)}&section_id=${encodeURIComponent(sectionId)}&code=${encodeURIComponent(m.code || classData.code)}&id=${encodeURIComponent(m.id)}${officialAssessmentId ? `&official_assessment_id=${encodeURIComponent(officialAssessmentId)}` : ''}${officialLaunchPayloadJson ? `&official_assessment_data=${encodeURIComponent(officialLaunchPayloadJson)}` : ''}&content=${encodeURIComponent(m.content || '')}&item_type=${encodeURIComponent(m.item_type || m.category || 'word')}&language=${encodeURIComponent(m.language || '')}&crla_fresh=1`;
                     return `
                         <div class="assessment-card-shell ${isLocked ? 'is-locked' : ''}" data-official-assessment="true">
                             <a href="${generatedStartUrl}" class="assessment-type-link type-${m.category || m.item_type || 'word'} ${isLocked ? 'is-disabled is-locked' : ''}" data-class-code="${escapeHtml(classData.code)}" ${isLocked ? 'tabindex="-1" aria-disabled="true" onclick="return false;"' : ''}>
@@ -1323,13 +1328,14 @@
                                 .some(value => ['syllable_blending', 'blend_the_syllables'].includes(String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')));
                             const isClapCountSyllables = [templateActivityName, m.content_json?.template_title, m.content_json?.activity_type]
                                 .some(value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === 'clap_count_syllables');
+                            const sectionId = m.section_id || classData.id || classData.section_id || '';
                             const generatedStartUrl = isLocked ? '#' : (isClapCountSyllables
-                                ? `${clapCountSyllablesUrl}?id=${encodeURIComponent(m.id)}`
+                                ? `${clapCountSyllablesUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
                                 : isSyllableBlending
-                                ? `${syllableBlendingUrl}?id=${encodeURIComponent(m.id)}`
+                                ? `${syllableBlendingUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
                                 : isPictureWordMatching
-                                ? `${pictureWordMatchingUrl}?id=${encodeURIComponent(m.id)}`
-                                : `${urlMap[m.category]}?test=${encodeURIComponent(m.title)}&code=${encodeURIComponent(m.code || classData.code)}&id=${encodeURIComponent(m.id)}&content=${encodeURIComponent(m.content || '')}&item_type=${encodeURIComponent(m.item_type || m.category || 'word')}&language=${encodeURIComponent(m.language || '')}`);
+                                ? `${pictureWordMatchingUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
+                                : `${urlMap[m.category]}?test=${encodeURIComponent(m.title)}&section_id=${encodeURIComponent(sectionId)}&code=${encodeURIComponent(m.code || classData.code)}&id=${encodeURIComponent(m.id)}&content=${encodeURIComponent(m.content || '')}&item_type=${encodeURIComponent(m.item_type || m.category || 'word')}&language=${encodeURIComponent(m.language || '')}`);
                             console.log("PABASA_OFFICIAL_TRACE", {
                                 stage: "assessment_card_link",
                                 selected_material_id: mId || "",

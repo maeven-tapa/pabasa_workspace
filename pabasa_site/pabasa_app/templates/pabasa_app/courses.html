@@ -16535,15 +16535,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         contentPayload.phraseReading = activeTemplateActivity.phraseReading;
                     }
                     const materialClassContext = resolveMaterialClassContext();
-                    const saveClassCode = materialClassContext.classCode;
                     const payload = {
                         title: values.title,
                         reading_type: getTemplateReadingType(activeTemplateActivity?.templateTitle),
                         content: JSON.stringify(contentPayload),
                         status: 'published',
                         usage_type: 'assessment',
-                        class_id: materialClassContext.classId || null,
-                        class_code: saveClassCode,
+                        section_id: materialClassContext.classId || null,
                         scheduled_at: null,
                         assigned_week: values.weeks?.[0] || null,
                         assigned_weeks: values.weeks || [],
@@ -16624,7 +16622,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                     'X-CSRFToken': attachToken,
                                     'X-Requested-With': 'XMLHttpRequest'
                                 },
-                                body: JSON.stringify({ course_id: attachCourseId, material_id: Number(createdMaterialId) })
+                                body: JSON.stringify({
+                                    course_id: attachCourseId,
+                                    section_id: materialClassContext.classId || null,
+                                    material_id: Number(createdMaterialId)
+                                })
                             });
                             let attachData = {};
                             try { attachData = await attachResp.json(); } catch (e) { attachData = {}; }
@@ -19070,7 +19072,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                                 'X-CSRFToken': csrfToken,
                                                 'X-Requested-With': 'XMLHttpRequest'
                                             },
-                                            body: JSON.stringify({ material_id: editingMaterialId, title: title, reading_type: readingType, content: content, status: status, usage_type: usageType, class_code: currentClassCode, scheduled_at: schedule || null, assigned_week: assignedWeek, language: language, randomize_order: randomizeOrder, assessment_kind: assessmentKind, source_type: sourceType })
+                                            body: JSON.stringify({ material_id: editingMaterialId, title: title, reading_type: readingType, content: content, status: status, usage_type: usageType, section_id: getTeacherSectionId(currentClassCode) || null, scheduled_at: schedule || null, assigned_week: assignedWeek, language: language, randomize_order: randomizeOrder, assessment_kind: assessmentKind, source_type: sourceType })
                                         };
                                         apiResponse = await fetch('/dashboard/teacher/update-material/', opts);
                                         if (apiResponse.status === 403) {
@@ -19088,8 +19090,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                     // Resolve the exact class-backed card that opened this modal. Never
                                     // fall back to the first class, which can persist material to the wrong section.
                                     const materialClassContext = resolveMaterialClassContext();
-                                    const saveClassCode = materialClassContext.classCode || null;
-                                    
                                     const postOpts = {
                                         method: 'POST',
                                         credentials: 'same-origin',
@@ -19104,8 +19104,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                             content: content,
                                             status: status,
                                             usage_type: usageType,
-                                            class_id: materialClassContext.classId || null,
-                                            class_code: saveClassCode,
+                                            section_id: materialClassContext.classId || null,
                                             scheduled_at: schedule || null,
                                             assigned_week: assignedWeek,
                                             language: language,
@@ -19330,6 +19329,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 // Capture values now — the modal reset clears `window.courseAttachTarget` synchronously,
                                 // so stash the course id, CSRF token and created ids for the deferred task.
                                 const _attachCourseId = String(window.courseAttachTarget);
+                                const _attachSectionId = resolveMaterialClassContext().classId || null;
                                 const _attachCsrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
                                 const _createdIdsSnapshot = Array.isArray(createdIds) ? createdIds.slice() : [];
 
@@ -19341,7 +19341,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                                 method: 'POST',
                                                 credentials: 'same-origin',
                                                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': _attachCsrf },
-                                                body: JSON.stringify({ course_id: _attachCourseId, material_id: Number(mid) })
+                                                body: JSON.stringify({ course_id: _attachCourseId, section_id: _attachSectionId, material_id: Number(mid) })
                                             });
                                             let attachData = {};
                                             try { attachData = await attachResp.json(); } catch (e) { /* ignore */ }

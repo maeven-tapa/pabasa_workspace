@@ -46,6 +46,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // --- Student Materials View & NEW Badge Logic ---
     const urlParams = new URLSearchParams(window.location.search);
     const classCode = urlParams.get('code');
+    const sectionId = urlParams.get('section_id') || '';
     if (!classCode) return;
 
     function loadReadings() {
@@ -148,7 +149,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Determine correct base URL based on designation
         const baseUrl = (usage === 'assessment' || usage === 'both') ? '/dashboard/assessment' : '/dashboard/practice';
-        window.location.href = `${baseUrl}/${type}/?code=${classCode}&test=${encodeURIComponent(selectedMaterialData.title)}&id=${selectedMaterialData.materialId}&viewMode=${viewMode}`;
+        window.location.href = `${baseUrl}/${type}/?section_id=${encodeURIComponent(sectionId)}&code=${encodeURIComponent(classCode)}&test=${encodeURIComponent(selectedMaterialData.title)}&id=${selectedMaterialData.materialId}&viewMode=${viewMode}`;
     }
 
     // --- Click Handler for Marking as Read & Navigation ---

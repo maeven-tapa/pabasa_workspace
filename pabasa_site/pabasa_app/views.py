@@ -1161,20 +1161,40 @@ def _notify_principal_performance_events(student_user, assessment=None, material
     return []
 
 
-def _resolve_assessment_class_name(assessment=None, material=None, class_code=None):
+def _resolve_assessment_class_name(assessment=None, material=None, section_id=None, class_code=None, student_user=None):
     """Resolve a human-readable class name for assessment completion alerts."""
-    if material and material.section:
-        return material.section.class_name
-    if assessment and assessment.section:
-        return assessment.section.class_name
-    if class_code:
-        section = Section.objects.filter(class_code__iexact=str(class_code).strip(), is_active=True).first()
+    authorized_sections = Section.objects.filter(is_active=True)
+    if student_user and getattr(student_user, 'role', None) == 'student':
+        authorized_sections = authorized_sections.filter(
+            enrollments__student=student_user,
+            enrollments__is_active=True,
+        )
+    elif student_user and getattr(student_user, 'role', None) == 'teacher':
+        authorized_sections = authorized_sections.filter(teacher=student_user)
+    elif student_user:
+        authorized_sections = Section.objects.none()
+    if section_id:
+        try:
+            section = authorized_sections.filter(pk=int(section_id)).first()
+        except (TypeError, ValueError):
+            section = None
         if section:
             return section.class_name
+    if material and material.section and authorized_sections.filter(pk=material.section_id).exists():
+        return material.section.class_name
+    if assessment and assessment.section and authorized_sections.filter(pk=assessment.section_id).exists():
+        return assessment.section.class_name
     if material and hasattr(material, 'assigned_sections'):
-        assigned = material.assigned_sections.filter(is_active=True).first()
+        assigned = material.assigned_sections.filter(
+            pk__in=authorized_sections.values('pk'),
+        ).first()
         if assigned:
             return assigned.class_name
+    if not section_id and class_code:
+        # Transitional compatibility only; relational membership remains authoritative.
+        section = authorized_sections.filter(class_code__iexact=str(class_code).strip()).first()
+        if section:
+            return section.class_name
     return None
 
 def _teachers_for_assessment_completion(assessment=None, material=None, student_user=None):
@@ -8977,8 +8997,16 @@ def assessment(request):
         parsed_items = [str(item).strip() for item in items if str(item).strip()]
         content_text = '\n'.join(parsed_items) if parsed_items else str(getattr(material, 'content_text', '') or '').strip()
         item_type = str(getattr(material, 'item_type', '') or 'word').strip().lower() or 'word'
+        launch_section = Section.objects.filter(
+            is_active=True,
+            enrollments__student=user,
+            enrollments__is_active=True,
+        ).filter(
+            Q(pk=material.section_id) | Q(assigned_materials=material)
+        ).first()
         launch_url = (
             f"{reverse('reading_word_page')}?test={quote(material.title or 'Reading Assessment')}"
+            f"&section_id={getattr(launch_section, 'id', '') or ''}"
             f"&code={quote(getattr(material, 'code', '') or 'ASSESS')}"
             f"&id={material.id}"
             f"&content={quote(content_text)}"
@@ -8987,6 +9015,7 @@ def assessment(request):
         )
         student_assessment_materials.append({
             'id': material.id,
+            'section_id': getattr(launch_section, 'id', None),
             'title': material.title or 'Reading Assessment',
             'code': getattr(material, 'code', '') or 'ASSESS',
             'item_type': item_type,
@@ -10566,6 +10595,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             status=403,
         )
 
+    section_id = data.get('section_id')
     class_code = data.get('class_code')
     assessment_type_hint = data.get('assessment_type') or data.get('type') or data.get('mode') or ''
     already_completed = False
@@ -11050,7 +11080,13 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             )
 
     student_name = f"{student_user.first_name} {student_user.last_name}".strip() or student_user.custom_id
-    class_name = _resolve_assessment_class_name(assessment=assessment, material=material, class_code=class_code)
+    class_name = _resolve_assessment_class_name(
+        assessment=assessment,
+        material=material,
+        section_id=section_id,
+        class_code=class_code,
+        student_user=student_user,
+    )
 
     email_subject = None
     if is_retake:
@@ -11564,6 +11600,7 @@ def _build_assist_assessment_url(material, student_user, course, teacher_user, s
     params = {
         'id': str(material.id),
         'test': (material.title or material.prompt_text or 'Assessment').strip() or 'Assessment',
+        'section_id': section.id if section else '',
         'code': section.class_code if section else (material.code or (course.code if course else 'ASSIST')),
         'content': content,
         'item_type': item_type or 'word',
@@ -14468,6 +14505,20 @@ def _teacher_can_access_material(teacher_user, material):
     return False
 
 
+def _material_school_ids(material):
+    """Return explicit schools currently associated with a material."""
+    if not material:
+        return set()
+    school_ids = set()
+    if getattr(material, 'teacher_id', None) and getattr(material.teacher, 'school_record_id', None):
+        school_ids.add(material.teacher.school_record_id)
+    if getattr(material, 'section_id', None) and getattr(material.section, 'school_id', None):
+        school_ids.add(material.section.school_id)
+    school_ids.update(material.assigned_sections.exclude(school_id=None).values_list('school_id', flat=True))
+    school_ids.update(material.courses.exclude(school_id=None).values_list('school_id', flat=True))
+    return {school_id for school_id in school_ids if school_id is not None}
+
+
 def _teacher_can_export_directory_crla(teacher_user, assessment):
     """Authorize a system CRLA export through the teacher's student roster."""
     if not teacher_user or not assessment or getattr(teacher_user, 'role', None) not in {'teacher', 'admin'}:
@@ -14845,7 +14896,9 @@ def create_course(request):
         data = json.loads(request.body)
         title = (data.get('title') or '').strip()
         description = (data.get('description') or '').strip()
-        section_ids = data.get('sections') or []
+        section_ids = data.get('section_ids')
+        if section_ids is None:
+            section_ids = data.get('sections') or []  # Transitional payload key.
 
         if not title:
             return JsonResponse({'success': False, 'error': 'Title is required'}, status=400)
@@ -14873,13 +14926,18 @@ def create_course(request):
             send_email=False,
         )
         if section_ids:
-            # Accept either numeric ids or class_code strings
+            authorized_sections = Section.objects.filter(
+                teacher=teacher_user,
+                school=teacher_user.school_record,
+                is_active=True,
+            )
             for sid in section_ids:
                 try:
                     if isinstance(sid, int) or str(sid).isdigit():
-                        sec = Section.objects.filter(id=int(sid), teacher=teacher_user, school=teacher_user.school_record, is_active=True).first()
+                        sec = authorized_sections.filter(id=int(sid)).first()
                     else:
-                        sec = Section.objects.filter(class_code=str(sid).strip(), teacher=teacher_user, school=teacher_user.school_record, is_active=True).first()
+                        # Transitional compatibility for callers not yet migrated.
+                        sec = authorized_sections.filter(class_code__iexact=str(sid).strip()).first()
                     if sec:
                         course.sections.add(sec)
                 except Exception:
@@ -15008,6 +15066,7 @@ def add_material_to_course(request):
     try:
         data = json.loads(request.body)
         course_id = data.get('course_id')
+        section_id = data.get('section_id')
         material_id = data.get('material_id')
 
         user_id = request.session.get('user_id')
@@ -15018,19 +15077,37 @@ def add_material_to_course(request):
         course_id_text = str(course_id or '')
         class_section = None
         course = None
+        if section_id:
+            try:
+                class_section = Section.objects.filter(
+                    id=int(section_id),
+                    teacher=teacher_user,
+                    is_active=True,
+                ).first()
+            except (TypeError, ValueError):
+                class_section = None
+            if not class_section:
+                return JsonResponse({'success': False, 'error': 'Section not found or not owned by you'}, status=404)
         if course_id_text.startswith('section-'):
-            class_section = Section.objects.filter(
-                id=course_id_text.removeprefix('section-'),
-                teacher=teacher_user, is_active=True,
-            ).first()
+            if class_section is None:
+                class_section = Section.objects.filter(
+                    id=course_id_text.removeprefix('section-'),
+                    teacher=teacher_user, is_active=True,
+                ).first()
         else:
             course = _teacher_course_scope(teacher_user, include_legacy=True).filter(id=course_id, teacher=teacher_user).first()
         if not course and not class_section:
             return JsonResponse({'success': False, 'error': 'Course not found or not owned by you'}, status=404)
+        if course and class_section and not course.sections.filter(id=class_section.id).exists():
+            return JsonResponse({'success': False, 'error': 'Section is not assigned to this course'}, status=403)
 
         material = Material.objects.filter(id=material_id).first()
         if not material:
             return JsonResponse({'success': False, 'error': 'Material not found'}, status=404)
+
+        material_school_ids = _material_school_ids(material)
+        if material_school_ids and not material.is_system_owned and teacher_user.school_record_id not in material_school_ids:
+            return JsonResponse({'success': False, 'error': 'Cross-school material assignment is not allowed'}, status=403)
 
         # Shared-library records are intentionally reusable. Personal and
         # template records must already belong to this teacher; being unassigned
@@ -15040,7 +15117,10 @@ def add_material_to_course(request):
 
         if course:
             course.materials.add(material)
-        course_section = class_section or course.sections.filter(is_active=True).first()
+        course_section = class_section or course.sections.filter(
+            teacher=teacher_user,
+            is_active=True,
+        ).first()
         if course_section and material.section_id != course_section.id:
             material.section = course_section
             update_fields = ['section', 'updated_at']
@@ -15657,6 +15737,7 @@ def get_class_materials(request):
                 item = {
                     'id': f"material-{m.id}",
                     'raw_id': m.id,
+                    'section_id': section.id,
                     'action_id': f"material-{m.id}",
                     'record_kind': 'material',
                     'system_assessment_key': getattr(m, 'system_assessment_key', '') or '',
@@ -15725,6 +15806,7 @@ def get_class_materials(request):
 
                 item = {
                     'id': f"assessment-{a.id}",
+                    'section_id': section.id,
                     'code': a.code,
                     'title': title_value,
                     'system_assessment_key': '',
@@ -15763,6 +15845,7 @@ def get_class_materials(request):
 
                 item = {
                     'id': f"practice-{p.id}",
+                    'section_id': section.id,
                     'code': p.code,
                     'title': title_value,
                     'system_assessment_key': '',
@@ -15797,6 +15880,7 @@ def get_class_materials(request):
         
         return JsonResponse({
             'success': True,
+            'section_id': section.id,
             'materials': materials,
             'official_assessments': official_assessments,
             'all_materials': all_materials_flat,
@@ -16891,17 +16975,25 @@ def _shared_material_import_is_unchanged(source_material, title, content, readin
     )
 
 
-def _find_existing_shared_material(title, content, item_type, language='', source_material_id=None):
+def _find_existing_shared_material(title, content, item_type, language='', source_material_id=None, teacher_user=None):
     qs = Material.objects.filter(source_type='shared', is_active=True)
     if source_material_id:
         _, parsed_id = _parse_prefixed_id(source_material_id)
         if parsed_id:
             material = qs.filter(id=parsed_id).first()
-            if material:
+            if material and (
+                not teacher_user
+                or material.is_system_owned
+                or not _material_school_ids(material)
+                or teacher_user.school_record_id in _material_school_ids(material)
+            ):
                 return material
 
     target = _shared_material_fingerprint(title, content, item_type, language)
     for material in qs.filter(title__iexact=(title or '').strip(), item_type=item_type).order_by('created_at', 'id'):
+        material_school_ids = _material_school_ids(material)
+        if teacher_user and material_school_ids and not material.is_system_owned and teacher_user.school_record_id not in material_school_ids:
+            continue
         material_language = ''
         if isinstance(material.content_json, dict):
             material_language = material.content_json.get('language') or ''
@@ -17092,7 +17184,7 @@ def _queue_material_creation_followups(material, section, teacher_user, status, 
 def add_reading_material(request):
     """
     Creates a new reading material (Assessment) linked to a class.
-    Expects JSON: { title, reading_type, content, status, class_code, scheduled_at? }
+    Expects JSON: { title, reading_type, content, status, section_id, scheduled_at? }
     """
     perf_start = time.perf_counter()
     try:
@@ -17103,7 +17195,7 @@ def add_reading_material(request):
         requested_usage_type = (data.get('usage_type') or 'assessment').strip()        # practice | assessment | both
         requested_source_type = (data.get('source_type') or data.get('origin') or 'shared').strip().lower()
         source_type = requested_source_type if requested_source_type in ('personal', 'shared', 'template') else 'shared'
-        class_id_raw = data.get('class_id') or data.get('section_id')
+        section_id_raw = data.get('section_id') or data.get('class_id')
         class_code   = (data.get('class_code') or '').strip()
         requested_assessment_kind = str(data.get('assessment_kind') or 'regular').strip().lower()
         assessment_kind = requested_assessment_kind if requested_assessment_kind in {'regular', 'crla'} else 'regular'
@@ -17243,8 +17335,8 @@ def add_reading_material(request):
             return JsonResponse({'success': False, 'error': 'Teacher not found.'}, status=404)
 
         section = None
-        if class_id_raw:
-            _, class_id = _parse_prefixed_id(class_id_raw)
+        if section_id_raw:
+            _, class_id = _parse_prefixed_id(section_id_raw)
             section = Section.objects.filter(
                 id=class_id,
                 teacher=teacher_user,
@@ -17252,12 +17344,11 @@ def add_reading_material(request):
             ).first() if class_id else None
             if not section:
                 return JsonResponse({'success': False, 'error': 'Class not found or does not belong to you.'}, status=404)
-            if class_code and str(section.class_code).strip().casefold() != class_code.casefold():
-                return JsonResponse({'success': False, 'error': 'The selected class identity does not match its class code.'}, status=400)
             class_code = section.class_code
         elif class_code:
+            # Transitional compatibility for callers not yet migrated.
             section = Section.objects.filter(
-                class_code=class_code,
+                class_code__iexact=class_code,
                 teacher=teacher_user,
                 is_active=True
             ).first()
@@ -17302,6 +17393,9 @@ def add_reading_material(request):
                     _, parsed_id = _parse_prefixed_id(source_material_id)
                     if parsed_id:
                         source_material = Material.objects.filter(id=parsed_id, source_type='shared', is_active=True).first()
+                        source_school_ids = _material_school_ids(source_material)
+                        if source_material and source_school_ids and not source_material.is_system_owned and teacher_user.school_record_id not in source_school_ids:
+                            return JsonResponse({'success': False, 'error': 'Cross-school material sharing is not allowed.'}, status=403)
 
                 if source_material:
                     needs_duplicate = not _shared_material_import_is_unchanged(
@@ -17323,6 +17417,7 @@ def add_reading_material(request):
                         reading_type,
                         language,
                         source_material_id=source_material_id,
+                        teacher_user=teacher_user,
                     )
             if existing_shared:
                 existing_owner_id = existing_shared.teacher_id or getattr(getattr(existing_shared, 'section', None), 'teacher_id', None)

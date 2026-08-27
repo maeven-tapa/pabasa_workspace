@@ -655,7 +655,10 @@ var getStudentClassData = window.getStudentClassData = function() {
                             timestamp: Math.round(materialFetchStartedAt * 100) / 100,
                         });
                         try {
-                            const materialResponse = await fetch(`/api/class/materials/?class_code=${encodeURIComponent(cls.code)}`);
+                            const materialSelector = cls.id || cls.section_id
+                                ? `section_id=${encodeURIComponent(cls.id || cls.section_id)}`
+                                : `class_code=${encodeURIComponent(cls.code)}`;
+                            const materialResponse = await fetch(`/api/class/materials/?${materialSelector}`);
                             const responseDoneAt = performance.now();
                             let materialJsonStartedAt = performance.now();
                             const materialData = await materialResponse.json();

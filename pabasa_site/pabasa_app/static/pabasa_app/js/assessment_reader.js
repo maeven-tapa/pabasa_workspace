@@ -94,6 +94,7 @@
         }
         const testTitle = (officialAssessmentData && officialAssessmentData.official_title) || customMaterialData?.title || urlParams.get("test") || "Assessment";
         const testCode = (officialAssessmentData && officialAssessmentData.official_code) || customMaterialData?.code || urlParams.get("code") || "TST-000";
+        const sectionId = customMaterialData?.section_id || urlParams.get("section_id") || "";
         const materialId = (
             (officialAssessmentData && (officialAssessmentData.id || officialAssessmentData.material_id)) ||
             officialAssessmentId ||
@@ -3222,7 +3223,7 @@
                 const payload = {
                     material_id: materialId,
                     activity_type: 'assessment',
-                    class_code: testCode,
+                    section_id: sectionId || null,
                     assessment_type: mode,
                     official_assessment_id: officialAssessmentId || "",
                     official_assessment_data: officialAssessmentData || null,
@@ -3276,6 +3277,7 @@
                         needs_manual_review: completionMetrics.needs_manual_review ?? false,
                     },
                 };
+                if (!sectionId && testCode) payload.class_code = testCode;
                 if (isRetakeMode) {
                     payload.is_retake = true;
                     const retakeCounts = JSON.parse(localStorage.getItem('pabasa_retake_counts') || '{}');
@@ -3563,7 +3565,7 @@
                     assessment_type: mode,
                     material_id: materialId,
                     activity_type: 'assessment',
-                    class_code: testCode,
+                    section_id: sectionId || null,
                     correct_words: completionMetrics.correct_words ?? completionMetrics.word_count ?? 0,
                     incorrect_words: completionMetrics.incorrect_words ?? 0,
                     skipped_words: completionMetrics.skipped_words ?? 0,
@@ -3610,6 +3612,7 @@
                         needs_manual_review: completionMetrics.needs_manual_review ?? false,
                     },
                 };
+                if (!sectionId && testCode) completionPayload.class_code = testCode;
                 if (isRetakeMode && materialId) {
                     const retakeCounts = JSON.parse(localStorage.getItem('pabasa_retake_counts') || '{}');
                     completionPayload.attempt_number = retakeCounts[String(materialId).trim()] || 1;

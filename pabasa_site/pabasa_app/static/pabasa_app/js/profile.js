@@ -777,7 +777,11 @@ function initProfilePage() {
             // Update View Details link to point to the real student course view
             const viewBtn = card.querySelector(".view-details-btn") || card.querySelector(".view-class-btn") || card.querySelector("a.btn-primary");
             if (viewBtn) {
-                viewBtn.setAttribute("href", `/dashboard/courses/student-view/?code=${code}`);
+                const joinedClasses = getStoredArray("pabasa_student_joined_classes");
+                const joinedClass = joinedClasses.find(item => String(item.code || '').toUpperCase() === code);
+                const sectionId = joinedClass?.id || joinedClass?.section_id || '';
+                const sectionQuery = sectionId ? `section_id=${encodeURIComponent(sectionId)}&` : '';
+                viewBtn.setAttribute("href", `/dashboard/courses/student-view/?${sectionQuery}code=${encodeURIComponent(code)}`);
             }
         });
     }
