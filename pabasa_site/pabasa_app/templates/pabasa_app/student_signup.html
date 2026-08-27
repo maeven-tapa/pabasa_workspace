@@ -333,6 +333,21 @@
         margin-bottom: 0.65rem;
     }
 
+    .privacy-notice-scroll {
+        height: min(20rem, 52vh);
+        overflow-y: auto;
+        margin: 0.9rem 0;
+        padding: 0.9rem 1rem;
+        border: 1px solid rgba(16, 70, 110, 0.2);
+        border-radius: 0.85rem;
+        background: rgba(255, 255, 255, 0.62);
+        scrollbar-gutter: stable;
+    }
+
+    .privacy-step-document .privacy-notice-scroll .privacy-link-row {
+        margin-bottom: 0;
+    }
+
     .privacy-step-document .privacy-link-row {
         display: flex;
         flex-wrap: wrap;
@@ -646,39 +661,41 @@
                                 <h2>Privacy Notice</h2>
                                 <p class="text-muted">Please review the privacy notice below before creating your account.</p>
 
-                                <h3>1. Data We Collect</h3>
-                                <ul>
+                                <div class="privacy-notice-scroll" tabindex="0" role="region" aria-label="Privacy notice details">
+                                    <h3>1. Data We Collect</h3>
+                                    <ul>
                                     <li><strong>Full Name</strong> — Displayed on your profile and used in reading assessment reports and account identification.</li>
                                     <li><strong>Email Address</strong> — Used for account registration, login, verification, password recovery, and important account notifications.</li>
                                     <li><strong>Password</strong> — Securely hashed before storage and never stored or displayed in plain text.</li>
                                     <li><strong>Contact Number</strong> — Used for account verification and important account-related notifications, when applicable.</li>
                                     <li><strong>School Information</strong> — Includes your school name and other relevant institutional details to associate your account with your educational institution and manage access within the platform.</li>
                                     <li><strong>Reading Assessment Records</strong> — Includes reading assessment results, progress, and generated reports to monitor learning performance and provide educational insights.</li>
-                                </ul>
+                                    </ul>
 
-                                <h3>2. How We Use It</h3>
-                                <p>We use this information to create and secure your account, personalize your learning experience, and contact you about your account when needed. We do not sell your personal data to third parties.</p>
+                                    <h3>2. How We Use It</h3>
+                                    <p>We use this information to create and secure your account, personalize your learning experience, and contact you about your account when needed. We do not sell your personal data to third parties.</p>
 
-                                <h3>3. Data Sharing</h3>
-                                <p>We do not use your information for advertising, and we share it only when necessary.</p>
-                                <p><strong>We do not:</strong> sell personal information · rent user information · share information for advertising</p>
-                                <p><strong>We only share when necessary with:</strong> authorized school personnel · school administrators · technical service providers · government authorities when legally required</p>
+                                    <h3>3. Data Sharing</h3>
+                                    <p>We do not use your information for advertising, and we share it only when necessary.</p>
+                                    <p><strong>We do not:</strong> sell personal information · rent user information · share information for advertising</p>
+                                    <p><strong>We only share when necessary with:</strong> authorized school personnel · school administrators · technical service providers · government authorities when legally required</p>
 
-                                <h3>4. Your Rights</h3>
-                                <p>You have rights under the Data Privacy Act of 2012, including the right to:</p>
-                                <ul>
+                                    <h3>4. Your Rights</h3>
+                                    <p>You have rights under the Data Privacy Act of 2012, including the right to:</p>
+                                    <ul>
                                     <li>Be informed about how your information is handled</li>
                                     <li>Access and correct your personal data</li>
                                     <li>Object to or withdraw consent for processing</li>
                                     <li>Request deletion of your data, subject to legal retention requirements</li>
                                     <li>File a complaint with the National Privacy Commission</li>
-                                </ul>
+                                    </ul>
 
-                                <h3>5. Related Documents</h3>
-                                <div class="privacy-link-row">
+                                    <h3>5. Related Documents</h3>
+                                    <div class="privacy-link-row">
                                     <a href="{% url 'privacy' %}">Privacy Policy</a>
                                     <span>·</span>
                                     <a href="{% url 'terms' %}">Terms and Conditions</a>
+                                    </div>
                                 </div>
 
                                 <div class="privacy-consent-group">
