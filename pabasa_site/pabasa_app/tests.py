@@ -19,7 +19,7 @@ from pypdf import PdfReader
 from reportlab.pdfgen import canvas
 
 from .forms import AdminPracticeMaterialForm
-from .models import Material, User, Section, Assessment, Notification, Course, Note, LiveAssessmentSession, School, SchoolCalendar, CalendarEvent
+from .models import Material, User, Section, Assessment, Notification, Course, Note, LiveAssessmentSession, School, SchoolCalendar, CalendarEvent, StoryReadingProgress
 from .reading_stt import (
     ReadingMatcher,
     analyze_reading,
@@ -589,6 +589,15 @@ class AssessmentPageTemplateTests(TestCase):
         self.assertNotIn('official_assessment_data=', custom_card_source)
         self.assertNotIn('crla_fresh', custom_card_source)
 
+    def test_story_reading_card_uses_dedicated_route_from_template_identity(self):
+        template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "assessment.html"
+        content = template_path.read_text(encoding="utf-8")
+        custom_card_source = content.split('const materialSourceType =', 1)[1].split('renderedRows.push', 1)[0]
+
+        self.assertIn("{% url 'story_reading_page' %}", content)
+        self.assertIn('const isStoryReading = [m.template_title, m.template_type', custom_card_source)
+        self.assertIn('`${storyReadingUrl}?id=${encodeURIComponent(m.id)}', custom_card_source)
+
 
 class ReadingLaunchClassificationTests(TestCase):
     def _login_student(self):
@@ -741,6 +750,129 @@ class ReadingLaunchClassificationTests(TestCase):
                 self.assertNotContains(response, 'Calculating your score breakdown')
                 self.assertNotContains(response, '>Continue to Sentence Reading')
 
+    def test_story_reading_has_independent_route_template_and_script(self):
+        self._login_student()
+        material = Material.objects.create(
+            title='Sam and His Hat', code='STORY-BOOK', item_type='paragraph',
+            content_text='Sam has a big hat. The hat is blue. Sam puts it on.',
+            content_json={
+                'template_title': 'Story Reading',
+                'template_lesson': 'Story Reading',
+                'storyTitle': 'Sam and His Hat',
+                'storyText': 'Sam has a big hat. The hat is blue. Sam puts it on.',
+                'language': 'English',
+            },
+            language='English', type='assessment', source_type='template',
+            assessment_kind='regular', is_official_reading=False,
+            is_system_owned=False, student_access=True,
+        )
+
+        response = self.client.get(reverse('story_reading_page'), {'id': f'material-{material.id}'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'pabasa_app/story_reading_flipbook.html')
+        self.assertContains(response, 'id="storybookApp"')
+        self.assertContains(response, 'id="oralReadingButton"')
+        self.assertNotContains(response, 'id="storyTitle"')
+        self.assertContains(response, 'Start Reading')
+        self.assertContains(response, 'Listen to Story')
+        self.assertContains(response, 'pabasa_app/js/story_reading_flipbook.js')
+        self.assertNotContains(response, 'assessment_reader.js')
+
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'story_reading_flipbook.js'
+        script = script_path.read_text(encoding='utf-8')
+        self.assertIn('navigator.mediaDevices.getUserMedia', script)
+        self.assertIn('new MediaRecorder', script)
+        self.assertIn('const SPEECH_CHUNK_MS = 3200;', script)
+        self.assertIn('const SPEECH_REQUEST_TIMEOUT_MS = 35000;', script)
+        self.assertIn("fetch('/api/reading/transcribe/'", script)
+        self.assertIn("fetch('/api/reading/read-aloud/'", script)
+        self.assertIn('class="book-opening"', script)
+        self.assertIn('Read at your own pace', script)
+        self.assertIn("pages = [''];", script)
+        self.assertIn('index += 2', script)
+        self.assertIn('sentences.slice(index, index + 2)', script)
+        self.assertIn('pageCount.textContent = `Page ${start + 1} of ${pages.length}`;', script)
+        self.assertIn('oralReadingButton.disabled = onTitlePage;', script)
+        self.assertIn('listenButton.disabled = onTitlePage;', script)
+        self.assertNotIn('Begin on the next page', script)
+        self.assertNotIn('Turn the page to start reading the story aloud.', script)
+        self.assertIn('class="story-word"', script)
+        self.assertIn('cursorFromTranscript', script)
+        self.assertIn("word.classList.toggle('is-read'", script)
+
+        assessment_script = (Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js').read_text(encoding='utf-8')
+        self.assertIn('["sentence", "paragraph"].includes(mode) ? 10000 : 2400', assessment_script)
+        self.assertNotIn('SpeechRecognition', script)
+        self.assertNotIn('speechSynthesis', script)
+
+    def test_story_reading_completion_is_persisted_and_restored_without_assessment_result(self):
+        student = self._login_student()
+        material = Material.objects.create(
+            title='The Blue Kite', code='STORY-PERSIST', item_type='paragraph',
+            content_text='Mia has a blue kite.',
+            content_json={
+                'template_title': 'Story Reading',
+                'storyTitle': 'The Blue Kite',
+                'storyText': 'Mia has a blue kite.',
+                'language': 'English',
+            },
+            language='English', type='assessment', source_type='template',
+            assessment_kind='regular', student_access=True,
+        )
+
+        response = self.client.post(
+            reverse('story_reading_complete'),
+            data=json.dumps({
+                'material_id': f'material-{material.id}',
+                'story_title': 'The Blue Kite',
+                'total_words': 5,
+                'words_read': 5,
+                'progress_percent': 100,
+                'duration_seconds': 12,
+            }),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+        self.assertTrue(response.json()['completed'])
+        progress = StoryReadingProgress.objects.get(student=student, material=material)
+        self.assertTrue(progress.completed)
+        self.assertEqual(progress.words_read, 5)
+        self.assertEqual(material.assessment_results.count(), 0)
+
+        reopened = self.client.get(reverse('story_reading_page'), {'id': f'material-{material.id}'})
+        self.assertEqual(reopened.status_code, 200)
+        self.assertTrue(reopened.context['story_reading_data']['completion']['completed'])
+        self.assertEqual(reopened.context['story_reading_data']['return_url'], reverse('dashboard'))
+
+    def test_story_reading_script_does_not_use_shared_completion_flow(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'story_reading_flipbook.js'
+        script = script_path.read_text(encoding='utf-8')
+        self.assertIn("fetch('/api/story-reading/complete/'", script)
+        self.assertNotIn("fetch('/record-assessment-completion/'", script)
+        self.assertNotIn('pabasa-assist-complete', script)
+        self.assertIn("href = story.return_url || '/dashboard/'", script)
+
+    def test_regular_paragraph_material_stays_on_existing_reader(self):
+        self._login_student()
+        material = Material.objects.create(
+            title='Paragraph Material', code='REG-PARA-SEPARATE', item_type='paragraph',
+            content_text='This remains in the existing paragraph reader.',
+            content_json={'items': ['This remains in the existing paragraph reader.'], 'language': 'English'},
+            language='English', type='assessment', source_type='personal',
+            assessment_kind='regular', is_official_reading=False,
+            is_system_owned=False, student_access=True,
+        )
+
+        response = self.client.get(reverse('reading_para_page'), {'id': f'material-{material.id}'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'pabasa_app/reading_para_page.html')
+        self.assertContains(response, 'assessment_reader.js')
+        self.assertNotContains(response, 'story_reading_flipbook.js')
+
     def test_official_crla_keeps_formal_completion_shell(self):
         self._login_student()
         material = Material.objects.create(
@@ -770,6 +902,145 @@ class ReadingLaunchClassificationTests(TestCase):
         self.assertIn('if (!isMyMaterials && branchState.stage)', content)
         self.assertIn('const shouldShowClassification = !isMyMaterials && showClassification === true;', content)
         self.assertNotIn('urlParams.get("source") === "my_materials"', content)
+
+    def test_filipino_story_sets_load_selected_scenes_and_images(self):
+        self._login_student()
+        expected = {
+            'story-1-ang-umaga-ni-lito': ('filipino-set-1', 'Ang Umaga ni Lito', [
+                'Maagang gumising si Lito.', 'Naghilamos siya ng mukha.', 'Nagsipilyo siya ng ngipin.',
+                'Kumain siya ng almusal.', 'Isinuot niya ang uniporme.', 'Pumasok si Lito sa paaralan.',
+            ]),
+            'story-2-si-nena-at-ang-bulaklak': ('filipino-set-2', 'Si Nena at ang Bulaklak', [
+                'May nakita si Nena na bulaklak.', 'Maliwanag ang kulay nito.', 'Diniligan niya ang bulaklak.',
+                'Lumaki ito araw-araw.', 'Masaya si Nena sa kanyang halaman.', 'Inalagaan niya ito.',
+            ]),
+            'story-3-ang-masayang-araw': ('filipino-set-3', 'Ang Masayang Araw', [
+                'Maaraw noong araw na iyon.', 'Lumabas sina Carlo at Ana.', 'Naglalaro sila sa parke.',
+                'Tumakbo si Carlo sa damuhan.', 'Umupo si Ana sa ilalim ng puno.', 'Masaya silang umuwi.',
+            ]),
+            'story-4-ang-baon-ni-rosa': ('filipino-set-4', 'Ang Baon ni Rosa', [
+                'May baon na tinapay si Rosa.', 'May dala rin siyang gatas.',
+                'Umupo siya sa tabi ng kanyang kaibigan.', 'Ibinahagi niya ang kanyang tinapay.',
+                'Nagpasalamat ang kanyang kaibigan.', 'Masaya silang kumain.',
+            ]),
+            'story-5-ang-nawalang-lapis': ('filipino-set-5', 'Ang Nawalang Lapis', [
+                'Hinahanap ni Joel ang kanyang lapis.', 'Tumingin siya sa kanyang mesa.',
+                'Tumingin din siya sa kanyang bag.', 'Nakita niya ito sa ilalim ng libro.',
+                'Kinuha niya ang lapis.', 'Nagpatuloy siya sa pagsusulat.',
+            ]),
+        }
+        for selector_key, (story_key, title, sentences) in expected.items():
+            with self.subTest(selector_key=selector_key):
+                material = Material.objects.create(
+                    title='Filipino Story', code=f'FIL-{story_key}', item_type='paragraph',
+                    content_json={
+                        'template_title': 'Story Reading',
+                        'language': 'Filipino',
+                        'storyTitle': title,
+                        'storyReading': {'language': 'Filipino', 'storyKey': selector_key},
+                    },
+                    language='Filipino', type='assessment', source_type='template',
+                    assessment_kind='regular', student_access=True,
+                )
+                response = self.client.get(reverse('story_reading_page'), {'id': f'material-{material.id}'})
+                payload = response.context['story_reading_data']
+                self.assertEqual(payload['story_key'], story_key)
+                self.assertEqual(payload['title'], title)
+                self.assertEqual(payload['text'].split('\n\n'), sentences)
+                self.assertEqual(payload['text'].count('\n\n'), 5)
+                self.assertEqual(payload['images'], [
+                    f'/static/pabasa_app/images/story_reading/Filipino/Set_{story_key[-1]}/{index}.png'
+                    for index in range(1, 7)
+                ])
+
+    def test_filipino_story_does_not_restore_progress_from_another_story(self):
+        student = self._login_student()
+        material = Material.objects.create(
+            title='Filipino Story', code='FIL-PERSIST', item_type='paragraph',
+            content_json={
+                'template_title': 'Story Reading', 'language': 'Filipino',
+                'storyTitle': 'Si Nena at ang Bulaklak',
+                'storyReading': {'language': 'Filipino', 'storyKey': 'story-2-si-nena-at-ang-bulaklak'},
+            },
+            language='Filipino', type='assessment', source_type='template',
+            assessment_kind='regular', student_access=True,
+        )
+        StoryReadingProgress.objects.create(
+            student=student, material=material, story_title='Ang Umaga ni Lito',
+            story_key='filipino-set-1', current_scene=6, current_time_seconds=60,
+            completed=True,
+        )
+        response = self.client.get(reverse('story_reading_page'), {'id': f'material-{material.id}'})
+        self.assertIsNone(response.context['story_reading_data']['completion'])
+
+    def test_english_story_sets_load_selected_scenes_and_images(self):
+        self._login_student()
+        expected = {
+            'story-1-ben-and-the-little-pet': ('english-set-1', 'Ben and the Little Pet', [
+                'Ben has a pet.', 'It is a little pet.', 'The pet is on a mat.',
+                'Ben pats the pet.', 'The pet is happy.', 'Ben is happy too.',
+            ]),
+            'story-2-mia-and-the-red-ball': ('english-set-2', 'Mia and the Red Ball', [
+                'Mia has a red ball.', 'She plays with the ball.', 'The ball rolls away.',
+                'Mia runs after it.', 'She gets the ball back.', 'Mia is happy.',
+            ]),
+            'story-3-sams-big-hat': ('english-set-3', "Sam's Big Hat", [
+                'Sam has a big hat.', 'The hat is blue.', 'Sam puts it on.',
+                'He goes outside.', 'The sun is hot.', 'Sam likes his hat.',
+            ]),
+            'story-4-the-little-fish': ('english-set-4', 'The Little Fish', [
+                'A little fish is in a pond.', 'The fish swims in the water.',
+                'It sees a green leaf.', 'The fish swims under it.',
+                'Then it swims away.', 'The little fish is safe.',
+            ]),
+            'story-5-anas-new-book': ('english-set-5', "Ana's New Book", [
+                'Ana has a new book.', 'The book has many pictures.', 'Ana sits on a mat.',
+                'She opens the book.', 'She reads each page.', 'Ana likes her new book.',
+            ]),
+        }
+        for selector_key, (story_key, title, sentences) in expected.items():
+            with self.subTest(selector_key=selector_key):
+                material = Material.objects.create(
+                    title='English Story', code=f'ENG-{story_key}', item_type='paragraph',
+                    content_json={
+                        'template_title': 'Story Reading',
+                        'language': 'English',
+                        'storyTitle': title,
+                        'storyReading': {'language': 'English', 'storyKey': selector_key},
+                    },
+                    language='English', type='assessment', source_type='template',
+                    assessment_kind='regular', student_access=True,
+                )
+                response = self.client.get(reverse('story_reading_page'), {'id': f'material-{material.id}'})
+                payload = response.context['story_reading_data']
+                self.assertEqual(payload['language'], 'English')
+                self.assertEqual(payload['story_key'], story_key)
+                self.assertEqual(payload['title'], title)
+                self.assertEqual(payload['text'].split('\n\n'), sentences)
+                self.assertEqual(payload['images'], [
+                    f'/static/pabasa_app/images/story_reading/English/Set_{story_key[-1]}/{index}.png'
+                    for index in range(1, 7)
+                ])
+
+    def test_english_story_does_not_restore_progress_from_another_story(self):
+        student = self._login_student()
+        material = Material.objects.create(
+            title='English Story', code='ENG-PERSIST', item_type='paragraph',
+            content_json={
+                'template_title': 'Story Reading', 'language': 'English',
+                'storyTitle': 'Mia and the Red Ball',
+                'storyReading': {'language': 'English', 'storyKey': 'story-2-mia-and-the-red-ball'},
+            },
+            language='English', type='assessment', source_type='template',
+            assessment_kind='regular', student_access=True,
+        )
+        StoryReadingProgress.objects.create(
+            student=student, material=material, story_title='Ben and the Little Pet',
+            story_key='english-set-1', current_scene=6, current_time_seconds=60,
+            completed=True,
+        )
+        response = self.client.get(reverse('story_reading_page'), {'id': f'material-{material.id}'})
+        self.assertIsNone(response.context['story_reading_data']['completion'])
 
 
 class AssessmentWorkflowStateTests(TestCase):

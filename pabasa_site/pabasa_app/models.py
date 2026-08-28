@@ -1381,6 +1381,34 @@ class Material(models.Model):
 # Assessment attempts are stored in the Assessment `attempts` JSONField.
 
 
+class StoryReadingProgress(models.Model):
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="story_reading_progress")
+    material = models.ForeignKey("Material", on_delete=models.CASCADE, related_name="story_reading_progress")
+    story_title = models.CharField(max_length=150, blank=True, default="")
+    story_key = models.CharField(max_length=100, blank=True, default="")
+    total_words = models.PositiveIntegerField(default=0)
+    words_read = models.PositiveIntegerField(default=0)
+    progress_percent = models.FloatField(default=0)
+    correct_sentences = models.PositiveSmallIntegerField(default=0)
+    reading_score = models.FloatField(default=0)
+    duration_seconds = models.PositiveIntegerField(null=True, blank=True)
+    current_scene = models.PositiveSmallIntegerField(default=1)
+    current_time_seconds = models.FloatField(default=0)
+    completed = models.BooleanField(default=False)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "story_reading_progress"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["student", "material"],
+                name="unique_story_reading_progress",
+            ),
+        ]
+
+
 class SchoolCalendar(models.Model):
     TERM_CHOICES = [(1, "Term 1"), (2, "Term 2"), (3, "Term 3"), (4, "Term 4")]
 

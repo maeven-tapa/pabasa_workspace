@@ -54,7 +54,7 @@ from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_
 from django.db import transaction
 import re
 import traceback
-from .models import User, School, Section, Enrollment, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent
+from .models import User, School, Section, Enrollment, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
 from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
 from .reading_stt import (
@@ -9414,6 +9414,186 @@ def _is_clap_count_material(material):
     return 'clap_count_syllables' in normalized
 
 
+def _is_story_reading_material(material):
+    """Identify the teacher-assigned Story Reading template only."""
+    content = getattr(material, 'content_json', None) if material else None
+    if not isinstance(content, dict):
+        return False
+    values = (
+        content.get('template_title'), content.get('template_lesson'),
+        content.get('template_type'), content.get('activity_type'),
+    )
+    normalized = {
+        re.sub(r'[^a-z0-9]+', '_', str(value or '').strip().lower()).strip('_')
+        for value in values
+    }
+    return 'story_reading' in normalized
+
+
+FILIPINO_STORY_READING_SETS = {
+    'filipino-set-1': {
+        'title': 'Ang Umaga ni Lito',
+        'sentences': [
+            'Maagang gumising si Lito.',
+            'Naghilamos siya ng mukha.',
+            'Nagsipilyo siya ng ngipin.',
+            'Kumain siya ng almusal.',
+            'Isinuot niya ang uniporme.',
+            'Pumasok si Lito sa paaralan.',
+        ],
+    },
+    'filipino-set-2': {
+        'title': 'Si Nena at ang Bulaklak',
+        'sentences': [
+            'May nakita si Nena na bulaklak.',
+            'Maliwanag ang kulay nito.',
+            'Diniligan niya ang bulaklak.',
+            'Lumaki ito araw-araw.',
+            'Masaya si Nena sa kanyang halaman.',
+            'Inalagaan niya ito.',
+        ],
+    },
+    'filipino-set-3': {
+        'title': 'Ang Masayang Araw',
+        'sentences': [
+            'Maaraw noong araw na iyon.',
+            'Lumabas sina Carlo at Ana.',
+            'Naglalaro sila sa parke.',
+            'Tumakbo si Carlo sa damuhan.',
+            'Umupo si Ana sa ilalim ng puno.',
+            'Masaya silang umuwi.',
+        ],
+    },
+    'filipino-set-4': {
+        'title': 'Ang Baon ni Rosa',
+        'sentences': [
+            'May baon na tinapay si Rosa.',
+            'May dala rin siyang gatas.',
+            'Umupo siya sa tabi ng kanyang kaibigan.',
+            'Ibinahagi niya ang kanyang tinapay.',
+            'Nagpasalamat ang kanyang kaibigan.',
+            'Masaya silang kumain.',
+        ],
+    },
+    'filipino-set-5': {
+        'title': 'Ang Nawalang Lapis',
+        'sentences': [
+            'Hinahanap ni Joel ang kanyang lapis.',
+            'Tumingin siya sa kanyang mesa.',
+            'Tumingin din siya sa kanyang bag.',
+            'Nakita niya ito sa ilalim ng libro.',
+            'Kinuha niya ang lapis.',
+            'Nagpatuloy siya sa pagsusulat.',
+        ],
+    },
+}
+
+FILIPINO_STORY_READING_ALIASES = {
+    'story-1-ang-umaga-ni-lito': 'filipino-set-1',
+    'story-2-si-nena-at-ang-bulaklak': 'filipino-set-2',
+    'story-3-ang-masayang-araw': 'filipino-set-3',
+    'story-4-ang-baon-ni-rosa': 'filipino-set-4',
+    'story-5-ang-nawalang-lapis': 'filipino-set-5',
+}
+
+
+ENGLISH_STORY_READING_SETS = {
+    'english-set-1': {
+        'title': 'Ben and the Little Pet',
+        'sentences': [
+            'Ben has a pet.',
+            'It is a little pet.',
+            'The pet is on a mat.',
+            'Ben pats the pet.',
+            'The pet is happy.',
+            'Ben is happy too.',
+        ],
+    },
+    'english-set-2': {
+        'title': 'Mia and the Red Ball',
+        'sentences': [
+            'Mia has a red ball.',
+            'She plays with the ball.',
+            'The ball rolls away.',
+            'Mia runs after it.',
+            'She gets the ball back.',
+            'Mia is happy.',
+        ],
+    },
+    'english-set-3': {
+        'title': "Sam's Big Hat",
+        'sentences': [
+            'Sam has a big hat.',
+            'The hat is blue.',
+            'Sam puts it on.',
+            'He goes outside.',
+            'The sun is hot.',
+            'Sam likes his hat.',
+        ],
+    },
+    'english-set-4': {
+        'title': 'The Little Fish',
+        'sentences': [
+            'A little fish is in a pond.',
+            'The fish swims in the water.',
+            'It sees a green leaf.',
+            'The fish swims under it.',
+            'Then it swims away.',
+            'The little fish is safe.',
+        ],
+    },
+    'english-set-5': {
+        'title': "Ana's New Book",
+        'sentences': [
+            'Ana has a new book.',
+            'The book has many pictures.',
+            'Ana sits on a mat.',
+            'She opens the book.',
+            'She reads each page.',
+            'Ana likes her new book.',
+        ],
+    },
+}
+
+ENGLISH_STORY_READING_ALIASES = {
+    'story-1-ben-and-the-little-pet': 'english-set-1',
+    'story-2-mia-and-the-red-ball': 'english-set-2',
+    'story-3-sams-big-hat': 'english-set-3',
+    'story-4-the-little-fish': 'english-set-4',
+    'story-5-anas-new-book': 'english-set-5',
+}
+
+
+def _story_reading_key(content_json, language):
+    story_config = content_json.get('storyReading') if isinstance(content_json.get('storyReading'), dict) else {}
+    requested_key = str(
+        story_config.get('storyKey')
+        or content_json.get('sourceStoryKey')
+        or content_json.get('storyKey')
+        or ''
+    ).strip().lower()
+    language_key = str(language or '').strip().lower()
+    if language_key == 'filipino':
+        stories = FILIPINO_STORY_READING_SETS
+        aliases = FILIPINO_STORY_READING_ALIASES
+    elif language_key == 'english':
+        stories = ENGLISH_STORY_READING_SETS
+        aliases = ENGLISH_STORY_READING_ALIASES
+    else:
+        return ''
+    canonical_key = aliases.get(requested_key, requested_key)
+    if canonical_key in stories:
+        return canonical_key
+    requested_title = str(
+        content_json.get('storyTitle') or story_config.get('storyTitle') or ''
+    ).strip().casefold()
+    return next(
+        (key for key, story in stories.items()
+         if story['title'].casefold() == requested_title),
+        '',
+    )
+
+
 @xframe_options_sameorigin
 def clap_count_syllables_page(request):
     access_response = _enforce_student_access_for_request(request)
@@ -9713,6 +9893,143 @@ def reading_para_page(request):
             'crla_official_assessment_data_json': json.dumps(launch_data, default=str, separators=(',', ':')) if launch_data else '',
         })
     return render(request, 'pabasa_app/reading_para_page.html', context)
+
+
+@login_required(role='student')
+@xframe_options_sameorigin
+def story_reading_page(request):
+    """Render the independent Story Player experience."""
+    access_response = _enforce_student_access_for_request(request)
+    if access_response:
+        return access_response
+
+    _, material_id = _parse_prefixed_id(request.GET.get('id') or request.GET.get('material_id'))
+    material = Material.objects.filter(pk=material_id).first() if material_id else None
+    if not material or not _is_story_reading_material(material):
+        return redirect('assessment')
+
+    access_response = _enforce_student_access_for_request(request, material=material)
+    if access_response:
+        return access_response
+
+    content_json = material.content_json if isinstance(material.content_json, dict) else {}
+    story_config = content_json.get('storyReading') if isinstance(content_json.get('storyReading'), dict) else {}
+    student = User.objects.filter(id=request.session.get('user_id'), role='student').first()
+    story_payload = {
+        'id': material.id,
+        'material_id': f'material-{material.id}',
+        'title': str(content_json.get('storyTitle') or story_config.get('storyTitle') or material.title or 'Story Reading').strip(),
+        'text': str(content_json.get('storyText') or story_config.get('storyText') or material.content_text or material.prompt_text or '').strip(),
+        'language': content_json.get('language') or material.language or 'English',
+        'images': content_json.get('images') if isinstance(content_json.get('images'), list) else [],
+        'first_name': str(getattr(student, 'first_name', '') or '').strip().split(' ')[0],
+        'section_id': request.GET.get('section_id') or '',
+        'return_url': reverse('dashboard'),
+        'completion': None,
+    }
+    language = str(story_payload['language']).strip()
+    story_key = _story_reading_key(content_json, language)
+    if not story_key and language.lower() == 'filipino' and material.id == 30:
+        story_key = 'filipino-set-1'
+    if story_key:
+        stories = FILIPINO_STORY_READING_SETS if language.lower() == 'filipino' else ENGLISH_STORY_READING_SETS
+        story = stories[story_key]
+        image_language = 'Filipino' if language.lower() == 'filipino' else 'English'
+        story_payload.update({
+            'story_key': story_key,
+            'title': story['title'],
+            'text': '\n\n'.join(story['sentences']),
+            'images': [f'/static/pabasa_app/images/story_reading/{image_language}/Set_{story_key[-1]}/{index}.png' for index in range(1, 7)],
+        })
+    progress = StoryReadingProgress.objects.filter(student=student, material=material).first()
+    if progress and (not story_key or progress.story_key in ('', story_key)):
+        story_payload['completion'] = {
+            'completed': bool(progress.completed),
+            'story_title': progress.story_title,
+            'total_words': progress.total_words,
+            'words_read': progress.words_read,
+            'progress_percent': progress.progress_percent,
+            'correct_sentences': progress.correct_sentences,
+            'reading_score': progress.reading_score,
+            'duration_seconds': progress.duration_seconds,
+            'story_key': progress.story_key,
+            'current_scene': progress.current_scene,
+            'current_time_seconds': progress.current_time_seconds,
+            'completed_at': progress.completed_at.isoformat() if progress.completed_at else None,
+        }
+    return render(request, 'pabasa_app/story_reading_flipbook.html', {
+        'story_reading_data': story_payload,
+    })
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='student')
+def story_reading_complete(request):
+    try:
+        payload = json.loads(request.body or '{}')
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
+
+    student = User.objects.filter(id=request.session.get('user_id'), role='student', is_archived=False).first()
+    if not student:
+        return JsonResponse({'success': False, 'error': 'Student not found.'}, status=404)
+
+    _, material_id = _parse_prefixed_id(payload.get('material_id'))
+    material = Material.objects.filter(pk=material_id).first() if material_id else None
+    if not material or not _is_story_reading_material(material):
+        return JsonResponse({'success': False, 'error': 'Story Reading material not found.'}, status=404)
+    access_response = _enforce_student_access_for_request(request, material=material, json_response=True)
+    if access_response:
+        return access_response
+
+    try:
+        total_words = max(0, int(payload.get('total_words') or 0))
+        words_read = max(0, min(total_words, int(payload.get('words_read') or total_words)))
+        progress_percent = max(0.0, min(100.0, float(payload.get('progress_percent') or 0)))
+        correct_sentences = max(0, min(6, int(payload.get('correct_sentences') or 0)))
+        reading_score = correct_sentences / 6 * 100
+        duration_seconds = payload.get('duration_seconds')
+        duration_seconds = max(0, int(duration_seconds)) if duration_seconds is not None else None
+        current_scene = max(1, int(payload.get('current_scene') or 1))
+        current_time_seconds = max(0.0, float(payload.get('current_time_seconds') or 0))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Invalid Story Reading progress.'}, status=400)
+
+    requested_completed = bool(payload.get('completed', True))
+    existing_progress = StoryReadingProgress.objects.filter(student=student, material=material).first()
+    progress, _ = StoryReadingProgress.objects.update_or_create(
+        student=student,
+        material=material,
+        defaults={
+            'story_title': str(payload.get('story_title') or material.title or '').strip()[:150],
+            'story_key': str(payload.get('story_key') or '').strip()[:100],
+            'total_words': total_words,
+            'words_read': words_read,
+            'progress_percent': progress_percent,
+            'correct_sentences': correct_sentences,
+            'reading_score': reading_score,
+            'duration_seconds': duration_seconds,
+            'current_scene': current_scene,
+            'current_time_seconds': current_time_seconds,
+            'completed': requested_completed or bool(existing_progress and existing_progress.completed),
+            'completed_at': timezone.now() if requested_completed else (existing_progress.completed_at if existing_progress else None),
+        },
+    )
+    return JsonResponse({
+        'success': True,
+        'completed': progress.completed,
+        'current_scene': progress.current_scene,
+        'current_time_seconds': progress.current_time_seconds,
+        'material_id': f'material-{material.id}',
+        'story_title': progress.story_title,
+        'total_words': progress.total_words,
+        'words_read': progress.words_read,
+        'progress_percent': progress.progress_percent,
+        'correct_sentences': progress.correct_sentences,
+        'reading_score': progress.reading_score,
+        'completed_at': progress.completed_at.isoformat() if progress.completed_at else None,
+    })
 
 @xframe_options_sameorigin
 def reading_vowel_page(request):
