@@ -806,6 +806,32 @@ class ReadingLaunchClassificationTests(TestCase):
         self.assertNotIn('SpeechRecognition', script)
         self.assertNotIn('speechSynthesis', script)
 
+    def test_story_reading_displays_each_material_assigned_week_after_refresh(self):
+        self._login_student()
+        for index, assigned_week in enumerate((1, 4, 8), start=1):
+            with self.subTest(assigned_week=assigned_week):
+                material = Material.objects.create(
+                    title=f'Story Week {assigned_week}', code=f'STORY-WEEK-{index}', item_type='paragraph',
+                    content_text='A story sentence.',
+                    content_json={
+                        'template_title': 'Story Reading',
+                        'storyTitle': f'Story Week {assigned_week}',
+                        'storyText': 'A story sentence.',
+                        'language': 'English',
+                    },
+                    language='English', type='assessment', source_type='template',
+                    assessment_kind='regular', student_access=True, assigned_week=assigned_week,
+                    assigned_weeks=[assigned_week],
+                )
+
+                for _ in range(2):
+                    response = self.client.get(reverse('story_reading_page'), {'id': f'material-{material.id}'})
+                    self.assertEqual(response.status_code, 200)
+                    payload = response.context['story_reading_data']
+                    self.assertEqual(payload['assigned_week'], assigned_week)
+                    self.assertEqual(payload['assigned_week_display'], f'Week {assigned_week}')
+                    self.assertContains(response, f'Week {assigned_week} <span aria-hidden="true">·</span> Story Reading', html=True)
+
     def test_story_reading_completion_updates_shared_assessment_result_and_restores_progress(self):
         student = self._login_student()
         material = Material.objects.create(

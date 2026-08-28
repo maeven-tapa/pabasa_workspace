@@ -9918,6 +9918,8 @@ def story_reading_page(request):
     story_payload = {
         'id': material.id,
         'material_id': f'material-{material.id}',
+        'assigned_week': material.assigned_week,
+        'assigned_week_display': format_assigned_week_display(material.assigned_week),
         'title': str(content_json.get('storyTitle') or story_config.get('storyTitle') or material.title or 'Story Reading').strip(),
         'text': str(content_json.get('storyText') or story_config.get('storyText') or material.content_text or material.prompt_text or '').strip(),
         'language': content_json.get('language') or material.language or 'English',
