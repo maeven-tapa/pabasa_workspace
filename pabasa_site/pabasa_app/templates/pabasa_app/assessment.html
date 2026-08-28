@@ -1268,6 +1268,9 @@
                 ` : '';
 
                 const contentHtml = (() => {
+                    if (!sortedWeeks.length) {
+                        return '';
+                    }
                     const rowWeekGroups = chunkWeeksByRow(sortedWeeks, grid.clientWidth || grid.offsetWidth || window.innerWidth || 0);
                     const renderedRowGroups = rowWeekGroups.map((weekGroup) => {
                         const maxRows = weekGroup.reduce((max, week) => Math.max(max, groups[week].length), 0);
@@ -1402,7 +1405,12 @@
                     </div>
                     
                     ${officialAssessmentsHtml}
-                    ${contentHtml || '<p class="text-center text-muted small my-3">No assessments assigned for this class.</p>'}
+                    ${contentHtml || (!officialAssessments.length ? `
+                        <div class="assessment-empty-state" role="status">
+                            <i class="bi bi-journal-x" style="font-size: 2.5rem; opacity: 0.3;" aria-hidden="true"></i>
+                            <h3>No assessment available right now.</h3>
+                            <p>Your teacher hasn’t posted a reading assessment yet. Please check back later.</p>
+                        </div>` : '')}
                 </div>`;
             }).join("");
         }
