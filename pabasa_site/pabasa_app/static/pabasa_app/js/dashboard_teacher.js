@@ -1,7 +1,6 @@
 (function () {
     document.addEventListener('DOMContentLoaded', function () {
         const classList = document.getElementById("classList");
-        const classCountMirror = document.getElementById("classCountMirror"); // Renamed from classCount to target the 'Class' stat card
         const studentCountMirror = document.getElementById("studentCountMirror") || document.getElementById("profileTotalStudentsCount") || document.getElementById("totalStudentsJoined");
         const copyClassCodeBtn = document.getElementById("copyClassCodeBtn");
         const manageClassLink = document.getElementById("manageClassLink");
@@ -23,12 +22,6 @@
 
         const teacherEmail = (window.PABASA_USER_EMAIL || localStorage.getItem("pabasaUserEmail") || '').trim();
         const scopedKey = teacherEmail ? `pabasa_teacher_sections_${teacherEmail}` : null;
-
-        function updateClassCount() {
-            if (classCountMirror && classList) {
-                classCountMirror.textContent = String(classList.querySelectorAll('.class-card').length);
-            }
-        }
 
         function updateBannerCountsFromClassData(classData) {
             if (!classData) return;
@@ -150,11 +143,6 @@
                     classList.appendChild(card);
                 });
 
-                // Update total class count stat
-                if (classCountMirror) {
-                    classCountMirror.textContent = String(data.classes.length);
-                }
-
                 // Update total student count stat card immediately from aggregated class data
                 const totalStudents = data.classes.reduce((sum, cls) => sum + (parseInt(cls.students) || 0), 0);
                 if (studentCountMirror) {
@@ -219,7 +207,7 @@
             }
 
             // Update all "Manage Class" or "Class" buttons in the dashboard and workspace card
-            const classManagementUrls = document.querySelectorAll('#sidebarClassLink, #manageClassLink, #quickLinkClass, .workspace-card .btn-class, [data-manage-class-btn]');
+            const classManagementUrls = document.querySelectorAll('#sidebarClassLink, #manageClassLink, .workspace-card .btn-class, [data-manage-class-btn]');
             classManagementUrls.forEach(link => {
                 if (link.tagName === 'A') {
                     if (sectionId) link.href = `/dashboard/teacher/manage/?section_id=${encodeURIComponent(sectionId)}`;
@@ -546,7 +534,6 @@
 
                     // Update key UI elements if present
                     try {
-                        if (classCountMirror) classCountMirror.textContent = String(data.classes_count || 0);
                         const totalEl = document.getElementById('profileTotalStudentsCount');
                         if (totalEl) totalEl.textContent = String(data.total_students || 0);
                         const matEl = document.getElementById('profileMaterialsPostedCount');

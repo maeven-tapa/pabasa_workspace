@@ -68,10 +68,6 @@
         box-shadow: none;
     }
 
-    .teacher-quick-links a.primary {
-        box-shadow: 0 8px 18px rgba(15,78,100,0.12);
-    }
-
     .btn {
         border-radius: var(--radius-md);
         transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
@@ -126,8 +122,6 @@
         background: rgba(31,111,139,0.06);
         color: var(--dash-primary-deep);
     }
-
-    .teacher-stat-card small { color: var(--dash-ink-soft); }
 
     .teacher-dashboard { display: grid; gap: 1.15rem; }
     @media (min-width: 992px) { .teacher-dashboard { padding-bottom:25px; } }
@@ -195,115 +189,6 @@
     .teacher-gantt-bar { height:1.35rem; margin:0 2px; border-radius:999px; padding:.2rem .45rem; color:#fff; font-size:.7rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; z-index:2; }
     @media (max-width: 991.98px) { .teacher-dashboard-columns { grid-template-columns:1fr; } .teacher-calendar-card { position:static; } .teacher-calendar-grid { height:auto; grid-template-rows:none; } .teacher-calendar-grid > div { min-height:2.8rem; } .teacher-upcoming-empty { min-height:0; } }
     @media (max-width: 575.98px) { .teacher-calendar-expanded .modal-dialog { width:calc(100vw - 1rem); margin:.5rem auto; } .teacher-calendar-expanded .modal-content { height:calc(100vh - 1rem); max-height:calc(100vh - 1rem); } }
-
-    .teacher-hero {
-        background: var(--surface-glass) !important;
-        backdrop-filter: blur(12px) saturate(130%);
-        -webkit-backdrop-filter: blur(12px) saturate(130%);
-        border: 1px solid var(--surface-glass-border) !important;
-        border-radius: var(--radius-xl);
-        box-shadow: var(--dash-shadow);
-        display: grid;
-        align-items: center;
-        gap: clamp(1.25rem, 3vw, 2.5rem);
-        grid-template-columns: minmax(0, 3fr) minmax(240px, 2fr);
-        overflow: hidden;
-        padding: clamp(1.1rem, 3vw, 2rem);
-        position: relative;
-    }
-
-    .teacher-hero-copy {
-        position: relative;
-        z-index: 1;
-    }
-
-    .teacher-hero-copy {
-        align-content: center;
-        display: grid;
-        gap: 1rem;
-    }
-
-    .teacher-hero-copy h2 {
-        font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: clamp(2rem, 3.5vw, 3.3rem);
-        font-weight: 900;
-        letter-spacing: 0;
-        line-height: 1.05;
-        margin: 0;
-        max-width: 720px;
-    }
-
-    .teacher-hero-copy p {
-        color: var(--dash-ink-soft);
-        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
-        font-size: 0.98rem;
-        line-height: 1.65;
-        margin: 0;
-        max-width: 660px;
-    }
-
-    .teacher-kicker {
-        align-items: center;
-        color: var(--dash-primary-deep);
-        display: inline-flex;
-        font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: 0.76rem;
-        font-weight: 900;
-        gap: 0.5rem;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-    }
-
-    .teacher-kicker::before {
-        background: var(--dash-primary);
-        border-radius: 999px;
-        content: "";
-        height: 2px;
-        width: 34px;
-    }
-
-    .teacher-quick-links {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-    }
-
-    .teacher-quick-links a {
-        align-items: center;
-        background: var(--surface-solid);
-        border: 1px solid rgba(31, 111, 139, 0.14);
-        border-radius: var(--radius-md);
-        color: var(--dash-primary-deep);
-        display: inline-flex;
-        font-family: "Nunito", "Segoe UI", sans-serif;
-        font-weight: 700;
-        gap: 0.45rem;
-        min-height: 46px;
-        padding: 0.55rem 0.9rem;
-        text-decoration: none;
-        box-shadow: 0 8px 18px rgba(15,78,100,0.06);
-    }
-
-    .teacher-quick-links a.primary {
-        background: var(--dash-primary);
-        color: #fff;
-    }
-
-    .teacher-hero-illustration {
-        align-items: center;
-        display: flex;
-        justify-content: center;
-        min-width: 0;
-        padding: 0.25rem;
-    }
-
-    .teacher-hero-illustration svg {
-        display: block;
-        height: auto;
-        max-height: 250px;
-        max-width: 100%;
-        width: min(100%, 330px);
-    }
 
     .teacher-field {
         display: grid;
@@ -554,10 +439,205 @@
         letter-spacing: 0.01em;
     }
 
-    .teacher-stat-grid {
-        display: grid;
+    .teacher-glance,
+    .teacher-attention {
+        background: var(--surface-glass);
+        border: 1px solid var(--surface-glass-border);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--dash-shadow);
+        padding: 1rem;
+    }
+
+    .teacher-glance-heading,
+    .teacher-attention-heading {
+        align-items: flex-start;
+        display: flex;
+        justify-content: space-between;
         gap: 1rem;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-bottom: 0.85rem;
+    }
+
+    .teacher-glance-heading h3,
+    .teacher-attention-heading h3 {
+        color: #17334a;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.05rem;
+        font-weight: 900;
+        margin: 0;
+    }
+
+    .teacher-glance-heading p,
+    .teacher-attention-heading p {
+        color: var(--dash-ink-soft);
+        font-size: 0.8rem;
+        margin: 0.15rem 0 0;
+    }
+
+    .teacher-glance-grid {
+        display: grid;
+        gap: 0.65rem;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .class-title-actions {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+    }
+
+    .teacher-glance-item {
+        background: rgba(31, 111, 139, 0.055);
+        border: 1px solid rgba(31, 111, 139, 0.1);
+        border-radius: var(--radius-md);
+        min-width: 0;
+        padding: 0.75rem;
+    }
+
+    .teacher-glance-item strong {
+        color: #17334a;
+        display: block;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.35rem;
+        font-weight: 900;
+        line-height: 1.1;
+    }
+
+    .teacher-glance-item span {
+        color: var(--dash-ink-soft);
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        line-height: 1.3;
+        margin-top: 0.25rem;
+    }
+
+    .teacher-reading-summary {
+        border-top: 1px solid rgba(31, 111, 139, 0.1);
+        margin-top: 0.9rem;
+        padding-top: 0.85rem;
+    }
+
+    .teacher-reading-summary-head {
+        align-items: baseline;
+        display: flex;
+        gap: 0.75rem;
+        justify-content: space-between;
+        margin-bottom: 0.65rem;
+    }
+
+    .teacher-reading-summary-head h4 {
+        color: #17334a;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.86rem;
+        font-weight: 900;
+        margin: 0;
+    }
+
+    .teacher-reading-summary-head span {
+        color: var(--dash-ink-soft);
+        font-size: 0.72rem;
+    }
+
+    .teacher-reading-grid {
+        display: grid;
+        gap: 0.5rem;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .teacher-reading-item {
+        align-items: center;
+        background: rgba(31, 111, 139, 0.035);
+        border: 1px solid rgba(31, 111, 139, 0.08);
+        border-radius: 12px;
+        display: grid;
+        gap: 0.25rem;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        min-width: 0;
+        padding: 0.55rem 0.6rem;
+    }
+
+    .teacher-reading-dot {
+        background: var(--level-color, #64748b);
+        border-radius: 999px;
+        height: 0.55rem;
+        width: 0.55rem;
+    }
+
+    .teacher-reading-label {
+        color: var(--dash-ink-soft);
+        font-size: 0.68rem;
+        font-weight: 700;
+        line-height: 1.15;
+        min-width: 0;
+    }
+
+    .teacher-reading-count {
+        color: #17334a;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1rem;
+        font-weight: 900;
+    }
+
+    .teacher-reading-item.level-low { --level-color: #dc2626; }
+    .teacher-reading-item.level-high { --level-color: #f59e0b; }
+    .teacher-reading-item.level-developing { --level-color: #8b5cf6; }
+    .teacher-reading-item.level-transitioning { --level-color: #0284c7; }
+    .teacher-reading-item.level-grade { --level-color: #16a34a; }
+
+    .class-empty-notice {
+        align-items: flex-start;
+        background: rgba(245, 158, 11, 0.08);
+        border: 1px solid rgba(245, 158, 11, 0.2);
+        border-radius: var(--radius-md);
+        color: #854d0e;
+        display: flex;
+        font-size: 0.8rem;
+        gap: 0.5rem;
+        margin: 0.75rem 0 0;
+        padding: 0.65rem 0.75rem;
+    }
+
+    .teacher-attention-list {
+        display: grid;
+        gap: 0.55rem;
+    }
+
+    .teacher-attention-row {
+        align-items: center;
+        border: 1px solid rgba(16, 70, 110, 0.1);
+        border-radius: var(--radius-md);
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: minmax(0, 1fr) auto;
+        padding: 0.7rem 0.8rem;
+    }
+
+    .teacher-attention-name {
+        color: #17334a;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.9rem;
+        font-weight: 900;
+    }
+
+    .teacher-attention-reason,
+    .teacher-attention-empty {
+        color: var(--dash-ink-soft);
+        font-size: 0.78rem;
+        line-height: 1.35;
+    }
+
+    .teacher-attention-reason { margin-top: 0.1rem; }
+    .teacher-attention-empty { margin: 0; padding: 0.35rem 0; }
+    .teacher-attention-action { font-size: 0.76rem; font-weight: 800; padding: 0.42rem 0.7rem; white-space: nowrap; }
+
+    @media (max-width: 720px) {
+        .teacher-glance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .teacher-glance-heading { align-items: flex-start; flex-direction: column; }
+        .teacher-reading-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .class-title-row { align-items: flex-start; flex-direction: column; }
+        .teacher-attention-row { align-items: start; grid-template-columns: 1fr; }
+        .teacher-attention-action { justify-self: start; }
     }
 
     /* Keep the existing data/script hooks while making the canonical class
@@ -647,54 +727,6 @@
     .class-workspace > .class-detail-grid {
         min-width: 0;
         width: 100%;
-    }
-
-    .teacher-stat-card {
-        background: var(--surface-solid) !important;
-        border: 1px solid var(--dash-border);
-        border-radius: var(--radius-lg);
-        box-shadow: 0 12px 28px rgba(16,40,64,0.07);
-        display: grid;
-        gap: 0.35rem;
-        min-height: 146px;
-        padding: 1rem;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .teacher-stat-card::after {
-        color: rgba(31, 111, 139, 0.08);
-        content: attr(data-mark);
-        font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: 4.5rem;
-        font-weight: 900;
-        line-height: 1;
-        position: absolute;
-        right: -0.2rem;
-        bottom: -0.8rem;
-    }
-
-    .teacher-stat-card strong {
-        font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: clamp(1.65rem, 3vw, 2.2rem);
-        color: #1e293b;
-        line-height: 1.05;
-        position: relative;
-        z-index: 1;
-    }
-
-    .teacher-stat-card span,
-    .teacher-stat-card small {
-        position: relative;
-        z-index: 1;
-    }
-
-    .teacher-stat-card span {
-        color: var(--dash-muted);
-        font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: 0.84rem;
-        font-weight: 700;
-        line-height: 1.25;
     }
 
     .teacher-board {
@@ -1061,73 +1093,9 @@
         }
     }
 
-    @media (max-width: 1200px) {
-        .teacher-stat-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-    }
-
-    @media (min-width: 1920px) {
-        .teacher-stat-grid {
-            gap: 1.15rem;
-        }
-
-        .teacher-stat-card {
-            min-height: 138px;
-            padding: 1.15rem;
-        }
-
-        .teacher-stat-card strong {
-            font-size: clamp(1.8rem, 2vw, 2.45rem);
-        }
-
-        .teacher-stat-card::after {
-            font-size: 5rem;
-            bottom: -0.9rem;
-        }
-    }
-
-    @media (min-width: 2560px) {
-        .teacher-stat-grid {
-            gap: 1.35rem;
-        }
-
-        .teacher-stat-card {
-            min-height: 152px;
-            padding: 1.35rem;
-        }
-
-        .teacher-stat-card strong {
-            font-size: clamp(1.9rem, 1.7vw, 2.7rem);
-        }
-
-        .teacher-stat-card span {
-            font-size: 0.9rem;
-        }
-
-        .teacher-stat-card small {
-            line-height: 1.35;
-        }
-
-        .teacher-stat-card::after {
-            font-size: 5.6rem;
-            right: -0.05rem;
-            bottom: -1rem;
-        }
-    }
-
     @media (max-width: 1100px) {
         .teacher-board {
             grid-template-columns: 1fr;
-        }
-
-        .teacher-hero {
-            grid-template-columns: minmax(0, 1.2fr) minmax(220px, 1fr);
-        }
-
-        .teacher-hero-illustration svg {
-            max-height: 210px;
-            width: min(100%, 290px);
         }
 
         .class-workspace { grid-template-columns: 1fr; }
@@ -1137,15 +1105,6 @@
     }
 
     @media (max-width: 720px) {
-        .teacher-hero {
-            grid-template-columns: 1fr;
-        }
-
-        .teacher-hero-illustration {
-            justify-content: flex-start;
-        }
-
-        .teacher-stat-grid,
         .class-meta-row,
         .student-row {
             grid-template-columns: 1fr;
@@ -1215,8 +1174,8 @@
         background: #0f172a !important;
     }
 
-    body.dark-theme .teacher-hero,
-    body.dark-theme .teacher-stat-card,
+    body.dark-theme .teacher-glance,
+    body.dark-theme .teacher-attention,
     body.dark-theme .teacher-panel,
     body.dark-theme .class-card,
     body.dark-theme .class-banner,
@@ -1242,25 +1201,45 @@
         color: #e2e8f0 !important;
     }
 
-    body.dark-theme .teacher-hero-copy h2,
+    body.dark-theme .teacher-glance-heading h3,
+    body.dark-theme .teacher-reading-summary-head h4,
+    body.dark-theme .teacher-attention-heading h3,
+    body.dark-theme .teacher-glance-item strong,
+    body.dark-theme .teacher-reading-count,
+    body.dark-theme .teacher-attention-name,
     body.dark-theme .teacher-panel-head h3,
     body.dark-theme .class-banner h3,
     body.dark-theme .class-card-head strong,
-    body.dark-theme .teacher-stat-card strong,
     body.dark-theme #createdClassCode {
         color: #f8fafc !important;
     }
 
-    body.dark-theme .teacher-hero-copy p,
-    body.dark-theme .teacher-stat-card span,
-    body.dark-theme .teacher-stat-card small,
+    body.dark-theme .teacher-glance-heading p,
+    body.dark-theme .teacher-reading-summary-head span,
+    body.dark-theme .teacher-reading-label,
+    body.dark-theme .teacher-attention-heading p,
+    body.dark-theme .teacher-glance-item span,
+    body.dark-theme .teacher-attention-reason,
+    body.dark-theme .teacher-attention-empty,
     body.dark-theme .class-card .small.text-secondary,
     body.dark-theme .mini-metric span,
     body.dark-theme #createdClassName {
         color: #94a3b8 !important;
     }
 
-    body.dark-theme .teacher-kicker,
+    body.dark-theme .teacher-glance-item,
+    body.dark-theme .teacher-reading-item,
+    body.dark-theme .teacher-attention-row {
+        background: rgba(15, 23, 42, 0.72) !important;
+        border-color: rgba(125, 211, 252, 0.14) !important;
+    }
+
+    body.dark-theme .class-empty-notice {
+        background: rgba(245, 158, 11, 0.12) !important;
+        border-color: rgba(251, 191, 36, 0.24) !important;
+        color: #fcd34d !important;
+    }
+
     body.dark-theme .dash-pill,
     body.dark-theme .class-code-pill {
         background: rgba(56, 189, 248, 0.12) !important;
@@ -1268,7 +1247,6 @@
         color: #7dd3fc !important;
     }
 
-    body.dark-theme .teacher-quick-links a,
     body.dark-theme .btn.btn-secondary,
     body.dark-theme .btn.btn-ghost {
         background: rgba(15, 23, 42, 0.72) !important;
@@ -1278,14 +1256,9 @@
 
     body.dark-theme .dashboard-topbar h1,
     body.dark-theme .dash-pill,
-    body.dark-theme .teacher-hero-copy h2,
-    body.dark-theme .teacher-kicker,
-    body.dark-theme .teacher-quick-links a,
     body.dark-theme .teacher-field label,
     body.dark-theme .generated-code span,
     body.dark-theme .generated-code strong,
-    body.dark-theme .teacher-stat-card strong,
-    body.dark-theme .teacher-stat-card span,
     body.dark-theme .teacher-panel-head h3,
     body.dark-theme .class-card-head strong,
     body.dark-theme .class-code-pill,
@@ -1301,7 +1274,6 @@
         font-family: "Nunito", "Segoe UI", sans-serif !important;
     }
 
-    body.dark-theme .teacher-hero-copy p,
     body.dark-theme .teacher-field .form-control,
     body.dark-theme .class-card .small.text-secondary,
     body.dark-theme .modal-body,
@@ -1311,7 +1283,6 @@
         font-family: "Quattrocento Sans", "Segoe UI", sans-serif !important;
     }
 
-    body.dark-theme .teacher-quick-links a.primary,
     body.dark-theme .btn.btn-primary {
         background: #0284c7 !important;
         border-color: #0284c7 !important;
@@ -1391,76 +1362,47 @@
 
 {% block content %}
 <section class="teacher-dashboard">
-    <div class="teacher-hero">
-        <div class="teacher-hero-copy">
-            <h2>Manage reading progress and coursework in one place.</h2>
-            <p>Track student performance, assign materials, and review class activity.</p>
-            <div class="teacher-quick-links">
-                <a class="primary" href="{% url 'courses' %}"><i class="bi bi-folder2-open"></i> Course</a>
-                <a id="quickLinkClass" href="{% url 'class_management' %}{% if joined_classes.0.section_id %}?section_id={{ joined_classes.0.section_id }}{% endif %}"><i class="bi bi-door-open"></i> Class</a>
-                <a href="{% url 'students' %}"><i class="bi bi-people"></i> Student Records</a>
-            </div>
-            {% if not active_teacher_class_count %}
-            <p class="small text-secondary mb-0">No class assigned yet. Please contact the administrator to be assigned to a class.</p>
-            {% endif %}
-        </div>
-
-        <div class="teacher-hero-illustration" aria-hidden="true">
-            <svg viewBox="0 0 360 270" fill="none" xmlns="http://www.w3.org/2000/svg" role="img">
-                <path d="M31 223C56 193 97 191 123 212C144 229 170 225 191 207C218 184 256 190 282 211C300 226 321 225 338 214" stroke="#C7E5EB" stroke-width="12" stroke-linecap="round"/>
-                <rect x="43" y="75" width="112" height="121" rx="19" fill="#E8F5F7"/>
-                <path d="M62 91C82 82 103 85 118 99V171C103 157 82 154 62 164V91Z" fill="white" stroke="#1F6F8B" stroke-width="5" stroke-linejoin="round"/>
-                <path d="M118 99C133 85 154 82 174 91V164C154 154 133 157 118 171V99Z" fill="#FFF8E8" stroke="#1F6F8B" stroke-width="5" stroke-linejoin="round"/>
-                <path d="M78 113H103M78 128H104M133 113H158M133 128H158" stroke="#9BCDD8" stroke-width="5" stroke-linecap="round"/>
-                <circle cx="250" cy="79" r="27" fill="#F8C76A"/>
-                <path d="M220 151C220 123 233 107 250 107C267 107 280 123 280 151V182H220V151Z" fill="#1F6F8B"/>
-                <path d="M238 119C245 127 255 127 263 119" stroke="white" stroke-width="5" stroke-linecap="round"/>
-                <path d="M200 180C208 150 229 140 250 140C271 140 292 150 300 180" fill="#F4A261"/>
-                <path d="M209 184H292" stroke="#1F6F8B" stroke-width="9" stroke-linecap="round"/>
-                <circle cx="202" cy="67" r="8" fill="#F4A261"/>
-                <circle cx="310" cy="111" r="7" fill="#9BCDD8"/>
-                <path d="M295 51L302 65L317 67L306 78L309 93L295 85L282 93L285 78L274 67L289 65L295 51Z" fill="#F8C76A"/>
-                <path d="M179 185C194 174 209 174 222 185" stroke="#F4A261" stroke-width="7" stroke-linecap="round"/>
-                <rect x="170" y="191" width="128" height="13" rx="6.5" fill="#9BCDD8"/>
-            </svg>
-        </div>
-    </div>
-
     <div class="teacher-dashboard-columns">
     <div class="teacher-dashboard-main">
-            <div class="teacher-stat-grid" aria-label="Teacher dashboard statistics">
+            <section class="teacher-glance" aria-labelledby="teacherGlanceTitle">
+                <div class="teacher-glance-heading">
+                    <div>
+                        <h3 id="teacherGlanceTitle">Class at a glance</h3>
+                        <p>A quick summary of your advisory students.</p>
+                    </div>
+                </div>
+                <div class="teacher-glance-grid">
+                    <div class="teacher-glance-item"><strong id="glanceTotalStudents">0</strong><span>Total students</span></div>
+                    <div class="teacher-glance-item"><strong id="glanceNeedsAttention">0</strong><span>Need support</span></div>
+                    <div class="teacher-glance-item"><strong id="glanceAssessed">0</strong><span>Assessed students</span></div>
+                    <div class="teacher-glance-item"><strong id="glanceProgress">0%</strong><span>Average progress in 30 days</span></div>
+                </div>
+                <div class="teacher-reading-summary" aria-labelledby="teacherReadingSummaryTitle">
+                    <div class="teacher-reading-summary-head">
+                        <h4 id="teacherReadingSummaryTitle">Reading-level distribution</h4>
+                        <span>Selected class</span>
+                    </div>
+                    <div class="teacher-reading-grid" role="list">
+                        <div class="teacher-reading-item level-low" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">Low Emerging</span><strong class="teacher-reading-count" id="dashLowEmergingCount">0</strong></div>
+                        <div class="teacher-reading-item level-high" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">High Emerging</span><strong class="teacher-reading-count" id="dashHighEmergingCount">0</strong></div>
+                        <div class="teacher-reading-item level-developing" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">Developing</span><strong class="teacher-reading-count" id="dashDevelopingCount">0</strong></div>
+                        <div class="teacher-reading-item level-transitioning" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">Transitioning</span><strong class="teacher-reading-count" id="dashTransitioningCount">0</strong></div>
+                        <div class="teacher-reading-item level-grade" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">At Grade Level</span><strong class="teacher-reading-count" id="dashGradeLevelCount">0</strong></div>
+                    </div>
+                </div>
+            </section>
 
-        <article class="teacher-stat-card" data-mark="Cl">
-            <span>Class</span>
-            <strong id="classCountMirror">{{ active_teacher_class_count }}</strong>
-            <small class="text-secondary">Active class spaces</small>
-        </article>
-        <article class="teacher-stat-card" data-mark="L">
-            <span>Low Emerging Readers</span>
-            <strong id="dashLowEmergingCount">0</strong>
-            <small class="text-danger">Needs urgent support</small>
-        </article>
-        <article class="teacher-stat-card" data-mark="H">
-            <span>High Emerging Readers</span>
-            <strong id="dashHighEmergingCount">0</strong>
-            <small class="text-primary">Building toward grade level</small>
-        </article>
-        <article class="teacher-stat-card" data-mark="D">
-            <span>Developing Readers</span>
-            <strong id="dashDevelopingCount">0</strong>
-            <small class="text-secondary">Building accuracy</small>
-        </article>
-        <article class="teacher-stat-card" data-mark="T">
-            <span>Transitioning Readers</span>
-            <strong id="dashTransitioningCount">0</strong>
-            <small class="text-secondary">Approaching target</small>
-        </article>
-        <article class="teacher-stat-card" data-mark="G">
-            <span>Readers at Grade Level</span>
-            <strong id="dashGradeLevelCount">0</strong>
-            <small class="text-success">Meets expectation</small>
-        </article>
-            </div>
+            <section class="teacher-attention" aria-labelledby="teacherAttentionTitle">
+                <div class="teacher-attention-heading">
+                    <div>
+                        <h3 id="teacherAttentionTitle">Needs attention</h3>
+                        <p>Students prioritized for your next follow-up.</p>
+                    </div>
+                </div>
+                <div class="teacher-attention-list" id="teacherAttentionList" aria-live="polite">
+                    <p class="teacher-attention-empty">Loading students...</p>
+                </div>
+            </section>
 
     <div class="teacher-board">
         <aside class="teacher-panel">
@@ -1481,9 +1423,15 @@
                 <span id="activeClassCode" class="visually-hidden">—</span>
                 <div class="class-title-row">
                     <h3 id="activeClassName">No class selected</h3>
-                    <a id="manageClassLink" class="btn btn-sm btn-primary fw-bold" href="#" style="display: none;"><i class="bi bi-gear-fill me-1"></i>Manage Class</a>
+                    <div class="class-title-actions">
+                        <a class="btn btn-sm btn-secondary fw-bold" href="{% url 'courses' %}"><i class="bi bi-folder2-open me-1"></i>Course</a>
+                        <a id="manageClassLink" class="btn btn-sm btn-primary fw-bold" href="#" style="display: none;"><i class="bi bi-gear-fill me-1"></i>Manage Class</a>
+                    </div>
                 </div>
                 <p class="visually-hidden" id="activeClassSubject"></p>
+                {% if not active_teacher_class_count %}
+                <p class="class-empty-notice"><i class="bi bi-info-circle" aria-hidden="true"></i><span>No class is assigned yet. Please contact the administrator to be assigned to a class.</span></p>
+                {% endif %}
                 <div class="class-meta-row">
                     <div class="mini-metric"><strong id="activeStudentCount">0</strong><span class="small text-secondary">students joined</span></div>
                     <div class="mini-metric"><strong id="activeAssessmentCount">0</strong><span class="small text-secondary">assessment materials</span></div>
@@ -1534,15 +1482,37 @@
 
 <div class="modal fade teacher-calendar-expanded" id="teacherCalendarExpanded" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-xl"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">School Calendar</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><div class="teacher-expanded-toolbar mb-3"><div class="teacher-expanded-nav"><button type="button" class="btn btn-sm btn-outline-primary" id="teacherExpandedPrev">Previous</button><button type="button" class="btn btn-sm btn-outline-primary" id="teacherExpandedToday">Today</button><button type="button" class="btn btn-sm btn-outline-primary" id="teacherExpandedNext">Next</button></div><strong id="teacherExpandedMonth"></strong><div class="teacher-calendar-filter" role="group" aria-label="Expanded calendar filter"><button type="button" class="active" data-teacher-expanded-filter="global">System-wide</button><button type="button" data-teacher-expanded-filter="school">School</button></div></div><div class="teacher-gantt" id="teacherExpandedGrid"></div></div></div></div></div>
 
+<div id="teacherDashboardConfig"
+     hidden
+     data-calendar-events="{{ student_calendar_events_json|default:'[]'|escape }}"
+     data-today-year="{{ today.year|default:'' }}"
+     data-today-month="{{ today.month|add:'-1'|default:'0' }}"
+     data-today-day="{{ today.day|default:'1' }}"
+     data-courses-url="{% url 'courses' %}"
+     data-students-url="{% url 'students' %}"
+     data-user-email="{{ email|default:'' }}"></div>
+
 <script>
 (function () {
-    const events = {{ student_calendar_events_json|default:'[]'|safe }};
-    const today = new Date({{ today.year }}, {{ today.month|add:'-1' }}, {{ today.day }});
+    const dashboardConfig = document.getElementById('teacherDashboardConfig');
+    const configData = dashboardConfig ? dashboardConfig.dataset : {};
+    let events = [];
+    try {
+        const parsedEvents = JSON.parse(configData.calendarEvents || '[]');
+        events = Array.isArray(parsedEvents) ? parsedEvents : [];
+    } catch (error) {
+        console.warn('Unable to parse teacher calendar events.', error);
+    }
+    const currentDate = new Date();
+    const todayYear = Number(configData.todayYear || currentDate.getFullYear());
+    const todayMonth = Number(configData.todayMonth || currentDate.getMonth());
+    const todayDay = Number(configData.todayDay || currentDate.getDate());
+    const today = new Date(todayYear, todayMonth, todayDay);
     let cursor = new Date(today.getFullYear(), today.getMonth(), 1);
     let filter = 'global';
     const colors = {school_opening:'#22c55e', pre_assessment:'#3b82f6', midline_assessment:'#14b8a6', post_assessment:'#a855f7', school_closing:'#ef4444', holiday:'#f59e0b', examination:'#f97316', other:'#6b7280'};
     const parseDate = value => { const p = String(value || '').slice(0, 10).split('-').map(Number); return p.length === 3 && p.every(Number.isFinite) ? new Date(p[0], p[1] - 1, p[2]) : null; };
-    const key = date => date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate();;
+    const key = date => date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate();
     const visibleEvents = () => events.filter(event => event.scope === filter);
     const eventContains = (event, date) => { const start = parseDate(event.start_date || event.start); const end = parseDate(event.end_date || event.end || event.start); return start && end && key(start) <= key(date) && key(date) <= key(end); };
     function drawCompact() {
@@ -1615,107 +1585,136 @@
         draw();
         drawUpcoming();
     });
-}());
+})();
 </script>
 
 
 <script>
-// Update reading level statistics from the authoritative reading-level source
-function updateDashboardStatistics(providedStudents = null, providedLevelCounts = null) {
-    const studentsAll = Array.isArray(providedStudents)
-        ? providedStudents.filter(student => student && student.name && student.name !== "Jay Park")
-        : [];
+let teacherDashboardStudents = [];
 
-    // Determine currently selected class (if any) and filter students accordingly
-    const activeSectionIdEl = document.getElementById('activeClassSectionId');
-    const activeSectionId = activeSectionIdEl ? (activeSectionIdEl.textContent || '').trim() : '';
-    const students = (activeSectionId && activeSectionId !== "—")
-        ? studentsAll.filter(s => Array.isArray(s.section_ids) && s.section_ids.map(String).includes(String(activeSectionId)))
-        : studentsAll.slice();
+function renderTeacherAtGlance(providedStudents = null) {
+    const dashboardConfig = document.getElementById('teacherDashboardConfig');
+    const configData = dashboardConfig ? dashboardConfig.dataset : {};
+    if (Array.isArray(providedStudents)) {
+        teacherDashboardStudents = providedStudents.filter(student => student && student.name);
+    }
 
+    const activeSectionId = (document.getElementById('activeClassSectionId')?.textContent || '').trim();
+    const activeClassName = (document.getElementById('activeClassName')?.textContent || '').trim();
+    const hasSelectedClass = Boolean(activeSectionId && activeClassName && activeClassName !== 'No class selected');
+    const students = hasSelectedClass
+        ? teacherDashboardStudents.filter(student => {
+            const matchesSection = Array.isArray(student.section_ids)
+                && student.section_ids.map(String).includes(String(activeSectionId));
+            const matchesClassName = Array.isArray(student.classes)
+                && student.classes.some(name => String(name).trim() === activeClassName);
+            return matchesSection || matchesClassName;
+        })
+        : teacherDashboardStudents.slice();
+    const numericValue = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+    const normalizeLevelLabel = value => {
+        if (window.PABASA_READING_LEVEL && typeof window.PABASA_READING_LEVEL.normalizeReadingLevelLabel === 'function') {
+            return window.PABASA_READING_LEVEL.normalizeReadingLevelLabel(value);
+        }
+        const text = String(value || '').trim().toLowerCase().replace(/[_-]+/g, ' ');
+        if (text.includes('low') && text.includes('emerging')) return 'Low Emerging Readers';
+        if (text.includes('high') && text.includes('emerging')) return 'High Emerging Readers';
+        if (text.includes('develop')) return 'Developing Readers';
+        if (text.includes('transition')) return 'Transitioning Readers';
+        if (text.includes('grade')) return 'Readers at Grade Level';
+        return null;
+    };
+    const isLowEmerging = student => normalizeLevelLabel(student.level) === 'Low Emerging Readers';
+    const hasNoAssessment = student => student.has_completed_assessment !== true;
+    const isInactive = student => {
+        const lastActive = Date.parse(student.last_active_at || '');
+        return !Number.isNaN(lastActive) && lastActive < Date.now() - (14 * 24 * 60 * 60 * 1000);
+    };
+    const hasNoProgress = student => !hasNoAssessment(student) && numericValue(student.improvement_30d) <= 0;
+    const priority = student => isLowEmerging(student) ? 0 : hasNoAssessment(student) ? 1 : isInactive(student) ? 2 : hasNoProgress(student) ? 3 : 4;
+    const reason = student => isLowEmerging(student)
+        ? 'Low Emerging Reader'
+        : hasNoAssessment(student)
+            ? 'No assessment yet'
+            : isInactive(student)
+                ? 'Inactive recently'
+                : 'Declining or no progress';
+
+    const studentsNeedingAttention = students
+        .filter(student => priority(student) < 4)
+        .sort((first, second) => priority(first) - priority(second) || String(first.name).localeCompare(String(second.name)));
+    const assessedCount = students.filter(student => student.has_completed_assessment === true).length;
+    const averageProgress = students.length
+        ? students.reduce((sum, student) => sum + numericValue(student.improvement_30d), 0) / students.length
+        : 0;
     const levelCounts = {
-        "Low Emerging Readers": 0,
-        "High Emerging Readers": 0,
-        "Developing Readers": 0,
-        "Transitioning Readers": 0,
-        "Readers at Grade Level": 0
+        'Low Emerging Readers': 0,
+        'High Emerging Readers': 0,
+        'Developing Readers': 0,
+        'Transitioning Readers': 0,
+        'Readers at Grade Level': 0
+    };
+    students.forEach(student => {
+        const level = normalizeLevelLabel(student.level);
+        if (level && Object.prototype.hasOwnProperty.call(levelCounts, level)) levelCounts[level] += 1;
+    });
+    const setMetric = (id, value) => {
+        const element = document.getElementById(id);
+        if (element) element.textContent = value;
     };
 
-    const hasServerCounts = providedLevelCounts && Object.keys(providedLevelCounts).length > 0;
-    if (hasServerCounts) {
-        Object.keys(levelCounts).forEach(key => {
-            levelCounts[key] = Number(providedLevelCounts[key] || 0);
-        });
-    } else {
-        const normalizeLevelLabel = (value) => {
-            if (window.PABASA_READING_LEVEL && typeof window.PABASA_READING_LEVEL.normalizeReadingLevelLabel === 'function') {
-                return window.PABASA_READING_LEVEL.normalizeReadingLevelLabel(value);
-            }
-            const text = String(value || '').trim().toLowerCase().replace(/[_-]+/g, ' ');
-            if (!text) return null;
-            if (text.includes('low') && text.includes('emerging')) return 'Low Emerging Readers';
-            if (text.includes('high') && text.includes('emerging')) return 'High Emerging Readers';
-            if (text.includes('develop')) return 'Developing Readers';
-            if (text.includes('transition')) return 'Transitioning Readers';
-            if (text.includes('grade')) return 'Readers at Grade Level';
-            return null;
-        };
+    setMetric('glanceTotalStudents', String(students.length));
+    setMetric('glanceNeedsAttention', String(studentsNeedingAttention.length));
+    setMetric('glanceAssessed', String(assessedCount));
+    setMetric('glanceProgress', `${averageProgress >= 0 ? '+' : ''}${averageProgress.toFixed(1)}%`);
+    setMetric('dashLowEmergingCount', String(levelCounts['Low Emerging Readers']));
+    setMetric('dashHighEmergingCount', String(levelCounts['High Emerging Readers']));
+    setMetric('dashDevelopingCount', String(levelCounts['Developing Readers']));
+    setMetric('dashTransitioningCount', String(levelCounts['Transitioning Readers']));
+    setMetric('dashGradeLevelCount', String(levelCounts['Readers at Grade Level']));
 
-        students.forEach(student => {
-            const normalized = normalizeLevelLabel(student?.level || student?.reading_level || student?.classification || student?.crla_classification);
-            if (normalized && levelCounts.hasOwnProperty(normalized)) {
-                levelCounts[normalized]++;
-            }
-        });
+    const list = document.getElementById('teacherAttentionList');
+    if (!list) return;
+    list.replaceChildren();
+
+    const visibleStudents = studentsNeedingAttention.slice(0, 5);
+    if (!visibleStudents.length) {
+        const emptyState = document.createElement('p');
+        emptyState.className = 'teacher-attention-empty';
+        emptyState.textContent = 'No students need follow-up right now.';
+        list.appendChild(emptyState);
+        return;
     }
 
-    // Update dashboard statistics
-    const elLow = document.getElementById("dashLowEmergingCount");
-    const elHigh = document.getElementById("dashHighEmergingCount");
-    const elDev = document.getElementById("dashDevelopingCount");
-    const elTrans = document.getElementById("dashTransitioningCount");
-    const elGrade = document.getElementById("dashGradeLevelCount");
+    visibleStudents.forEach(student => {
+        const row = document.createElement('div');
+        row.className = 'teacher-attention-row';
 
-    if (elLow) elLow.textContent = String(Number(levelCounts["Low Emerging Readers"] || 0));
-    if (elHigh) elHigh.textContent = String(Number(levelCounts["High Emerging Readers"] || 0));
-    if (elDev) elDev.textContent = String(Number(levelCounts["Developing Readers"] || 0));
-    if (elTrans) elTrans.textContent = String(Number(levelCounts["Transitioning Readers"] || 0));
-    if (elGrade) elGrade.textContent = String(Number(levelCounts["Readers at Grade Level"] || 0));
+        const details = document.createElement('div');
+        const name = document.createElement('div');
+        name.className = 'teacher-attention-name';
+        name.textContent = student.name;
+        const reasonText = document.createElement('div');
+        reasonText.className = 'teacher-attention-reason';
+        reasonText.textContent = reason(student);
+        details.append(name, reasonText);
 
-    // Ensure Classes count is dynamic: prefer server-filled value, otherwise compute from localStorage teacher classes
-    const classCountMirrorEl = document.getElementById('classCountMirror'); // Target the 'Class' stat card
-    if (classCountMirrorEl) {
-        // If server hasn't populated it yet (value is 0), compute local fallback
-        const currentVal = parseInt(classCountMirrorEl.textContent || "0", 10) || 0;
-        if (currentVal <= 0) {
-            // Aggregate any user-scoped Section cache keys
-            let count = 0;
-            try {
-                Object.keys(localStorage).forEach(function (k) {
-                    if (!k || typeof k !== 'string') return;
-                    if (k.startsWith('pabasa_teacher_sections')) {
-                        try {
-                            const parsed = JSON.parse(localStorage.getItem(k) || '[]');
-                            if (Array.isArray(parsed)) count = Math.max(count, parsed.length);
-                        } catch (e) {}
-                    }
-                });
-            } catch (e) {}
-            classCountMirrorEl.textContent = String(count || 0);
-        }
-    }
+        const action = document.createElement('a');
+        action.className = 'btn btn-secondary teacher-attention-action';
+        action.href = hasNoAssessment(student) ? (configData.coursesUrl || '#') : (configData.studentsUrl || '#');
+        action.textContent = hasNoAssessment(student) ? 'Assess' : 'View record';
+        row.append(details, action);
+        list.appendChild(row);
+    });
 }
+
+window.addEventListener('pabasa:teacher-class-selected', () => renderTeacherAtGlance());
 
 // Load and display student cards
 function syncClassCardToRightColumn() {
     const classCard = document.querySelector('.class-workspace');
-    const upcomingCard = document.querySelector('.teacher-upcoming-card');
     if (!classCard) return;
-    if (window.innerWidth >= 992 && upcomingCard) {
-        const classRect = classCard.getBoundingClientRect();
-        const upcomingRect = upcomingCard.getBoundingClientRect();
-        classCard.style.height = `${Math.max(0, upcomingRect.bottom - classRect.top)}px`;
-    } else classCard.style.height = '';
+    classCard.style.height = '';
 }
 
 async function loadPersistedStudents() {
@@ -1869,7 +1868,7 @@ document.addEventListener("DOMContentLoaded", async function() {
             if (resp && resp.ok) {
                 const data = await resp.json();
                 if (data && data.success && Array.isArray(data.students)) {
-                    // Map server students to the expected shape used by updateDashboardStatistics
+                    // Map the authoritative roster to the compact teacher overview.
                     const mapped = data.students.map(s => ({
                         name: s.name || '',
                         class: Array.isArray(s.classes) ? s.classes.join(', ') : (s.class || ''),
@@ -1878,16 +1877,19 @@ document.addEventListener("DOMContentLoaded", async function() {
                         level: s.reading_level || s.level || s.adapted_reading_level || '',
                         accuracy: s.accuracy || '0',
                         wpm: s.wpm || '0',
-                        email: s.email || ''
+                        email: s.email || '',
+                        has_completed_assessment: s.has_completed_assessment === true,
+                        last_active_at: s.last_active_at || '',
+                        improvement_30d: s.improvement_30d
                     }));
-                    updateDashboardStatistics(mapped, data.level_counts || null);
+                    renderTeacherAtGlance(mapped);
                     return;
                 }
             }
         } catch (e) {
             console.warn('Failed to fetch teacher students for dashboard statistics', e);
         }
-        updateDashboardStatistics([]);
+        renderTeacherAtGlance([]);
     }
 
     await fetchAndUpdateStudents();
@@ -1918,8 +1920,9 @@ document.addEventListener("DOMContentLoaded", async function() {
 
 <script>
     window.PABASA_USER_ROLE = "teacher";
-    window.PABASA_USER_EMAIL = "{{ email|escapejs }}";
+    const teacherDashboardConfig = document.getElementById('teacherDashboardConfig');
+    window.PABASA_USER_EMAIL = teacherDashboardConfig ? teacherDashboardConfig.dataset.userEmail : '';
 </script>
 
-<script src="{% static 'pabasa_app/js/dashboard_teacher.js' %}?v=20260828-regression-1"></script>
+<script src="{% static 'pabasa_app/js/dashboard_teacher.js' %}?v=20260828-layout-1"></script>
 {% endblock %}
