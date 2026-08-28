@@ -462,6 +462,11 @@
         padding: 1rem;
     }
 
+    .teacher-glance {
+        container-name: teacher-glance;
+        container-type: inline-size;
+    }
+
     .teacher-glance-heading,
     .teacher-attention-heading {
         align-items: flex-start;
@@ -557,6 +562,7 @@
         display: grid;
         gap: 0.5rem;
         grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+        width: 100%;
     }
 
     .teacher-reading-item {
@@ -672,6 +678,8 @@
         min-width: 0;
         padding: 1rem;
         width: 100%;
+        container-name: class-workspace;
+        container-type: inline-size;
     }
     @media (min-width: 992px) { .class-workspace { align-content:start; gap:.7rem; padding:.8rem; } .class-detail-grid .teacher-panel { align-content:start; } }
     .class-workspace > .class-banner {
@@ -1054,6 +1062,18 @@
     .teacher-dashboard .teacher-attention-action,
     .teacher-dashboard .class-title-actions .btn { font-size:.86rem; }
     .teacher-dashboard .student-inline-details strong { font-size:.9rem; }
+    .teacher-dashboard .class-banner .class-meta-row {
+        grid-template-columns:repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr));
+    }
+    @container teacher-glance (min-width:40rem) {
+        .teacher-dashboard .teacher-reading-grid { grid-template-columns:repeat(5, minmax(0, 1fr)); }
+        .teacher-dashboard .teacher-reading-item { gap:.2rem; padding:.55rem .45rem; }
+        .teacher-dashboard .teacher-reading-label { font-size:.75rem; white-space:nowrap; }
+        .teacher-dashboard .teacher-reading-count { font-size:.95rem; }
+    }
+    @container class-workspace (max-width:25rem) {
+        .teacher-dashboard .class-banner .class-meta-row { grid-template-columns:1fr; }
+    }
     @media (min-width:992px) {
         .teacher-dashboard-columns { align-items:stretch; grid-template-columns:minmax(0,1fr) minmax(290px,360px); grid-template-areas:"glance calendar" "attention calendar" "workspace upcoming"; }
         .teacher-dashboard-main,
