@@ -13681,7 +13681,7 @@ def class_management_view(request):
     else:
         section = assigned.first()
     if not section:
-        return render(request, 'pabasa_app/teacher_no_section.html', _dashboard_context(request, 'teacher', {'page_title': 'Class'}))
+        return render(request, 'pabasa_app/teacher_no_section.html', _dashboard_context(request, 'teacher', {'page_title': 'Section'}))
 
     all_sections = list(Section.objects.filter(
         teacher=teacher_user, is_active=True
@@ -15143,7 +15143,7 @@ def update_class_info(request):
                 section = assigned_sections.filter(pk=int(section_id)).first()
             except (TypeError, ValueError):
                 section = None
-        if not section: return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
+        if not section: return JsonResponse({'success': False, 'error': 'Section not found'}, status=404)
         section.class_name = data.get('class_name', '').strip()
         # 'grade_level' and per-class 'section' fields removed from the model; only update fields that remain
         section.description = data.get('description', '').strip()
@@ -15175,17 +15175,17 @@ def teacher_add_student(request):
         student = User.objects.filter(id=student_id, role='student').first()
         
         if not student:
-            return JsonResponse({'success': False, 'error': 'Class or Student not found'}, status=404)
+            return JsonResponse({'success': False, 'error': 'Section or Student not found'}, status=404)
 
         if section_id and not section:
-            return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
+            return JsonResponse({'success': False, 'error': 'Section not found'}, status=404)
 
         if section:
             if section.add_student(student):
                 student_name = f"{student.first_name} {student.last_name}"
                 _create_notification(
                     student,
-                    'Added to class',
+                    'Added to section',
                     f'You were added to {section.class_name}.',
                     'success',
                     reverse('dashboard'),
@@ -15193,14 +15193,14 @@ def teacher_add_student(request):
                 )
                 _create_notification(
                     section.teacher,
-                    'Student Enrolled in a Class',
+                    'Student Enrolled in a Section',
                     f'• {student_name} joined {section.class_name}.',
                     'success',
                     f"{reverse('class_management')}?section_id={section.id}",
                     section.teacher,
                 )
                 _notify_admins(
-                    'Student joined a class',
+                    'Student joined a section',
                     f'{student_name} was added to {section.class_name} ({section.class_code}).',
                     'info',
                     reverse('admin_class_detail', args=[section.id]),

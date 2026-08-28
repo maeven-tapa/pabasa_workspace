@@ -1022,7 +1022,7 @@
 {% endblock %}
 
 {% block header %}
-    {% include "pabasa_app/partials/_header.html" with page_title="Class Management" %}
+    {% include "pabasa_app/partials/_header.html" with page_title="Section Management" %}
 {% endblock %}
 
 {% block content %}
@@ -1030,8 +1030,8 @@
     <header class="page-head">
         <div class="page-head-left">
             <div class="page-head-title">
-                <h1>Class Details</h1>
-                <p class="page-subtitle">Manage class information and enrolled students.</p>
+                <h1>Section Details</h1>
+                <p class="page-subtitle">Manage section information and enrolled students.</p>
             </div>
         </div>
 
@@ -1039,12 +1039,12 @@
             <div class="class-switcher-wrap" id="classSwitcherWrap">
                 <button type="button" class="class-switcher-trigger" id="classSwitcherTrigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="classSwitcherMenu">
                     <span class="class-switcher-trigger-text">
-                        <span class="class-switcher-label">Viewing Class</span>
+                        <span class="class-switcher-label">Viewing Section</span>
                         <span class="class-switcher-value" id="classSwitcherValue">{{ section.class_code|default:section.class_name }}</span>
                     </span>
                     <i class="bi bi-chevron-down" aria-hidden="true"></i>
                 </button>
-                <div class="class-switcher-menu" id="classSwitcherMenu" role="listbox" aria-label="Switch class">
+                <div class="class-switcher-menu" id="classSwitcherMenu" role="listbox" aria-label="Switch section">
                     {% for s in sections %}
                     <button
                         type="button"
@@ -1071,8 +1071,8 @@
         <section class="card">
             <div class="card-header">
                 <div class="section-heading">
-                    <p class="card-title">Class Information</p>
-                    <p class="card-subtitle">Keep the classroom title and description concise for easy scanning.</p>
+                    <p class="card-title">Section Information</p>
+                    <p class="card-subtitle">Keep the section title and description concise for easy scanning.</p>
                 </div>
                 <div class="card-actions">
                     <button type="submit" form="updateClassForm" class="btn btn-primary btn-sm"><i class="bi bi-check2-circle me-1"></i> Save Changes</button>
@@ -1084,7 +1084,7 @@
                 <input type="hidden" name="section_id" value="{{ section.id }}">
 
                 <div class="form-group col-span-12">
-                    <label for="className">Title / Class Name</label>
+                    <label for="className">Title / Section Name</label>
                     <input id="className" type="text" class="form-control" name="class_name" value="{{ section.class_name }}" required>
                 </div>
 
@@ -1223,7 +1223,7 @@
 <div class="student-add-loading-modal" id="addStudentLoadingModal" role="dialog" aria-modal="true" aria-live="polite" aria-labelledby="addStudentLoadingTitle">
     <div class="student-add-loading-dialog">
         <div class="spinner-border text-primary mb-3" role="status" aria-label="Loading"></div>
-        <h5 class="fw-bold mb-2" id="addStudentLoadingTitle">Adding student to class</h5>
+        <h5 class="fw-bold mb-2" id="addStudentLoadingTitle">Adding student to section</h5>
         <p class="text-muted mb-0">Please wait while the selected student is being added.</p>
     </div>
 </div>

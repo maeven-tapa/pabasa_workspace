@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(response => response.json())
             .then(res => {
                 if (res.success) {
-                    if (typeof showToast === 'function') showToast('Class details updated successfully.', 'success'); else try{ alert('Class details updated successfully.'); }catch(e){}
+                    if (typeof showToast === 'function') showToast('Section details updated successfully.', 'success'); else try{ alert('Section details updated successfully.'); }catch(e){}
                     setTimeout(() => window.location.reload(), 1200);
                 } else {
                     if (typeof showToast === 'function') showToast('Error: ' + res.error, 'error'); else try{ alert('Error: ' + res.error); }catch(e){}
@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     loadingModalEl.classList.remove('is-visible');
                 }
                 clickedButton.disabled = false;
-                console.error('Error adding student to class:', error);
+                console.error('Error adding student to section:', error);
                 if (typeof showToast === 'function') showToast('Error: Unable to add student. Please try again.', 'error'); else try{ alert('Error: Unable to add student. Please try again.'); }catch(e){}
             });
         });
