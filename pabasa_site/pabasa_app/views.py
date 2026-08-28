@@ -4360,6 +4360,12 @@ def _dashboard_context(request, nav_role=None, extra=None):
         'joined_classes': joined_classes,
         'active_teacher_class_count': len(joined_classes),
     }
+    if user and user.role == 'student':
+        context['student_reading_level'] = (
+            _reader_assessment_state(user).get('reader_classification')
+            or getattr(user, 'reading_level', '')
+            or 'Pending'
+        )
     perf_mark('teacher_courses_start')
     # Classes are the source of truth for personal Courses. Each active class
     # is represented as a course card without requiring a legacy Course row.

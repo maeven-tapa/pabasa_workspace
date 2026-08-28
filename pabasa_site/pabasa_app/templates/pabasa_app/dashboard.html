@@ -989,6 +989,21 @@
         font-size: 0.78rem;
     }
 
+    .reading-level-badge {
+        align-items: center;
+        background: rgba(31, 182, 255, 0.1);
+        border: 1px solid rgba(31, 182, 255, 0.22);
+        border-radius: 999px;
+        color: #176b91;
+        display: inline-flex;
+        font-size: 0.72rem;
+        font-weight: 700;
+        gap: 0.3rem;
+        margin-top: 0.15rem;
+        padding: 0.25rem 0.55rem;
+        width: fit-content;
+    }
+
     .class-card-code {
         font-family: "Nunito", "Segoe UI", sans-serif;
         display: inline-flex;
@@ -2072,6 +2087,7 @@
 <script>
     window.PABASA_USER_EMAIL = "{{ email|escapejs }}";
     window.PABASA_DASHBOARD_GREETING_NAME = "{{ dashboard_greeting_name|default:'Student'|escapejs }}";
+    window.PABASA_STUDENT_READING_LEVEL = "{{ student_reading_level|default:'Pending'|escapejs }}";
     window.PABASA_STUDENT_CALENDAR_EVENTS = {{ student_calendar_events_json|default:"[]"|safe }};
 </script>
 
@@ -2756,6 +2772,7 @@
                     <div class="class-card-meta">
                         <span><i class="bi bi-person-badge me-2 text-primary"></i> Teacher: <strong>${escapeHtml(classData.teacher || classData.teacher_name || classData.teacherName || "Your teacher")}</strong></span>
                         <span><i class="bi bi-stars me-2 text-info"></i> ${escapeHtml(classData.subject || classData.header || "Reading")} class</span>
+                        <span class="reading-level-badge" data-reading-level><i class="bi bi-bar-chart-fill"></i> Reading Level: ${escapeHtml(window.PABASA_STUDENT_READING_LEVEL || 'Pending')}</span>
                     </div>
                     ${classData.currentLesson ? `
                     <div class="class-card-new-info">
