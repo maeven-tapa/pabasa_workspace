@@ -806,7 +806,7 @@ class ReadingLaunchClassificationTests(TestCase):
         self.assertNotIn('SpeechRecognition', script)
         self.assertNotIn('speechSynthesis', script)
 
-    def test_story_reading_completion_is_persisted_and_restored_without_assessment_result(self):
+    def test_story_reading_completion_updates_shared_assessment_result_and_restores_progress(self):
         student = self._login_student()
         material = Material.objects.create(
             title='The Blue Kite', code='STORY-PERSIST', item_type='paragraph',
@@ -840,20 +840,48 @@ class ReadingLaunchClassificationTests(TestCase):
         progress = StoryReadingProgress.objects.get(student=student, material=material)
         self.assertTrue(progress.completed)
         self.assertEqual(progress.words_read, 5)
-        self.assertEqual(material.assessment_results.count(), 0)
+
+        completion_response = self.client.post(
+            reverse('record_assessment_completion'),
+            data=json.dumps({
+                'material_id': f'material-{material.id}',
+                'activity_type': 'story_reading',
+                'assessment_type': 'paragraph',
+                'items_completed': 6,
+                'correct_items': 5,
+                'accuracy': 83.333333,
+                'total_score': 83.333333,
+                'duration_seconds': 12,
+                'scores': {
+                    'correct_items': 5,
+                    'items_completed': 6,
+                    'accuracy': 83.333333,
+                    'total_score': 83.333333,
+                    'duration_seconds': 12,
+                },
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(completion_response.status_code, 200)
+        self.assertTrue(completion_response.json()['success'])
+        result = material.assessment_results.get(student=student, attempt_status='completed')
+        self.assertEqual(result.correct_items, 5)
+        self.assertEqual(result.items_completed, 6)
+        self.assertAlmostEqual(result.total_score, 83.333333, places=2)
 
         reopened = self.client.get(reverse('story_reading_page'), {'id': f'material-{material.id}'})
         self.assertEqual(reopened.status_code, 200)
         self.assertTrue(reopened.context['story_reading_data']['completion']['completed'])
         self.assertEqual(reopened.context['story_reading_data']['return_url'], reverse('dashboard'))
 
-    def test_story_reading_script_does_not_use_shared_completion_flow(self):
+    def test_story_reading_script_uses_shared_completion_flow_at_final_completion(self):
         script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'story_reading_flipbook.js'
         script = script_path.read_text(encoding='utf-8')
         self.assertIn("fetch('/api/story-reading/complete/'", script)
-        self.assertNotIn("fetch('/record-assessment-completion/'", script)
-        self.assertNotIn('pabasa-assist-complete', script)
-        self.assertIn("href = story.return_url || '/dashboard/'", script)
+        player_script = (Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'story_reading_player.js').read_text(encoding='utf-8')
+        self.assertIn("fetch('/record-assessment-completion/'", player_script)
+        self.assertIn('finishCompletion()', player_script)
+        self.assertIn('state.scene >= scenes.length', player_script)
 
     def test_regular_paragraph_material_stays_on_existing_reader(self):
         self._login_student()
