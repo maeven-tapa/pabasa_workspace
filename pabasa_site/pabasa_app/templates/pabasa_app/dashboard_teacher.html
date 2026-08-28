@@ -126,14 +126,17 @@
     .teacher-dashboard { display: grid; gap: 1.15rem; }
     @media (min-width: 992px) { .teacher-dashboard { padding-bottom:25px; } }
 
-    .teacher-dashboard-columns { display:grid; grid-template-columns:minmax(0,1fr) minmax(290px,360px); gap:1.15rem; align-items:start; }
-    .teacher-dashboard-main { min-width:0; display:grid; gap:1.15rem; }
+    /* Desktop uses shared grid rows, so the class workspace and upcoming card
+       always begin and end together as their content changes. */
+    .teacher-dashboard-columns { display:grid; gap:1.15rem; min-width:0; }
+    .teacher-dashboard-main,
+    .teacher-calendar-column { min-width:0; }
     .teacher-calendar-card { background:#fff; border:1px solid rgba(16,70,110,.1); border-radius:22px; padding:1rem; box-shadow:0 12px 28px rgba(16,70,110,.08); position:sticky; top:1rem; display:flex; flex-direction:column; }
     .teacher-calendar-head { display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-bottom:.7rem; }
-    .teacher-calendar-head h3 { margin:0; color:#10466e; font-size:1.05rem; font-weight:900; }
-    .teacher-calendar-meta { color:#6b7d8f; font-size:.78rem; margin-bottom:.7rem; }
+    .teacher-calendar-head h3 { margin:0; color:#10466e; font-size:1.08rem; font-weight:900; }
+    .teacher-calendar-meta { color:#6b7d8f; font-size:.84rem; margin-bottom:.7rem; }
     .teacher-calendar-filter { display:flex; gap:2px; padding:3px; border:1px solid rgba(16,70,110,.12); border-radius:999px; background:rgba(16,70,110,.035); margin-bottom:.8rem; }
-    .teacher-calendar-filter button { flex:0 0 auto; min-width:7.4rem; border:0; border-radius:999px; background:transparent; color:#64788a; padding:.35rem .75rem; font-size:.72rem; font-weight:800; white-space:nowrap; }
+    .teacher-calendar-filter button { flex:0 0 auto; min-width:7.4rem; border:0; border-radius:999px; background:transparent; color:#64788a; padding:.42rem .75rem; font-size:.82rem; font-weight:800; white-space:nowrap; }
     .teacher-calendar-filter button[data-teacher-calendar-filter="school"], .teacher-calendar-filter button[data-teacher-expanded-filter="school"] { min-width:5.2rem; }
     .teacher-calendar-filter button.active { background:#10466e; color:#fff; }
     .teacher-calendar-card .teacher-calendar-filter { width:100%; }
@@ -144,29 +147,29 @@
     .teacher-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); grid-template-rows:1.55rem repeat(6,minmax(0,1fr)); height:18.35rem; border:1px solid rgba(16,70,110,.08); border-radius:10px; overflow:hidden; }
     .teacher-calendar-grid > div { min-width:0; min-height:0; border-right:1px solid rgba(16,70,110,.08); border-bottom:1px solid rgba(16,70,110,.08); padding:.25rem; }
     .teacher-calendar-grid > div:nth-child(7n) { border-right:0; }
-    .teacher-calendar-weekday { min-height:auto!important; text-align:center; color:#6b7d8f; font-size:.62rem; font-weight:900; padding:.35rem .1rem!important; background:#f6fbfe; }
-    .teacher-calendar-day-number { color:#10466e; font-size:.7rem; font-weight:900; }
+    .teacher-calendar-weekday { min-height:auto!important; text-align:center; color:#6b7d8f; font-size:.72rem; font-weight:900; padding:.35rem .1rem!important; background:#f6fbfe; }
+    .teacher-calendar-day-number { color:#10466e; font-size:.8rem; font-weight:900; }
     .teacher-calendar-day.is-adjacent .teacher-calendar-day-number { opacity:.4; }
     .teacher-calendar-day.is-today { background:#eef9ff; }
     .teacher-calendar-event { display:block; height:4px; margin-top:.3rem; border-radius:999px; background:#3b82f6; }
     .teacher-calendar-event.school { background:#d97706; }
     .teacher-calendar-expand { width:100%; margin-top:.8rem; }
     .teacher-calendar-column { min-width:0; }
-    .teacher-upcoming-card { background:#fff; border:1px solid rgba(16,70,110,.1); border-radius:22px; padding:1rem; box-shadow:0 12px 28px rgba(16,70,110,.08); margin-top:1.15rem; display:flex; flex-direction:column; }
+    .teacher-upcoming-card { background:#fff; border:1px solid rgba(16,70,110,.1); border-radius:22px; padding:1rem; box-shadow:0 12px 28px rgba(16,70,110,.08); display:flex; flex-direction:column; min-width:0; }
     .teacher-upcoming-head { margin-bottom:.75rem; }
-    .teacher-upcoming-head h3 { margin:0; color:#10466e; font-size:1.1rem; font-weight:900; }
-    .teacher-upcoming-head p { color:#6b7d8f; font-size:.85rem; margin:.2rem 0 0; }
-    .teacher-upcoming-table { width:100%; table-layout:fixed; border-collapse:collapse; font-size:.85rem; }
-    .teacher-upcoming-table th { color:#6b7d8f; font-size:.78rem; font-weight:800; text-align:left; padding:.4rem .25rem; border-bottom:1px solid #d7e5ef; }
-    .teacher-upcoming-table td { color:#29465a; padding:.62rem .25rem; border-bottom:1px solid rgba(16,70,110,.08); vertical-align:top; overflow-wrap:anywhere; }
+    .teacher-upcoming-head h3 { margin:0; color:#10466e; font-size:1.08rem; font-weight:900; }
+    .teacher-upcoming-head p { color:#6b7d8f; font-size:.86rem; margin:.2rem 0 0; }
+    .teacher-upcoming-table { width:100%; table-layout:fixed; border-collapse:collapse; font-size:.88rem; }
+    .teacher-upcoming-table th { color:#6b7d8f; font-size:.8rem; font-weight:800; text-align:left; padding:.45rem .25rem; border-bottom:1px solid #d7e5ef; }
+    .teacher-upcoming-table td { color:#29465a; padding:.68rem .25rem; border-bottom:1px solid rgba(16,70,110,.08); vertical-align:top; overflow-wrap:anywhere; }
     .teacher-upcoming-table th:first-child,.teacher-upcoming-table td:first-child { width:38%; }
     .teacher-upcoming-table th:last-child,.teacher-upcoming-table td:last-child { width:62%; }
     .teacher-upcoming-table tbody tr { height:3.55rem; }
     .teacher-upcoming-table tbody td { height:3.55rem; }
     .teacher-upcoming-content { min-height:11.2rem; }
-    .teacher-upcoming-empty { color:#6b7d8f; font-size:.85rem; margin:0; padding:.3rem 0; min-height:11.2rem; }
-    .teacher-upcoming-pagination { align-items:center; display:flex; justify-content:center; gap:.2rem; margin-top:.7rem; min-height:2rem; }
-    .teacher-upcoming-pagination button { background:transparent; border:0; border-radius:8px; color:#10466e; font-size:.85rem; font-weight:900; min-width:1.9rem; padding:.3rem .4rem; }
+    .teacher-upcoming-empty { color:#6b7d8f; font-size:.88rem; margin:0; padding:.3rem 0; min-height:11.2rem; }
+    .teacher-upcoming-pagination { align-items:center; display:flex; justify-content:center; gap:.45rem; margin-top:auto; min-height:2.35rem; padding-top:.7rem; }
+    .teacher-upcoming-pagination button { background:transparent; border:1px solid rgba(16,70,110,.14); border-radius:8px; color:#10466e; font-size:.84rem; font-weight:900; min-height:2rem; padding:.32rem .6rem; }
     .teacher-upcoming-pagination button.active { background:#10466e; color:#fff; }
     .teacher-upcoming-pagination button:disabled { color:#b8c5ce; cursor:not-allowed; }
     .teacher-calendar-expanded .modal-dialog { max-width:1100px; }
@@ -187,6 +190,17 @@
     .teacher-gantt-day.adjacent .teacher-gantt-day-number { opacity:.45; }
     .teacher-gantt-lanes { position:relative; padding:.25rem 0 .45rem; min-height:2.2rem; }
     .teacher-gantt-bar { height:1.35rem; margin:0 2px; border-radius:999px; padding:.2rem .45rem; color:#fff; font-size:.7rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; z-index:2; }
+    @media (min-width: 992px) {
+        .teacher-dashboard-columns { align-items:stretch; grid-template-columns:minmax(0,1fr) minmax(290px,360px); grid-template-areas:"glance calendar" "attention calendar" "workspace upcoming"; }
+        .teacher-dashboard-main,
+        .teacher-calendar-column,
+        .teacher-board { display:contents; }
+        .teacher-glance { grid-area:glance; }
+        .teacher-attention { grid-area:attention; }
+        .teacher-calendar-card { grid-area:calendar; }
+        .class-workspace { grid-area:workspace; height:100%; }
+        .teacher-upcoming-card { grid-area:upcoming; height:100%; }
+    }
     @media (max-width: 991.98px) { .teacher-dashboard-columns { grid-template-columns:1fr; } .teacher-calendar-card { position:static; } .teacher-calendar-grid { height:auto; grid-template-rows:none; } .teacher-calendar-grid > div { min-height:2.8rem; } .teacher-upcoming-empty { min-height:0; } }
     @media (max-width: 575.98px) { .teacher-calendar-expanded .modal-dialog { width:calc(100vw - 1rem); margin:.5rem auto; } .teacher-calendar-expanded .modal-content { height:calc(100vh - 1rem); max-height:calc(100vh - 1rem); } }
 
@@ -476,7 +490,7 @@
     .teacher-glance-grid {
         display: grid;
         gap: 0.65rem;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.75rem), 1fr));
     }
 
     .class-title-actions {
@@ -542,7 +556,7 @@
     .teacher-reading-grid {
         display: grid;
         gap: 0.5rem;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
     }
 
     .teacher-reading-item {
@@ -1018,12 +1032,40 @@
     .student-card .student-inline-details strong { flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .student-card .student-inline-details .student-separator { color:#b5c3cb; flex:0 0 auto; }
     .student-card .student-inline-details .student-email { color:var(--dash-muted); flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .student-pagination { align-items:center; display:flex; gap:.2rem; justify-content:center; min-height:2rem; margin-top:.35rem; }
-    .student-pagination button { background:transparent; border:0; border-radius:8px; color:#10466e; font-size:.85rem; font-weight:900; min-width:1.9rem; padding:.3rem .4rem; }
+    .student-pagination { align-items:center; display:flex; gap:.45rem; justify-content:center; min-height:2.35rem; margin-top:auto; padding-top:.65rem; }
+    .student-pagination button { background:transparent; border:1px solid rgba(16,70,110,.14); border-radius:8px; color:#10466e; font-size:.84rem; font-weight:900; min-height:2rem; padding:.32rem .6rem; }
     .student-pagination button.active { background:#10466e; color:#fff; }
     .student-pagination button:disabled { color:#b8c5ce; cursor:not-allowed; }
+    .teacher-pagination-status { color:#60788b; font-size:.84rem; font-weight:800; min-width:4.75rem; text-align:center; }
     @media (max-width: 575.98px) { .student-card .student-inline-details { align-items:flex-start; flex-direction:column; gap:.05rem; } .student-card .student-separator { display:none; } .student-card .student-email { max-width:100%; } }
     @media (max-width: 991.98px) { .class-workspace { height:auto !important; } .class-detail-grid .teacher-panel { height:auto !important; grid-template-rows:none; } }
+
+    /* Readable, dashboard-only type scale. */
+    .teacher-dashboard .teacher-glance-heading p,
+    .teacher-dashboard .teacher-attention-heading p,
+    .teacher-dashboard .teacher-reading-summary-head span,
+    .teacher-dashboard .teacher-reading-label,
+    .teacher-dashboard .teacher-attention-reason,
+    .teacher-dashboard .mini-metric span,
+    .teacher-dashboard .student-email { font-size:.84rem; }
+    .teacher-dashboard .teacher-glance-item span { font-size:.82rem; }
+    .teacher-dashboard .teacher-reading-summary-head h4 { font-size:.92rem; }
+    .teacher-dashboard .teacher-reading-count { font-size:1.08rem; }
+    .teacher-dashboard .teacher-attention-action,
+    .teacher-dashboard .class-title-actions .btn { font-size:.86rem; }
+    .teacher-dashboard .student-inline-details strong { font-size:.9rem; }
+    @media (min-width:992px) {
+        .teacher-dashboard-columns { align-items:stretch; grid-template-columns:minmax(0,1fr) minmax(290px,360px); grid-template-areas:"glance calendar" "attention calendar" "workspace upcoming"; }
+        .teacher-dashboard-main,
+        .teacher-calendar-column,
+        .teacher-board { display:contents; }
+        .teacher-glance { grid-area:glance; }
+        .teacher-attention { grid-area:attention; }
+        .teacher-calendar-card { grid-area:calendar; }
+        .class-workspace { grid-area:workspace; height:100%; }
+        .teacher-upcoming-card { grid-area:upcoming; height:100%; margin-top:0; }
+    }
+    @media (max-width:991.98px) { .teacher-upcoming-card { margin-top:1.15rem; } }
 
     .student-card {
         align-items: center;
@@ -1561,7 +1603,7 @@
         if (!content || !pagination) return;
         const monday = new Date(today); monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
         const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
-        const weekEvents = events.filter(event => { const start=parseDate(event.start_date||event.start); const end=parseDate(event.end_date||event.end||event.start)||start; return start&&end&&key(end)>=key(monday)&&key(start)<=key(sunday); }).sort((a,b)=>key(parseDate(a.start_date||a.start))-key(parseDate(b.start_date||b.start)));
+        const weekEvents = visibleEvents().filter(event => { const start=parseDate(event.start_date||event.start); const end=parseDate(event.end_date||event.end||event.start)||start; return start&&end&&key(end)>=key(monday)&&key(start)<=key(sunday); }).sort((a,b)=>key(parseDate(a.start_date||a.start))-key(parseDate(b.start_date||b.start)));
         const pageSize=3, pageCount=Math.ceil(weekEvents.length/pageSize), page=Math.min(Number(pagination.dataset.page||1),Math.max(pageCount,1));
         pagination.dataset.page=page;
         if (!weekEvents.length) { content.innerHTML='<p class="teacher-upcoming-empty">No upcoming activities this week.</p>'; pagination.innerHTML=''; return; }
@@ -1573,12 +1615,13 @@
         content.innerHTML='<table class="teacher-upcoming-table"><thead><tr><th>Date</th><th>Activity</th></tr></thead><tbody>'+pageRows.map(event=>event?'<tr><td>'+formatDateRange(event)+'</td><td>'+escapeHtml(event.title||'Untitled activity')+'</td></tr>':'<tr aria-hidden="true"><td>&nbsp;</td><td>&nbsp;</td></tr>').join('')+'</tbody></table>';
         if (pageCount<=1) { pagination.innerHTML=''; return; }
         pagination.innerHTML='<button type="button" data-upcoming-page="prev" aria-label="Previous page">‹</button>'+Array.from({length:pageCount},(_,i)=>'<button type="button" class="'+(i+1===page?'active':'')+'" data-upcoming-page="'+(i+1)+'">'+(i+1)+'</button>').join('')+'<button type="button" data-upcoming-page="next" aria-label="Next page">›</button>';
+        pagination.innerHTML='<button type="button" data-upcoming-page="prev" aria-label="Previous upcoming activities page">Previous</button><span class="teacher-pagination-status" aria-live="polite">Page '+page+' of '+pageCount+'</span><button type="button" data-upcoming-page="next" aria-label="Next upcoming activities page">Next</button>';
         pagination.querySelector('[data-upcoming-page="prev"]').disabled=page===1; pagination.querySelector('[data-upcoming-page="next"]').disabled=page===pageCount;
         pagination.querySelectorAll('button').forEach(button=>button.onclick=()=>{const target=button.dataset.upcomingPage; pagination.dataset.page=target==='prev'?page-1:target==='next'?page+1:target; drawUpcoming();});
     }
     document.addEventListener('DOMContentLoaded', () => {
-        document.querySelectorAll('[data-teacher-calendar-filter]').forEach(button => button.onclick = () => { filter=button.dataset.teacherCalendarFilter; document.querySelectorAll('[data-teacher-calendar-filter]').forEach(item=>item.classList.toggle('active',item===button)); draw(); });
-        document.querySelectorAll('[data-teacher-expanded-filter]').forEach(button => button.onclick = () => { filter=button.dataset.teacherExpandedFilter; document.querySelectorAll('[data-teacher-expanded-filter]').forEach(item=>item.classList.toggle('active',item===button)); document.querySelectorAll('[data-teacher-calendar-filter]').forEach(item=>item.classList.toggle('active',item.dataset.teacherCalendarFilter===filter)); draw(); });
+        document.querySelectorAll('[data-teacher-calendar-filter]').forEach(button => button.onclick = () => { filter=button.dataset.teacherCalendarFilter; document.querySelectorAll('[data-teacher-calendar-filter]').forEach(item=>item.classList.toggle('active',item===button)); document.getElementById('teacherUpcomingPagination').dataset.page='1'; draw(); drawUpcoming(); });
+        document.querySelectorAll('[data-teacher-expanded-filter]').forEach(button => button.onclick = () => { filter=button.dataset.teacherExpandedFilter; document.querySelectorAll('[data-teacher-expanded-filter]').forEach(item=>item.classList.toggle('active',item===button)); document.querySelectorAll('[data-teacher-calendar-filter]').forEach(item=>item.classList.toggle('active',item.dataset.teacherCalendarFilter===filter)); document.getElementById('teacherUpcomingPagination').dataset.page='1'; draw(); drawUpcoming(); });
         document.getElementById('teacherExpandedPrev').onclick=()=>{cursor.setMonth(cursor.getMonth()-1);draw();}; document.getElementById('teacherExpandedToday').onclick=()=>{cursor=new Date(today.getFullYear(),today.getMonth(),1);draw();}; document.getElementById('teacherExpandedNext').onclick=()=>{cursor.setMonth(cursor.getMonth()+1);draw();};
         document.getElementById('teacherCalendarExpanded').addEventListener('shown.bs.modal', drawExpanded);
         window.addEventListener('resize', drawExpanded);
@@ -1708,7 +1751,11 @@ function renderTeacherAtGlance(providedStudents = null) {
     });
 }
 
-window.addEventListener('pabasa:teacher-class-selected', () => renderTeacherAtGlance());
+window.addEventListener('pabasa:teacher-class-selected', () => {
+    const studentPagination = document.getElementById('studentPagination');
+    if (studentPagination) studentPagination.dataset.page = '1';
+    renderTeacherAtGlance();
+});
 
 // Load and display student cards
 function syncClassCardToRightColumn() {
@@ -1844,6 +1891,11 @@ async function loadPersistedStudents() {
         if (!studentPagination) return;
         studentPagination.dataset.page = studentPage;
         studentPagination.innerHTML = '<button type="button" data-student-page="prev" aria-label="Previous page">‹</button>' + Array.from({length: studentPageCount}, (_, index) => '<button type="button" class="' + (index + 1 === studentPage ? 'active' : '') + '" data-student-page="' + (index + 1) + '">' + (index + 1) + '</button>').join('') + '<button type="button" data-student-page="next" aria-label="Next page">›</button>';
+        if (studentPageCount <= 1) {
+            studentPagination.innerHTML = '';
+            return;
+        }
+        studentPagination.innerHTML = '<button type="button" data-student-page="prev" aria-label="Previous student page">Previous</button><span class="teacher-pagination-status" aria-live="polite">Page ' + studentPage + ' of ' + studentPageCount + '</span><button type="button" data-student-page="next" aria-label="Next student page">Next</button>';
         studentPagination.querySelector('[data-student-page="prev"]').disabled = studentPage === 1;
         studentPagination.querySelector('[data-student-page="next"]').disabled = studentPage === studentPageCount;
         studentPagination.querySelectorAll('button').forEach(button => button.onclick = () => { const target = button.dataset.studentPage; studentPage = target === 'prev' ? studentPage - 1 : target === 'next' ? studentPage + 1 : Number(target); renderStudentPage(); });
