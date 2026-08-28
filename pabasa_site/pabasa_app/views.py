@@ -1382,17 +1382,14 @@ def _crla_grade2_part2_profile(correct_words_read, correct_answers):
 
     if percent is None or answers is None:
         return 'NOT AVAILABLE'
-    if percent < 25 and answers == 0:
-        return 'Low Emerging Reader'
-    if 26 <= percent <= 50 and 1 <= answers <= 2:
-        return 'High Emerging Reader'
-    if 51 <= percent <= 75 and 3 <= answers <= 4:
-        return 'Developing Reader'
-    if 76 <= percent < 100 and 5 <= answers <= 6:
-        return 'Transitioning Reader'
-    if percent == 100 and answers >= 5:
-        return 'Reading At Grade Level'
-    return 'NOT AVAILABLE'
+    reading_band = 0 if percent <= 25 else 1 if percent <= 50 else 2 if percent <= 75 else 3
+    comprehension_band = 0 if answers <= 0 else 1 if answers <= 2 else 2 if answers <= 4 else 3
+    return (
+        'High Emerging Reader',
+        'Developing Reader',
+        'Transitioning Reader',
+        'Reading At Grade Level',
+    )[min(reading_band, comprehension_band)]
 
 
 def _osps_multiplier(assessment_type):
@@ -9793,8 +9790,13 @@ def persist_student_end_assessment_state(request):
         if stage == 'completed':
             _sync_assessment_workflow_state(student, score_payload={
                 'assessment_type': 'paragraph',
+                'story_total_words': saved.get('story_total_words') or saved.get('total_story_words'),
+                'words_read': saved.get('words_read') or saved.get('total_words_read'),
+                'miscues': saved.get('miscues'),
+                'duration_seconds': saved.get('duration_seconds'),
                 'story_read_percent': saved.get('story_read_percent'),
                 'correct_answers': saved.get('correct_answers'),
+                'comprehension_correct': saved.get('comprehension_correct'),
                 'crla_classification': final_classification,
                 'classification': final_classification,
             }, material=material)

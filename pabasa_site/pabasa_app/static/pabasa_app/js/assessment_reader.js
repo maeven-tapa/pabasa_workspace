@@ -516,7 +516,7 @@
         function getStoryClassificationFromResult(storyReadPercent, correctAnswers) {
             const percent = Number(storyReadPercent);
             const correct = Number(correctAnswers);
-            if (!Number.isFinite(percent) || !Number.isFinite(correct)) return "";
+                if (!Number.isFinite(percent) || !Number.isFinite(correct)) return "";
             const readingBand = percent <= 25 ? 0 : percent <= 50 ? 1 : percent <= 75 ? 2 : 3;
             const comprehensionBand = correct <= 0 ? 0 : correct <= 2 ? 1 : correct <= 4 ? 2 : 3;
             return [
@@ -1971,7 +1971,12 @@
         function buildCrlaScoreData(scores) {
             const endState = readStudentEndState() || {};
             const source = { ...endState, ...(scores || {}) };
-            const task1Score = source.task1_score ?? source.correct_words ?? source.word_count ?? null;
+            const task1ScoreCandidate = source.task1_score ?? source.task1_correct_words
+                ?? (currentAssessmentBranch === "words" ? source.correct_words ?? source.word_count : null);
+            const task1ScoreNumber = Number(task1ScoreCandidate);
+            const task1Score = Number.isInteger(task1ScoreNumber) && task1ScoreNumber >= 0 && task1ScoreNumber <= 10
+                ? task1ScoreNumber
+                : null;
             const task2Score = source.task2_score
                 ?? source.task2_rhymes_score
                 ?? source.task2_sentences_score
@@ -1998,7 +2003,7 @@
                 comprehension_total: source.comprehension_total ?? source.total_questions ?? null,
                 comprehension_correct: source.comprehension_correct ?? source.correct_answers ?? null,
                 passage_accuracy_percent: passageAccuracy,
-                crla_classification: null,
+                crla_classification: source.crla_classification ?? source.classification ?? null,
             };
         }
 
@@ -3023,6 +3028,14 @@
                             ? "Light Refresher"
                             : "Grade Ready";
             } else if (currentAssessmentBranch === "story") {
+                const preservedTask1Score = Number(previousEndState.task1_score ?? previousEndState.task1_correct_words);
+                const preservedTask2Score = Number(previousEndState.task2_score
+                    ?? previousEndState.task2_rhymes_score
+                    ?? previousEndState.task2_sentences_score);
+                const preservedTask1IsValid = Number.isInteger(preservedTask1Score)
+                    && preservedTask1Score >= 0 && preservedTask1Score <= 10;
+                const preservedTask2IsValid = Number.isInteger(preservedTask2Score)
+                    && preservedTask2Score >= 0 && preservedTask2Score <= 10;
                 const storyRead = Number(
                     latestScores.story_read_percent ??
                     latestScores.story_percent ??
@@ -3040,8 +3053,18 @@
                     0
                 );
                 branchState.classification = getStoryClassificationFromResult(storyRead, correctAnswers);
+                latestScores.crla_classification = branchState.classification;
+                latestScores.classification = branchState.classification;
                 branchState.stage = "completed";
                 branchState.next_stage = "completed";
+                branchState.task1_score = preservedTask1IsValid ? preservedTask1Score : null;
+                branchState.task1_correct_words = preservedTask1IsValid ? preservedTask1Score : null;
+                branchState.task2_type = previousEndState.task2_type
+                    || (previousEndState.task2_rhymes_score != null ? "Task 2L / Rhymes" : "Task 2H / Sentences");
+                branchState.task2_score = preservedTask2IsValid ? preservedTask2Score : null;
+                branchState.task2_rhymes_score = previousEndState.task2_rhymes_score ?? null;
+                branchState.task2_sentences_score = previousEndState.task2_sentences_score ?? null;
+                branchState.part1_total_score = previousEndState.part1_total_score ?? null;
                 branchState.story_read_percent = Number.isFinite(storyRead) ? storyRead : null;
                 branchState.story_total_words = latestScores.total_story_words ?? null;
                 branchState.total_story_words = latestScores.total_story_words ?? null;

@@ -165,17 +165,13 @@ def crla_part2_profile(total_story_words: Any, words_read: Any, miscues: Any,
                         else 2 if passage_accuracy_percent <= 75 else 3)
     comprehension_band = None if answers is None else (0 if answers <= 0 else 1 if answers <= 2 else 2 if answers <= 4 else 3)
     classification = "NOT AVAILABLE"
-    if passage_accuracy_percent is not None and answers is not None:
-        if passage_accuracy_percent < 25 and answers == 0:
-            classification = "Low Emerging Reader"
-        elif 26 <= passage_accuracy_percent <= 50 and 1 <= answers <= 2:
-            classification = "High Emerging Reader"
-        elif 51 <= passage_accuracy_percent <= 75 and 3 <= answers <= 4:
-            classification = "Developing Reader"
-        elif 76 <= passage_accuracy_percent < 100 and 5 <= answers <= 6:
-            classification = "Transitioning Reader"
-        elif passage_accuracy_percent == 100 and answers >= 5:
-            classification = "Reading At Grade Level"
+    if reading_band is not None and comprehension_band is not None:
+        classification = (
+            "High Emerging Reader",
+            "Developing Reader",
+            "Transitioning Reader",
+            "Reading At Grade Level",
+        )[min(reading_band, comprehension_band)]
     final_band = min(reading_band, comprehension_band) if reading_band is not None and comprehension_band is not None else None
     return {
         "total_story_words": total_words, "words_read": read, "miscues": error_count,
@@ -209,6 +205,9 @@ def normalize_crla_score_data(data: Dict[str, Any]) -> Dict[str, Any]:
     for key, keys in aliases.items():
         value = next((source.get(alias) for alias in keys if source.get(alias) not in (None, "")), None)
         normalized[key] = value
+    for key in ("task1_correct_words", "task1_score"):
+        value = _coerce_int(normalized.get(key))
+        normalized[key] = value if value is not None and 0 <= value <= CRLA_TASK1_ITEM_COUNT else None
     return normalized
 
 
@@ -483,9 +482,7 @@ def build_assessment_score_payload(data: Dict[str, Any]) -> Dict[str, Any]:
     else:
         overall_raw_score = max(0, correct_words)
     final_score = overall_raw_score
-    if part1_total is not None:
-        classification = crla_part1_classification(final_score)
-    elif assessment_type == "paragraph":
+    if assessment_type == "paragraph":
         total_story_words = crla_score_data.get("story_total_words") or data.get("total_story_words", payload.get("total_story_words", target_word_count))
         words_read = crla_score_data.get("words_read") or data.get("words_read", payload.get("words_read", correct_words + incorrect_words))
         miscues = crla_score_data.get("miscues") if crla_score_data.get("miscues") is not None else data.get("miscues", payload.get("miscues", incorrect_words))
@@ -494,6 +491,8 @@ def build_assessment_score_payload(data: Dict[str, Any]) -> Dict[str, Any]:
             comprehension = data.get("correct_answers", payload.get("correct_answers"))
         part2_profile = crla_part2_profile(total_story_words, words_read, miscues, duration_seconds, comprehension)
         classification = part2_profile["classification"]
+    elif part1_total is not None:
+        classification = crla_part1_classification(final_score)
     elif is_crla_attempt:
         # A Task 1-only record must not be assigned a generic percentage-based
         # reader classification before its applicable Task 2 is completed.
@@ -501,6 +500,7 @@ def build_assessment_score_payload(data: Dict[str, Any]) -> Dict[str, Any]:
     else:
         classification = payload.get("crla_classification") or payload.get("classification") or crla_classification(final_score)
     performance_interpretation_value = payload.get("performance_interpretation") or performance_interpretation(final_score)
+    crla_score_data["crla_classification"] = classification if is_crla_attempt else crla_score_data.get("crla_classification")
     adapted_level_payload = adapted_reading_level_from_attempts([
         {"overall_raw_score": overall_raw_score, "assessment_type": assessment_type}
     ])

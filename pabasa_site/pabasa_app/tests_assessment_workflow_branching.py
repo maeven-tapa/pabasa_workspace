@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from django.test import SimpleTestCase
 
-from pabasa_app.views import _aral_eligible_classification, _sync_assessment_workflow_state
+from pabasa_app.views import _aral_eligible_classification, _crla_grade2_part2_profile, _sync_assessment_workflow_state
 from pabasa_app.scoring import build_assessment_score_payload
 
 
@@ -46,6 +46,108 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
             },
         })
         self.assertEqual(payload["crla_score_data"]["task1_total_words"], 10)
+        self.assertIsNone(payload["crla_score_data"]["task1_correct_words"])
+        self.assertIsNone(payload["crla_score_data"]["task1_score"])
+
+    def test_story_words_read_cannot_populate_task1_correct_words(self):
+        payload = build_assessment_score_payload({
+            "assessment_type": "paragraph",
+            "correct_words": 56,
+            "target_word_count": 95,
+            "crla_score_data": {
+                "story_total_words": 95,
+                "words_read": 56,
+                "miscues": 39,
+                "duration_seconds": 869.25,
+                "comprehension_total": 6,
+                "comprehension_correct": 3,
+            },
+        })
+        self.assertEqual(payload["crla_score_data"]["words_read"], 56)
+        self.assertIsNone(payload["crla_score_data"]["task1_correct_words"])
+        self.assertIsNone(payload["crla_score_data"]["task1_score"])
+
+    def test_task1_score_above_official_limit_is_rejected(self):
+        payload = build_assessment_score_payload({
+            "assessment_type": "paragraph",
+            "crla_score_data": {"task1_score": 56, "words_read": 56},
+        })
+        self.assertIsNone(payload["crla_score_data"]["task1_score"])
+
+    def test_valid_task1_and_task2_remain_independent_from_story_words(self):
+        payload = build_assessment_score_payload({
+            "assessment_type": "paragraph",
+            "correct_words": 56,
+            "crla_score_data": {
+                "task1_total_words": 10,
+                "task1_correct_words": 7,
+                "task1_score": 7,
+                "task2_type": "Task 2H / Sentences",
+                "task2_score": 4,
+                "part1_total_score": 11,
+                "story_total_words": 80,
+                "words_read": 60,
+                "miscues": 3,
+                "duration_seconds": 90,
+                "comprehension_total": 6,
+                "comprehension_correct": 3,
+            },
+        })
+        self.assertEqual(payload["crla_score_data"]["task1_correct_words"], 7)
+        self.assertEqual(payload["crla_score_data"]["task1_score"], 7)
+        self.assertEqual(payload["crla_score_data"]["task2_type"], "Task 2H / Sentences")
+        self.assertEqual(payload["crla_score_data"]["task2_score"], 4)
+        self.assertEqual(payload["crla_score_data"]["part1_total_score"], 11)
+        self.assertEqual(payload["crla_classification"], "Transitioning Reader")
+        self.assertEqual(payload["crla_score_data"]["crla_classification"], "Transitioning Reader")
+
+    def test_valid_part2_classification_ignores_legacy_generic_aggregates(self):
+        payload = build_assessment_score_payload({
+            "assessment_type": "paragraph",
+            "correct_words": 56,
+            "accuracy": 58.95,
+            "pronunciation_score": 22.67,
+            "fluency_score": 35,
+            "total_score": 56,
+            "crla_score_data": {
+                "story_total_words": 80,
+                "words_read": 50,
+                "miscues": 3,
+                "duration_seconds": 90,
+                "comprehension_total": 6,
+                "comprehension_correct": 3,
+            },
+        })
+        self.assertEqual(payload["crla_classification"], "Developing Reader")
+        self.assertEqual(payload["total_score"], 56)
+
+    def test_part2_server_helper_matches_authoritative_band_mapping(self):
+        self.assertEqual(_crla_grade2_part2_profile(53.68, 6), "Transitioning Reader")
+
+    def test_other_part2_classification_bands_remain_available(self):
+        self.assertEqual(_crla_grade2_part2_profile(50, 3), "Developing Reader")
+        self.assertEqual(_crla_grade2_part2_profile(100, 6), "Reading At Grade Level")
+
+    def test_part2_classification_persists_through_completed_state_sync(self):
+        end_state = self._run_sync({
+            "assessment_type": "paragraph",
+            "story_total_words": 95,
+            "words_read": 73,
+            "miscues": 22,
+            "duration_seconds": 491.88,
+            "story_read_percent": 53.68,
+            "comprehension_total": 6,
+            "comprehension_correct": 6,
+            "correct_answers": 6,
+            "crla_classification": "Transitioning Reader",
+        })
+        self.assertEqual(end_state["classification"], "Transitioning Reader")
+
+    def test_overlay_prefers_authoritative_crla_classification(self):
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        resolver = source.split("function resolveClassificationLabel", 1)[1].split("function isAralEligibleClassification", 1)[0]
+        self.assertIn("scorePayload?.crla_classification", resolver)
+        self.assertLess(resolver.index("scorePayload?.crla_classification"), resolver.index("scorePayload?.classification"))
 
     def test_story_segment_completion_advances_before_final_completion(self):
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
