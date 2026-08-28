@@ -1633,9 +1633,7 @@
         const pageRows=weekEvents.slice((page-1)*pageSize,page*pageSize);
         while (pageRows.length < pageSize) pageRows.push(null);
         content.innerHTML='<table class="teacher-upcoming-table"><thead><tr><th>Date</th><th>Activity</th></tr></thead><tbody>'+pageRows.map(event=>event?'<tr><td>'+formatDateRange(event)+'</td><td>'+escapeHtml(event.title||'Untitled activity')+'</td></tr>':'<tr aria-hidden="true"><td>&nbsp;</td><td>&nbsp;</td></tr>').join('')+'</tbody></table>';
-        if (pageCount<=1) { pagination.innerHTML=''; return; }
         pagination.innerHTML='<button type="button" data-upcoming-page="prev" aria-label="Previous page">‹</button>'+Array.from({length:pageCount},(_,i)=>'<button type="button" class="'+(i+1===page?'active':'')+'" data-upcoming-page="'+(i+1)+'">'+(i+1)+'</button>').join('')+'<button type="button" data-upcoming-page="next" aria-label="Next page">›</button>';
-        pagination.innerHTML='<button type="button" data-upcoming-page="prev" aria-label="Previous upcoming activities page">Previous</button><span class="teacher-pagination-status" aria-live="polite">Page '+page+' of '+pageCount+'</span><button type="button" data-upcoming-page="next" aria-label="Next upcoming activities page">Next</button>';
         pagination.querySelector('[data-upcoming-page="prev"]').disabled=page===1; pagination.querySelector('[data-upcoming-page="next"]').disabled=page===pageCount;
         pagination.querySelectorAll('button').forEach(button=>button.onclick=()=>{const target=button.dataset.upcomingPage; pagination.dataset.page=target==='prev'?page-1:target==='next'?page+1:target; drawUpcoming();});
     }
@@ -1911,11 +1909,6 @@ async function loadPersistedStudents() {
         if (!studentPagination) return;
         studentPagination.dataset.page = studentPage;
         studentPagination.innerHTML = '<button type="button" data-student-page="prev" aria-label="Previous page">‹</button>' + Array.from({length: studentPageCount}, (_, index) => '<button type="button" class="' + (index + 1 === studentPage ? 'active' : '') + '" data-student-page="' + (index + 1) + '">' + (index + 1) + '</button>').join('') + '<button type="button" data-student-page="next" aria-label="Next page">›</button>';
-        if (studentPageCount <= 1) {
-            studentPagination.innerHTML = '';
-            return;
-        }
-        studentPagination.innerHTML = '<button type="button" data-student-page="prev" aria-label="Previous student page">Previous</button><span class="teacher-pagination-status" aria-live="polite">Page ' + studentPage + ' of ' + studentPageCount + '</span><button type="button" data-student-page="next" aria-label="Next student page">Next</button>';
         studentPagination.querySelector('[data-student-page="prev"]').disabled = studentPage === 1;
         studentPagination.querySelector('[data-student-page="next"]').disabled = studentPage === studentPageCount;
         studentPagination.querySelectorAll('button').forEach(button => button.onclick = () => { const target = button.dataset.studentPage; studentPage = target === 'prev' ? studentPage - 1 : target === 'next' ? studentPage + 1 : Number(target); renderStudentPage(); });
