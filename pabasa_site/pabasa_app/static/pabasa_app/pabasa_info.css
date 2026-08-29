@@ -16,6 +16,7 @@
     background: #fcfbf8;
     font-family: "Nunito", "Segoe UI", sans-serif;
     overflow: hidden;
+    width: 100%;
 }
 
 @keyframes learningPatternDrift {
@@ -23,7 +24,19 @@
     to { background-position: 360px 240px; }
 }
 
-main.flex-grow-1.py-4 { padding-block: 0 !important; }
+/* Use the full page canvas rather than base.html's centered Bootstrap
+   container. This keeps every animated section flush with the viewport. */
+main.flex-grow-1.py-4:has(.pabasa-info) { padding: 0 !important; }
+main.flex-grow-1.py-4:has(.pabasa-info) > .container {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* The public-page footer normally has a top margin. Remove it here so the
+   final animated section reaches the footer instead of leaving a blank gap. */
+main:has(.pabasa-info) + .editorial-footer { margin-top: 0; }
 
 .info-container { position: relative; z-index: 1; width: min(100% - clamp(2rem, 7vw, 8rem), 80rem); margin-inline: auto; }
 .info-section, .info-hero { position: relative; isolation: isolate; overflow: hidden; }
