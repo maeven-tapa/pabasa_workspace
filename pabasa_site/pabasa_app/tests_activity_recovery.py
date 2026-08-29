@@ -36,7 +36,24 @@ class ProtectedActivityRecoveryTests(TestCase):
         self.assertTemplateUsed(response, 'pabasa_app/picture_word_matching_page.html')
         payload = json.loads(response.context['picture_word_material_json'])
         self.assertEqual(payload['items'][0]['word'], 'Aso')
-        self.assertIn('/picture_word/Set%20D/Dog.png', payload['items'][0]['image_path'])
+        self.assertIn('/picture_word/prescribe_sets/Set%20D/Dog-Aso.png', payload['items'][0]['image_path'])
+
+    def test_picture_word_route_migrates_legacy_custom_asset_path(self):
+        material = Material.objects.create(
+            title='Picture-Word Matching', item_type='word', type='assessment', source_type='template',
+            status='published', student_access=True, language='English',
+            content_text='horse', content_json={
+                'template_title': 'Picture-Word Matching', 'activity_type': 'picture_word_matching',
+                'language': 'English', 'pictureWordMatching': {'mode': 'custom'},
+                'items': [{'image': 'Horse.png', 'set': 'Custom Set', 'englishWord': 'Horse', 'filipinoWord': 'Kabayo'}],
+            },
+        )
+
+        response = self.client.get(reverse('picture_word_matching_page'), {'id': f'material-{material.id}'})
+
+        self.assertEqual(response.status_code, 200)
+        payload = json.loads(response.context['picture_word_material_json'])
+        self.assertIn('/picture_word/custom/Horse-Kabayo.png', payload['items'][0]['image_path'])
 
     def test_syllable_blending_route_renders_lost_found_payload(self):
         content = build_activity('Filipino', 'big_box', 0)

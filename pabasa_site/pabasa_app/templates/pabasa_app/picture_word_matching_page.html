@@ -76,9 +76,10 @@
         if (!filename) return '';
         const configuredSet = String(material.assessment_set || material.pictureWordMatching?.setKey || '').trim();
         const itemSet = String(item.set || item.sourceSetKey || configuredSet || '').replace(/^Set\s+/i, '').trim();
+        const prescribedFolder = /^Set\s+/i.test(itemSet) ? itemSet : `Set ${itemSet}`;
         const folder = String(item.sourceType || '').toLowerCase() === 'custom' || itemSet.toLowerCase() === 'custom'
-            ? 'Custom'
-            : `Set ${itemSet}`;
+            ? 'custom'
+            : `prescribe_sets/${prescribedFolder}`;
         return `/static/pabasa_app/images/picture_word/${folder}/${filename}`;
     };
     const items = (Array.isArray(material.items) ? material.items : []).filter(item => item && typeof item === 'object' && imageFor(item) && wordFor(item)).map((item,index) => ({...item,_id:`picture-${index}`,_answer:wordFor(item)}));

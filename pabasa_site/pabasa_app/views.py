@@ -9685,6 +9685,97 @@ def letter_sound_matching_page(request):
     return render(request, 'pabasa_app/letter_sound_matching_page.html', context)
 
 
+PICTURE_WORD_IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webp'}
+
+
+def _picture_word_label_from_filename(value):
+    """Convert one side of an ``English-Tagalog.png`` asset name into a display label."""
+    return str(value or '').replace('_', ' ').strip()
+
+
+def _picture_word_catalog():
+    """Build the Picture-Word library from its static-asset directory structure."""
+    static_root = Path(settings.BASE_DIR) / 'pabasa_app' / 'static' / 'pabasa_app' / 'images' / 'picture_word'
+
+    def read_folder(folder, *, set_key, source_type, relative_folder):
+        if not folder.is_dir():
+            return []
+        items = []
+        for asset in sorted(folder.iterdir(), key=lambda entry: entry.name.casefold()):
+            if not asset.is_file() or asset.suffix.casefold() not in PICTURE_WORD_IMAGE_EXTENSIONS:
+                continue
+            english_part, separator, filipino_part = asset.stem.partition('-')
+            english_word = _picture_word_label_from_filename(english_part)
+            filipino_word = _picture_word_label_from_filename(filipino_part)
+            if not separator or not english_word or not filipino_word:
+                logger.warning('Skipping Picture-Word asset with invalid filename: %s', asset)
+                continue
+            relative_asset = f'pabasa_app/images/picture_word/{relative_folder}/{asset.name}'
+            image_url = f"{settings.STATIC_URL.rstrip('/')}/{quote(relative_asset, safe='/')}"
+            items.append({
+                'image': asset.name,
+                'image_asset': asset.name,
+                'englishWord': english_word,
+                'filipinoWord': filipino_word,
+                'setKey': set_key,
+                'sourceSetKey': set_key,
+                'sourceType': source_type,
+                'image_path': image_url,
+                'imagePreview': image_url,
+            })
+        return items
+
+    custom_items = read_folder(
+        static_root / 'custom',
+        set_key='custom',
+        source_type='custom',
+        relative_folder='custom',
+    )
+    prescribed_sets = []
+    prescribed_root = static_root / 'prescribe_sets'
+    if prescribed_root.is_dir():
+        for folder in sorted((entry for entry in prescribed_root.iterdir() if entry.is_dir()), key=lambda entry: entry.name.casefold()):
+            prescribed_sets.append({
+                'key': folder.name,
+                'label': folder.name,
+                'items': read_folder(
+                    folder,
+                    set_key=folder.name,
+                    source_type='prescribed',
+                    relative_folder=f'prescribe_sets/{folder.name}',
+                ),
+            })
+    return {
+        'prescribedSets': prescribed_sets,
+        'customItems': custom_items,
+    }
+
+
+def _find_picture_word_catalog_item(catalog, *, filename='', set_key='', source_type='', english_word='', filipino_word=''):
+    """Find a current asset for a saved Picture-Word item, including legacy records."""
+    source_type = str(source_type or '').strip().lower()
+    set_key = str(set_key or '').strip()
+    custom_items = catalog.get('customItems') or []
+    prescribed_sets = catalog.get('prescribedSets') or []
+    normalized_set_key = re.sub(r'\s+set$', '', set_key, flags=re.IGNORECASE).casefold()
+    if source_type == 'custom' or normalized_set_key == 'custom':
+        candidates = custom_items
+    else:
+        normalized_set_key = re.sub(r'^set\s+', '', set_key, flags=re.IGNORECASE).casefold()
+        matching_set = next((entry for entry in prescribed_sets if re.sub(r'^set\s+', '', str(entry.get('key') or ''), flags=re.IGNORECASE).casefold() == normalized_set_key), None)
+        candidates = matching_set.get('items', []) if matching_set else [item for entry in prescribed_sets for item in entry.get('items', [])]
+
+    filename = Path(str(filename or '').replace('\\', '/')).name.casefold()
+    english_word = str(english_word or '').strip().casefold()
+    filipino_word = str(filipino_word or '').strip().casefold()
+    for item in candidates:
+        if filename and str(item.get('image') or '').casefold() == filename:
+            return item
+        if english_word and filipino_word and str(item.get('englishWord') or '').casefold() == english_word and str(item.get('filipinoWord') or '').casefold() == filipino_word:
+            return item
+    return None
+
+
 def _normalize_picture_word_matching_content(content_json):
     """Return a self-contained Picture-Word payload with durable static image URLs."""
     if not isinstance(content_json, dict):
@@ -9706,7 +9797,7 @@ def _normalize_picture_word_matching_content(content_json):
     mode = str(matching_config.get('mode') or '').strip().lower()
     configured_set = str(matching_config.get('setKey') or result.get('assessment_set') or '').strip()
     language = str(result.get('language') or matching_config.get('language') or 'English').strip()
-    static_root = Path(settings.BASE_DIR) / 'pabasa_app' / 'static' / 'pabasa_app' / 'images' / 'picture_word'
+    catalog = _picture_word_catalog()
 
     normalized_items = []
     for raw_item in result.get('items') or []:
@@ -9716,26 +9807,33 @@ def _normalize_picture_word_matching_content(content_json):
         raw_filename = str(item.get('image_asset') or item.get('sourceImage') or item.get('image') or '').strip()
         filename = Path(raw_filename.replace('\\', '/')).name
         raw_set = str(item.get('sourceSetKey') or item.get('set') or configured_set).strip()
-        set_key = re.sub(r'^set\s+', '', raw_set, flags=re.IGNORECASE).strip()
-        is_custom = mode == 'custom' or str(item.get('sourceType') or '').lower() == 'custom' or set_key.lower() == 'custom'
-        folder = 'Custom' if is_custom else f'Set {set_key}'
-
-        asset_dir = static_root / folder
-        if filename and asset_dir.is_dir():
-            actual_name = next((entry.name for entry in asset_dir.iterdir() if entry.is_file() and entry.name.casefold() == filename.casefold()), None)
-            if actual_name:
-                filename = actual_name
-
-        relative_asset = f'pabasa_app/images/picture_word/{folder}/{filename}' if filename else ''
-        image_url = f"{settings.STATIC_URL.rstrip('/')}/{quote(relative_asset, safe='/')}" if relative_asset else ''
         english_word = str(item.get('englishWord') or item.get('english_word') or item.get('word') or '').strip()
         filipino_word = str(item.get('filipinoWord') or item.get('filipino_word') or item.get('word') or '').strip()
+        catalog_item = _find_picture_word_catalog_item(
+            catalog,
+            filename=filename,
+            set_key=raw_set,
+            source_type=item.get('sourceType'),
+            english_word=english_word,
+            filipino_word=filipino_word,
+        )
+        if catalog_item:
+            filename = catalog_item['image']
+            english_word = catalog_item['englishWord']
+            filipino_word = catalog_item['filipinoWord']
+            set_key = catalog_item['setKey']
+            source_type = catalog_item['sourceType']
+            image_url = catalog_item['image_path']
+        else:
+            set_key = raw_set
+            source_type = 'custom' if mode == 'custom' or str(item.get('sourceType') or '').lower() == 'custom' else 'prescribed'
+            image_url = str(item.get('image_path') or item.get('imagePreview') or '')
         item.update({
             'image': filename, 'image_asset': filename, 'sourceImage': filename,
             'image_path': image_url, 'imagePreview': image_url,
-            'sourceSetKey': 'Custom' if is_custom else set_key,
-            'sourceType': 'custom' if is_custom else 'prescribed',
-            'set': 'Custom Set' if is_custom else f'Set {set_key}',
+            'sourceSetKey': set_key,
+            'sourceType': source_type,
+            'set': 'Custom' if source_type == 'custom' else set_key,
             'englishWord': english_word, 'english_word': english_word,
             'filipinoWord': filipino_word, 'filipino_word': filipino_word,
             'word': filipino_word if language.lower().startswith('fil') else english_word,
@@ -13094,6 +13192,7 @@ def course_teacher_view(request):
         'crla_assessment_status_message': _crla_creation_block_message(teacher_user=teacher_user) if current_term == 2 or crla_existing else '',
         'syllable_blending_catalog': activity_catalog(),
         'clap_count_word_bank': word_bank_catalog(),
+        'picture_word_catalog': _picture_word_catalog(),
     })
     return render(request, 'pabasa_app/courses.html', context)
 

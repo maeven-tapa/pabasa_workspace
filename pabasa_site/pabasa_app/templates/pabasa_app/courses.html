@@ -8844,6 +8844,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
 {{ syllable_blending_catalog|json_script:"syllable-blending-catalog" }}
 {{ clap_count_word_bank|json_script:"clap-count-word-bank" }}
+{{ picture_word_catalog|json_script:"picture-word-catalog" }}
 <script>
     // Get the current teacher's name from the page title or username
     let CURRENT_TEACHER_NAME = "Teacher";
@@ -14160,334 +14161,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 ]
             }
         };
-        const PICTURE_WORD_MATCHING_SYSTEM_SETS = {
-            A: [
-                { image: 'Jaw.png', filipinoWord: 'Panga', englishWord: 'Jaw' },
-                { image: 'Medicine.png', filipinoWord: 'Gamot', englishWord: 'Medicine' },
-                { image: 'Branch.png', filipinoWord: 'Sanga', englishWord: 'Branch' },
-                { image: 'Fruit.png', filipinoWord: 'Bunga', englishWord: 'Fruit' },
-                { image: 'RubberBand.png', filipinoWord: 'Goma', englishWord: 'Rubber Band' }
-            ],
-            B: [
-                { image: 'Robot.png', filipinoWord: 'Robot', englishWord: 'Robot' },
-                { image: 'Umbrella.png', filipinoWord: 'Payong', englishWord: 'Umbrella' },
-                { image: 'Wallet.png', filipinoWord: 'Pitaka', englishWord: 'Wallet' },
-                { image: 'Railway.png', filipinoWord: 'Riles', englishWord: 'Railway' },
-                { image: 'Heart.png', filipinoWord: 'Puso', englishWord: 'Heart' }
-            ],
-            C: [
-                { image: 'Pet.png', filipinoWord: 'Alaga', englishWord: 'Pet' },
-                { image: 'Mat.png', filipinoWord: 'Banig', englishWord: 'Mat' },
-                { image: 'Pat.png', filipinoWord: 'Tapik', englishWord: 'Pat' },
-                { image: 'Little.png', filipinoWord: 'Maliit', englishWord: 'Little' },
-                { image: 'Happy.png', filipinoWord: 'Masaya', englishWord: 'Happy' }
-            ],
-            D: [
-                { image: 'Dog.png', filipinoWord: 'Aso', englishWord: 'Dog' },
-                { image: 'Cat.png', filipinoWord: 'Pusa', englishWord: 'Cat' },
-                { image: 'Bird.png', filipinoWord: 'Ibon', englishWord: 'Bird' },
-                { image: 'Fish.png', filipinoWord: 'Isda', englishWord: 'Fish' },
-                { image: 'Rabbit.png', filipinoWord: 'Kuneho', englishWord: 'Rabbit' }
-            ],
-            E: [
-                { image: 'Apple.png', filipinoWord: 'Mansanas', englishWord: 'Apple' },
-                { image: 'Banana.png', filipinoWord: 'Saging', englishWord: 'Banana' },
-                { image: 'Orange.png', filipinoWord: 'Orange', englishWord: 'Orange' },
-                { image: 'Mango.png', filipinoWord: 'Mangga', englishWord: 'Mango' },
-                { image: 'Watermelon.png', filipinoWord: 'Pakwan', englishWord: 'Watermelon' }
-            ],
-            F: [
-                { image: 'Desk.png', filipinoWord: 'Mesa', englishWord: 'Desk' },
-                { image: 'Chair.png', filipinoWord: 'Upuan', englishWord: 'Chair' },
-                { image: 'Book.png', filipinoWord: 'Libro', englishWord: 'Book' },
-                { image: 'Pencil.png', filipinoWord: 'Lapis', englishWord: 'Pencil' },
-                { image: 'Eraser.png', filipinoWord: 'Pambura', englishWord: 'Eraser' }
-            ],
-            G: [
-                { image: 'Doctor.png', filipinoWord: 'Doktor', englishWord: 'Doctor' },
-                { image: 'Teacher.png', filipinoWord: 'Guro', englishWord: 'Teacher' },
-                { image: 'Nurse.png', filipinoWord: 'Nars', englishWord: 'Nurse' },
-                { image: 'Police.png', filipinoWord: 'Pulis', englishWord: 'Police Officer' },
-                { image: 'FIrefighter.png', filipinoWord: 'Bumbero', englishWord: 'Firefighter' }
-            ]
-        };
-        const PICTURE_WORD_MATCHING_SET_KEYS = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+        const PICTURE_WORD_CATALOG = JSON.parse(document.getElementById('picture-word-catalog')?.textContent || '{}');
+        const PICTURE_WORD_PRESCRIBED_SETS = Array.isArray(PICTURE_WORD_CATALOG.prescribedSets) ? PICTURE_WORD_CATALOG.prescribedSets : [];
         const PICTURE_WORD_CUSTOM_MAX_ITEMS = 5;
-        const PICTURE_WORD_CUSTOM_STORAGE_KEY = 'pabasa_picture_word_custom_selection';
-        const SYLLABLE_BLENDING_CATALOG = JSON.parse(document.getElementById('syllable-blending-catalog')?.textContent || '{}');
-        const CLAP_COUNT_WORD_BANK = JSON.parse(document.getElementById('clap-count-word-bank')?.textContent || '{}');
-        const PICTURE_WORD_CUSTOM_EXTRA_ITEMS = [
-            { image: 'Horse.png', englishWord: 'Horse', filipinoWord: 'Kabayo' },
-            { image: 'Cow.png', englishWord: 'Cow', filipinoWord: 'Baka' },
-            { image: 'Chicken.png', englishWord: 'Chicken', filipinoWord: 'Manok' },
-            { image: 'Frog.png', englishWord: 'Frog', filipinoWord: 'Palaka' },
-            { image: 'Butterflyy.png', englishWord: 'Butterfly', filipinoWord: 'Paruparo' },
-            { image: 'Bread.png', englishWord: 'Bread', filipinoWord: 'Tinapay' },
-            { image: 'Rice.png', englishWord: 'Rice', filipinoWord: 'Kanin' },
-            { image: 'Egg.png', englishWord: 'Egg', filipinoWord: 'Itlog' },
-            { image: 'Milk.png', englishWord: 'Milk', filipinoWord: 'Gatas' },
-            { image: 'Cake.png', englishWord: 'Cake', filipinoWord: 'Keyk' },
-            { image: 'Ruler.png', englishWord: 'Ruler', filipinoWord: 'Ruler' },
-            { image: 'Bag.png', englishWord: 'Bag', filipinoWord: 'Bag' },
-            { image: 'Crayon.png', englishWord: 'Crayon', filipinoWord: 'Krayola' },
-            { image: 'Classroom.png', englishWord: 'Classroom', filipinoWord: 'Silid-aralan' },
-            { image: 'Board.png', englishWord: 'Board', filipinoWord: 'Pisara' },
-            { image: 'Farmer.png', englishWord: 'Farmer', filipinoWord: 'Magsasaka' },
-            { image: 'Chef.png', englishWord: 'Chef', filipinoWord: 'Kusinero' },
-            { image: 'Dentist.png', englishWord: 'Dentist', filipinoWord: 'Dentista' },
-            { image: 'Pilot.png', englishWord: 'Pilot', filipinoWord: 'Piloto' },
-            { image: 'Carpenter.png', englishWord: 'Carpenter', filipinoWord: 'Karpintero' },
-            { image: 'Flag.png', englishWord: 'Flag', filipinoWord: 'Watawat' },
-            { image: 'Sun.png', englishWord: 'Sun', filipinoWord: 'Araw' },
-            { image: 'Flower.png', englishWord: 'Flower', filipinoWord: 'Bulaklak' },
-            { image: 'Pillow.png', englishWord: 'Pillow', filipinoWord: 'Unan' },
-            { image: 'Star.png', englishWord: 'Star', filipinoWord: 'Bituin' },
-            { image: 'Moon.png', englishWord: 'Moon', filipinoWord: 'Buwan' },
-            { image: 'Computer.png', englishWord: 'Computer', filipinoWord: 'Kompyuter' },
-            { image: 'Notebook.png', englishWord: 'Notebook', filipinoWord: 'Kwaderno' },
-            { image: 'Car.png', englishWord: 'Car', filipinoWord: 'Sasakyan' },
-            { image: 'Bicycle.png', englishWord: 'Bicycle', filipinoWord: 'Bisikleta' },
-            { image: 'Plate.png', englishWord: 'Plate', filipinoWord: 'Plato' },
-            { image: 'Cloud.png', englishWord: 'Cloud', filipinoWord: 'Ulap' },
-            { image: 'House.png', englishWord: 'House', filipinoWord: 'Bahay' },
-            { image: 'Tear.png', englishWord: 'Tear', filipinoWord: 'Luha' },
-            { image: 'Church.png', englishWord: 'Church', filipinoWord: 'Simbahan' },
-            { image: 'Leaf.png', englishWord: 'Leaf', filipinoWord: 'Dahon' },
-            { image: 'Mountain.png', englishWord: 'Mountain', filipinoWord: 'Bundok' },
-            { image: 'Rain.png', englishWord: 'Rain', filipinoWord: 'Ulan' },
-            { image: 'River.png', englishWord: 'River', filipinoWord: 'Ilog' },
-            { image: 'Boy.png', englishWord: 'Boy', filipinoWord: 'Lalaki' },
-            { image: 'Girl.png', englishWord: 'Girl', filipinoWord: 'Babae' },
-            { image: 'Mother.png', englishWord: 'Mother', filipinoWord: 'Nanay' },
-            { image: 'Father.png', englishWord: 'Father', filipinoWord: 'Tatay' },
-            { image: 'School.png', englishWord: 'School', filipinoWord: 'Paaralan' },
-            { image: 'Park.png', englishWord: 'Park', filipinoWord: 'Parke' },
-            { image: 'Library.png', englishWord: 'Library', filipinoWord: 'Silid-Aklatan' },
-            { image: 'Farm.png', englishWord: 'Farm', filipinoWord: 'Bukid' },
-            { image: 'Restaurant.png', englishWord: 'Restaurant', filipinoWord: 'Restawran' },
-            { image: 'Bus.png', englishWord: 'Bus', filipinoWord: 'Bus' },
-            { image: 'Jeepney.png', englishWord: 'Jeepney', filipinoWord: 'Dyip' },
-            { image: 'Motorcycle.png', englishWord: 'Motorcycle', filipinoWord: 'Motor' },
-            { image: 'Truck.png', englishWord: 'Truck', filipinoWord: 'Trak' },
-            { image: 'Train.png', englishWord: 'Train', filipinoWord: 'Tren' },
-            { image: 'Airplane.png', englishWord: 'Airplane', filipinoWord: 'Eroplano' },
-            { image: 'Boat.png', englishWord: 'Boat', filipinoWord: 'Bangka' },
-            { image: 'Water.png', englishWord: 'Water', filipinoWord: 'Tubig' },
-            { image: 'Soap.png', englishWord: 'Soap', filipinoWord: 'Sabon' },
-            { image: 'Ball.png', englishWord: 'Ball', filipinoWord: 'Bola' },
-            { image: 'Cap.png', englishWord: 'Cap', filipinoWord: 'Sumbrero' },
-            { image: 'Singer.png', englishWord: 'Singer', filipinoWord: 'Mang-aawit' },
-            { image: 'Tree.png', englishWord: 'Tree', filipinoWord: 'Puno' },
-            { image: 'Door.png', englishWord: 'Door', filipinoWord: 'Pinto' },
-            { image: 'Window.png', englishWord: 'Window', filipinoWord: 'Bintana' },
-            { image: 'Shoes.png', englishWord: 'Shoe', filipinoWord: 'Sapatos' },
-            { image: 'Mirror.png', englishWord: 'Mirror', filipinoWord: 'Salamin' },
-            { image: 'Pig.png', englishWord: 'Pig', filipinoWord: 'Baboy' },
-            { image: 'Sheep.png', englishWord: 'Sheep', filipinoWord: 'Tupa' },
-            { image: 'Goat.png', englishWord: 'Goat', filipinoWord: 'Kambing' },
-            { image: 'Lion.png', englishWord: 'Lion', filipinoWord: 'Leon' },
-            { image: 'Tiger.png', englishWord: 'Tiger', filipinoWord: 'Tigre' },
-            { image: 'Monkey.png', englishWord: 'Monkey', filipinoWord: 'Unggoy' },
-            { image: 'Spider.png', englishWord: 'Spider', filipinoWord: 'Gagamba' },
-            { image: 'Snake.png', englishWord: 'Snake', filipinoWord: 'Ahas' },
-            { image: 'Turtle.png', englishWord: 'Turtle', filipinoWord: 'Pagong' },
-            { image: 'Squid.png', englishWord: 'Squid', filipinoWord: 'Pusit' },
-            { image: 'Shark.png', englishWord: 'Shark', filipinoWord: 'Pating' },
-            { image: 'Dolphin.png', englishWord: 'Dolphin', filipinoWord: 'Lumba-lumba' },
-            { image: 'Worm.png', englishWord: 'Worm', filipinoWord: 'Uod' },
-            { image: 'Mouse.png', englishWord: 'Mouse', filipinoWord: 'Daga' },
-            { image: 'Owl.png', englishWord: 'Owl', filipinoWord: 'Kuwago' },
-            { image: 'Fox.png', englishWord: 'Fox', filipinoWord: 'Soro' },
-            { image: 'Wolf.png', englishWord: 'Wolf', filipinoWord: 'Lobo' },
-            { image: 'Panda.png', englishWord: 'Panda', filipinoWord: 'Panda' },
-            { image: 'Ear.png', englishWord: 'Ear', filipinoWord: 'Tainga' },
-            { image: 'Forehead.png', englishWord: 'Forehead', filipinoWord: 'Noo' },
-            { image: 'Finger.png', englishWord: 'Finger', filipinoWord: 'Daliri' },
-            { image: 'Ankle.png', englishWord: 'Ankle', filipinoWord: 'Bukong-bukong' },
-            { image: 'Elbow.png', englishWord: 'Elbow', filipinoWord: 'Siko' },
-            { image: 'Leg.png', englishWord: 'Leg', filipinoWord: 'Binti' },
-            { image: 'Stomach.png', englishWord: 'Stomach', filipinoWord: 'Tiyan' },
-            { image: 'Neck.png', englishWord: 'Neck', filipinoWord: 'Leeg' },
-            { image: 'Tooth.png', englishWord: 'Tooth', filipinoWord: 'Ngipin' },
-            { image: 'Cheese.png', englishWord: 'Cheese', filipinoWord: 'Keso' },
-            { image: 'Soup.png', englishWord: 'Soup', filipinoWord: 'Sabaw' },
-            { image: 'Potato.png', englishWord: 'Potato', filipinoWord: 'Patatas' },
-            { image: 'Tomato.png', englishWord: 'Tomato', filipinoWord: 'Kamatis' },
-            { image: 'Onion.png', englishWord: 'Onion', filipinoWord: 'Sibuyas' },
-            { image: 'Garlic.png', englishWord: 'Garlic', filipinoWord: 'Bawang' },
-            { image: 'Cabbage.png', englishWord: 'Cabbage', filipinoWord: 'Repolyo' },
-            { image: 'Corn.png', englishWord: 'Corn', filipinoWord: 'Mais' },
-            { image: 'Chocolate.png', englishWord: 'Chocolate', filipinoWord: 'Tsokolate' },
-            { image: 'Sugar.png', englishWord: 'Sugar', filipinoWord: 'Asukal' },
-            { image: 'Peanut.png', englishWord: 'Peanut', filipinoWord: 'Mani' },
-            { image: 'Bed.png', englishWord: 'Bed', filipinoWord: 'Kama' },
-            { image: 'Towel.png', englishWord: 'Towel', filipinoWord: 'Tuwalya' },
-            { image: 'Cup.png', englishWord: 'Cup', filipinoWord: 'Tasa' },
-            { image: 'Knife.png', englishWord: 'Knife', filipinoWord: 'Kutsilyo' },
-            { image: 'Pitcher.png', englishWord: 'Pitcher', filipinoWord: 'Pitsel' },
-            { image: 'Pot.png', englishWord: 'Pot', filipinoWord: 'Kaldero' },
-            { image: 'Pan.png', englishWord: 'Pan', filipinoWord: 'Kawali' },
-            { image: 'Stove.png', englishWord: 'Stove', filipinoWord: 'Kalan' },
-            { image: 'Clock.png', englishWord: 'Clock', filipinoWord: 'Orasan' },
-            { image: 'Lamp.png', englishWord: 'Lamp', filipinoWord: 'Lampara' },
-            { image: 'Cabinet.png', englishWord: 'Cabinet', filipinoWord: 'Aparador' },
-            { image: 'Oven.png', englishWord: 'Oven', filipinoWord: 'Pugon' },
-            { image: 'Basket.png', englishWord: 'Basket', filipinoWord: 'Buslo' },
-            { image: 'Broom.png', englishWord: 'Broom', filipinoWord: 'Walis' },
-            { image: 'Garbage.png', englishWord: 'Garbage', filipinoWord: 'Basura' },
-            { image: 'Camera.png', englishWord: 'Camera', filipinoWord: 'Kamera' },
-            { image: 'Radio.png', englishWord: 'Radio', filipinoWord: 'Radyo' },
-            { image: 'Sofa.png', englishWord: 'Sofa', filipinoWord: 'Sopa' },
-            { image: 'Shirt.png', englishWord: 'Shirt', filipinoWord: 'Kamiseta' },
-            { image: 'Pants.png', englishWord: 'Pants', filipinoWord: 'Pantalon' },
-            { image: 'Skirt.png', englishWord: 'Skirt', filipinoWord: 'Palda' },
-            { image: 'Sock.png', englishWord: 'Sock', filipinoWord: 'Medyas' },
-            { image: 'Hat.png', englishWord: 'Hat', filipinoWord: 'Sumbrero' },
-            { image: 'Glasses.png', englishWord: 'Glasses', filipinoWord: 'Salamin' },
-            { image: 'Grass.png', englishWord: 'Grass', filipinoWord: 'Damo' },
-            { image: 'Mud.png', englishWord: 'Mud', filipinoWord: 'Putik' },
-            { image: 'Forest.png', englishWord: 'Forest', filipinoWord: 'Gubat' },
-            { image: 'Hill.png', englishWord: 'Hill', filipinoWord: 'Burol' },
-            { image: 'Cave.png', englishWord: 'Cave', filipinoWord: 'Kuweba' },
-            { image: 'Island.png', englishWord: 'Island', filipinoWord: 'Isla' },
-            { image: 'Globe.png', englishWord: 'Globe', filipinoWord: 'Globo' },
-            { image: 'Paper.png', englishWord: 'Paper', filipinoWord: 'Papel' },
-            { image: 'Blanket.png', englishWord: 'Blanket', filipinoWord: 'Kumot' },
-            { image: 'Bottle.png', englishWord: 'Bottle', filipinoWord: 'Bote' },
-            { image: 'Box.png', englishWord: 'Box', filipinoWord: 'Kahon' },
-            { image: 'Toothbrush.png', englishWord: 'Toothbrush', filipinoWord: 'Sipilyo' },
-            { image: 'Button.png', englishWord: 'Button', filipinoWord: 'Butones' },
-            { image: 'Candle.png', englishWord: 'Candle', filipinoWord: 'Kandila' },
-            { image: 'Castle.png', englishWord: 'Castle', filipinoWord: 'Kastilyo' },
-            { image: 'Comb.png', englishWord: 'Comb', filipinoWord: 'Suklay' },
-            { image: 'Crown.png', englishWord: 'Crown', filipinoWord: 'Korona' },
-            { image: 'Diamond.png', englishWord: 'Diamond', filipinoWord: 'Diyamante' },
-            { image: 'Drum.png', englishWord: 'Drum', filipinoWord: 'Tambol' },
-            { image: 'Feather.png', englishWord: 'Feather', filipinoWord: 'Balahibo' },
-            { image: 'Fence.png', englishWord: 'Fence', filipinoWord: 'Bakod' },
-            { image: 'Fork.png', englishWord: 'Fork', filipinoWord: 'Tinidor' },
-            { image: 'Guitar.png', englishWord: 'Guitar', filipinoWord: 'Gitara' },
-            { image: 'Hammer.png', englishWord: 'Hammer', filipinoWord: 'Martilyo' },
-            { image: 'Kite.png', englishWord: 'Kite', filipinoWord: 'Saranggola' },
-            { image: 'Ladder.png', englishWord: 'Ladder', filipinoWord: 'Hagdan' },
-            { image: 'Mask.png', englishWord: 'Mask', filipinoWord: 'Maskara' },
-            { image: 'Needle.png', englishWord: 'Needle', filipinoWord: 'Karayom' },
-            { image: 'Nest.png', englishWord: 'Nest', filipinoWord: 'Pugad' },
-            { image: 'Net.png', englishWord: 'Net', filipinoWord: 'Lambat' },
-            { image: 'Roof.png', englishWord: 'Roof', filipinoWord: 'Bubong' },
-            { image: 'Rope.png', englishWord: 'Rope', filipinoWord: 'Lubid' },
-            { image: 'Shell.png', englishWord: 'Shell', filipinoWord: 'Kabibe' },
-            { image: 'Slipper.png', englishWord: 'Slipper', filipinoWord: 'Tsinelas' },
-            { image: 'Spoon.png', englishWord: 'Spoon', filipinoWord: 'Kutsara' },
-            { image: 'Stone.png', englishWord: 'Stone', filipinoWord: 'Bato' },
-            { image: 'Belt.png', englishWord: 'Belt', filipinoWord: 'Sinturon' },
-            { image: 'Table.png', englishWord: 'Table', filipinoWord: 'Hapag' },
-            { image: 'Man.png', englishWord: 'Man', filipinoWord: 'Lalaki' },
-            { image: 'Baby.png', englishWord: 'Baby', filipinoWord: 'Sanggol' },
-            { image: 'Child.png', englishWord: 'Child', filipinoWord: 'Bata' },
-            { image: 'Hero.png', englishWord: 'Hero', filipinoWord: 'Bayani' },
-            { image: 'Body.png', englishWord: 'Body', filipinoWord: 'Katawan' },
-            { image: 'Head.png', englishWord: 'Head', filipinoWord: 'Ulo' },
-            { image: 'Face.png', englishWord: 'Face', filipinoWord: 'Mukha' },
-            { image: 'Mouth.png', englishWord: 'Mouth', filipinoWord: 'Bibig' },
-            { image: 'Tongue.png', englishWord: 'Tongue', filipinoWord: 'Dila' },
-            { image: 'Arm.png', englishWord: 'Arm', filipinoWord: 'Braso' },
-            { image: 'Wrist.png', englishWord: 'Wrist', filipinoWord: 'Pulso' },
-            { image: 'Hand.png', englishWord: 'Hand', filipinoWord: 'Kamay' },
-            { image: 'Back.png', englishWord: 'Back', filipinoWord: 'Likod' },
-            { image: 'Sweat.png', englishWord: 'Sweat', filipinoWord: 'Pawis' },
-            { image: 'Food.png', englishWord: 'Food', filipinoWord: 'Pagkain' },
-            { image: 'Oil.png', englishWord: 'Oil', filipinoWord: 'Mantika' },
-            { image: 'Vegetable.png', englishWord: 'Vegetable', filipinoWord: 'Gulay' },
-            { image: 'Calamansi.png', englishWord: 'Calamansi', filipinoWord: 'Kalamansi' },
-            { image: 'Tamarind.png', englishWord: 'Tamarind', filipinoWord: 'Sampalok' },
-            { image: 'Ginger.png', englishWord: 'Ginger', filipinoWord: 'Luya' },
-            { image: 'Yam.png', englishWord: 'Yam', filipinoWord: 'Ube' },
-            { image: 'Duck.png', englishWord: 'Duck', filipinoWord: 'Pato' },
-            { image: 'Pigeon.png', englishWord: 'Pigeon', filipinoWord: 'Kalapati' },
-            { image: 'Carabao.png', englishWord: 'Carabao', filipinoWord: 'Kalabaw' },
-            { image: 'Web.png', englishWord: 'Web', filipinoWord: 'Sapot' },
-            { image: 'Wing.png', englishWord: 'Wing', filipinoWord: 'Pakpak' },
-            { image: 'Beak.png', englishWord: 'Beak', filipinoWord: 'Tuka' },
-            { image: 'Fang.png', englishWord: 'Fang', filipinoWord: 'Pangil' },
-            { image: 'Cockroach.png', englishWord: 'Cockroach', filipinoWord: 'Ipis' },
-            { image: 'Bedroom.png', englishWord: 'Bedroom', filipinoWord: 'Silid-tulugan' },
-            { image: 'Garden.png', englishWord: 'Garden', filipinoWord: 'Hardin' },
-            { image: 'Toy.png', englishWord: 'Toy', filipinoWord: 'Laruan' },
-            { image: 'Money.png', englishWord: 'Money', filipinoWord: 'Pera' },
-            { image: 'Playground.png', englishWord: 'Playground', filipinoWord: 'Palaruan' },
-            { image: 'Bank.png', englishWord: 'Bank', filipinoWord: 'Bangko' },
-            { image: 'Shield.png', englishWord: 'Shield', filipinoWord: 'Kalasag' },
-            { image: 'Snow.png', englishWord: 'Snow', filipinoWord: 'Niyebe' },
-            { image: 'Poem.png', englishWord: 'Poem', filipinoWord: 'Tula' },
-            { image: 'Basin.png', englishWord: 'Basin', filipinoWord: 'Palanggana' },
-            { image: 'Charcoal.png', englishWord: 'Charcoal', filipinoWord: 'Uling' },
-            { image: 'Broomstick.png', englishWord: 'Broomstick', filipinoWord: 'Walis Tingting' },
-            { image: 'Dustpan.png', englishWord: 'Dustpan', filipinoWord: 'Pandakot' },
-            { image: 'Funnel.png', englishWord: 'Funnel', filipinoWord: 'Imbudo' },
-            { image: 'Plant.png', englishWord: 'Plant', filipinoWord: 'Halaman' },
-            { image: 'Bone.png', englishWord: 'Bone', filipinoWord: 'Buto' },
-            { image: 'Fire.png', englishWord: 'Fire', filipinoWord: 'Apoy' },
-            { image: 'Gold.png', englishWord: 'Gold', filipinoWord: 'Ginto' },
-            { image: 'Cotton.png', englishWord: 'Cotton', filipinoWord: 'Bulak' },
-            { image: 'Crab.png', englishWord: 'Crab', filipinoWord: 'Alimango' },
-            { image: 'Ship.png', englishWord: 'Ship', filipinoWord: 'Barko' },
-            { image: 'Lightning.png', englishWord: 'Lightning', filipinoWord: 'Kidlat' },
-            { image: 'Vine.png', englishWord: 'Vine', filipinoWord: 'Baging' },
-            { image: 'Foot.png', englishWord: 'Foot', filipinoWord: 'Paa' },
-            { image: 'Seagull.png', englishWord: 'Seagull', filipinoWord: 'Tagak' },
-            { image: 'Peacock.png', englishWord: 'Peacock', filipinoWord: 'Paboreal' },
-            { image: 'Ghost.png', englishWord: 'Ghost', filipinoWord: 'Multo' },
-            { image: 'Turnip.png', englishWord: 'Turnip', filipinoWord: 'Singkamas' },
-            { image: 'Stair.png', englishWord: 'Stair', filipinoWord: 'Hagdanan' },
-            { image: 'Lantern.png', englishWord: 'Lantern', filipinoWord: 'Parol' },
-            { image: 'Ladle.png', englishWord: 'Ladle', filipinoWord: 'Sandok' },
-            { image: 'Cloth.png', englishWord: 'Cloth', filipinoWord: 'Tela' },
-            { image: 'Festival.png', englishWord: 'Festival', filipinoWord: 'Pista' },
-            { image: 'Moss.png', englishWord: 'Moss', filipinoWord: 'Lumot' },
-            { image: 'Kitten.png', englishWord: 'Kitten', filipinoWord: 'Kuting' },
-            { image: 'Puppy.png', englishWord: 'Puppy', filipinoWord: 'Tuta' },
-            { image: 'Droplet.png', englishWord: 'Droplet', filipinoWord: 'Patak' },
-            { image: 'Sailor.png', englishWord: 'Sailor', filipinoWord: 'Mandaragat' },
-            { image: 'Bubble.png', englishWord: 'Bubble', filipinoWord: 'Bula' },
-            { image: 'Thigh.png', englishWord: 'Thigh', filipinoWord: 'Hita' },
-            { image: 'Tower.png', englishWord: 'Tower', filipinoWord: 'Tore' },
-            { image: 'Statue.png', englishWord: 'Statue', filipinoWord: 'Rebulto' },
-            { image: 'Balloon.png', englishWord: 'Balloon', filipinoWord: 'Lobo' },
-            { image: 'Pirate.png', englishWord: 'Pirate', filipinoWord: 'Pirata' },
-            { image: 'Fisherman.png', englishWord: 'Fisherman', filipinoWord: 'Mangingisda' },
-            { image: 'Gift.png', englishWord: 'Gift', filipinoWord: 'Regalo' },
-            { image: 'Glove.png', englishWord: 'Glove', filipinoWord: 'Guwantes' },
-            { image: 'Guard.png', englishWord: 'Guard', filipinoWord: 'Guwardiya' },
-            { image: 'Soldier.png', englishWord: 'Soldier', filipinoWord: 'Sundalo' },
-            { image: 'Fist.png', englishWord: 'Fist', filipinoWord: 'Kamao' },
-            { image: 'Hut.png', englishWord: 'Hut', filipinoWord: 'Kubo' },
-            { image: 'Tube.png', englishWord: 'Tube', filipinoWord: 'Tubo' },
-            { image: 'Cape.png', englishWord: 'Cape', filipinoWord: 'Kapa' },
-            { image: 'Squash.png', englishWord: 'Squash', filipinoWord: 'Kalabasa' },
-            { image: 'Angel.png', englishWord: 'Angel', filipinoWord: 'Anghel' }
-        ];
         const PICTURE_WORD_CUSTOM_LIBRARY = [
-            ...Object.entries(PICTURE_WORD_MATCHING_SYSTEM_SETS).flatMap(([setKey, items]) => (items || []).map(item => ({
-                setKey,
-                image: item.image,
-                englishWord: item.englishWord,
-                filipinoWord: item.filipinoWord
-            }))),
-            ...PICTURE_WORD_CUSTOM_EXTRA_ITEMS.map(item => ({
-                setKey: 'Custom',
-                image: item.image,
-                englishWord: item.englishWord,
-                filipinoWord: item.filipinoWord
-            }))
+            ...PICTURE_WORD_PRESCRIBED_SETS.flatMap(set => Array.isArray(set.items) ? set.items : []),
+            ...(Array.isArray(PICTURE_WORD_CATALOG.customItems) ? PICTURE_WORD_CATALOG.customItems : [])
         ].map(item => ({
             ...item,
-            searchText: [
-                item.englishWord,
-                item.filipinoWord,
-                item.image?.replace(/\.[^.]+$/, '') || '',
-                item.setKey
-            ].join(' ').toLowerCase()
+            searchText: [item.englishWord, item.filipinoWord, item.image?.replace(/\.[^.]+$/, '') || '', item.setKey].join(' ').toLowerCase()
         }));
         const TEMPLATE_ITEM_TITLE_KEYS = {
             'Phrase Reading Practice': 'phrase',
@@ -14865,11 +14547,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
 
         function getPictureWordMatchingSets() {
-            return PICTURE_WORD_MATCHING_SET_KEYS.map(key => ({
-                key,
-                label: `Set ${key}`,
-                items: PICTURE_WORD_MATCHING_SYSTEM_SETS[key] || []
-            }));
+            return PICTURE_WORD_PRESCRIBED_SETS;
         }
 
         function getPictureWordMatchingWord(item, language) {
@@ -14895,14 +14573,20 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
 
         function getPictureWordMatchingPreviewImage(item, setKey) {
-            if (String(setKey || '').trim() === 'Custom') {
-                return `/static/pabasa_app/images/picture_word/Custom/${item.image}`;
-            }
-            return `/static/pabasa_app/images/picture_word/Set ${setKey}/${item.image}`;
+            if (item.imagePreview || item.image_path) return item.imagePreview || item.image_path;
+            const key = String(setKey || item.setKey || '').trim();
+            const folder = String(item.sourceType || '').toLowerCase() === 'custom' || key.toLowerCase() === 'custom'
+                ? 'custom'
+                : `prescribe_sets/${key}`;
+            return `/static/pabasa_app/images/picture_word/${folder}/${item.image}`;
         }
 
         function normalizePictureWordMatchingSelection(setKey, language) {
-            const normalizedSetKey = PICTURE_WORD_MATCHING_SYSTEM_SETS[setKey] ? setKey : 'A';
+            const rawSetKey = String(setKey || '').trim();
+            const normalizedSetKey = PICTURE_WORD_PRESCRIBED_SETS.find(set => (
+                String(set.key || '') === rawSetKey
+                || String(set.key || '').replace(/^Set\s+/i, '') === rawSetKey.replace(/^Set\s+/i, '')
+            ))?.key || PICTURE_WORD_PRESCRIBED_SETS[0]?.key || '';
             return {
                 setKey: normalizedSetKey,
                 language: language === 'English' ? 'English' : 'Filipino'
@@ -14916,14 +14600,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         function normalizePictureWordCustomItem(item) {
             if (!item) return null;
             const rawSetKey = String(item.setKey || item.sourceSetKey || item.source_set || '').trim();
-            const setKey = rawSetKey.toLowerCase() === 'custom' ? 'Custom' : rawSetKey.toUpperCase();
-            const sourceSet = PICTURE_WORD_MATCHING_SYSTEM_SETS[setKey] || [];
             const image = String(item.image || item.sourceImage || item.image_asset || '').trim();
-            const sourceItem = sourceSet.find(entry => String(entry.image || '').trim() === image) || null;
+            const sourceItem = PICTURE_WORD_CUSTOM_LIBRARY.find(entry => (
+                String(entry.image || '').trim() === image
+                && (String(entry.setKey || '') === rawSetKey || rawSetKey.replace(/^Set\s+/i, '') === String(entry.setKey || '').replace(/^Set\s+/i, ''))
+            )) || null;
+            const setKey = sourceItem?.setKey || (rawSetKey.toLowerCase() === 'custom' ? 'custom' : rawSetKey);
             const englishWord = String(item.englishWord || item.english_word || sourceItem?.englishWord || '').trim();
             const filipinoWord = String(item.filipinoWord || item.filipino_word || sourceItem?.filipinoWord || '').trim();
             if (!image || !englishWord || !filipinoWord) return null;
-            return { setKey, image, englishWord, filipinoWord };
+            return { setKey, image, englishWord, filipinoWord, imagePreview: sourceItem?.imagePreview || item.imagePreview || item.image_path, sourceType: sourceItem?.sourceType || item.sourceType };
         }
 
         function getPictureWordCustomSelection() {
@@ -14946,7 +14632,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 activeTemplateActivity.pictureWordMatching?.setKey || 'A',
                 language
             );
-            return (PICTURE_WORD_MATCHING_SYSTEM_SETS[selection.setKey] || []).map(item => ({
+            const set = PICTURE_WORD_PRESCRIBED_SETS.find(entry => entry.key === selection.setKey);
+            return (set?.items || []).map(item => ({
                 ...item,
                 setKey: selection.setKey,
                 word: getPictureWordMatchingWord(item, selection.language),
@@ -15606,7 +15293,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     if (setButton) {
                         activeTemplateActivity.pictureWordMatching = Object.assign(
                             {},
-                            normalizePictureWordMatchingSelection(setButton.getAttribute('data-picture-word-set-select') || 'A', getPictureWordMatchingSelectedLanguage()),
+                            normalizePictureWordMatchingSelection(setButton.getAttribute('data-picture-word-set-select') || '', getPictureWordMatchingSelectedLanguage()),
                             { mode: 'prescribed' }
                         );
                         renderTemplateDynamicFields(title);
@@ -15644,7 +15331,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             filipinoWord: item.filipinoWord,
                             sourceSetKey: item.setKey,
                             sourceImage: item.image,
-                            sourceType: 'custom'
+                            sourceType: item.sourceType
                         }));
                         activeTemplateActivity.content = {
                             assessment_set: 'custom',
@@ -15661,7 +15348,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
             const language = getPictureWordMatchingSelectedLanguage();
             const currentMode = getPictureWordMatchingMode();
-            const current = normalizePictureWordMatchingSelection(activeTemplateActivity.pictureWordMatching?.setKey || 'A', language);
+            const current = normalizePictureWordMatchingSelection(activeTemplateActivity.pictureWordMatching?.setKey || '', language);
             if (currentMode !== 'custom') {
                 activeTemplateActivity.pictureWordMatching = Object.assign({}, current, { mode: 'prescribed' });
             } else if (!activeTemplateActivity.pictureWordMatching?.mode) {
@@ -15894,7 +15581,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <article class="picture-word-card ${isSelected ? 'is-selected' : ''}" data-picture-word-card="${escapeAttr(set.key)}">
                                     <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
                                         <div class="min-w-0">
-                                            <h6 class="mb-1 fw-bold text-truncate">${escapeHtml(`Set ${set.key}`)}</h6>
+                            <h6 class="mb-1 fw-bold text-truncate">${escapeHtml(set.label || set.key)}</h6>
                                             <div class="text-muted small">5 items</div>
                                         </div>
                                         <span class="badge ${isSelected ? 'text-bg-primary' : 'text-bg-light'}">${isSelected ? 'Selected' : 'Ready'}</span>
@@ -15913,7 +15600,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                     <div class="picture-word-card-words" title="${escapeAttr(items.map(item => getPictureWordMatchingWord(item, language)).join(' • '))}">
                                         ${escapeHtml(items.map(item => getPictureWordMatchingWord(item, language)).join(' • '))}
                                     </div>
-                                    <button type="button" class="btn btn-sm picture-word-set-button ${isSelected ? 'is-selected' : ''} w-100" data-picture-word-set-select="${escapeAttr(set.key)}" aria-pressed="${isSelected ? 'true' : 'false'}">${isSelected ? '<i class="bi bi-check2 me-1" aria-hidden="true"></i>Selected' : `Use Set ${set.key}`}</button>
+                                    <button type="button" class="btn btn-sm picture-word-set-button ${isSelected ? 'is-selected' : ''} w-100" data-picture-word-set-select="${escapeAttr(set.key)}" aria-pressed="${isSelected ? 'true' : 'false'}">${isSelected ? '<i class="bi bi-check2 me-1" aria-hidden="true"></i>Selected' : `Use ${escapeHtml(set.label || set.key)}`}</button>
                                 </article>
                             `;
                         }).join('')}
@@ -16722,12 +16409,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const selectedItems = getPictureWordCustomSelection();
                     content.items = selectedItems.map(item => ({
                         image: item.image,
-                        set: `Custom Set`,
+                        set: item.setKey,
                         filipino_word: item.filipinoWord,
                         english_word: item.englishWord,
                         word: getPictureWordMatchingWord(item, content.language),
                         image_asset: item.image,
-                        image_path: getPictureWordMatchingPreviewImage(item, item.setKey)
+                        image_path: getPictureWordMatchingPreviewImage(item, item.setKey),
+                        imagePreview: getPictureWordMatchingPreviewImage(item, item.setKey),
+                        sourceSetKey: item.setKey,
+                        sourceImage: item.image,
+                        sourceType: item.sourceType
                     }));
                     content.pictureWordMatching = {
                         mode: 'custom',
@@ -16736,15 +16427,20 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     };
                     content.assessment_set = 'custom';
                 } else {
-                    const selection = normalizePictureWordMatchingSelection(activeTemplateActivity?.pictureWordMatching?.setKey || 'A', language || 'English');
-                    const items = (PICTURE_WORD_MATCHING_SYSTEM_SETS[selection.setKey] || []).map(item => ({
+                    const selection = normalizePictureWordMatchingSelection(activeTemplateActivity?.pictureWordMatching?.setKey || '', language || 'English');
+                    const selectedSet = PICTURE_WORD_PRESCRIBED_SETS.find(entry => entry.key === selection.setKey);
+                    const items = (selectedSet?.items || []).map(item => ({
                         image: item.image,
-                        set: `Set ${selection.setKey}`,
+                        set: selection.setKey,
                         filipino_word: item.filipinoWord,
                         english_word: item.englishWord,
                         word: getPictureWordMatchingWord(item, selection.language),
                         image_asset: item.image,
-                        image_path: getPictureWordMatchingPreviewImage(item, selection.setKey)
+                        image_path: getPictureWordMatchingPreviewImage(item, selection.setKey),
+                        imagePreview: getPictureWordMatchingPreviewImage(item, selection.setKey),
+                        sourceSetKey: selection.setKey,
+                        sourceImage: item.image,
+                        sourceType: 'prescribed'
                     }));
                     content.items = items;
                     content.pictureWordMatching = selection;
@@ -16992,7 +16688,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 image: item.image,
                                 image_asset: item.image,
                                 image_path: getPictureWordMatchingPreviewImage(item, item.setKey),
-                                set: 'Custom Set',
+                                set: item.setKey,
                                 word: getPictureWordMatchingWord(item, values.language || 'English'),
                                 englishWord: item.englishWord,
                                 english_word: item.englishWord,
@@ -17001,7 +16697,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 imagePreview: getPictureWordMatchingPreviewImage(item, item.setKey),
                                 sourceSetKey: item.setKey,
                                 sourceImage: item.image,
-                                sourceType: 'custom'
+                                sourceType: item.sourceType
                             }));
                         } else {
                             contentPayload.pictureWordMatching = activeTemplateActivity.pictureWordMatching || normalizePictureWordMatchingSelection('A', values.language || 'English');
