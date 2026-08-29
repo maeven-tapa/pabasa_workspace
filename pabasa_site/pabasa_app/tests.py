@@ -22,6 +22,7 @@ from .forms import AdminPracticeMaterialForm
 from .models import Material, User, Section, Assessment, Notification, Course, Note, LiveAssessmentSession, School, SchoolCalendar, CalendarEvent, StoryReadingProgress
 from .reading_stt import (
     ReadingMatcher,
+    align_story_transcript,
     analyze_reading,
     language_code_for,
     synthesize_read_aloud_audio,
@@ -2704,16 +2705,36 @@ class AssessmentResultsPageTests(TestCase):
         template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "reading_assessment_base.html"
         content = template_path.read_text(encoding="utf-8")
 
-        self.assertIn("Great job completing your reading assessment! Your results show your current reading performance. Keep practicing to improve your reading skills.", content)
-        self.assertNotIn("This assessment result is based on the student's reading accuracy, fluency, pronunciation, and pacing during the assessment.", content)
+        self.assertIn("Great job completing your reading assessment! Keep practicing to improve your reading skills.", content)
+        self.assertNotIn("Your results show your current reading performance", content)
         self.assertNotIn("completionPerformanceInterpretation", content)
 
-    def test_completion_page_has_loading_placeholder_for_results(self):
+    def test_completion_page_has_no_score_loading_placeholder(self):
         template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "reading_assessment_base.html"
         content = template_path.read_text(encoding="utf-8")
 
-        self.assertIn("completion-loading", content)
-        self.assertIn("Calculating your score breakdown...", content)
+        self.assertNotIn("completion-loading", content)
+        self.assertNotIn("Calculating your score breakdown...", content)
+
+    def test_completion_page_shows_only_final_classification(self):
+        template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "reading_assessment_base.html"
+        content = template_path.read_text(encoding="utf-8")
+
+        self.assertIn("Your Reading Classification", content)
+        self.assertNotIn("Score Breakdown", content)
+        self.assertNotIn("RESULTS OVERVIEW", content)
+        self.assertNotIn("READING DETAILS", content)
+        self.assertNotIn("Calculating your score breakdown...", content)
+        self.assertNotIn("Correct words read", content)
+        self.assertNotIn("Reading type", content)
+
+    def test_completion_flow_returns_without_classification_overlay(self):
+        script_path = Path(__file__).resolve().parent / "static" / "pabasa_app" / "js" / "assessment_reader.js"
+        content = script_path.read_text(encoding="utf-8")
+
+        self.assertNotIn("show_classification", content)
+        self.assertNotIn("goBackToAssessments(true)", content)
+        self.assertIn("goBackToAssessments()", content)
 
     def test_build_reading_report_pdf_omits_performance_interpretation(self):
         report = {
@@ -2975,8 +2996,169 @@ class ReadingMatcherTests(TestCase):
         self.assertEqual(ReadingMatcher.normalize_words("19."), ["19"])
         self.assertEqual(ReadingMatcher.normalize_words("19,"), ["19"])
 
+    def test_story_alignment_reports_single_substitution_without_rating_entire_sentence_wrong(self):
+        result = align_story_transcript(
+            "Si Ana ay pumunta sa bahay.",
+            "Si Ana ay puminta sa bahay.",
+            language_code="fil-PH",
+        )
+        self.assertEqual(result["total_words"], 6)
+        self.assertEqual(result["correct_words"], 5)
+        self.assertEqual(result["miscues"], 1)
+        self.assertEqual(result["word_results"][3]["result"], "miscue")
+        self.assertEqual(result["word_results"][3]["type"], "substitution")
+
+    def test_story_alignment_detects_omission_and_keeps_following_words_aligned(self):
+        result = align_story_transcript(
+            "Si Ana ay pumunta sa bahay.",
+            "Si Ana pumunta sa bahay.",
+            language_code="fil-PH",
+        )
+        self.assertEqual(result["miscues"], 1)
+        self.assertEqual(result["word_results"][2]["expected"], "ay")
+        self.assertEqual(result["word_results"][2]["result"], "miscue")
+        self.assertEqual(result["word_results"][2]["type"], "omission")
+        self.assertEqual(result["word_results"][3]["expected"], "pumunta")
+        self.assertEqual(result["word_results"][3]["result"], "correct")
+
+    def test_story_alignment_handles_insertion_without_shifting_later_words(self):
+        result = align_story_transcript(
+            "Si Ana pumunta sa bahay.",
+            "Si Ana ay pumunta sa bahay.",
+            language_code="fil-PH",
+        )
+        self.assertEqual(result["miscues"], 1)
+        self.assertEqual(result["word_results"][2]["expected"], "pumunta")
+        self.assertEqual(result["word_results"][2]["result"], "correct")
+        self.assertEqual(result["word_results"][3]["expected"], "sa")
+        self.assertEqual(result["word_results"][3]["result"], "correct")
+
+    def test_story_alignment_normalizes_formatting_noise_and_keeps_genuine_differences_as_miscues(self):
+        formatting_result = align_story_transcript(
+            "Si Ana ay pumunta.",
+            "si   ana   ay   pumunta",
+            language_code="fil-PH",
+        )
+        self.assertEqual(formatting_result["miscues"], 0)
+
+        genuine_result = align_story_transcript(
+            "binti",
+            "bente",
+            language_code="fil-PH",
+        )
+        self.assertEqual(genuine_result["miscues"], 1)
+        self.assertEqual(genuine_result["word_results"][0]["result"], "miscue")
+        self.assertEqual(genuine_result["word_results"][0]["type"], "substitution")
+
+    def test_story_alignment_critical_fragmentation_pagong_bagong(self):
+        """Test that STT fragmentation artifacts are distinguished from genuine miscues.
+        
+        Expected: "Pagong"
+        Genuine student miscue: "bagong" (different lexical item)
+        STT output for miscue: "ba go ng" (fragmented)
+        
+        MUST mark as miscue, NOT as correct.
+        """
+        # Case 1: Harmless STT segmentation of correct word
+        result = align_story_transcript(
+            "Pagong",
+            "pa gong",
+            language_code="fil-PH",
+        )
+        self.assertEqual(result["correct_words"], 1, 
+            "STT splitting 'Pagong' into 'pa gong' is a harmless segmentation artifact")
+        self.assertEqual(result["miscues"], 0)
+        self.assertEqual(result["word_results"][0]["result"], "correct")
+        
+        # Case 2: Genuine student miscue (bagong vs Pagong)
+        result = align_story_transcript(
+            "Pagong",
+            "ba go ng",
+            language_code="fil-PH",
+        )
+        self.assertEqual(result["correct_words"], 0, 
+            "STT output 'ba go ng' represents student saying 'bagong', not 'Pagong'")
+        self.assertEqual(result["miscues"], 1)
+        self.assertEqual(result["word_results"][0]["result"], "miscue")
+        self.assertEqual(result["word_results"][0]["type"], "substitution")
+
+    def test_story_alignment_critical_fragmentation_niya_ni(self):
+        """Test that student omissions are not masked by STT fragmentation.
+        
+        Expected: "niya"
+        Student says: "ni" (genuine omission)
+        STT may fragment this in various ways: "ni", "ni a", etc.
+        
+        MUST remain a miscue, NOT automatically joined into "niya".
+        """
+        # Case 1: Simple omission - student says "ni" not "niya"
+        result = align_story_transcript(
+            "niya",
+            "ni",
+            language_code="fil-PH",
+        )
+        self.assertEqual(result["correct_words"], 0,
+            "Student said 'ni', not 'niya'")
+        self.assertEqual(result["miscues"], 1)
+        self.assertEqual(result["word_results"][0]["result"], "miscue")
+        
+        # Case 2: Fragmented output "ni a" - must NOT be auto-joined into "niya"
+        result = align_story_transcript(
+            "niya",
+            "ni a",
+            language_code="fil-PH",
+        )
+        # The system should recognize these as separate tokens, not auto-join them
+        # Result should be 1-2 tokens in recognized, but they should NOT match "niya" exactly
+        self.assertEqual(result["correct_words"], 0,
+            "Fragmented 'ni a' must not be auto-joined to become 'niya'")
+        self.assertGreaterEqual(result["miscues"], 1,
+            "At least one word should be marked as miscue")
+
+    def test_story_alignment_mixed_passage_with_segmentation_and_miscue(self):
+        """Test passage with both harmless segmentation and genuine miscues.
+        
+        Expected: "sabi ni Pagong"
+        Student reads: "sabi" (correct) + "ni" (correct) + "bagong" (miscue)
+        STT returns: "sabi ni ba go ng"
+        
+        Should align as: sabi=CORRECT, ni=CORRECT, Pagong=MISCUE
+        """
+        result = align_story_transcript(
+            "sabi ni Pagong",
+            "sabi ni ba go ng",
+            language_code="fil-PH",
+        )
+        self.assertEqual(result["total_words"], 3)
+        self.assertEqual(result["correct_words"], 2,
+            "First two words (sabi, ni) are correct")
+        self.assertEqual(result["miscues"], 1,
+            "Third word (Pagong) is a miscue")
+        
+        # Verify individual word results
+        self.assertEqual(result["word_results"][0]["expected"], "sabi")
+        self.assertEqual(result["word_results"][0]["result"], "correct")
+        
+        self.assertEqual(result["word_results"][1]["expected"], "ni")
+        self.assertEqual(result["word_results"][1]["result"], "correct")
+        
+        self.assertEqual(result["word_results"][2]["expected"], "pagong")
+        self.assertEqual(result["word_results"][2]["result"], "miscue")
+        self.assertEqual(result["word_results"][2]["type"], "substitution")
+
+    def test_story_alignment_preserves_raw_recognized_text_for_audit(self):
+        """Ensure raw STT output is preserved for later audit and debugging."""
+        expected = "Pagong"
+        recognized = "ba go ng"
+        result = align_story_transcript(expected, recognized, language_code="fil-PH")
+        
+        # The raw input should be preserved in the result
+        self.assertEqual(result["recognized_text"], recognized.lower().replace("  ", " "))
+        # But the word_results should show the miscue properly
+        self.assertEqual(result["word_results"][0]["result"], "miscue")
 
 class AdaptedReadingLevelTests(TestCase):
+
     def test_adapted_reading_level_label_uses_expected_thresholds(self):
         self.assertEqual(_adapted_reading_level_label(0.90), "Readers at Grade Level")
         self.assertEqual(_adapted_reading_level_label(0.76), "Transitioning Readers")

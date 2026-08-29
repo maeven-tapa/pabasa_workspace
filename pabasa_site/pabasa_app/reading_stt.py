@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import re
 import socket
+import unicodedata
 import urllib.error
 import urllib.request
 
@@ -595,6 +596,161 @@ def _post_google_stt(url, payload, label, timeout_seconds=12):
     if not alternatives:
         return ""
     return alternatives[0].get("transcript", "").strip()
+
+
+def _normalize_story_word_text(value):
+    text = unicodedata.normalize("NFKC", str(value or ""))
+    text = text.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"')
+    text = text.replace("—", " ").replace("–", " ").replace("…", " ").replace("`", "'")
+    text = text.lower()
+    text = re.sub(r"[^a-z0-9'\s-]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def _story_alignment_tokens(text):
+    normalized = _normalize_story_word_text(text)
+    if not normalized:
+        return []
+    return [token for token in re.split(r"\s+", normalized) if token]
+
+
+def _story_words_are_equivalent(expected_word, recognized_word):
+    if expected_word is None or recognized_word is None:
+        return False
+    expected = _normalize_story_word_text(expected_word)
+    recognized = _normalize_story_word_text(recognized_word)
+    if not expected or not recognized:
+        return False
+    return expected == recognized
+
+
+def align_story_transcript(expected_text, recognized_text, language_code="en-US"):
+    """Align a story transcript against the expected text at the word level.
+
+    This is intentionally conservative: it tolerates punctuation/case/spacing
+    artifacts but does not apply broad fuzzy matching to silently accept
+    materially different words. The output preserves sequential order and records
+    omissions, insertions, and substitutions at the word level.
+    """
+    expected_words = _story_alignment_tokens(expected_text)
+    recognized_words = _story_alignment_tokens(recognized_text)
+    if not expected_words and not recognized_words:
+        return {
+            "expected_text": str(expected_text or ""),
+            "recognized_text": str(recognized_text or ""),
+            "language_code": language_code,
+            "expected_words": [],
+            "recognized_words": [],
+            "total_words": 0,
+            "correct_words": 0,
+            "miscues": 0,
+            "accuracy": 0.0,
+            "word_results": [],
+        }
+
+    rows = len(expected_words) + 1
+    cols = len(recognized_words) + 1
+    dp = [[0] * cols for _ in range(rows)]
+    for i in range(1, rows):
+        dp[i][0] = i
+    for j in range(1, cols):
+        dp[0][j] = j
+    for i in range(1, rows):
+        for j in range(1, cols):
+            expected_word = expected_words[i - 1]
+            recognized_word = recognized_words[j - 1]
+            substitution_cost = 0 if _story_words_are_equivalent(expected_word, recognized_word) else 1
+            dp[i][j] = min(
+                dp[i - 1][j] + 1,
+                dp[i][j - 1] + 1,
+                dp[i - 1][j - 1] + substitution_cost,
+            )
+
+    word_results = []
+    insertion_count = 0
+    i = len(expected_words)
+    j = len(recognized_words)
+    while i > 0 or j > 0:
+        if i > 0 and j > 0:
+            expected_word = expected_words[i - 1]
+            recognized_word = recognized_words[j - 1]
+            substitution_cost = 0 if _story_words_are_equivalent(expected_word, recognized_word) else 1
+            if dp[i][j] == dp[i - 1][j - 1] + substitution_cost:
+                if _story_words_are_equivalent(expected_word, recognized_word):
+                    word_results.append({
+                        "expected": expected_word,
+                        "recognized": recognized_word,
+                        "result": "correct",
+                        "type": "correct",
+                        "expected_index": i - 1,
+                        "recognized_index": j - 1,
+                    })
+                else:
+                    word_results.append({
+                        "expected": expected_word,
+                        "recognized": recognized_word,
+                        "result": "miscue",
+                        "type": "substitution",
+                        "expected_index": i - 1,
+                        "recognized_index": j - 1,
+                    })
+                i -= 1
+                j -= 1
+                continue
+        if i > 0 and dp[i][j] == dp[i - 1][j] + 1:
+            word_results.append({
+                "expected": expected_words[i - 1],
+                "recognized": None,
+                "result": "miscue",
+                "type": "omission",
+                "expected_index": i - 1,
+                "recognized_index": None,
+            })
+            i -= 1
+            continue
+        if j > 0:
+            recognized_word = recognized_words[j - 1]
+            if i > 0:
+                expected_word = expected_words[i - 1]
+                has_future_match = any(
+                    _story_words_are_equivalent(expected_word, later_word)
+                    for later_word in recognized_words[: j - 1]
+                )
+                if (
+                    not _story_words_are_equivalent(expected_word, recognized_word)
+                    and has_future_match
+                ):
+                    insertion_count += 1
+                    j -= 1
+                    continue
+            word_results.append({
+                "expected": None,
+                "recognized": recognized_word,
+                "result": "miscue",
+                "type": "insertion",
+                "expected_index": None,
+                "recognized_index": j - 1,
+            })
+            j -= 1
+
+    word_results.reverse()
+    correct_words = sum(1 for item in word_results if item.get("result") == "correct")
+    miscues = sum(1 for item in word_results if item.get("result") == "miscue") + insertion_count
+    total_words = max(len(expected_words), 0)
+    accuracy = (correct_words / total_words * 100.0) if total_words else 0.0
+    return {
+        "expected_text": str(expected_text or ""),
+        "recognized_text": str(recognized_text or ""),
+        "language_code": language_code,
+        "expected_words": expected_words,
+        "recognized_words": recognized_words,
+        "total_words": total_words,
+        "correct_words": correct_words,
+        "miscues": miscues,
+        "accuracy": round(accuracy, 2),
+        "word_results": word_results,
+    }
 
 
 def analyze_reading(target_text, current_syllable_index=0, transcript="", language_code="en-US"):

@@ -27,6 +27,8 @@
         const quitBtn = document.getElementById("quitBtn");
         const reviewBtn = document.getElementById("reviewBtn");
         const finishBtn = document.getElementById("finishBtn");
+        const completionClassificationValue = document.getElementById("completionClassificationValue");
+        const completionClassificationPanel = document.getElementById("completionClassificationPanel");
         const storySelectionPanel = document.getElementById("storySelectionPanel");
         const storySelectionGrid = document.getElementById("storySelectionGrid");
         const storySelectionTitle = document.getElementById("storySelectionTitle");
@@ -1479,13 +1481,10 @@
             shell.classList.add("is-complete");
             const title = document.getElementById("completionTitle");
             const message = document.getElementById("completionMessage");
-            const summary = document.getElementById("completionSummary");
-            const score = Number(endState.routing_score ?? endState.score ?? 0);
-            const isWords = stage.endsWith("words");
-            const isEarly = stage.startsWith("early_completed_");
-            const taskCorrect = Number(isWords ? (endState.correct_words ?? score) : (endState.correct_sentences ?? 0));
-            const taskTotal = Number(isWords ? 10 : (endState.sentence_items_administered ?? 0));
-            if (title) title.textContent = isEarly ? "Assessment complete" : "🎉 Great job!";
+            const classificationText = endState.classification || "Assessment completed";
+            if (completionClassificationValue) completionClassificationValue.textContent = classificationText;
+            if (completionClassificationPanel) completionClassificationPanel.hidden = false;
+            if (title) title.textContent = stage === "completed" ? "Assessment complete" : "Assessment complete";
             if (message) message.textContent = stage === "transition_to_rhymes"
                 ? "You completed Word Reading. You’re ready for Rhymes."
                 : stage === "transition_to_sentence"
@@ -1494,23 +1493,7 @@
                     ? (endState.branch === "rhymes"
                         ? "You completed Rhymes. You’re ready for Story Reading."
                         : "You completed Sentence Reading. You’re ready for Story Reading.")
-                    : isEarly
-                        ? `Your assessment ends here. You got ${taskCorrect}/${taskTotal} ${isWords ? "words" : "sentences"} correct.${isWords ? "" : ` ${score} correct items total.`}`
-                        : "You completed the reading assessment.";
-            if (summary && isEarly) {
-                buildCompletionSummary(summary, {
-                    word_count: taskCorrect,
-                    accuracy: taskTotal ? (taskCorrect / taskTotal) * 100 : null,
-                    final_score: score,
-                    total_score: score,
-                    duration_seconds: endState.duration_seconds ?? null,
-                    pronunciation_score: endState.pronunciation_score ?? null,
-                    classification: endState.classification || (isWords ? "Low Emerging Reader" : "High Emerging Reader"),
-                }, {
-                    readingType: isWords ? "Word" : "Sentence",
-                    classification: endState.classification || (isWords ? "Low Emerging Reader" : "High Emerging Reader"),
-                });
-            }
+                    : "You completed the reading assessment.";
             if (finishBtn) {
                 finishBtn.dataset.transitionUrl = stage === "transition_to_sentence"
                     ? buildCrlaStageUrl("sentences", endState)
@@ -1521,7 +1504,7 @@
                         : "";
                 finishBtn.textContent = stage === "transition_to_rhymes" ? "Continue to Rhymes →" : stage === "transition_to_sentence" ? "Continue to Sentence Reading →" : stage === "transition_to_story" ? "Continue to Story Reading →" : "Back to Assessment";
             }
-            reviewBtn?.classList.toggle("d-none", !isEarly && stage !== "completed");
+            reviewBtn?.classList.toggle("d-none", !["early_completed_words", "early_completed_sentences", "completed"].includes(stage));
             setCompletionLoadingState(false);
             return true;
         }
@@ -2191,50 +2174,40 @@
             summary.classList.add("is-visible");
         }
 
+        function setCompletionClassification(scores, fallback = "—") {
+            const normalizedScores = normalizeCompletionScores(scores, {});
+            const classification = resolveClassificationLabel(normalizedScores, fallback) || fallback;
+            if (completionClassificationValue) completionClassificationValue.textContent = classification;
+            if (completionClassificationPanel) completionClassificationPanel.hidden = false;
+            return classification;
+        }
+
         function renderScoreSummary(scores) {
-            const summary = document.getElementById("completionSummary") || document.querySelector(".completion-summary");
             const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
-            if (!summary) return;
-            buildCompletionSummary(summary, scores, {
-                readingType: mode || "word",
-                classification: resolveClassificationLabel(normalizeCompletionScores(scores, {})) || "—",
-            });
+            const normalizedScores = normalizeCompletionScores(scores, {});
+            setCompletionClassification(scores, "—");
             if (disclaimer) {
-                const normalizedScores = normalizeCompletionScores(scores, {});
-                disclaimer.textContent = normalizedScores.adapted_reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || "Great job completing your reading assessment! Your results show your current reading performance. Keep practicing to improve your reading skills.";
+                disclaimer.textContent = normalizedScores.adapted_reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || "Great job completing your reading assessment! Keep practicing to improve your reading skills.";
             }
             setCompletionLoadingState(false);
         }
 
         function renderMyMaterialsCompletion(scores) {
-            const summary = document.getElementById("completionSummary") || document.querySelector(".completion-summary");
-            const feedback = document.getElementById("completionReadingLevelDisclaimer");
-            if (!summary) return;
-
+            const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
             const normalizedScores = normalizeCompletionScores(scores, calculateScores());
-            const correctWords = Math.max(0, Math.round(Number(normalizedScores.correct_words) || 0));
-            const totalWords = Math.max(correctWords, Math.round(Number(normalizedScores.target_word_count) || 0));
-            const accuracy = totalWords ? Math.round((correctWords / totalWords) * 100) : 0;
-            const feedbackRules = mode === "paragraph"
-                ? [[90, "Excellent reading! Keep it up!"], [75, "Great job! Your reading is getting stronger."], [60, "Good effort! Keep practicing."], [0, "Nice try! Every reading helps you improve."]]
-                : mode === "sentence"
-                    ? [[90, "Amazing reading! Keep it up!"], [75, "Great reading! You are doing well."], [50, "Nice try! Keep practicing."], [0, "Keep going! Practice makes progress."]]
-                    : [[90, "Excellent! Keep up the great reading!"], [75, "Great job! You are doing well."], [50, "Good try! Keep practicing."], [0, "Keep going! You can do it!"]];
-
-            summary.querySelectorAll("[data-score-tile]").forEach(tile => tile.remove());
-            const tile = document.createElement("section");
-            tile.className = "completion-score-tile completion-score-tile--panel";
-            tile.dataset.scoreTile = "true";
-            const grid = document.createElement("div");
-            grid.className = "completion-result-grid";
-            grid.append(
-                createCompletionResultRow("Correct Words", `${correctWords} / ${totalWords}`),
-                createCompletionResultRow("Accuracy", `${accuracy}%`),
-                createCompletionResultRow("Reading Time", formatDuration(normalizedScores.duration_seconds))
-            );
-            tile.appendChild(grid);
-            summary.appendChild(tile);
-            if (feedback) feedback.textContent = feedbackRules.find(([minimum]) => accuracy >= minimum)[1];
+            const classification = resolveClassificationLabel(normalizedScores, "—") || "—";
+            setCompletionClassification(normalizedScores, classification);
+            if (disclaimer) {
+                const correctWords = Math.max(0, Math.round(Number(normalizedScores.correct_words) || 0));
+                const totalWords = Math.max(correctWords, Math.round(Number(normalizedScores.target_word_count) || 0));
+                const accuracy = totalWords ? Math.round((correctWords / totalWords) * 100) : 0;
+                const feedbackRules = mode === "paragraph"
+                    ? [[90, "Excellent reading! Keep it up!"], [75, "Great job! Your reading is getting stronger."], [60, "Good effort! Keep practicing."], [0, "Nice try! Every reading helps you improve."]]
+                    : mode === "sentence"
+                        ? [[90, "Amazing reading! Keep it up!"], [75, "Great reading! You are doing well."], [50, "Nice try! Keep practicing."], [0, "Keep going! Practice makes progress."]]
+                        : [[90, "Excellent! Keep up the great reading!"], [75, "Great job! You are doing well."], [50, "Good try! Keep practicing."], [0, "Keep going! You can do it!"]];
+                disclaimer.textContent = feedbackRules.find(([minimum]) => accuracy >= minimum)[1];
+            }
             setCompletionLoadingState(false, { minDurationMs: 0 });
         }
 
@@ -2743,7 +2716,9 @@
 
             if (data.complete) {
                 // CRLA Official Assessment: Lock this item to prevent further updates
-                if (isOfficialAssessmentLaunch) {
+                // EXCEPTION: Story Reading segments are NOT locked; each segment is just a checkpoint in continuous reading
+                const isStrictItem = isOfficialAssessmentLaunch && currentStoryState !== "story_reading";
+                if (isStrictItem) {
                     itemLocked[currentIndex] = true;
                     itemScores[currentIndex] = {
                         correct_words: correctWordCounts[currentIndex] || 0,
@@ -2811,7 +2786,9 @@
                 
                 // CRLA Official Assessment: Show red feedback and auto-advance after no match
                 // This prevents students from repeatedly attempting wrong answers
-                if (isOfficialAssessmentLaunch && !itemLocked[currentIndex] && transcript && Number(data.matched || 0) === 0) {
+                // EXCEPTION: Story Reading is a continuous oral reading assessment and does NOT lock/auto-advance on miscues
+                const isStrictAssessmentMode = isOfficialAssessmentLaunch && currentStoryState !== "story_reading";
+                if (isStrictAssessmentMode && !itemLocked[currentIndex] && transcript && Number(data.matched || 0) === 0) {
                     // Clear previous auto-advance timer if exists
                     if (autoAdvanceTimer) {
                         window.clearTimeout(autoAdvanceTimer);
@@ -2858,6 +2835,9 @@
                             transitionToItem(currentIndex + 1, "Moving to next item.", "Keep reading clearly.");
                         }
                     }, 1200);
+                } else if (currentStoryState === "story_reading" && !isRecording) {
+                    // Story Reading: Continue listening for more content without locking
+                    setSpeechStatus("I'm still listening", "Keep reading—I'll transcribe as you speak.", true);
                 }
             }
         }
@@ -4538,8 +4518,7 @@
             pauseOverlay?.classList.add("d-none");
         }
 
-        function goBackToAssessments(showClassification = false) {
-            const shouldShowClassification = !isMyMaterials && showClassification === true;
+        function goBackToAssessments() {
             if (isAssistMode && window.parent && window.parent !== window) {
                 window.parent.postMessage({
                     type: "pabasa-assist-returning",
@@ -4559,10 +4538,6 @@
                 return;
             }
             const assessmentUrl = new URL('/dashboard/assessment/', window.location.origin);
-            if (shouldShowClassification) {
-                assessmentUrl.searchParams.set('workflow', 'original');
-                assessmentUrl.searchParams.set('show_classification', '1');
-            }
             window.location.assign(assessmentUrl.toString());
         }
 
@@ -4591,7 +4566,7 @@
         });
 
         storyQuestionFinishBtn?.addEventListener("click", () => {
-            goBackToAssessments(true);
+            goBackToAssessments();
         });
 
         prevBtn?.addEventListener("click", () => { 
@@ -4730,7 +4705,7 @@
                 window.location.assign(transitionUrl);
                 return;
             }
-            goBackToAssessments(true);
+            goBackToAssessments();
         });
 
         if (isReviewMode) {

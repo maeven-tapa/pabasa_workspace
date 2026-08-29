@@ -58,6 +58,7 @@ from .models import User, School, Section, Enrollment, Assessment, Material, Pra
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
 from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
 from .reading_stt import (
+    align_story_transcript,
     analyze_reading,
     language_code_for,
     phrase_hints_for,
@@ -9136,39 +9137,8 @@ def assessment(request):
     except Exception as exc:
         logger.warning("PABASA_OFFICIAL_TRACE workflow_launch_context logging_failed=%s", exc)
 
-    classification_triggered = str(request.GET.get('show_classification') or '').strip().lower() in {'1', 'true', 'yes'}
-    show_classification_card = (
-        stage == 'original'
-        and bool(state.get('reader_classification'))
-        and state.get('classification_workflow_status') != 'completed'
-        and (classification_triggered or state.get('classification_workflow_status') == 'pending')
-    )
-    classification_result = None
-    if show_classification_card and user:
-        classification_result = Assessment.objects.filter(
-            Q(material__is_official_reading=True) | Q(source_assessment__is_system_owned=True),
-            student=user,
-            attempt_status='completed',
-        ).order_by('-completed_at', '-updated_at', '-created_at', '-id').first()
-
-    classification_score = getattr(classification_result, 'total_score', None)
-    context['show_classification_card'] = show_classification_card
-    formal_performance = performance_interpretation(classification_score) if classification_score is not None else ('Needs Intensive Support' if eligible else '')
-    friendly_performance = {
-        'needs intensive support': ('Keep Practicing 💪', 'You’re getting better every time!'),
-        'needs support': ('Keep Going! 🌟', 'You’re getting better every time!'),
-        'developing': ('You’re Making Progress! 🌱', 'You’re getting better every time!'),
-        'on track': ('You’re Doing Great! ⭐', 'Keep practicing your reading!'),
-        'advanced': ('Amazing Reading! 🏆', 'Keep practicing your reading!'),
-    }.get(str(formal_performance or '').strip().lower(), ('Keep Practicing 💪', 'You’re getting better every time!'))
-    classification_label = str(state.get('reader_classification') or '').strip()
-    context['classification_card'] = {
-        'level': classification_label[:-1] if classification_label.endswith(' Readers') else classification_label,
-        'performance_interpretation': friendly_performance[0] if eligible else '',
-        'performance_message': friendly_performance[1] if eligible else '',
-        'disclaimer': ADAPTED_READING_LEVEL_DISCLAIMER if classification_result else '',
-        'aral_eligible': eligible,
-    }
+    context['show_classification_card'] = False
+    context['classification_card'] = {}
 
     if stage == 'unavailable':
         context['workflow_title'] = 'CRLA Assessment Currently Unavailable'
@@ -9988,13 +9958,18 @@ def story_reading_complete(request):
     try:
         total_words = max(0, int(payload.get('total_words') or 0))
         words_read = max(0, min(total_words, int(payload.get('words_read') or total_words)))
+        correct_words = max(0, int(payload.get('correct_words') or (words_read if total_words == 0 else 0)))
+        miscues = max(0, int(payload.get('miscues') or max(0, total_words - correct_words)))
         progress_percent = max(0.0, min(100.0, float(payload.get('progress_percent') or 0)))
         correct_sentences = max(0, min(6, int(payload.get('correct_sentences') or 0)))
         reading_score = correct_sentences / 6 * 100
         duration_seconds = payload.get('duration_seconds')
         duration_seconds = max(0, int(duration_seconds)) if duration_seconds is not None else None
+        accuracy = float(payload.get('accuracy') if payload.get('accuracy') is not None else (correct_words / total_words * 100 if total_words else 0.0))
+        wpm = float(payload.get('wpm') if payload.get('wpm') is not None else 0.0)
         current_scene = max(1, int(payload.get('current_scene') or 1))
         current_time_seconds = max(0.0, float(payload.get('current_time_seconds') or 0))
+        word_alignment = payload.get('word_results') or payload.get('word_alignment') or []
     except (TypeError, ValueError):
         return JsonResponse({'success': False, 'error': 'Invalid Story Reading progress.'}, status=400)
 
@@ -10008,9 +9983,14 @@ def story_reading_complete(request):
             'story_key': str(payload.get('story_key') or '').strip()[:100],
             'total_words': total_words,
             'words_read': words_read,
+            'correct_words': correct_words,
+            'miscues': miscues,
+            'accuracy': round(max(0.0, min(100.0, accuracy)), 2),
+            'wpm': round(max(0.0, wpm), 2),
             'progress_percent': progress_percent,
             'correct_sentences': correct_sentences,
             'reading_score': reading_score,
+            'word_alignment': word_alignment if isinstance(word_alignment, list) else [],
             'duration_seconds': duration_seconds,
             'current_scene': current_scene,
             'current_time_seconds': current_time_seconds,
@@ -10337,6 +10317,25 @@ def reading_transcribe_api(request):
         analysis['syllable_context_count'] = context_count
         analysis['target_syllable_count'] = target_count
         analysis['syllable_context_progress'] = context_progress
+        
+        # For Story Reading (paragraph mode): Add word-level alignment results
+        # This enables precise miscue detection: distinguishes between STT segmentation artifacts 
+        # (e.g., "pa gong" for "Pagong") and genuine student miscues (e.g., "bagong" for "Pagong")
+        if mode == "paragraph":
+            alignment_result = align_story_transcript(target_text, analysis_transcript, language_code)
+            analysis['word_results'] = alignment_result.get('word_results', [])
+            analysis['word_alignment'] = {
+                'expected_words': alignment_result.get('expected_words', []),
+                'recognized_words': alignment_result.get('recognized_words', []),
+                'total_words': alignment_result.get('total_words', 0),
+                'correct_words': alignment_result.get('correct_words', 0),
+                'miscues': alignment_result.get('miscues', 0),
+                'accuracy': alignment_result.get('accuracy', 0.0),
+                'raw_recognized_text': transcript,  # Preserve original STT output for audit
+                'analyzed_recognized_text': analysis_transcript,  # After stitching if applied
+                'stitching_applied': stitching_applied,
+            }
+        
         analysis.update({
             'success': True,
             'language_code': language_code,

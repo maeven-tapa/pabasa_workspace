@@ -1416,110 +1416,34 @@
             max-width: 580px;
         }
 
-        .completion-summary {
+        .completion-classification-panel {
+            background: rgba(255, 255, 255, 0.84);
+            border: 1px solid rgba(27, 26, 23, 0.08);
+            border-radius: 26px;
+            box-shadow: 0 18px 36px rgba(17, 24, 39, 0.08);
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 0.85rem;
-            align-items: stretch;
-            max-height: 0;
-            opacity: 0;
-            overflow: hidden;
-            pointer-events: none;
-            transform: translateY(8px);
-            transition: opacity 220ms ease, transform 220ms ease, max-height 220ms ease;
-        }
-
-        .completion-summary.is-visible {
-            max-height: none;
-            opacity: 1;
-            overflow: visible;
-            pointer-events: auto;
-            transform: translateY(0);
-        }
-
-        .completion-summary--my-materials {
-            grid-template-columns: minmax(0, 560px);
-            justify-content: center;
-            margin-inline: auto;
-            width: 100%;
-        }
-
-        .completion-summary--my-materials .completion-result-grid {
-            grid-template-rows: repeat(3, minmax(32px, auto));
-        }
-
-        .completion-loading {
-            background: rgba(255, 255, 255, 0.64);
-            border: 1px solid rgba(27, 26, 23, 0.07);
-            border-radius: 20px;
-            display: grid;
-            gap: 0.8rem;
-            margin: 0.05rem auto 0;
-            max-height: 220px;
+            gap: 0.35rem;
+            justify-items: center;
+            margin: 0.5rem auto 0;
             max-width: 560px;
-            overflow: hidden;
-            padding: 0.9rem 1rem;
-            transition: opacity 220ms ease, transform 220ms ease, max-height 220ms ease, margin 220ms ease, padding 220ms ease;
+            padding: clamp(1.25rem, 3vw, 2rem);
+            width: min(100%, 560px);
         }
 
-        .completion-loading.is-hidden {
-            margin-block: 0;
-            max-height: 0;
-            opacity: 0;
-            padding-block: 0;
-            pointer-events: none;
-            transform: translateY(6px);
-            visibility: hidden;
-        }
-
-        .completion-loading-heading {
-            align-items: center;
+        .completion-classification-label {
             color: var(--accent-deep);
-            display: inline-flex;
-            font-size: 0.95rem;
-            font-weight: 800;
-            gap: 0.6rem;
-            justify-content: center;
+            font-size: 0.78rem;
+            font-weight: 900;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
         }
 
-        .completion-loading-spinner {
-            animation: completion-spin 0.9s linear infinite;
-            border: 2px solid rgba(31, 111, 139, 0.26);
-            border-radius: 50%;
-            border-top-color: var(--accent-deep);
-            display: inline-block;
-            flex-shrink: 0;
-            height: 15px;
-            width: 15px;
-            will-change: transform;
-        }
-
-        .completion-loading-skeleton {
-            display: grid;
-            gap: 0.55rem;
-        }
-
-        .completion-loading-bar {
-            animation: completion-shimmer 1.35s ease-in-out infinite;
-            background: linear-gradient(90deg, rgba(31, 111, 139, 0.16) 0%, rgba(31, 111, 139, 0.32) 50%, rgba(31, 111, 139, 0.16) 100%);
-            background-size: 200% 100%;
-            border-radius: 999px;
-            height: 10px;
-        }
-
-        .completion-loading-bar--wide {
-            margin: 0 auto;
-            width: min(100%, 220px);
-        }
-
-        .completion-loading-bar:nth-child(2) {
-            margin: 0 auto;
-            width: min(100%, 280px);
-        }
-
-        .completion-loading-bar:nth-child(3) {
-            margin: 0 auto;
-            width: min(100%, 180px);
+        .completion-classification-panel strong {
+            color: var(--ink);
+            font-size: clamp(1.65rem, 3.6vw, 3rem);
+            font-weight: 900;
+            line-height: 1.1;
+            text-wrap: balance;
         }
 
         .completion-disclaimer {
@@ -3438,24 +3362,15 @@
             <article class="completion-card">
                 <div class="completion-mark">{% if is_my_materials_completion %}✓{% else %}A{% endif %}</div>
                 <div class="completion-kicker">{% if is_my_materials_completion %}My Materials{% else %}Reading Assessment Results{% endif %}</div>
-                <h1 id="completionTitle">{% if is_my_materials_completion %}Reading complete!{% else %}Assessment complete.{% endif %}</h1>
-                <p id="completionMessage">{% if is_my_materials_completion %}You finished this material. Here is how your reading went.{% else %}You finished the reading set. Your teacher can now review the session and use it for your next practice step.{% endif %}</p>
-                <h2 class="completion-breakdown-title">{% if is_my_materials_completion %}Your Results{% else %}Score Breakdown{% endif %}</h2>
-                <div class="completion-summary{% if is_my_materials_completion %} completion-summary--my-materials{% endif %}" id="completionSummary" aria-live="polite"></div>
-                {% if not is_my_materials_completion %}
-                <div class="completion-loading" id="completionLoadingState" aria-live="polite" aria-busy="true">
-                    <div class="completion-loading-heading">
-                        <span class="completion-loading-spinner" aria-hidden="true"></span>
-                        <span class="completion-loading-text">Calculating your score breakdown...</span>
-                    </div>
-                    <div class="completion-loading-skeleton" aria-hidden="true">
-                        <span class="completion-loading-bar completion-loading-bar--wide"></span>
-                        <span class="completion-loading-bar"></span>
-                        <span class="completion-loading-bar"></span>
-                    </div>
+                <h1 id="completionTitle">{% if is_my_materials_completion %}Reading complete!{% else %}Assessment complete{% endif %}</h1>
+                <p id="completionMessage">{% if is_my_materials_completion %}You finished this material. Great work.{% else %}You completed the reading assessment. Here is your final result.{% endif %}</p>
+
+                <div class="completion-classification-panel" id="completionClassificationPanel" aria-live="polite">
+                    <span class="completion-classification-label">Your Reading Classification</span>
+                    <strong id="completionClassificationValue">—</strong>
                 </div>
-                {% endif %}
-                <p class="completion-disclaimer is-encouragement" id="completionReadingLevelDisclaimer" aria-live="polite">{% if is_my_materials_completion %}Great job finishing this material! Keep practicing to grow your reading skills.{% else %}Great job completing your reading assessment! Your results show your current reading performance. Keep practicing to improve your reading skills.{% endif %}</p>
+
+                <p class="completion-disclaimer is-encouragement" id="completionReadingLevelDisclaimer" aria-live="polite">{% if is_my_materials_completion %}Great job finishing this material! Keep practicing to grow your reading skills.{% else %}Keep practicing to improve your reading skills.{% endif %}</p>
                 <div class="completion-actions">
                     <button class="completion-secondary" id="reviewBtn" type="button">{% if is_my_materials_completion %}Try Again{% else %}Start Again{% endif %}</button>
                     <button class="completion-primary" id="finishBtn" type="button">{% if is_my_materials_completion %}Done / Back to Materials{% else %}Back to Assessment{% endif %}</button>

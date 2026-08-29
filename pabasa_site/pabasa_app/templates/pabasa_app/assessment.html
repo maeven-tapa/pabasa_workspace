@@ -694,53 +694,6 @@
 
 </section>
 
-{% if show_classification_card %}
-<section class="assessment-result-overlay" role="dialog" aria-modal="true" aria-labelledby="assessmentResultTitle">
-    <article class="status-ticket assessment-result-card">
-        <header class="assessment-result-heading">
-            <span class="prep-icon" aria-hidden="true"><i class="bi {% if classification_card.aral_eligible %}bi-compass{% else %}bi-award{% endif %}"></i></span>
-            <div>
-                <span class="ticket-label">CRLA Assessment</span>
-                <h2 id="assessmentResultTitle">
-                    🎉 You Did It!
-                </h2>
-                <p class="assessment-result-subtitle">Here’s how you did:</p>
-            </div>
-        </header>
-
-        <div class="assessment-result-level">
-            <span class="ticket-label">Your Reading Level</span>
-            <strong>{{ classification_card.level }} {% if classification_card.aral_eligible %}🌱{% endif %}</strong>
-        </div>
-
-        {% if classification_card.performance_interpretation %}
-        <dl class="assessment-result-details">
-            <div>
-                <dt>{{ classification_card.performance_interpretation }}</dt>
-                <dd>{{ classification_card.performance_message }}</dd>
-            </div>
-        </dl>
-        {% endif %}
-
-        {% if classification_card.disclaimer %}
-        <p class="assessment-result-disclaimer" id="assessmentResultDisclaimer">{{ classification_card.disclaimer }}</p>
-        {% endif %}
-
-        <div class="assessment-result-actions">
-            {% if classification_card.aral_eligible %}
-            <form method="post" action="{% url 'activate_aral_intervention' %}" class="d-inline-flex">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-right-circle"></i> Keep Learning →</button>
-            </form>
-            <a class="btn btn-outline-primary" href="{% url 'practice' %}"><i class="bi bi-journal-text"></i> Practice Reading</a>
-            {% else %}
-            <a class="btn btn-outline-primary" href="{% url 'dashboard' %}"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
-            <a class="btn btn-primary" href="{% url 'practice' %}"><i class="bi bi-journal-text"></i> Practice Reading</a>
-            {% endif %}
-        </div>
-    </article>
-</section>
-{% endif %}
 
 <script>
     // --- Assessment click tracking and recent class order logic ---
