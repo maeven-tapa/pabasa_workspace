@@ -2149,7 +2149,7 @@ body { overflow-x: hidden; }
 .principles-board-intro h2,
 .project-context-header h2,
 .development-team-section h2 { font-size:clamp(2rem,4vw,3rem) !important; line-height:1.08; }
-.principles-board { border:0 !important; background:rgba(255,255,255,.82) !important; backdrop-filter:blur(8px); box-shadow:0 1.2rem 3rem rgba(16,70,110,.1) !important; }
+.principles-board { border:0 !important; border-radius:1.35rem !important; background:rgba(255,255,255,.82) !important; backdrop-filter:blur(8px); box-shadow:0 1.2rem 3rem rgba(16,70,110,.1) !important; }
 .principle-item { border-radius:1rem !important; background:#fff !important; box-shadow:0 .5rem 1.2rem rgba(16,70,110,.07); }
 .timeline-step { border-radius:1.1rem !important; background:rgba(255,255,255,.9) !important; box-shadow:0 .6rem 1.5rem rgba(16,70,110,.08); }
 .timeline-index { border-radius:.4rem 1rem 1rem !important; transform:rotate(-4deg); }
