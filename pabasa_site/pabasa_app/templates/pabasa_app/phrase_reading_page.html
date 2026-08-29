@@ -1,0 +1,94 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Secret Messages | Phrase Reading</title>
+    <link rel="icon" type="image/png" href="{% static 'pabasa_app/images/pabasalogo.png' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&family=Patrick+Hand&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{% static 'pabasa_app/css/phrase_reading.css' %}?v={% now 'U' %}">
+</head>
+<body>
+    <script>
+        window.__PABASA_OFFICIAL_ASSESSMENT__ = null;
+        window.__PABASA_CUSTOM_MATERIAL__ = {{ custom_material_launch_data_json|default:'null'|safe }};
+        window.__PABASA_MY_MATERIALS__ = {% if is_my_materials_completion %}true{% else %}false{% endif %};
+        window.__PABASA_STUDENT_END_STATE__ = {{ student_end_assessment_state_json|default:'{}'|safe }};
+        window.__PHRASE_READING_ASSETS__ = {
+            stamps: [{% for number in "123456789x" %}"{% static 'pabasa_app/images/phrase_reading/stamp' %}{% if number == 'x' %}10{% else %}{{ number }}{% endif %}.svg"{% if not forloop.last %},{% endif %}{% endfor %}]
+        };
+        window.PABASA_USER_NAME = "{{ user_full_name|escapejs }}";
+        window.PABASA_USER_ID = "{{ request.session.user_id|default:'' }}";
+        window.PABASA_USER_ROLE = "{{ nav_role }}";
+    </script>
+
+    <main class="phrase-reading-app reader-shell reader-phrase" id="phraseReadingApp">
+        <div class="phrase-reading-sky" aria-hidden="true"></div>
+        <img class="phrase-decoration phrase-flower phrase-flower-left" src="{% static 'pabasa_app/images/phrase_reading/flower1.svg' %}" alt="">
+        <img class="phrase-decoration phrase-flower phrase-flower-right" src="{% static 'pabasa_app/images/phrase_reading/flower2.svg' %}" alt="">
+        <img class="phrase-decoration phrase-mailbox" src="{% static 'pabasa_app/images/phrase_reading/mailbox.svg' %}" alt="">
+        <img class="phrase-decoration phrase-star phrase-star-one" src="{% static 'pabasa_app/images/phrase_reading/star1.svg' %}" alt="">
+        <img class="phrase-decoration phrase-star phrase-star-two" src="{% static 'pabasa_app/images/phrase_reading/star2.svg' %}" alt="">
+        <img class="phrase-decoration phrase-icon phrase-icon-one" src="{% static 'pabasa_app/images/phrase_reading/icon1.svg' %}" alt="">
+        <img class="phrase-decoration phrase-icon phrase-icon-two" src="{% static 'pabasa_app/images/phrase_reading/icon2.svg' %}" alt="">
+
+        <header class="phrase-reading-header">
+            <a class="phrase-back-link" href="{% url 'assessment' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i><span>Back to Assessment</span></a>
+            <div class="phrase-heading-group">
+                <span class="phrase-title-icon" aria-hidden="true">✉️</span>
+                <div><p class="phrase-eyebrow">Phrase Reading</p><h1>Secret Messages</h1></div>
+            </div>
+            <div class="phrase-progress" role="status" aria-live="polite">
+                <span>Messages Read</span><strong id="phraseProgressCount">0 / 10</strong>
+                <div class="phrase-progress-track"><span id="progressFill"></span></div>
+            </div>
+        </header>
+
+        <section class="phrase-envelope-scene" id="phraseEnvelopeScene" aria-labelledby="phraseBoardTitle">
+            <div class="phrase-board-copy"><h2 id="phraseBoardTitle">You have magical mail!</h2><p>Choose an envelope and discover the message inside.</p></div>
+            <div class="phrase-envelope-board" id="phraseEnvelopeBoard"></div>
+        </section>
+
+        <section class="phrase-message-view" id="phraseMessageView" aria-hidden="true">
+            <button class="phrase-message-close" id="phraseMessageClose" type="button" aria-label="Return to envelopes"><i class="bi bi-x-lg"></i></button>
+            <div class="phrase-open-envelope" aria-hidden="true"><span class="phrase-open-back"></span><span class="phrase-open-paper"></span><span class="phrase-open-front"></span><span class="phrase-open-flap"></span></div>
+            <article class="phrase-message-paper">
+                <div class="phrase-paper-top"><span id="counter">Message 1 / 10</span><span class="phrase-paper-sparkle">✦</span></div>
+                <div class="phrase-word-stage" aria-live="polite" aria-atomic="true">
+                    <h1 id="readingWord">Loading messages...</h1>
+                </div>
+                <div class="phrase-reading-status"><span class="phrase-listening-dot"></span><span id="readingHelperText">Open a message when you are ready.</span></div>
+                <div class="phrase-reading-controls">
+                    <button id="btnStartReading" class="phrase-control phrase-control-primary d-none" type="button"><i class="bi bi-mic-fill"></i> Start Reading</button>
+                    <button id="btnReadAloud" class="phrase-control phrase-control-secondary d-none" type="button"><i class="bi bi-volume-up-fill"></i> Read Aloud</button>
+                    <button id="btnStopReading" class="d-none" type="button">Finish Reading</button>
+                </div>
+            </article>
+            <div class="speech-panel d-none" id="speechPanel" hidden aria-hidden="true"><strong id="speechStatus">Ready</strong><span id="speechTranscript">No words recognized yet. Keep reading clearly.</span><code id="rawMicInput">Waiting for speech...</code></div>
+        </section>
+
+        <section class="completion-page" id="completionPage" aria-live="polite" aria-atomic="true">
+            <article class="completion-card">
+                <div class="completion-mark">✉</div><p class="completion-kicker">All mail collected</p>
+                <h1 id="completionTitle">Secret messages complete!</h1>
+                <p id="completionMessage">Wonderful reading—you opened every magical message.</p>
+                <div class="completion-actions"><button id="reviewBtn" type="button">Read Again</button><button id="finishBtn" type="button">Return to Activities</button></div>
+            </article>
+        </section>
+
+        <button id="prevBtn" class="phrase-reader-hook" type="button">Previous</button><button id="nextBtn" class="phrase-reader-hook" type="button">Next</button>
+        <button id="pauseBtn" class="phrase-reader-hook" type="button">Pause</button><button id="btnToggleMic" class="phrase-reader-hook" type="button">Mic</button><button id="btnTestMic" class="phrase-reader-hook" type="button">Test</button>
+        <div id="pauseOverlay" class="d-none"></div><div id="pauseMenu" class="d-none"><button id="resumeBtn">Resume</button><button id="retryBtn">Retry</button><button id="quitBtn">Exit</button></div>
+        <div id="micTestOverlay" class="d-none"><button id="micTestCloseBtn">Close</button><button id="micSampleRecordBtn">Record</button><button id="micSamplePlayBtn">Play</button><span id="micTestStatus"></span><select id="micDeviceSelect"><option value="">Default microphone</option></select><input id="speechDebugToggle" type="checkbox"></div>
+        <div id="liveCountdownOverlay" class="d-none"><span id="liveCountdownNumber">10</span><span id="liveCountdownSubtext"></span></div>
+    </main>
+    {% csrf_token %}
+    <script src="{% static 'pabasa_app/js/reading_level_utils.js' %}?v={% now 'U' %}"></script>
+    <script src="{% static 'pabasa_app/js/assessment_reader.js' %}?v={% now 'U' %}"></script>
+    <script src="{% static 'pabasa_app/js/phrase_reading.js' %}?v={% now 'U' %}"></script>
+</body>
+</html>

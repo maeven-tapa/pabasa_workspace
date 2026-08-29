@@ -1134,6 +1134,7 @@
                 const clapCountSyllablesUrl = "{% url 'clap_count_syllables_page' %}";
                 const letterSoundMatchingUrl = "{% url 'letter_sound_matching_page' %}";
                 const storyReadingUrl = "{% url 'story_reading_page' %}";
+                const phraseReadingUrl = "{% url 'phrase_reading_page' %}";
                 const iconMap = { word: 'bi-type', sentence: 'bi-chat-left-text', paragraph: 'bi-card-text', vowel: 'bi-soundwave' };
                 const labelMap = { word: 'Word Reading', sentence: 'Sentence Reading', paragraph: 'Paragraph Reading', vowel: 'Vowel Reading' };
                 const officialAssessmentId = "{{ crla_official_assessment_id|default:''|escapejs }}";
@@ -1289,8 +1290,13 @@
                             const isStoryReading = [m.template_title, m.template_type, m.content_json?.template_title,
                                 m.content_json?.template_lesson, m.content_json?.template_type, m.content_json?.activity_type]
                                 .some(value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === 'story_reading');
+                            const isPhraseReading = [templateActivityName, m.template_title, m.template_type,
+                                m.content_json?.template_title, m.content_json?.template_lesson, m.content_json?.template_type]
+                                .some(value => ['phrase_reading', 'phrase_reading_practice'].includes(String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')));
                             const sectionId = m.section_id || classData.id || classData.section_id || '';
-                            const generatedStartUrl = isLocked ? '#' : (isStoryReading
+                            const generatedStartUrl = isLocked ? '#' : (isPhraseReading
+                                ? `${phraseReadingUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
+                                : isStoryReading
                                 ? `${storyReadingUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
                                 : isClapCountSyllables
                                 ? `${clapCountSyllablesUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`

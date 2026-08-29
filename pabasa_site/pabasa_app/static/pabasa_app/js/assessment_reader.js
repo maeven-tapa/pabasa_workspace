@@ -9,6 +9,7 @@
         if (shell.classList.contains('reader-sentence')) mode = 'sentence';
         if (shell.classList.contains('reader-paragraph')) mode = 'paragraph';
         if (shell.classList.contains('reader-vowel')) mode = 'vowel';
+        if (shell.classList.contains('reader-phrase')) mode = 'phrase';
 
         const readingWord = document.getElementById("readingWord");
         const readingTitle = document.getElementById("readingTitle");
@@ -253,11 +254,11 @@
         let hasHeardSinceLastChunk = false;
         let ambientNoiseFloor = 0;
         let speechFrameCount = 0;
-        // Sentences and paragraphs need enough context for reliable recognition.
+        // Sentences, phrases, and paragraphs need enough context for reliable recognition.
         // Keep fast feedback for word/vowel assessments, but allow longer
         // recordings for continuous reading while remaining below Google's
         // 12-second transcription timeout.
-        let speechChunkMs = ["sentence", "paragraph"].includes(mode) ? 10000 : 2400;
+        let speechChunkMs = ["sentence", "phrase", "paragraph"].includes(mode) ? 10000 : 2400;
         const speechLevelThreshold = 0.014;
         const speechNoiseMultiplier = 3.2;
         let micDeviceOptionButtons = [];
@@ -265,7 +266,7 @@
         function setCurrentItemMode(nextMode) {
             const normalized = String(nextMode || mode || "word").toLowerCase();
             mode = normalized;
-            speechChunkMs = ["sentence", "paragraph"].includes(mode) ? 10000 : 2400;
+            speechChunkMs = ["sentence", "phrase", "paragraph"].includes(mode) ? 10000 : 2400;
         }
 
         function setSpeechDebugPanelVisible(isVisible, persist = true) {
@@ -1389,6 +1390,50 @@
         function buildItemPages(sourceItems, sourceTypes) {
             return sourceItems.map((text, index) => splitTextIntoDisplayPages(text, sourceTypes[index] || mode));
         }
+
+        function syncPhraseSelectionIntoReadingUI(selectedItem = window.__PABASA_SELECTED_READING_ITEM__ || window.__PABASA_SELECTED_PHRASE__ || null, options = {}) {
+            const force = Boolean(options.force);
+            const targetItem = selectedItem && typeof selectedItem === 'object' ? selectedItem : null;
+            if (!targetItem && !force) return false;
+
+            const selectedText = String(targetItem?.text || targetItem?.phrase || targetItem?.content || targetItem?.word || targetItem || "").trim();
+            if (!selectedText) return false;
+
+            const selectedIndex = Number.isInteger(targetItem?.sourceIndex) ? targetItem.sourceIndex : 0;
+            const phraseId = String(targetItem?.sourceId || targetItem?.id || `phrase-${selectedIndex}`).trim();
+
+            items = [selectedText];
+            itemTypes = ['phrase'];
+            itemPages = buildItemPages(items, itemTypes);
+            itemTitles = [selectedText];
+            pageCorrectWordCounts = items.map(() => []);
+            correctWordCounts = new Array(items.length).fill(0);
+            currentIndex = 0;
+            currentPageIndex = 0;
+            window.__PABASA_CURRENT_PHRASE_INDEX__ = selectedIndex;
+            window.__PABASA_SELECTED_PHRASE__ = targetItem || { text: selectedText, sourceId: phraseId, sourceIndex: selectedIndex };
+            window.__PABASA_SELECTED_READING_ITEM__ = window.__PABASA_SELECTED_PHRASE__;
+
+            console.log('Phrase selection synced to reading UI', {
+                phraseIndex: selectedIndex,
+                phraseId,
+                phraseText: selectedText,
+                selectedItem,
+            });
+
+            updateUI();
+            animateCurrentItem();
+            return true;
+        }
+
+        document.addEventListener('phraseReadingStarted', (event) => {
+            const detail = event?.detail || {};
+            const selectedItem = detail.phrase || window.__PABASA_SELECTED_READING_ITEM__ || window.__PABASA_SELECTED_PHRASE__ || null;
+            if (mode !== 'phrase' && !shell.classList.contains('reader-phrase')) return;
+            if (selectedItem) {
+                syncPhraseSelectionIntoReadingUI(selectedItem, { force: true });
+            }
+        });
 
         function getCurrentItemPages() {
             return itemPages[currentIndex] || [items[currentIndex] || ""];
@@ -2780,7 +2825,42 @@
                 });
             }
 
+            const hasRecognizedSpeech = Boolean(
+                transcript
+                || Number(data.matched || 0) > 0
+                || Number(data.correct_word_count || 0) > 0
+                || (Array.isArray(data.word_results) && data.word_results.some((result) => String(result?.result || "").trim().length > 0))
+            );
+
+            if (mode === 'phrase' && data.complete && !hasRecognizedSpeech) {
+                console.warn("PABASA: Ignoring premature completion with no recognized speech.", {
+                    transcript,
+                    matched: Number(data.matched || 0),
+                    correctWordCount: Number(data.correct_word_count || 0),
+                    wordResults: Array.isArray(data.word_results) ? data.word_results : [],
+                    currentIndex,
+                    itemText: getCurrentDisplayText() || items[currentIndex] || "",
+                });
+                return;
+            }
+
             if (data.complete) {
+                if (mode === 'phrase') {
+                    isRecording = false;
+                    stopSpeechRecognition();
+                    document.dispatchEvent(new CustomEvent('phraseReadingCompleted', {
+                        detail: {
+                            phraseIndex: window.__PABASA_CURRENT_PHRASE_INDEX__,
+                            phraseId: window.__PABASA_SELECTED_READING_ITEM__?.sourceId || window.__PABASA_SELECTED_READING_ITEM__?.id || null,
+                            phraseText: window.__PABASA_SELECTED_READING_ITEM__?.text || window.__PABASA_SELECTED_READING_ITEM__?.phrase || getCurrentDisplayText(),
+                            transcript,
+                            matched: data.matched,
+                            current_word_index: data.current_word_index,
+                            current_syllable_index: data.current_syllable_index,
+                        },
+                    }));
+                    return;
+                }
                 // CRLA Official Assessment: Lock this item to prevent further updates
                 // EXCEPTION: Story Reading segments are NOT locked; each segment is just a checkpoint in continuous reading
                 const isStrictItem = isOfficialAssessmentLaunch && currentStoryState !== "story_reading";
@@ -2919,6 +2999,11 @@
         }
 
         function renderSyllableDisplay(data, previousCorrectWords = 0) {
+            if (shell.classList.contains('reader-phrase')) {
+                const displayText = String(getCurrentDisplayText() || items[currentIndex] || "").trim();
+                renderPhraseWordGuide(displayText, data?.current_word_index);
+                return;
+            }
             if (!readingWord || !Array.isArray(data.words) || !Array.isArray(data.word_syllable_ranges)) return;
             const displayText = String(getCurrentDisplayText() || items[currentIndex] || "");
             const itemTitle = getCurrentItemTitle();
@@ -2979,8 +3064,36 @@
             }
         }
 
+        function renderPhraseWordGuide(displayText, activeWordIndex = 0) {
+            if (!readingWord) return;
+            const parts = String(displayText || "").split(/(\s+)/);
+            let wordIndex = 0;
+            const parsedActiveIndex = Number(activeWordIndex);
+            const targetIndex = Number.isFinite(parsedActiveIndex) ? Math.max(0, parsedActiveIndex) : 0;
+            readingWord.replaceChildren();
+            parts.forEach((part) => {
+                if (!part) return;
+                if (/^\s+$/.test(part)) {
+                    readingWord.appendChild(document.createTextNode(part));
+                    return;
+                }
+                const word = document.createElement("span");
+                word.className = "phrase-reading-word";
+                if (wordIndex === targetIndex) word.classList.add("is-current");
+                word.textContent = part;
+                readingWord.appendChild(word);
+                wordIndex += 1;
+            });
+            readingWord.hidden = false;
+        }
+
         // CRLA Official Assessment: Render syllables with a specific word highlighted as wrong/error
         function renderSyllableDisplayWithError(data, activeWordIndex = -1, previousCorrectWords = 0) {
+            if (shell.classList.contains('reader-phrase')) {
+                const displayText = String(getCurrentDisplayText() || items[currentIndex] || "").trim();
+                renderPhraseWordGuide(displayText, data?.current_word_index);
+                return;
+            }
             if (!readingWord || !Array.isArray(data.words) || !Array.isArray(data.word_syllable_ranges)) return;
             const displayText = String(getCurrentDisplayText() || items[currentIndex] || "");
             const itemTitle = getCurrentItemTitle();
@@ -3105,7 +3218,12 @@
                 readingTitle.hidden = !itemTitle;
             }
             if (readingWord) {
-                readingWord.textContent = bodyText || displayText;
+                const safeText = (bodyText || displayText || "").trim();
+                if (shell.classList.contains('reader-phrase')) {
+                    renderPhraseWordGuide(safeText, 0);
+                } else {
+                    readingWord.textContent = bodyText || displayText;
+                }
                 readingWord.hidden = false;
             }
             resetSyllableStitching();
@@ -3118,7 +3236,9 @@
                 counter.textContent = pageLabel ? `${label} ${currentIndex + 1}/${items.length} · ${pageLabel}` : `${label} ${currentIndex + 1}/${items.length}`;
             }
             updateAssessmentHeaderLabel();
-            if (progressFill) progressFill.style.width = `${((currentIndex + 1) / items.length) * 100}%`;
+            if (progressFill && !shell.classList.contains('reader-phrase')) {
+                progressFill.style.width = `${((currentIndex + 1) / items.length) * 100}%`;
+            }
             
             updateAssessmentNavigationButtons();
             updateSpeechProcessingControls();
@@ -4142,6 +4262,17 @@
 
         const startReading = () => {
             if (isReviewMode || isSpeechResponsePending()) return;
+            if (mode === 'phrase') {
+                const selectedPhrase = window.__PABASA_SELECTED_READING_ITEM__ || window.__PABASA_SELECTED_PHRASE__ || null;
+                const synced = syncPhraseSelectionIntoReadingUI(selectedPhrase, { force: true });
+                if (synced) {
+                    console.log('Start Reading using selected phrase item', {
+                        phraseIndex: window.__PABASA_CURRENT_PHRASE_INDEX__,
+                        phraseId: window.__PABASA_SELECTED_READING_ITEM__?.sourceId || window.__PABASA_SELECTED_READING_ITEM__?.id || null,
+                        phraseText: window.__PABASA_SELECTED_READING_ITEM__?.text || window.__PABASA_SELECTED_READING_ITEM__?.phrase || null,
+                    });
+                }
+            }
             if (currentStoryState === "story_ready" && currentSelectedStory) {
                 currentStoryState = "story_reading";
                 setCurrentItemMode("paragraph");

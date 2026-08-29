@@ -9908,6 +9908,21 @@ def reading_sentence_page(request):
         })
     return render(request, 'pabasa_app/reading_sentence_page.html', context)
 
+
+@xframe_options_sameorigin
+def phrase_reading_page(request):
+    """Render the isolated Secret Messages presentation for Phrase Reading."""
+    access_response = _enforce_student_access_for_request(request)
+    if access_response:
+        return access_response
+    context = _dashboard_context(request)
+    context.update(_custom_material_reading_context(request))
+    context['student_end_assessment_state_json'] = json.dumps(
+        (_get_user_state(User.objects.filter(id=request.session.get('user_id')).first()).get('student_end_assessment_state') or {}),
+        default=str, separators=(',', ':'),
+    )
+    return render(request, 'pabasa_app/phrase_reading_page.html', context)
+
 @xframe_options_sameorigin
 def reading_para_page(request):
     access_response = _enforce_student_access_for_request(request)

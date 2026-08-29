@@ -81,6 +81,7 @@ urlpatterns = [
     path('dashboard/assessment/story-reading/', views.story_reading_page, name='story_reading_page'),
     path('api/story-reading/complete/', views.story_reading_complete, name='story_reading_complete'),
     path('dashboard/assessment/reading_ui/sentence/', views.reading_sentence_page, name='reading_sentence_page'),
+    path('dashboard/assessment/activity/phrase-reading/', views.phrase_reading_page, name='phrase_reading_page'),
     path('dashboard/assessment/reading_ui/para/', views.reading_para_page, name='reading_para_page'),
     path('dashboard/assessment/reading_ui/vowel/', views.reading_vowel_page, name='reading_vowel_page'),
     path('api/reading/transcribe/', views.reading_transcribe_api, name='reading_transcribe_api'),
