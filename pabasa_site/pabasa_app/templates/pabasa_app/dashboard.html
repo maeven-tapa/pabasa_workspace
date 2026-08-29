@@ -385,20 +385,44 @@
         margin-top: 0.1rem;
     }
 
-    /* Compact independent columns prevent a short card from being stretched
-       to the height of the card beside it. */
+    /* Desktop card rows share grid tracks for consistent alignment. */
     .dashboard-main-layout {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 1.5rem;
         margin-top: 1.5rem;
-        align-items: start;
+        align-items: stretch;
     }
 
     .dashboard-card-column {
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
+        display: contents;
+    }
+
+    .left-column .my-classes-section {
+        grid-area: 1 / 1;
+    }
+
+    .right-column .student-calendar-card {
+        grid-area: 1 / 2;
+    }
+
+    .left-column .my-achievements {
+        grid-area: 2 / 1;
+    }
+
+    .right-column .my-reading-journey {
+        grid-area: 2 / 2;
+    }
+
+    .my-classes-section,
+    .student-calendar-card {
+        align-self: start;
+        width: 100%;
+    }
+
+    .my-achievements,
+    .my-reading-journey {
+        align-self: stretch;
         min-width: 0;
     }
 
@@ -1784,10 +1808,6 @@
             gap: 1.25rem;
         }
 
-        .dashboard-card-column {
-            display: contents;
-        }
-
         .my-classes-section { order: 1; }
         .student-calendar-card { order: 2; }
         .my-achievements { order: 3; }
@@ -1795,6 +1815,8 @@
 
         .dashboard-main-layout > *,
         .dashboard-card-column > * {
+            grid-area: auto;
+            align-self: auto;
             height: auto;
         }
 
