@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Letter & Sound Matching - Audio Pipeline Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .test-section h2 {
+            color: #764ba2;
+            margin-top: 0;
+            font-size: 18px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px 5px 5px 0;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #764ba2;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 10px;
+            color: #333;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #667eea;
+            padding-left: 10px;
+        }
+        .log-entry.success {
+            border-left-color: #4caf50;
+            color: #2e7d32;
+        }
+        .log-entry.error {
+            border-left-color: #f44336;
+            color: #c62828;
+        }
+        .log-entry.warning {
+            border-left-color: #ff9800;
+            color: #e65100;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .status.playing {
+            background: #4caf50;
+            color: white;
+        }
+        .status.failed {
+            background: #f44336;
+            color: white;
+        }
+        .status.loading {
+            background: #2196f3;
+            color: white;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .grid button {
+            padding: 12px;
+            font-weight: bold;
+        }
+        .clear-log {
+            background: #999;
+            font-size: 12px;
+            padding: 5px 10px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Letter & Sound Matching - Audio Pipeline Test</h1>
+        <p class="subtitle">Test audio files are accessible and playable from the web server</p>
+        
+        <div class="test-section">
+            <h2>📝 Test Filipino Vowels</h2>
+            <p>Click to test vowel audio files</p>
+            <div class="grid">
+                <button onclick="testAudio('A', 'Filipino')">A (T)</button>
+                <button onclick="testAudio('E', 'Filipino')">E (T)</button>
+                <button onclick="testAudio('I', 'Filipino')">I (T)</button>
+                <button onclick="testAudio('O', 'Filipino')">O (T)</button>
+                <button onclick="testAudio('U', 'Filipino')">U (T)</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📝 Test Filipino Syllables</h2>
+            <p>Click to test syllable audio files</p>
+            <div class="grid">
+                <button onclick="testAudio('MA', 'Filipino')">MA (T)</button>
+                <button onclick="testAudio('BA', 'Filipino')">BA (T)</button>
+                <button onclick="testAudio('TA', 'Filipino')">TA (T)</button>
+                <button onclick="testAudio('YU', 'Filipino')">YU (T)</button>
+                <button onclick="testAudio('NGA', 'Filipino')">NGA (T)</button>
+                <button onclick="testAudio('ÑA', 'Filipino')">ÑA (T)</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📝 Test English Vowels</h2>
+            <p>Click to test English vowel audio files</p>
+            <div class="grid">
+                <button onclick="testAudio('A', 'English')">A (E)</button>
+                <button onclick="testAudio('E', 'English')">E (E)</button>
+                <button onclick="testAudio('I', 'English')">I (E)</button>
+                <button onclick="testAudio('O', 'English')">O (E)</button>
+                <button onclick="testAudio('U', 'English')">U (E)</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📝 Test English Syllables</h2>
+            <p>Click to test English syllable audio files</p>
+            <div class="grid">
+                <button onclick="testAudio('CH', 'English')">CH (E)</button>
+                <button onclick="testAudio('SH', 'English')">SH (E)</button>
+                <button onclick="testAudio('TH', 'English')">TH (E)</button>
+                <button onclick="testAudio('AI', 'English')">AI (E)</button>
+                <button onclick="testAudio('NG', 'English')">NG (E)</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔍 Test Console Logs</h2>
+            <p>Open browser DevTools (F12) and look for [LetterSoundAudio] entries in Console tab</p>
+            <button onclick="copyTestCommand()">Copy Test Command</button>
+            <div class="log" id="testLog"></div>
+            <button class="clear-log" onclick="clearLog()">Clear Log</button>
+        </div>
+    </div>
+    
+    <script>
+        const logs = [];
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = `[${timestamp}] ${message}`;
+            logs.push({ message: entry, type });
+            updateLogDisplay();
+            console.log(`[AudioTest] ${message}`);
+        }
+        
+        function updateLogDisplay() {
+            const logDiv = document.getElementById('testLog');
+            logDiv.innerHTML = logs.map(l => `<div class="log-entry ${l.type}">${l.message}</div>`).join('');
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function clearLog() {
+            logs.length = 0;
+            updateLogDisplay();
+        }
+        
+        function copyTestCommand() {
+            const cmd = `window.testAudioSetup('MA', 'Filipino'); // Run in DevTools console`;
+            navigator.clipboard.writeText(cmd).then(() => {
+                log('✅ Test command copied to clipboard', 'success');
+            });
+        }
+        
+        function testAudio(phonics, language) {
+            log(`Starting test: ${phonics} (${language})`, 'info');
+            
+            // Determine category
+            const vowels = ['A', 'E', 'I', 'O', 'U'];
+            const category = vowels.includes(phonics) ? 'vowels' : 'syllables';
+            
+            // Determine language code
+            const langCode = language === 'Filipino' ? 'T' : 'E';
+            const langFolder = language.toLowerCase();
+            
+            // Build path
+            const filename = `${phonics} (${langCode}).MP3`;
+            const audioPath = `/static/pabasa_app/audio/phonics/${langFolder}/${category}/${filename}`;
+            
+            log(`Resolved path: ${audioPath}`, 'info');
+            
+            // Test file existence with HEAD request
+            fetch(audioPath, { method: 'HEAD' })
+                .then(resp => {
+                    if (resp.ok) {
+                        log(`✅ File found (HTTP ${resp.status})`, 'success');
+                        // Try to load and play
+                        playTestAudio(audioPath, phonics);
+                    } else {
+                        log(`❌ File not found (HTTP ${resp.status})`, 'error');
+                    }
+                })
+                .catch(err => {
+                    log(`❌ File check failed: ${err.message}`, 'error');
+                });
+        }
+        
+        function playTestAudio(audioPath, phonics) {
+            log(`Loading audio...`, 'info');
+            
+            const audio = new Audio();
+            let timeoutHandle = null;
+            
+            audio.addEventListener('canplay', () => {
+                clearTimeout(timeoutHandle);
+                log(`✅ Audio loaded, starting playback...`, 'success');
+                audio.play()
+                    .then(() => log(`✅ Playing: ${phonics}`, 'success'))
+                    .catch(err => log(`❌ Playback failed: ${err.message}`, 'error'));
+            });
+            
+            audio.addEventListener('error', () => {
+                clearTimeout(timeoutHandle);
+                const error = audio.error;
+                log(`❌ Load failed: ${error ? error.message : 'Unknown error'}`, 'error');
+            });
+            
+            audio.addEventListener('play', () => {
+                log(`🎵 Audio is now playing`, 'success');
+            });
+            
+            audio.addEventListener('ended', () => {
+                log(`✅ Playback finished`, 'success');
+            });
+            
+            // Set timeout for loading
+            timeoutHandle = setTimeout(() => {
+                if (audio.readyState < 2) {
+                    log(`⚠️ Load timeout after 5 seconds`, 'warning');
+                }
+            }, 5000);
+            
+            audio.src = audioPath;
+            audio.load();
+        }
+        
+        // Log initial state
+        log('Audio Pipeline Test Ready', 'success');
+        log(`Server: http://127.0.0.1:8000`, 'info');
+        log('Click buttons above to test audio files', 'info');
+    </script>
+</body>
+</html>

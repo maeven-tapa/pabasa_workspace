@@ -9384,6 +9384,16 @@ def _is_clap_count_material(material):
     return 'clap_count_syllables' in normalized
 
 
+def _is_letter_sound_matching_material(material):
+    """Identify Letter & Sound Matching activities."""
+    content = getattr(material, 'content_json', None) if material else None
+    if not isinstance(content, dict):
+        return False
+    values = (content.get('template_title'), content.get('template_lesson'), content.get('activity_type'))
+    normalized = {re.sub(r'[^a-z0-9]+', '_', str(value or '').lower()).strip('_') for value in values}
+    return 'letter_sound_matching' in normalized
+
+
 def _is_story_reading_material(material):
     """Identify the teacher-assigned Story Reading template only."""
     content = getattr(material, 'content_json', None) if material else None
@@ -9609,6 +9619,70 @@ def clap_count_syllables_page(request):
     }, default=str, separators=(',', ':'))
     context['clap_count_completion_json'] = json.dumps(completion_payload or {}, default=str, separators=(',', ':'))
     return render(request, 'pabasa_app/clap_count_syllables_page.html', context)
+
+
+@xframe_options_sameorigin
+def letter_sound_matching_page(request):
+    """Render the dedicated Letter & Sound Matching learner UI."""
+    access_response = _enforce_student_access_for_request(request)
+    if access_response:
+        return access_response
+    _, material_id = _parse_prefixed_id(request.GET.get('id') or request.GET.get('material_id'))
+    material = Material.objects.filter(pk=material_id).first() if material_id else None
+    if not material or not _is_letter_sound_matching_material(material):
+        return redirect('assessment')
+    
+    content = dict(material.content_json or {})
+    reading_set_id = content.get('reading_set_id', 'filipino_set_1')
+    language = content.get('language', 'Filipino')
+    items = content.get('items', [])
+    
+    student_user = User.objects.filter(id=request.session.get('user_id'), role='student').first()
+    completed_result = None
+    if student_user:
+        completed_result = material.assessment_results.filter(
+            student=student_user, attempt_status='completed',
+        ).order_by('-completed_at', '-created_at', '-id').first()
+    
+    completion_payload = None
+    if completed_result:
+        saved_matches = []
+        remarks = str(getattr(completed_result, 'remarks', '') or '')
+        result_prefix = 'LETTER_SOUND_MATCHING_RESULT:'
+        if remarks.startswith(result_prefix):
+            try:
+                saved_result = json.loads(remarks[len(result_prefix):])
+                if isinstance(saved_result, dict) and isinstance(saved_result.get('matches'), list):
+                    saved_matches = saved_result['matches']
+            except (TypeError, ValueError, json.JSONDecodeError):
+                saved_matches = []
+        
+        total_items = int(getattr(completed_result, 'items_completed', 0) or len(items))
+        correct_items = min(total_items, int(getattr(completed_result, 'correct_items', 0) or 0))
+        accuracy = getattr(completed_result, 'accuracy', None)
+        if accuracy is None:
+            accuracy = getattr(completed_result, 'total_score', None)
+        if accuracy is None:
+            accuracy = round((correct_items / total_items) * 100, 2) if total_items else 0
+        
+        completion_payload = {
+            'completed': True,
+            'correct_items': correct_items,
+            'total_items': total_items,
+            'accuracy': accuracy,
+            'matches': saved_matches,
+        }
+    
+    context = _dashboard_context(request)
+    context['letter_sound_matching_material_json'] = json.dumps({
+        'id': material.id,
+        'title': material.title or 'Letter & Sound Matching',
+        'language': language,
+        'reading_set_id': reading_set_id,
+        'items': items if isinstance(items, list) else [],
+    }, default=str, separators=(',', ':'))
+    context['letter_sound_matching_completion_json'] = json.dumps(completion_payload or {}, default=str, separators=(',', ':'))
+    return render(request, 'pabasa_app/letter_sound_matching_page.html', context)
 
 
 def _normalize_picture_word_matching_content(content_json):
@@ -10916,6 +10990,10 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         str(activity_type or '').strip().lower() == 'clap_count_syllables'
         or bool(material and _is_clap_count_material(material))
     )
+    is_letter_sound_matching = (
+        str(activity_type or '').strip().lower() == 'letter_sound_matching'
+        or bool(material and _is_letter_sound_matching_material(material))
+    )
     is_crla_assessment = bool(
         data.get('crla_score_data')
         or getattr(material, 'assessment_kind', '') == 'crla'
@@ -10991,7 +11069,44 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         state['interactive_activity_progress'] = progress_store
         _set_user_state(student_user, state)
         return JsonResponse({'success': True, 'saved': True, 'responses': normalized_responses})
-    if is_picture_word_matching:
+    if is_letter_sound_matching:
+        if not material or not _is_letter_sound_matching_material(material):
+            return JsonResponse({'success': False, 'error': 'Invalid Letter & Sound Matching material.'}, status=400)
+        raw_scores = data.get('scores') if isinstance(data.get('scores'), dict) else {}
+        matching_content = material.content_json if isinstance(material.content_json, dict) else {}
+        matching_items = matching_content.get('items') if isinstance(matching_content.get('items'), list) else []
+        submitted_matches = raw_scores.get('matches') if isinstance(raw_scores.get('matches'), list) else []
+        normalized_matches = []
+        correct_items = 0
+        for index, item in enumerate(matching_items):
+            expected_letter = str((item or {}).get('letter') or '').strip() if isinstance(item, dict) else ''
+            submitted_match = submitted_matches[index] if index < len(submitted_matches) and isinstance(submitted_matches[index], dict) else {}
+            submitted_letter = str(submitted_match.get('letter') or '').strip()
+            is_correct_match = bool(expected_letter) and submitted_letter.casefold() == expected_letter.casefold()
+            if is_correct_match:
+                correct_items += 1
+            normalized_matches.append({
+                'letter': expected_letter,
+                'selected_letter': submitted_letter,
+                'sound': str(submitted_match.get('sound') or '').strip() if is_correct_match else '',
+                'is_correct': is_correct_match,
+            })
+        total_items = len(matching_items)
+        objective_score = round((correct_items / total_items) * 100) if total_items else 0
+        score_payload = {
+            'accuracy': objective_score,
+            'total_score': objective_score,
+            'correct_items': correct_items,
+            'items_completed': total_items,
+            'duration_seconds': max(0, int(raw_scores.get('duration_seconds') or 0)),
+            'passed': objective_score >= 75,
+            'remarks': 'LETTER_SOUND_MATCHING_RESULT:' + json.dumps({
+                'activity_type': 'letter_sound_matching',
+                'reading_set_id': matching_content.get('reading_set_id'),
+                'matches': normalized_matches,
+            }, separators=(',', ':')),
+        }
+    elif is_picture_word_matching:
         if not material or not _is_picture_word_matching_material(material):
             return JsonResponse({'success': False, 'error': 'Invalid Picture-Word Matching material.'}, status=400)
         raw_scores = data.get('scores') if isinstance(data.get('scores'), dict) else data
@@ -11143,7 +11258,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         }
     else:
         score_payload = _practice_score_payload(data) if is_practice else _assessment_score_payload(data)
-    if (is_picture_word_matching or is_syllable_blending or is_clap_count_syllables) and already_completed and not is_retake:
+    if (is_picture_word_matching or is_syllable_blending or is_clap_count_syllables or is_letter_sound_matching) and already_completed and not is_retake:
         existing_result = material.assessment_results.filter(
             student=student_user,
             attempt_status='completed',
@@ -11155,7 +11270,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             'items_completed': getattr(existing_result, 'items_completed', 0) or 0,
             'accuracy': getattr(existing_result, 'accuracy', 0) or 0,
         })
-    if not is_practice and not is_picture_word_matching and not is_syllable_blending and not is_crla_assessment:
+    if not is_practice and not is_picture_word_matching and not is_syllable_blending and not is_letter_sound_matching and not is_crla_assessment:
         account_assessment_type = (
             getattr(assessment, 'assessment_type', None)
             or assessment_type_hint
@@ -11234,7 +11349,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 material.save(update_fields=['teacher', 'updated_at'])
                 _log_completion_timing('assessment_teacher_save')
             _log_completion_timing('assessment_record_attempt_start')
-            if is_clap_count_syllables:
+            if is_clap_count_syllables or is_letter_sound_matching:
                 # Lock this material row while checking/creating so concurrent final submits
                 # cannot create more than one completed result for this student/material.
                 with transaction.atomic():
@@ -11259,7 +11374,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 student=student_user,
                 attempt_status='completed',
             ).order_by('-completed_at', '-created_at').select_related('source_assessment').first()
-        if not is_practice and not is_picture_word_matching and not is_syllable_blending and not is_clap_count_syllables and not is_crla_assessment:
+        if not is_practice and not is_picture_word_matching and not is_syllable_blending and not is_clap_count_syllables and not is_letter_sound_matching and not is_crla_assessment:
             _log_completion_timing('student_profile_save_start')
             _update_student_reading_profile(student_user, score_payload)
             _log_completion_timing('student_profile_save_end')

@@ -1,0 +1,1463 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Letter & Sound Matching | PABASA</title>
+    <link rel="icon" href="{% static 'pabasa_app/images/pabasalogo.png' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        @font-face {
+            font-family: "Super Bubble";
+            src: url("{% static 'pabasa_app/font/Super Bubble.ttf' %}") format("truetype");
+            font-weight: 400;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        :root {
+            --bg-deep: #072c3d;
+            --bg-mid: #0d4964;
+            --bg-shallow: #1b8fb0;
+            --panel: rgba(7, 34, 43, 0.38);
+            --panel-strong: rgba(5, 24, 30, 0.56);
+            --soft-glow: rgba(255, 255, 255, 0.22);
+            --ink: #f6fbff;
+            --muted: rgba(240, 249, 255, 0.82);
+            --gold: #f7d46f;
+            --orange: #ff8c5d;
+            --coral: #ff6f61;
+            --mint: #7be7bf;
+            --sky: #7ad1ff;
+            --purple: #b38bff;
+            --success: #3ad58d;
+            --danger: #ff7d7d;
+            --shadow: rgba(4, 17, 24, 0.42);
+        }
+
+        * { box-sizing: border-box; }
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+        }
+        body {
+            background-image: url("{% static 'pabasa_app/images/underwater_3.jpg' %}");
+            background-position: center top;
+            background-repeat: no-repeat;
+            background-size: cover;
+            color: var(--ink);
+            font-family: "Segoe UI", sans-serif;
+        }
+        button { font: inherit; }
+
+        .activity {
+            width: min(1200px, calc(100% - 18px));
+            height: 100vh;
+            height: 100svh;
+            height: 100dvh;
+            margin: 0 auto;
+            padding: 8px 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .activity-nav {
+            display: flex;
+            flex: 0 0 auto;
+            margin-bottom: 8px;
+        }
+
+        .activity-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 40px;
+            padding: 8px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            border-radius: 12px;
+            background: #8FE3E5;
+            color: #075B68;
+            font-family: "Segoe UI", sans-serif;
+            text-decoration: none;
+            font-size: 0.82rem;
+            font-weight: 800;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 3px 0 rgba(0, 70, 80, 0.25);
+            transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .activity-back:hover,
+        .activity-back:focus-visible {
+            background: #A5ECEE;
+            transform: translateX(-2px);
+        }
+
+        .activity-back:active {
+            background: #7CD8DB;
+            box-shadow: 0 1px 0 rgba(0, 70, 80, 0.25);
+            transform: translateY(2px);
+        }
+
+        .game-shell {
+            position: relative;
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            border-radius: 26px;
+            overflow: hidden;
+            box-shadow: 0 18px 36px rgba(4, 17, 24, 0.28);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .topbar {
+            position: relative;
+            z-index: 3;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 18px;
+            background: rgba(5, 24, 30, 0.38);
+            border-bottom: 1px solid rgba(255,255,255,0.14);
+            backdrop-filter: blur(10px);
+        }
+
+        .game-title-wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .game-title-wrap .badge {
+            font-size: 1.1rem;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+        }
+
+        .game-title-wrap h1 {
+            margin: 0;
+            font-family: "Super Bubble", "Segoe UI", sans-serif;
+            font-size: clamp(1.05rem, 2vw, 1.5rem);
+            line-height: 1.2;
+            color: #FF7F9F;
+            font-weight: 400;
+            letter-spacing: 0.03em;
+            text-shadow:
+                2px 3px 0 rgba(0, 55, 80, 0.45),
+                0 0 8px rgba(255, 255, 255, 0.15);
+        }
+
+        .progress-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+        }
+
+        .progress-label {
+            color: #FFD76A;
+            font-family: "Super Bubble", "Segoe UI", sans-serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            white-space: nowrap;
+            letter-spacing: 0.02em;
+            text-shadow: 1px 2px 3px rgba(0, 55, 80, 0.35);
+        }
+
+        .progress-label strong {
+            font-size: 0.9rem;
+            color: #FFD76A;
+            font-weight: 700;
+        }
+
+        .progress-bar {
+            width: min(200px, 32vw);
+            height: 28px;
+            overflow: visible;
+        }
+
+        .progress-track,
+        .progress-fill {
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            vector-effect: non-scaling-stroke;
+        }
+
+        .progress-track {
+            stroke: #4FBCC7;
+            stroke-width: 7;
+        }
+
+        .progress-fill {
+            stroke: #FFD76A;
+            stroke-width: 6;
+            stroke-dasharray: 100;
+            stroke-dashoffset: 100;
+            transition: stroke-dashoffset 0.42s ease;
+            filter: drop-shadow(0 0 4px rgba(255, 215, 106, 0.45));
+            animation: progressCurrent 4s ease-in-out infinite;
+        }
+
+        .scene {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: hidden;
+            background: rgba(7, 34, 43, 0.10);
+        }
+
+        .scene-glow {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 25%, rgba(143, 227, 255, 0.28), rgba(143, 227, 255, 0.04) 40%, transparent 70%);
+            pointer-events: none;
+        }
+
+        /* COMPACT HUD AT TOP - LISTEN AREA ONLY */
+        .target-hud {
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 12;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 9px;
+            min-width: min(172px, 40vw);
+            padding: 13px 22px 15px;
+            border-radius: 46% 54% 48% 52% / 42% 45% 55% 58%;
+            background: linear-gradient(155deg, rgba(91, 213, 235, 0.76), rgba(19, 122, 160, 0.68));
+            border: 1px solid rgba(224, 251, 255, 0.58);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 12px 24px rgba(3, 41, 61, 0.24);
+            backdrop-filter: blur(10px);
+            animation: targetFloat 4.8s ease-in-out infinite;
+        }
+
+        .target-hud::before,
+        .target-hud::after {
+            content: "";
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .target-hud::before {
+            width: 7px;
+            height: 7px;
+            left: -12px;
+            top: 18px;
+            border: 1px solid rgba(225, 251, 255, 0.72);
+            box-shadow: -8px 16px 0 -2px rgba(218, 248, 255, 0.42), 6px -10px 0 -2px rgba(255,255,255,0.7);
+        }
+
+        .target-hud::after {
+            width: 5px;
+            height: 5px;
+            right: -10px;
+            bottom: 15px;
+            background: rgba(239, 253, 255, 0.8);
+            box-shadow: 8px -17px 0 1px rgba(218, 248, 255, 0.38), -1px 12px 0 -1px rgba(255,255,255,0.62);
+        }
+
+        .target-label {
+            margin: 0;
+            font-family: "Super Bubble", "Segoe UI", sans-serif;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.11em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.85);
+            line-height: 1.2;
+        }
+
+        .speaker-button {
+            width: 42px;
+            height: 42px;
+            border: 0;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #ffca58, #ff8f5a);
+            color: #12263d;
+            box-shadow: 0 10px 18px rgba(255, 173, 97, 0.28);
+            cursor: pointer;
+            transition: transform 0.16s ease, filter 0.16s ease;
+            position: relative;
+            font-size: 1.1rem;
+        }
+
+        .speaker-button:hover,
+        .speaker-button:focus-visible {
+            transform: translateY(-2px) scale(1.06);
+            filter: brightness(1.06);
+        }
+
+        .speaker-button:active {
+            transform: scale(0.96);
+        }
+
+        .speaker-button.playing::before {
+            content: "";
+            position: absolute;
+            inset: -6px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            animation: pulseRing 0.8s ease-out infinite;
+        }
+
+        /* FISH PLAY AREA */
+        .fish-zone {
+            position: relative;
+            flex: 1;
+            overflow: hidden;
+            z-index: 2;
+        }
+
+        .fishing-rod {
+            position: absolute;
+            left: 0;
+            top: 8%;
+            width: clamp(185px, 23vw, 310px);
+            height: clamp(200px, 28vw, 355px);
+            pointer-events: none;
+            z-index: 4;
+            opacity: 0.95;
+        }
+
+        .rod-svg {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.24));
+        }
+
+        .fish-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 3;
+        }
+
+        /* Each answer is one positioned fish + text unit. */
+        .fish-choice {
+            position: absolute;
+            border: none;
+            background: transparent;
+            padding: 0;
+            margin: 0;
+            cursor: pointer;
+            filter: drop-shadow(0 12px 20px rgba(3, 18, 24, 0.24));
+            transition: opacity 0.2s ease, transform 0.2s ease, filter 0.2s ease;
+            z-index: 5;
+            width: clamp(140px, 12vw, 190px);
+            aspect-ratio: 4 / 3;
+            overflow: hidden;
+            animation: swimIdle var(--fish-speed, 6.5s) cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+            transform-origin: center;
+        }
+
+        .fish-image {
+            display: block;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: calc(100% * var(--fish-canvas-scale, 3.2));
+            max-width: none;
+            height: auto;
+            transform: translate(var(--fish-center-x, -50%), var(--fish-center-y, -50%));
+            filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.16));
+        }
+
+        .fish-image-1 { --fish-canvas-scale: 4.1; --fish-center-x: -48.7%; --fish-center-y: -52.1%; }
+        .fish-image-2 { --fish-canvas-scale: 3; --fish-center-x: -50%; --fish-center-y: -50%; }
+        .fish-image-3 { --fish-canvas-scale: 3.2; --fish-center-x: -50%; --fish-center-y: -50%; }
+        .fish-image-4 { --fish-canvas-scale: 3.2; --fish-center-x: -50%; --fish-center-y: -50%; }
+        .fish-image-5 { --fish-canvas-scale: 3.2; --fish-center-x: -50%; --fish-center-y: -50%; }
+        .fish-image-6 { --fish-canvas-scale: 3.5; --fish-center-x: -50%; --fish-center-y: -50%; }
+
+        .fish-letter {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(48px, 5vw, 76px);
+            line-height: 1;
+            font-weight: 400;
+            color: #ffffff;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.4);
+            text-align: center;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        .fish-letter.is-syllable { font-size: clamp(38px, 4vw, 58px); }
+        .fish-letter.is-long { font-size: clamp(32px, 3.4vw, 48px); }
+
+        .fish-choice:hover,
+        .fish-choice:focus-visible {
+            filter: drop-shadow(0 14px 24px rgba(3, 18, 24, 0.32));
+        }
+
+        .fish-choice.is-locked {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .fish-choice.is-wrong {
+            animation: wrongShake 0.5s ease-in-out;
+            z-index: 7;
+        }
+
+        .fish-choice.is-correct {
+            z-index: 11;
+            animation: correctCatch 1.1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .fish-choice.is-correct .fish-letter {
+            animation: letterGlow 0.6s ease-out forwards;
+        }
+
+        .fish-choice.is-caught {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* CODE-GENERATED CURVED FISHING LINE */
+        .hook-line {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 6;
+            pointer-events: none;
+        }
+
+        .fishing-line-path,
+        .fishing-hook-path {
+            fill: none;
+            stroke: rgba(238, 247, 250, 0.82);
+            stroke-width: 1.6;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            vector-effect: non-scaling-stroke;
+        }
+
+        .fishing-hook-path { stroke-width: 2; }
+
+        .hook-line.active .fishing-line-path {
+            stroke-dasharray: 1;
+            animation: lineReach 0.38s ease-out forwards;
+        }
+
+        /* BUBBLE FIELD */
+        .bubble-field {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .bubble {
+            position: absolute;
+            bottom: -50px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4), rgba(255,255,255,0.1));
+            border: 1px solid rgba(255,255,255,0.2);
+            animation: bubbleRise 7s ease-in infinite;
+            opacity: 0.6;
+        }
+
+        .bubble:nth-child(1) { left: 6%; animation-delay: 0s; }
+        .bubble:nth-child(2) { left: 18%; animation-delay: 1.2s; }
+        .bubble:nth-child(3) { left: 32%; animation-delay: 0.6s; }
+        .bubble:nth-child(4) { left: 45%; animation-delay: 2s; }
+        .bubble:nth-child(5) { left: 58%; animation-delay: 1.4s; }
+        .bubble:nth-child(6) { left: 72%; animation-delay: 3s; }
+        .bubble:nth-child(7) { left: 86%; animation-delay: 1.8s; }
+
+        .hidden { display: none !important; }
+        body.results-open { overflow: hidden; }
+
+        .results {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: grid;
+            place-items: center;
+            padding: 16px;
+            background-image: url("{% static 'pabasa_app/images/underwater_3.jpg' %}");
+            background-position: center;
+            background-size: cover;
+            animation: backdropIn 0.25s ease both;
+        }
+
+        .result-modal {
+            width: min(680px, 100%);
+            max-height: calc(100vh - 32px);
+            max-height: calc(100dvh - 32px);
+            overflow: hidden;
+            background: linear-gradient(155deg, rgba(9, 101, 137, 0.86), rgba(5, 51, 79, 0.9));
+            border-radius: 46px 58px 44px 62px;
+            border: 1px solid rgba(218, 250, 255, 0.48);
+            box-shadow: 0 24px 64px rgba(3, 19, 26, 0.38);
+            padding: clamp(22px, 4vw, 32px);
+            text-align: center;
+            position: relative;
+            color: #fff;
+        }
+
+        .result-modal::before {
+            content: "✦";
+            position: absolute;
+            top: 18px;
+            right: 28px;
+            color: rgba(255, 239, 158, 0.9);
+            font-size: 1.5rem;
+            text-shadow: -34px 18px 0 rgba(225, 251, 255, 0.55);
+        }
+
+        .result-modal::after {
+            content: "";
+            position: absolute;
+            left: 24px;
+            bottom: 32px;
+            width: 8px;
+            height: 8px;
+            border: 1px solid rgba(225, 251, 255, 0.58);
+            border-radius: 50%;
+            box-shadow: 12px -24px 0 -2px rgba(225, 251, 255, 0.48), 3px -48px 0 1px rgba(225, 251, 255, 0.28);
+            pointer-events: none;
+        }
+
+        .result-title {
+            margin: 0 0 8px;
+            font-family: "Super Bubble", "Segoe UI", sans-serif;
+            color: #fff9d5;
+            font-size: clamp(1.4rem, 3vw, 1.9rem);
+            font-weight: 600;
+            letter-spacing: 0.06em;
+        }
+
+        .result-message {
+            margin: 0 0 18px;
+            color: rgba(240, 252, 255, 0.88);
+            font-size: 0.9rem;
+            font-weight: 400;
+        }
+
+        .score-badge {
+            display: inline-block;
+            font-family: "Super Bubble", "Segoe UI", sans-serif;
+            font-weight: 600;
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            color: #fff4a8;
+            margin: 4px 0 10px;
+        }
+
+        .result-list {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 8px;
+            max-height: none;
+            overflow: hidden;
+            padding: 10px 4px;
+            margin: 16px 0 0;
+            color: #fff;
+        }
+
+        .result-item {
+            position: relative;
+            aspect-ratio: 4 / 3;
+            overflow: hidden;
+        }
+
+        .result-item .fish-image {
+            pointer-events: none;
+        }
+
+        .caught-letter {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: clamp(25px, 3vw, 38px);
+            font-weight: 400;
+            text-shadow: 2px 2px 5px rgba(0,0,0,.45);
+            white-space: nowrap;
+        }
+
+        .caught-letter.is-syllable { font-size: clamp(22px, 2.5vw, 32px); }
+        .caught-letter.is-long { font-size: clamp(19px, 2.2vw, 28px); }
+
+        .result-kicker {
+            margin: 18px 0 0;
+            font-family: "Super Bubble", "Segoe UI", sans-serif;
+            color: rgba(232, 251, 255, 0.9);
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.16em;
+        }
+
+        .result-action {
+            margin-top: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 42px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #0d87b4, #0b5f85);
+            color: #fff4b0;
+            font-family: "Super Bubble", "Segoe UI", sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 12px 20px rgba(13, 132, 180, 0.22);
+            transition: transform 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        .result-action:hover,
+        .result-action:focus-visible {
+            transform: translateY(-1px);
+            box-shadow: 0 16px 26px rgba(13, 132, 180, 0.28);
+        }
+
+        @keyframes swimIdle {
+            0% { 
+                transform: translate(0, 0) rotate(-4deg); 
+            }
+            25% { transform: translate(8px, -6px) rotate(-1deg); }
+            50% {
+                transform: translate(16px, 2px) rotate(3deg);
+            }
+            75% { transform: translate(7px, 7px) rotate(0deg); }
+            100% { 
+                transform: translate(0, 0) rotate(-4deg); 
+            }
+        }
+
+        @keyframes targetFloat {
+            0%, 100% { transform: translate(-50%, 0); }
+            50% { transform: translate(-50%, -5px); }
+        }
+
+        @keyframes progressCurrent {
+            0%, 100% { stroke-opacity: 0.9; }
+            50% { stroke-opacity: 1; }
+        }
+
+        @keyframes wrongShake {
+            0%, 100% { transform: translateX(0) rotate(0deg); }
+            15% { transform: translateX(-8px) rotate(-6deg); }
+            35% { transform: translateX(6px) rotate(5deg); }
+            55% { transform: translateX(-4px) rotate(-3deg); }
+            75% { transform: translateX(3px) rotate(2deg); }
+        }
+
+        @keyframes correctCatch {
+            0% { 
+                transform: translateY(0) rotate(0deg) scale(1);
+            }
+            20% {
+                transform: translateY(-8px) rotate(-6deg) scale(1.06);
+            }
+            50% {
+                transform: translateY(-64px) rotate(8deg) scale(1.04);
+            }
+            100% { 
+                transform: translateY(-140px) rotate(-12deg) scale(0.5); 
+                opacity: 0.2;
+            }
+        }
+
+        @keyframes lineReach {
+            from { stroke-dashoffset: 1; }
+            to { stroke-dashoffset: 0; }
+        }
+
+        @keyframes letterGlow {
+            0% {
+                text-shadow: 
+                    0 0 2px rgba(0, 0, 0, 0.4),
+                    0 3px 8px rgba(0, 0, 0, 0.3),
+                    0 0 12px rgba(100, 200, 255, 0.2);
+            }
+            100% {
+                text-shadow: 
+                    0 0 4px rgba(255, 255, 255, 0.6),
+                    0 3px 12px rgba(255, 255, 255, 0.5),
+                    0 0 24px rgba(122, 209, 255, 0.6);
+            }
+        }
+
+        @keyframes bubbleRise {
+            0% { 
+                transform: translateY(0) scale(0.8); 
+                opacity: 0;
+            }
+            15% { 
+                opacity: 0.7;
+            }
+            85% {
+                opacity: 0.7;
+            }
+            100% { 
+                transform: translateY(-260px) scale(1.2); 
+                opacity: 0;
+            }
+        }
+
+        @keyframes pulseRing {
+            0% { transform: scale(0.9); opacity: 0.7; }
+            100% { transform: scale(1.22); opacity: 0; }
+        }
+
+        @keyframes backdropIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* RESPONSIVE DESIGN */
+        @media (max-width: 1024px) {
+            .scene {
+                min-height: 0;
+            }
+
+            .fishing-rod {
+                left: 0;
+                width: clamp(165px, 21vw, 255px);
+                height: clamp(180px, 25vw, 300px);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .scene {
+                min-height: 0;
+            }
+
+            .topbar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .progress-wrap {
+                width: 100%;
+                align-items: flex-start;
+            }
+
+            .progress-bar {
+                width: min(240px, 100%);
+            }
+
+            .target-hud {
+                top: 12px;
+                min-width: min(140px, 42vw);
+                padding: 10px 14px;
+                gap: 10px;
+            }
+
+            .target-label {
+                font-size: 0.68rem;
+            }
+
+            .speaker-button {
+                width: 40px;
+                height: 40px;
+                font-size: 0.95rem;
+            }
+
+            .fishing-rod {
+                left: 0;
+                top: 10%;
+                width: clamp(140px, 20vw, 205px);
+                height: clamp(155px, 24vw, 240px);
+            }
+
+            .fish-choice {
+                width: clamp(135px, 20vw, 170px);
+            }
+
+            .fish-letter {
+                font-size: clamp(42px, 7vw, 60px);
+            }
+
+            .fish-letter.is-syllable { font-size: clamp(32px, 5.5vw, 44px); }
+            .fish-letter.is-long { font-size: clamp(27px, 4.8vw, 38px); }
+        }
+
+        @media (max-width: 480px) {
+            .activity {
+                width: min(100%, calc(100% - 10px));
+                margin: 0 auto;
+                padding: 5px 0;
+            }
+
+            .topbar {
+                padding: 10px 12px;
+                gap: 8px;
+            }
+
+            .game-title-wrap h1 {
+                font-size: 0.95rem;
+            }
+
+            .scene {
+                min-height: 0;
+            }
+
+            .target-hud {
+                top: 10px;
+                left: 50%;
+                transform: translateX(-50%);
+                min-width: min(120px, 45vw);
+                padding: 6px 10px;
+                gap: 4px;
+                border-radius: 12px;
+            }
+
+            .target-label {
+                font-size: 0.62rem;
+            }
+
+            .speaker-button {
+                width: 36px;
+                height: 36px;
+                font-size: 0.85rem;
+            }
+
+            .fishing-rod {
+                left: 0;
+                top: 12%;
+                width: 130px;
+                height: 145px;
+                opacity: 0.85;
+            }
+
+            .fish-choice {
+                width: clamp(115px, 32vw, 145px);
+            }
+
+            .fish-letter {
+                font-size: clamp(36px, 11vw, 52px);
+            }
+
+            .fish-letter.is-syllable { font-size: clamp(28px, 8vw, 36px); }
+            .fish-letter.is-long { font-size: clamp(24px, 7vw, 31px); }
+
+            .fish-choice:hover,
+            .fish-choice:focus-visible {
+                transform: scale(1.05);
+            }
+        }
+
+        @media (max-height: 650px) {
+            .activity {
+                padding: 4px 0;
+            }
+
+            .activity-nav {
+                margin-bottom: 4px;
+            }
+
+            .activity-back {
+                min-height: 32px;
+                padding: 4px 10px;
+            }
+
+            .topbar {
+                flex-direction: row;
+                align-items: center;
+                padding: 6px 10px;
+                gap: 8px;
+            }
+
+            .progress-wrap {
+                width: auto;
+                align-items: flex-end;
+                gap: 2px;
+            }
+
+            .progress-bar {
+                width: min(165px, 30vw);
+                height: 22px;
+            }
+
+            .target-hud {
+                top: 5px;
+                gap: 4px;
+                padding: 7px 15px 8px;
+            }
+
+            .speaker-button {
+                width: 34px;
+                height: 34px;
+            }
+
+            .fish-choice {
+                width: clamp(100px, 11vw, 150px);
+            }
+
+            .fishing-rod {
+                top: 4%;
+                width: clamp(120px, 18vw, 190px);
+                height: clamp(130px, 21vw, 215px);
+            }
+
+            .result-modal {
+                padding: 14px 18px;
+            }
+
+            .result-message {
+                margin-bottom: 8px;
+            }
+
+            .score-badge {
+                margin-bottom: 5px;
+            }
+
+            .result-kicker {
+                margin-top: 9px;
+            }
+
+            .result-list {
+                gap: 4px;
+                padding: 4px 2px;
+                margin-top: 7px;
+            }
+
+            .result-action {
+                margin-top: 8px;
+            }
+        }
+
+        @media (max-height: 480px) {
+            .result-list {
+                grid-template-columns: repeat(7, minmax(0, 1fr));
+            }
+
+            .caught-letter,
+            .caught-letter.is-syllable,
+            .caught-letter.is-long {
+                font-size: clamp(12px, 2vw, 19px);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation: none !important;
+                transition: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+<main class="activity">
+    <nav class="activity-nav" aria-label="Activity navigation">
+        <a class="activity-back" href="{% url 'assessment' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Assessment</a>
+    </nav>
+
+    <div class="game-shell">
+        <header class="topbar">
+            <div class="game-title-wrap">
+                <span class="badge" aria-hidden="true">🎣</span>
+                <h1>Phonics Fishing</h1>
+            </div>
+            <div class="progress-wrap">
+                <div class="progress-label">Fish Caught: <strong id="progressLabel">0 / 0</strong></div>
+                <svg class="progress-bar" viewBox="0 0 200 28" role="img" aria-label="Fishing progress">
+                    <defs>
+                        <linearGradient id="progressWaveGradient" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stop-color="#73d7ff"></stop>
+                            <stop offset="52%" stop-color="#7af6c6"></stop>
+                            <stop offset="100%" stop-color="#ffe795"></stop>
+                        </linearGradient>
+                    </defs>
+                    <path class="progress-track" pathLength="100" d="M 5 17 C 30 3, 52 27, 78 13 S 126 4, 148 15 S 178 24, 195 9"></path>
+                    <path id="progressFill" class="progress-fill" pathLength="100" d="M 5 17 C 30 3, 52 27, 78 13 S 126 4, 148 15 S 178 24, 195 9"></path>
+                </svg>
+            </div>
+        </header>
+
+        <section class="scene" id="gameScene" aria-live="polite" aria-label="Fish catching game area">
+            <div class="scene-glow" aria-hidden="true"></div>
+
+            <!-- Compact HUD at top - LISTEN ONLY, NO TARGET LETTER SHOWN -->
+            <div class="target-hud">
+                <p class="target-label">Listen Carefully!</p>
+                <button class="speaker-button" id="speakerButton" type="button" aria-label="Play sound">
+                    <i class="bi bi-volume-up-fill" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            <!-- Main fish play area -->
+            <div class="fish-zone" id="fishZone">
+                <!-- Fishing pole -->
+                <div class="fishing-rod" aria-hidden="true">
+                    <img class="rod-svg" src="{% static 'pabasa_app/images/fishing_pole.svg' %}" alt="Fishing pole" />
+                </div>
+
+                <!-- Fishing line and hook -->
+                <svg class="hook-line" id="hookLine" aria-hidden="true" preserveAspectRatio="none">
+                    <path class="fishing-line-path" id="fishingLinePath" pathLength="1"></path>
+                    <path class="fishing-hook-path" id="fishingHookPath"></path>
+                </svg>
+
+                <!-- Fish swim here -->
+                <div class="fish-layer" id="fishLayer"></div>
+
+                <!-- Ambient bubbles -->
+                <div class="bubble-field" aria-hidden="true">
+                    <span class="bubble"></span>
+                    <span class="bubble"></span>
+                    <span class="bubble"></span>
+                    <span class="bubble"></span>
+                    <span class="bubble"></span>
+                    <span class="bubble"></span>
+                    <span class="bubble"></span>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <section id="results" class="results hidden" role="dialog" aria-modal="true" aria-labelledby="resultTitle" tabindex="-1" aria-live="polite">
+        <div class="result-modal">
+            <h2 id="resultTitle" class="result-title">🎣 Great Catch!</h2>
+            <p id="resultMessage" class="result-message">You caught them all!</p>
+            <div class="score-badge" id="scoreDisplay">0 / 0</div>
+            <p class="result-kicker">YOUR CATCH</p>
+            <div id="resultList" class="result-list"></div>
+            <button class="result-action" id="finishButton" type="button">Back to Assessments</button>
+        </div>
+    </section>
+</main>
+
+{{ letter_sound_matching_material_json|json_script:"letter-sound-material" }}
+{{ letter_sound_matching_completion_json|json_script:"letter-sound-completion" }}
+
+<script>
+(() => {
+    const raw = JSON.parse(document.getElementById('letter-sound-material').textContent || '"{}"');
+    const material = typeof raw === 'string' ? JSON.parse(raw || '{}') : raw;
+    const completionRaw = JSON.parse(document.getElementById('letter-sound-completion').textContent || '"{}"');
+    const completion = typeof completionRaw === 'string' ? JSON.parse(completionRaw || '{}') : completionRaw;
+
+    const language = String(material.language || 'Filipino').toLowerCase();
+    const items = Array.isArray(material.items) ? material.items : [];
+    const totalItems = items.length;
+
+    console.log('[LetterSoundMatching] Initialized:', {
+        language,
+        materialLanguage: material.language,
+        totalItems,
+        readingSetId: material.reading_set_id,
+        firstThreeItems: items.slice(0, 3)
+    });
+
+    if (!totalItems) {
+        document.body.textContent = 'No phonics items found. Please check your assignment.';
+        console.error('[LetterSoundMatching] No items found in material', material);
+        return;
+    }
+
+    const el = (id) => document.getElementById(id);
+    const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+
+    const fishPalette = ['#68d0ff', '#ff9a6b', '#7fe7b9', '#ff7ebf', '#b9a1ff', '#f7d66d', '#ff7d7d', '#6bc7d9'];
+
+    let currentIndex = 0;
+    let correctCount = 0;
+    let answers = new Map();
+    let questionResults = [];
+    let submitted = false;
+    let lastSelectedAnswer = null;
+    let activeCatchFish = null;
+    let catchLineStartedAt = 0;
+    let completionSavePromise = null;
+    const startedAt = Date.now();
+
+    function getPoleTip(zoneRect) {
+        const poleRect = document.querySelector('.fishing-rod').getBoundingClientRect();
+        const aspect = 1440 / 810;
+        const imageWidth = Math.min(poleRect.width, poleRect.height * aspect);
+        const imageHeight = imageWidth / aspect;
+        return {
+            x: poleRect.left - zoneRect.left + ((poleRect.width - imageWidth) / 2) + (imageWidth * 968 / 1440),
+            y: poleRect.top - zoneRect.top + ((poleRect.height - imageHeight) / 2) + (imageHeight * 159 / 810)
+        };
+    }
+
+    function startCatchLine(fishChoice) {
+        activeCatchFish = fishChoice;
+        catchLineStartedAt = performance.now();
+        const line = el('hookLine');
+        line.classList.remove('active');
+        void line.getBoundingClientRect();
+        line.classList.add('active');
+    }
+
+    function drawFishingLine(time) {
+        const zoneRect = el('fishZone').getBoundingClientRect();
+        const start = getPoleTip(zoneRect);
+        let end;
+        let tautness = 0;
+        el('hookLine').setAttribute('viewBox', `0 0 ${zoneRect.width} ${zoneRect.height}`);
+
+        if (activeCatchFish?.isConnected) {
+            const fishRect = activeCatchFish.getBoundingClientRect();
+            end = { x: fishRect.left - zoneRect.left + fishRect.width * 0.5, y: fishRect.top - zoneRect.top + fishRect.height * 0.52 };
+            tautness = Math.min(1, (time - catchLineStartedAt) / 900);
+        } else {
+            end = { x: Math.min(zoneRect.width - 24, start.x + 105), y: Math.min(zoneRect.height - 28, start.y + 220) };
+        }
+
+        const sway = Math.sin(time / 850) * (activeCatchFish ? 2 : 4);
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+        const slack = (1 - tautness) * Math.min(58, Math.max(24, Math.abs(dy) * 0.18));
+        el('fishingLinePath').setAttribute('d', `M ${start.x} ${start.y} C ${start.x + dx * 0.12 + sway} ${start.y + dy * 0.12}, ${start.x + dx * 0.28 + slack} ${start.y + dy * 0.30}, ${start.x + dx * 0.52 + slack + sway} ${start.y + dy * 0.48} S ${start.x + dx * 0.72 - slack * 0.35} ${start.y + dy * 0.68}, ${start.x + dx * 0.80} ${start.y + dy * 0.76} S ${end.x - dx * 0.06} ${end.y - dy * 0.08}, ${end.x} ${end.y}`);
+        el('fishingHookPath').setAttribute('d', `M ${end.x} ${end.y - 2} C ${end.x - 1} ${end.y + 7}, ${end.x + 2} ${end.y + 13}, ${end.x + 8} ${end.y + 11} C ${end.x + 12} ${end.y + 9}, ${end.x + 11} ${end.y + 5}, ${end.x + 8} ${end.y + 4}`);
+        requestAnimationFrame(drawFishingLine);
+    }
+
+    function formatDisplayLetter(letter) {
+        if (!letter) return '';
+        return String(letter).trim();
+    }
+
+    function shuffled(values) {
+        const result = [...values];
+        for (let index = result.length - 1; index > 0; index -= 1) {
+            const swapIndex = Math.floor(Math.random() * (index + 1));
+            [result[index], result[swapIndex]] = [result[swapIndex], result[index]];
+        }
+        return result;
+    }
+
+    function updateTarget() {
+        // Target letter is no longer displayed in the listen area
+        // Student must identify the sound by listening only
+        const current = items[currentIndex] || items[0];
+        // Letter is now only shown on the fish choices
+    }
+
+    function updateProgress() {
+        const completed = questionResults.filter(Boolean).length;
+        el('progressLabel').textContent = `${completed} / ${totalItems}`;
+        const percentage = totalItems ? (completed / totalItems) * 100 : 0;
+        el('progressFill').style.strokeDashoffset = `${100 - percentage}`;
+    }
+
+    function renderFishScene() {
+        const fishLayer = el('fishLayer');
+        const fishZone = el('fishZone');
+        fishLayer.innerHTML = '';
+
+        setTimeout(() => playAudio(true), 150);
+
+        activeCatchFish = null;
+        el('hookLine').classList.remove('active');
+
+        const current = items[currentIndex];
+        const distractors = shuffled(items.filter((item) => item.letter !== current.letter)).slice(0, 3);
+        const roundChoices = shuffled([current, ...distractors]);
+        const safeFishPositions = [
+            { x: 0.50, y: 0.04 },
+            { x: 0.94, y: 0.28 },
+            { x: 0.10, y: 0.72 },
+            { x: 0.72, y: 0.88 }
+        ];
+
+        roundChoices.forEach((item, index) => {
+
+            const fishButton = document.createElement('button');
+            fishButton.type = 'button';
+            fishButton.className = 'fish-choice';
+            fishButton.dataset.letter = item.letter;
+            fishButton.setAttribute('aria-label', `Catch fish with letter ${item.letter}`);
+
+            fishButton.style.setProperty('--fish-speed', `${5.5 + (index % 4) * 0.8}s`);
+            fishButton.style.animationDelay = `${(index % 7) * 0.28}s`;
+
+            const fishIndex = (index % 6) + 1;
+            const fishSvg = '{% static "pabasa_app/images/fish_1.svg" %}'.replace('fish_1.svg', `fish_${fishIndex}.svg`);
+            const displayText = formatDisplayLetter(item.letter);
+            const textSizeClass = displayText.length >= 3 ? 'is-long' : (displayText.length === 2 ? 'is-syllable' : '');
+            
+            fishButton.innerHTML = `
+                <img class="fish-image fish-image-${fishIndex}" src="${fishSvg}" alt="" />
+                <span class="fish-letter ${textSizeClass}">${escapeHtml(displayText)}</span>
+            `;
+
+            fishButton.addEventListener('click', () => selectFish(fishButton, item));
+            fishLayer.appendChild(fishButton);
+
+            const position = safeFishPositions[index];
+            const horizontalPadding = Math.max(18, fishZone.clientWidth * 0.04);
+            const topSafeArea = Math.max(78, Math.min(120, fishZone.clientHeight * 0.22));
+            const bottomPadding = Math.max(18, fishZone.clientHeight * 0.04);
+            const availableWidth = Math.max(0, fishZone.clientWidth - fishButton.offsetWidth - horizontalPadding * 2);
+            const availableHeight = Math.max(0, fishZone.clientHeight - fishButton.offsetHeight - topSafeArea - bottomPadding);
+            fishButton.style.left = `${horizontalPadding + availableWidth * position.x}px`;
+            fishButton.style.top = `${topSafeArea + availableHeight * position.y}px`;
+        });
+    }
+
+    function advanceToNextQuestion() {
+        if (currentIndex < totalItems - 1) {
+            currentIndex += 1;
+            updateTarget();
+            renderFishScene();
+            submitted = false;
+            lastSelectedAnswer = null;
+        } else {
+            completeActivity();
+        }
+    }
+
+    function selectFish(fishButton, phonics) {
+        if (submitted) return;
+
+        submitted = true;
+        lastSelectedAnswer = phonics;
+
+        const current = items[currentIndex];
+        const isCorrect = phonics.letter === current.letter;
+
+        questionResults[currentIndex] = {
+            item_index: currentIndex,
+            expected_letter: current.letter,
+            selected_letter: phonics.letter,
+            sound: phonics.sound,
+            is_correct: isCorrect
+        };
+
+        document.querySelectorAll('.fish-choice').forEach((fish) => {
+            fish.disabled = true;
+            if (fish !== fishButton) {
+                fish.classList.add('is-locked');
+            }
+        });
+
+        if (isCorrect) {
+            fishButton.classList.add('is-correct');
+            correctCount += 1;
+            answers.set(current.letter, phonics);
+            startCatchLine(fishButton);
+
+            setTimeout(() => {
+                fishButton.classList.add('is-caught');
+            }, 600);
+
+            setTimeout(() => {
+                el('hookLine').classList.remove('active');
+                activeCatchFish = null;
+                advanceToNextQuestion();
+            }, 1100);
+        } else {
+            fishButton.classList.add('is-wrong');
+            setTimeout(() => {
+                fishButton.classList.remove('is-wrong');
+                advanceToNextQuestion();
+            }, 520);
+        }
+
+        updateProgress();
+    }
+
+    function resolveAudioPath(phonicsLetter) {
+        if (!phonicsLetter) return null;
+
+        const phonics = String(phonicsLetter).trim();
+        const langLower = language.toLowerCase();
+        const isFilipino = langLower.startsWith('fil') || langLower === 'tagalog';
+        const langCode = isFilipino ? 'T' : 'E';
+        const vowels = ['A', 'E', 'I', 'O', 'U'];
+        const category = vowels.includes(phonics.toUpperCase()) ? 'vowels' : 'syllables';
+        const filename = `${phonics} (${langCode}).MP3`;
+        const audioPath = `/static/pabasa_app/audio/phonics/${langLower}/${category}/${filename}`;
+
+        return { path: audioPath, phonics, language, category, langCode, filename };
+    }
+
+    function playAudio(isAutoplay = false) {
+        const current = items[currentIndex];
+        const audioInfo = resolveAudioPath(current.letter);
+
+        if (!audioInfo) {
+            console.error('[LetterSoundAudio] No phonics item found');
+            return;
+        }
+
+        const audio = new Audio();
+        let loadTimeout = null;
+        let playAttempted = false;
+
+        audio.addEventListener('canplay', () => {
+            clearTimeout(loadTimeout);
+            if (!playAttempted) {
+                playAttempted = true;
+                audio.play().catch(() => {});
+            }
+        });
+
+        audio.addEventListener('error', () => {
+            clearTimeout(loadTimeout);
+        });
+
+        audio.addEventListener('play', () => {
+            const speaker = el('speakerButton');
+            speaker.classList.add('playing');
+            setTimeout(() => speaker.classList.remove('playing'), 900);
+        });
+
+        audio.addEventListener('ended', () => {
+            el('speakerButton').classList.remove('playing');
+        });
+
+        audio.src = audioInfo.path;
+        audio.load();
+
+        loadTimeout = setTimeout(() => {
+            if (isAutoplay && audio.readyState < 2) {
+                const speaker = el('speakerButton');
+                speaker.classList.remove('playing');
+            }
+        }, 2500);
+    }
+
+    function showResults(savedResult = {}) {
+        document.body.classList.add('results-open');
+        const savedCorrect = Number(savedResult.correct_items ?? correctCount);
+        const savedTotal = Number(savedResult.items_completed ?? savedResult.total_items ?? totalItems);
+
+        el('scoreDisplay').textContent = `${savedCorrect} / ${savedTotal}`;
+        el('resultList').innerHTML = Array.from(answers.entries()).map(([letter]) => {
+            const fishSvg = '{% static "pabasa_app/images/fish_1.svg" %}';
+            const sizeClass = String(letter).length >= 3 ? 'is-long' : (String(letter).length === 2 ? 'is-syllable' : '');
+            return `<div class="result-item">
+                <img class="fish-image fish-image-1" src="${fishSvg}" alt="" />
+                <span class="caught-letter ${sizeClass}">${escapeHtml(letter)}</span>
+            </div>`;
+        }).join('');
+
+        el('results').classList.remove('hidden');
+    }
+
+    async function persistResult(correct, total, accuracy) {
+        const duration = Math.round((Date.now() - startedAt) / 1000);
+        const response = await fetch('{% url "record_assessment_completion" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                material_id: material.id,
+                activity_type: 'letter_sound_matching',
+                status: 'completed',
+                items_completed: total,
+                scores: {
+                    reading_set_id: material.reading_set_id,
+                    correct_items: correct,
+                    items_completed: total,
+                    accuracy,
+                    duration_seconds: duration,
+                    matches: questionResults.map((result) => ({
+                        letter: result.selected_letter,
+                        expected_letter: result.expected_letter,
+                        sound: result.sound,
+                        is_correct: result.is_correct
+                    }))
+                }
+            })
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.error || 'Unable to save activity result.');
+        return result;
+    }
+
+    async function completeActivity() {
+        const accuracy = totalItems ? Math.round((correctCount / totalItems) * 100) : 0;
+        if (!completionSavePromise) {
+            completionSavePromise = (async () => {
+                let lastError;
+                for (let attempt = 0; attempt < 3; attempt += 1) {
+                    try {
+                        return await persistResult(correctCount, totalItems, accuracy);
+                    } catch (error) {
+                        lastError = error;
+                        if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 700));
+                    }
+                }
+                throw lastError;
+            })();
+        }
+
+        try {
+            showResults(await completionSavePromise);
+        } catch (error) {
+            completionSavePromise = null;
+            console.error('[LetterSoundMatching] Completion save failed:', error);
+            window.alert('Your result could not be saved yet. Please check your connection and try again.');
+        }
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    el('speakerButton').addEventListener('click', (event) => {
+        event.stopPropagation();
+        playAudio(false);
+    });
+
+    el('finishButton').addEventListener('click', () => {
+        window.location.href = '{% url "assessment" %}';
+    });
+
+    function setupCompletionState() {
+        if (!completion.completed) return;
+        correctCount = completion.correct_items || 0;
+        questionResults = Array.isArray(completion.matches) ? [...completion.matches] : [];
+        completion.matches?.forEach((match) => {
+            if (match.is_correct !== false) answers.set(match.letter, match);
+        });
+        updateProgress();
+        showResults(completion);
+    }
+
+    updateTarget();
+    updateProgress();
+    renderFishScene();
+    setupCompletionState();
+    requestAnimationFrame(drawFishingLine);
+})();
+</script>
+</body>
+</html>
