@@ -23,6 +23,7 @@ from .models import Material, User, Section, Assessment, Notification, Course, N
 from .reading_stt import (
     ReadingMatcher,
     align_story_transcript,
+    story_word_states_from_results,
     analyze_reading,
     language_code_for,
     synthesize_read_aloud_audio,
@@ -713,6 +714,59 @@ class ReadingLaunchClassificationTests(TestCase):
 
         self.assertIn('customMaterialData || liveContent', custom_branch)
         self.assertNotIn("sessionStorage.getItem('pabasa_crla_assessment_items')", custom_branch)
+
+    def test_crla_miscue_branch_advances_local_paragraph_cursor(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        miscue_branch = content.split('if ((isStrictAssessmentMode || mode === "paragraph") && !itemLocked[currentIndex] && currentTargetMisread) {', 1)[1].split('if (Number(data.matched || 0) > 0)', 1)[0]
+
+        self.assertIn('data.word_syllable_ranges[activeWordIndex][1]', miscue_branch)
+        self.assertIn('currentSyllableIndex = resolvedWordEnd;', miscue_branch)
+        self.assertNotIn('transitionToItem(', miscue_branch)
+        context_guard = content.split('function isCurrentSpeechContext(context) {', 1)[1].split('async function sendAudioChunk', 1)[0]
+        self.assertIn('context.syllableIndex === currentSyllableIndex', context_guard)
+        update_ui = content.split('function updateUI() {', 1)[1].split('function normalizeDisplayWord', 1)[0]
+        self.assertNotIn('currentSyllableIndex = 0;', update_ui)
+        self.assertIn('evaluatedParagraphWordIndex(data.word_syllable_ranges, context?.syllableIndex)', content.replace('\n', ' '))
+        self.assertIn('paragraphWordResults[activeWordIndex] !== "miscue"', content)
+        self.assertIn('paragraphWordResults[readableWordIndex] === "miscue"', content)
+        self.assertNotIn('|| readableWordIndex === wrongWordIndex', miscue_branch)
+
+    def test_crla_future_word_results_do_not_create_paragraph_visual_state(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        recorder = content.split('function recordParagraphWordResult(', 1)[1].split('function evaluatedParagraphWordIndex', 1)[0]
+
+        self.assertIn('expectedIndex === activeWordIndex', recorder)
+        self.assertNotIn('wordResults.forEach', recorder)
+        self.assertNotIn('expectedIndex > throughIndex', recorder)
+
+    def test_crla_paragraph_miscue_state_is_sticky_across_redraws(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        recorder = content.split('function recordParagraphWordResult(', 1)[1].split('function evaluatedParagraphWordIndex', 1)[0]
+
+        self.assertIn('paragraphWordResults[activeWordIndex] !== "miscue"', recorder)
+        self.assertIn('paragraphWordResults[activeWordIndex] = status;', recorder)
+        self.assertIn('paragraphWordResults[readableWordIndex] === "miscue"', content)
+
+    def test_crla_later_correct_result_cannot_overwrite_paragraph_miscue(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        recorder = content.split('function recordParagraphWordResult(', 1)[1].split('function evaluatedParagraphWordIndex', 1)[0]
+
+        self.assertIn('if (paragraphWordResults[activeWordIndex] !== "miscue")', recorder)
+        self.assertNotIn('paragraphWordResults[activeWordIndex] = "correct"', recorder)
+
+    def test_crla_correct_word_then_miscue_does_not_paint_next_word(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        result_handling = content.split('const activeWordIndex = mode === "paragraph"', 1)[1].split('const hasProgressRegression', 1)[0]
+
+        self.assertIn('evaluatedParagraphWordIndex(data.word_syllable_ranges, context?.syllableIndex)', result_handling)
+        self.assertIn('recordParagraphWordResult(data.word_results, activeWordIndex)', result_handling)
+        self.assertNotIn('const activeWordIndex = Number(data.current_word_index || 0)', result_handling)
+        self.assertIn('renderSyllableDisplayWithError(data, activeWordIndex', content)
 
     def test_regular_materials_render_my_materials_completion_shell_for_each_reading_type(self):
         self._login_student()
@@ -3156,6 +3210,104 @@ class ReadingMatcherTests(TestCase):
         self.assertEqual(result["recognized_text"], recognized.lower().replace("  ", " "))
         # But the word_results should show the miscue properly
         self.assertEqual(result["word_results"][0]["result"], "miscue")
+
+    def test_story_word_states_mark_only_attempted_words_as_read(self):
+        states = story_word_states_from_results(
+            "Naku, Kuneho, wala ka nang ibang sinabi",
+            "Naku, Pagong",
+            total_words=7,
+        )
+        self.assertEqual(states, [
+            "correct",
+            "miscue",
+            "pending",
+            "pending",
+            "pending",
+            "pending",
+            "pending",
+        ])
+
+    def test_story_word_states_keep_unattempted_words_pending_after_misread(self):
+        states = story_word_states_from_results(
+            "ang bata ay naglalaro sa parke",
+            "ang guro",
+            total_words=6,
+        )
+        self.assertEqual(states, [
+            "correct",
+            "miscue",
+            "pending",
+            "pending",
+            "pending",
+            "pending",
+        ])
+
+    def test_story_word_states_mark_attempted_tail_words_correct_and_keep_rest_pending(self):
+        states = story_word_states_from_results(
+            "ang bata ay naglalaro sa parke",
+            "ang bata ay",
+            total_words=6,
+        )
+        self.assertEqual(states, [
+            "correct",
+            "correct",
+            "correct",
+            "pending",
+            "pending",
+            "pending",
+        ])
+
+    def test_story_word_states_generic_for_punctuated_and_non_punctuated_paragraphs(self):
+        cases = [
+            (
+                "ang bata ay naglalaro sa parke",
+                "ang guro",
+                6,
+                ["correct", "miscue", "pending", "pending", "pending", "pending"],
+            ),
+            (
+                "Naku, Kuneho, wala ka nang ibang sinabi.",
+                "Naku, Pagong.",
+                7,
+                ["correct", "miscue", "pending", "pending", "pending", "pending", "pending"],
+            ),
+            (
+                "Maganda ang umaga at masaya ang araw.",
+                "Maganda ang umaga at masaya ang buwan.",
+                7,
+                ["correct", "correct", "correct", "correct", "correct", "correct", "miscue"],
+            ),
+        ]
+
+        for expected_text, recognized_text, total_words, expected_states in cases:
+            with self.subTest(expected_text=expected_text, recognized_text=recognized_text):
+                states = story_word_states_from_results(
+                    expected_text,
+                    recognized_text,
+                    total_words=total_words,
+                )
+                self.assertEqual(states, expected_states)
+
+    def test_story_word_states_use_dynamic_word_results_current_index(self):
+        expected_text = "Bata, huminga at maglakad sa parke."
+        states = story_word_states_from_results(
+            expected_text,
+            total_words=7,
+            word_results=[
+                {"expected_index": 0, "result": "correct"},
+                {"expected_index": 1, "result": "miscue"},
+                {"expected_index": 2, "result": "correct"},
+            ],
+        )
+        self.assertEqual(states, [
+            "correct",
+            "miscue",
+            "correct",
+            "pending",
+            "pending",
+            "pending",
+            "pending",
+        ])
 
 class AdaptedReadingLevelTests(TestCase):
 

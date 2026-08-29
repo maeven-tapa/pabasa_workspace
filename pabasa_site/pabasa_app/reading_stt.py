@@ -625,6 +625,51 @@ def _story_words_are_equivalent(expected_word, recognized_word):
     return expected == recognized
 
 
+def story_word_states_from_results(expected_text, recognized_text=None, total_words=None, word_results=None):
+    """Return per-word visual states using the same attempted-then-advance pattern.
+
+    The student can resolve one target word at a time. Correct attempts become
+    green/read; miscues become red/read; untouched words remain pending. The
+    comparison stops at the first mismatch, mirroring the other reading modes.
+    """
+    if recognized_text is not None:
+        expected_words = _story_alignment_tokens(expected_text)
+        recognized_words = _story_alignment_tokens(recognized_text)
+        total = max(0, int(total_words or len(expected_words)))
+        states = ["pending"] * total
+        target_index = 0
+        for spoken_word in recognized_words:
+            if target_index >= len(expected_words) or target_index >= len(states):
+                break
+            expected_word = expected_words[target_index]
+            if _story_words_are_equivalent(expected_word, spoken_word):
+                states[target_index] = "correct"
+                target_index += 1
+                continue
+            states[target_index] = "miscue"
+            break
+        return states
+
+    resolved = ["pending"] * max(0, int(total_words or 0))
+    if not isinstance(word_results, list):
+        return resolved
+    for item in word_results:
+        if not isinstance(item, dict):
+            continue
+        result = str(item.get("result") or "").strip().lower()
+        if result not in {"correct", "miscue"}:
+            continue
+        expected_index = item.get("expected_index")
+        try:
+            expected_index = int(expected_index)
+        except (TypeError, ValueError):
+            continue
+        if expected_index < 0 or expected_index >= len(resolved):
+            continue
+        resolved[expected_index] = result
+    return resolved
+
+
 def align_story_transcript(expected_text, recognized_text, language_code="en-US"):
     """Align a story transcript against the expected text at the word level.
 

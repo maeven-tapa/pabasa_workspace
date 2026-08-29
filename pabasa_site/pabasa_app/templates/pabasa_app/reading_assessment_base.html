@@ -438,6 +438,28 @@
             animation: pabasaItemChange 0.34s ease both;
         }
 
+                .reading-word .story-word {
+            display: inline-block;
+            margin: 0 0.06em;
+            border-radius: 0.38em;
+            padding: 0.04em 0.12em;
+            transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+        }
+
+        .reading-word .story-word.is-read {
+            box-shadow: inset 0 0 0 1px rgba(27, 26, 23, 0.05);
+        }
+
+        .reading-word .story-word.is-correct {
+            background: #e7f7ec;
+            color: #2f9e44;
+        }
+
+        .reading-word .story-word.is-miscue {
+            background: #ffebee;
+            color: #c41c3b;
+        }
+
         .reading-word .syllable {
             display: inline-block;
             border-radius: 0.3em;

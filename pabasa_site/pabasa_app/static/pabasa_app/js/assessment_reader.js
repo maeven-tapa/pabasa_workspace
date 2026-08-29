@@ -150,6 +150,7 @@
         let pageCorrectWordCounts = [];
         let currentIndex = 0;
         let currentPageIndex = 0;
+        let paragraphWordResults = {};
         let isRecording = false;
         let isMuted = false;
         let startTime = null;
@@ -2510,29 +2511,58 @@
         }
 
         function currentSpeechContext() {
-            return {
+            const context = {
                 index: currentIndex,
                 itemText: getCurrentDisplayText() || items[currentIndex] || "",
                 syllableIndex: currentSyllableIndex,
                 version: itemResultVersion,
             };
+            return context;
         }
 
         function resetCurrentPageState() {
             currentPageIndex = 0;
             currentSyllableIndex = 0;
+            paragraphWordResults = {};
             itemResultVersion += 1;
             resetSyllableStitching();
         }
 
         function isCurrentSpeechContext(context) {
-            return Boolean(
+            const accepted = Boolean(
                 context
                 && context.index === currentIndex
                 && context.itemText === (getCurrentDisplayText() || items[currentIndex])
+                && context.syllableIndex === currentSyllableIndex
                 && context.version === itemResultVersion
                 && !isAdvancingItem
             );
+            return accepted;
+        }
+
+        function recordParagraphWordResult(wordResults, activeWordIndex) {
+            if (mode !== "paragraph" || !Array.isArray(wordResults) || activeWordIndex < 0) return null;
+            const activeResult = wordResults.find((result) => {
+                const expectedIndex = Number(result?.expected_index ?? -1);
+                return Number.isInteger(expectedIndex) && expectedIndex === activeWordIndex;
+            });
+            const status = String(activeResult?.result || "").trim().toLowerCase();
+            if (status !== "correct" && status !== "miscue") return activeResult || null;
+            if (paragraphWordResults[activeWordIndex] !== "miscue") {
+                paragraphWordResults[activeWordIndex] = status;
+            }
+            return activeResult;
+        }
+
+        function evaluatedParagraphWordIndex(wordSyllableRanges, syllableIndex) {
+            if (!Array.isArray(wordSyllableRanges)) return -1;
+            const cursor = Number(syllableIndex);
+            if (!Number.isFinite(cursor)) return -1;
+            return wordSyllableRanges.findIndex((range) => {
+                const start = Number(range?.[0]);
+                const end = Number(range?.[1]);
+                return Number.isFinite(start) && Number.isFinite(end) && start <= cursor && cursor < end;
+            });
         }
 
         async function sendAudioChunk(blob, context = currentSpeechContext()) {
@@ -2594,6 +2624,15 @@
                 if (!response.ok || !data.success) {
                     throw new Error(data.error || "Speech check failed.");
                 }
+                console.log("=== CRLA PARAGRAPH RUNTIME ===");
+                console.log("currentIndex:", currentIndex);
+                console.log("current_word_index:", data.current_word_index);
+                console.log("current_word:", data.current_word);
+                console.log("matched:", data.matched);
+                console.log("next_word:", data.next_word);
+                console.log("next_syllable:", data.next_syllable);
+                console.log("word_results:", data.word_results);
+                console.log("FULL DATA:", data);
                 if (!isCurrentSpeechContext(context)) return;
                 currentSttLanguageCode = String(data.language_code || currentSttLanguageCode || "");
                 if (String(data.language_code || "").toLowerCase() === "fil-ph" && data.syllable_context) {
@@ -2676,6 +2715,33 @@
             const previousCorrectWords = Number(correctWordCounts[currentIndex] || 0);
             const proposedCorrectWords = Number(data.correct_word_count || data.current_word_index || 0);
             const proposedSyllableIndex = Number(data.current_syllable_index || currentSyllableIndex || 0);
+            const activeWordIndex = mode === "paragraph"
+                ? evaluatedParagraphWordIndex(data.word_syllable_ranges, context?.syllableIndex)
+                : Number(data.current_word_index || 0);
+            const activeTargetResult = mode === "paragraph"
+                ? recordParagraphWordResult(data.word_results, activeWordIndex)
+                : (Array.isArray(data.word_results)
+                    ? data.word_results.find((item) => Number(item?.expected_index ?? -1) === activeWordIndex) || null
+                    : null);
+            const currentTargetMisread = Boolean(
+                activeTargetResult
+                && String(activeTargetResult.result || "").trim().toLowerCase() === "miscue"
+            );
+            console.log("[CRLA] ACTIVE TARGET RESULT:", activeTargetResult);
+            console.log("[CRLA] MISCUE:", currentTargetMisread);
+            console.log("[CRLA] BRANCH:", currentTargetMisread ? "MISCUE_ADVANCE" : "NORMAL");
+            console.log("[CRLA_STRICT_ASSESSMENT] Active target evaluation", {
+                itemIndex: currentIndex,
+                activeWordIndex,
+                activeWord: Array.isArray(data.words) && activeWordIndex >= 0 ? data.words[activeWordIndex] : null,
+                nextWord: data.next_word || null,
+                nextSyllable: data.next_syllable || null,
+                matched: Number(data.matched || 0),
+                wordResults: Array.isArray(data.word_results) ? data.word_results : [],
+                activeTargetResult,
+                currentTargetMisread,
+                branchTaken: currentTargetMisread ? "MISCUE_ADVANCE" : "NORMAL",
+            });
             const hasProgressRegression = proposedSyllableIndex < currentSyllableIndex
                 || (proposedSyllableIndex === currentSyllableIndex && proposedCorrectWords < previousCorrectWords);
 
@@ -2769,6 +2835,33 @@
                 return;
             }
 
+            const isStrictAssessmentMode = isOfficialAssessmentLaunch && currentStoryState !== "story_reading";
+
+            if ((isStrictAssessmentMode || mode === "paragraph") && !itemLocked[currentIndex] && currentTargetMisread) {
+                // Current target miscue must always take precedence over generic matched===0 retry logic.
+                // Resolve the current target through the same syllable-based paragraph progression used for
+                // successful reads: mark the word as a resolved miscue and advance the cursor to the next word.
+                const resolvedWordEnd = Number(
+                    (Array.isArray(data.word_syllable_ranges) && data.word_syllable_ranges[activeWordIndex] && data.word_syllable_ranges[activeWordIndex][1]) || 0
+                );
+                if (resolvedWordEnd > currentSyllableIndex) {
+                    currentSyllableIndex = resolvedWordEnd;
+                }
+                setSpeechStatus("Not quite right.", `Expected: ${data.next_word || "the next word"}. You read: ${transcript}`, false);
+                renderSyllableDisplayWithError(data, activeWordIndex, Number(correctWordCounts[currentIndex] || 0));
+                console.log("[CRLA_STRICT_ASSESSMENT] Current target miscue resolved; paragraph cursor advanced", {
+                    itemIndex: currentIndex,
+                    currentWordIndex: activeWordIndex,
+                    activeTargetResult,
+                    wordResults: Array.isArray(data.word_results) ? data.word_results : [],
+                    spokenText: transcript,
+                    branchTaken: "MISCUE_ADVANCE",
+                    resolvedSyllableIndex: currentSyllableIndex,
+                    advanceCalled: true,
+                });
+                return;
+            }
+
             if (Number(data.matched || 0) > 0) {
                 // Clear any pending auto-advance for official assessments
                 if (autoAdvanceTimer) {
@@ -2783,34 +2876,23 @@
             } else {
                 const nextHint = data.next_syllable && data.next_word ? `Try again from: ${data.next_syllable} in ${data.next_word}` : "Keep reading.";
                 setSpeechStatus(transcript ? nextHint : "Listening with Google Speech...", speechDetail, true);
-                
-                // CRLA Official Assessment: Show red feedback and auto-advance after no match
-                // This prevents students from repeatedly attempting wrong answers
-                // EXCEPTION: Story Reading is a continuous oral reading assessment and does NOT lock/auto-advance on miscues
-                const isStrictAssessmentMode = isOfficialAssessmentLaunch && currentStoryState !== "story_reading";
+
                 if (isStrictAssessmentMode && !itemLocked[currentIndex] && transcript && Number(data.matched || 0) === 0) {
-                    // Clear previous auto-advance timer if exists
+                    // Preserve original retry behavior for unmatched non-miscue responses.
                     if (autoAdvanceTimer) {
                         window.clearTimeout(autoAdvanceTimer);
                     }
-                    
-                    // Show red error feedback on the misread word
-                    const wrongWordIndex = Number(data.current_word_index || 0);
                     setSpeechStatus("Not quite right.", `Expected: ${data.next_word || "the next word"}. You read: ${transcript}`, false);
-                    renderSyllableDisplayWithError(data, wrongWordIndex, Number(correctWordCounts[currentIndex] || 0));
-                    
-                    console.log("[CRLA_STRICT_ASSESSMENT] Wrong reading detected, showing red feedback", {
+                    console.log("[CRLA_STRICT_ASSESSMENT] Unmatched response kept in retry branch", {
                         itemIndex: currentIndex,
                         expectedWord: data.next_word,
                         spokenText: transcript,
-                        wrongWordIndex: wrongWordIndex,
+                        activeWordIndex,
                     });
                     
-                    // After showing red feedback for 1.2 seconds, lock item and advance
                     autoAdvanceTimer = window.setTimeout(() => {
                         if (!isRecording || itemLocked[currentIndex]) return;
                         
-                        // Lock the item with current (low) score
                         itemLocked[currentIndex] = true;
                         itemScores[currentIndex] = {
                             correct_words: correctWordCounts[currentIndex] || 0,
@@ -2821,12 +2903,6 @@
                         };
                         persistLockedItemResult(currentIndex);
                         
-                        console.log("[CRLA_STRICT_ASSESSMENT] Auto-advanced item due to no match", {
-                            itemIndex: currentIndex,
-                            score: itemScores[currentIndex],
-                        });
-                        
-                        // Advance to next item
                         if (currentIndex >= items.length - 1) {
                             isRecording = false;
                             stopSpeechRecognition();
@@ -2875,7 +2951,9 @@
                     const range = data.word_syllable_ranges[readableWordIndex] || [0, 0];
                     const span = document.createElement("span");
                     span.className = "syllable";
-                    if (range[1] <= currentSyllableIndex) {
+                    if (paragraphWordResults[readableWordIndex] === "miscue") {
+                        span.classList.add("is-wrong");
+                    } else if (range[1] <= currentSyllableIndex) {
                         span.classList.add("is-read");
                         if (shouldAnimate && readableWordIndex >= previousCorrectWords) {
                             span.classList.add("is-new-read");
@@ -2902,7 +2980,7 @@
         }
 
         // CRLA Official Assessment: Render syllables with a specific word highlighted as wrong/error
-        function renderSyllableDisplayWithError(data, wrongWordIndex = -1, previousCorrectWords = 0) {
+        function renderSyllableDisplayWithError(data, activeWordIndex = -1, previousCorrectWords = 0) {
             if (!readingWord || !Array.isArray(data.words) || !Array.isArray(data.word_syllable_ranges)) return;
             const displayText = String(getCurrentDisplayText() || items[currentIndex] || "");
             const itemTitle = getCurrentItemTitle();
@@ -2937,7 +3015,7 @@
                     span.className = "syllable";
                     
                     // Highlight the specific word index as wrong if it matches
-                    if (readableWordIndex === wrongWordIndex) {
+                    if (paragraphWordResults[readableWordIndex] === "miscue") {
                         span.classList.add("is-wrong");
                     } else if (range[1] <= currentSyllableIndex) {
                         span.classList.add("is-read");
@@ -2967,6 +3045,13 @@
 
         function normalizeDisplayWord(word) {
             return String(word || "").toLowerCase().replace(/[^a-z0-9']/g, "");
+        }
+
+        function readableWords(text) {
+            return String(text || "")
+                .split(/\s+/)
+                .map((word) => word.trim())
+                .filter((word) => word && normalizeDisplayWord(word));
         }
 
         function getCurrentSectionLabel(type = mode) {
@@ -3023,7 +3108,6 @@
                 readingWord.textContent = bodyText || displayText;
                 readingWord.hidden = false;
             }
-            currentSyllableIndex = 0;
             resetSyllableStitching();
             pendingAudioChunk = null;
             isAdvancingItem = false;
@@ -3089,6 +3173,7 @@
             currentIndex = nextIndex;
             currentPageIndex = 0;
             currentSyllableIndex = 0;
+            paragraphWordResults = {};
             setCurrentItemMode(itemTypes[currentIndex] || mode);
             updateUI();
             animateCurrentItem();
@@ -4086,6 +4171,7 @@
                 correctWordCounts = new Array(items.length).fill(0);
                 latestScores = null;
                 currentSyllableIndex = 0;
+                paragraphWordResults = {};
                 pendingAudioChunk = null;
                 hasHeardSinceLastChunk = false;
                 resetRawMicInput("Waiting for speech...");
@@ -4672,6 +4758,7 @@
             stopReadAloud();
             currentIndex = 0;
             currentSyllableIndex = 0;
+            paragraphWordResults = {};
             spokenTranscript = "";
             correctWordCounts = new Array(items.length).fill(0);
             pendingAudioChunk = null;
