@@ -213,6 +213,11 @@
         const syllableStitchingWindowMs = 4000;
         let liveCountdownTimer = null;
         let liveCountdownStarted = false;
+        // CRLA Official Assessment: Item Locking
+        // Track whether each item has been scored and locked (no further updates allowed)
+        let itemLocked = [];
+        let itemScores = [];
+        let autoAdvanceTimer = null;
         let liveServerTimeOffsetMs = 0;
         const liveSessionId = urlParams.get("live_session_id");
         const liveSessionStateUrl = liveSessionId ? `/api/live-assessment/session/${liveSessionId}/` : null;
@@ -468,6 +473,32 @@
             return writeStudentEndState({
                 ...current,
                 ...(patch || {}),
+            });
+        }
+
+        // CRLA Official Assessment: Persist item score immediately when locked
+        function persistLockedItemResult(itemIndex) {
+            if (!isOfficialAssessmentLaunch || !itemLocked[itemIndex]) return;
+            const itemScore = itemScores[itemIndex];
+            if (!itemScore) return;
+            
+            // Save to localStorage for resilience
+            try {
+                const savedResults = JSON.parse(localStorage.getItem('crla_item_results') || '{}');
+                const key = `${officialAssessmentId}_${itemIndex}`;
+                savedResults[key] = itemScore;
+                localStorage.setItem('crla_item_results', JSON.stringify(savedResults));
+            } catch (error) {
+                console.warn("[CRLA_STRICT_ASSESSMENT] Failed to persist item result to localStorage", error);
+            }
+            
+            // Notify server immediately
+            const endState = readStudentEndState();
+            return updateStudentEndState({
+                ...endState,
+                last_locked_item_index: itemIndex,
+                locked_items_count: (itemLocked.filter(Boolean) || []).length,
+                updated_at: new Date().toISOString(),
             });
         }
 
@@ -1572,6 +1603,9 @@
                 pageCorrectWordCounts = items.map(() => []);
                 currentMaterialLanguage = officialLanguage || "";
                 correctWordCounts = new Array(items.length).fill(0);
+                // CRLA Official Assessment: Initialize item locking
+                itemLocked = new Array(items.length).fill(false);
+                itemScores = new Array(items.length).fill(null);
                 currentStoryChoices = getStoryChoicesFromAssessment();
                 const persistedStoryTitle = String(persistedEndState.selected_story || "").trim().toLowerCase();
                 if (activeStage === "story") {
@@ -1661,6 +1695,12 @@
                     pageCorrectWordCounts = items.map(() => []);
                     currentMaterialLanguage = liveLanguage || "";
                     correctWordCounts = new Array(items.length).fill(0);
+                    // CRLA Official Assessment: Initialize item locking for live content
+                    itemLocked = new Array(items.length).fill(false);
+                    itemScores = new Array(items.length).fill(null);
+                    // CRLA Official Assessment: Initialize item locking for live content
+                    itemLocked = new Array(items.length).fill(false);
+                    itemScores = new Array(items.length).fill(null);
                     if (items.length === 0) {
                         if (readingWord) readingWord.textContent = "No assessment items assigned.";
                         if (nextBtn) nextBtn.disabled = true;
@@ -1731,6 +1771,9 @@
             itemPages = buildItemPages(items, itemTypes);
             pageCorrectWordCounts = items.map(() => []);
             correctWordCounts = new Array(items.length).fill(0);
+            // CRLA Official Assessment: Initialize item locking for legacy materials
+            itemLocked = new Array(items.length).fill(false);
+            itemScores = new Array(items.length).fill(null);
             if (items.length === 0) {
                 if (readingWord) readingWord.textContent = "No assessment items assigned.";
                 if (nextBtn) nextBtn.disabled = true;
@@ -2640,6 +2683,19 @@
 
         function handleSpeechResult(data, context = currentSpeechContext()) {
             if (!isCurrentSpeechContext(context)) return;
+            
+            // CRLA Official Assessment: Check if item is already locked
+            // Official assessments allow only ONE scoring attempt per item
+            if (isOfficialAssessmentLaunch && itemLocked[currentIndex]) {
+                // Item is locked. Ignore this late/stale response.
+                console.log("[CRLA_STRICT_ASSESSMENT] Late response rejected for locked item", {
+                    currentIndex,
+                    itemLocked: itemLocked[currentIndex],
+                    transcript: data.transcript || "",
+                });
+                return;
+            }
+            
             const transcript = (data.transcript || "").trim();
             if (transcript) {
                 spokenTranscript = [spokenTranscript, transcript].filter(Boolean).join(" ");
@@ -2686,6 +2742,22 @@
             }
 
             if (data.complete) {
+                // CRLA Official Assessment: Lock this item to prevent further updates
+                if (isOfficialAssessmentLaunch) {
+                    itemLocked[currentIndex] = true;
+                    itemScores[currentIndex] = {
+                        correct_words: correctWordCounts[currentIndex] || 0,
+                        transcript: transcript,
+                        timestamp: new Date().toISOString(),
+                    };
+                    console.log("[CRLA_STRICT_ASSESSMENT] Item locked after completion", {
+                        itemIndex: currentIndex,
+                        result: itemScores[currentIndex],
+                    });
+                    // Persist immediately to backend and localStorage
+                    persistLockedItemResult(currentIndex);
+                }
+                
                 isAdvancingItem = true;
                 pendingAudioChunk = null;
                 setSpeechStatus("Great job! You finished this item.", transcript ? `Words: ${transcript}` : "", true);
@@ -2723,6 +2795,11 @@
             }
 
             if (Number(data.matched || 0) > 0) {
+                // Clear any pending auto-advance for official assessments
+                if (autoAdvanceTimer) {
+                    window.clearTimeout(autoAdvanceTimer);
+                    autoAdvanceTimer = null;
+                }
                 setSpeechStatus(
                     `Matched ${correctWordsRead()} word${Number(correctWordsRead()) === 1 ? "" : "s"}.`,
                     `${speechDetail}${data.formatted_syllables ? " | Syllables: " + data.formatted_syllables : ""}`,
@@ -2731,6 +2808,57 @@
             } else {
                 const nextHint = data.next_syllable && data.next_word ? `Try again from: ${data.next_syllable} in ${data.next_word}` : "Keep reading.";
                 setSpeechStatus(transcript ? nextHint : "Listening with Google Speech...", speechDetail, true);
+                
+                // CRLA Official Assessment: Show red feedback and auto-advance after no match
+                // This prevents students from repeatedly attempting wrong answers
+                if (isOfficialAssessmentLaunch && !itemLocked[currentIndex] && transcript && Number(data.matched || 0) === 0) {
+                    // Clear previous auto-advance timer if exists
+                    if (autoAdvanceTimer) {
+                        window.clearTimeout(autoAdvanceTimer);
+                    }
+                    
+                    // Show red error feedback on the misread word
+                    const wrongWordIndex = Number(data.current_word_index || 0);
+                    setSpeechStatus("Not quite right.", `Expected: ${data.next_word || "the next word"}. You read: ${transcript}`, false);
+                    renderSyllableDisplayWithError(data, wrongWordIndex, Number(correctWordCounts[currentIndex] || 0));
+                    
+                    console.log("[CRLA_STRICT_ASSESSMENT] Wrong reading detected, showing red feedback", {
+                        itemIndex: currentIndex,
+                        expectedWord: data.next_word,
+                        spokenText: transcript,
+                        wrongWordIndex: wrongWordIndex,
+                    });
+                    
+                    // After showing red feedback for 1.2 seconds, lock item and advance
+                    autoAdvanceTimer = window.setTimeout(() => {
+                        if (!isRecording || itemLocked[currentIndex]) return;
+                        
+                        // Lock the item with current (low) score
+                        itemLocked[currentIndex] = true;
+                        itemScores[currentIndex] = {
+                            correct_words: correctWordCounts[currentIndex] || 0,
+                            transcript: spokenTranscript,
+                            timestamp: new Date().toISOString(),
+                            auto_advanced: true,
+                            auto_advanced_reason: 'no_match',
+                        };
+                        persistLockedItemResult(currentIndex);
+                        
+                        console.log("[CRLA_STRICT_ASSESSMENT] Auto-advanced item due to no match", {
+                            itemIndex: currentIndex,
+                            score: itemScores[currentIndex],
+                        });
+                        
+                        // Advance to next item
+                        if (currentIndex >= items.length - 1) {
+                            isRecording = false;
+                            stopSpeechRecognition();
+                            showCompletion(true);
+                        } else {
+                            transitionToItem(currentIndex + 1, "Moving to next item.", "Keep reading clearly.");
+                        }
+                    }, 1200);
+                }
             }
         }
 
@@ -2768,6 +2896,70 @@
                     const span = document.createElement("span");
                     span.className = "syllable";
                     if (range[1] <= currentSyllableIndex) {
+                        span.classList.add("is-read");
+                        if (shouldAnimate && readableWordIndex >= previousCorrectWords) {
+                            span.classList.add("is-new-read");
+                            span.style.animationDelay = `${animatedWordCount * 130}ms`;
+                            animatedWordCount += 1;
+                        }
+                    } else if (range[0] <= currentSyllableIndex && currentSyllableIndex < range[1]) {
+                        span.classList.add("is-current");
+                    }
+                    span.textContent = part;
+                    container.appendChild(span);
+                    readableWordIndex += 1;
+                });
+            };
+
+            if (itemTitle && readingTitle) {
+                readingTitle.textContent = "";
+                renderTextParts(titleText, readingTitle);
+            }
+            renderTextParts(bodyText || displayText, readingWord);
+            if (progressFill && typeof data.progress === "number") {
+                progressFill.style.width = `${((currentIndex + (data.progress / 100)) / items.length) * 100}%`;
+            }
+        }
+
+        // CRLA Official Assessment: Render syllables with a specific word highlighted as wrong/error
+        function renderSyllableDisplayWithError(data, wrongWordIndex = -1, previousCorrectWords = 0) {
+            if (!readingWord || !Array.isArray(data.words) || !Array.isArray(data.word_syllable_ranges)) return;
+            const displayText = String(getCurrentDisplayText() || items[currentIndex] || "");
+            const itemTitle = getCurrentItemTitle();
+            const { titleText, bodyText } = splitDisplayTextByTitle(displayText, itemTitle);
+            if (readingTitle) {
+                readingTitle.hidden = !itemTitle;
+                if (itemTitle) {
+                    readingTitle.textContent = "";
+                }
+            }
+            readingWord.textContent = "";
+
+            let readableWordIndex = 0;
+            let animatedWordCount = 0;
+            const shouldAnimate = true;
+            const renderTextParts = (text, container) => {
+                const parts = String(text || "").split(/(\s+)/);
+                parts.forEach((part) => {
+                    if (!part) return;
+                    if (/^\s+$/.test(part)) {
+                        container.appendChild(document.createTextNode(part));
+                        return;
+                    }
+
+                    if (isDisplayListMarker(part) || !normalizeDisplayWord(part)) {
+                        container.appendChild(document.createTextNode(part));
+                        return;
+                    }
+
+                    const range = data.word_syllable_ranges[readableWordIndex] || [0, 0];
+                    const span = document.createElement("span");
+                    span.className = "syllable";
+                    
+                    // Highlight the specific word index as wrong if it matches
+                    if (readableWordIndex === wrongWordIndex) {
+                        span.classList.add("is-wrong");
+                    } else if (range[1] <= currentSyllableIndex) {
                         span.classList.add("is-read");
                         if (shouldAnimate && readableWordIndex >= previousCorrectWords) {
                             span.classList.add("is-new-read");
@@ -2909,6 +3101,11 @@
 
         function transitionToItem(nextIndex, statusMessage = "", detail = "") {
             if (nextIndex < 0 || nextIndex >= items.length || nextIndex === currentIndex) return;
+            // CRLA Official Assessment: Clear auto-advance timer when transitioning
+            if (autoAdvanceTimer) {
+                window.clearTimeout(autoAdvanceTimer);
+                autoAdvanceTimer = null;
+            }
             currentIndex = nextIndex;
             currentPageIndex = 0;
             currentSyllableIndex = 0;
@@ -3933,6 +4130,11 @@
         const stopReading = async () => {
             if (isReviewMode || isSpeechResponsePending()) return;
             if (!isRecording) return;
+            // CRLA Official Assessment: Cleanup auto-advance timer
+            if (autoAdvanceTimer) {
+                window.clearTimeout(autoAdvanceTimer);
+                autoAdvanceTimer = null;
+            }
             if (mediaRecorder && mediaRecorder.state === "recording") {
                 try {
                     await flushCurrentSpeechChunk();

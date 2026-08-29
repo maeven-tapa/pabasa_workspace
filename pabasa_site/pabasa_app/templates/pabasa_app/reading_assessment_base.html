@@ -462,9 +462,31 @@
             transform: translateY(-1px);
         }
 
+        .reading-word .syllable.is-wrong {
+            background: #ffebee;
+            color: #c41c3b;
+            animation: pabasaWordError 0.5s ease both;
+        }
+
         .reading-word .word-gap {
             display: inline-block;
             width: 0.28em;
+        }
+
+        @keyframes pabasaWordError {
+            0% {
+                background: #ffebee;
+                color: #c41c3b;
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                background: #ffebee;
+                color: #c41c3b;
+                transform: scale(1);
+            }
         }
 
         @keyframes pabasaWordReveal {
@@ -2700,6 +2722,10 @@
         body.dark-theme .reading-word .syllable.is-current {
             background: rgba(56, 189, 248, 0.22) !important;
             color: #f8fafc !important;
+        }
+        body.dark-theme .reading-word .syllable.is-wrong {
+            background: rgba(196, 28, 59, 0.24) !important;
+            color: #ff6b7a !important;
         }
         body.dark-theme .summary-tile span {
             color: #94a3b8 !important;
