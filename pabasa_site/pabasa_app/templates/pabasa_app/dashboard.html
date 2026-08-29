@@ -1790,8 +1790,8 @@
 
         .my-classes-section { order: 1; }
         .student-calendar-card { order: 2; }
-        .my-reading-journey { order: 3; }
-        .my-achievements { order: 4; }
+        .my-achievements { order: 3; }
+        .my-reading-journey { order: 4; }
 
         .dashboard-main-layout > *,
         .dashboard-card-column > * {
@@ -1936,32 +1936,12 @@
                 <div class="class-list" data-class-list aria-live="polite"></div>
             </div>
 
-            <!-- My Reading Journey -->
-            <div class="my-reading-journey" data-reading-journey>
+            <!-- My Achievements -->
+            <div class="my-achievements" data-achievements>
                 <h3 class="section-title">
-                    <span>My Reading Journey</span>
+                    <span>My Achievements</span>
                 </h3>
-
-                <div class="progress-item">
-                    <div class="progress-label">
-                        <span>Reading Progress</span>
-                        <span class="progress-value" data-reading-percent>0%</span>
-                    </div>
-                    <div class="progress-bar-container" data-progress="0">
-                        <div class="progress-bar-fill" data-reading-progress-fill style="width: 0%;"></div>
-                    </div>
-                </div>
-
-                <div class="stats-container">
-                    <div class="stat-item">
-                        <div class="stat-item-value" data-assessments-completed>0</div>
-                        <div class="stat-item-label">Assessments</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-item-value" data-reading-days>0</div>
-                        <div class="stat-item-label">Reading Days</div>
-                    </div>
-                </div>
+                <div class="achievements-grid" data-achievements-grid></div>
             </div>
         </div>
 
@@ -1992,12 +1972,32 @@
                 </button>
             </article>
 
-            <!-- My Achievements -->
-            <div class="my-achievements" data-achievements>
+            <!-- My Reading Journey -->
+            <div class="my-reading-journey" data-reading-journey>
                 <h3 class="section-title">
-                    <span>My Achievements</span>
+                    <span>My Reading Journey</span>
                 </h3>
-                <div class="achievements-grid" data-achievements-grid></div>
+
+                <div class="progress-item">
+                    <div class="progress-label">
+                        <span>Reading Progress</span>
+                        <span class="progress-value" data-reading-percent>0%</span>
+                    </div>
+                    <div class="progress-bar-container" data-progress="0">
+                        <div class="progress-bar-fill" data-reading-progress-fill style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <div class="stats-container">
+                    <div class="stat-item">
+                        <div class="stat-item-value" data-assessments-completed>0</div>
+                        <div class="stat-item-label">Assessments</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-item-value" data-reading-days>0</div>
+                        <div class="stat-item-label">Reading Days</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
