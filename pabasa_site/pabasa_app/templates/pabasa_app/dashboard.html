@@ -74,9 +74,17 @@
         position: relative;
     }
 
-    /* Keep the document as the only vertical scrolling container. */
+    /* Keep html as the only vertical scrolling container. Using `hidden` for
+       horizontal overflow makes the other axis compute to `auto`, so use
+       non-scrolling clipping here and let body grow with its content. */
+    html {
+        overflow-x: clip !important;
+        overflow-y: auto !important;
+    }
+
     body.dashboard-body {
-        overflow-y: auto;
+        overflow-x: clip !important;
+        overflow-y: visible !important;
     }
 
     .dashboard-main,
@@ -377,17 +385,21 @@
         margin-top: 0.1rem;
     }
 
-    /* Balanced two-row card layout on desktop. */
+    /* Compact independent columns prevent a short card from being stretched
+       to the height of the card beside it. */
     .dashboard-main-layout {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 1.5rem;
         margin-top: 1.5rem;
-        align-items: stretch;
+        align-items: start;
     }
 
-    .right-column {
-        display: contents;
+    .dashboard-card-column {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        min-width: 0;
     }
 
     .my-classes-section {
@@ -1772,8 +1784,17 @@
             gap: 1.25rem;
         }
 
+        .dashboard-card-column {
+            display: contents;
+        }
+
+        .my-classes-section { order: 1; }
+        .student-calendar-card { order: 2; }
+        .my-reading-journey { order: 3; }
+        .my-achievements { order: 4; }
+
         .dashboard-main-layout > *,
-        .right-column > * {
+        .dashboard-card-column > * {
             height: auto;
         }
 
@@ -1904,42 +1925,16 @@
         {% endcomment %}
     </div>
 
-    <!-- Desktop: Classes/Calendar, then Reading Journey/Achievements. -->
+    <!-- Independent desktop columns keep each card at its natural height. -->
     <div class="dashboard-main-layout" data-dashboard-main-layout style="display: none;">
-        <!-- Left Column: My Classes -->
-        <div class="my-classes-section">
-            <div class="my-classes-header">
-                <span>My Classes</span>
+        <div class="dashboard-card-column left-column">
+            <!-- My Classes -->
+            <div class="my-classes-section">
+                <div class="my-classes-header">
+                    <span>My Classes</span>
+                </div>
+                <div class="class-list" data-class-list aria-live="polite"></div>
             </div>
-            <div class="class-list" data-class-list aria-live="polite"></div>
-        </div>
-
-        <!-- Group kept for content organization; CSS places its cards in the parent grid. -->
-        <div class="right-column">
-            <article class="student-calendar-card">
-                <div class="student-calendar-head">
-                    <h3><i class="bi bi-calendar3"></i> School Calendar</h3>
-                    <div class="student-calendar-filter" role="group"><button type="button" class="active" data-student-calendar-filter="global">System-wide</button><button type="button" data-student-calendar-filter="school">School</button></div>
-                </div>
-                <div class="student-calendar-month" id="studentCalendarMonth"></div>
-                <div class="student-calendar-meta">School Year: <strong>{{ student_calendar_school_year|default:"Not set" }}</strong> · <strong>{{ student_calendar_current_term|default:"Not set" }}</strong></div>
-
-                <div class="student-calendar-grid" id="studentCalendarGrid" aria-label="Current month calendar" aria-readonly="true">
-                    <div class="student-calendar-weekdays" aria-hidden="true">
-                        <div class="student-calendar-weekday">Sun</div>
-                        <div class="student-calendar-weekday">Mon</div>
-                        <div class="student-calendar-weekday">Tue</div>
-                        <div class="student-calendar-weekday">Wed</div>
-                        <div class="student-calendar-weekday">Thu</div>
-                        <div class="student-calendar-weekday">Fri</div>
-                        <div class="student-calendar-weekday">Sat</div>
-                    </div>
-                </div>
-
-                <button type="button" class="btn btn-primary student-calendar-expand" data-bs-toggle="modal" data-bs-target="#studentCalendarModal">
-                    <i class="bi bi-arrows-fullscreen me-2"></i>Expand Calendar
-                </button>
-            </article>
 
             <!-- My Reading Journey -->
             <div class="my-reading-journey" data-reading-journey>
@@ -1968,6 +1963,34 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="dashboard-card-column right-column">
+            <!-- School Calendar -->
+            <article class="student-calendar-card">
+                <div class="student-calendar-head">
+                    <h3><i class="bi bi-calendar3"></i> School Calendar</h3>
+                    <div class="student-calendar-filter" role="group"><button type="button" class="active" data-student-calendar-filter="global">System-wide</button><button type="button" data-student-calendar-filter="school">School</button></div>
+                </div>
+                <div class="student-calendar-month" id="studentCalendarMonth"></div>
+                <div class="student-calendar-meta">School Year: <strong>{{ student_calendar_school_year|default:"Not set" }}</strong> · <strong>{{ student_calendar_current_term|default:"Not set" }}</strong></div>
+
+                <div class="student-calendar-grid" id="studentCalendarGrid" aria-label="Current month calendar" aria-readonly="true">
+                    <div class="student-calendar-weekdays" aria-hidden="true">
+                        <div class="student-calendar-weekday">Sun</div>
+                        <div class="student-calendar-weekday">Mon</div>
+                        <div class="student-calendar-weekday">Tue</div>
+                        <div class="student-calendar-weekday">Wed</div>
+                        <div class="student-calendar-weekday">Thu</div>
+                        <div class="student-calendar-weekday">Fri</div>
+                        <div class="student-calendar-weekday">Sat</div>
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-primary student-calendar-expand" data-bs-toggle="modal" data-bs-target="#studentCalendarModal">
+                    <i class="bi bi-arrows-fullscreen me-2"></i>Expand Calendar
+                </button>
+            </article>
 
             <!-- My Achievements -->
             <div class="my-achievements" data-achievements>
