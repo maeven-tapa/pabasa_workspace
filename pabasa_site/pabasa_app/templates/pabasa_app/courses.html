@@ -1,4 +1,4 @@
-{% extends "pabasa_app/base_dashboard.html" %}
+﻿{% extends "pabasa_app/base_dashboard.html" %}
 {% load static %}
 
 {% block extra_head %}
@@ -7048,6 +7048,12 @@
 .phrase-set-select-btn.is-selected,
 .phrase-set-select-btn.is-selected:hover { background: var(--activity-brand); border-color: var(--activity-brand); color: #fff; cursor: default; }
 .phrase-set-select-btn:disabled { background: #e7edef; border-color: #e7edef; color: #8a969d; cursor: not-allowed; opacity: 1; }
+.letter-sound-items-preview { background: var(--activity-subtle); border: 1px solid var(--activity-border); border-radius: 12px; padding: 1rem; margin-top: 1rem; }
+.letter-sound-preview-title { color: var(--activity-ink); font: 800 .94rem/1.35 "Nunito", sans-serif; letter-spacing: -.01em; margin: 0 0 1rem; }
+.letter-sound-items-grid { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); margin-bottom: .75rem; }
+.letter-sound-item-card { align-items: center; background: #fff; border: 1px solid #c7e2e8; border-radius: 8px; color: var(--activity-brand-deep); display: flex; font: 900 1.1rem/1 "Nunito", sans-serif; height: 52px; justify-content: center; min-width: 52px; }
+.letter-sound-items-count { border-top: 1px solid var(--activity-border); padding-top: .65rem; }
+
 .phrase-selected-items { margin-top: 1rem; }
 .phrase-selected-items-header { align-items: flex-start; display: flex; gap: 1rem; justify-content: space-between; margin-bottom: .65rem; }
 .phrase-selected-items-title { color: var(--activity-ink); font: 800 .9rem/1.35 "Nunito", sans-serif; margin: 0; }
@@ -13781,7 +13787,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const materialCustomDropdowns = new WeakMap();
         const openMaterialDropdowns = new Set();
         const TEMPLATE_DEFINITIONS = {
-            'Letter & Sound Matching': { lesson: 'Phonics', hint: 'Match letters with their corresponding sounds.', fields: [{ key: 'letter', label: 'Letter', type: 'text', placeholder: 'Letter A' }, { key: 'sound', label: 'Corresponding sound', type: 'text', placeholder: '/a/' }], addLabel: 'Add Item' },
+            'Letter & Sound Matching': { lesson: 'Phonics', hint: 'Choose a predefined Filipino phonics set. All letters and audio are provided by the system.', fields: [], addLabel: 'Select Reading Set' },
             'Sound Detective': { lesson: 'Phonological Awareness', hint: 'Identify and locate sounds inside words.', fields: [{ key: 'word', label: 'Word', type: 'text', placeholder: 'mata' }, { key: 'targetSound', label: 'Target sound', type: 'text', placeholder: '/m/' }, { key: 'position', label: 'Position of sound', type: 'select', options: ['Beginning', 'Middle', 'End'] }], addLabel: 'Add Item' },
             'Match the Letter to Its Sound': { lesson: 'Letter-Sound Correspondence', hint: 'Match each letter to the sound it makes.', fields: [{ key: 'letter', label: 'Letter', type: 'text' }, { key: 'sound', label: 'Sound', type: 'text' }], addLabel: 'Add Item' },
             'Clap & Count Syllables': { lesson: 'Syllable Awareness', hint: 'Choose a language, system word set, and words for clapping practice.', fields: [], addLabel: 'Select Words' },
@@ -13816,13 +13822,344 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             ['15', 'Story Response', 'Response to Story']
         ];
         const TEMPLATE_ITEM_LIST_TYPES = new Set([
-            'Letter & Sound Matching',
             'Sound Detective',
             'Clap & Count Syllables',
             'Word Meaning Match',
             'Phrase Reading Practice',
             'Sentence Reading Practice'
         ]);
+        // Letter & Sound Matching — Filipino Predefined Reading Sets
+        const LETTER_SOUND_MATCHING_READING_SETS = {
+            filipino_set_1: {
+                id: 'filipino_set_1',
+                label: 'Filipino Set 1 — Patinig',
+                language: 'Filipino',
+                items: [
+                    { letter: 'A', sound: 'A' },
+                    { letter: 'E', sound: 'E' },
+                    { letter: 'I', sound: 'I' },
+                    { letter: 'O', sound: 'O' },
+                    { letter: 'U', sound: 'U' }
+                ]
+            },
+            filipino_set_2: {
+                id: 'filipino_set_2',
+                label: 'Filipino Set 2 — B, M, S, T',
+                language: 'Filipino',
+                items: [
+                    { letter: 'BA', sound: 'BA' },
+                    { letter: 'BE', sound: 'BE' },
+                    { letter: 'BI', sound: 'BI' },
+                    { letter: 'BO', sound: 'BO' },
+                    { letter: 'BU', sound: 'BU' },
+                    { letter: 'MA', sound: 'MA' },
+                    { letter: 'ME', sound: 'ME' },
+                    { letter: 'MI', sound: 'MI' },
+                    { letter: 'MO', sound: 'MO' },
+                    { letter: 'MU', sound: 'MU' },
+                    { letter: 'SA', sound: 'SA' },
+                    { letter: 'SE', sound: 'SE' },
+                    { letter: 'SI', sound: 'SI' },
+                    { letter: 'SO', sound: 'SO' },
+                    { letter: 'SU', sound: 'SU' },
+                    { letter: 'TA', sound: 'TA' },
+                    { letter: 'TE', sound: 'TE' },
+                    { letter: 'TI', sound: 'TI' },
+                    { letter: 'TO', sound: 'TO' },
+                    { letter: 'TU', sound: 'TU' }
+                ]
+            },
+            filipino_set_3: {
+                id: 'filipino_set_3',
+                label: 'Filipino Set 3 — D, G, K, P',
+                language: 'Filipino',
+                items: [
+                    { letter: 'DA', sound: 'DA' },
+                    { letter: 'DE', sound: 'DE' },
+                    { letter: 'DI', sound: 'DI' },
+                    { letter: 'DO', sound: 'DO' },
+                    { letter: 'DU', sound: 'DU' },
+                    { letter: 'GA', sound: 'GA' },
+                    { letter: 'GE', sound: 'GE' },
+                    { letter: 'GI', sound: 'GI' },
+                    { letter: 'GO', sound: 'GO' },
+                    { letter: 'GU', sound: 'GU' },
+                    { letter: 'KA', sound: 'KA' },
+                    { letter: 'KE', sound: 'KE' },
+                    { letter: 'KI', sound: 'KI' },
+                    { letter: 'KO', sound: 'KO' },
+                    { letter: 'KU', sound: 'KU' },
+                    { letter: 'PA', sound: 'PA' },
+                    { letter: 'PE', sound: 'PE' },
+                    { letter: 'PI', sound: 'PI' },
+                    { letter: 'PO', sound: 'PO' },
+                    { letter: 'PU', sound: 'PU' }
+                ]
+            },
+            filipino_set_4: {
+                id: 'filipino_set_4',
+                label: 'Filipino Set 4 — H, L, N, R',
+                language: 'Filipino',
+                items: [
+                    { letter: 'HA', sound: 'HA' },
+                    { letter: 'HE', sound: 'HE' },
+                    { letter: 'HI', sound: 'HI' },
+                    { letter: 'HO', sound: 'HO' },
+                    { letter: 'HU', sound: 'HU' },
+                    { letter: 'LA', sound: 'LA' },
+                    { letter: 'LE', sound: 'LE' },
+                    { letter: 'LI', sound: 'LI' },
+                    { letter: 'LO', sound: 'LO' },
+                    { letter: 'LU', sound: 'LU' },
+                    { letter: 'NA', sound: 'NA' },
+                    { letter: 'NE', sound: 'NE' },
+                    { letter: 'NI', sound: 'NI' },
+                    { letter: 'NO', sound: 'NO' },
+                    { letter: 'NU', sound: 'NU' },
+                    { letter: 'RA', sound: 'RA' },
+                    { letter: 'RE', sound: 'RE' },
+                    { letter: 'RI', sound: 'RI' },
+                    { letter: 'RO', sound: 'RO' },
+                    { letter: 'RU', sound: 'RU' }
+                ]
+            },
+            filipino_set_5: {
+                id: 'filipino_set_5',
+                label: 'Filipino Set 5 — NG',
+                language: 'Filipino',
+                items: [
+                    { letter: 'NGA', sound: 'NGA' },
+                    { letter: 'NGE', sound: 'NGE' },
+                    { letter: 'NGI', sound: 'NGI' },
+                    { letter: 'NGO', sound: 'NGO' },
+                    { letter: 'NGU', sound: 'NGU' },
+                    { letter: 'ÑA', sound: 'ÑA' },
+                    { letter: 'ÑE', sound: 'ÑE' },
+                    { letter: 'ÑI', sound: 'ÑI' },
+                    { letter: 'ÑO', sound: 'ÑO' },
+                    { letter: 'ÑU', sound: 'ÑU' }
+                ]
+            },
+            filipino_set_6: {
+                id: 'filipino_set_6',
+                label: 'Filipino Set 6 — W and Y',
+                language: 'Filipino',
+                items: [
+                    { letter: 'WA', sound: 'WA' },
+                    { letter: 'WE', sound: 'WE' },
+                    { letter: 'WI', sound: 'WI' },
+                    { letter: 'WO', sound: 'WO' },
+                    { letter: 'WU', sound: 'WU' },
+                    { letter: 'YA', sound: 'YA' },
+                    { letter: 'YE', sound: 'YE' },
+                    { letter: 'YI', sound: 'YI' },
+                    { letter: 'YO', sound: 'YO' },
+                    { letter: 'YU', sound: 'YU' }
+                ]
+            },
+            english_set_1: {
+                id: 'english_set_1',
+                label: 'English Set 1 — Basic Letter Sounds',
+                language: 'English',
+                items: [
+                    { letter: 'B', sound: 'B' },
+                    { letter: 'C', sound: 'C' },
+                    { letter: 'D', sound: 'D' },
+                    { letter: 'F', sound: 'F' },
+                    { letter: 'G', sound: 'G' },
+                    { letter: 'H', sound: 'H' },
+                    { letter: 'J', sound: 'J' },
+                    { letter: 'L', sound: 'L' },
+                    { letter: 'M', sound: 'M' },
+                    { letter: 'N', sound: 'N' },
+                    { letter: 'P', sound: 'P' },
+                    { letter: 'R', sound: 'R' },
+                    { letter: 'S', sound: 'S' },
+                    { letter: 'T', sound: 'T' },
+                    { letter: 'V', sound: 'V' },
+                    { letter: 'W', sound: 'W' },
+                    { letter: 'X', sound: 'X' },
+                    { letter: 'Y', sound: 'Y' },
+                    { letter: 'Z', sound: 'Z' }
+                ]
+            },
+            english_set_2: {
+                id: 'english_set_2',
+                label: 'English Set 2 — Basic Vowel Sounds',
+                language: 'English',
+                items: [
+                    { letter: 'A', sound: 'A' },
+                    { letter: 'E', sound: 'E' },
+                    { letter: 'I', sound: 'I' },
+                    { letter: 'O', sound: 'O' },
+                    { letter: 'U', sound: 'U' }
+                ]
+            },
+            english_set_3: {
+                id: 'english_set_3',
+                label: 'English Set 3 — Common Consonant Patterns',
+                language: 'English',
+                items: [
+                    { letter: 'CH', sound: 'CH' },
+                    { letter: 'NG', sound: 'NG' },
+                    { letter: 'QU', sound: 'QU' },
+                    { letter: 'SH', sound: 'SH' },
+                    { letter: 'TH', sound: 'TH' }
+                ]
+            },
+            english_set_4: {
+                id: 'english_set_4',
+                label: 'English Set 4 — Common Vowel Teams',
+                language: 'English',
+                items: [
+                    { letter: 'AI', sound: 'AI' },
+                    { letter: 'EE', sound: 'EE' },
+                    { letter: 'IE', sound: 'IE' },
+                    { letter: 'OA', sound: 'OA' },
+                    { letter: 'OI', sound: 'OI' },
+                    { letter: 'OO', sound: 'OO' },
+                    { letter: 'OU', sound: 'OU' }
+                ]
+            },
+            english_set_5: {
+                id: 'english_set_5',
+                label: 'English Set 5 — R-Controlled Vowels',
+                language: 'English',
+                items: [
+                    { letter: 'AR', sound: 'AR' },
+                    { letter: 'ER', sound: 'ER' },
+                    { letter: 'OR', sound: 'OR' }
+                ]
+            },
+            english_set_6: {
+                id: 'english_set_6',
+                label: 'English Set 6 — Advanced Vowel Patterns',
+                language: 'English',
+                items: [
+                    { letter: 'AIR', sound: 'AIR' },
+                    { letter: 'AW', sound: 'AW' },
+                    { letter: 'EAR', sound: 'EAR' },
+                    { letter: 'UE', sound: 'UE' }
+                ]
+            },
+            english_set_7: {
+                id: 'english_set_7',
+                label: 'English Set 7 — Mixed Basic Sounds',
+                language: 'English',
+                items: [
+                    { letter: 'B', sound: 'B' },
+                    { letter: 'C', sound: 'C' },
+                    { letter: 'D', sound: 'D' },
+                    { letter: 'F', sound: 'F' },
+                    { letter: 'A', sound: 'A' },
+                    { letter: 'E', sound: 'E' },
+                    { letter: 'I', sound: 'I' },
+                    { letter: 'G', sound: 'G' },
+                    { letter: 'H', sound: 'H' },
+                    { letter: 'L', sound: 'L' },
+                    { letter: 'O', sound: 'O' },
+                    { letter: 'U', sound: 'U' },
+                    { letter: 'M', sound: 'M' },
+                    { letter: 'N', sound: 'N' },
+                    { letter: 'P', sound: 'P' },
+                    { letter: 'R', sound: 'R' },
+                    { letter: 'S', sound: 'S' },
+                    { letter: 'T', sound: 'T' }
+                ]
+            },
+            english_set_8: {
+                id: 'english_set_8',
+                label: 'English Set 8 — Mixed Consonant + Vowel Patterns',
+                language: 'English',
+                items: [
+                    { letter: 'A', sound: 'A' },
+                    { letter: 'E', sound: 'E' },
+                    { letter: 'I', sound: 'I' },
+                    { letter: 'O', sound: 'O' },
+                    { letter: 'U', sound: 'U' },
+                    { letter: 'CH', sound: 'CH' },
+                    { letter: 'NG', sound: 'NG' },
+                    { letter: 'SH', sound: 'SH' },
+                    { letter: 'TH', sound: 'TH' },
+                    { letter: 'AI', sound: 'AI' },
+                    { letter: 'EE', sound: 'EE' },
+                    { letter: 'IE', sound: 'IE' },
+                    { letter: 'OA', sound: 'OA' },
+                    { letter: 'OI', sound: 'OI' },
+                    { letter: 'OO', sound: 'OO' },
+                    { letter: 'OU', sound: 'OU' }
+                ]
+            },
+            english_set_9: {
+                id: 'english_set_9',
+                label: 'English Set 9 — Mixed Advanced Phonics',
+                language: 'English',
+                items: [
+                    { letter: 'CH', sound: 'CH' },
+                    { letter: 'NG', sound: 'NG' },
+                    { letter: 'QU', sound: 'QU' },
+                    { letter: 'SH', sound: 'SH' },
+                    { letter: 'TH', sound: 'TH' },
+                    { letter: 'AR', sound: 'AR' },
+                    { letter: 'ER', sound: 'ER' },
+                    { letter: 'OR', sound: 'OR' },
+                    { letter: 'AIR', sound: 'AIR' },
+                    { letter: 'AW', sound: 'AW' },
+                    { letter: 'EAR', sound: 'EAR' },
+                    { letter: 'UE', sound: 'UE' }
+                ]
+            },
+            english_set_10: {
+                id: 'english_set_10',
+                label: 'English Set 10 — Full English Phonics Review',
+                language: 'English',
+                items: [
+                    { letter: 'B', sound: 'B' },
+                    { letter: 'C', sound: 'C' },
+                    { letter: 'D', sound: 'D' },
+                    { letter: 'F', sound: 'F' },
+                    { letter: 'G', sound: 'G' },
+                    { letter: 'H', sound: 'H' },
+                    { letter: 'J', sound: 'J' },
+                    { letter: 'L', sound: 'L' },
+                    { letter: 'M', sound: 'M' },
+                    { letter: 'N', sound: 'N' },
+                    { letter: 'P', sound: 'P' },
+                    { letter: 'R', sound: 'R' },
+                    { letter: 'S', sound: 'S' },
+                    { letter: 'T', sound: 'T' },
+                    { letter: 'V', sound: 'V' },
+                    { letter: 'W', sound: 'W' },
+                    { letter: 'X', sound: 'X' },
+                    { letter: 'Y', sound: 'Y' },
+                    { letter: 'Z', sound: 'Z' },
+                    { letter: 'A', sound: 'A' },
+                    { letter: 'E', sound: 'E' },
+                    { letter: 'I', sound: 'I' },
+                    { letter: 'O', sound: 'O' },
+                    { letter: 'U', sound: 'U' },
+                    { letter: 'CH', sound: 'CH' },
+                    { letter: 'NG', sound: 'NG' },
+                    { letter: 'QU', sound: 'QU' },
+                    { letter: 'SH', sound: 'SH' },
+                    { letter: 'TH', sound: 'TH' },
+                    { letter: 'AI', sound: 'AI' },
+                    { letter: 'EE', sound: 'EE' },
+                    { letter: 'IE', sound: 'IE' },
+                    { letter: 'OA', sound: 'OA' },
+                    { letter: 'OI', sound: 'OI' },
+                    { letter: 'OO', sound: 'OO' },
+                    { letter: 'OU', sound: 'OU' },
+                    { letter: 'AR', sound: 'AR' },
+                    { letter: 'ER', sound: 'ER' },
+                    { letter: 'OR', sound: 'OR' },
+                    { letter: 'AIR', sound: 'AIR' },
+                    { letter: 'AW', sound: 'AW' },
+                    { letter: 'EAR', sound: 'EAR' },
+                    { letter: 'UE', sound: 'UE' }
+                ]
+            }
+        };
         const PICTURE_WORD_MATCHING_SYSTEM_SETS = {
             A: [
                 { image: 'Jaw.png', filipinoWord: 'Panga', englishWord: 'Jaw' },
@@ -14479,6 +14816,19 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function isClapCountTemplate(title) { return title === 'Clap & Count Syllables'; }
 
+        function isLetterSoundMatchingTemplate(title) { 
+            return title === 'Letter & Sound Matching'; 
+        }
+
+        function getLetterSoundMatchingReadingSets(language) {
+            const allSets = Object.values(LETTER_SOUND_MATCHING_READING_SETS);
+            return allSets.filter(set => set.language === language);
+        }
+
+        function getLetterSoundMatchingReadingSetById(setId) {
+            return LETTER_SOUND_MATCHING_READING_SETS[setId] || null;
+        }
+
         function normalizeSentenceReadingLanguage(language) {
             return language === 'Filipino' ? 'Tagalog' : language;
         }
@@ -14816,6 +15166,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 pictureWordMatchingCustom: restoredPictureWordCustom,
                 sentenceReading: restoredSentenceSelection,
                 storyReading: restoredStoryReading,
+                letterSoundMatching: isLetterSoundMatchingTemplate(templateTitle) ? {
+                    readingSetId: String(contentJson.reading_set_id || 'filipino_set_1'),
+                    language: String(contentJson.language || restoredLanguage || 'Filipino').trim() || 'Filipino'
+                } : null,
                 clapCount: isClapCountTemplate(templateTitle) ? {
                     wordSet: String(contentJson.word_set || ''),
                     selectedWordIds: Array.isArray(contentJson.selected_word_ids) ? contentJson.selected_word_ids : [],
@@ -15171,6 +15525,71 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             selectAllCheckbox?.addEventListener('change', () => {
                 const indices = selectAllCheckbox.checked && selectedSet ? selectedSet.items.map((_, index) => index) : [];
                 setPhraseReadingSelection(indices);
+                renderTemplateDynamicFields(title);
+                renderTemplatePreview();
+            });
+        }
+
+        function renderLetterSoundMatchingSelector(title) {
+            if (!templateDynamicFields || !activeTemplateActivity) return;
+            const language = getSelectedTemplateLanguage();
+            const availableSets = getLetterSoundMatchingReadingSets(language);
+            
+            // Get current selection or default to first available set
+            let selectedSetId = activeTemplateActivity.letterSoundMatching?.readingSetId;
+            const currentSelectedSet = selectedSetId ? getLetterSoundMatchingReadingSetById(selectedSetId) : null;
+            
+            // If current selection is not valid for this language, switch to first available set
+            if (!currentSelectedSet || currentSelectedSet.language !== language) {
+                selectedSetId = availableSets.length > 0 ? availableSets[0].id : null;
+                if (selectedSetId) {
+                    activeTemplateActivity.letterSoundMatching = {
+                        readingSetId: selectedSetId,
+                        language: language
+                    };
+                    const newSet = getLetterSoundMatchingReadingSetById(selectedSetId);
+                    activeTemplateActivity.items = newSet ? newSet.items : [];
+                }
+            }
+            
+            const selectedSet = selectedSetId ? getLetterSoundMatchingReadingSetById(selectedSetId) : null;
+            
+            templateDynamicFields.innerHTML = `
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label fw-bold" for="letterSoundReadingSet">Reading Set <span class="text-danger">*</span></label>
+                        <select id="letterSoundReadingSet" class="form-select">
+                            ${availableSets.map(set => `<option value="${escapeAttr(set.id)}" ${set.id === selectedSetId ? 'selected' : ''}>${escapeHtml(set.label)}</option>`).join('')}
+                        </select>
+                        <div class="form-text">Select a predefined ${language} phonics set. All items and audio are provided by the system.</div>
+                    </div>
+                    ${selectedSet ? `
+                        <div class="col-12">
+                            <div class="letter-sound-items-preview">
+                                <h6 class="letter-sound-preview-title">${escapeHtml(selectedSet.label)}</h6>
+                                <div class="letter-sound-items-grid">
+                                    ${selectedSet.items.map(item => `
+                                        <div class="letter-sound-item-card">
+                                            <div class="letter-sound-item-letter">${escapeHtml(item.letter)}</div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                <div class="letter-sound-items-count"><small class="text-muted">${selectedSet.items.length} items in this set</small></div>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            document.getElementById('letterSoundReadingSet')?.addEventListener('change', event => {
+                const readingSetId = event.target.value;
+                const readingSet = getLetterSoundMatchingReadingSetById(readingSetId);
+                const currentLanguage = getSelectedTemplateLanguage();
+                activeTemplateActivity.letterSoundMatching = {
+                    readingSetId: readingSetId,
+                    language: currentLanguage
+                };
+                activeTemplateActivity.items = readingSet ? readingSet.items : [];
                 renderTemplateDynamicFields(title);
                 renderTemplatePreview();
             });
@@ -15646,6 +16065,18 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 return {title: activeTemplateActivity.title || 'Clap & Count Syllables', meta: `${language} · Syllable Awareness`, body: words.map(word => `${word.word} — ${word.syllable_count} syllables`), emptyMessage: 'Choose a word set and select words.'};
             }
 
+            if (isLetterSoundMatchingTemplate(templateTitle)) {
+                const readingSetId = activeTemplateActivity.letterSoundMatching?.readingSetId || 'filipino_set_1';
+                const readingSet = getLetterSoundMatchingReadingSetById(readingSetId);
+                const items = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : (readingSet ? readingSet.items : []);
+                return {
+                    title: activeTemplateActivity.title || 'Letter & Sound Matching',
+                    meta: `${language} · Phonics`,
+                    body: items.map((item, index) => `${index + 1}. ${item.letter} — ${item.sound}`).filter(Boolean),
+                    emptyMessage: 'Select a reading set.'
+                };
+            }
+
             if (isPhraseReadingTemplate(templateTitle)) {
                 const selectedSet = getPhraseReadingSets(language).find(set => set.key === activeTemplateActivity.phraseReading?.setKey) || null;
                 const items = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : [];
@@ -15850,6 +16281,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     renderTemplateDynamicFields(title);
                     renderTemplatePreview();
                 }));
+                return;
+            }
+            if (isLetterSoundMatchingTemplate(title)) {
+                Array.from(document.querySelectorAll('input[name="templateLanguage"]')).forEach(input => {
+                    input.disabled = false;
+                    input.parentElement?.classList.remove('opacity-50');
+                    input.parentElement?.setAttribute('title', '');
+                });
+                renderLetterSoundMatchingSelector(title);
                 return;
             }
             if (isPictureWordMatchingTemplate(title)) {
@@ -16181,6 +16621,17 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (isClapCountTemplate(templateTitle)) {
                 activeTemplateActivity.clapCount = {wordSet:'',selectedWordIds:[],numberOfWords:10,randomizeOrder:true,allowRetry:true};
             }
+            if (isLetterSoundMatchingTemplate(templateTitle)) {
+                const defaultSetId = 'filipino_set_1';
+                const defaultSet = getLetterSoundMatchingReadingSetById(defaultSetId);
+                activeTemplateActivity.letterSoundMatching = {
+                    readingSetId: defaultSetId,
+                    language: 'Filipino'
+                };
+                activeTemplateActivity.items = defaultSet ? defaultSet.items : [];
+                activeTemplateActivity.title = 'Letter & Sound Matching';
+                if (templateActivityTitle) templateActivityTitle.value = 'Letter & Sound Matching';
+            }
             if (isPictureWordMatchingTemplate(templateTitle)) {
                 activeTemplateActivity.pictureWordMatching = Object.assign({}, normalizePictureWordMatchingSelection('A', templateLanguage), { mode: 'prescribed' });
                 activeTemplateActivity.pictureWordMatchingCustom = { items: [], searchQuery: '' };
@@ -16203,7 +16654,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             window.__addMaterialDefaultMode = 'template';
             setTemplateBuilderActive(true);
             if (templateActivityTitle) {
-                templateActivityTitle.value = '';
+                if (!isLetterSoundMatchingTemplate(templateTitle)) {
+                    templateActivityTitle.value = '';
+                }
                 templateActivityTitle.closest('.template-title-field')?.classList.toggle('d-none', isSyllableBlendingTemplate(templateTitle));
             }
             renderTemplateDynamicFields(templateTitle);
@@ -16255,6 +16708,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 content.activity_format = activeTemplateActivity.activityFormat || 'syllable_combination';
                 content.activity_type = 'syllable_blending';
                 content.activity_id = activeTemplateActivity.selectedActivityId || '';
+            } else if (isLetterSoundMatchingTemplate(activeTemplateActivity?.templateTitle)) {
+                const readingSetId = activeTemplateActivity.letterSoundMatching?.readingSetId || 'filipino_set_1';
+                const readingSet = getLetterSoundMatchingReadingSetById(readingSetId);
+                content.language = language;
+                content.activity_type = 'letter_sound_matching';
+                content.reading_set_id = readingSetId;
+                content.items = readingSet ? readingSet.items : [];
             } else if (isPictureWordMatchingTemplate(activeTemplateActivity?.templateTitle)) {
                 const mode = activeTemplateActivity?.pictureWordMatching?.mode === 'custom' ? 'custom' : 'prescribed';
                 content.language = language || 'English';
@@ -16326,6 +16786,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 if (!['Filipino', 'English'].includes(values.language)) return 'Choose Filipino or English.';
                 if (!['syllable_combination', 'big_box'].includes(values.content?.activity_format)) return 'Choose an activity format.';
                 if (!values.content?.activity_id) return 'Select one of the five prebuilt activities.';
+                if (!values.weeks.length) return 'Select at least one week.';
+                return '';
+            }
+            if (isLetterSoundMatchingTemplate(activeTemplateActivity?.templateTitle)) {
+                if (!['Filipino', 'English'].includes(values.language)) return 'Letter & Sound Matching language must be Filipino or English.';
+                if (!values.content?.reading_set_id) return 'Select a reading set.';
+                if (!Array.isArray(values.content?.items) || !values.content.items.length) return 'The selected reading set has no items.';
                 if (!values.weeks.length) return 'Select at least one week.';
                 return '';
             }
@@ -16491,6 +16958,21 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             template_type: 'Syllable Blending',
                             template_source: 'template',
                             weeks: values.weeks || [],
+                        });
+                    }
+                    if (isLetterSoundMatchingTemplate(activeTemplateActivity?.templateTitle)) {
+                        const readingSet = getLetterSoundMatchingReadingSetById(values.content?.reading_set_id || 'filipino_set_1');
+                        if (!readingSet) throw new Error('The selected reading set could not be loaded. Please select it again.');
+                        Object.assign(contentPayload, {
+                            activity_type: 'letter_sound_matching',
+                            reading_set_id: values.content.reading_set_id,
+                            language: values.language,
+                            template_title: 'Letter & Sound Matching',
+                            template_lesson: 'Phonics',
+                            template_type: 'Letter & Sound Matching',
+                            template_source: 'template',
+                            weeks: values.weeks || [],
+                            items: values.content.items || readingSet.items
                         });
                     }
                     if (isClapCountTemplate(activeTemplateActivity?.templateTitle)) {
