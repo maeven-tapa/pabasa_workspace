@@ -3237,6 +3237,54 @@ class ReadingMatcherTests(TestCase):
         self.assertEqual(result["word_results"][3]["result"], "miscue")
         self.assertEqual(result["word_results"][3]["type"], "substitution")
 
+    def test_story_cursor_relative_alignment_resolves_multi_word_chunk(self):
+        result = align_story_transcript(
+            "ako ang pinakamabilis tumakbo sa bahay",
+            "pinakamabilis tumakbo sa",
+            language_code="fil-PH",
+            start_word_index=2,
+        )
+        resolved = [(item["expected_index"], item["result"]) for item in result["word_results"]]
+        self.assertEqual(resolved, [(2, "correct"), (3, "correct"), (4, "correct")])
+
+    def test_story_cursor_relative_alignment_is_independent_of_chunk_boundaries(self):
+        expected = "ako ang pinakamabilis tumakbo sa bahay"
+        one_chunk = align_story_transcript(expected, "ako ang pinakamabilis tumakbo sa bahay", start_word_index=0)
+        split_chunks = [
+            align_story_transcript(expected, "ako ang", start_word_index=0),
+            align_story_transcript(expected, "pinakamabilis tumakbo", start_word_index=2),
+            align_story_transcript(expected, "sa bahay", start_word_index=4),
+        ]
+        combined = [item for chunk in split_chunks for item in chunk["word_results"]]
+        self.assertEqual(
+            [(item["expected_index"], item["result"]) for item in combined],
+            [(item["expected_index"], item["result"]) for item in one_chunk["word_results"]],
+        )
+
+    def test_story_cursor_relative_alignment_uses_next_repeated_word(self):
+        result = align_story_transcript("ako ay ako rin", "ako rin", start_word_index=2)
+        self.assertEqual(
+            [(item["expected_index"], item["result"]) for item in result["word_results"]],
+            [(2, "correct"), (3, "correct")],
+        )
+
+    def test_story_cursor_relative_short_chunk_does_not_reconsider_word_zero(self):
+        result = align_story_transcript("ako ang mabilis wala nang iba", "wala nang", start_word_index=3)
+        self.assertEqual([item["expected_index"] for item in result["word_results"]], [3, 4])
+        self.assertTrue(all(item["result"] == "correct" for item in result["word_results"]))
+
+    def test_story_cursor_relative_miscue_does_not_mark_unattempted_tail(self):
+        result = align_story_transcript(
+            "ako ang mabilis tumakbo sa bahay bukas",
+            "mabagal tumakbo sa",
+            start_word_index=2,
+        )
+        self.assertEqual(
+            [(item["expected_index"], item["result"]) for item in result["word_results"]],
+            [(2, "miscue"), (3, "correct"), (4, "correct")],
+        )
+        self.assertNotIn(5, [item["expected_index"] for item in result["word_results"]])
+
     def test_story_alignment_detects_omission_and_keeps_following_words_aligned(self):
         result = align_story_transcript(
             "Si Ana ay pumunta sa bahay.",

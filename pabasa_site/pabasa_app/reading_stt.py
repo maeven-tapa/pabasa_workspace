@@ -670,7 +670,7 @@ def story_word_states_from_results(expected_text, recognized_text=None, total_wo
     return resolved
 
 
-def align_story_transcript(expected_text, recognized_text, language_code="en-US"):
+def align_story_transcript(expected_text, recognized_text, language_code="en-US", start_word_index=None):
     """Align a story transcript against the expected text at the word level.
 
     This is intentionally conservative: it tolerates punctuation/case/spacing
@@ -678,8 +678,13 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
     materially different words. The output preserves sequential order and records
     omissions, insertions, and substitutions at the word level.
     """
-    expected_words = _story_alignment_tokens(expected_text)
+    all_expected_words = _story_alignment_tokens(expected_text)
     recognized_words = _story_alignment_tokens(recognized_text)
+    cursor_relative = start_word_index is not None
+    absolute_word_offset = min(max(0, int(start_word_index or 0)), len(all_expected_words))
+    expected_words = all_expected_words[absolute_word_offset:] if cursor_relative else all_expected_words
+    if cursor_relative and recognized_words:
+        expected_words = expected_words[:len(recognized_words)]
     if not expected_words and not recognized_words:
         return {
             "expected_text": str(expected_text or ""),
@@ -780,15 +785,21 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
             j -= 1
 
     word_results.reverse()
+    if cursor_relative:
+        while word_results and word_results[-1].get("type") == "omission":
+            word_results.pop()
+        for item in word_results:
+            if item.get("expected_index") is not None:
+                item["expected_index"] += absolute_word_offset
     correct_words = sum(1 for item in word_results if item.get("result") == "correct")
     miscues = sum(1 for item in word_results if item.get("result") == "miscue") + insertion_count
-    total_words = max(len(expected_words), 0)
+    total_words = max(len(all_expected_words), 0)
     accuracy = (correct_words / total_words * 100.0) if total_words else 0.0
     return {
         "expected_text": str(expected_text or ""),
         "recognized_text": str(recognized_text or ""),
         "language_code": language_code,
-        "expected_words": expected_words,
+        "expected_words": all_expected_words,
         "recognized_words": recognized_words,
         "total_words": total_words,
         "correct_words": correct_words,

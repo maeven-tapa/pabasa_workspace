@@ -10697,7 +10697,18 @@ def reading_transcribe_api(request):
         # This enables precise miscue detection: distinguishes between STT segmentation artifacts 
         # (e.g., "pa gong" for "Pagong") and genuine student miscues (e.g., "bagong" for "Pagong")
         if mode == "paragraph":
-            alignment_result = align_story_transcript(target_text, analysis_transcript, language_code)
+            word_ranges = analysis.get('word_syllable_ranges', [])
+            story_start_word_index = len(word_ranges)
+            for word_index, word_range in enumerate(word_ranges):
+                if word_range[0] <= current_syllable_index < word_range[1]:
+                    story_start_word_index = word_index
+                    break
+            alignment_result = align_story_transcript(
+                target_text,
+                analysis_transcript,
+                language_code,
+                start_word_index=story_start_word_index,
+            )
             analysis['word_results'] = alignment_result.get('word_results', [])
             analysis['word_alignment'] = {
                 'expected_words': alignment_result.get('expected_words', []),
