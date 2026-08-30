@@ -124,6 +124,20 @@
                 console.log(prefix, detail);
             }
         }
+        const storyDebugStorageKey = "pabasaCrlaStoryDebug";
+        let storyDebugEnabled = urlParams.get("story_debug") === "1"
+            || localStorage.getItem(storyDebugStorageKey) === "true";
+        window.setCrlaStoryDebug = function (enabled) {
+            storyDebugEnabled = Boolean(enabled);
+            localStorage.setItem(storyDebugStorageKey, String(storyDebugEnabled));
+            console.info("[CRLA_STORY_DEBUG]", { event: "toggle", enabled: storyDebugEnabled });
+            return storyDebugEnabled;
+        };
+        function storyDebug(detail) {
+            if (storyDebugEnabled && mode === "paragraph" && currentStoryState === "story_reading") {
+                console.log("[CRLA_STORY_DEBUG]", detail);
+            }
+        }
         const liveContent = customMaterialData?.content || urlParams.get("content") || "";
         const liveItemType = (customMaterialData?.item_type || urlParams.get("item_type") || urlParams.get("type") || "").toLowerCase();
         const liveLanguage = customMaterialData?.language || urlParams.get("language") || "";
@@ -2625,6 +2639,38 @@
             syllableStitchingContextAt = 0;
         }
 
+        function resetStorySegmentState(previousSegmentIndex, nextSegmentIndex, reason) {
+            const before = {
+                currentSyllableIndex,
+                paragraphWordResults: { ...paragraphWordResults },
+            };
+            currentSyllableIndex = 0;
+            paragraphWordResults = {};
+            resetSyllableStitching();
+            storyDebug({
+                event: "segment_transition",
+                reason,
+                previous_segment_index: previousSegmentIndex,
+                next_segment_index: nextSegmentIndex,
+                cursor_before_reset: before.currentSyllableIndex,
+                cursor_after_reset: currentSyllableIndex,
+                paragraph_word_results_before_reset: before.paragraphWordResults,
+                paragraph_word_results_after_reset: { ...paragraphWordResults },
+            });
+        }
+
+        function logStorySegmentInitialization(reason) {
+            storyDebug({
+                event: "segment_initialization",
+                reason,
+                story_index: currentIndex,
+                segment_index: currentPageIndex,
+                segment_text: getCurrentDisplayText() || "",
+                current_syllable_index: currentSyllableIndex,
+                paragraph_word_results: { ...paragraphWordResults },
+            });
+        }
+
         function currentSpeechContext() {
             const context = {
                 index: currentIndex,
@@ -2894,6 +2940,18 @@
                 activeTargetResult
                 && String(activeTargetResult.result || "").trim().toLowerCase() === "miscue"
             );
+            storyDebug({
+                event: "stt_callback",
+                segment_index: currentPageIndex,
+                current_syllable_index: context?.syllableIndex,
+                returned_syllable_index: data.current_syllable_index,
+                current_word_index: data.current_word_index,
+                matched_count: Number(data.matched || 0),
+                miscues: Number(data.word_alignment?.miscues ?? (Array.isArray(data.word_results)
+                    ? data.word_results.filter((result) => String(result?.result || "").toLowerCase() === "miscue").length
+                    : 0)),
+                word_results: Array.isArray(data.word_results) ? data.word_results : [],
+            });
             console.log("[CRLA] ACTIVE TARGET RESULT:", activeTargetResult);
             console.log("[CRLA] MISCUE:", currentTargetMisread);
             console.log("[CRLA] BRANCH:", currentTargetMisread ? "MISCUE_ADVANCE" : "NORMAL");
@@ -3076,6 +3134,13 @@
                 pendingAudioChunk = null;
                 setSpeechStatus("Great job! You finished this item.", transcript ? `Words: ${transcript}` : "", true);
                 if (currentStoryState === "story_reading") {
+                    storyDebug({
+                        event: "segment_completion",
+                        navigation: "automatic",
+                        segment_index: currentPageIndex,
+                        current_syllable_index: currentSyllableIndex,
+                        paragraph_word_results: { ...paragraphWordResults },
+                    });
                     traceEndSession('handleSpeechResult.storySegmentComplete', {
                         currentPageIndex,
                         pageCount: getCurrentPageCount(),
@@ -3083,11 +3148,14 @@
                     window.setTimeout(() => {
                         if (!isRecording || context.version !== itemResultVersion) return;
                         if (currentPageIndex < getCurrentPageCount() - 1) {
+                            const previousSegmentIndex = currentPageIndex;
                             currentPageIndex += 1;
                             currentStorySegmentIndex = currentPageIndex;
+                            resetStorySegmentState(previousSegmentIndex, currentPageIndex, "automatic_completion");
                             updateStudentEndState({ stage: "story_reading", story_segment_index: currentPageIndex });
                             updateUI();
                             renderStoryReadingState(currentSelectedStory);
+                            logStorySegmentInitialization("automatic_completion");
                             animateCurrentItem();
                         } else {
                             stopReading();
@@ -3249,6 +3317,16 @@
                         span.classList.add("is-current");
                     }
                     span.textContent = part;
+                    storyDebug({
+                        event: "highlight_state",
+                        segment_index: currentPageIndex,
+                        affected_word_index: readableWordIndex,
+                        word: part,
+                        visual_state: span.classList.contains("is-wrong")
+                            ? "is-wrong"
+                            : (span.classList.contains("is-read") ? "is-read" : "unstyled"),
+                        css_classes: Array.from(span.classList),
+                    });
                     container.appendChild(span);
                     readableWordIndex += 1;
                 });
@@ -3409,6 +3487,16 @@
                         span.classList.add("is-current");
                     }
                     span.textContent = part;
+                    storyDebug({
+                        event: "highlight_state",
+                        segment_index: currentPageIndex,
+                        affected_word_index: readableWordIndex,
+                        word: part,
+                        visual_state: span.classList.contains("is-wrong")
+                            ? "is-wrong"
+                            : (span.classList.contains("is-read") ? "is-read" : "unstyled"),
+                        css_classes: Array.from(span.classList),
+                    });
                     container.appendChild(span);
                     readableWordIndex += 1;
                 });
@@ -4614,6 +4702,7 @@
                     story_segment_index: currentPageIndex,
                 });
                 renderStoryReadingState(currentSelectedStory);
+                logStorySegmentInitialization("reading_started");
             }
             console.log("PABASA: Assessment recording and timer started.");
         };
@@ -5083,11 +5172,14 @@
         prevBtn?.addEventListener("click", () => { 
             if (currentStoryState === "story_reading" && currentSelectedStory) {
                 if (currentPageIndex > 0) {
+                    const previousSegmentIndex = currentPageIndex;
                     currentPageIndex -= 1;
                     currentStorySegmentIndex = currentPageIndex;
+                    resetStorySegmentState(previousSegmentIndex, currentPageIndex, "manual_back");
                     updateStudentEndState({ stage: "story_reading", story_segment_index: currentPageIndex });
                     updateUI();
                     renderStoryReadingState(currentSelectedStory);
+                    logStorySegmentInitialization("manual_back");
                     animateCurrentItem();
                 }
                 return;
@@ -5105,11 +5197,14 @@
         nextBtn?.addEventListener("click", () => {
             if (currentStoryState === "story_reading" && currentSelectedStory) {
                 if (currentPageIndex < getCurrentPageCount() - 1) {
+                    const previousSegmentIndex = currentPageIndex;
                     currentPageIndex += 1;
                     currentStorySegmentIndex = currentPageIndex;
+                    resetStorySegmentState(previousSegmentIndex, currentPageIndex, "manual_next");
                     updateStudentEndState({ stage: "story_reading", story_segment_index: currentPageIndex });
                     updateUI();
                     renderStoryReadingState(currentSelectedStory);
+                    logStorySegmentInitialization("manual_next");
                     animateCurrentItem();
                 } else {
                     stopReading();

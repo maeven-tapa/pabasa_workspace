@@ -901,6 +901,31 @@ class ReadingLaunchClassificationTests(TestCase):
         self.assertIn('if (paragraphWordResults[activeWordIndex] !== "miscue")', recorder)
         self.assertNotIn('paragraphWordResults[activeWordIndex] = "correct"', recorder)
 
+    def test_story_segment_transitions_reset_segment_local_reading_state(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        resetter = content.split('function resetStorySegmentState(', 1)[1].split('function currentSpeechContext()', 1)[0]
+
+        self.assertIn('currentSyllableIndex = 0;', resetter)
+        self.assertIn('paragraphWordResults = {};', resetter)
+        self.assertIn('resetSyllableStitching();', resetter)
+
+        automatic = content.split("traceEndSession('handleSpeechResult.storySegmentComplete'", 1)[1].split('if (currentIndex >= items.length - 1)', 1)[0]
+        navigation = content.split('prevBtn?.addEventListener("click"', 1)[1].split("if (currentStoryState === \"story_comprehension\")", 1)[0]
+        self.assertEqual(automatic.count('resetStorySegmentState('), 1)
+        self.assertEqual(navigation.count('resetStorySegmentState('), 2)
+
+    def test_story_segment_diagnostics_are_toggleable_and_read_only(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        debug_setup = content.split('const storyDebugStorageKey', 1)[1].split('const liveContent', 1)[0]
+
+        self.assertIn('urlParams.get("story_debug") === "1"', debug_setup)
+        self.assertIn('window.setCrlaStoryDebug = function (enabled)', debug_setup)
+        self.assertIn('console.log("[CRLA_STORY_DEBUG]", detail);', debug_setup)
+        for event in ('segment_initialization', 'segment_transition', 'stt_callback', 'highlight_state', 'segment_completion'):
+            self.assertIn(f'event: "{event}"', content)
+
     def test_crla_correct_word_then_miscue_does_not_paint_next_word(self):
         script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
         content = script_path.read_text(encoding='utf-8')
