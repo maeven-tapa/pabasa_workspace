@@ -10,10 +10,10 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
     const currentTime = document.getElementById('currentTime');
     const durationLabel = document.getElementById('durationLabel');
     const playButton = document.getElementById('playButton');
+    const playbackButton = document.getElementById('playbackButton');
     const previousButton = document.getElementById('previousScene');
     const mediaViewport = document.querySelector('.media-viewport');
     const muteButton = document.getElementById('muteButton');
-    const fullscreenButton = document.getElementById('fullscreenButton');
     const listenButton = muteButton;
     const oralButton = playButton;
     const status = document.getElementById('readingStatus');
@@ -96,15 +96,20 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
         subtitle.innerHTML = wordMarkup(scenes[state.scene - 1] || '');
         progress.value = String(state.time); fill.style.width = `${totalDuration ? state.time / totalDuration * 100 : 0}%`;
         currentTime.textContent = formatTime(state.time); durationLabel.textContent = formatTime(totalDuration);
+        if (playbackButton) { playbackButton.textContent = state.playing ? '❚❚' : '▶'; playbackButton.setAttribute('aria-label', state.playing ? 'Pause' : 'Play'); }
         progressText.innerHTML = `<strong>Story ${state.scene} of ${scenes.length}</strong> · ${state.scene === scenes.length ? 'Almost at school!' : 'Lito is getting ready!'}`;
         document.querySelectorAll('.scene-marker').forEach((marker, index) => marker.classList.toggle('active', index === state.scene - 1));
-        playButton.textContent = state.oral ? '🎙 Reading...' : '🎙 Read With Me';
-        playButton.setAttribute('aria-label', state.oral ? 'Reading' : 'Read With Me');
+        const atFinalEndpoint = totalDuration > 0 && state.time >= totalDuration;
+        playButton.innerHTML = atFinalEndpoint
+            ? '<i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>End Activity</span><span aria-hidden="true">&rsaquo;</span>'
+            : `<i class="bi bi-book-half" aria-hidden="true"></i><span>${state.oral ? 'Reading...' : 'Read With Me'}</span><span aria-hidden="true">&rsaquo;</span>`;
+        playButton.setAttribute('aria-label', atFinalEndpoint ? 'End Activity' : (state.oral ? 'Reading' : 'Read With Me'));
         playButton.setAttribute('aria-pressed', String(state.oral));
+        playButton.classList.toggle('is-complete-action', atFinalEndpoint);
         listenButton.textContent = ttsAudio ? '🔊 Listening...' : '🔊 Listen to Story';
         listenButton.setAttribute('aria-label', ttsAudio ? 'Listening' : 'Listen to Story');
         listenButton.setAttribute('aria-pressed', String(Boolean(ttsAudio)));
-        previousButton.disabled = state.scene <= 1;
+        previousButton.disabled = false;
         if (state.oral) highlight(state.readingCursor);
         debugAudio('Scene rendered', { scene: state.scene, target: scenes[state.scene - 1] || '', time: state.time, oral: state.oral });
     }
@@ -113,6 +118,7 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
     function togglePlay() { if (state.completed) return; state.playing = !state.playing; lastFrameTime = 0; if (state.playing) frame = requestAnimationFrame(tick); else cancelAnimationFrame(frame); render(); persist(); }
     function seek(value) { stopTts(); state.time = Math.min(totalDuration, Math.max(0, Number(value) || 0)); state.completed = false; state.readingCursor = 0; render(); persist(); }
     function moveScene(direction) { seek(Math.min(totalDuration - .01, Math.max(0, (state.scene - 1 + direction) * sceneDuration))); }
+    function restartStory() { stopOral(true); stopTts(); cancelAnimationFrame(frame); state.playing = false; state.time = 0; state.scene = 1; state.completed = false; state.readingCursor = 0; state.correctSentences = 0; state.readingScore = 0; app.classList.remove('is-complete'); if (completionPanel) completionPanel.hidden = true; setStatus(''); render(); persist(); }
     function setStatus(message, listening = false) { status.textContent = message; status.classList.toggle('is-listening', listening); }
     function stopTts() { ttsController?.abort(); ttsController = null; if (ttsAudio) ttsAudio.pause(); if (ttsUrl) URL.revokeObjectURL(ttsUrl); ttsAudio = null; ttsUrl = ''; listenButton.textContent = '🔊 Listen to Story'; listenButton.setAttribute('aria-pressed', 'false'); }
     async function listen() { if (ttsAudio) { stopTts(); return; } if (state.oral) return; const controller = new AbortController(); ttsController = controller; listenButton.textContent = 'Loading…'; const form = new FormData(); form.append('target_text', scenes[state.scene - 1] || ''); form.append('mode', 'paragraph'); form.append('language', data.language || ''); try { const response = await fetch('/api/reading/read-aloud/', {method:'POST', credentials:'same-origin', headers:{'X-CSRFToken':csrf()}, body:form, signal:controller.signal}); const result = await response.json(); if (!response.ok || !result.success) throw new Error(); ttsUrl = URL.createObjectURL(base64ToBlob(result.audio_content, result.mime_type || 'audio/mpeg')); ttsAudio = new Audio(ttsUrl); ttsAudio.muted = state.muted; ttsAudio.onended = stopTts; listenButton.textContent = '🔊 Listening...'; listenButton.setAttribute('aria-pressed', 'true'); await ttsAudio.play(); } catch (error) { if (error.name !== 'AbortError') setStatus('Audio is unavailable right now.'); stopTts(); } }
@@ -129,19 +135,61 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
     async function sendChunk(blob, context) { if (!sameContext(context)) { debugAudio('Chunk rejected before request', { scene: context.scene, size: blob?.size || 0, currentScene: state.scene, currentContext: state.context, requestContext: context.version }); return; } if (sending) { debugAudio('Chunk queued behind request', { scene: context.scene, size: blob?.size || 0 }); pending.push({blob,context}); return; } sending = true; const serial = ++requestSerial; const form = new FormData(); form.append('audio', blob, `story-reading-${Date.now()}.webm`); form.append('target_text', context.text); form.append('current_syllable_index', '0'); form.append('mode', 'paragraph'); form.append('language', data.language || ''); debugAudio('POST transcribe', { scene: context.scene, target: context.text, size: blob.size, type: blob.type, serial }); const controller = new AbortController(); requestController = controller; const timeout = setTimeout(() => controller.abort(), 35000); try { const response = await fetch('/api/reading/transcribe/', {method:'POST', credentials:'same-origin', signal:controller.signal, headers:{Accept:'application/json','X-Requested-With':'XMLHttpRequest','X-CSRFToken':csrf()}, body:form}); const result = await response.json(); debugAudio('Transcription response', { scene: context.scene, status: response.status, success: result.success, transcript: result.transcript || '', rawTranscript: result.raw_transcript || '', currentWordIndex: result.current_word_index, correctWordCount: result.correct_word_count, serial }); if (!response.ok || !result.success) throw new Error(); if (sameContext(context)) { state.readingCursor = Math.max(state.readingCursor, Number(result.current_word_index || result.correct_word_count || 0), cursorFromTranscript(result.raw_transcript || result.transcript || '')); highlight(state.readingCursor); if (state.readingCursor >= wordsIn(context.text).length) { debugAudio('Sentence complete', { scene: context.scene, target: context.text, cursor: state.readingCursor }); state.correctSentences = Math.min(totalSentences, state.correctSentences + 1); state.readingScore = state.correctSentences / totalSentences * 100; persist(); stopOral(true); if (state.scene >= scenes.length) { state.time = totalDuration; state.completed = true; finishCompletion(); } else { const nextTime = state.scene * sceneDuration + .02; const nextContextVersion = state.context; mediaViewport?.classList.add('is-transitioning'); window.setTimeout(() => { if (state.completed || state.context !== nextContextVersion) return; state.time = nextTime; state.readingCursor = 0; mediaViewport?.classList.remove('is-transitioning'); render(); setStatus('Scene ready. Press Read With Me to continue.'); }, 350); } } } else { debugAudio('TRANSCRIPT DISCARDED', { scene: context.scene, currentScene: state.scene, reason: 'context-mismatch', currentContext: state.context, responseContext: context.version, serial }); } } catch (error) { debugAudio('Transcription request failed', { scene: context.scene, name: error?.name, message: error?.message, serial }); if (sameContext(context)) setStatus('🎙 I’m still listening… Keep reading clearly.', true); } finally { clearTimeout(timeout); if (requestController === controller) requestController = null; sending = false; const next = pending.shift(); if (next && sameContext(next.context)) sendChunk(next.blob, next.context); else if (next) debugAudio('TRANSCRIPT DISCARDED', { scene: next.context.scene, currentScene: state.scene, reason: 'queued-context-mismatch', currentContext: state.context, requestContext: next.context.version }); } }
     function showCompletion() { stopOral(true); stopTts(); app.classList.add('is-complete'); completionPanel.hidden = false; document.getElementById('completedStoryTitle').textContent = data.title || 'Ang Umaga ni Lito'; document.getElementById('readingScoreSummary').textContent = `${state.correctSentences} / ${totalSentences} sentences read correctly`; document.getElementById('readingScoreValue').textContent = `${Math.round(state.readingScore)}% Reading Score`; document.getElementById('saveStatus').textContent = 'Your reading progress has been saved.'; }
     function updateFullscreenButton() {
-        const isFullscreen = document.fullscreenElement === app;
-        fullscreenButton.textContent = isFullscreen ? '×' : '⛶';
-        fullscreenButton.setAttribute('aria-label', isFullscreen ? 'Exit fullscreen' : 'Fullscreen');
-        fullscreenButton.title = isFullscreen ? 'Exit fullscreen' : 'Fullscreen';
-        app.classList.toggle('is-fullscreen', isFullscreen);
+        return;
     }
-    async function toggleFullscreen() {
+    async function listenOneSegment() {
+        if (ttsAudio) { stopTts(); return; }
+        if (state.oral || state.scene > scenes.length) return;
+        const segmentStart = Math.min(totalDuration, Math.max(0, (state.scene - 1) * sceneDuration));
+        const segmentEnd = Math.min(totalDuration, state.scene * sceneDuration);
+        state.time = segmentStart;
+        render();
+        const controller = new AbortController();
+        ttsController = controller;
+        listenButton.textContent = 'Loading…';
+        const form = new FormData();
+        form.append('target_text', scenes[state.scene - 1] || '');
+        form.append('mode', 'paragraph');
+        form.append('language', data.language || '');
         try {
-            if (document.fullscreenElement) await document.exitFullscreen();
-            else await app.requestFullscreen();
-        } catch (error) { setStatus('Fullscreen is unavailable in this browser.'); }
+            const response = await fetch('/api/reading/read-aloud/', {method:'POST', credentials:'same-origin', headers:{'X-CSRFToken':csrf()}, body:form, signal:controller.signal});
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error();
+            ttsUrl = URL.createObjectURL(base64ToBlob(result.audio_content, result.mime_type || 'audio/mpeg'));
+            ttsAudio = new Audio(ttsUrl);
+            ttsAudio.muted = state.muted;
+            const stopAtNextMarker = () => {
+                if (!ttsAudio || !Number.isFinite(ttsAudio.duration)) return;
+                const progressRatio = Math.min(1, ttsAudio.currentTime / ttsAudio.duration);
+                state.time = segmentStart + (segmentEnd - segmentStart) * progressRatio;
+                render();
+                if (state.time >= segmentEnd) {
+                    ttsAudio.pause();
+                    ttsAudio.currentTime = ttsAudio.duration;
+                    ttsAudio.onended?.();
+                }
+            };
+            ttsAudio.ontimeupdate = stopAtNextMarker;
+            ttsAudio.onended = () => {
+                state.time = segmentEnd;
+                if (ttsAudio) ttsAudio.ontimeupdate = null;
+                stopTts();
+                render();
+                persist();
+            };
+            listenButton.textContent = '🔊 Listening...';
+            listenButton.setAttribute('aria-pressed', 'true');
+            await ttsAudio.play();
+        } catch (error) {
+            if (error.name !== 'AbortError') setStatus('Audio is unavailable right now.');
+            stopTts();
+        }
     }
-    progress.oninput = event => seek(event.target.value); previousButton.onclick = () => moveScene(-1); listenButton.onclick = listen; oralButton.onclick = startOral; fullscreenButton.onclick = toggleFullscreen; document.addEventListener('fullscreenchange', updateFullscreenButton);
+    function endActivity() {
+        const exitLink = document.getElementById('backToAssessmentButton');
+        if (exitLink?.href) window.location.assign(exitLink.href);
+    }
+    progress.oninput = event => seek(event.target.value); previousButton.onclick = restartStory; listenButton.onclick = listenOneSegment; oralButton.onclick = () => { if (state.time >= totalDuration) endActivity(); else startOral(); }; document.querySelectorAll('.scene-marker').forEach(marker => marker.onclick = () => seek(marker.dataset.time));
     window.addEventListener('beforeunload', () => { persist(); stopOral(true); stopTts(); });
-    restoreState(); render(); updateFullscreenButton(); if (state.completed) showCompletion();
+    restoreState(); render(); if (state.completed) showCompletion();
 })();
