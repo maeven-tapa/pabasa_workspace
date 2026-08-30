@@ -3388,7 +3388,7 @@
                 <p id="completionMessage">{% if is_my_materials_completion %}You finished this material. Great work.{% else %}You completed the reading assessment. Here is your final result.{% endif %}</p>
 
                 <div class="completion-classification-panel" id="completionClassificationPanel" aria-live="polite">
-                    <span class="completion-classification-label">Your Reading Classification</span>
+                    <span class="completion-classification-label" id="completionClassificationLabel">{% if is_my_materials_completion %}Items Correctly Read{% else %}Your Reading Classification{% endif %}</span>
                     <strong id="completionClassificationValue">—</strong>
                 </div>
 

@@ -939,6 +939,7 @@ class ReadingLaunchClassificationTests(TestCase):
                 self.assertTrue(response.context['is_my_materials_completion'])
                 self.assertContains(response, 'window.__PABASA_MY_MATERIALS__ = true;')
                 self.assertContains(response, '<div class="completion-kicker">My Materials</div>', html=True)
+                self.assertContains(response, '>Items Correctly Read<', count=1)
                 self.assertContains(response, '>Try Again<', count=1)
                 self.assertContains(response, '>Done / Back to Materials<', count=1)
                 self.assertNotContains(response, '<div class="completion-kicker">Reading Assessment Results</div>', html=True)
@@ -1140,6 +1141,7 @@ class ReadingLaunchClassificationTests(TestCase):
         self.assertFalse(response.context.get('is_my_materials_completion', False))
         self.assertContains(response, 'window.__PABASA_MY_MATERIALS__ = false;')
         self.assertContains(response, '<div class="completion-kicker">Reading Assessment Results</div>', html=True)
+        self.assertContains(response, '>Your Reading Classification<', count=1)
         self.assertContains(response, '>Score Breakdown<', count=1)
         self.assertNotContains(response, '<div class="completion-kicker">My Materials</div>', html=True)
 
@@ -1149,6 +1151,11 @@ class ReadingLaunchClassificationTests(TestCase):
 
         self.assertIn('const isMyMaterials = window.__PABASA_MY_MATERIALS__ === true;', content)
         self.assertIn('renderMyMaterialsCompletion(latestScores);', content)
+        self.assertIn('completionClassificationValue.textContent = `${correct} / ${total}`;', content)
+        self.assertIn('completionClassificationLabel.textContent = `${pluralLabel} Correctly Read`;', content)
+        my_materials_renderer = content.split('function renderMyMaterialsCompletion(scores)', 1)[1].split('function setSpeechStatus', 1)[0]
+        self.assertNotIn('resolveClassificationLabel', my_materials_renderer)
+        self.assertNotIn('setCompletionClassification', my_materials_renderer)
         self.assertIn('if (!isMyMaterials && branchState.stage)', content)
         self.assertIn('const shouldShowClassification = !isMyMaterials && showClassification === true;', content)
         self.assertNotIn('urlParams.get("source") === "my_materials"', content)

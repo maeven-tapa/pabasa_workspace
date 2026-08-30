@@ -30,6 +30,7 @@
         const finishBtn = document.getElementById("finishBtn");
         const completionClassificationValue = document.getElementById("completionClassificationValue");
         const completionClassificationPanel = document.getElementById("completionClassificationPanel");
+        const completionClassificationLabel = document.getElementById("completionClassificationLabel");
         const storySelectionPanel = document.getElementById("storySelectionPanel");
         const storySelectionGrid = document.getElementById("storySelectionGrid");
         const storySelectionTitle = document.getElementById("storySelectionTitle");
@@ -2241,18 +2242,26 @@
         function renderMyMaterialsCompletion(scores) {
             const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
             const normalizedScores = normalizeCompletionScores(scores, calculateScores());
-            const classification = resolveClassificationLabel(normalizedScores, "—") || "—";
-            setCompletionClassification(normalizedScores, classification);
+            const itemType = mode === "para" ? "paragraph" : mode;
+            const isWordReading = itemType === "word";
+            const singularLabel = itemType === "sentence" ? "Sentence" : itemType === "paragraph" ? "Paragraph" : "Word";
+            const pluralLabel = `${singularLabel}s`;
+            const correct = Math.max(0, Math.round(Number(
+                isWordReading
+                    ? (normalizedScores.correct_words ?? normalizedScores.word_count ?? 0)
+                    : (normalizedScores.correct_items ?? 0)
+            ) || 0));
+            const total = Math.max(correct, Math.round(Number(
+                isWordReading
+                    ? (normalizedScores.target_word_count ?? 0)
+                    : (normalizedScores.items_completed ?? items.length)
+            ) || 0));
+
+            if (completionClassificationLabel) completionClassificationLabel.textContent = `${pluralLabel} Correctly Read`;
+            if (completionClassificationValue) completionClassificationValue.textContent = `${correct} / ${total}`;
+            if (completionClassificationPanel) completionClassificationPanel.hidden = false;
             if (disclaimer) {
-                const correctWords = Math.max(0, Math.round(Number(normalizedScores.correct_words) || 0));
-                const totalWords = Math.max(correctWords, Math.round(Number(normalizedScores.target_word_count) || 0));
-                const accuracy = totalWords ? Math.round((correctWords / totalWords) * 100) : 0;
-                const feedbackRules = mode === "paragraph"
-                    ? [[90, "Excellent reading! Keep it up!"], [75, "Great job! Your reading is getting stronger."], [60, "Good effort! Keep practicing."], [0, "Nice try! Every reading helps you improve."]]
-                    : mode === "sentence"
-                        ? [[90, "Amazing reading! Keep it up!"], [75, "Great reading! You are doing well."], [50, "Nice try! Keep practicing."], [0, "Keep going! Practice makes progress."]]
-                        : [[90, "Excellent! Keep up the great reading!"], [75, "Great job! You are doing well."], [50, "Good try! Keep practicing."], [0, "Keep going! You can do it!"]];
-                disclaimer.textContent = feedbackRules.find(([minimum]) => accuracy >= minimum)[1];
+                disclaimer.textContent = `${correct} out of ${total} ${pluralLabel.toLowerCase()} correctly read.`;
             }
             setCompletionLoadingState(false, { minDurationMs: 0 });
         }
