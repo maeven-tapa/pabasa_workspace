@@ -63,7 +63,10 @@
                 </div>
                 <div class="phrase-reading-status"><span class="phrase-listening-dot"></span><span id="readingHelperText">Open a message when you are ready.</span></div>
                 <div class="phrase-reading-controls">
-                    <button id="btnStartReading" class="phrase-control phrase-control-primary d-none" type="button"><i class="bi bi-mic-fill"></i> Start Reading</button>
+                    <button id="btnStartReading" class="phrase-control phrase-control-primary d-none" type="button">
+                        <span class="phrase-mic-visual" aria-hidden="true"><i class="bi bi-mic-fill"></i><span class="phrase-audio-wave"><i></i><i></i><i></i></span></span>
+                        <span class="phrase-mic-label">Start Reading</span>
+                    </button>
                     <button id="btnReadAloud" class="phrase-control phrase-control-secondary d-none" type="button"><i class="bi bi-volume-up-fill"></i> Read Aloud</button>
                     <button id="btnStopReading" class="d-none" type="button">Finish Reading</button>
                 </div>

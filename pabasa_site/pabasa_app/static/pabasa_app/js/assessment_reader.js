@@ -2270,6 +2270,33 @@
             if (currentStoryState === "story_comprehension" || currentStoryState === "story_complete") {
                 syncStoryAnswerText();
             }
+            syncPhraseMicrophoneButton();
+        }
+
+        function syncPhraseMicrophoneButton() {
+            if (!btnStartReading || !shell?.classList.contains("reader-phrase")) return;
+
+            const isProcessing = Boolean(isRecording && (isSendingChunk || pendingAudioChunk));
+            const isListening = Boolean(isRecording && !isMuted && recognitionActive && !isProcessing);
+            const isStarting = Boolean(isRecording && !isMuted && !recognitionActive && !isProcessing);
+            let label = "Start Reading";
+            let icon = "bi-mic-fill";
+
+            if (isProcessing) {
+                label = "Processing...";
+                icon = "bi-hourglass-split";
+            } else if (isListening) {
+                label = "Listening...";
+            } else if (isStarting) {
+                label = "Starting microphone...";
+            }
+
+            btnStartReading.innerHTML = `<span class="phrase-mic-visual" aria-hidden="true"><i class="bi ${icon}"></i><span class="phrase-audio-wave"><i></i><i></i><i></i></span></span><span class="phrase-mic-label">${label}</span>`;
+            btnStartReading.classList.toggle("is-listening", isListening);
+            btnStartReading.classList.toggle("is-processing", isProcessing);
+            btnStartReading.classList.toggle("is-starting", isStarting);
+            btnStartReading.setAttribute("aria-label", label);
+            btnStartReading.setAttribute("aria-live", "polite");
         }
 
         function setRawMicInput(value) {
@@ -2548,6 +2575,7 @@
                 delete button.dataset.speechProcessingState;
                 button.removeAttribute("aria-busy");
             });
+            syncPhraseMicrophoneButton();
         }
 
         function resetSyllableStitching() {
@@ -3263,7 +3291,9 @@
                 nextBtn?.classList.remove("d-none");
             }
 
-            if (btnStartReading) {
+            if (btnStartReading && shell.classList.contains('reader-phrase')) {
+                syncPhraseMicrophoneButton();
+            } else if (btnStartReading) {
                 const isActiveReading = isRecording && (
                     currentAssessmentUiMode === "standard"
                     || currentAssessmentUiMode === "story"
@@ -4306,7 +4336,11 @@
                 pendingAudioChunk = null;
                 hasHeardSinceLastChunk = false;
                 resetRawMicInput("Waiting for speech...");
-                btnStartReading?.classList.add("d-none");
+                if (shell.classList.contains("reader-phrase")) {
+                    btnStartReading?.classList.remove("d-none");
+                } else {
+                    btnStartReading?.classList.add("d-none");
+                }
                 btnStopReading?.classList.add("d-none");
                 btnReadAloud?.classList.remove("is-playing");
                 updateUI();
