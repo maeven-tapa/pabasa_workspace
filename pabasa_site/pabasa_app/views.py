@@ -15021,12 +15021,25 @@ def get_teacher_assessments_api(request):
         assessment_list = []
         for a in assessments_qs:
             attempts = a.get_attempts()
+            source_material = a.material or a.materials.order_by('created_at').first()
+            source_type = str(getattr(source_material, 'source_type', '') or '').strip().lower()
+            source_content = getattr(source_material, 'content_json', None) or {}
+            template_title = ''
+            if source_type == 'template' and isinstance(source_content, dict):
+                template_title = str(
+                    source_content.get('template_title')
+                    or source_content.get('template_activity_name')
+                    or source_content.get('template_type')
+                    or ''
+                ).strip()
             assessment_list.append({
                 'id': a.id,
                 'raw_id': a.id,
                 'code': a.code,
                 'title': a.title,
                 'assessment_type': a.assessment_type,
+                'source_type': source_type,
+                'template_title': template_title,
                 'status': a.status,
                 'is_active': a.is_active,
                 'attempt_count': len(attempts),
@@ -15113,6 +15126,13 @@ def get_teacher_assessments_api(request):
                     'code': m.code,
                     'title': m.title,
                     'assessment_type': m.item_type,
+                    'source_type': str(m.source_type or '').strip().lower(),
+                    'template_title': str(
+                        (m.content_json or {}).get('template_title')
+                        or (m.content_json or {}).get('template_activity_name')
+                        or (m.content_json or {}).get('template_type')
+                        or ''
+                    ).strip() if isinstance(m.content_json, dict) else '',
                     'status': m.status,
                     'is_active': m.is_active,
                     'student_access': bool(getattr(m, 'student_access', False)),

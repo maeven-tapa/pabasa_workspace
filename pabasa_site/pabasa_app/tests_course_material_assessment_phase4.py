@@ -162,6 +162,36 @@ class CourseMaterialAssessmentPhase4Tests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(assessment.id, {item["id"] for item in response.json()["assessments"]})
 
+    def test_assessment_api_exposes_persisted_template_title_for_results_label(self):
+        assessment = Assessment.objects.create(
+            title="Template Assessment",
+            code="PH4-TEMPLATE-ASSESS",
+            assessment_type="sentence",
+            teacher=self.teacher_a,
+            section=self.section_a,
+        )
+        Material.objects.create(
+            assessment=assessment,
+            section=self.section_a,
+            teacher=self.teacher_a,
+            title="Custom activity title",
+            item_type="sentence",
+            type="assessment",
+            source_type="template",
+            content_json={"template_title": "Phrase Reading Practice"},
+        )
+        self._login(self.teacher_a)
+
+        response = self.client.get(reverse("get_teacher_assessments_api"), {
+            "course_id": f"section-{self.section_a.id}",
+        })
+
+        self.assertEqual(response.status_code, 200)
+        item = next(row for row in response.json()["assessments"] if row["id"] == assessment.id)
+        self.assertEqual(item["source_type"], "template")
+        self.assertEqual(item["template_title"], "Phrase Reading Practice")
+        self.assertEqual(item["assessment_type"], "sentence")
+
     def test_class_code_only_material_creation_is_rejected(self):
         self._login(self.teacher_a)
 

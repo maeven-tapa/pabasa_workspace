@@ -9621,9 +9621,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             .map(assessment => {
                 const assessmentId = Number(assessment.id);
                 const rawTypeLabel = String(assessment.level || assessment.assessment_type || '').trim();
-                const typeLabel = rawTypeLabel
+                const safeTypeLabel = rawTypeLabel
                     ? rawTypeLabel.replace(/[_-]+/g, ' ').replace(/\b\w/g, char => char.toUpperCase())
                     : '';
+                const isTemplateAssessment = String(assessment.source_type || '').trim().toLowerCase() === 'template';
+                const templateTitle = String(assessment.template_title || '').trim();
+                const typeLabel = isTemplateAssessment && templateTitle ? templateTitle : safeTypeLabel;
                 const metadataDate = assessment.published_at || assessment.created_at || assessment.updated_at || null;
                 const metadataDateObject = metadataDate ? new Date(metadataDate) : null;
                 const dateLabel = metadataDateObject && !Number.isNaN(metadataDateObject.getTime())
