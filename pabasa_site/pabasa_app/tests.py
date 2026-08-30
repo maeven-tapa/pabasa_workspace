@@ -841,6 +841,21 @@ class ReadingLaunchClassificationTests(TestCase):
         self.assertIn('customMaterialData || liveContent', custom_branch)
         self.assertNotIn("sessionStorage.getItem('pabasa_crla_assessment_items')", custom_branch)
 
+    def test_phrase_listening_button_resets_microphone_without_completing_activity(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        reset_branch = content.split('const resetPhraseListening = () => {', 1)[1].split('const startReading = () => {', 1)[0]
+        start_branch = content.split('const startReading = () => {', 1)[1].split("if (mode === 'phrase')", 1)[0]
+
+        self.assertIn('if (mode !== "phrase" || !isRecording) return false;', reset_branch)
+        self.assertIn('itemResultVersion += 1;', reset_branch)
+        self.assertIn('isRecording = false;', reset_branch)
+        self.assertIn('stopSpeechRecognition();', reset_branch)
+        self.assertIn('syncPhraseMicrophoneButton();', reset_branch)
+        self.assertNotIn('showCompletion(', reset_branch)
+        self.assertNotIn('phraseReadingCompleted', reset_branch)
+        self.assertLess(start_branch.index('if (resetPhraseListening()) return;'), start_branch.index('if (isSpeechResponsePending()) return;'))
+
     def test_crla_miscue_branch_advances_local_paragraph_cursor(self):
         script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
         content = script_path.read_text(encoding='utf-8')

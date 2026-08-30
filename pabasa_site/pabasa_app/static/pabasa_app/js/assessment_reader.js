@@ -2562,6 +2562,15 @@
             [btnStartReading, btnStopReading, btnReadAloud].forEach((button) => {
                 if (!button) return;
                 if (speechResponsePending) {
+                    // Phrase Reading uses the start button as a listening toggle.
+                    // Keep it clickable so the learner can cancel listening without
+                    // submitting, advancing, or completing the current phrase.
+                    if (button === btnStartReading && shell?.classList.contains("reader-phrase")) {
+                        button.disabled = false;
+                        delete button.dataset.speechProcessingState;
+                        button.removeAttribute("aria-busy");
+                        return;
+                    }
                     if (!button.dataset.speechProcessingState) {
                         button.dataset.speechProcessingState = button.disabled ? "already-disabled" : "locked";
                     }
@@ -4290,8 +4299,28 @@
             }, 1000);
         }
 
+        const resetPhraseListening = () => {
+            if (mode !== "phrase" || !isRecording) return false;
+
+            // Invalidate a transcription response that may already be in flight.
+            // It must not score or complete the phrase after listening is cancelled.
+            itemResultVersion += 1;
+            isRecording = false;
+            isAdvancingItem = false;
+            pendingAudioChunk = null;
+            hasHeardSinceLastChunk = false;
+            stopSpeechRecognition();
+            btnStartReading?.classList.remove("d-none", "is-listening", "is-processing", "is-starting");
+            btnStopReading?.classList.add("d-none");
+            setSpeechStatus("Ready", "Read the message aloud when you are ready.", false);
+            syncPhraseMicrophoneButton();
+            return true;
+        };
+
         const startReading = () => {
-            if (isReviewMode || isSpeechResponsePending()) return;
+            if (isReviewMode) return;
+            if (resetPhraseListening()) return;
+            if (isSpeechResponsePending()) return;
             if (mode === 'phrase') {
                 const selectedPhrase = window.__PABASA_SELECTED_READING_ITEM__ || window.__PABASA_SELECTED_PHRASE__ || null;
                 const synced = syncPhraseSelectionIntoReadingUI(selectedPhrase, { force: true });
