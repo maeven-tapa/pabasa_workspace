@@ -26,6 +26,7 @@ from .reading_stt import (
     align_story_transcript,
     story_word_states_from_results,
     analyze_reading,
+    analyze_sentence_reading,
     language_code_for,
     synthesize_read_aloud_audio,
     target_phrase_hints,
@@ -899,6 +900,31 @@ class ReadingLaunchClassificationTests(TestCase):
 
         self.assertIn('if (paragraphWordResults[activeWordIndex] !== "miscue")', recorder)
         self.assertNotIn('paragraphWordResults[activeWordIndex] = "correct"', recorder)
+
+    def test_story_segment_transitions_reset_segment_local_reading_state(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        resetter = content.split('function resetStorySegmentState(', 1)[1].split('function currentSpeechContext()', 1)[0]
+
+        self.assertIn('currentSyllableIndex = 0;', resetter)
+        self.assertIn('paragraphWordResults = {};', resetter)
+        self.assertIn('resetSyllableStitching();', resetter)
+
+        automatic = content.split("traceEndSession('handleSpeechResult.storySegmentComplete'", 1)[1].split('if (currentIndex >= items.length - 1)', 1)[0]
+        navigation = content.split('prevBtn?.addEventListener("click"', 1)[1].split("if (currentStoryState === \"story_comprehension\")", 1)[0]
+        self.assertEqual(automatic.count('resetStorySegmentState('), 1)
+        self.assertEqual(navigation.count('resetStorySegmentState('), 2)
+
+    def test_story_segment_diagnostics_are_toggleable_and_read_only(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        debug_setup = content.split('const storyDebugStorageKey', 1)[1].split('const liveContent', 1)[0]
+
+        self.assertIn('urlParams.get("story_debug") === "1"', debug_setup)
+        self.assertIn('window.setCrlaStoryDebug = function (enabled)', debug_setup)
+        self.assertIn('console.log("[CRLA_STORY_DEBUG]", detail);', debug_setup)
+        for event in ('segment_initialization', 'segment_transition', 'stt_callback', 'highlight_state', 'segment_completion'):
+            self.assertIn(f'event: "{event}"', content)
 
     def test_crla_correct_word_then_miscue_does_not_paint_next_word(self):
         script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
@@ -3211,6 +3237,54 @@ class ReadingMatcherTests(TestCase):
         self.assertEqual(result["word_results"][3]["result"], "miscue")
         self.assertEqual(result["word_results"][3]["type"], "substitution")
 
+    def test_story_cursor_relative_alignment_resolves_multi_word_chunk(self):
+        result = align_story_transcript(
+            "ako ang pinakamabilis tumakbo sa bahay",
+            "pinakamabilis tumakbo sa",
+            language_code="fil-PH",
+            start_word_index=2,
+        )
+        resolved = [(item["expected_index"], item["result"]) for item in result["word_results"]]
+        self.assertEqual(resolved, [(2, "correct"), (3, "correct"), (4, "correct")])
+
+    def test_story_cursor_relative_alignment_is_independent_of_chunk_boundaries(self):
+        expected = "ako ang pinakamabilis tumakbo sa bahay"
+        one_chunk = align_story_transcript(expected, "ako ang pinakamabilis tumakbo sa bahay", start_word_index=0)
+        split_chunks = [
+            align_story_transcript(expected, "ako ang", start_word_index=0),
+            align_story_transcript(expected, "pinakamabilis tumakbo", start_word_index=2),
+            align_story_transcript(expected, "sa bahay", start_word_index=4),
+        ]
+        combined = [item for chunk in split_chunks for item in chunk["word_results"]]
+        self.assertEqual(
+            [(item["expected_index"], item["result"]) for item in combined],
+            [(item["expected_index"], item["result"]) for item in one_chunk["word_results"]],
+        )
+
+    def test_story_cursor_relative_alignment_uses_next_repeated_word(self):
+        result = align_story_transcript("ako ay ako rin", "ako rin", start_word_index=2)
+        self.assertEqual(
+            [(item["expected_index"], item["result"]) for item in result["word_results"]],
+            [(2, "correct"), (3, "correct")],
+        )
+
+    def test_story_cursor_relative_short_chunk_does_not_reconsider_word_zero(self):
+        result = align_story_transcript("ako ang mabilis wala nang iba", "wala nang", start_word_index=3)
+        self.assertEqual([item["expected_index"] for item in result["word_results"]], [3, 4])
+        self.assertTrue(all(item["result"] == "correct" for item in result["word_results"]))
+
+    def test_story_cursor_relative_miscue_does_not_mark_unattempted_tail(self):
+        result = align_story_transcript(
+            "ako ang mabilis tumakbo sa bahay bukas",
+            "mabagal tumakbo sa",
+            start_word_index=2,
+        )
+        self.assertEqual(
+            [(item["expected_index"], item["result"]) for item in result["word_results"]],
+            [(2, "miscue"), (3, "correct"), (4, "correct")],
+        )
+        self.assertNotIn(5, [item["expected_index"] for item in result["word_results"]])
+
     def test_story_alignment_detects_omission_and_keeps_following_words_aligned(self):
         result = align_story_transcript(
             "Si Ana ay pumunta sa bahay.",
@@ -3823,6 +3897,88 @@ class StudentSignupCustomIdTests(TestCase):
 
         self.assertEqual(result["correct_word_count"], 1)
         self.assertFalse(result["complete"])
+
+
+class SentenceReadingWordResultTests(TestCase):
+    target = "the water is cold"
+
+    def test_all_words_correct_receive_one_point_each(self):
+        result = analyze_sentence_reading(self.target, "the water is cold")
+        self.assertTrue(result["complete"])
+        self.assertEqual(result["correct_word_count"], 4)
+        self.assertEqual([item["result"] for item in result["word_results"]], ["correct"] * 4)
+
+    def test_wrong_word_is_pending_until_speech_moves_forward(self):
+        pending = analyze_sentence_reading(self.target, "the apple")
+        self.assertEqual(pending["word_results"][1]["result"], "pending")
+        result = analyze_sentence_reading(self.target, "is cold", pending["word_results"])
+        self.assertTrue(result["complete"])
+        self.assertEqual(result["word_results"][1]["result"], "miscue")
+        self.assertEqual(result["word_results"][1]["points"], 0)
+
+    def test_immediate_correction_receives_point_without_miscue(self):
+        result = analyze_sentence_reading(self.target, "the apple water is cold")
+        corrected = result["word_results"][1]
+        self.assertTrue(result["complete"])
+        self.assertTrue(corrected["correct"])
+        self.assertTrue(corrected["self_corrected"])
+        self.assertFalse(corrected["miscue"])
+        self.assertEqual(corrected["points"], 1)
+
+    def test_multiple_miscues_are_recorded_individually(self):
+        result = analyze_sentence_reading(self.target, "the is warm")
+        result = analyze_sentence_reading(self.target, "again", result["word_results"])
+        self.assertTrue(result["complete"])
+        self.assertEqual([item["result"] for item in result["word_results"]], [
+            "correct", "miscue", "correct", "miscue",
+        ])
+
+    def test_mixed_results_keep_self_correction_and_miscue_separate(self):
+        result = analyze_sentence_reading(self.target, "the apple water cold")
+        self.assertTrue(result["complete"])
+        self.assertEqual(result["word_results"][1]["self_corrected"], True)
+        self.assertEqual(result["word_results"][2]["result"], "miscue")
+        self.assertEqual(result["correct_word_count"], 3)
+
+    def test_silence_after_pending_final_word_confirms_miscue(self):
+        pending = analyze_sentence_reading(self.target, "the water is warm")
+        self.assertFalse(pending["complete"])
+        result = analyze_sentence_reading(self.target, "", pending["word_results"])
+        self.assertTrue(result["complete"])
+        self.assertEqual(result["word_results"][-1]["result"], "miscue")
+
+    def test_crla_clean_sentence_regression(self):
+        result = analyze_sentence_reading(
+            "naglalaba si tatay sa palanggana",
+            "naglalaba si tatay sa palanggana",
+            language_code="fil-PH",
+        )
+        self.assertEqual((result["correct_word_count"], result["miscues"]), (5, 0))
+
+    def test_crla_intentional_miscue_regression(self):
+        result = analyze_sentence_reading(
+            "magpapalit ako ng kamiseta mamaya",
+            "magpapalit ako ng damit mamaya",
+            language_code="fil-PH",
+        )
+        self.assertEqual((result["correct_word_count"], result["miscues"]), (4, 1))
+        self.assertEqual(
+            [item["result"] for item in result["word_results"]],
+            ["correct", "correct", "correct", "miscue", "correct"],
+        )
+
+    def test_crla_split_word_stt_reconstructs_only_current_target(self):
+        result = analyze_sentence_reading(
+            "nilinis nila ang agiw rito",
+            "ni li ni si nila ang agiw rito",
+            language_code="fil-PH",
+        )
+        self.assertEqual((result["correct_word_count"], result["miscues"]), (5, 0))
+        self.assertEqual(
+            [item["result"] for item in result["word_results"]],
+            ["correct", "correct", "correct", "correct", "correct"],
+        )
+        self.assertEqual(result["word_results"][0]["type"], "split_token_reconstruction")
 
 
 class StudentLrnTests(TestCase):

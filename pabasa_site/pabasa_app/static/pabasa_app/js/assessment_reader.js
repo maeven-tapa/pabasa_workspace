@@ -109,6 +109,35 @@
         const viewMode = urlParams.get("viewMode");
         const isAssistMode = urlParams.get("assist") === "1";
         const assistToken = urlParams.get("assist_token") || "";
+        const sentenceDebugStorageKey = "pabasaCrlaSentenceDebug";
+        let sentenceDebugEnabled = urlParams.get("sentence_debug") === "1"
+            || localStorage.getItem(sentenceDebugStorageKey) === "true";
+        let sentenceDebugCallbackId = 0;
+        window.setCrlaSentenceDebug = function (enabled) {
+            sentenceDebugEnabled = Boolean(enabled);
+            localStorage.setItem(sentenceDebugStorageKey, String(sentenceDebugEnabled));
+            console.info("[SENTENCE DEBUG][STATE]", { enabled: sentenceDebugEnabled });
+            return sentenceDebugEnabled;
+        };
+        function sentenceDebug(prefix, detail) {
+            if (sentenceDebugEnabled && isOfficialAssessmentLaunch && mode === "sentence") {
+                console.log(prefix, detail);
+            }
+        }
+        const storyDebugStorageKey = "pabasaCrlaStoryDebug";
+        let storyDebugEnabled = urlParams.get("story_debug") === "1"
+            || localStorage.getItem(storyDebugStorageKey) === "true";
+        window.setCrlaStoryDebug = function (enabled) {
+            storyDebugEnabled = Boolean(enabled);
+            localStorage.setItem(storyDebugStorageKey, String(storyDebugEnabled));
+            console.info("[CRLA_STORY_DEBUG]", { event: "toggle", enabled: storyDebugEnabled });
+            return storyDebugEnabled;
+        };
+        function storyDebug(detail) {
+            if (storyDebugEnabled && mode === "paragraph" && currentStoryState === "story_reading") {
+                console.log("[CRLA_STORY_DEBUG]", detail);
+            }
+        }
         const liveContent = customMaterialData?.content || urlParams.get("content") || "";
         const liveItemType = (customMaterialData?.item_type || urlParams.get("item_type") || urlParams.get("type") || "").toLowerCase();
         const liveLanguage = customMaterialData?.language || urlParams.get("language") || "";
@@ -153,6 +182,7 @@
         let currentIndex = 0;
         let currentPageIndex = 0;
         let paragraphWordResults = {};
+        let sentenceWordResults = {};
         let isRecording = false;
         let isMuted = false;
         let startTime = null;
@@ -1907,6 +1937,7 @@
                 const itemWordCount = readableWordCount(item);
                 return total + (itemWordCount > 0 && Number(correctWordCounts[index] || 0) >= itemWordCount ? 1 : 0);
             }, 0);
+            const sentenceWordScore = isOfficialAssessmentLaunch && mode === "sentence" ? matchedWords : null;
             const needsManualReview = !speechRecognitionUsed;
 
             return {
@@ -1920,12 +1951,14 @@
                 speech_recognition_used: speechRecognitionUsed,
                 needs_manual_review: needsManualReview,
                 correct_words: matchedWords,
+                ...(sentenceWordScore !== null ? { correct_sentences: sentenceWordScore, sentence_count: sentenceWordScore } : {}),
                 correct_items: correctItems,
                 items_completed: items.length,
                 incorrect_words: Math.max(0, targetWordCount - matchedWords),
                 skipped_words: 0,
                 raw_metrics: {
                     correct_words: matchedWords,
+                    ...(sentenceWordScore !== null ? { correct_sentences: sentenceWordScore, sentence_count: sentenceWordScore } : {}),
                     correct_items: correctItems,
                     items_completed: items.length,
                     incorrect_words: Math.max(0, targetWordCount - matchedWords),
@@ -2394,7 +2427,12 @@
                 speechAudioChunks = [];
                 mediaRecorder = null;
 
-                if (chunks.length && isRecording && !isMuted && shouldSendAudioChunk() && isCurrentSpeechContext(recorderContext)) {
+                const hasPendingSentenceCorrection = isOfficialAssessmentLaunch
+                    && mode === "sentence"
+                    && (sentenceWordResults[currentIndex] || []).some(
+                        (result) => String(result?.result || "").toLowerCase() === "pending" && result?.recognized
+                    );
+                if (chunks.length && isRecording && !isMuted && (shouldSendAudioChunk() || hasPendingSentenceCorrection) && isCurrentSpeechContext(recorderContext)) {
                     hasHeardSinceLastChunk = false;
                     // Pause microphone capture until this spoken chunk has a final
                     // Cloud response. This prevents overlapping, unscored speech.
@@ -2601,6 +2639,38 @@
             syllableStitchingContextAt = 0;
         }
 
+        function resetStorySegmentState(previousSegmentIndex, nextSegmentIndex, reason) {
+            const before = {
+                currentSyllableIndex,
+                paragraphWordResults: { ...paragraphWordResults },
+            };
+            currentSyllableIndex = 0;
+            paragraphWordResults = {};
+            resetSyllableStitching();
+            storyDebug({
+                event: "segment_transition",
+                reason,
+                previous_segment_index: previousSegmentIndex,
+                next_segment_index: nextSegmentIndex,
+                cursor_before_reset: before.currentSyllableIndex,
+                cursor_after_reset: currentSyllableIndex,
+                paragraph_word_results_before_reset: before.paragraphWordResults,
+                paragraph_word_results_after_reset: { ...paragraphWordResults },
+            });
+        }
+
+        function logStorySegmentInitialization(reason) {
+            storyDebug({
+                event: "segment_initialization",
+                reason,
+                story_index: currentIndex,
+                segment_index: currentPageIndex,
+                segment_text: getCurrentDisplayText() || "",
+                current_syllable_index: currentSyllableIndex,
+                paragraph_word_results: { ...paragraphWordResults },
+            });
+        }
+
         function currentSpeechContext() {
             const context = {
                 index: currentIndex,
@@ -2668,11 +2738,29 @@
             updateAssessmentNavigationButtons();
             updateSpeechProcessingControls();
             const formData = new FormData();
+            const sentenceCallbackId = mode === "sentence" ? ++sentenceDebugCallbackId : null;
             formData.append("audio", blob, `reading-${Date.now()}.${audioExtensionForBlob(blob)}`);
             formData.append("target_text", context.itemText);
             formData.append("current_syllable_index", String(context.syllableIndex));
             formData.append("mode", mode);
             formData.append("language", currentMaterialLanguage || "");
+            if (isOfficialAssessmentLaunch && mode === "sentence") {
+                formData.append("crla_sentence_word_scoring", "1");
+                formData.append("sentence_word_results", JSON.stringify(sentenceWordResults[currentIndex] || []));
+                if (sentenceDebugEnabled) {
+                    formData.append("sentence_debug", "1");
+                    formData.append("sentence_callback_id", String(sentenceCallbackId));
+                    sentenceDebug("[SENTENCE DEBUG][STT]", {
+                        phase: "request",
+                        callback_id: sentenceCallbackId,
+                        interim: false,
+                        final: false,
+                        target_sentence: context.itemText,
+                        prior_word_results: sentenceWordResults[currentIndex] || [],
+                        audio_size: blob?.size || 0,
+                    });
+                }
+            }
             if (
                 (
                     String(currentSttLanguageCode || "").toLowerCase() === "fil-ph"
@@ -2713,7 +2801,30 @@
                         : "The speech service returned an invalid response.");
                 }
                 if (!response.ok || !data.success) {
-                    throw new Error(data.error || "Speech check failed.");
+                    const responseError = new Error(data.error || "Speech check failed.");
+                    responseError.status = response.status;
+                    throw responseError;
+                }
+                if (sentenceDebugEnabled && mode === "sentence") {
+                    sentenceDebug("[SENTENCE DEBUG][STT]", {
+                        phase: "response",
+                        callback_id: sentenceCallbackId,
+                        raw_transcript: data.raw_transcript || data.transcript || "",
+                        normalized_transcript: data.sentence_debug_trace?.[0]?.normalized_transcript || data.transcript || "",
+                        interim: false,
+                        final: true,
+                        recognized_words: data.sentence_debug_trace?.[0]?.recognized_words || [],
+                        request_context: context,
+                        current_context: currentSpeechContext(),
+                        duplicate_or_stale: !isCurrentSpeechContext(context),
+                    });
+                    (data.sentence_debug_trace || []).forEach((entry) => {
+                        const { prefix, ...details } = entry;
+                        sentenceDebug(prefix || "[SENTENCE DEBUG][STATE]", {
+                            callback_id: sentenceCallbackId,
+                            ...details,
+                        });
+                    });
                 }
                 console.log("=== CRLA PARAGRAPH RUNTIME ===");
                 console.log("currentIndex:", currentIndex);
@@ -2749,6 +2860,17 @@
                 handleSpeechResult(data, context);
             } catch (error) {
                 console.warn("PABASA: Reading transcription failed", error);
+                if (error?.status === 401) {
+                    pendingAudioChunk = null;
+                    isRecording = false;
+                    stopSpeechRecognition();
+                    setSpeechStatus("Session expired.", "Please sign in again to continue Sentence Reading.", false);
+                    window.setTimeout(() => {
+                        const returnUrl = `${window.location.pathname}${window.location.search}`;
+                        window.location.assign(`/auth/?next=${encodeURIComponent(returnUrl)}`);
+                    }, 900);
+                    return;
+                }
                 if (isCurrentSpeechContext(context)) {
                     const message = error?.name === "AbortError"
                         ? "Speech processing timed out. Keep reading; the next audio chunk will retry automatically."
@@ -2818,6 +2940,18 @@
                 activeTargetResult
                 && String(activeTargetResult.result || "").trim().toLowerCase() === "miscue"
             );
+            storyDebug({
+                event: "stt_callback",
+                segment_index: currentPageIndex,
+                current_syllable_index: context?.syllableIndex,
+                returned_syllable_index: data.current_syllable_index,
+                current_word_index: data.current_word_index,
+                matched_count: Number(data.matched || 0),
+                miscues: Number(data.word_alignment?.miscues ?? (Array.isArray(data.word_results)
+                    ? data.word_results.filter((result) => String(result?.result || "").toLowerCase() === "miscue").length
+                    : 0)),
+                word_results: Array.isArray(data.word_results) ? data.word_results : [],
+            });
             console.log("[CRLA] ACTIVE TARGET RESULT:", activeTargetResult);
             console.log("[CRLA] MISCUE:", currentTargetMisread);
             console.log("[CRLA] BRANCH:", currentTargetMisread ? "MISCUE_ADVANCE" : "NORMAL");
@@ -2853,6 +2987,77 @@
                 correctWordsRead()
             );
             currentSyllableIndex = Math.max(currentSyllableIndex, proposedSyllableIndex);
+            if (isOfficialAssessmentLaunch && mode === "sentence") {
+                const priorSentenceResults = sentenceWordResults[currentIndex] || [];
+                const priorPendingIndex = priorSentenceResults.findIndex((result) => String(result?.result || "pending").toLowerCase() === "pending");
+                const stateBefore = {
+                    current_target_index: priorPendingIndex >= 0 ? priorPendingIndex : 0,
+                    correct_word_count: Number(correctWordCounts[currentIndex] || 0),
+                    miscue_count: priorSentenceResults.filter((result) => String(result?.result || "").toLowerCase() === "miscue").length,
+                    word_results: priorSentenceResults,
+                    complete: Boolean(itemLocked[currentIndex]),
+                };
+                const results = Array.isArray(data.word_results) ? data.word_results : [];
+                sentenceWordResults[currentIndex] = results;
+                correctWordCounts[currentIndex] = results.reduce(
+                    (total, result) => total + (String(result?.result || "").toLowerCase() === "correct" ? 1 : 0),
+                    0
+                );
+                renderSentenceWordResults(data);
+                sentenceDebug("[SENTENCE DEBUG][STATE]", {
+                    phase: "browser_apply_response",
+                    before: stateBefore,
+                    after: {
+                        current_target_index: data.current_word_index,
+                        correct_word_count: correctWordCounts[currentIndex],
+                        miscue_count: results.filter((result) => String(result?.result || "").toLowerCase() === "miscue").length,
+                        word_results: results,
+                        complete: Boolean(data.complete),
+                    },
+                });
+                setSpeechStatus(
+                    data.complete ? "Great job! You finished this sentence." : "Keep reading.",
+                    transcript ? `Words: ${transcript}` : "Listening for the rest of the sentence.",
+                    true
+                );
+
+                if (data.complete) {
+                    itemLocked[currentIndex] = true;
+                    itemScores[currentIndex] = {
+                        correct_words: correctWordCounts[currentIndex],
+                        word_results: results,
+                        miscues: results.filter((result) => String(result?.result || "").toLowerCase() === "miscue").length,
+                        transcript: spokenTranscript,
+                        timestamp: new Date().toISOString(),
+                    };
+                    persistLockedItemResult(currentIndex);
+                    sentenceDebug("[SENTENCE DEBUG][COMPLETE]", {
+                        final_per_word_results: results,
+                        total_correct_words: correctWordCounts[currentIndex],
+                        total_miscues: itemScores[currentIndex].miscues,
+                        final_sentence_score: correctWordCounts[currentIndex],
+                        advance_reason: "all_target_words_resolved",
+                    });
+                    isAdvancingItem = true;
+                    pendingAudioChunk = null;
+                    if (currentIndex >= items.length - 1) {
+                        isRecording = false;
+                        stopSpeechRecognition();
+                        showCompletion(true);
+                    } else {
+                        window.setTimeout(() => {
+                            if (!isRecording || context.version !== itemResultVersion) return;
+                            sentenceDebug("[SENTENCE DEBUG][ADVANCE]", {
+                                previous_sentence_index: currentIndex,
+                                new_sentence_index: currentIndex + 1,
+                                reason: "completed_sentence_existing_advance_flow",
+                            });
+                            transitionToItem(currentIndex + 1, "Next sentence loaded.", "Keep reading clearly.");
+                        }, 700);
+                    }
+                }
+                return;
+            }
             if (transcript || Number(data.matched || 0) > 0) {
                 renderSyllableDisplay(data, previousCorrectWords);
             }
@@ -2929,6 +3134,13 @@
                 pendingAudioChunk = null;
                 setSpeechStatus("Great job! You finished this item.", transcript ? `Words: ${transcript}` : "", true);
                 if (currentStoryState === "story_reading") {
+                    storyDebug({
+                        event: "segment_completion",
+                        navigation: "automatic",
+                        segment_index: currentPageIndex,
+                        current_syllable_index: currentSyllableIndex,
+                        paragraph_word_results: { ...paragraphWordResults },
+                    });
                     traceEndSession('handleSpeechResult.storySegmentComplete', {
                         currentPageIndex,
                         pageCount: getCurrentPageCount(),
@@ -2936,11 +3148,14 @@
                     window.setTimeout(() => {
                         if (!isRecording || context.version !== itemResultVersion) return;
                         if (currentPageIndex < getCurrentPageCount() - 1) {
+                            const previousSegmentIndex = currentPageIndex;
                             currentPageIndex += 1;
                             currentStorySegmentIndex = currentPageIndex;
+                            resetStorySegmentState(previousSegmentIndex, currentPageIndex, "automatic_completion");
                             updateStudentEndState({ stage: "story_reading", story_segment_index: currentPageIndex });
                             updateUI();
                             renderStoryReadingState(currentSelectedStory);
+                            logStorySegmentInitialization("automatic_completion");
                             animateCurrentItem();
                         } else {
                             stopReading();
@@ -3102,6 +3317,16 @@
                         span.classList.add("is-current");
                     }
                     span.textContent = part;
+                    storyDebug({
+                        event: "highlight_state",
+                        segment_index: currentPageIndex,
+                        affected_word_index: readableWordIndex,
+                        word: part,
+                        visual_state: span.classList.contains("is-wrong")
+                            ? "is-wrong"
+                            : (span.classList.contains("is-read") ? "is-read" : "unstyled"),
+                        css_classes: Array.from(span.classList),
+                    });
                     container.appendChild(span);
                     readableWordIndex += 1;
                 });
@@ -3141,6 +3366,54 @@
         }
 
         // CRLA Official Assessment: Render syllables with a specific word highlighted as wrong/error
+        function renderSentenceWordResults(data) {
+            if (!readingWord) return;
+            const previousVisualStates = new Map(
+                Array.from(readingWord.querySelectorAll("[data-sentence-target-index]")).map((element) => [
+                    Number(element.dataset.sentenceTargetIndex),
+                    Array.from(element.classList),
+                ])
+            );
+            const resultsByIndex = new Map(
+                (Array.isArray(data?.word_results) ? data.word_results : [])
+                    .map((result) => [Number(result?.expected_index), result])
+            );
+            const displayText = String(getCurrentDisplayText() || items[currentIndex] || "");
+            let readableWordIndex = 0;
+            readingWord.replaceChildren();
+            displayText.split(/(\s+)/).forEach((part) => {
+                if (!part) return;
+                if (/^\s+$/.test(part) || isDisplayListMarker(part) || !normalizeDisplayWord(part)) {
+                    readingWord.appendChild(document.createTextNode(part));
+                    return;
+                }
+                const word = document.createElement("span");
+                word.className = "syllable";
+                const result = resultsByIndex.get(readableWordIndex);
+                const classesBefore = previousVisualStates.get(readableWordIndex) || [];
+                if (String(result?.result || "").toLowerCase() === "miscue") {
+                    word.classList.add("is-wrong");
+                }
+                word.textContent = part;
+                word.dataset.sentenceTargetIndex = String(readableWordIndex);
+                readingWord.appendChild(word);
+                sentenceDebug("[SENTENCE DEBUG][HIGHLIGHT]", {
+                    target_index: readableWordIndex,
+                    target_word: part,
+                    dom_element: `#readingWord [data-sentence-target-index="${readableWordIndex}"]`,
+                    classes_before: classesBefore,
+                    class_added: word.classList.contains("is-wrong") ? "is-wrong" : null,
+                    class_removed: classesBefore.includes("is-wrong") && !word.classList.contains("is-wrong") ? "is-wrong" : null,
+                    classes_after: Array.from(word.classList),
+                    result: String(result?.result || "pending").toUpperCase(),
+                    final_visual_state: word.classList.contains("is-wrong") ? "red_miscue" : "normal",
+                    entire_sentence_highlighted: readingWord.classList.contains("is-wrong"),
+                });
+                readableWordIndex += 1;
+            });
+            readingWord.hidden = false;
+        }
+
         function renderIncorrectWordFeedback(data, activeWordIndex = 0, previousCorrectWords = 0) {
             if (!readingWord) return;
             const reportedMiscue = Array.isArray(data?.word_results)
@@ -3214,6 +3487,16 @@
                         span.classList.add("is-current");
                     }
                     span.textContent = part;
+                    storyDebug({
+                        event: "highlight_state",
+                        segment_index: currentPageIndex,
+                        affected_word_index: readableWordIndex,
+                        word: part,
+                        visual_state: span.classList.contains("is-wrong")
+                            ? "is-wrong"
+                            : (span.classList.contains("is-read") ? "is-read" : "unstyled"),
+                        css_classes: Array.from(span.classList),
+                    });
                     container.appendChild(span);
                     readableWordIndex += 1;
                 });
@@ -4419,6 +4702,7 @@
                     story_segment_index: currentPageIndex,
                 });
                 renderStoryReadingState(currentSelectedStory);
+                logStorySegmentInitialization("reading_started");
             }
             console.log("PABASA: Assessment recording and timer started.");
         };
@@ -4888,11 +5172,14 @@
         prevBtn?.addEventListener("click", () => { 
             if (currentStoryState === "story_reading" && currentSelectedStory) {
                 if (currentPageIndex > 0) {
+                    const previousSegmentIndex = currentPageIndex;
                     currentPageIndex -= 1;
                     currentStorySegmentIndex = currentPageIndex;
+                    resetStorySegmentState(previousSegmentIndex, currentPageIndex, "manual_back");
                     updateStudentEndState({ stage: "story_reading", story_segment_index: currentPageIndex });
                     updateUI();
                     renderStoryReadingState(currentSelectedStory);
+                    logStorySegmentInitialization("manual_back");
                     animateCurrentItem();
                 }
                 return;
@@ -4910,11 +5197,14 @@
         nextBtn?.addEventListener("click", () => {
             if (currentStoryState === "story_reading" && currentSelectedStory) {
                 if (currentPageIndex < getCurrentPageCount() - 1) {
+                    const previousSegmentIndex = currentPageIndex;
                     currentPageIndex += 1;
                     currentStorySegmentIndex = currentPageIndex;
+                    resetStorySegmentState(previousSegmentIndex, currentPageIndex, "manual_next");
                     updateStudentEndState({ stage: "story_reading", story_segment_index: currentPageIndex });
                     updateUI();
                     renderStoryReadingState(currentSelectedStory);
+                    logStorySegmentInitialization("manual_next");
                     animateCurrentItem();
                 } else {
                     stopReading();
