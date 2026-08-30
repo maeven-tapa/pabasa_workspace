@@ -804,6 +804,247 @@ def analyze_reading(target_text, current_syllable_index=0, transcript="", langua
     return matcher.payload(matched, transcript)
 
 
+def analyze_sentence_reading(target_text, transcript="", prior_results=None, language_code="en-US", debug=False):
+    """Resolve a sentence sequentially while allowing an immediate self-correction."""
+    matcher = ReadingMatcher(target_text, 0, language_code)
+    spoken_words = matcher.normalize_spoken_words(transcript)
+    debug_trace = []
+    if debug:
+        debug_trace.append({
+            "prefix": "[SENTENCE DEBUG][STT]",
+            "raw_transcript": str(transcript or ""),
+            "normalized_transcript": " ".join(spoken_words),
+            "recognized_words": spoken_words,
+            "interim": False,
+            "final": True,
+        })
+    results = []
+    prior_by_index = {}
+    for item in prior_results or []:
+        if not isinstance(item, dict):
+            continue
+        try:
+            index = int(item.get("expected_index"))
+        except (TypeError, ValueError):
+            continue
+        if 0 <= index < len(matcher.words):
+            prior_by_index[index] = dict(item)
+
+    for index, expected in enumerate(matcher.words):
+        previous = prior_by_index.get(index, {})
+        status = str(previous.get("result") or "").lower()
+        if status in {"correct", "miscue"}:
+            results.append(previous)
+        else:
+            results.append({
+                "expected": matcher.normalize_word(expected),
+                "recognized": previous.get("recognized"),
+                "result": "pending",
+                "type": "pending",
+                "expected_index": index,
+                "recognized_index": None,
+                "correct": False,
+                "self_corrected": False,
+                "miscue": False,
+                "points": 0,
+                "attempt_count": int(previous.get("attempt_count") or 0),
+            })
+
+    target_index = next((i for i, item in enumerate(results) if item["result"] == "pending"), len(results))
+    initial_results = [dict(item) for item in results]
+    initial_target_index = target_index
+    if debug:
+        debug_trace.append({
+            "prefix": "[SENTENCE DEBUG][TARGET]",
+            "target_sentence": str(target_text or ""),
+            "target_words": list(matcher.words),
+            "current_target_index": target_index,
+            "current_target_word": matcher.words[target_index] if target_index < len(matcher.words) else None,
+        })
+    spoken_index = 0
+    while target_index < len(results) and spoken_index < len(spoken_words):
+        target_word = matcher.normalize_word(matcher.words[target_index])
+        spoken_word = spoken_words[spoken_index]
+        current = results[target_index]
+        is_exact_match = matcher.words_match(spoken_word, target_word)
+        split_match_end = None
+        if not is_exact_match:
+            joined_tokens = spoken_word
+            target_syllables = matcher.split_syllables(target_word)
+            max_join_end = min(len(spoken_words), spoken_index + 6)
+            for candidate_end in range(spoken_index + 1, max_join_end):
+                joined_tokens += spoken_words[candidate_end]
+                if joined_tokens == target_word:
+                    split_match_end = candidate_end + 1
+                    break
+                final_token = spoken_words[candidate_end]
+                filipino_final_consonant_spelling = (
+                    str(language_code or "").lower() == "fil-ph"
+                    and len(target_syllables) > 1
+                    and candidate_end - spoken_index + 1 <= len(target_syllables) + 1
+                    and len(final_token) == 2
+                    and final_token[-1] in "aeiou"
+                    and joined_tokens[:-1] == target_word
+                    and target_word.endswith(final_token[0])
+                )
+                if filipino_final_consonant_spelling:
+                    split_match_end = candidate_end + 1
+                    break
+                if len(joined_tokens) >= len(target_word):
+                    break
+        resolved_by_split_tokens = split_match_end is not None
+        if debug:
+            debug_trace.append({
+                "prefix": "[SENTENCE DEBUG][MATCH]",
+                "target_index": target_index,
+                "target_word": target_word,
+                "recognized_index": spoken_index,
+                "recognized_word": spoken_word,
+                "match": is_exact_match,
+                "split_token_reconstruction": resolved_by_split_tokens,
+                "recognized_span": spoken_words[spoken_index:split_match_end] if resolved_by_split_tokens else [spoken_word],
+                "result_before": str(current.get("result") or "").upper(),
+            })
+        if is_exact_match or resolved_by_split_tokens:
+            was_pending_correction = bool(current.get("recognized"))
+            current.update({
+                "recognized": " ".join(spoken_words[spoken_index:split_match_end]) if resolved_by_split_tokens else spoken_word,
+                "result": "correct",
+                "type": "split_token_reconstruction" if resolved_by_split_tokens else ("self_correction" if was_pending_correction else "correct"),
+                "recognized_index": spoken_index,
+                "correct": True,
+                "self_corrected": was_pending_correction,
+                "miscue": False,
+                "points": 1,
+            })
+            target_index += 1
+            if debug:
+                debug_trace[-1].update({
+                    "final_result": "CORRECT",
+                    "self_corrected": was_pending_correction,
+                    "split_token_reconstruction": resolved_by_split_tokens,
+                    "points": 1,
+                })
+                debug_trace.append({
+                    "prefix": "[SENTENCE DEBUG][ADVANCE]",
+                    "previous_index": target_index - 1,
+                    "previous_word": target_word,
+                    "new_index": target_index,
+                    "new_word": matcher.words[target_index] if target_index < len(matcher.words) else None,
+                    "reason": "resolved_split_token_reconstruction" if resolved_by_split_tokens else ("resolved_self_correction" if was_pending_correction else "resolved_correct_word"),
+                })
+            spoken_index = split_match_end if resolved_by_split_tokens else spoken_index + 1
+            continue
+
+        next_target_matches = (
+            target_index + 1 < len(results)
+            and matcher.words_match(spoken_word, matcher.normalize_word(matcher.words[target_index + 1]))
+        )
+        if next_target_matches or int(current.get("attempt_count") or 0) >= 1:
+            current.update({
+                "result": "miscue",
+                "type": "omission" if next_target_matches else "substitution",
+                "correct": False,
+                "self_corrected": False,
+                "miscue": True,
+                "points": 0,
+            })
+            target_index += 1
+            if debug:
+                debug_trace[-1].update({
+                    "final_result": "MISCUE",
+                    "points": 0,
+                    "next_target_matches": next_target_matches,
+                })
+                debug_trace.append({
+                    "prefix": "[SENTENCE DEBUG][ADVANCE]",
+                    "previous_index": target_index - 1,
+                    "previous_word": target_word,
+                    "new_index": target_index,
+                    "new_word": matcher.words[target_index] if target_index < len(matcher.words) else None,
+                    "reason": "recognized_next_target" if next_target_matches else "uncorrected_repeat_mismatch",
+                })
+            if not next_target_matches:
+                spoken_index += 1
+            continue
+
+        current.update({
+            "recognized": spoken_word,
+            "attempt_count": 1,
+        })
+        if debug:
+            debug_trace[-1].update({
+                "final_result": "PENDING",
+                "points": 0,
+                "reason": "first_mismatch_waiting_for_self_correction",
+            })
+        spoken_index += 1
+
+    # A following silent recognition chunk confirms that an uncorrected final
+    # word was left behind; the first mismatch response itself remains pending.
+    if not spoken_words and target_index == len(results) - 1:
+        final_result = results[target_index]
+        if final_result["result"] == "pending" and int(final_result.get("attempt_count") or 0) >= 1:
+            final_result.update({
+                "result": "miscue",
+                "type": "substitution",
+                "correct": False,
+                "self_corrected": False,
+                "miscue": True,
+                "points": 0,
+            })
+
+    resolved_count = next((i for i, item in enumerate(results) if item["result"] == "pending"), len(results))
+    current_syllable_index = matcher.word_syllable_ranges[resolved_count - 1][1] if resolved_count else 0
+    correct_words = sum(int(item.get("points") or 0) for item in results)
+    response = {
+        "transcript": transcript,
+        "matched": correct_words,
+        "current_syllable_index": current_syllable_index,
+        "current_word_index": resolved_count,
+        "correct_word_count": correct_words,
+        "syllables": matcher.syllables,
+        "word_syllable_ranges": matcher.word_syllable_ranges,
+        "words": matcher.words,
+        "next_syllable": matcher.syllables[current_syllable_index] if current_syllable_index < len(matcher.syllables) else "",
+        "next_word": matcher.words[resolved_count] if resolved_count < len(matcher.words) else "",
+        "complete": bool(results) and resolved_count >= len(results),
+        "progress": round((resolved_count / len(results)) * 100, 2) if results else 0,
+        "word_results": results,
+        "miscues": sum(1 for item in results if item["result"] == "miscue"),
+    }
+    if debug:
+        final_target_index = response["current_word_index"]
+        debug_trace.append({
+            "prefix": "[SENTENCE DEBUG][STATE]",
+            "before": {
+                "current_target_index": initial_target_index,
+                "correct_word_count": sum(int(item.get("points") or 0) for item in initial_results),
+                "miscue_count": sum(1 for item in initial_results if item.get("result") == "miscue"),
+                "word_results": initial_results,
+                "complete": False,
+            },
+            "after": {
+                "current_target_index": final_target_index,
+                "correct_word_count": correct_words,
+                "miscue_count": response["miscues"],
+                "word_results": results,
+                "complete": response["complete"],
+            },
+        })
+        if response["complete"]:
+            debug_trace.append({
+                "prefix": "[SENTENCE DEBUG][COMPLETE]",
+                "word_results": results,
+                "total_correct_words": correct_words,
+                "total_miscues": response["miscues"],
+                "final_sentence_score": correct_words,
+                "advance_reason": "all_target_words_resolved",
+            })
+        response["sentence_debug_trace"] = debug_trace
+    return response
+
+
 class ReadingMatcher:
     def __init__(self, target_text, current_syllable_index=0, language_code="en-US"):
         self.target_text = target_text or ""

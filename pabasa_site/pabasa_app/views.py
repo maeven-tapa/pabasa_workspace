@@ -60,6 +60,7 @@ from .reading_material_utils import format_assigned_week_display, format_assigne
 from .reading_stt import (
     align_story_transcript,
     analyze_reading,
+    analyze_sentence_reading,
     language_code_for,
     phrase_hints_for,
     target_phrase_hints,
@@ -4278,7 +4279,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
     teacher_role = ''
     initials = "".join(part[:1] for part in full_name.split()[:2]).upper() or "PA"
     birthday_display = ""
-    if user.birth_month and user.birth_day and user.birth_year:
+    if user and user.birth_month and user.birth_day and user.birth_year:
         birthday_display = f"{int(user.birth_month):02d}/{int(user.birth_day):02d}/{user.birth_year}"
     profile_photo_url = None
     username = ''
@@ -10021,6 +10022,8 @@ def syllable_blending_page(request):
 
 @xframe_options_sameorigin
 def reading_sentence_page(request):
+    if not _check_auth(request):
+        return redirect('auth')
     access_response = _enforce_student_access_for_request(request)
     if access_response:
         return access_response
@@ -10663,7 +10666,17 @@ def reading_transcribe_api(request):
             transcript,
             language_code,
         )
-        analysis = analyze_reading(target_text, current_syllable_index, analysis_transcript, language_code)
+        if mode == "sentence" and request.POST.get('crla_sentence_word_scoring') == '1':
+            try:
+                sentence_word_results = json.loads(request.POST.get('sentence_word_results') or '[]')
+            except (TypeError, ValueError, json.JSONDecodeError):
+                sentence_word_results = []
+            sentence_debug = request.POST.get('sentence_debug') == '1'
+            analysis = analyze_sentence_reading(
+                target_text, analysis_transcript, sentence_word_results, language_code, debug=sentence_debug,
+            )
+        else:
+            analysis = analyze_reading(target_text, current_syllable_index, analysis_transcript, language_code)
         metrics_context = analysis_transcript if stitching_applied else next_syllable_context
         context_count, target_count, context_progress = syllable_context_metrics(
             target_text,

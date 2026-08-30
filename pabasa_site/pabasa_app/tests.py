@@ -26,6 +26,7 @@ from .reading_stt import (
     align_story_transcript,
     story_word_states_from_results,
     analyze_reading,
+    analyze_sentence_reading,
     language_code_for,
     synthesize_read_aloud_audio,
     target_phrase_hints,
@@ -3823,6 +3824,88 @@ class StudentSignupCustomIdTests(TestCase):
 
         self.assertEqual(result["correct_word_count"], 1)
         self.assertFalse(result["complete"])
+
+
+class SentenceReadingWordResultTests(TestCase):
+    target = "the water is cold"
+
+    def test_all_words_correct_receive_one_point_each(self):
+        result = analyze_sentence_reading(self.target, "the water is cold")
+        self.assertTrue(result["complete"])
+        self.assertEqual(result["correct_word_count"], 4)
+        self.assertEqual([item["result"] for item in result["word_results"]], ["correct"] * 4)
+
+    def test_wrong_word_is_pending_until_speech_moves_forward(self):
+        pending = analyze_sentence_reading(self.target, "the apple")
+        self.assertEqual(pending["word_results"][1]["result"], "pending")
+        result = analyze_sentence_reading(self.target, "is cold", pending["word_results"])
+        self.assertTrue(result["complete"])
+        self.assertEqual(result["word_results"][1]["result"], "miscue")
+        self.assertEqual(result["word_results"][1]["points"], 0)
+
+    def test_immediate_correction_receives_point_without_miscue(self):
+        result = analyze_sentence_reading(self.target, "the apple water is cold")
+        corrected = result["word_results"][1]
+        self.assertTrue(result["complete"])
+        self.assertTrue(corrected["correct"])
+        self.assertTrue(corrected["self_corrected"])
+        self.assertFalse(corrected["miscue"])
+        self.assertEqual(corrected["points"], 1)
+
+    def test_multiple_miscues_are_recorded_individually(self):
+        result = analyze_sentence_reading(self.target, "the is warm")
+        result = analyze_sentence_reading(self.target, "again", result["word_results"])
+        self.assertTrue(result["complete"])
+        self.assertEqual([item["result"] for item in result["word_results"]], [
+            "correct", "miscue", "correct", "miscue",
+        ])
+
+    def test_mixed_results_keep_self_correction_and_miscue_separate(self):
+        result = analyze_sentence_reading(self.target, "the apple water cold")
+        self.assertTrue(result["complete"])
+        self.assertEqual(result["word_results"][1]["self_corrected"], True)
+        self.assertEqual(result["word_results"][2]["result"], "miscue")
+        self.assertEqual(result["correct_word_count"], 3)
+
+    def test_silence_after_pending_final_word_confirms_miscue(self):
+        pending = analyze_sentence_reading(self.target, "the water is warm")
+        self.assertFalse(pending["complete"])
+        result = analyze_sentence_reading(self.target, "", pending["word_results"])
+        self.assertTrue(result["complete"])
+        self.assertEqual(result["word_results"][-1]["result"], "miscue")
+
+    def test_crla_clean_sentence_regression(self):
+        result = analyze_sentence_reading(
+            "naglalaba si tatay sa palanggana",
+            "naglalaba si tatay sa palanggana",
+            language_code="fil-PH",
+        )
+        self.assertEqual((result["correct_word_count"], result["miscues"]), (5, 0))
+
+    def test_crla_intentional_miscue_regression(self):
+        result = analyze_sentence_reading(
+            "magpapalit ako ng kamiseta mamaya",
+            "magpapalit ako ng damit mamaya",
+            language_code="fil-PH",
+        )
+        self.assertEqual((result["correct_word_count"], result["miscues"]), (4, 1))
+        self.assertEqual(
+            [item["result"] for item in result["word_results"]],
+            ["correct", "correct", "correct", "miscue", "correct"],
+        )
+
+    def test_crla_split_word_stt_reconstructs_only_current_target(self):
+        result = analyze_sentence_reading(
+            "nilinis nila ang agiw rito",
+            "ni li ni si nila ang agiw rito",
+            language_code="fil-PH",
+        )
+        self.assertEqual((result["correct_word_count"], result["miscues"]), (5, 0))
+        self.assertEqual(
+            [item["result"] for item in result["word_results"]],
+            ["correct", "correct", "correct", "correct", "correct"],
+        )
+        self.assertEqual(result["word_results"][0]["type"], "split_token_reconstruction")
 
 
 class StudentLrnTests(TestCase):
