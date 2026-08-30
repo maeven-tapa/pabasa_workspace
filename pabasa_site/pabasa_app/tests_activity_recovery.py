@@ -75,6 +75,44 @@ class ProtectedActivityRecoveryTests(TestCase):
         self.assertEqual(len(payload['items']), 5)
         self.assertTrue(payload['syllable_pool'])
 
+    def test_syllable_combination_result_requires_both_syllables(self):
+        content = build_activity('English', 'syllable_combination', 1)
+        content.update({
+            'template_title': 'Syllable Blending', 'template_lesson': 'Syllable Blending',
+            'template_type': 'Syllable Blending', 'template_source': 'template',
+            'items': [{'syllables': ['mon', 'key'], 'answer': 'monkey'}],
+        })
+        material = Material.objects.create(
+            title='MON + KEY', item_type='word', type='assessment', source_type='template',
+            status='published', student_access=True, language='English', content_text='monkey',
+            content_json=content,
+        )
+
+        response = self.client.get(reverse('syllable_blending_page'), {'id': f'material-{material.id}'})
+
+        self.assertEqual(response.status_code, 200)
+        payload = json.loads(response.context['syllable_blending_material_json'])
+        self.assertEqual(payload['items'][0], {'syllables': ['mon', 'key'], 'answer': 'monkey'})
+        rendered = response.content.decode('utf-8')
+        self.assertIn('<span class="answer-slot">?</span>', rendered)
+        self.assertIn("syllableResults.length===2&&syllableResults.every(Boolean)", rendered)
+        self.assertIn("bothCorrect?String(item.answer||'').toUpperCase():'?'", rendered)
+        self.assertIn('syllable_results:syllableResults.map(Boolean)', rendered)
+
+    def test_syllable_combination_partial_match_keeps_result_hidden(self):
+        template_path = 'pabasa_app/syllable_blending_page.html'
+        with open(self._template_filename(template_path), encoding='utf-8') as template_file:
+            source = template_file.read()
+
+        self.assertIn("return expected.map((syllable,index)=>Boolean(", source)
+        self.assertIn("syllableResults.length===2&&syllableResults.every(Boolean)", source)
+        self.assertIn("if(slot)slot.textContent=bothCorrect?String(item.answer||'').toUpperCase():'?'", source)
+
+    @staticmethod
+    def _template_filename(template_path):
+        from django.template.loader import get_template
+        return get_template(template_path).origin.name
+
     def test_picture_word_completion_uses_objective_matching_score(self):
         material = Material.objects.create(
             title='Picture-Word Matching', item_type='word', type='assessment', source_type='template',
