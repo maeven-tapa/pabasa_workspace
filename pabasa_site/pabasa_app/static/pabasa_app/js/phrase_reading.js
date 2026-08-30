@@ -23,6 +23,10 @@
       this.currentPhrase = null;
       this.selectedPhrase = null;
       this.activityMarkedComplete = false;
+      this.completionPersisted = false;
+      this.completionSavePromise = null;
+      this.startedAt = Date.now();
+      this.savedCompletion = window.__PHRASE_READING_COMPLETION__ || {};
       this.activityStateKey = 'phrase-reading-default';
 
       // DOM references
@@ -67,6 +71,10 @@
         
         // Update progress display
         this._updateProgress();
+
+        if (this.savedCompletion.completed) {
+          this._showSavedCompletionState();
+        }
         
         console.log('Phrase Reading initialized', {
           totalPhrases: this.phrases.length,
@@ -171,6 +179,13 @@
           .map((entry) => Number(entry))
           .filter((entry) => Number.isInteger(entry) && entry >= 0 && entry < PHRASE_TOTAL);
       };
+
+      if (this.savedCompletion.completed) {
+        this.completedPhrases = new Set(Array.from({ length: PHRASE_TOTAL }, (_, index) => index));
+        this.activityMarkedComplete = true;
+        this.completionPersisted = true;
+        return;
+      }
 
       let storedCompleted = [];
       try {
@@ -369,8 +384,8 @@
       }
     }
 
-    _notifyActivityCompletion() {
-      if (this.activityMarkedComplete) return;
+    async _notifyActivityCompletion() {
+      if (this.activityMarkedComplete || this.completedPhrases.size !== PHRASE_TOTAL) return;
       this.activityMarkedComplete = true;
 
       const detail = {
@@ -380,8 +395,63 @@
         completedPhrases: Array.from(this.completedPhrases).sort((a, b) => a - b),
       };
 
-      window.dispatchEvent(new CustomEvent('pabasa:assessment-completed', { detail }));
-      document.dispatchEvent(new CustomEvent('phraseReadingComplete', { detail }));
+      try {
+        if (this.finishBtn) this.finishBtn.disabled = true;
+        const savedResult = await this._saveMaterialCompletion(detail.completedPhrases);
+        this.completionPersisted = true;
+        this.savedCompletion = {
+          completed: true,
+          correct_items: Number(savedResult.correct_items ?? PHRASE_TOTAL),
+          total_items: Number(savedResult.items_completed ?? PHRASE_TOTAL),
+          accuracy: Number(savedResult.accuracy ?? savedResult.total_score ?? 100),
+          total_score: Number(savedResult.total_score ?? savedResult.final_score ?? 100),
+          completed_phrases: detail.completedPhrases,
+        };
+        this._renderCompletionResult(this.savedCompletion);
+        if (this.reviewBtn) this.reviewBtn.hidden = true;
+        if (this.finishBtn) {
+          this.finishBtn.disabled = false;
+          this.finishBtn.textContent = 'Return to Activities';
+          this.finishBtn.onclick = null;
+        }
+        window.dispatchEvent(new CustomEvent('pabasa:assessment-completed', { detail }));
+        document.dispatchEvent(new CustomEvent('phraseReadingComplete', { detail }));
+      } catch (error) {
+        this.activityMarkedComplete = false;
+        console.error('Phrase Reading completion could not be saved:', error);
+        const completionMessage = this.completionPage?.querySelector('#completionMessage');
+        if (completionMessage) completionMessage.textContent = 'Your result could not be saved. Please try again before returning.';
+        if (this.finishBtn) {
+          this.finishBtn.disabled = false;
+          this.finishBtn.textContent = 'Save Again';
+          this.finishBtn.onclick = () => this._notifyActivityCompletion();
+        }
+      }
+    }
+
+    _saveMaterialCompletion(completedPhrases) {
+      if (this.completionSavePromise) return this.completionSavePromise;
+      const material = window.__PABASA_CUSTOM_MATERIAL__ || {};
+      const materialId = material.id || material.raw_id;
+      if (!materialId) return Promise.reject(new Error('Phrase Reading material ID is missing.'));
+      const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]')?.value || '';
+      this.completionSavePromise = fetch(window.__PHRASE_READING_COMPLETION_URL__, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({
+          material_id: materialId, activity_type: 'phrase_reading',
+          assessment_type: 'phrase', status: 'completed', items_completed: PHRASE_TOTAL,
+          scores: {
+            completed_phrases: completedPhrases,
+            duration_seconds: Math.round((Date.now() - this.startedAt) / 1000),
+          },
+        }),
+      }).then(async (response) => {
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) throw new Error(result.error || 'Unable to save Phrase Reading completion.');
+        return result;
+      }).finally(() => { this.completionSavePromise = null; });
+      return this.completionSavePromise;
     }
 
     _persistCompletionState() {
@@ -438,18 +508,40 @@
         completionMessage.textContent = 'Wonderful reading—you opened every magical message.';
       }
       
+      this._renderCompletionResult(this.savedCompletion);
+      if (this.reviewBtn) this.reviewBtn.hidden = true;
+
       // Setup completion action buttons
-      if (this.reviewBtn) {
-        this.reviewBtn.addEventListener('click', () => this._restartPhraseReading());
-      }
       if (this.finishBtn) {
         this.finishBtn.addEventListener('click', () => this._returnToAssessment());
       }
     }
 
+    _renderCompletionResult(result = {}) {
+      const resultElement = this.completionPage?.querySelector('#completionResult');
+      if (!resultElement) return;
+      const total = Number(result.total_items ?? PHRASE_TOTAL);
+      const correct = Number(result.correct_items ?? total);
+      const score = Number(result.total_score ?? result.accuracy ?? 100);
+      resultElement.textContent = `${correct} of ${total} phrases completed - Score: ${score}%`;
+    }
+
+    _showSavedCompletionState() {
+      this.completedPhrases = new Set(Array.from({ length: PHRASE_TOTAL }, (_, index) => index));
+      this.activityMarkedComplete = true;
+      this.completionPersisted = true;
+      this._renderEnvelopeBoard();
+      this._updateProgress();
+      this._showCompletionPage();
+      this._renderCompletionResult(this.savedCompletion);
+      if (this.reviewBtn) this.reviewBtn.hidden = true;
+      if (this.finishBtn) this.finishBtn.disabled = false;
+    }
+
     _restartPhraseReading() {
       this.completedPhrases.clear();
       this.activityMarkedComplete = false;
+      this.completionPersisted = false;
       this._persistCompletionState();
       this.app?.classList.remove('is-complete');
       this._hideMessageView();
@@ -459,6 +551,10 @@
     }
 
     _returnToAssessment() {
+      if (!this.completionPersisted) {
+        this._notifyActivityCompletion();
+        return;
+      }
       // Navigate back to assessment dashboard
       window.location.href = '/dashboard/assessment/';
     }

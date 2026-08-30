@@ -9365,6 +9365,25 @@ def _is_picture_word_matching_material(material):
     return 'picture_word_matching' in normalized
 
 
+def _is_phrase_reading_material(material):
+    """Identify the Phrase Reading template targeted by its activity page."""
+    if not material:
+        return False
+    content_json = getattr(material, 'content_json', None) or {}
+    if not isinstance(content_json, dict):
+        return False
+    candidates = (
+        content_json.get('template_title'), content_json.get('template_activity_name'),
+        content_json.get('template_lesson'), content_json.get('template_type'),
+        content_json.get('activity_type'), getattr(material, 'title', ''),
+    )
+    normalized = {
+        re.sub(r'[^a-z0-9]+', '_', str(value or '').strip().lower()).strip('_')
+        for value in candidates
+    }
+    return bool(normalized.intersection({'phrase_reading', 'phrase_reading_practice'}))
+
+
 def _is_syllable_blending_material(material):
     if not material or not isinstance(getattr(material, 'content_json', None), dict):
         return False
@@ -10138,8 +10157,39 @@ def phrase_reading_page(request):
         return access_response
     context = _dashboard_context(request)
     context.update(_custom_material_reading_context(request))
+    _, material_id = _parse_prefixed_id(request.GET.get('id') or request.GET.get('material_id'))
+    material = Material.objects.filter(pk=material_id).first() if material_id else None
+    completion_payload = {}
+    student_user = User.objects.filter(id=request.session.get('user_id'), role='student').first()
+    if material and _is_phrase_reading_material(material) and student_user:
+        completed_result = material.assessment_results.filter(
+            student=student_user, attempt_status='completed',
+        ).order_by('-completed_at', '-created_at', '-id').first()
+        if completed_result:
+            completed_phrases = list(range(10))
+            remarks = str(getattr(completed_result, 'remarks', '') or '')
+            result_prefix = 'PHRASE_READING_RESULT:'
+            if remarks.startswith(result_prefix):
+                try:
+                    saved_result = json.loads(remarks[len(result_prefix):])
+                    saved_indexes = saved_result.get('completed_phrases') if isinstance(saved_result, dict) else None
+                    if isinstance(saved_indexes, list):
+                        completed_phrases = saved_indexes
+                except (TypeError, ValueError, json.JSONDecodeError):
+                    pass
+            completion_payload = {
+                'completed': True,
+                'correct_items': int(getattr(completed_result, 'correct_items', 0) or 10),
+                'total_items': int(getattr(completed_result, 'items_completed', 0) or 10),
+                'accuracy': getattr(completed_result, 'accuracy', None) or getattr(completed_result, 'total_score', 0) or 100,
+                'total_score': getattr(completed_result, 'total_score', None) or getattr(completed_result, 'accuracy', 0) or 100,
+                'duration_seconds': int(getattr(completed_result, 'duration_seconds', 0) or 0),
+                'completed_phrases': completed_phrases,
+                'completed_at': completed_result.completed_at.isoformat() if completed_result.completed_at else '',
+            }
+    context['phrase_reading_completion_json'] = json.dumps(completion_payload, default=str, separators=(',', ':'))
     context['student_end_assessment_state_json'] = json.dumps(
-        (_get_user_state(User.objects.filter(id=request.session.get('user_id')).first()).get('student_end_assessment_state') or {}),
+        (_get_user_state(student_user).get('student_end_assessment_state') or {}),
         default=str, separators=(',', ':'),
     )
     return render(request, 'pabasa_app/phrase_reading_page.html', context)
@@ -11221,6 +11271,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         already_completed = _student_completed_assessment_before(assessment, material, student_user)
     _log_completion_timing('score_calculation_start')
     is_picture_word_matching = str(activity_type or '').strip().lower() == 'picture_word_matching'
+    is_phrase_reading = str(activity_type or '').strip().lower() == 'phrase_reading'
     is_syllable_blending = str(activity_type or '').strip().lower() == 'syllable_blending'
     is_clap_count_syllables = (
         str(activity_type or '').strip().lower() == 'clap_count_syllables'
@@ -11305,7 +11356,35 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         state['interactive_activity_progress'] = progress_store
         _set_user_state(student_user, state)
         return JsonResponse({'success': True, 'saved': True, 'responses': normalized_responses})
-    if is_letter_sound_matching:
+    if is_phrase_reading:
+        if not material or not _is_phrase_reading_material(material):
+            return JsonResponse({'success': False, 'error': 'Invalid Phrase Reading material.'}, status=400)
+        raw_scores = data.get('scores') if isinstance(data.get('scores'), dict) else {}
+        phrase_content = material.content_json if isinstance(material.content_json, dict) else {}
+        phrase_items = phrase_content.get('items') if isinstance(phrase_content.get('items'), list) else []
+        if len(phrase_items) != 10:
+            return JsonResponse({'success': False, 'error': 'Phrase Reading must contain exactly 10 phrases.'}, status=400)
+        submitted_indexes = raw_scores.get('completed_phrases')
+        try:
+            completed_indexes = sorted({int(index) for index in submitted_indexes})
+        except (TypeError, ValueError):
+            completed_indexes = []
+        if completed_indexes != list(range(10)) or int(data.get('items_completed') or 0) != 10:
+            return JsonResponse({
+                'success': False,
+                'error': 'All 10 phrases must be completed before saving this activity.',
+            }, status=400)
+        score_payload = {
+            'accuracy': 100, 'total_score': 100,
+            'correct_items': 10, 'items_completed': 10,
+            'duration_seconds': max(0, int(raw_scores.get('duration_seconds') or 0)),
+            'passed': True,
+            'remarks': 'PHRASE_READING_RESULT:' + json.dumps({
+                'activity_type': 'phrase_reading',
+                'completed_phrases': completed_indexes,
+            }, separators=(',', ':')),
+        }
+    elif is_letter_sound_matching:
         if not material or not _is_letter_sound_matching_material(material):
             return JsonResponse({'success': False, 'error': 'Invalid Letter & Sound Matching material.'}, status=400)
         raw_scores = data.get('scores') if isinstance(data.get('scores'), dict) else {}
@@ -11494,7 +11573,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         }
     else:
         score_payload = _practice_score_payload(data) if is_practice else _assessment_score_payload(data)
-    if (is_picture_word_matching or is_syllable_blending or is_clap_count_syllables or is_letter_sound_matching) and already_completed and not is_retake:
+    if (is_phrase_reading or is_picture_word_matching or is_syllable_blending or is_clap_count_syllables or is_letter_sound_matching) and already_completed and not is_retake:
         existing_result = material.assessment_results.filter(
             student=student_user,
             attempt_status='completed',
@@ -11506,7 +11585,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             'items_completed': getattr(existing_result, 'items_completed', 0) or 0,
             'accuracy': getattr(existing_result, 'accuracy', 0) or 0,
         })
-    if not is_practice and not is_picture_word_matching and not is_syllable_blending and not is_letter_sound_matching and not is_crla_assessment:
+    if not is_practice and not is_phrase_reading and not is_picture_word_matching and not is_syllable_blending and not is_letter_sound_matching and not is_crla_assessment:
         account_assessment_type = (
             getattr(assessment, 'assessment_type', None)
             or assessment_type_hint
@@ -11585,7 +11664,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 material.save(update_fields=['teacher', 'updated_at'])
                 _log_completion_timing('assessment_teacher_save')
             _log_completion_timing('assessment_record_attempt_start')
-            if is_clap_count_syllables or is_letter_sound_matching:
+            if is_phrase_reading or is_clap_count_syllables or is_letter_sound_matching:
                 # Lock this material row while checking/creating so concurrent final submits
                 # cannot create more than one completed result for this student/material.
                 with transaction.atomic():

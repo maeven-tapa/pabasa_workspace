@@ -18,9 +18,11 @@
         window.__PABASA_CUSTOM_MATERIAL__ = {{ custom_material_launch_data_json|default:'null'|safe }};
         window.__PABASA_MY_MATERIALS__ = {% if is_my_materials_completion %}true{% else %}false{% endif %};
         window.__PABASA_STUDENT_END_STATE__ = {{ student_end_assessment_state_json|default:'{}'|safe }};
+        window.__PHRASE_READING_COMPLETION__ = {{ phrase_reading_completion_json|default:'{}'|safe }};
         window.__PHRASE_READING_ASSETS__ = {
             stamps: [{% for number in "123456789x" %}"{% static 'pabasa_app/images/phrase_reading/stamp' %}{% if number == 'x' %}10{% else %}{{ number }}{% endif %}.svg"{% if not forloop.last %},{% endif %}{% endfor %}]
         };
+        window.__PHRASE_READING_COMPLETION_URL__ = "{% url 'record_assessment_completion' %}";
         window.PABASA_USER_NAME = "{{ user_full_name|escapejs }}";
         window.PABASA_USER_ID = "{{ request.session.user_id|default:'' }}";
         window.PABASA_USER_ROLE = "{{ nav_role }}";
@@ -79,6 +81,7 @@
                 <div class="completion-mark">✉</div><p class="completion-kicker">All mail collected</p>
                 <h1 id="completionTitle">Secret messages complete!</h1>
                 <p id="completionMessage">Wonderful reading—you opened every magical message.</p>
+                <p id="completionResult" class="completion-result"></p>
                 <div class="completion-actions"><button id="reviewBtn" type="button">Read Again</button><button id="finishBtn" type="button">Return to Activities</button></div>
             </article>
         </section>

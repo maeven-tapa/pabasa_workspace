@@ -8454,6 +8454,58 @@ class AssessmentCompletionNotificationTests(TestCase):
         self.assertEqual(Assessment.objects.count(), 1)
         self.assertEqual(material.assessment.get_student_attempt_count(self.student), 1)
 
+    def test_phrase_reading_requires_all_ten_phrases_and_persists_completion(self):
+        material = Material.objects.create(
+            title="Phrase Reading",
+            item_type="phrase",
+            content_json={
+                "template_title": "Phrase Reading",
+                "items": [f"Phrase {index}" for index in range(1, 11)],
+            },
+            type="assessment",
+            status="published",
+            is_active=True,
+            section=self.section,
+        )
+        self._login_student()
+        endpoint = reverse("record_assessment_completion")
+        partial_payload = {
+            "material_id": f"material-{material.id}",
+            "activity_type": "phrase_reading",
+            "items_completed": 9,
+            "scores": {"completed_phrases": list(range(9))},
+        }
+
+        partial = self.client.post(endpoint, data=json.dumps(partial_payload), content_type="application/json")
+
+        self.assertEqual(partial.status_code, 400)
+        self.assertFalse(material.has_student_completed(self.student))
+
+        complete_payload = {
+            **partial_payload,
+            "items_completed": 10,
+            "scores": {"completed_phrases": list(range(10))},
+        }
+        complete = self.client.post(endpoint, data=json.dumps(complete_payload), content_type="application/json")
+
+        self.assertEqual(complete.status_code, 200)
+        self.assertTrue(complete.json()["success"])
+        self.assertTrue(material.has_student_completed(self.student))
+        result = material.assessment_results.get(student=self.student, attempt_status="completed")
+        self.assertEqual(result.items_completed, 10)
+        self.assertEqual(result.correct_items, 10)
+
+        reopened = self.client.get(reverse("phrase_reading_page"), {"id": material.id})
+
+        self.assertEqual(reopened.status_code, 200)
+        restored = json.loads(reopened.context["phrase_reading_completion_json"])
+        self.assertTrue(restored["completed"])
+        self.assertEqual(restored["correct_items"], 10)
+        self.assertEqual(restored["total_items"], 10)
+        self.assertEqual(restored["total_score"], 100)
+        self.assertEqual(restored["completed_phrases"], list(range(10)))
+        self.assertEqual(material.assessment_results.filter(student=self.student).count(), 1)
+
     def test_repeated_assessment_completions_create_separate_assessment_rows(self):
         material = Material.objects.create(
             title="Retake Assessment",
