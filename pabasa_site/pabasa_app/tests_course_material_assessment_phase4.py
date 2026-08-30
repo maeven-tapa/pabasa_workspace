@@ -192,6 +192,42 @@ class CourseMaterialAssessmentPhase4Tests(TestCase):
         self.assertEqual(item["template_title"], "Phrase Reading Practice")
         self.assertEqual(item["assessment_type"], "sentence")
 
+    def test_results_api_uses_material_id_for_assessment_export(self):
+        material = Material.objects.create(
+            section=self.section_a,
+            teacher=self.teacher_a,
+            title="Lost and Found",
+            item_type="word",
+            prompt_text="read",
+            content_text="read",
+            content_json={"items": ["read"]},
+            type="assessment",
+            source_type="personal",
+            status="published",
+            is_active=True,
+        )
+        material.assigned_sections.add(self.section_a)
+        assessment = Assessment.objects.create(
+            title="Lost and Found",
+            code="PH4-LOST-FOUND",
+            assessment_type="word",
+            teacher=self.teacher_a,
+            section=self.section_a,
+            material=material,
+            is_active=True,
+        )
+        self._login(self.teacher_a)
+
+        response = self.client.get(reverse("get_teacher_assessments_api"), {
+            "course_id": f"section-{self.section_a.id}",
+        })
+
+        self.assertEqual(response.status_code, 200)
+        item = next(row for row in response.json()["assessments"] if row["id"] == assessment.id)
+        self.assertEqual(item["title"], "Lost and Found")
+        self.assertEqual(item["material_id"], material.id)
+        self.assertNotEqual(item["material_id"], assessment.id)
+
     def test_class_code_only_material_creation_is_rejected(self):
         self._login(self.teacher_a)
 

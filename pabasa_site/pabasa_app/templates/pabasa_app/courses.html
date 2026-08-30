@@ -9619,7 +9619,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             });
         const assessmentExportCards = sortedAssessments
             .map(assessment => {
-                const assessmentId = Number(assessment.id);
+                const exportMaterialId = String(assessment.material_id ?? '').trim();
                 const rawTypeLabel = String(assessment.level || assessment.assessment_type || '').trim();
                 const safeTypeLabel = rawTypeLabel
                     ? rawTypeLabel.replace(/[_-]+/g, ' ').replace(/\b\w/g, char => char.toUpperCase())
@@ -9632,6 +9632,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 const dateLabel = metadataDateObject && !Number.isNaN(metadataDateObject.getTime())
                     ? metadataDateObject.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
                     : '';
+                const canExport = Boolean(exportMaterialId);
                 return `
                     <div class="course-assessment-overview-card">
                         <div class="course-assessment-overview-copy">
@@ -9643,12 +9644,21 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 </div>
                             ` : ''}
                         </div>
-                        <a class="course-assessment-export-btn"
-                           href="/assessment/${assessmentId}/export-crla/"
-                           title="Export"
-                           aria-label="Export">
-                            <i class="bi bi-file-earmark-spreadsheet"></i>Export
-                        </a>
+                        ${canExport ? `
+                            <a class="course-assessment-export-btn"
+                               href="/material/export-results/?material_id=${encodeURIComponent(exportMaterialId)}"
+                               title="Export"
+                               aria-label="Export">
+                                <i class="bi bi-file-earmark-spreadsheet"></i>Export
+                            </a>
+                        ` : `
+                            <span class="course-assessment-export-btn disabled"
+                                  aria-disabled="true"
+                                  title="No material linked for export"
+                                  style="opacity:0.55; pointer-events:none; cursor:default;">
+                                <i class="bi bi-file-earmark-spreadsheet"></i>Export
+                            </span>
+                        `}
                     </div>
                 `;
             })

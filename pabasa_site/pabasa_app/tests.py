@@ -2,6 +2,7 @@ from django.conf import settings
 from django.test import Client, TestCase
 from django.urls import reverse
 from django.contrib.auth.hashers import check_password, make_password
+from openpyxl import load_workbook
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from datetime import date, datetime, timedelta
@@ -9486,6 +9487,201 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertIn("async function refreshOpenCourseAfterAssessmentChange", content)
         self.assertIn("loadCourseStudents(openCourseId)", content)
         self.assertIn("Could not refresh course students after assessment change", content)
+
+    def test_material_export_generates_student_activity_results_workbook(self):
+        teacher = User.objects.create(
+            custom_id="TCH-MAT-EXP",
+            role="teacher",
+            first_name="Material",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="material-export-teacher@example.com",
+            password_hash=make_password("teacher-password"),
+            teacher_role="Teacher",
+        )
+        student_one = User.objects.create(
+            custom_id="PABASA-0001",
+            role="student",
+            first_name="Juan",
+            last_name="Dela Cruz",
+            middle_initial="",
+            suffix="",
+            sex="male",
+            birth_month=8,
+            birth_day=15,
+            birth_year=2014,
+            email="juan@example.com",
+            password_hash=make_password("student-password"),
+            grade_level="Grade 2",
+            section="Rizal",
+        )
+        student_two = User.objects.create(
+            custom_id="PABASA-0002",
+            role="student",
+            first_name="Maria",
+            last_name="Santos",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=9,
+            birth_day=20,
+            birth_year=2014,
+            email="maria@example.com",
+            password_hash=make_password("student-password"),
+            grade_level="Grade 2",
+            section="Rizal",
+        )
+        section = test_section_create(
+            teacher=teacher,
+            class_name="Rizal",
+            class_code="RIZ-001",
+            subject="Reading",
+            is_active=True,
+        )
+        section.add_student(student_one)
+        section.add_student(student_two)
+
+        material = Material.objects.create(
+            teacher=teacher,
+            section=section,
+            title="Phrase Reading",
+            item_type="sentence",
+            type="assessment",
+            status="published",
+            is_active=True,
+            source_type='personal',
+            content_json={'template_title': 'Phrase Reading'},
+        )
+        material.record_assessment_result(
+            student_one,
+            status="completed",
+            completed_at="2026-08-30T09:00:00+00:00",
+            correct_items=8,
+            items_completed=10,
+        )
+
+        session = self.client.session
+        session['user_id'] = teacher.id
+        session['user_role'] = teacher.role
+        session.save()
+
+        response = self.client.get(reverse('export_material_results'), {'material_id': f'material-{material.id}'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response['Content-Type'],
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        workbook = load_workbook(BytesIO(response.content), data_only=False)
+        self.assertEqual(workbook.sheetnames[0], 'Activity Results')
+        sheet = workbook.active
+        self.assertEqual(sheet['A1'].value, 'PABASA — Student Activity Results')
+        self.assertEqual(sheet['A2'].value, 'Activity: Phrase Reading')
+        header = [cell.value for cell in sheet[4]]
+        self.assertEqual(header[:10], [
+            'Student Name',
+            'PABASA ID',
+            'Grade',
+            'Section',
+            'Activity Title',
+            'Activity Type',
+            'Score',
+            'Percentage',
+            'Status',
+            'Date Completed',
+        ])
+        self.assertTrue(all(cell.font.bold for cell in sheet[4]))
+        self.assertFalse(any(cell.font.bold for cell in sheet[5]))
+        self.assertFalse(any(cell.font.bold for cell in sheet[6]))
+
+        first_row_values = [cell.value for cell in sheet[5]]
+        self.assertEqual(first_row_values[0], 'Juan Dela Cruz')
+        self.assertEqual(first_row_values[1], 'PABASA-0001')
+        self.assertEqual(first_row_values[4], 'Phrase Reading')
+        self.assertEqual(first_row_values[6], '8/10')
+        self.assertEqual(first_row_values[7], '80%')
+        self.assertEqual(first_row_values[8], 'Completed')
+
+        second_row_values = [cell.value for cell in sheet[6]]
+        self.assertEqual(second_row_values[0], 'Maria Santos')
+        self.assertEqual(second_row_values[8], 'Not Attempted')
+        self.assertEqual(second_row_values[6], '—')
+        self.assertEqual(second_row_values[7], '—')
+
+    def test_material_export_humanizes_activity_type_slug_in_excel(self):
+        teacher = User.objects.create(
+            custom_id="TCH-ACT-TYPE",
+            role="teacher",
+            first_name="Type",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="activity-type-teacher@example.com",
+            password_hash=make_password("teacher-password"),
+            teacher_role="Teacher",
+        )
+        student = User.objects.create(
+            custom_id="PABASA-0009",
+            role="student",
+            first_name="Sample",
+            last_name="Student",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=2014,
+            email="activity-type-student@example.com",
+            password_hash=make_password("student-password"),
+            grade_level="Grade 2",
+            section="Rizal",
+        )
+        section = test_section_create(
+            teacher=teacher,
+            class_name="Rizal",
+            class_code="RIZ-ACT",
+            subject="Reading",
+            is_active=True,
+        )
+        section.add_student(student)
+        material = Material.objects.create(
+            teacher=teacher,
+            section=section,
+            title="Sound Play",
+            item_type="word",
+            type="assessment",
+            status="published",
+            is_active=True,
+            source_type='personal',
+            content_json={'activity_type': 'syllable_blending'},
+        )
+        material.record_assessment_result(
+            student,
+            status="completed",
+            completed_at="2026-08-30T09:00:00+00:00",
+            correct_items=4,
+            items_completed=5,
+        )
+
+        session = self.client.session
+        session['user_id'] = teacher.id
+        session['user_role'] = teacher.role
+        session.save()
+
+        response = self.client.get(reverse('export_material_results'), {'material_id': f'material-{material.id}'})
+
+        self.assertEqual(response.status_code, 200)
+        workbook = load_workbook(BytesIO(response.content), data_only=False)
+        self.assertEqual(workbook.active['F5'].value, 'Syllable Blending')
 
     def test_course_report_recipients_do_not_use_local_storage_students(self):
         response = self.client.get(reverse("courses"))

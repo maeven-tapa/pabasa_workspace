@@ -93,6 +93,8 @@ from .scoring import (
 )
 from .management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
 from .utils.crla_export import export_crla_excel
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
 
 PRACTICE_LANGUAGE_CHOICES = [
     ("English", "English"),
@@ -15022,7 +15024,7 @@ def get_teacher_assessments_api(request):
         for a in assessments_qs:
             attempts = a.get_attempts()
             source_material = a.material or a.materials.order_by('created_at').first()
-            source_type = str(getattr(source_material, 'source_type', '') or '').strip().lower()
+            source_type = str(getattr(source_material, 'source_type', '') or '').strip().lower() if source_material else ''
             source_content = getattr(source_material, 'content_json', None) or {}
             template_title = ''
             if source_type == 'template' and isinstance(source_content, dict):
@@ -15035,6 +15037,7 @@ def get_teacher_assessments_api(request):
             assessment_list.append({
                 'id': a.id,
                 'raw_id': a.id,
+                'material_id': getattr(source_material, 'id', None),
                 'code': a.code,
                 'title': a.title,
                 'assessment_type': a.assessment_type,
@@ -15123,6 +15126,7 @@ def get_teacher_assessments_api(request):
                 assessment_list.append({
                     'id': f"material-{m.id}",
                     'raw_id': m.id,
+                    'material_id': m.id,
                     'code': m.code,
                     'title': m.title,
                     'assessment_type': m.item_type,
@@ -15278,6 +15282,218 @@ def export_crla_assessment(request, assessment_id):
     )
     response["Content-Disposition"] = f'attachment; filename="{workbook.name}"'
     response["Content-Length"] = str(len(response.content))
+    return response
+
+
+def _material_activity_type_label(material):
+    if not material:
+        return 'Word'
+
+    def _format_label(value):
+        text = str(value or '').strip()
+        if not text:
+            return ''
+        if text.lower() == text and (re.search(r'[_\-]', text) or ' ' in text):
+            normalized = text.replace('_', ' ').replace('-', ' ')
+            normalized = re.sub(r'\s+', ' ', normalized).strip()
+            if normalized:
+                return ' '.join(part.capitalize() for part in normalized.split())
+        return text
+
+    content_json = getattr(material, 'content_json', None) or {}
+    if isinstance(content_json, dict):
+        for field in ('template_title', 'template_type', 'template_activity_name', 'selected_set_name', 'activity_type'):
+            value = str(content_json.get(field) or '').strip()
+            if value:
+                label = _format_label(value)
+                if label:
+                    return label
+
+    title = str(getattr(material, 'title', '') or '').strip()
+    if title:
+        title_label = _format_label(title)
+        if title_label:
+            return title_label
+
+    return str(getattr(material, 'item_type', '') or '').strip() or 'Word'
+
+
+def _material_result_score_display(result):
+    if result is None:
+        return '—'
+    correct = result.correct_items if result.correct_items is not None else None
+    total = result.items_completed if result.items_completed not in (None, '') else None
+    if correct is None or total is None or total <= 0:
+        return '—'
+    return f"{int(correct)}/{int(total)}"
+
+
+def _material_result_percentage_display(result):
+    if result is None:
+        return '—'
+    correct = result.correct_items if result.correct_items is not None else None
+    total = result.items_completed if result.items_completed not in (None, '') else None
+    if correct is None or total in (None, '', 0) or total <= 0:
+        return '—'
+    percentage = round((float(correct) / float(total)) * 100, 2)
+    return f"{percentage:g}%"
+
+
+@require_http_methods(["GET"])
+@login_required(role='teacher')
+def export_material_results(request):
+    """Download a material-scoped workbook with one row per student for the selected activity."""
+    material_id = request.GET.get('material_id') or request.GET.get('id')
+    _, material_id_int = _parse_prefixed_id(material_id)
+    if not material_id_int:
+        return HttpResponse("Material not found.", status=404)
+
+    # Try to find by Material ID first
+    material = Material.objects.filter(id=material_id_int).select_related('section', 'teacher').first()
+    
+    # If not found as a Material, try as an Assessment ID and get its associated Material
+    if not material:
+        assessment = Assessment.objects.filter(id=material_id_int, is_active=True).select_related('material').first()
+        if assessment and assessment.material:
+            material = assessment.material
+    
+    if not material:
+        return HttpResponse("Material not found.", status=404)
+
+    teacher_user = User.objects.filter(id=request.session.get('user_id')).first()
+    if not teacher_user or not _teacher_can_access_material(teacher_user, material):
+        return HttpResponseForbidden("You do not have access to this material.")
+
+    sections = []
+    if material.section_id:
+        sections.append(material.section)
+    sections.extend(list(material.assigned_sections.filter(is_active=True).select_related('teacher')))
+    for course in material.courses.filter(is_active=True).prefetch_related('sections'):
+        sections.extend(list(course.sections.filter(is_active=True).select_related('teacher')))
+    if not sections:
+        sections = list(Section.objects.filter(
+            Q(teacher=teacher_user, is_active=True) |
+            Q(courses__materials=material, is_active=True),
+        ).distinct())
+    deduped_sections = []
+    seen_section_ids = set()
+    for section in sections:
+        if not section or section.id in seen_section_ids:
+            continue
+        seen_section_ids.add(section.id)
+        deduped_sections.append(section)
+    sections = deduped_sections
+
+    student_ids = set()
+    for section in sections:
+        for entry in section.get_enrolled_students(active_only=True):
+            student_id = entry.get('student_id')
+            if student_id:
+                student_ids.add(int(student_id))
+
+    if not student_ids:
+        return HttpResponse("No students are enrolled for this material.", status=404)
+
+    students = list(User.objects.filter(id__in=student_ids, role='student').order_by('first_name', 'last_name', 'custom_id'))
+    student_map = {student.id: student for student in students}
+    results_by_student = {
+        assessment.student_id: assessment for assessment in Assessment.objects.filter(
+            material=material,
+            is_active=True,
+        ).select_related('student', 'material').order_by('-completed_at', '-updated_at', '-id')
+        if assessment.student_id is not None
+    }
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Activity Results'
+    title_fill = PatternFill('solid', fgColor='D9EAF7')
+    header_fill = PatternFill('solid', fgColor='E9ECEF')
+    header_font = Font(bold=True)
+
+    ws['A1'] = 'PABASA — Student Activity Results'
+    ws['A1'].font = Font(bold=True, size=14)
+    ws.merge_cells('A1:J1')
+    ws['A2'] = f'Activity: {material.title}'
+    ws.merge_cells('A2:J2')
+
+    headers = [
+        'Student Name',
+        'PABASA ID',
+        'Grade',
+        'Section',
+        'Activity Title',
+        'Activity Type',
+        'Score',
+        'Percentage',
+        'Status',
+        'Date Completed',
+    ]
+    row_idx = 4
+    for col_index, header in enumerate(headers, start=1):
+        cell = ws.cell(row=row_idx, column=col_index, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    ws.freeze_panes = 'A5'
+
+    for student in students:
+        row_idx += 1
+        result = results_by_student.get(student.id)
+        completed = bool(result and str(result.attempt_status or '').strip().lower() == 'completed')
+        score_display = '—'
+        percent_display = '—'
+        status_display = 'Not Attempted'
+        date_display = '—'
+        if result and completed:
+            score_display = _material_result_score_display(result)
+            percent_display = _material_result_percentage_display(result)
+            status_display = 'Completed'
+            if result.completed_at:
+                if timezone.is_naive(result.completed_at):
+                    result_completed_at = timezone.make_aware(result.completed_at, timezone.get_default_timezone())
+                else:
+                    result_completed_at = result.completed_at
+                date_display = timezone.localtime(result_completed_at).strftime('%B %d, %Y')
+        ws.append([
+            f"{student.first_name} {student.last_name}".strip() or student.custom_id,
+            getattr(student, 'custom_id', '') or '',
+            getattr(student, 'grade_level', '') or '',
+            getattr(student, 'section', '') or '',
+            material.title,
+            _material_activity_type_label(material),
+            score_display,
+            percent_display,
+            status_display,
+            '' if date_display == '—' else date_display,
+        ])
+
+    for column_cells in ws.columns:
+        max_length = 0
+        column = None
+        # Find the column letter from the first cell that has it (skip MergedCell objects)
+        for cell in column_cells:
+            if hasattr(cell, 'column_letter'):
+                column = cell.column_letter
+                break
+        if column is None:
+            continue
+        for cell in column_cells:
+            if cell.value is None:
+                continue
+            try:
+                max_length = max(max_length, len(str(cell.value)))
+            except Exception:
+                pass
+        ws.column_dimensions[column].width = min(max(12, max_length + 2), 28)
+
+    ws.sheet_view.showGridLines = False
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    response = HttpResponse(output.getvalue(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="{slugify(material.title) or "activity-results"}.xlsx"'
     return response
 
 
