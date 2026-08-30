@@ -861,14 +861,14 @@ class ReadingLaunchClassificationTests(TestCase):
     def test_crla_miscue_branch_advances_local_paragraph_cursor(self):
         script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
         content = script_path.read_text(encoding='utf-8')
-        miscue_branch = content.split('if ((isStrictAssessmentMode || mode === "paragraph") && !itemLocked[currentIndex] && currentTargetMisread) {', 1)[1].split('if (Number(data.matched || 0) > 0)', 1)[0]
+        miscue_branch = content.split('if (!itemLocked[currentIndex] && (', 1)[1].split('if (Number(data.matched || 0) > 0)', 1)[0]
 
         self.assertIn('data.word_syllable_ranges[activeWordIndex][1]', miscue_branch)
         self.assertIn('currentSyllableIndex = resolvedWordEnd;', miscue_branch)
         self.assertNotIn('transitionToItem(', miscue_branch)
         context_guard = content.split('function isCurrentSpeechContext(context) {', 1)[1].split('async function sendAudioChunk', 1)[0]
         self.assertIn('context.syllableIndex === currentSyllableIndex', context_guard)
-        update_ui = content.split('function updateUI() {', 1)[1].split('function normalizeDisplayWord', 1)[0]
+        update_ui = content.split('function updateUI() {', 1)[1].split('function animateCurrentItem()', 1)[0]
         self.assertNotIn('currentSyllableIndex = 0;', update_ui)
         self.assertIn('evaluatedParagraphWordIndex(data.word_syllable_ranges, context?.syllableIndex)', content.replace('\n', ' '))
         self.assertIn('paragraphWordResults[activeWordIndex] !== "miscue"', content)
@@ -878,7 +878,7 @@ class ReadingLaunchClassificationTests(TestCase):
     def test_crla_future_word_results_do_not_create_paragraph_visual_state(self):
         script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
         content = script_path.read_text(encoding='utf-8')
-        recorder = content.split('function recordParagraphWordResult(', 1)[1].split('function evaluatedParagraphWordIndex', 1)[0]
+        recorder = content.split('function recordParagraphWordResult(', 1)[1].split('function consumeSequentialParagraphWordResults', 1)[0]
 
         self.assertIn('expectedIndex === activeWordIndex', recorder)
         self.assertNotIn('wordResults.forEach', recorder)
@@ -925,6 +925,42 @@ class ReadingLaunchClassificationTests(TestCase):
         self.assertIn('console.log("[CRLA_STORY_DEBUG]", detail);', debug_setup)
         for event in ('segment_initialization', 'segment_transition', 'stt_callback', 'highlight_state', 'segment_completion'):
             self.assertIn(f'event: "{event}"', content)
+
+    def test_story_miscue_branch_consumes_only_contiguous_paragraph_results(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        consumer = content.split('function consumeSequentialParagraphWordResults(', 1)[1].split('function evaluatedParagraphWordIndex', 1)[0]
+        miscue_branch = content.split('if (!itemLocked[currentIndex] && (', 1)[1].split('if (Number(data.matched || 0) > 0)', 1)[0]
+
+        self.assertIn('for (let targetIndex = activeWordIndex; resultsByTargetIndex.has(targetIndex); targetIndex += 1)', consumer)
+        self.assertIn('paragraphWordResults[targetIndex] = status;', consumer)
+        self.assertIn('currentSyllableIndex = finalWordEnd;', consumer)
+        self.assertIn('consumeSequentialParagraphWordResults(', miscue_branch)
+        self.assertIn('Number(data.current_word_index ?? activeWordIndex)', miscue_branch)
+        self.assertIn('mode === "paragraph" && paragraphChunkMiscueResult', miscue_branch)
+        self.assertIn('renderSyllableDisplayWithError(data, highlightedMiscueIndex', miscue_branch)
+
+    def test_story_miscue_consumption_stops_at_speculative_future_substitution(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        consumer = content.split('function consumeSequentialParagraphWordResults(', 1)[1].split('function evaluatedParagraphWordIndex', 1)[0]
+
+        self.assertIn('targetIndex < confirmedWordIndex && status === "correct"', consumer)
+        self.assertIn('targetIndex === confirmedWordIndex && status === "miscue"', consumer)
+        self.assertIn('status === "correct"', consumer)
+        self.assertIn('resultType === "multi_token_substitution"', consumer)
+        self.assertIn('break;', consumer)
+        self.assertNotIn('recognized_index', consumer)
+
+    def test_story_miscue_completion_requires_authoritative_server_completion(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        miscue_branch = content.split('if (!itemLocked[currentIndex] && (', 1)[1].split('if (Number(data.matched || 0) > 0)', 1)[0]
+
+        completion_condition = miscue_branch.split('const paragraphChunkCompleted', 1)[1].split(';', 1)[0]
+        self.assertIn('data.complete === true', completion_condition)
+        self.assertIn('finalResolvedTargetIndex === data.word_syllable_ranges.length - 1', completion_condition)
+        self.assertIn('post_miscue_sequential_consumption', miscue_branch)
 
     def test_crla_correct_word_then_miscue_does_not_paint_next_word(self):
         script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
@@ -3237,6 +3273,63 @@ class ReadingMatcherTests(TestCase):
         self.assertEqual(result["word_results"][3]["result"], "miscue")
         self.assertEqual(result["word_results"][3]["type"], "substitution")
 
+    def test_story_alignment_groups_two_token_tatay_miscue_without_resolving_may(self):
+        target = "Iba't ibang tao ang sumasakay sa jeepney ni Tatay. May mga estudyante."
+        result = align_story_transcript(
+            target,
+            "iba't ibang tao ang sumasakay sa jeepney ni na nay",
+            language_code="fil-PH",
+            start_word_index=0,
+        )
+        tatay = next(item for item in result["word_results"] if item.get("expected_index") == 8)
+        self.assertEqual(tatay["recognized"], "na nay")
+        self.assertEqual(tatay["result"], "miscue")
+        self.assertEqual(tatay["type"], "multi_token_substitution")
+        self.assertEqual(tatay["recognized_start_index"], 8)
+        self.assertEqual(tatay["recognized_end_index"], 10)
+        self.assertNotIn(9, [item.get("expected_index") for item in result["word_results"]])
+
+    def test_story_alignment_does_not_merge_li_with_following_correct_word(self):
+        result = align_story_transcript("bibilis pa sa akin", "li pa sa akin", start_word_index=0)
+        self.assertEqual(
+            [(item["expected_index"], item["result"]) for item in result["word_results"]],
+            [(0, "miscue"), (1, "correct"), (2, "correct"), (3, "correct")],
+        )
+
+    def test_story_alignment_keeps_genuine_consecutive_miscues_separate(self):
+        result = align_story_transcript("tatay may", "lolo bukas", start_word_index=0)
+        self.assertEqual(
+            [(item["expected_index"], item["recognized"], item["type"]) for item in result["word_results"]],
+            [(0, "lolo", "substitution"), (1, "bukas", "substitution")],
+        )
+
+    def test_story_alignment_two_token_transition_preserves_one_token_correct_reading(self):
+        result = align_story_transcript("tatay may bata", "tatay may bata", start_word_index=0)
+        self.assertEqual([item["type"] for item in result["word_results"]], ["correct", "correct", "correct"])
+
+    def test_story_alignment_two_token_transition_preserves_repeated_words(self):
+        result = align_story_transcript("may may bata", "may may bata", start_word_index=0)
+        self.assertEqual([item["expected_index"] for item in result["word_results"]], [0, 1, 2])
+        self.assertTrue(all(item["result"] == "correct" for item in result["word_results"]))
+
+    def test_story_alignment_multi_token_cursor_index_is_absolute(self):
+        result = align_story_transcript("una pangalawa tatay may", "na nay", start_word_index=2)
+        self.assertEqual(len(result["word_results"]), 1)
+        self.assertEqual(result["word_results"][0]["expected_index"], 2)
+
+    def test_story_alignment_one_token_recognized_index_remains_callback_relative(self):
+        result = align_story_transcript("una pangalawa tatay may", "tatay", start_word_index=2)
+        self.assertEqual(result["word_results"][0]["recognized_index"], 0)
+
+    def test_story_alignment_multi_token_span_keeps_existing_consumer_fields(self):
+        result = align_story_transcript("tatay may", "na nay", start_word_index=0)
+        item = result["word_results"][0]
+        self.assertEqual(item["expected_index"], 0)
+        self.assertEqual(item["recognized_index"], 0)
+        self.assertEqual(item["recognized_start_index"], 0)
+        self.assertEqual(item["recognized_end_index"], 2)
+        self.assertEqual(item["result"], "miscue")
+
     def test_story_cursor_relative_alignment_resolves_multi_word_chunk(self):
         result = align_story_transcript(
             "ako ang pinakamabilis tumakbo sa bahay",
@@ -3284,6 +3377,53 @@ class ReadingMatcherTests(TestCase):
             [(2, "miscue"), (3, "correct"), (4, "correct")],
         )
         self.assertNotIn(5, [item["expected_index"] for item in result["word_results"]])
+
+    def test_story_post_miscue_chunk_exposes_trailing_correct_results(self):
+        result = align_story_transcript("bibilis pa sa akin", "li pa sa akin", start_word_index=0)
+        self.assertEqual(
+            [(item["expected_index"], item["result"]) for item in result["word_results"]],
+            [(0, "miscue"), (1, "correct"), (2, "correct"), (3, "correct")],
+        )
+
+    def test_story_post_miscue_chunk_can_contain_another_miscue(self):
+        result = align_story_transcript("bibilis pa sa akin", "li bahay sa akin", start_word_index=0)
+        self.assertEqual(
+            [(item["expected_index"], item["result"]) for item in result["word_results"]],
+            [(0, "miscue"), (1, "miscue"), (2, "correct"), (3, "correct")],
+        )
+
+    def test_story_post_miscue_chunk_preserves_correct_miscue_correct_order(self):
+        result = align_story_transcript("una pangatlo huli", "una mali huli", start_word_index=0)
+        self.assertEqual(
+            [(item["expected_index"], item["result"]) for item in result["word_results"]],
+            [(0, "correct"), (1, "miscue"), (2, "correct")],
+        )
+
+    def test_story_post_miscue_single_word_and_short_chunk_are_unchanged(self):
+        single = align_story_transcript("bibilis", "li", start_word_index=0)
+        short = align_story_transcript("bibilis pa sa akin", "li", start_word_index=0)
+        self.assertEqual([(item["expected_index"], item["result"]) for item in single["word_results"]], [(0, "miscue")])
+        self.assertEqual([(item["expected_index"], item["result"]) for item in short["word_results"]], [(0, "miscue")])
+
+    def test_story_post_miscue_repeated_words_use_next_occurrence(self):
+        result = align_story_transcript("ako ako rin", "mali ako rin", start_word_index=0)
+        self.assertEqual(
+            [(item["expected_index"], item["result"]) for item in result["word_results"]],
+            [(0, "miscue"), (1, "correct"), (2, "correct")],
+        )
+
+    def test_story_post_miscue_results_are_equivalent_across_chunk_boundaries(self):
+        expected = "bibilis pa sa akin"
+        combined = align_story_transcript(expected, "li pa sa akin", start_word_index=0)["word_results"]
+        split = (
+            align_story_transcript(expected, "li", start_word_index=0)["word_results"]
+            + align_story_transcript(expected, "pa sa", start_word_index=1)["word_results"]
+            + align_story_transcript(expected, "akin", start_word_index=3)["word_results"]
+        )
+        self.assertEqual(
+            [(item["expected_index"], item["result"]) for item in split],
+            [(item["expected_index"], item["result"]) for item in combined],
+        )
 
     def test_story_alignment_detects_omission_and_keeps_following_words_aligned(self):
         result = align_story_transcript(

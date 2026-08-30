@@ -2715,6 +2715,49 @@
             return activeResult;
         }
 
+        function consumeSequentialParagraphWordResults(wordResults, activeWordIndex, wordSyllableRanges, confirmedWordIndex) {
+            if (mode !== "paragraph" || !Array.isArray(wordResults) || activeWordIndex < 0) return [];
+            const resultsByTargetIndex = new Map();
+            wordResults.forEach((result) => {
+                const expectedIndex = Number(result?.expected_index ?? -1);
+                const status = String(result?.result || "").trim().toLowerCase();
+                if (Number.isInteger(expectedIndex) && expectedIndex >= activeWordIndex && (status === "correct" || status === "miscue")) {
+                    resultsByTargetIndex.set(expectedIndex, result);
+                }
+            });
+
+            const resolved = [];
+            let firstMiscueResolved = false;
+            for (let targetIndex = activeWordIndex; resultsByTargetIndex.has(targetIndex); targetIndex += 1) {
+                const result = resultsByTargetIndex.get(targetIndex);
+                const status = String(result.result).trim().toLowerCase();
+                const resultType = String(result.type || "").trim().toLowerCase();
+                const genericallyConfirmedCorrect = targetIndex < confirmedWordIndex && status === "correct";
+                const activeUnresolvedMiscue = targetIndex === confirmedWordIndex && status === "miscue";
+                const safelyResolvedAfterMiscue = firstMiscueResolved && (
+                    status === "correct"
+                    || resultType === "multi_token_substitution"
+                );
+                if (!genericallyConfirmedCorrect && !activeUnresolvedMiscue && !safelyResolvedAfterMiscue) {
+                    break;
+                }
+                if (paragraphWordResults[targetIndex] !== "miscue") {
+                    paragraphWordResults[targetIndex] = status;
+                }
+                resolved.push({ ...result, expected_index: targetIndex, result: status });
+                if (status === "miscue") {
+                    firstMiscueResolved = true;
+                }
+            }
+
+            const finalTargetIndex = resolved.length ? resolved[resolved.length - 1].expected_index : -1;
+            const finalWordEnd = Number(wordSyllableRanges?.[finalTargetIndex]?.[1] || 0);
+            if (finalWordEnd > currentSyllableIndex) {
+                currentSyllableIndex = finalWordEnd;
+            }
+            return resolved;
+        }
+
         function evaluatedParagraphWordIndex(wordSyllableRanges, syllableIndex) {
             if (!Array.isArray(wordSyllableRanges)) return -1;
             const cursor = Number(syllableIndex);
@@ -2940,6 +2983,12 @@
                 activeTargetResult
                 && String(activeTargetResult.result || "").trim().toLowerCase() === "miscue"
             );
+            const paragraphChunkMiscueResult = mode === "paragraph" && Array.isArray(data.word_results)
+                ? data.word_results.find((result) => (
+                    Number(result?.expected_index ?? -1) >= activeWordIndex
+                    && String(result?.result || "").trim().toLowerCase() === "miscue"
+                )) || null
+                : null;
             storyDebug({
                 event: "stt_callback",
                 segment_index: currentPageIndex,
@@ -3178,21 +3227,55 @@
 
             const isStrictAssessmentMode = isOfficialAssessmentLaunch && currentStoryState !== "story_reading";
 
-            if ((isStrictAssessmentMode || mode === "paragraph") && !itemLocked[currentIndex] && currentTargetMisread) {
+            if (!itemLocked[currentIndex] && (
+                (isStrictAssessmentMode && currentTargetMisread)
+                || (mode === "paragraph" && paragraphChunkMiscueResult)
+            )) {
                 // Current target miscue must always take precedence over generic matched===0 retry logic.
                 // Resolve the current target through the same syllable-based paragraph progression used for
                 // successful reads: mark the word as a resolved miscue and advance the cursor to the next word.
+                const sequentialParagraphResults = mode === "paragraph"
+                    ? consumeSequentialParagraphWordResults(
+                        data.word_results,
+                        activeWordIndex,
+                        data.word_syllable_ranges,
+                        Number(data.current_word_index ?? activeWordIndex)
+                    )
+                    : [];
                 const resolvedWordEnd = Number(
                     (Array.isArray(data.word_syllable_ranges) && data.word_syllable_ranges[activeWordIndex] && data.word_syllable_ranges[activeWordIndex][1]) || 0
                 );
-                if (resolvedWordEnd > currentSyllableIndex) {
+                if (!sequentialParagraphResults.length && resolvedWordEnd > currentSyllableIndex) {
                     currentSyllableIndex = resolvedWordEnd;
                 }
-                setSpeechStatus("Not quite right.", `Expected: ${data.next_word || "the next word"}. You read: ${transcript}`, false);
+                const finalResolvedTargetIndex = sequentialParagraphResults.length
+                    ? sequentialParagraphResults[sequentialParagraphResults.length - 1].expected_index
+                    : activeWordIndex;
+                const highlightedMiscueIndex = mode === "paragraph"
+                    ? Number(paragraphChunkMiscueResult?.expected_index ?? activeWordIndex)
+                    : activeWordIndex;
+                const paragraphChunkCompleted = mode === "paragraph"
+                    && data.complete === true
+                    && finalResolvedTargetIndex === data.word_syllable_ranges.length - 1;
+                storyDebug({
+                    event: "post_miscue_sequential_consumption",
+                    current_target_index: activeWordIndex,
+                    current_target_result: activeTargetResult,
+                    remaining_spoken_results: sequentialParagraphResults.slice(1),
+                    subsequently_resolved: sequentialParagraphResults.slice(1).map((result) => ({
+                        target_index: result.expected_index,
+                        result: result.result,
+                        recognized_index: result.recognized_index,
+                    })),
+                    final_cursor_position: currentSyllableIndex,
+                    segment_complete: paragraphChunkCompleted,
+                });
+                const expectedMiscueWord = Array.isArray(data.words) ? data.words[highlightedMiscueIndex] : data.next_word;
+                setSpeechStatus("Not quite right.", `Expected: ${expectedMiscueWord || "the next word"}. You read: ${transcript}`, false);
                 if (mode === "word") {
                     renderIncorrectWordFeedback(data, activeWordIndex, Number(correctWordCounts[currentIndex] || 0));
                 } else {
-                    renderSyllableDisplayWithError(data, activeWordIndex, Number(correctWordCounts[currentIndex] || 0));
+                    renderSyllableDisplayWithError(data, highlightedMiscueIndex, Number(correctWordCounts[currentIndex] || 0));
                 }
                 console.log("[CRLA_STRICT_ASSESSMENT] Current target miscue resolved; paragraph cursor advanced", {
                     itemIndex: currentIndex,
@@ -3204,6 +3287,38 @@
                     resolvedSyllableIndex: currentSyllableIndex,
                     advanceCalled: true,
                 });
+                if (paragraphChunkCompleted && currentStoryState === "story_reading") {
+                    isAdvancingItem = true;
+                    pendingAudioChunk = null;
+                    setSpeechStatus("Great job! You finished this item.", transcript ? `Words: ${transcript}` : "", true);
+                    storyDebug({
+                        event: "segment_completion",
+                        navigation: "automatic_after_miscue_chunk",
+                        segment_index: currentPageIndex,
+                        current_syllable_index: currentSyllableIndex,
+                        paragraph_word_results: { ...paragraphWordResults },
+                    });
+                    traceEndSession('handleSpeechResult.storySegmentCompleteAfterMiscueChunk', {
+                        currentPageIndex,
+                        pageCount: getCurrentPageCount(),
+                    });
+                    window.setTimeout(() => {
+                        if (!isRecording || context.version !== itemResultVersion) return;
+                        if (currentPageIndex < getCurrentPageCount() - 1) {
+                            const previousSegmentIndex = currentPageIndex;
+                            currentPageIndex += 1;
+                            currentStorySegmentIndex = currentPageIndex;
+                            resetStorySegmentState(previousSegmentIndex, currentPageIndex, "automatic_completion");
+                            updateStudentEndState({ stage: "story_reading", story_segment_index: currentPageIndex });
+                            updateUI();
+                            renderStoryReadingState(currentSelectedStory);
+                            logStorySegmentInitialization("automatic_completion");
+                            animateCurrentItem();
+                        } else {
+                            stopReading();
+                        }
+                    }, 700);
+                }
                 return;
             }
 

@@ -625,6 +625,33 @@ def _story_words_are_equivalent(expected_word, recognized_word):
     return expected == recognized
 
 
+def _story_two_token_candidate(expected_word, first_token, second_token):
+    """Return conservative evidence for one Story word split into two STT tokens."""
+    expected = _normalize_story_word_text(expected_word).replace(" ", "")
+    first = _normalize_story_word_text(first_token).replace(" ", "")
+    second = _normalize_story_word_text(second_token).replace(" ", "")
+    if len(expected) < 4 or len(first) < 2 or len(second) < 2:
+        return None
+    combined = first + second
+    if len(combined) != len(expected):
+        return None
+    if combined == expected:
+        return {"combined": combined, "correct": True, "cost": 0}
+    expected_parts = ReadingMatcher.split_syllables(expected)
+    if len(expected_parts) != 2 or [len(first), len(second)] != [len(part) for part in expected_parts]:
+        return None
+    distance = ReadingMatcher.edit_distance(combined, expected, 2)
+    if distance > 2:
+        return None
+    return {
+        "combined": combined,
+        "correct": False,
+        # A narrowly justified two-token substitution must beat two unrelated
+        # one-token substitutions plus a trailing omission in cursor mode.
+        "cost": 0 if distance == 0 else 0.9,
+    }
+
+
 def story_word_states_from_results(expected_text, recognized_text=None, total_words=None, word_results=None):
     """Return per-word visual states using the same attempted-then-advance pattern.
 
@@ -711,17 +738,47 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
             expected_word = expected_words[i - 1]
             recognized_word = recognized_words[j - 1]
             substitution_cost = 0 if _story_words_are_equivalent(expected_word, recognized_word) else 1
-            dp[i][j] = min(
+            candidates = [
                 dp[i - 1][j] + 1,
                 dp[i][j - 1] + 1,
                 dp[i - 1][j - 1] + substitution_cost,
-            )
+            ]
+            if j >= 2:
+                multi_token = _story_two_token_candidate(
+                    expected_word,
+                    recognized_words[j - 2],
+                    recognized_words[j - 1],
+                )
+                if multi_token:
+                    candidates.append(dp[i - 1][j - 2] + multi_token["cost"])
+            dp[i][j] = min(candidates)
 
     word_results = []
     insertion_count = 0
     i = len(expected_words)
     j = len(recognized_words)
     while i > 0 or j > 0:
+        if i > 0 and j >= 2:
+            expected_word = expected_words[i - 1]
+            multi_token = _story_two_token_candidate(
+                expected_word,
+                recognized_words[j - 2],
+                recognized_words[j - 1],
+            )
+            if multi_token and dp[i][j] == dp[i - 1][j - 2] + multi_token["cost"]:
+                word_results.append({
+                    "expected": expected_word,
+                    "recognized": f"{recognized_words[j - 2]} {recognized_words[j - 1]}",
+                    "result": "correct" if multi_token["correct"] else "miscue",
+                    "type": "multi_token_correct" if multi_token["correct"] else "multi_token_substitution",
+                    "expected_index": i - 1,
+                    "recognized_index": j - 2,
+                    "recognized_start_index": j - 2,
+                    "recognized_end_index": j,
+                })
+                i -= 1
+                j -= 2
+                continue
         if i > 0 and j > 0:
             expected_word = expected_words[i - 1]
             recognized_word = recognized_words[j - 1]
