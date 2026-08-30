@@ -2974,7 +2974,11 @@
                     currentSyllableIndex = resolvedWordEnd;
                 }
                 setSpeechStatus("Not quite right.", `Expected: ${data.next_word || "the next word"}. You read: ${transcript}`, false);
-                renderSyllableDisplayWithError(data, activeWordIndex, Number(correctWordCounts[currentIndex] || 0));
+                if (mode === "word") {
+                    renderIncorrectWordFeedback(data, activeWordIndex, Number(correctWordCounts[currentIndex] || 0));
+                } else {
+                    renderSyllableDisplayWithError(data, activeWordIndex, Number(correctWordCounts[currentIndex] || 0));
+                }
                 console.log("[CRLA_STRICT_ASSESSMENT] Current target miscue resolved; paragraph cursor advanced", {
                     itemIndex: currentIndex,
                     currentWordIndex: activeWordIndex,
@@ -3009,6 +3013,9 @@
                         window.clearTimeout(autoAdvanceTimer);
                     }
                     setSpeechStatus("Not quite right.", `Expected: ${data.next_word || "the next word"}. You read: ${transcript}`, false);
+                    if (mode === "word") {
+                        renderIncorrectWordFeedback(data, activeWordIndex, previousCorrectWords);
+                    }
                     console.log("[CRLA_STRICT_ASSESSMENT] Unmatched response kept in retry branch", {
                         itemIndex: currentIndex,
                         expectedWord: data.next_word,
@@ -3134,6 +3141,26 @@
         }
 
         // CRLA Official Assessment: Render syllables with a specific word highlighted as wrong/error
+        function renderIncorrectWordFeedback(data, activeWordIndex = 0, previousCorrectWords = 0) {
+            if (!readingWord) return;
+            const reportedMiscue = Array.isArray(data?.word_results)
+                ? data.word_results.find((result) => String(result?.result || "").trim().toLowerCase() === "miscue")
+                : null;
+            const reportedMiscueIndex = Number(reportedMiscue?.expected_index);
+            const incorrectWordIndex = Number.isInteger(reportedMiscueIndex) && reportedMiscueIndex >= 0
+                ? reportedMiscueIndex
+                : activeWordIndex;
+            if (Array.isArray(data?.words) && Array.isArray(data?.word_syllable_ranges)) {
+                renderSyllableDisplayWithError(data, incorrectWordIndex, previousCorrectWords);
+                return;
+            }
+
+            const word = document.createElement("span");
+            word.className = "syllable is-wrong";
+            word.textContent = String(getCurrentDisplayText() || items[currentIndex] || "").trim();
+            readingWord.replaceChildren(word);
+        }
+
         function renderSyllableDisplayWithError(data, activeWordIndex = -1, previousCorrectWords = 0) {
             if (shell.classList.contains('reader-phrase')) {
                 const displayText = String(getCurrentDisplayText() || items[currentIndex] || "").trim();
@@ -3174,7 +3201,7 @@
                     span.className = "syllable";
                     
                     // Highlight the specific word index as wrong if it matches
-                    if (paragraphWordResults[readableWordIndex] === "miscue") {
+                    if (readableWordIndex === activeWordIndex || paragraphWordResults[readableWordIndex] === "miscue") {
                         span.classList.add("is-wrong");
                     } else if (range[1] <= currentSyllableIndex) {
                         span.classList.add("is-read");
