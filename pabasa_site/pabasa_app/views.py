@@ -9410,6 +9410,28 @@ def _is_story_reading_material(material):
     return 'story_reading' in normalized
 
 
+def _is_sentence_reading_template_material(material):
+    """Identify only the teacher-assigned Sentence Reading Practice template."""
+    content = getattr(material, 'content_json', None) if material else None
+    if (
+        not material
+        or str(getattr(material, 'source_type', '') or '').strip().lower() != 'template'
+        or _assessment_kind_value(material) != 'regular'
+        or bool(getattr(material, 'is_official_reading', False))
+        or not isinstance(content, dict)
+    ):
+        return False
+    values = (
+        content.get('template_title'), content.get('template_lesson'),
+        content.get('template_type'), content.get('template_activity_name'),
+    )
+    normalized = {
+        re.sub(r'[^a-z0-9]+', '_', str(value or '').strip().lower()).strip('_')
+        for value in values
+    }
+    return bool({'sentence_reading', 'sentence_reading_practice'} & normalized)
+
+
 FILIPINO_STORY_READING_SETS = {
     'filipino-set-1': {
         'title': 'Ang Umaga ni Lito',
@@ -10005,6 +10027,107 @@ def reading_sentence_page(request):
             'crla_official_assessment_data_json': json.dumps(launch_data, default=str, separators=(',', ':')) if launch_data else '',
         })
     return render(request, 'pabasa_app/reading_sentence_page.html', context)
+
+
+@xframe_options_sameorigin
+def sentence_bot_page(request):
+    """Render Sentence Bot only through the template-activity route."""
+    access_response = _enforce_student_access_for_request(request)
+    if access_response:
+        return access_response
+    _, material_id = _parse_prefixed_id(request.GET.get('id') or request.GET.get('material_id'))
+    material = Material.objects.filter(pk=material_id).first() if material_id else None
+    if not _is_sentence_reading_template_material(material):
+        return redirect('assessment')
+    student_user = User.objects.filter(id=request.session.get('user_id'), role='student').first()
+    completed_result = None
+    if student_user:
+        completed_result = material.assessment_results.filter(
+            student=student_user, attempt_status='completed',
+        ).order_by('-completed_at', '-created_at', '-id').first()
+    items = (material.content_json or {}).get('items') if isinstance(material.content_json, dict) else []
+    total_sentences = len(items) if isinstance(items, list) else 0
+    completion_payload = {}
+    if completed_result:
+        saved_total = max(0, int(getattr(completed_result, 'items_completed', 0) or total_sentences))
+        saved_correct = max(0, int(getattr(completed_result, 'correct_items', 0) or saved_total))
+        if total_sentences:
+            saved_total = total_sentences
+            saved_correct = min(saved_correct, total_sentences)
+        completion_payload = {
+            'completed': True,
+            'correct_sentences': saved_correct,
+            'total_sentences': saved_total,
+            'total_score': getattr(completed_result, 'total_score', None),
+            'completed_at': completed_result.completed_at.isoformat() if completed_result.completed_at else '',
+        }
+    context = _dashboard_context(request)
+    context.update(_custom_material_reading_context(request))
+    context['student_end_assessment_state_json'] = json.dumps(
+        (_get_user_state(User.objects.filter(id=request.session.get('user_id')).first()).get('student_end_assessment_state') or {}),
+        default=str, separators=(',', ':'),
+    )
+    context['sentence_bot_completed'] = bool(completed_result)
+    context['sentence_bot_completion_json'] = json.dumps(completion_payload, default=str, separators=(',', ':'))
+    return render(request, 'pabasa_app/sentence_bot_page.html', context)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='student')
+def sentence_bot_complete(request):
+    """Persist one immutable Sentence Bot completion per student and material."""
+    try:
+        data = json.loads(request.body or '{}')
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({'success': False, 'error': 'Invalid completion payload.'}, status=400)
+    _, material_id = _parse_prefixed_id(data.get('material_id'))
+    student_user = User.objects.filter(id=request.session.get('user_id'), role='student').first()
+    if not material_id or not student_user:
+        return JsonResponse({'success': False, 'error': 'A valid student and material are required.'}, status=400)
+    with transaction.atomic():
+        material = Material.objects.select_for_update().filter(pk=material_id).first()
+        if not _is_sentence_reading_template_material(material):
+            return JsonResponse({'success': False, 'error': 'Invalid Sentence Bot material.'}, status=400)
+        access_response = _enforce_student_access_for_request(request, material=material, json_response=True)
+        if access_response:
+            return access_response
+        existing = material.assessment_results.filter(
+            student=student_user, attempt_status='completed',
+        ).order_by('-completed_at', '-created_at', '-id').first()
+        was_already_completed = existing is not None
+        items = (material.content_json or {}).get('items') if isinstance(material.content_json, dict) else []
+        total_sentences = len(items) if isinstance(items, list) else 0
+        if total_sentences < 1:
+            return JsonResponse({'success': False, 'error': 'This Sentence Bot activity has no sentences.'}, status=400)
+        if existing is None:
+            raw_scores = data.get('scores') if isinstance(data.get('scores'), dict) else {}
+            duration_seconds = max(0, int(raw_scores.get('duration_seconds') or data.get('duration_seconds') or 0))
+            material.record_assessment_result(
+                student_user,
+                status='completed', completed_at=timezone.now(),
+                items_completed=total_sentences, correct_items=total_sentences,
+                accuracy=100, total_score=100, passed=True,
+                duration_seconds=duration_seconds,
+                transcript=str(raw_scores.get('transcript') or data.get('transcript') or '')[:5000],
+                speech_recognition_used=bool(raw_scores.get('speech_recognition_used') or data.get('speech_recognition_used')),
+                remarks='SENTENCE_BOT_RESULT:' + json.dumps({
+                    'correct_sentences': total_sentences,
+                    'total_sentences': total_sentences,
+                }, separators=(',', ':')),
+            )
+            existing = material.assessment_results.filter(
+                student=student_user, attempt_status='completed',
+            ).order_by('-completed_at', '-created_at', '-id').first()
+    return JsonResponse({
+        'success': True,
+        'already_completed': was_already_completed,
+        'correct_items': int(getattr(existing, 'correct_items', 0) or total_sentences),
+        'items_completed': int(getattr(existing, 'items_completed', 0) or total_sentences),
+        'accuracy': getattr(existing, 'accuracy', None) or 100,
+        'total_score': getattr(existing, 'total_score', None) or 100,
+        'final_score': getattr(existing, 'total_score', None) or 100,
+    })
 
 
 @xframe_options_sameorigin

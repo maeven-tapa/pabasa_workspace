@@ -617,6 +617,132 @@ class ReadingLaunchClassificationTests(TestCase):
         session.save()
         return student
 
+    def _sentence_material(self, *, code, source_type='template', assessment_kind='regular', is_official=False):
+        return Material.objects.create(
+            title='Sentence Reading Practice', code=code, item_type='sentence',
+            content_text='The moon is bright tonight.',
+            content_json={
+                'template_title': 'Sentence Reading Practice',
+                'template_lesson': 'Sentence Reading',
+                'template_type': 'Sentence Reading Practice',
+                'language': 'English',
+                'items': [{'sentence': 'The moon is bright tonight.'}],
+            },
+            language='English', type='assessment', source_type=source_type,
+            assessment_kind=assessment_kind, is_official_reading=is_official,
+            is_system_owned=is_official, student_access=True,
+        )
+
+    def test_reading_ui_sentence_route_never_renders_sentence_bot_for_official_crla(self):
+        self._login_student()
+        material = self._sentence_material(
+            code='CRLA-SENTENCE-ROUTE', source_type='shared',
+            assessment_kind='crla', is_official=True,
+        )
+
+        response = self.client.get(reverse('reading_sentence_page'), {
+            'id': f'material-{material.id}',
+            'official_assessment_id': f'material-{material.id}',
+            'item_type': 'sentence',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'pabasa_app/reading_sentence_page.html')
+        self.assertTemplateNotUsed(response, 'pabasa_app/sentence_bot_page.html')
+        self.assertNotContains(response, 'pabasa_app/js/sentence_bot.js')
+
+    def test_reading_ui_sentence_route_never_renders_sentence_bot_from_item_type(self):
+        self._login_student()
+        material = self._sentence_material(code='REGULAR-SENTENCE-ROUTE', source_type='template')
+
+        response = self.client.get(reverse('reading_sentence_page'), {
+            'id': f'material-{material.id}', 'item_type': 'sentence',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'pabasa_app/reading_sentence_page.html')
+        self.assertTemplateNotUsed(response, 'pabasa_app/sentence_bot_page.html')
+
+    def test_sentence_bot_activity_route_renders_valid_regular_template(self):
+        self._login_student()
+        material = self._sentence_material(code='VALID-SENTENCE-BOT')
+
+        response = self.client.get(reverse('sentence_bot_page'), {
+            'id': f'material-{material.id}',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'pabasa_app/sentence_bot_page.html')
+        self.assertContains(response, 'pabasa_app/js/sentence_bot.js')
+        self.assertContains(response, 'sentence-bot-root')
+
+    def test_sentence_bot_activity_route_rejects_official_crla_material(self):
+        self._login_student()
+        material = self._sentence_material(
+            code='CRLA-ON-BOT-ROUTE', source_type='template',
+            assessment_kind='crla', is_official=True,
+        )
+
+        response = self.client.get(reverse('sentence_bot_page'), {
+            'id': f'material-{material.id}',
+        })
+
+        self.assertRedirects(response, reverse('assessment'), fetch_redirect_response=False)
+
+    def test_sentence_bot_activity_route_rejects_non_template_material(self):
+        self._login_student()
+        material = self._sentence_material(code='PERSONAL-ON-BOT-ROUTE', source_type='personal')
+
+        response = self.client.get(reverse('sentence_bot_page'), {
+            'id': f'material-{material.id}',
+        })
+
+        self.assertRedirects(response, reverse('assessment'), fetch_redirect_response=False)
+
+    def test_sentence_bot_completion_persists_and_locks_reopening(self):
+        student = self._login_student()
+        material = self._sentence_material(code='PERSISTED-SENTENCE-BOT')
+
+        active_response = self.client.get(reverse('sentence_bot_page'), {
+            'id': f'material-{material.id}',
+        })
+        self.assertEqual(active_response.status_code, 200)
+        self.assertContains(active_response, 'assessment_reader.js')
+
+        completion_response = self.client.post(
+            reverse('sentence_bot_complete'),
+            data=json.dumps({
+                'material_id': f'material-{material.id}',
+                'activity_type': 'sentence_bot',
+                'scores': {'duration_seconds': 12, 'speech_recognition_used': True},
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(completion_response.status_code, 200)
+        self.assertTrue(completion_response.json()['success'])
+        result = material.assessment_results.get(student=student, attempt_status='completed')
+        self.assertEqual(result.correct_items, 1)
+        self.assertEqual(result.items_completed, 1)
+        self.assertEqual(result.total_score, 100)
+
+        reopened_response = self.client.get(reverse('sentence_bot_page'), {
+            'id': f'material-{material.id}', 'item_type': 'sentence', 'retake': '1',
+        })
+        self.assertEqual(reopened_response.status_code, 200)
+        self.assertTrue(reopened_response.context['sentence_bot_completed'])
+        self.assertNotContains(reopened_response, 'assessment_reader.js')
+        self.assertContains(reopened_response, '"completed":true')
+        self.assertContains(reopened_response, '"correct_sentences":1')
+        self.assertContains(reopened_response, '"total_sentences":1')
+
+        duplicate_response = self.client.post(
+            reverse('sentence_bot_complete'),
+            data=json.dumps({'material_id': material.id, 'activity_type': 'sentence_bot'}),
+            content_type='application/json',
+        )
+        self.assertEqual(duplicate_response.status_code, 200)
+        self.assertEqual(material.assessment_results.filter(student=student, attempt_status='completed').count(), 1)
+
     def test_custom_material_launch_is_redirected_to_clean_non_crla_url(self):
         material = Material.objects.create(
             title='English Reading',

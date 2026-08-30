@@ -1,0 +1,24 @@
+{% extends "pabasa_app/reading_assessment_base.html" %}
+{% load static %}
+
+{% block page_title %}Sentence Bot | PABASA{% endblock %}
+{% block mode_class %}reader-sentence sentence-bot-root{% endblock %}
+{% block level_mark %}SB{% endblock %}
+{% block eyebrow %}Sentence Bot{% endblock %}
+{% block counter_text %}Training 01 / 01{% endblock %}
+{% block content_class %}content-sentence sentence-bot-reader-card{% endblock %}
+{% block watermark %}bot{% endblock %}
+{% block initial_text %}Loading sentence training...{% endblock %}
+{% block script %}
+<link rel="stylesheet" href="{% static 'pabasa_app/sentence_bot.css' %}?v={% now 'U' %}">
+<script>window.__PABASA_SENTENCE_BOT_ASSET_ROOT__ = "{% static 'pabasa_app/images/sentence_bot/' %}";</script>
+<script>
+window.__PABASA_SENTENCE_BOT_COMPLETION__ = {{ sentence_bot_completion_json|default:'{}'|safe }};
+window.__PABASA_SENTENCE_BOT_COMPLETE_URL__ = "{% url 'sentence_bot_complete' %}";
+window.__PABASA_SENTENCE_BOT_BACK_URL__ = "{% url 'assessment' %}";
+</script>
+{% if not sentence_bot_completed %}
+<script src="{% static 'pabasa_app/js/assessment_reader.js' %}?v={% now 'U' %}"></script>
+{% endif %}
+<script src="{% static 'pabasa_app/js/sentence_bot.js' %}?v={% now 'U' %}"></script>
+{% endblock %}
