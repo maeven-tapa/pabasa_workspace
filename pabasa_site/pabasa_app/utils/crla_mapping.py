@@ -39,4 +39,4 @@ STUDENT_COLUMNS = {
 }
 
 # Result cells are populated by the exporter from persisted assessment data.
-FORMULA_COLUMNS = frozenset()
+FORMULA_COLUMNS = frozenset({"I", "J", "P", "Q"})

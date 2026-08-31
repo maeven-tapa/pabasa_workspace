@@ -101,6 +101,23 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
         self.assertEqual(payload["crla_classification"], "Transitioning Reader")
         self.assertEqual(payload["crla_score_data"]["crla_classification"], "Transitioning Reader")
 
+    def test_selected_official_story_number_survives_completion_scoring(self):
+        for story_number in (1, 2):
+            with self.subTest(story_number=story_number):
+                payload = build_assessment_score_payload({
+                    "assessment_type": "paragraph",
+                    "crla_score_data": {
+                        "story_number": story_number,
+                        "story_total_words": 96 if story_number == 1 else 95,
+                        "words_read": 80,
+                        "miscues": 2,
+                        "duration_seconds": 120,
+                        "comprehension_total": 6,
+                        "comprehension_correct": 4,
+                    },
+                })
+                self.assertEqual(payload["crla_score_data"]["story_number"], story_number)
+
     def test_valid_part2_classification_ignores_legacy_generic_aggregates(self):
         payload = build_assessment_score_payload({
             "assessment_type": "paragraph",
@@ -157,6 +174,21 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
         self.assertIn('renderStoryComprehensionState(currentSelectedStory.title)', source)
         completion = source.split("async function showStoryCompletionScreen", 1)[1].split("function hideStoryCompletionScreen", 1)[0]
         self.assertIn("await showCompletion(true);", completion)
+
+    def test_official_story_choices_have_stable_one_based_keys(self):
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        choices = source.split("function getStoryChoicesFromAssessment", 1)[1].split("function shortStoryPreview", 1)[0]
+        self.assertIn(".map((item, index) => ({", choices)
+        self.assertIn("key: index + 1", choices)
+
+        score_data = source.split("function buildCrlaScoreData", 1)[1].split("function setCompletionActionButtonsProcessing", 1)[0]
+        self.assertIn("story_number: source.story_number ?? currentSelectedStory?.key ?? null", score_data)
+
+    def test_terminal_story_sync_forwards_story_identity(self):
+        source = (Path(__file__).parent / "views.py").read_text(encoding="utf-8")
+        endpoint = source.split("def persist_student_end_assessment_state", 1)[1].split("_STORY_ANSWER_FILLER_WORDS", 1)[0]
+        self.assertIn("'story_number': saved.get('story_number')", endpoint)
+        self.assertIn("'selected_story': saved.get('selected_story')", endpoint)
 
     def _run_sync(self, score_payload, initial_end_state=None):
         student = SimpleNamespace(id=1, pk=1, reading_level="")
@@ -352,6 +384,8 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
             "story_read_percent": 73.81,
         })
         for field, expected in {
+            "story_number": 2,
+            "selected_story": "Ang Pagong at ang Kuneho",
             "story_total_words": 126,
             "total_story_words": 126,
             "words_read": 93,

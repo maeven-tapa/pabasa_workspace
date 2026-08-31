@@ -86,7 +86,11 @@ def _attempt_sort_key(attempt):
 
 def _latest_attempts(assessment):
     attempts = (
-        Assessment.objects.filter(source_assessment=assessment, student__isnull=False)
+        Assessment.objects.filter(
+            source_assessment=assessment,
+            student__isnull=False,
+            attempt_status="completed",
+        )
         .select_related("student", "teacher", "section", "section__teacher", "material")
         .order_by("student_id", "attempt_number", "created_at", "id")
     )
@@ -148,6 +152,11 @@ def _student_end_state(student, material_ids):
     return state
 
 
+def _crla_score_data(attempt):
+    score_data = getattr(attempt, "crla_score_data", None)
+    return score_data if isinstance(score_data, dict) else {}
+
+
 def _reading_profile(part_1_total, percent, correct_answers, persisted=""):
     if part_1_total is not None and part_1_total <= 10:
         return "Low Emerging Reader"
@@ -206,19 +215,36 @@ def _reading_profile_remark(profile):
     }.get(normalized)
 
 
-def _story_number(state, assessment):
-    selected = str(state.get("selected_story") or "").strip()
+def _story_number(score_data, state):
+    selected = str(
+        score_data.get("story_number")
+        or score_data.get("story_key")
+        or score_data.get("story_title")
+        or score_data.get("selected_story")
+        or state.get("selected_story")
+        or ""
+    ).strip()
     if not selected:
         return None
     normalized = selected.casefold()
-    for material in assessment.materials.all():
-        content = material.content_json if isinstance(material.content_json, dict) else {}
-        passages = content.get("passages") if isinstance(content.get("passages"), list) else []
-        for index, passage in enumerate(passages[:2], start=1):
-            if isinstance(passage, dict) and str(passage.get("title") or "").strip().casefold() == normalized:
-                return index
-    match = re.search(r"(?:story|kuwento)\s*([12])", selected, re.IGNORECASE)
-    return int(match.group(1)) if match else None
+    if normalized in {"si pagong at kuneho", "ang pagong at ang kuneho", "ang pagong at kuneho"}:
+        return 1
+    if normalized == "isang kakaibang araw":
+        return 2
+    if normalized in {"filipino-set-1", "story-1", "story1", "1"}:
+        return 1
+    if normalized in {"filipino-set-2", "story-2", "story2", "2"}:
+        return 2
+    return None
+
+
+def _row_formulas(row):
+    return {
+        "I": f'=IF(AND(F{row}="",G{row}="",H{row}=""),"",SUM(F{row}:H{row}))',
+        "J": f'=IF(I{row}="","",IF(I{row}<=10,"Full Refresher",IF(I{row}<17,"Moderate Refresher",IF(I{row}<27,"Light Refresher","Grade Ready"))))',
+        "P": f'=IF(AND(M{row}>0,OR(N{row}>0,O{row}>0)),(M{row}/((N{row}*60)+O{row}))*60,"")',
+        "Q": f'=IFERROR(M{row}/IF(K{row}=2,$P$7,$M$7),"")',
+    }
 
 
 def _assessment_students(assessment, latest_attempts):
@@ -250,37 +276,49 @@ def _assessment_students(assessment, latest_attempts):
 
 
 def _student_values(student, attempt, state, assessment):
+    score_data = _crla_score_data(attempt)
     duration = _bounded_integer(
-        _first_value(state.get("duration_seconds"), getattr(attempt, "duration_seconds", None)),
+        score_data.get("duration_seconds"),
         0,
         24 * 60 * 60,
     )
-    story_number = _story_number(state, assessment)
-    minutes, seconds = (divmod(duration, 60) if duration is not None and story_number == 2 else (None, None))
+    story_number = _story_number(score_data, state)
+    minutes, seconds = divmod(duration, 60) if duration is not None else (None, None)
 
-    task_1_score = _bounded_integer(_first_value(state.get("task1_score"), state.get("correct_words")), 0, 10)
-    rhyme_score = _bounded_integer(state.get("task2_rhymes_score"), 0, 10)
-    sentence_score = _bounded_integer(_first_value(state.get("task2_sentences_score"), state.get("correct_sentences")), 0, 10)
-    if rhyme_score is None and state.get("branch") == "rhymes":
-        cumulative = _bounded_integer(state.get("cumulative_correct"), 0, 30)
-        if cumulative is not None and task_1_score is not None:
-            rhyme_score = max(0, cumulative - task_1_score)
-    # The established CRLA sentence branch advances qualifying learners past
-    # Rhymes with the same 10-point credit formerly encoded in the template's
-    # Column I formula. Export it explicitly so F + G + H always equals I.
-    if rhyme_score is None and sentence_score is not None and task_1_score is not None and task_1_score >= 7:
-        rhyme_score = 10
+    task_1_score = _bounded_integer(score_data.get("task1_score"), 0, 10)
+    task_2_score = _bounded_integer(score_data.get("task2_score"), 0, 30)
+    task_2_type = str(score_data.get("task2_type") or "").lower()
+    rhyme_score = task_2_score if "l" in task_2_type else None
+    sentence_score = task_2_score if "h" in task_2_type else None
+
+    if task_1_score is not None:
+        if 0 <= task_1_score <= 6:
+            rhyme_score = _bounded_integer(task_2_score, 0, 10)
+            sentence_score = None
+        elif 7 <= task_1_score <= 10:
+            sentence_score = _bounded_integer(task_2_score, 0, 30)
+            rhyme_score = None
+
     part_1_total = None
     if task_1_score is not None and (rhyme_score is not None or sentence_score is not None):
         part_1_total = task_1_score + (rhyme_score or 0) + (sentence_score or 0)
 
-    words_read = _bounded_integer(
-        _first_value(state.get("total_words_read"), getattr(attempt, "word_count", None)), 0, 100000
-    ) if story_number else None
-    percent = _number(
-        _first_value(state.get("story_read_percent"), state.get("correct_words_percentage"), getattr(attempt, "accuracy", None))
-    ) if story_number else None
-    correct_answers = _bounded_integer(state.get("correct_answers"), 0, 6) if story_number else None
+    story_words_read = _bounded_integer(
+        score_data.get("words_read"),
+        0,
+        100000,
+    )
+    miscues = _bounded_integer(
+        score_data.get("miscues"),
+        0,
+        100000,
+    )
+    percent = _number(score_data.get("passage_accuracy_percent"))
+    correct_answers = _bounded_integer(
+        score_data.get("comprehension_correct"),
+        0,
+        6,
+    )
     profile = _reading_profile(part_1_total, percent, correct_answers, state.get("classification"))
 
     completed_at = None
@@ -296,6 +334,10 @@ def _student_values(student, attempt, state, assessment):
     raw_sex = str(student.sex or "").strip().lower()
     sex = {"m": "Male", "male": "Male", "f": "Female", "female": "Female"}.get(raw_sex, "")
 
+    words_per_minute = _number(
+        score_data.get("wpm")
+    )
+
     return {
         # LRN is an official learner identifier. Never substitute an internal
         # database/user/custom ID when the learner has no stored LRN.
@@ -309,11 +351,11 @@ def _student_values(student, attempt, state, assessment):
         "part_1_total": part_1_total,
         "part_1_reading_level": _part_1_reading_level(part_1_total),
         "story_number": story_number,
-        "miscues": None,
-        "total_words_read": words_read,
+        "miscues": miscues,
+        "total_words_read": story_words_read,
         "reading_minutes": minutes,
         "reading_seconds": seconds,
-        "words_per_minute": _number(_first_value(state.get("wpm"), getattr(attempt, "wpm", None))) if story_number else None,
+        "words_per_minute": words_per_minute,
         "correct_words_percentage": (percent / 100) if percent is not None else None,
         "comprehension_score": correct_answers,
         "learner_experience_rating": learner_rating,
@@ -388,7 +430,8 @@ def export_crla_excel(assessment_id):
         )
         for field, column in STUDENT_COLUMNS.items():
             if column in FORMULA_COLUMNS:
-                raise RuntimeError(f"Refusing to overwrite formula column {column}.")
+                worksheet[f"{column}{row}"] = _row_formulas(row)[column]
+                continue
             worksheet[f"{column}{row}"] = values[field]
 
     output = BytesIO()

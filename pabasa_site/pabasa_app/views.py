@@ -10460,6 +10460,8 @@ def persist_student_end_assessment_state(request):
         if stage == 'completed':
             _sync_assessment_workflow_state(student, score_payload={
                 'assessment_type': 'paragraph',
+                'story_number': saved.get('story_number'),
+                'selected_story': saved.get('selected_story'),
                 'story_total_words': saved.get('story_total_words') or saved.get('total_story_words'),
                 'words_read': saved.get('words_read') or saved.get('total_words_read'),
                 'miscues': saved.get('miscues'),

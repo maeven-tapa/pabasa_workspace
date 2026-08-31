@@ -6,8 +6,8 @@ from django.utils import timezone
 from openpyxl import load_workbook
 import uuid
 
-from .models import Assessment, Material, School, Section, User
-from .utils.crla_export import _part_1_reading_level, export_crla_excel
+from .models import Assessment, Material, School, Section, StoryReadingProgress, User
+from .utils.crla_export import _part_1_reading_level, _row_formulas, _story_number, export_crla_excel
 
 
 def test_section_create(**kwargs):
@@ -30,6 +30,47 @@ class CrlaExportResultTests(TestCase):
             with self.subTest(total=total):
                 self.assertEqual(_part_1_reading_level(total), level)
         self.assertIsNone(_part_1_reading_level(None))
+
+    def test_generated_formula_logic_matches_official_crla_ranges(self):
+        cases = (
+            (5, 4, None, 9, "Full Refresher"),
+            (6, 5, None, 11, "Moderate Refresher"),
+            (10, None, 4, 14, "Moderate Refresher"),
+            (10, None, 7, 17, "Light Refresher"),
+            (10, None, 10, 20, "Light Refresher"),
+            (10, None, 17, 27, "Grade Ready"),
+        )
+        formulas = _row_formulas(20)
+        self.assertEqual(
+            formulas["I"],
+            '=IF(AND(F20="",G20="",H20=""),"",SUM(F20:H20))',
+        )
+        self.assertEqual(
+            formulas["J"],
+            '=IF(I20="","",IF(I20<=10,"Full Refresher",IF(I20<17,"Moderate Refresher",IF(I20<27,"Light Refresher","Grade Ready"))))',
+        )
+        self.assertEqual(
+            formulas["P"],
+            '=IF(AND(M20>0,OR(N20>0,O20>0)),(M20/((N20*60)+O20))*60,"")',
+        )
+        self.assertEqual(
+            formulas["Q"],
+            '=IFERROR(M20/IF(K20=2,$P$7,$M$7),"")',
+        )
+        for task1, rhymes, sentences, total, level in cases:
+            with self.subTest(task1=task1, rhymes=rhymes, sentences=sentences):
+                self.assertEqual(task1 + (rhymes or 0) + (sentences or 0), total)
+                self.assertEqual(
+                    "Full Refresher" if total <= 10 else
+                    "Moderate Refresher" if total < 17 else
+                    "Light Refresher" if total < 27 else "Grade Ready",
+                    level,
+                )
+
+    def test_story_number_uses_persisted_selected_story_title(self):
+        self.assertEqual(_story_number({}, {"selected_story": "Si Pagong at Kuneho"}), 1)
+        self.assertEqual(_story_number({}, {"selected_story": "Isang Kakaibang Araw"}), 2)
+        self.assertIsNone(_story_number({}, {"selected_story": "Unknown Story"}))
 
     def make_user(self, custom_id, role, first_name, last_name, **extra):
         return User.objects.create(
@@ -71,10 +112,10 @@ class CrlaExportResultTests(TestCase):
             "reading_assessment_state": {
                 "student_end_assessment_state": {
                     "material_id": str(material.id), "stage": "completed", "branch": "sentences",
-                    "task1_score": 8, "task2_sentences_score": 7, "part1_total_score": 25,
-                    "selected_story": "Story Two", "total_words_read": 70,
-                    "duration_seconds": 125, "wpm": 33.6, "story_read_percent": 70,
-                    "correct_answers": 3, "learner_experience_rating": 4,
+                    "task1_score": 1, "task2_rhymes_score": 9, "task2_sentences_score": 29,
+                    "part1_total_score": 10, "selected_story": "Story One", "total_words_read": 1,
+                    "duration_seconds": 1, "wpm": 1, "story_read_percent": 1,
+                    "correct_answers": 1, "learner_experience_rating": 4,
                     "classification": "Transitioning Reader",
                 }
             }
@@ -85,25 +126,32 @@ class CrlaExportResultTests(TestCase):
             student=student, title="CRLA result", code="CRLA-EXPORT-RESULT",
             assessment_type="paragraph", status="published", attempt_status="completed",
             completed_at=timezone.now(), duration_seconds=125, word_count=70, wpm=33.6,
-            accuracy=70, correct_items=3,
+            accuracy=70, correct_items=3, crla_score_data={
+                "task1_score": 10, "task2_type": "Task 2H / Sentences", "task2_score": 4,
+                "part1_total_score": 14, "story_number": None, "story_total_words": 96,
+                "words_read": 96, "miscues": 0, "duration_seconds": 519.99, "wpm": 11.08,
+                "passage_accuracy_percent": 100, "comprehension_total": 6,
+                "comprehension_correct": 4,
+            },
         )
 
         workbook = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)
         sheet = workbook["G2 MT Reading Scoresheet"]
 
         self.assertEqual(sheet["C6"].value, "Maria Santos")
-        self.assertEqual(sheet["F11"].value, 8)
-        self.assertEqual(sheet["G11"].value, 10)
-        self.assertEqual(sheet["H11"].value, 7)
-        self.assertEqual(sheet["I11"].value, 25)
-        self.assertEqual(sheet["J11"].value, "Light Refresher")
-        self.assertEqual(sheet["K11"].value, 2)
-        self.assertEqual(sheet["M11"].value, 70)
-        self.assertEqual((sheet["N11"].value, sheet["O11"].value), (2, 5))
-        self.assertEqual(sheet["P11"].value, 33.6)
-        self.assertEqual(sheet["Q11"].value, 0.7)
-        self.assertEqual(sheet["R11"].value, 3)
-        self.assertEqual(sheet["S11"].value, 4)
+        self.assertEqual(sheet["F11"].value, 10)
+        self.assertIsNone(sheet["G11"].value)
+        self.assertEqual(sheet["H11"].value, 4)
+        self.assertTrue(str(sheet["I11"].value).startswith("="))
+        self.assertTrue(str(sheet["J11"].value).startswith("="))
+        self.assertIsNone(sheet["K11"].value)
+        self.assertEqual(sheet["L11"].value, 0)
+        self.assertEqual(sheet["M11"].value, 96)
+        self.assertEqual((sheet["N11"].value, sheet["O11"].value), (8, 40))
+        self.assertTrue(str(sheet["P11"].value).startswith("="))
+        self.assertTrue(str(sheet["Q11"].value).startswith("="))
+        self.assertEqual(sheet["R11"].value, 4)
+        self.assertIsNone(sheet["S11"].value)
         self.assertEqual(sheet["T11"].value, "Level 3")
         self.assertEqual(sheet["U11"].value, "Transitioning Reader")
         self.assertEqual(sheet["V11"].value, "Needs continued reading practice")
@@ -125,7 +173,7 @@ class CrlaExportResultTests(TestCase):
         )
         student.preference = {"reading_assessment_state": {"student_end_assessment_state": {
             "material_id": str(material.id), "stage": "early_completed_words", "branch": "rhymes",
-            "task1_score": 6, "task2_rhymes_score": 3, "part1_total_score": 9,
+            "task1_score": 1, "task2_rhymes_score": 9, "part1_total_score": 10,
             "classification": "Low Emerging Reader",
         }}}
         student.save(update_fields=["preference", "updated_at"])
@@ -134,13 +182,73 @@ class CrlaExportResultTests(TestCase):
             student=student, title="early result", code="CRLA-EARLY-RESULT",
             assessment_type="word", status="published", attempt_status="completed",
             completed_at=timezone.now(), duration_seconds=20, word_count=6, wpm=18, accuracy=60,
+            crla_score_data={"task1_score": 6, "task2_type": "Task 2L / Rhymes", "task2_score": 3},
         )
 
         sheet = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)["G2 MT Reading Scoresheet"]
         self.assertEqual((sheet["F11"].value, sheet["G11"].value), (6, 3))
-        self.assertEqual(sheet["I11"].value, 9)
-        self.assertEqual(sheet["J11"].value, "Full Refresher")
-        for column in ("K", "M", "N", "O", "P", "Q", "R", "S", "T"):
+        self.assertIsNone(sheet["H11"].value)
+        self.assertTrue(str(sheet["I11"].value).startswith("="))
+        self.assertTrue(str(sheet["J11"].value).startswith("="))
+        for column in ("K", "N", "O", "R", "S", "T"):
             self.assertIsNone(sheet[f"{column}11"].value)
+        self.assertTrue(str(sheet["P11"].value).startswith("="))
+        self.assertTrue(str(sheet["Q11"].value).startswith("="))
         self.assertEqual(sheet["U11"].value, "Low Emerging Reader")
         self.assertEqual(sheet["V11"].value, "Needs intensive reading intervention")
+
+    def test_export_keeps_official_formula_cells_and_persists_story_miscues(self):
+        teacher = self.make_user("CRLA-T3", "teacher", "Luz", "Delgado")
+        student = self.make_user("CRLA-S3", "student", "Rosa", "Santos")
+        section = test_section_create(
+            class_code="G2-SAMPAGUITA", class_name="Grade 2 Sampaguita", teacher=teacher,
+            subject="Filipino", students=[{"student_id": student.id, "is_active": True}],
+        )
+        root = Assessment.objects.create(
+            teacher=teacher, section=section, title="CRLA Story Export", code="CRLA-STORY-EXPORT",
+            assessment_type="paragraph", status="published",
+        )
+        material = Material.objects.create(
+            assessment=root, section=section, teacher=teacher, code="CRLA-STORY-MAT",
+            item_type="paragraph", type="assessment", assessment_kind="crla",
+            content_json={"passages": [{"title": "Story One"}, {"title": "Story Two"}]},
+        )
+        student.preference = {"reading_assessment_state": {"student_end_assessment_state": {
+            "material_id": str(material.id), "stage": "completed", "branch": "story",
+            "task1_score": 1, "task2_rhymes_score": 9, "task2_sentences_score": 29,
+            "part1_total_score": 10, "selected_story": "Story One", "total_words_read": 1, "miscues": 99,
+            "duration_seconds": 1, "wpm": 1, "story_read_percent": 1,
+            "correct_answers": 1, "classification": "Transitioning Reader",
+        }}}
+        student.save(update_fields=["preference", "updated_at"])
+        Assessment.objects.create(
+            teacher=teacher, section=section, material=material, source_assessment=root,
+            student=student, title="story result", code="CRLA-STORY-RESULT",
+            assessment_type="paragraph", status="published", attempt_status="completed",
+            completed_at=timezone.now(), duration_seconds=125, word_count=70, wpm=33.6,
+            accuracy=70, correct_items=3, crla_score_data={
+                "task1_score": 8, "task2_type": "Task 2H / Sentences", "task2_score": 7,
+                "story_number": 2, "words_read": 70, "miscues": 3,
+                "duration_seconds": 125, "wpm": 33.6, "passage_accuracy_percent": 70,
+                "comprehension_correct": 3,
+            },
+        )
+        StoryReadingProgress.objects.create(
+            student=student, material=material, story_title="Story Two", total_words=100,
+            words_read=70, correct_words=70, miscues=3, accuracy=70, wpm=33.6,
+            correct_sentences=3, duration_seconds=125, completed=True,
+            completed_at=timezone.now(),
+        )
+
+        sheet = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)["G2 MT Reading Scoresheet"]
+        self.assertEqual(sheet["F11"].value, 8)
+        self.assertEqual(sheet["H11"].value, 7)
+        self.assertTrue(str(sheet["I11"].value).startswith("="))
+        self.assertTrue(str(sheet["J11"].value).startswith("="))
+        self.assertEqual(sheet["K11"].value, 2)
+        self.assertEqual(sheet["L11"].value, 3)
+        self.assertEqual(sheet["M11"].value, 70)
+        self.assertEqual((sheet["N11"].value, sheet["O11"].value), (2, 5))
+        self.assertTrue(str(sheet["P11"].value).startswith("="))
+        self.assertTrue(str(sheet["Q11"].value).startswith("="))
+        self.assertEqual(sheet["R11"].value, 3)

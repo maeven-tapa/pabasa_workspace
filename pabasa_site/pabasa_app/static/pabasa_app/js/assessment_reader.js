@@ -597,7 +597,8 @@
             const passages = Array.isArray(officialAssessmentData?.passages) ? officialAssessmentData.passages : [];
             return passages
                 .filter(item => item && typeof item === "object")
-                .map(item => ({
+                .map((item, index) => ({
+                    key: index + 1,
                     title: String(item.title || "").trim(),
                     content: String(item.content || "").trim(),
                 }))
