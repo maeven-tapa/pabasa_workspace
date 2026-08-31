@@ -28,54 +28,28 @@ load_dotenv(PROJECT_ROOT / '.env')
 # SECURITY WARNING: keep the production value in Secret Manager.
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-def _bool_env(name, default=False):
-    value = os.environ.get(name)
-    if value is None:
-        return default
-    normalized = value.strip().lower()
-    if normalized in {'1', 'true', 'yes', 'on'}:
-        return True
-    if normalized in {'0', 'false', 'no', 'off'}:
-        return False
-    raise ImproperlyConfigured(f'{name} must be true or false.')
-
-
-DJANGO_ENV = os.environ.get('DJANGO_ENV', 'development').strip().lower()
+# Cloud Run always provides K_SERVICE. Local runs remain in development mode.
+DJANGO_ENV = 'production' if os.environ.get('K_SERVICE') else 'development'
 if not SECRET_KEY:
     if DJANGO_ENV == 'production':
         raise ImproperlyConfigured('DJANGO_SECRET_KEY must be set in production.')
     SECRET_KEY = 'django-insecure-local-development-only'
 
-DEBUG = _bool_env('DJANGO_DEBUG', default=DJANGO_ENV != 'production')
-
-def _csv_env(name):
-    value = os.environ.get(name, '')
-    return [item.strip() for item in value.split(',') if item.strip()]
+DEBUG = DJANGO_ENV != 'production'
 
 
-def _dedupe(items):
-    seen = set()
-    output = []
-    for item in items:
-        if item and item not in seen:
-            seen.add(item)
-            output.append(item)
-    return output
-
-
-ALLOWED_HOSTS = _dedupe(_csv_env('ALLOWED_HOSTS') + [
+ALLOWED_HOSTS = [
     'tupcpabasa.app',
     'www.tupcpabasa.app',
     'pabasa-363691003404.asia-southeast1.run.app',
     '127.0.0.1',
     'localhost',
-])
+]
 
-CSRF_TRUSTED_ORIGINS = _dedupe(_csv_env('CSRF_TRUSTED_ORIGINS') + [
+CSRF_TRUSTED_ORIGINS = [
     'https://tupcpabasa.app',
     'https://www.tupcpabasa.app',
-])
+]
 
 
 # Application definition
@@ -169,7 +143,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-SITE_URL = os.environ.get('SITE_URL', 'https://tupcpabasa.app')
+SITE_URL = 'https://tupcpabasa.app'
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
@@ -180,25 +154,23 @@ if DJANGO_ENV == 'production':
     SECURE_SSL_REDIRECT = True
 
 # Email settings for Gmail
-EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
-EMAIL_USE_TLS = _bool_env('EMAIL_USE_TLS', default=True)
-EMAIL_USE_SSL = _bool_env('EMAIL_USE_SSL', default=False)
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+EMAIL_HOST_USER = 'pabasa.tupc@gmail.com'
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
-EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', '15'))
+DEFAULT_FROM_EMAIL = 'pabasa.tupc@gmail.com'
+EMAIL_TIMEOUT = 15
 
 # Google Cloud Speech-to-Text settings used by the reading assessment UI.
 GOOGLE_STT_API_KEY = os.environ.get('GOOGLE_STT_API_KEY', '')
-GOOGLE_CLOUD_PROJECT_ID = os.environ.get('GOOGLE_CLOUD_PROJECT_ID', '')
-GOOGLE_STT_LOCATION = os.environ.get('GOOGLE_STT_LOCATION', 'us')
+GOOGLE_CLOUD_PROJECT_ID = 'project-2b0d295d-ee06-40a7-927'
+GOOGLE_STT_LOCATION = 'us'
 # Chirp 3 is used through Speech-to-Text V2 Recognize for short reading clips.
-GOOGLE_STT_MODEL = os.environ.get('GOOGLE_STT_MODEL', 'chirp_3')
-GOOGLE_STT_CREDENTIALS_FILE = os.environ.get(
-    'GOOGLE_STT_CREDENTIALS_FILE', BASE_DIR / 'google-stt-service-account.json'
-)
+GOOGLE_STT_MODEL = 'chirp_3'
+GOOGLE_STT_CREDENTIALS_FILE = BASE_DIR / 'google-stt-service-account.json'
 PABASA_OVERRIDE_SECURITY_CODE = os.environ.get('PABASA_OVERRIDE_SECURITY_CODE', '')
 
 CACHES = {
