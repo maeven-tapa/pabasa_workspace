@@ -454,10 +454,17 @@ def google_stt_credentials(service_account, credentials_file):
             scopes=scopes,
         )
 
-    raise RuntimeError(
-        f"Google service account file was not found: {credentials_path}. "
-        "Set GOOGLE_STT_SERVICE_ACCOUNT_JSON_B64 on hosting."
-    )
+    # Cloud Run supplies Application Default Credentials through its service
+    # account, avoiding a long-lived service-account key in the container.
+    try:
+        from google.auth import default
+        credentials, _ = default(scopes=scopes)
+        return credentials
+    except Exception as exc:
+        raise RuntimeError(
+            f"Google service account file was not found: {credentials_path}. "
+            "Configure a Cloud Run service account or GOOGLE_STT_SERVICE_ACCOUNT_JSON."
+        ) from exc
 
 
 def transcribe_audio_bytes_v1(
