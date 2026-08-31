@@ -73,6 +73,7 @@ from .reading_stt import (
 from .hunt_scoring import classify_speech
 from .syllable_blending import activity_catalog, build_activity, normalize_format
 from .clap_count_word_bank import score_displayed_words, word_bank_catalog, validate_configuration
+from .sound_detective import catalog as sound_detective_catalog, validate_configuration as validate_sound_detective
 from .reader_classification import classify_student_account
 from .scoring import (
     ADAPTED_READING_LEVEL_DISCLAIMER,
@@ -9406,6 +9407,15 @@ def _is_clap_count_material(material):
     return 'clap_count_syllables' in normalized
 
 
+def _is_sound_detective_material(material):
+    content = getattr(material, 'content_json', None) if material else None
+    if not isinstance(content, dict):
+        return False
+    values = (content.get('template_title'), content.get('template_lesson'), content.get('activity_type'))
+    normalized = {re.sub(r'[^a-z0-9]+', '_', str(value or '').lower()).strip('_') for value in values}
+    return 'sound_detective' in normalized
+
+
 def _is_letter_sound_matching_material(material):
     """Identify Letter & Sound Matching activities."""
     content = getattr(material, 'content_json', None) if material else None
@@ -9663,6 +9673,26 @@ def clap_count_syllables_page(request):
     }, default=str, separators=(',', ':'))
     context['clap_count_completion_json'] = json.dumps(completion_payload or {}, default=str, separators=(',', ':'))
     return render(request, 'pabasa_app/clap_count_syllables_page.html', context)
+
+
+@xframe_options_sameorigin
+def sound_detective_page(request):
+    access_response = _enforce_student_access_for_request(request)
+    if access_response:
+        return access_response
+    _, material_id = _parse_prefixed_id(request.GET.get('id') or request.GET.get('material_id'))
+    material = Material.objects.filter(pk=material_id).first() if material_id else None
+    if not material or not _is_sound_detective_material(material):
+        return redirect('assessment')
+    try:
+        configuration = validate_sound_detective(dict(material.content_json or {}))
+    except ValueError as exc:
+        return HttpResponse(str(exc), status=400, content_type='text/plain; charset=utf-8')
+    payload = dict(configuration)
+    payload.update({'id': material.id, 'title': material.title})
+    context = _dashboard_context(request)
+    context['sound_detective_material_json'] = json.dumps(payload, default=str, separators=(',', ':'))
+    return render(request, 'pabasa_app/sound_detective_page.html', context)
 
 
 @xframe_options_sameorigin
@@ -13422,6 +13452,7 @@ def course_teacher_view(request):
         'crla_assessment_status_message': _crla_creation_block_message(teacher_user=teacher_user) if current_term == 2 or crla_existing else '',
         'syllable_blending_catalog': activity_catalog(),
         'clap_count_word_bank': word_bank_catalog(),
+        'sound_detective_catalog': sound_detective_catalog(),
         'picture_word_catalog': _picture_word_catalog(),
     })
     return render(request, 'pabasa_app/courses.html', context)
@@ -18165,6 +18196,17 @@ def add_reading_material(request):
                         'allow_retry': bool(template_payload.get('allow_retry', True)),
                     })
                     title = title or 'Clap & Count Syllables'
+                if template_identity in {'phonological awareness', 'sound detective'}:
+                    try:
+                        sound_config = validate_sound_detective(template_payload)
+                    except (TypeError, ValueError) as exc:
+                        return JsonResponse({'success': False, 'errors': {'content': str(exc)}}, status=400)
+                    template_payload.update(sound_config)
+                    template_payload.update({
+                        'template_title': 'Sound Detective', 'template_lesson': 'Phonological Awareness',
+                        'template_type': 'Sound Detective', 'template_source': 'template',
+                    })
+                    title = title or 'Sound Detective'
                 def _template_item_text(item, template_title_value=''):
                     if not isinstance(item, dict):
                         return str(item).strip() if item is not None else ''
@@ -18550,6 +18592,11 @@ def teacher_update_material(request):
                     return JsonResponse({'success': False, 'error': str(exc)}, status=400)
                 template_payload['items'] = bank_items[:int(template_payload['number_of_words'])]
                 template_payload['activity_type'] = 'clap_count_syllables'
+            if template_title == 'Sound Detective':
+                try:
+                    template_payload.update(validate_sound_detective(template_payload))
+                except (TypeError, ValueError) as exc:
+                    return JsonResponse({'success': False, 'error': str(exc)}, status=400)
             template_payload = _normalize_picture_word_matching_content(template_payload)
             template_items = template_payload.get('items') if isinstance(template_payload.get('items'), list) else []
 

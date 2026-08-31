@@ -8855,6 +8855,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
 {{ syllable_blending_catalog|json_script:"syllable-blending-catalog" }}
 {{ clap_count_word_bank|json_script:"clap-count-word-bank" }}
+{{ sound_detective_catalog|json_script:"sound-detective-catalog" }}
 {{ picture_word_catalog|json_script:"picture-word-catalog" }}
 <script>
     // Get the current teacher's name from the page title or username
@@ -13813,7 +13814,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const openMaterialDropdowns = new Set();
         const TEMPLATE_DEFINITIONS = {
             'Letter & Sound Matching': { lesson: 'Phonics', hint: 'Choose a predefined Filipino phonics set. All letters and audio are provided by the system.', fields: [], addLabel: 'Select Reading Set' },
-            'Sound Detective': { lesson: 'Phonological Awareness', hint: 'Identify and locate sounds inside words.', fields: [{ key: 'word', label: 'Word', type: 'text', placeholder: 'mata' }, { key: 'targetSound', label: 'Target sound', type: 'text', placeholder: '/m/' }, { key: 'position', label: 'Position of sound', type: 'select', options: ['Beginning', 'Middle', 'End'] }], addLabel: 'Add Item' },
+            'Sound Detective': { lesson: 'Phonological Awareness', hint: 'Choose a language, sound set, and curated picture words.', fields: [], addLabel: 'Select Words' },
             'Match the Letter to Its Sound': { lesson: 'Letter-Sound Correspondence', hint: 'Match each letter to the sound it makes.', fields: [{ key: 'letter', label: 'Letter', type: 'text' }, { key: 'sound', label: 'Sound', type: 'text' }], addLabel: 'Add Item' },
             'Clap & Count Syllables': { lesson: 'Syllable Awareness', hint: 'Choose a language, system word set, and words for clapping practice.', fields: [], addLabel: 'Select Words' },
             'Blend the Syllables': { lesson: 'Syllable Blending', hint: 'Choose a language and one ready-made activity format.', fields: [], addLabel: 'Pre-built content' },
@@ -14186,6 +14187,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
         };
         const PICTURE_WORD_CATALOG = JSON.parse(document.getElementById('picture-word-catalog')?.textContent || '{}');
+        const SOUND_DETECTIVE_CATALOG = JSON.parse(document.getElementById('sound-detective-catalog')?.textContent || '{}');
         const PICTURE_WORD_PRESCRIBED_SETS = Array.isArray(PICTURE_WORD_CATALOG.prescribedSets) ? PICTURE_WORD_CATALOG.prescribedSets : [];
         const PICTURE_WORD_CUSTOM_MAX_ITEMS = 5;
         const PICTURE_WORD_CUSTOM_LIBRARY = [
@@ -14521,6 +14523,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
 
         function isClapCountTemplate(title) { return title === 'Clap & Count Syllables'; }
+
+        function isSoundDetectiveTemplate(title) { return title === 'Sound Detective'; }
 
         function isLetterSoundMatchingTemplate(title) { 
             return title === 'Letter & Sound Matching'; 
@@ -14887,6 +14891,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     numberOfWords: Number(contentJson.number_of_words) || 10,
                     randomizeOrder: Boolean(contentJson.randomize_order),
                     allowRetry: contentJson.allow_retry !== false
+                } : null,
+                soundDetective: isSoundDetectiveTemplate(templateTitle) ? {
+                    soundSet: String(contentJson.sound_set || ''),
+                    selectedWordIds: Array.isArray(contentJson.selected_word_ids) ? contentJson.selected_word_ids : [],
+                    numberOfQuestions: Number(contentJson.number_of_questions) || restoredItems.length || 1,
+                    randomizeQuestions: Boolean(contentJson.randomize_questions),
+                    randomizeAnswerChoices: Boolean(contentJson.randomize_answer_choices),
+                    allowRetry: contentJson.allow_retry !== false,
+                    previewIndex: 0
                 } : null,
                 activityFormat: isSyllableBlendingTemplate(templateTitle) ? (contentJson.activity_format || 'syllable_combination') : null,
                 selectedActivityId: isSyllableBlendingTemplate(templateTitle) ? (contentJson.activity_id || null) : null,
@@ -15941,6 +15954,29 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             };
         }
 
+        function getSoundDetectiveSet(language, setId) {
+            return (SOUND_DETECTIVE_CATALOG?.[language]?.sets || []).find(set => set.id === setId) || null;
+        }
+
+        function renderSoundDetectiveSelector() {
+            const language = activeTemplateActivity.language === 'English' ? 'English' : 'Filipino';
+            const sets = SOUND_DETECTIVE_CATALOG?.[language]?.sets || [];
+            const config = activeTemplateActivity.soundDetective || (activeTemplateActivity.soundDetective = {soundSet:'',selectedWordIds:[],numberOfQuestions:1,randomizeQuestions:false,randomizeAnswerChoices:false,allowRetry:true,previewIndex:0});
+            if (!sets.some(set => set.id === config.soundSet)) { config.soundSet = ''; config.selectedWordIds = []; }
+            const selectedSet = getSoundDetectiveSet(language, config.soundSet);
+            const words = selectedSet?.items || [];
+            config.selectedWordIds = config.selectedWordIds.filter(id => words.some(word => word.id === id));
+            const selectedCount = config.selectedWordIds.length;
+            templateDynamicFields.innerHTML = `<div class="row g-3 sound-detective-builder">
+                <div class="col-12"><label class="form-label fw-bold" for="soundDetectiveSet">Sound Set <span class="text-danger">*</span></label><select class="form-select" id="soundDetectiveSet"><option value="">Choose a sound set</option>${sets.map(set=>`<option value="${escapeAttr(set.id)}" ${set.id===config.soundSet?'selected':''}>${escapeHtml(set.label)}</option>`).join('')}</select></div>
+                ${selectedSet ? `<div class="col-12"><div class="d-flex justify-content-between align-items-center mb-2"><strong>Select picture words</strong><span>${selectedCount} selected</span></div><label class="form-check mb-3"><input class="form-check-input" type="checkbox" id="soundDetectiveSelectAll" ${selectedCount===words.length?'checked':''}><span class="form-check-label">Select all</span></label><div class="row g-3">${words.map(word=>`<div class="col-6 col-lg-4"><label class="card h-100 p-2 text-center position-relative ${config.selectedWordIds.includes(word.id)?'border-primary border-2 bg-primary-subtle':''}" style="cursor:pointer"><input class="form-check-input position-absolute top-0 end-0 m-2 sound-detective-word-check" type="checkbox" value="${escapeAttr(word.id)}" ${config.selectedWordIds.includes(word.id)?'checked':''}><img src="${escapeAttr(word.image_url)}" alt="${escapeAttr(word.word)}" style="height:105px;object-fit:contain"><strong class="text-uppercase mt-2">${escapeHtml(word.word)}</strong><span class="badge text-bg-light mt-1">${escapeHtml(word.position)}</span></label></div>`).join('')}</div></div>
+                <div class="col-12 d-flex justify-content-end"><button type="button" class="btn template-btn template-btn-secondary" id="soundDetectivePreviewBtn"><i class="bi bi-play-circle me-1"></i>Preview Activity</button></div>` : ''}</div>`;
+            document.getElementById('soundDetectiveSet').onchange=e=>{config.soundSet=e.target.value;const set=getSoundDetectiveSet(language,config.soundSet);config.selectedWordIds=(set?.items||[]).map(item=>item.id);config.numberOfQuestions=config.selectedWordIds.length;config.previewIndex=0;renderSoundDetectiveSelector();renderTemplatePreview()};
+            document.getElementById('soundDetectiveSelectAll')?.addEventListener('change',e=>{config.selectedWordIds=e.target.checked?words.map(word=>word.id):[];config.numberOfQuestions=config.selectedWordIds.length||1;config.previewIndex=0;renderSoundDetectiveSelector();renderTemplatePreview()});
+            document.querySelectorAll('.sound-detective-word-check').forEach(box=>box.onchange=()=>{config.selectedWordIds=Array.from(document.querySelectorAll('.sound-detective-word-check:checked')).map(el=>el.value);config.numberOfQuestions=Math.min(config.numberOfQuestions||config.selectedWordIds.length,Math.max(1,config.selectedWordIds.length));config.previewIndex=0;renderSoundDetectiveSelector();renderTemplatePreview()});
+            document.getElementById('soundDetectivePreviewBtn')?.addEventListener('click',()=>{config.previewIndex=0;renderSoundDetectivePreview();document.querySelector('.template-preview-section')?.scrollIntoView({behavior:'smooth',block:'start'});templatePreviewPanel?.focus?.({preventScroll:true})});
+        }
+
         function renderClapCountSelector() {
             const language = activeTemplateActivity.language === 'English' ? 'English' : 'Filipino';
             const catalog = CLAP_COUNT_WORD_BANK[language] || {sets:[],words:[]};
@@ -16002,6 +16038,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 updatePhraseReadingLanguageAvailability();
             }
             if (isClapCountTemplate(title)) { renderClapCountSelector(); return; }
+            if (isSoundDetectiveTemplate(title)) { renderSoundDetectiveSelector(); return; }
             if (isPhraseReadingTemplate(title)) {
                 renderPhraseReadingSelector(title);
                 return;
@@ -16124,9 +16161,22 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             `;
         }
 
+        function renderSoundDetectivePreview() {
+            const language = activeTemplateActivity.language === 'English' ? 'English' : 'Filipino';
+            const config = activeTemplateActivity.soundDetective || {};
+            const selectedSet = getSoundDetectiveSet(language, config.soundSet);
+            const selected = (selectedSet?.items || []).filter(item => (config.selectedWordIds || []).includes(item.id));
+            if (!selected.length) { templatePreviewPanel.innerHTML='<div class="template-preview-empty"><i class="bi bi-search"></i><span>Choose a sound set and picture words to preview the activity.</span></div>'; return; }
+            config.previewIndex=Math.min(Number(config.previewIndex)||0,selected.length-1);const item=selected[config.previewIndex],choices=['Beginning','Middle','End'];
+            templatePreviewPanel.innerHTML=`<div class="p-3 p-md-4 text-center bg-white rounded-4 border"><div class="d-flex justify-content-between mb-2"><strong class="text-primary">🔎 ${escapeHtml(templateActivityTitle?.value||'Sound Detective')}</strong><span>${config.previewIndex+1} of ${selected.length}</span></div><div class="progress mb-3" style="height:8px"><div class="progress-bar bg-success" style="width:${config.previewIndex/selected.length*100}%"></div></div><h5>Listen for: <strong>${escapeHtml(item.target_sound)}</strong> <button type="button" class="btn btn-sm btn-outline-primary rounded-pill" data-sd-listen>🔊 Listen</button></h5><img src="${escapeAttr(item.image_url)}" alt="${escapeAttr(item.word)}" style="width:190px;height:170px;object-fit:contain"><h2 class="fw-bold text-uppercase">${escapeHtml(item.word)}</h2><p>Where do you hear the ${escapeHtml(item.target_sound)} sound?</p><div class="d-flex flex-wrap justify-content-center gap-2">${choices.map(choice=>`<button type="button" class="btn btn-outline-primary fw-bold" data-sd-answer="${choice}">${choice}</button>`).join('')}</div><div class="fw-bold mt-3" data-sd-feedback role="status"></div><button type="button" class="btn btn-primary mt-2 d-none" data-sd-next>${config.previewIndex+1===selected.length?'Start over':'Next word'}</button></div>`;
+            templatePreviewPanel.querySelector('[data-sd-listen]')?.addEventListener('click',()=>{if(!('speechSynthesis'in window))return;window.speechSynthesis.cancel();window.speechSynthesis.speak(new SpeechSynthesisUtterance(item.word))});
+            templatePreviewPanel.querySelectorAll('[data-sd-answer]').forEach(button=>button.addEventListener('click',()=>{const correct=button.dataset.sdAnswer===item.position,feedback=templatePreviewPanel.querySelector('[data-sd-feedback]');button.classList.remove('btn-outline-primary');button.classList.add(correct?'btn-success':'btn-danger');feedback.textContent=correct?'Correct! You found it!':(config.allowRetry?'Try again — listen carefully.':`The sound is at the ${item.position.toLowerCase()}.`);if(correct||!config.allowRetry){templatePreviewPanel.querySelectorAll('[data-sd-answer]').forEach(btn=>btn.disabled=true);const next=templatePreviewPanel.querySelector('[data-sd-next]');next.classList.remove('d-none');next.onclick=()=>{config.previewIndex=(config.previewIndex+1)%selected.length;renderSoundDetectivePreview()}}}));
+        }
+
         function renderTemplatePreview() {
             if (!templatePreviewPanel || !activeTemplateActivity) return;
             const templateTitle = activeTemplateActivity.templateTitle;
+            if (isSoundDetectiveTemplate(templateTitle)) { renderSoundDetectivePreview(); return; }
             const language = activeTemplateActivity.language || 'Filipino';
             const summary = getTemplateContentSelectionSummary();
             const weeks = getTemplateWeeks();
@@ -16420,6 +16470,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (isClapCountTemplate(templateTitle)) {
                 activeTemplateActivity.clapCount = {wordSet:'',selectedWordIds:[],numberOfWords:10,randomizeOrder:true,allowRetry:true};
             }
+            if (isSoundDetectiveTemplate(templateTitle)) {
+                activeTemplateActivity.soundDetective = {soundSet:'',selectedWordIds:[],numberOfQuestions:1,randomizeQuestions:false,randomizeAnswerChoices:false,allowRetry:true,previewIndex:0};
+                activeTemplateActivity.title = 'Sound Detective';
+            }
             if (isLetterSoundMatchingTemplate(templateTitle)) {
                 const defaultSetId = 'filipino_set_1';
                 const defaultSet = getLetterSoundMatchingReadingSetById(defaultSetId);
@@ -16454,7 +16508,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             setTemplateBuilderActive(true);
             if (templateActivityTitle) {
                 if (!isLetterSoundMatchingTemplate(templateTitle)) {
-                    templateActivityTitle.value = '';
+                    templateActivityTitle.value = isSoundDetectiveTemplate(templateTitle) ? 'Sound Detective' : '';
                 }
                 templateActivityTitle.closest('.template-title-field')?.classList.toggle('d-none', isSyllableBlendingTemplate(templateTitle));
             }
@@ -16502,6 +16556,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (isClapCountTemplate(activeTemplateActivity?.templateTitle)) {
                 const config=activeTemplateActivity.clapCount||{};
                 Object.assign(content,{language,activity_type:'clap_count_syllables',word_set:config.wordSet||'',selected_word_ids:config.selectedWordIds||[],number_of_words:Number(config.numberOfWords)||0,randomize_order:Boolean(config.randomizeOrder),allow_retry:Boolean(config.allowRetry)});
+            } else if (isSoundDetectiveTemplate(activeTemplateActivity?.templateTitle)) {
+                const config=activeTemplateActivity.soundDetective||{};
+                const selectedSet=getSoundDetectiveSet(language,config.soundSet);
+                const selectedItems=(selectedSet?.items||[]).filter(item=>(config.selectedWordIds||[]).includes(item.id));
+                Object.assign(content,{language,activity_type:'sound_detective',sound_set:config.soundSet||'',sound_set_label:selectedSet?.label||'',target_sound:selectedSet?.sound||'',selected_word_ids:config.selectedWordIds||[],number_of_questions:selectedItems.length,randomize_questions:false,randomize_answer_choices:false,allow_retry:true,items:selectedItems});
             } else if (isSyllableBlendingTemplate(activeTemplateActivity?.templateTitle)) {
                 content.language = language;
                 content.activity_format = activeTemplateActivity.activityFormat || 'syllable_combination';
@@ -16597,6 +16656,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 if (!values.content?.word_set) return 'Word set is required.';
                 if (!Array.isArray(values.content?.selected_word_ids)||!values.content.selected_word_ids.length) return 'Select at least one word.';
                 if (values.content.number_of_words<1||values.content.number_of_words>values.content.selected_word_ids.length) return 'Number of words cannot exceed the selected words.';
+                if (!values.weeks.length) return 'Select at least one week.';
+                return '';
+            }
+            if (isSoundDetectiveTemplate(activeTemplateActivity?.templateTitle)) {
+                const selectedSet=getSoundDetectiveSet(values.language,values.content?.sound_set);
+                if (!selectedSet) return 'Choose a sound set for the selected language.';
+                const validIds=new Set(selectedSet.items.map(item=>item.id));
+                if (!Array.isArray(values.content?.selected_word_ids)||!values.content.selected_word_ids.length) return 'Select at least one word item.';
+                if (values.content.selected_word_ids.some(id=>!validIds.has(id))) return 'Selected words must belong to the selected sound set.';
+                if (values.content.number_of_questions<1||values.content.number_of_questions>values.content.selected_word_ids.length) return 'Number of questions cannot exceed the selected words.';
                 if (!values.weeks.length) return 'Select at least one week.';
                 return '';
             }
@@ -16803,6 +16872,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     }
                     if (isClapCountTemplate(activeTemplateActivity?.templateTitle)) {
                         Object.assign(contentPayload, values.content, {activity_type:'clap_count_syllables',language:values.language,template_title:'Clap & Count Syllables',template_lesson:'Syllable Awareness',template_type:'Clap & Count Syllables',template_source:'template',items:[]});
+                    }
+                    if (isSoundDetectiveTemplate(activeTemplateActivity?.templateTitle)) {
+                        Object.assign(contentPayload, values.content, {activity_type:'sound_detective',language:values.language,template_title:'Sound Detective',template_lesson:'Phonological Awareness',template_type:'Sound Detective',template_source:'template'});
                     }
                     if (isPictureWordMatchingTemplate(activeTemplateActivity?.templateTitle)) {
                         const mode = activeTemplateActivity?.pictureWordMatching?.mode === 'custom' ? 'custom' : 'prescribed';
@@ -17969,6 +18041,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
                     } else if (isClapCountTemplate(activeTemplateActivity?.templateTitle)) {
                         activeTemplateActivity.clapCount = {wordSet:'',selectedWordIds:[],numberOfWords:10,randomizeOrder:true,allowRetry:true};
+                        renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
+                    } else if (isSoundDetectiveTemplate(activeTemplateActivity?.templateTitle)) {
+                        activeTemplateActivity.soundDetective = {soundSet:'',selectedWordIds:[],numberOfQuestions:1,randomizeQuestions:false,randomizeAnswerChoices:false,allowRetry:true,previewIndex:0};
                         renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
                     }
                     renderTemplatePreview();

@@ -1132,6 +1132,7 @@
                 const pictureWordMatchingUrl = "{% url 'picture_word_matching_page' %}";
                 const syllableBlendingUrl = "{% url 'syllable_blending_page' %}";
                 const clapCountSyllablesUrl = "{% url 'clap_count_syllables_page' %}";
+                const soundDetectiveUrl = "{% url 'sound_detective_page' %}";
                 const letterSoundMatchingUrl = "{% url 'letter_sound_matching_page' %}";
                 const storyReadingUrl = "{% url 'story_reading_page' %}";
                 const phraseReadingUrl = "{% url 'phrase_reading_page' %}";
@@ -1288,6 +1289,8 @@
                                 .some(value => ['syllable_blending', 'blend_the_syllables'].includes(String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')));
                             const isClapCountSyllables = [templateActivityName, m.content_json?.template_title, m.content_json?.activity_type]
                                 .some(value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === 'clap_count_syllables');
+                            const isSoundDetective = [templateActivityName, m.content_json?.template_title, m.content_json?.template_lesson, m.content_json?.activity_type]
+                                .some(value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === 'sound_detective');
                             const isStoryReading = [m.template_title, m.template_type, m.content_json?.template_title,
                                 m.content_json?.template_lesson, m.content_json?.template_type, m.content_json?.activity_type]
                                 .some(value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === 'story_reading');
@@ -1309,6 +1312,8 @@
                                 ? `${storyReadingUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
                                 : isClapCountSyllables
                                 ? `${clapCountSyllablesUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
+                                : isSoundDetective
+                                ? `${soundDetectiveUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
                                 : isLetterSoundMatching
                                 ? `${letterSoundMatchingUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
                                 : isSyllableBlending
