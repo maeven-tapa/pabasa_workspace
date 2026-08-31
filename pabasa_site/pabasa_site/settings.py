@@ -165,7 +165,7 @@ DEFAULT_FROM_EMAIL = 'pabasa.tupc@gmail.com'
 EMAIL_TIMEOUT = 15
 
 # Google Cloud Speech-to-Text settings used by the reading assessment UI.
-GOOGLE_STT_API_KEY = os.environ.get('GOOGLE_STT_API_KEY', '')
+GOOGLE_STT_API_KEY = os.environ.get('GOOGLE_API_KEY', '')
 GOOGLE_CLOUD_PROJECT_ID = 'project-2b0d295d-ee06-40a7-927'
 GOOGLE_STT_LOCATION = 'us'
 # Chirp 3 is used through Speech-to-Text V2 Recognize for short reading clips.
