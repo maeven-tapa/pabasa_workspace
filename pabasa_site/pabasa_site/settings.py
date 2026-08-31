@@ -62,6 +62,7 @@ def _dedupe(items):
 ALLOWED_HOSTS = _dedupe(_csv_env('ALLOWED_HOSTS') + [
     'tupcpabasa.app',
     'www.tupcpabasa.app',
+    'pabasa-363691003404.asia-southeast1.run.app',
     '127.0.0.1',
     'localhost',
 ])
