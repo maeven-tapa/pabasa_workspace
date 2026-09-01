@@ -57,10 +57,29 @@
             {% endif %}{% endif %}
         </div>
         {% empty %}<p class="text-secondary mb-0">No enrollments recorded.</p>{% endfor %}
-        {% if managed_user.account_status == 'active' and not current_return_enrollment %}<form method="post" action="{% url 'admin_student_returning_enrollment' managed_user.id %}" class="mt-2" onsubmit="return confirm('Prepare this retained student for the active school year as Awaiting Assignment?');">{% csrf_token %}<button class="btn btn-sm btn-outline-success" type="submit"><i class="bi bi-person-plus me-1"></i>Prepare Returning Student</button></form>{% endif %}
+        {% if managed_user.account_status == 'active' and not current_return_enrollment %}<form method="post" action="{% url 'admin_student_returning_enrollment' managed_user.id %}" id="prepareReturningStudentForm" class="mt-2">{% csrf_token %}<button class="btn btn-sm btn-outline-success" type="button" data-bs-toggle="modal" data-bs-target="#prepareReturningStudentModal"><i class="bi bi-person-plus me-1"></i>Prepare Returning Student</button></form>{% endif %}
     </div>
     {% if managed_user.account_status == 'pending_archive' %}<div class="border rounded-3 p-3 bg-white mt-3"><h3 class="h5"><i class="bi bi-hourglass-split me-1"></i>Pending Archive Review</h3><form method="post" action="{% url 'admin_student_archive_action' managed_user.id %}" class="d-flex flex-wrap gap-2" onsubmit="return confirm('Approve archiving this promoted student account? All records will be preserved.');">{% csrf_token %}<input type="hidden" name="action" value="approve_archive"><button class="btn btn-outline-danger" type="submit"><i class="bi bi-archive me-1"></i>Approve Archive</button></form><form method="post" action="{% url 'admin_student_archive_action' managed_user.id %}" class="mt-2" onsubmit="return confirm('Correct this outcome to Retained and restore the account to Active?');">{% csrf_token %}<input type="hidden" name="action" value="revert_retained"><button class="btn btn-outline-success" type="submit"><i class="bi bi-arrow-counterclockwise me-1"></i>Revert to Retained</button></form></div>{% endif %}
     {% if managed_user.is_archived %}<div class="border rounded-3 p-3 bg-white mt-3"><form method="post" action="{% url 'admin_student_restore' managed_user.id %}" onsubmit="return confirm('Restore this student account? Historical records will remain unchanged.');">{% csrf_token %}<button class="btn btn-outline-success" type="submit"><i class="bi bi-person-check me-1"></i>Restore Account</button></form><form method="post" action="{% url 'admin_student_archive_action' managed_user.id %}" class="mt-2" onsubmit="return confirm('Correct the promoted outcome to Retained and restore this account to Active?');">{% csrf_token %}<input type="hidden" name="action" value="correct_retained"><button class="btn btn-outline-warning" type="submit"><i class="bi bi-arrow-counterclockwise me-1"></i>Correct to Retained</button></form></div>{% endif %}
     {% endif %}
 </div>
+{% if managed_user.account_status == 'active' and not current_return_enrollment %}
+<div class="modal fade" id="prepareReturningStudentModal" tabindex="-1" aria-labelledby="prepareReturningStudentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-0 px-4 pt-4 pb-2">
+                <h2 class="modal-title h5 mb-0" id="prepareReturningStudentModalLabel">Prepare Returning Student</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <p class="mb-0">Prepare this retained student for the active school year as Awaiting Assignment?</p>
+            </div>
+            <div class="modal-footer border-0 px-4 pt-2 pb-4 gap-2">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary" form="prepareReturningStudentForm">Prepare Student</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
