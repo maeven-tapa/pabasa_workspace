@@ -6434,6 +6434,13 @@ def _admin_section_template_context(request, section, page_title):
     student_count = section.get_student_count()
     enrolled_students = section.get_enrolled_students(active_only=True)
     enrollments = section.enrollments.filter(is_active=True).select_related('student').order_by('student__last_name', 'student__first_name')
+    destination_sections = Section.objects.filter(
+        school_id=section.school_id,
+        school_calendar_id=section.school_calendar_id,
+        school_calendar__is_active=True,
+        is_active=True,
+        grade_level=NEW_USER_GRADE_LEVEL,
+    ).exclude(pk=section.pk).order_by('class_name', 'id')
     
     context = _admin_context(request, page_title, [])
     context.update({
@@ -6444,6 +6451,7 @@ def _admin_section_template_context(request, section, page_title):
         'teacher_name': section.active_teacher_name(),
         'status': 'Active' if section.is_active else 'Archived',
         'enrollments': enrollments,
+        'destination_sections': destination_sections,
     })
     return context
 
@@ -6464,6 +6472,8 @@ def admin_class_edit(request, section_id):
         section = _get_managed_section(section_id)
         if not section:
             return redirect('admin_classes')
+        if request.GET.get('edit') == '1':
+            return render(request, 'pabasa_app/admin_class_edit.html', _admin_section_template_context(request, section, 'Edit Class'))
         return render(request, 'pabasa_app/admin_section_management.html', _admin_section_template_context(request, section, 'Section Management'))
     return _admin_edit_section(request, section_id)
 

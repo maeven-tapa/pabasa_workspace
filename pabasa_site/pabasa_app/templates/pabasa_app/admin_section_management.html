@@ -91,29 +91,104 @@
           {% else %}
             <p class="text-muted">Not assigned</p>
           {% endif %}
-          <a class="btn btn-sm btn-outline-secondary ms-1" href="{% url 'admin_class_edit' section.id %}?edit=1">Edit Section</a>
+          <a class="btn btn-sm btn-outline-secondary ms-1" href="{% url 'admin_class_edit' section.id %}?edit=1" onclick="window.location.assign(this.href); return false;">Edit Section</a>
         </div>
       </section>
     </div>
     <div class="col-12 col-lg-8">
       <section class="card shadow-sm border-0">
         <div class="card-body p-4">
-          <h2 class="h5">Students <span class="badge text-bg-light border">{{ enrollments|length }}</span></h2>
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <h2 class="h5 mb-0">Students <span class="badge text-bg-light border" id="sectionStudentCount">{{ enrollments|length }}</span></h2>
+            <div class="d-flex flex-wrap gap-2" role="search">
+              <input class="form-control form-control-sm" id="sectionStudentSearch" type="search" placeholder="Search students" aria-label="Search current section students" style="max-width: 15rem;">
+              <select class="form-select form-select-sm" id="sectionStudentSort" aria-label="Sort current section students" style="max-width: 13rem;">
+                <option value="name-asc">Name A–Z</option>
+                <option value="name-desc">Name Z–A</option>
+                <option value="id-asc">Student ID ascending</option>
+                <option value="id-desc">Student ID descending</option>
+                <option value="lrn-asc">LRN ascending</option>
+                <option value="lrn-desc">LRN descending</option>
+              </select>
+            </div>
+          </div>
           <div class="table-responsive">
-            <table class="table">
-              <thead><tr><th>Student ID</th><th>LRN</th><th>Name</th><th>Status</th></tr></thead>
+            <table class="table" id="sectionStudentsTable">
+              <thead><tr><th>Student ID</th><th>LRN</th><th>Name</th><th>Status</th><th>Actions</th></tr></thead>
               <tbody>
                 {% for enrollment in enrollments %}
-                  <tr><td>{{ enrollment.student.custom_id }}</td><td>{{ enrollment.student.lrn|default:'—' }}</td><td>{{ enrollment.student.first_name }} {{ enrollment.student.last_name }}</td><td>{% if enrollment.student.is_archived %}Archived{% else %}Active{% endif %}</td></tr>
+                  <tr data-student-row data-student-id="{{ enrollment.student.custom_id }}" data-student-lrn="{{ enrollment.student.lrn|default:'' }}" data-student-name="{{ enrollment.student.first_name }} {{ enrollment.student.last_name }}">
+                    <td>{{ enrollment.student.custom_id }}</td>
+                    <td>{{ enrollment.student.lrn|default:'—' }}</td>
+                    <td>{{ enrollment.student.first_name }} {{ enrollment.student.last_name }}</td>
+                    <td>{% if enrollment.student.is_archived %}Archived{% else %}Active{% endif %}</td>
+                    <td>{% if enrollment.status == 'active' and enrollment.is_active and not enrollment.student.is_archived %}<button type="button" class="btn btn-sm btn-outline-primary" data-move-student data-student-id="{{ enrollment.student_id }}" data-student-name="{{ enrollment.student.first_name }} {{ enrollment.student.last_name }}"><i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i>Move Student</button>{% else %}—{% endif %}</td>
+                  </tr>
                 {% empty %}
-                  <tr><td colspan="4" class="text-muted">No students enrolled.</td></tr>
+                  <tr><td colspan="5" class="text-muted">No students enrolled.</td></tr>
                 {% endfor %}
               </tbody>
             </table>
           </div>
+          <div class="text-muted small mt-2" id="sectionStudentEmpty" hidden>No students match your search.</div>
         </div>
       </section>
     </div>
   </div>
 </div>
+<div class="modal fade" id="moveStudentModal" tabindex="-1" aria-labelledby="moveStudentTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" id="moveStudentForm" action="{% url 'admin_student_move_enrollment' 0 %}">
+        {% csrf_token %}
+        <div class="modal-header"><h2 class="modal-title h5" id="moveStudentTitle">Move Student</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+        <div class="modal-body">
+          <p class="mb-2">Move <strong id="moveStudentName"></strong> from <strong>{{ section.class_name }}</strong>.</p>
+          <label class="form-label fw-bold" for="moveStudentDestination">Destination section</label>
+          <select class="form-select" id="moveStudentDestination" name="section_id" required>
+            <option value="">Choose an active Grade 2 section</option>
+            {% for destination in destination_sections %}<option value="{{ destination.id }}">{{ destination.class_name }}{% if destination.teacher %} — {{ destination.teacher.first_name }} {{ destination.teacher.last_name }}{% endif %}</option>{% empty %}<option value="" disabled>No other eligible sections available</option>{% endfor %}
+          </select>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary"><i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i>Move Student</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const table = document.getElementById('sectionStudentsTable');
+  const search = document.getElementById('sectionStudentSearch');
+  const sort = document.getElementById('sectionStudentSort');
+  const count = document.getElementById('sectionStudentCount');
+  const empty = document.getElementById('sectionStudentEmpty');
+  if (table && search && sort) {
+    const rows = Array.from(table.querySelectorAll('tbody tr[data-student-row]'));
+    const normalize = value => String(value || '').trim().toLocaleLowerCase();
+    const render = () => {
+      const query = normalize(search.value);
+      const [field, direction] = sort.value.split('-');
+      const visible = rows.filter(row => ['studentId', 'studentLrn', 'studentName'].some(key => normalize(row.dataset[key]).includes(query)));
+      visible.sort((a, b) => {
+        const key = field === 'id' ? 'studentId' : field === 'lrn' ? 'studentLrn' : 'studentName';
+        return normalize(a.dataset[key]).localeCompare(normalize(b.dataset[key]), undefined, { numeric: true }) * (direction === 'desc' ? -1 : 1);
+      });
+      rows.forEach(row => { row.hidden = true; });
+      visible.forEach(row => { row.hidden = false; table.tBodies[0].appendChild(row); });
+      if (count) count.textContent = visible.length;
+      if (empty) empty.hidden = visible.length !== 0;
+    };
+    search.addEventListener('input', render); sort.addEventListener('change', render); render();
+  }
+  const modal = document.getElementById('moveStudentModal');
+  const form = document.getElementById('moveStudentForm');
+  const moveActionTemplate = form ? form.action : '';
+  const name = document.getElementById('moveStudentName');
+  document.querySelectorAll('[data-move-student]').forEach(button => button.addEventListener('click', () => {
+    form.action = moveActionTemplate.replace(/\/0\/move-enrollment\/$/, `/${button.dataset.studentId}/move-enrollment/`);
+    name.textContent = button.dataset.studentName || '';
+    bootstrap.Modal.getOrCreateInstance(modal).show();
+  }));
+});
+</script>
 {% endblock %}
