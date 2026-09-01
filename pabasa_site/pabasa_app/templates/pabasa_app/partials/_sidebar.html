@@ -8,7 +8,7 @@
         <div class="sidebar-brand-row sidebar-profile-card d-flex align-items-center justify-content-between gap-2 mt-3">
             <a class="d-flex align-items-center gap-2 text-decoration-none text-reset" href="{% url 'profile' %}?role={{ nav_role|default:'student' }}" aria-label="Go to profile">
                 <div class="sidebar-text">
-                    <div class="sidebar-user-name">{{ user_full_name|default:first_name|default:"PABASA User" }}</div>
+                    <div class="sidebar-user-name">{% if user_full_name %}{{ user_full_name }}{% else %}PABASA User{% endif %}</div>
                     <div class="brand-note mt-1 small">{% if nav_role == 'teacher' %}Teacher{% else %}Student{% endif %}</div>
                 </div>
             </a>

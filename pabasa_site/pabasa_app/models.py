@@ -46,6 +46,11 @@ def default_unlocked_themes():
 
 
 class User(models.Model):
+    ACCOUNT_STATUS_CHOICES = [
+        ("active", "Active"),
+        ("pending_archive", "Pending Archive"),
+        ("archived", "Archived"),
+    ]
     ROLE_CHOICES = [
         ("admin", "Admin"),
         ("principal", "Principal"),
@@ -73,6 +78,7 @@ class User(models.Model):
     preference = models.JSONField(default=dict, blank=True)
     is_archived = models.BooleanField(default=False)
     archived_at = models.DateTimeField(null=True, blank=True)
+    account_status = models.CharField(max_length=20, choices=ACCOUNT_STATUS_CHOICES, default="active")
     # Teacher-specific fields
     teacher_role = models.CharField(max_length=50, blank=True, null=True)
     school = models.CharField(max_length=150, blank=True, null=True)
@@ -158,6 +164,36 @@ class User(models.Model):
         self.tags = [entry for entry in tags if entry != tag]
         self.save(update_fields=['tags', 'updated_at'])
         return True
+
+    def set_account_status(self, status, changed_by=None, reason=""):
+        if status not in dict(self.ACCOUNT_STATUS_CHOICES):
+            raise ValidationError({"account_status": "Invalid account status."})
+        now = timezone.now()
+        self.account_status = status
+        self.is_archived = status == "archived"
+        self.archived_at = now if self.is_archived else None
+        self.save(update_fields=["account_status", "is_archived", "archived_at", "updated_at"])
+        AccountStatusHistory.objects.create(
+            student=self, status=status, changed_by=changed_by, reason=reason
+        )
+
+    def sync_legacy_student_fields(self, enrollment=None):
+        if self.role != "student":
+            return
+        enrollment = enrollment or self.enrollments.filter(
+            status="active", is_active=True, school_calendar__is_active=True,
+            section__is_active=True, grade_level="Grade 2",
+        ).select_related("section", "school_calendar", "school").first()
+        if enrollment:
+            self.grade_level = enrollment.grade_level or "Grade 2"
+            self.section = enrollment.section.section if enrollment.section_id else None
+            self.school_calendar_id = enrollment.school_calendar_id
+            self.school = enrollment.school.name if enrollment.school_id else self.school
+        else:
+            self.grade_level = "Grade 2"
+            self.section = None
+            self.school_calendar = None
+        self.save(update_fields=["grade_level", "section", "school_calendar", "school", "updated_at"])
 
 
 class HuntStarAward(models.Model):
@@ -347,7 +383,7 @@ class Section(models.Model):
         """Return student entries derived from relational enrollments."""
         enrollments = self.enrollments.select_related("student").all()
         if active_only:
-            enrollments = enrollments.filter(is_active=True)
+            enrollments = enrollments.filter(status="active", is_active=True)
         return [self._get_student_entry(e.student, e.joined_at.isoformat() if e.joined_at else None, e.is_active) for e in enrollments]
     
     def has_student(self, user, active_only=True):
@@ -357,7 +393,7 @@ class Section(models.Model):
         
         query = self.enrollments.filter(student_id=user.id)
         if active_only:
-            query = query.filter(is_active=True)
+            query = query.filter(status="active", is_active=True)
         return query.exists()
     
     def get_student_count(self):
@@ -388,16 +424,18 @@ class Section(models.Model):
 
         with transaction.atomic():
             Section.objects.select_for_update().get(pk=self.pk)
-            Enrollment.objects.select_for_update().filter(student=user, is_active=True).exclude(section=self).update(is_active=False)
+            Enrollment.objects.select_for_update().filter(
+                student=user, school_calendar_id=self.school_calendar_id,
+                status__in=("active", "awaiting_assignment"), is_active=True,
+            ).exclude(section=self).update(status="completed", is_active=False)
             enrollment, created = Enrollment.objects.get_or_create(
                 student=user,
                 section=self,
                 defaults={"is_active": True},
             )
             was_active = not created and enrollment.is_active
-            if not enrollment.is_active:
-                enrollment.is_active = True
-                enrollment.save(update_fields=["is_active"])
+            if enrollment.status != "active" or not enrollment.is_active:
+                enrollment.activate()
 
             students = self.get_enrolled_students()
             for index, entry in enumerate(students):
@@ -412,7 +450,9 @@ class Section(models.Model):
             self._save_enrollment()
             user.grade_level = self.grade_level
             user.section = self.section
-            user.save(update_fields=["grade_level", "section", "updated_at"])
+            user.school_calendar_id = self.school_calendar_id
+            user.school = self.school.name if self.school_id else user.school
+            user.save(update_fields=["grade_level", "section", "school_calendar", "school", "updated_at"])
             user.add_tag(self.get_tag_label())
             return not was_active
 
@@ -442,8 +482,9 @@ class Section(models.Model):
         enrollment_changed = Enrollment.objects.filter(
             student=user,
             section=self,
+            status__in=("active", "awaiting_assignment"),
             is_active=True,
-        ).update(is_active=False)
+        ).update(status="completed", is_active=False)
         if changed:
             self.students = students
             self._save_enrollment()
@@ -469,19 +510,44 @@ class Section(models.Model):
         if changed:
             self.students = students
             self._save_enrollment()
-        enrollment_changed = Enrollment.objects.filter(section=self, is_active=True).update(is_active=False)
+        enrollment_changed = Enrollment.objects.filter(
+            section=self, status__in=("active", "awaiting_assignment"), is_active=True
+        ).update(status="completed", is_active=False)
         for student_user in User.objects.filter(id__in=affected_student_ids | relational_student_ids):
             student_user.remove_tag(tag_label)
         return bool(changed or enrollment_changed)
 
 
 class Enrollment(models.Model):
-    """Relational source for a student's membership in a canonical section."""
+    """A student's membership in a school-year Grade 2 section.
+
+    The nullable school-year fields keep legacy rows usable while the data
+    migration fills them from their existing Section relationship.
+    """
+    STATUS_CHOICES = [
+        ("active", "Active"),
+        ("completed", "Completed"),
+        ("awaiting_assignment", "Awaiting Assignment"),
+    ]
+    OUTCOME_CHOICES = [
+        ("not_finalized", "Not Finalized"),
+        ("promoted", "Promoted"),
+        ("retained", "Retained"),
+    ]
 
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="enrollments")
-    section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name="enrollments")
+    section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name="enrollments", null=True, blank=True)
+    school = models.ForeignKey("School", on_delete=models.PROTECT, related_name="enrollments", null=True, blank=True)
+    school_calendar = models.ForeignKey("SchoolCalendar", on_delete=models.PROTECT, related_name="enrollments", null=True, blank=True)
+    grade_level = models.CharField(max_length=20, default="Grade 2", blank=True)
+    assigned_teacher = models.ForeignKey(User, on_delete=models.SET_NULL, related_name="assigned_enrollments", null=True, blank=True)
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default="active")
+    outcome = models.CharField(max_length=20, choices=OUTCOME_CHOICES, default="not_finalized")
+    finalized_by = models.ForeignKey(User, on_delete=models.SET_NULL, related_name="finalized_enrollments", null=True, blank=True)
+    finalized_at = models.DateTimeField(null=True, blank=True)
     joined_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "class_enrollments"
@@ -491,6 +557,14 @@ class Enrollment(models.Model):
                 fields=["student", "section"],
                 name="unique_student_section_enrollment",
             ),
+            models.UniqueConstraint(
+                fields=["student", "school_calendar"],
+                condition=models.Q(
+                    school_calendar__isnull=False,
+                    status__in=["active", "awaiting_assignment"],
+                ),
+                name="unique_current_student_school_year",
+            ),
         ]
 
     def clean(self):
@@ -499,9 +573,67 @@ class Enrollment(models.Model):
             raise ValidationError({"student": "Only a student account can be enrolled in a section."})
         if self.section_id and not self.section.is_active:
             raise ValidationError({"section": "Cannot enroll a student in an inactive section."})
+        if self.section_id:
+            if self.school_id and self.school_id != self.section.school_id:
+                raise ValidationError({"school": "Enrollment school must match its section."})
+            if self.school_calendar_id and self.school_calendar_id != self.section.school_calendar_id:
+                raise ValidationError({"school_calendar": "Enrollment school year must match its section."})
+
+    def save(self, *args, **kwargs):
+        if self.section_id:
+            self.school_id = self.school_id or self.section.school_id
+            self.school_calendar_id = self.school_calendar_id or self.section.school_calendar_id
+            self.grade_level = self.grade_level or self.section.grade_level or "Grade 2"
+            self.assigned_teacher_id = self.assigned_teacher_id or self.section.teacher_id
+        self.is_active = self.status == "active"
+        super().save(*args, **kwargs)
+
+    def activate(self):
+        self.status = "active"
+        self.is_active = True
+        self.save(update_fields=["status", "is_active", "updated_at"])
+
+    def await_assignment(self):
+        self.status = "awaiting_assignment"
+        self.is_active = False
+        self.save(update_fields=["status", "is_active", "updated_at"])
+
+    def complete(self):
+        self.status = "completed"
+        self.is_active = False
+        self.save(update_fields=["status", "is_active", "updated_at"])
+
+    def deactivate(self):
+        self.complete()
+
+    def finalize_outcome(self, outcome, finalized_by=None):
+        if outcome not in {"promoted", "retained"}:
+            raise ValidationError({"outcome": "Outcome must be promoted or retained."})
+        with transaction.atomic():
+            self.outcome = outcome
+            self.status = "completed"
+            self.finalized_by = finalized_by
+            self.finalized_at = timezone.now()
+            self.save(update_fields=["outcome", "status", "is_active", "finalized_by", "finalized_at", "updated_at"])
+            self.student.set_account_status(
+                "pending_archive" if outcome == "promoted" else "active",
+                changed_by=finalized_by,
+                reason=f"{outcome.title()} at end of school year",
+            )
 
     def __str__(self):
-        return f"{self.student.custom_id} in {self.section.class_code}"
+        return f"{self.student.custom_id} in {self.section.class_code if self.section_id else 'Unassigned'}"
+
+
+class AccountStatusHistory(models.Model):
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="account_status_history")
+    status = models.CharField(max_length=20, choices=User.ACCOUNT_STATUS_CHOICES)
+    changed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="account_status_changes")
+    reason = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
 
 class Assessment(models.Model):
     SYSTEM_ASSESSMENT_CHOICES = [
@@ -544,6 +676,7 @@ class Assessment(models.Model):
     attempt_no = models.PositiveIntegerField(default=0)
     source_assessment = models.ForeignKey("self", null=True, blank=True, related_name="attempt_rows", on_delete=models.CASCADE)
     student = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="assessment_attempt_rows")
+    enrollment = models.ForeignKey("Enrollment", null=True, blank=True, on_delete=models.SET_NULL, related_name="assessment_attempts")
     attempt_id = models.CharField(max_length=64, blank=True, default="")
     attempt_number = models.PositiveIntegerField(default=1)
     attempt_status = models.CharField(max_length=20, default="started")
@@ -753,6 +886,8 @@ class Assessment(models.Model):
         rows = Assessment.objects.filter(source_assessment=group).order_by('attempt_number', 'created_at', 'id')
         if student is not None:
             rows = rows.filter(student_id=student.id)
+            if self.section_id and self.section.school_calendar_id:
+                rows = rows.filter(enrollment__student_id=student.id, enrollment__school_calendar_id=self.section.school_calendar_id)
         return [row._serialize_attempt() for row in rows]
 
     def get_latest_attempt(self, student=None):
@@ -808,6 +943,12 @@ class Assessment(models.Model):
         official_term = _configured_term_for_date(attempt_completed_at, self.system_assessment_phase) if self.is_system_owned else None
         if official_term is None:
             official_term = getattr(self.material, 'official_term', None) if self.material_id else self.official_term
+        attempt_enrollment = attempt_data.pop('enrollment', None)
+        if attempt_enrollment is None and self.section_id and self.section.school_calendar_id:
+            attempt_enrollment = Enrollment.objects.filter(
+                student=student, section=self.section,
+                school_calendar_id=self.section.school_calendar_id,
+            ).order_by('id').first()
         attempt_row = Assessment.objects.create(
             title=self.title,
             code=self._build_attempt_code(group_assessment.code, attempt_number),
@@ -824,6 +965,7 @@ class Assessment(models.Model):
             official_term=official_term,
             source_assessment=group_assessment,
             student=student,
+            enrollment=attempt_enrollment,
             attempt_id=str(attempt_id),
             attempt_number=attempt_number,
             attempt_status=str(attempt_data.pop('status', 'completed') or 'completed'),
@@ -1057,7 +1199,14 @@ class Practice(models.Model):
         if not isinstance(attempts, list):
             return []
         if student:
-            return [a for a in attempts if a.get("student_id") == student.id]
+            current = Enrollment.objects.filter(
+                student=student, status="active", is_active=True,
+                school_calendar__is_active=True, section__is_active=True,
+                section=self.section,
+            ).order_by("id").first() if self.section_id else None
+            if current:
+                return [a for a in attempts if a.get("student_id") == student.id and str(a.get("enrollment_id")) == str(current.id)]
+            return []
         latest = {}
         for a in attempts:
             sid = a.get("student_id")
@@ -1072,11 +1221,14 @@ class Practice(models.Model):
         return student_attempts[-1] if student_attempts else None
 
     def _get_attempt_entry(self, student, status="started", started_at=None, **kwargs):
+        enrollment = kwargs.pop("enrollment", None)
         entry = {
             "student_id": student.id,
             "started_at": started_at or timezone.now().isoformat(),
             "status": status,
         }
+        if enrollment is not None:
+            entry["enrollment_id"] = enrollment.id
         for key in [
             "completed_at", "device_info", "mic_used", "accuracy", "wpm",
             "fluency_score", "pronunciation_score", "time_score",
@@ -1098,6 +1250,11 @@ class Practice(models.Model):
 
     def record_attempt(self, student, replace=True, **attempt_data):
         attempts = getattr(self, "attempts", None) or []
+        if "enrollment" not in attempt_data and self.section_id:
+            attempt_data["enrollment"] = Enrollment.objects.filter(
+                student=student, section=self.section, status="active", is_active=True,
+                school_calendar__is_active=True,
+            ).order_by("id").first()
         entry = self._get_attempt_entry(student, **attempt_data)
         if replace:
             attempts = [a for a in attempts if a.get("student_id") != student.id]
@@ -1399,6 +1556,7 @@ class Material(models.Model):
 class StoryReadingProgress(models.Model):
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="story_reading_progress")
     material = models.ForeignKey("Material", on_delete=models.CASCADE, related_name="story_reading_progress")
+    enrollment = models.ForeignKey("Enrollment", null=True, blank=True, on_delete=models.SET_NULL, related_name="story_reading_progress")
     story_title = models.CharField(max_length=150, blank=True, default="")
     story_key = models.CharField(max_length=100, blank=True, default="")
     total_words = models.PositiveIntegerField(default=0)
@@ -1424,7 +1582,13 @@ class StoryReadingProgress(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["student", "material"],
-                name="unique_story_reading_progress",
+                condition=models.Q(enrollment__isnull=True),
+                name="unique_legacy_story_reading_progress",
+            ),
+            models.UniqueConstraint(
+                fields=["enrollment", "material"],
+                condition=models.Q(enrollment__isnull=False),
+                name="unique_enrollment_story_reading_progress",
             ),
         ]
 

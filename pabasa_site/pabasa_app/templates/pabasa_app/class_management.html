@@ -1078,6 +1078,12 @@
                     <button type="submit" form="updateClassForm" class="btn btn-primary btn-sm"><i class="bi bi-check2-circle me-1"></i> Save Changes</button>
                 </div>
             </div>
+            <div class="alert {% if finalization_open %}alert-info{% else %}alert-secondary{% endif %} mx-3 mt-3 mb-0">
+                <strong><i class="bi bi-flag me-1"></i>Year-End Finalization</strong>
+                <span class="ms-2">{{ finalization_counts.finalized }} of {{ finalization_counts.total }} students finalized</span>
+                <span class="d-block small mt-1">Not Finalized: {{ finalization_counts.not_finalized }} · Promoted: {{ finalization_counts.promoted }} · Retained: {{ finalization_counts.retained }}</span>
+                {% if not finalization_open %}<span class="d-block small mt-1">Available during the configured Term 3 closing period.</span>{% endif %}
+            </div>
 
             <form id="updateClassForm" class="class-form">
                 {% csrf_token %}
@@ -1117,6 +1123,7 @@
                             <th>Email</th>
                             <th>Reading Level</th>
                             <th>Joined Date</th>
+                            <th>Year-End Outcome</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1127,6 +1134,14 @@
                             <td>{{ student.email }}</td>
                             <td><span class="status-chip reading-level-chip" data-reading-level="{{ student.reading_level|default:'Pending' }}">{{ student.reading_level|default:'Pending' }}</span></td>
                             <td><small class="text-muted">{{ student.joined_at }}</small></td>
+                            <td>
+                                {% if student.enrollment.student.is_archived %}<span class="status-chip"><i class="bi bi-archive me-1"></i>Archived</span>
+                                {% elif student.enrollment.outcome == 'promoted' %}<span class="status-chip"><i class="bi bi-hourglass-split me-1"></i>Promoted — Pending Admin Archive</span>
+                                {% elif student.enrollment.outcome == 'retained' %}<span class="status-chip"><i class="bi bi-check-circle me-1"></i>Retained</span>
+                                {% else %}<span class="status-chip">Not Finalized</span>{% endif %}
+                                {% if student.can_finalize %}<form method="post" action="{% url 'teacher_finalize_student' %}" class="mt-2" onsubmit="return confirm(this.outcome.value === 'promoted' ? 'Promoted students will be submitted to the Admin for account archival because PABASA currently supports Grade 2 only.' : 'Retained students will keep their account and may be reassigned to a Grade 2 section for the next school year.');">{% csrf_token %}<input type="hidden" name="student_id" value="{{ student.enrollment.student_id }}"><input type="hidden" name="section_id" value="{{ section.id }}"><select name="outcome" class="form-select form-select-sm d-inline-block" style="max-width:10rem" required><option value="">Choose outcome</option><option value="promoted">Promoted</option><option value="retained">Retained</option></select><button class="btn btn-sm btn-outline-primary ms-1" type="submit"><i class="bi bi-check2-square me-1"></i>Finalize</button></form>{% endif %}
+                                {% if finalization_open and student.enrollment.status == 'completed' and student.enrollment.finalized_by_id == request.session.user_id and not student.enrollment.student.is_archived %}<form method="post" action="{% url 'teacher_correct_student_outcome' %}" class="mt-2" onsubmit="return confirm('Correct this year-end outcome? The account status will be updated, but the completed enrollment will remain historical.');">{% csrf_token %}<input type="hidden" name="student_id" value="{{ student.enrollment.student_id }}"><input type="hidden" name="section_id" value="{{ section.id }}"><select name="outcome" class="form-select form-select-sm" required><option value="">Correct to…</option><option value="promoted">Promoted</option><option value="retained">Retained</option></select><button class="btn btn-sm btn-outline-warning mt-1" type="submit"><i class="bi bi-arrow-counterclockwise me-1"></i>Correct</button></form>{% endif %}
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>
@@ -1156,6 +1171,7 @@
                     <div class="student-card-actions">
                         <span class="status-chip reading-level-chip" data-reading-level="{{ student.reading_level|default:'Pending' }}">{{ student.reading_level|default:'Pending' }}</span>
                         <span class="status-chip">Joined {{ student.joined_at }}</span>
+                        <span class="status-chip">{{ student.outcome_label }}</span>
                     </div>
                 </article>
                 {% empty %}

@@ -3,6 +3,7 @@ from .models import (
 	User,
 	Section,
 	Enrollment,
+	AccountStatusHistory,
 	Assessment,
 	Practice,
 	Material,
@@ -21,7 +22,7 @@ def all_model_fields(model):
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
 	list_display = all_model_fields(User)
-	list_filter = ("role", "is_archived", "sex", "created_at")
+	list_filter = ("role", "account_status", "is_archived", "sex", "created_at")
 	search_fields = ("custom_id", "first_name", "last_name", "email")
 	ordering = ("last_name", "first_name")
 
@@ -43,10 +44,17 @@ class SectionAdmin(admin.ModelAdmin):
 
 @admin.register(Enrollment)
 class EnrollmentAdmin(admin.ModelAdmin):
-	list_display = ("student", "section", "is_active", "joined_at")
-	list_filter = ("is_active", "section")
+	list_display = ("student", "school_calendar", "section", "status", "outcome", "is_active", "joined_at")
+	list_filter = ("status", "outcome", "is_active", "school_calendar", "section")
 	search_fields = ("student__custom_id", "student__first_name", "student__last_name", "section__class_code")
 	ordering = ("-joined_at",)
+
+
+@admin.register(AccountStatusHistory)
+class AccountStatusHistoryAdmin(admin.ModelAdmin):
+	list_display = ("student", "status", "changed_by", "created_at", "reason")
+	list_filter = ("status", "created_at")
+	search_fields = ("student__custom_id", "student__first_name", "student__last_name")
 
 
 @admin.register(Assessment)

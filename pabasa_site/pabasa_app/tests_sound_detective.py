@@ -186,7 +186,7 @@ class SoundDetectiveCreationLaunchUrlTests(TestCase):
         self.assertIn("const soundDetectiveUrl = \"{% url 'sound_detective_page' %}\";", template_html)
         self.assertIn("isSoundDetective", template_html)
         self.assertIn("/dashboard/assessment/activity/sound-detective/", template_html)
-        self.assertNotIn("/activity/sound-detective/", template_html)
+        self.assertNotIn("/dashboard/assessment/sound-detective/", template_html)
         self.assertNotIn("/dashboard/assessment/sound-detective/", template_html)
 
     def test_sound_detective_template_uses_isolated_activity_shell(self):

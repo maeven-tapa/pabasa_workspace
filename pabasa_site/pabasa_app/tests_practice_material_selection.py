@@ -14,12 +14,13 @@ class PracticeMaterialSelectionTests(SimpleTestCase):
             item_type="word",
             status="published",
             content_text="hello world",
+            prompt_text="",
             content_json={"mode": "free", "difficulty": "easy", "level": "level_1"},
             created_at=None,
         )
 
         serialized = _serialize_student_practice_material(material)
 
-        self.assertEqual(serialized["mode"], "free")
+        self.assertEqual(serialized["game_mode"], "free")
         self.assertEqual(serialized["difficulty"], "easy")
         self.assertEqual(serialized["level"], "level_1")

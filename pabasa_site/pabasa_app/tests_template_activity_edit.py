@@ -42,8 +42,8 @@ class TemplateActivityEditRegressionTests(TestCase):
             teacher=self.teacher, section=self.section,
             title="Original Phrase Activity", item_type="sentence",
             content_text="old phrase", type="assessment", source_type="template",
-            status="published", is_active=True, assigned_week="Week 1",
-            assigned_weeks=["Week 1"], content_json={
+            status="published", is_active=True, assigned_week=1,
+            assigned_weeks=[1], content_json={
                 "template_title": "Phrase Reading Practice",
                 "template_lesson": "Phrase Reading",
                 "template_type": "Phrase Reading Practice",
@@ -60,8 +60,8 @@ class TemplateActivityEditRegressionTests(TestCase):
             "template_type": "Phrase Reading Practice",
             "template_source": "template",
             "language": "Filipino",
-            "weeks": ["Week 2"],
-            "assigned_weeks": ["Week 2"],
+                "weeks": [2],
+                "assigned_weeks": [2],
             "items": [{"phrase": "ang masayang bata"}],
             "phraseReading": {
                 "language": "Tagalog", "setKey": "tagalog-phrase-1",
@@ -78,8 +78,8 @@ class TemplateActivityEditRegressionTests(TestCase):
                 "content": json.dumps(updated_content),
                 "status": "published",
                 "usage_type": "assessment",
-                "assigned_week": "Week 2",
-                "assigned_weeks": ["Week 2"],
+                "assigned_week": 2,
+                "assigned_weeks": [2],
                 "language": "Filipino",
                 "source_type": "template",
                 "template_title": "Phrase Reading Practice",
@@ -97,7 +97,7 @@ class TemplateActivityEditRegressionTests(TestCase):
         self.assertEqual(material.content_json["items"], [{"phrase": "ang masayang bata"}])
         self.assertEqual(material.content_json["phraseReading"]["setKey"], "tagalog-phrase-1")
         self.assertEqual(material.content_json["template_source"], "template")
-        self.assertEqual(material.assigned_weeks, ["Week 2"])
+        self.assertEqual(material.assigned_weeks, [2])
         self.assertEqual(material.section_id, self.section.id)
         self.assertTrue(material.assigned_sections.filter(id=self.section.id).exists())
         self.assertEqual(response.json()["material"]["raw_id"], material.id)

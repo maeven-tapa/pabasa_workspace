@@ -44,7 +44,9 @@
                     <td>{{ user.custom_id }}</td>
                     <td>{{ user.email }}</td>
                     <td>
-                        {% if user.is_archived %}
+                        {% if user.account_status == 'pending_archive' %}
+                        <span class="badge rounded-pill text-bg-warning">Pending Archive</span>
+                        {% elif user.is_archived %}
                         <span class="badge rounded-pill text-bg-secondary">Archived</span>
                         {% else %}
                         <span class="badge rounded-pill text-bg-success">Active</span>

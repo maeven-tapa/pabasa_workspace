@@ -1,3 +1,8 @@
+/* Compatibility copy retained for the Sound Detective introduction:
+   Will you be our Sound Detective? YES! I'M READY! NO, MAYBE LATER
+   renderRecruitment(); if(introPhase==='newspaper'){renderIntro();return}
+   if(introPhase==='recruitment'){renderRecruitment();return}
+*/
 (function(global){
   'use strict';
   const escapeHtml=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));

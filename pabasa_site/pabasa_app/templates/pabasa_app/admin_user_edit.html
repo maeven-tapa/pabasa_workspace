@@ -23,7 +23,7 @@
     </div>
     {% endif %}
 
-    <form method="post">
+    <form method="post" onsubmit="return confirm('Save these student changes? If the section changes, the current school-year enrollment will be updated and historical enrollments will be preserved.');">
         {% csrf_token %}
         <div class="row g-3">
             <div class="col-12 col-md-6">

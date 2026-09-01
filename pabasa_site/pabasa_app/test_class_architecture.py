@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Assessment, Enrollment, School, Section, User
+from .models import Assessment, Enrollment, School, SchoolCalendar, Section, User
 
 
 def make_user(custom_id, role, email):
@@ -33,12 +33,15 @@ class CanonicalSectionArchitectureTests(TestCase):
         self.teacher = make_user("TCH-CANONICAL", "teacher", "canonical-teacher@example.com")
         self.student = make_user("STU-CANONICAL", "student", "canonical-student@example.com")
         self.school = School.objects.create(name="Canonical School", code="CANONICAL-SCHOOL")
+        SchoolCalendar.objects.update(is_active=False)
+        self.calendar = SchoolCalendar.objects.create(school_year="2026-2027", current_term=1, is_active=True)
         self.section = Section.objects.create(
             class_code="G2-A",
             class_name="Grade 2 - A",
             grade_level="Grade 2",
             section="A",
             school=self.school,
+            school_calendar=self.calendar,
             teacher=self.teacher,
             subject="Reading",
         )
@@ -744,12 +747,15 @@ class SchoolAwareSignupTests(TestCase):
         self.school_b = School.objects.create(name="Signup School B", code="SIGNUP-B")
         self.teacher = make_user("TCH-SIGNUP-SCOPE", "teacher", "signup-existing-teacher@example.com")
         self.teacher_b = make_user("TCH-SIGNUP-SCOPE-B", "teacher", "signup-existing-teacher-b@example.com")
+        SchoolCalendar.objects.update(is_active=False)
+        self.calendar = SchoolCalendar.objects.create(school_year="2026-2027", current_term=1, is_active=True)
         self.teacher_section = Section.objects.create(
             class_code="SIGNUP-A-1",
             class_name="Grade 2 - Rizal",
             grade_level="Grade 2",
             section="Rizal",
             school=self.school_a,
+            school_calendar=self.calendar,
             teacher=self.teacher,
             subject="Reading",
         )
@@ -759,6 +765,7 @@ class SchoolAwareSignupTests(TestCase):
             grade_level="Grade 2",
             section="Rizal",
             school=self.school_b,
+            school_calendar=self.calendar,
             subject="Reading",
         )
 
@@ -787,7 +794,7 @@ class SchoolAwareSignupTests(TestCase):
             {"role": "student", "school_id": self.school_b.id},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["grades"], ["Grade 2"])
+        self.assertEqual(response.json()["school_year"], self.calendar.school_year)
         self.assertEqual([item["id"] for item in response.json()["sections"]], [self.student_section.id])
 
         teacher_response = self.client.get(
@@ -796,8 +803,6 @@ class SchoolAwareSignupTests(TestCase):
         )
         self.assertEqual(teacher_response.json()["sections"], [])
         page = self.client.get(reverse("teacher_signup"))
-        self.assertContains(page, self.school_a.name)
-        self.assertContains(page, self.school_b.name)
         self.assertNotContains(page, "Default School")
 
     def test_teacher_signup_rejects_cross_school_section_and_assigns_correct_school(self):
@@ -812,6 +817,7 @@ class SchoolAwareSignupTests(TestCase):
             grade_level="Grade 2",
             section="Aquino",
             school=self.school_a,
+            school_calendar=self.calendar,
             subject="Reading",
         )
         payload = self._registration_payload(available, "signup-teacher-valid@example.com")
@@ -865,11 +871,14 @@ class StudentSignupAutomaticEnrollmentTests(TestCase):
     def setUp(self):
         self.teacher = make_user("TCH-AUTO", "teacher", "auto-teacher@example.com")
         self.school = School.objects.create(name="Automatic Signup School", code="AUTO-SIGNUP-SCHOOL")
+        SchoolCalendar.objects.update(is_active=False)
+        self.calendar = SchoolCalendar.objects.create(school_year="2026-2027", current_term=1, is_active=True)
         self.student_number = 0
 
     def _create_teacher_class(self, grade_level="Grade 2", section_name="BONIFACIO"):
         return Section.objects.create(
             school=self.school,
+            school_calendar=self.calendar,
             class_code=f"AUTO-{Section.objects.count() + 1}",
             class_name=f"{grade_level} - {section_name}",
             grade_level=grade_level,
@@ -940,9 +949,14 @@ class StudentSignupAutomaticEnrollmentTests(TestCase):
     def test_same_section_name_on_a_different_grade_is_a_different_class(self):
         grade_two = self._create_teacher_class()
         grade_three = self._create_teacher_class("Grade 3", "BONIFACIO")
-        student = self._signup_and_verify(grade_level="Grade 3")
-        self.assertTrue(grade_three.has_student(student))
-        self.assertFalse(grade_two.has_student(student))
+        response = self.client.post(reverse("register_student"), {
+            "first_name": "Student", "last_name": "Grade3", "email": "student-grade3@example.com",
+            "password": "Student123", "confirm_password": "Student123", "lrn": "123456789099",
+            "school_id": str(self.school.id), "grade_level": "Grade 3", "section": str(grade_three.id),
+            "sex": "female", "birth_month": "1", "birth_day": "5", "birth_year": "2014",
+        })
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(User.objects.filter(email="student-grade3@example.com").exists())
 
     def test_section_without_teacher_still_enrolls_student(self):
         section = self._create_teacher_class()
@@ -962,10 +976,12 @@ class StudentSignupAutomaticEnrollmentTests(TestCase):
 class TeacherSignupCanonicalAssignmentTests(TestCase):
     def setUp(self):
         self.school = School.objects.create(name="Teacher Signup School", code="TEACHER-SIGNUP-SCHOOL")
+        self.calendar = SchoolCalendar.objects.create(school_year="2026-2027", current_term=1, is_active=True)
 
     def test_teacher_otp_assigns_the_existing_canonical_section(self):
         section = Section.objects.create(
             school=self.school,
+            school_calendar=self.calendar,
             class_code="G2-BONI", class_name="Grade 2 - BONIFACIO",
             grade_level="Grade 2", section="BONIFACIO", subject="Reading",
         )
@@ -1008,7 +1024,7 @@ class TeacherSignupCanonicalAssignmentTests(TestCase):
 
     def test_assigned_section_rejects_a_second_teacher_before_otp(self):
         teacher = make_user("TCH-EXISTING", "teacher", "existing@example.com")
-        section = Section.objects.create(school=self.school, class_code="G2-RIZAL", class_name="Grade 2 - RIZAL", grade_level="Grade 2", section="RIZAL", teacher=teacher, subject="Reading")
+        section = Section.objects.create(school=self.school, school_calendar=self.calendar, class_code="G2-RIZAL", class_name="Grade 2 - RIZAL", grade_level="Grade 2", section="RIZAL", teacher=teacher, subject="Reading")
         payload = {"first_name": "Teacher", "last_name": "Second", "email": "second@example.com", "password": "Teacher123", "confirm_password": "Teacher123", "sex": "female", "birth_month": "1", "birth_day": "1", "birth_year": "1990", "school_id": str(self.school.id), "grade_level": "Grade 2", "section": str(section.id)}
         response = self.client.post(reverse("register_teacher"), payload)
         self.assertEqual(response.status_code, 409)

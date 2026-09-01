@@ -29,7 +29,9 @@
             <dd class="col-sm-9">{{ managed_user.get_role_display }}</dd>
             <dt class="col-sm-3 text-secondary">Status</dt>
             <dd class="col-sm-9">
-                {% if managed_user.is_archived %}
+                {% if managed_user.account_status == 'pending_archive' %}
+                <span class="badge rounded-pill text-bg-warning">Pending Archive</span>
+                {% elif managed_user.is_archived %}
                 <span class="badge rounded-pill text-bg-secondary">Archived</span>
                 {% else %}
                 <span class="badge rounded-pill text-bg-success">Active</span>
@@ -41,5 +43,24 @@
             <dd class="col-sm-9 mb-0">{{ managed_user.updated_at|date:"M d, Y g:i A" }}</dd>
         </dl>
     </div>
+    {% if managed_role == 'student' %}
+    <div class="border rounded-3 p-3 bg-white mt-3">
+        <h3 class="h5"><i class="bi bi-journal-bookmark me-1"></i>Enrollment History</h3>
+        {% for enrollment in student_enrollments %}
+        <div class="border-top py-3">
+            <div><strong>{{ enrollment.school_calendar.school_year|default:'School year not set' }}</strong> · {{ enrollment.grade_level|default:'Grade 2' }} · {% if enrollment.section %}{{ enrollment.section.section }}{% else %}Unassigned{% endif %}</div>
+            <small class="text-secondary">Teacher: {% if enrollment.assigned_teacher %}{{ enrollment.assigned_teacher.first_name }} {{ enrollment.assigned_teacher.last_name }}{% else %}Unassigned{% endif %} · {{ enrollment.get_status_display }} · {{ enrollment.get_outcome_display }}</small>
+            {% if enrollment.status == 'active' or enrollment.status == 'awaiting_assignment' %}{% if enrollment.school_calendar.is_active %}
+            <form method="post" action="{% url 'admin_student_move_enrollment' managed_user.id %}" class="mt-2 d-flex gap-2" onsubmit="return confirm('Move this student to the selected section? The previous enrollment history will be preserved.');">
+                {% csrf_token %}<select class="form-select form-select-sm" name="section_id" required><option value="">Choose Grade 2 section</option>{% for section in student_assignment_sections %}<option value="{{ section.id }}" {% if enrollment.section_id == section.id %}selected{% endif %}>{{ section.section }}{% if section.teacher %} — {{ section.teacher.first_name }} {{ section.teacher.last_name }}{% endif %}</option>{% endfor %}</select><button class="btn btn-sm btn-outline-primary" type="submit"><i class="bi bi-arrow-left-right me-1"></i>Move</button>
+            </form>
+            {% endif %}{% endif %}
+        </div>
+        {% empty %}<p class="text-secondary mb-0">No enrollments recorded.</p>{% endfor %}
+        {% if managed_user.account_status == 'active' %}<form method="post" action="{% url 'admin_student_returning_enrollment' managed_user.id %}" class="mt-2" onsubmit="return confirm('Prepare this retained student for the active school year as Awaiting Assignment?');">{% csrf_token %}<button class="btn btn-sm btn-outline-success" type="submit"><i class="bi bi-person-plus me-1"></i>Prepare Returning Student</button></form>{% endif %}
+    </div>
+    {% if managed_user.account_status == 'pending_archive' %}<div class="border rounded-3 p-3 bg-white mt-3"><h3 class="h5"><i class="bi bi-hourglass-split me-1"></i>Pending Archive Review</h3><form method="post" action="{% url 'admin_student_archive_action' managed_user.id %}" class="d-flex flex-wrap gap-2" onsubmit="return confirm('Approve archiving this promoted student account? All records will be preserved.');">{% csrf_token %}<input type="hidden" name="action" value="approve_archive"><button class="btn btn-outline-danger" type="submit"><i class="bi bi-archive me-1"></i>Approve Archive</button></form><form method="post" action="{% url 'admin_student_archive_action' managed_user.id %}" class="mt-2" onsubmit="return confirm('Correct this outcome to Retained and restore the account to Active?');">{% csrf_token %}<input type="hidden" name="action" value="revert_retained"><button class="btn btn-outline-success" type="submit"><i class="bi bi-arrow-counterclockwise me-1"></i>Revert to Retained</button></form></div>{% endif %}
+    {% if managed_user.is_archived %}<div class="border rounded-3 p-3 bg-white mt-3"><form method="post" action="{% url 'admin_student_restore' managed_user.id %}" onsubmit="return confirm('Restore this student account? Historical records will remain unchanged.');">{% csrf_token %}<button class="btn btn-outline-success" type="submit"><i class="bi bi-person-check me-1"></i>Restore Account</button></form><form method="post" action="{% url 'admin_student_archive_action' managed_user.id %}" class="mt-2" onsubmit="return confirm('Correct the promoted outcome to Retained and restore this account to Active?');">{% csrf_token %}<input type="hidden" name="action" value="correct_retained"><button class="btn btn-outline-warning" type="submit"><i class="bi bi-arrow-counterclockwise me-1"></i>Correct to Retained</button></form></div>{% endif %}
+    {% endif %}
 </div>
 {% endblock %}

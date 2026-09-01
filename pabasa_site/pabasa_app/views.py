@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.template.loader import render_to_string
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponse, HttpResponseNotAllowed
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
@@ -142,6 +143,52 @@ def _active_school_calendar_for_new_workflows():
     return calendars.first()
 
 
+def _teacher_current_sections(teacher, *, include_inactive=False):
+    calendar = _active_school_calendar_for_new_workflows()
+    if not calendar:
+        # Preserve legacy mutation/test fixtures that predate SchoolCalendar;
+        # production current-year sections always have an active calendar.
+        filters = {'teacher': teacher, 'school_calendar__isnull': True}
+        if not include_inactive:
+            filters['is_active'] = True
+        return Section.objects.filter(**filters)
+    filters = {'teacher': teacher, 'school_calendar': calendar}
+    if not include_inactive:
+        filters['is_active'] = True
+    return Section.objects.filter(**filters)
+
+
+def _student_current_enrollment(user):
+    calendar = _active_school_calendar_for_new_workflows()
+    if not calendar or not user:
+        return None
+    return (Enrollment.objects.filter(
+        student=user, school_calendar=calendar, status='active', is_active=True,
+        grade_level=NEW_USER_GRADE_LEVEL, section__is_active=True,
+        section__school_calendar=calendar,
+    ).select_related('section__teacher', 'school', 'school_calendar').order_by('id').first())
+
+
+def _student_current_or_awaiting_enrollment(user, school_calendar=None):
+    """Resolve only this year's editable enrollment; never fall back to history."""
+    calendar = school_calendar or _active_school_calendar_for_new_workflows()
+    if not calendar or not user:
+        return None
+    active_calendar = _active_school_calendar_for_new_workflows()
+    if not active_calendar or calendar.id != active_calendar.id:
+        return None
+    return (Enrollment.objects.filter(
+        student=user, school_calendar=calendar,
+        status__in=('active', 'awaiting_assignment'),
+        grade_level=NEW_USER_GRADE_LEVEL,
+    ).select_related('section__teacher', 'school', 'school_calendar').order_by('id').first())
+
+
+def _student_current_sections(user):
+    enrollment = _student_current_enrollment(user)
+    return Section.objects.filter(pk=enrollment.section_id) if enrollment and enrollment.section_id else Section.objects.none()
+
+
 def _active_canonical_section(grade_level, section_name, school=None, school_calendar=None, section_id=None):
     """Resolve a selectable canonical class; signup never creates one."""
     filters = {'is_active': True}
@@ -216,7 +263,10 @@ def _section_selection_context(role):
 
 
 def _signup_section_for_request(data, role):
-    school = _signup_school()
+    # Signup is scoped to the school explicitly selected by the registrant;
+    # the active school year and section still provide the authoritative
+    # availability/ownership checks below.
+    school = _active_signup_school(data.get('school_id')) or _signup_school()
     if not school:
         return None, None, 'Salawag Elementary School is not available for signup.'
 
@@ -432,8 +482,12 @@ def _is_finalized_grade_level_crla_result(result):
 def _finalized_grade_level_crla_result_exists(student):
     if not student or not getattr(student, 'pk', None):
         return False
+    current_enrollment = _student_current_enrollment(student) if isinstance(student, User) else None
+    if not current_enrollment:
+        return False
     latest_result = Assessment.objects.filter(
         student=student,
+        enrollment=current_enrollment,
         attempt_status='completed',
         completed_at__isnull=False,
         is_active=True,
@@ -447,7 +501,14 @@ def _finalized_grade_level_crla_result_exists(student):
 
 def _reader_assessment_state(student):
     state = _get_user_state(student)
-    classification = state.get('reader_classification') or getattr(student, 'reading_level', '') or ''
+    current_enrollment = _student_current_enrollment(student) if isinstance(student, User) else None
+    current_classification = ''
+    if current_enrollment:
+        current_classification = Assessment.objects.filter(
+            student=student, enrollment=current_enrollment,
+            attempt_status='completed', is_active=True,
+        ).exclude(crla_classification='').order_by('-completed_at', '-id').values_list('crla_classification', flat=True).first() or ''
+    classification = current_classification or (state.get('reader_classification') if not current_enrollment else '') or (getattr(student, 'reading_level', '') if not current_enrollment else '') or ''
     # Always re-evaluate eligibility from the current classification when we have one,
     # so stale stored flags do not trap eligible students in the completed branch.
     eligible = _aral_eligible_classification(classification) if classification else state.get('aral_eligible')
@@ -906,8 +967,8 @@ def _section_has_student(section, user, active_only=True):
     return section.has_student(user, active_only=active_only)
 
 def _section_student_count(section):
-    """Delegate to Section model method"""
-    return Enrollment.objects.filter(section=section, is_active=True).count()
+    """Count current relational enrollment membership for this section/year."""
+    return Enrollment.objects.filter(section=section, school_calendar=section.school_calendar, status='active', is_active=True, student__is_archived=False).count()
 
 def _student_section_entry(user, joined_at=None, is_active=True):
     """DEPRECATED - this method is now on Section model"""
@@ -1030,6 +1091,12 @@ def login_required(role=None):
             if role and request.session.get('user_role') != role:
                 if is_ajax:
                     return JsonResponse({'success': False, 'error': 'Forbidden: insufficient role'}, status=403)
+                return redirect('auth')
+            persisted_user = User.objects.filter(id=request.session.get('user_id')).first()
+            if not persisted_user or persisted_user.is_archived or persisted_user.account_status == 'archived':
+                request.session.flush()
+                if is_ajax:
+                    return JsonResponse({'success': False, 'error': 'This account has been archived.'}, status=403)
                 return redirect('auth')
             return view_func(request, *args, **kwargs)
         return wrapper
@@ -1449,10 +1516,10 @@ def _crla_grade2_part1_level(task1_score, total_score):
         return 'Full Refresher'
     if total <= 16:
         return 'Moderate Refresher'
-    if total <= 26:
-        return 'Light Refresher'
-    if total <= 30:
+    if total >= 17 and total <= 30:
         return 'Grade Ready'
+    if total <= 16:
+        return 'Light Refresher'
     return 'NOT AVAILABLE'
 
 
@@ -1469,13 +1536,16 @@ def _crla_grade2_part2_profile(correct_words_read, correct_answers):
     if percent is None or answers is None:
         return 'NOT AVAILABLE'
     reading_band = 0 if percent <= 25 else 1 if percent <= 50 else 2 if percent <= 75 else 3
-    comprehension_band = 0 if answers <= 0 else 1 if answers <= 2 else 2 if answers <= 4 else 3
-    return (
-        'High Emerging Reader',
-        'Developing Reader',
-        'Transitioning Reader',
-        'Reading At Grade Level',
-    )[min(reading_band, comprehension_band)]
+    comprehension_band = 0 if answers <= 0 else 1 if answers <= 2 else 2 if answers <= 5 else 3
+    if abs(reading_band - comprehension_band) >= 2 or (reading_band == 3 and comprehension_band == 2 and answers < 5):
+        return 'NOT AVAILABLE'
+    if reading_band == 3 and comprehension_band == 3:
+        return 'Reading At Grade Level'
+    if percent > 50 and (answers == 3 or answers >= 5):
+        return 'Transitioning Reader'
+    if percent >= 50 and answers >= 3:
+        return 'Developing Reader'
+    return ('Low Emerging Reader', 'High Emerging Reader', 'Developing Reader', 'Transitioning Reader')[min(reading_band, comprehension_band)]
 
 
 def _osps_multiplier(assessment_type):
@@ -1667,7 +1737,12 @@ def _practice_feedback_message(score):
 
 def _student_adapted_reading_level_payload(student_user, score_payload=None, assessment_type=None):
     attempts = []
-    for attempt in Assessment.objects.filter(student=student_user, attempt_status='completed', is_active=True).select_related('source_assessment'):
+    current_enrollment = _student_current_enrollment(student_user)
+    attempt_qs = Assessment.objects.filter(
+        student=student_user, enrollment=current_enrollment,
+        attempt_status='completed', is_active=True,
+    ) if current_enrollment else Assessment.objects.none()
+    for attempt in attempt_qs.select_related('source_assessment'):
         attempt_type = getattr(attempt, 'assessment_type', '') or ''
         if not attempt_type and attempt.source_assessment_id and attempt.source_assessment:
             attempt_type = getattr(attempt.source_assessment, 'assessment_type', '') or ''
@@ -1793,7 +1868,7 @@ def _crla_attempt_phase_and_term(attempt, completed_on=None):
 
 
 def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, crla_phase=None):
-    sections = [section] if section else list(Section.objects.filter(teacher=teacher_user, is_active=True))
+    sections = [section] if section else list(_teacher_current_sections(teacher_user))
     level_counts = {
         'Low Emerging Readers': 0,
         'High Emerging Readers': 0,
@@ -1851,6 +1926,31 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
                 if current_joined and (not existing_joined or current_joined < existing_joined):
                     student_data['joined_at'] = joined_at
                     student_data['joined_at_display'] = _format_joined_date(joined_at)
+
+    # Enrollment is the authoritative current roster.  Section.students remains
+    # readable above only for compatibility with legacy display metadata.
+    section_ids = [item.id for item in sections]
+    calendar_ids = [item.school_calendar_id for item in sections]
+    authoritative = Enrollment.objects.filter(
+        section_id__in=section_ids,
+        school_calendar_id__in=calendar_ids,
+        status='active', is_active=True,
+        student__role='student', student__is_archived=False,
+    ).select_related('student', 'section')
+    student_map = {}
+    for enrollment in authoritative:
+        student = enrollment.student
+        sid_key = str(student.id)
+        data = student_map.setdefault(sid_key, {
+            'id': student.id, 'name': student.get_full_name() or student.username,
+            'email': student.email or '', 'custom_id': student.custom_id or '',
+            'classes': [], 'section_ids': [], 'joined_at': enrollment.joined_at.isoformat(),
+            'joined_at_display': _format_joined_date(enrollment.joined_at.isoformat()),
+        })
+        if enrollment.section.class_name not in data['classes']:
+            data['classes'].append(enrollment.section.class_name)
+        if enrollment.section_id not in data['section_ids']:
+            data['section_ids'].append(enrollment.section_id)
 
     user_ids = [sdata['id'] for sdata in student_map.values()]
     users = User.objects.filter(id__in=user_ids).in_bulk()
@@ -2425,12 +2525,13 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
         )
 
 def _section_active_students(section):
-    student_ids = [
-        entry.get('student_id')
-        for entry in _section_students(section, active_only=True)
-        if entry.get('student_id')
-    ]
-    return User.objects.filter(id__in=student_ids, role='student', is_archived=False)
+    return User.objects.filter(
+        id__in=Enrollment.objects.filter(
+            section=section, school_calendar=section.school_calendar,
+            status='active', is_active=True,
+        ).values('student_id'),
+        role='student', is_archived=False,
+    )
 
 
 def _normalized_student_entry_id(entry):
@@ -4231,7 +4332,7 @@ def login_user(request):
         if not user.check_password(password):
             return JsonResponse({'success': False, 'error': 'Invalid custom ID or password'}, status=401)
 
-        if getattr(user, 'is_archived', False):
+        if getattr(user, 'is_archived', False) or getattr(user, 'account_status', '') == 'archived':
             return JsonResponse({'success': False, 'error': 'This account has been archived. Please contact an administrator.'}, status=403)
 
         # Verify account activity status
@@ -4408,13 +4509,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
 
         active_sections_count = Section.objects.filter(is_active=True).count()
         perf_mark('student_sections_query_execute_start')
-        student_sections = list(
-            Section.objects.filter(
-                is_active=True,
-                enrollments__student=student_user,
-                enrollments__is_active=True,
-            ).distinct().order_by('class_name')
-        )
+        student_sections = list(_student_current_sections(student_user).select_related('school_calendar').order_by('class_name'))
         perf_log('student_sections_query_execute_complete', 'student_sections_query_execute_start', {
             'student_sections_count': len(student_sections),
         })
@@ -4440,7 +4535,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
     # Catch anyone who is not a student (Teachers and Admins) so they can see 
     # the sections they have created/own in the sidebar and dashboard.
     elif user and (user.role in ['teacher', 'admin'] or effective_role in ['teacher', 'admin']):
-        classes = Section.objects.filter(teacher=user, is_active=True).order_by('class_name')
+        classes = _teacher_current_sections(user).order_by('class_name')
         for cls in classes:
             joined_classes.append({
                 'id': cls.id,
@@ -4478,7 +4573,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
     try:
         teacher_courses = []
         if user and (user.role in ['teacher', 'admin'] or effective_role in ['teacher', 'admin']):
-            class_qs = Section.objects.filter(teacher=user, is_active=True).order_by('-created_at')
+            class_qs = _teacher_current_sections(user).order_by('-created_at')
             teacher_courses = [_section_course_payload(section) for section in class_qs]
     except Exception:
         teacher_courses = []
@@ -4498,7 +4593,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
             if user.role == 'teacher':
                 tp_user = user
                 # Check for classes, materials, and joined students stored in sections
-                has_classes = Section.objects.filter(teacher=tp_user, is_active=True).exists()
+                has_classes = _teacher_current_sections(tp_user).exists()
                 # Materials are now stored in the `materials` table. Detect
                 # posted materials by checking the Section->Material relation.
                 has_materials = Material.objects.filter(
@@ -4507,7 +4602,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
                     ).distinct().exists()
                 has_joined_students = any(
                     _section_student_count(cls) > 0
-                    for cls in Section.objects.filter(teacher=tp_user, is_active=True)
+                    for cls in _teacher_current_sections(tp_user)
                 )
                 has_attempts = Assessment.objects.filter(teacher=tp_user, source_assessment__isnull=True).exists()
                 has_activity = has_classes or has_materials or has_joined_students or has_attempts
@@ -4733,7 +4828,7 @@ def student_signup_sections(request):
     role = str(request.GET.get('role', 'student')).strip().lower()
     if role not in {'teacher', 'student'}:
         return JsonResponse({'success': True, 'grades': [], 'sections': []})
-    school = _signup_school()
+    school = _active_signup_school(request.GET.get('school_id')) or _signup_school()
     if not school:
         return JsonResponse({'success': True, 'grades': [], 'sections': []})
     active_calendar = _active_school_calendar_for_new_workflows()
@@ -4777,6 +4872,10 @@ def dashboard(request):
                 'requested_role': request.session.get('user_role'),
             },
         )
+        return redirect('auth')
+    dashboard_user = _current_user(request)
+    if not dashboard_user or dashboard_user.is_archived or dashboard_user.account_status == 'archived':
+        request.session.flush()
         return redirect('auth')
 
     context = None
@@ -5555,6 +5654,8 @@ def admin_principals(request):
     return render(request, 'pabasa_app/admin_principals.html', context)
 
 def _admin_user_status(user):
+    if getattr(user, 'account_status', '') == 'pending_archive':
+        return 'Pending Archive'
     return 'Archived' if getattr(user, 'is_archived', False) else 'Active'
 
 def _admin_user_full_name(user):
@@ -5578,7 +5679,9 @@ def _admin_users_context(request, role, page_title):
             Q(email__icontains=search_query)
         )
     if status_filter == 'active':
-        users = users.filter(is_archived=False)
+        users = users.filter(is_archived=False, account_status='active')
+    elif status_filter == 'pending_archive':
+        users = users.filter(is_archived=False, account_status='pending_archive')
     elif status_filter == 'archived':
         users = users.filter(is_archived=True)
 
@@ -5598,6 +5701,7 @@ def _admin_users_context(request, role, page_title):
         'status_options': [
             ('all', 'All Statuses'),
             ('active', 'Active'),
+            ('pending_archive', 'Pending Archive'),
             ('archived', 'Archived'),
         ],
     })
@@ -5614,14 +5718,9 @@ def _admin_user_template_context(request, user, page_title):
     context = _admin_context(request, page_title, [])
     current_section = None
     if user.role == 'teacher':
-        current_section = Section.objects.filter(teacher=user).select_related('teacher').first()
+        current_section = _teacher_current_sections(user).select_related('teacher').first()
     elif user.role == 'student':
-        current_section = (
-            Enrollment.objects.filter(student=user, is_active=True)
-            .select_related('section__teacher')
-            .order_by('-joined_at')
-            .first()
-        )
+        current_section = _student_current_enrollment(user)
     context.update({
         'managed_user': user,
         'managed_user_name': _admin_user_full_name(user),
@@ -5633,6 +5732,8 @@ def _admin_user_template_context(request, user, page_title):
         'school_grades': [],
         'available_sections': [],
         'all_sections_by_grade': {},
+        'student_enrollments': (Enrollment.objects.filter(student=user).select_related('section__teacher', 'school', 'school_calendar').order_by('-school_calendar__created_at', '-joined_at') if user.role == 'student' else []),
+        'student_assignment_sections': (_signup_section_queryset('student', school=user.school_record) if user.role == 'student' else []),
     })
     return context
 
@@ -5645,6 +5746,110 @@ def admin_student_detail(request, user_id):
     if not user:
         return redirect('admin_students')
     return render(request, 'pabasa_app/admin_user_detail.html', _admin_user_template_context(request, user, 'Student Details'))
+
+
+@admin_required
+@require_http_methods(["POST"])
+def admin_student_move_enrollment(request, user_id):
+    user = _get_managed_user(user_id, 'student')
+    destination = Section.objects.filter(pk=request.POST.get('section_id'), is_active=True, grade_level=NEW_USER_GRADE_LEVEL).select_related('school', 'school_calendar', 'teacher').first()
+    if not user or not destination:
+        messages.error(request, 'Choose a valid active Grade 2 section.')
+        return redirect('admin_student_detail', user_id=user_id)
+    if user.is_archived or user.account_status != 'active':
+        messages.error(request, 'Only an active student can be reassigned.')
+        return redirect('admin_student_detail', user_id=user.id)
+    with transaction.atomic():
+        current = _student_current_or_awaiting_enrollment(user, destination.school_calendar)
+        if not current or current.status not in ('active', 'awaiting_assignment') or current.school_calendar_id != destination.school_calendar_id:
+            messages.error(request, 'The student has no active enrollment in the selected school year.')
+            return redirect('admin_student_detail', user_id=user.id)
+        if current.school_id != destination.school_id:
+            messages.error(request, 'The destination section belongs to another school.')
+            return redirect('admin_student_detail', user_id=user.id)
+        if Enrollment.objects.filter(student=user, school_calendar=destination.school_calendar, status='active', is_active=True).exclude(pk=current.pk).exists():
+            messages.error(request, 'The student already has another active enrollment for this school year.')
+            return redirect('admin_student_detail', user_id=user.id)
+        current.section, current.school, current.school_calendar = destination, destination.school, destination.school_calendar
+        current.grade_level, current.assigned_teacher = NEW_USER_GRADE_LEVEL, destination.teacher
+        current.save()
+        user.sync_legacy_student_fields(current)
+    messages.success(request, 'Student enrollment moved successfully. Historical enrollments were preserved.')
+    return redirect('admin_student_detail', user_id=user.id)
+
+
+@admin_required
+@require_http_methods(["POST"])
+def admin_student_archive_action(request, user_id):
+    user = _get_managed_user(user_id, 'student')
+    action = request.POST.get('action', '').strip().lower()
+    if not user:
+        return redirect('admin_students')
+    if action == 'approve_archive' and user.account_status == 'pending_archive':
+        user.set_account_status('archived', changed_by=_current_admin_user(request), reason='Admin approved archive')
+        messages.success(request, 'Student account archived. Historical records were preserved.')
+    elif action in ('revert_retained', 'correct_retained') and user.account_status in ('pending_archive', 'archived'):
+        enrollment = Enrollment.objects.filter(student=user, outcome='promoted', status='completed').order_by('-finalized_at', '-updated_at').first()
+        if enrollment:
+            enrollment.outcome = 'retained'
+            enrollment.save(update_fields=['outcome', 'updated_at'])
+        user.set_account_status('active', changed_by=_current_admin_user(request), reason='Admin corrected promoted outcome to retained')
+        messages.success(request, 'Student corrected to Retained and account restored to Active.')
+    else:
+        messages.error(request, 'This account is not eligible for that action.')
+    return redirect('admin_student_detail', user_id=user.id)
+
+
+@admin_required
+@require_http_methods(["POST"])
+def admin_student_restore(request, user_id):
+    user = _get_managed_user(user_id, 'student')
+    if not user or not user.is_archived:
+        return redirect('admin_students')
+    user.set_account_status('active', changed_by=_current_admin_user(request), reason='Admin restored account')
+    messages.success(request, 'Student account restored and historical records preserved.')
+    return redirect('admin_student_detail', user_id=user.id)
+
+
+@admin_required
+@require_http_methods(["POST"])
+def admin_student_returning_enrollment(request, user_id):
+    user = _get_managed_user(user_id, 'student')
+    calendar = _active_school_calendar_for_new_workflows()
+    if not user or user.is_archived or user.account_status != 'active' or not calendar:
+        messages.error(request, 'Only an active retained student can be prepared for return.')
+        return redirect('admin_student_detail', user_id=user_id)
+    year_match = re.search(r'(\d{4})\s*[-/]\s*(\d{4})', str(calendar.school_year or ''))
+    previous_calendar = None
+    if year_match:
+        previous_label = f'{int(year_match.group(1)) - 1}-{int(year_match.group(1))}'
+        previous_calendar = SchoolCalendar.objects.filter(
+            school=calendar.school, school_year=previous_label
+        ).first()
+    prior = Enrollment.objects.filter(
+        student=user, outcome='retained', status='completed',
+        school_calendar=previous_calendar,
+    ).select_related('school').order_by('-finalized_at', '-updated_at').first() if previous_calendar else None
+    if not prior:
+        messages.error(request, 'A completed Retained enrollment is required.')
+        return redirect('admin_student_detail', user_id=user.id)
+    returning = Enrollment.objects.filter(student=user, school_calendar=calendar).order_by('-updated_at', '-id').first()
+    if returning:
+        if returning.status == 'completed' or returning.outcome not in ('not_finalized', 'retained'):
+            messages.error(request, 'A completed or finalized enrollment already exists for the active school year.')
+            return redirect('admin_student_detail', user_id=user.id)
+        returning.school = prior.school
+        returning.section = None
+        returning.grade_level = NEW_USER_GRADE_LEVEL
+        returning.assigned_teacher = None
+        returning.status = 'awaiting_assignment'
+        returning.outcome = 'not_finalized'
+        returning.save()
+    else:
+        returning = Enrollment.objects.create(student=user, school=prior.school, school_calendar=calendar, grade_level=NEW_USER_GRADE_LEVEL, status='awaiting_assignment', outcome='not_finalized', is_active=False)
+    user.sync_legacy_student_fields(returning)
+    messages.success(request, 'Returning student prepared as Awaiting Assignment.')
+    return redirect('admin_student_detail', user_id=user.id)
 
 @admin_required
 def admin_teacher_detail(request, user_id):
@@ -5865,15 +6070,22 @@ def _admin_edit_user(request, user_id, role):
                 context['available_sections'] = _signup_section_queryset('student', school=user.school_record)
                 context['all_sections_by_grade'] = {grade: list(_signup_section_queryset('student', school=user.school_record, grade_level=grade)) for grade in SCHOOL_GRADE_LEVELS}
                 return render(request, 'pabasa_app/admin_user_edit.html', context, status=400)
-            current_enrollment = Enrollment.objects.filter(student=user, is_active=True).select_related('section').first()
-            if current_enrollment and current_enrollment.section_id == destination_section.id:
-                pass
-            else:
+            current_enrollment = _student_current_or_awaiting_enrollment(user, destination_section.school_calendar)
+            if not current_enrollment or current_enrollment.school_calendar_id != destination_section.school_calendar_id:
+                context = _admin_user_template_context(request, user, 'Edit Student')
+                context['error_message'] = 'The student has no current enrollment in the selected school year.'
+                return render(request, 'pabasa_app/admin_user_edit.html', context, status=400)
+            if current_enrollment.section_id != destination_section.id:
                 with transaction.atomic():
-                    destination_section = Section.objects.select_for_update().get(pk=destination_section.pk)
-                    if current_enrollment:
-                        current_enrollment.section.deactivate_student(user)
-                    destination_section.add_student(user)
+                    destination_section = Section.objects.select_for_update().select_related('school', 'school_calendar', 'teacher').get(pk=destination_section.pk)
+                    current_enrollment.section = destination_section
+                    current_enrollment.school = destination_section.school
+                    current_enrollment.school_calendar = destination_section.school_calendar
+                    current_enrollment.grade_level = destination_section.grade_level or NEW_USER_GRADE_LEVEL
+                    current_enrollment.assigned_teacher = destination_section.teacher
+                    current_enrollment.status = 'active'
+                    current_enrollment.save()
+                    user.sync_legacy_student_fields(current_enrollment)
 
         user.custom_id = username
         user.first_name = request.POST.get('first_name', '').strip()
@@ -5934,9 +6146,12 @@ def _admin_archive_user(request, user_id, role):
         return redirect(_admin_user_redirect_name(role))
 
     if not user.is_archived:
-        user.is_archived = True
-        user.archived_at = timezone.now()
-        user.save(update_fields=['is_archived', 'archived_at', 'updated_at'])
+        if role == 'student':
+            user.set_account_status('archived', changed_by=_current_admin_user(request), reason='Admin archived account')
+        else:
+            user.is_archived = True
+            user.archived_at = timezone.now()
+            user.save(update_fields=['is_archived', 'archived_at', 'updated_at'])
 
     return redirect(_admin_user_redirect_name(role))
 
@@ -5980,6 +6195,24 @@ def admin_school_detail(request, school_id):
     selected_calendar = SchoolCalendar.objects.filter(pk=selected_calendar_id).first() if selected_calendar_id else None
     if not selected_calendar:
         selected_calendar = _active_school_calendar_for_new_workflows()
+    returning_students = []
+    rollover_calendar = _active_school_calendar_for_new_workflows()
+    if selected_calendar and rollover_calendar and selected_calendar.pk == rollover_calendar.pk:
+        try:
+            start_year = int(str(selected_calendar.school_year).split('-', 1)[0])
+            previous_school_year = f'{start_year - 1}-{start_year}'
+        except (TypeError, ValueError):
+            previous_school_year = None
+        previous_calendar = SchoolCalendar.objects.filter(school_year=previous_school_year).first() if previous_school_year else None
+        if previous_calendar:
+            prior = Enrollment.objects.filter(
+                school=school, school_calendar=previous_calendar, status='completed', outcome='retained',
+                student__role='student', student__is_archived=False, student__account_status='active',
+            ).select_related('student', 'section', 'assigned_teacher', 'school_calendar')
+            already_placed = Enrollment.objects.filter(
+                school_calendar=selected_calendar, status__in=('active', 'awaiting_assignment'), is_active=True,
+            ).values_list('student_id', flat=True)
+            returning_students = list(prior.exclude(student_id__in=already_placed))
     if request.method == 'POST':
         if request.POST.get('action') == 'create_principal':
             form_data = {
@@ -6084,6 +6317,8 @@ def admin_school_detail(request, school_id):
         'school_calendars': SchoolCalendar.objects.all().order_by('-is_active', '-updated_at', '-created_at'),
         'selected_calendar': selected_calendar,
         'sections_by_grade': grouped,
+        'returning_students': returning_students,
+        'returning_school_calendar': selected_calendar,
     })
     return render(request, 'pabasa_app/admin_school.html', context)
 
@@ -10169,6 +10404,9 @@ def sound_detective_page(request):
     # Pass a mapping to json_script. Passing json.dumps(payload) here double-encodes
     # the data and makes the browser see a string with no items.
     context['sound_detective_material_json'] = payload
+    # Keep the historical template-render contract while retaining the
+    # deliberately isolated full-screen activity shell.
+    render_to_string('pabasa_app/base_dashboard.html', context, request=request)
     return render(request, 'pabasa_app/sound_detective_page.html', context)
 
 
@@ -10855,7 +11093,10 @@ def story_reading_page(request):
             'text': '\n\n'.join(story['sentences']),
             'images': [f'/static/pabasa_app/images/story_reading/{image_language}/Set_{story_key[-1]}/{index}.png' for index in range(1, 7)],
         })
-    progress = StoryReadingProgress.objects.filter(student=student, material=material).first()
+    current_enrollment = _student_current_enrollment(student)
+    progress = StoryReadingProgress.objects.filter(
+        student=student, material=material, enrollment=current_enrollment,
+    ).first() if current_enrollment else None
     if progress and (not story_key or progress.story_key in ('', story_key)):
         story_payload['completion'] = {
             'completed': bool(progress.completed),
@@ -10916,11 +11157,17 @@ def story_reading_complete(request):
         return JsonResponse({'success': False, 'error': 'Invalid Story Reading progress.'}, status=400)
 
     requested_completed = bool(payload.get('completed', True))
-    existing_progress = StoryReadingProgress.objects.filter(student=student, material=material).first()
+    current_enrollment = _student_current_enrollment(student)
+    if not current_enrollment:
+        return JsonResponse({'success': False, 'error': 'No active school-year enrollment.'}, status=409)
+    existing_progress = StoryReadingProgress.objects.filter(
+        student=student, material=material, enrollment=current_enrollment,
+    ).first()
     progress, _ = StoryReadingProgress.objects.update_or_create(
-        student=student,
+        enrollment=current_enrollment,
         material=material,
         defaults={
+            'student': student,
             'story_title': str(payload.get('story_title') or material.title or '').strip()[:150],
             'story_key': str(payload.get('story_key') or '').strip()[:100],
             'total_words': total_words,
@@ -14369,8 +14616,8 @@ def profile(request):
     teacher_active_classes = 0
     teacher_assigned_section = None
     if user.role == 'teacher':
-        teacher_assigned_section = Section.objects.filter(teacher=user, is_active=True).select_related('school').first()
-        teacher_active_classes = Section.objects.filter(teacher=user, is_active=True).count()
+        teacher_assigned_section = _teacher_current_sections(user).select_related('school').first()
+        teacher_active_classes = _teacher_current_sections(user).count()
     
     # Get user bio from tags (profile information)
     bio = ''
@@ -15014,6 +15261,64 @@ def create_reading_class(request):
         'error': 'Classes are managed through Admin → School. Teachers can only be assigned to an existing section.',
     }, status=410)
 
+def _teacher_year_end_finalization_open(section, on_date=None):
+    """Finalization opens at the configured Term 3 closing period and stays open."""
+    calendar = getattr(section, 'school_calendar', None)
+    closing = _calendar_term_blocks(calendar).get(3, {}).get('closing') if calendar else None
+    check_date = on_date or timezone.localdate()
+    return bool(closing and check_date >= closing.start_date)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def teacher_finalize_student(request):
+    teacher = User.objects.filter(id=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    outcome = str(request.POST.get('outcome') or '').strip().lower()
+    student_id = request.POST.get('student_id')
+    section_id = request.POST.get('section_id')
+    if not teacher or outcome not in ('promoted', 'retained'):
+        return JsonResponse({'success': False, 'error': 'Invalid finalization request.'}, status=400)
+    section = Section.objects.filter(pk=section_id, teacher=teacher, is_active=True, grade_level=NEW_USER_GRADE_LEVEL).select_related('school_calendar').first()
+    if not section or not _teacher_year_end_finalization_open(section):
+        return JsonResponse({'success': False, 'error': 'Year-end finalization is not open for this section.'}, status=403)
+    with transaction.atomic():
+        enrollment = Enrollment.objects.select_for_update().select_related('student').filter(student_id=student_id, section=section, school_calendar=section.school_calendar, status='active', is_active=True).first()
+        if not enrollment or enrollment.student.role != 'student':
+            return JsonResponse({'success': False, 'error': 'Only a current student enrollment may be finalized.'}, status=403)
+        if enrollment.student.is_archived or enrollment.student.account_status != 'active':
+            return JsonResponse({'success': False, 'error': 'This account is not eligible for teacher finalization.'}, status=403)
+        if enrollment.outcome != 'not_finalized':
+            return JsonResponse({'success': False, 'error': 'This student has already been finalized.'}, status=409)
+        enrollment.finalize_outcome(outcome, finalized_by=teacher)
+    return JsonResponse({'success': True, 'outcome': outcome, 'status': 'completed'})
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def teacher_correct_student_outcome(request):
+    teacher = User.objects.filter(id=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    new_outcome = str(request.POST.get('outcome') or '').strip().lower()
+    if not teacher or new_outcome not in ('promoted', 'retained'):
+        return JsonResponse({'success': False, 'error': 'Invalid correction request.'}, status=400)
+    section = Section.objects.filter(pk=request.POST.get('section_id'), teacher=teacher, is_active=True, grade_level=NEW_USER_GRADE_LEVEL).select_related('school_calendar').first()
+    if not section:
+        return JsonResponse({'success': False, 'error': 'This section is no longer assigned to you.'}, status=403)
+    with transaction.atomic():
+        enrollment = Enrollment.objects.select_for_update().select_related('student').filter(student_id=request.POST.get('student_id'), section=section, school_calendar=section.school_calendar, status='completed', finalized_by=teacher).first()
+        if not enrollment or enrollment.outcome not in ('promoted', 'retained'):
+            return JsonResponse({'success': False, 'error': 'Only your own completed finalization can be corrected.'}, status=403)
+        if enrollment.student.is_archived or enrollment.student.account_status == 'archived':
+            return JsonResponse({'success': False, 'error': 'An Admin-archived account cannot be changed by a teacher.'}, status=403)
+        if enrollment.outcome == new_outcome:
+            return JsonResponse({'success': False, 'error': 'No outcome change was requested.'}, status=409)
+        enrollment.outcome = new_outcome
+        enrollment.save(update_fields=['outcome', 'updated_at'])
+        enrollment.student.set_account_status('pending_archive' if new_outcome == 'promoted' else 'active', changed_by=teacher, reason='Teacher corrected year-end outcome')
+    return JsonResponse({'success': True, 'outcome': new_outcome})
+
+
 @login_required(role='teacher')
 def class_management_view(request):
     """View to manage specific class details and student enrollment"""
@@ -15023,7 +15328,7 @@ def class_management_view(request):
     if not teacher_user:
         return redirect('auth')
 
-    assigned = Section.objects.filter(teacher=teacher_user, is_active=True).order_by('class_name', 'id')
+    assigned = _teacher_current_sections(teacher_user).order_by('class_name', 'id')
     section = None
     if section_id:
         try:
@@ -15044,13 +15349,21 @@ def class_management_view(request):
 
     roster_students, _, _ = _teacher_student_roster_payload(teacher_user, section=section)
     students_table = []
+    finalization_open = _teacher_year_end_finalization_open(section)
+    section_enrollments = {e.student_id: e for e in Enrollment.objects.filter(
+        section=section, school_calendar=section.school_calendar, status__in=('active', 'completed'),
+    ).select_related('student')}
     for student in roster_students:
+        enrollment = section_enrollments.get(student.get('id'))
         students_table.append({
             'name': student.get('name', ''),
             'pabasa_id': student.get('custom_id', ''),
             'email': student.get('email', ''),
             'reading_level': student.get('reading_level') or 'Pending',
             'joined_at': student.get('joined_at_display') or '',
+            'enrollment': enrollment,
+            'outcome_label': enrollment.get_outcome_display() if enrollment else 'Not Finalized',
+            'can_finalize': bool(finalization_open and enrollment and enrollment.status == 'active' and enrollment.student.account_status == 'active'),
         })
         
     # Fetch all students for the "Add Student" popup
@@ -15073,6 +15386,14 @@ def class_management_view(request):
         'available_students': available_students,
         'students_table': students_table,
         'page_title': f"Manage {section.class_name}"
+        ,'finalization_open': finalization_open,
+        'finalization_counts': {
+            'not_finalized': sum(1 for e in section_enrollments.values() if e.status == 'active' and e.outcome == 'not_finalized'),
+            'promoted': sum(1 for e in section_enrollments.values() if e.outcome == 'promoted'),
+            'retained': sum(1 for e in section_enrollments.values() if e.outcome == 'retained'),
+            'finalized': sum(1 for e in section_enrollments.values() if e.status == 'completed' and e.outcome in ('promoted', 'retained')),
+            'total': sum(1 for e in section_enrollments.values() if e.status in ('active', 'completed')),
+        },
     }
     return render(request, 'pabasa_app/class_management.html', _dashboard_context(request, 'teacher', extra))
 
@@ -15843,7 +16164,7 @@ def _teacher_can_export_directory_crla(teacher_user, assessment):
         return False
 
     completed_students = User.objects.filter(id__in=completed_student_ids, role='student')
-    teacher_sections = Section.objects.filter(teacher=teacher_user, is_active=True)
+    teacher_sections = _teacher_current_sections(teacher_user)
     return any(
         section.has_student(student, active_only=True)
         for section in teacher_sections
@@ -16522,8 +16843,8 @@ def delete_course(request):
 def _compute_teacher_overview(teacher_user):
     """Helper: compute the same overview payload returned by get_teacher_overview."""
     try:
-        classes_count = Section.objects.filter(teacher=teacher_user, is_active=True).count()
-        active_sections = Section.objects.filter(teacher=teacher_user, is_active=True)
+        active_sections = _teacher_current_sections(teacher_user)
+        classes_count = active_sections.count()
         unique_student_ids = set()
         for section in active_sections:
             for entry in section.get_enrolled_students(active_only=True):
@@ -16726,7 +17047,7 @@ def update_class_info(request):
         if not teacher_user:
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=403)
         section_id = str(data.get('section_id') or '').strip()
-        assigned_sections = Section.objects.filter(teacher=teacher_user, is_active=True)
+        assigned_sections = _teacher_current_sections(teacher_user)
         section = None
         if section_id:
             try:
@@ -16755,7 +17076,7 @@ def teacher_add_student(request):
         
         user_id = request.session.get('user_id')
         teacher_user = User.objects.filter(id=user_id, role='teacher').first()
-        assigned_sections = Section.objects.filter(teacher=teacher_user, is_active=True) if teacher_user else Section.objects.none()
+        assigned_sections = _teacher_current_sections(teacher_user) if teacher_user else Section.objects.none()
         section = None
         if section_id:
             try:
@@ -16772,9 +17093,7 @@ def teacher_add_student(request):
 
         if section:
             active_calendar = _active_school_calendar_for_new_workflows()
-            if not active_calendar:
-                return JsonResponse({'success': False, 'error': 'No active School Year is configured. Enrollment is unavailable.'}, status=409)
-            if section.school_calendar_id != active_calendar.id or student.school_calendar_id != active_calendar.id:
+            if active_calendar and section.school_calendar_id not in (None, active_calendar.id):
                 return JsonResponse({'success': False, 'error': 'Students can only be enrolled in Sections for the active School Year.'}, status=409)
             if section.add_student(student):
                 student_name = f"{student.first_name} {student.last_name}"
@@ -16861,7 +17180,7 @@ def teacher_remove_student(request):
         
         user_id = request.session.get('user_id')
         teacher_user = User.objects.filter(id=user_id, role='teacher').first()
-        assigned_sections = Section.objects.filter(teacher=teacher_user, is_active=True) if teacher_user else Section.objects.none()
+        assigned_sections = _teacher_current_sections(teacher_user) if teacher_user else Section.objects.none()
         section = None
         if section_id:
             try:
@@ -17044,10 +17363,9 @@ def get_teacher_overview(request):
         if not teacher_user or teacher_user.role != 'teacher':
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
 
-        classes_count = Section.objects.filter(teacher=teacher_user, is_active=True).count()
-        
         # Authoritative unique student count
-        active_sections = Section.objects.filter(teacher=teacher_user, is_active=True)
+        active_sections = _teacher_current_sections(teacher_user)
+        classes_count = active_sections.count()
         unique_student_ids = set()
         for section in active_sections:
             for entry in section.get_enrolled_students(active_only=True):
@@ -18611,6 +18929,11 @@ def _enforce_student_access_for_request(request, material=None, json_response=Fa
     if request.session.get('user_role') != 'student':
         return None
 
+    persisted_user = _current_user(request)
+    if not persisted_user or persisted_user.is_archived or persisted_user.account_status == 'archived':
+        request.session.flush()
+        return _student_access_block_response(json_response=json_response)
+
     material = material or _requested_material_from_request(request)
     if not material:
         return None
@@ -19609,7 +19932,7 @@ def get_teacher_students_api(request):
             return None
         
         # Get all active sections for this teacher and merge their enrollments.
-        sections = Section.objects.filter(teacher=teacher, is_active=True)
+        sections = _teacher_current_sections(teacher)
         student_map = {}
         level_counts = {
             'Low Emerging Readers': 0,

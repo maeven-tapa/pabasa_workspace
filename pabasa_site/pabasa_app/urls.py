@@ -35,6 +35,10 @@ urlpatterns = [
     path('dashboard/admin/students/<int:user_id>/', views.admin_student_detail, name='admin_student_detail'),
     path('dashboard/admin/students/<int:user_id>/edit/', views.admin_student_edit, name='admin_student_edit'),
     path('dashboard/admin/students/<int:user_id>/archive/', views.admin_student_archive, name='admin_student_archive'),
+    path('dashboard/admin/students/<int:user_id>/move-enrollment/', views.admin_student_move_enrollment, name='admin_student_move_enrollment'),
+    path('dashboard/admin/students/<int:user_id>/enrollment-action/', views.admin_student_archive_action, name='admin_student_archive_action'),
+    path('dashboard/admin/students/<int:user_id>/restore/', views.admin_student_restore, name='admin_student_restore'),
+    path('dashboard/admin/students/<int:user_id>/prepare-return/', views.admin_student_returning_enrollment, name='admin_student_returning_enrollment'),
     path('dashboard/admin/teachers/', views.admin_teachers, name='admin_teachers'),
     path('dashboard/admin/teachers/<int:user_id>/', views.admin_teacher_detail, name='admin_teacher_detail'),
     path('dashboard/admin/teachers/<int:user_id>/edit/', views.admin_teacher_edit, name='admin_teacher_edit'),
@@ -177,6 +181,8 @@ urlpatterns = [
         views.class_management_view,
         name='class_management'
     ),
+    path('dashboard/teacher/finalize-student/', views.teacher_finalize_student, name='teacher_finalize_student'),
+    path('dashboard/teacher/correct-student-outcome/', views.teacher_correct_student_outcome, name='teacher_correct_student_outcome'),
     path(
         'dashboard/teacher/update-class/',
         views.update_class_info,
