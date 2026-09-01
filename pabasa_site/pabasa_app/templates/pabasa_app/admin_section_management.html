@@ -1,1 +1,119 @@
-{% extends 'pabasa_app/admin_base.html' %}{% block content %}<div class="container-fluid py-2"><a href="{% url 'admin_school_detail' section.school_id %}" class="small">← Back to School</a><div class="card shadow-sm border-0 mt-3 mb-4"><div class="card-body p-4"><div class="d-flex justify-content-between"><div><div class="small text-muted text-uppercase">Section Information</div><h1 class="h3">{{ section.grade_level }} — {{ section.section|default:section.class_name }}</h1><div class="text-muted">Section code: {{ section.class_code }} · ID: {{ section.id }}</div></div><span class="badge {% if section.is_active %}text-bg-success{% else %}text-bg-secondary{% endif %}">{{ status }}</span></div></div></div><div class="row g-4"><div class="col-12 col-lg-4"><section class="card shadow-sm border-0 h-100"><div class="card-body p-4"><h2 class="h5">Assigned Teacher</h2>{% if teacher %}<dl class="small row"><dt class="col-5">Teacher ID</dt><dd class="col-7">{{ teacher.custom_id }}</dd><dt class="col-5">Name</dt><dd class="col-7">{{ teacher.first_name }} {{ teacher.last_name }}</dd><dt class="col-5">Email</dt><dd class="col-7 text-break">{{ teacher.email }}</dd><dt class="col-5">Status</dt><dd class="col-7">{% if teacher.is_archived %}Archived{% else %}Active{% endif %}</dd></dl><a class="btn btn-sm btn-outline-primary" href="{% url 'admin_teacher_detail' teacher.id %}">Manage Teacher</a>{% else %}<p class="text-muted">Not assigned</p>{% endif %}<a class="btn btn-sm btn-outline-secondary ms-1" href="{% url 'admin_class_edit' section.id %}?edit=1">Edit Section</a></div></section></div><div class="col-12 col-lg-8"><section class="card shadow-sm border-0"><div class="card-body p-4"><h2 class="h5">Students <span class="badge text-bg-light border">{{ enrollments|length }}</span></h2><div class="table-responsive"><table class="table"><thead><tr><th>Student ID</th><th>LRN</th><th>Name</th><th>Status</th></tr></thead><tbody>{% for enrollment in enrollments %}<tr><td>{{ enrollment.student.custom_id }}</td><td>{{ enrollment.student.lrn|default:'—' }}</td><td>{{ enrollment.student.first_name }} {{ enrollment.student.last_name }}</td><td>{% if enrollment.student.is_archived %}Archived{% else %}Active{% endif %}</td></tr>{% empty %}<tr><td colspan="4" class="text-muted">No students enrolled.</td></tr>{% endfor %}</tbody></table></div></div></section></div></div></div>{% endblock %}
+{% extends 'pabasa_app/admin_base.html' %}
+
+{% block content %}
+<style>
+  .section-back-link {
+    align-items: center;
+    background: var(--admin-primary-soft);
+    border: 1px solid rgba(46, 168, 229, 0.28);
+    border-radius: 0.5rem;
+    color: var(--admin-primary-deep);
+    display: inline-flex;
+    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-size: 0.875rem;
+    font-weight: 700;
+    gap: 0.4rem;
+    line-height: 1.25;
+    padding: 0.45rem 0.7rem;
+    text-decoration: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+  }
+
+  .section-back-link:hover {
+    background: #dff3fc;
+    border-color: rgba(46, 168, 229, 0.5);
+    color: var(--admin-primary-deep);
+  }
+
+  .section-back-link:focus-visible {
+    box-shadow: 0 0 0 0.2rem rgba(46, 168, 229, 0.25);
+    outline: 0;
+  }
+
+  .section-status-badge {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 0.78rem;
+    font-weight: 800;
+    gap: 0.35rem;
+    line-height: 1;
+    padding: 0.45rem 0.65rem;
+  }
+
+  .section-status-badge__dot {
+    background: currentColor;
+    border-radius: 50%;
+    height: 0.42rem;
+    opacity: 0.9;
+    width: 0.42rem;
+  }
+
+  .section-information-title {
+    overflow-wrap: anywhere;
+  }
+</style>
+
+<div class="container-fluid py-2">
+  <a href="{% url 'admin_school_detail' section.school_id %}" class="section-back-link">
+    <i class="bi bi-arrow-left" aria-hidden="true"></i>
+    <span>Back to School</span>
+  </a>
+
+  <div class="card shadow-sm border-0 mt-3 mb-4">
+    <div class="card-body p-4">
+      <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-start gap-3">
+        <div class="min-w-0">
+          <div class="small text-muted text-uppercase">Section Information</div>
+          <h1 class="h3 section-information-title mb-2">{{ section.grade_level }} — {{ section.section|default:section.class_name }}</h1>
+          <div class="text-muted">Section code: {{ section.class_code }} · ID: {{ section.id }}</div>
+        </div>
+        <span class="badge rounded-pill section-status-badge {% if section.is_active %}text-bg-success{% else %}text-bg-secondary{% endif %}">
+          <span class="section-status-badge__dot" aria-hidden="true"></span>{{ status }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-12 col-lg-4">
+      <section class="card shadow-sm border-0 h-100">
+        <div class="card-body p-4">
+          <h2 class="h5">Assigned Teacher</h2>
+          {% if teacher %}
+            <dl class="small row">
+              <dt class="col-5">Teacher ID</dt><dd class="col-7">{{ teacher.custom_id }}</dd>
+              <dt class="col-5">Name</dt><dd class="col-7">{{ teacher.first_name }} {{ teacher.last_name }}</dd>
+              <dt class="col-5">Email</dt><dd class="col-7 text-break">{{ teacher.email }}</dd>
+              <dt class="col-5">Status</dt><dd class="col-7">{% if teacher.is_archived %}Archived{% else %}Active{% endif %}</dd>
+            </dl>
+            <a class="btn btn-sm btn-outline-primary" href="{% url 'admin_teacher_detail' teacher.id %}">Manage Teacher</a>
+          {% else %}
+            <p class="text-muted">Not assigned</p>
+          {% endif %}
+          <a class="btn btn-sm btn-outline-secondary ms-1" href="{% url 'admin_class_edit' section.id %}?edit=1">Edit Section</a>
+        </div>
+      </section>
+    </div>
+    <div class="col-12 col-lg-8">
+      <section class="card shadow-sm border-0">
+        <div class="card-body p-4">
+          <h2 class="h5">Students <span class="badge text-bg-light border">{{ enrollments|length }}</span></h2>
+          <div class="table-responsive">
+            <table class="table">
+              <thead><tr><th>Student ID</th><th>LRN</th><th>Name</th><th>Status</th></tr></thead>
+              <tbody>
+                {% for enrollment in enrollments %}
+                  <tr><td>{{ enrollment.student.custom_id }}</td><td>{{ enrollment.student.lrn|default:'—' }}</td><td>{{ enrollment.student.first_name }} {{ enrollment.student.last_name }}</td><td>{% if enrollment.student.is_archived %}Archived{% else %}Active{% endif %}</td></tr>
+                {% empty %}
+                  <tr><td colspan="4" class="text-muted">No students enrolled.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}
