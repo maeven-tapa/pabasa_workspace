@@ -52,6 +52,30 @@
   .section-information-title {
     overflow-wrap: anywhere;
   }
+
+  .section-edit-button {
+    background: rgba(255, 255, 255, 0.58);
+    border-color: rgba(108, 117, 125, 0.42);
+    box-shadow: 0 1px 2px rgba(33, 37, 41, 0.04);
+    color: #495057;
+    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  }
+
+  .section-edit-button:hover,
+  .section-edit-button:focus-visible {
+    background: rgba(248, 249, 250, 0.92);
+    border-color: rgba(73, 80, 87, 0.62);
+    box-shadow: 0 3px 8px rgba(33, 37, 41, 0.1);
+    color: #212529;
+    transform: translateY(-1px);
+  }
+
+  @supports (backdrop-filter: blur(8px)) {
+    .section-edit-button {
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+  }
 </style>
 
 <div class="container-fluid py-2">
@@ -68,9 +92,12 @@
           <h1 class="h3 section-information-title mb-2">{{ section.grade_level }} — {{ section.section|default:section.class_name }}</h1>
           <div class="text-muted">Section code: {{ section.class_code }} · ID: {{ section.id }}</div>
         </div>
-        <span class="badge rounded-pill section-status-badge {% if section.is_active %}text-bg-success{% else %}text-bg-secondary{% endif %}">
-          <span class="section-status-badge__dot" aria-hidden="true"></span>{{ status }}
-        </span>
+        <div class="d-flex flex-column align-items-end gap-2">
+          <span class="badge rounded-pill section-status-badge {% if section.is_active %}text-bg-success{% else %}text-bg-secondary{% endif %}">
+            <span class="section-status-badge__dot" aria-hidden="true"></span>{{ status }}
+          </span>
+          <a class="btn btn-sm btn-outline-secondary section-edit-button" href="{% url 'admin_class_edit' section.id %}?edit=1" onclick="window.location.assign(this.href); return false;">Edit Section</a>
+        </div>
       </div>
     </div>
   </div>
@@ -87,13 +114,9 @@
               <dt class="col-5">Email</dt><dd class="col-7 text-break">{{ teacher.email }}</dd>
               <dt class="col-5">Status</dt><dd class="col-7">{% if teacher.is_archived %}Archived{% else %}Active{% endif %}</dd>
             </dl>
-            <a class="btn btn-sm btn-outline-primary" href="{% url 'admin_teacher_detail' teacher.id %}">Manage Teacher</a>
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#assignTeacherModal"><i class="bi bi-person-gear me-1" aria-hidden="true"></i>Change Teacher</button>
           {% else %}
             <p class="text-muted">Not assigned</p>
-            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#assignTeacherModal"><i class="bi bi-person-plus me-1" aria-hidden="true"></i>Assign Teacher</button>
           {% endif %}
-          <a class="btn btn-sm btn-outline-secondary ms-1" href="{% url 'admin_class_edit' section.id %}?edit=1" onclick="window.location.assign(this.href); return false;">Edit Section</a>
         </div>
       </section>
     </div>
