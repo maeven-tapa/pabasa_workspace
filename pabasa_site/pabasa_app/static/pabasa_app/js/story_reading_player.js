@@ -90,6 +90,63 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
         state.readingScore = Number(server.reading_score ?? saved?.readingScore) || (state.correctSentences / totalSentences * 100);
     };
     const persist = () => { try { localStorage.setItem(storageKey, JSON.stringify({time:state.time, scene:state.scene, completed:state.completed, correctSentences:state.correctSentences, readingScore:state.readingScore})); } catch (error) {} return saveState(); };
+    const liveComments = { feed: null, lastEvent: '' };
+    function addLiveComment(event) {
+        if (!liveComments.feed || liveComments.lastEvent === event) return;
+        const score = Number(state.readingScore || 0);
+        const commentMap = {
+            welcome: ['ReadingBuddy', 'Your story is ready—take your time! 📚'],
+            listening: ['BookFriend', 'We’re listening. Read one word at a time! 👂'],
+            progress: ['ARAL Buddy', score >= 80 ? 'Great reading! Keep it up! 🌟' : 'Nice try—keep going! You can do it! 💪'],
+            encouragement: ['ReadingBuddy', 'Take your time. You can do it! 🌟'],
+            complete: ['BookFriend', score >= 80 ? 'Awesome job! Your reading was clear! 👏' : 'You finished the story—keep practicing! 🌟'],
+        };
+        const [author, message] = commentMap[event] || commentMap.encouragement;
+        const item = document.createElement('article');
+        item.className = 'live-comment';
+        item.innerHTML = `<span class="live-comment-avatar" aria-hidden="true">${event === 'complete' ? '🎉' : event === 'progress' ? '⭐' : '📚'}</span><div><strong>${author}</strong><p>${message}</p></div>`;
+        liveComments.feed.append(item);
+        while (liveComments.feed.children.length > 5) liveComments.feed.firstElementChild?.remove();
+        liveComments.feed.scrollTop = liveComments.feed.scrollHeight;
+        liveComments.lastEvent = event;
+    }
+    function mountLiveShell() {
+        if (!app || app.dataset.liveShellMounted === 'true') return;
+        const playerHeader = app.querySelector('.player-header');
+        const mediaShell = app.querySelector('.media-shell');
+        if (!playerHeader || !mediaShell) return;
+        app.dataset.liveShellMounted = 'true';
+        app.classList.add('live-story-player');
+        document.documentElement.classList.add('live-story-page');
+        document.body.classList.add('live-story-page');
+        const liveHeader = document.createElement('header');
+        liveHeader.className = 'live-app-header';
+        const logoUrl = window.pabasaStoryLogoUrl || '/static/pabasa_app/images/pabasalogo.png';
+        liveHeader.innerHTML = `<div class="live-brand"><img src="${logoUrl}" alt="PABASA" class="brand-logo-image"><span>Edu<span>PABASA</span></span><b>LIVE</b><em>Story Reading</em></div>`;
+        const backLink = playerHeader.querySelector('.back-link');
+        if (backLink) liveHeader.append(backLink);
+        if (data.first_name) {
+            const profile = document.createElement('div');
+            profile.className = 'live-reader-profile';
+            profile.innerHTML = `<span aria-hidden="true">👋</span><span>${escapeHtml(data.first_name)}</span>`;
+            liveHeader.append(profile);
+        }
+        const layout = document.createElement('div');
+        layout.className = 'live-stream-layout';
+        const main = document.createElement('section');
+        main.className = 'live-stream-main';
+        const chat = document.createElement('aside');
+        chat.className = 'live-comments-panel';
+        chat.setAttribute('aria-label', 'Active reading comments');
+        chat.innerHTML = '<header><span><i aria-hidden="true"></i> Active Comments</span><small>Reading Live</small></header><div class="live-comments-feed" aria-live="polite"></div>';
+        app.insertBefore(liveHeader, app.firstChild);
+        app.insertBefore(layout, completionPanel);
+        layout.append(main, chat);
+        main.append(mediaShell, playerHeader, status, progressText);
+        playerHeader.classList.add('live-story-meta');
+        liveComments.feed = chat.querySelector('.live-comments-feed');
+        addLiveComment(state.completed ? 'complete' : 'welcome');
+    }
     function render() {
         state.scene = Math.min(scenes.length, Math.max(1, Math.floor(Math.min(state.time, Math.max(0, totalDuration - .001)) / sceneDuration) + 1));
         image.src = imageFor(state.scene); image.alt = `Scene ${state.scene} from ${data.title || 'the story'}`;
@@ -119,7 +176,7 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
     function seek(value) { stopTts(); state.time = Math.min(totalDuration, Math.max(0, Number(value) || 0)); state.completed = false; state.readingCursor = 0; render(); persist(); }
     function moveScene(direction) { seek(Math.min(totalDuration - .01, Math.max(0, (state.scene - 1 + direction) * sceneDuration))); }
     function restartStory() { stopOral(true); stopTts(); cancelAnimationFrame(frame); state.playing = false; state.time = 0; state.scene = 1; state.completed = false; state.readingCursor = 0; state.correctSentences = 0; state.readingScore = 0; app.classList.remove('is-complete'); if (completionPanel) completionPanel.hidden = true; setStatus(''); render(); persist(); }
-    function setStatus(message, listening = false) { status.textContent = message; status.classList.toggle('is-listening', listening); }
+    function setStatus(message, listening = false) { status.textContent = message; status.classList.toggle('is-listening', listening); const copy = String(message || '').toLowerCase(); if (copy.includes('scene ready')) addLiveComment('progress'); else if (copy.includes('still listening')) addLiveComment('encouragement'); else if (listening) addLiveComment('listening'); }
     function stopTts() { ttsController?.abort(); ttsController = null; if (ttsAudio) ttsAudio.pause(); if (ttsUrl) URL.revokeObjectURL(ttsUrl); ttsAudio = null; ttsUrl = ''; listenButton.textContent = '🔊 Listen to Story'; listenButton.setAttribute('aria-pressed', 'false'); }
     async function listen() { if (ttsAudio) { stopTts(); return; } if (state.oral) return; const controller = new AbortController(); ttsController = controller; listenButton.textContent = 'Loading…'; const form = new FormData(); form.append('target_text', scenes[state.scene - 1] || ''); form.append('mode', 'paragraph'); form.append('language', data.language || ''); try { const response = await fetch('/api/reading/read-aloud/', {method:'POST', credentials:'same-origin', headers:{'X-CSRFToken':csrf()}, body:form, signal:controller.signal}); const result = await response.json(); if (!response.ok || !result.success) throw new Error(); ttsUrl = URL.createObjectURL(base64ToBlob(result.audio_content, result.mime_type || 'audio/mpeg')); ttsAudio = new Audio(ttsUrl); ttsAudio.muted = state.muted; ttsAudio.onended = stopTts; listenButton.textContent = '🔊 Listening...'; listenButton.setAttribute('aria-pressed', 'true'); await ttsAudio.play(); } catch (error) { if (error.name !== 'AbortError') setStatus('Audio is unavailable right now.'); stopTts(); } }
     function base64ToBlob(value, type) { const binary = atob(value || ''); const bytes = new Uint8Array(binary.length); for (let index=0; index<binary.length; index += 1) bytes[index] = binary.charCodeAt(index); return new Blob([bytes], {type}); }
@@ -133,7 +190,7 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
     function cursorFromTranscript(transcript) { const target = wordsIn(scenes[state.scene - 1]).map(token); const spoken = wordsIn(transcript).map(token); let cursor = state.readingCursor; let source = 0; while (cursor < target.length && source < spoken.length) { if (spoken.slice(source, source + 3).some(word => word === target[cursor] || (word.length > 4 && target[cursor].length > 4 && word[0] === target[cursor][0]))) cursor += 1; source += 1; } return cursor; }
     async function finishCompletion() { if (state.completionSaving) return; state.completionSaving = true; try { const progressResponse = await persist(); if (!progressResponse?.ok) throw new Error('Story progress was not saved.'); const completionResponse = await saveAssessmentCompletion(); const completion = await completionResponse.json().catch(() => ({})); if (!completionResponse.ok || !completion.success) throw new Error(completion.error || 'Assessment completion was not saved.'); showCompletion(); } catch (error) { state.completed = false; persist(); setStatus('Reading progress was not saved. Please finish Scene 6 again.', false); } finally { state.completionSaving = false; } }
     async function sendChunk(blob, context) { if (!sameContext(context)) { debugAudio('Chunk rejected before request', { scene: context.scene, size: blob?.size || 0, currentScene: state.scene, currentContext: state.context, requestContext: context.version }); return; } if (sending) { debugAudio('Chunk queued behind request', { scene: context.scene, size: blob?.size || 0 }); pending.push({blob,context}); return; } sending = true; const serial = ++requestSerial; const form = new FormData(); form.append('audio', blob, `story-reading-${Date.now()}.webm`); form.append('target_text', context.text); form.append('current_syllable_index', '0'); form.append('mode', 'paragraph'); form.append('language', data.language || ''); debugAudio('POST transcribe', { scene: context.scene, target: context.text, size: blob.size, type: blob.type, serial }); const controller = new AbortController(); requestController = controller; const timeout = setTimeout(() => controller.abort(), 35000); try { const response = await fetch('/api/reading/transcribe/', {method:'POST', credentials:'same-origin', signal:controller.signal, headers:{Accept:'application/json','X-Requested-With':'XMLHttpRequest','X-CSRFToken':csrf()}, body:form}); const result = await response.json(); debugAudio('Transcription response', { scene: context.scene, status: response.status, success: result.success, transcript: result.transcript || '', rawTranscript: result.raw_transcript || '', currentWordIndex: result.current_word_index, correctWordCount: result.correct_word_count, serial }); if (!response.ok || !result.success) throw new Error(); if (sameContext(context)) { state.readingCursor = Math.max(state.readingCursor, Number(result.current_word_index || result.correct_word_count || 0), cursorFromTranscript(result.raw_transcript || result.transcript || '')); highlight(state.readingCursor); if (state.readingCursor >= wordsIn(context.text).length) { debugAudio('Sentence complete', { scene: context.scene, target: context.text, cursor: state.readingCursor }); state.correctSentences = Math.min(totalSentences, state.correctSentences + 1); state.readingScore = state.correctSentences / totalSentences * 100; persist(); stopOral(true); if (state.scene >= scenes.length) { state.time = totalDuration; state.completed = true; finishCompletion(); } else { const nextTime = state.scene * sceneDuration + .02; const nextContextVersion = state.context; mediaViewport?.classList.add('is-transitioning'); window.setTimeout(() => { if (state.completed || state.context !== nextContextVersion) return; state.time = nextTime; state.readingCursor = 0; mediaViewport?.classList.remove('is-transitioning'); render(); setStatus('Scene ready. Press Read With Me to continue.'); }, 350); } } } else { debugAudio('TRANSCRIPT DISCARDED', { scene: context.scene, currentScene: state.scene, reason: 'context-mismatch', currentContext: state.context, responseContext: context.version, serial }); } } catch (error) { debugAudio('Transcription request failed', { scene: context.scene, name: error?.name, message: error?.message, serial }); if (sameContext(context)) setStatus('🎙 I’m still listening… Keep reading clearly.', true); } finally { clearTimeout(timeout); if (requestController === controller) requestController = null; sending = false; const next = pending.shift(); if (next && sameContext(next.context)) sendChunk(next.blob, next.context); else if (next) debugAudio('TRANSCRIPT DISCARDED', { scene: next.context.scene, currentScene: state.scene, reason: 'queued-context-mismatch', currentContext: state.context, requestContext: next.context.version }); } }
-    function showCompletion() { stopOral(true); stopTts(); app.classList.add('is-complete'); completionPanel.hidden = false; const subtitle = completionPanel.querySelector('.complete-subtitle'); if (subtitle) subtitle.textContent = 'You finished reading!'; document.getElementById('completedStoryTitle').textContent = data.title || 'Ang Umaga ni Lito'; document.getElementById('readingScoreSummary').innerHTML = `<span class="completion-stat-value">${state.correctSentences} / ${totalSentences}</span><span class="completion-stat-label">Sentences Correct</span>`; document.getElementById('readingScoreValue').innerHTML = `<span class="completion-stat-value">${Math.round(state.readingScore)}%</span><span class="completion-stat-label">Reading Score</span>`; document.getElementById('saveStatus').textContent = 'Your reading progress has been saved.'; }
+    function showCompletion() { stopOral(true); stopTts(); app.classList.add('is-complete'); completionPanel.hidden = false; const subtitle = completionPanel.querySelector('.complete-subtitle'); if (subtitle) subtitle.textContent = 'You finished reading!'; document.getElementById('completedStoryTitle').textContent = data.title || 'Ang Umaga ni Lito'; document.getElementById('readingScoreSummary').innerHTML = `<span class="completion-stat-value">${state.correctSentences} / ${totalSentences}</span><span class="completion-stat-label">Sentences Correct</span>`; document.getElementById('readingScoreValue').innerHTML = `<span class="completion-stat-value">${Math.round(state.readingScore)}%</span><span class="completion-stat-label">Reading Score</span>`; document.getElementById('saveStatus').textContent = 'Your reading progress has been saved.'; addLiveComment('complete'); }
     function updateFullscreenButton() {
         return;
     }
@@ -191,5 +248,5 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
     }
     progress.oninput = event => seek(event.target.value); previousButton.onclick = restartStory; listenButton.onclick = listenOneSegment; oralButton.onclick = () => { if (state.time >= totalDuration) endActivity(); else startOral(); }; document.querySelectorAll('.scene-marker').forEach(marker => marker.onclick = () => seek(marker.dataset.time));
     window.addEventListener('beforeunload', () => { persist(); stopOral(true); stopTts(); });
-    restoreState(); render(); if (state.completed) showCompletion();
+    restoreState(); mountLiveShell(); render(); if (state.completed) showCompletion();
 })();
