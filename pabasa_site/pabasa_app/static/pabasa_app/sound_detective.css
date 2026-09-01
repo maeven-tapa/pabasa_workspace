@@ -61,3 +61,26 @@
 /* The orb's magnifier is temporarily moved into the clue area during investigation. */
 .sd-scan-lens{display:none!important}.sd-evidence.is-detective-mode{background:radial-gradient(circle at var(--sd-scan-x,50%) 46%,rgba(255,252,231,.96) 0,rgba(255,246,203,.72) 16%,rgba(10,15,30,.55) 54%),linear-gradient(145deg,rgba(255,255,250,.96),rgba(249,235,200,.9));transition:background .32s cubic-bezier(.22,.61,.36,1)}.sd-evidence.is-detective-mode .sd-picture{filter:brightness(.45) saturate(.72);transition:filter .32s ease}.sd-magnifier.is-scanning{position:absolute;z-index:8;left:var(--sd-scan-x,50%);top:46%;width:170px;height:auto;pointer-events:none;filter:drop-shadow(0 10px 10px rgba(20,12,10,.42)) drop-shadow(0 0 20px rgba(255,242,172,.72));animation:sd-lens-float 1.1s ease-in-out infinite alternate}.sd-magnifier.is-found{filter:drop-shadow(0 10px 10px rgba(20,12,10,.42)) drop-shadow(0 0 24px rgba(91,221,116,.96));animation:sd-lens-found-orb .42s cubic-bezier(.22,.61,.36,1) 2}.sd-magnifier.is-missed{filter:drop-shadow(0 10px 10px rgba(20,12,10,.42)) drop-shadow(0 0 19px rgba(235,96,83,.82));animation:sd-lens-missed-orb .42s ease-in-out 2}.sd-evidence.is-detective-mode::after{box-shadow:0 0 35px 18px rgba(255,239,170,.32);border-color:rgba(255,250,216,.26)}
 @keyframes sd-lens-float{to{margin-top:-6px;rotate:2deg}}@keyframes sd-lens-found-orb{50%{scale:1.1;rotate:-5deg}}@keyframes sd-lens-missed-orb{25%{translate:-5px 0}75%{translate:5px 0}}
+
+/* Keep the SD Newspaper title in its existing row while centering each narration state below it. */
+.sd-newspaper{
+  display:flex;
+  flex-direction:column;
+}
+
+.sd-newspaper .sd-intro{
+  display:grid;
+  flex:1 1 auto;
+  grid-template-rows:auto minmax(0,1fr) auto;
+  min-height:0;
+}
+
+.sd-newspaper .sd-intro-copy.sd-intro-narration{
+  align-items:center;
+  box-sizing:border-box;
+  display:flex;
+  font-size:clamp(1.2rem,1.8vw,1.6rem);
+  justify-content:center;
+  text-align:center;
+  width:100%;
+}
