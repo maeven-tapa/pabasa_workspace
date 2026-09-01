@@ -5822,7 +5822,7 @@ def admin_student_archive_action(request, user_id):
     if action == 'approve_archive' and user.account_status == 'pending_archive':
         user.set_account_status('archived', changed_by=_current_admin_user(request), reason='Admin approved archive')
         messages.success(request, 'Student account archived. Historical records were preserved.')
-    elif action in ('revert_retained', 'correct_retained') and user.account_status in ('pending_archive', 'archived'):
+    elif action in ('revert_retained', 'correct_retained') and user.account_status in ('pending_archive', 'archived', 'active'):
         enrollment = Enrollment.objects.filter(student=user, outcome='promoted', status='completed').order_by('-finalized_at', '-updated_at').first()
         if enrollment:
             enrollment.outcome = 'retained'
