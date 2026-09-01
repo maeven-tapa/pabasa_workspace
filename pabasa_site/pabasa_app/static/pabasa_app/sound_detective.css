@@ -84,3 +84,15 @@
   text-align:center;
   width:100%;
 }
+
+/* The revealed evidence card is the only item in this activity area. */
+.sd-card-reveal .sd-investigation{
+  align-self:stretch;
+  display:flex;
+  grid-column:1 / -1;
+  grid-row:1 / -1;
+  justify-content:center;
+  align-items:center;
+  min-height:0;
+  width:100%;
+}
