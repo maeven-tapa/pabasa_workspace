@@ -25,51 +25,31 @@ load_dotenv(PROJECT_ROOT / '.env')
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-c8tcixn4vam*#z1*^d+9x6ddm89ph_+z%5+jce14vgdr@#*y5t'
+# SECURITY WARNING: keep the production value in Secret Manager.
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-def _bool_env(name, default=False):
-    value = os.environ.get(name)
-    if value is None:
-        return default
-    normalized = value.strip().lower()
-    if normalized in {'1', 'true', 'yes', 'on'}:
-        return True
-    if normalized in {'0', 'false', 'no', 'off'}:
-        return False
-    raise ImproperlyConfigured(f'{name} must be true or false.')
+# Cloud Run always provides K_SERVICE. Local runs remain in development mode.
+DJANGO_ENV = 'production' if os.environ.get('K_SERVICE') else 'development'
+if not SECRET_KEY:
+    if DJANGO_ENV == 'production':
+        raise ImproperlyConfigured('DJANGO_SECRET_KEY must be set in production.')
+    SECRET_KEY = 'django-insecure-local-development-only'
+
+DEBUG = DJANGO_ENV != 'production'
 
 
-DJANGO_ENV = os.environ.get('DJANGO_ENV', 'development').strip().lower()
-DEBUG = True
-
-def _csv_env(name):
-    value = os.environ.get(name, '')
-    return [item.strip() for item in value.split(',') if item.strip()]
-
-
-def _dedupe(items):
-    seen = set()
-    output = []
-    for item in items:
-        if item and item not in seen:
-            seen.add(item)
-            output.append(item)
-    return output
-
-
-ALLOWED_HOSTS = _dedupe(_csv_env('ALLOWED_HOSTS') + [
+ALLOWED_HOSTS = [
     'tupcpabasa.app',
     'www.tupcpabasa.app',
+    'pabasa-363691003404.asia-southeast1.run.app',
     '127.0.0.1',
     'localhost',
-])
+]
 
-CSRF_TRUSTED_ORIGINS = _dedupe(_csv_env('CSRF_TRUSTED_ORIGINS') + [
+CSRF_TRUSTED_ORIGINS = [
     'https://tupcpabasa.app',
     'https://www.tupcpabasa.app',
-])
+]
 
 
 # Application definition
@@ -163,7 +143,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-SITE_URL = os.environ.get('SITE_URL', 'https://tupcpabasa.app')
+SITE_URL = 'https://tupcpabasa.app'
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
@@ -178,12 +158,14 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
 EMAIL_HOST_USER = 'pabasa.tupc@gmail.com'
-EMAIL_HOST_PASSWORD = 'sfsy zplk rmku bdxt'
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = 'pabasa.tupc@gmail.com'
+EMAIL_TIMEOUT = 15
 
 # Google Cloud Speech-to-Text settings used by the reading assessment UI.
-GOOGLE_STT_API_KEY = 'AIzaSyDPMgJX8t195Z9bfoID2gwlG5oPhBVK_tk'
+GOOGLE_STT_API_KEY = os.environ.get('GOOGLE_API_KEY', '')
 GOOGLE_CLOUD_PROJECT_ID = 'project-2b0d295d-ee06-40a7-927'
 GOOGLE_STT_LOCATION = 'us'
 # Chirp 3 is used through Speech-to-Text V2 Recognize for short reading clips.
