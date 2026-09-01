@@ -240,8 +240,11 @@ def _signup_section_for_request(data, role):
     return school, section, None
 
 
-def _school_sections_queryset(school):
-    return Section.objects.filter(school=school).select_related('teacher', 'school', 'school_calendar').order_by('school_calendar__school_year', 'grade_level', 'section', 'class_name')
+def _school_sections_queryset(school, school_calendar=None):
+    queryset = Section.objects.filter(school=school)
+    if school_calendar:
+        queryset = queryset.filter(school_calendar=school_calendar)
+    return queryset.select_related('teacher', 'school', 'school_calendar').order_by('school_calendar__school_year', 'grade_level', 'section', 'class_name')
 
 
 def _practice_language_value(value):
@@ -5971,6 +5974,12 @@ def admin_school_detail(request, school_id):
     # This title is rendered only by the shared Admin topbar. School page
     # content continues to use the persisted School record below.
     context = _admin_context(request, "School", [])
+    selected_calendar_id = request.GET.get('school_calendar_id')
+    if request.method == 'POST' and request.POST.get('school_calendar_id'):
+        selected_calendar_id = request.POST.get('school_calendar_id')
+    selected_calendar = SchoolCalendar.objects.filter(pk=selected_calendar_id).first() if selected_calendar_id else None
+    if not selected_calendar:
+        selected_calendar = _active_school_calendar_for_new_workflows()
     if request.method == 'POST':
         if request.POST.get('action') == 'create_principal':
             form_data = {
@@ -6056,13 +6065,15 @@ def admin_school_detail(request, school_id):
                                 subject='Reading',
                                 is_active=True,
                             )
-                            return redirect('admin_school_detail', school_id=school.id)
+                            return redirect(
+                                f'{reverse("admin_school_detail", args=[school.id])}?school_calendar_id={school_calendar.id}'
+                            )
                         context['error_message'] = f'{NEW_USER_GRADE_LEVEL} - {section.section} already exists for {school_calendar.school_year}.'
                 except IntegrityError:
                     context['error_message'] = f'{NEW_USER_GRADE_LEVEL} - {section_name} already exists for {school_calendar.school_year}.'
 
     grouped = {grade: [] for grade in SCHOOL_GRADE_LEVELS}
-    for section in _school_sections_queryset(school):
+    for section in _school_sections_queryset(school, selected_calendar):
         grouped.setdefault(section.grade_level, []).append(section)
     context.update({
         'school': school,
@@ -6071,6 +6082,7 @@ def admin_school_detail(request, school_id):
         'principal': context.get('principal', _active_principal_for_school(school)),
         'principal_form_data': context.get('principal_form_data', {}),
         'school_calendars': SchoolCalendar.objects.all().order_by('-is_active', '-updated_at', '-created_at'),
+        'selected_calendar': selected_calendar,
         'sections_by_grade': grouped,
     })
     return render(request, 'pabasa_app/admin_school.html', context)

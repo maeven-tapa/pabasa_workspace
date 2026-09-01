@@ -10533,6 +10533,55 @@ class AdminSingleSchoolTests(TestCase):
         self.assertEqual(created.school_calendar, inactive_calendar)
         self.assertEqual(created.grade_level, 'Grade 2')
 
+    def test_school_sections_are_scoped_to_selected_calendar(self):
+        old_calendar = SchoolCalendar.objects.create(
+            school_year='2026-2027', current_term=3, is_active=False,
+        )
+        new_calendar = SchoolCalendar.objects.create(
+            school_year='2027-2028', current_term=1, is_active=True,
+        )
+        old_section = Section.objects.create(
+            school=self.salawag, school_calendar=old_calendar, class_code='OLDY-002',
+            class_name='Grade 2 - Orchid', subject='Reading', grade_level='Grade 2', section='ORCHID',
+        )
+
+        old_response = self.client.get(
+            reverse('admin_school_detail', args=[self.salawag.id]),
+            {'school_calendar_id': old_calendar.id},
+        )
+        self.assertContains(old_response, old_section.section)
+        self.assertNotContains(old_response, 'No sections configured.')
+
+        new_response = self.client.get(
+            reverse('admin_school_detail', args=[self.salawag.id]),
+            {'school_calendar_id': new_calendar.id},
+        )
+        self.assertContains(new_response, 'No sections configured.')
+        self.assertNotContains(new_response, old_section.section)
+
+        create_response = self.client.post(reverse('admin_school_detail', args=[self.salawag.id]), {
+            'school_calendar_id': new_calendar.id,
+            'section': 'Sampaguita',
+        })
+        self.assertRedirects(
+            create_response,
+            f'{reverse("admin_school_detail", args=[self.salawag.id])}?school_calendar_id={new_calendar.id}',
+        )
+        self.assertContains(
+            self.client.get(
+                reverse('admin_school_detail', args=[self.salawag.id]),
+                {'school_calendar_id': new_calendar.id},
+            ),
+            'SAMPAGUITA',
+        )
+        self.assertContains(
+            self.client.get(
+                reverse('admin_school_detail', args=[self.salawag.id]),
+                {'school_calendar_id': old_calendar.id},
+            ),
+            'ORCHID',
+        )
+
     def test_signup_sections_only_returns_active_school_year_sections(self):
         old_calendar = SchoolCalendar.objects.create(
             school_year='2025-2026', current_term=3, is_active=False,
