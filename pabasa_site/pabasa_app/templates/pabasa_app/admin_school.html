@@ -39,8 +39,10 @@
 
   .school-section-actions .btn {
     align-items: center;
+    background-color: rgba(255, 255, 255, 0.58);
+    border: 1px solid rgba(108, 117, 125, 0.42);
     border-radius: 0.375rem;
-    border-width: 1px;
+    box-shadow: 0 1px 2px rgba(33, 37, 41, 0.04);
     display: inline-flex;
     font-size: 0.875rem;
     font-weight: 700;
@@ -48,59 +50,42 @@
     line-height: 1.25;
     min-height: 2.25rem;
     padding: 0.5rem 0.75rem;
+    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease, transform 0.15s ease;
     white-space: nowrap;
   }
 
-  .school-section-actions .section-action-assign {
-    background-color: #198754;
-    border-color: #198754;
-    color: #fff;
-  }
-
-  .school-section-actions .section-action-assign:hover,
-  .school-section-actions .section-action-assign:focus-visible {
-    background-color: #146c43;
-    border-color: #13653f;
-    color: #fff;
-  }
-
-  .school-section-actions .section-action-change {
-    background-color: #fd7e14;
-    border-color: #fd7e14;
-    color: #212529;
-  }
-
-  .school-section-actions .section-action-change:hover,
-  .school-section-actions .section-action-change:focus-visible {
-    background-color: #e86f0c;
-    border-color: #dc680b;
-    color: #212529;
-  }
-
+  .school-section-actions .section-action-assign,
+  .school-section-actions .section-action-change,
   .school-section-actions .section-action-manage {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
-    color: #fff;
-  }
-
-  .school-section-actions .section-action-manage:hover,
-  .school-section-actions .section-action-manage:focus-visible {
-    background-color: #0a58ca;
-    border-color: #0a53be;
-    color: #fff;
+    color: #495057;
   }
 
   .school-section-actions .section-action-deactivate {
-    background-color: #dc3545;
-    border-color: #dc3545;
-    color: #fff;
+    color: #842029;
+    border-color: rgba(220, 53, 69, 0.38);
+  }
+
+  .school-section-actions .btn:hover,
+  .school-section-actions .btn:focus-visible {
+    background-color: rgba(248, 249, 250, 0.92);
+    border-color: rgba(73, 80, 87, 0.62);
+    box-shadow: 0 3px 8px rgba(33, 37, 41, 0.1);
+    color: #212529;
+    transform: translateY(-1px);
   }
 
   .school-section-actions .section-action-deactivate:hover,
   .school-section-actions .section-action-deactivate:focus-visible {
-    background-color: #bb2d3b;
-    border-color: #b02a37;
-    color: #fff;
+    background-color: rgba(248, 225, 227, 0.72);
+    border-color: rgba(220, 53, 69, 0.65);
+    color: #842029;
+  }
+
+  @supports (backdrop-filter: blur(8px)) {
+    .school-section-actions .btn {
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
   }
 </style>
 <div class="container-fluid py-2">
