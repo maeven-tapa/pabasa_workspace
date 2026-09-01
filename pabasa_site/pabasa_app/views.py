@@ -126,6 +126,14 @@ def _active_signup_school(school_id):
     return _real_active_schools().filter(pk=int(school_id)).first()
 
 
+def _signup_school():
+    """New accounts are always created under the single supported school."""
+    return _real_active_schools().filter(
+        pk=PRIMARY_SCHOOL_ID,
+        name=PRIMARY_SCHOOL_NAME,
+    ).first()
+
+
 def _active_school_calendar_for_new_workflows():
     """Return the one calendar that can receive newly created users/sections."""
     calendars = SchoolCalendar.objects.filter(is_active=True).order_by('-updated_at', '-created_at')
@@ -208,16 +216,9 @@ def _section_selection_context(role):
 
 
 def _signup_section_for_request(data, role):
-    school = _active_signup_school(data.get('school_id'))
+    school = _signup_school()
     if not school:
-        legacy_name = str(data.get('school') or '').strip()
-        school = School.objects.filter(
-            name__iexact=legacy_name,
-            status='active',
-            is_active=True,
-        ).exclude(name='Default School').first() if legacy_name else None
-    if not school:
-        return None, None, 'Choose an active School.'
+        return None, None, 'Salawag Elementary School is not available for signup.'
 
     active_calendar = _active_school_calendar_for_new_workflows()
     if not active_calendar:
@@ -3772,7 +3773,7 @@ def register_teacher(request):
         
         # Validate required fields
         required_fields = ['first_name', 'last_name', 'email', 'password', 'confirm_password',
-                         'sex', 'birth_month', 'birth_day', 'birth_year', 'school_id', 'section']
+                         'sex', 'birth_month', 'birth_day', 'birth_year', 'section']
         
         for field in required_fields:
             if not data.get(field):
@@ -3830,7 +3831,7 @@ def register_student(request):
         )
         
         # Validate required fields
-        required_fields = ['first_name', 'last_name', 'email', 'password', 'confirm_password', 'lrn', 'school_id', 'section',
+        required_fields = ['first_name', 'last_name', 'email', 'password', 'confirm_password', 'lrn', 'section',
                          'sex', 'birth_month', 'birth_day', 'birth_year']
         
         for field in required_fields:
@@ -4676,13 +4677,11 @@ def privacy(request):
 def teacher_signup(request):
     return render(request, 'pabasa_app/teacher_signup.html', {
         'signup_grades': [],
-        'signup_schools': _real_active_schools(),
     })
 
 def student_signup(request):
     return render(request, 'pabasa_app/student_signup.html', {
         'signup_grades': [],
-        'signup_schools': _real_active_schools(),
     })
 
 @require_http_methods(["GET"])
@@ -4690,7 +4689,7 @@ def student_signup_sections(request):
     role = str(request.GET.get('role', 'student')).strip().lower()
     if role not in {'teacher', 'student'}:
         return JsonResponse({'success': True, 'grades': [], 'sections': []})
-    school = _active_signup_school(request.GET.get('school_id'))
+    school = _signup_school()
     if not school:
         return JsonResponse({'success': True, 'grades': [], 'sections': []})
     active_calendar = _active_school_calendar_for_new_workflows()

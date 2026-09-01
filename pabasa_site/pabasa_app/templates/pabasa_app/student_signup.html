@@ -598,16 +598,9 @@
                                title="Enter exactly 12 digits." required>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label" for="studentSchool">School</label>
-                        <select class="form-select" name="school_id" id="studentSchool" required>
-                            <option value="" selected disabled>Select School</option>
-                            {% for school in signup_schools %}<option value="{{ school.id }}">{{ school.name }}</option>{% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-6">
                         <label class="form-label" for="studentSection">Section</label>
                         <select class="form-select" name="section" id="studentSection" required disabled>
-                            <option value="" selected disabled>Select School first</option>
+                            <option value="" selected disabled>Loading sections…</option>
                         </select>
                     </div>
                     <div class="col-md-6">
@@ -843,19 +836,19 @@
             sectionSelect.disabled = false;
         }
 
-        const schoolSelect = document.getElementById('studentSchool');
-        schoolSelect?.addEventListener('change', async () => {
+        async function loadSections() {
             sectionSelect.disabled = true;
             sectionSelect.innerHTML = '<option value="" selected disabled>Loading sections…</option>';
             try {
-                const response = await fetch('{% url "signup_sections" %}?role=student&school_id=' + encodeURIComponent(schoolSelect.value));
+                const response = await fetch('{% url "signup_sections" %}?role=student');
                 const data = await response.json();
                 if (!response.ok || !data.success) throw new Error(data.error || 'Unable to load sections');
                 renderSectionOptions(data.sections || []);
             } catch (_) {
                 sectionSelect.innerHTML = '<option value="" selected>Unable to load sections</option>';
             }
-        });
+        }
+        loadSections();
         
         const passwordRules = {
             length: form.querySelector("[data-rule='length']"),

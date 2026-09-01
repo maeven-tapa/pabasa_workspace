@@ -10549,7 +10549,7 @@ class AdminSingleSchoolTests(TestCase):
             class_name='Grade 2 - Sampaguita', subject='Reading', grade_level='Grade 2', section='SAMPAGUITA',
         )
 
-        response = self.client.get(reverse('signup_sections'), {'role': 'student', 'school_id': self.salawag.id})
+        response = self.client.get(reverse('signup_sections'), {'role': 'student'})
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
@@ -10560,7 +10560,7 @@ class AdminSingleSchoolTests(TestCase):
     def test_signup_sections_requires_an_active_school_year(self):
         SchoolCalendar.objects.create(school_year='2025-2026', current_term=3, is_active=False)
 
-        response = self.client.get(reverse('signup_sections'), {'role': 'student', 'school_id': self.salawag.id})
+        response = self.client.get(reverse('signup_sections'), {'role': 'student'})
 
         self.assertEqual(response.status_code, 409)
         self.assertIn('No active School Year', response.json()['error'])
@@ -10580,7 +10580,7 @@ class AdminSingleSchoolTests(TestCase):
             'first_name': 'Mia', 'last_name': 'Rivera', 'email': 'mia.calendar@example.com',
             'password': 'Student123', 'confirm_password': 'Student123', 'lrn': '123456789012',
             'sex': 'female', 'birth_month': '1', 'birth_day': '5', 'birth_year': '2014',
-            'school_id': self.salawag.id, 'section': section.id,
+            'section': section.id,
         }
 
         response = self.client.post(reverse('register_student'), payload)
@@ -10609,7 +10609,7 @@ class AdminSingleSchoolTests(TestCase):
             'first_name': 'Tina', 'last_name': 'Teacher', 'email': 'tina.calendar@example.com',
             'password': 'Teacher123', 'confirm_password': 'Teacher123', 'sex': 'female',
             'birth_month': '1', 'birth_day': '5', 'birth_year': '1990',
-            'school_id': self.salawag.id, 'section': section.id, 'department': 'Mathematics',
+            'section': section.id, 'department': 'Mathematics',
         }
 
         response = self.client.post(reverse('register_teacher'), payload)
