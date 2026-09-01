@@ -94,12 +94,20 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
     function addLiveComment(event) {
         if (!liveComments.feed || liveComments.lastEvent === event) return;
         const score = Number(state.readingScore || 0);
-        const commentMap = {
+        const isFilipino = /^(fil|tag)/i.test(String(data.language || '').trim());
+        const nearCompletion = state.correctSentences >= Math.max(1, totalSentences - 1);
+        const commentMap = isFilipino ? {
+            welcome: ['ReadingBuddy', 'Handa na ang iyong kuwento—basahin lang nang dahan-dahan! 📚'],
+            listening: ['Kaibigang Mambabasa', 'Nakikinig kami. Isa-isang salita lang! 👂'],
+            progress: ['Bituing Mambabasa', nearCompletion ? 'Malapit na matapos! Ang galing mo! 🌟' : score >= 80 ? 'Napakalinaw ng pagbasa! Ituloy mo lang! 👏' : 'Magandang simula! Ituloy mo lang! 💪'],
+            encouragement: ['ReadingBuddy', 'Walang problema—dahan-dahan lang. Kaya mo ito! 🌟'],
+            complete: ['Kaibigang Mambabasa', score >= 80 ? 'Natapos mo ang kuwento! Ang galing ng pagbasa mo! 🎉' : 'Natapos mo ang kuwento! Magpatuloy lang sa pagsasanay! 🌟'],
+        } : {
             welcome: ['ReadingBuddy', 'Your story is ready—take your time! 📚'],
-            listening: ['BookFriend', 'We’re listening. Read one word at a time! 👂'],
-            progress: ['ARAL Buddy', score >= 80 ? 'Great reading! Keep it up! 🌟' : 'Nice try—keep going! You can do it! 💪'],
-            encouragement: ['ReadingBuddy', 'Take your time. You can do it! 🌟'],
-            complete: ['BookFriend', score >= 80 ? 'Awesome job! Your reading was clear! 👏' : 'You finished the story—keep practicing! 🌟'],
+            listening: ['StarReader', 'We’re listening. Read one word at a time! 👂'],
+            progress: ['BookFriend', nearCompletion ? 'You’re almost finished—great reading! 🌟' : score >= 80 ? 'Clear reading! Keep it up! 👏' : 'Great start! Keep going! 💪'],
+            encouragement: ['ReadingBuddy', 'No worries—take your time. You can do it! 🌟'],
+            complete: ['StarReader', score >= 80 ? 'You finished the story—awesome reading! 🎉' : 'You finished the story—keep practicing! 🌟'],
         };
         const [author, message] = commentMap[event] || commentMap.encouragement;
         const item = document.createElement('article');
@@ -176,7 +184,7 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
     function seek(value) { stopTts(); state.time = Math.min(totalDuration, Math.max(0, Number(value) || 0)); state.completed = false; state.readingCursor = 0; render(); persist(); }
     function moveScene(direction) { seek(Math.min(totalDuration - .01, Math.max(0, (state.scene - 1 + direction) * sceneDuration))); }
     function restartStory() { stopOral(true); stopTts(); cancelAnimationFrame(frame); state.playing = false; state.time = 0; state.scene = 1; state.completed = false; state.readingCursor = 0; state.correctSentences = 0; state.readingScore = 0; app.classList.remove('is-complete'); if (completionPanel) completionPanel.hidden = true; setStatus(''); render(); persist(); }
-    function setStatus(message, listening = false) { status.textContent = message; status.classList.toggle('is-listening', listening); const copy = String(message || '').toLowerCase(); if (copy.includes('scene ready')) addLiveComment('progress'); else if (copy.includes('still listening')) addLiveComment('encouragement'); else if (listening) addLiveComment('listening'); }
+    function setStatus(message, listening = false) { status.textContent = message; status.classList.toggle('is-listening', listening); const copy = String(message || '').toLowerCase(); if (copy.includes('scene ready')) addLiveComment('progress'); else if (copy.includes('still listening') || copy.includes('try again') || copy.includes('keep reading')) addLiveComment('encouragement'); else if (listening) addLiveComment('listening'); }
     function stopTts() { ttsController?.abort(); ttsController = null; if (ttsAudio) ttsAudio.pause(); if (ttsUrl) URL.revokeObjectURL(ttsUrl); ttsAudio = null; ttsUrl = ''; listenButton.textContent = '🔊 Listen to Story'; listenButton.setAttribute('aria-pressed', 'false'); }
     async function listen() { if (ttsAudio) { stopTts(); return; } if (state.oral) return; const controller = new AbortController(); ttsController = controller; listenButton.textContent = 'Loading…'; const form = new FormData(); form.append('target_text', scenes[state.scene - 1] || ''); form.append('mode', 'paragraph'); form.append('language', data.language || ''); try { const response = await fetch('/api/reading/read-aloud/', {method:'POST', credentials:'same-origin', headers:{'X-CSRFToken':csrf()}, body:form, signal:controller.signal}); const result = await response.json(); if (!response.ok || !result.success) throw new Error(); ttsUrl = URL.createObjectURL(base64ToBlob(result.audio_content, result.mime_type || 'audio/mpeg')); ttsAudio = new Audio(ttsUrl); ttsAudio.muted = state.muted; ttsAudio.onended = stopTts; listenButton.textContent = '🔊 Listening...'; listenButton.setAttribute('aria-pressed', 'true'); await ttsAudio.play(); } catch (error) { if (error.name !== 'AbortError') setStatus('Audio is unavailable right now.'); stopTts(); } }
     function base64ToBlob(value, type) { const binary = atob(value || ''); const bytes = new Uint8Array(binary.length); for (let index=0; index<binary.length; index += 1) bytes[index] = binary.charCodeAt(index); return new Blob([bytes], {type}); }
