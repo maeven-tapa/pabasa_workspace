@@ -4,7 +4,7 @@ import uuid
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Assessment, Course, Material, School, Section, User
+from .models import Assessment, Course, Enrollment, Material, School, Section, User
 
 
 def test_section_create(**kwargs):
@@ -118,3 +118,26 @@ class SectionBackedCoursesRegressionTests(TestCase):
         material.refresh_from_db()
         self.assertIsNone(material.section_id)
         self.assertFalse(material.assigned_sections.filter(id=self.section.id).exists())
+
+    def test_section_backed_course_can_start_live_assessment(self):
+        student = self._user("SCS-STUDENT", "scs-student@example.com", "student", self.school)
+        Enrollment.objects.create(student=student, section=self.section, assigned_teacher=self.teacher)
+        material = Material.objects.create(
+            teacher=self.teacher, section=self.section, title="Live Section Material",
+            item_type="word", content_text="read", content_json={"items": ["read"]},
+            type="assessment", source_type="personal", status="published", is_active=True,
+        )
+        response = self.client.post(
+            reverse("start_live_assessment"),
+            json.dumps({
+                "course_id": None,
+                "section_id": self.section.id,
+                "material_id": material.id,
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["success"])
+        self.assertEqual(body["session"]["available_students"][0]["id"], student.id)

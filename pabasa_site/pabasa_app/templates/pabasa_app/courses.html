@@ -10909,12 +10909,24 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         if (action === 'live') {
                             if (!mat) return showToast('Material not found', 'error');
                             try {
-                                const materialIdForBackend = String(mat.id || mat.raw_id || rawRecordId(mid) || '').trim();
+                                const materialIdForBackend = Number(mat.id || mat.raw_id || rawRecordId(mid));
+                                const courseIdForBackend = /^\d+$/.test(String(activeCourse.id || '').trim())
+                                    ? Number(activeCourse.id)
+                                    : null;
+                                const sectionIdForBackend = mat.section_id
+                                    || mat.assigned_section_ids?.[0]
+                                    || activeCourse.section_id
+                                    || activeCourse.sections?.[0]?.id
+                                    || null;
                                 const res = await fetch('/dashboard/teacher/start-live-assessment/', {
                                     method: 'POST',
                                     credentials: 'same-origin',
                                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                                    body: JSON.stringify({ course_id: activeCourseId, material_id: materialIdForBackend })
+                                    body: JSON.stringify({
+                                        course_id: courseIdForBackend,
+                                        section_id: sectionIdForBackend,
+                                        material_id: materialIdForBackend,
+                                    })
                                 });
                                 const d = await res.json();
                                 if (!res.ok || !d.success) {

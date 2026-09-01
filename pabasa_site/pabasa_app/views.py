@@ -13764,6 +13764,7 @@ def start_live_assessment(request):
         data = {}
 
     course_id = data.get('course_id')
+    section_id = data.get('section_id')
     material_id = data.get('material_id')
     teacher_user = User.objects.filter(id=request.session.get('user_id')).first()
     if not teacher_user:
@@ -13771,9 +13772,25 @@ def start_live_assessment(request):
 
     course = None
     if course_id:
-        course = Course.objects.filter(id=course_id).first()
+        try:
+            course = Course.objects.filter(id=int(course_id)).first()
+        except (TypeError, ValueError):
+            return JsonResponse({'success': False, 'error': 'A numeric course_id is required'}, status=400)
         if course and teacher_user.role != 'admin' and not _teacher_owns_course(course, teacher_user):
             return JsonResponse({'success': False, 'error': 'Course access denied'}, status=403)
+
+    selected_section = None
+    if section_id:
+        try:
+            selected_section = Section.objects.filter(id=int(section_id), is_active=True).first()
+        except (TypeError, ValueError):
+            return JsonResponse({'success': False, 'error': 'A numeric section_id is required'}, status=400)
+        if not selected_section:
+            return JsonResponse({'success': False, 'error': 'Section not found'}, status=404)
+        if teacher_user.role != 'admin' and selected_section.teacher_id != teacher_user.id:
+            return JsonResponse({'success': False, 'error': 'Section access denied'}, status=403)
+        if course and not course.sections.filter(id=selected_section.id).exists():
+            return JsonResponse({'success': False, 'error': 'Section is not part of this course'}, status=400)
 
     material = None
     if material_id:
@@ -13786,14 +13803,22 @@ def start_live_assessment(request):
                     or material.courses.filter(id=course.id).exists()
                 )
             )
-            if not is_course_linked:
+            is_section_linked = bool(
+                selected_section and (
+                    material.section_id == selected_section.id
+                    or material.assigned_sections.filter(id=selected_section.id).exists()
+                )
+            )
+            if not is_course_linked and not is_section_linked:
                 return JsonResponse({'success': False, 'error': 'Material access denied'}, status=403)
 
     if not material:
         return JsonResponse({'success': False, 'error': 'Material not found'}, status=404)
 
     sections = []
-    if course:
+    if selected_section:
+        sections = [selected_section]
+    elif course:
         sections = list(course.sections.filter(is_active=True))
         if not sections and material.section and material.section.is_active:
             sections = [material.section]
@@ -15698,6 +15723,8 @@ def _section_course_payload(section):
         material_payload = {
             'id': material.id, 'raw_id': material.id,
             'action_id': f'material-{material.id}', 'record_kind': 'material',
+            'section_id': material.section_id,
+            'assigned_section_ids': list(material.assigned_sections.values_list('id', flat=True)),
             'assessment_id': material.assessment_id,
             'code': material.assessment.code if material.assessment else None,
             'title': material.title, 'item_type': material.item_type, 'type': material.type,
@@ -16043,6 +16070,8 @@ def get_teacher_courses_api(request):
                     'raw_id': m.id,
                     'action_id': f"material-{m.id}",
                     'record_kind': 'material',
+                    'section_id': m.section_id,
+                    'assigned_section_ids': list(m.assigned_sections.values_list('id', flat=True)),
                     'assessment_id': m.assessment_id,
                     'code': m.assessment.code if m.assessment else None,
                     'title': m.title,
