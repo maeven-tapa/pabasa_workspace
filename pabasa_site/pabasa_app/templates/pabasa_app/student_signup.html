@@ -605,22 +605,9 @@
                         </select>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label" for="studentGradeLevel">Grade level</label>
-                        <select class="form-select" name="grade_level" id="studentGradeLevel" required>
-                            <option value="" selected disabled>Select Grade Level</option>
-                            {% for grade in signup_grades %}
-                                <option
-                                    value="{{ grade.value }}"
-                                    {% if not grade.is_available %}disabled class="availability-option-locked"{% endif %}>
-                                    {% if grade.is_available %}{{ grade.label }}{% else %}{{ grade.label }} &mdash; Not available &#xf47a;{% endif %}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-6">
                         <label class="form-label" for="studentSection">Section</label>
                         <select class="form-select" name="section" id="studentSection" required disabled>
-                            <option value="" selected disabled>Select Grade Level first</option>
+                            <option value="" selected disabled>Select School first</option>
                         </select>
                     </div>
                     <div class="col-md-6">
@@ -791,7 +778,6 @@
         const passwordMatchError = form.querySelector("[data-password-match-error]");
         const passwordToggles = form.querySelectorAll("[data-password-toggle]");
         const privacyConsentCheckbox = form.querySelector('input[name="privacy_consent"]');
-        const gradeSelect = form.querySelector('#studentGradeLevel');
         const sectionSelect = form.querySelector('#studentSection');
         const birthMonthInput = form.querySelector('#studentBirthMonth');
         const birthDayInput = form.querySelector('#studentBirthDay');
@@ -858,30 +844,13 @@
         }
 
         const schoolSelect = document.getElementById('studentSchool');
-        function renderGradeOptions(grades) {
-            gradeSelect.innerHTML = '<option value="" selected disabled>Select Grade Level</option>' +
-                (grades || []).map((grade) => `<option value="${grade}">${grade}</option>`).join('');
-            gradeSelect.disabled = !(grades && grades.length);
-        }
         schoolSelect?.addEventListener('change', async () => {
-            gradeSelect.disabled = true;
             sectionSelect.disabled = true;
-            renderGradeOptions([]);
-            sectionSelect.innerHTML = '<option value="" selected disabled>Select Grade Level first</option>';
+            sectionSelect.innerHTML = '<option value="" selected disabled>Loading sections…</option>';
             try {
                 const response = await fetch('{% url "signup_sections" %}?role=student&school_id=' + encodeURIComponent(schoolSelect.value));
                 const data = await response.json();
-                renderGradeOptions(data.grades || []);
-            } catch (_) {
-                gradeSelect.innerHTML = '<option value="" selected>Unable to load grades</option>';
-            }
-        });
-        gradeSelect?.addEventListener('change', async () => {
-            sectionSelect.disabled = true;
-            sectionSelect.innerHTML = '<option value="" selected>Loading sections…</option>';
-            try {
-                const response = await fetch('{% url "signup_sections" %}?role=student&school_id=' + encodeURIComponent(schoolSelect.value) + '&grade_level=' + encodeURIComponent(gradeSelect.value));
-                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.error || 'Unable to load sections');
                 renderSectionOptions(data.sections || []);
             } catch (_) {
                 sectionSelect.innerHTML = '<option value="" selected>Unable to load sections</option>';
@@ -1003,8 +972,8 @@
             event.preventDefault();
             updateValidation();
 
-            if (hasDisabledSelection(gradeSelect) || hasDisabledSelection(sectionSelect)) {
-                errorMessage.textContent = 'Please select an available grade level and section.';
+            if (hasDisabledSelection(sectionSelect)) {
+                errorMessage.textContent = 'Please select an available section.';
                 errorMessage.classList.remove("d-none");
                 return;
             }

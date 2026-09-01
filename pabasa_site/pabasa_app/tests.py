@@ -10509,3 +10509,118 @@ class AdminSingleSchoolTests(TestCase):
             self.client.get(reverse('admin_school_detail', args=[self.other_school.id])).status_code,
             404,
         )
+
+    def test_new_sections_use_selected_calendar_and_grade_two(self):
+        inactive_calendar = SchoolCalendar.objects.create(
+            school_year='2025-2026', current_term=3, is_active=False,
+        )
+        active_calendar = SchoolCalendar.objects.create(
+            school_year='2026-2027', current_term=1, is_active=True,
+        )
+
+        response = self.client.get(reverse('admin_school_detail', args=[self.salawag.id]))
+        self.assertContains(response, 'School Year')
+        self.assertContains(response, active_calendar.school_year)
+        self.assertContains(response, inactive_calendar.school_year)
+        self.assertNotContains(response, 'name="grade_level"')
+
+        response = self.client.post(reverse('admin_school_detail', args=[self.salawag.id]), {
+            'school_calendar_id': inactive_calendar.id,
+            'section': 'Orchid',
+        })
+        self.assertRedirects(response, reverse('admin_school_detail', args=[self.salawag.id]))
+        created = Section.objects.get(school=self.salawag, section='ORCHID')
+        self.assertEqual(created.school_calendar, inactive_calendar)
+        self.assertEqual(created.grade_level, 'Grade 2')
+
+    def test_signup_sections_only_returns_active_school_year_sections(self):
+        old_calendar = SchoolCalendar.objects.create(
+            school_year='2025-2026', current_term=3, is_active=False,
+        )
+        active_calendar = SchoolCalendar.objects.create(
+            school_year='2026-2027', current_term=1, is_active=True,
+        )
+        old_section = Section.objects.create(
+            school=self.salawag, school_calendar=old_calendar, class_code='OLDY-001',
+            class_name='Grade 2 - Orchid', subject='Reading', grade_level='Grade 2', section='ORCHID',
+        )
+        active_section = Section.objects.create(
+            school=self.salawag, school_calendar=active_calendar, class_code='ACTY-001',
+            class_name='Grade 2 - Sampaguita', subject='Reading', grade_level='Grade 2', section='SAMPAGUITA',
+        )
+
+        response = self.client.get(reverse('signup_sections'), {'role': 'student', 'school_id': self.salawag.id})
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload['school_year'], active_calendar.school_year)
+        self.assertEqual([section['id'] for section in payload['sections']], [active_section.id])
+        self.assertNotIn(old_section.id, [section['id'] for section in payload['sections']])
+
+    def test_signup_sections_requires_an_active_school_year(self):
+        SchoolCalendar.objects.create(school_year='2025-2026', current_term=3, is_active=False)
+
+        response = self.client.get(reverse('signup_sections'), {'role': 'student', 'school_id': self.salawag.id})
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn('No active School Year', response.json()['error'])
+
+    @patch('pabasa_app.views._notify_admins')
+    @patch('pabasa_app.views.send_student_confirmation_email')
+    @patch('pabasa_app.views.send_student_signup_otp_email')
+    def test_student_signup_assigns_grade_two_and_active_school_year(self, mock_otp, mock_confirmation, mock_notify):
+        active_calendar = SchoolCalendar.objects.create(
+            school_year='2026-2027', current_term=1, is_active=True,
+        )
+        section = Section.objects.create(
+            school=self.salawag, school_calendar=active_calendar, class_code='STSY-001',
+            class_name='Grade 2 - Sampaguita', subject='Reading', grade_level='Grade 2', section='SAMPAGUITA',
+        )
+        payload = {
+            'first_name': 'Mia', 'last_name': 'Rivera', 'email': 'mia.calendar@example.com',
+            'password': 'Student123', 'confirm_password': 'Student123', 'lrn': '123456789012',
+            'sex': 'female', 'birth_month': '1', 'birth_day': '5', 'birth_year': '2014',
+            'school_id': self.salawag.id, 'section': section.id,
+        }
+
+        response = self.client.post(reverse('register_student'), payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.session['pending_student_signup']['grade_level'], 'Grade 2')
+
+        response = self.client.post(reverse('verify_student_otp'), {
+            'otp': self.client.session['pending_student_signup_otp'],
+        })
+        self.assertEqual(response.status_code, 200)
+        student = User.objects.get(email=payload['email'])
+        self.assertEqual(student.grade_level, 'Grade 2')
+        self.assertEqual(student.school_calendar, active_calendar)
+
+    @patch('pabasa_app.views.send_teacher_confirmation_email')
+    @patch('pabasa_app.views.send_teacher_signup_otp_email')
+    def test_teacher_signup_assigns_active_school_year(self, mock_otp, mock_confirmation):
+        active_calendar = SchoolCalendar.objects.create(
+            school_year='2026-2027', current_term=1, is_active=True,
+        )
+        section = Section.objects.create(
+            school=self.salawag, school_calendar=active_calendar, class_code='TCSY-001',
+            class_name='Grade 2 - Rosal', subject='Reading', grade_level='Grade 2', section='ROSAL',
+        )
+        payload = {
+            'first_name': 'Tina', 'last_name': 'Teacher', 'email': 'tina.calendar@example.com',
+            'password': 'Teacher123', 'confirm_password': 'Teacher123', 'sex': 'female',
+            'birth_month': '1', 'birth_day': '5', 'birth_year': '1990',
+            'school_id': self.salawag.id, 'section': section.id, 'department': 'Mathematics',
+        }
+
+        response = self.client.post(reverse('register_teacher'), payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.session['pending_teacher_signup']['grade_level'], 'Grade 2')
+
+        response = self.client.post(reverse('verify_teacher_otp'), {
+            'otp': self.client.session['pending_teacher_signup_otp'],
+        })
+        self.assertEqual(response.status_code, 200)
+        teacher = User.objects.get(email=payload['email'])
+        self.assertEqual(teacher.school_calendar, active_calendar)
+        section.refresh_from_db()
+        self.assertEqual(section.teacher, teacher)

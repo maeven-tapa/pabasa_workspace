@@ -106,6 +106,7 @@ PRACTICE_LANGUAGE_SESSION_KEY = "practice_mode_language"
 PRACTICE_LANGUAGE_PREFERENCE_KEY = "practice_mode_language"
 PRACTICE_ACTIVE_SESSION_KEY = "practice_active_session"
 SCHOOL_GRADE_LEVELS = tuple(f"Grade {number}" for number in range(1, 7))
+NEW_USER_GRADE_LEVEL = "Grade 2"
 PRIMARY_SCHOOL_NAME = "Salawag Elementary School"
 PRIMARY_SCHOOL_ID = 3
 ADMIN_SCHOOL_CARD_ID = "107912"
@@ -125,7 +126,15 @@ def _active_signup_school(school_id):
     return _real_active_schools().filter(pk=int(school_id)).first()
 
 
-def _active_canonical_section(grade_level, section_name, school=None, section_id=None):
+def _active_school_calendar_for_new_workflows():
+    """Return the one calendar that can receive newly created users/sections."""
+    calendars = SchoolCalendar.objects.filter(is_active=True).order_by('-updated_at', '-created_at')
+    if calendars.count() != 1:
+        return None
+    return calendars.first()
+
+
+def _active_canonical_section(grade_level, section_name, school=None, school_calendar=None, section_id=None):
     """Resolve a selectable canonical class; signup never creates one."""
     filters = {'is_active': True}
     if grade_level:
@@ -137,11 +146,20 @@ def _active_canonical_section(grade_level, section_name, school=None, section_id
     queryset = Section.objects.filter(**filters)
     if school is not None:
         queryset = queryset.filter(school=school)
-    return queryset.select_related('school', 'teacher').first()
+    if school_calendar is not None:
+        queryset = queryset.filter(school_calendar=school_calendar)
+    return queryset.select_related('school', 'school_calendar', 'teacher').first()
 
 
 def _signup_section_queryset(role, school=None, grade_level=None):
-    qs = Section.objects.filter(is_active=True).select_related('teacher', 'school').order_by('grade_level', 'section')
+    active_calendar = _active_school_calendar_for_new_workflows()
+    if not active_calendar:
+        return Section.objects.none()
+    qs = Section.objects.filter(
+        is_active=True,
+        school_calendar=active_calendar,
+        grade_level=NEW_USER_GRADE_LEVEL,
+    ).select_related('teacher', 'school', 'school_calendar').order_by('section')
     if school is not None:
         qs = qs.filter(school=school)
     else:
@@ -161,6 +179,7 @@ def _section_signup_payload(section):
         'id': section.id,
         'school_id': section.school_id,
         'school_name': section.school.name if section.school else '',
+        'school_year': section.school_calendar.school_year if section.school_calendar else '',
         'grade_level': section.grade_level,
         'section': section.section,
         'class_name': section.class_name,
@@ -200,24 +219,28 @@ def _signup_section_for_request(data, role):
     if not school:
         return None, None, 'Choose an active School.'
 
-    grade = str(data.get('grade_level') or '').strip()
+    active_calendar = _active_school_calendar_for_new_workflows()
+    if not active_calendar:
+        return school, None, 'No active School Year is configured. Please contact an administrator.'
+
     section_value = str(data.get('section') or '').strip()
-    if grade not in SCHOOL_GRADE_LEVELS or not section_value:
-        return school, None, 'Choose a valid Grade Level and Section.'
+    if not section_value:
+        return school, None, 'Choose an available Section.'
     section_id = int(section_value) if section_value.isdigit() else None
     section = _active_canonical_section(
-        grade,
+        NEW_USER_GRADE_LEVEL,
         section_value if section_id is None else '',
         school=school,
+        school_calendar=active_calendar,
         section_id=section_id,
     )
     if not section:
-        return school, None, 'The selected Section does not belong to that School and Grade Level.'
+        return school, None, 'The selected Section is not available for the active School Year.'
     return school, section, None
 
 
 def _school_sections_queryset(school):
-    return Section.objects.filter(school=school).select_related('teacher', 'school').order_by('grade_level', 'section', 'class_name')
+    return Section.objects.filter(school=school).select_related('teacher', 'school', 'school_calendar').order_by('school_calendar__school_year', 'grade_level', 'section', 'class_name')
 
 
 def _practice_language_value(value):
@@ -3749,7 +3772,7 @@ def register_teacher(request):
         
         # Validate required fields
         required_fields = ['first_name', 'last_name', 'email', 'password', 'confirm_password',
-                         'sex', 'birth_month', 'birth_day', 'birth_year', 'school_id', 'grade_level', 'section']
+                         'sex', 'birth_month', 'birth_day', 'birth_year', 'school_id', 'section']
         
         for field in required_fields:
             if not data.get(field):
@@ -3773,6 +3796,7 @@ def register_teacher(request):
         # Create pending signup and send OTP
         signup_data = data.copy()
         signup_data['email'] = email
+        signup_data['grade_level'] = NEW_USER_GRADE_LEVEL
         otp = _store_pending_teacher_signup(request, signup_data)
         try:
             send_teacher_signup_otp_email(request, email, otp, data.get('first_name'))
@@ -3806,15 +3830,13 @@ def register_student(request):
         )
         
         # Validate required fields
-        required_fields = ['first_name', 'last_name', 'email', 'password', 'confirm_password', 'lrn', 'school_id', 'grade_level', 'section',
+        required_fields = ['first_name', 'last_name', 'email', 'password', 'confirm_password', 'lrn', 'school_id', 'section',
                          'sex', 'birth_month', 'birth_day', 'birth_year']
         
         for field in required_fields:
             if not data.get(field):
                 return JsonResponse({'success': False, 'error': f'{field} is required'}, status=400)
 
-        grade_level = str(data.get('grade_level', '')).strip()
-        section_name = str(data.get('section', '')).strip()
         school, selected_section, signup_error = _signup_section_for_request(data, 'student')
         if signup_error:
             return JsonResponse({'success': False, 'error': signup_error}, status=400)
@@ -3841,6 +3863,7 @@ def register_student(request):
         # exactly the address to which the OTP was delivered.
         signup_data = data.copy()
         signup_data['email'] = raw_email
+        signup_data['grade_level'] = NEW_USER_GRADE_LEVEL
         otp = _store_pending_student_signup(request, signup_data)
         logger.debug("STUDENT REGISTRATION PENDING CREATED session_keys=%s", sorted(list(request.session.keys())))
         try:
@@ -3911,6 +3934,7 @@ def verify_teacher_otp(request):
             teacher_role='',
             school=school.name,
             school_record=school,
+            school_calendar=canonical_section.school_calendar,
             section=canonical_section.section,
             department=pending.get('department', ''),
         )
@@ -4042,7 +4066,7 @@ def verify_student_otp(request):
             _clear_pending_student_signup(request)
             return JsonResponse({'success': False, 'error': 'The selected grade and section are no longer available.'}, status=400)
 
-        custom_id = generate_custom_id('student', pending.get('grade_level', ''))
+        custom_id = generate_custom_id('student', NEW_USER_GRADE_LEVEL)
         logger.debug("VERIFY STUDENT OTP BEFORE USER CREATE custom_id=%s email=%s grade_level=%s lrn_present=%s",
                      custom_id, pending.get('email'), pending.get('grade_level', ''), bool(lrn))
         user = None
@@ -4068,14 +4092,15 @@ def verify_student_otp(request):
                         contact_no=pending.get('contact_no', ''),
                         school=school.name,
                         school_record=school,
+                        school_calendar=selected_section.school_calendar,
                         lrn=lrn or None,
-                        grade_level=pending.get('grade_level', ''),
+                        grade_level=NEW_USER_GRADE_LEVEL,
                         section=selected_section.section,
                         reading_level=pending.get('reading_level', ''),
                     )
                 break
             except IntegrityError:
-                custom_id = generate_custom_id('student', pending.get('grade_level', ''))
+                custom_id = generate_custom_id('student', NEW_USER_GRADE_LEVEL)
         if user is None:
             logger.error("VERIFY STUDENT OTP could not allocate unique custom ID")
             _clear_pending_student_signup(request)
@@ -4662,18 +4687,21 @@ def student_signup(request):
 
 @require_http_methods(["GET"])
 def student_signup_sections(request):
-    grade = str(request.GET.get('grade_level', '')).strip()
-    if grade and grade not in SCHOOL_GRADE_LEVELS:
-        return JsonResponse({'success': True, 'sections': []})
     role = str(request.GET.get('role', 'student')).strip().lower()
     if role not in {'teacher', 'student'}:
         return JsonResponse({'success': True, 'grades': [], 'sections': []})
     school = _active_signup_school(request.GET.get('school_id'))
     if not school:
         return JsonResponse({'success': True, 'grades': [], 'sections': []})
-    sections = [_section_signup_payload(section) for section in _signup_section_queryset(role, school=school, grade_level=grade or None)]
-    grades = sorted({section['grade_level'] for section in sections if section.get('grade_level')})
-    return JsonResponse({'success': True, 'grades': grades, 'sections': sections})
+    active_calendar = _active_school_calendar_for_new_workflows()
+    if not active_calendar:
+        return JsonResponse({
+            'success': False,
+            'error': 'No active School Year is configured. Please contact an administrator.',
+            'sections': [],
+        }, status=409)
+    sections = [_section_signup_payload(section) for section in _signup_section_queryset(role, school=school)]
+    return JsonResponse({'success': True, 'school_year': active_calendar.school_year, 'sections': sections})
 
 def dashboard(request):
     logger.warning(
@@ -5960,32 +5988,38 @@ def admin_school_detail(request, school_id):
         else:
             context['principal_form_data'] = {}
         if request.POST.get('action') != 'create_principal':
-            grade = str(request.POST.get('grade_level') or '').strip()
+            active_calendar = _active_school_calendar_for_new_workflows()
+            school_calendar_id = request.POST.get('school_calendar_id')
+            school_calendar = SchoolCalendar.objects.filter(pk=school_calendar_id).first()
             section_name = str(request.POST.get('section') or '').strip()
-            if grade not in SCHOOL_GRADE_LEVELS or not section_name:
-                context['error_message'] = 'Choose a grade and provide a section name.'
+            if not active_calendar:
+                context['error_message'] = 'No active School Year is configured. Create or activate a School Calendar before adding a Section.'
+            elif not school_calendar or not section_name:
+                context['error_message'] = 'Choose a School Year and provide a section name.'
             else:
                 try:
                     with transaction.atomic():
                         section = Section.objects.filter(
                             school=school,
-                            grade_level__iexact=grade,
+                            school_calendar=school_calendar,
+                            grade_level__iexact=NEW_USER_GRADE_LEVEL,
                             section__iexact=section_name,
                         ).first()
                         if not section:
                             Section.objects.create(
                                 school=school,
-                                grade_level=grade,
+                                school_calendar=school_calendar,
+                                grade_level=NEW_USER_GRADE_LEVEL,
                                 section=section_name.upper(),
-                                class_name=f'{grade} - {section_name.upper()}',
+                                class_name=f'{NEW_USER_GRADE_LEVEL} - {section_name.upper()}',
                                 class_code=generate_unique_class_code(),
                                 subject='Reading',
                                 is_active=True,
                             )
                             return redirect('admin_school_detail', school_id=school.id)
-                        context['error_message'] = f'{grade} - {section.section} already exists in {school.name}.'
+                        context['error_message'] = f'{NEW_USER_GRADE_LEVEL} - {section.section} already exists for {school_calendar.school_year}.'
                 except IntegrityError:
-                    context['error_message'] = f'{grade} - {section_name} already exists in {school.name}.'
+                    context['error_message'] = f'{NEW_USER_GRADE_LEVEL} - {section_name} already exists for {school_calendar.school_year}.'
 
     grouped = {grade: [] for grade in SCHOOL_GRADE_LEVELS}
     for section in _school_sections_queryset(school):
@@ -5996,7 +6030,7 @@ def admin_school_detail(request, school_id):
         'school_card_address': ADMIN_SCHOOL_CARD_ADDRESS,
         'principal': context.get('principal', _active_principal_for_school(school)),
         'principal_form_data': context.get('principal_form_data', {}),
-        'grades': SCHOOL_GRADE_LEVELS,
+        'school_calendars': SchoolCalendar.objects.all().order_by('-is_active', '-updated_at', '-created_at'),
         'sections_by_grade': grouped,
     })
     return render(request, 'pabasa_app/admin_school.html', context)
@@ -16685,6 +16719,11 @@ def teacher_add_student(request):
             return JsonResponse({'success': False, 'error': 'Section not found'}, status=404)
 
         if section:
+            active_calendar = _active_school_calendar_for_new_workflows()
+            if not active_calendar:
+                return JsonResponse({'success': False, 'error': 'No active School Year is configured. Enrollment is unavailable.'}, status=409)
+            if section.school_calendar_id != active_calendar.id or student.school_calendar_id != active_calendar.id:
+                return JsonResponse({'success': False, 'error': 'Students can only be enrolled in Sections for the active School Year.'}, status=409)
             if section.add_student(student):
                 student_name = f"{student.first_name} {student.last_name}"
                 _create_notification(

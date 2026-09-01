@@ -83,6 +83,13 @@ class User(models.Model):
         null=True,
         blank=True,
     )
+    school_calendar = models.ForeignKey(
+        "SchoolCalendar",
+        on_delete=models.PROTECT,
+        related_name="users",
+        null=True,
+        blank=True,
+    )
     department = models.CharField(max_length=100, blank=True, null=True)
     # Student-specific fields
     lrn = models.CharField(
@@ -214,6 +221,13 @@ class Section(models.Model):
         on_delete=models.PROTECT,
         related_name="sections",
     )
+    school_calendar = models.ForeignKey(
+        "SchoolCalendar",
+        on_delete=models.PROTECT,
+        related_name="sections",
+        null=True,
+        blank=True,
+    )
     class_code = models.CharField(max_length=20, unique=True)
     class_name = models.CharField(max_length=150)
     header = models.CharField(max_length=100, default="Reading Class")
@@ -242,10 +256,11 @@ class Section(models.Model):
         constraints = [
             models.UniqueConstraint(
                 "school",
+                "school_calendar",
                 Lower("grade_level"),
                 Lower("section"),
                 condition=models.Q(grade_level__gt="", section__gt=""),
-                name="unique_school_canonical_grade_section",
+                name="unique_school_calendar_canonical_grade_section",
             ),
         ]
 
