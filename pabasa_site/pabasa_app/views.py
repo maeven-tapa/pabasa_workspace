@@ -5738,6 +5738,29 @@ def _admin_user_redirect_name(role):
         return 'admin_principals'
     return 'admin_teachers'
 
+def _student_returning_eligibility(user, calendar=None):
+    """Return the finalized prior enrollment that makes a student returnable."""
+    calendar = calendar or _active_school_calendar_for_new_workflows()
+    if not calendar:
+        return None
+    year_match = re.search(r'(\d{4})\s*[-/]\s*(\d{4})', str(calendar.school_year or ''))
+    if not year_match:
+        return None
+    previous_label = f'{int(year_match.group(1)) - 1}-{int(year_match.group(1))}'
+    previous_calendar = SchoolCalendar.objects.filter(school_year=previous_label).first()
+    if not previous_calendar:
+        return None
+    # Both fields are set by Enrollment.finalize_outcome; requiring them keeps
+    # legacy/default Not Finalized rows from being treated as retained.
+    return Enrollment.objects.filter(
+        student=user,
+        school_calendar=previous_calendar,
+        status='completed',
+        outcome='retained',
+        finalized_by__isnull=False,
+        finalized_at__isnull=False,
+    ).select_related('school').order_by('-finalized_at', '-updated_at').first()
+
 def _admin_user_template_context(request, user, page_title):
     context = _admin_context(request, page_title, [])
     current_section = None
@@ -5745,6 +5768,12 @@ def _admin_user_template_context(request, user, page_title):
         current_section = _teacher_current_sections(user).select_related('teacher').first()
     elif user.role == 'student':
         current_section = _student_current_enrollment(user)
+    active_calendar = _active_school_calendar_for_new_workflows() if user.role == 'student' else None
+    current_return_enrollment = Enrollment.objects.filter(
+        student=user,
+        school_calendar=active_calendar,
+        status__in=('active', 'awaiting_assignment'),
+    ).select_related('section', 'school_calendar').first() if active_calendar else None
     context.update({
         'managed_user': user,
         'managed_user_name': _admin_user_full_name(user),
@@ -5757,11 +5786,12 @@ def _admin_user_template_context(request, user, page_title):
         'available_sections': [],
         'all_sections_by_grade': {},
         'student_enrollments': (Enrollment.objects.filter(student=user).select_related('section__teacher', 'school', 'school_calendar').order_by('-school_calendar__created_at', '-joined_at') if user.role == 'student' else []),
-        'current_return_enrollment': (Enrollment.objects.filter(
-            student=user,
-            school_calendar=_active_school_calendar_for_new_workflows(),
-            status__in=('active', 'awaiting_assignment'),
-        ).select_related('section', 'school_calendar').first() if user.role == 'student' and _active_school_calendar_for_new_workflows() else None),
+        'current_return_enrollment': current_return_enrollment,
+        'can_prepare_returning_student': bool(
+            user.role == 'student' and user.account_status == 'active'
+            and not current_return_enrollment
+            and _student_returning_eligibility(user, active_calendar)
+        ),
         'student_assignment_sections': (_signup_section_queryset('student', school=user.school_record) if user.role == 'student' else []),
     })
     return context
@@ -5853,17 +5883,7 @@ def admin_student_returning_enrollment(request, user_id):
     if not user or user.is_archived or user.account_status != 'active' or not calendar:
         messages.error(request, 'Only an active retained student can be prepared for return.')
         return redirect('admin_student_detail', user_id=user_id)
-    year_match = re.search(r'(\d{4})\s*[-/]\s*(\d{4})', str(calendar.school_year or ''))
-    previous_calendar = None
-    if year_match:
-        previous_label = f'{int(year_match.group(1)) - 1}-{int(year_match.group(1))}'
-        previous_calendar = SchoolCalendar.objects.filter(
-            school_year=previous_label
-        ).first()
-    prior = Enrollment.objects.filter(
-        student=user, outcome='retained', status='completed',
-        school_calendar=previous_calendar,
-    ).select_related('school').order_by('-finalized_at', '-updated_at').first() if previous_calendar else None
+    prior = _student_returning_eligibility(user, calendar)
     if not prior:
         messages.error(request, 'A completed Retained enrollment is required.')
         return redirect('admin_student_detail', user_id=user.id)
