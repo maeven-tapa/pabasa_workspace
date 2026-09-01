@@ -3408,6 +3408,27 @@ def _clear_pending_student_signup(request):
 def _normalize_registration_value(value):
     return str(value or '').strip()
 
+
+def _signup_birth_date_error(data, role):
+    """Validate the birth date rules before a signup can be persisted."""
+    try:
+        birth_date = date(
+            int(data.get('birth_year')),
+            int(data.get('birth_month')),
+            int(data.get('birth_day')),
+        )
+    except (TypeError, ValueError):
+        return 'Enter a valid birth date.'
+
+    if role == 'student' and birth_date.year > 2019:
+        return 'Student birth year must be 2019 or earlier.'
+    if role == 'teacher':
+        today = timezone.localdate()
+        age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+        if age < 18:
+            return 'Teachers must be at least 18 years old.'
+    return ''
+
 def _send_pabasa_otp_email(subject, text_message, recipient_email, first_name, otp, eyebrow, heading, intro, action_url=None, action_label="Open PABASA"):
     safe_name = escape(first_name or "PABASA user")
     safe_otp = escape(str(otp))
@@ -3779,6 +3800,10 @@ def register_teacher(request):
             if not data.get(field):
                 return JsonResponse({'success': False, 'error': f'{field} is required'}, status=400)
 
+        birth_date_error = _signup_birth_date_error(data, 'teacher')
+        if birth_date_error:
+            return JsonResponse({'success': False, 'error': birth_date_error}, status=400)
+
         school, canonical_section, signup_error = _signup_section_for_request(data, 'teacher')
         if signup_error:
             return JsonResponse({'success': False, 'error': signup_error}, status=400)
@@ -3837,6 +3862,10 @@ def register_student(request):
         for field in required_fields:
             if not data.get(field):
                 return JsonResponse({'success': False, 'error': f'{field} is required'}, status=400)
+
+        birth_date_error = _signup_birth_date_error(data, 'student')
+        if birth_date_error:
+            return JsonResponse({'success': False, 'error': birth_date_error}, status=400)
 
         school, selected_section, signup_error = _signup_section_for_request(data, 'student')
         if signup_error:
@@ -3905,6 +3934,11 @@ def verify_teacher_otp(request):
 
         if otp != expected_otp:
             return JsonResponse({'success': False, 'error': 'Invalid OTP. Please try again.'}, status=400)
+
+        birth_date_error = _signup_birth_date_error(pending, 'teacher')
+        if birth_date_error:
+            _clear_pending_teacher_signup(request)
+            return JsonResponse({'success': False, 'error': birth_date_error}, status=400)
 
         if User.objects.filter(email=pending['email']).exists():
             _clear_pending_teacher_signup(request)
@@ -4037,6 +4071,11 @@ def verify_student_otp(request):
 
         if otp != expected_otp:
             return JsonResponse({'success': False, 'error': 'Invalid OTP. Please try again.'}, status=400)
+
+        birth_date_error = _signup_birth_date_error(pending, 'student')
+        if birth_date_error:
+            _clear_pending_student_signup(request)
+            return JsonResponse({'success': False, 'error': birth_date_error}, status=400)
 
         pending_email = _normalize_registration_value(pending.get('email'))
         pending_lrn = _normalize_registration_value(pending.get('lrn'))
@@ -4677,11 +4716,13 @@ def privacy(request):
 def teacher_signup(request):
     return render(request, 'pabasa_app/teacher_signup.html', {
         'signup_grades': [],
+        'teacher_max_birth_year': timezone.localdate().year - 18,
     })
 
 def student_signup(request):
     return render(request, 'pabasa_app/student_signup.html', {
         'signup_grades': [],
+        'student_max_birth_year': 2019,
     })
 
 @require_http_methods(["GET"])

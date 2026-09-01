@@ -573,7 +573,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Birth year</label>
-                        <input class="form-control" type="number" name="birth_year" id="studentBirthYear" placeholder="Year" min="1900" max="2100" oninput="if(this.value.length > 4) this.value = this.value.slice(0, 4);" required>
+                        <input class="form-control" type="number" name="birth_year" id="studentBirthYear" placeholder="Year" min="1900" max="{{ student_max_birth_year }}" oninput="if(this.value.length > 4) this.value = this.value.slice(0, 4);" required>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Sex</label>
