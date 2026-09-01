@@ -6443,6 +6443,86 @@ def _normalize_school_year_value(value):
     return f'{start_year:04d}-{end_year:04d}', None
 
 
+def _easter_sunday(year):
+    """Return Gregorian Easter Sunday using the Meeus/Jones/Butcher algorithm."""
+    a = year % 19
+    b, c = divmod(year, 100)
+    d, e = divmod(b, 4)
+    f = (b + 8) // 25
+    g = (b - f + 1) // 3
+    h = (19 * a + b - d - g + 15) % 30
+    i, k = divmod(c, 4)
+    l = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * l) // 451
+    month = (h + l - 7 * m + 114) // 31
+    day = (h + l - 7 * m + 114) % 31 + 1
+    return date(year, month, day)
+
+
+def _opening_block_end(opening_date):
+    """Opening blocks run from their selected start date through Friday."""
+    return opening_date + timedelta(days=(4 - opening_date.weekday()) % 7)
+
+
+def _add_weekdays(start_date, additional_days):
+    """Move forward by weekdays only; Saturday and Sunday are skipped."""
+    result = start_date
+    for _ in range(additional_days):
+        result += timedelta(days=1)
+        while result.weekday() >= 5:
+            result += timedelta(days=1)
+    return result
+
+
+def _seed_philippine_holidays(school_calendar):
+    """Create the recurring nationwide Philippine holidays for one school year."""
+    school_year, error = _normalize_school_year_value(getattr(school_calendar, 'school_year', ''))
+    if error:
+        return []
+    start_year = int(school_year[:4])
+    school_year_start = date(start_year, 6, 1)
+    school_year_end = date(start_year + 1, 5, 31)
+    holidays = []
+    for year in (start_year, start_year + 1):
+        easter = _easter_sunday(year)
+        august_last_day = date(year, 8, 31)
+        national_heroes_day = august_last_day - timedelta(days=(august_last_day.weekday() - 0) % 7)
+        holidays.extend([
+            ('New Year’s Day', date(year, 1, 1)),
+            ('Maundy Thursday', easter - timedelta(days=3)),
+            ('Good Friday', easter - timedelta(days=2)),
+            ('Black Saturday', easter - timedelta(days=1)),
+            ('Araw ng Kagitingan', date(year, 4, 9)),
+            ('Labor Day', date(year, 5, 1)),
+            ('Independence Day', date(year, 6, 12)),
+            ('National Heroes Day', national_heroes_day),
+            ('Ninoy Aquino Day', date(year, 8, 21)),
+            ('All Saints’ Day', date(year, 11, 1)),
+            ('All Souls’ Day', date(year, 11, 2)),
+            ('Bonifacio Day', date(year, 11, 30)),
+            ('Feast of the Immaculate Conception', date(year, 12, 8)),
+            ('Christmas Eve', date(year, 12, 24)),
+            ('Christmas Day', date(year, 12, 25)),
+            ('Rizal Day', date(year, 12, 30)),
+            ('Last Day of the Year', date(year, 12, 31)),
+        ])
+
+    created = []
+    for title, holiday_date in holidays:
+        if not school_year_start <= holiday_date <= school_year_end:
+            continue
+        event, was_created = CalendarEvent.objects.get_or_create(
+            school_calendar=school_calendar,
+            event_type='holiday',
+            title=title,
+            start_date=holiday_date,
+            defaults={'term': 1, 'end_date': holiday_date, 'description': 'Automatically added Philippine national holiday.'},
+        )
+        if was_created:
+            created.append(event)
+    return created
+
+
 def _calendar_term_blocks(school_calendar):
     perf_started_at = time.perf_counter()
     query_start = len(connection.queries) if settings.DEBUG else None
@@ -6471,6 +6551,31 @@ def _calendar_term_blocks(school_calendar):
             },
         )
     return blocks
+
+
+def _calendar_configured_term_bounds(school_calendar):
+    """Return the configured school-year span: Term 1 opening through Term 3 closing."""
+    blocks = _calendar_term_blocks(school_calendar)
+    opening = blocks.get(1, {}).get('opening')
+    closing = blocks.get(3, {}).get('closing')
+    if not opening or not closing:
+        return None, None
+    return opening.start_date, closing.end_date
+
+
+def _calendar_is_current_from_term_blocks(school_calendar, on_date=None):
+    start_date, end_date = _calendar_configured_term_bounds(school_calendar)
+    check_date = on_date or date.today()
+    return bool(start_date and end_date and start_date <= check_date <= end_date)
+
+
+def _can_start_next_school_year(calendars, on_date=None):
+    """Only allow one successor after the latest School Year's Term 3 has ended."""
+    if not calendars:
+        return True
+    latest_calendar = max(calendars, key=lambda calendar: int(calendar.school_year[5:]))
+    _start_date, end_date = _calendar_configured_term_bounds(latest_calendar)
+    return bool(end_date and (on_date or date.today()) > end_date)
 
 
 def _calendar_events_for_school_calendar(school_calendar):
@@ -6718,20 +6823,9 @@ def _selected_school_calendar(request=None):
     if not selected_calendar:
         selected_calendar = calendars[0] if calendars else None
     if not selected_calendar:
-        try:
-            # Attempt to create a fallback calendar only when safe. In some
-            # production environments the database user may be read-only or
-            # migrations may be unsynced; creation failures should not crash
-            # the student dashboard. Fall back to None when creation fails.
-            selected_calendar = SchoolCalendar.objects.create(school_year='2026-2027', current_term=1, is_active=True)
-            calendars = list(SchoolCalendar.objects.all().order_by('school_year', 'created_at'))
-            active_calendar = selected_calendar
-        except Exception:
-            try:
-                logger.exception("Failed to create fallback SchoolCalendar; proceeding without creating.")
-            except Exception:
-                pass
-            selected_calendar = None
+        # A calendar is created only when an administrator explicitly creates
+        # a School Year. This keeps a cleared calendar database empty.
+        selected_calendar = None
     if selected_calendar and not getattr(selected_calendar, '_prefetched_objects_cache', {}).get('events'):
         try:
             selected_calendar = SchoolCalendar.objects.prefetch_related('events').get(id=selected_calendar.id)
@@ -6754,6 +6848,12 @@ def _selected_school_calendar(request=None):
 
 def _calendar_context(request):
     selected_calendar, calendars, active_calendar = _selected_school_calendar(request)
+    current_calendar_ids = [
+        school_calendar.id
+        for school_calendar in calendars
+        if _calendar_is_current_from_term_blocks(school_calendar)
+    ]
+    can_create_school_year = _can_start_next_school_year(calendars)
 
     events = CalendarEvent.objects.filter(school_calendar=selected_calendar).filter(
         Q(scope=CalendarEvent.SCOPE_GLOBAL) | Q(scope__in=['', None], school__isnull=True)
@@ -6767,6 +6867,32 @@ def _calendar_context(request):
         }
         for event in events
     ] + instructional_events
+    term_block_events = CalendarEvent.objects.filter(
+        school_calendar__in=calendars,
+        event_type__in=['school_opening', 'school_closing'],
+        scope=CalendarEvent.SCOPE_GLOBAL,
+    ).order_by('school_calendar_id', 'term', 'event_type', 'start_date')
+    calendar_term_blocks = {
+        str(school_calendar.id): {
+            str(term): {'opening': '', 'closing': ''}
+            for term in (1, 2, 3)
+        }
+        for school_calendar in calendars
+    }
+    for event in term_block_events:
+        blocks = calendar_term_blocks.setdefault(str(event.school_calendar_id), {
+            str(term): {'opening': '', 'closing': ''}
+            for term in (1, 2, 3)
+        })
+        if event.term in {1, 2, 3}:
+            key = 'opening' if event.event_type == 'school_opening' else 'closing'
+            if not blocks[str(event.term)][key]:
+                blocks[str(event.term)][key] = event.start_date.isoformat()
+    selected_term_blocks = calendar_term_blocks.get(str(getattr(selected_calendar, 'id', '')), {})
+    has_saved_term_blocks = bool(
+        selected_term_blocks.get('1', {}).get('opening')
+        and selected_term_blocks.get('1', {}).get('closing')
+    )
     return {
         'page_title': 'School Calendar',
         'admin_username': request.session.get('custom_id', ''),
@@ -6780,6 +6906,10 @@ def _calendar_context(request):
         'school_year_label': _calendar_school_year_label(selected_calendar),
         'calendar_events': events,
         'calendar_events_json': json.dumps(calendar_events_json),
+        'calendar_term_blocks_json': json.dumps(calendar_term_blocks),
+        'has_saved_term_blocks': has_saved_term_blocks,
+        'current_calendar_ids': current_calendar_ids,
+        'can_create_school_year': can_create_school_year,
         'term_options': [(1, 'Term 1'), (2, 'Term 2'), (3, 'Term 3')],
         'event_type_options': CalendarEvent.EVENT_TYPE_CHOICES,
     }
@@ -6938,6 +7068,14 @@ def admin_school_calendar(request):
             if current_term not in {1, 2, 3, 4}:
                 current_term = 1
 
+            if not selected_calendar:
+                existing_calendars = list(SchoolCalendar.objects.all())
+                if existing_calendars and not _can_start_next_school_year(existing_calendars):
+                    error_message = 'A new School Year can be created after the current School Year ends.'
+                    if wants_json():
+                        return JsonResponse({'success': False, 'error': error_message}, status=400)
+                    return HttpResponseForbidden(error_message)
+
             if selected_calendar:
                 duplicate_calendar = SchoolCalendar.objects.filter(school_year=school_year).exclude(id=selected_calendar.id).exists()
             else:
@@ -6961,8 +7099,79 @@ def admin_school_calendar(request):
                     is_active=True,
                 )
             SchoolCalendar.objects.exclude(id=selected_calendar.id).update(is_active=False)
+            _seed_philippine_holidays(selected_calendar)
             if wants_json():
                 return JsonResponse({'success': True, 'calendar_id': selected_calendar.id, 'current_term': selected_calendar.current_term})
+            return redirect(f"{reverse('admin_school_calendar')}?calendar_id={selected_calendar.id}&term={selected_calendar.current_term}")
+
+        if action == 'start_next_school_year':
+            existing_calendars = list(SchoolCalendar.objects.all().order_by('school_year', 'created_at'))
+            if not existing_calendars:
+                return JsonResponse({'success': False, 'error': 'Start the first School Year by entering its year.'}, status=400)
+            if not _can_start_next_school_year(existing_calendars):
+                return JsonResponse({'success': False, 'error': 'The next School Year can be started after the current School Year ends.'}, status=400)
+            source_calendar = max(existing_calendars, key=lambda calendar: int(calendar.school_year[5:]))
+            next_start_year = int(source_calendar.school_year[5:])
+            next_school_year = f'{next_start_year}-{next_start_year + 1}'
+            selected_calendar, _ = SchoolCalendar.objects.get_or_create(
+                school_year=next_school_year,
+                defaults={'current_term': 1, 'is_active': True},
+            )
+            SchoolCalendar.objects.exclude(id=selected_calendar.id).update(is_active=False)
+            if not selected_calendar.is_active:
+                selected_calendar.is_active = True
+                selected_calendar.save(update_fields=['is_active', 'updated_at'])
+            _seed_philippine_holidays(selected_calendar)
+            return JsonResponse({'success': True, 'calendar_id': selected_calendar.id, 'school_year': selected_calendar.school_year})
+
+        if action == 'save_suspensions':
+            if not selected_calendar:
+                return HttpResponseForbidden('Select a School Year first.')
+            raw_dates = (request.POST.get('suspension_dates') or '').split(',')
+            suspension_dates = []
+            for raw_date in raw_dates:
+                value = raw_date.strip()
+                if not value:
+                    continue
+                try:
+                    suspension_dates.append(date.fromisoformat(value))
+                except ValueError:
+                    return HttpResponseForbidden('One or more suspension dates are invalid.')
+            suspension_dates = sorted(set(suspension_dates))
+            if not suspension_dates:
+                return HttpResponseForbidden('Select at least one suspension date.')
+
+            saved_events = []
+            for suspension_date in suspension_dates:
+                term = _calendar_current_term(selected_calendar, on_date=suspension_date) or selected_calendar.current_term or 1
+                event, _ = CalendarEvent.objects.get_or_create(
+                    school_calendar=selected_calendar,
+                    event_type='other',
+                    title='Class Suspension',
+                    start_date=suspension_date,
+                    end_date=suspension_date,
+                    defaults={'term': term, 'description': 'School suspension.'},
+                )
+                saved_events.append(_calendar_event_payload(event))
+            if wants_json():
+                return JsonResponse({'success': True, 'events': saved_events})
+            return redirect(f"{reverse('admin_school_calendar')}?calendar_id={selected_calendar.id}&term={selected_calendar.current_term}")
+
+        if action == 'delete_suspension':
+            if not selected_calendar:
+                return HttpResponseForbidden('Select a School Year first.')
+            event_id = request.POST.get('event_id')
+            suspension = CalendarEvent.objects.filter(
+                id=event_id,
+                school_calendar=selected_calendar,
+                event_type='other',
+                title='Class Suspension',
+            ).first()
+            if not suspension:
+                return HttpResponseForbidden('Suspension event not found.')
+            suspension.delete()
+            if wants_json():
+                return JsonResponse({'success': True, 'event_id': event_id})
             return redirect(f"{reverse('admin_school_calendar')}?calendar_id={selected_calendar.id}&term={selected_calendar.current_term}")
 
         if action == 'save_event':
@@ -7082,6 +7291,113 @@ def admin_school_calendar(request):
             event.save()
             if wants_json():
                 return JsonResponse({'success': True, 'event': _calendar_event_payload(event)})
+            return redirect(f"{reverse('admin_school_calendar')}?calendar_id={selected_calendar.id}&term={selected_calendar.current_term}")
+
+        if action == 'save_term_blocks':
+            if not selected_calendar:
+                return HttpResponseForbidden('Select a school year first.')
+            _seed_philippine_holidays(selected_calendar)
+
+            term_dates = {}
+            for term in (1, 2, 3):
+                opening_value = (request.POST.get(f'term_{term}_opening') or '').strip()
+                closing_value = (request.POST.get(f'term_{term}_closing') or '').strip()
+                if bool(opening_value) != bool(closing_value):
+                    return HttpResponseForbidden(f'Term {term} needs both an opening and an end-of-term date.')
+                if not opening_value:
+                    continue
+                try:
+                    opening_date = date.fromisoformat(opening_value)
+                    closing_date = date.fromisoformat(closing_value)
+                except ValueError:
+                    return HttpResponseForbidden(f'Term {term} has an invalid date.')
+                if opening_date > closing_date:
+                    return HttpResponseForbidden(f'Term {term} opening date must be on or before its end-of-term date.')
+                if closing_date <= _opening_block_end(opening_date):
+                    return HttpResponseForbidden(f'Term {term} end-of-term block must begin after its one-week opening block.')
+                term_dates[term] = (opening_date, closing_date)
+
+            if not term_dates:
+                return HttpResponseForbidden('Add dates for at least one term.')
+
+            for term in sorted(term_dates):
+                if term == 1:
+                    continue
+                previous_complete = (term - 1) in term_dates or (
+                    CalendarEvent.objects.filter(school_calendar=selected_calendar, term=term - 1, event_type='school_opening').exists()
+                    and CalendarEvent.objects.filter(school_calendar=selected_calendar, term=term - 1, event_type='school_closing').exists()
+                )
+                if not previous_complete:
+                    return HttpResponseForbidden(f'Complete Term {term - 1} before setting up Term {term}.')
+                previous_closing = term_dates.get(term - 1, (None, None))[1]
+                if previous_closing is None:
+                    previous_event = CalendarEvent.objects.filter(
+                        school_calendar=selected_calendar, term=term - 1, event_type='school_closing'
+                    ).order_by('id').first()
+                    previous_closing = previous_event.start_date if previous_event else None
+                if previous_closing and term_dates[term][0] <= _add_weekdays(previous_closing, 9):
+                    return HttpResponseForbidden(f'Term {term} must start after the previous term’s 10-day end-of-term block.')
+
+            assessment_types = {
+                1: ('pre_assessment', 'Pre-Assessment Week'),
+                2: ('midline_assessment', 'Midline Assessment Week'),
+                3: ('post_assessment', 'Post-Assessment Week'),
+            }
+            assessment_windows = {}
+            for term, (opening_date, closing_date) in term_dates.items():
+                # Assessments start on the Monday after the opening date's
+                # week and run Monday through Friday. A Monday opening uses
+                # the following Monday; a midweek opening uses next Monday.
+                days_until_next_monday = 7 - opening_date.weekday()
+                assessment_start = opening_date + timedelta(days=days_until_next_monday)
+                assessment_end = assessment_start + timedelta(days=4)
+                closing_block_end = _add_weekdays(closing_date, 9)
+                if assessment_end > closing_block_end:
+                    return HttpResponseForbidden(
+                        f'Term {term} closing block must end on or after {assessment_end.isoformat()} so its assessment week can be scheduled.'
+                    )
+                assessment_windows[term] = (assessment_start, assessment_end)
+
+            saved_events = []
+            for term, (opening_date, closing_date) in term_dates.items():
+                opening = CalendarEvent.objects.filter(
+                    school_calendar=selected_calendar, term=term, event_type='school_opening'
+                ).order_by('id').first()
+                if not opening:
+                    opening = CalendarEvent(school_calendar=selected_calendar, term=term, event_type='school_opening')
+                opening.title = 'Opening Block'
+                opening.start_date = opening_date
+                opening.end_date = _opening_block_end(opening_date)
+                opening.save()
+                closing = CalendarEvent.objects.filter(
+                    school_calendar=selected_calendar, term=term, event_type='school_closing'
+                ).order_by('id').first()
+                if not closing:
+                    closing = CalendarEvent(school_calendar=selected_calendar, term=term, event_type='school_closing')
+                closing.title = 'End-of-Term Block'
+                closing.start_date = closing_date
+                closing.end_date = _add_weekdays(closing_date, 9)
+                closing.save()
+                saved_events.extend([_calendar_event_payload(opening), _calendar_event_payload(closing)])
+                assessment_type, assessment_title = assessment_types[term]
+                assessment_start, assessment_end = assessment_windows[term]
+                assessment = CalendarEvent.objects.filter(
+                    school_calendar=selected_calendar, term=term, event_type=assessment_type
+                ).order_by('id').first()
+                if not assessment:
+                    assessment = CalendarEvent(
+                        school_calendar=selected_calendar,
+                        term=term,
+                        event_type=assessment_type,
+                    )
+                assessment.title = assessment_title
+                assessment.start_date = assessment_start
+                assessment.end_date = assessment_end
+                assessment.save()
+                saved_events.append(_calendar_event_payload(assessment))
+
+            if wants_json():
+                return JsonResponse({'success': True, 'events': saved_events})
             return redirect(f"{reverse('admin_school_calendar')}?calendar_id={selected_calendar.id}&term={selected_calendar.current_term}")
 
         if action == 'delete_event':

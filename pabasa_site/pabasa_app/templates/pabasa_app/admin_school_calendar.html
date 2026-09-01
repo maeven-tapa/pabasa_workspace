@@ -12,16 +12,12 @@
     .calendar-card-inner { padding: 1rem 1.1rem; }
     .calendar-label { color: #6b7f95; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.35rem; }
     .calendar-value { color: #10466E; font-family: "Nunito", "Segoe UI", sans-serif; font-size: 1.05rem; font-weight: 900; }
-    .calendar-value-inline { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
-    .calendar-change-link { border: 0; background: transparent; padding: 0; color: #2ea8e5; font-size: .86rem; font-weight: 900; text-decoration: none; }
-    .calendar-change-link:hover { color: #10466E; text-decoration: underline; }
-    .calendar-switch-wrap { position: relative; display: inline-flex; align-items: center; }
-    .calendar-switch-menu { position: absolute; top: calc(100% + .45rem); left: 0; z-index: 1050; min-width: 15rem; padding: .45rem; border: 1px solid rgba(16, 70, 110, 0.12); border-radius: 16px; background: #fff; box-shadow: 0 18px 34px rgba(16, 70, 110, 0.16); display: none; }
-    .calendar-switch-menu.is-open { display: grid; gap: .25rem; }
-    .calendar-switch-item { width: 100%; border: 0; background: transparent; text-align: left; padding: .65rem .75rem; border-radius: 12px; color: #10466E; font-weight: 800; }
-    .calendar-switch-item:hover { background: rgba(46,168,229,0.08); }
-    .calendar-switch-item.is-active { background: rgba(46,168,229,0.12); }
-    .calendar-top-action { display: flex; align-items: stretch; }
+    .school-year-navigation { max-width: 17rem; border-color: rgba(16,70,110,.18); color: #10466E; font-family: "Nunito", "Segoe UI", sans-serif; font-size: 1.05rem; font-weight: 900; }
+    .term-progress { display: flex; align-items: center; gap: .5rem; color: #8ba0b2; font-size: 1.02rem; font-weight: 900; }
+    .term-progress-step { padding: .42rem .62rem; border-radius: 999px; white-space: nowrap; }
+    .term-progress-step.is-active { background: #2ea8e5; color: #fff; box-shadow: 0 6px 14px rgba(46,168,229,.25); }
+    .term-progress-arrow { color: #a7b6c3; font-size: 1rem; }
+    .calendar-top-action { display: flex; flex-direction: column; gap: .5rem; align-items: stretch; }
     .calendar-top-action .btn { border-radius: 18px; font-weight: 800; min-width: 120px; }
     .calendar-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.75rem; align-items: center; margin-bottom: 0.9rem; }
     .calendar-toolbar-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
@@ -36,7 +32,16 @@
     .fc .fc-button { border-radius: 999px !important; box-shadow: none !important; font-family: "Nunito", "Segoe UI", sans-serif; font-weight: 800; }
     .fc .fc-col-header-cell-cushion { padding: 0.75rem 0.25rem; font-weight: 800; color: #62809a; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.04em; }
     .fc .fc-daygrid-day-frame { min-height: 8.5rem; padding: 0.55rem; }
+    .fc .fc-daygrid-day { background: rgba(34, 197, 94, 0.08); }
     .fc .fc-daygrid-day.fc-day-today { background: linear-gradient(180deg, rgba(46,168,229,0.08), rgba(46,168,229,0.03)) !important; }
+    .fc .fc-day-sat,
+    .fc .fc-day-sun { background: #fff !important; }
+    .fc .fc-daygrid-day.has-suspension { background: #ff3b30 !important; }
+    .fc .fc-daygrid-day.has-suspension .fc-daygrid-event-harness { display: none; }
+    .suspension-remove-btn { position: absolute; top: .35rem; right: .35rem; z-index: 5; width: 1.35rem; height: 1.35rem; padding: 0; border: 0; border-radius: 999px; background: #991b1b; color: #fff; font-weight: 900; line-height: 1; opacity: 0; transition: opacity .15s ease; }
+    .fc .fc-daygrid-day.has-suspension:hover .suspension-remove-btn { opacity: 1; }
+    .suspension-notice { position: absolute; bottom: .35rem; left: .35rem; right: .35rem; z-index: 4; color: #fff; font-size: .68rem; font-weight: 900; text-align: center; }
+    .fc .fc-bg-event { opacity: 1; }
     .fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number { background: #2ea8e5; color: #fff; border-radius: 999px; min-width: 2rem; min-height: 2rem; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 10px 20px rgba(46,168,229,0.20); }
     .fc .fc-daygrid-day-number { color: #557089; font-size: 0.85rem; font-weight: 800; text-decoration: none; }
     .fc .fc-daygrid-event, .fc .fc-timegrid-event { border: 0; border-radius: 14px; padding: 0.18rem 0.45rem; font-weight: 700; box-shadow: 0 8px 18px rgba(16, 70, 110, 0.12); cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
@@ -53,6 +58,12 @@
     .modal-content { border: 1px solid rgba(16, 70, 110, 0.10); border-radius: 22px; box-shadow: 0 24px 70px rgba(6, 23, 38, 0.18); overflow: hidden; }
     .modal-header, .modal-footer { border-color: rgba(16, 70, 110, 0.10); }
     .modal-header { background: linear-gradient(135deg, rgba(16,70,110,0.05), rgba(46,168,229,0.03)); }
+    .term-block-section { border-top: 1px solid rgba(16, 70, 110, 0.12); padding-top: 1rem; margin-top: 1rem; }
+    .term-block-section:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+    .term-block-section[hidden] { display: none; }
+    .term-block-section .form-control:disabled { background: #e9edf1; border-color: #d4dce4; color: #82909d; cursor: not-allowed; }
+    .term-block-heading { color: #10466E; font-size: 1rem; font-weight: 900; margin-bottom: .8rem; }
+    .term-block-hint { color: #6b7f95; font-size: .82rem; font-weight: 700; }
     @media (max-width: 991.98px) { .calendar-top { grid-template-columns: 1fr; } .calendar-stage { min-height: 32rem; } }
 </style>
 
@@ -60,26 +71,31 @@
     <div class="calendar-top">
         <div class="calendar-card calendar-card-inner">
             <div class="calendar-label">School Year</div>
-            <div class="calendar-value calendar-value-inline">
-                <span>{{ school_year_label }}</span>
-                <span class="calendar-switch-wrap">
-                    <button type="button" class="calendar-change-link" id="changeSchoolYearBtn" aria-haspopup="true" aria-expanded="false">Switch</button>
-                    <div class="calendar-switch-menu" id="schoolYearSwitchMenu" role="menu" aria-label="Switch school year">
-                        {% for school_calendar in school_calendars %}
-                        <button type="button" class="calendar-switch-item{% if selected_calendar and selected_calendar.id == school_calendar.id %} is-active{% endif %}" data-calendar-id="{{ school_calendar.id }}" role="menuitem">{{ school_calendar.school_year }}</button>
-                        {% endfor %}
-                    </div>
-                </span>
-            </div>
+            <select class="form-select school-year-navigation" id="schoolYearNavigation" aria-label="Select school year">
+                <option value="" disabled {% if not selected_calendar %}selected{% endif %}>Select School Year</option>
+                {% for school_calendar in school_calendars %}
+                <option value="{{ school_calendar.id }}" {% if selected_calendar and selected_calendar.id == school_calendar.id %}selected{% endif %}>{{ school_calendar.school_year }}{% if school_calendar.id in current_calendar_ids %} (Current){% endif %}</option>
+                {% endfor %}
+                {% if can_create_school_year %}
+                <option value="__new_school_year__">Start School Year</option>
+                {% endif %}
+            </select>
         </div>
 
         <div class="calendar-card calendar-card-inner">
             <div class="calendar-label">Current Term</div>
-            <div class="calendar-value">{{ selected_term_label }}</div>
+            <div class="term-progress" aria-label="Current term: {{ selected_term_label }}">
+                <span class="term-progress-step{% if selected_term == 1 %} is-active{% endif %}">Term 1</span>
+                <span class="term-progress-arrow" aria-hidden="true">→</span>
+                <span class="term-progress-step{% if selected_term == 2 %} is-active{% endif %}">Term 2</span>
+                <span class="term-progress-arrow" aria-hidden="true">→</span>
+                <span class="term-progress-step{% if selected_term == 3 %} is-active{% endif %}">Term 3</span>
+            </div>
         </div>
 
         <div class="calendar-top-action justify-content-end">
-            <button type="button" class="btn btn-primary px-4" id="addEventBtn">+ Add Event</button>
+            <button type="button" class="btn {% if has_saved_term_blocks %}btn-success{% else %}btn-primary{% endif %} px-4" id="addEventBtn" {% if not selected_calendar %}disabled{% endif %}>{% if has_saved_term_blocks %}Edit Event{% else %}+ Add Event{% endif %}</button>
+            <button type="button" class="btn btn-outline-primary px-4" id="addSuspensionBtn" {% if not has_saved_term_blocks %}disabled{% endif %}>Add Suspensions</button>
         </div>
     </div>
 
@@ -96,8 +112,93 @@
                 <span class="btn btn-outline-primary btn-sm disabled" id="calendarMonthTitle">Month</span>
             </div>
         </div>
-        <div id="calendarEmpty" class="calendar-empty">No events scheduled for this month.</div>
         <div id="calendar"></div>
+    </div>
+</div>
+
+<div class="modal fade" id="suspensionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title mb-0">Add Suspensions</h5>
+                    <div class="text-secondary small">Select one or more dates from the calendar.</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="suspensionForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="save_suspensions">
+                    <input type="hidden" name="calendar_id" value="{% if selected_calendar %}{{ selected_calendar.id }}{% endif %}">
+                    <input type="hidden" name="suspension_dates" id="suspensionDates">
+                    <div id="suspensionPicker"></div>
+                    <div class="small text-secondary mt-3" id="suspensionSelectionHint">No dates selected.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Suspensions</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="calendarConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title mb-0" id="calendarConfirmTitle">Confirm deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-secondary" id="calendarConfirmMessage">Are you sure you want to continue?</div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="calendarConfirmButton">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="termBlocksModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title mb-0" id="termBlocksModalTitle">Add Term Blocks</h5>
+                    <div class="text-secondary small">Set each term's opening and end-of-term dates.</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" id="termBlocksForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="save_term_blocks">
+                    <input type="hidden" name="calendar_id" id="termBlocksCalendarId" value="{% if selected_calendar %}{{ selected_calendar.id }}{% endif %}">
+                    {% for value, label in term_options %}
+                    <section class="term-block-section" data-term-section="{{ value }}" {% if value != 1 %}hidden{% endif %}>
+                        <div class="d-flex flex-wrap justify-content-between gap-2 align-items-center">
+                            <div class="term-block-heading">{{ label }}</div>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-secondary" for="term{{ value }}Opening">Opening Block (Start Date)</label>
+                                <input class="form-control" id="term{{ value }}Opening" name="term_{{ value }}_opening" type="date" data-term-opening="{{ value }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-secondary" for="term{{ value }}Closing">End-of-Term Block (Start Date · 10 School Days)</label>
+                                <input class="form-control" id="term{{ value }}Closing" name="term_{{ value }}_closing" type="date" data-term-closing="{{ value }}">
+                            </div>
+                        </div>
+                    </section>
+                    {% endfor %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Term Blocks</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -118,18 +219,6 @@
                     <input type="hidden" name="calendar_id" value="{% if selected_calendar %}{{ selected_calendar.id }}{% endif %}">
                     <input type="hidden" name="event_id" id="eventId">
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary" for="eventCalendar">School Year</label>
-                            <select class="form-select" id="eventCalendar" name="event_calendar_id" required>
-                                <optgroup label="School Years">
-                                    {% for school_calendar in school_calendars %}
-                                    <option value="{{ school_calendar.id }}" {% if selected_calendar and selected_calendar.id == school_calendar.id %}selected{% endif %}>{{ school_calendar.school_year }}</option>
-                                    {% endfor %}
-                                </optgroup>
-                                <option value="" disabled>-----------------</option>
-                                <option value="__new_school_year__">+ New School Year</option>
-                            </select>
-                        </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-secondary" for="eventType">Event Type</label>
                             <select class="form-select" id="eventType" name="event_type" required>
@@ -181,7 +270,7 @@
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title mb-0">Create School Year</h5>
+                <h5 class="modal-title mb-0">Start School Year</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="schoolYearForm">
@@ -207,6 +296,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/interaction@6.1.15/index.global.min.js"></script>
 <script>
     window.PABASA_CALENDAR_EVENTS = {{ calendar_events_json|safe }};
+    window.PABASA_CALENDAR_TERM_BLOCKS = {{ calendar_term_blocks_json|safe }};
     window.PABASA_CALENDAR_URL = "{% url 'admin_school_calendar' %}";
 </script>
 <script>
@@ -218,8 +308,7 @@
         const modal = window.bootstrap ? new bootstrap.Modal(modalEl) : null;
         const schoolYearModalEl = document.getElementById('schoolYearModal');
         const schoolYearModal = window.bootstrap ? new bootstrap.Modal(schoolYearModalEl) : null;
-        const changeSchoolYearBtn = document.getElementById('changeSchoolYearBtn');
-        const schoolYearSwitchMenu = document.getElementById('schoolYearSwitchMenu');
+        const schoolYearNavigation = document.getElementById('schoolYearNavigation');
         const eventForm = document.getElementById('calendarEventForm');
         const eventIdInput = document.getElementById('eventId');
         const calendarIdInput = eventForm.querySelector('[name="calendar_id"]');
@@ -235,6 +324,24 @@
         const eventEndInput = document.getElementById('eventEnd');
         const eventDescriptionInput = document.getElementById('eventDescription');
         const addEventBtn = document.getElementById('addEventBtn');
+        const addSuspensionBtn = document.getElementById('addSuspensionBtn');
+        const suspensionModalEl = document.getElementById('suspensionModal');
+        const suspensionModal = window.bootstrap ? new bootstrap.Modal(suspensionModalEl) : null;
+        const suspensionForm = document.getElementById('suspensionForm');
+        const suspensionDatesInput = document.getElementById('suspensionDates');
+        const suspensionSelectionHint = document.getElementById('suspensionSelectionHint');
+        const suspensionPickerEl = document.getElementById('suspensionPicker');
+        const confirmModalEl = document.getElementById('calendarConfirmModal');
+        const confirmModal = window.bootstrap ? new bootstrap.Modal(confirmModalEl) : null;
+        const confirmTitle = document.getElementById('calendarConfirmTitle');
+        const confirmMessage = document.getElementById('calendarConfirmMessage');
+        const confirmButton = document.getElementById('calendarConfirmButton');
+        const termBlocksModalEl = document.getElementById('termBlocksModal');
+        const termBlocksModal = window.bootstrap ? new bootstrap.Modal(termBlocksModalEl) : null;
+        const termBlocksForm = document.getElementById('termBlocksForm');
+        const termBlocksCalendarId = document.getElementById('termBlocksCalendarId');
+        const termSections = Array.from(document.querySelectorAll('[data-term-section]'));
+        const hasSavedTermBlocks = {{ has_saved_term_blocks|yesno:"true,false" }};
         const deleteEventBtn = document.getElementById('deleteEventBtn');
         const calendarPrevBtn = document.getElementById('calendarPrevBtn');
         const calendarTodayBtn = document.getElementById('calendarTodayBtn');
@@ -251,6 +358,9 @@
 
         const csrfToken = getCsrfToken();
         let calendar;
+        let suspensionCalendar;
+        let confirmationResolver;
+        const selectedSuspensionDates = new Set();
 
         const colors = {
         start_of_classes: '#0ea5e9',
@@ -265,6 +375,132 @@
         instructional: '#16a34a',
         other: '#6b7280',
     };
+        const calendarBackgrounds = {
+            school_opening: 'rgba(250, 204, 21, 0.34)',
+            school_closing: 'rgba(239, 68, 68, 0.28)',
+            holiday: 'rgba(249, 115, 22, 0.28)',
+        };
+        const assessmentEventTypes = new Set(['pre_assessment', 'midline_assessment', 'post_assessment', 'examination']);
+        const todayValue = formatDateValue(new Date());
+
+        function isSuspensionEvent(event) {
+            const eventType = event?.event_type || event?.extendedProps?.event_type;
+            return eventType === 'other' && event?.title === 'Class Suspension';
+        }
+
+        function suspensionEventForDate(dateValue) {
+            return (window.PABASA_CALENDAR_EVENTS || []).find((event) => isSuspensionEvent(event) && event.start === dateValue);
+        }
+
+        function hasAssessmentOnDate(dateValue) {
+            return (window.PABASA_CALENDAR_EVENTS || []).some((event) => (
+                assessmentEventTypes.has(event.event_type)
+                && event.start <= dateValue
+                && (event.end_date || event.end || event.start) >= dateValue
+            ));
+        }
+
+        function formatDateValue(date) {
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${date.getFullYear()}-${month}-${day}`;
+        }
+
+        function calendarDisplayEvent(event) {
+            const eventType = event?.event_type || event?.extendedProps?.event_type;
+            if (isSuspensionEvent(event)) {
+                return [{
+                    ...event,
+                    id: `${event.id}-background`,
+                    source_event_id: event.id,
+                    is_calendar_background: true,
+                    display: 'background',
+                    backgroundColor: '#ff3b30',
+                    borderColor: 'transparent',
+                }];
+            }
+            if (assessmentEventTypes.has(eventType)) {
+                const cursor = new Date(`${event.start}T00:00:00`);
+                const eventEnd = new Date(`${event.end}T00:00:00`);
+                const segments = [];
+                let segmentStart = null;
+                while (cursor < eventEnd) {
+                    const dateValue = formatDateValue(cursor);
+                    if (suspensionEventForDate(dateValue)) {
+                        if (segmentStart) {
+                            segments.push({
+                                ...event,
+                                id: `${event.id}-segment-${segments.length}`,
+                                source_event_id: event.id,
+                                start: formatDateValue(segmentStart),
+                                end: dateValue,
+                            });
+                            segmentStart = null;
+                        }
+                        cursor.setDate(cursor.getDate() + 1);
+                        continue;
+                    }
+                    if (!segmentStart) segmentStart = new Date(cursor);
+                    cursor.setDate(cursor.getDate() + 1);
+                }
+                if (segmentStart) {
+                    segments.push({
+                        ...event,
+                        id: `${event.id}-segment-${segments.length}`,
+                        source_event_id: event.id,
+                        start: formatDateValue(segmentStart),
+                        end: formatDateValue(cursor),
+                    });
+                }
+                return segments;
+            }
+            if (!calendarBackgrounds[eventType]) return [event];
+            if (eventType === 'holiday') {
+                return [
+                    {
+                        ...event,
+                        id: `${event.id}-background`,
+                        source_event_id: event.id,
+                        is_calendar_background: true,
+                        display: 'background',
+                        backgroundColor: calendarBackgrounds[eventType],
+                        borderColor: 'transparent',
+                        classNames: [`calendar-${eventType}-background`],
+                    },
+                    { ...event, classNames: ['calendar-holiday-label'] },
+                ];
+            }
+            const cursor = new Date(`${event.start}T00:00:00`);
+            const eventEnd = new Date(`${event.end}T00:00:00`);
+            const segments = [];
+            while (cursor < eventEnd) {
+                while (cursor < eventEnd && (cursor.getDay() === 0 || cursor.getDay() === 6)) {
+                    cursor.setDate(cursor.getDate() + 1);
+                }
+                if (cursor >= eventEnd) break;
+                const segmentStart = new Date(cursor);
+                while (cursor < eventEnd && cursor.getDay() !== 0 && cursor.getDay() !== 6) {
+                    cursor.setDate(cursor.getDate() + 1);
+                }
+                segments.push({
+                    ...event,
+                    id: `${event.id}-background-${segments.length}`,
+                    source_event_id: event.id,
+                    is_calendar_background: true,
+                    start: formatDateValue(segmentStart),
+                    end: formatDateValue(cursor),
+                    display: 'background',
+                    backgroundColor: calendarBackgrounds[eventType],
+                    borderColor: 'transparent',
+                    classNames: [`calendar-${eventType}-background`],
+                });
+            }
+            return segments;
+        }
+
+        function calendarDisplayEvents(events) {
+            return (events || []).flatMap(calendarDisplayEvent);
+        }
 
         function getTermWindow(termValue) {
             const term = String(termValue || '');
@@ -272,6 +508,89 @@
             const opening = events.find((item) => String(item.term) === term && item.event_type === 'school_opening');
             const closing = events.find((item) => String(item.term) === term && item.event_type === 'school_closing');
             return { opening, closing };
+        }
+
+        function termInput(term, block) {
+            return document.querySelector(`[data-term-${block}="${term}"]`);
+        }
+
+        function termIsComplete(term) {
+            return Boolean(termInput(term, 'opening')?.value && termInput(term, 'closing')?.value);
+        }
+
+        function addDays(dateValue, days) {
+            if (!dateValue) return '';
+            const date = new Date(`${dateValue}T00:00:00`);
+            date.setDate(date.getDate() + days);
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${date.getFullYear()}-${month}-${day}`;
+        }
+
+        function addWeekdays(dateValue, days) {
+            if (!dateValue) return '';
+            const date = new Date(`${dateValue}T00:00:00`);
+            for (let index = 0; index < days; index += 1) {
+                date.setDate(date.getDate() + 1);
+                while (date.getDay() === 0 || date.getDay() === 6) date.setDate(date.getDate() + 1);
+            }
+            return formatDateValue(date);
+        }
+
+        function openingBlockEnd(dateValue) {
+            if (!dateValue) return '';
+            const date = new Date(`${dateValue}T00:00:00`);
+            date.setDate(date.getDate() + ((5 - date.getDay() + 7) % 7));
+            return formatDateValue(date);
+        }
+
+        function syncTermBlockDateLimits() {
+            for (const term of [1, 2, 3]) {
+                const opening = termInput(term, 'opening');
+                const closing = termInput(term, 'closing');
+                const previousClosing = term > 1 ? termInput(term - 1, 'closing')?.value : '';
+                if (previousClosing) {
+                    opening.min = addDays(addWeekdays(previousClosing, 9), 1);
+                } else {
+                    opening.removeAttribute('min');
+                }
+                if (opening.value) {
+                    closing.min = addDays(openingBlockEnd(opening.value), 1);
+                } else {
+                    closing.removeAttribute('min');
+                }
+            }
+        }
+
+        function syncTermBlockVisibility() {
+            const hasSchoolYear = Boolean(termBlocksCalendarId?.value);
+            termSections.forEach((section) => {
+                const term = Number(section.dataset.termSection);
+                const isVisible = hasSchoolYear && (term === 1 || termIsComplete(term - 1));
+                const opening = termInput(term, 'opening');
+                const closing = termInput(term, 'closing');
+                section.hidden = !isVisible;
+                opening.disabled = !isVisible;
+                closing.disabled = !isVisible || !opening.value;
+            });
+        }
+
+        function loadTermBlocks(calendarId) {
+            const blocks = window.PABASA_CALENDAR_TERM_BLOCKS?.[String(calendarId)] || {};
+            for (const term of [1, 2, 3]) {
+                const values = blocks[String(term)] || {};
+                termInput(term, 'opening').value = values.opening || '';
+                termInput(term, 'closing').value = values.closing || '';
+            }
+            if (termBlocksCalendarId) termBlocksCalendarId.value = calendarId || '';
+            syncTermBlockDateLimits();
+            syncTermBlockVisibility();
+        }
+
+        function openTermBlocksModal() {
+            loadTermBlocks(currentCalendarId);
+            document.getElementById('termBlocksModalTitle').textContent = hasSavedTermBlocks ? 'Edit Event' : 'Add Term Blocks';
+            termBlocksModal?.show();
         }
 
         function parseDateInput(value) {
@@ -354,22 +673,6 @@
             schoolYearModal?.show();
         }
 
-        function closeSchoolYearSwitchMenu() {
-            schoolYearSwitchMenu?.classList.remove('is-open');
-            changeSchoolYearBtn?.setAttribute('aria-expanded', 'false');
-        }
-
-        function toggleSchoolYearSwitchMenu() {
-            if (!schoolYearSwitchMenu) return;
-            const willOpen = !schoolYearSwitchMenu.classList.contains('is-open');
-            if (willOpen) {
-                schoolYearSwitchMenu.classList.add('is-open');
-                changeSchoolYearBtn?.setAttribute('aria-expanded', 'true');
-            } else {
-                closeSchoolYearSwitchMenu();
-            }
-        }
-
         function getInitialCalendarDate() {
             const events = window.PABASA_CALENDAR_EVENTS || [];
             for (const event of events) {
@@ -379,6 +682,97 @@
             }
             return null;
         }
+
+        function refreshSuspensionPicker() {
+            if (!suspensionCalendar) return;
+            suspensionCalendar.removeAllEvents();
+            const savedSuspensionDates = new Set(
+                (window.PABASA_CALENDAR_EVENTS || [])
+                    .filter(isSuspensionEvent)
+                    .map((event) => event.start)
+            );
+            [...savedSuspensionDates].forEach((dateValue) => {
+                suspensionCalendar.addEvent({
+                    id: `saved-suspension-${dateValue}`,
+                    start: dateValue,
+                    display: 'background',
+                    backgroundColor: '#ef4444',
+                    borderColor: 'transparent',
+                });
+            });
+            [...selectedSuspensionDates].sort().forEach((dateValue) => {
+                if (savedSuspensionDates.has(dateValue)) return;
+                suspensionCalendar.addEvent({
+                    id: `suspension-${dateValue}`,
+                    title: 'New suspension',
+                    start: dateValue,
+                    allDay: true,
+                    backgroundColor: '#f97316',
+                    borderColor: '#f97316',
+                });
+            });
+            const selectedDates = [...selectedSuspensionDates].sort();
+            suspensionDatesInput.value = selectedDates.join(',');
+            suspensionSelectionHint.textContent = selectedDates.length
+                ? `${selectedDates.length} date${selectedDates.length === 1 ? '' : 's'} selected: ${selectedDates.join(', ')}`
+                : 'No dates selected.';
+        }
+
+        function openSuspensionModal() {
+            selectedSuspensionDates.clear();
+            if (!suspensionCalendar) {
+                suspensionCalendar = new FullCalendar.Calendar(suspensionPickerEl, {
+                    initialView: 'dayGridMonth',
+                    initialDate: todayValue,
+                    height: 'auto',
+                    headerToolbar: { left: 'prev,next', center: 'title', right: '' },
+                    validRange: { start: todayValue },
+                    datesSet: (info) => {
+                        const today = new Date(`${todayValue}T00:00:00`);
+                        const currentMonth = info.view.currentStart;
+                        const isCurrentMonth = currentMonth.getFullYear() === today.getFullYear()
+                            && currentMonth.getMonth() === today.getMonth();
+                        const previousButton = suspensionPickerEl.querySelector('.fc-prev-button');
+                        if (previousButton) previousButton.disabled = isCurrentMonth;
+                    },
+                    dateClick: (info) => {
+                        if (info.dateStr < todayValue) return;
+                        if (suspensionEventForDate(info.dateStr)) return;
+                        if (selectedSuspensionDates.has(info.dateStr)) {
+                            selectedSuspensionDates.delete(info.dateStr);
+                        } else {
+                            selectedSuspensionDates.add(info.dateStr);
+                        }
+                        refreshSuspensionPicker();
+                    },
+                });
+            }
+            refreshSuspensionPicker();
+            suspensionModal?.show();
+            window.setTimeout(() => suspensionCalendar?.render(), 200);
+        }
+
+        function requestDeleteConfirmation(title, message) {
+            return new Promise((resolve) => {
+                confirmationResolver = resolve;
+                confirmTitle.textContent = title;
+                confirmMessage.textContent = message;
+                confirmModal?.show();
+            });
+        }
+
+        confirmButton?.addEventListener('click', () => {
+            const resolve = confirmationResolver;
+            confirmationResolver = null;
+            confirmModal?.hide();
+            resolve?.(true);
+        });
+        confirmModalEl?.addEventListener('hidden.bs.modal', () => {
+            if (confirmationResolver) {
+                confirmationResolver(false);
+                confirmationResolver = null;
+            }
+        });
 
         function openEventModal(eventData) {
             eventForm.reset();
@@ -438,6 +832,7 @@
         }
 
         function updateEmptyState() {
+            if (!emptyEl) return;
             const hasEvents = (calendar.getEvents() || []).some((event) => {
                 const currentStart = calendar.view.currentStart;
                 const currentEnd = calendar.view.currentEnd;
@@ -450,7 +845,7 @@
 
         function refreshCalendar() {
             calendar.removeAllEvents();
-            (window.PABASA_CALENDAR_EVENTS || []).forEach((event) => calendar.addEvent(event));
+            calendarDisplayEvents(window.PABASA_CALENDAR_EVENTS).forEach((event) => calendar.addEvent(event));
             updateEmptyState();
         }
 
@@ -460,19 +855,71 @@
             calendarWeekBtn.classList.toggle('btn-primary', viewName === 'timeGridWeek');
         }
 
+        async function removeSuspension(eventId) {
+            if (!await requestDeleteConfirmation('Delete suspension?', 'Remove this class suspension date?')) return;
+            const formData = new FormData();
+            formData.append('action', 'delete_suspension');
+            formData.append('calendar_id', currentCalendarId);
+            formData.append('event_id', eventId);
+            const response = await fetch(window.PABASA_CALENDAR_URL, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                credentials: 'same-origin',
+                body: formData,
+            });
+            if (!response.ok) {
+                window.alert((await response.text()) || 'Unable to remove the suspension.');
+                return;
+            }
+            window.location.reload();
+        }
+
         calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
-            initialDate: getInitialCalendarDate() || undefined,
             height: 'auto',
             headerToolbar: false,
             dayMaxEvents: true,
             nowIndicator: true,
-            selectable: true,
-            events: window.PABASA_CALENDAR_EVENTS || [],
-            eventContent: (arg) => ({
-                html: `<div class="event-pill" style="background:${colors[arg.event.extendedProps.event_type] || colors.other};"><span class="event-dot"></span><span>${arg.event.title}</span></div>`
-            }),
+            selectable: false,
+            events: calendarDisplayEvents(window.PABASA_CALENDAR_EVENTS),
+            dayCellDidMount: (info) => {
+                const dateValue = formatDateValue(info.date);
+                const suspension = suspensionEventForDate(dateValue);
+                if (!suspension) return;
+                info.el.classList.add('has-suspension');
+                const removeButton = document.createElement('button');
+                removeButton.type = 'button';
+                removeButton.className = 'suspension-remove-btn';
+                removeButton.setAttribute('aria-label', 'Remove suspension');
+                removeButton.textContent = '×';
+                removeButton.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    removeSuspension(suspension.id);
+                });
+                info.el.querySelector('.fc-daygrid-day-frame')?.appendChild(removeButton);
+                const notice = document.createElement('div');
+                notice.className = 'suspension-notice';
+                notice.textContent = 'Class suspended';
+                info.el.querySelector('.fc-daygrid-day-frame')?.appendChild(notice);
+            },
+            eventContent: (arg) => {
+                if (arg.event.extendedProps.is_calendar_background) return { html: '' };
+                return {
+                    html: `<div class="event-pill" style="background:${colors[arg.event.extendedProps.event_type] || colors.other};"><span class="event-dot"></span><span>${arg.event.title}</span></div>`
+                };
+            },
             eventDidMount: (info) => {
+                const blockBackground = calendarBackgrounds[info.event.extendedProps.event_type];
+                if (info.event.extendedProps.is_calendar_background && blockBackground) {
+                    info.el.style.backgroundColor = blockBackground;
+                    info.el.style.borderColor = 'transparent';
+                    return;
+                }
                 const color = colors[info.event.extendedProps.event_type] || colors.other;
                 info.el.style.backgroundColor = 'transparent';
                 info.el.style.borderColor = 'transparent';
@@ -497,33 +944,13 @@
                 calendarMonthTitle.textContent = formatMonthTitle(info.view.currentStart);
                 updateEmptyState();
             },
-            dateClick: (info) => {
-                openEventModal({
-                    start: info.dateStr,
-                    end: info.dateStr,
-                    event_type: 'other',
-                    term: '{% if selected_term %}{{ selected_term }}{% else %}1{% endif %}',
-                });
-            },
-            eventClick: (info) => {
-                if (info.event.extendedProps.is_generated) return;
-                openEventModal({
-                    id: info.event.id,
-                    title: info.event.title,
-                    event_type: info.event.extendedProps.event_type,
-                    term: info.event.extendedProps.term,
-                    start: info.event.startStr || '',
-                    end: info.event.extendedProps.end_date || info.event.endStr || info.event.startStr || '',
-                    end_date: info.event.extendedProps.end_date || '',
-                    description: info.event.extendedProps.description || '',
-                });
-            }
         });
 
         calendar.render();
         setView('dayGridMonth');
 
-        addEventBtn?.addEventListener('click', () => openEventModal());
+        addEventBtn?.addEventListener('click', openTermBlocksModal);
+        addSuspensionBtn?.addEventListener('click', openSuspensionModal);
         calendarPrevBtn?.addEventListener('click', () => calendar.prev());
         calendarTodayBtn?.addEventListener('click', () => calendar.today());
         calendarNextBtn?.addEventListener('click', () => calendar.next());
@@ -542,25 +969,48 @@
                 calendarIdInput.value = eventCalendarInput.value;
             }
         });
-        changeSchoolYearBtn?.addEventListener('click', (event) => {
-            event.stopPropagation();
-            toggleSchoolYearSwitchMenu();
+        termBlocksForm?.querySelectorAll('input[type="date"]').forEach((input) => {
+            input.addEventListener('change', () => {
+                syncTermBlockDateLimits();
+                syncTermBlockVisibility();
+            });
         });
-        schoolYearSwitchMenu?.addEventListener('click', (event) => {
-            const target = event.target.closest('[data-calendar-id]');
-            if (!target) return;
-            const calendarId = target.getAttribute('data-calendar-id');
-            closeSchoolYearSwitchMenu();
+        schoolYearNavigation?.addEventListener('change', async () => {
+            const calendarId = schoolYearNavigation.value;
+            if (calendarId === '__new_school_year__') {
+                schoolYearNavigation.value = currentCalendarId || '';
+                if (!currentCalendarId) {
+                    openCreateSchoolYearModal();
+                    return;
+                }
+                const formData = new FormData();
+                formData.append('action', 'start_next_school_year');
+                formData.append('calendar_id', currentCalendarId);
+                const response = await fetch(window.PABASA_CALENDAR_URL, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                    },
+                    credentials: 'same-origin',
+                    body: formData,
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    window.alert(data.error || 'Unable to start the next School Year.');
+                    return;
+                }
+                const url = new URL(window.location.href);
+                url.searchParams.set('calendar_id', data.calendar_id);
+                window.location.href = url.toString();
+                return;
+            }
             if (calendarId && String(calendarId) !== String(currentCalendarId || '')) {
                 const url = new URL(window.location.href);
                 url.searchParams.set('calendar_id', calendarId);
                 window.location.href = url.toString();
             }
-        });
-        document.addEventListener('click', (event) => {
-            if (!schoolYearSwitchMenu || !changeSchoolYearBtn) return;
-            if (schoolYearSwitchMenu.contains(event.target) || changeSchoolYearBtn.contains(event.target)) return;
-            closeSchoolYearSwitchMenu();
         });
         newSchoolYearInput?.addEventListener('input', () => {
             syncSchoolYearMask();
@@ -643,6 +1093,76 @@
             window.location.href = url.toString();
         });
 
+        termBlocksForm?.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const calendarId = currentCalendarId;
+            if (!calendarId) {
+                window.alert('Select a school year from the School Year card first.');
+                return;
+            }
+            for (const term of [1, 2, 3]) {
+                const section = document.querySelector(`[data-term-section="${term}"]`);
+                if (section?.hidden) continue;
+                const opening = termInput(term, 'opening').value;
+                const closing = termInput(term, 'closing').value;
+                if (Boolean(opening) !== Boolean(closing)) {
+                    window.alert(`Term ${term} needs both an Opening Block and an End-of-Term Block date.`);
+                    return;
+                }
+                if (opening && opening > closing) {
+                    window.alert(`Term ${term} opening date must be on or before its end-of-term date.`);
+                    return;
+                }
+            }
+            const formData = new FormData(termBlocksForm);
+            formData.set('calendar_id', calendarId);
+            const response = await fetch(window.PABASA_CALENDAR_URL, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                credentials: 'same-origin',
+                body: formData,
+            });
+            if (!response.ok) {
+                window.alert((await response.text()) || 'Unable to save term blocks.');
+                return;
+            }
+            const data = await response.json();
+            if (data.success) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('calendar_id', calendarId);
+                window.location.href = url.toString();
+            }
+        });
+
+        suspensionForm?.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (!suspensionDatesInput.value) {
+                window.alert('Select at least one suspension date.');
+                return;
+            }
+            const formData = new FormData(suspensionForm);
+            const response = await fetch(window.PABASA_CALENDAR_URL, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                credentials: 'same-origin',
+                body: formData,
+            });
+            if (!response.ok) {
+                window.alert((await response.text()) || 'Unable to save suspensions.');
+                return;
+            }
+            const data = await response.json();
+            if (data.success) window.location.reload();
+        });
+
         eventForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             if (!eventTypeInput.value) {
@@ -692,12 +1212,11 @@
         }
         const data = await response.json();
         if (!data.success) return;
-        const existing = calendar.getEventById(String(data.event.id));
-        if (existing) {
-            existing.remove();
-        }
+        calendar.getEvents()
+            .filter((item) => String(item.id) === String(data.event.id) || String(item.extendedProps.source_event_id || '') === String(data.event.id))
+            .forEach((item) => item.remove());
         if (String(data.event.school_calendar_id || '') === String(currentCalendarId || '')) {
-            calendar.addEvent(data.event);
+            calendarDisplayEvents([data.event]).forEach((event) => calendar.addEvent(event));
             window.PABASA_CALENDAR_EVENTS = calendar.getEvents().map((item) => ({
                 id: item.id,
                 title: item.title,
@@ -728,6 +1247,7 @@
 
     deleteEventBtn.addEventListener('click', async () => {
         if (!eventIdInput.value) return;
+        if (!await requestDeleteConfirmation('Delete event?', 'This calendar event will be permanently removed.')) return;
         const formData = new FormData();
         formData.append('action', 'delete_event');
         formData.append('event_id', eventIdInput.value);

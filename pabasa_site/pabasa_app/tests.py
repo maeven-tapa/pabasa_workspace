@@ -245,6 +245,132 @@ class SchoolCalendarAdminTests(TestCase):
         self.assertContains(page, "Midline Assessment Week")
         self.assertContains(page, '"event_type": "midline_assessment"')
 
+    def test_admin_school_calendar_saves_progressive_term_blocks(self):
+        admin = User.objects.create(
+            custom_id="ADM-1002",
+            role="admin",
+            first_name="Ari",
+            last_name="Admin",
+            middle_initial="",
+            suffix="",
+            sex="male",
+            birth_month=1,
+            birth_day=2,
+            birth_year=1985,
+            email="admin1002@example.com",
+            password_hash=make_password("admin-password"),
+        )
+        calendar = SchoolCalendar.objects.create(school_year="2026-2027", current_term=1, is_active=True)
+        self._login_admin(admin)
+
+        response = self.client.post(
+            reverse("admin_school_calendar"),
+            {
+                "action": "save_term_blocks",
+                "calendar_id": calendar.id,
+                "term_1_opening": "2026-06-01",
+                "term_1_closing": "2026-08-31",
+                "term_2_opening": "2026-09-14",
+                "term_2_closing": "2026-11-30",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            CalendarEvent.objects.filter(school_calendar=calendar, event_type="school_opening").count(), 2
+        )
+        self.assertEqual(
+            CalendarEvent.objects.filter(school_calendar=calendar, event_type="school_closing").count(), 2
+        )
+        self.assertEqual(
+            CalendarEvent.objects.get(school_calendar=calendar, term=2, event_type="school_closing").start_date,
+            date(2026, 11, 30),
+        )
+        self.assertEqual(
+            CalendarEvent.objects.get(school_calendar=calendar, term=1, event_type="school_opening").end_date,
+            date(2026, 6, 5),
+        )
+        self.assertEqual(
+            CalendarEvent.objects.get(school_calendar=calendar, term=2, event_type="school_closing").end_date,
+            date(2026, 12, 11),
+        )
+        self.assertEqual(
+            CalendarEvent.objects.get(school_calendar=calendar, term=1, event_type="pre_assessment").start_date,
+            date(2026, 6, 8),
+        )
+        self.assertEqual(
+            CalendarEvent.objects.get(school_calendar=calendar, term=2, event_type="midline_assessment").start_date,
+            date(2026, 9, 21),
+        )
+        holiday = CalendarEvent.objects.get(school_calendar=calendar, title="Independence Day", start_date=date(2026, 6, 12))
+        self.assertEqual(holiday.event_type, "holiday")
+        self.assertEqual(holiday.end_date, date(2026, 6, 12))
+
+    def test_term_assessment_uses_the_next_monday_after_a_midweek_opening(self):
+        admin = User.objects.create(
+            custom_id="ADM-1003", role="admin", first_name="Mia", last_name="Admin", middle_initial="", suffix="",
+            sex="female", birth_month=1, birth_day=2, birth_year=1985, email="admin1003@example.com",
+            password_hash=make_password("admin-password"),
+        )
+        calendar = SchoolCalendar.objects.create(school_year="2027-2028", current_term=1, is_active=True)
+        self._login_admin(admin)
+
+        response = self.client.post(reverse("admin_school_calendar"), {
+            "action": "save_term_blocks", "calendar_id": calendar.id,
+            "term_1_opening": "2027-06-02", "term_1_closing": "2027-08-31",
+        })
+
+        self.assertEqual(response.status_code, 302)
+        assessment = CalendarEvent.objects.get(school_calendar=calendar, term=1, event_type="pre_assessment")
+        self.assertEqual(assessment.start_date, date(2027, 6, 7))
+        self.assertEqual(assessment.end_date, date(2027, 6, 11))
+
+    def test_admin_can_start_the_next_school_year_automatically(self):
+        admin = User.objects.create(
+            custom_id="ADM-1004", role="admin", first_name="Noel", last_name="Admin", middle_initial="", suffix="",
+            sex="male", birth_month=1, birth_day=2, birth_year=1985, email="admin1004@example.com",
+            password_hash=make_password("admin-password"),
+        )
+        calendar = SchoolCalendar.objects.create(school_year="2025-2026", current_term=1, is_active=True)
+        CalendarEvent.objects.create(
+            school_calendar=calendar, term=1, title="Opening Block", event_type="school_opening",
+            start_date=date(2025, 6, 2), end_date=date(2025, 6, 6),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar, term=3, title="End-of-Term Block", event_type="school_closing",
+            start_date=date(2026, 5, 18), end_date=date(2026, 5, 29),
+        )
+        self._login_admin(admin)
+
+        response = self.client.post(reverse("admin_school_calendar"), {"action": "start_next_school_year"}, HTTP_ACCEPT="application/json")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["school_year"], "2026-2027")
+        self.assertTrue(SchoolCalendar.objects.get(school_year="2026-2027").is_active)
+
+    def test_admin_can_save_multiple_suspension_dates(self):
+        admin = User.objects.create(
+            custom_id="ADM-1005", role="admin", first_name="Sam", last_name="Admin", middle_initial="", suffix="",
+            sex="male", birth_month=1, birth_day=2, birth_year=1985, email="admin1005@example.com",
+            password_hash=make_password("admin-password"),
+        )
+        calendar = SchoolCalendar.objects.create(school_year="2026-2027", current_term=1, is_active=True)
+        self._login_admin(admin)
+
+        response = self.client.post(reverse("admin_school_calendar"), {
+            "action": "save_suspensions", "calendar_id": calendar.id,
+            "suspension_dates": "2026-06-15,2026-06-16",
+        })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(CalendarEvent.objects.filter(school_calendar=calendar, title="Class Suspension").count(), 2)
+        suspension = CalendarEvent.objects.filter(school_calendar=calendar, title="Class Suspension").first()
+        response = self.client.post(reverse("admin_school_calendar"), {
+            "action": "delete_suspension", "calendar_id": calendar.id, "event_id": suspension.id,
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(CalendarEvent.objects.filter(school_calendar=calendar, title="Class Suspension").count(), 1)
+
     def _create_official_crla_calendar(self, *, pre_start, pre_end, post_start, post_end):
         calendar = SchoolCalendar.objects.create(
             school_year='2026-2027',
