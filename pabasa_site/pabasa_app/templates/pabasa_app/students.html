@@ -1781,7 +1781,7 @@ function toStudentClassList(student) {
 
 function formatStudentMetric(value, suffix = '') {
     if (value === null || value === undefined || value === '') {
-        return '0' + suffix;
+        return '';
     }
 
     const numeric = Number(value);
@@ -1789,7 +1789,7 @@ function formatStudentMetric(value, suffix = '') {
         return `${Math.round(numeric)}${suffix}`;
     }
 
-    return `0${suffix}`;
+    return '';
 }
 
 function formatStudentGradeLevel(student) {

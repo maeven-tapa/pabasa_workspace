@@ -9575,6 +9575,8 @@ class TeacherStudentsDirectoryTests(TestCase):
         data = response.json()
         self.assertEqual(data["students"][0]["level"], "Pending")
         self.assertFalse(data["students"][0]["has_completed_assessment"])
+        self.assertIsNone(data["students"][0]["accuracy"])
+        self.assertIsNone(data["students"][0]["wpm"])
 
     def test_crla_directory_uses_enrollment_and_source_material_for_all_term_phase_filters(self):
         system_owner = User.objects.create(
@@ -9618,8 +9620,104 @@ class TeacherStudentsDirectoryTests(TestCase):
                 if (term, phase) == (2, 'midtest'):
                     self.assertEqual([student["id"] for student in students], [self.student.id])
                     self.assertEqual(students[0]["assessment_id"], root.id)
+                    self.assertTrue(students[0]["has_completed_assessment"])
                 else:
-                    self.assertEqual(students, [])
+                    self.assertEqual([student["id"] for student in students], [self.student.id])
+                    self.assertEqual(students[0]["level"], "Pending")
+                    self.assertFalse(students[0]["has_completed_assessment"])
+                    self.assertIsNone(students[0]["assessment_id"])
+                    self.assertIsNone(students[0]["accuracy"])
+                    self.assertIsNone(students[0]["wpm"])
+
+    def test_crla_directory_keeps_students_without_matching_attempts_pending(self):
+        pending_student = User.objects.create(
+            custom_id="STD-DIR2", role="student", first_name="Pending", last_name="Student",
+            middle_initial="", suffix="", sex="male", birth_month=3, birth_day=3,
+            birth_year=2013, email="pending-student@example.com",
+            password_hash=make_password("student-password"),
+        )
+        self.section_a.add_student(pending_student)
+        system_owner = User.objects.create(
+            custom_id="ADM-CRLA-MIX", role="admin", first_name="CRLA", last_name="Owner",
+            middle_initial="", suffix="", sex="female", birth_month=1, birth_day=1,
+            birth_year=1990, email="crla-mixed-owner@example.com",
+            password_hash=make_password("system-password"),
+        )
+        root = Assessment.objects.create(
+            teacher=system_owner, title="Term 1 Pre-Test CRLA", code="CRLA-DIR-MIX",
+            assessment_type="paragraph", status="published", is_active=True,
+            is_system_owned=True, system_assessment_period="bosy",
+            system_assessment_phase="pretest",
+        )
+        material = Material.objects.create(
+            assessment=root, teacher=system_owner, title=root.title, code="CRLA-DIR-MIX-MAT",
+            item_type="paragraph", type="assessment", assessment_kind="crla",
+            source_type="personal", status="published", is_active=True,
+            is_official_reading=True, is_system_owned=True, official_term=1,
+            system_assessment_period="bosy", system_assessment_phase="pretest",
+        )
+        root.record_attempt(
+            self.student, status="completed", completed_at="2026-06-01T09:00:00+00:00",
+            total_score=82, accuracy=82,
+        )
+        Assessment.objects.filter(source_assessment=root, student=self.student).update(
+            material=material, official_term=1,
+        )
+
+        response = self.client.get(
+            reverse("get_teacher_students_api"),
+            {"term": 1, "assessment": "pretest"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        students = {student["id"]: student for student in response.json()["students"]}
+        self.assertEqual(set(students), {self.student.id, pending_student.id})
+        self.assertTrue(students[self.student.id]["has_completed_assessment"])
+        self.assertNotEqual(students[self.student.id]["level"], "Pending")
+        self.assertEqual(students[self.student.id]["accuracy"], 82)
+        self.assertEqual(students[pending_student.id]["level"], "Pending")
+        self.assertFalse(students[pending_student.id]["has_completed_assessment"])
+        self.assertIsNone(students[pending_student.id]["accuracy"])
+        self.assertIsNone(students[pending_student.id]["wpm"])
+
+    def test_crla_directory_preserves_persisted_zero_accuracy_and_wpm(self):
+        system_owner = User.objects.create(
+            custom_id="ADM-CRLA-ZERO", role="admin", first_name="CRLA", last_name="Owner",
+            middle_initial="", suffix="", sex="female", birth_month=1, birth_day=1,
+            birth_year=1990, email="crla-zero-owner@example.com",
+            password_hash=make_password("system-password"),
+        )
+        root = Assessment.objects.create(
+            teacher=system_owner, title="Term 1 Zero CRLA", code="CRLA-DIR-ZERO",
+            assessment_type="paragraph", status="published", is_active=True,
+            is_system_owned=True, system_assessment_period="bosy",
+            system_assessment_phase="pretest",
+        )
+        material = Material.objects.create(
+            assessment=root, teacher=system_owner, title=root.title, code="CRLA-DIR-ZERO-MAT",
+            item_type="paragraph", type="assessment", assessment_kind="crla",
+            source_type="personal", status="published", is_active=True,
+            is_official_reading=True, is_system_owned=True, official_term=1,
+            system_assessment_period="bosy", system_assessment_phase="pretest",
+        )
+        root.record_attempt(
+            self.student, status="completed", completed_at="2026-06-01T09:00:00+00:00",
+            total_score=0, accuracy=0, wpm=0,
+        )
+        Assessment.objects.filter(source_assessment=root, student=self.student).update(
+            material=material, official_term=1,
+        )
+
+        response = self.client.get(
+            reverse("get_teacher_students_api"),
+            {"term": 1, "assessment": "pretest"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        student = response.json()["students"][0]
+        self.assertTrue(student["has_completed_assessment"])
+        self.assertEqual(student["accuracy"], 0)
+        self.assertEqual(student["wpm"], 0)
 
     def test_official_crla_attempts_persist_calendar_term_independently_from_stage(self):
         calendar = SchoolCalendar.objects.create(

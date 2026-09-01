@@ -2020,8 +2020,6 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
             continue
 
         attempts = student_attempts.get(sid_key, [])
-        if crla_term and crla_phase and not attempts:
-            continue
 
         profile = {}
         if isinstance(user.tags, list):
@@ -2076,8 +2074,12 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
             'adapted_level_score': adapted_payload.get('adapted_level_score') if has_completed_assessment else None,
             'adapted_reading_level_disclaimer': disclaimer,
             'reading_level_disclaimer': disclaimer,
-            'accuracy': latest.get('accuracy') if latest.get('accuracy') is not None else profile.get('accuracy', '0'),
-            'wpm': latest.get('wpm') if latest.get('wpm') is not None else profile.get('wpm', '0'),
+            'accuracy': (
+                latest.get('accuracy') if latest.get('accuracy') is not None else profile.get('accuracy')
+            ) if has_completed_assessment else None,
+            'wpm': (
+                latest.get('wpm') if latest.get('wpm') is not None else profile.get('wpm')
+            ) if has_completed_assessment else None,
             'fluency_score': latest.get('fluency_score', profile.get('fluency_score')),
             'pronunciation_score': latest.get('pronunciation_score', profile.get('pronunciation_score')),
             'time_score': latest.get('time_score', profile.get('time_score')),
