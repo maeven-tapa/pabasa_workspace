@@ -966,6 +966,21 @@ def _section_has_student(section, user, active_only=True):
     """Delegate to Section model method"""
     return section.has_student(user, active_only=active_only)
 
+
+def _display_user_name(user):
+    """Build a display name for the custom PABASA User model."""
+    if not user:
+        return ''
+    parts = [
+        getattr(user, 'first_name', ''),
+        getattr(user, 'middle_initial', ''),
+        getattr(user, 'last_name', ''),
+        getattr(user, 'suffix', ''),
+    ]
+    name = ' '.join(str(part).strip() for part in parts if str(part or '').strip()).strip()
+    return name or getattr(user, 'custom_id', '') or getattr(user, 'email', '') or ''
+
+
 def _section_student_count(section):
     """Count current relational enrollment membership for this section/year."""
     return _current_section_enrollments(section).filter(student__is_archived=False).count()
@@ -1957,7 +1972,7 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
         student = enrollment.student
         sid_key = str(student.id)
         data = student_map.setdefault(sid_key, {
-            'id': student.id, 'name': student.get_full_name() or student.username,
+            'id': student.id, 'name': _display_user_name(student),
             'email': student.email or '', 'custom_id': student.custom_id or '',
             'classes': [], 'section_ids': [], 'joined_at': enrollment.joined_at.isoformat(),
             'joined_at_display': _format_joined_date(enrollment.joined_at.isoformat()),
