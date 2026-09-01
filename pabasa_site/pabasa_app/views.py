@@ -17,7 +17,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.urls import reverse
 from django.db import IntegrityError, transaction, OperationalError, connection
-from django.db.models import Count, Prefetch, Q
+from django.db.models import Count, F, Prefetch, Q
 from django.utils.text import slugify
 from functools import wraps
 from urllib.parse import quote, urlparse
@@ -968,7 +968,22 @@ def _section_has_student(section, user, active_only=True):
 
 def _section_student_count(section):
     """Count current relational enrollment membership for this section/year."""
-    return Enrollment.objects.filter(section=section, school_calendar=section.school_calendar, status='active', is_active=True, student__is_archived=False).count()
+    return _current_section_enrollments(section).filter(student__is_archived=False).count()
+
+
+def _current_section_enrollments(section, statuses=('active',)):
+    """Return the authoritative current-year enrollments for an active section."""
+    if not section or not section.is_active or not section.school_calendar_id:
+        return Enrollment.objects.none()
+    return Enrollment.objects.filter(
+        section=section,
+        school_calendar_id=section.school_calendar_id,
+        school_calendar__is_active=True,
+        status__in=statuses,
+        is_active=True,
+        student__role='student',
+        student__is_archived=False,
+    )
 
 def _student_section_entry(user, joined_at=None, is_active=True):
     """DEPRECATED - this method is now on Section model"""
@@ -1929,11 +1944,11 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
 
     # Enrollment is the authoritative current roster.  Section.students remains
     # readable above only for compatibility with legacy display metadata.
-    section_ids = [item.id for item in sections]
-    calendar_ids = [item.school_calendar_id for item in sections]
     authoritative = Enrollment.objects.filter(
-        section_id__in=section_ids,
-        school_calendar_id__in=calendar_ids,
+        section__in=sections,
+        section__is_active=True,
+        section__school_calendar__is_active=True,
+        school_calendar=F('section__school_calendar'),
         status='active', is_active=True,
         student__role='student', student__is_archived=False,
     ).select_related('student', 'section')
@@ -2525,13 +2540,7 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
         )
 
 def _section_active_students(section):
-    return User.objects.filter(
-        id__in=Enrollment.objects.filter(
-            section=section, school_calendar=section.school_calendar,
-            status='active', is_active=True,
-        ).values('student_id'),
-        role='student', is_archived=False,
-    )
+    return User.objects.filter(id__in=_current_section_enrollments(section).values('student_id'))
 
 
 def _normalized_student_entry_id(entry):
@@ -13301,12 +13310,10 @@ def get_assist_students(request):
     students = []
     seen = set()
     for section in course.sections.filter(is_active=True).order_by('class_name'):
-        for entry in section.get_enrolled_students(active_only=True):
-            student_id = entry.get('student_id')
-            if not student_id or student_id in seen:
-                continue
-            student_user = User.objects.filter(id=student_id, role='student', is_archived=False).first()
-            if not student_user:
+        for enrollment in _current_section_enrollments(section).select_related('student'):
+            student_user = enrollment.student
+            student_id = student_user.id
+            if student_id in seen:
                 continue
             seen.add(student_id)
             students.append({
@@ -13534,14 +13541,12 @@ def start_live_assessment(request):
     available_student_ids = []
     seen_student_ids = set()
     for section in sections:
-        for entry in section.get_enrolled_students(active_only=True):
-            student_id = entry.get('student_id')
-            if not student_id or str(student_id) in seen_student_ids:
+        for enrollment in _current_section_enrollments(section):
+            student_id = enrollment.student_id
+            if str(student_id) in seen_student_ids:
                 continue
-            student_user = User.objects.filter(id=student_id, role='student', is_archived=False).first()
-            if student_user:
-                seen_student_ids.add(str(student_id))
-                available_student_ids.append(student_user.id)
+            seen_student_ids.add(str(student_id))
+            available_student_ids.append(student_id)
 
     if not available_student_ids:
         return JsonResponse({'success': False, 'error': 'No active students found for this course'}, status=400)
@@ -15350,8 +15355,8 @@ def class_management_view(request):
     roster_students, _, _ = _teacher_student_roster_payload(teacher_user, section=section)
     students_table = []
     finalization_open = _teacher_year_end_finalization_open(section)
-    section_enrollments = {e.student_id: e for e in Enrollment.objects.filter(
-        section=section, school_calendar=section.school_calendar, status__in=('active', 'completed'),
+    section_enrollments = {e.student_id: e for e in _current_section_enrollments(
+        section, statuses=('active', 'completed')
     ).select_related('student')}
     for student in roster_students:
         enrollment = section_enrollments.get(student.get('id'))
