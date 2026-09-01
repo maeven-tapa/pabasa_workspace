@@ -201,6 +201,10 @@ document.addEventListener('DOMContentLoaded', function () {
     name.textContent = button.dataset.studentName || '';
     bootstrap.Modal.getOrCreateInstance(modal).show();
   }));
+  const assignmentModal = document.getElementById('assignTeacherModal');
+  if (assignmentModal && new URLSearchParams(window.location.search).has('teacher_action')) {
+    bootstrap.Modal.getOrCreateInstance(assignmentModal).show();
+  }
 });
 </script>
 {% endblock %}
