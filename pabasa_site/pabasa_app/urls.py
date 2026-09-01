@@ -80,6 +80,7 @@ urlpatterns = [
     path('dashboard/assessment/activity/syllable-blending/', views.syllable_blending_page, name='syllable_blending_page'),
     path('dashboard/assessment/activity/clap-count-syllables/', views.clap_count_syllables_page, name='clap_count_syllables_page'),
     path('dashboard/assessment/activity/sound-detective/', views.sound_detective_page, name='sound_detective_page'),
+    path('dashboard/assessment/sound-detective/progress/', views.sound_detective_progress, name='sound_detective_progress'),
     path('dashboard/assessment/story-reading/', views.story_reading_page, name='story_reading_page'),
     path('api/story-reading/complete/', views.story_reading_complete, name='story_reading_complete'),
     path('dashboard/assessment/reading_ui/sentence/', views.reading_sentence_page, name='reading_sentence_page'),

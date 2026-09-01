@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
+<link rel="stylesheet" href="{% static 'pabasa_app/sound_detective.css' %}?v=20260831-7">
 <style>
     :root {
         --dash-primary: #1f6f8b;
@@ -8857,6 +8858,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 {{ clap_count_word_bank|json_script:"clap-count-word-bank" }}
 {{ sound_detective_catalog|json_script:"sound-detective-catalog" }}
 {{ picture_word_catalog|json_script:"picture-word-catalog" }}
+<script src="{% static 'pabasa_app/js/sound_detective.js' %}?v=20260901-2"></script>
 <script>
     // Get the current teacher's name from the page title or username
     let CURRENT_TEACHER_NAME = "Teacher";
@@ -16167,10 +16169,17 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const selectedSet = getSoundDetectiveSet(language, config.soundSet);
             const selected = (selectedSet?.items || []).filter(item => (config.selectedWordIds || []).includes(item.id));
             if (!selected.length) { templatePreviewPanel.innerHTML='<div class="template-preview-empty"><i class="bi bi-search"></i><span>Choose a sound set and picture words to preview the activity.</span></div>'; return; }
-            config.previewIndex=Math.min(Number(config.previewIndex)||0,selected.length-1);const item=selected[config.previewIndex],choices=['Beginning','Middle','End'];
-            templatePreviewPanel.innerHTML=`<div class="p-3 p-md-4 text-center bg-white rounded-4 border"><div class="d-flex justify-content-between mb-2"><strong class="text-primary">🔎 ${escapeHtml(templateActivityTitle?.value||'Sound Detective')}</strong><span>${config.previewIndex+1} of ${selected.length}</span></div><div class="progress mb-3" style="height:8px"><div class="progress-bar bg-success" style="width:${config.previewIndex/selected.length*100}%"></div></div><h5>Listen for: <strong>${escapeHtml(item.target_sound)}</strong> <button type="button" class="btn btn-sm btn-outline-primary rounded-pill" data-sd-listen>🔊 Listen</button></h5><img src="${escapeAttr(item.image_url)}" alt="${escapeAttr(item.word)}" style="width:190px;height:170px;object-fit:contain"><h2 class="fw-bold text-uppercase">${escapeHtml(item.word)}</h2><p>Where do you hear the ${escapeHtml(item.target_sound)} sound?</p><div class="d-flex flex-wrap justify-content-center gap-2">${choices.map(choice=>`<button type="button" class="btn btn-outline-primary fw-bold" data-sd-answer="${choice}">${choice}</button>`).join('')}</div><div class="fw-bold mt-3" data-sd-feedback role="status"></div><button type="button" class="btn btn-primary mt-2 d-none" data-sd-next>${config.previewIndex+1===selected.length?'Start over':'Next word'}</button></div>`;
-            templatePreviewPanel.querySelector('[data-sd-listen]')?.addEventListener('click',()=>{if(!('speechSynthesis'in window))return;window.speechSynthesis.cancel();window.speechSynthesis.speak(new SpeechSynthesisUtterance(item.word))});
-            templatePreviewPanel.querySelectorAll('[data-sd-answer]').forEach(button=>button.addEventListener('click',()=>{const correct=button.dataset.sdAnswer===item.position,feedback=templatePreviewPanel.querySelector('[data-sd-feedback]');button.classList.remove('btn-outline-primary');button.classList.add(correct?'btn-success':'btn-danger');feedback.textContent=correct?'Correct! You found it!':(config.allowRetry?'Try again — listen carefully.':`The sound is at the ${item.position.toLowerCase()}.`);if(correct||!config.allowRetry){templatePreviewPanel.querySelectorAll('[data-sd-answer]').forEach(btn=>btn.disabled=true);const next=templatePreviewPanel.querySelector('[data-sd-next]');next.classList.remove('d-none');next.onclick=()=>{config.previewIndex=(config.previewIndex+1)%selected.length;renderSoundDetectivePreview()}}}));
+            templatePreviewPanel.innerHTML = '<div data-sound-detective-preview></div>';
+            window.SoundDetective.mount(templatePreviewPanel.querySelector('[data-sound-detective-preview]'), {
+                title: templateActivityTitle?.value || 'Sound Detective',
+                preview: true,
+                language,
+                target_sound: selectedSet?.sound || '',
+                items: selected,
+                background_url: "{% static 'pabasa_app/images/sound_detective/sound_detective_bg.jpg' %}",
+                detective_url: "{% static 'pabasa_app/images/sound_detective/detective2.png' %}",
+                magnifier_url: "{% static 'pabasa_app/images/sound_detective/magnifying.png' %}"
+            });
         }
 
         function renderTemplatePreview() {
@@ -16963,7 +16972,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         let message = text;
                         try {
                             const parsed = JSON.parse(text);
-                            message = parsed.error || parsed.message || JSON.stringify(parsed.errors || parsed);
+                            message = parsed.error || parsed.message || parsed.errors?.content || Object.values(parsed.errors || {})[0] || 'Unable to save the activity.';
                         } catch (e) {}
                         throw new Error(message || `Save failed (${response.status})`);
                     }

@@ -1132,8 +1132,8 @@
                 const pictureWordMatchingUrl = "{% url 'picture_word_matching_page' %}";
                 const syllableBlendingUrl = "{% url 'syllable_blending_page' %}";
                 const clapCountSyllablesUrl = "{% url 'clap_count_syllables_page' %}";
-                const soundDetectiveUrl = "{% url 'sound_detective_page' %}";
                 const letterSoundMatchingUrl = "{% url 'letter_sound_matching_page' %}";
+                const soundDetectiveUrl = "{% url 'sound_detective_page' %}";
                 const storyReadingUrl = "{% url 'story_reading_page' %}";
                 const phraseReadingUrl = "{% url 'phrase_reading_page' %}";
                 const sentenceBotUrl = "{% url 'sentence_bot_page' %}";
@@ -1200,7 +1200,26 @@
                     const officialLaunchPayloadJson = JSON.stringify(officialLaunchPayload);
                     const isLocked = !Boolean(m.student_access);
                     const sectionId = m.section_id || classData.id || classData.section_id || '';
-                    const generatedStartUrl = isLocked ? '#' : `${urlMap[m.category || m.item_type || 'word']}?test=${encodeURIComponent(m.title)}&section_id=${encodeURIComponent(sectionId)}&id=${encodeURIComponent(m.id)}${officialAssessmentId ? `&official_assessment_id=${encodeURIComponent(officialAssessmentId)}` : ''}${officialLaunchPayloadJson ? `&official_assessment_data=${encodeURIComponent(officialLaunchPayloadJson)}` : ''}&content=${encodeURIComponent(m.content || '')}&item_type=${encodeURIComponent(m.item_type || m.category || 'word')}&language=${encodeURIComponent(m.language || '')}&crla_fresh=1`;
+                    const officialMaterialSourceType = String(m.source_type || m.material_source || '').trim().toLowerCase();
+                    const officialTemplateActivityName = officialMaterialSourceType === 'template'
+                        ? String(
+                            m.template_title
+                            || m.template_type
+                            || m.content_json?.template_title
+                            || m.content_json?.template_type
+                            || m.title
+                            || ''
+                        ).trim()
+                        : '';
+                    const isOfficialSoundDetective = [officialTemplateActivityName, m.content_json?.template_title,
+                        m.content_json?.template_lesson, m.content_json?.activity_type, m.title]
+                        .some(value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === 'sound_detective');
+                    const officialSoundDetectiveMaterialId = String(m.id ?? '').startsWith('material-') ? String(m.id) : `material-${m.id}`;
+                    const generatedStartUrl = isLocked ? '#' : (
+                        isOfficialSoundDetective
+                            ? `${soundDetectiveUrl}?id=${encodeURIComponent(officialSoundDetectiveMaterialId)}&section_id=${encodeURIComponent(sectionId)}`
+                            : `${urlMap[m.category || m.item_type || 'word']}?test=${encodeURIComponent(m.title)}&section_id=${encodeURIComponent(sectionId)}&id=${encodeURIComponent(m.id)}${officialAssessmentId ? `&official_assessment_id=${encodeURIComponent(officialAssessmentId)}` : ''}${officialLaunchPayloadJson ? `&official_assessment_data=${encodeURIComponent(officialLaunchPayloadJson)}` : ''}&content=${encodeURIComponent(m.content || '')}&item_type=${encodeURIComponent(m.item_type || m.category || 'word')}&language=${encodeURIComponent(m.language || '')}&crla_fresh=1`
+                    );
                     return `
                         <div class="assessment-card-shell ${isLocked ? 'is-locked' : ''}" data-official-assessment="true">
                             <a href="${generatedStartUrl}" class="assessment-type-link type-${m.category || m.item_type || 'word'} ${isLocked ? 'is-disabled is-locked' : ''}" data-section-id="${escapeHtml(classData.id || classData.section_id || '')}" data-class-code="${escapeHtml(classData.code)}" ${isLocked ? 'tabindex="-1" aria-disabled="true" onclick="return false;"' : ''}>
@@ -1281,6 +1300,8 @@
                             const isPictureWordMatching = [templateActivityName, m.content_json?.template_title,
                                 m.content_json?.template_activity_name, m.content_json?.activity_type, m.title]
                                 .some(value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === 'picture_word_matching');
+                            const isSoundDetective = [templateActivityName, m.content_json?.template_title, m.content_json?.template_lesson, m.content_json?.activity_type]
+                                .some(value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === 'sound_detective');
                             const isLetterSoundMatching = [templateActivityName, m.content_json?.template_title,
                                 m.content_json?.template_activity_name, m.content_json?.activity_type, m.title]
                                 .some(value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === 'letter_sound_matching');
@@ -1289,8 +1310,7 @@
                                 .some(value => ['syllable_blending', 'blend_the_syllables'].includes(String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')));
                             const isClapCountSyllables = [templateActivityName, m.content_json?.template_title, m.content_json?.activity_type]
                                 .some(value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === 'clap_count_syllables');
-                            const isSoundDetective = [templateActivityName, m.content_json?.template_title, m.content_json?.template_lesson, m.content_json?.activity_type]
-                                .some(value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === 'sound_detective');
+                            const soundDetectiveMaterialId = String(m.id ?? '').startsWith('material-') ? String(m.id) : `material-${m.id}`;
                             const isStoryReading = [m.template_title, m.template_type, m.content_json?.template_title,
                                 m.content_json?.template_lesson, m.content_json?.template_type, m.content_json?.activity_type]
                                 .some(value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === 'story_reading');
@@ -1313,7 +1333,7 @@
                                 : isClapCountSyllables
                                 ? `${clapCountSyllablesUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
                                 : isSoundDetective
-                                ? `${soundDetectiveUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
+                                ? `${soundDetectiveUrl}?id=${encodeURIComponent(soundDetectiveMaterialId)}&section_id=${encodeURIComponent(sectionId)}`
                                 : isLetterSoundMatching
                                 ? `${letterSoundMatchingUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
                                 : isSyllableBlending

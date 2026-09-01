@@ -9416,6 +9416,24 @@ def _is_sound_detective_material(material):
     return 'sound_detective' in normalized
 
 
+def _sound_detective_launch_url(material_or_id, section_id=None):
+    """Build the one canonical learner launch URL for Sound Detective."""
+    raw_id = getattr(material_or_id, 'id', material_or_id)
+    _, material_id = _parse_prefixed_id(raw_id)
+    if not material_id:
+        return ''
+    if not section_id and hasattr(material_or_id, 'section_id'):
+        section_id = material_or_id.section_id
+    if not section_id and hasattr(material_or_id, 'assigned_sections'):
+        section_id = material_or_id.assigned_sections.values_list('id', flat=True).first()
+    if not section_id:
+        return ''
+    return (
+        f"{reverse('sound_detective_page')}?id=material-{material_id}"
+        f"&section_id={section_id}"
+    )
+
+
 def _is_letter_sound_matching_material(material):
     """Identify Letter & Sound Matching activities."""
     content = getattr(material, 'content_json', None) if material else None
@@ -9675,6 +9693,7 @@ def clap_count_syllables_page(request):
     return render(request, 'pabasa_app/clap_count_syllables_page.html', context)
 
 
+@login_required(role='student')
 @xframe_options_sameorigin
 def sound_detective_page(request):
     access_response = _enforce_student_access_for_request(request)
@@ -9684,15 +9703,120 @@ def sound_detective_page(request):
     material = Material.objects.filter(pk=material_id).first() if material_id else None
     if not material or not _is_sound_detective_material(material):
         return redirect('assessment')
+    access_response = _enforce_student_access_for_request(request, material=material)
+    if access_response:
+        return access_response
     try:
         configuration = validate_sound_detective(dict(material.content_json or {}))
     except ValueError as exc:
         return HttpResponse(str(exc), status=400, content_type='text/plain; charset=utf-8')
     payload = dict(configuration)
-    payload.update({'id': material.id, 'title': material.title})
+    progress_key = f"sound_detective_progress:{material.id}:{request.session.get('user_id') or 'anonymous'}"
+    saved_progress = request.session.get(progress_key)
+    if not isinstance(saved_progress, dict):
+        saved_progress = {}
+    total_items = len(configuration['items'])
+    student_user = User.objects.filter(id=request.session.get('user_id'), role='student').first()
+    completed_result = material.assessment_results.filter(
+        student=student_user, attempt_status='completed',
+    ).order_by('-completed_at', '-created_at', '-id').first() if student_user else None
+    saved_completed = completed_result is not None
+    completed_items = total_items if saved_completed else max(0, min(int(saved_progress.get('completed_items') or 0), total_items))
+    current_index = max(0, min(int(saved_progress.get('current_index') or 0), max(0, total_items - 1)))
+    activity_completed = saved_completed or (bool(saved_progress.get('activity_completed')) and completed_items >= total_items and total_items > 0)
+    saved_correct = int(getattr(completed_result, 'correct_items', 0) or 0) if completed_result else int(saved_progress.get('correct_items') or 0)
+    payload.update({
+        'id': material.id, 'title': material.title,
+        'progress': {
+            'current_index': total_items if activity_completed else current_index,
+            'completed_items': completed_items,
+            'activity_completed': activity_completed,
+            'correct_items': max(0, min(saved_correct, total_items)),
+        },
+        'completion': {
+            'completed': saved_completed,
+            'correct_items': max(0, min(saved_correct, total_items)),
+            'total_items': int(getattr(completed_result, 'items_completed', 0) or total_items) if completed_result else total_items,
+        },
+        'material_id': f'material-{material.id}',
+        'section_id': request.GET.get('section_id') or '',
+        'progress_url': f"{reverse('sound_detective_progress')}?id=material-{material.id}&section_id={request.GET.get('section_id') or ''}",
+    })
     context = _dashboard_context(request)
-    context['sound_detective_material_json'] = json.dumps(payload, default=str, separators=(',', ':'))
+    # Pass a mapping to json_script. Passing json.dumps(payload) here double-encodes
+    # the data and makes the browser see a string with no items.
+    context['sound_detective_material_json'] = payload
     return render(request, 'pabasa_app/sound_detective_page.html', context)
+
+
+@login_required(role='student')
+@csrf_protect
+@require_http_methods(["POST"])
+def sound_detective_progress(request):
+    _, material_id = _parse_prefixed_id(request.GET.get('id') or request.GET.get('material_id'))
+    material = Material.objects.filter(pk=material_id).first() if material_id else None
+    if not material or not _is_sound_detective_material(material):
+        return JsonResponse({'success': False, 'error': 'Sound Detective activity not found.'}, status=404)
+    access_response = _enforce_student_access_for_request(request, material=material)
+    if access_response:
+        return access_response
+    try:
+        configuration = validate_sound_detective(dict(material.content_json or {}))
+        data = json.loads(request.body or '{}')
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    total_items = len(configuration['items'])
+    progress_key = f"sound_detective_progress:{material.id}:{request.session.get('user_id') or 'anonymous'}"
+    student_user = User.objects.filter(id=request.session.get('user_id'), role='student').first()
+    completed_result = material.assessment_results.filter(
+        student=student_user, attempt_status='completed',
+    ).order_by('-completed_at', '-created_at', '-id').first() if student_user else None
+    if completed_result:
+        completed_progress = {
+            'current_index': total_items,
+            'completed_items': total_items,
+            'activity_completed': True,
+            'correct_items': max(0, min(int(getattr(completed_result, 'correct_items', 0) or 0), total_items)),
+        }
+        request.session[progress_key] = completed_progress
+        request.session.modified = True
+        return JsonResponse({'success': True, 'progress': completed_progress, 'already_completed': True})
+    previous = request.session.get(progress_key)
+    if not isinstance(previous, dict):
+        previous = {'current_index': 0, 'completed_items': 0, 'activity_completed': False}
+    previous_completed = max(0, min(int(previous.get('completed_items') or 0), total_items))
+    previous_index = max(0, min(int(previous.get('current_index') or 0), total_items))
+    completed_items = max(0, min(int(data.get('completed_items') or 0), total_items))
+    requested_index = max(0, int(data.get('current_index') or 0))
+    if completed_items > previous_completed + 1 or requested_index > previous_index + 1:
+        return JsonResponse({'success': False, 'error': 'Sound Detective progress must advance one item at a time.'}, status=409)
+    activity_completed = bool(data.get('activity_completed')) and completed_items >= total_items and requested_index >= total_items and total_items > 0
+    current_index = total_items if activity_completed else min(requested_index, max(0, total_items - 1))
+    correct_items = completed_items
+    progress = {
+        'current_index': current_index,
+        'completed_items': completed_items,
+        'correct_items': correct_items,
+        'activity_completed': activity_completed,
+    }
+    request.session[progress_key] = progress
+    request.session.modified = True
+    if activity_completed:
+        if student_user:
+            with transaction.atomic():
+                material = Material.objects.select_for_update().get(pk=material.pk)
+                if not material.has_student_completed(student_user):
+                    material.record_assessment_result(
+                        student_user,
+                        status='completed',
+                        attempt_status='completed',
+                        correct_items=correct_items,
+                        items_completed=total_items,
+                        total_score=correct_items,
+                        accuracy=round((correct_items / total_items) * 100, 2),
+                        passed=correct_items == total_items,
+                    )
+    return JsonResponse({'success': True, 'progress': progress})
 
 
 @xframe_options_sameorigin
@@ -14556,7 +14680,7 @@ def _section_course_payload(section):
     materials = []
     for material in materials_qs:
         content_json = material.content_json if isinstance(material.content_json, dict) else {}
-        materials.append({
+        material_payload = {
             'id': material.id, 'raw_id': material.id,
             'action_id': f'material-{material.id}', 'record_kind': 'material',
             'assessment_id': material.assessment_id,
@@ -14583,7 +14707,8 @@ def _section_course_payload(section):
             'selected_set_name': content_json.get('activity_name') or '',
             'student_access': bool(material.student_access),
             'assessment_kind': _assessment_kind_value(material),
-        })
+        }
+        materials.append(material_payload)
 
     practices = [{
         'id': f'practice-{practice.id}', 'raw_id': practice.id,
@@ -17970,7 +18095,7 @@ def _material_response_payload(material, tokens=None, section=None, is_shared_ma
     activity_id = str(content_json.get('activity_id') or '').strip() if isinstance(content_json, dict) else ''
     primary_section = section or getattr(material, 'section', None)
 
-    return {
+    payload = {
         'id': f"material-{material.id}",
         'raw_id': material.id,
         'class_id': getattr(primary_section, 'id', None),
@@ -18008,6 +18133,7 @@ def _material_response_payload(material, tokens=None, section=None, is_shared_ma
         'student_access': bool(getattr(material, 'student_access', False)),
         'assessment_kind': _assessment_kind_value(material),
     }
+    return payload
 
 
 def _material_language_from_subject(subject):

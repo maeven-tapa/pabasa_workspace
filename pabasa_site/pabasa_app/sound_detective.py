@@ -32,6 +32,11 @@ WORDS = {
     ],
 }
 
+# The Filipino /t/ set reuses the existing duck illustration stored with Set 5.
+IMAGE_OVERRIDES = {
+    ("Filipino", 3, "itik"): "pabasa_app/images/sound_detective/filipino/Set_5/itik.png",
+}
+
 
 def catalog():
     result = {}
@@ -44,11 +49,15 @@ def catalog():
             for item_index, (asset_word, position) in enumerate(zip(WORDS[language][set_index - 1], positions), 1):
                 display_word = "sun" if asset_word == "sun (2)" else asset_word
                 filename = f"{asset_word}.png"
-                relative = f"pabasa_app/images/sound_detective/{folder}/Set_{set_index}/{filename}"
+                relative = IMAGE_OVERRIDES.get(
+                    (language, set_index, asset_word),
+                    f"pabasa_app/images/sound_detective/{folder}/Set_{set_index}/{filename}",
+                )
                 items.append({
                     "id": f"{folder[:2]}_set_{set_index}_{item_index}",
                     "word": display_word,
                     "target_sound": f"/{sound}/",
+                    "audio_url": f"/static/pabasa_app/images/sound_detective/audio/{sound}.mp3",
                     "position": position,
                     "image": relative,
                     "image_url": f"/static/{relative}",

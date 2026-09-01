@@ -1,12 +1,174 @@
-{% extends 'pabasa_app/base_dashboard.html' %}
 {% load static %}
-{% block content %}
-<style>
-.sd-wrap{max-width:780px;margin:1.5rem auto;padding:1rem}.sd-card{background:#fff;border:1px solid #dbeafe;border-radius:24px;box-shadow:0 18px 45px rgba(15,23,42,.1);padding:clamp(1rem,4vw,2.5rem);text-align:center}.sd-kicker{color:#2563eb;font-weight:800}.sd-progress{height:10px;background:#e2e8f0;border-radius:999px;overflow:hidden}.sd-progress>span{display:block;height:100%;background:#22c55e;transition:width .25s}.sd-image{width:min(260px,70vw);height:230px;object-fit:contain;margin:1rem auto}.sd-word{font-size:clamp(2rem,7vw,3.5rem);font-weight:900;letter-spacing:.06em}.sd-options{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-top:1.5rem}.sd-option{border:2px solid #bfdbfe;background:#eff6ff;border-radius:16px;padding:1rem .5rem;font-weight:800;color:#1e3a8a}.sd-option:hover,.sd-option:focus{border-color:#2563eb;transform:translateY(-2px)}.sd-option.correct{background:#dcfce7;border-color:#22c55e;color:#166534}.sd-option.wrong{background:#fee2e2;border-color:#ef4444;color:#991b1b}.sd-feedback{min-height:2rem;margin-top:1rem;font-weight:800}.sd-next{margin-top:.5rem;border:0;border-radius:14px;background:#2563eb;color:white;padding:.8rem 1.4rem;font-weight:800}.sd-complete{padding:3rem 1rem}.sd-listen{border:0;background:#dbeafe;color:#1d4ed8;border-radius:999px;padding:.5rem .9rem;font-weight:800}@media(max-width:540px){.sd-options{grid-template-columns:1fr}.sd-image{height:190px}}
-</style>
-<main class="sd-wrap"><section class="sd-card" id="sdGame" aria-live="polite"></section></main>
-{{ sound_detective_material_json|json_script:"sound-detective-data" }}
-<script>
-(()=>{const data=JSON.parse(document.getElementById('sound-detective-data').textContent),root=document.getElementById('sdGame');let items=[...(data.items||[])];if(data.randomize_questions)items.sort(()=>Math.random()-.5);items=items.slice(0,data.number_of_questions||items.length);let index=0,correct=0,locked=false;const labels=['Beginning','Middle','End'];function speak(){if(!('speechSynthesis'in window))return;window.speechSynthesis.cancel();window.speechSynthesis.speak(new SpeechSynthesisUtterance(items[index].word))}function render(){if(index>=items.length){root.innerHTML=`<div class="sd-complete"><div style="font-size:4rem">🏅</div><h1>Great detective work!</h1><p>You found ${correct} of ${items.length} sounds.</p><a class="sd-next d-inline-block text-decoration-none" href="{% url 'assessment' %}">Back to activities</a></div>`;return}locked=false;const item=items[index],choices=[...labels];if(data.randomize_answer_choices)choices.sort(()=>Math.random()-.5);root.innerHTML=`<div class="d-flex justify-content-between gap-3 mb-2"><span class="sd-kicker">🔎 ${data.title||'Sound Detective'}</span><span>${index+1} of ${items.length}</span></div><div class="sd-progress"><span style="width:${index/items.length*100}%"></span></div><h2 class="mt-4">Listen for: <strong>${item.target_sound}</strong> <button class="sd-listen" type="button" aria-label="Hear ${item.word}">🔊 Listen</button></h2><img class="sd-image" src="${item.image_url}" alt="${item.word}"><div class="sd-word">${item.word.toUpperCase()}</div><p class="mt-2 mb-0">Where do you hear the ${item.target_sound} sound?</p><div class="sd-options">${choices.map(choice=>`<button class="sd-option" type="button" data-choice="${choice}">${choice}</button>`).join('')}</div><div class="sd-feedback" role="status"></div>`;root.querySelector('.sd-listen').onclick=speak;root.querySelectorAll('.sd-option').forEach(button=>button.onclick=()=>answer(button,item))}function answer(button,item){if(locked)return;const ok=button.dataset.choice===item.position,feedback=root.querySelector('.sd-feedback');button.classList.add(ok?'correct':'wrong');if(ok){locked=true;correct++;feedback.textContent='Correct! You found it!';root.querySelectorAll('.sd-option').forEach(b=>b.disabled=true);const next=document.createElement('button');next.className='sd-next';next.textContent=index+1===items.length?'Finish':'Next word';next.onclick=()=>{index++;render()};feedback.after(next)}else{feedback.textContent=data.allow_retry?'Try again — listen carefully.':`The sound is at the ${item.position.toLowerCase()}.`;if(!data.allow_retry){locked=true;root.querySelector(`[data-choice="${item.position}"]`)?.classList.add('correct');setTimeout(()=>{index++;render()},1100)}}}render()})();
-</script>
-{% endblock %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sound Detective | PABASA</title>
+    <link rel="icon" href="{% static 'pabasa_app/images/pabasalogo.png' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{% static 'pabasa_app/sound_detective.css' %}?v=20260831-7">
+    <style>
+        :root {
+            --sd-activity-bg: #f8f1dd;
+            --sd-panel-shadow: rgba(26, 17, 14, 0.2);
+        }
+
+        * { box-sizing: border-box; }
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            max-width: 100vw;
+            max-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        body {
+            background:
+                linear-gradient(180deg, rgba(19, 15, 13, 0.12), rgba(19, 15, 13, 0.08)),
+                url("{% static 'pabasa_app/images/sound_detective/sound_detective_bg.jpg' %}") center/cover no-repeat fixed;
+            color: #302a32;
+            font-family: "Nunito", "Segoe UI", sans-serif;
+        }
+
+        .sound-detective-activity {
+            width: 100vw;
+            height: 100vh;
+            max-width: 100vw;
+            max-height: 100vh;
+            padding: 14px 16px 18px;
+            background: transparent;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sound-detective-nav {
+            width: min(1240px, 100%);
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            flex: 0 0 auto;
+        }
+
+        .sound-detective-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 42px;
+            padding: 9px 14px;
+            border: 1px solid rgba(84, 63, 52, 0.22);
+            border-radius: 14px;
+            background: rgba(255, 250, 233, 0.82);
+            color: #2f2d25;
+            text-decoration: none;
+            font-size: 0.88rem;
+            font-weight: 900;
+            letter-spacing: 0.02em;
+            box-shadow: 0 10px 18px rgba(37, 28, 22, 0.09);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        }
+
+        .sound-detective-back:hover,
+        .sound-detective-back:focus-visible {
+            background: rgba(255, 255, 255, 0.92);
+            transform: translateX(-2px);
+            box-shadow: 0 12px 22px rgba(37, 28, 22, 0.12);
+            text-decoration: none;
+        }
+
+        #soundDetectiveGame {
+            width: min(1240px, 100%);
+            height: 100%;
+            max-width: 100vw;
+            max-height: 100vh;
+            margin: 0 auto;
+            display: block;
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .sound-detective-stage {
+            width: 100%;
+            height: 100%;
+            max-width: 100vw;
+            max-height: 100vh;
+            min-height: 0;
+            padding: 0;
+            border-radius: 0;
+            border: 0;
+            background: transparent !important;
+            background-image: none !important;
+            box-shadow: none;
+            overflow: hidden;
+        }
+
+        .sd-game {
+            width: min(1200px, calc(100% - 10px));
+            height: 100%;
+            max-height: 100vh;
+            min-height: 0;
+            margin: 0 auto;
+            border-radius: 30px;
+            box-shadow: inset 0 1px rgba(255,255,255,0.7);
+        }
+
+        @media (max-width: 850px) {
+            .sound-detective-activity {
+                padding: 10px 10px 12px;
+            }
+            #soundDetectiveGame,
+            .sound-detective-stage {
+                min-height: 0;
+                height: 100%;
+            }
+            .sd-game {
+                width: min(100%, calc(100% - 4px));
+                min-height: 0;
+                height: 100%;
+                border-radius: 20px;
+            }
+        }
+
+        @media (max-width: 570px) {
+            .sound-detective-nav {
+                margin-bottom: 8px;
+            }
+            .sound-detective-back {
+                min-height: 38px;
+                font-size: 0.8rem;
+            }
+            .sd-game {
+                width: 100%;
+                min-height: 0;
+                height: 100%;
+                border-radius: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sound-detective-activity">
+        <nav class="sound-detective-nav activity-nav" aria-label="Activity navigation">
+            <a class="sound-detective-back activity-back" href="{% url 'assessment' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Assessment</a>
+        </nav>
+        <main id="soundDetectiveGame" class="activity sound-detective-stage" aria-live="polite"></main>
+    </div>
+
+    {{ sound_detective_material_json|json_script:"sound-detective-data" }}
+    <script src="{% static 'pabasa_app/js/sound_detective.js' %}?v=20260901-2"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            let data = JSON.parse(document.getElementById('sound-detective-data').textContent);
+            if (typeof data === 'string') data = JSON.parse(data);
+            data.detective_url = "{% static 'pabasa_app/images/sound_detective/detective2.png' %}";
+            data.magnifier_url = "{% static 'pabasa_app/images/sound_detective/magnifying.png' %}";
+            data.back_url = "{% url 'assessment' %}";
+            data.student_name = "{{ first_name|default:'' }} {{ last_name|default:'' }}".trim() || "Young Detective";
+            window.SoundDetective.mount(document.getElementById('soundDetectiveGame'), data);
+        });
+    </script>
+</body>
+</html>
