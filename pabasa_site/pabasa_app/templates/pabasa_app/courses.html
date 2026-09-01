@@ -10659,6 +10659,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     assistQueueState.pendingIndex = -1;
                     assistQueueState.students = [];
                     assistQueueState.courseId = null;
+                    assistQueueState.sectionId = null;
                     assistQueueState.materialId = null;
                     assistQueueState.courseTitle = '';
                     assistQueueState.materialTitle = '';
@@ -10708,6 +10709,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
                     body: JSON.stringify({
                         course_id: assistQueueState.courseId,
+                        section_id: assistQueueState.sectionId,
                         material_id: assistQueueState.materialId,
                         student_id: student.id
                     })
@@ -10743,8 +10745,19 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 list.innerHTML = '<div class="text-center text-muted py-3">Loading students...</div>';
                 const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
                 modal.show();
-                const materialId = String(material.id || material.raw_id || '').replace(/^(material|assessment)-/, '');
-                const res = await fetch(`/dashboard/teacher/assist/students/?course_id=${encodeURIComponent(activeCourse.id)}&material_id=${encodeURIComponent(materialId)}`, { credentials: 'same-origin' });
+                const materialId = Number(material.id || material.raw_id);
+                const courseId = /^\d+$/.test(String(activeCourse.id || '').trim()) ? Number(activeCourse.id) : null;
+                const sectionId = material.section_id
+                    || material.assigned_section_ids?.[0]
+                    || activeCourse.section_id
+                    || activeCourse.sections?.[0]?.id
+                    || null;
+                const query = new URLSearchParams({
+                    course_id: courseId === null ? '' : String(courseId),
+                    section_id: sectionId === null ? '' : String(sectionId),
+                    material_id: String(materialId),
+                });
+                const res = await fetch(`/dashboard/teacher/assist/students/?${query.toString()}`, { credentials: 'same-origin' });
                 const data = await res.json();
                 if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load students');
                 if (!data.students.length) {
@@ -10811,7 +10824,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         }
                     });
                     assistQueueState.active = true;
-                    assistQueueState.courseId = activeCourse.id;
+                    assistQueueState.courseId = courseId;
+                    assistQueueState.sectionId = sectionId;
                     assistQueueState.courseTitle = activeCourse.title || activeCourse.name || activeCourse.code || '';
                     assistQueueState.materialId = materialId;
                     assistQueueState.materialTitle = material.title || '';

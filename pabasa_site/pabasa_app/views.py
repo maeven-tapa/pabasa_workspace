@@ -13564,18 +13564,34 @@ def get_assist_students(request):
         return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
 
     teacher_user = User.objects.filter(id=request.session.get('user_id')).first()
-    course = Course.objects.filter(id=request.GET.get('course_id')).first()
-    material = Material.objects.filter(id=request.GET.get('material_id')).first()
-    if not teacher_user or not course or not material:
-        return JsonResponse({'success': False, 'error': 'Course or material not found'}, status=404)
-    if teacher_user.role != 'admin' and not _teacher_owns_course(course, teacher_user):
+    try:
+        course = Course.objects.filter(id=int(request.GET.get('course_id'))).first() if request.GET.get('course_id') else None
+        selected_section = Section.objects.filter(id=int(request.GET.get('section_id')), is_active=True).first() if request.GET.get('section_id') else None
+        material = Material.objects.filter(id=int(request.GET.get('material_id'))).first()
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Numeric course, section, and material IDs are required'}, status=400)
+    if not teacher_user or not material or (not course and not selected_section):
+        return JsonResponse({'success': False, 'error': 'Course, section, or material not found'}, status=404)
+    if course and teacher_user.role != 'admin' and not _teacher_owns_course(course, teacher_user):
         return JsonResponse({'success': False, 'error': 'Course access denied'}, status=403)
-    if not course.materials.filter(id=material.id).exists():
+    if selected_section and teacher_user.role != 'admin' and selected_section.teacher_id != teacher_user.id:
+        return JsonResponse({'success': False, 'error': 'Section access denied'}, status=403)
+    if course and selected_section and not course.sections.filter(id=selected_section.id).exists():
+        return JsonResponse({'success': False, 'error': 'Section is not part of this course'}, status=400)
+    material_linked = course and course.materials.filter(id=material.id).exists()
+    material_linked = material_linked or (
+        selected_section and (
+            material.section_id == selected_section.id
+            or material.assigned_sections.filter(id=selected_section.id).exists()
+        )
+    )
+    if not material_linked:
         return JsonResponse({'success': False, 'error': 'Material is not assigned to this course'}, status=403)
 
     students = []
     seen = set()
-    for section in course.sections.filter(is_active=True).order_by('class_name'):
+    sections = [selected_section] if selected_section else course.sections.filter(is_active=True).order_by('class_name')
+    for section in sections:
         for enrollment in _current_section_enrollments(section).select_related('student'):
             student_user = enrollment.student
             student_id = student_user.id
@@ -13607,18 +13623,33 @@ def start_assist_assessment(request):
         data = {}
 
     teacher_user = User.objects.filter(id=request.session.get('user_id')).first()
-    course = Course.objects.filter(id=data.get('course_id')).first()
-    material = Material.objects.filter(id=data.get('material_id')).first()
+    try:
+        course = Course.objects.filter(id=int(data.get('course_id'))).first() if data.get('course_id') else None
+        selected_section = Section.objects.filter(id=int(data.get('section_id')), is_active=True).first() if data.get('section_id') else None
+        material = Material.objects.filter(id=int(data.get('material_id'))).first()
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Numeric course, section, and material IDs are required'}, status=400)
     student_user = User.objects.filter(id=data.get('student_id'), role='student', is_archived=False).first()
-    if not teacher_user or not course or not material or not student_user:
+    if not teacher_user or not material or not student_user or (not course and not selected_section):
         return JsonResponse({'success': False, 'error': 'Unable to start assisted assessment'}, status=404)
-    if teacher_user.role != 'admin' and not _teacher_owns_course(course, teacher_user):
+    if course and teacher_user.role != 'admin' and not _teacher_owns_course(course, teacher_user):
         return JsonResponse({'success': False, 'error': 'Course access denied'}, status=403)
-    if not course.materials.filter(id=material.id).exists():
+    if selected_section and teacher_user.role != 'admin' and selected_section.teacher_id != teacher_user.id:
+        return JsonResponse({'success': False, 'error': 'Section access denied'}, status=403)
+    if course and selected_section and not course.sections.filter(id=selected_section.id).exists():
+        return JsonResponse({'success': False, 'error': 'Section is not part of this course'}, status=400)
+    material_linked = course and course.materials.filter(id=material.id).exists()
+    material_linked = material_linked or (
+        selected_section and (
+            material.section_id == selected_section.id
+            or material.assigned_sections.filter(id=selected_section.id).exists()
+        )
+    )
+    if not material_linked:
         return JsonResponse({'success': False, 'error': 'Material is not assigned to this course'}, status=403)
 
-    section = None
-    for candidate in course.sections.filter(is_active=True):
+    section = selected_section
+    for candidate in ([] if section else course.sections.filter(is_active=True)):
         if candidate.has_student(student_user, active_only=True):
             section = candidate
             break

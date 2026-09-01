@@ -127,6 +127,14 @@ class SectionBackedCoursesRegressionTests(TestCase):
             item_type="word", content_text="read", content_json={"items": ["read"]},
             type="assessment", source_type="personal", status="published", is_active=True,
         )
+        picker_response = self.client.get(
+            reverse("get_assist_students"),
+            {"course_id": "", "section_id": self.section.id, "material_id": material.id},
+        )
+
+        self.assertEqual(picker_response.status_code, 200)
+        self.assertEqual(picker_response.json()["students"][0]["id"], student.id)
+
         response = self.client.post(
             reverse("start_live_assessment"),
             json.dumps({
