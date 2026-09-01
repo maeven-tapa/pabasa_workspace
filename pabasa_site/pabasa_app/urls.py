@@ -91,6 +91,11 @@ urlpatterns = [
     path('dashboard/assessment/activity/sentence-reading/', views.sentence_bot_page, name='sentence_bot_page'),
     path('api/sentence-bot/complete/', views.sentence_bot_complete, name='sentence_bot_complete'),
     path('dashboard/assessment/activity/phrase-reading/', views.phrase_reading_page, name='phrase_reading_page'),
+    path(
+        'dashboard/assessment/activity/<slug:activity_slug>/',
+        views.aral_template_activity_page,
+        name='aral_template_activity_page',
+    ),
     path('dashboard/assessment/reading_ui/para/', views.reading_para_page, name='reading_para_page'),
     path('dashboard/assessment/reading_ui/vowel/', views.reading_vowel_page, name='reading_vowel_page'),
     path('api/reading/transcribe/', views.reading_transcribe_api, name='reading_transcribe_api'),

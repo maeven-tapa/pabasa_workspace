@@ -10174,6 +10174,114 @@ def _is_sentence_reading_template_material(material):
     return bool({'sentence_reading', 'sentence_reading_practice'} & normalized)
 
 
+ARAL_TEMPLATE_ACTIVITY_PAGES = {
+    'word-meaning-match': {
+        'activity_key': 'word_meaning_match',
+        'template': 'pabasa_app/word_meaning_match_page.html',
+        'context_name': 'word_meaning_activity',
+    },
+    'fluency-reading': {
+        'activity_key': 'fluency_reading',
+        'template': 'pabasa_app/fluency_reading_page.html',
+        'context_name': 'fluency_activity',
+    },
+}
+
+ARAL_TEMPLATE_KEYS_BY_TITLE = {
+    'Word Meaning Match': 'word_meaning_match',
+    'Fluency Reading': 'fluency_reading',
+}
+
+
+def _normalize_aral_template_payload(payload, template_title='', existing_key=''):
+    """Lock the ARAL activity identity and reject mixed-language reading-set payloads."""
+    if not isinstance(payload, dict):
+        return None
+    existing_key = str(existing_key or '').strip()
+    activity_key = existing_key if existing_key in ARAL_TEMPLATE_KEYS_BY_TITLE.values() else ARAL_TEMPLATE_KEYS_BY_TITLE.get(str(template_title or '').strip())
+    if not activity_key:
+        return None
+
+    language = Material.normalize_language_value(payload.get('language'))
+    reading_set_id = str(payload.get('reading_set_id') or '').strip().lower()
+    language_token = 'filipino' if language == 'Filipino' else 'english'
+    set_match = re.fullmatch(rf'{re.escape(activity_key)}-{language_token}-(\d{{1,2}})', reading_set_id)
+    set_number = int(set_match.group(1)) if set_match else 0
+    valid_numbers = range(1, 6) if language == 'Filipino' else range(6, 11)
+    if not set_match or set_number not in valid_numbers:
+        return 'The selected reading set does not belong to the selected language.'
+
+    canonical_title = next(title for title, key in ARAL_TEMPLATE_KEYS_BY_TITLE.items() if key == activity_key)
+    payload.update({
+        'activity_key': activity_key,
+        'activity_type': activity_key,
+        'language': language,
+        'template_title': canonical_title,
+        'template_type': canonical_title,
+        'template_source': 'template',
+    })
+    if activity_key == 'word_meaning_match':
+        items = payload.get('items')
+        if not isinstance(items, list) or not items:
+            return 'The selected vocabulary reading set has no items.'
+    elif not str(payload.get('passage') or '').strip():
+        return 'The selected fluency reading set has no passage.'
+    return None
+
+
+def _is_dedicated_aral_template_material(material, activity_key):
+    """Identify a dedicated ARAL activity without relying on editable display fields."""
+    content = getattr(material, 'content_json', None) if material else None
+    return bool(
+        material and isinstance(content, dict)
+        and getattr(material, 'source_type', '') == 'template'
+        and _assessment_kind_value(material) == 'regular'
+        and content.get('activity_key') == activity_key
+    )
+
+
+@login_required(role='student')
+@xframe_options_sameorigin
+def aral_template_activity_page(request, activity_slug):
+    """Render an isolated Grade 2 ARAL activity selected by its route slug."""
+    page = ARAL_TEMPLATE_ACTIVITY_PAGES.get(activity_slug)
+    if not page:
+        return redirect('assessment')
+
+    _, material_id = _parse_prefixed_id(request.GET.get('id') or request.GET.get('material_id'))
+    material = Material.objects.filter(pk=material_id).first() if material_id else None
+    if not _is_dedicated_aral_template_material(material, page['activity_key']):
+        return redirect('assessment')
+
+    access_response = _enforce_student_access_for_request(request, material=material)
+    if access_response:
+        return access_response
+
+    content = dict(material.content_json or {})
+    payload = {
+        'id': material.id,
+        'material_id': f'material-{material.id}',
+        'activity_slug': activity_slug,
+        'title': material.title,
+        'language': content.get('language') or material.language or 'English',
+        'instructions': content.get('instructions'), 'reading_set': content.get('reading_set'),
+        'assigned_week': material.assigned_week,
+        'assigned_week_display': format_assigned_week_display(material.assigned_week),
+    }
+    if page['activity_key'] == 'word_meaning_match':
+        payload['items'] = content.get('items', []) if isinstance(content.get('items'), list) else []
+    else:
+        payload.update({
+            'passage': str(content.get('passage') or '').strip(),
+            'phrases': content.get('phrases', []) if isinstance(content.get('phrases'), list) else [],
+        })
+
+    # json_script serializes this dictionary safely. Passing a pre-encoded JSON
+    # string would make the browser receive a string instead of an object.
+    context = {page['context_name']: payload}
+    return render(request, page['template'], context)
+
+
 FILIPINO_STORY_READING_SETS = {
     'filipino-set-1': {
         'title': 'Ang Umaga ni Lito',
@@ -19071,6 +19179,12 @@ def add_reading_material(request):
                     template_payload.get('template_lesson') or template_payload.get('template_title')
                     or data.get('template_lesson') or data.get('template_title') or ''
                 ).strip().lower()
+                aral_error = _normalize_aral_template_payload(
+                    template_payload,
+                    template_title=data.get('template_title') or template_payload.get('template_title'),
+                )
+                if aral_error:
+                    return JsonResponse({'success': False, 'errors': {'content': aral_error}}, status=400)
                 if template_identity in {'syllable blending', 'blend the syllables'}:
                     selected_language = data.get('language') or template_payload.get('language') or 'Filipino'
                     selected_format = normalize_format(template_payload.get('activity_format'))
@@ -19435,6 +19549,15 @@ def teacher_update_material(request):
                 return JsonResponse({'success': False, 'error': 'Invalid template activity content.'}, status=400)
             if not isinstance(template_payload, dict):
                 return JsonResponse({'success': False, 'error': 'Invalid template activity content.'}, status=400)
+            existing_content = material.content_json if isinstance(material.content_json, dict) else {}
+            existing_activity_key = existing_content.get('activity_key')
+            aral_error = _normalize_aral_template_payload(
+                template_payload,
+                template_title=data.get('template_title') or template_payload.get('template_title'),
+                existing_key=existing_activity_key,
+            )
+            if aral_error:
+                return JsonResponse({'success': False, 'errors': {'content': aral_error}}, status=400)
 
         if requested_assessment_kind == 'crla' and previous_assessment_kind != 'crla':
             crla_block = _crla_creation_block_message(teacher_user=teacher_user)
@@ -19452,8 +19575,9 @@ def teacher_update_material(request):
             if weeks_error:
                 return JsonResponse({'success': False, 'errors': {'assigned_weeks': weeks_error}}, status=400)
             material.assigned_weeks = assigned_weeks
-            if assigned_weeks and not material.assigned_week:
-                material.assigned_week = assigned_weeks[0]
+            # Keep the single-week compatibility field in sync on every edit.
+            # This also clears a stale week when all assignments are removed.
+            material.assigned_week = assigned_weeks[0] if assigned_weeks else None
         
         material.is_active = (material.status in ['published', 'scheduled'])
         # current teacher for any potential Assessment creation
@@ -19482,6 +19606,12 @@ def teacher_update_material(request):
 
         if template_payload is not None:
             template_title = str(data.get('template_title') or template_payload.get('template_title') or '').strip()
+            locked_activity_key = str(template_payload.get('activity_key') or '').strip()
+            if locked_activity_key in ARAL_TEMPLATE_KEYS_BY_TITLE.values():
+                template_title = next(
+                    title for title, key in ARAL_TEMPLATE_KEYS_BY_TITLE.items()
+                    if key == locked_activity_key
+                )
             material.item_type = _template_reading_type(template_title)
             template_payload.update({
                 'template_title': template_title,

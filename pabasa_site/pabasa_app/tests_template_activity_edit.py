@@ -97,7 +97,7 @@ class TemplateActivityEditRegressionTests(TestCase):
         self.assertEqual(material.content_json["items"], [{"phrase": "ang masayang bata"}])
         self.assertEqual(material.content_json["phraseReading"]["setKey"], "tagalog-phrase-1")
         self.assertEqual(material.content_json["template_source"], "template")
-        self.assertEqual(material.assigned_weeks, [2])
+        self.assertEqual(material.assigned_weeks, ["Week 2"])
         self.assertEqual(material.section_id, self.section.id)
         self.assertTrue(material.assigned_sections.filter(id=self.section.id).exists())
         self.assertEqual(response.json()["material"]["raw_id"], material.id)

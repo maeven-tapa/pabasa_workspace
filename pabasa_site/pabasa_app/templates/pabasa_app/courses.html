@@ -13823,10 +13823,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             'Syllable Blending': { lesson: 'Syllable Blending', hint: 'Choose a language and one ready-made activity format.', fields: [], addLabel: 'Pre-built content' },
             'Picture-Word Matching': { lesson: 'Word Recognition', hint: 'Choose a prescribed language and set, then preview the ready-made picture-word pairs.', fields: [], addLabel: 'Select Prescribed Set' },
             'Decode the Word': { lesson: 'Word Decoding', hint: 'Break a word into sounds and decode it.', fields: [{ key: 'word', label: 'Word', type: 'text' }, { key: 'prompt', label: 'Decoding prompt', type: 'text', placeholder: 'Say the sounds then blend them.' }], addLabel: 'Add Item' },
-            'Word Meaning Match': { lesson: 'Vocabulary Development', hint: 'Connect words with meanings, pictures, or phrases.', fields: [{ key: 'word', label: 'Word', type: 'text' }, { key: 'meaning', label: 'Meaning / picture / phrase', type: 'text' }], addLabel: 'Add Item' },
+            'Word Meaning Match': { lesson: 'Vocabulary Development', hint: 'Choose a Grade 2 language and a ready-to-use word meaning set.', fields: [], addLabel: 'Select Reading Set' },
             'Phrase Reading Practice': { lesson: 'Phrase Reading', hint: 'Create short phrases for reading practice.', fields: [{ key: 'phrase', label: 'Phrase', type: 'text' }], addLabel: 'Add Phrase' },
             'Sentence Reading Practice': { lesson: 'Sentence Reading', hint: 'Select a prescribed sentence set for reading practice.', fields: [], addLabel: 'Select Sentence Set' },
-            'Fluency Reading': { lesson: 'Reading Fluency', hint: 'Provide passages for smooth, accurate reading.', fields: [{ key: 'passage', label: 'Reading passage', type: 'textarea' }], addLabel: 'Add Passage' },
+            'Fluency Reading': { lesson: 'Reading Fluency', hint: 'Choose a Grade 2 language and a ready-to-use fluency passage.', fields: [], addLabel: 'Select Reading Set' },
             'Story Reading': { lesson: 'Story Reading', hint: 'Select a prescribed story for reading practice.', fields: [], addLabel: 'Select Story' },
             "5W's Story Questions": { lesson: 'Reading Comprehension', hint: 'Select a published story, then add questions and correct answers.', fields: [], addLabel: 'Add Question' },
             'Retell the Story': { lesson: 'Story Retelling', hint: 'Guide students to retell the story in their own words.', fields: [{ key: 'story', label: 'Story/passage', type: 'textarea' }, { key: 'guideQuestions', label: 'Optional guide questions', type: 'textarea' }], addLabel: 'Add Prompt' },
@@ -13856,6 +13856,33 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             'Phrase Reading Practice',
             'Sentence Reading Practice'
         ]);
+        // System-owned Grade 2 ARAL reading sets. Language is explicit and never inferred from a title.
+        const ARAL_READING_SETS = {
+            word_meaning_match: [
+                ['Filipino','Bahay at Pamilya',[['bahay','Ang bahay ay tirahan ng pamilya.',['tirahan ng pamilya','pagkain','laruan'],0],['nanay','Si Nanay ay nag-aalaga sa akin.',['aking ina','aking guro','aking kaibigan'],0],['tulong','Nagbigay ako ng tulong sa bahay.',['pag-aalaga','paglalaro','pagtulog'],0]]],
+                ['Filipino','Paaralan',[['guro','Ang guro ay nagtuturo sa klase.',['taong nagtuturo','taong nagluluto','taong nagmamaneho'],0],['aklat','Binasa ko ang aklat.',['libro','lapis','upuan'],0],['aralin','Natapos ko ang aralin.',['gawain sa pagkatuto','oras ng laro','pagkain'],0]]],
+                ['Filipino','Pagkain at Kalusugan',[['masustansiya','Masustansiya ang gulay.',['mabuti sa katawan','matamis na laruan','malakas na tunog'],0],['uhaw','Uminom ako dahil ako ay uhaw.',['nais uminom','nais matulog','nais tumakbo'],0],['malinis','Malinis ang aking kamay.',['walang dumi','maraming laruan','mataas'],0]]],
+                ['Filipino','Kalikasan',[['halaman','Diniligan ko ang halaman.',['nabubuhay at tumutubo','isang sasakyan','isang damit'],0],['ulan','Nagpayong kami sa ulan.',['tubig mula sa ulap','ilaw mula sa araw','hangin sa loob'],0],['ibon','Lumilipad ang ibon.',['hayop na may pakpak','isda sa tubig','halaman sa lupa'],0]]],
+                ['Filipino','Damdamin at Kilos',[['masaya','Masaya ako sa aking kaarawan.',['may galak','pagod','galit'],0],['tumulong','Tumulong ako sa pagliligpit.',['nagbigay ng tulong','nagtago','tumakbo palayo'],0],['maingat','Maingat akong tumawid.',['nag-iingat','nagmamadali','naglalaro'],0]]],
+                ['English','Home and Family',[['home','Our home keeps our family safe.',['a place where a family lives','a kind of food','a school bag'],0],['mother','My mother reads with me.',['my mom','my teacher','my friend'],0],['help','I help to clean the table.',['to give support','to sleep','to hide'],0]]],
+                ['English','School Day',[['teacher','Our teacher helps us learn.',['a person who teaches','a person who cooks','a toy'],0],['book','I opened my book.',['something to read','something to eat','something to wear'],0],['lesson','We finished our lesson.',['a learning activity','a game outside','a snack'],0]]],
+                ['English','Food and Health',[['healthy','Vegetables are healthy food.',['good for the body','very noisy','a kind of toy'],0],['thirsty','I drank water because I was thirsty.',['wanting a drink','wanting to sleep','wanting to jump'],0],['clean','My hands are clean.',['not dirty','very tall','very fast'],0]]],
+                ['English','Nature',[['plant','The plant grows in the sun.',['a living thing that grows','a bus','a jacket'],0],['rain','We used an umbrella in the rain.',['water from clouds','a bright light','a loud sound'],0],['bird','The bird can fly.',['an animal with wings','a fish','a tree'],0]]],
+                ['English','Feelings and Actions',[['happy','I am happy at my party.',['feeling glad','feeling sleepy','feeling angry'],0],['share','I share my crayons.',['to give some to others','to throw away','to hide'],0],['careful','Be careful when you cross.',['taking care','moving too fast','being noisy'],0]]],
+            ],
+            fluency_reading: [
+                ['Filipino','Ang Aking Umaga','Maaga akong gumising. Naglinis ako ng ngipin at naligo. Kumain kami ng almusal. Handa na ako sa paaralan.',['Maaga akong gumising.','Naglinis ako ng ngipin at naligo.','Kumain kami ng almusal.','Handa na ako sa paaralan.']],
+                ['Filipino','Sa Paaralan','Pumasok kami sa silid-aralan. Binati namin ang guro. Nagbasa kami ng aklat. Masaya kaming natuto.',['Pumasok kami sa silid-aralan.','Binati namin ang guro.','Nagbasa kami ng aklat.','Masaya kaming natuto.']],
+                ['Filipino','Ang Munting Hardin','May munting hardin si Lino. Dinidiligan niya ang mga halaman. May dilaw na bulaklak sa tabi. Masaya si Lino sa kanyang hardin.',['May munting hardin si Lino.','Dinidiligan niya ang mga halaman.','May dilaw na bulaklak sa tabi.','Masaya si Lino sa kanyang hardin.']],
+                ['Filipino','Tulong-Tulong sa Bahay','Nagligpit si Ana ng laruan. Nagwalis si Kuya sa sala. Nagpasalamat si Nanay sa kanila. Malinis ang aming bahay.',['Nagligpit si Ana ng laruan.','Nagwalis si Kuya sa sala.','Nagpasalamat si Nanay sa kanila.','Malinis ang aming bahay.']],
+                ['Filipino','Araw ng Laro','Naglaro kami sa parke. Tumakbo kami at tumawa. Uminom kami ng tubig. Umuwi kaming masaya.',['Naglaro kami sa parke.','Tumakbo kami at tumawa.','Uminom kami ng tubig.','Umuwi kaming masaya.']],
+                ['English','My Morning','I woke up early. I brushed my teeth and took a bath. We ate breakfast. I was ready for school.',['I woke up early.','I brushed my teeth and took a bath.','We ate breakfast.','I was ready for school.']],
+                ['English','At School','We went into the classroom. We greeted our teacher. We read a book. We were happy to learn.',['We went into the classroom.','We greeted our teacher.','We read a book.','We were happy to learn.']],
+                ['English','The Little Garden','Lino has a little garden. He waters the plants. A yellow flower grows by the path. Lino loves his garden.',['Lino has a little garden.','He waters the plants.','A yellow flower grows by the path.','Lino loves his garden.']],
+                ['English','Helping at Home','Ana put away the toys. Her brother swept the room. Mother thanked them. Their home was clean.',['Ana put away the toys.','Her brother swept the room.','Mother thanked them.','Their home was clean.']],
+                ['English','Play Day','We played at the park. We ran and laughed. We drank water. We went home happy.',['We played at the park.','We ran and laughed.','We drank water.','We went home happy.']],
+            ]
+        };
         // Letter & Sound Matching — Filipino Predefined Reading Sets
         const LETTER_SOUND_MATCHING_READING_SETS = {
             filipino_set_1: {
@@ -14520,6 +14547,31 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return title === 'Picture-Word Matching';
         }
 
+        function isAralReadingSetTemplate(title) {
+            return title === 'Word Meaning Match' || title === 'Fluency Reading';
+        }
+
+        function aralActivityKey(title) {
+            return title === 'Word Meaning Match' ? 'word_meaning_match' : 'fluency_reading';
+        }
+
+        function getAralReadingSets(title, language) {
+            const target = language === 'Filipino' ? 'Filipino' : 'English';
+            return (ARAL_READING_SETS[aralActivityKey(title)] || []).map((entry, index) => ({
+                id: `${aralActivityKey(title)}-${entry[0].toLowerCase()}-${index + 1}`,
+                language: entry[0], title: entry[1], data: entry.slice(2)
+            })).filter(set => set.language === target);
+        }
+
+        function syncAralReadingSet() {
+            if (!activeTemplateActivity || !isAralReadingSetTemplate(activeTemplateActivity.templateTitle)) return;
+            const sets = getAralReadingSets(activeTemplateActivity.templateTitle, activeTemplateActivity.language);
+            const selected = sets.find(set => set.id === activeTemplateActivity.aralReadingSetId) || sets[0];
+            activeTemplateActivity.aralReadingSetId = selected?.id || '';
+            activeTemplateActivity.aralReadingSet = selected || null;
+            activeTemplateActivity.items = activeTemplateActivity.templateTitle === 'Word Meaning Match' ? (selected?.data?.[0] || []).map(([word, sentence, choices, answer_index]) => ({word, sentence, choices, answer_index})) : [];
+        }
+
         function isSyllableBlendingTemplate(title) {
             return title === 'Syllable Blending' || title === 'Blend the Syllables';
         }
@@ -14883,6 +14935,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 pictureWordMatchingCustom: restoredPictureWordCustom,
                 sentenceReading: restoredSentenceSelection,
                 storyReading: restoredStoryReading,
+                aralReadingSetId: isAralReadingSetTemplate(templateTitle) ? String(contentJson.reading_set_id || '') : '',
                 letterSoundMatching: isLetterSoundMatchingTemplate(templateTitle) ? {
                     readingSetId: String(contentJson.reading_set_id || 'filipino_set_1'),
                     language: String(contentJson.language || restoredLanguage || 'Filipino').trim() || 'Filipino'
@@ -16039,6 +16092,17 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (isPhraseReadingTemplate(title)) {
                 updatePhraseReadingLanguageAvailability();
             }
+            if (isAralReadingSetTemplate(title)) {
+                syncAralReadingSet();
+                const sets = getAralReadingSets(title, activeTemplateActivity.language);
+                const selectedId = activeTemplateActivity.aralReadingSetId;
+                templateDynamicFields.innerHTML = `<div class="row g-3"><div class="col-12"><label class="form-label fw-bold" for="aralReadingSet">Reading Set <span class="text-danger">*</span></label><select class="form-select" id="aralReadingSet">${sets.map(set => `<option value="${escapeAttr(set.id)}" ${set.id === selectedId ? 'selected' : ''}>${escapeHtml(set.language)} — ${escapeHtml(set.title)}</option>`).join('')}</select><div class="form-text">Only ${escapeHtml(activeTemplateActivity.language)} Grade 2 reading sets are shown. The activity content and instructions are ready to use.</div></div><div class="col-12"><div class="alert alert-info mb-0"><strong>Ready-to-use template:</strong> teachers can change the Activity Title, language, reading set, and week only.</div></div></div>`;
+                templateDynamicFields.querySelector('#aralReadingSet').addEventListener('change', event => {
+                    activeTemplateActivity.aralReadingSetId = event.target.value;
+                    syncAralReadingSet(); renderTemplatePreview();
+                });
+                return;
+            }
             if (isClapCountTemplate(title)) { renderClapCountSelector(); return; }
             if (isSoundDetectiveTemplate(title)) { renderSoundDetectiveSelector(); return; }
             if (isPhraseReadingTemplate(title)) {
@@ -16245,14 +16309,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 previewBody = values.word ? `<div class="preview-learning-card text-center"><div class="preview-syllable-pieces justify-content-center">${Array.from(String(values.word)).map(char => `<span class="preview-syllable-piece">${escapeHtml(char)}</span>`).join('')}</div><div class="preview-found-word mt-4">${escapeHtml(values.word)}</div></div>` : empty('Enter a word to see the decoding task.');
             } else if (templateTitle === 'Word Meaning Match') {
                 instruction = learnerCopy.meaning;
-                previewBody = items.length ? cards(items.slice(0, 6).map(item => `<div class="preview-learning-card"><div class="preview-answer-token">${escapeHtml(item.word || '')}</div><div class="small text-muted mt-2">${escapeHtml(item.meaning || '')}</div></div>`).join('')) : empty('Add words and meanings to begin the preview.');
+                const item = items[0];
+                previewBody = item ? `<article class="preview-reading-card text-center"><img src="{% static 'pabasa_app/images/footer-mascot.png' %}" alt="PABASA reading buddy" width="72" height="72" style="object-fit:contain"><div><span class="badge text-bg-warning mb-3">Word 1 of ${items.length}</span></div><div class="preview-answer-token fs-3">${escapeHtml(item.word || '')}</div><div class="mt-2 mb-3">${escapeHtml(item.sentence || '')}</div><div class="small fw-bold text-muted mb-2">${language === 'Filipino' ? 'Ano ang kahulugan ng salita?' : 'What does this word mean?'}</div><div class="d-grid gap-2">${(item.choices || []).map(choice => `<button class="btn btn-outline-success" type="button" tabindex="-1">${escapeHtml(choice)}</button>`).join('')}</div></article>` : empty('Choose a vocabulary reading set to begin the preview.');
             } else if (isPhraseReadingTemplate(templateTitle) || isSentenceReadingTemplate(templateTitle)) {
                 instruction = isPhraseReadingTemplate(templateTitle) ? learnerCopy.phrase : learnerCopy.sentence;
                 previewBody = summary.body?.length ? `<div class="preview-reading-card">${summary.body.slice(0, 8).map(line => `<div class="mb-2">${escapeHtml(String(line).replace(/^\d+\.\s*/, ''))}</div>`).join('')}</div>` : empty(summary.emptyMessage || 'Select reading content to begin the preview.');
             } else if (templateTitle === 'Fluency Reading' || isStoryReadingTemplate(templateTitle)) {
                 instruction = templateTitle === 'Fluency Reading' ? learnerCopy.fluency : learnerCopy.story;
-                const passage = summary.body?.[0] || templateDynamicFields?.querySelector('[data-field-key="passage"]')?.value || '';
-                previewBody = passage ? `<article class="preview-reading-card">${escapeHtml(passage)}</article>` : empty('Select or add a passage to begin the preview.');
+                const passage = templateTitle === 'Fluency Reading' ? (activeTemplateActivity?.aralReadingSet?.data?.[0] || '') : (summary.body?.[0] || templateDynamicFields?.querySelector('[data-field-key="passage"]')?.value || '');
+                previewBody = passage ? `<article class="preview-reading-card"><div class="d-flex align-items-center justify-content-between gap-3 mb-3"><div class="d-flex flex-wrap gap-2"><span class="badge text-bg-primary">1. ${language === 'Filipino' ? 'Makinig' : 'Listen'}</span><span class="badge text-bg-light">2. ${language === 'Filipino' ? 'Magsanay' : 'Practice'}</span><span class="badge text-bg-light">3. ${language === 'Filipino' ? 'Bumasa' : 'Read'}</span></div><img src="{% static 'pabasa_app/images/footer-mascot.png' %}" alt="PABASA reading buddy" width="64" height="64" style="object-fit:contain"></div><div class="fs-5 lh-lg text-center">${escapeHtml(passage)}</div><div class="d-flex flex-wrap justify-content-center gap-2 mt-3"><button class="btn btn-primary" type="button" tabindex="-1">🔊 ${language === 'Filipino' ? 'Pakinggan' : 'Listen'}</button><button class="btn btn-outline-primary" type="button" tabindex="-1">${language === 'Filipino' ? 'Magsanay' : 'Start Practice'} →</button></div></article>` : empty('Choose a fluency reading set to begin the preview.');
             } else if (templateTitle === "5W's Story Questions") {
                 instruction = learnerCopy.questions;
                 const storyTitle = activeTemplateActivity.content?.storyTitle || 'Selected story';
@@ -16511,6 +16576,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     selectedIndices: []
                 };
             }
+            if (isAralReadingSetTemplate(templateTitle)) {
+                activeTemplateActivity.aralReadingSetId = '';
+                syncAralReadingSet();
+                activeTemplateActivity.title = templateTitle;
+            }
             activeTemplateItemEditIndex = null;
             applyTemplateLanguageSelection(templateLanguage, templateTitle);
             window.__addMaterialDefaultMode = 'template';
@@ -16519,6 +16589,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 if (!isLetterSoundMatchingTemplate(templateTitle)) {
                     templateActivityTitle.value = isSoundDetectiveTemplate(templateTitle) ? 'Sound Detective' : '';
                 }
+                if (isAralReadingSetTemplate(templateTitle)) templateActivityTitle.value = templateTitle;
                 templateActivityTitle.closest('.template-title-field')?.classList.toggle('d-none', isSyllableBlendingTemplate(templateTitle));
             }
             renderTemplateDynamicFields(templateTitle);
@@ -16562,7 +16633,21 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 syncSentenceReadingItems();
             }
             const language = getSelectedTemplateLanguage();
-            if (isClapCountTemplate(activeTemplateActivity?.templateTitle)) {
+            if (isAralReadingSetTemplate(activeTemplateActivity?.templateTitle)) {
+                activeTemplateActivity.language = language;
+                syncAralReadingSet();
+                const set = activeTemplateActivity.aralReadingSet;
+                Object.assign(content, {
+                    language, activity_key: aralActivityKey(activeTemplateActivity.templateTitle),
+                    reading_set_id: set?.id || '', reading_set: set?.title || '',
+                    instructions: activeTemplateActivity.templateTitle === 'Word Meaning Match'
+                        ? (language === 'English' ? 'Read the word and choose its meaning.' : 'Basahin ang salita at piliin ang kahulugan nito.')
+                        : (language === 'English' ? 'Listen, practice, then read accurately, smoothly, and clearly.' : 'Makinig, magsanay, at basahin nang wasto, tuloy-tuloy, at malinaw.'),
+                    items: activeTemplateActivity.items || [],
+                    passage: activeTemplateActivity.templateTitle === 'Fluency Reading' ? (set?.data?.[0] || '') : '',
+                    phrases: activeTemplateActivity.templateTitle === 'Fluency Reading' ? (set?.data?.[1] || []) : [],
+                });
+            } else if (isClapCountTemplate(activeTemplateActivity?.templateTitle)) {
                 const config=activeTemplateActivity.clapCount||{};
                 Object.assign(content,{language,activity_type:'clap_count_syllables',word_set:config.wordSet||'',selected_word_ids:config.selectedWordIds||[],number_of_words:Number(config.numberOfWords)||0,randomize_order:Boolean(config.randomizeOrder),allow_retry:Boolean(config.allowRetry)});
             } else if (isSoundDetectiveTemplate(activeTemplateActivity?.templateTitle)) {
@@ -16690,6 +16775,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 if (!values.content?.reading_set_id) return 'Select a reading set.';
                 if (!Array.isArray(values.content?.items) || !values.content.items.length) return 'The selected reading set has no items.';
                 if (!values.weeks.length) return 'Select at least one week.';
+                return '';
+            }
+            if (isAralReadingSetTemplate(activeTemplateActivity?.templateTitle)) {
+                const set = getAralReadingSets(activeTemplateActivity.templateTitle, values.language)
+                    .find(entry => entry.id === values.content?.reading_set_id);
+                if (!set) return 'Choose a reading set for the selected language.';
+                if (activeTemplateActivity.templateTitle === 'Word Meaning Match' && !values.content?.items?.length) return 'The selected vocabulary set has no items.';
+                if (activeTemplateActivity.templateTitle === 'Fluency Reading' && !values.content?.passage) return 'The selected fluency set has no passage.';
+                if (values.weeks.length !== 1) return 'Select exactly one week.';
                 return '';
             }
             if (isSentenceReadingTemplate(activeTemplateActivity?.templateTitle)) {
@@ -16848,6 +16942,20 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         weeks: values.weeks || [],
                         items: Array.isArray(activeTemplateActivity?.items) ? activeTemplateActivity.items : [],
                     });
+                    if (isAralReadingSetTemplate(activeTemplateActivity?.templateTitle)) {
+                        const set = getAralReadingSets(activeTemplateActivity.templateTitle, values.language)
+                            .find(entry => entry.id === values.content?.reading_set_id);
+                        if (!set) throw new Error('Choose a reading set for the selected language.');
+                        Object.assign(contentPayload, values.content, {
+                            activity_key: aralActivityKey(activeTemplateActivity.templateTitle),
+                            activity_type: aralActivityKey(activeTemplateActivity.templateTitle),
+                            language: values.language, reading_set_id: set.id, reading_set: set.title,
+                            template_title: activeTemplateActivity.templateTitle,
+                            template_lesson: activeTemplateActivity.lesson,
+                            template_type: activeTemplateActivity.templateTitle,
+                            template_source: 'template', weeks: values.weeks || [],
+                        });
+                    }
                     if (isSyllableBlendingTemplate(activeTemplateActivity?.templateTitle)) {
                         const selectedSet = (SYLLABLE_BLENDING_CATALOG?.[values.language]?.[values.content.activity_format] || [])
                             .find(activity => activity.activity_id === values.content.activity_id);
@@ -18037,7 +18145,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     }
                     activeTemplateActivity.language = selectedTemplateLanguage;
                     if (templateLanguageHidden) templateLanguageHidden.value = selectedTemplateLanguage;
-                    if (activeTemplateActivity?.templateTitle === 'Phrase Reading Practice') {
+                    if (isAralReadingSetTemplate(activeTemplateActivity?.templateTitle)) {
+                        activeTemplateActivity.aralReadingSetId = '';
+                        syncAralReadingSet();
+                        renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
+                    } else if (activeTemplateActivity?.templateTitle === 'Phrase Reading Practice') {
                         renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
                     } else if (activeTemplateActivity?.templateTitle === 'Story Reading') {
                         renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
