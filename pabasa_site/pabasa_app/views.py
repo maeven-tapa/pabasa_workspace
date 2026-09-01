@@ -106,6 +106,10 @@ PRACTICE_LANGUAGE_SESSION_KEY = "practice_mode_language"
 PRACTICE_LANGUAGE_PREFERENCE_KEY = "practice_mode_language"
 PRACTICE_ACTIVE_SESSION_KEY = "practice_active_session"
 SCHOOL_GRADE_LEVELS = tuple(f"Grade {number}" for number in range(1, 7))
+PRIMARY_SCHOOL_NAME = "Salawag Elementary School"
+PRIMARY_SCHOOL_ID = 3
+ADMIN_SCHOOL_CARD_ID = "107912"
+ADMIN_SCHOOL_CARD_ADDRESS = "4114 Paliparan Road, Dasmariñas, Calabarzon"
 
 
 def _real_active_schools():
@@ -5886,36 +5890,19 @@ def _school_card_context(school):
 
 
 @admin_required
-@require_http_methods(["GET", "POST"])
+@require_http_methods(["GET"])
 def admin_school(request):
-    """List schools and create new ones."""
-    context = _admin_context(request, 'Schools', [])
-    if request.method == 'POST':
-        school_name = str(request.POST.get('school_name') or '').strip()
-        school_code = str(request.POST.get('school_code') or '').strip()
-        if not school_name:
-            context['error_message'] = 'School name is required.'
-        else:
-            try:
-                School.objects.create(
-                    name=school_name,
-                    code=school_code or slugify(school_name).upper(),
-                )
-                return redirect('admin_school')
-            except IntegrityError:
-                context['error_message'] = 'A school with that name or code already exists.'
-    real_schools = School.objects.filter(status='active', is_active=True).exclude(name='Default School').order_by('name')
-    context.update({
-        'schools': [_school_card_context(school) for school in real_schools],
-    })
-    return render(request, 'pabasa_app/admin_school.html', context)
+    """Compatibility route for the single supported school workspace."""
+    return redirect('admin_school_detail', school_id=PRIMARY_SCHOOL_ID)
 
 
 @admin_required
 @require_http_methods(["GET", "POST"])
 def admin_school_detail(request, school_id):
-    school = get_object_or_404(School, id=school_id)
-    context = _admin_context(request, school.name, [])
+    school = get_object_or_404(School, id=school_id, name=PRIMARY_SCHOOL_NAME)
+    # This title is rendered only by the shared Admin topbar. School page
+    # content continues to use the persisted School record below.
+    context = _admin_context(request, "School", [])
     if request.method == 'POST':
         if request.POST.get('action') == 'create_principal':
             form_data = {
@@ -6005,6 +5992,8 @@ def admin_school_detail(request, school_id):
         grouped.setdefault(section.grade_level, []).append(section)
     context.update({
         'school': school,
+        'school_card_id': ADMIN_SCHOOL_CARD_ID,
+        'school_card_address': ADMIN_SCHOOL_CARD_ADDRESS,
         'principal': context.get('principal', _active_principal_for_school(school)),
         'principal_form_data': context.get('principal_form_data', {}),
         'grades': SCHOOL_GRADE_LEVELS,

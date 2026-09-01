@@ -10457,3 +10457,55 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(len(data["skipped"]), 2)
         self.assertCountEqual([item["reason"] for item in data["skipped"]], ["missing_email", "not_enrolled"])
         mock_email_cls.assert_called_once()
+
+
+class AdminSingleSchoolTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create(
+            custom_id='ADM-SALAWAG', role='admin', first_name='Admin', last_name='User',
+            sex='female', birth_month=1, birth_day=1, birth_year=1990,
+            email='admin.salawag@example.com', password_hash=make_password('password'),
+        )
+        self.salawag = School.objects.get(name='Salawag Elementary School')
+        self.other_school = School.objects.create(name='Other Elementary School', code='OTHER-ES')
+        session = self.client.session
+        session.update({'user_id': self.admin.id, 'user_role': 'admin', 'custom_id': self.admin.custom_id})
+        session.save()
+
+    def test_school_list_route_redirects_to_salawag_detail(self):
+        response = self.client.get(reverse('admin_school'))
+
+        self.assertRedirects(
+            response,
+            reverse('admin_school_detail', args=[3]),
+            fetch_redirect_response=False,
+        )
+
+    def test_school_creation_post_is_disabled_without_modifying_records(self):
+        school_count = School.objects.count()
+
+        response = self.client.post(reverse('admin_school'), {
+            'school_name': 'Another School', 'school_code': 'ANOTHER-ES',
+        })
+
+        self.assertEqual(response.status_code, 405)
+        self.assertEqual(School.objects.count(), school_count)
+        self.assertTrue(School.objects.filter(pk=self.salawag.pk).exists())
+
+    def test_only_salawag_detail_workspace_is_available(self):
+        response = self.client.get(reverse('admin_school_detail', args=[self.salawag.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '<h1 class="h3 fw-bold mb-0">School</h1>', html=True)
+        self.assertContains(response, 'School ID')
+        self.assertContains(response, '107912')
+        self.assertContains(response, '4114 Paliparan Road, Dasmariñas, Calabarzon')
+        self.assertContains(response, 'Salawag Elementary School')
+        self.assertContains(response, 'href="/dashboard/admin/school/3/"')
+        self.assertContains(response, '>School<')
+        self.salawag.refresh_from_db()
+        self.assertEqual(self.salawag.name, 'Salawag Elementary School')
+        self.assertEqual(self.salawag.code, 'SALAWAG-ES')
+        self.assertEqual(
+            self.client.get(reverse('admin_school_detail', args=[self.other_school.id])).status_code,
+            404,
+        )
