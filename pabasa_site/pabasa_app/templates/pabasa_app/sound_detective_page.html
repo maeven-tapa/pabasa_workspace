@@ -158,7 +158,7 @@
     </div>
 
     {{ sound_detective_material_json|json_script:"sound-detective-data" }}
-    <script src="{% static 'pabasa_app/js/sound_detective.js' %}?v=20260901-2"></script>
+    <script src="{% static 'pabasa_app/js/sound_detective.js' %}?v=20260901-3"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             let data = JSON.parse(document.getElementById('sound-detective-data').textContent);
