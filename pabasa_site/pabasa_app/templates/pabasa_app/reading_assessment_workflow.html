@@ -231,7 +231,7 @@
 {% block content %}
 {{ crla_assessment_items_json|json_script:"crlaAssessmentItems" }}
 <section class="workflow-shell">
-    <article class="workflow-card {% if stage == 'complete' %}success{% endif %}">
+    <article class="workflow-card {% if stage == 'complete' or stage == 'grade_level_complete' %}success{% endif %}">
         {% if stage == "unavailable" %}
             <div class="workflow-center">
                 <span class="workflow-pill">CRLA Assessment Currently Unavailable</span>
@@ -247,6 +247,23 @@
             <div class="workflow-actions">
                 <a class="btn btn-primary workflow-button primary" href="{% url 'practice' %}"><i class="bi bi-journal-text"></i> Go to Practice</a>
                 <a class="workflow-button secondary" href="{% url 'dashboard' %}"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+            </div>
+        {% elif stage == "grade_level_complete" %}
+            <div class="workflow-center">
+                <span class="workflow-pill">READING GOAL ACHIEVED</span>
+                <span class="workflow-icon" aria-hidden="true"><i class="bi bi-trophy-fill"></i></span>
+                <div class="workflow-copy">
+                    <h1>You're Reading at Grade Level!</h1>
+                    <p class="workflow-message">
+                        Great job! Your reading skills are at the expected level for your grade. Keep practicing to make your reading even stronger.
+                    </p>
+                    <p class="workflow-message">You have completed your reading assessment.</p>
+                </div>
+            </div>
+
+            <div class="workflow-actions">
+                <a class="btn btn-primary workflow-button primary" href="{% url 'dashboard' %}"><i class="bi bi-house-heart-fill"></i> Back to Dashboard</a>
+                <a class="btn btn-primary workflow-button primary" href="{% url 'practice' %}"><i class="bi bi-journal-text"></i> Go to Practice</a>
             </div>
         {% elif stage == "complete" %}
             <div class="workflow-center">

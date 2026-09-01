@@ -366,6 +366,54 @@ def _aral_eligible_classification(label):
     }
 
 
+def _reading_at_grade_level_classification(label):
+    normalized = str(label or "").strip().lower()
+    return normalized in {
+        "reading at grade level",
+        "reader at grade level",
+        "readers at grade level",
+    }
+
+
+def _is_finalized_grade_level_crla_result(result):
+    if result is None:
+        return False
+    if str(getattr(result, 'attempt_status', '') or '').strip().lower() != 'completed':
+        return False
+    if getattr(result, 'completed_at', None) is None:
+        return False
+    material = getattr(result, 'material', None)
+    source = getattr(result, 'source_assessment', None)
+    system_key = str(
+        getattr(result, 'system_assessment_key', '')
+        or getattr(source, 'system_assessment_key', '')
+        or getattr(material, 'system_assessment_key', '')
+        or ''
+    ).strip().lower()
+    is_crla = bool(
+        str(getattr(material, 'assessment_kind', '') or '').strip().lower() == 'crla'
+        or system_key in {'bosy_crla_pretest', 'midline_crla_midtest', 'eosy_crla_posttest'}
+    )
+    classification = getattr(result, 'crla_classification', '') or getattr(result, 'classification', '')
+    return is_crla and _reading_at_grade_level_classification(classification)
+
+
+def _finalized_grade_level_crla_result_exists(student):
+    if not student or not getattr(student, 'pk', None):
+        return False
+    latest_result = Assessment.objects.filter(
+        student=student,
+        attempt_status='completed',
+        completed_at__isnull=False,
+        is_active=True,
+    ).filter(
+        Q(material__assessment_kind='crla')
+        | Q(system_assessment_key__in=('bosy_crla_pretest', 'midline_crla_midtest', 'eosy_crla_posttest'))
+        | Q(source_assessment__system_assessment_key__in=('bosy_crla_pretest', 'midline_crla_midtest', 'eosy_crla_posttest'))
+    ).select_related('material', 'source_assessment').order_by('-completed_at', '-updated_at', '-id').first()
+    return _is_finalized_grade_level_crla_result(latest_result)
+
+
 def _reader_assessment_state(student):
     state = _get_user_state(student)
     classification = state.get('reader_classification') or getattr(student, 'reading_level', '') or ''
@@ -374,10 +422,12 @@ def _reader_assessment_state(student):
     eligible = _aral_eligible_classification(classification) if classification else state.get('aral_eligible')
     if eligible is None:
         eligible = False
+    grade_level_complete = _finalized_grade_level_crla_result_exists(student)
     return {
         'reader_classification': classification,
-        'aral_eligible': bool(eligible),
-        'aral_status': str(state.get('aral_status') or ('active' if state.get('current_phase') == 'materials' and eligible else 'pending')).strip().lower(),
+        'aral_eligible': False if grade_level_complete else bool(eligible),
+        'aral_status': 'ineligible' if grade_level_complete else str(state.get('aral_status') or ('active' if state.get('current_phase') == 'materials' and eligible else 'pending')).strip().lower(),
+        'reading_at_grade_level_complete': grade_level_complete,
         'classification_workflow_status': state.get('classification_workflow_status') or '',
         'pre_test_completed': bool(state.get('crla_pretest_completed')),
         'post_test_completed': bool(state.get('crla_posttest_completed')),
@@ -2148,33 +2198,6 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
         elif system_key == 'eosy_crla_posttest':
             assessment_phase = 'posttest'
 
-    if assessment_kind == 'crla':
-        crla_windows = state.get('crla_windows')
-        if not isinstance(crla_windows, dict):
-            crla_windows = {}
-        current_window = crla_windows.get(assessment_phase, {})
-        if not isinstance(current_window, dict):
-            current_window = {}
-        current_window.update({
-            'completed': True,
-            'classification': normalized_classification,
-            'aral_eligible': bool(state['aral_eligible']),
-        })
-        if assessment_phase == 'pretest':
-            state['crla_pretest_completed'] = True
-        elif assessment_phase == 'posttest':
-            state['crla_posttest_completed'] = True
-        else:
-            active_calendar = _active_school_calendar()
-            current_term = _calendar_current_term(active_calendar) if active_calendar else None
-            if current_term == 1:
-                state['crla_pretest_completed'] = True
-            elif current_term == 4:
-                state['crla_posttest_completed'] = True
-        if assessment_phase:
-            crla_windows[assessment_phase] = current_window
-            state['crla_windows'] = crla_windows
-
     if assessment_type in {'word', 'sentence', 'paragraph'}:
         student_end_state = state.get('student_end_assessment_state')
         if not isinstance(student_end_state, dict):
@@ -2319,6 +2342,10 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
             state['aral_eligible'] = bool(_aral_eligible_classification(final_classification))
             if assessment_kind == 'crla':
                 state['aral_status'] = 'active' if state['aral_eligible'] else 'ineligible'
+                if assessment_phase == 'pretest':
+                    state['crla_pretest_completed'] = True
+                elif assessment_phase == 'posttest':
+                    state['crla_posttest_completed'] = True
                 if assessment_phase:
                     crla_windows = state.get('crla_windows') if isinstance(state.get('crla_windows'), dict) else {}
                     current_window = crla_windows.get(assessment_phase) if isinstance(crla_windows.get(assessment_phase), dict) else {}
@@ -8891,7 +8918,10 @@ def assessment(request):
 
     stage = 'complete'
     routing_reason = 'default_complete'
-    if state.get('aral_status') == 'active':
+    if state.get('reading_at_grade_level_complete'):
+        stage = 'grade_level_complete'
+        routing_reason = 'finalized_reading_at_grade_level'
+    elif state.get('aral_status') == 'active':
         stage = 'original'
         routing_reason = 'active_aral_intervention'
     elif forced_workflow == 'original':

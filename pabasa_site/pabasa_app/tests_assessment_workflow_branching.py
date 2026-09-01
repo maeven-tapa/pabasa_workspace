@@ -2,13 +2,110 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from django.template.loader import render_to_string
 from django.test import SimpleTestCase
+from django.urls import reverse
 
-from pabasa_app.views import _aral_eligible_classification, _crla_grade2_part2_profile, _sync_assessment_workflow_state
+from pabasa_app.views import (
+    _aral_eligible_classification,
+    _crla_grade2_part2_profile,
+    _is_finalized_grade_level_crla_result,
+    _reader_assessment_state,
+    _sync_assessment_workflow_state,
+)
 from pabasa_app.scoring import build_assessment_score_payload
 
 
 class AssessmentWorkflowBranchingTests(SimpleTestCase):
+    @staticmethod
+    def _result(classification="Reading At Grade Level", status="completed", completed=True, crla=True, official=None):
+        return SimpleNamespace(
+            attempt_status=status,
+            completed_at=object() if completed else None,
+            crla_classification=classification,
+            classification="",
+            system_assessment_key="",
+            source_assessment=None,
+            material=SimpleNamespace(
+                assessment_kind="crla" if crla else "regular",
+                is_official_reading=crla if official is None else official,
+                system_assessment_key="",
+            ),
+        )
+
+    def test_finalized_crla_grade_level_result_is_authoritative(self):
+        self.assertTrue(_is_finalized_grade_level_crla_result(self._result()))
+        student = SimpleNamespace(pk=1, reading_level="Reading At Grade Level")
+        with patch("pabasa_app.views._get_user_state", return_value={"aral_status": "active"}), \
+             patch("pabasa_app.views._finalized_grade_level_crla_result_exists", return_value=True):
+            resolved = _reader_assessment_state(student)
+        self.assertTrue(resolved["reading_at_grade_level_complete"])
+        self.assertFalse(resolved["aral_eligible"])
+        self.assertEqual(resolved["aral_status"], "ineligible")
+
+    def test_other_finalized_crla_classifications_are_not_grade_level_complete(self):
+        for classification in (
+            "Transitioning Reader", "Developing Reader", "High Emerging Reader", "Low Emerging Reader",
+        ):
+            with self.subTest(classification=classification):
+                self.assertFalse(_is_finalized_grade_level_crla_result(self._result(classification=classification)))
+
+    def test_profile_grade_level_without_finalized_crla_is_not_complete(self):
+        student = SimpleNamespace(pk=1, reading_level="Reading At Grade Level")
+        with patch("pabasa_app.views._get_user_state", return_value={}), \
+             patch("pabasa_app.views._finalized_grade_level_crla_result_exists", return_value=False):
+            resolved = _reader_assessment_state(student)
+        self.assertFalse(resolved["reading_at_grade_level_complete"])
+
+    def test_in_progress_crla_grade_level_result_is_not_complete(self):
+        self.assertFalse(_is_finalized_grade_level_crla_result(self._result(status="started")))
+        self.assertFalse(_is_finalized_grade_level_crla_result(self._result(completed=False)))
+
+    def test_stale_crla_completion_flags_and_grade_profile_are_not_complete(self):
+        student = SimpleNamespace(pk=1, reading_level="Reading At Grade Level")
+        for stale_flag in ("crla_pretest_completed", "crla_posttest_completed"):
+            with self.subTest(stale_flag=stale_flag), \
+                 patch("pabasa_app.views._get_user_state", return_value={stale_flag: True}), \
+                 patch("pabasa_app.views._finalized_grade_level_crla_result_exists", return_value=False):
+                resolved = _reader_assessment_state(student)
+                self.assertFalse(resolved["reading_at_grade_level_complete"])
+
+    def test_non_crla_terminal_grade_level_result_is_not_complete(self):
+        self.assertFalse(_is_finalized_grade_level_crla_result(self._result(crla=False)))
+        self.assertFalse(_is_finalized_grade_level_crla_result(self._result(crla=False, official=True)))
+
+    def test_in_progress_crla_does_not_mark_window_completed(self):
+        student = SimpleNamespace(id=1, pk=1, reading_level="Reading At Grade Level")
+        state = {}
+        assessment = SimpleNamespace(assessment_kind="crla", system_assessment_phase="pretest")
+        with patch("pabasa_app.views._get_user_state", return_value=state), \
+             patch("pabasa_app.views._set_user_state", side_effect=lambda _student, value: state.update(value)), \
+             patch("pabasa_app.views.timezone.now", return_value=SimpleNamespace(isoformat=lambda: "2026-09-01T00:00:00")):
+            _sync_assessment_workflow_state(
+                student,
+                {"assessment_type": "word", "correct_words": 7},
+                assessment=assessment,
+            )
+        self.assertFalse(state.get("crla_pretest_completed", False))
+        self.assertFalse(any(window.get("completed") for window in state.get("crla_windows", {}).values()))
+
+    def test_grade_level_completion_card_has_only_dashboard_and_practice_actions(self):
+        html = render_to_string("pabasa_app/reading_assessment_workflow.html", {
+            "stage": "grade_level_complete",
+            "crla_assessment_items_json": [],
+        })
+        self.assertIn("READING GOAL ACHIEVED", html)
+        self.assertIn("You're Reading at Grade Level!", html)
+        self.assertIn("You have completed your reading assessment.", html)
+        self.assertIn(f'href="{reverse("dashboard")}"', html)
+        self.assertIn(f'href="{reverse("practice")}"', html)
+        self.assertEqual(html.count('class="btn btn-primary workflow-button primary"'), 2)
+        for forbidden in (
+            "Start Reading Assessment", "Continue Assessment", "Take Assessment Again",
+            "Retake Assessment", "Continue Reading Assessment", "Start ARAL Intervention",
+        ):
+            self.assertNotIn(forbidden, html)
+
     def test_story_correct_words_cannot_become_task1(self):
         payload = build_assessment_score_payload({
             "assessment_type": "paragraph",
