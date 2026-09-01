@@ -81,6 +81,7 @@ urlpatterns = [
     path('dashboard/assessment/reading_ui/word/', views.reading_word_page, name='reading_word_page'),
     path('dashboard/assessment/activity/picture-word-matching/', views.picture_word_matching_page, name='picture_word_matching_page'),
     path('dashboard/assessment/activity/letter-sound-matching/', views.letter_sound_matching_page, name='letter_sound_matching_page'),
+    path('dashboard/assessment/activity/letter-sound-correspondence/', views.letter_sound_correspondence_page, name='letter_sound_correspondence_page'),
     path('dashboard/assessment/activity/syllable-blending/', views.syllable_blending_page, name='syllable_blending_page'),
     path('dashboard/assessment/activity/clap-count-syllables/', views.clap_count_syllables_page, name='clap_count_syllables_page'),
     path('dashboard/assessment/activity/sound-detective/', views.sound_detective_page, name='sound_detective_page'),

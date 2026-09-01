@@ -1133,6 +1133,7 @@
                 const syllableBlendingUrl = "{% url 'syllable_blending_page' %}";
                 const clapCountSyllablesUrl = "{% url 'clap_count_syllables_page' %}";
                 const letterSoundMatchingUrl = "{% url 'letter_sound_matching_page' %}";
+                const letterSoundCorrespondenceUrl = "{% url 'letter_sound_correspondence_page' %}";
                 const soundDetectiveUrl = "{% url 'sound_detective_page' %}";
                 // Canonical activity route: /dashboard/assessment/activity/sound-detective/
                 const storyReadingUrl = "{% url 'story_reading_page' %}";
@@ -1308,6 +1309,7 @@
                             const isLetterSoundMatching = [templateActivityName, m.content_json?.template_title,
                                 m.content_json?.template_activity_name, m.content_json?.activity_type, m.title]
                                 .some(value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === 'letter_sound_matching');
+                            const isLetterSoundCorrespondence = String(m.content_json?.activity_slug || '') === 'letter-sound-correspondence';
                             const isSyllableBlending = [templateActivityName, m.content_json?.template_title,
                                 m.content_json?.template_lesson, m.content_json?.activity_type, m.title]
                                 .some(value => ['syllable_blending', 'blend_the_syllables'].includes(String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')));
@@ -1346,6 +1348,8 @@
                                 ? `${soundDetectiveUrl}?id=${encodeURIComponent(soundDetectiveMaterialId)}&section_id=${encodeURIComponent(sectionId)}`
                                 : isLetterSoundMatching
                                 ? `${letterSoundMatchingUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
+                                : isLetterSoundCorrespondence
+                                ? `${letterSoundCorrespondenceUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
                                 : isSyllableBlending
                                 ? `${syllableBlendingUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
                                 : isPictureWordMatching

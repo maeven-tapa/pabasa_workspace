@@ -13817,7 +13817,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const TEMPLATE_DEFINITIONS = {
             'Letter & Sound Matching': { lesson: 'Phonics', hint: 'Choose a predefined Filipino phonics set. All letters and audio are provided by the system.', fields: [], addLabel: 'Select Reading Set' },
             'Sound Detective': { lesson: 'Phonological Awareness', hint: 'Choose a language, sound set, and curated picture words.', fields: [], addLabel: 'Select Words' },
-            'Match the Letter to Its Sound': { lesson: 'Letter-Sound Correspondence', hint: 'Match each letter to the sound it makes.', fields: [{ key: 'letter', label: 'Letter', type: 'text' }, { key: 'sound', label: 'Sound', type: 'text' }], addLabel: 'Add Item' },
+            'Match the Letter to Its Sound': { lesson: 'Letter-Sound Correspondence', hint: 'Choose a language and a ready-made reading set. The carnival game, audio, letters, and choices are supplied by the system.', fields: [], addLabel: 'Select Reading Set' },
             'Clap & Count Syllables': { lesson: 'Syllable Awareness', hint: 'Choose a language, system word set, and words for clapping practice.', fields: [], addLabel: 'Select Words' },
             'Blend the Syllables': { lesson: 'Syllable Blending', hint: 'Choose a language and one ready-made activity format.', fields: [], addLabel: 'Pre-built content' },
             'Syllable Blending': { lesson: 'Syllable Blending', hint: 'Choose a language and one ready-made activity format.', fields: [], addLabel: 'Pre-built content' },
@@ -14402,6 +14402,25 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 }
             ]
         };
+        // Match the Letter to Its Sound — prescribed vowel and consonant sets, isolated from Letter & Sound Matching.
+        const LETTER_SOUND_CORRESPONDENCE_READING_SETS = {
+            tagalog_vowels: {
+                id: 'tagalog_vowels', label: 'Tagalog Vowels — A, E, I, O, U', language: 'Filipino',
+                items: [{letter:'A',sound:'A'},{letter:'E',sound:'E'},{letter:'I',sound:'I'},{letter:'O',sound:'O'},{letter:'U',sound:'U'}]
+            },
+            tagalog_consonants: {
+                id: 'tagalog_consonants', label: 'Tagalog Consonants — BA, MA, SA, TA, KA', language: 'Filipino',
+                items: [{letter:'BA',sound:'BA'},{letter:'MA',sound:'MA'},{letter:'SA',sound:'SA'},{letter:'TA',sound:'TA'},{letter:'KA',sound:'KA'}]
+            },
+            english_vowels: {
+                id: 'english_vowels', label: 'English Vowels — A, E, I, O, U', language: 'English',
+                items: [{letter:'A',sound:'A'},{letter:'E',sound:'E'},{letter:'I',sound:'I'},{letter:'O',sound:'O'},{letter:'U',sound:'U'}]
+            },
+            english_consonants: {
+                id: 'english_consonants', label: 'English Consonants — B, C, D, F, G', language: 'English',
+                items: [{letter:'B',sound:'B'},{letter:'C',sound:'C'},{letter:'D',sound:'D'},{letter:'F',sound:'F'},{letter:'G',sound:'G'}]
+            }
+        };
         let activeTemplateActivity = null;
         let activeTemplateItemEditIndex = null;
         let createdTemplateActivities = [];
@@ -14584,6 +14603,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return title === 'Letter & Sound Matching'; 
         }
 
+        function isLetterSoundCorrespondenceTemplate(title) {
+            return title === 'Match the Letter to Its Sound';
+        }
+
         function getLetterSoundMatchingReadingSets(language) {
             const allSets = Object.values(LETTER_SOUND_MATCHING_READING_SETS);
             return allSets.filter(set => set.language === language);
@@ -14591,6 +14614,36 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function getLetterSoundMatchingReadingSetById(setId) {
             return LETTER_SOUND_MATCHING_READING_SETS[setId] || null;
+        }
+
+        function getLetterSoundCorrespondenceReadingSets(language) {
+            const normalizedLanguage = language === 'English' ? 'English' : 'Filipino';
+            return Object.values(LETTER_SOUND_CORRESPONDENCE_READING_SETS)
+                .filter(set => set.language === normalizedLanguage);
+        }
+
+        function getLetterSoundCorrespondenceReadingSetById(setId) {
+            return LETTER_SOUND_CORRESPONDENCE_READING_SETS[setId] || null;
+        }
+
+        function getLetterSoundCorrespondenceReadingSet(language, setId = '') {
+            const sets = getLetterSoundCorrespondenceReadingSets(language);
+            const selectedSet = getLetterSoundCorrespondenceReadingSetById(setId);
+            return selectedSet && selectedSet.language === (language === 'English' ? 'English' : 'Filipino')
+                ? selectedSet
+                : sets[0] || null;
+        }
+
+        function syncLetterSoundCorrespondenceSet() {
+            if (!activeTemplateActivity || !isLetterSoundCorrespondenceTemplate(activeTemplateActivity.templateTitle)) return null;
+            const set = getLetterSoundCorrespondenceReadingSet(
+                getSelectedTemplateLanguage(),
+                activeTemplateActivity.letterSoundCorrespondence?.readingSetId
+            );
+            if (!set) return null;
+            activeTemplateActivity.letterSoundCorrespondence = { readingSetId: set.id, language: set.language };
+            activeTemplateActivity.items = set.items.map(item => ({...item}));
+            return set;
         }
 
         function normalizeSentenceReadingLanguage(language) {
@@ -14938,6 +14991,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 aralReadingSetId: isAralReadingSetTemplate(templateTitle) ? String(contentJson.reading_set_id || '') : '',
                 letterSoundMatching: isLetterSoundMatchingTemplate(templateTitle) ? {
                     readingSetId: String(contentJson.reading_set_id || 'filipino_set_1'),
+                    language: String(contentJson.language || restoredLanguage || 'Filipino').trim() || 'Filipino'
+                } : null,
+                letterSoundCorrespondence: isLetterSoundCorrespondenceTemplate(templateTitle) ? {
+                    readingSetId: String(contentJson.reading_set_id || (restoredLanguage === 'English' ? 'english_vowels' : 'tagalog_vowels')),
                     language: String(contentJson.language || restoredLanguage || 'Filipino').trim() || 'Filipino'
                 } : null,
                 clapCount: isClapCountTemplate(templateTitle) ? {
@@ -15453,6 +15510,38 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             });
         }
 
+        function renderLetterSoundCorrespondenceSelector() {
+            if (!templateDynamicFields || !activeTemplateActivity) return;
+            const set = syncLetterSoundCorrespondenceSet();
+            if (!set) return;
+            const availableSets = getLetterSoundCorrespondenceReadingSets(set.language);
+            templateDynamicFields.innerHTML = `
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label" for="letterSoundCorrespondenceReadingSet">Reading Set</label>
+                        <select class="form-select mb-2" id="letterSoundCorrespondenceReadingSet">
+                            ${availableSets.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === set.id ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}
+                        </select>
+                        <div class="form-text mb-2">Choose a ready-to-play vowel or consonant set. Letters, audio, and answer choices are supplied by the system.</div>
+                        <div class="letter-sound-items-preview">
+                            <h6 class="letter-sound-preview-title">${escapeHtml(set.label)}</h6>
+                            <div class="letter-sound-items-grid">
+                                ${set.items.map(item => `<div class="letter-sound-item-card"><div class="letter-sound-item-letter">${escapeHtml(item.letter)}</div></div>`).join('')}
+                            </div>
+                            <div class="letter-sound-items-count"><small class="text-muted">5 prescribed items</small></div>
+                        </div>
+                    </div>
+                </div>`;
+            document.getElementById('letterSoundCorrespondenceReadingSet')?.addEventListener('change', event => {
+                const selectedSet = getLetterSoundCorrespondenceReadingSet(set.language, event.target.value);
+                if (!selectedSet) return;
+                activeTemplateActivity.letterSoundCorrespondence = { readingSetId: selectedSet.id, language: selectedSet.language };
+                activeTemplateActivity.items = selectedSet.items.map(item => ({...item}));
+                renderLetterSoundCorrespondenceSelector();
+                renderTemplatePreview();
+            });
+        }
+
         function renderPictureWordMatchingSelector(title) {
             if (!templateDynamicFields || !activeTemplateActivity) return;
             if (!templateDynamicFields.dataset.pictureWordCustomBound) {
@@ -15936,6 +16025,19 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 };
             }
 
+            if (isLetterSoundCorrespondenceTemplate(templateTitle)) {
+                const readingSet = getLetterSoundCorrespondenceReadingSet(
+                    language,
+                    activeTemplateActivity.letterSoundCorrespondence?.readingSetId
+                );
+                return {
+                    title: activeTemplateActivity.title || 'Match the Letter to Its Sound',
+                    meta: `${language} · Letter-Sound Correspondence`,
+                    body: readingSet.items.map((item, index) => `${index + 1}. ${item.letter} — ${item.sound}`),
+                    emptyMessage: 'The prescribed vowel set is ready.'
+                };
+            }
+
             if (isPhraseReadingTemplate(templateTitle)) {
                 const selectedSet = getPhraseReadingSets(language).find(set => set.key === activeTemplateActivity.phraseReading?.setKey) || null;
                 const items = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : [];
@@ -16187,6 +16289,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     input.parentElement?.setAttribute('title', '');
                 });
                 renderLetterSoundMatchingSelector(title);
+                return;
+            }
+            if (isLetterSoundCorrespondenceTemplate(title)) {
+                Array.from(document.querySelectorAll('input[name="templateLanguage"]')).forEach(input => {
+                    input.disabled = false;
+                    input.parentElement?.classList.remove('opacity-50');
+                    input.parentElement?.setAttribute('title', '');
+                });
+                renderLetterSoundCorrespondenceSelector();
                 return;
             }
             if (isPictureWordMatchingTemplate(title)) {
@@ -16557,7 +16668,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 };
                 activeTemplateActivity.items = defaultSet ? defaultSet.items : [];
                 activeTemplateActivity.title = 'Letter & Sound Matching';
-                if (templateActivityTitle) templateActivityTitle.value = 'Letter & Sound Matching';
+                if (templateActivityTitle) templateActivityTitle.value = activeTemplateActivity.title;
+            }
+            if (isLetterSoundCorrespondenceTemplate(templateTitle)) {
+                const defaultSet = getLetterSoundCorrespondenceReadingSet('Filipino');
+                activeTemplateActivity.letterSoundCorrespondence = { readingSetId: defaultSet.id, language: 'Filipino' };
+                activeTemplateActivity.items = defaultSet.items.map(item => ({...item}));
+                activeTemplateActivity.title = 'Match the Letter to Its Sound';
+                if (templateActivityTitle) templateActivityTitle.value = activeTemplateActivity.title;
             }
             if (isPictureWordMatchingTemplate(templateTitle)) {
                 activeTemplateActivity.pictureWordMatching = Object.assign({}, normalizePictureWordMatchingSelection('A', templateLanguage), { mode: 'prescribed' });
@@ -16586,7 +16704,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             window.__addMaterialDefaultMode = 'template';
             setTemplateBuilderActive(true);
             if (templateActivityTitle) {
-                if (!isLetterSoundMatchingTemplate(templateTitle)) {
+                if (!isLetterSoundMatchingTemplate(templateTitle) && !isLetterSoundCorrespondenceTemplate(templateTitle)) {
                     templateActivityTitle.value = isSoundDetectiveTemplate(templateTitle) ? 'Sound Detective' : '';
                 }
                 if (isAralReadingSetTemplate(templateTitle)) templateActivityTitle.value = templateTitle;
@@ -16667,6 +16785,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 content.activity_type = 'letter_sound_matching';
                 content.reading_set_id = readingSetId;
                 content.items = readingSet ? readingSet.items : [];
+            } else if (isLetterSoundCorrespondenceTemplate(activeTemplateActivity?.templateTitle)) {
+                const readingSet = getLetterSoundCorrespondenceReadingSet(
+                    language,
+                    activeTemplateActivity.letterSoundCorrespondence?.readingSetId
+                );
+                content.language = readingSet.language;
+                content.activity_type = 'letter_sound_correspondence';
+                content.reading_set_id = readingSet.id;
+                content.items = readingSet.items.map(item => ({...item}));
             } else if (isPictureWordMatchingTemplate(activeTemplateActivity?.templateTitle)) {
                 const mode = activeTemplateActivity?.pictureWordMatching?.mode === 'custom' ? 'custom' : 'prescribed';
                 content.language = language || 'English';
@@ -16774,6 +16901,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 if (!['Filipino', 'English'].includes(values.language)) return 'Letter & Sound Matching language must be Filipino or English.';
                 if (!values.content?.reading_set_id) return 'Select a reading set.';
                 if (!Array.isArray(values.content?.items) || !values.content.items.length) return 'The selected reading set has no items.';
+                if (getLetterSoundMatchingReadingSetById(values.content.reading_set_id)?.language !== values.language) return 'Choose a reading set for the selected language.';
+                if (!values.weeks.length) return 'Select at least one week.';
+                return '';
+            }
+            if (isLetterSoundCorrespondenceTemplate(activeTemplateActivity?.templateTitle)) {
+                const set = getLetterSoundCorrespondenceReadingSetById(values.content?.reading_set_id);
+                if (!['Filipino', 'English'].includes(values.language)) return 'Choose Filipino or English.';
+                if (!set || set.language !== values.language || values.content?.items?.length !== 5) return 'Choose a prescribed reading set for the selected language.';
                 if (!values.weeks.length) return 'Select at least one week.';
                 return '';
             }
@@ -16985,6 +17120,22 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             template_source: 'template',
                             weeks: values.weeks || [],
                             items: values.content.items || readingSet.items
+                        });
+                    }
+                    if (isLetterSoundCorrespondenceTemplate(activeTemplateActivity?.templateTitle)) {
+                        const readingSet = getLetterSoundCorrespondenceReadingSetById(values.content?.reading_set_id);
+                        if (!readingSet || readingSet.language !== values.language) throw new Error('Choose a reading set for the selected language.');
+                        Object.assign(contentPayload, {
+                            activity_slug: 'letter-sound-correspondence',
+                            activity_type: 'letter_sound_correspondence',
+                            reading_set_id: readingSet.id,
+                            language: readingSet.language,
+                            template_title: 'Match the Letter to Its Sound',
+                            template_lesson: 'Letter-Sound Correspondence',
+                            template_type: 'Match the Letter to Its Sound',
+                            template_source: 'template',
+                            weeks: values.weeks || [],
+                            items: readingSet.items
                         });
                     }
                     if (isClapCountTemplate(activeTemplateActivity?.templateTitle)) {
@@ -18165,6 +18316,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
                     } else if (isSoundDetectiveTemplate(activeTemplateActivity?.templateTitle)) {
                         activeTemplateActivity.soundDetective = {soundSet:'',selectedWordIds:[],numberOfQuestions:1,randomizeQuestions:false,randomizeAnswerChoices:false,allowRetry:true,previewIndex:0};
+                        renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
+                    } else if (isLetterSoundMatchingTemplate(activeTemplateActivity?.templateTitle)) {
+                        renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
+                    } else if (isLetterSoundCorrespondenceTemplate(activeTemplateActivity?.templateTitle)) {
+                        syncLetterSoundCorrespondenceSet();
                         renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
                     }
                     renderTemplatePreview();

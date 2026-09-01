@@ -10200,6 +10200,15 @@ def _is_letter_sound_matching_material(material):
     return 'letter_sound_matching' in normalized
 
 
+LETTER_SOUND_CORRESPONDENCE_SLUG = 'letter-sound-correspondence'
+
+
+def _is_letter_sound_correspondence_material(material):
+    """Identify the carnival activity solely by its immutable activity slug."""
+    content = getattr(material, 'content_json', None) if material else None
+    return isinstance(content, dict) and content.get('activity_slug') == LETTER_SOUND_CORRESPONDENCE_SLUG
+
+
 def _is_story_reading_material(material):
     """Identify the teacher-assigned Story Reading template only."""
     content = getattr(material, 'content_json', None) if material else None
@@ -10748,6 +10757,30 @@ def letter_sound_matching_page(request):
     }, default=str, separators=(',', ':'))
     context['letter_sound_matching_completion_json'] = json.dumps(completion_payload or {}, default=str, separators=(',', ':'))
     return render(request, 'pabasa_app/letter_sound_matching_page.html', context)
+
+
+@xframe_options_sameorigin
+def letter_sound_correspondence_page(request):
+    """Render the isolated carnival Letter-Sound Correspondence activity."""
+    access_response = _enforce_student_access_for_request(request)
+    if access_response:
+        return access_response
+    _, material_id = _parse_prefixed_id(request.GET.get('id') or request.GET.get('material_id'))
+    material = Material.objects.filter(pk=material_id).first() if material_id else None
+    if not material or not _is_letter_sound_correspondence_material(material):
+        return redirect('assessment')
+
+    content = dict(material.content_json or {})
+    items = content.get('items') if isinstance(content.get('items'), list) else []
+    context = _dashboard_context(request)
+    context['letter_sound_correspondence_material_json'] = json.dumps({
+        'id': material.id,
+        'title': material.title or 'Match the Letter to Its Sound',
+        'language': content.get('language') or 'Filipino',
+        'reading_set_id': content.get('reading_set_id') or '',
+        'items': items,
+    }, default=str, separators=(',', ':'))
+    return render(request, 'pabasa_app/letter_sound_correspondence_page.html', context)
 
 
 PICTURE_WORD_IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webp'}
@@ -12339,6 +12372,10 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         str(activity_type or '').strip().lower() == 'letter_sound_matching'
         or bool(material and _is_letter_sound_matching_material(material))
     )
+    is_letter_sound_correspondence = (
+        str(activity_type or '').strip().lower() == 'letter_sound_correspondence'
+        and bool(material and _is_letter_sound_correspondence_material(material))
+    )
     is_crla_assessment = bool(
         data.get('crla_score_data')
         or getattr(material, 'assessment_kind', '') == 'crla'
@@ -12440,6 +12477,38 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             'remarks': 'PHRASE_READING_RESULT:' + json.dumps({
                 'activity_type': 'phrase_reading',
                 'completed_phrases': completed_indexes,
+            }, separators=(',', ':')),
+        }
+    elif is_letter_sound_correspondence:
+        raw_scores = data.get('scores') if isinstance(data.get('scores'), dict) else {}
+        activity_items = (material.content_json or {}).get('items') if material else []
+        activity_items = activity_items if isinstance(activity_items, list) else []
+        submitted_answers = raw_scores.get('answers') if isinstance(raw_scores.get('answers'), list) else []
+        normalized_answers = []
+        correct_items = 0
+        for index, item in enumerate(activity_items):
+            expected_letter = str(item.get('letter') or '').strip() if isinstance(item, dict) else ''
+            submitted = submitted_answers[index] if index < len(submitted_answers) and isinstance(submitted_answers[index], dict) else {}
+            selected_letter = str(submitted.get('selected_letter') or '').strip()
+            is_correct = bool(expected_letter) and selected_letter.casefold() == expected_letter.casefold()
+            correct_items += int(is_correct)
+            normalized_answers.append({
+                'letter': expected_letter,
+                'selected_letter': selected_letter,
+                'is_correct': is_correct,
+            })
+        total_items = len(activity_items)
+        objective_score = round((correct_items / total_items) * 100) if total_items else 0
+        score_payload = {
+            'accuracy': objective_score,
+            'total_score': objective_score,
+            'correct_items': correct_items,
+            'items_completed': total_items,
+            'duration_seconds': max(0, int(raw_scores.get('duration_seconds') or 0)),
+            'passed': objective_score >= 75,
+            'remarks': 'LETTER_SOUND_CORRESPONDENCE_RESULT:' + json.dumps({
+                'activity_slug': LETTER_SOUND_CORRESPONDENCE_SLUG,
+                'answers': normalized_answers,
             }, separators=(',', ':')),
         }
     elif is_letter_sound_matching:
@@ -12631,7 +12700,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         }
     else:
         score_payload = _practice_score_payload(data) if is_practice else _assessment_score_payload(data)
-    if (is_phrase_reading or is_picture_word_matching or is_syllable_blending or is_clap_count_syllables or is_letter_sound_matching) and already_completed and not is_retake:
+    if (is_phrase_reading or is_picture_word_matching or is_syllable_blending or is_clap_count_syllables or is_letter_sound_matching or is_letter_sound_correspondence) and already_completed and not is_retake:
         existing_result = material.assessment_results.filter(
             student=student_user,
             attempt_status='completed',
@@ -12643,7 +12712,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             'items_completed': getattr(existing_result, 'items_completed', 0) or 0,
             'accuracy': getattr(existing_result, 'accuracy', 0) or 0,
         })
-    if not is_practice and not is_phrase_reading and not is_picture_word_matching and not is_syllable_blending and not is_letter_sound_matching and not is_crla_assessment:
+    if not is_practice and not is_phrase_reading and not is_picture_word_matching and not is_syllable_blending and not is_letter_sound_matching and not is_letter_sound_correspondence and not is_crla_assessment:
         account_assessment_type = (
             getattr(assessment, 'assessment_type', None)
             or assessment_type_hint
@@ -12722,7 +12791,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 material.save(update_fields=['teacher', 'updated_at'])
                 _log_completion_timing('assessment_teacher_save')
             _log_completion_timing('assessment_record_attempt_start')
-            if is_phrase_reading or is_clap_count_syllables or is_letter_sound_matching:
+            if is_phrase_reading or is_clap_count_syllables or is_letter_sound_matching or is_letter_sound_correspondence:
                 # Lock this material row while checking/creating so concurrent final submits
                 # cannot create more than one completed result for this student/material.
                 with transaction.atomic():
@@ -12747,7 +12816,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 student=student_user,
                 attempt_status='completed',
             ).order_by('-completed_at', '-created_at').select_related('source_assessment').first()
-        if not is_practice and not is_picture_word_matching and not is_syllable_blending and not is_clap_count_syllables and not is_letter_sound_matching and not is_crla_assessment:
+        if not is_practice and not is_picture_word_matching and not is_syllable_blending and not is_clap_count_syllables and not is_letter_sound_matching and not is_letter_sound_correspondence and not is_crla_assessment:
             _log_completion_timing('student_profile_save_start')
             _update_student_reading_profile(student_user, score_payload)
             _log_completion_timing('student_profile_save_end')
