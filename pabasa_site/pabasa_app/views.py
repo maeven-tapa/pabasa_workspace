@@ -5757,6 +5757,11 @@ def _admin_user_template_context(request, user, page_title):
         'available_sections': [],
         'all_sections_by_grade': {},
         'student_enrollments': (Enrollment.objects.filter(student=user).select_related('section__teacher', 'school', 'school_calendar').order_by('-school_calendar__created_at', '-joined_at') if user.role == 'student' else []),
+        'current_return_enrollment': (Enrollment.objects.filter(
+            student=user,
+            school_calendar=_active_school_calendar_for_new_workflows(),
+            status__in=('active', 'awaiting_assignment'),
+        ).select_related('section', 'school_calendar').first() if user.role == 'student' and _active_school_calendar_for_new_workflows() else None),
         'student_assignment_sections': (_signup_section_queryset('student', school=user.school_record) if user.role == 'student' else []),
     })
     return context
@@ -5794,9 +5799,14 @@ def admin_student_move_enrollment(request, user_id):
         if Enrollment.objects.filter(student=user, school_calendar=destination.school_calendar, status='active', is_active=True).exclude(pk=current.pk).exists():
             messages.error(request, 'The student already has another active enrollment for this school year.')
             return redirect('admin_student_detail', user_id=user.id)
+        previous_section = current.section
         current.section, current.school, current.school_calendar = destination, destination.school, destination.school_calendar
         current.grade_level, current.assigned_teacher = NEW_USER_GRADE_LEVEL, destination.teacher
+        current.status = 'active' if destination.teacher_id else 'awaiting_assignment'
         current.save()
+        if previous_section and previous_section.id != destination.id:
+            previous_section.sync_legacy_student_fields()
+        destination.sync_legacy_student_fields()
         user.sync_legacy_student_fields(current)
     messages.success(request, 'Student enrollment moved successfully. Historical enrollments were preserved.')
     return redirect('admin_student_detail', user_id=user.id)
@@ -5848,7 +5858,7 @@ def admin_student_returning_enrollment(request, user_id):
     if year_match:
         previous_label = f'{int(year_match.group(1)) - 1}-{int(year_match.group(1))}'
         previous_calendar = SchoolCalendar.objects.filter(
-            school=calendar.school, school_year=previous_label
+            school_year=previous_label
         ).first()
     prior = Enrollment.objects.filter(
         student=user, outcome='retained', status='completed',
@@ -6054,7 +6064,12 @@ def _admin_edit_user(request, user_id, role):
                 return render(request, 'pabasa_app/admin_user_edit.html', context, status=400)
             with transaction.atomic():
                 destination_section = Section.objects.select_for_update().get(pk=destination_section.pk)
-                occupied_by = Section.objects.select_for_update().filter(teacher=user).exclude(pk=destination_section.pk).first()
+                occupied_by = Section.objects.select_for_update().filter(
+                    teacher=user,
+                    school_calendar_id=destination_section.school_calendar_id,
+                    is_active=True,
+                    grade_level=NEW_USER_GRADE_LEVEL,
+                ).exclude(pk=destination_section.pk).first()
                 if occupied_by:
                     occupied_by.unassign_teacher()
                 if destination_section.teacher_id and destination_section.teacher_id != user.id:
@@ -6107,8 +6122,9 @@ def _admin_edit_user(request, user_id, role):
                     current_enrollment.school_calendar = destination_section.school_calendar
                     current_enrollment.grade_level = destination_section.grade_level or NEW_USER_GRADE_LEVEL
                     current_enrollment.assigned_teacher = destination_section.teacher
-                    current_enrollment.status = 'active'
+                    current_enrollment.status = 'active' if destination_section.teacher_id else 'awaiting_assignment'
                     current_enrollment.save()
+                    destination_section.sync_legacy_student_fields()
                     user.sync_legacy_student_fields(current_enrollment)
 
         user.custom_id = username
@@ -6234,7 +6250,7 @@ def admin_school_detail(request, school_id):
                 student__role='student', student__is_archived=False, student__account_status='active',
             ).select_related('student', 'section', 'assigned_teacher', 'school_calendar')
             already_placed = Enrollment.objects.filter(
-                school_calendar=selected_calendar, status__in=('active', 'awaiting_assignment'), is_active=True,
+                school_calendar=selected_calendar, status__in=('active', 'awaiting_assignment'),
             ).values_list('student_id', flat=True)
             returning_students = list(prior.exclude(student_id__in=already_placed))
     if request.method == 'POST':
@@ -6370,14 +6386,31 @@ def admin_school_section_update(request, section_id):
     elif action == 'reactivate':
         section.is_active = True
         section.save(update_fields=['is_active', 'updated_at'])
-    elif action == 'assign_teacher':
+    elif action in ('assign_teacher', 'change_teacher'):
         teacher_id = request.POST.get('teacher_id')
-        teacher = User.objects.filter(id=teacher_id, role='teacher').first()
-        if teacher:
+        teacher = User.objects.filter(id=teacher_id, role='teacher', is_archived=False, school_record_id=section.school_id).first()
+        if not teacher:
+            messages.error(request, 'Choose a valid active teacher from this school.')
+        else:
             try:
-                section.assign_teacher(teacher, replace_existing=bool(request.POST.get('replace_teacher')))
-            except ValidationError:
-                pass
+                section.assign_teacher(teacher, replace_existing=(action == 'change_teacher'))
+                Enrollment.objects.filter(
+                    section=section, school_calendar=section.school_calendar,
+                    status='awaiting_assignment', is_active=False,
+                ).update(assigned_teacher=teacher, status='active', is_active=True)
+                Enrollment.objects.filter(
+                    section=section, school_calendar=section.school_calendar,
+                    status='active', is_active=True,
+                ).update(assigned_teacher=teacher)
+                section.sync_legacy_student_fields()
+                verb = 'changed' if action == 'change_teacher' else 'assigned'
+                messages.success(request, f'{teacher.first_name} {teacher.last_name} was {verb} for {section.class_name}.')
+            except ValidationError as exc:
+                logger.warning(
+                    'Admin teacher assignment rejected section_id=%s teacher_id=%s calendar_id=%s errors=%s',
+                    section.id, teacher.id, section.school_calendar_id, exc.messages,
+                )
+                messages.error(request, '; '.join(str(error) for error in exc.messages) or 'Teacher assignment could not be saved.')
     if section.school_id:
         return redirect('admin_school_detail', school_id=section.school_id)
     return redirect('admin_school')
@@ -6441,6 +6474,15 @@ def _admin_section_template_context(request, section, page_title):
         is_active=True,
         grade_level=NEW_USER_GRADE_LEVEL,
     ).exclude(pk=section.pk).order_by('class_name', 'id')
+    eligible_teachers = User.objects.filter(
+        role='teacher', is_archived=False, school_record_id=section.school_id,
+    ).order_by('last_name', 'first_name', 'custom_id')
+    conflicting_teacher_ids = set(Section.objects.filter(
+        school_calendar_id=section.school_calendar_id,
+        is_active=True,
+        grade_level=NEW_USER_GRADE_LEVEL,
+        teacher__isnull=False,
+    ).exclude(pk=section.pk).values_list('teacher_id', flat=True))
     
     context = _admin_context(request, page_title, [])
     context.update({
@@ -6452,6 +6494,8 @@ def _admin_section_template_context(request, section, page_title):
         'status': 'Active' if section.is_active else 'Archived',
         'enrollments': enrollments,
         'destination_sections': destination_sections,
+        'eligible_teachers': eligible_teachers,
+        'conflicting_teacher_ids': conflicting_teacher_ids,
     })
     return context
 

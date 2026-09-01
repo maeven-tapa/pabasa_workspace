@@ -88,8 +88,10 @@
               <dt class="col-5">Status</dt><dd class="col-7">{% if teacher.is_archived %}Archived{% else %}Active{% endif %}</dd>
             </dl>
             <a class="btn btn-sm btn-outline-primary" href="{% url 'admin_teacher_detail' teacher.id %}">Manage Teacher</a>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#assignTeacherModal"><i class="bi bi-person-gear me-1" aria-hidden="true"></i>Change Teacher</button>
           {% else %}
             <p class="text-muted">Not assigned</p>
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#assignTeacherModal"><i class="bi bi-person-plus me-1" aria-hidden="true"></i>Assign Teacher</button>
           {% endif %}
           <a class="btn btn-sm btn-outline-secondary ms-1" href="{% url 'admin_class_edit' section.id %}?edit=1" onclick="window.location.assign(this.href); return false;">Edit Section</a>
         </div>
@@ -154,6 +156,16 @@
       </form>
     </div>
   </div>
+</div>
+<div class="modal fade" id="assignTeacherModal" tabindex="-1" aria-labelledby="assignTeacherTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <form method="post" action="{% url 'admin_school_section_update' section.id %}">
+      {% csrf_token %}<input type="hidden" name="action" value="{% if teacher %}change_teacher{% else %}assign_teacher{% endif %}">
+      <div class="modal-header"><h2 class="modal-title h5" id="assignTeacherTitle">{% if teacher %}Change{% else %}Assign{% endif %} Teacher</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+      <div class="modal-body"><p class="small text-muted">Select an active teacher from {{ section.school.name }}.</p><label class="form-label fw-bold" for="sectionTeacher">Teacher</label><select class="form-select" id="sectionTeacher" name="teacher_id" required><option value="">Choose a teacher</option>{% for candidate in eligible_teachers %}<option value="{{ candidate.id }}" {% if teacher and teacher.id == candidate.id %}selected{% endif %}{% if candidate.id in conflicting_teacher_ids and candidate.id != section.teacher_id %} disabled{% endif %}>{{ candidate.first_name }} {{ candidate.last_name }} — {{ candidate.custom_id }}{% if candidate.id in conflicting_teacher_ids and candidate.id != section.teacher_id %} (assigned this school year){% endif %}</option>{% empty %}<option value="" disabled>No eligible teachers available</option>{% endfor %}</select></div>
+      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1" aria-hidden="true"></i>Save Teacher</button></div>
+    </form>
+  </div></div>
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function () {

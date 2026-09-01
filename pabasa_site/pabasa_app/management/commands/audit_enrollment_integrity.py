@@ -48,12 +48,24 @@ class Command(BaseCommand):
                 issues.append({'type': 'account_status_mismatch', 'user_id': user.id})
         for section in Section.objects.all():
             json_ids = {str(item.get('student_id')) for item in (section.students or []) if item.get('student_id') is not None}
-            relational_ids = {str(value) for value in Enrollment.objects.filter(section=section, school_calendar=section.school_calendar, status='active', is_active=True).values_list('student_id', flat=True)}
+            relational_ids = {str(value) for value in Enrollment.objects.filter(
+                section=section, school_calendar=section.school_calendar,
+                status='active', is_active=True,
+                student__role='student', student__is_archived=False,
+            ).values_list('student_id', flat=True)}
             if json_ids != relational_ids:
                 issues.append({'type': 'section_students_mismatch', 'section_id': section.id})
-                if options['fix_cache'] and section.id in {15, 20}:
+                if options['fix_cache']:
                     # Keep only current relational members in this legacy roster cache.
-                    section.students = section.get_enrolled_students(active_only=True)
+                    section.students = [section._get_student_entry(
+                        enrollment.student,
+                        enrollment.joined_at.isoformat() if enrollment.joined_at else None,
+                        True,
+                    ) for enrollment in Enrollment.objects.filter(
+                        section=section, school_calendar=section.school_calendar,
+                        status='active', is_active=True,
+                        student__role='student', student__is_archived=False,
+                    ).select_related('student')]
                     section._save_enrollment()
                     repaired.append({'type': 'section_students_mismatch', 'section_id': section.id})
         for row in Assessment.objects.filter(student__isnull=False, section__isnull=False, enrollment__isnull=True):

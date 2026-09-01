@@ -351,7 +351,12 @@ class Section(models.Model):
 
         with transaction.atomic():
             locked_self = Section.objects.select_for_update().get(pk=self.pk)
-            conflicting = Section.objects.select_for_update().filter(teacher=teacher_user).exclude(pk=locked_self.pk).first()
+            conflicting = Section.objects.select_for_update().filter(
+                teacher=teacher_user,
+                school_calendar_id=locked_self.school_calendar_id,
+                is_active=True,
+                grade_level__iexact="Grade 2",
+            ).exclude(pk=locked_self.pk).first()
             if conflicting:
                 raise ValidationError({"teacher": "This teacher is already assigned to another active section."})
 
