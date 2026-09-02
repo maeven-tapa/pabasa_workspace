@@ -110,3 +110,4 @@ class TemplateActivityEditRegressionTests(TestCase):
         self.assertNotIn("templateSaveAssignBtn", source)
         self.assertNotIn("Save &amp; Assign", source)
         self.assertNotIn("assignOnly", source)
+
