@@ -243,6 +243,7 @@ Each set contains 10 phonics items in format:
 
 ## 📊 Data Flow
 
+{% raw %}
 ```
 User Access
     ↓
@@ -277,6 +278,7 @@ Results Modal
     ↓
 User completes activity
 ```
+{% endraw %}
 
 ---
 

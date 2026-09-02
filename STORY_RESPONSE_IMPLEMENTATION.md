@@ -155,9 +155,11 @@ In `course_teacher_view.html`, add "Story Response" to the activity type selecto
 
 ### Step 2: Include Create Panel Modal
 Add this to `course_teacher_view.html`:
+{% raw %}
 ```html
 {% include "pabasa_app/partials/_story_response_create_panel.html" %}
 ```
+{% endraw %}
 
 ### Step 3: Trigger Modal on Activity Selection
 ```javascript
