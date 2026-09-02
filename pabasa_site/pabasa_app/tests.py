@@ -20,7 +20,7 @@ from pypdf import PdfReader
 from reportlab.pdfgen import canvas
 
 from .forms import AdminPracticeMaterialForm
-from .models import Material, User, Section, Assessment, Notification, Course, Note, LiveAssessmentSession, School, SchoolCalendar, CalendarEvent, StoryReadingProgress
+from .models import Material, User, Section, Assessment, Notification, Course, Note, LiveAssessmentSession, School, SchoolCalendar, CalendarEvent, StoryReadingProgress, TeacherAralSchedule
 from .reading_stt import (
     ReadingMatcher,
     align_story_transcript,
@@ -50,6 +50,64 @@ from .management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CO
 from .views import _active_school_calendar, _apply_progression_unlock_override, _aral_eligible_classification, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _primary_school, _save_admin_practice_material, _selected_school_calendar, _sync_assessment_workflow_state, _official_crla_assessment_labels, _official_assessment_availability_for_student
 from .weekly_digest import send_weekly_digest
 from .scoring import build_assessment_score_payload
+
+
+class TeacherAralScheduleTests(TestCase):
+    def test_dashboard_supports_multi_day_aral_selection_without_section_field(self):
+        school = School.objects.create(name="Schedule School", code="SCH-SCHED")
+        school_calendar = SchoolCalendar.objects.create(school_year="2026-2027", current_term=1, is_active=True)
+        teacher = User.objects.create(
+            custom_id="TCHR-ARAL-01",
+            role="teacher",
+            first_name="Ari",
+            last_name="Teacher",
+            school_record=school,
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="aralteacher@example.com",
+            password_hash=make_password("teacher-password"),
+        )
+        section = Section.objects.create(
+            school=school,
+            teacher=teacher,
+            school_calendar=school_calendar,
+            class_name="Section A",
+            class_code="SEC-A",
+            subject="Reading",
+            is_active=True,
+        )
+
+        session = self.client.session
+        session["user_id"] = teacher.id
+        session["user_role"] = teacher.role
+        session.save()
+
+        dashboard_response = self.client.get(reverse("dashboard_teacher"))
+        self.assertEqual(dashboard_response.status_code, 200)
+        self.assertContains(dashboard_response, "My ARAL Schedule")
+        self.assertNotContains(dashboard_response, 'id="teacherAralSection"')
+
+        response = self.client.post(
+            reverse("teacher_create_aral_schedule"),
+            {
+                "weekday": ["0", "2", "4"],
+                "remark": "Reading practice",
+                "applies_to": TeacherAralSchedule.APPLIES_TO_CURRENT,
+            },
+            follow=False,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        schedules = list(TeacherAralSchedule.objects.filter(
+            teacher=teacher,
+            school_calendar=school_calendar,
+            remark="Reading practice",
+        ).order_by("weekday"))
+        self.assertEqual(len(schedules), 3)
+        self.assertEqual([schedule.weekday for schedule in schedules], [0, 2, 4])
+        self.assertEqual(schedules[0].section_id, section.id)
 
 
 class ClassMaterialsApiTests(TestCase):

@@ -5144,30 +5144,47 @@ def teacher_create_aral_schedule(request):
     if not teacher or teacher.role != 'teacher' or teacher.is_archived:
         return redirect('auth')
     active_calendar, _, _ = _selected_school_calendar(request)
-    section = _teacher_current_sections(teacher).filter(
-        pk=request.POST.get('section_id'), school_calendar=active_calendar,
-    ).first()
+    section = _teacher_current_sections(teacher).filter(school_calendar=active_calendar).order_by('id').first()
     if not section:
-        messages.error(request, 'Choose one of your assigned sections.')
+        messages.error(request, 'You need at least one active section to create an ARAL schedule.')
         return redirect('dashboard_teacher')
-    try:
-        weekday = int(request.POST.get('weekday', ''))
-    except (TypeError, ValueError):
-        weekday = -1
+
+    selected_weekdays = request.POST.getlist('weekday')
+    if not selected_weekdays:
+        selected_weekdays = [request.POST.get('weekday')]
+    weekdays = []
+    for raw_weekday in selected_weekdays:
+        if raw_weekday in (None, ''):
+            continue
+        try:
+            weekday = int(raw_weekday)
+        except (TypeError, ValueError):
+            continue
+        if 0 <= weekday <= 6:
+            weekdays.append(weekday)
+    weekdays = sorted(set(weekdays))
+
     applies_to = request.POST.get('applies_to', TeacherAralSchedule.APPLIES_TO_CURRENT)
     remark = request.POST.get('remark', '').strip()
     current_term = _calendar_current_term(active_calendar) if active_calendar else None
-    if weekday not in range(7) or not remark or applies_to not in dict(TeacherAralSchedule.APPLIES_TO_CHOICES):
-        messages.error(request, 'Enter a day and schedule remark.')
+    if not weekdays or not remark or applies_to not in dict(TeacherAralSchedule.APPLIES_TO_CHOICES):
+        messages.error(request, 'Select at least one day and enter a schedule remark.')
         return redirect('dashboard_teacher')
     if applies_to == TeacherAralSchedule.APPLIES_TO_CURRENT and not current_term:
         messages.error(request, 'The active term is not configured yet.')
         return redirect('dashboard_teacher')
-    TeacherAralSchedule.objects.create(
-        teacher=teacher, section=section, school_calendar=active_calendar,
-        weekday=weekday, remark=remark[:200], applies_to=applies_to,
-        term=current_term if applies_to == TeacherAralSchedule.APPLIES_TO_CURRENT else None,
-    )
+
+    term_value = current_term if applies_to == TeacherAralSchedule.APPLIES_TO_CURRENT else None
+    for weekday in weekdays:
+        TeacherAralSchedule.objects.create(
+            teacher=teacher,
+            section=section,
+            school_calendar=active_calendar,
+            weekday=weekday,
+            remark=remark[:200],
+            applies_to=applies_to,
+            term=term_value,
+        )
     messages.success(request, 'ARAL schedule added to your private teacher calendar.')
     return redirect('dashboard_teacher')
 
