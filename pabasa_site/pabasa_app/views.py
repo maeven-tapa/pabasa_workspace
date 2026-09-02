@@ -22272,7 +22272,8 @@ def story_response_page(request):
         'student_first_name': str(student.first_name or '').strip().split()[0] if student and student.first_name else 'Friend',
         'student_avatar_set': 'male' if str(getattr(student, 'sex', '')).strip().lower().startswith('m') else 'female',
         'assigned_week': material.assigned_week,
-        'return_url': reverse('dashboard'),
+        # Story Response is an independent learner activity, like Story Reading.
+        'return_url': reverse('assessment'),
     }
     
     return render(request, 'pabasa_app/story_response_page.html', {

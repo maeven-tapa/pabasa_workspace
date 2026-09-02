@@ -1,561 +1,63 @@
-{% extends "pabasa_app/base_dashboard.html" %}
-{% load static %}
-
-{% block extra_head %}
+{% load static %}<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Story Interview | PABASA</title><style>@font-face{font-family:R;src:url('{% static "pabasa_app/font/Righteous-Regular.ttf" %}')}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden}body{font-family:R;background:#201635}.set{height:100dvh;padding:clamp(14px,2.5vw,34px);color:#fff;background:url('{% static "pabasa_app/images/story_response/bg.jpg" %}') center/cover no-repeat}.show{height:100%;max-width:1240px;margin:auto;display:flex;flex-direction:column}.brand{font-size:clamp(.8rem,1.5vw,1.1rem);letter-spacing:.13em;text-shadow:0 2px 3px #0008}.segment{margin:.15rem 0;font-size:clamp(1.1rem,2.2vw,1.75rem)}.story{margin:0;color:#fff1b9;font-size:clamp(.9rem,1.6vw,1.2rem)}.stage{flex:1;min-height:0;display:grid;grid-template-columns:minmax(340px,1fr) minmax(330px,.78fr);align-items:center;gap:clamp(18px,5vw,70px)}.tv{position:relative;width:min(680px,100%);justify-self:center;aspect-ratio:1.52}.tvframe{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none}.screen{position:absolute;z-index:1;left:14%;top:20%;width:61%;height:54%;display:grid;place-items:end center;overflow:hidden;border-radius:9% 8% 10% 9%;background:radial-gradient(circle at 50% 20%,#6dc0df,#183f67 62%,#10253f)}.host{max-height:105%;max-width:90%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.onair{position:absolute;z-index:3;top:12%;left:17%;padding:4px 8px;border-radius:5px;background:#df3f44;color:#fff;font-size:clamp(.55rem,1vw,.75rem);letter-spacing:.08em}.hostlabel{position:absolute;z-index:3;bottom:24%;left:20%;padding:4px 8px;background:#182a45e8;font-size:clamp(.55rem,1vw,.75rem);letter-spacing:.08em}.talk{align-self:center}.asks{margin:0 0 .5rem;color:#fff7c9;font-size:clamp(.75rem,1.3vw,.95rem);letter-spacing:.12em;text-shadow:0 2px 3px #0008}.prompt{margin:0;color:#fff;font-size:clamp(1.5rem,3.2vw,2.7rem);line-height:1.22;text-shadow:0 3px 5px #0009}.turn{margin:clamp(20px,4vh,42px) 0 .6rem;color:#ffe177;font-size:clamp(1rem,1.8vw,1.4rem);letter-spacing:.1em;text-shadow:0 2px 3px #0008}.btn{font-family:R;cursor:pointer;border:0;border-radius:12px;padding:.8rem 1rem}.answer{display:inline-flex;align-items:center;gap:10px;min-height:58px;background:#ef5e52;color:#fff;border-bottom:5px solid #a8393d;font-size:clamp(1.05rem,1.9vw,1.35rem);box-shadow:0 7px 14px #30152866}.hear{display:block;margin-top:13px;background:#fff4ca;color:#554e52;border:1px solid #c8983d;font-size:.85rem}.recording,.processing,.playback{display:none;margin-top:14px}.recording.show,.processing.show,.playback.show{display:block}.recording{color:#fff;font-size:1rem;text-shadow:0 2px 3px #000}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#f33}.time{font-size:1.4rem}.playback{width:min(100%,350px);padding:12px;background:#fff4ca;color:#453153;border-radius:12px}.row{display:grid;grid-template-columns:42px 1fr;gap:8px}.play{border:0;border-radius:8px;background:#f1b941}.progress{width:100%}.again{margin-top:8px;background:#8066ab;color:#fff}.back{color:#fff;text-decoration:none;font-size:.85rem;text-shadow:0 2px 3px #0008}@media(max-width:760px){.set{padding:14px}.stage{grid-template-columns:1fr;gap:0;align-content:center}.tv{width:min(500px,92vw);max-height:52vh}.talk{text-align:center}.prompt{font-size:clamp(1.25rem,5vw,1.85rem)}.turn{margin:12px 0 .4rem}.answer{min-height:48px}.back{margin-top:8px}}@media(max-height:620px){.tv{width:min(530px,60vw)}.turn{margin:10px 0}.answer{min-height:46px}}</style></head><body><main class="set"><section class="show"><header><div class="brand">STORYTIME ADVENTURES</div><h1 class="segment">STORY INTERVIEW</h1><p class="story" id="story"></p></header><section class="stage"><div class="tv"><div class="screen"><img id="avatar" class="host" src="{% static 'pabasa_app/images/story_response/female_idle.png' %}" alt="Story host"></div><img class="tvframe" src="{% static 'pabasa_app/images/story_response/tv.png' %}" alt=""><span class="onair">● ON AIR</span><span class="hostlabel">STORY HOST</span></div><section class="talk"><p class="asks">HOST ASKS:</p><p class="prompt" id="prompt"></p><p class="turn" id="state">YOUR TURN!</p><div id="recording" class="recording"><span class="dot"></span> RECORDING<div id="timer" class="time">00:00</div></div><div id="processing" class="processing">The host is listening...</div><div id="playback" class="playback"><b>Your Answer</b><div class="row"><button id="play" class="play">▶</button><input id="progress" class="progress" type="range" min="0" max="0" value="0"></div><span id="current">0:00</span> / <span id="total">0:00</span><button id="again" class="btn again">↻ Record Again</button></div><div id="stack"><button id="record" class="btn answer" hidden>🎙 Answer Now</button><button id="hear" class="btn hear" hidden>🔊 Hear Question</button></div></section></section><a id="back" class="back" href="{% url 'assessment' %}">← Back to Activities</a></section></main><script>const a={{story_response_data|safe}},P='{% static "pabasa_app/images/story_response/" %}',A={female:{idle:P+'female_idle.png',listening:P+'female_listening.png',thinking:P+'female_thinking.png',speaking:P+'female_speaking.png'},male:{idle:P+'male_idle.png',listening:P+'male_listening.png',thinking:P+'male_thinking.png',speaking:P+'male_speaking.png'}},$=x=>document.getElementById(x);let r,s,c=[],t,url,audio;function state(x){$('avatar').src=A[a.student_avatar_set==='male'?'male':'female'][x];$('state').textContent=x==='speaking'?'YOUR TURN — SPEAK!':x==='thinking'?'THE HOST IS LISTENING...':'YOUR TURN!'}function ui(x){$('recording').classList.toggle('show',x==='rec');$('processing').classList.toggle('show',x==='think');$('playback').classList.toggle('show',x==='review');$('stack').hidden=x==='think'||x==='review';$('record').textContent=x==='rec'?'⏹ Stop Recording':'🎙 Answer Now'}function f(n){return Math.floor(n/60)+':'+String(Math.floor(n%60)).padStart(2,'0')}async function rec(){if(r?.state==='recording'){clearInterval(t);state('thinking');ui('think');r.stop();return}try{s=await navigator.mediaDevices.getUserMedia({audio:true});c=[];r=new MediaRecorder(s);r.ondataavailable=e=>c.push(e.data);r.onstop=()=>{s.getTracks().forEach(x=>x.stop());url=URL.createObjectURL(new Blob(c));audio=new Audio(url);audio.onloadedmetadata=()=>{$('progress').max=audio.duration;$('total').textContent=f(audio.duration)};audio.ontimeupdate=()=>{$('progress').value=audio.currentTime;$('current').textContent=f(audio.currentTime)};state('idle');ui('review')};r.start();let q=Date.now();t=setInterval(()=>$('timer').textContent=f((Date.now()-q)/1000),250);state('speaking');ui('rec')}catch(e){alert('Please allow microphone access to record your answer.')}}$('story').textContent=a.source_story_title||'';$('prompt').textContent=a.response_prompt||'What would you like to share about the story?';$('back').href=a.return_url||'{% url "assessment" %}';$('hear').hidden=!a.read_aloud_enabled;$('record').hidden=!a.voice_recording_enabled;state('idle');ui('ready');$('hear').onclick=()=>{state('listening');let u=new SpeechSynthesisUtterance(a.response_prompt);u.lang=String(a.language).toLowerCase().startsWith('fil')?'fil-PH':'en-US';u.onend=()=>state('idle');speechSynthesis.speak(u)};$('record').onclick=rec;$('again').onclick=()=>{audio?.pause();state('idle');ui('ready')};$('play').onclick=()=>audio?.play();$('progress').oninput=e=>audio&&(audio.currentTime=e.target.value)</script></body></html>
+<style>.talk{position:relative;padding:clamp(52px,6vw,86px) clamp(44px,5vw,76px) clamp(36px,4vw,58px);isolation:isolate}.talk:before{content:'';position:absolute;z-index:-1;inset:0;background:url('{% static "pabasa_app/images/story_response/bubble2.png" %}') center/100% 100% no-repeat}.asks{color:#7452a2;text-shadow:none}.prompt{color:#4c3b5b;text-shadow:none}.turn{color:#e55351;text-shadow:none}.recording,.processing{color:#753f55;text-shadow:none}.answer{position:relative;background:#e94f52;border-bottom-color:#9f3439}.hear{margin-left:auto;margin-right:auto}.tv{filter:drop-shadow(0 18px 16px rgba(49,21,44,.42))}@media(max-width:760px){.talk{padding:clamp(38px,9vw,55px) clamp(30px,8vw,46px) 28px}.talk:before{background-size:100% 100%}}</style>
+<style>.set{position:relative;isolation:isolate;background-image:linear-gradient(90deg,rgba(8,24,63,.58),rgba(16,42,91,.35) 48%,rgba(8,24,63,.54)),url('{% static "pabasa_app/images/story_response/bg.jpg" %}');background-blend-mode:multiply,normal}.show{position:relative;z-index:1}.stage{grid-template-columns:minmax(280px,.85fr) minmax(320px,.8fr);gap:clamp(18px,3vw,46px)}.tv{width:min(410px,30vw);justify-self:end}.talk{max-width:min(470px,40vw);padding:clamp(38px,4vw,58px) clamp(34px,3.5vw,52px) clamp(25px,3vw,38px)}.talk:before{background-size:100% 100%}.prompt{font-size:clamp(1.2rem,2.25vw,1.95rem)}.turn{margin:18px 0 .45rem;font-size:clamp(.9rem,1.3vw,1.1rem)}.answer{min-height:48px;padding:.55rem .95rem;font-size:clamp(.95rem,1.3vw,1.1rem)}.hear{margin-top:8px;padding:.45rem .7rem;font-size:.72rem}.onair,.hostlabel{font-size:.58rem}.brand,.segment,.story{position:relative;z-index:2}@media(max-width:760px){.set{background-image:linear-gradient(rgba(8,24,63,.56),rgba(8,24,63,.56)),url('{% static "pabasa_app/images/story_response/bg.jpg" %}')}.stage{grid-template-columns:1fr}.tv{width:min(330px,66vw);justify-self:center}.talk{max-width:min(440px,94vw);margin:auto}.prompt{font-size:clamp(1.1rem,4.7vw,1.6rem)}}</style>
+<style>.talk{max-width:min(440px,36vw);padding:clamp(34px,3.8vw,52px) clamp(38px,3.6vw,50px) clamp(38px,3.5vw,48px)}.talk:before{background-image:url('{% static "pabasa_app/images/story_response/bubble3.png" %}');background-size:100% 100%;filter:drop-shadow(0 10px 12px rgba(6,19,49,.24))}.asks{color:#42709b;font-size:.72rem}.prompt{color:#1e3550;font-size:clamp(1.15rem,2.05vw,1.72rem);line-height:1.25}.tv{width:min(420px,31vw)}.set:after{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 35%,rgba(5,18,57,.25) 100%)}.talk,.tv{position:relative;z-index:2}@media(max-width:760px){.talk{max-width:min(430px,93vw);padding:clamp(32px,8vw,45px) clamp(35px,8vw,45px) 34px}.tv{width:min(330px,67vw)}}</style>
 <style>
-    @font-face {
-        font-family: 'Righteous';
-        src: url('{% static "pabasa_app/font/Righteous-Regular.ttf" %}') format('truetype');
-    }
-    .story-response-container {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 2rem;
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 2rem;
-    }
-
-    .story-panel {
-        background: linear-gradient(135deg, #e8f4f8 0%, #d4e9f2 100%);
-        border-radius: 24px;
-        padding: 2rem;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-        overflow-y: auto;
-        max-height: calc(100vh - 120px);
-    }
-
-    .story-header {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .story-icon {
-        width: 48px;
-        height: 48px;
-        background: rgba(31, 111, 139, 0.1);
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-    }
-
-    .story-title {
-        font-family: 'Righteous', sans-serif;
-        font-size: 1.4rem;
-        font-weight: 900;
-        line-height: 1.2;
-        color: #1f6f8b;
-        margin: 0;
-    }
-
-    .story-body {
-        font-size: 0.95rem;
-        line-height: 1.8;
-        color: #333;
-        background: #fff;
-        padding: 1.5rem;
-        border-radius: 16px;
-        border: 1px solid rgba(31, 111, 139, 0.15);
-    }
-
-    .response-panel {
-        background: #fff;
-        border: 1px solid #e0e0e0;
-        border-radius: 24px;
-        padding: 2rem;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-        display: flex;
-        flex-direction: column;
-    }
-
-    .response-header {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 2rem;
-    }
-
-    .host-avatar {
-        width: 80px;
-        height: 80px;
-        border-radius: 16px;
-        object-fit: cover;
-        border: 3px solid #007bff;
-    }
-
-    .host-intro {
-        flex: 1;
-    }
-
-    .host-greeting {
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        font-weight: 700;
-        color: #667084;
-        margin: 0 0 0.25rem;
-    }
-
-    .host-name {
-        font-size: 1.1rem;
-        font-weight: 900;
-        color: #1b1a17;
-        margin: 0;
-    }
-
-    .prompt-card {
-        background: linear-gradient(135deg, #fff5e6 0%, #ffe4cc 100%);
-        border: 2px solid #ffc876;
-        border-radius: 18px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-    }
-
-    .prompt-label {
-        font-size: 0.8rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        color: #b8860b;
-        margin: 0 0 0.5rem;
-    }
-
-    .prompt-text {
-        font-size: 1.2rem;
-        font-weight: 700;
-        color: #333;
-        line-height: 1.4;
-        margin: 0;
-    }
-
-    .response-input-section {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        margin-bottom: 1.5rem;
-    }
-
-    .response-label {
-        font-size: 0.85rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: #667084;
-        margin-bottom: 0.75rem;
-    }
-
-    .response-textarea {
-        flex: 1;
-        padding: 1rem;
-        border: 2px solid #e0e0e0;
-        border-radius: 12px;
-        font-size: 0.95rem;
-        font-family: inherit;
-        resize: none;
-        min-height: 150px;
-    }
-
-    .response-textarea:focus {
-        outline: none;
-        border-color: #007bff;
-        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-    }
-
-    .response-actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .action-button {
-        padding: 0.75rem;
-        border: 2px solid #e0e0e0;
-        border-radius: 12px;
-        background: #fff;
-        color: #333;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        font-size: 0.9rem;
-    }
-
-    .action-button:hover {
-        border-color: #007bff;
-        background: #f0f7ff;
-        color: #007bff;
-    }
-
-    .action-button.disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-
-    .submission-section {
-        display: flex;
-        gap: 1rem;
-    }
-
-    .btn-submit {
-        flex: 1;
-        padding: 0.85rem;
-        border: 0;
-        border-radius: 12px;
-        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-        color: #fff;
-        font-weight: 700;
-        font-size: 0.95rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .btn-submit:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(0, 123, 255, 0.3);
-    }
-
-    .btn-submit:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-        transform: none;
-    }
-
-    .btn-back {
-        padding: 0.85rem 1.25rem;
-        border: 2px solid #e0e0e0;
-        border-radius: 12px;
-        background: #fff;
-        color: #333;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .btn-back:hover {
-        border-color: #ccc;
-        background: #f9f9f9;
-    }
-
-    .recording-indicator {
-        display: none;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.75rem 1rem;
-        background: #ffe6e6;
-        border: 1px solid #ffcccc;
-        border-radius: 8px;
-        color: #c41e3a;
-        font-size: 0.85rem;
-        font-weight: 600;
-        margin-bottom: 1rem;
-    }
-
-    .recording-indicator.active {
-        display: flex;
-    }
-
-    .recording-dot {
-        width: 8px;
-        height: 8px;
-        background: #c41e3a;
-        border-radius: 50%;
-        animation: pulse 1s infinite;
-    }
-
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
-    }
-
-    .success-message {
-        display: none;
-        padding: 1rem;
-        background: #d4edda;
-        border: 1px solid #c3e6cb;
-        border-radius: 8px;
-        color: #155724;
-        font-weight: 600;
-        text-align: center;
-    }
-
-    .success-message.show {
-        display: block;
-    }
-
-    @media (max-width: 1024px) {
-        .story-response-container {
-            grid-template-columns: 1fr;
-            gap: 1.5rem;
-            padding: 1.5rem;
-        }
-
-        .story-panel {
-            max-height: 300px;
-        }
-
-        .response-panel {
-            min-height: auto;
-        }
-    }
-
-    @media (max-width: 768px) {
-        .response-actions {
-            grid-template-columns: 1fr;
-        }
-
-        .story-response-container {
-            padding: 1rem;
-            gap: 1rem;
-        }
-
-        .host-avatar {
-            width: 60px;
-            height: 60px;
-        }
-
-        .prompt-text {
-            font-size: 1rem;
-        }
-    }
+/* The environment is its own blurred layer; all activity and scene elements sit above it. */
+.set{overflow:hidden;background:#182f64;}
+.set:before{content:'';position:absolute;z-index:0;inset:-18px;pointer-events:none;background:linear-gradient(110deg,rgba(13,36,86,.36),rgba(94,165,205,.12) 54%,rgba(255,198,133,.18)),url('{% static "pabasa_app/images/story_response/bg.jpg" %}') center/cover no-repeat;filter:blur(6px);transform:scale(1.035);}
+.set:after{z-index:0;background:radial-gradient(ellipse at center,transparent 28%,rgba(7,25,71,.28) 100%);}
+.show>header{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;}
+.brand{font-size:0;letter-spacing:0;}.brand:after{content:'THE STORYVENTURE';font-size:clamp(1.15rem,2.3vw,1.75rem);letter-spacing:.08em;color:#fff4bc;text-shadow:0 2px 4px rgba(5,18,57,.72);}.segment{display:none;}
+.stage{grid-template-columns:minmax(460px,1.35fr) minmax(340px,.75fr);gap:clamp(14px,2.5vw,38px);}
+.tv{width:min(700px,54vw);justify-self:start;transform:translateX(-32px);filter:drop-shadow(0 22px 18px rgba(24,25,71,.36));}
+.host{width:auto;height:115%;max-height:115%;max-width:108%;transform:translateY(5%);}
+.hostlabel{font-size:clamp(.78rem,1.15vw,1rem);}
+.talk{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;width:min(500px,40vw);max-width:none;aspect-ratio:1;padding:21% 11% 33%;overflow:hidden;border:0;border-radius:0;background:url('{% static "pabasa_app/images/story_response/bubble4.png" %}') center/contain no-repeat;box-shadow:none;filter:drop-shadow(0 10px 12px rgba(6,19,49,.24));backdrop-filter:none;-webkit-backdrop-filter:none;transform:translateX(clamp(-78px,-4.5vw,-40px));}
+.talk:before{display:none;content:none;}
+.asks{display:none;}
+.prompt{margin:0;padding:0;border:0;border-radius:0;background:transparent;color:#1e3550;font-size:clamp(1rem,1.65vw,1.45rem);line-height:1.24;text-align:center;box-shadow:none;text-shadow:none;}
+#stack:not([hidden]){display:flex;flex-direction:row;align-items:center;justify-content:center;flex-wrap:wrap;gap:clamp(8px,1vw,12px);max-width:100%;min-width:0;box-sizing:border-box;margin-top:clamp(12px,1.6vw,18px);}
+#stack .story-response-action{display:inline-flex;align-items:center;justify-content:center;gap:.45em;min-height:40px;min-width:0;margin:0;padding:.45rem .7rem;border:1px solid #c8983d;border-bottom-width:4px;border-radius:12px;font-family:R;font-size:clamp(.78rem,1vw,.9rem);font-weight:400;line-height:1.2;text-align:center;box-shadow:0 5px 10px rgba(48,21,40,.2);transition:transform .15s ease,box-shadow .15s ease;}
+#stack .story-response-action:hover{transform:translateY(-1px);box-shadow:0 7px 12px rgba(48,21,40,.25);}
+#stack .story-response-action:active{transform:translateY(2px);box-shadow:0 2px 5px rgba(48,21,40,.2);}
+#stack .answer{order:2;background:#e94f52;border-color:#9f3439;color:#fff;}
+#stack .hear{order:1;background:#fff4ca;color:#554e52;}
+#stack .answer[hidden],#stack .hear[hidden]{display:none;}
+.recording,.processing,.playback{order:2;align-self:center;}
+.story-response-state{width:100%;height:auto;max-width:100%;min-width:0;min-height:0;flex:0 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(8px,1.2vw,14px);box-sizing:border-box;}
+.story-response-state>.recording,.story-response-state>.processing,.story-response-state>.playback{margin:0;max-width:100%;min-width:0;box-sizing:border-box;text-align:center;}
+.story-response-state>.recording.show{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:.4rem;white-space:nowrap;}
+.story-response-state>.recording.show .time{font-size:1rem;line-height:1;}
+.story-response-state>.processing.show{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(6px,1vw,10px);}
+.story-response-state>.playback{width:min(100%,300px);padding:0;background:transparent;border-radius:0;}
+.story-response-state>.playback.show{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(6px,1vw,10px);}
+.story-response-state>.playback .row{width:min(100%,240px);}
+.story-response-state>.playback .time-display{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:6px;white-space:nowrap;margin:0;}
+.story-response-state>.playback .again{margin-top:6px;}
+.story-response-state[data-phase="rec"]{gap:clamp(8px,1vw,12px);}
+.story-response-state[data-phase="rec"]>#stack{order:3;margin-top:0;}
+@media(max-width:960px){.stage{grid-template-columns:minmax(300px,1.12fr) minmax(320px,.88fr);gap:clamp(10px,2vw,24px)}.tv{width:min(600px,54vw);transform:translateX(-16px)}.talk{width:min(450px,44vw)}.prompt{font-size:clamp(.95rem,1.8vw,1.2rem)}}
+@media(max-width:760px){html,body{overflow:auto}.set{min-height:100dvh;height:auto}.show{min-height:calc(100dvh - 28px)}.stage{grid-template-columns:1fr;gap:clamp(8px,2vh,16px);padding:12px 0 18px}.tv{width:min(540px,94vw);max-height:none;justify-self:start;transform:none;order:0}.talk{width:min(500px,94vw);padding:21% 11% 33%;transform:none;order:1}.response-interaction{margin-top:clamp(10px,2vh,18px)}.prompt{font-size:clamp(1rem,4vw,1.3rem)}.back{padding:8px 0 2px}}
+@media(max-height:620px) and (min-width:761px){.tv{width:min(560px,46vw)}.talk{width:min(370px,38vw)}.prompt{font-size:clamp(.88rem,1.45vw,1.05rem)}#stack:not([hidden]){margin-top:7px}.turn{margin-top:6px}}
 </style>
-{% endblock %}
-
-{% block header %}
-    {% include "pabasa_app/partials/_header.html" with page_title="Story Response" page_date="" %}
-{% endblock %}
-
-{% block content %}
-<div class="story-response-container">
-    <!-- Left: Story Panel -->
-    <div class="story-panel">
-        <div class="story-header">
-            <div class="story-icon">📖</div>
-            <div>
-                <h2 class="story-title" id="storyTitle">Story</h2>
-            </div>
-        </div>
-        <div class="story-body" id="storyBody">
-            <!-- Story text loaded via JS -->
-        </div>
-    </div>
-
-    <!-- Right: Response Panel -->
-    <div class="response-panel">
-        <div class="response-header">
-            <img id="hostAvatar" class="host-avatar" src="{% static 'pabasa_app/images/story_response/female_idle.png' %}" alt="Your avatar">
-            <div class="host-intro">
-                <p class="host-greeting">Let's reflect</p>
-                <p class="host-name" id="studentName">Friend</p>
-            </div>
-        </div>
-
-        <div class="prompt-card">
-            <p class="prompt-label">Response Prompt</p>
-            <p class="prompt-text" id="promptText">Loading...</p>
-        </div>
-
-        <div class="response-input-section">
-            <div class="response-label">Your Response</div>
-            <textarea 
-                id="responseTextarea" 
-                class="response-textarea" 
-                placeholder="Share your thoughts, feelings, and reflections about the story. What did you think? How did it make you feel?">
-            </textarea>
-        </div>
-
-        <div class="recording-indicator" id="recordingIndicator">
-            <span class="recording-dot"></span>
-            <span>Recording your response...</span>
-        </div>
-
-        <div class="response-actions">
-            <button class="action-button" id="readAloudBtn" style="display: none;">
-                <i class="bi bi-volume-up"></i> Read Aloud
-            </button>
-            <button class="action-button" id="recordBtn" style="display: none;">
-                <i class="bi bi-mic-fill"></i> Record Voice
-            </button>
-        </div>
-
-        <div class="success-message" id="successMessage">
-            <i class="bi bi-check-circle me-2"></i>
-            Your response has been recorded!
-        </div>
-
-        <div class="submission-section">
-            <button class="btn-submit" id="submitBtn">Submit Response</button>
-            <button class="btn-back" id="backBtn">Back</button>
-        </div>
-    </div>
-</div>
-
 <script>
-    const activity = {{ story_response_data|safe }};
-    
-    // Initialize page
-    document.addEventListener('DOMContentLoaded', function() {
-        // Set story content
-        document.getElementById('storyTitle').textContent = activity.source_story_title || 'Story';
-        document.getElementById('storyBody').textContent = activity.source_story_text || 'Story content loading...';
-        
-        // Set student name
-        document.getElementById('studentName').textContent = activity.student_first_name || 'Friend';
-        
-        // Set prompt
-        document.getElementById('promptText').textContent = activity.response_prompt || 'Share your thoughts about this story.';
-        
-        // The student avatar is chosen from the student's signup/profile sex; teachers do not select it.
-        const hostPath = activity.student_avatar_set === 'male'
-            ? '{% static "pabasa_app/images/story_response/male_idle.png" %}'
-            : '{% static "pabasa_app/images/story_response/female_idle.png" %}';
-        document.getElementById('hostAvatar').src = hostPath;
-        
-        // Show/hide audio buttons
-        if (activity.read_aloud_enabled) {
-            document.getElementById('readAloudBtn').style.display = 'flex';
-        }
-        if (activity.voice_recording_enabled) {
-            document.getElementById('recordBtn').style.display = 'flex';
-        }
-        
-        // Event listeners
-        document.getElementById('submitBtn').addEventListener('click', submitResponse);
-        document.getElementById('backBtn').addEventListener('click', function() {
-            window.location.href = activity.return_url || '{% url "dashboard" %}';
-        });
-        
-        if (activity.read_aloud_enabled) {
-            document.getElementById('readAloudBtn').addEventListener('click', readAloudPrompt);
-        }
-        
-        if (activity.voice_recording_enabled) {
-            document.getElementById('recordBtn').addEventListener('click', toggleVoiceRecording);
-        }
-    });
-    
-    let isRecording = false;
-    let mediaRecorder = null;
-    let audioChunks = [];
-    
-    function readAloudPrompt() {
-        const text = activity.response_prompt;
-        if ('speechSynthesis' in window) {
-            // Cancel any current speech
-            speechSynthesis.cancel();
-            
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = activity.language === 'Filipino' ? 'fil-PH' : 'en-US';
-            utterance.rate = 0.9;
-            speechSynthesis.speak(utterance);
-        } else {
-            alert('Text-to-speech is not supported in your browser.');
-        }
-    }
-    
-    async function toggleVoiceRecording() {
-        if (!isRecording) {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                audioChunks = [];
-                
-                mediaRecorder.ondataavailable = (event) => {
-                    audioChunks.push(event.data);
-                };
-                
-                mediaRecorder.start();
-                isRecording = true;
-                
-                document.getElementById('recordBtn').textContent = '⏹ Stop Recording';
-                document.getElementById('recordingIndicator').classList.add('active');
-                document.getElementById('recordBtn').classList.add('recording-active');
-            } catch (error) {
-                alert('Unable to access microphone. Please check permissions.');
-                console.error('Microphone access error:', error);
-            }
-        } else {
-            mediaRecorder.stop();
-            isRecording = false;
-            
-            document.getElementById('recordBtn').textContent = '🎤 Record Voice';
-            document.getElementById('recordingIndicator').classList.remove('active');
-            document.getElementById('recordBtn').classList.remove('recording-active');
-            
-            mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                // Could upload audio here or just use transcript
-                console.log('Audio recorded:', audioBlob);
-            };
-        }
-    }
-    
-    async function submitResponse() {
-        const responseText = document.getElementById('responseTextarea').value.trim();
-        
-        if (!responseText) {
-            alert('Please write a response before submitting.');
-            return;
-        }
-        
-        document.getElementById('submitBtn').disabled = true;
-        document.getElementById('submitBtn').textContent = 'Submitting...';
-        
-        try {
-            const response = await fetch('{% url "story_response_submit" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({
-                    material_id: activity.material_id,
-                    response_text: responseText,
-                    duration_seconds: 0,
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                document.getElementById('successMessage').classList.add('show');
-                
-                setTimeout(() => {
-                    window.location.href = activity.return_url || '{% url "dashboard" %}';
-                }, 2000);
-            } else {
-                alert('Error: ' + (data.error || 'Failed to submit response'));
-                document.getElementById('submitBtn').disabled = false;
-                document.getElementById('submitBtn').textContent = 'Submit Response';
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('An error occurred while submitting your response');
-            document.getElementById('submitBtn').disabled = false;
-            document.getElementById('submitBtn').textContent = 'Submit Response';
-        }
-    }
-    
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
+document.querySelector('.hostlabel').textContent='STORY EXPLORER';
+document.querySelector('.turn')?.remove();
+state=x=>{$('avatar').src=A[a.student_avatar_set==='male'?'male':'female'][x]};
+document.querySelectorAll('#stack .btn').forEach(button=>button.classList.add('story-response-action'));
+const speechBubble=document.querySelector('.talk');
+const responseState=document.createElement('div');
+responseState.className='story-response-state';
+['prompt','stack','recording','processing','playback'].forEach(id=>responseState.append($(`${id}`)));
+speechBubble.replaceChildren(responseState);
+const timeDisplay=document.createElement('div');
+timeDisplay.className='time-display';
+timeDisplay.append($('current'),document.createTextNode(' / '),$('total'));
+$('again').before(timeDisplay);
+Array.from($('playback').childNodes).filter(node=>node.nodeType===Node.TEXT_NODE&&node.textContent.includes('/')).forEach(node=>node.remove());
+const setResponseActionLabels=()=>{$('hear').textContent='🔊 Hear';if(r?.state!=='recording')$('record').textContent='🎙 Answer';};
+const renderResponseUi=ui;
+ui=x=>{renderResponseUi(x);responseState.dataset.phase=x;$('prompt').hidden=x==='think'||x==='review';if(x==='ready'){$('hear').hidden=!a.read_aloud_enabled;$('record').hidden=!a.voice_recording_enabled}else if(x==='rec'){$('hear').hidden=true;$('record').hidden=false}setResponseActionLabels();};
+setResponseActionLabels();
 </script>
-{% endblock %}
