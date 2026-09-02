@@ -4432,6 +4432,17 @@
             if (!liveSessionId || !isCurrentLiveAssessment()) return null;
             if (!Object.keys(updateValues).length) return null;
             try {
+                const liveStage = currentStoryState === "story_reading" || currentStoryState === "story_comprehension" || currentStoryState === "story_complete"
+                    ? "story"
+                    : currentAssessmentBranch;
+                const liveStageLabels = {
+                    words: "Words",
+                    rhymes: "Rhymes",
+                    sentences: "Sentences",
+                    sentences_low: "Sentences",
+                    sentences_high: "Sentences",
+                    story: "Story",
+                };
                 traceEndSession('publishLiveSessionState.enter', { updateValues });
                 const completionSnapshot = calculateScores();
                 const completionMetrics = normalizeCompletionScores(completionSnapshot || {}, {});
@@ -4508,6 +4519,10 @@
                     },
                     body: JSON.stringify({
                         ...updateValues,
+                        ...(isOfficialAssessmentLaunch ? {
+                            crla_stage: liveStage,
+                            crla_stage_label: liveStageLabels[liveStage] || "",
+                        } : {}),
                         completion_payload: completionPayload,
                     }),
                 });

@@ -1754,6 +1754,15 @@
         });
 
         const states = (session && session.student_states) ? session.student_states : {};
+        const isOfficialCrlaSession = session?.official_crla === true;
+        const crlaStageLabels = {
+            words: 'Words',
+            rhymes: 'Rhymes',
+            sentences: 'Sentences',
+            sentences_low: 'Sentences',
+            sentences_high: 'Sentences',
+            story: 'Story',
+        };
         ids.forEach((sid) => {
             const row = existing[sid];
             if (!row) return;
@@ -1772,7 +1781,7 @@
                 waiting: 'Waiting',
                 ready: 'Ready',
                 finished: 'Finished',
-                completed: 'Finished',
+                completed: isOfficialCrlaSession ? 'Completed' : 'Finished',
                 paused: 'Paused',
                 needs_attention: 'Needs Attention',
                 disconnected: 'Offline',
@@ -1841,13 +1850,15 @@
                 if (elapsedCol) elapsedCol.textContent = '--';
                 if (scoreCol) scoreCol.textContent = st.final_score != null ? st.final_score : '--';
             } else if (statusLower === 'reading') {
+                const crlaStageLabel = st.crla_stage_label || crlaStageLabels[st.crla_stage] || '';
+                const crlaProgressText = crlaStageLabel && itemsTotal > 0
+                    ? `${crlaStageLabel} · ${itemsCompleted} / ${itemsTotal}`
+                    : '--';
                 if (progressBar) {
                     progressBar.style.width = `${percent}%`;
                     progressBar.setAttribute('aria-valuenow', percent);
                 }
-                if (progressText) {
-                    progressText.textContent = progressTextValue;
-                }
+                if (progressText) progressText.textContent = isOfficialCrlaSession ? crlaProgressText : progressTextValue;
                 if (elapsedCol) elapsedCol.textContent = st.elapsed_seconds ? formatElapsed(st.elapsed_seconds) : '--';
                 if (scoreCol) scoreCol.textContent = st.final_score != null ? st.final_score : 'Calculating...';
             } else {
@@ -1856,7 +1867,11 @@
                     progressBar.style.width = `${finalPercent}%`;
                     progressBar.setAttribute('aria-valuenow', finalPercent);
                 }
-                if (progressText) progressText.textContent = st.items_total ? `${finalPercent}% • ${st.items_completed || 0} / ${st.items_total}` : `${finalPercent}%`;
+                if (progressText) {
+                    progressText.textContent = isOfficialCrlaSession
+                        ? (statusLower === 'completed' ? 'Completed' : '--')
+                        : (st.items_total ? `${finalPercent}% • ${st.items_completed || 0} / ${st.items_total}` : `${finalPercent}%`);
+                }
                 if (elapsedCol) elapsedCol.textContent = st.elapsed_seconds ? formatElapsed(st.elapsed_seconds) : '--';
                 if (scoreCol) scoreCol.textContent = st.final_score != null ? st.final_score : 'Calculating...';
             }

@@ -14850,6 +14850,7 @@ def live_assessment_session_state(request, session_id):
             'duration_seconds': session.duration_seconds or 0,
             'ends_at': session.ends_at.isoformat() if session.ends_at else None,
             'reader_url': reader_url,
+            'official_crla': True,
             'student_states': session.student_states or {},
             'activity_log': session.activity_log or [],
             'available_students': available_profiles,
@@ -14924,6 +14925,10 @@ def live_assessment_student_state_update(request, session_id):
                 state_values['elapsed_seconds'] = 0
         if 'current_item' in data:
             state_values['current_item'] = data.get('current_item')
+        if 'crla_stage' in data:
+            state_values['crla_stage'] = str(data.get('crla_stage') or '').strip().lower()
+        if 'crla_stage_label' in data:
+            state_values['crla_stage_label'] = str(data.get('crla_stage_label') or '').strip()
         if 'final_score' in data:
             try:
                 state_values['final_score'] = float(data.get('final_score'))
