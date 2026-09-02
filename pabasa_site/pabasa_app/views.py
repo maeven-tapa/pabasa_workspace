@@ -12441,7 +12441,7 @@ def reading_transcribe_api(request):
                 target_text, analysis_transcript, sentence_word_results, language_code, debug=sentence_debug,
             )
         else:
-            analysis = analyze_reading(target_text, current_syllable_index, analysis_transcript, language_code)
+            analysis = analyze_reading(target_text, current_syllable_index, analysis_transcript, language_code, strict_rhyme=request.POST.get('crla_rhymes') == '1')
         metrics_context = analysis_transcript if stitching_applied else next_syllable_context
         context_count, target_count, context_progress = syllable_context_metrics(
             target_text,

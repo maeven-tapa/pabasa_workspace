@@ -873,8 +873,8 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
     }
 
 
-def analyze_reading(target_text, current_syllable_index=0, transcript="", language_code="en-US"):
-    matcher = ReadingMatcher(target_text, current_syllable_index, language_code)
+def analyze_reading(target_text, current_syllable_index=0, transcript="", language_code="en-US", strict_rhyme=False):
+    matcher = ReadingMatcher(target_text, current_syllable_index, language_code, strict_rhyme=strict_rhyme)
     matched = matcher.advance_for_spoken_text(transcript)
     return matcher.payload(matched, transcript)
 
@@ -1121,9 +1121,10 @@ def analyze_sentence_reading(target_text, transcript="", prior_results=None, lan
 
 
 class ReadingMatcher:
-    def __init__(self, target_text, current_syllable_index=0, language_code="en-US"):
+    def __init__(self, target_text, current_syllable_index=0, language_code="en-US", strict_rhyme=False):
         self.target_text = target_text or ""
         self.language_code = language_code or "en-US"
+        self.strict_rhyme = bool(strict_rhyme)
         self.words = self.readable_words(self.target_text)
         self.current_syllable_index = max(0, int(current_syllable_index or 0))
         self.current_word_index = 0
@@ -1221,7 +1222,7 @@ class ReadingMatcher:
         if spoken_word in SPOKEN_VOWELS and target_word in SPOKEN_VOWELS:
             if SPOKEN_VOWELS[spoken_word] == SPOKEN_VOWELS[target_word]:
                 return True
-        if self.number_words_match(spoken_word, target_word):
+        if not self.strict_rhyme and self.number_words_match(spoken_word, target_word):
             return True
         if self.homophones_match(spoken_word, target_word):
             return True

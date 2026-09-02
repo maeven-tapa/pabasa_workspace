@@ -1668,6 +1668,7 @@
                     activeStage = persistedStage;
                 }
                 currentAssessmentBranch = activeStage;
+                shell.classList.toggle("is-crla-rhymes", activeStage === "rhymes");
 
                 if (stageMap[activeStage]) {
                     items = stageMap[activeStage].items.slice();
@@ -2820,6 +2821,7 @@
             formData.append("current_syllable_index", String(context.syllableIndex));
             formData.append("mode", mode);
             formData.append("language", currentMaterialLanguage || "");
+            if (currentAssessmentBranch === "rhymes") formData.append("crla_rhymes", "1");
             if (isOfficialAssessmentLaunch && mode === "sentence") {
                 formData.append("crla_sentence_word_scoring", "1");
                 formData.append("sentence_word_results", JSON.stringify(sentenceWordResults[currentIndex] || []));
@@ -3513,6 +3515,28 @@
             readingWord.hidden = false;
         }
 
+        function renderRhymesWordGuide(displayText, activeWordIndex = 0) {
+            if (!readingWord) return;
+            const parts = String(displayText || "").split(/(\s+)/);
+            const targetIndex = Math.max(0, Number(activeWordIndex) || 0);
+            let wordIndex = 0;
+            readingWord.replaceChildren();
+            parts.forEach((part) => {
+                if (!part) return;
+                if (/^\s+$/.test(part) || !normalizeDisplayWord(part)) {
+                    readingWord.appendChild(document.createTextNode(part));
+                    return;
+                }
+                const word = document.createElement("span");
+                word.className = "syllable";
+                if (wordIndex === targetIndex) word.classList.add("is-current");
+                word.textContent = part;
+                readingWord.appendChild(word);
+                wordIndex += 1;
+            });
+            readingWord.hidden = false;
+        }
+
         // CRLA Official Assessment: Render syllables with a specific word highlighted as wrong/error
         function renderSentenceWordResults(data) {
             if (!readingWord) return;
@@ -3723,7 +3747,9 @@
             }
             if (readingWord) {
                 const safeText = (bodyText || displayText || "").trim();
-                if (shell.classList.contains('reader-phrase')) {
+                if (currentAssessmentBranch === "rhymes") {
+                    renderRhymesWordGuide(safeText, 0);
+                } else if (shell.classList.contains('reader-phrase')) {
                     renderPhraseWordGuide(safeText, 0);
                 } else {
                     readingWord.textContent = bodyText || displayText;
