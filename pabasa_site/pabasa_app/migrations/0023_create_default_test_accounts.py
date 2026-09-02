@@ -1,16 +1,13 @@
 from django.db import migrations
 
-from pabasa_app.test_accounts import ensure_default_test_accounts, remove_default_test_accounts
-
-
 def create_default_test_accounts(apps, schema_editor):
-    User = apps.get_model("pabasa_app", "User")
-    ensure_default_test_accounts(User=User)
+    # Retained only for migration graph compatibility. Testing accounts are
+    # managed as ordinary database records now.
+    pass
 
 
 def delete_default_test_accounts(apps, schema_editor):
-    User = apps.get_model("pabasa_app", "User")
-    remove_default_test_accounts(User=User)
+    pass
 
 
 class Migration(migrations.Migration):
