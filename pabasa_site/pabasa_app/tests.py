@@ -409,7 +409,7 @@ class SchoolCalendarAdminTests(TestCase):
         self.assertContains(page, "Midline Assessment Week")
         self.assertContains(page, '"event_type": "midline_assessment"')
 
-    def test_admin_school_calendar_saves_progressive_term_blocks(self):
+    def test_admin_school_calendar_renders_year_view_and_soft_yellow_opening_block(self):
         admin = User.objects.create(
             custom_id="ADM-1002",
             role="admin",
@@ -422,6 +422,31 @@ class SchoolCalendarAdminTests(TestCase):
             birth_day=2,
             birth_year=1985,
             email="admin1002@example.com",
+            password_hash=make_password("admin-password"),
+        )
+        calendar = SchoolCalendar.objects.create(school_year="2026-2027", current_term=1, is_active=True)
+        self._login_admin(admin)
+
+        response = self.client.get(reverse("admin_school_calendar"), {"calendar_id": calendar.id})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Year View")
+        self.assertContains(response, "calendarYearBtn")
+        self.assertContains(response, "school_opening: '#facc15'")
+
+    def test_admin_school_calendar_saves_progressive_term_blocks(self):
+        admin = User.objects.create(
+            custom_id="ADM-1003",
+            role="admin",
+            first_name="Ari",
+            last_name="Admin",
+            middle_initial="",
+            suffix="",
+            sex="male",
+            birth_month=1,
+            birth_day=2,
+            birth_year=1985,
+            email="admin1003@example.com",
             password_hash=make_password("admin-password"),
         )
         calendar = SchoolCalendar.objects.create(school_year="2026-2027", current_term=1, is_active=True)
