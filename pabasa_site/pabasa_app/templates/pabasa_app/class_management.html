@@ -34,12 +34,6 @@
         background-image: none;
     }
 
-    .page-head,
-    .page-back-btn {
-        position: relative;
-        z-index: 1;
-    }
-
     .dashboard-content-wrap {
         padding: clamp(0.9rem, 2vw, 1.25rem);
         max-width: 1180px;
@@ -49,78 +43,6 @@
     .page-shell {
         display: grid;
         gap: 1rem;
-    }
-
-    .page-head {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: center;
-        gap: 1rem;
-        padding: 1.1rem 1.15rem;
-        border-radius: 20px;
-        background: rgba(255, 255, 255, 0.94);
-        backdrop-filter: blur(12px) saturate(130%);
-        -webkit-backdrop-filter: blur(12px) saturate(130%);
-        border: 1px solid rgba(255, 255, 255, 0.92);
-        box-shadow: 0 18px 36px rgba(15, 23, 42, 0.1);
-        min-height: 92px;
-    }
-
-    .page-head-left {
-        display: flex;
-        align-items: center;
-        gap: 0.9rem;
-        min-width: 0;
-    }
-
-    .page-back-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        border-radius: 999px;
-        border: 1px solid rgba(15, 23, 42, 0.12);
-        background: rgba(255, 255, 255, 0.96);
-        color: var(--primary);
-        font-weight: 700;
-        padding: 0.65rem 0.95rem;
-        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-        transition: transform 0.16s ease, box-shadow 0.16s ease;
-        text-decoration: none;
-        font-size: 0.92rem;
-    }
-
-    .page-back-btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
-    }
-
-    .page-head-title {
-        min-width: 0;
-    }
-
-    .page-head-title h1 {
-        font-family: "Nunito", "Segoe UI", sans-serif;
-        margin: 0;
-        font-size: 1.3rem;
-        line-height: 1.15;
-        font-weight: 900;
-        letter-spacing: 0;
-        color: var(--text-high);
-    }
-
-    .page-subtitle {
-        margin: 0.25rem 0 0;
-        color: var(--text-medium);
-        font-size: 0.92rem;
-        line-height: 1.45;
-        max-width: 56ch;
-    }
-
-    .page-head-actions {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        min-width: 0;
     }
 
     .class-switcher-wrap {
@@ -306,6 +228,170 @@
         gap: 1rem;
     }
 
+    .assessment-week-card {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(58, 141, 95, 0.28);
+        border-radius: 22px;
+        background: linear-gradient(135deg, rgba(224, 247, 233, 0.84), rgba(244, 252, 247, 0.68));
+        box-shadow: 0 16px 34px rgba(34, 116, 76, 0.13), inset 0 1px rgba(255, 255, 255, 0.82);
+        backdrop-filter: blur(14px) saturate(125%);
+        -webkit-backdrop-filter: blur(14px) saturate(125%);
+    }
+
+    .assessment-week-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 5px;
+        background: #4d9b6b;
+    }
+
+    .assessment-week-card .card-header {
+        align-items: center;
+        margin-bottom: 0;
+        padding: 0.2rem 0.25rem 0.2rem 0.35rem;
+    }
+
+    .assessment-week-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .assessment-week-copy {
+        display: flex;
+        flex: 1 1 auto;
+        min-width: 0;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .assessment-week-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        min-width: 0;
+        white-space: nowrap;
+    }
+
+    .assessment-week-heading-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 2.2rem;
+        width: 2.2rem;
+        height: 2.2rem;
+        border: 1px solid rgba(34, 116, 76, 0.22);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.62);
+        color: #26352d;
+        font-size: 1.05rem;
+        box-shadow: inset 0 1px rgba(255, 255, 255, 0.8);
+    }
+
+    .assessment-week-title h2 {
+        color: #1f2933;
+        font-size: 1.16rem;
+        font-weight: 900;
+    }
+
+    .assessment-week-card .card-subtitle {
+        margin-left: 2.95rem;
+        max-width: 68ch;
+        color: #000;
+    }
+
+    .assessment-week-card .form-check {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        padding-left: 0;
+        padding: 0.55rem 0.75rem;
+        border: 1px solid rgba(42, 96, 62, 0.18);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.48);
+        box-shadow: inset 0 1px rgba(255, 255, 255, 0.72);
+    }
+
+    .assessment-week-card .form-check-input {
+        margin: 0;
+    }
+
+    .assessment-week-card .form-check-label {
+        color: #26352d;
+        letter-spacing: 0.04em;
+    }
+
+    .finalization-status-card {
+        display: grid;
+        gap: 0.5rem;
+        padding: 0.8rem 1rem 0.75rem;
+        border: 1px solid rgba(100, 116, 139, 0.18);
+        border-left: 3px solid #94a3b8;
+        border-radius: 15px;
+        background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+        color: #334155;
+        box-shadow: inset 0 1px rgba(255, 255, 255, 0.9);
+    }
+
+    .finalization-status-heading {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        color: #1f2937;
+        font-size: 1rem;
+    }
+
+    .finalization-status-heading i {
+        color: #64748b;
+        font-size: 1rem;
+    }
+
+    .finalization-status-summary {
+        margin-left: 1.5rem;
+        color: #64748b;
+        font-size: 0.88rem;
+        font-weight: 700;
+        line-height: 1.25;
+    }
+
+    .finalization-status-counts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+        margin-left: 1.5rem;
+        color: #475569;
+        font-size: 0.8rem;
+    }
+
+    .finalization-status-counts span {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.28rem;
+        padding: 0.3rem 0.55rem;
+        border: 1px solid rgba(100, 116, 139, 0.14);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.48);
+        white-space: nowrap;
+    }
+
+    .finalization-status-counts strong {
+        color: #1f2937;
+        font-weight: 800;
+    }
+
+    .finalization-status-note {
+        margin-left: 1.5rem;
+        margin-top: 0.05rem;
+        padding-top: 0.4rem;
+        border-top: 1px solid rgba(100, 116, 139, 0.13);
+        color: #64748b;
+        font-size: 0.76rem;
+        line-height: 1.3;
+    }
+
     .card {
         background: rgba(255, 255, 255, 0.94);
         backdrop-filter: blur(12px) saturate(130%);
@@ -386,15 +472,11 @@
         font-size: 0.9rem !important;
     }
 
-    .save-changes-btn {
-        width: auto;
-        min-width: 132px;
-    }
-
     .class-form {
         display: grid;
         grid-template-columns: repeat(12, minmax(0, 1fr));
         gap: 1rem;
+        margin-top: 1.25rem;
     }
 
     .form-group {
@@ -437,12 +519,6 @@
     textarea {
         min-height: 104px;
         resize: vertical;
-    }
-
-    #classDescription {
-        min-height: 104px;
-        resize: none;
-        overflow-y: auto;
     }
 
     .col-span-8 {
@@ -874,7 +950,6 @@
         color: #f1f5f9;
     }
 
-    body.dark-theme .page-head,
     body.dark-theme .card,
     body.dark-theme .table-frame,
     body.dark-theme .student-card,
@@ -887,8 +962,6 @@
         box-shadow: 0 22px 44px rgba(0, 0, 0, 0.35) !important;
     }
 
-    body.dark-theme .page-back-btn,
-    body.dark-theme .class-switcher-trigger,
     body.dark-theme .student-table th,
     body.dark-theme .student-table td,
     body.dark-theme .status-chip,
@@ -903,7 +976,6 @@
         color: #e2e8f0 !important;
     }
 
-    body.dark-theme .page-head-title h1,
     body.dark-theme .card-title,
     body.dark-theme .section-heading h2,
     body.dark-theme .student-card-name,
@@ -912,7 +984,6 @@
         color: #f8fafc !important;
     }
 
-    body.dark-theme .page-subtitle,
     body.dark-theme .card-subtitle,
     body.dark-theme .form-group label,
     body.dark-theme .student-card-meta,
@@ -940,24 +1011,23 @@
         color: #fde68a !important;
     }
 
-    @media (max-width: 960px) {
-        .page-head {
-            grid-template-columns: 1fr;
-            align-items: flex-start;
-        }
+    body.dark-theme .finalization-status-card {
+        background: linear-gradient(135deg, #1e293b, #263449) !important;
+        border-color: rgba(148, 163, 184, 0.22) !important;
+        border-left-color: #94a3b8 !important;
+        color: #cbd5e1 !important;
+    }
 
-        .page-head-actions {
-            width: 100%;
-            justify-content: stretch;
-        }
+    body.dark-theme .finalization-status-heading,
+    body.dark-theme .finalization-status-counts span strong {
+        color: #f1f5f9 !important;
+    }
 
-        .class-switcher-wrap {
-            width: 100%;
-        }
-
-        .class-switcher-menu {
-            width: 100%;
-        }
+    body.dark-theme .finalization-status-summary,
+    body.dark-theme .finalization-status-counts,
+    body.dark-theme .finalization-status-note,
+    body.dark-theme .finalization-status-heading i {
+        color: #cbd5e1 !important;
     }
 
     @media (max-width: 860px) {
@@ -980,19 +1050,6 @@
             padding: 0.8rem;
         }
 
-        .page-head {
-            padding: 1rem;
-            gap: 0.85rem;
-        }
-
-        .page-head-title h1 {
-            font-size: 1.06rem;
-        }
-
-        .page-subtitle {
-            font-size: 0.88rem;
-        }
-
         .card-header {
             flex-direction: column;
             align-items: flex-start;
@@ -1000,6 +1057,17 @@
 
         .card-actions {
             width: 100%;
+        }
+
+        .finalization-status-summary,
+        .finalization-status-counts,
+        .finalization-status-note {
+            margin-left: 0;
+        }
+
+        .finalization-status-counts span {
+            flex: 1 1 auto;
+            justify-content: space-between;
         }
 
         .save-changes-btn {
@@ -1027,52 +1095,15 @@
 
 {% block content %}
 <div class="page-shell">
-    <header class="page-head">
-        <div class="page-head-left">
-            <div class="page-head-title">
-                <h1>Section Details</h1>
-                <p class="page-subtitle">Manage section information and enrolled students.</p>
-            </div>
-        </div>
-
-        <div class="page-head-actions">
-            <div class="class-switcher-wrap" id="classSwitcherWrap">
-                <button type="button" class="class-switcher-trigger" id="classSwitcherTrigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="classSwitcherMenu">
-                    <span class="class-switcher-trigger-text">
-                        <span class="class-switcher-label">Viewing Section</span>
-                        <span class="class-switcher-value" id="classSwitcherValue">{{ section.class_code|default:section.class_name }}</span>
-                    </span>
-                    <i class="bi bi-chevron-down" aria-hidden="true"></i>
-                </button>
-                <div class="class-switcher-menu" id="classSwitcherMenu" role="listbox" aria-label="Switch section">
-                    {% for s in sections %}
-                    <button
-                        type="button"
-                        class="class-switcher-option {% if s.id == section.id %}is-selected{% endif %}"
-                        role="option"
-                        aria-selected="{% if s.id == section.id %}true{% else %}false{% endif %}"
-                        data-section-id="{{ s.id }}"
-                        data-class-code="{{ s.class_code }}"
-                        data-class-name="{{ s.class_name|escape }}"
-                    >
-                        <span class="class-switcher-option-text">
-                            <span class="class-switcher-option-title">{{ s.class_code }}</span>
-                            <span class="class-switcher-option-subtitle">{{ s.class_name }}</span>
-                        </span>
-                        <i class="bi bi-check2 class-switcher-check" aria-hidden="true"></i>
-                    </button>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-    </header>
-
     <main class="page-body">
         {% if assessment_week_toggle_available %}
-        <section class="card" aria-labelledby="assessmentWeekHeading">
-            <div class="card-header">
-                <div class="section-heading">
-                    <h2 id="assessmentWeekHeading">Assessment Week</h2>
+        <section class="card assessment-week-card" aria-labelledby="assessmentWeekHeading">
+            <div class="card-header assessment-week-header">
+                <div class="assessment-week-copy">
+                    <div class="assessment-week-title">
+                        <span class="assessment-week-heading-icon" aria-hidden="true"><i class="bi bi-clipboard2-check"></i></span>
+                        <h2 id="assessmentWeekHeading">Assessment Week</h2>
+                    </div>
                     <p class="card-subtitle">When enabled, students in this section can access only assessments. Other sections are not affected.</p>
                 </div>
                 <div class="form-check form-switch mb-0">
@@ -1096,33 +1127,25 @@
             <div class="card-header">
                 <div class="section-heading">
                     <p class="card-title">Section Information</p>
-                    <p class="card-subtitle">Keep the section title and description concise for easy scanning.</p>
-                </div>
-                <div class="card-actions">
-                    <button type="submit" form="updateClassForm" class="btn btn-primary btn-sm"><i class="bi bi-check2-circle me-1"></i> Save Changes</button>
+                    <p class="card-subtitle">Keep the section title concise for easy scanning.</p>
                 </div>
             </div>
-            <div class="alert {% if finalization_open %}alert-info{% else %}alert-secondary{% endif %} mx-3 mt-3 mb-0">
-                <strong><i class="bi bi-flag me-1"></i>Year-End Finalization</strong>
-                <span class="ms-2">{{ finalization_counts.finalized }} of {{ finalization_counts.total }} students finalized</span>
-                <span class="d-block small mt-1">Not Finalized: {{ finalization_counts.not_finalized }} · Promoted: {{ finalization_counts.promoted }} · Retained: {{ finalization_counts.retained }}</span>
-                {% if not finalization_open %}<span class="d-block small mt-1">Available during the configured Term 3 closing period.</span>{% endif %}
-            </div>
-
             <form id="updateClassForm" class="class-form">
                 {% csrf_token %}
                 <input type="hidden" name="section_id" value="{{ section.id }}">
 
                 <div class="form-group col-span-12">
                     <label for="className">Title / Section Name</label>
-                    <input id="className" type="text" class="form-control" name="class_name" value="{{ section.class_name }}" required>
-                </div>
-
-                <div class="form-group col-span-12">
-                    <label for="classDescription">Description</label>
-                    <textarea id="classDescription" class="form-control" name="description" maxlength="100" placeholder="Short description (max 100 characters)">{{ section.description }}</textarea>
+                    <input id="className" type="text" class="form-control" name="class_name" value="{{ section.class_name }}" readonly aria-readonly="true">
                 </div>
             </form>
+
+            <div class="alert {% if finalization_open %}alert-info{% else %}alert-secondary{% endif %} finalization-status-card mx-3 mt-3 mb-0">
+                <div class="finalization-status-heading"><i class="bi bi-flag" aria-hidden="true"></i><strong>Year-End Finalization</strong></div>
+                <div class="finalization-status-summary">{{ finalization_counts.finalized }} of {{ finalization_counts.total }} students finalized</div>
+                <div class="finalization-status-counts"><span>Not Finalized: <strong>{{ finalization_counts.not_finalized }}</strong></span><span>Promoted: <strong>{{ finalization_counts.promoted }}</strong></span><span>Retained: <strong>{{ finalization_counts.retained }}</strong></span></div>
+                {% if not finalization_open %}<div class="finalization-status-note">Available during the configured Term 3 closing period.</div>{% endif %}
+            </div>
         </section>
 
         <section class="card">
@@ -1284,56 +1307,6 @@ window.hideClassStudentLoading = function () {
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const wrap = document.getElementById('classSwitcherWrap');
-    const trigger = document.getElementById('classSwitcherTrigger');
-    const menu = document.getElementById('classSwitcherMenu');
-    const valueEl = document.getElementById('classSwitcherValue');
-
-    if (!wrap || !trigger || !menu || !valueEl) return;
-
-    const options = Array.from(menu.querySelectorAll('.class-switcher-option'));
-
-    function closeMenu() {
-        wrap.classList.remove('is-open');
-        trigger.setAttribute('aria-expanded', 'false');
-    }
-
-    function toggleMenu() {
-        const isOpen = wrap.classList.contains('is-open');
-        if (isOpen) {
-            closeMenu();
-        } else {
-            wrap.classList.add('is-open');
-            trigger.setAttribute('aria-expanded', 'true');
-        }
-    }
-
-    trigger.addEventListener('click', function (e) {
-        e.stopPropagation();
-        toggleMenu();
-    });
-
-    options.forEach((option) => {
-        option.addEventListener('click', function () {
-            const sectionId = this.dataset.sectionId;
-            const classCode = this.dataset.classCode;
-            const className = this.dataset.className || classCode;
-            valueEl.textContent = classCode;
-            window.location.href = '?section_id=' + encodeURIComponent(sectionId);
-        });
-    });
-
-    document.addEventListener('click', function (e) {
-        if (!wrap.contains(e.target)) {
-            closeMenu();
-        }
-    });
-
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') {
-            closeMenu();
-        }
-    });
 });
 </script>
 <script>
