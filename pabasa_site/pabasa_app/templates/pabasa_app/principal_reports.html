@@ -343,7 +343,7 @@
             <div>
                 <p style="background: rgba(46, 168, 229, 0.12); color: #10466E; display: inline-block; padding: 0.28rem 0.6rem; border-radius: 999px; font-weight: 700; font-size: 0.76rem; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 0.4rem;">Reporting Hub</p>
                 <h4 class="mb-1" style="color: #1b1a17; font-weight: 800;">Review school reports in one place</h4>
-                <p class="mb-0 reports-subtle-text">Choose a report type, optionally filter by grade level, and review the live preview before exporting.</p>
+                <p class="mb-0 reports-subtle-text">Choose a report type for Grade 2 and review the live preview before exporting.</p>
             </div>
             <div style="width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #2EA8E5 0%, #10466E 100%); display: flex; align-items: center; justify-content: center; color: #fff;">
                 <i class="bi bi-file-earmark-bar-graph"></i>
@@ -353,7 +353,7 @@
 
     <h5 class="reports-section-title mb-3">Choose a report</h5>
     <div class="principal-panel mb-4 reports-panel reports-filter-panel" id="reportsFilterPanel">
-        <p class="reports-subtle-text mb-3">Start with one report type. Use the grade filter when you want a focused view for a specific level.</p>
+        <p class="reports-subtle-text mb-3">Start with one report type. Reports include Grade 2 data.</p>
         <form method="get" id="reportsForm">
             <div class="row mb-3 reports-filter-grid">
                 <div class="col-md-6">
@@ -376,41 +376,6 @@
                                 <span class="custom-device-option-text">
                                     <span class="custom-device-option-title">{{ rt.label }}</span>
                                     <span class="custom-device-option-subtitle">Use this report view</span>
-                                </span>
-                                <i class="bi bi-check2 custom-device-check" aria-hidden="true"></i>
-                            </button>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <label for="gradeLevel" class="form-label">Grade Level (Optional)</label>
-                    <div class="custom-device-dropdown{% if selected_report_type != 'grade' %} is-disabled{% endif %}" id="gradeLevelDropdown" data-custom-report-dropdown>
-                        <button type="button" class="custom-device-trigger" id="gradeLevelTrigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="gradeLevelMenu" {% if selected_report_type != 'grade' %}disabled{% endif %}>
-                            <span class="custom-device-trigger-text">
-                                <span class="custom-device-value" id="gradeLevelValue">{% if selected_grade %}{{ selected_grade }}{% else %}All Grades{% endif %}</span>
-                            </span>
-                            <i class="bi bi-chevron-down" aria-hidden="true"></i>
-                        </button>
-                        <select class="custom-device-select" id="gradeLevel" name="grade_level" tabindex="-1" aria-hidden="true" {% if selected_report_type != 'grade' %}disabled{% endif %}>
-                            <option value="">All Grades</option>
-                            {% for row in grade_rows %}
-                            <option value="{{ row.grade }}" {% if selected_grade == row.grade %}selected{% endif %}>{{ row.grade }}</option>
-                            {% endfor %}
-                        </select>
-                        <div class="custom-device-menu" id="gradeLevelMenu" role="listbox" aria-label="Grade level">
-                            <button type="button" class="custom-device-option" role="option" aria-selected="{% if not selected_grade %}true{% else %}false{% endif %}" data-device-id="" data-index="0">
-                                <span class="custom-device-option-text">
-                                    <span class="custom-device-option-title">All Grades</span>
-                                    <span class="custom-device-option-subtitle">Include every grade level</span>
-                                </span>
-                                <i class="bi bi-check2 custom-device-check" aria-hidden="true"></i>
-                            </button>
-                            {% for row in grade_rows %}
-                            <button type="button" class="custom-device-option" role="option" aria-selected="{% if selected_grade == row.grade %}true{% else %}false{% endif %}" data-device-id="{{ row.grade }}" data-index="{{ forloop.counter }}">
-                                <span class="custom-device-option-text">
-                                    <span class="custom-device-option-title">{{ row.grade }}</span>
-                                    <span class="custom-device-option-subtitle">Filter this grade level</span>
                                 </span>
                                 <i class="bi bi-check2 custom-device-check" aria-hidden="true"></i>
                             </button>
@@ -465,19 +430,14 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const reportTypeSelect = document.getElementById('reportType');
-        const gradeLevelSelect = document.getElementById('gradeLevel');
         const reportsForm = document.getElementById('reportsForm');
         const reportDropdown = document.getElementById('reportTypeDropdown');
         const reportTrigger = document.getElementById('reportTypeTrigger');
         const reportMenu = document.getElementById('reportTypeMenu');
         const reportValue = document.getElementById('reportTypeValue');
-        const gradeDropdown = document.getElementById('gradeLevelDropdown');
-        const gradeTrigger = document.getElementById('gradeLevelTrigger');
-        const gradeMenu = document.getElementById('gradeLevelMenu');
-        const gradeValue = document.getElementById('gradeLevelValue');
         const filterPanel = document.getElementById('reportsFilterPanel');
 
-        if (!reportTypeSelect || !gradeLevelSelect || !reportsForm || !reportDropdown || !gradeDropdown) {
+        if (!reportTypeSelect || !reportsForm || !reportDropdown) {
             return;
         }
 
@@ -579,29 +539,7 @@
             emptyLabel: 'Choose report'
         });
 
-        const syncGradeDropdown = initReportDropdown({
-            dropdown: gradeDropdown,
-            trigger: gradeTrigger,
-            menu: gradeMenu,
-            select: gradeLevelSelect,
-            value: gradeValue,
-            emptyLabel: 'All Grades'
-        });
-
-        const syncGradeFilter = () => {
-            const isGradeReport = reportTypeSelect.value === 'grade';
-            gradeLevelSelect.disabled = !isGradeReport;
-            gradeTrigger.disabled = !isGradeReport;
-            gradeDropdown.classList.toggle('is-disabled', !isGradeReport);
-            if (!isGradeReport) {
-                gradeLevelSelect.value = '';
-                setDropdownOpen(gradeDropdown, gradeTrigger, false);
-            }
-            syncGradeDropdown();
-        };
-
         const submitReportFilters = () => {
-            syncGradeFilter();
             reportsForm.submit();
         };
 
@@ -612,9 +550,7 @@
         });
 
         reportTypeSelect.addEventListener('change', submitReportFilters);
-        gradeLevelSelect.addEventListener('change', submitReportFilters);
         syncReportDropdown();
-        syncGradeFilter();
     });
 </script>
 {% endblock %}

@@ -1885,6 +1885,7 @@ class LiveAssessmentSession(models.Model):
     id = models.CharField(max_length=64, primary_key=True)
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name='live_assessment_sessions')
     course = models.ForeignKey('Course', on_delete=models.SET_NULL, related_name='live_assessment_sessions', null=True, blank=True)
+    section = models.ForeignKey('Section', on_delete=models.SET_NULL, related_name='live_assessment_sessions', null=True, blank=True)
     material = models.ForeignKey('Material', on_delete=models.CASCADE, related_name='live_assessment_sessions')
     student_ids = models.JSONField(default=list, blank=True)
     student_count = models.IntegerField(default=0)

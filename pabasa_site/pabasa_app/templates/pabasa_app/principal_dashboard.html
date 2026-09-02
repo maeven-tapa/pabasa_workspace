@@ -1,31 +1,6 @@
 {% extends "pabasa_app/principal_base.html" %}
-{% load static %}
-
 {% block content %}
 <style>
-    .principal-content {
-        position: relative;
-        isolation: isolate;
-    }
-
-    .principal-content::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background-image: url('{% static "pabasa_app/images/ses_logo.jpg" %}');
-        background-repeat: no-repeat;
-        background-position: center;
-        background-size: 60%;
-        opacity: 0.32;
-        pointer-events: none;
-        z-index: -1;
-    }
-
-    .principal-content > * {
-        position: relative;
-        z-index: 1;
-    }
-
     .dashboard-hero {
         background: linear-gradient(135deg, rgba(255, 214, 57, 0.22) 0%, rgba(46, 168, 229, 0.12) 45%, rgba(255, 255, 255, 0.98) 100%);
         border: 1px solid rgba(16, 70, 110, 0.16);
