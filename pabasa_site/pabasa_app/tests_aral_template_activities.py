@@ -1,6 +1,8 @@
 import json
 import uuid
+from unittest.mock import patch
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
@@ -183,3 +185,205 @@ class DedicatedAralTemplateActivityTests(TestCase):
         )
         self.assertEqual(rejected.status_code, 400)
         self.assertFalse(Material.objects.filter(title="Mixed Language").exists())
+
+    def test_vocabulary_completion_is_server_scored_saved_and_idempotent(self):
+        material = self.make_material(
+            "word_meaning_match", reading_set_id="word_meaning_match-english-6",
+            reading_set="Home and Family", items=[
+                {"word": "home", "sentence": "Our home is safe.",
+                 "choices": ["a place to live", "food", "a toy"], "answer_index": 0},
+                {"word": "meal", "sentence": "We share a meal.",
+                 "choices": ["a game", "food we eat", "a room"], "answer_index": 1},
+            ],
+        )
+        self.login_student()
+        url = reverse(
+            "aral_template_activity_complete",
+            kwargs={"activity_slug": "word-meaning-match"},
+        )
+        payload = {
+            "material_id": material.id,
+            "duration_seconds": 41,
+            "answers": [
+                {"item_index": 0, "first_choice_index": 2,
+                 "final_choice_index": 0, "attempts": 2},
+                {"item_index": 1, "first_choice_index": 1,
+                 "final_choice_index": 1, "attempts": 1},
+            ],
+        }
+
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+
+        self.assertEqual(response.status_code, 200)
+        result_payload = response.json()["result"]
+        self.assertTrue(result_payload["completed"])
+        self.assertEqual(result_payload["correct_items"], 1)
+        self.assertEqual(result_payload["items_completed"], 2)
+        self.assertEqual(result_payload["accuracy"], 50.0)
+        self.assertFalse(result_payload["passed"])
+        result = material.assessment_results.get(student=self.student)
+        self.assertEqual(result.attempt_status, "completed")
+        self.assertEqual(result.duration_seconds, 41)
+        self.assertEqual(result.word_count, 2)
+        self.assertEqual(result.correct_items, 1)
+        self.assertTrue(result.remarks.startswith("WORD_MEANING_MATCH_RESULT:"))
+
+        duplicate = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(duplicate.status_code, 200)
+        self.assertTrue(duplicate.json()["already_completed"])
+        self.assertEqual(material.assessment_results.filter(student=self.student).count(), 1)
+
+        reopened = self.client.get(
+            reverse("aral_template_activity_page", kwargs={"activity_slug": "word-meaning-match"}),
+            {"id": material.id},
+        )
+        self.assertEqual(reopened.status_code, 200)
+        self.assertTrue(reopened.context["word_meaning_activity"]["completion"]["completed"])
+
+    def test_vocabulary_completion_rejects_incomplete_or_unmastered_answers(self):
+        material = self.make_material(
+            "word_meaning_match", reading_set_id="word_meaning_match-english-6",
+            items=[
+                {"word": "home", "choices": ["house", "food"], "answer_index": 0},
+                {"word": "meal", "choices": ["room", "food"], "answer_index": 1},
+            ],
+        )
+        self.login_student()
+        url = reverse(
+            "aral_template_activity_complete",
+            kwargs={"activity_slug": "word-meaning-match"},
+        )
+
+        incomplete = self.client.post(url, json.dumps({
+            "material_id": material.id,
+            "answers": [{"item_index": 0, "first_choice_index": 0,
+                         "final_choice_index": 0, "attempts": 1}],
+        }), content_type="application/json")
+        self.assertEqual(incomplete.status_code, 400)
+
+        unmastered = self.client.post(url, json.dumps({
+            "material_id": material.id,
+            "answers": [
+                {"item_index": 0, "first_choice_index": 0,
+                 "final_choice_index": 0, "attempts": 1},
+                {"item_index": 1, "first_choice_index": 0,
+                 "final_choice_index": 0, "attempts": 1},
+            ],
+        }), content_type="application/json")
+        self.assertEqual(unmastered.status_code, 400)
+        self.assertFalse(material.assessment_results.filter(student=self.student).exists())
+
+    @patch("pabasa_app.views.transcribe_audio_bytes_with_model")
+    def test_fluency_completion_calculates_cwpm_and_persists_transcript(self, transcribe):
+        passage = "Maaga akong gumising. Handa na ako sa paaralan."
+        transcribe.return_value = (passage, "chirp_3", "")
+        material = self.make_material(
+            "fluency_reading", language="Filipino",
+            reading_set_id="fluency_reading-filipino-1",
+            reading_set="Ang Aking Umaga", passage=passage,
+            phrases=["Maaga akong gumising.", "Handa na ako sa paaralan."],
+        )
+        self.login_student()
+        url = reverse(
+            "aral_template_activity_complete",
+            kwargs={"activity_slug": "fluency-reading"},
+        )
+
+        response = self.client.post(url, {
+            "material_id": str(material.id),
+            "duration_seconds": "30",
+            "audio": SimpleUploadedFile("reading.webm", b"recorded-audio", "audio/webm"),
+        })
+
+        self.assertEqual(response.status_code, 200)
+        result_payload = response.json()["result"]
+        self.assertTrue(result_payload["completed"])
+        self.assertEqual(result_payload["accuracy"], 100.0)
+        self.assertEqual(result_payload["wpm"], result_payload["correct_items"] * 2)
+        result = material.assessment_results.get(student=self.student)
+        self.assertEqual(result.transcript, passage)
+        self.assertEqual(result.attempt_status, "completed")
+        self.assertEqual(result.duration_seconds, 30)
+        self.assertTrue(result.mic_used)
+        self.assertTrue(result.speech_recognition_used)
+        self.assertTrue(result.remarks.startswith("FLUENCY_READING_RESULT:"))
+        self.assertEqual(material.assessment_results.filter(student=self.student).count(), 1)
+
+        duplicate = self.client.post(url, {"material_id": str(material.id)})
+        self.assertEqual(duplicate.status_code, 200)
+        self.assertTrue(duplicate.json()["already_completed"])
+        self.assertEqual(material.assessment_results.filter(student=self.student).count(), 1)
+        transcribe.assert_called_once()
+
+    @patch("pabasa_app.views.transcribe_audio_bytes_with_model")
+    def test_fluency_no_speech_does_not_create_false_completion(self, transcribe):
+        transcribe.return_value = ("", "chirp_3", "")
+        material = self.make_material(
+            "fluency_reading", language="Filipino",
+            reading_set_id="fluency_reading-filipino-1",
+            passage="Ako ay masayang nagbabasa.",
+        )
+        self.login_student()
+
+        response = self.client.post(
+            reverse("aral_template_activity_complete", kwargs={"activity_slug": "fluency-reading"}),
+            {"material_id": str(material.id), "duration_seconds": "12",
+             "audio": SimpleUploadedFile("reading.webm", b"silence", "audio/webm")},
+        )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertFalse(material.assessment_results.filter(student=self.student).exists())
+
+    @patch("pabasa_app.views.transcribe_audio_bytes_with_model")
+    def test_fluency_api_rejects_wrong_slug_and_crla_without_transcribing(self, transcribe):
+        material = self.make_material(
+            "fluency_reading", passage="I read every day.",
+            reading_set_id="fluency_reading-english-1",
+        )
+        self.login_student()
+        wrong_slug = self.client.post(
+            reverse("aral_template_activity_complete", kwargs={"activity_slug": "word-meaning-match"}),
+            json.dumps({"material_id": material.id, "answers": []}),
+            content_type="application/json",
+        )
+        self.assertEqual(wrong_slug.status_code, 404)
+
+        material.assessment_kind = "crla"
+        material.save(update_fields=["assessment_kind"])
+        crla = self.client.post(
+            reverse("aral_template_activity_complete", kwargs={"activity_slug": "fluency-reading"}),
+            {"material_id": str(material.id), "duration_seconds": "10",
+             "audio": SimpleUploadedFile("reading.webm", b"audio", "audio/webm")},
+        )
+        self.assertEqual(crla.status_code, 404)
+        transcribe.assert_not_called()
+
+    def test_dedicated_templates_use_server_audio_and_fluency_recorder(self):
+        vocabulary = self.make_material(
+            "word_meaning_match", reading_set_id="word_meaning_match-english-6",
+            items=[{"word": "home", "choices": ["house", "food"], "answer_index": 0}],
+        )
+        fluency = self.make_material(
+            "fluency_reading", reading_set_id="fluency_reading-english-1",
+            passage="I read every day.",
+        )
+        self.login_student()
+
+        vocabulary_page = self.client.get(
+            reverse("aral_template_activity_page", kwargs={"activity_slug": "word-meaning-match"}),
+            {"id": vocabulary.id},
+        )
+        fluency_page = self.client.get(
+            reverse("aral_template_activity_page", kwargs={"activity_slug": "fluency-reading"}),
+            {"id": fluency.id},
+        )
+
+        self.assertEqual(vocabulary_page.status_code, 200)
+        self.assertContains(vocabulary_page, "data.tts_url")
+        self.assertContains(vocabulary_page, "data.completion_url")
+        self.assertNotContains(vocabulary_page, "speechSynthesis")
+        self.assertEqual(fluency_page.status_code, 200)
+        self.assertContains(fluency_page, "MediaRecorder")
+        self.assertContains(fluency_page, "data.tts_url")
+        self.assertContains(fluency_page, "data.completion_url")
+        self.assertNotContains(fluency_page, "speechSynthesis")

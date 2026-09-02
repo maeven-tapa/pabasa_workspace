@@ -97,6 +97,11 @@ urlpatterns = [
         views.aral_template_activity_page,
         name='aral_template_activity_page',
     ),
+    path(
+        'api/dashboard/assessment/activity/<slug:activity_slug>/complete/',
+        views.aral_template_activity_complete,
+        name='aral_template_activity_complete',
+    ),
     path('dashboard/assessment/reading_ui/para/', views.reading_para_page, name='reading_para_page'),
     path('dashboard/assessment/reading_ui/vowel/', views.reading_vowel_page, name='reading_vowel_page'),
     path('api/reading/transcribe/', views.reading_transcribe_api, name='reading_transcribe_api'),
