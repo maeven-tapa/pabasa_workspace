@@ -37,9 +37,7 @@
 
         body {
             min-height: 100vh;
-            background:
-                radial-gradient(circle at top left, rgba(255, 214, 57, 0.12), transparent 30%),
-                linear-gradient(135deg, #eef8ff 0%, #f6fbff 42%, var(--principal-primary-soft) 100%);
+            background: #ffffff;
             color: var(--principal-text);
             font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
             line-height: 1.5;
@@ -133,12 +131,18 @@
             overflow-x: hidden;
             padding: 0 1rem 0.5rem;
             -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .principal-sidebar-nav::-webkit-scrollbar {
+            display: none;
         }
 
         .principal-sidebar-footer {
             margin-top: auto;
             flex-shrink: 0;
-            padding: 0.85rem 1rem calc(0.85rem + env(safe-area-inset-bottom));
+            padding: 0.85rem 1rem calc(0.35rem + env(safe-area-inset-bottom));
         }
 
         .principal-sidebar .offcanvas-header {
@@ -447,28 +451,6 @@
         .principal-content {
             max-width: 1180px;
             margin: 0 auto;
-            position: relative;
-            isolation: isolate;
-        }
-
-        .principal-content::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background-image: url('{% static "pabasa_app/images/ses_logo.jpg" %}');
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: 58%;
-            opacity: 0.22;
-            filter: saturate(1.1) contrast(1.05);
-            transform: translateZ(0);
-            pointer-events: none;
-            z-index: -1;
-        }
-
-        .principal-content > * {
-            position: relative;
-            z-index: 1;
         }
 
         .principal-panel {

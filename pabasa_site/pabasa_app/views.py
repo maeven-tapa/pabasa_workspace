@@ -22397,14 +22397,18 @@ def principal_school_workspace(request):
         return HttpResponseForbidden('Principal access required.')
     school = user.school_record
     grouped = {grade: [] for grade in SCHOOL_GRADE_LEVELS}
+    ordered_sections = []
     if school:
         sections = Section.objects.filter(school_id=school.id).select_related('teacher').annotate(
             active_student_count=Count('enrollments', filter=Q(enrollments__is_active=True), distinct=True)
         ).order_by('grade_level', 'section', 'class_name')
-        for section in sections:
+        ordered_sections = list(sections)
+        for section in ordered_sections:
             grouped.setdefault(section.grade_level or 'Unspecified', []).append(section)
+    split_index = (len(ordered_sections) + 1) // 2
+    section_columns = [ordered_sections[:split_index], ordered_sections[split_index:]]
     context = _principal_context(request, 'School Workspace')
-    context.update({'school': school, 'sections_by_grade': grouped, 'has_sections': any(grouped.values())})
+    context.update({'school': school, 'sections_by_grade': grouped, 'section_columns': section_columns, 'has_sections': any(grouped.values())})
     return render(request, 'pabasa_app/principal_school_workspace.html', context)
 
 
@@ -22488,11 +22492,10 @@ def principal_reports(request):
     }
 
     selected_report_type = (request.GET.get('report_type') or 'school').strip().lower()
-    selected_grade = (request.GET.get('grade_level') or '').strip()
-    if selected_report_type != 'grade':
-        selected_grade = ''
+    selected_grade = NEW_USER_GRADE_LEVEL
     export_type = (request.GET.get('export') or '').strip().lower()
     headers, rows = _principal_report_preview_rows(analytics, selected_report_type, selected_grade)
+    preview_rows = rows[:-2] if selected_report_type == 'school' else rows
     selected_report_label = f"{report_type_labels.get(selected_report_type, 'School Performance')} Report"
     selected_report_summary = 'School-wide participation, completion rate, and performance trends across the campus.'
 
@@ -22522,9 +22525,9 @@ def principal_reports(request):
         'selected_grade': selected_grade,
         'selected_report_label': selected_report_label,
         'report_preview_summary': selected_report_summary,
-        'report_preview_count': len(rows),
+        'report_preview_count': len(preview_rows),
         'report_preview_headers': headers,
-        'report_preview_rows': rows,
+        'report_preview_rows': preview_rows,
     })
     return render(request, 'pabasa_app/principal_reports.html', context)
 
@@ -22685,7 +22688,9 @@ def principal_calendar(request):
             return JsonResponse({"events": events})
         active_calendar, _, _ = _selected_school_calendar(request)
         widget = _calendar_month_view(active_calendar)
-        return render(request, "pabasa_app/principal_calendar.html", {"events": events, "events_json": json.dumps(events), "school": school, "active_school_calendar": active_calendar, "student_calendar_school_year": _calendar_school_year_label(active_calendar), "student_calendar_current_term": f"Term {active_calendar.current_term}" if active_calendar else "Not set", "calendar_weekday_labels": ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], "student_calendar_events_json": json.dumps(events), **widget})
+        context = _principal_context(request, "Calendar")
+        context.update({"events": events, "events_json": json.dumps(events), "school": school, "active_school_calendar": active_calendar, "student_calendar_school_year": _calendar_school_year_label(active_calendar), "student_calendar_current_term": f"Term {active_calendar.current_term}" if active_calendar else "Not set", "calendar_weekday_labels": ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], "student_calendar_events_json": json.dumps(events), **widget})
+        return render(request, "pabasa_app/principal_calendar.html", context)
     if request.method == "POST":
         try:
             if not school:

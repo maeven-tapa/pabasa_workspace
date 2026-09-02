@@ -1,14 +1,59 @@
 {% extends 'pabasa_app/principal_base.html' %}
+{% block extra_head %}
+<style>
+  .principal-view-btn {
+    background: var(--principal-primary-deep);
+    border-color: var(--principal-primary-deep);
+    box-shadow: 0 6px 14px rgba(16, 70, 110, 0.2);
+    color: #fff;
+  }
+
+  .principal-view-btn:hover,
+  .principal-view-btn:focus {
+    background: var(--principal-accent);
+    border-color: var(--principal-accent-deep);
+    box-shadow: 0 8px 16px rgba(245, 184, 0, 0.24);
+    color: var(--principal-primary-deep);
+  }
+
+  .school-page-title {
+    color: #1b1a17;
+    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  .school-section-title {
+    color: var(--principal-primary-deep);
+    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+  }
+
+  .school-card-title {
+    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  .school-meta {
+    color: var(--principal-muted);
+    font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+    line-height: 1.5;
+  }
+</style>
+{% endblock %}
 {% block content %}
 <div class="container-fluid px-0">
   {% if not school %}
   <div class="principal-panel p-4"><h2 class="h4">School not assigned</h2><p class="text-muted mb-0">Your Principal account is not currently linked to a School.</p></div>
   {% else %}
-  <div class="principal-panel p-4 mb-4"><div class="d-flex flex-wrap justify-content-between gap-3"><div><p class="text-uppercase small fw-bold text-primary mb-1">Your School</p><h2 class="h3 mb-2">{{ school.name }}</h2><p class="text-muted mb-0">{{ school.address|default:'Address not provided' }}</p></div><div class="text-md-end"><span class="badge text-bg-light border">School code: {{ school.code|default:school.id }}</span><p class="small text-muted mt-2 mb-0">Read-only workspace</p></div></div></div>
-  <div class="d-flex align-items-center justify-content-between mb-3"><h2 class="h4 mb-0">Grade Levels &amp; Sections</h2><span class="small text-muted">School hierarchy</span></div>
+  <div class="principal-panel p-4 mb-4"><div class="d-flex flex-wrap justify-content-between gap-3"><div><p class="text-uppercase small fw-bold text-primary mb-1">Your School</p><h2 class="school-page-title mb-2">{{ school.name }}</h2><p class="school-meta mb-0">{{ school.address|default:'Address not provided' }}</p></div><div class="text-md-end"><span class="badge text-bg-light border">School code: {{ school.code|default:school.id }}</span><p class="school-meta small mt-2 mb-0">Read-only workspace</p></div></div></div>
+  <div class="d-flex align-items-center justify-content-between mb-3"><h2 class="school-section-title h4 mb-0">Grade 2 Sections</h2><span class="school-meta small">School hierarchy</span></div>
   <div class="row g-4">
   {% if not has_sections %}<div class="col-12"><div class="principal-panel p-4 text-muted">No sections configured for this School.</div></div>{% endif %}
-  {% for grade, sections in sections_by_grade.items %}{% if sections %}<div class="col-12 col-lg-6"><section class="principal-panel h-100"><div class="p-3 border-bottom"><h3 class="h5 mb-0">{{ grade }}</h3></div><div class="list-group list-group-flush">{% for section in sections %}<a class="list-group-item list-group-item-action p-3" href="{% url 'principal_section_detail' section.id %}"><div class="d-flex justify-content-between gap-2"><strong>{{ section.section|default:section.class_name }}</strong><span class="badge {% if section.is_active %}text-bg-success{% else %}text-bg-secondary{% endif %}">{% if section.is_active %}Active{% else %}Inactive{% endif %}</span></div><div class="small text-muted mt-2">Teacher: {% if section.teacher %}{{ section.teacher.first_name }} {{ section.teacher.last_name }}{% else %}Not assigned{% endif %}</div><div class="small text-muted">Students: {{ section.active_student_count }}</div></a>{% endfor %}</div></section></div>{% endif %}{% endfor %}
+  {% for sections in section_columns %}<div class="col-12 col-lg-6"><section class="principal-panel h-100"><div class="p-3 border-bottom"><h3 class="school-card-title h5 mb-0">Sections</h3></div><div class="list-group list-group-flush">{% for section in sections %}<div class="list-group-item p-3"><div class="d-flex justify-content-between align-items-start gap-2"><strong class="school-card-title">{{ section.section|default:section.class_name }}</strong><span class="badge {% if section.is_active %}text-bg-success{% else %}text-bg-secondary{% endif %}">{% if section.is_active %}Active{% else %}Inactive{% endif %}</span></div><div class="school-meta small mt-2">Teacher: {% if section.teacher %}{{ section.teacher.first_name }} {{ section.teacher.last_name }}{% else %}Not assigned{% endif %}</div><div class="school-meta small mb-2">Students: {{ section.active_student_count }}</div><a class="btn btn-sm principal-view-btn" href="{% url 'principal_section_detail' section.id %}">View</a></div>{% endfor %}</div></section></div>{% endfor %}
   </div>{% endif %}
 </div>
 {% endblock %}

@@ -99,6 +99,7 @@
             box-shadow: 16px 0 40px rgba(6, 23, 38, 0.24);
             padding: 1.15rem;
             overflow: hidden;
+            transition: width 0.25s ease;
         }
 
         .admin-sidebar::before {
@@ -189,6 +190,7 @@
             margin-left: var(--admin-sidebar-width);
             min-height: 100vh;
             padding: clamp(1rem, 2vw, 1.6rem);
+            transition: margin-left 0.25s ease;
         }
 
         /* Collapsible admin sidebar support */
@@ -202,6 +204,7 @@
 
         body.admin-sidebar-collapsed .admin-brand-text,
         body.admin-sidebar-collapsed .admin-role-card,
+        body.admin-sidebar-collapsed .admin-nav-label,
         body.admin-sidebar-collapsed .admin-nav-link .admin-nav-text,
         body.admin-sidebar-collapsed .admin-logo-text,
         body.admin-sidebar-collapsed .admin-brand-workspace,
@@ -564,6 +567,27 @@
         .admin-sidebar .btn-outline-danger:hover {
             background: rgba(255, 255, 255, 0.18);
             color: #fff;
+        }
+
+        .sidebar-collapse-btn {
+            align-items: center;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 13px;
+            color: #fff;
+            display: inline-flex;
+            height: 36px;
+            justify-content: center;
+            min-width: 36px;
+            padding: 0;
+            transition: background 0.16s ease, transform 0.12s ease;
+        }
+
+        .sidebar-collapse-btn:hover,
+        .sidebar-collapse-btn:focus-visible {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            transform: translateY(-1px);
         }
 
         .admin-topbar,
@@ -2299,6 +2323,38 @@
 
             .admin-sidebar-footer .btn {
                 min-height: 48px;
+            }
+
+            body.admin-sidebar-collapsed .offcanvas .admin-sidebar {
+                width: 100% !important;
+            }
+
+            body.admin-sidebar-collapsed .offcanvas .admin-role-card,
+            body.admin-sidebar-collapsed .offcanvas .admin-nav-label,
+            body.admin-sidebar-collapsed .offcanvas .admin-nav-link .admin-nav-text,
+            body.admin-sidebar-collapsed .offcanvas .admin-brand-text {
+                display: block !important;
+            }
+
+            body.admin-sidebar-collapsed .offcanvas .admin-nav-link {
+                justify-content: flex-start;
+                padding: 0.68rem 0.75rem;
+            }
+
+            body.admin-sidebar-collapsed .offcanvas .admin-nav-link i {
+                margin-right: 0.7rem !important;
+            }
+
+            body.admin-sidebar-collapsed .offcanvas .admin-sidebar-footer .admin-logout-btn {
+                width: 100% !important;
+                height: auto !important;
+                min-height: 48px !important;
+                padding: 0.85rem 1rem !important;
+                border-radius: 14px !important;
+            }
+
+            body.admin-sidebar-collapsed .offcanvas .admin-sidebar-footer .admin-logout-text {
+                display: inline !important;
             }
         }
         /* Additional responsive rules to satisfy mobile/tablet requirements */

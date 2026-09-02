@@ -212,35 +212,5 @@
         </div>
     </div>
 
-    <div class="row mb-4">
-        <div class="col-md-6 mb-3">
-            <div class="principal-panel">
-                <h6 class="mb-3">Top Performing Grades</h6>
-                <div class="d-flex flex-column gap-2">
-                    {% for row in top_grades %}
-                    <div class="performance-callout" style="background: linear-gradient(90deg, rgba(34, 197, 94, 0.08) 0%, rgba(255, 255, 255, 0.85) 100%);">
-                        <p class="small mb-0"><strong>{{ row.grade }}</strong>: {{ row.average_score }}% average</p>
-                    </div>
-                    {% empty %}
-                    <div class="text-muted small">No top-performing grades yet.</div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6 mb-3">
-            <div class="principal-panel">
-                <h6 class="mb-3">Grades Needing Intervention</h6>
-                <div class="d-flex flex-column gap-2">
-                    {% for row in intervention_grades %}
-                    <div class="performance-callout" style="background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, rgba(255, 255, 255, 0.85) 100%);">
-                        <p class="small mb-0"><strong>{{ row.grade }}</strong>: {{ row.average_score }}% average</p>
-                    </div>
-                    {% empty %}
-                    <div class="text-muted small">No intervention alerts at the moment.</div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 {% endblock %}
