@@ -2881,6 +2881,7 @@
                     }
 
                     classData.students = classData.student_count || 0; // Use database student count
+                    const assessmentWeekEnabled = Boolean(classData.assessment_week_enabled);
                     
                     let pCount = 0;
                     let aCount = 0;
@@ -2932,11 +2933,12 @@
                     const progress = totalInClass > 0 ? Math.round((seenInClass / totalInClass) * 100) : 0;
                     return { 
                         ...classData, 
-                        practiceCount: pCount, 
+                        practiceCount: assessmentWeekEnabled ? 0 : pCount,
                         assessmentCount: aCount, 
-                        totalPractice: totalPracticeInClass, 
+                        totalPractice: assessmentWeekEnabled ? 0 : totalPracticeInClass,
                         progress: progress,
-                        currentLesson: currentLesson,
+                        currentLesson: assessmentWeekEnabled ? null : currentLesson,
+                        assessmentWeekEnabled: assessmentWeekEnabled,
                         hasUnreadMaterial: hasUnreadMaterial
                     };
                 })
@@ -2975,6 +2977,11 @@
                         <span><i class="bi bi-stars me-2 text-info"></i> ${escapeHtml(classData.subject || classData.header || "Reading")} class</span>
                         <span class="reading-level-badge" data-reading-level><i class="bi bi-bar-chart-fill"></i> Reading Level: ${escapeHtml(window.PABASA_STUDENT_READING_LEVEL || 'Pending')}</span>
                     </div>
+                    ${classData.assessmentWeekEnabled ? `
+                    <div class="alert alert-warning py-2 px-3 mb-2 small" role="status">
+                        <i class="bi bi-clipboard2-check me-1"></i><strong>Assessment Week</strong> is active. Only assessments are available for this section.
+                    </div>
+                    ` : ''}
                     ${classData.currentLesson ? `
                     <div class="class-card-new-info">
                         <div class="current-lesson-item">
@@ -3001,7 +3008,7 @@
                     </div>
                     <div class="class-card-actions">
                         <button class="continue-learning-btn" type="button" data-continue-learning data-section-id="${escapeHtml(classData.section_id || classData.id || '')}" data-class-code="${escapeHtml(classData.code)}">
-                            <i class="bi bi-play-circle me-1"></i>Continue Learning
+                            <i class="bi ${classData.assessmentWeekEnabled ? 'bi-clipboard2-check' : 'bi-play-circle'} me-1"></i>${classData.assessmentWeekEnabled ? 'Open Assessment' : 'Continue Learning'}
                         </button>
                     </div>
                 </article>

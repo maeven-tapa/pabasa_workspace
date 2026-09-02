@@ -205,6 +205,11 @@ urlpatterns = [
         name='update_class_info'
     ),
     path(
+        'dashboard/teacher/section/assessment-week/',
+        views.update_section_assessment_week,
+        name='update_section_assessment_week'
+    ),
+    path(
         'dashboard/teacher/update-material/',
         views.teacher_update_material,
         name='teacher_update_material'

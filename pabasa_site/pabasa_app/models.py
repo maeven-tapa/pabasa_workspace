@@ -276,6 +276,9 @@ class Section(models.Model):
         blank=True,
     )
     is_active = models.BooleanField(default=True)
+    # Deliberately section-scoped so one section's assessment period never
+    # changes another section's learning flow.
+    assessment_week_enabled = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     subject = models.CharField(max_length=50)

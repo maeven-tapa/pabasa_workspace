@@ -232,7 +232,33 @@
 {{ crla_assessment_items_json|json_script:"crlaAssessmentItems" }}
 <section class="workflow-shell">
     <article class="workflow-card {% if stage == 'complete' or stage == 'grade_level_complete' %}success{% endif %}">
-        {% if stage == "unavailable" %}
+        {% if stage == "assessment_week_locked" %}
+            <div class="workflow-center">
+                <span class="workflow-pill">ASSESSMENT WEEK LOCKED</span>
+                <span class="workflow-icon" aria-hidden="true"><i class="bi bi-lock-fill"></i></span>
+                <div class="workflow-copy">
+                    <p class="workflow-subtitle">{{ workflow_subtitle }}</p>
+                    <h1>{{ workflow_title }}</h1>
+                    <p class="workflow-message">{{ workflow_message }}</p>
+                </div>
+            </div>
+            <div class="workflow-actions">
+                <a class="workflow-button secondary" href="{% url 'dashboard' %}"><i class="bi bi-arrow-left"></i> Return to Dashboard</a>
+            </div>
+        {% elif stage == "assessment_not_taken" %}
+            <div class="workflow-center">
+                <span class="workflow-pill">ASSESSMENT NOT TAKEN</span>
+                <span class="workflow-icon" aria-hidden="true"><i class="bi bi-calendar-x"></i></span>
+                <div class="workflow-copy">
+                    <p class="workflow-subtitle">{{ workflow_subtitle }}</p>
+                    <h1>{{ workflow_title }}</h1>
+                    <p class="workflow-message">{{ workflow_message }}</p>
+                </div>
+            </div>
+            <div class="workflow-actions">
+                <a class="workflow-button secondary" href="{% url 'dashboard' %}"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+            </div>
+        {% elif stage == "unavailable" %}
             <div class="workflow-center">
                 <span class="workflow-pill">CRLA Assessment Currently Unavailable</span>
                 <span class="workflow-icon" aria-hidden="true"><i class="bi bi-calendar-x"></i></span>
