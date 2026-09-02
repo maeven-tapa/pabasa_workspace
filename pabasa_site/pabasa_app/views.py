@@ -7466,6 +7466,61 @@ def _calendar_is_in_postassessment_window(school_calendar, term, on_date=None):
     return block.start_date <= check_date <= block.end_date
 
 
+def _section_is_in_assessment_week(section, on_date=None):
+    """Use the section's configured calendar assessment event as the toggle gate."""
+    if not section:
+        return False
+    school_calendar = section.school_calendar or _active_school_calendar(on_date)
+    if not school_calendar:
+        return False
+    check_date = on_date or timezone.localdate()
+    return CalendarEvent.objects.filter(
+        school_calendar=school_calendar,
+        event_type__in={'pre_assessment', 'midline_assessment', 'post_assessment'},
+        start_date__lte=check_date,
+        end_date__gte=check_date,
+    ).filter(
+        Q(scope=CalendarEvent.SCOPE_GLOBAL, school__isnull=True)
+        | Q(scope=CalendarEvent.SCOPE_SCHOOL, school=section.school)
+    ).exists()
+
+
+def _section_assessment_week_status(section, on_date=None):
+    """Return ``during``, ``after`` or ``before`` from configured calendar events."""
+    if not section:
+        return 'none'
+    calendar = section.school_calendar or _active_school_calendar(on_date)
+    if not calendar:
+        return 'none'
+    check_date = on_date or timezone.localdate()
+    events = CalendarEvent.objects.filter(
+        school_calendar=calendar,
+        event_type__in={'pre_assessment', 'midline_assessment', 'post_assessment'},
+    ).filter(
+        Q(scope=CalendarEvent.SCOPE_GLOBAL, school__isnull=True)
+        | Q(scope=CalendarEvent.SCOPE_SCHOOL, school=section.school)
+    ).order_by('-end_date', '-start_date')
+    current = events.filter(start_date__lte=check_date, end_date__gte=check_date).exists()
+    if current:
+        return 'during'
+    if events.filter(end_date__lt=check_date).exists():
+        return 'after'
+    if events.filter(start_date__gt=check_date).exists():
+        return 'before'
+    return 'none'
+
+
+def _student_completed_section_assessment(student, section):
+    if not student or not section:
+        return False
+    return Assessment.objects.filter(
+        student=student, attempt_status='completed', completed_at__isnull=False,
+        is_active=True,
+    ).filter(
+        Q(section=section) | Q(material__section=section) | Q(material__assigned_sections=section)
+    ).exists()
+
+
 def _format_calendar_date(value):
     if not value:
         return ''
@@ -9863,6 +9918,57 @@ def assessment(request):
         for section in Section.objects.filter(is_active=True).select_related('teacher')
         if user and section.has_student(user, active_only=True)
     ] if user and getattr(user, 'role', '') == 'student' else []
+    requested_section_id = request.GET.get('section_id')
+    assessment_week_section = None
+    if requested_section_id:
+        try:
+            requested_section_id = int(requested_section_id)
+        except (TypeError, ValueError):
+            requested_section_id = None
+    if requested_section_id:
+        assessment_week_section = next(
+            (section for section in joined_sections if section.id == requested_section_id and section.assessment_week_enabled),
+            None,
+        )
+    selected_section = None
+    if requested_section_id:
+        selected_section = next((section for section in joined_sections if section.id == requested_section_id), None)
+    if selected_section is None:
+        current_section_ids = set(_student_current_sections(user).values_list('id', flat=True)) if user else set()
+        selected_section = next((section for section in joined_sections if section.id in current_section_ids), None)
+    if selected_section is None and len(joined_sections) == 1:
+        selected_section = joined_sections[0]
+    section_week_status = _section_assessment_week_status(selected_section) if selected_section else 'none'
+    section_assessment_completed = _student_completed_section_assessment(user, selected_section)
+    if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status == 'after':
+        if not section_assessment_completed:
+            context = _dashboard_context(request, 'student')
+            context.update({
+                'stage': 'assessment_not_taken',
+                'workflow_title': 'Assessment Not Taken',
+                'workflow_subtitle': selected_section.class_name,
+                'workflow_message': "You didn’t complete the Assessment Week assessment, so this reading assessment isn’t available to you yet.",
+            })
+            return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
+        if _finalized_grade_level_crla_result_exists(user):
+            context = _dashboard_context(request, 'student')
+            context.update({
+                'stage': 'grade_level_complete',
+                'workflow_title': 'Congratulations!',
+                'workflow_subtitle': 'You’re reading at grade level!',
+                'workflow_message': 'Keep up the great work. You can continue practicing whenever you like.',
+            })
+            return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
+    if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status in {'before', 'during'} and not selected_section.assessment_week_enabled:
+        context = _dashboard_context(request, 'student')
+        context.update({
+            'stage': 'assessment_week_locked',
+            'assessment_week_section': selected_section,
+            'workflow_title': 'Waiting for Assessment Week',
+            'workflow_subtitle': selected_section.class_name,
+            'workflow_message': 'Your teacher has not enabled Assessment Week yet. Please wait until it is enabled; your assessment will appear here once it becomes available.',
+        })
+        return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
 
     state = workflow.get('eligibility') or _reader_assessment_state(user)
     try:
@@ -9902,6 +10008,9 @@ def assessment(request):
     completed_posttest = bool(state.get('post_test_completed'))
     eligible = bool(state.get('aral_eligible'))
     forced_workflow = str(request.GET.get('workflow') or request.GET.get('view') or '').strip().lower()
+    # Assessment Week takes precedence over URL-supplied normal workflow state.
+    if assessment_week_section:
+        forced_workflow = ''
     active_phase = workflow.get('active_phase') or _official_crla_assessment_phase(user)
     official_availability = _official_assessment_availability_for_student(user, request)
     official_crla_material = _official_crla_material_for_student(user, official_availability.get('assessment_type'))
@@ -9929,7 +10038,13 @@ def assessment(request):
 
     stage = 'complete'
     routing_reason = 'default_complete'
-    if state.get('reading_at_grade_level_complete'):
+    if section_week_status == 'after' and section_assessment_completed:
+        stage = 'original'
+        routing_reason = 'completed_assessment_week_teacher_materials'
+    elif assessment_week_section:
+        stage = 'assessment'
+        routing_reason = 'section_assessment_week'
+    elif state.get('reading_at_grade_level_complete'):
         stage = 'grade_level_complete'
         routing_reason = 'finalized_reading_at_grade_level'
     elif state.get('aral_status') == 'active':
@@ -10014,6 +10129,12 @@ def assessment(request):
 
     current_week = _student_current_week(request, user)
     materials = _assessment_materials_for_student(user)
+    if assessment_week_section:
+        # Use only assessments attached to this enabled section. This prevents
+        # an assessment-week launch from leaking another section's materials.
+        materials = materials.filter(
+            Q(section=assessment_week_section) | Q(assigned_sections=assessment_week_section)
+        ).distinct()
     student_assessment_materials = []
     material_map = {}
     for material in materials:
@@ -10146,6 +10267,8 @@ def assessment(request):
         'crla_official_assessment_data_json': json.dumps(crla_official_assessment_data, default=str, separators=(',', ':')) if crla_official_assessment_data else '',
         'crla_official_assessment_id': crla_material_id,
         'student_assessment_materials': student_assessment_materials,
+        'assessment_week_enabled': bool(assessment_week_section),
+        'assessment_week_section': assessment_week_section,
         'joined_sections_count': len(joined_sections),
         'active_school_calendar': official_calendar,
     })
@@ -10265,6 +10388,8 @@ def activate_aral_intervention(request):
     student_user = User.objects.filter(id=request.session.get('user_id')).first()
     if not student_user:
         return JsonResponse({'success': False, 'error': 'Student not found.'}, status=404)
+    if _student_has_assessment_week(student_user):
+        return _assessment_week_block_response(json_response=True)
 
     state = _get_user_state(student_user)
     classification = state.get('reader_classification') or getattr(student_user, 'reading_level', '') or ''
@@ -14067,7 +14192,11 @@ def _student_can_complete_assessment(student_user, assessment=None, material=Non
             or linked_material.assessment_kind == 'crla'
         ))
     )
+    if linked_material and not _assessment_week_allows_material(student_user, linked_material):
+        return False
     if official:
+        if not _student_has_assessment_week(student_user):
+            return False
         availability = _official_assessment_availability_for_student(student_user)
         return bool(availability.get('available'))
 
@@ -16242,6 +16371,7 @@ def class_management_view(request):
 
     extra = {
         'section': section,
+        'assessment_week_toggle_available': _section_assessment_week_status(section) == 'during',
         'sections': all_sections,
         'available_students': available_students,
         'students_table': students_table,
@@ -17927,6 +18057,49 @@ def update_class_info(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def update_section_assessment_week(request):
+    """Change Assessment Week only for a section owned by this teacher."""
+    try:
+        data = json.loads(request.body or '{}')
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({'success': False, 'error': 'Invalid request body.'}, status=400)
+
+    teacher = User.objects.filter(
+        id=request.session.get('user_id'), role='teacher', is_archived=False,
+    ).first()
+    if not teacher:
+        return JsonResponse({'success': False, 'error': 'Teacher not found.'}, status=403)
+
+    try:
+        section_id = int(data.get('section_id'))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'A valid section is required.'}, status=400)
+    enabled = data.get('assessment_week_enabled')
+    if not isinstance(enabled, bool):
+        return JsonResponse({'success': False, 'error': 'Assessment Week state must be true or false.'}, status=400)
+
+    # Resolve ownership server-side; the supplied section id is never trusted.
+    section = _teacher_current_sections(teacher).filter(pk=section_id).first()
+    if not section:
+        return JsonResponse({'success': False, 'error': 'This section is not assigned to you.'}, status=403)
+    if _section_assessment_week_status(section) != 'during':
+        return JsonResponse({
+            'success': False,
+            'error': 'Assessment Week is not active for this section today.',
+        }, status=403)
+
+    section.assessment_week_enabled = enabled
+    section.save(update_fields=['assessment_week_enabled', 'updated_at'])
+    return JsonResponse({
+        'success': True,
+        'section_id': section.id,
+        'assessment_week_enabled': section.assessment_week_enabled,
+    })
+
 @csrf_protect
 @require_http_methods(["POST"])
 @login_required(role='teacher')
@@ -18193,8 +18366,9 @@ def get_student_joined_classes(request):
                     'header': section.header or section.class_code[:4],
                     'teacher_id': section.teacher.custom_id if section.teacher else None,
                     'teacher_name': f"{section.teacher.first_name} {section.teacher.last_name}" if section.teacher else '',
-                    'student_count': section.get_student_count(),
-                    'created_at': section.created_at.isoformat(),
+                'student_count': section.get_student_count(),
+                    'assessment_week_enabled': bool(section.assessment_week_enabled),
+                'created_at': section.created_at.isoformat(),
                 })
         
         logger.warning(
@@ -18313,6 +18487,26 @@ def get_class_materials(request):
             | Q(system_assessment_key__in=list(OFFICIAL_CRLA_CONTENT.keys()))
             | Q(system_assessment_phase__in=['pretest', 'posttest'])
         )
+        assessment_week_enabled = bool(
+            request_user.role == 'student' and section.assessment_week_enabled
+        )
+        if request_user.role == 'student' and _section_assessment_week_status(section) == 'after':
+            if not _student_completed_section_assessment(request_user, section):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Assessment Week assessment was not completed; reading assessments are unavailable.',
+                }, status=403)
+            if _finalized_grade_level_crla_result_exists(request_user):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Reading assessments are not needed because you are reading at grade level.',
+                }, status=403)
+        # Enforce Assessment Week at the data boundary too: a direct materials
+        # API request cannot expose normal prompts or practice to this section.
+        if assessment_week_enabled:
+            materials_qs = materials_qs.filter(
+                Q(type__in=['assessment', 'both']) | Q(assessment__isnull=False)
+            )
         # Avoid duplication: exclude assessments that are already represented by a Material record.
         # Material records act as the primary container for metadata like "Assigned Week".
         # Some assessment attempts are stored as Assessment rows tied to a Material via material_id,
@@ -18333,6 +18527,8 @@ def get_class_materials(request):
             Q(section__isnull=True, teacher=section.teacher) |
             Q(section__isnull=True, teacher__role='admin')
         ).order_by('-created_at')
+        if assessment_week_enabled:
+            practices_qs = practices_qs.none()
         teacher_user = request_user if request_user.role == 'teacher' else None
         # Requesting user (could be student or teacher) used to compute attempt counts
         effective_date = date.today()
@@ -18560,6 +18756,7 @@ def get_class_materials(request):
         return JsonResponse({
             'success': True,
             'section_id': section.id,
+            'assessment_week_enabled': assessment_week_enabled,
             'materials': materials,
             'official_assessments': official_assessments,
             'all_materials': all_materials_flat,
@@ -19773,8 +19970,10 @@ def _requested_material_from_request(request):
         request.GET.get('material_id')
         or request.GET.get('id')
         or request.GET.get('assessment_id')
+        or request.GET.get('official_assessment_id')
         or request.POST.get('material_id')
         or request.POST.get('id')
+        or request.POST.get('official_assessment_id')
     )
     _, material_id = _parse_prefixed_id(raw_material_id)
     if not material_id:
@@ -19787,6 +19986,66 @@ def _student_access_block_response(json_response=False):
     if json_response:
         return JsonResponse({'success': False, 'error': message}, status=403)
     return HttpResponseForbidden(message)
+
+
+def _assessment_week_block_response(json_response=False):
+    message = 'Assessment Week is enabled for this section. Only assessments are available right now.'
+    if json_response:
+        return JsonResponse({'success': False, 'error': message, 'assessment_week_enabled': True}, status=403)
+    return HttpResponseForbidden(message)
+
+
+def _student_has_assessment_week(student):
+    if not student:
+        return False
+    return any(
+        section.has_student(student, active_only=True)
+        for section in Section.objects.filter(is_active=True, assessment_week_enabled=True)
+    )
+
+
+def _assessment_week_allows_material(student, material):
+    """Require the enrolled section owning an assessment to have the toggle on."""
+    if not student or not material:
+        return False
+    section_ids = set()
+    if material.section_id:
+        section_ids.add(material.section_id)
+    if hasattr(material, 'assigned_sections'):
+        section_ids.update(material.assigned_sections.values_list('id', flat=True))
+    if not section_ids:
+        # Official/system assessments are not section-attached; they still
+        # require Assessment Week in the student's enrolled section.
+        return _student_has_assessment_week(student)
+    return any(
+        section.has_student(student, active_only=True)
+        and (
+            section.assessment_week_enabled
+            or (
+                _section_assessment_week_status(section) == 'after'
+                and _student_completed_section_assessment(student, section)
+                and not _finalized_grade_level_crla_result_exists(student)
+            )
+        )
+        for section in Section.objects.filter(id__in=section_ids, is_active=True)
+    )
+
+
+def _material_assessment_week_section(student, material):
+    """Return the student's enabled Assessment Week section for this material."""
+    if not student or not material:
+        return None
+    candidate_ids = set()
+    if material.section_id:
+        candidate_ids.add(material.section_id)
+    if hasattr(material, 'assigned_sections'):
+        candidate_ids.update(material.assigned_sections.values_list('id', flat=True))
+    for section in Section.objects.filter(
+        id__in=candidate_ids, is_active=True, assessment_week_enabled=True
+    ):
+        if section.has_student(student, active_only=True):
+            return section
+    return None
 
 
 def _enforce_student_access_for_request(request, material=None, json_response=False):
@@ -19803,7 +20062,13 @@ def _enforce_student_access_for_request(request, material=None, json_response=Fa
         return None
 
     material_type = str(getattr(material, 'type', '') or '').strip().lower()
-    if material_type not in {'assessment', 'both'} and getattr(material, 'assessment_id', None) is None:
+    is_assessment_material = material_type in {'assessment', 'both'} or bool(getattr(material, 'assessment_id', None))
+    if is_assessment_material and not _assessment_week_allows_material(persisted_user, material):
+        return _assessment_week_block_response(json_response=json_response)
+    if _material_assessment_week_section(persisted_user, material) and not is_assessment_material:
+        return _assessment_week_block_response(json_response=json_response)
+
+    if not is_assessment_material:
         return None
 
     if bool(getattr(material, 'student_access', False)):

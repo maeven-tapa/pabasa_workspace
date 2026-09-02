@@ -1068,6 +1068,30 @@
     </header>
 
     <main class="page-body">
+        {% if assessment_week_toggle_available %}
+        <section class="card" aria-labelledby="assessmentWeekHeading">
+            <div class="card-header">
+                <div class="section-heading">
+                    <h2 id="assessmentWeekHeading">Assessment Week</h2>
+                    <p class="card-subtitle">When enabled, students in this section can access only assessments. Other sections are not affected.</p>
+                </div>
+                <div class="form-check form-switch mb-0">
+                    <input
+                        class="form-check-input"
+                        type="checkbox"
+                        role="switch"
+                        id="assessmentWeekToggle"
+                        {% if section.assessment_week_enabled %}checked{% endif %}
+                        aria-describedby="assessmentWeekStatus"
+                    >
+                    <label class="form-check-label fw-semibold" for="assessmentWeekToggle" id="assessmentWeekStatus">
+                        {% if section.assessment_week_enabled %}ON{% else %}OFF{% endif %}
+                    </label>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
         <section class="card">
             <div class="card-header">
                 <div class="section-heading">
@@ -1308,6 +1332,53 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
             closeMenu();
+        }
+    });
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const toggle = document.getElementById('assessmentWeekToggle');
+    const status = document.getElementById('assessmentWeekStatus');
+    if (!toggle || !status) return;
+
+    const csrfToken = document.querySelector('#updateClassForm input[name="csrfmiddlewaretoken"]')?.value || '';
+    toggle.addEventListener('change', async function () {
+        const enabled = toggle.checked;
+        const confirmation = enabled
+            ? 'Enable Assessment Week for this section?\n\nStudents in this section will only be able to access the assessment while Assessment Week is enabled. Other sections will not be affected.'
+            : 'Disable Assessment Week for this section?\n\nStudents in this section will return to the normal learning and prompt flow.';
+        if (!window.confirm(confirmation)) {
+            toggle.checked = !enabled;
+            return;
+        }
+
+        toggle.disabled = true;
+        try {
+            const response = await fetch('{% url "update_section_assessment_week" %}', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({
+                    section_id: {{ section.id }},
+                    assessment_week_enabled: enabled,
+                }),
+            });
+            const payload = await response.json();
+            if (!response.ok || !payload.success) {
+                throw new Error(payload.error || 'Assessment Week could not be updated.');
+            }
+            toggle.checked = Boolean(payload.assessment_week_enabled);
+            status.textContent = toggle.checked ? 'ON' : 'OFF';
+        } catch (error) {
+            toggle.checked = !enabled;
+            window.alert(error.message || 'Assessment Week could not be updated.');
+        } finally {
+            toggle.disabled = false;
         }
     });
 });
