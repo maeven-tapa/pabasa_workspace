@@ -159,6 +159,38 @@ def _signup_school():
     return _primary_school()
 
 
+def _user_school_calendar_queryset(user):
+    """Return the school-owned calendars for the given user.
+
+    Teacher and student schedules should always resolve from the school they are
+    assigned to, not from a single global active calendar.
+    """
+    if not user:
+        return SchoolCalendar.objects.none()
+
+    school = getattr(user, 'school_record', None)
+    if not school and getattr(user, 'school', None):
+        school = School.objects.filter(name=user.school).first()
+    if not school:
+        return SchoolCalendar.objects.none()
+
+    if user.role == 'teacher':
+        queryset = SchoolCalendar.objects.filter(
+            Q(sections__school=school, sections__teacher=user) | Q(id=user.school_calendar_id)
+        ).distinct()
+    elif user.role == 'student':
+        queryset = SchoolCalendar.objects.filter(
+            Q(enrollments__school=school, enrollments__student=user, enrollments__status__in=('active', 'awaiting_assignment'), enrollments__is_active=True) |
+            Q(id=user.school_calendar_id)
+        ).distinct()
+    else:
+        queryset = SchoolCalendar.objects.filter(
+            Q(sections__school=school) | Q(enrollments__school=school)
+        ).distinct()
+
+    return queryset.order_by('-is_active', '-updated_at', '-created_at')
+
+
 def _active_school_calendar_for_new_workflows():
     """Return the one calendar that can receive newly created users/sections."""
     calendars = SchoolCalendar.objects.filter(is_active=True).order_by('-updated_at', '-created_at')
@@ -7267,7 +7299,24 @@ def _format_calendar_date(value):
 def _selected_school_calendar(request=None):
     perf_started_at = time.perf_counter()
     query_start = len(connection.queries) if settings.DEBUG else None
-    calendars = list(SchoolCalendar.objects.order_by('school_year', 'created_at'))
+
+    user = None
+    user_school = None
+    if request:
+        user_id = request.session.get('user_id')
+        if user_id:
+            user = User.objects.select_related('school_record').filter(id=user_id).first()
+            if user:
+                user_school = getattr(user, 'school_record', None)
+                if not user_school and getattr(user, 'school', None):
+                    user_school = School.objects.filter(name=user.school).first()
+
+    base_queryset = SchoolCalendar.objects.all()
+    if user and user.role in {'teacher', 'student'} and user_school:
+        calendars = list(_user_school_calendar_queryset(user))
+    else:
+        calendars = list(base_queryset.order_by('school_year', 'created_at'))
+
     active_calendar = None
     best_start = None
     check_date = date.today()

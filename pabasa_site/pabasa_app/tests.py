@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.test import Client, TestCase
+from django.test import Client, RequestFactory, TestCase
 from django.urls import reverse
 from django.contrib.auth.hashers import check_password, make_password
 from openpyxl import load_workbook
@@ -47,7 +47,7 @@ def test_section_create(**kwargs):
     return Section.objects.create(school=school, **kwargs)
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
 from .management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
-from .views import _active_school_calendar, _apply_progression_unlock_override, _aral_eligible_classification, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _primary_school, _save_admin_practice_material, _sync_assessment_workflow_state, _official_crla_assessment_labels, _official_assessment_availability_for_student
+from .views import _active_school_calendar, _apply_progression_unlock_override, _aral_eligible_classification, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _primary_school, _save_admin_practice_material, _selected_school_calendar, _sync_assessment_workflow_state, _official_crla_assessment_labels, _official_assessment_availability_for_student
 from .weekly_digest import send_weekly_digest
 from .scoring import build_assessment_score_payload
 
@@ -169,6 +169,112 @@ class ClassMaterialsApiTests(TestCase):
         word_titles = [item["title"] for item in data["materials"]["word"]]
         self.assertIn("Teacher Intervention Text", word_titles)
         self.assertFalse(any("BoSY" in title for title in word_titles))
+
+
+class SchoolCalendarSelectionTests(TestCase):
+    def test_selected_school_calendar_respects_teacher_school(self):
+        school_a = School.objects.create(name="School A", code="SCH-A")
+        school_b = School.objects.create(name="School B", code="SCH-B")
+
+        calendar_a = SchoolCalendar.objects.create(school_year="2026-2027", current_term=1, is_active=True)
+        calendar_b = SchoolCalendar.objects.create(school_year="2027-2028", current_term=1, is_active=True)
+
+        CalendarEvent.objects.create(
+            school_calendar=calendar_a,
+            term=1,
+            title="School A Opening Block",
+            event_type="school_opening",
+            start_date=date(2027, 6, 1),
+            end_date=date(2027, 6, 7),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar_a,
+            term=1,
+            title="School A Closing Block",
+            event_type="school_closing",
+            start_date=date(2027, 9, 30),
+            end_date=date(2027, 10, 6),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar_b,
+            term=1,
+            title="School B Opening Block",
+            event_type="school_opening",
+            start_date=date(2026, 6, 1),
+            end_date=date(2026, 6, 7),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar_b,
+            term=1,
+            title="School B Closing Block",
+            event_type="school_closing",
+            start_date=date(2026, 9, 30),
+            end_date=date(2026, 10, 6),
+        )
+
+        teacher = User.objects.create(
+            custom_id="TCHR-SCHOOL-A",
+            role="teacher",
+            first_name="Ava",
+            last_name="Teacher",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=1990,
+            email="teacher-school-a@example.com",
+            password_hash=make_password("password"),
+            school_record=school_a,
+        )
+        other_teacher = User.objects.create(
+            custom_id="TCHR-SCHOOL-B",
+            role="teacher",
+            first_name="Ben",
+            last_name="Teacher",
+            sex="male",
+            birth_month=1,
+            birth_day=2,
+            birth_year=1991,
+            email="teacher-school-b@example.com",
+            password_hash=make_password("password"),
+            school_record=school_b,
+        )
+
+        Section.objects.create(
+            school=school_a,
+            school_calendar=calendar_a,
+            class_code="SCHA-001",
+            class_name="School A Class",
+            teacher=teacher,
+            is_active=True,
+            subject="Reading",
+            grade_level="Grade 2",
+            section="A",
+        )
+        Section.objects.create(
+            school=school_b,
+            school_calendar=calendar_b,
+            class_code="SCHB-001",
+            class_name="School B Class",
+            teacher=other_teacher,
+            is_active=True,
+            subject="Reading",
+            grade_level="Grade 2",
+            section="B",
+        )
+
+        session = self.client.session
+        session["user_id"] = teacher.id
+        session["user_role"] = "teacher"
+        session.save()
+
+        request = RequestFactory().get("/dashboard/teacher/")
+        request.session = session
+
+        with patch("pabasa_app.views.date", wraps=date) as mock_date:
+            mock_date.today.return_value = date(2026, 7, 15)
+            selected = _selected_school_calendar(request)
+
+        self.assertEqual(selected, calendar_a)
 
 
 class SchoolCalendarAdminTests(TestCase):

@@ -55,6 +55,9 @@
     .event-dot { width: .55rem; height: .55rem; border-radius: 999px; background: rgba(255,255,255,.92); }
     .calendar-empty { display: none; padding: .9rem 1rem; margin-bottom: .9rem; border-radius: 16px; background: rgba(16,70,110,0.04); color: #5d7288; font-weight: 700; }
     .calendar-empty.is-visible { display: block; }
+    .calendar-legend { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; padding: 0.85rem 1rem; margin-top: 0.5rem; border-radius: 16px; background: rgba(16, 70, 110, 0.03); border: 1px solid rgba(16, 70, 110, 0.08); }
+    .calendar-legend-item { display: inline-flex; align-items: center; gap: 0.5rem; color: #294a66; font-size: 0.82rem; font-weight: 800; }
+    .calendar-legend-swatch { width: 0.8rem; height: 0.8rem; border-radius: 0.35rem; box-shadow: inset 0 0 0 1px rgba(16, 70, 110, 0.18); }
     .modal-content { border: 1px solid rgba(16, 70, 110, 0.10); border-radius: 22px; box-shadow: 0 24px 70px rgba(6, 23, 38, 0.18); overflow: hidden; }
     .modal-header, .modal-footer { border-color: rgba(16, 70, 110, 0.10); }
     .modal-header { background: linear-gradient(135deg, rgba(16,70,110,0.05), rgba(46,168,229,0.03)); }
@@ -113,6 +116,11 @@
             </div>
         </div>
         <div id="calendar"></div>
+    </div>
+
+    <div class="calendar-card calendar-card-inner">
+        <div class="calendar-label">Legend</div>
+        <div class="calendar-legend" id="calendarLegend" aria-label="School calendar legend"></div>
     </div>
 </div>
 
@@ -375,6 +383,22 @@
         instructional: '#16a34a',
         other: '#6b7280',
     };
+        const legendEntries = [
+            { key: 'school_opening', label: 'Opening Block' },
+            { key: 'pre_assessment', label: 'Pre-Assessment' },
+            { key: 'midline_assessment', label: 'Mid-Assessment' },
+            { key: 'post_assessment', label: 'Post-Assessment' },
+            { key: 'school_closing', label: 'Ending Block' },
+        ];
+        const calendarLegend = document.getElementById('calendarLegend');
+        if (calendarLegend) {
+            calendarLegend.innerHTML = legendEntries.map(({ key, label }) => `
+                <span class="calendar-legend-item">
+                    <span class="calendar-legend-swatch" style="background-color: ${colors[key] || '#6b7280'}"></span>
+                    <span>${label}</span>
+                </span>
+            `).join('');
+        }
         const calendarBackgrounds = {
             school_opening: 'rgba(250, 204, 21, 0.34)',
             school_closing: 'rgba(239, 68, 68, 0.28)',
