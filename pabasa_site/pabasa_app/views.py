@@ -191,8 +191,43 @@ def _user_school_calendar_queryset(user):
     return queryset.order_by('-is_active', '-updated_at', '-created_at')
 
 
+def _school_for_user(user):
+    if not user:
+        return None
+    if getattr(user, 'school_record_id', None):
+        return user.school_record
+    school_name = (getattr(user, 'school', None) or '').strip()
+    if not school_name:
+        return None
+    return School.objects.filter(name=school_name).first()
+
+
+def _school_calendar_for_user(user):
+    school = _school_for_user(user)
+    if not school:
+        return _active_school_calendar_for_new_workflows()
+    if getattr(user, 'role', None) == 'teacher':
+        calendar = SchoolCalendar.objects.filter(
+            sections__school=school,
+            sections__teacher=user,
+            sections__is_active=True,
+        ).order_by('-is_active', '-updated_at', '-created_at').distinct().first()
+        if calendar:
+            return calendar
+    elif getattr(user, 'role', None) == 'student':
+        calendar = SchoolCalendar.objects.filter(
+            enrollments__school=school,
+            enrollments__student=user,
+            enrollments__status__in=('active', 'awaiting_assignment'),
+            enrollments__is_active=True,
+        ).order_by('-is_active', '-updated_at', '-created_at').distinct().first()
+        if calendar:
+            return calendar
+    return SchoolCalendar.objects.filter(sections__school=school).order_by('-is_active', '-updated_at', '-created_at').distinct().first() or _active_school_calendar_for_new_workflows()
+
+
 def _active_school_calendar_for_new_workflows():
-    """Return the one calendar that can receive newly created users/sections."""
+    """Legacy fallback: return the one active calendar only when there is no school context."""
     calendars = SchoolCalendar.objects.filter(is_active=True).order_by('-updated_at', '-created_at')
     if calendars.count() != 1:
         return None
@@ -200,6 +235,15 @@ def _active_school_calendar_for_new_workflows():
 
 
 def _teacher_current_sections(teacher, *, include_inactive=False):
+    if not teacher:
+        return Section.objects.none()
+    school = _school_for_user(teacher)
+    if school:
+        filters = {'teacher': teacher, 'school': school}
+        if not include_inactive:
+            filters['is_active'] = True
+        return Section.objects.filter(**filters).select_related('school', 'school_calendar', 'teacher').order_by('class_name')
+
     calendar = _active_school_calendar_for_new_workflows()
     if not calendar:
         # Preserve legacy mutation/test fixtures that predate SchoolCalendar;
@@ -215,8 +259,17 @@ def _teacher_current_sections(teacher, *, include_inactive=False):
 
 
 def _student_current_enrollment(user):
+    if not user:
+        return None
+    school = _school_for_user(user)
+    if school:
+        return (Enrollment.objects.filter(
+            student=user, school=school, status='active', is_active=True,
+            grade_level=NEW_USER_GRADE_LEVEL, section__is_active=True,
+        ).select_related('section__teacher', 'school', 'school_calendar').order_by('id').first())
+
     calendar = _active_school_calendar_for_new_workflows()
-    if not calendar or not user:
+    if not calendar:
         return None
     return (Enrollment.objects.filter(
         student=user, school_calendar=calendar, status='active', is_active=True,
@@ -227,8 +280,24 @@ def _student_current_enrollment(user):
 
 def _student_current_or_awaiting_enrollment(user, school_calendar=None):
     """Resolve only this year's editable enrollment; never fall back to history."""
+    if not user:
+        return None
+    school = _school_for_user(user)
+    if school:
+        filters = {
+            'student': user,
+            'school': school,
+            'status__in': ('active', 'awaiting_assignment'),
+            'grade_level': NEW_USER_GRADE_LEVEL,
+        }
+        if school_calendar is not None:
+            filters['school_calendar'] = school_calendar
+        return (Enrollment.objects.filter(**filters)
+            .select_related('section__teacher', 'school', 'school_calendar')
+            .order_by('id').first())
+
     calendar = school_calendar or _active_school_calendar_for_new_workflows()
-    if not calendar or not user:
+    if not calendar:
         return None
     active_calendar = _active_school_calendar_for_new_workflows()
     if not active_calendar or calendar.id != active_calendar.id:
@@ -263,7 +332,10 @@ def _active_canonical_section(grade_level, section_name, school=None, school_cal
 
 
 def _signup_section_queryset(role, school=None, grade_level=None):
-    active_calendar = _active_school_calendar_for_new_workflows()
+    if school is not None:
+        active_calendar = SchoolCalendar.objects.filter(sections__school=school).order_by('-is_active', '-updated_at', '-created_at').distinct().first() or _active_school_calendar_for_new_workflows()
+    else:
+        active_calendar = _active_school_calendar_for_new_workflows()
     if not active_calendar:
         return Section.objects.none()
     if school is not None:
