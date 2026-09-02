@@ -144,7 +144,7 @@
     .teacher-aral-form { border-top:1px solid rgba(16,70,110,.1); margin-top:.9rem; padding-top:.9rem; }
     .teacher-aral-form h4 { color:#10466e; font-size:.92rem; font-weight:900; margin:0 0 .65rem; }
     .teacher-aral-form .form-label { color:#6b7d8f; font-size:.75rem; font-weight:800; margin-bottom:.2rem; }
-    .teacher-aral-form .form-control, .teacher-aral-form .form-select { font-size:.82rem; min-height:2.2rem; }
+    .teacher-aral-form .form-select { font-size:.82rem; min-height:2.2rem; }
     .teacher-calendar-nav { display:flex; gap:.35rem; margin-bottom:.7rem; }
     .teacher-calendar-nav button { border:1px solid #cfe0ec; background:#fff; border-radius:999px; color:#10466e; padding:.32rem .55rem; font-size:.72rem; font-weight:800; }
     .teacher-calendar-month { color:#10466e; font-size:1.05rem; font-weight:900; margin-bottom:.55rem; }
@@ -159,6 +159,104 @@
     .teacher-calendar-event.school { background:#d97706; }
     .teacher-calendar-expand { width:100%; margin-top:.8rem; }
     .teacher-calendar-column { min-width:0; }
+
+    /* Keep the calendar and ARAL controls compact, aligned, and easy to scan. */
+    .teacher-calendar-card {
+        gap: .7rem;
+        padding: 1.05rem;
+    }
+
+    .teacher-calendar-card .teacher-calendar-head {
+        margin-bottom: 0;
+    }
+
+    .teacher-calendar-card .teacher-calendar-filter {
+        margin-bottom: 0;
+        padding: 2px;
+        background: rgba(16, 70, 110, .025);
+    }
+
+    .teacher-calendar-card .teacher-calendar-filter button {
+        padding: .34rem .65rem;
+        font-size: .78rem;
+    }
+
+    .teacher-calendar-card .teacher-calendar-month {
+        margin-bottom: 0;
+        line-height: 1.25;
+    }
+
+    .teacher-calendar-card .teacher-calendar-meta {
+        margin: -.2rem 0 0;
+        line-height: 1.3;
+    }
+
+    .teacher-calendar-card .teacher-calendar-grid {
+        height: 17.5rem;
+    }
+
+    .teacher-calendar-section {
+        display: grid;
+        gap: .65rem;
+        padding-bottom: .85rem;
+        border-bottom: 1px solid rgba(16, 70, 110, .1);
+    }
+
+    .teacher-aral-form {
+        display: grid;
+        gap: .55rem;
+        margin-top: .05rem;
+        padding-top: .15rem;
+        border-top: 0;
+    }
+
+    .teacher-aral-form h4 {
+        margin: 0 0 .1rem;
+    }
+
+    .teacher-aral-form .form-label {
+        margin: 0;
+    }
+
+    .teacher-aral-form #teacherAralWeekday {
+        margin: -.1rem 0 .1rem !important;
+    }
+
+    .teacher-aral-form #teacherAralWeekday > div {
+        display: grid !important;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: .35rem .55rem !important;
+    }
+
+    .teacher-aral-form .form-check-inline {
+        display: flex;
+        align-items: center;
+        gap: .3rem;
+        margin: 0;
+        min-width: 0;
+    }
+
+    .teacher-aral-form .form-check-input {
+        flex: 0 0 auto;
+        margin: 0;
+    }
+
+    .teacher-aral-form .form-check-label {
+        font-size: .78rem;
+    }
+
+    .teacher-aral-form .form-select {
+        margin: 0 !important;
+    }
+
+    .teacher-aral-form .btn,
+    .teacher-calendar-card .teacher-calendar-expand {
+        margin-top: .1rem;
+        min-height: 2rem;
+        padding: .38rem .65rem;
+        font-size: .78rem;
+        line-height: 1.2;
+    }
     .teacher-upcoming-card { background:#fff; border:1px solid rgba(16,70,110,.1); border-radius:22px; padding:1rem; box-shadow:0 12px 28px rgba(16,70,110,.08); display:flex; flex-direction:column; min-width:0; }
     .teacher-upcoming-head { margin-bottom:.75rem; }
     .teacher-upcoming-head h3 { margin:0; color:#10466e; font-size:1.08rem; font-weight:900; }
@@ -194,18 +292,10 @@
     .teacher-gantt-day.adjacent .teacher-gantt-day-number { opacity:.45; }
     .teacher-gantt-lanes { position:relative; padding:.25rem 0 .45rem; min-height:2.2rem; }
     .teacher-gantt-bar { height:1.35rem; margin:0 2px; border-radius:999px; padding:.2rem .45rem; color:#fff; font-size:.7rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; z-index:2; }
-    @media (min-width: 992px) {
-        .teacher-dashboard-columns { align-items:stretch; grid-template-columns:minmax(0,1fr) minmax(290px,360px); grid-template-areas:"glance calendar" "attention calendar" "workspace upcoming"; }
-        .teacher-dashboard-main,
-        .teacher-calendar-column,
-        .teacher-board { display:contents; }
-        .teacher-glance { grid-area:glance; }
-        .teacher-attention { grid-area:attention; }
-        .teacher-calendar-card { grid-area:calendar; }
-        .class-workspace { grid-area:workspace; height:100%; }
-        .teacher-upcoming-card { grid-area:upcoming; height:100%; }
-    }
     @media (max-width: 991.98px) { .teacher-dashboard-columns { grid-template-columns:1fr; } .teacher-calendar-card { position:static; } .teacher-calendar-grid { height:auto; grid-template-rows:none; } .teacher-calendar-grid > div { min-height:2.8rem; } .teacher-upcoming-empty { min-height:0; } }
+    @media (max-width: 575.98px) {
+        .teacher-aral-form #teacherAralWeekday > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
     @media (max-width: 575.98px) { .teacher-calendar-expanded .modal-dialog { width:calc(100vw - 1rem); margin:.5rem auto; } .teacher-calendar-expanded .modal-content { height:calc(100vh - 1rem); max-height:calc(100vh - 1rem); } }
 
     .teacher-field {
@@ -664,6 +754,25 @@
         .teacher-attention-action { justify-self: start; }
     }
 
+    .teacher-glance-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-auto-rows: 1fr;
+    }
+
+    .teacher-glance-item {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    @media (max-width: 720px) {
+        .teacher-glance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 440px) {
+        .teacher-glance-grid { grid-template-columns: 1fr; }
+    }
+
     /* Keep the existing data/script hooks while making the canonical class
        and enrollment content the main teacher dashboard board. */
     .teacher-dashboard-main > .row { display: contents; }
@@ -703,7 +812,6 @@
     .class-detail-grid > div { height: 100%; min-width: 0; }
     .class-detail-grid .teacher-panel { height: 100%; }
     .teacher-dashboard-main { min-width: 0; width: 100%; }
-    @media (min-width: 992px) { .class-workspace { align-self:start; display:flex; flex-direction:column; } .class-workspace > .class-banner { flex:0 0 auto; width:100%; } .class-workspace > .class-detail-grid { align-self:stretch; display:flex; flex:1 1 auto; height:auto; min-height:0; width:100%; } .class-detail-grid > div { display:flex; flex:1 1 auto; height:auto; min-height:0; width:100%; } .class-detail-grid .teacher-panel { align-self:stretch; display:grid; flex:1 1 auto; height:auto; min-height:0; margin-bottom:0; grid-template-rows:auto minmax(0,1fr) auto; } }
     .class-workspace {
         grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
         min-width: 0;
@@ -1021,6 +1129,7 @@
     }
 
     .student-row {
+        align-content: start;
         grid-template-columns: 1fr;
         gap: .45rem;
         min-height: 0;
@@ -1061,6 +1170,7 @@
     .teacher-dashboard .mini-metric span,
     .teacher-dashboard .student-email { font-size:.84rem; }
     .teacher-dashboard .teacher-glance-item span { font-size:.82rem; }
+    .student-attention-indicator { color:#b45309; font-size:.72rem; font-weight:800; margin-left:.35rem; white-space:nowrap; }
     .teacher-dashboard .teacher-reading-summary-head h4 { font-size:.92rem; }
     .teacher-dashboard .teacher-reading-count { font-size:1.08rem; }
     .teacher-dashboard .teacher-attention-action,
@@ -1078,18 +1188,104 @@
     @container class-workspace (max-width:25rem) {
         .teacher-dashboard .class-banner .class-meta-row { grid-template-columns:1fr; }
     }
-    @media (min-width:992px) {
-        .teacher-dashboard-columns { align-items:stretch; grid-template-columns:minmax(0,1fr) minmax(290px,360px); grid-template-areas:"glance calendar" "attention calendar" "workspace upcoming"; }
-        .teacher-dashboard-main,
-        .teacher-calendar-column,
-        .teacher-board { display:contents; }
-        .teacher-glance { grid-area:glance; }
-        .teacher-attention { grid-area:attention; }
-        .teacher-calendar-card { grid-area:calendar; }
-        .class-workspace { grid-area:workspace; height:100%; }
-        .teacher-upcoming-card { grid-area:upcoming; height:100%; margin-top:0; }
-    }
     @media (max-width:991.98px) { .teacher-upcoming-card { margin-top:1.15rem; } }
+
+    /* Desktop height ownership: the outer grid equalizes columns, the left
+       column owns the remaining height, and only the workspace consumes it. */
+    .teacher-dashboard-columns {
+        align-items: start;
+    }
+
+    .teacher-glance { align-self: start; }
+
+    .class-banner {
+        min-height: 0;
+    }
+
+    @media (min-width: 992px) {
+        .teacher-dashboard-columns {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(290px, 360px);
+            grid-template-rows: auto;
+            grid-template-areas: none;
+            align-items: stretch;
+        }
+
+        .teacher-dashboard-main {
+            display: flex;
+            flex-direction: column;
+            gap: 1.15rem;
+            grid-column: 1;
+            grid-row: 1;
+            align-self: stretch;
+            width: 100%;
+            min-height: 0;
+        }
+
+        .teacher-dashboard-main > .teacher-glance,
+        .teacher-dashboard-main .teacher-board > .class-workspace {
+            width: 100%;
+            max-width: none;
+            flex: 0 0 auto;
+        }
+
+        .teacher-dashboard-main > .teacher-glance {
+            height: auto;
+            align-self: stretch;
+            flex: 0 0 auto;
+        }
+
+        .teacher-dashboard-main .teacher-board > .class-workspace {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 auto;
+            min-height: 0;
+            height: auto;
+            align-self: stretch;
+        }
+
+        .teacher-dashboard-main .teacher-board {
+            display: contents;
+        }
+
+        .teacher-dashboard-main .teacher-board > .class-workspace {
+            grid-column: auto;
+            grid-row: auto;
+        }
+
+        .teacher-dashboard-main .teacher-board > .class-workspace > .class-banner {
+            flex: 0 0 auto;
+            width: 100%;
+        }
+
+        .teacher-dashboard-main .teacher-board > .class-workspace > .class-detail-grid,
+        .teacher-dashboard-main .teacher-board > .class-workspace > .class-detail-grid > div {
+            display: flex;
+            flex: 1 1 auto;
+            height: auto;
+            min-height: 0;
+            width: 100%;
+        }
+
+        .teacher-dashboard-main .teacher-board > .class-workspace > .class-detail-grid .teacher-panel {
+            align-self: stretch;
+            display: grid;
+            flex: 1 1 auto;
+            height: auto;
+            min-height: 0;
+            margin-bottom: 0;
+            grid-template-rows: auto minmax(0, 1fr) auto;
+        }
+
+        .teacher-calendar-column {
+            display: flex;
+            flex-direction: column;
+            gap: 1.15rem;
+            grid-column: 2;
+            grid-row: 1;
+            align-self: stretch;
+        }
+    }
 
     .student-card {
         align-items: center;
@@ -1441,6 +1637,8 @@
                     <div class="teacher-glance-item"><strong id="glanceTotalStudents">0</strong><span>Total students</span></div>
                     <div class="teacher-glance-item"><strong id="glanceNeedsAttention">0</strong><span>Need support</span></div>
                     <div class="teacher-glance-item"><strong id="glanceAssessed">0</strong><span>Assessed students</span></div>
+                    <div class="teacher-glance-item"><strong id="activeAssessmentCount">0</strong><span>Assessment materials</span></div>
+                    <div class="teacher-glance-item"><strong id="activePracticeCount">0</strong><span>Practice materials</span></div>
                     <div class="teacher-glance-item"><strong id="glanceProgress">0%</strong><span>Average progress in 30 days</span></div>
                 </div>
                 <div class="teacher-reading-summary" aria-labelledby="teacherReadingSummaryTitle">
@@ -1455,18 +1653,6 @@
                         <div class="teacher-reading-item level-transitioning" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">Transitioning</span><strong class="teacher-reading-count" id="dashTransitioningCount">0</strong></div>
                         <div class="teacher-reading-item level-grade" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">At Grade Level</span><strong class="teacher-reading-count" id="dashGradeLevelCount">0</strong></div>
                     </div>
-                </div>
-            </section>
-
-            <section class="teacher-attention" aria-labelledby="teacherAttentionTitle">
-                <div class="teacher-attention-heading">
-                    <div>
-                        <h3 id="teacherAttentionTitle">Needs attention</h3>
-                        <p>Students prioritized for your next follow-up.</p>
-                    </div>
-                </div>
-                <div class="teacher-attention-list" id="teacherAttentionList" aria-live="polite">
-                    <p class="teacher-attention-empty">Loading students...</p>
                 </div>
             </section>
 
@@ -1498,11 +1684,6 @@
                 {% if not active_teacher_class_count %}
                 <p class="class-empty-notice"><i class="bi bi-info-circle" aria-hidden="true"></i><span>No class is assigned yet. Please contact the administrator to be assigned to a class.</span></p>
                 {% endif %}
-                <div class="class-meta-row">
-                    <div class="mini-metric"><strong id="activeStudentCount">0</strong><span class="small text-secondary">Total Students</span></div>
-                    <div class="mini-metric"><strong id="activeAssessmentCount">0</strong><span class="small text-secondary">assessment materials</span></div>
-                    <div class="mini-metric"><strong id="activePracticeCount">0</strong><span class="small text-secondary">practice materials</span></div>
-                </div>
             </article>
 
             <div class="class-detail-grid">
@@ -1513,7 +1694,6 @@
                                 <h3>Enrolled Students</h3>
                                 <p class="small text-secondary mb-0">Students assigned to your advisory class.</p>
                             </div>
-                            <a class="small fw-bold" href="{% url 'students' %}">View all</a>
                         </div>
                 <div class="student-row" id="dashboardStudentRow">
                             <div id="noStudentsMessage" style="text-align: center; padding: 2rem; color: var(--dash-muted); width: 100%;">
@@ -1531,10 +1711,13 @@
     <div class="teacher-calendar-column">
     <aside class="teacher-calendar-card" aria-label="School Calendar">
         <div class="teacher-calendar-head"><h3><i class="bi bi-calendar3"></i> School Calendar</h3></div>
-        <div class="teacher-calendar-filter" role="group" aria-label="Calendar filter"><button type="button" class="active" data-teacher-calendar-filter="global">System-wide</button><button type="button" data-teacher-calendar-filter="school">School</button></div>
-        <div class="teacher-calendar-month" id="teacherCalendarMonth"></div>
-        <div class="teacher-calendar-meta">School Year: <strong>{{ student_calendar_school_year|default:"Not set" }}</strong> · <strong>{{ student_calendar_current_term|default:"Not set" }}</strong></div>
-        <div class="teacher-calendar-grid" id="teacherCalendarGrid"></div>
+        <div class="teacher-calendar-section">
+            <div class="teacher-calendar-filter" role="group" aria-label="Calendar filter"><button type="button" class="active" data-teacher-calendar-filter="global">System-wide</button><button type="button" data-teacher-calendar-filter="school">School</button></div>
+            <div class="teacher-calendar-month" id="teacherCalendarMonth"></div>
+            <div class="teacher-calendar-meta">School Year: <strong>{{ student_calendar_school_year|default:"Not set" }}</strong> · <strong>{{ student_calendar_current_term|default:"Not set" }}</strong></div>
+            <div class="teacher-calendar-grid" id="teacherCalendarGrid"></div>
+            <button type="button" class="btn btn-primary teacher-calendar-expand" data-bs-toggle="modal" data-bs-target="#teacherCalendarExpanded">Expand Calendar</button>
+        </div>
         {% if teacher_aral_sections %}
         <form class="teacher-aral-form" method="post" action="{% url 'teacher_create_aral_schedule' %}">
             {% csrf_token %}
@@ -1543,45 +1726,42 @@
             <div class="mb-2" id="teacherAralWeekday">
                 <div class="d-flex flex-wrap gap-2">
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" id="teacherAralWeekday0" name="weekday" value="0">
+                        <input class="form-check-input" type="checkbox" id="teacherAralWeekday0" name="weekday" value="0" {% if 0 in teacher_aral_scheduled_weekdays %}disabled{% endif %}>
                         <label class="form-check-label" for="teacherAralWeekday0">Mon</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" id="teacherAralWeekday1" name="weekday" value="1">
+                        <input class="form-check-input" type="checkbox" id="teacherAralWeekday1" name="weekday" value="1" {% if 1 in teacher_aral_scheduled_weekdays %}disabled{% endif %}>
                         <label class="form-check-label" for="teacherAralWeekday1">Tue</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" id="teacherAralWeekday2" name="weekday" value="2">
+                        <input class="form-check-input" type="checkbox" id="teacherAralWeekday2" name="weekday" value="2" {% if 2 in teacher_aral_scheduled_weekdays %}disabled{% endif %}>
                         <label class="form-check-label" for="teacherAralWeekday2">Wed</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" id="teacherAralWeekday3" name="weekday" value="3">
+                        <input class="form-check-input" type="checkbox" id="teacherAralWeekday3" name="weekday" value="3" {% if 3 in teacher_aral_scheduled_weekdays %}disabled{% endif %}>
                         <label class="form-check-label" for="teacherAralWeekday3">Thu</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" id="teacherAralWeekday4" name="weekday" value="4">
+                        <input class="form-check-input" type="checkbox" id="teacherAralWeekday4" name="weekday" value="4" {% if 4 in teacher_aral_scheduled_weekdays %}disabled{% endif %}>
                         <label class="form-check-label" for="teacherAralWeekday4">Fri</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" id="teacherAralWeekday5" name="weekday" value="5">
+                        <input class="form-check-input" type="checkbox" id="teacherAralWeekday5" name="weekday" value="5" {% if 5 in teacher_aral_scheduled_weekdays %}disabled{% endif %}>
                         <label class="form-check-label" for="teacherAralWeekday5">Sat</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" id="teacherAralWeekday6" name="weekday" value="6">
+                        <input class="form-check-input" type="checkbox" id="teacherAralWeekday6" name="weekday" value="6" {% if 6 in teacher_aral_scheduled_weekdays %}disabled{% endif %}>
                         <label class="form-check-label" for="teacherAralWeekday6">Sun</label>
                     </div>
                 </div>
             </div>
-            <label class="form-label" for="teacherAralRemark">Schedule / Remark</label>
-            <input class="form-control mb-2" id="teacherAralRemark" name="remark" maxlength="200" placeholder="After every class" required>
-            <label class="form-label" for="teacherAralAppliesTo">Applies To</label>
-            <select class="form-select mb-2" id="teacherAralAppliesTo" name="applies_to" required>
+            <label for="teacherAralAppliesTo">Aral Program</label>
+            <select class="form-select" id="teacherAralAppliesTo" name="applies_to" required>
                 {% for value, label in teacher_aral_schedule_choices %}<option value="{{ value }}">{{ label }}{% if value == 'current' %} (Term {{ teacher_aral_current_term }}){% endif %}</option>{% endfor %}
             </select>
             <button class="btn btn-primary btn-sm w-100" type="submit"><i class="bi bi-plus-circle me-1"></i>Add ARAL Schedule</button>
         </form>
         {% endif %}
-        <button type="button" class="btn btn-primary teacher-calendar-expand" data-bs-toggle="modal" data-bs-target="#teacherCalendarExpanded">Expand Calendar</button>
     </aside>
     <section class="teacher-upcoming-card" aria-labelledby="teacherUpcomingTitle">
         <div class="teacher-upcoming-head"><h3 id="teacherUpcomingTitle">Upcoming This Week</h3><p>For your advisory class</p></div>
@@ -1825,8 +2005,30 @@ window.addEventListener('pabasa:teacher-class-selected', () => {
     renderTeacherAtGlance();
 });
 
-// Load and display student cards
-function syncClassCardToRightColumn() {
+    let dashboardStudentResizeObserver = null;
+
+    function getDashboardStudentPageSize(studentRow) {
+        // On desktop the student row is the expandable middle grid track. On
+        // mobile it remains content-sized, so preserve the natural list flow.
+        if (!window.matchMedia('(min-width: 992px)').matches || !studentRow.clientHeight) return null;
+        const styles = window.getComputedStyle(studentRow);
+        const rowGap = parseFloat(styles.rowGap) || 0;
+        const padding = (parseFloat(styles.paddingTop) || 0) + (parseFloat(styles.paddingBottom) || 0);
+        const card = studentRow.querySelector('.student-card');
+        const cardHeight = card
+            ? card.getBoundingClientRect().height
+            : Math.max(
+                parseFloat(styles.minHeight) || 0,
+                parseFloat(styles.lineHeight) || 0,
+                (parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16) * 2.35
+            );
+        const availableHeight = Math.max(studentRow.clientHeight - padding, 0);
+        const itemHeight = cardHeight + rowGap;
+        return itemHeight > 0 ? Math.max(1, Math.floor((availableHeight + rowGap) / itemHeight)) : 1;
+    }
+
+    // Load and display student cards
+    function syncClassCardToRightColumn() {
     const classCard = document.querySelector('.class-workspace');
     if (!classCard) return;
     classCard.style.height = '';
@@ -1865,6 +2067,7 @@ async function loadPersistedStudents() {
                     level: s.reading_level || s.level || s.adapted_reading_level || '',
                     wpm: s.wpm || '0',
                     accuracy: s.accuracy || '0',
+                    has_completed_assessment: s.has_completed_assessment === true,
                     email: s.email || ''
                 }));
                 console.log('Loading students for dashboard from server:', students);
@@ -1920,11 +2123,12 @@ async function loadPersistedStudents() {
         }
     });
 
-    // Render a compact, fixed-size page of student rows without changing enrollment data.
+    // Render as many student rows as the stretched student area can actually fit.
     studentRow.querySelectorAll(".student-card").forEach(card => card.remove());
     const studentPagination = document.getElementById('studentPagination');
     let studentPage = Number(studentPagination?.dataset.page || 1);
-    const studentPageSize = 5;
+    const measuredPageSize = getDashboardStudentPageSize(studentRow);
+    const studentPageSize = measuredPageSize || dedupedStudents.length;
     const studentPageCount = Math.ceil(dedupedStudents.length / studentPageSize);
     studentPage = Math.min(studentPage, Math.max(studentPageCount, 1));
     const renderStudentPage = () => {
@@ -1948,15 +2152,21 @@ async function loadPersistedStudents() {
         
         const studentCard = document.createElement("div");
         studentCard.className = "student-card";
+        const needsAttention = studentData.has_completed_assessment !== true || normalizeLevelLabel(studentData.level) === 'Low Emerging Readers';
         studentCard.innerHTML = `
             <span class="student-avatar">${initials}</span>
-            <div class="student-inline-details"><strong>${studentData.name}</strong><span class="student-separator">|</span><span class="student-email">${studentData.email || 'No email captured'}</span></div>
+            <div class="student-inline-details"><strong>${studentData.name}</strong>${needsAttention ? '<span class="student-attention-indicator"><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>Needs attention</span>' : ''}<span class="student-separator">|</span><span class="student-email">${studentData.email || 'No email captured'}</span></div>
         `;
         
         studentRow.appendChild(studentCard);
         console.log("✓ Added student to dashboard:", studentData.name);
         });
         if (!studentPagination) return;
+        if (studentPageCount <= 1) {
+            studentPagination.dataset.page = '1';
+            studentPagination.innerHTML = '';
+            return;
+        }
         studentPagination.dataset.page = studentPage;
         studentPagination.innerHTML = '<button type="button" data-student-page="prev" aria-label="Previous page">‹</button>' + Array.from({length: studentPageCount}, (_, index) => '<button type="button" class="' + (index + 1 === studentPage ? 'active' : '') + '" data-student-page="' + (index + 1) + '">' + (index + 1) + '</button>').join('') + '<button type="button" data-student-page="next" aria-label="Next page">›</button>';
         studentPagination.querySelector('[data-student-page="prev"]').disabled = studentPage === 1;
@@ -1964,6 +2174,11 @@ async function loadPersistedStudents() {
         studentPagination.querySelectorAll('button').forEach(button => button.onclick = () => { const target = button.dataset.studentPage; studentPage = target === 'prev' ? studentPage - 1 : target === 'next' ? studentPage + 1 : Number(target); renderStudentPage(); });
     };
     renderStudentPage();
+
+    if (!dashboardStudentResizeObserver) {
+        dashboardStudentResizeObserver = new ResizeObserver(() => loadPersistedStudents());
+        dashboardStudentResizeObserver.observe(studentRow);
+    }
 }
 
 document.addEventListener("DOMContentLoaded", async function() {

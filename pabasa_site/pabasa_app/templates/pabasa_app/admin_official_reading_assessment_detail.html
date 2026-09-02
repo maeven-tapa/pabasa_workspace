@@ -48,6 +48,19 @@
   </div>
 
   <div class="mt-4 bg-white border rounded-4 p-3">
+    <div class="small text-secondary fw-bold text-uppercase mb-2">Rhyming Words</div>
+    <div class="d-grid gap-2">
+      {% for pair in reading_rhyme_pairs %}
+      <div class="border rounded-3 p-2">
+        <span class="text-secondary me-2">{{ forloop.counter }}.</span>{{ pair.word_a }} — {{ pair.word_b }}
+      </div>
+      {% empty %}
+      <span class="text-secondary">No rhyming words configured.</span>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="mt-4 bg-white border rounded-4 p-3">
     <div class="small text-secondary fw-bold text-uppercase mb-2">Sentences</div>
     <div class="d-grid gap-2">
       {% for item in reading_sentences %}

@@ -1604,6 +1604,15 @@
                 const officialCode = String(officialAssessmentData.official_code || officialAssessmentData.code || "OFFICIAL").trim();
                 const officialLanguage = String(officialAssessmentData.language || liveLanguage || "").trim();
                 const officialWords = Array.isArray(officialAssessmentData.words) ? officialAssessmentData.words.map(item => String(item || "").trim()).filter(Boolean) : [];
+                const officialRhymePairs = Array.isArray(officialAssessmentData.rhyme_pairs)
+                    ? officialAssessmentData.rhyme_pairs
+                        .map(pair => ({
+                            word_a: String(pair?.word_a || '').trim(),
+                            word_b: String(pair?.word_b || '').trim(),
+                        }))
+                        .filter(pair => pair.word_a && pair.word_b)
+                        .map(pair => `${pair.word_a} — ${pair.word_b}`)
+                    : [];
                 const officialSentences = Array.isArray(officialAssessmentData.sentences) ? officialAssessmentData.sentences.map(item => String(item || "").trim()).filter(Boolean) : [];
                 const officialPassages = [];
                 if (Array.isArray(officialAssessmentData.passages)) {
@@ -1618,7 +1627,7 @@
                 }
                 const stageMap = {
                     words: { items: officialWords, type: "word", label: "Words" },
-                    rhymes: { items: officialWords, type: "word", label: "Rhymes" },
+                    rhymes: { items: officialRhymePairs, type: "word", label: "Rhyming Words" },
                     sentences: { items: officialSentences, type: "sentence", label: "Sentences" },
                     story: { items: [], type: "paragraph", label: "Story Reading" },
                 };
@@ -3812,7 +3821,9 @@
             const completionSnapshot = calculateScores();
             latestScores = normalizeCompletionScores(latestScores || completionSnapshot, completionSnapshot);
             const isSentenceBranch = ["sentences_low", "sentences_high", "sentences"].includes(currentAssessmentBranch);
-            const branchScore = Number(isSentenceBranch
+            const branchScore = Number(currentAssessmentBranch === "rhymes"
+                ? (latestScores.correct_items ?? 0)
+                : isSentenceBranch
                 ? (latestScores.correct_sentences ?? latestScores.sentence_count ?? latestScores.correct_items ?? 0)
                 : (latestScores.correct_words ?? latestScores.word_count ?? latestScores.correct_items ?? 0));
             const previousEndState = readStudentEndState();

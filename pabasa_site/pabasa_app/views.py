@@ -4900,6 +4900,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
             context['teacher_aral_sections'] = list(_teacher_current_sections(user).filter(school_calendar=active_school_calendar))
             context['teacher_aral_current_term'] = current_term or active_school_calendar.current_term
             context['teacher_aral_schedule_choices'] = TeacherAralSchedule.APPLIES_TO_CHOICES
+            context['teacher_aral_scheduled_weekdays'] = set(TeacherAralSchedule.objects.filter(teacher=user, school_calendar=active_school_calendar, is_active=True).values_list('weekday', flat=True))
         print("CONTEXT_KEY_DONE", "calendar_legend")
         perf_log('student_calendar_built', 'student_calendar_start', {
             'student_calendar_events_count': len(student_calendar_events),
@@ -5165,23 +5166,25 @@ def teacher_create_aral_schedule(request):
     weekdays = sorted(set(weekdays))
 
     applies_to = request.POST.get('applies_to', TeacherAralSchedule.APPLIES_TO_CURRENT)
-    remark = request.POST.get('remark', '').strip()
     current_term = _calendar_current_term(active_calendar) if active_calendar else None
-    if not weekdays or not remark or applies_to not in dict(TeacherAralSchedule.APPLIES_TO_CHOICES):
-        messages.error(request, 'Select at least one day and enter a schedule remark.')
+    if not weekdays or applies_to not in dict(TeacherAralSchedule.APPLIES_TO_CHOICES):
+        messages.error(request, 'Select at least one day and an Aral Program.')
         return redirect('dashboard_teacher')
     if applies_to == TeacherAralSchedule.APPLIES_TO_CURRENT and not current_term:
         messages.error(request, 'The active term is not configured yet.')
         return redirect('dashboard_teacher')
 
     term_value = current_term if applies_to == TeacherAralSchedule.APPLIES_TO_CURRENT else None
+    if TeacherAralSchedule.objects.filter(teacher=teacher, section=section, school_calendar=active_calendar, is_active=True, applies_to=applies_to, term=term_value, weekday__in=weekdays).exists():
+        messages.error(request, 'An ARAL schedule already exists for one or more selected days.')
+        return redirect('dashboard_teacher')
     for weekday in weekdays:
         TeacherAralSchedule.objects.create(
             teacher=teacher,
             section=section,
             school_calendar=active_calendar,
             weekday=weekday,
-            remark=remark[:200],
+            remark='Aral Program',
             applies_to=applies_to,
             term=term_value,
         )
@@ -8460,6 +8463,7 @@ def _official_reading_launch_data(material):
         'assessment_type': assessment_type,
         'item_type': payload['item_type'] or 'word',
         'words': payload['words'],
+        'rhyme_pairs': content_json.get('rhyme_pairs', []),
         'sentences': payload['sentences'],
         'passages': payload['passages'],
         'stories': [{'title': str(passage.get('title') or '').strip(), 'content': str(passage.get('content') or '').strip()} for passage in payload['passages'] if isinstance(passage, dict)],
@@ -8786,6 +8790,7 @@ def _official_assessment_edit_context(request, material=None):
     school_year_value = active_calendar.school_year if active_calendar else ''
     content_json = getattr(material, 'content_json', None) or {}
     words = content_json.get('words') if isinstance(content_json, dict) and isinstance(content_json.get('words'), list) else []
+    rhyme_pairs = content_json.get('rhyme_pairs') if isinstance(content_json, dict) and isinstance(content_json.get('rhyme_pairs'), list) else []
     sentences = content_json.get('sentences') if isinstance(content_json, dict) and isinstance(content_json.get('sentences'), list) else []
     passages = content_json.get('passages') if isinstance(content_json, dict) and isinstance(content_json.get('passages'), list) else []
     story_qas = content_json.get('story_qas') if isinstance(content_json, dict) and isinstance(content_json.get('story_qas'), list) else []
@@ -8858,6 +8863,14 @@ def _official_assessment_edit_context(request, material=None):
         'language_options': [('English', 'English'), ('Filipino', 'Filipino')],
         'selected_assessment_type': _official_reading_assessment_type(material) if material else 'pre_assessment',
         'reading_words': words,
+        'reading_rhyme_pairs': [
+            {
+                'word_a': str(pair.get('word_a') or '').strip(),
+                'word_b': str(pair.get('word_b') or '').strip(),
+            }
+            for pair in rhyme_pairs
+            if isinstance(pair, dict) and str(pair.get('word_a') or '').strip() and str(pair.get('word_b') or '').strip()
+        ],
         'reading_sentences': sentences,
         'reading_passages': passages,
         'reading_items_json': json.dumps({
@@ -9164,6 +9177,7 @@ def _official_assessment_detail_context(request, material):
     selected_calendar, calendars, active_calendar = _selected_school_calendar(request)
     content_json = getattr(material, 'content_json', None) or {}
     words = content_json.get('words') if isinstance(content_json, dict) and isinstance(content_json.get('words'), list) else []
+    rhyme_pairs = content_json.get('rhyme_pairs') if isinstance(content_json, dict) and isinstance(content_json.get('rhyme_pairs'), list) else []
     sentences = content_json.get('sentences') if isinstance(content_json, dict) and isinstance(content_json.get('sentences'), list) else []
     passages = content_json.get('passages') if isinstance(content_json, dict) and isinstance(content_json.get('passages'), list) else []
     story_qas = content_json.get('story_qas') if isinstance(content_json, dict) and isinstance(content_json.get('story_qas'), list) else []
@@ -9237,6 +9251,11 @@ def _official_assessment_detail_context(request, material):
         'material_status_label': 'Active' if material.is_active else 'Archived',
         'system_status_label': 'SYSTEM OFFICIAL' if material.is_system_owned else 'CUSTOM',
         'reading_words': words,
+        'reading_rhyme_pairs': [
+            {'word_a': str(pair.get('word_a') or '').strip(), 'word_b': str(pair.get('word_b') or '').strip()}
+            for pair in rhyme_pairs
+            if isinstance(pair, dict) and str(pair.get('word_a') or '').strip() and str(pair.get('word_b') or '').strip()
+        ],
         'reading_sentences': sentences,
         'reading_passages': passages,
         'reading_story_qas': qas_by_story,
