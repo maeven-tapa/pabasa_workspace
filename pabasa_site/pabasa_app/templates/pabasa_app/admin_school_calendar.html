@@ -35,13 +35,35 @@
     .fc .fc-daygrid-day { background: rgba(16, 70, 110, 0.02); }
     .fc .fc-daygrid-day.fc-day-today { background: linear-gradient(180deg, rgba(46,168,229,0.08), rgba(46,168,229,0.03)) !important; }
     .calendar-year-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.9rem; min-height: 40rem; }
-    .calendar-year-month { background: #fff; border: 1px solid rgba(16,70,110,0.10); border-radius: 18px; padding: 0.8rem; min-height: 10.5rem; cursor: pointer; transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease; }
+    .calendar-year-month { background: #fff; border: 1px solid rgba(16,70,110,0.10); border-radius: 18px; padding: 0.7rem 0.7rem 0.5rem; min-height: 12.4rem; cursor: pointer; transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease; }
     .calendar-year-month:hover { transform: translateY(-1px); border-color: rgba(46,168,229,0.45); box-shadow: 0 12px 24px rgba(16,70,110,0.08); }
-    .calendar-year-month-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.6rem; color: #10466E; font-size: 0.82rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; }
-    .calendar-year-month-body { display: flex; flex-direction: column; gap: 0.35rem; min-height: 7.5rem; }
-    .calendar-year-month-event { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.28rem 0.5rem; min-width: 0; border-radius: 999px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.72rem; font-weight: 800; }
-    .calendar-year-month-event::before { content: ""; width: 0.5rem; height: 0.5rem; border-radius: 999px; background: rgba(255,255,255,0.9); flex-shrink: 0; }
+    .calendar-year-month-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem; color: #10466E; font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; }
+    .calendar-year-month-header .calendar-year-month-name { display: inline-flex; align-items: center; gap: 0.4rem; }
+    .calendar-year-month-header .calendar-year-month-term { padding: 0.15rem 0.45rem; border-radius: 999px; background: rgba(46,168,229,0.10); color: #2a7aa5; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.04em; }
+    .calendar-year-month-mini { margin-top: 0.25rem; }
+    .calendar-year-weekdays, .calendar-year-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.15rem; }
+    .calendar-year-weekdays { margin-bottom: 0.25rem; color: #7a8ea1; font-size: 0.57rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+    .calendar-year-weekdays span { display: inline-flex; align-items: center; justify-content: center; min-height: 0.9rem; }
+    .calendar-year-day { position: relative; display: flex; align-items: center; justify-content: center; min-height: 1.55rem; border-radius: 0.55rem; font-size: 0.63rem; font-weight: 800; color: #4f6782; }
+    .calendar-year-day.is-muted { color: rgba(79, 103, 130, 0.42); }
+    .calendar-year-day.is-today { background: rgba(46,168,229,0.12); color: #10466E; }
+    .calendar-year-day.is-event { background: rgba(16,70,110,0.04); }
+    .calendar-year-day-markers { position: absolute; left: 50%; bottom: 0.18rem; transform: translateX(-50%); display: inline-flex; gap: 0.11rem; align-items: center; justify-content: center; }
+    .calendar-year-day-marker { display: inline-block; width: 0.38rem; height: 0.38rem; border-radius: 999px; box-shadow: 0 0 0 1px rgba(255,255,255,0.7); }
+    .calendar-year-day.has-event > .calendar-year-day-number { position: relative; z-index: 1; }
+    .calendar-year-day.has-event .calendar-year-day-marker { border: 0; }
     .calendar-year-empty { color: #7a8ea1; font-size: 0.8rem; font-weight: 700; }
+    .calendar-year-detail-modal .modal-content { border-radius: 22px; overflow: hidden; }
+    .calendar-year-detail-modal .modal-header { background: linear-gradient(135deg, rgba(16,70,110,0.04), rgba(46,168,229,0.04)); }
+    .calendar-year-detail-list { display: grid; gap: 0.75rem; }
+    .calendar-year-detail-item { border: 1px solid rgba(16,70,110,0.12); border-radius: 14px; background: rgba(16,70,110,0.02); padding: 0.75rem 0.8rem; }
+    .calendar-year-detail-item-title { display: flex; align-items: center; gap: 0.55rem; font-size: 0.96rem; font-weight: 900; color: #10466E; }
+    .calendar-year-detail-item-type { display: inline-flex; align-items: center; gap: 0.45rem; color: #59738c; font-size: 0.76rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+    .calendar-year-detail-item-type::before { content: ""; width: 0.6rem; height: 0.6rem; border-radius: 999px; background: currentColor; opacity: .85; }
+    .calendar-year-detail-item-description { margin-top: 0.45rem; color: #536b80; font-size: 0.82rem; line-height: 1.5; }
+    @media (max-width: 1199.98px) { .calendar-year-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @media (max-width: 767.98px) { .calendar-year-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 479.98px) { .calendar-year-grid { grid-template-columns: 1fr; } }
     .fc .fc-day-sat,
     .fc .fc-day-sun { background: #fff !important; }
     .fc .fc-daygrid-day.has-suspension { background: #ff3b30 !important; }
@@ -122,11 +144,11 @@
                 <button type="button" class="btn btn-outline-secondary btn-sm" id="calendarTodayBtn">Today</button>
                 <button type="button" class="btn btn-outline-secondary btn-sm" id="calendarNextBtn">Next</button>
             </div>
-            <div class="calendar-toolbar-group">
-                <button type="button" class="btn btn-outline-secondary btn-sm" id="calendarYearBtn">Year View</button>
-                <button type="button" class="btn btn-outline-secondary btn-sm" id="calendarMonthBtn">Month View</button>
-                <button type="button" class="btn btn-outline-secondary btn-sm" id="calendarWeekBtn">Week View</button>
-                <span class="btn btn-outline-primary btn-sm disabled" id="calendarMonthTitle">Month</span>
+            <div class="calendar-toolbar-group" aria-label="Calendar view selector">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="calendarMonthBtn">Month</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="calendarWeekBtn">Week</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="calendarYearBtn">Year</button>
+                <span class="visually-hidden" id="calendarMonthTitle" aria-live="polite">Month</span>
             </div>
         </div>
         <div id="calendar"></div>
@@ -284,6 +306,26 @@
     </div>
 </div>
 
+<div class="modal fade calendar-year-detail-modal" id="yearViewDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title mb-0" id="yearViewDetailTitle">School Year Details</h5>
+                    <div class="text-secondary small">Event schedule for this date</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="yearViewDetailList" class="calendar-year-detail-list"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="schoolYearModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content">
@@ -315,6 +357,7 @@
 <script>
     window.PABASA_CALENDAR_EVENTS = {{ calendar_events_json|safe }};
     window.PABASA_CALENDAR_TERM_BLOCKS = {{ calendar_term_blocks_json|safe }};
+    window.PABASA_SELECTED_SCHOOL_YEAR = "{{ selected_calendar.school_year|default:''|escapejs }}";
     window.PABASA_CALENDAR_URL = "{% url 'admin_school_calendar' %}";
 </script>
 <script>
@@ -883,41 +926,192 @@
             return { start, end };
         }
 
+        function getSelectedCalendarEvents() {
+            const calendarId = String(currentCalendarId || schoolYearNavigation?.value || '');
+            if (!calendarId) return (window.PABASA_CALENDAR_EVENTS || []);
+            return (window.PABASA_CALENDAR_EVENTS || []).filter((event) => {
+                const eventCalendarId = event?.school_calendar_id ?? event?.calendar_id ?? event?.schoolCalendarId;
+                return String(eventCalendarId || '') === String(calendarId);
+            });
+        }
+
+        function getSelectedYearMonthRange() {
+            const events = getSelectedCalendarEvents();
+            const relevant = events.filter((event) => ['school_opening', 'start_of_classes', 'school_closing', 'end_of_classes'].includes(event.event_type));
+            const starts = relevant
+                .map((event) => parseDateInput(event.start || event.start_date))
+                .filter(Boolean)
+                .map((date) => new Date(date.getFullYear(), date.getMonth(), 1));
+            const ends = relevant
+                .map((event) => parseDateInput(event.end_date || event.end || event.start || event.start_date))
+                .filter(Boolean)
+                .map((date) => new Date(date.getFullYear(), date.getMonth(), 1));
+            if (starts.length || ends.length) {
+                const start = starts.length ? new Date(Math.min(...starts.map((date) => date.getTime()))) : new Date();
+                const end = ends.length ? new Date(Math.max(...ends.map((date) => date.getTime()))) : new Date();
+                return { start, end };
+            }
+            const schoolYear = String(window.PABASA_SELECTED_SCHOOL_YEAR || '').trim();
+            if (/^\d{4}-\d{4}$/.test(schoolYear)) {
+                const startYear = Number(schoolYear.slice(0, 4));
+                return {
+                    start: new Date(startYear, 6, 1),
+                    end: new Date(startYear + 1, 5, 31),
+                };
+            }
+            const fallback = new Date();
+            return { start: new Date(fallback.getFullYear(), 0, 1), end: new Date(fallback.getFullYear(), 11, 31) };
+        }
+
+        function getTermWindowForMonth(monthDate) {
+            const calendarId = String(currentCalendarId || schoolYearNavigation?.value || '');
+            const blocks = window.PABASA_CALENDAR_TERM_BLOCKS?.[calendarId] || {};
+            const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+            const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+            for (const term of [1, 2, 3]) {
+                const opening = blocks[String(term)]?.opening ? new Date(`${blocks[String(term)].opening}T00:00:00`) : null;
+                const closing = blocks[String(term)]?.closing ? new Date(`${blocks[String(term)].closing}T00:00:00`) : null;
+                if (!opening && !closing) continue;
+                const start = opening || new Date(monthStart.getFullYear(), 0, 1);
+                const end = closing || new Date(monthEnd.getFullYear(), 11, 31);
+                if (monthStart >= start && monthEnd <= end) {
+                    return {
+                        term,
+                        label: `Term ${term}`,
+                        color: term === 1 ? 'rgba(46,168,229,0.10)' : term === 2 ? 'rgba(250, 204, 21, 0.10)' : 'rgba(168, 85, 247, 0.10)',
+                    };
+                }
+            }
+            return {
+                term: null,
+                label: '',
+                color: 'rgba(16,70,110,0.04)',
+            };
+        }
+
+        function openYearDetailModal(dateValue) {
+            const events = getSelectedCalendarEvents().filter((event) => {
+                const start = parseDateInput(event.start || event.start_date);
+                const end = parseDateInput(event.end_date || event.end || event.start || event.start_date);
+                if (!start || !end) return false;
+                const current = new Date(`${dateValue}T00:00:00`);
+                return start <= current && end >= current;
+            });
+            if (!events.length) return;
+            const dateLabel = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(`${dateValue}T00:00:00`));
+            const listHtml = events.map((event) => {
+                const label = event.title || event.event_type_label || 'Event';
+                const eventTypeLabel = event.event_type_label || 'Event';
+                const color = colors[event.event_type] || colors.other;
+                const description = event.description ? `<div class="calendar-year-detail-item-description">${event.description}</div>` : '';
+                return `
+                    <div class="calendar-year-detail-item">
+                        <div class="calendar-year-detail-item-title">
+                            <span class="calendar-year-detail-item-type" style="color:${color};">${eventTypeLabel}</span>
+                        </div>
+                        <div class="mb-1"><strong>${label}</strong></div>
+                        ${description}
+                    </div>
+                `;
+            }).join('');
+            const modalEl = document.getElementById('yearViewDetailModal');
+            const modalTitle = document.getElementById('yearViewDetailTitle');
+            const detailList = document.getElementById('yearViewDetailList');
+            if (modalTitle) modalTitle.textContent = dateLabel;
+            if (detailList) detailList.innerHTML = listHtml;
+            const modal = window.bootstrap ? bootstrap.Modal.getOrCreateInstance(modalEl) : null;
+            modal?.show();
+        }
+
         function renderYearView() {
             if (!calendarYearView) return;
-            const { start, end } = getSchoolYearBounds();
+            const { start, end } = getSelectedYearMonthRange();
             const monthCursor = new Date(start.getFullYear(), start.getMonth(), 1);
             const lastMonth = new Date(end.getFullYear(), end.getMonth(), 1);
             const cards = [];
             while (monthCursor <= lastMonth) {
                 const monthStart = new Date(monthCursor);
                 const monthEnd = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 0);
-                const monthEvents = (window.PABASA_CALENDAR_EVENTS || []).filter((event) => {
+                const monthEventMap = new Map();
+                const monthRelevantEvents = getSelectedCalendarEvents().filter((event) => {
                     const eventStart = parseDateInput(event.start || event.start_date);
                     const eventEnd = parseDateInput(event.end_date || event.end || event.start || event.start_date);
                     if (!eventStart || !eventEnd) return false;
                     return eventStart <= monthEnd && eventEnd >= monthStart;
-                }).slice(0, 4);
+                });
+                for (const event of monthRelevantEvents) {
+                    const eventStart = parseDateInput(event.start || event.start_date);
+                    const eventEnd = parseDateInput(event.end_date || event.end || event.start || event.start_date);
+                    if (!eventStart || !eventEnd) continue;
+                    const current = new Date(eventStart);
+                    while (current <= eventEnd) {
+                        const dateValue = formatDateValue(current);
+                        const monthDate = new Date(`${dateValue}T00:00:00`);
+                        if (monthDate.getFullYear() === monthCursor.getFullYear() && monthDate.getMonth() === monthCursor.getMonth()) {
+                            const existing = monthEventMap.get(dateValue) || [];
+                            existing.push(event);
+                            monthEventMap.set(dateValue, existing);
+                        }
+                        current.setDate(current.getDate() + 1);
+                    }
+                }
                 const monthName = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(monthCursor);
-                const monthLabel = `${monthName} ${monthCursor.getFullYear()}`;
-                const itemsHtml = monthEvents.length ? monthEvents.map((event) => {
-                    const label = event.title || event.event_type_label || 'Event';
-                    const color = colors[event.event_type] || colors.other;
-                    return `<div class="calendar-year-month-event" style="background:${color};" title="${label}">${label}</div>`;
-                }).join('') : '<div class="calendar-year-empty">No events</div>';
+                const yearNumber = monthCursor.getFullYear();
+                const termMeta = getTermWindowForMonth(monthCursor);
+                const termColor = termMeta.color;
+                const termLabel = termMeta.label;
+                const weekdayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+                const firstDay = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1);
+                const leadingDays = firstDay.getDay();
+                const totalDays = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 0).getDate();
+                const totalCells = leadingDays + totalDays;
+                const dayCells = [];
+                for (let index = 0; index < leadingDays; index += 1) {
+                    dayCells.push(`<div class="calendar-year-day is-muted" aria-hidden="true"></div>`);
+                }
+                for (let day = 1; day <= totalDays; day += 1) {
+                    const date = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), day);
+                    const dateValue = formatDateValue(date);
+                    const dayEvents = monthEventMap.get(dateValue) || [];
+                    const markerHtml = dayEvents.slice(0, 3).map((event) => `<span class="calendar-year-day-marker" style="background:${colors[event.event_type] || colors.other};"></span>`).join('');
+                    const isToday = dateValue === todayValue;
+                    const hasEvent = dayEvents.length > 0;
+                    dayCells.push(`
+                        <div class="calendar-year-day${hasEvent ? ' has-event is-event' : ''}${isToday ? ' is-today' : ''}" data-year-date="${dateValue}" data-month-card="${monthName} ${yearNumber}">
+                            <span class="calendar-year-day-number">${day}</span>
+                            ${hasEvent ? `<span class="calendar-year-day-markers">${markerHtml}</span>` : ''}
+                        </div>
+                    `);
+                }
+                const trailingCells = (7 - (totalCells % 7)) % 7;
+                for (let index = 0; index < trailingCells; index += 1) {
+                    dayCells.push(`<div class="calendar-year-day is-muted" aria-hidden="true"></div>`);
+                }
+                const daysHtml = dayCells.join('');
                 cards.push(`
-                    <div class="calendar-year-month" data-month="${monthLabel}" data-year-date="${formatDateValue(monthStart)}">
-                        <div class="calendar-year-month-header"><span>${monthName}</span><span>${monthCursor.getFullYear()}</span></div>
-                        <div class="calendar-year-month-body">${itemsHtml}</div>
-                    </div>
+                    <article class="calendar-year-month" data-month-name="${monthName}" data-year-date="${formatDateValue(monthStart)}" aria-label="${monthName} ${yearNumber}">
+                        <div class="calendar-year-month-header">
+                            <span class="calendar-year-month-name">${monthName}</span>
+                            <span class="calendar-year-month-term" style="background:${termColor};">${termLabel}</span>
+                        </div>
+                        <div class="calendar-year-month-mini">
+                            <div class="calendar-year-weekdays">${weekdayLabels.map((label) => `<span>${label}</span>`).join('')}</div>
+                            <div class="calendar-year-days">${daysHtml}</div>
+                        </div>
+                    </article>
                 `);
                 monthCursor.setMonth(monthCursor.getMonth() + 1);
             }
             calendarYearView.innerHTML = cards.join('');
             calendarYearView.querySelectorAll('.calendar-year-month').forEach((element) => {
-                element.addEventListener('click', () => {
-                    const dateValue = element.dataset.yearDate;
-                    const targetDate = dateValue ? new Date(`${dateValue}T00:00:00`) : new Date();
+                element.addEventListener('click', (event) => {
+                    const clickedDay = event.target.closest('.calendar-year-day');
+                    if (clickedDay && clickedDay.dataset.yearDate) {
+                        event.stopPropagation();
+                        openYearDetailModal(clickedDay.dataset.yearDate);
+                        return;
+                    }
+                    const targetDate = element.dataset.yearDate ? new Date(`${element.dataset.yearDate}T00:00:00`) : new Date();
                     calendar.changeView('dayGridMonth');
                     calendar.gotoDate(targetDate);
                     setView('dayGridMonth');
@@ -948,7 +1142,6 @@
             if (viewName === 'year') {
                 calendarYearView?.classList.remove('d-none');
                 calendarEl.style.display = 'none';
-                calendarMonthTitle.textContent = 'Year';
                 calendarYearBtn.classList.add('btn-primary');
                 calendarMonthBtn.classList.remove('btn-primary');
                 calendarWeekBtn.classList.remove('btn-primary');
@@ -961,11 +1154,6 @@
             calendarYearBtn.classList.remove('btn-primary');
             calendarMonthBtn.classList.toggle('btn-primary', viewName === 'dayGridMonth');
             calendarWeekBtn.classList.toggle('btn-primary', viewName === 'timeGridWeek');
-            if (viewName === 'dayGridMonth') {
-                calendarMonthTitle.textContent = formatMonthTitle(calendar.view.currentStart);
-            } else {
-                calendarMonthTitle.textContent = 'Week';
-            }
         }
 
         async function removeSuspension(eventId) {

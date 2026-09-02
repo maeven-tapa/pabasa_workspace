@@ -430,8 +430,10 @@ class SchoolCalendarAdminTests(TestCase):
         response = self.client.get(reverse("admin_school_calendar"), {"calendar_id": calendar.id})
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Year View")
-        self.assertContains(response, "calendarYearBtn")
+        self.assertNotContains(response, "Year View")
+        self.assertContains(response, 'id="calendarYearBtn">Year</button>')
+        self.assertContains(response, 'id="calendarMonthBtn">Month</button>')
+        self.assertContains(response, 'id="calendarWeekBtn">Week</button>')
         self.assertContains(response, "school_opening: '#facc15'")
 
     def test_admin_school_calendar_saves_progressive_term_blocks(self):
