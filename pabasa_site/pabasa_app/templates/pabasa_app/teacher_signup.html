@@ -584,22 +584,10 @@
                         <label class="form-label">Contact number</label>
                         <input class="form-control" type="tel" name="contact_no" placeholder="09XXXXXXXXX">
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-12">
                         <label class="form-label">Section</label>
                         <select class="form-select" name="section" id="teacherSection" required disabled>
                             <option value="" selected disabled>Loading sections…</option>
-                        </select>
-                    </div>
-                    <div class="col-md-12">
-                        <label class="form-label">Department</label>
-                        <select class="form-select" name="department" required>
-                            <option value="" selected disabled>Select Department</option>
-                            <option value="Language &amp; Communication (English and Filipino)">Language &amp; Communication (English and Filipino)</option>
-                            <option value="Mathematics">Mathematics</option>
-                            <option value="Science">Science</option>
-                            <option value="Social Studies (Araling Panlipunan)">Social Studies (Araling Panlipunan)</option>
-                            <option value="Maka-Bayan / MAPEH">Maka-Bayan / MAPEH</option>
-                            <option value="Edukasyong Pantahanan at Pangkabuhayan (EPP)">Edukasyong Pantahanan at Pangkabuhayan (EPP)</option>
                         </select>
                     </div>
                     </div>
@@ -772,7 +760,8 @@
             sectionSelect.disabled = true;
             sectionSelect.innerHTML = '<option value="" selected disabled>Loading sections…</option>';
             try {
-                const response = await fetch('{% url "signup_sections" %}?role=teacher');
+                const query = new URLSearchParams({role: 'teacher', grade_level: 'Grade 2'});
+                const response = await fetch('{% url "signup_sections" %}?' + query.toString());
                 const data = await response.json();
                 if (!response.ok || !data.success) throw new Error(data.error || 'Unable to load sections');
                 renderSectionOptions(data.sections || []);

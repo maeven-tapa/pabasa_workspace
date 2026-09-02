@@ -4,7 +4,7 @@
 <div class="admin-panel">
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
         <div>
-            <a class="btn btn-sm btn-outline-secondary mb-3" href="{% url 'admin_principal_detail' managed_user.id %}">
+            <a class="btn btn-sm btn-outline-secondary mb-3" href="{% url 'admin_school_principal_detail' school.id managed_user.id %}">
                 <i class="bi bi-arrow-left me-1"></i>Back
             </a>
             <h2 class="h4 fw-bold mb-1">Edit {{ managed_user_name|default:managed_user.custom_id }}</h2>
@@ -68,7 +68,7 @@
         </div>
 
         <div class="d-flex flex-wrap justify-content-end gap-2 mt-4">
-            <a class="btn btn-outline-secondary" href="{% url 'admin_principal_detail' managed_user.id %}">Cancel</a>
+            <a class="btn btn-outline-secondary" href="{% url 'admin_school_principal_detail' school.id managed_user.id %}">Cancel</a>
             <button class="btn btn-primary" type="submit">
                 <i class="bi bi-check2 me-1"></i>Save changes
             </button>

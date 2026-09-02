@@ -148,7 +148,6 @@
           <span class="badge rounded-pill section-status-badge {% if section.is_active %}text-bg-success{% else %}text-bg-secondary{% endif %}">
             <span class="section-status-badge__dot" aria-hidden="true"></span>{{ status }}
           </span>
-          <a class="btn btn-sm btn-outline-secondary section-edit-button" href="{% url 'admin_class_edit' section.id %}?edit=1" onclick="window.location.assign(this.href); return false;">Edit Section</a>
         </div>
       </div>
     </div>

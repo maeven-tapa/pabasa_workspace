@@ -62,10 +62,23 @@
     line-height: 1.2;
   }
 
-  .school-section-heading .badge {
-    font-size: 0.7rem;
-    line-height: 1;
-    padding: 0.3rem 0.48rem;
+  .school-section-status {
+    border-radius: 50%;
+    flex: 0 0 0.65rem;
+    height: 0.65rem;
+    width: 0.65rem;
+  }
+
+  .school-section-status--active {
+    background-color: #198754;
+  }
+
+  .school-section-status--unassigned {
+    background-color: #fd7e14;
+  }
+
+  .school-section-status--inactive {
+    background-color: #dc3545;
   }
 
   .school-section-meta {
@@ -170,20 +183,16 @@
             <dt class="col-sm-4 col-lg-3 text-secondary">School Name</dt>
             <dd class="col-sm-8 col-lg-9">{{ school.name }}</dd>
             <dt class="col-sm-4 col-lg-3 text-secondary">School ID</dt>
-            <dd class="col-sm-8 col-lg-9">{{ school_card_id }}</dd>
+            <dd class="col-sm-8 col-lg-9">{{ school.code }}</dd>
             <dt class="col-sm-4 col-lg-3 text-secondary">School Address</dt>
-            <dd class="col-sm-8 col-lg-9 mb-0">{{ school_card_address }}</dd>
+            <dd class="col-sm-8 col-lg-9 mb-0">{{ school.address }}</dd>
           </dl>
         </section>
 
         <section class="border rounded-3 p-3 bg-light-subtle" aria-labelledby="principalDetailsHeading">
-        <h2 class="h5 mb-3" id="principalDetailsHeading">Principal</h2>
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-3"><h2 class="h5 mb-0" id="principalDetailsHeading">Principal</h2>{% if principal %}<a class="btn btn-sm btn-outline-primary flex-shrink-0" href="{% url 'admin_school_principal_detail' school.id principal.id %}">View</a>{% endif %}</div>
         {% if principal %}
           <div class="row gy-2 small"><div class="col-12 col-md-6"><span class="text-muted d-block">Name</span><strong>{{ principal.first_name }}{% if principal.middle_initial %} {{ principal.middle_initial }}.{% endif %} {{ principal.last_name }}{% if principal.suffix %} {{ principal.suffix }}{% endif %}</strong></div><div class="col-12 col-md-6"><span class="text-muted d-block">Principal ID</span><strong>{{ principal.custom_id }}</strong></div><div class="col-12 col-md-6"><span class="text-muted d-block">Email</span><strong class="text-break">{{ principal.email }}</strong></div><div class="col-12 col-md-6"><span class="text-muted d-block">Contact Number</span><strong>{{ principal.contact_no|default:'Not provided' }}</strong></div><div class="col-12"><span class="text-muted d-block">Status</span><span class="badge {% if principal.is_archived %}text-bg-secondary{% else %}text-bg-success{% endif %}">{% if principal.is_archived %}Archived{% else %}Active{% endif %}</span></div></div>
-          <div class="mt-2 d-flex gap-2">
-            <a class="btn btn-sm btn-outline-primary" href="{% url 'admin_principal_detail' principal.id %}">View</a>
-            <a class="btn btn-sm btn-outline-secondary" href="{% url 'admin_principal_edit' principal.id %}">Edit</a>
-          </div>
         {% else %}
           <div class="text-muted">Not assigned</div>
           {% if school.status == 'active' and school.is_active %}
@@ -218,19 +227,28 @@
                 </div>
                 <div class="col-12">
                   <div class="small text-muted">School: <strong>{{ school.name }}</strong> (read-only)</div>
+                  {% if archived_principals %}
+                  <button class="btn btn-primary mt-2" type="button" data-bs-toggle="modal" data-bs-target="#confirmPrincipalReplacementModal">Create a New Principal Account</button>
+                  {% else %}
                   <button class="btn btn-primary mt-2" type="submit" id="createPrincipalSubmitButton">Create Principal Account</button>
+                  {% endif %}
                 </div>
               </form>
             </div>
           {% endif %}
         {% endif %}
+        {% if archived_principals and not principal %}
+        <div class="modal fade" id="confirmPrincipalReplacementModal" tabindex="-1" aria-labelledby="confirmPrincipalReplacementTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title h5" id="confirmPrincipalReplacementTitle">Create a New Principal Account?</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p class="mb-2">Proceeding creates the new Principal account for {{ school.name }}.</p><p class="text-secondary mb-0">After the new account is created successfully, the deactivated Principal account will be permanently removed.</p></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" type="submit" form="createPrincipalAccountForm" name="confirm_replacement" value="1">Confirm and Create</button></div></div></div></div>
+        {% endif %}
         {% if principal_error %}<div class="alert alert-danger mt-3 mb-0">{{ principal_error }}</div>{% endif %}
+        {% if archived_principals %}
+        <div class="mt-3 pt-3 border-top"><span class="small text-muted d-block mb-2">Inactive Principal Accounts</span>{% for archived_principal in archived_principals %}<a class="btn btn-sm btn-outline-secondary me-2 mb-2" href="{% url 'admin_school_principal_detail' school.id archived_principal.id %}">{{ archived_principal.first_name }} {{ archived_principal.last_name }} <span class="text-muted">(Inactive)</span></a>{% endfor %}</div>
+        {% endif %}
         </section>
       </div>
     </div>
 
-    <div class="card shadow-sm border-0 mb-4"><div class="card-body"><form method="post" class="row g-3 align-items-end">{% csrf_token %}<div class="col-md-4"><label class="form-label" for="schoolCalendarSelect">School Year</label><select id="schoolCalendarSelect" name="school_calendar_id" class="form-select" required>{% for school_calendar in school_calendars %}<option value="{{ school_calendar.id }}"{% if school_calendar.id == selected_calendar.id %} selected{% endif %}>{{ school_calendar.school_year }}</option>{% endfor %}</select></div><div class="col-md-5"><label class="form-label">Section name</label><input name="section" class="form-control" maxlength="50" required></div><div class="col-md-3"><button class="btn btn-primary w-100">Add Section</button></div></form></div></div>
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3"><div class="d-flex flex-column align-items-start"><h2 class="h4 mb-1">Grade 2 Sections</h2><span class="small text-muted">Manage teachers, student assignments, and section statuses.</span></div><button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#returningStudentsModal"><i class="bi bi-arrow-repeat me-1"></i>Returning Students <span class="badge text-bg-info ms-1">{{ returning_students|length }}</span></button></div><div class="school-sections-table">{% for grade, sections in sections_by_grade.items %}{% if grade == "Grade 2" %}<section class="card shadow-sm border-0 h-100"><ul class="list-group list-group-flush">{% for section in sections %}<li class="list-group-item"><div class="d-flex flex-wrap gap-3 justify-content-between align-items-center"><div class="flex-grow-1"><div class="school-section-heading"><strong class="text-uppercase">{{ section.section }}</strong><span class="badge {% if section.is_active %}text-bg-success{% else %}text-bg-secondary{% endif %}">{% if section.is_active %}Active{% else %}Archived{% endif %}</span></div><div class="school-section-meta"><span>Teacher: <strong>{% if section.teacher %}{{ section.teacher.first_name }} {{ section.teacher.last_name }}{% else %}Not assigned{% endif %}</strong></span><span>Active students: <strong>{{ section.student_count }}</strong></span></div></div><div class="school-section-actions d-flex flex-wrap gap-2"><a class="btn section-action-{% if section.teacher %}change{% else %}assign{% endif %}" href="{% url 'admin_class_edit' section.id %}?teacher_action={% if section.teacher %}change{% else %}assign{% endif %}">{% if section.teacher %}Change Teacher{% else %}Assign Teacher{% endif %}</a><a class="btn section-action-manage" href="{% url 'admin_class_edit' section.id %}">Manage Section</a><form method="post" action="{% url 'admin_school_section_update' section.id %}">{% csrf_token %}<input type="hidden" name="action" value="{% if section.is_active %}deactivate{% else %}reactivate{% endif %}"><button class="btn {% if section.is_active %}section-action-deactivate{% else %}section-action-assign{% endif %}">{% if section.is_active %}Deactivate{% else %}Activate{% endif %}</button></form></div></div></li>{% empty %}<li class="list-group-item text-muted">No sections configured.</li>{% endfor %}</ul></section>{% endif %}{% endfor %}</div>
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3"><div class="d-flex flex-column align-items-start"><h2 class="h4 mb-1">Grade 2 Sections</h2><span class="small text-muted">Manage teachers, student assignments, and section statuses.</span></div><button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#returningStudentsModal"><i class="bi bi-arrow-repeat me-1"></i>Returning Students <span class="badge text-bg-info ms-1">{{ returning_students|length }}</span></button></div><div class="school-sections-table">{% for grade, sections in sections_by_grade.items %}{% if grade == "Grade 2" %}<section class="card shadow-sm border-0 h-100"><ul class="list-group list-group-flush">{% for section in sections %}<li class="list-group-item"><div class="d-flex flex-wrap gap-3 justify-content-between align-items-center"><div class="flex-grow-1"><div class="school-section-heading"><span class="school-section-status {% if section.teacher %}{% if section.teacher.is_archived %}school-section-status--inactive{% else %}school-section-status--active{% endif %}{% else %}school-section-status--unassigned{% endif %}" role="img" aria-label="{% if section.teacher %}{% if section.teacher.is_archived %}Teacher inactive{% else %}Teacher assigned{% endif %}{% else %}No teacher assigned{% endif %}"></span><strong class="text-uppercase">{{ section.section }}</strong></div><div class="school-section-meta"><span>Teacher: <strong>{% if section.teacher %}{{ section.teacher.first_name }} {{ section.teacher.last_name }}{% else %}Not assigned{% endif %}</strong></span><span>Active students: <strong>{{ section.student_count }}</strong></span></div></div><div class="school-section-actions d-flex flex-wrap gap-2"><button class="btn section-action-{% if section.teacher %}change{% else %}assign{% endif %}" type="button" data-assign-teacher data-section-name="{{ section.section }}" data-action="{% if section.teacher %}change_teacher{% else %}assign_teacher{% endif %}" data-update-url="{% url 'admin_school_section_update' section.id %}">{% if section.teacher %}Change Teacher{% else %}Assign Teacher{% endif %}</button><a class="btn section-action-manage" href="{% url 'admin_class_edit' section.id %}">Manage Section</a><form method="post" action="{% url 'admin_school_section_update' section.id %}">{% csrf_token %}<input type="hidden" name="action" value="{% if section.is_active %}deactivate{% else %}reactivate{% endif %}"><button class="btn {% if section.is_active %}section-action-deactivate{% else %}section-action-assign{% endif %}">{% if section.is_active %}Deactivate{% else %}Activate{% endif %}</button></form></div></div></li>{% empty %}<li class="list-group-item text-muted">No sections configured.</li>{% endfor %}</ul></section>{% endif %}{% endfor %}</div>
   {% else %}
     <div class="d-flex flex-column gap-3">{% for item in schools %}<article class="card shadow-sm border-0"><div class="card-body p-4"><div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-4"><div class="min-w-0"><h2 class="h4 mb-3 text-break">{{ item.name }}</h2><div class="row gy-2 gx-5"><div class="col-12 col-sm-auto"><div class="small text-muted">School ID</div><div class="fw-semibold text-break">{{ item.code }}</div></div><div class="col-12 col-sm-auto"><div class="small text-muted">Principal</div><div class="fw-semibold text-break">{{ item.principal_name }}</div></div><div class="col-12 col-sm-auto"><div class="small text-muted">Status</div><span class="badge rounded-pill {% if item.is_active %}text-bg-success{% else %}text-bg-secondary{% endif %}">{{ item.status_label }}</span></div></div></div><a class="btn btn-outline-primary flex-shrink-0" href="{% url 'admin_school_detail' item.id %}">Manage</a></div></div></article>{% empty %}<div class="text-muted">No schools yet.</div>{% endfor %}</div>
   {% endif %}
@@ -242,6 +260,37 @@
     <div class="modal-content border-0 shadow">
       <div class="modal-header"><div class="returning-students-heading-row"><h2 class="modal-title h4 mb-0" id="returningStudentsHeading"><i class="bi bi-arrow-repeat me-1"></i>Returning Students</h2><span class="badge text-bg-info">{{ returning_students|length }} ready</span></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
       <div class="modal-body"><p class="small text-muted returning-students-description mb-0">Retained Grade 2 students from the previous school year who have not yet been prepared or assigned for {{ returning_school_calendar.school_year }}.</p>{% if returning_students %}<div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Student</th><th>Previous Section</th><th>Status</th><th>Action</th></tr></thead><tbody>{% for enrollment in returning_students %}<tr><td><strong>{{ enrollment.student.first_name }} {{ enrollment.student.last_name }}</strong></td><td>{{ enrollment.section.section|default:'Unassigned' }}</td><td><span class="badge text-bg-success">Ready for New School Year</span></td><td><a class="btn btn-sm btn-outline-primary" href="{% url 'admin_student_detail' enrollment.student_id %}"><i class="bi bi-person-check me-1"></i>Prepare</a></td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="text-muted mb-0 returning-students-empty-state">No retained students are currently eligible for return.</p>{% endif %}</div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="schoolAssignTeacherModal" tabindex="-1" aria-labelledby="schoolAssignTeacherTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <form method="post" id="schoolAssignTeacherForm">
+        {% csrf_token %}
+        <input type="hidden" name="action" id="schoolAssignTeacherAction">
+        <div class="modal-header">
+          <h2 class="modal-title h5" id="schoolAssignTeacherTitle">Assign Teacher</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          {% if eligible_teachers %}
+          <p class="text-muted mb-3">Select an active teacher for <strong id="schoolAssignTeacherSection"></strong>.</p>
+          <label class="form-label" for="schoolAssignTeacherSelect">Teacher</label>
+          <select class="form-select" id="schoolAssignTeacherSelect" name="teacher_id" required>
+            {% for candidate in eligible_teachers %}
+            <option value="{{ candidate.id }}">{{ candidate.first_name }} {{ candidate.last_name }}{% if candidate.custom_id %} — {{ candidate.custom_id }}{% endif %}</option>
+            {% endfor %}
+          </select>
+          {% else %}
+          <p class="text-muted mb-0">No active teachers are available for this school.</p>
+          {% endif %}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% if eligible_teachers %}Cancel{% else %}Close{% endif %}</button>
+          {% if eligible_teachers %}<button type="submit" class="btn btn-primary">Save Teacher</button>{% endif %}
+        </div>
+      </form>
     </div>
   </div>
 </div>
@@ -259,15 +308,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  const schoolCalendarSelect = document.getElementById('schoolCalendarSelect');
-  if (schoolCalendarSelect) {
-    schoolCalendarSelect.addEventListener('change', function () {
-      const url = new URL(window.location.href);
-      url.searchParams.set('school_calendar_id', schoolCalendarSelect.value);
-      window.location.assign(url);
-    });
-  }
-
   const form = document.getElementById('createPrincipalAccountForm');
   const submitButton = document.getElementById('createPrincipalSubmitButton');
   const loadingModalElement = document.getElementById('createPrincipalLoadingModal');
@@ -282,6 +322,29 @@ document.addEventListener('DOMContentLoaded', function () {
     form.dataset.submitting = 'true';
     submitButton.disabled = true;
     bootstrap.Modal.getOrCreateInstance(loadingModalElement).show();
+  });
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const modalElement = document.getElementById('schoolAssignTeacherModal');
+  const form = document.getElementById('schoolAssignTeacherForm');
+  const actionInput = document.getElementById('schoolAssignTeacherAction');
+  const sectionName = document.getElementById('schoolAssignTeacherSection');
+  const title = document.getElementById('schoolAssignTeacherTitle');
+  const teacherSelect = document.getElementById('schoolAssignTeacherSelect');
+  if (!modalElement || !form || !actionInput || !title) return;
+
+  document.querySelectorAll('[data-assign-teacher]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      const isChange = button.dataset.action === 'change_teacher';
+      form.action = button.dataset.updateUrl;
+      actionInput.value = button.dataset.action;
+      if (sectionName) sectionName.textContent = button.dataset.sectionName;
+      title.textContent = isChange ? 'Change Teacher' : 'Assign Teacher';
+      if (teacherSelect) teacherSelect.value = '';
+      bootstrap.Modal.getOrCreateInstance(modalElement).show();
+    });
   });
 });
 </script>

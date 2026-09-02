@@ -56,6 +56,7 @@ from django.db import transaction
 import re
 import traceback
 from .models import User, School, Section, Enrollment, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress
+from .section_configuration import ensure_salawag_grade_two_sections
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
 from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
 from .reading_stt import (
@@ -109,9 +110,8 @@ PRACTICE_ACTIVE_SESSION_KEY = "practice_active_session"
 SCHOOL_GRADE_LEVELS = tuple(f"Grade {number}" for number in range(1, 7))
 NEW_USER_GRADE_LEVEL = "Grade 2"
 PRIMARY_SCHOOL_NAME = "Salawag Elementary School"
-PRIMARY_SCHOOL_ID = 3
-ADMIN_SCHOOL_CARD_ID = "107912"
-ADMIN_SCHOOL_CARD_ADDRESS = "4114 Paliparan Road, Dasmariñas, Calabarzon"
+PRIMARY_SCHOOL_CODE = "107912"
+PRIMARY_SCHOOL_ADDRESS = "4114 Paliparan Road Dasmariñas Calabarzon"
 
 
 def _real_active_schools():
@@ -119,6 +119,33 @@ def _real_active_schools():
         status="active",
         is_active=True,
     ).exclude(name="Default School").order_by("name", "id")
+
+
+def _primary_school():
+    """Return the single supported school without relying on its database PK."""
+    school, _ = School.objects.get_or_create(
+        name=PRIMARY_SCHOOL_NAME,
+        defaults={
+            "code": PRIMARY_SCHOOL_CODE,
+            "address": PRIMARY_SCHOOL_ADDRESS,
+            "status": "active",
+            "is_active": True,
+        },
+    )
+
+    updates = []
+    for field, value in {
+        "code": PRIMARY_SCHOOL_CODE,
+        "address": PRIMARY_SCHOOL_ADDRESS,
+        "status": "active",
+        "is_active": True,
+    }.items():
+        if getattr(school, field) != value:
+            setattr(school, field, value)
+            updates.append(field)
+    if updates:
+        school.save(update_fields=[*updates, "updated_at"])
+    return school
 
 
 def _active_signup_school(school_id):
@@ -129,10 +156,7 @@ def _active_signup_school(school_id):
 
 def _signup_school():
     """New accounts are always created under the single supported school."""
-    return _real_active_schools().filter(
-        pk=PRIMARY_SCHOOL_ID,
-        name=PRIMARY_SCHOOL_NAME,
-    ).first()
+    return _primary_school()
 
 
 def _active_school_calendar_for_new_workflows():
@@ -210,10 +234,11 @@ def _signup_section_queryset(role, school=None, grade_level=None):
     active_calendar = _active_school_calendar_for_new_workflows()
     if not active_calendar:
         return Section.objects.none()
+    if school is not None:
+        ensure_salawag_grade_two_sections(school, active_calendar)
     qs = Section.objects.filter(
         is_active=True,
         school_calendar=active_calendar,
-        grade_level=NEW_USER_GRADE_LEVEL,
     ).select_related('teacher', 'school', 'school_calendar').order_by('section')
     if school is not None:
         qs = qs.filter(school=school)
@@ -278,8 +303,12 @@ def _signup_section_for_request(data, role):
     if not section_value:
         return school, None, 'Choose an available Section.'
     section_id = int(section_value) if section_value.isdigit() else None
+    # Teacher signup is limited to Grade 2; client-submitted grades are not trusted.
+    grade_level = NEW_USER_GRADE_LEVEL if role == 'teacher' else str(
+        data.get('grade_level') or NEW_USER_GRADE_LEVEL
+    ).strip()
     section = _active_canonical_section(
-        NEW_USER_GRADE_LEVEL,
+        grade_level,
         section_value if section_id is None else '',
         school=school,
         school_calendar=active_calendar,
@@ -3950,7 +3979,7 @@ def register_teacher(request):
         # Create pending signup and send OTP
         signup_data = data.copy()
         signup_data['email'] = email
-        signup_data['grade_level'] = NEW_USER_GRADE_LEVEL
+        signup_data['grade_level'] = canonical_section.grade_level
         otp = _store_pending_teacher_signup(request, signup_data)
         try:
             send_teacher_signup_otp_email(request, email, otp, data.get('first_name'))
@@ -4021,7 +4050,7 @@ def register_student(request):
         # exactly the address to which the OTP was delivered.
         signup_data = data.copy()
         signup_data['email'] = raw_email
-        signup_data['grade_level'] = NEW_USER_GRADE_LEVEL
+        signup_data['grade_level'] = selected_section.grade_level
         otp = _store_pending_student_signup(request, signup_data)
         logger.debug("STUDENT REGISTRATION PENDING CREATED session_keys=%s", sorted(list(request.session.keys())))
         try:
@@ -4234,7 +4263,7 @@ def verify_student_otp(request):
             _clear_pending_student_signup(request)
             return JsonResponse({'success': False, 'error': 'The selected grade and section are no longer available.'}, status=400)
 
-        custom_id = generate_custom_id('student', NEW_USER_GRADE_LEVEL)
+        custom_id = generate_custom_id('student', selected_section.grade_level)
         logger.debug("VERIFY STUDENT OTP BEFORE USER CREATE custom_id=%s email=%s grade_level=%s lrn_present=%s",
                      custom_id, pending.get('email'), pending.get('grade_level', ''), bool(lrn))
         user = None
@@ -4262,13 +4291,13 @@ def verify_student_otp(request):
                         school_record=school,
                         school_calendar=selected_section.school_calendar,
                         lrn=lrn or None,
-                        grade_level=NEW_USER_GRADE_LEVEL,
+                        grade_level=selected_section.grade_level,
                         section=selected_section.section,
                         reading_level=pending.get('reading_level', ''),
                     )
                 break
             except IntegrityError:
-                custom_id = generate_custom_id('student', NEW_USER_GRADE_LEVEL)
+                custom_id = generate_custom_id('student', selected_section.grade_level)
         if user is None:
             logger.error("VERIFY STUDENT OTP could not allocate unique custom ID")
             _clear_pending_student_signup(request)
@@ -4837,13 +4866,13 @@ def privacy(request):
 
 def teacher_signup(request):
     return render(request, 'pabasa_app/teacher_signup.html', {
-        'signup_grades': [],
+        'signup_grades': _section_selection_context('teacher')[0],
         'teacher_max_birth_year': timezone.localdate().year - 18,
     })
 
 def student_signup(request):
     return render(request, 'pabasa_app/student_signup.html', {
-        'signup_grades': [],
+        'signup_grades': _section_selection_context('student')[0],
         'student_max_birth_year': 2019,
     })
 
@@ -4862,8 +4891,16 @@ def student_signup_sections(request):
             'error': 'No active School Year is configured. Please contact an administrator.',
             'sections': [],
         }, status=409)
-    sections = [_section_signup_payload(section) for section in _signup_section_queryset(role, school=school)]
-    return JsonResponse({'success': True, 'school_year': active_calendar.school_year, 'sections': sections})
+    grade_level = str(request.GET.get('grade_level') or '').strip()
+    queryset = _signup_section_queryset(role, school=school, grade_level=grade_level or None)
+    sections = [_section_signup_payload(section) for section in queryset] if grade_level else []
+    grades = sorted({section.grade_level for section in _signup_section_queryset(role, school=school)})
+    return JsonResponse({
+        'success': True,
+        'school_year': active_calendar.school_year,
+        'grades': [{'value': grade, 'label': grade} for grade in grades],
+        'sections': sections,
+    })
 
 def dashboard(request):
     logger.warning(
@@ -5564,118 +5601,8 @@ def _create_principal_account(request, school, first_name, middle_initial, last_
 
 @admin_required
 def admin_principals(request):
-    context = _admin_context(request, 'Principals', [])
-    search_query = request.GET.get('q', '').strip()
-    status_filter = request.GET.get('status', '')
-
-    context.update({
-        'form_data': {},
-        'created_principal': None,
-        'created_principal_id': None,
-        'search_query': search_query,
-        'status_filter': status_filter,
-    })
-
-    principals = User.objects.filter(role='principal')
-    if search_query:
-        principals = principals.filter(
-            Q(first_name__icontains=search_query)
-            | Q(last_name__icontains=search_query)
-            | Q(custom_id__icontains=search_query)
-            | Q(email__icontains=search_query)
-        )
-    if status_filter == 'active':
-        principals = principals.filter(is_archived=False)
-    elif status_filter == 'inactive':
-        principals = principals.filter(is_archived=True)
-
-    if request.method == 'POST':
-        form_data = {
-            'first_name': request.POST.get('first_name', '').strip(),
-            'middle_initial': request.POST.get('middle_initial', '').strip()[:1],
-            'last_name': request.POST.get('last_name', '').strip(),
-            'suffix': request.POST.get('suffix', '').strip(),
-            'school_name': request.POST.get('school_name', '').strip(),
-            'email': request.POST.get('email', '').strip().lower(),
-            'contact_no': request.POST.get('contact_no', '').strip(),
-        }
-        context['form_data'] = form_data
-        errors = []
-
-        for label, value in [
-            ('First name', form_data['first_name']),
-            ('Last name', form_data['last_name']),
-            ('School name', form_data['school_name']),
-            ('Email address', form_data['email']),
-        ]:
-            if not value:
-                errors.append(f'{label} is required.')
-        if form_data['email'] and User.objects.filter(email__iexact=form_data['email']).exists():
-            errors.append('An account with this email address already exists.')
-
-        if errors:
-            context['principal_error'] = ' '.join(errors)
-            context['principals'] = principals.order_by('last_name', 'first_name')
-            return render(request, 'pabasa_app/admin_principals.html', context)
-
-        try:
-            with transaction.atomic():
-                school = School.objects.filter(
-                    name__iexact=form_data['school_name'],
-                    status='active',
-                    is_active=True,
-                ).first()
-                if not school:
-                    raise ValueError('Choose an existing active School.')
-                user, temporary_password = _create_principal_account(
-                    request,
-                    school,
-                    form_data['first_name'],
-                    form_data['middle_initial'],
-                    form_data['last_name'],
-                    form_data['suffix'],
-                    form_data['email'],
-                    form_data['contact_no'],
-                )
-
-            email_sent = _try_send_principal_credentials_email(
-                request,
-                user,
-                user.school_record.name,
-                temporary_password,
-            )
-            if email_sent:
-                context['principal_success'] = 'Principal account created successfully. Login credentials were sent to the Principal\'s email.'
-            else:
-                context['principal_warning'] = 'Principal account created successfully, but the credentials email could not be sent. Please verify the email configuration or resend the credentials later.'
-            context['created_principal'] = user
-            context['created_principal_id'] = user.id
-            context['created_principal_name'] = _admin_user_full_name(user)
-            context['created_school_name'] = user.school_record.name
-            context['form_data'] = {}
-
-            principals = User.objects.filter(role='principal')
-            if search_query:
-                principals = principals.filter(
-                    Q(first_name__icontains=search_query)
-                    | Q(last_name__icontains=search_query)
-                    | Q(custom_id__icontains=search_query)
-                    | Q(email__icontains=search_query)
-                )
-            if status_filter == 'active':
-                principals = principals.filter(is_archived=False)
-            elif status_filter == 'inactive':
-                principals = principals.filter(is_archived=True)
-        except ValueError as exc:
-            context['principal_error'] = str(exc)
-        except IntegrityError:
-            context['principal_error'] = 'A principal account with the generated PABASA ID or email already exists. Please try again.'
-        except Exception:
-            logger.exception('Failed to create principal account')
-            context['principal_error'] = 'The account could not be created or the email could not be sent. Please check the mail settings and try again.'
-
-    context['principals'] = principals.order_by('last_name', 'first_name')
-    return render(request, 'pabasa_app/admin_principals.html', context)
+    """Retired compatibility URL for the former Principals workspace."""
+    return redirect('admin_school')
 
 def _admin_user_status(user):
     if getattr(user, 'account_status', '') == 'pending_archive':
@@ -5735,7 +5662,7 @@ def _admin_user_redirect_name(role):
     if role == 'student':
         return 'admin_students'
     if role == 'principal':
-        return 'admin_principals'
+        return 'admin_school'
     return 'admin_teachers'
 
 def _student_returning_eligibility(user, calendar=None):
@@ -6197,6 +6124,102 @@ def admin_principal_deactivate(request, user_id):
 
     return redirect('admin_principal_detail', user_id=user.id)
 
+
+def _school_principal_or_404(school_id, user_id):
+    school = get_object_or_404(School, id=school_id, name=PRIMARY_SCHOOL_NAME)
+    principal = get_object_or_404(User, id=user_id, role='principal', school_record=school)
+    return school, principal
+
+
+@admin_required
+def admin_school_principal_detail(request, school_id, user_id):
+    school, user = _school_principal_or_404(school_id, user_id)
+    context = _admin_user_template_context(request, user, 'Principal Details')
+    context.update({
+        'school': school,
+        'school_info': _get_profile_dict(user, 'principal_school_info') or {},
+        'principal_profile_info': _get_profile_dict(user, 'principal_profile_info') or {},
+    })
+    return render(request, 'pabasa_app/admin_principal_detail.html', context)
+
+
+@admin_required
+@require_http_methods(["GET", "POST"])
+def admin_school_principal_edit(request, school_id, user_id):
+    school, user = _school_principal_or_404(school_id, user_id)
+    profile_info = _get_profile_dict(user, 'principal_profile_info') or {}
+    if not isinstance(profile_info, dict):
+        profile_info = {}
+    context = _admin_user_template_context(request, user, 'Edit Principal')
+    context.update({'school': school, 'principal_profile_info': profile_info})
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip().lower()
+        if not request.POST.get('first_name', '').strip() or not request.POST.get('last_name', '').strip():
+            context['error_message'] = 'First name and last name are required.'
+            return render(request, 'pabasa_app/admin_principal_edit.html', context, status=400)
+        if not email:
+            context['error_message'] = 'Email is required.'
+            return render(request, 'pabasa_app/admin_principal_edit.html', context, status=400)
+        if User.objects.filter(email__iexact=email).exclude(id=user.id).exists():
+            context['error_message'] = 'Email is already used by another account.'
+            return render(request, 'pabasa_app/admin_principal_edit.html', context, status=400)
+        user.first_name = request.POST.get('first_name', '').strip()
+        user.middle_initial = request.POST.get('middle_initial', '').strip()[:1]
+        user.last_name = request.POST.get('last_name', '').strip()
+        user.suffix = request.POST.get('suffix', '').strip()
+        user.email = email
+        user.contact_no = request.POST.get('contact_no', '').strip()
+        user.school = school.name
+        user.save(update_fields=['first_name', 'middle_initial', 'last_name', 'suffix', 'email', 'contact_no', 'school', 'updated_at'])
+        profile_info.update({
+            'position': request.POST.get('position', '').strip() or 'Principal',
+            'full_name': _admin_user_full_name(user),
+        })
+        _set_profile_dict(user, 'principal_profile_info', profile_info)
+        return redirect('admin_school_principal_detail', school_id=school.id, user_id=user.id)
+    return render(request, 'pabasa_app/admin_principal_edit.html', context)
+
+
+@admin_required
+@require_http_methods(["POST"])
+def admin_school_principal_reset_password(request, school_id, user_id):
+    school, user = _school_principal_or_404(school_id, user_id)
+    if user.is_archived:
+        messages.warning(request, 'An inactive Principal account cannot have its password reset.')
+        return redirect('admin_school_principal_detail', school_id=school.id, user_id=user.id)
+    with transaction.atomic():
+        user = User.objects.select_for_update().get(id=user.id, role='principal', school_record=school)
+        temporary_password = _principal_temporary_password(user.last_name)
+        user.set_password(temporary_password)
+        user.must_change_password = True
+        user.save(update_fields=['password_hash', 'must_change_password', 'updated_at'])
+    if _try_send_principal_credentials_email(request, user, school.name, temporary_password, is_reset=True):
+        messages.success(request, "Principal password reset successfully. The temporary credentials were sent to the Principal's email.")
+    else:
+        messages.warning(request, 'Principal password reset successfully, but the temporary credentials email could not be sent.')
+    return redirect('admin_school_principal_detail', school_id=school.id, user_id=user.id)
+
+
+@admin_required
+@require_http_methods(["POST"])
+def admin_school_principal_status(request, school_id, user_id):
+    school, user = _school_principal_or_404(school_id, user_id)
+    action = request.POST.get('action', 'deactivate').strip().lower()
+    if action == 'reactivate' and user.is_archived:
+        if school.is_active and not _active_principal_for_school(school):
+            user.is_archived = False
+            user.archived_at = None
+            user.save(update_fields=['is_archived', 'archived_at', 'updated_at'])
+            messages.success(request, 'Principal account reactivated.')
+        else:
+            messages.error(request, 'This School already has an active Principal account.')
+    elif action == 'deactivate' and not user.is_archived:
+        user.is_archived = True
+        user.archived_at = timezone.now()
+        user.save(update_fields=['is_archived', 'archived_at', 'updated_at'])
+        messages.success(request, 'Principal account deactivated.')
+    return redirect('admin_school_detail', school_id=school.id)
+
 def _admin_archive_user(request, user_id, role):
     user = _get_managed_user(user_id, role)
     if not user:
@@ -6239,7 +6262,7 @@ def _school_card_context(school):
 @require_http_methods(["GET"])
 def admin_school(request):
     """Compatibility route for the single supported school workspace."""
-    return redirect('admin_school_detail', school_id=PRIMARY_SCHOOL_ID)
+    return redirect('admin_school_detail', school_id=_primary_school().pk)
 
 
 @admin_required
@@ -6255,6 +6278,7 @@ def admin_school_detail(request, school_id):
     selected_calendar = SchoolCalendar.objects.filter(pk=selected_calendar_id).first() if selected_calendar_id else None
     if not selected_calendar:
         selected_calendar = _active_school_calendar_for_new_workflows()
+    ensure_salawag_grade_two_sections(school, selected_calendar)
     returning_students = []
     rollover_calendar = _active_school_calendar_for_new_workflows()
     if selected_calendar and rollover_calendar and selected_calendar.pk == rollover_calendar.pk:
@@ -6293,90 +6317,75 @@ def admin_school_detail(request, school_id):
             if missing:
                 context['principal_error'] = f"{', '.join(missing)} required."
             else:
-                try:
-                    with transaction.atomic():
-                        locked_school = School.objects.select_for_update().get(pk=school.pk)
-                        principal, temporary_password = _create_principal_account(
+                archived_principal = User.objects.filter(
+                    role='principal', school_record=school, is_archived=True,
+                ).order_by('-archived_at', '-id').first()
+                if archived_principal and request.POST.get('confirm_replacement') != '1':
+                    context['principal_error'] = 'Confirm replacement before creating a new Principal account.'
+                    context['principal'] = _active_principal_for_school(school)
+                else:
+                    try:
+                        with transaction.atomic():
+                            locked_school = School.objects.select_for_update().get(pk=school.pk)
+                            principal, temporary_password = _create_principal_account(
+                                request,
+                                locked_school,
+                                form_data['first_name'],
+                                form_data['middle_initial'],
+                                form_data['last_name'],
+                                form_data['suffix'],
+                                form_data['email'],
+                                form_data['contact_no'],
+                            )
+                            if archived_principal:
+                                User.objects.select_for_update().get(pk=archived_principal.pk).delete()
+                        email_sent = _try_send_principal_credentials_email(
                             request,
-                            locked_school,
-                            form_data['first_name'],
-                            form_data['middle_initial'],
-                            form_data['last_name'],
-                            form_data['suffix'],
-                            form_data['email'],
-                            form_data['contact_no'],
+                            principal,
+                            locked_school.name,
+                            temporary_password,
                         )
-                    email_sent = _try_send_principal_credentials_email(
-                        request,
-                        principal,
-                        locked_school.name,
-                        temporary_password,
-                    )
-                    if email_sent:
-                        messages.success(
-                            request,
-                            "Principal account created successfully. Login credentials were sent to the Principal's email.",
-                        )
-                    else:
-                        messages.warning(
-                            request,
-                            'Principal account created successfully, but the credentials email could not be sent. '
-                            'Please verify the email configuration or resend the credentials later.',
-                        )
-                    return redirect('admin_school_detail', school_id=school.id)
-                except (ValueError, IntegrityError) as exc:
-                    context['principal_error'] = str(exc) if isinstance(exc, ValueError) else 'This School already has an active Principal.'
+                        if email_sent:
+                            messages.success(
+                                request,
+                                "Principal account created successfully. Login credentials were sent to the Principal's email.",
+                            )
+                        else:
+                            messages.warning(
+                                request,
+                                'Principal account created successfully, but the credentials email could not be sent. '
+                                'Please verify the email configuration or resend the credentials later.',
+                            )
+                        return redirect('admin_school_detail', school_id=school.id)
+                    except (ValueError, IntegrityError) as exc:
+                        context['principal_error'] = str(exc) if isinstance(exc, ValueError) else 'This School already has an active Principal.'
             context['principal'] = _active_principal_for_school(school)
         else:
             context['principal_form_data'] = {}
-        if request.POST.get('action') != 'create_principal':
-            active_calendar = _active_school_calendar_for_new_workflows()
-            school_calendar_id = request.POST.get('school_calendar_id')
-            school_calendar = SchoolCalendar.objects.filter(pk=school_calendar_id).first()
-            section_name = str(request.POST.get('section') or '').strip()
-            if not active_calendar:
-                context['error_message'] = 'No active School Year is configured. Create or activate a School Calendar before adding a Section.'
-            elif not school_calendar or not section_name:
-                context['error_message'] = 'Choose a School Year and provide a section name.'
-            else:
-                try:
-                    with transaction.atomic():
-                        section = Section.objects.filter(
-                            school=school,
-                            school_calendar=school_calendar,
-                            grade_level__iexact=NEW_USER_GRADE_LEVEL,
-                            section__iexact=section_name,
-                        ).first()
-                        if not section:
-                            Section.objects.create(
-                                school=school,
-                                school_calendar=school_calendar,
-                                grade_level=NEW_USER_GRADE_LEVEL,
-                                section=section_name.upper(),
-                                class_name=f'{NEW_USER_GRADE_LEVEL} - {section_name.upper()}',
-                                class_code=generate_unique_class_code(),
-                                subject='Reading',
-                                is_active=True,
-                            )
-                            return redirect(
-                                f'{reverse("admin_school_detail", args=[school.id])}?school_calendar_id={school_calendar.id}'
-                            )
-                        context['error_message'] = f'{NEW_USER_GRADE_LEVEL} - {section.section} already exists for {school_calendar.school_year}.'
-                except IntegrityError:
-                    context['error_message'] = f'{NEW_USER_GRADE_LEVEL} - {section_name} already exists for {school_calendar.school_year}.'
-
     grouped = {grade: [] for grade in SCHOOL_GRADE_LEVELS}
     for section in _school_sections_queryset(school, selected_calendar):
         grouped.setdefault(section.grade_level, []).append(section)
     context.update({
         'school': school,
-        'school_card_id': ADMIN_SCHOOL_CARD_ID,
-        'school_card_address': ADMIN_SCHOOL_CARD_ADDRESS,
         'principal': context.get('principal', _active_principal_for_school(school)),
+        'archived_principals': User.objects.filter(
+            role='principal', school_record=school, is_archived=True,
+        ).order_by('-archived_at', 'id'),
         'principal_form_data': context.get('principal_form_data', {}),
         'school_calendars': SchoolCalendar.objects.all().order_by('-is_active', '-updated_at', '-created_at'),
         'selected_calendar': selected_calendar,
         'sections_by_grade': grouped,
+        'eligible_teachers': User.objects.filter(
+            role='teacher', is_archived=False, school_record=school,
+        ).exclude(
+            id__in=Section.objects.filter(
+                school=school,
+                school_calendar=selected_calendar,
+                is_active=True,
+                grade_level=NEW_USER_GRADE_LEVEL,
+                teacher__isnull=False,
+            ).values_list('teacher_id', flat=True)
+        ).order_by('last_name', 'first_name', 'custom_id'),
         'returning_students': returning_students,
         'returning_school_calendar': selected_calendar,
     })

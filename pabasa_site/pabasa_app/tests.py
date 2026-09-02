@@ -47,7 +47,7 @@ def test_section_create(**kwargs):
     return Section.objects.create(school=school, **kwargs)
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
 from .management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
-from .views import _active_school_calendar, _apply_progression_unlock_override, _aral_eligible_classification, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _save_admin_practice_material, _sync_assessment_workflow_state, _official_crla_assessment_labels, _official_assessment_availability_for_student
+from .views import _active_school_calendar, _apply_progression_unlock_override, _aral_eligible_classification, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _primary_school, _save_admin_practice_material, _sync_assessment_workflow_state, _official_crla_assessment_labels, _official_assessment_availability_for_student
 from .weekly_digest import send_weekly_digest
 from .scoring import build_assessment_score_payload
 
@@ -10466,7 +10466,7 @@ class AdminSingleSchoolTests(TestCase):
             sex='female', birth_month=1, birth_day=1, birth_year=1990,
             email='admin.salawag@example.com', password_hash=make_password('password'),
         )
-        self.salawag = School.objects.get(name='Salawag Elementary School')
+        self.salawag = _primary_school()
         self.other_school = School.objects.create(name='Other Elementary School', code='OTHER-ES')
         session = self.client.session
         session.update({'user_id': self.admin.id, 'user_role': 'admin', 'custom_id': self.admin.custom_id})
@@ -10477,7 +10477,7 @@ class AdminSingleSchoolTests(TestCase):
 
         self.assertRedirects(
             response,
-            reverse('admin_school_detail', args=[3]),
+            reverse('admin_school_detail', args=[self.salawag.id]),
             fetch_redirect_response=False,
         )
 
@@ -10498,89 +10498,62 @@ class AdminSingleSchoolTests(TestCase):
         self.assertContains(response, '<h1 class="h3 fw-bold mb-0">School</h1>', html=True)
         self.assertContains(response, 'School ID')
         self.assertContains(response, '107912')
-        self.assertContains(response, '4114 Paliparan Road, Dasmariñas, Calabarzon')
+        self.assertContains(response, '4114 Paliparan Road Dasmariñas Calabarzon')
         self.assertContains(response, 'Salawag Elementary School')
-        self.assertContains(response, 'href="/dashboard/admin/school/3/"')
+        self.assertContains(response, 'href="/dashboard/admin/school/"')
         self.assertContains(response, '>School<')
         self.salawag.refresh_from_db()
         self.assertEqual(self.salawag.name, 'Salawag Elementary School')
-        self.assertEqual(self.salawag.code, 'SALAWAG-ES')
+        self.assertEqual(self.salawag.code, '107912')
+        self.assertEqual(self.salawag.address, '4114 Paliparan Road Dasmariñas Calabarzon')
+        self.assertEqual(School.objects.filter(name='Salawag Elementary School').count(), 1)
         self.assertEqual(
             self.client.get(reverse('admin_school_detail', args=[self.other_school.id])).status_code,
             404,
         )
 
-    def test_new_sections_use_selected_calendar_and_grade_two(self):
-        inactive_calendar = SchoolCalendar.objects.create(
-            school_year='2025-2026', current_term=3, is_active=False,
-        )
+    def test_school_displays_predefined_grade_two_sections_without_manual_add_form(self):
         active_calendar = SchoolCalendar.objects.create(
             school_year='2026-2027', current_term=1, is_active=True,
         )
 
         response = self.client.get(reverse('admin_school_detail', args=[self.salawag.id]))
-        self.assertContains(response, 'School Year')
-        self.assertContains(response, active_calendar.school_year)
-        self.assertContains(response, inactive_calendar.school_year)
-        self.assertNotContains(response, 'name="grade_level"')
 
-        response = self.client.post(reverse('admin_school_detail', args=[self.salawag.id]), {
-            'school_calendar_id': inactive_calendar.id,
-            'section': 'Orchid',
+        expected = [
+            'AGUINALDO', 'ALONZO', 'AQUINO', 'BALAGTAS', 'BALTAZAR', 'BONIFACIO',
+            'DAGOHOY', 'DEL PILAR', 'ESCODA', 'JACINTO', 'LAPU-LAPU', 'LUNA',
+            'MABINI', 'MAGSAYSAY', 'MALVAR', 'RICARTE', 'RIZAL', 'SAKAY',
+        ]
+        self.assertNotContains(response, 'Add Section')
+        self.assertNotContains(response, 'name="section" class="form-control"')
+        self.assertEqual(
+            list(Section.objects.filter(
+                school=self.salawag, school_calendar=active_calendar, grade_level='Grade 2',
+            ).order_by('section').values_list('section', flat=True)),
+            sorted(expected),
+        )
+        for section_name in expected:
+            self.assertContains(response, section_name)
+
+    def test_signup_uses_the_same_predefined_sections_for_students_and_teachers(self):
+        SchoolCalendar.objects.create(school_year='2026-2027', current_term=1, is_active=True)
+        expected = [
+            'AGUINALDO', 'ALONZO', 'AQUINO', 'BALAGTAS', 'BALTAZAR', 'BONIFACIO',
+            'DAGOHOY', 'DEL PILAR', 'ESCODA', 'JACINTO', 'LAPU-LAPU', 'LUNA',
+            'MABINI', 'MAGSAYSAY', 'MALVAR', 'RICARTE', 'RIZAL', 'SAKAY',
+        ]
+
+        student_response = self.client.get(reverse('signup_sections'), {
+            'role': 'student', 'grade_level': 'Grade 2',
         })
-        self.assertRedirects(response, reverse('admin_school_detail', args=[self.salawag.id]))
-        created = Section.objects.get(school=self.salawag, section='ORCHID')
-        self.assertEqual(created.school_calendar, inactive_calendar)
-        self.assertEqual(created.grade_level, 'Grade 2')
-
-    def test_school_sections_are_scoped_to_selected_calendar(self):
-        old_calendar = SchoolCalendar.objects.create(
-            school_year='2026-2027', current_term=3, is_active=False,
-        )
-        new_calendar = SchoolCalendar.objects.create(
-            school_year='2027-2028', current_term=1, is_active=True,
-        )
-        old_section = Section.objects.create(
-            school=self.salawag, school_calendar=old_calendar, class_code='OLDY-002',
-            class_name='Grade 2 - Orchid', subject='Reading', grade_level='Grade 2', section='ORCHID',
-        )
-
-        old_response = self.client.get(
-            reverse('admin_school_detail', args=[self.salawag.id]),
-            {'school_calendar_id': old_calendar.id},
-        )
-        self.assertContains(old_response, old_section.section)
-        self.assertNotContains(old_response, 'No sections configured.')
-
-        new_response = self.client.get(
-            reverse('admin_school_detail', args=[self.salawag.id]),
-            {'school_calendar_id': new_calendar.id},
-        )
-        self.assertContains(new_response, 'No sections configured.')
-        self.assertNotContains(new_response, old_section.section)
-
-        create_response = self.client.post(reverse('admin_school_detail', args=[self.salawag.id]), {
-            'school_calendar_id': new_calendar.id,
-            'section': 'Sampaguita',
+        teacher_response = self.client.get(reverse('signup_sections'), {
+            'role': 'teacher', 'grade_level': 'Grade 2',
         })
-        self.assertRedirects(
-            create_response,
-            f'{reverse("admin_school_detail", args=[self.salawag.id])}?school_calendar_id={new_calendar.id}',
-        )
-        self.assertContains(
-            self.client.get(
-                reverse('admin_school_detail', args=[self.salawag.id]),
-                {'school_calendar_id': new_calendar.id},
-            ),
-            'SAMPAGUITA',
-        )
-        self.assertContains(
-            self.client.get(
-                reverse('admin_school_detail', args=[self.salawag.id]),
-                {'school_calendar_id': old_calendar.id},
-            ),
-            'ORCHID',
-        )
+
+        self.assertEqual(student_response.status_code, 200)
+        self.assertEqual(teacher_response.status_code, 200)
+        self.assertEqual([item['section'] for item in student_response.json()['sections']], expected)
+        self.assertEqual([item['section'] for item in teacher_response.json()['sections']], expected)
 
     def test_signup_sections_only_returns_active_school_year_sections(self):
         old_calendar = SchoolCalendar.objects.create(
@@ -10593,17 +10566,13 @@ class AdminSingleSchoolTests(TestCase):
             school=self.salawag, school_calendar=old_calendar, class_code='OLDY-001',
             class_name='Grade 2 - Orchid', subject='Reading', grade_level='Grade 2', section='ORCHID',
         )
-        active_section = Section.objects.create(
-            school=self.salawag, school_calendar=active_calendar, class_code='ACTY-001',
-            class_name='Grade 2 - Sampaguita', subject='Reading', grade_level='Grade 2', section='SAMPAGUITA',
-        )
 
-        response = self.client.get(reverse('signup_sections'), {'role': 'student'})
+        response = self.client.get(reverse('signup_sections'), {'role': 'student', 'grade_level': 'Grade 2'})
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload['school_year'], active_calendar.school_year)
-        self.assertEqual([section['id'] for section in payload['sections']], [active_section.id])
+        self.assertEqual(len(payload['sections']), 18)
         self.assertNotIn(old_section.id, [section['id'] for section in payload['sections']])
 
     def test_signup_sections_requires_an_active_school_year(self):
