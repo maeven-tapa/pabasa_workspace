@@ -206,7 +206,6 @@
               </tbody>
             </table>
           </div>
-          <div class="text-muted small mt-2" id="sectionStudentEmpty" hidden>No students match your search.</div>
         </div>
       </section>
     </div>
@@ -247,7 +246,6 @@ document.addEventListener('DOMContentLoaded', function () {
   const search = document.getElementById('sectionStudentSearch');
   const sort = document.getElementById('sectionStudentSort');
   const count = document.getElementById('sectionStudentCount');
-  const empty = document.getElementById('sectionStudentEmpty');
   if (table && search && sort) {
     const rows = Array.from(table.querySelectorAll('tbody tr[data-student-row]'));
     const normalize = value => String(value || '').trim().toLocaleLowerCase();
@@ -262,7 +260,6 @@ document.addEventListener('DOMContentLoaded', function () {
       rows.forEach(row => { row.hidden = true; });
       visible.forEach(row => { row.hidden = false; table.tBodies[0].appendChild(row); });
       if (count) count.textContent = visible.length;
-      if (empty) empty.hidden = visible.length !== 0;
     };
     search.addEventListener('input', render); sort.addEventListener('change', render); render();
   }
