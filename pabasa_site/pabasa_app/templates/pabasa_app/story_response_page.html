@@ -1,0 +1,561 @@
+{% extends "pabasa_app/base_dashboard.html" %}
+{% load static %}
+
+{% block extra_head %}
+<style>
+    @font-face {
+        font-family: 'Righteous';
+        src: url('{% static "pabasa_app/font/Righteous-Regular.ttf" %}') format('truetype');
+    }
+    .story-response-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .story-panel {
+        background: linear-gradient(135deg, #e8f4f8 0%, #d4e9f2 100%);
+        border-radius: 24px;
+        padding: 2rem;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        overflow-y: auto;
+        max-height: calc(100vh - 120px);
+    }
+
+    .story-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .story-icon {
+        width: 48px;
+        height: 48px;
+        background: rgba(31, 111, 139, 0.1);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+
+    .story-title {
+        font-family: 'Righteous', sans-serif;
+        font-size: 1.4rem;
+        font-weight: 900;
+        line-height: 1.2;
+        color: #1f6f8b;
+        margin: 0;
+    }
+
+    .story-body {
+        font-size: 0.95rem;
+        line-height: 1.8;
+        color: #333;
+        background: #fff;
+        padding: 1.5rem;
+        border-radius: 16px;
+        border: 1px solid rgba(31, 111, 139, 0.15);
+    }
+
+    .response-panel {
+        background: #fff;
+        border: 1px solid #e0e0e0;
+        border-radius: 24px;
+        padding: 2rem;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .response-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .host-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 16px;
+        object-fit: cover;
+        border: 3px solid #007bff;
+    }
+
+    .host-intro {
+        flex: 1;
+    }
+
+    .host-greeting {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-weight: 700;
+        color: #667084;
+        margin: 0 0 0.25rem;
+    }
+
+    .host-name {
+        font-size: 1.1rem;
+        font-weight: 900;
+        color: #1b1a17;
+        margin: 0;
+    }
+
+    .prompt-card {
+        background: linear-gradient(135deg, #fff5e6 0%, #ffe4cc 100%);
+        border: 2px solid #ffc876;
+        border-radius: 18px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .prompt-label {
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #b8860b;
+        margin: 0 0 0.5rem;
+    }
+
+    .prompt-text {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #333;
+        line-height: 1.4;
+        margin: 0;
+    }
+
+    .response-input-section {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 1.5rem;
+    }
+
+    .response-label {
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #667084;
+        margin-bottom: 0.75rem;
+    }
+
+    .response-textarea {
+        flex: 1;
+        padding: 1rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        font-size: 0.95rem;
+        font-family: inherit;
+        resize: none;
+        min-height: 150px;
+    }
+
+    .response-textarea:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+    }
+
+    .response-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .action-button {
+        padding: 0.75rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        background: #fff;
+        color: #333;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .action-button:hover {
+        border-color: #007bff;
+        background: #f0f7ff;
+        color: #007bff;
+    }
+
+    .action-button.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .submission-section {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .btn-submit {
+        flex: 1;
+        padding: 0.85rem;
+        border: 0;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: #fff;
+        font-weight: 700;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(0, 123, 255, 0.3);
+    }
+
+    .btn-submit:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .btn-back {
+        padding: 0.85rem 1.25rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        background: #fff;
+        color: #333;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-back:hover {
+        border-color: #ccc;
+        background: #f9f9f9;
+    }
+
+    .recording-indicator {
+        display: none;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        background: #ffe6e6;
+        border: 1px solid #ffcccc;
+        border-radius: 8px;
+        color: #c41e3a;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .recording-indicator.active {
+        display: flex;
+    }
+
+    .recording-dot {
+        width: 8px;
+        height: 8px;
+        background: #c41e3a;
+        border-radius: 50%;
+        animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    .success-message {
+        display: none;
+        padding: 1rem;
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        border-radius: 8px;
+        color: #155724;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .success-message.show {
+        display: block;
+    }
+
+    @media (max-width: 1024px) {
+        .story-response-container {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            padding: 1.5rem;
+        }
+
+        .story-panel {
+            max-height: 300px;
+        }
+
+        .response-panel {
+            min-height: auto;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .response-actions {
+            grid-template-columns: 1fr;
+        }
+
+        .story-response-container {
+            padding: 1rem;
+            gap: 1rem;
+        }
+
+        .host-avatar {
+            width: 60px;
+            height: 60px;
+        }
+
+        .prompt-text {
+            font-size: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block header %}
+    {% include "pabasa_app/partials/_header.html" with page_title="Story Response" page_date="" %}
+{% endblock %}
+
+{% block content %}
+<div class="story-response-container">
+    <!-- Left: Story Panel -->
+    <div class="story-panel">
+        <div class="story-header">
+            <div class="story-icon">📖</div>
+            <div>
+                <h2 class="story-title" id="storyTitle">Story</h2>
+            </div>
+        </div>
+        <div class="story-body" id="storyBody">
+            <!-- Story text loaded via JS -->
+        </div>
+    </div>
+
+    <!-- Right: Response Panel -->
+    <div class="response-panel">
+        <div class="response-header">
+            <img id="hostAvatar" class="host-avatar" src="{% static 'pabasa_app/images/story_response/female_idle.png' %}" alt="Your avatar">
+            <div class="host-intro">
+                <p class="host-greeting">Let's reflect</p>
+                <p class="host-name" id="studentName">Friend</p>
+            </div>
+        </div>
+
+        <div class="prompt-card">
+            <p class="prompt-label">Response Prompt</p>
+            <p class="prompt-text" id="promptText">Loading...</p>
+        </div>
+
+        <div class="response-input-section">
+            <div class="response-label">Your Response</div>
+            <textarea 
+                id="responseTextarea" 
+                class="response-textarea" 
+                placeholder="Share your thoughts, feelings, and reflections about the story. What did you think? How did it make you feel?">
+            </textarea>
+        </div>
+
+        <div class="recording-indicator" id="recordingIndicator">
+            <span class="recording-dot"></span>
+            <span>Recording your response...</span>
+        </div>
+
+        <div class="response-actions">
+            <button class="action-button" id="readAloudBtn" style="display: none;">
+                <i class="bi bi-volume-up"></i> Read Aloud
+            </button>
+            <button class="action-button" id="recordBtn" style="display: none;">
+                <i class="bi bi-mic-fill"></i> Record Voice
+            </button>
+        </div>
+
+        <div class="success-message" id="successMessage">
+            <i class="bi bi-check-circle me-2"></i>
+            Your response has been recorded!
+        </div>
+
+        <div class="submission-section">
+            <button class="btn-submit" id="submitBtn">Submit Response</button>
+            <button class="btn-back" id="backBtn">Back</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const activity = {{ story_response_data|safe }};
+    
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set story content
+        document.getElementById('storyTitle').textContent = activity.source_story_title || 'Story';
+        document.getElementById('storyBody').textContent = activity.source_story_text || 'Story content loading...';
+        
+        // Set student name
+        document.getElementById('studentName').textContent = activity.student_first_name || 'Friend';
+        
+        // Set prompt
+        document.getElementById('promptText').textContent = activity.response_prompt || 'Share your thoughts about this story.';
+        
+        // The student avatar is chosen from the student's signup/profile sex; teachers do not select it.
+        const hostPath = activity.student_avatar_set === 'male'
+            ? '{% static "pabasa_app/images/story_response/male_idle.png" %}'
+            : '{% static "pabasa_app/images/story_response/female_idle.png" %}';
+        document.getElementById('hostAvatar').src = hostPath;
+        
+        // Show/hide audio buttons
+        if (activity.read_aloud_enabled) {
+            document.getElementById('readAloudBtn').style.display = 'flex';
+        }
+        if (activity.voice_recording_enabled) {
+            document.getElementById('recordBtn').style.display = 'flex';
+        }
+        
+        // Event listeners
+        document.getElementById('submitBtn').addEventListener('click', submitResponse);
+        document.getElementById('backBtn').addEventListener('click', function() {
+            window.location.href = activity.return_url || '{% url "dashboard" %}';
+        });
+        
+        if (activity.read_aloud_enabled) {
+            document.getElementById('readAloudBtn').addEventListener('click', readAloudPrompt);
+        }
+        
+        if (activity.voice_recording_enabled) {
+            document.getElementById('recordBtn').addEventListener('click', toggleVoiceRecording);
+        }
+    });
+    
+    let isRecording = false;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    
+    function readAloudPrompt() {
+        const text = activity.response_prompt;
+        if ('speechSynthesis' in window) {
+            // Cancel any current speech
+            speechSynthesis.cancel();
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = activity.language === 'Filipino' ? 'fil-PH' : 'en-US';
+            utterance.rate = 0.9;
+            speechSynthesis.speak(utterance);
+        } else {
+            alert('Text-to-speech is not supported in your browser.');
+        }
+    }
+    
+    async function toggleVoiceRecording() {
+        if (!isRecording) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.start();
+                isRecording = true;
+                
+                document.getElementById('recordBtn').textContent = '⏹ Stop Recording';
+                document.getElementById('recordingIndicator').classList.add('active');
+                document.getElementById('recordBtn').classList.add('recording-active');
+            } catch (error) {
+                alert('Unable to access microphone. Please check permissions.');
+                console.error('Microphone access error:', error);
+            }
+        } else {
+            mediaRecorder.stop();
+            isRecording = false;
+            
+            document.getElementById('recordBtn').textContent = '🎤 Record Voice';
+            document.getElementById('recordingIndicator').classList.remove('active');
+            document.getElementById('recordBtn').classList.remove('recording-active');
+            
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                // Could upload audio here or just use transcript
+                console.log('Audio recorded:', audioBlob);
+            };
+        }
+    }
+    
+    async function submitResponse() {
+        const responseText = document.getElementById('responseTextarea').value.trim();
+        
+        if (!responseText) {
+            alert('Please write a response before submitting.');
+            return;
+        }
+        
+        document.getElementById('submitBtn').disabled = true;
+        document.getElementById('submitBtn').textContent = 'Submitting...';
+        
+        try {
+            const response = await fetch('{% url "story_response_submit" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    material_id: activity.material_id,
+                    response_text: responseText,
+                    duration_seconds: 0,
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                document.getElementById('successMessage').classList.add('show');
+                
+                setTimeout(() => {
+                    window.location.href = activity.return_url || '{% url "dashboard" %}';
+                }, 2000);
+            } else {
+                alert('Error: ' + (data.error || 'Failed to submit response'));
+                document.getElementById('submitBtn').disabled = false;
+                document.getElementById('submitBtn').textContent = 'Submit Response';
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred while submitting your response');
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('submitBtn').textContent = 'Submit Response';
+        }
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

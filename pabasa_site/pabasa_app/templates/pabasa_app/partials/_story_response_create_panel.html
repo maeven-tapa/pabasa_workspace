@@ -1,0 +1,611 @@
+<!-- Story Response Create Activity Panel -->
+<!-- This panel is embedded in the course materials interface -->
+<!-- Triggered when teacher selects "Story Response" activity type -->
+
+<div class="modal fade" id="storyResponseCreateModal" tabindex="-1" aria-labelledby="storyResponseCreateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <form id="storyResponseCreateForm">
+                <!-- Header -->
+                <div class="modal-header border-0">
+                    <div>
+                        <h1 class="modal-title fs-5" id="storyResponseCreateModalLabel">Create Story Response Activity</h1>
+                        <p class="small text-secondary mb-0">Prompt students to reflect on a story they've already read</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Body -->
+                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                    <!-- Section 1: Activity Title -->
+                    <div class="mb-4">
+                        <h6 class="mb-2">Activity Title</h6>
+                        <input type="text" class="form-control" id="storyResponseTitle" name="title" placeholder="Story Response" value="Story Response" required>
+                        <small class="text-secondary">Teachers can customize the activity title</small>
+                    </div>
+
+                    <!-- Section 2: Lesson Info -->
+                    <div class="mb-4">
+                        <h6 class="mb-2">Lesson</h6>
+                        <div class="form-control-plaintext">
+                            <strong>Response to Story</strong>
+                            <p class="small text-secondary mb-0">Helps students respond to, reflect on, and connect with stories</p>
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Select Published Story -->
+                    <div class="mb-4">
+                        <h6 class="mb-2">Select Published Story</h6>
+                        <div id="storyLoadingSpinner" class="text-center" style="display: none;">
+                            <div class="spinner-border spinner-border-sm" role="status">
+                                <span class="visually-hidden">Loading stories...</span>
+                            </div>
+                        </div>
+                        <div id="storySelector" class="story-selector-grid" style="display: none;">
+                            <!-- Stories loaded via JS -->
+                        </div>
+                        <div id="storyEmptyState" class="alert alert-info" role="alert" style="display: none;">
+                            <i class="bi bi-info-circle me-2"></i>
+                            No published Story Reading activities found. Create one first before creating Story Response activities.
+                        </div>
+                        <input type="hidden" id="selectedStoryId" name="selected_story_id">
+                    </div>
+
+                    <!-- Section 4: Story Preview -->
+                    <div id="storyPreviewSection" class="mb-4" style="display: none;">
+                        <h6 class="mb-2">Story Preview</h6>
+                        <div class="story-preview-card">
+                            <div class="story-preview-header">
+                                <h5 id="previewStoryTitle" class="mb-1"></h5>
+                                <span id="previewStoryLanguage" class="badge bg-light text-dark"></span>
+                            </div>
+                            <div id="previewStoryText" class="story-preview-text mt-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- Section 5: Response Prompt -->
+                    <div class="mb-4">
+                        <h6 class="mb-2">Response Prompt</h6>
+                        <div id="promptLoadingSpinner" class="text-center" style="display: none;">
+                            <div class="spinner-border spinner-border-sm" role="status">
+                                <span class="visually-hidden">Loading prompts...</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Suggested Prompts Tabs -->
+                        <ul class="nav nav-tabs nav-fill mb-3" id="promptTabs" role="tablist" style="display: none;">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="suggestedPromptsTab" data-bs-toggle="tab" data-bs-target="#suggestedPromptsPane" type="button" role="tab">
+                                    <i class="bi bi-lightbulb me-1"></i> Suggested Prompts
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="customPromptTab" data-bs-toggle="tab" data-bs-target="#customPromptPane" type="button" role="tab">
+                                    <i class="bi bi-pencil-square me-1"></i> Create Your Own
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content" id="promptTabContent">
+                            <!-- Suggested Prompts -->
+                            <div class="tab-pane fade show active" id="suggestedPromptsPane" role="tabpanel">
+                                <div id="promptCategoriesContainer">
+                                    <!-- Prompt categories loaded via JS -->
+                                </div>
+                            </div>
+
+                            <!-- Custom Prompt -->
+                            <div class="tab-pane fade" id="customPromptPane" role="tabpanel">
+                                <div class="mb-3">
+                                    <label for="customPromptText" class="form-label">Your Custom Prompt</label>
+                                    <textarea class="form-control" id="customPromptText" name="custom_prompt" rows="3" placeholder="Enter a reflection prompt for students..."></textarea>
+                                    <small class="text-secondary">Example: What part of the story surprised you the most? Why?</small>
+                                </div>
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="useCustomPromptBtn">Use This Prompt</button>
+                            </div>
+                        </div>
+
+                        <!-- Selected Prompt Display -->
+                        <div id="selectedPromptDisplay" class="alert alert-info mt-3" style="display: none;">
+                            <strong>Selected Prompt:</strong>
+                            <p id="selectedPromptText" class="mb-0 mt-1"></p>
+                        </div>
+                        <input type="hidden" id="selectedPrompt" name="response_prompt">
+                        <input type="hidden" id="selectedPromptSource" name="prompt_source" value="suggested">
+                    </div>
+
+                    <!-- Section 6: Host Character -->
+                    <div class="mb-4">
+                        <h6 class="mb-2">Host Character</h6>
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <label class="position-relative">
+                                    <input type="radio" name="host_character" value="female" class="host-character-radio" checked>
+                                    <div class="host-character-card">
+                                        <img src="{% static 'pabasa_app/images/host/female_idle.jpg' %}" alt="Female Host" class="host-character-image">
+                                        <span class="host-character-label">Female Host</span>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="position-relative">
+                                    <input type="radio" name="host_character" value="male" class="host-character-radio">
+                                    <div class="host-character-card">
+                                        <img src="{% static 'pabasa_app/images/host/male_idle.png' %}" alt="Male Host" class="host-character-image">
+                                        <span class="host-character-label">Male Host</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 7: Audio Settings -->
+                    <div class="mb-4">
+                        <h6 class="mb-2">Audio Settings</h6>
+                        <div class="form-check form-check-lg mb-2">
+                            <input class="form-check-input" type="checkbox" id="readAloudEnabled" name="read_aloud_enabled" checked>
+                            <label class="form-check-label" for="readAloudEnabled">
+                                Enable Read Aloud
+                                <small class="d-block text-secondary mt-1">Students can hear the response prompt using text-to-speech</small>
+                            </label>
+                        </div>
+                        <div class="form-check form-check-lg">
+                            <input class="form-check-input" type="checkbox" id="voiceRecordingEnabled" name="voice_recording_enabled" checked>
+                            <label class="form-check-label" for="voiceRecordingEnabled">
+                                Enable Voice Recording
+                                <small class="d-block text-secondary mt-1">Students can record their spoken response</small>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Section 8: Student Activity Preview -->
+                    <div class="mb-4">
+                        <h6 class="mb-2">Student Activity Preview</h6>
+                        <div class="student-preview-card">
+                            <div class="student-preview-header">
+                                <div class="d-flex align-items-center gap-2">
+                                    <img id="previewHostImage" src="{% static 'pabasa_app/images/host/female_idle.jpg' %}" alt="Host" style="width: 60px; height: 60px; border-radius: 8px;">
+                                    <div>
+                                        <p class="mb-0 small text-secondary">Response Prompt</p>
+                                        <p id="previewPromptText" class="mb-0 fw-bold"></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="student-preview-actions mt-3">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" disabled>
+                                    <i class="bi bi-volume-up me-1"></i> Read Aloud
+                                </button>
+                                <button type="button" class="btn btn-primary btn-sm" disabled>
+                                    <i class="bi bi-mic-fill me-1"></i> Record Answer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="createStoryResponseBtn" disabled>Create Activity</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .story-selector-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: 1fr;
+    }
+
+    .story-selector-item {
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: #fff;
+    }
+
+    .story-selector-item:hover {
+        border-color: #007bff;
+        box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+    }
+
+    .story-selector-item.selected {
+        border-color: #007bff;
+        background-color: rgba(0, 123, 255, 0.05);
+    }
+
+    .story-selector-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        gap: 1rem;
+    }
+
+    .story-selector-item-title {
+        font-weight: 600;
+        font-size: 0.95rem;
+        margin: 0;
+    }
+
+    .story-selector-item-language {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .story-preview-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 1rem;
+        background: #f9f9f9;
+    }
+
+    .story-preview-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+    }
+
+    .story-preview-text {
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: #333;
+        max-height: 150px;
+        overflow-y: auto;
+    }
+
+    .prompt-category {
+        margin-bottom: 1.5rem;
+    }
+
+    .prompt-category-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .prompt-category-emoji {
+        font-size: 1.2rem;
+    }
+
+    .prompt-option {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: #fff;
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+
+    .prompt-option:hover {
+        border-color: #007bff;
+        background-color: #f0f7ff;
+    }
+
+    .prompt-option.selected {
+        border-color: #007bff;
+        background-color: #0066cc;
+        color: #fff;
+    }
+
+    .host-character-card {
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: #fff;
+    }
+
+    .host-character-radio {
+        display: none;
+    }
+
+    .host-character-radio:checked + .host-character-card {
+        border-color: #007bff;
+        background-color: rgba(0, 123, 255, 0.05);
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+    }
+
+    .host-character-image {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+    }
+
+    .host-character-label {
+        display: block;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #333;
+    }
+
+    .student-preview-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 1.25rem;
+        background: linear-gradient(135deg, #f5f8ff 0%, #e6f0ff 100%);
+    }
+
+    .student-preview-header {
+        padding: 0.75rem;
+        background: #fff;
+        border-radius: 8px;
+    }
+
+    .student-preview-actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .student-preview-actions button {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('storyResponseCreateModal');
+        const form = document.getElementById('storyResponseCreateForm');
+        const storySelector = document.getElementById('storySelector');
+        const storyLoadingSpinner = document.getElementById('storyLoadingSpinner');
+        const storyEmptyState = document.getElementById('storyEmptyState');
+        const selectedStoryIdInput = document.getElementById('selectedStoryId');
+        const storyPreviewSection = document.getElementById('storyPreviewSection');
+        const promptTabs = document.getElementById('promptTabs');
+        const promptLoadingSpinner = document.getElementById('promptLoadingSpinner');
+        const promptCategoriesContainer = document.getElementById('promptCategoriesContainer');
+        const customPromptText = document.getElementById('customPromptText');
+        const useCustomPromptBtn = document.getElementById('useCustomPromptBtn');
+        const selectedPromptDisplay = document.getElementById('selectedPromptDisplay');
+        const selectedPromptText = document.getElementById('selectedPromptText');
+        const selectedPrompt = document.getElementById('selectedPrompt');
+        const selectedPromptSource = document.getElementById('selectedPromptSource');
+        const createBtn = document.getElementById('createStoryResponseBtn');
+        const hostCharacterRadios = document.querySelectorAll('.host-character-radio');
+        const previewHostImage = document.getElementById('previewHostImage');
+
+        // Load published stories when modal opens
+        modal.addEventListener('show.bs.modal', async function() {
+            storyLoadingSpinner.style.display = 'block';
+            storySelector.style.display = 'none';
+            storyEmptyState.style.display = 'none';
+
+            try {
+                const response = await fetch('{% url "get_published_stories_api" %}', {
+                    method: 'GET',
+                    headers: {'Accept': 'application/json'}
+                });
+                const data = await response.json();
+
+                if (data.success && data.stories.length > 0) {
+                    renderStories(data.stories);
+                    storySelector.style.display = 'grid';
+                } else {
+                    storyEmptyState.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error loading stories:', error);
+                storyEmptyState.style.display = 'block';
+            } finally {
+                storyLoadingSpinner.style.display = 'none';
+            }
+        });
+
+        function renderStories(stories) {
+            storySelector.innerHTML = stories.map(story => `
+                <div class="story-selector-item" data-story-id="${story.id}">
+                    <div class="story-selector-item-header">
+                        <div>
+                            <h5 class="story-selector-item-title">${story.title}</h5>
+                            <span class="story-selector-item-language">${story.language}</span>
+                        </div>
+                        <span class="badge bg-success" style="align-self: start;">Published</span>
+                    </div>
+                    <p class="small text-secondary mb-0 mt-2">${story.text_preview}...</p>
+                </div>
+            `).join('');
+
+            // Add click handlers
+            document.querySelectorAll('.story-selector-item').forEach(item => {
+                item.addEventListener('click', async function() {
+                    selectStory(this);
+                });
+            });
+        }
+
+        async function selectStory(element) {
+            // Update UI
+            document.querySelectorAll('.story-selector-item').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+
+            const storyId = element.getAttribute('data-story-id');
+            selectedStoryIdInput.value = storyId;
+
+            // Update preview
+            const storyTitle = element.querySelector('.story-selector-item-title').textContent;
+            const storyLanguage = element.querySelector('.story-selector-item-language').textContent;
+            const storyText = element.querySelector('.small').textContent;
+
+            document.getElementById('previewStoryTitle').textContent = storyTitle;
+            document.getElementById('previewStoryLanguage').textContent = storyLanguage;
+            document.getElementById('previewStoryText').textContent = storyText.substring(0, 300) + '...';
+            storyPreviewSection.style.display = 'block';
+
+            // Load prompts
+            await loadPrompts(storyId, storyLanguage);
+
+            // Validate form
+            validateForm();
+        }
+
+        async function loadPrompts(storyId, language) {
+            promptLoadingSpinner.style.display = 'block';
+            promptCategoriesContainer.innerHTML = '';
+            promptTabs.style.display = 'none';
+
+            try {
+                const response = await fetch('{% url "get_story_response_prompts_api" %}', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({story_id: storyId, language: language})
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    renderPrompts(data.prompts_by_category);
+                    promptTabs.style.display = 'flex';
+                }
+            } catch (error) {
+                console.error('Error loading prompts:', error);
+            } finally {
+                promptLoadingSpinner.style.display = 'none';
+            }
+        }
+
+        function renderPrompts(promptsByCategory) {
+            const categories = [
+                'feelings', 'imagine', 'connect', 'reflect', 'predict'
+            ];
+
+            const html = categories
+                .filter(cat => promptsByCategory[cat])
+                .map(cat => {
+                    const categoryData = promptsByCategory[cat];
+                    return `
+                        <div class="prompt-category">
+                            <div class="prompt-category-header">
+                                <span class="prompt-category-emoji">${categoryData.emoji}</span>
+                                <div>
+                                    <strong>${categoryData.label}</strong>
+                                    <small class="d-block text-secondary">${categoryData.description}</small>
+                                </div>
+                            </div>
+                            ${categoryData.prompts.map(prompt => `
+                                <div class="prompt-option" data-prompt="${prompt.text}" data-category="${cat}">
+                                    ${prompt.text}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }).join('');
+
+            promptCategoriesContainer.innerHTML = html;
+
+            // Add click handlers
+            document.querySelectorAll('.prompt-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    selectPrompt(this.getAttribute('data-prompt'), 'suggested', this.getAttribute('data-category'));
+                    this.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+                });
+            });
+        }
+
+        function selectPrompt(promptText, source, category) {
+            // Deselect all prompts
+            document.querySelectorAll('.prompt-option').forEach(el => el.classList.remove('selected'));
+
+            // Select clicked prompt
+            const selected = Array.from(document.querySelectorAll('.prompt-option'))
+                .find(el => el.getAttribute('data-prompt') === promptText);
+            if (selected) selected.classList.add('selected');
+
+            selectedPrompt.value = promptText;
+            selectedPromptSource.value = source;
+            selectedPromptText.textContent = promptText;
+            selectedPromptDisplay.style.display = 'block';
+
+            document.getElementById('previewPromptText').textContent = promptText;
+
+            validateForm();
+        }
+
+        // Custom prompt handling
+        useCustomPromptBtn.addEventListener('click', function() {
+            const customText = customPromptText.value.trim();
+            if (customText) {
+                selectPrompt(customText, 'custom', 'custom');
+                // Switch to suggested tab to show selection
+                document.querySelector('[data-bs-target="#suggestedPromptsPane"]').click();
+            }
+        });
+
+        // Host character change
+        hostCharacterRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                const hostPath = this.value === 'female' 
+                    ? '{% static "pabasa_app/images/host/female_idle.jpg" %}'
+                    : '{% static "pabasa_app/images/host/male_idle.png" %}';
+                previewHostImage.src = hostPath;
+                validateForm();
+            });
+        });
+
+        function validateForm() {
+            const hasStory = !!selectedStoryIdInput.value;
+            const hasPrompt = !!selectedPrompt.value;
+            createBtn.disabled = !hasStory || !hasPrompt;
+        }
+
+        // Form submission
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const payload = {
+                title: formData.get('title'),
+                source_story_id: parseInt(formData.get('selected_story_id')),
+                response_prompt: formData.get('response_prompt'),
+                prompt_source: formData.get('prompt_source'),
+                host_character: formData.get('host_character'),
+                read_aloud_enabled: formData.has('read_aloud_enabled'),
+                voice_recording_enabled: formData.has('voice_recording_enabled'),
+                activity_type: 'story_response',
+            };
+
+            try {
+                createBtn.disabled = true;
+                createBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
+
+                const response = await fetch('{% url "add_reading_material" %}', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Close modal and refresh
+                    bootstrap.Modal.getInstance(modal).hide();
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to create activity'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while creating the activity');
+            } finally {
+                createBtn.disabled = false;
+                createBtn.innerHTML = 'Create Activity';
+            }
+        });
+    });
+</script>

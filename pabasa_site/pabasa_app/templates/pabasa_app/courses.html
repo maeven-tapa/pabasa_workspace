@@ -4,6 +4,11 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'pabasa_app/sound_detective.css' %}?v=20260831-7">
 <style>
+    @font-face {
+        font-family: 'Righteous';
+        src: url('{% static "pabasa_app/font/Righteous-Regular.ttf" %}') format('truetype');
+    }
+
     :root {
         --dash-primary: #1f6f8b;
         --dash-primary-soft: rgba(31,111,139,0.08);
@@ -14693,6 +14698,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return title === 'Story Reading';
         }
 
+        function isStoryResponseTemplate(title) {
+            return title === 'Story Response';
+        }
+
         function getPhraseReadingLanguage() {
             const raw = String(templateLanguageHidden?.value || activeTemplateActivity?.language || 'Tagalog');
             return raw === 'Filipino' ? 'Tagalog' : raw;
@@ -16215,6 +16224,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
             document.querySelector('.template-title-field')?.classList.toggle('d-none', title === "5W's Story Questions");
             if (title === "5W's Story Questions") { if (templateActivityTitle) templateActivityTitle.value = ''; renderFiveWEditor(); return; }
+            if (isStoryResponseTemplate(title)) { renderStoryResponseEditor(); return; }
             updateStoryReadingLanguageAvailability();
             updateSentenceReadingLanguageAvailability();
             if (isPhraseReadingTemplate(title)) {
@@ -16464,8 +16474,17 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 }
                 const questions = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : [];
                 previewBody = story || questions.length ? `<article class="preview-reading-card five-w-story-card mb-2"><strong>${escapeHtml(storyTitle)}</strong><div class="mt-2">${escapeHtml(story)}</div></article><div class="five-w-question-list">${questions.map((question, index) => `<div class="preview-question mb-2"><strong>Question ${index + 1}</strong><span class="preview-question-text">${escapeHtml(question.question || '')}</span></div>`).join('')}</div>` : empty('Select a published story and add a question to begin the preview.');
-            } else if (templateTitle === 'Retell the Story' || templateTitle === 'Story Response') {
-                instruction = templateTitle === 'Retell the Story' ? learnerCopy.retell : learnerCopy.response;
+            } else if (isStoryResponseTemplate(templateTitle)) {
+                const response = activeTemplateActivity.storyResponse || {};
+                const story = (response.stories || []).find(item => String(item.id) === String(response.storyId));
+                const storyText = String(story?.story_text || story?.text_preview || '').trim();
+                const prompt = String(response.prompt || '').trim();
+                instruction = language === 'Filipino' ? 'Basahin ang kuwento at ibahagi ang iyong tugon.' : 'Read the story and share your response.';
+                previewBody = story && prompt
+                    ? `<div class="preview-story-response"><article class="preview-reading-card mb-3"><div class="d-flex align-items-center gap-3 mb-3"><img src="{% static 'pabasa_app/images/story_response/female_idle.png' %}" alt="Student avatar" style="width:54px;height:54px;object-fit:contain"><div><div class="small text-muted">${language === 'Filipino' ? 'Kuwento' : 'Story'}</div><strong style="font-family:'Righteous', 'Nunito', sans-serif">${escapeHtml(story.title || '')}</strong></div></div><div>${escapeHtml(storyText)}</div></article><div class="preview-question mb-3"><div class="small fw-bold text-muted mb-1">${language === 'Filipino' ? 'Iyong Tugon' : 'Your Response'}</div>${escapeHtml(prompt)}</div><div class="d-flex flex-wrap gap-2 mb-3">${response.readAloud !== false ? `<button class="btn btn-outline-primary btn-sm" type="button" tabindex="-1"><i class="bi bi-volume-up me-1"></i>${language === 'Filipino' ? 'Pakinggan' : 'Read Aloud'}</button>` : ''}${response.voiceRecording !== false ? `<button class="btn btn-primary btn-sm" type="button" tabindex="-1"><i class="bi bi-mic-fill me-1"></i>${language === 'Filipino' ? 'I-record ang Sagot' : 'Record Answer'}</button>` : ''}</div><div class="preview-writing-area" aria-label="Learner writing area"><div class="preview-writing-line"></div><div class="preview-writing-line"></div><div class="preview-writing-line"></div></div></div>`
+                    : empty('Add the story and response prompt to begin the preview.');
+            } else if (templateTitle === 'Retell the Story') {
+                instruction = learnerCopy.retell;
                 const item = {}; templateDynamicFields?.querySelectorAll('.template-content-field').forEach(field => item[field.dataset.fieldKey] = field.value);
                 const prompt = item.prompt || item.guideQuestions || item.guidance || '';
                 previewBody = item.story || prompt ? `<article class="preview-reading-card mb-3">${escapeHtml(item.story || '')}</article>${prompt ? `<div class="preview-question mb-3">${escapeHtml(prompt)}</div>` : ''}<div class="preview-writing-area" aria-label="Learner writing area"><div class="preview-writing-line"></div><div class="preview-writing-line"></div><div class="preview-writing-line"></div></div>` : empty('Add the story and response prompt to begin the preview.');
@@ -16494,6 +16513,27 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 templatePreviewPanel.querySelector('[data-clap-preview-prev]')?.addEventListener('click', () => { config.previewIndex = Math.max(0, (Number(config.previewIndex) || 0) - 1); renderTemplatePreview(); });
                 templatePreviewPanel.querySelector('[data-clap-preview-next]')?.addEventListener('click', () => { config.previewIndex = (Number(config.previewIndex) || 0) + 1; renderTemplatePreview(); });
             }
+        }
+
+        async function renderStoryResponseEditor() {
+            if (!templateDynamicFields || !activeTemplateActivity) return;
+            const response = activeTemplateActivity.storyResponse || {};
+            const promptSets = {
+                English: ['What was your favorite part of the story?', 'How did the story make you feel?', 'If you were the character, what would you do?', 'Does the story remind you of something in your life?', 'What would you change about the story?', 'What do you think might happen next?'],
+                Filipino: ['Ano ang paborito mong bahagi ng kuwento?', 'Ano ang naramdaman mo habang binabasa o pinakikinggan ang kuwento?', 'Kung ikaw ang tauhan, ano ang gagawin mo?', 'May ipinapaalala ba sa iyo ang kuwento tungkol sa iyong sariling karanasan?', 'Ano ang gusto mong baguhin sa kuwento?', 'Sa tingin mo, ano ang maaaring mangyari pagkatapos?']
+            };
+            const activityLanguage = getSelectedTemplateLanguage();
+            const prompts = promptSets[activityLanguage];
+            if (response.promptSource !== 'custom' && response.prompt && !prompts.includes(response.prompt)) {
+                response.prompt = '';
+                response.promptSource = 'suggested';
+            }
+            templateDynamicFields.innerHTML = `<div class="row g-3"><div class="col-12"><label class="form-label fw-bold" for="storyResponseStory">Published Story Reading <span class="text-danger">*</span></label><select id="storyResponseStory" class="form-select" disabled><option>Loading published stories…</option></select><div class="form-text">Stories are loaded from your published Story Reading activities.</div><div id="storyResponseStoryNotice" class="alert alert-warning small mt-2 mb-0 d-none"></div></div><div class="col-12" id="storyResponseStoryPreview"></div><div class="col-12"><label class="form-label fw-bold">Response Prompt <span class="text-danger">*</span></label><div class="row g-2 mb-2">${prompts.map(prompt => `<div class="col-12 col-lg-6"><button type="button" class="btn w-100 text-start border story-response-prompt ${response.prompt === prompt && response.promptSource !== 'custom' ? 'border-primary bg-primary-subtle' : ''}" data-story-response-prompt="${escapeAttr(prompt)}">${escapeHtml(prompt)}</button></div>`).join('')}</div><label class="form-label small fw-bold mt-2" for="storyResponseCustomPrompt">Create Your Own Prompt</label><textarea id="storyResponseCustomPrompt" class="form-control" rows="3" placeholder="Write a personal, reflective, or imaginative prompt…">${escapeHtml(response.promptSource === 'custom' ? (response.prompt || '') : '')}</textarea><div class="form-text">A custom prompt is saved with this activity.</div></div><div class="col-md-6"><div class="form-check border rounded-3 p-3 h-100"><input class="form-check-input" type="checkbox" id="storyResponseReadAloud" ${response.readAloud !== false ? 'checked' : ''}><label class="form-check-label fw-semibold" for="storyResponseReadAloud">Read Aloud</label><div class="form-text">Let students hear the response prompt using text-to-speech.</div></div></div><div class="col-md-6"><div class="form-check border rounded-3 p-3 h-100"><input class="form-check-input" type="checkbox" id="storyResponseVoiceRecording" ${response.voiceRecording !== false ? 'checked' : ''}><label class="form-check-label fw-semibold" for="storyResponseVoiceRecording">Voice Recording</label><div class="form-text">Let students record a spoken response.</div></div></div></div>`;
+            const storySelect = document.getElementById('storyResponseStory'); const storyNotice = document.getElementById('storyResponseStoryNotice'); const preview = document.getElementById('storyResponseStoryPreview');
+            const updateResponse = () => { const selected = response.stories?.find(story => String(story.id) === String(storySelect.value)); const customPrompt = document.getElementById('storyResponseCustomPrompt').value.trim(); const selectedPrompt = templateDynamicFields.querySelector('.story-response-prompt.border-primary')?.dataset.storyResponsePrompt || ''; activeTemplateActivity.storyResponse = { stories: response.stories || [], storyId: storySelect.value, prompt: customPrompt || selectedPrompt, promptSource: customPrompt ? 'custom' : 'suggested', readAloud: document.getElementById('storyResponseReadAloud').checked, voiceRecording: document.getElementById('storyResponseVoiceRecording').checked }; preview.innerHTML = selected ? `<div class="border rounded-3 bg-light p-3"><div class="fw-semibold">${escapeHtml(selected.title)}</div><div class="small text-muted mb-2">${escapeHtml(selected.language || '')}</div><div class="small">${escapeHtml(selected.text_preview || '')}</div></div>` : ''; renderTemplatePreview(); };
+            templateDynamicFields.addEventListener('click', event => { const promptButton = event.target.closest('[data-story-response-prompt]'); if (!promptButton) return; templateDynamicFields.querySelectorAll('[data-story-response-prompt]').forEach(button => button.classList.remove('border-primary', 'bg-primary-subtle')); promptButton.classList.add('border-primary', 'bg-primary-subtle'); document.getElementById('storyResponseCustomPrompt').value = ''; updateResponse(); });
+            ['change', 'input'].forEach(eventName => templateDynamicFields.addEventListener(eventName, event => { if (event.target.matches('#storyResponseStory, #storyResponseCustomPrompt, #storyResponseReadAloud, #storyResponseVoiceRecording')) updateResponse(); }));
+            try { const apiResponse = await fetch('{% url "get_published_stories_api" %}', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }); const data = await apiResponse.json(); const stories = data.success && Array.isArray(data.stories) ? data.stories : []; if (!activeTemplateActivity || activeTemplateActivity.templateTitle !== 'Story Response') return; response.stories = stories; storySelect.disabled = !stories.length; if (!stories.length) { storySelect.innerHTML = '<option value="">No published Story Reading activities available</option>'; storyNotice.textContent = 'Publish a Story Reading activity first, then it will appear here automatically.'; storyNotice.classList.remove('d-none'); return; } const selectedId = stories.some(story => String(story.id) === String(response.storyId)) ? response.storyId : stories[0].id; storySelect.innerHTML = `<option value="">Choose a published story</option>${stories.map(story => `<option value="${escapeAttr(story.id)}" ${String(story.id) === String(selectedId) ? 'selected' : ''}>${escapeHtml(story.title)}${story.language ? ` — ${escapeHtml(story.language)}` : ''}</option>`).join('')}`; updateResponse(); } catch (error) { storySelect.innerHTML = '<option value="">Unable to load stories</option>'; storyNotice.textContent = 'Published stories could not be loaded. Please try again.'; storyNotice.classList.remove('d-none'); }
         }
 
         function renderStoryReadingSelector(title) {
@@ -16661,8 +16701,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         function showTemplateBuilder(templateTitle) {
             const def = getTemplateDefinition(templateTitle);
             window.__templateEditStateRestored = false;
-            setSelectedTemplateLanguage('Filipino', { render: false });
-            const templateLanguage = 'Filipino';
+            const templateLanguage = isStoryResponseTemplate(templateTitle) ? 'English' : 'Filipino';
+            setSelectedTemplateLanguage(templateLanguage, { render: false });
             if (!templateSupportsLanguage(templateTitle, templateLanguage)) return;
             activeTemplateActivity = {
                 templateTitle,
@@ -16713,6 +16753,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     storyKey: 'story-1-ben-and-the-little-pet'
                 };
             }
+            if (isStoryResponseTemplate(templateTitle)) {
+                activeTemplateActivity.title = 'Story Response';
+                activeTemplateActivity.storyResponse = { stories: [], storyId: '', prompt: '', promptSource: 'suggested', readAloud: true, voiceRecording: true };
+            }
             if (isSentenceReadingTemplate(templateTitle)) {
                 activeTemplateActivity.sentenceReading = {
                     language: normalizeSentenceReadingLanguage(templateLanguage),
@@ -16731,7 +16775,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             setTemplateBuilderActive(true);
             if (templateActivityTitle) {
                 if (!isLetterSoundMatchingTemplate(templateTitle) && !isLetterSoundCorrespondenceTemplate(templateTitle)) {
-                    templateActivityTitle.value = isSoundDetectiveTemplate(templateTitle) ? 'Sound Detective' : '';
+                    templateActivityTitle.value = isSoundDetectiveTemplate(templateTitle) ? 'Sound Detective' : (isStoryResponseTemplate(templateTitle) ? 'Story Response' : '');
                 }
                 if (isAralReadingSetTemplate(templateTitle)) templateActivityTitle.value = templateTitle;
                 templateActivityTitle.closest('.template-title-field')?.classList.toggle('d-none', isSyllableBlendingTemplate(templateTitle));
@@ -16777,7 +16821,17 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 syncSentenceReadingItems();
             }
             const language = getSelectedTemplateLanguage();
-            if (isAralReadingSetTemplate(activeTemplateActivity?.templateTitle)) {
+            if (isStoryResponseTemplate(activeTemplateActivity?.templateTitle)) {
+                const response = activeTemplateActivity.storyResponse || {};
+                const story = (response.stories || []).find(item => String(item.id) === String(response.storyId));
+                Object.assign(content, {
+                    activity_type: 'story_response', activity_title: (templateActivityTitle?.value || 'Story Response').trim(),
+                    source_story_reading_material_id: Number(response.storyId) || null,
+                    story_title: story?.title || '', story_language: language,
+                    response_prompt: response.prompt || '', prompt_source: response.promptSource || 'suggested',
+                    read_aloud_enabled: response.readAloud !== false, voice_recording_enabled: response.voiceRecording !== false
+                });
+            } else if (isAralReadingSetTemplate(activeTemplateActivity?.templateTitle)) {
                 activeTemplateActivity.language = language;
                 syncAralReadingSet();
                 const set = activeTemplateActivity.aralReadingSet;
@@ -16890,6 +16944,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function validateTemplateActivityForm(values) {
             const def = getTemplateDefinition(activeTemplateActivity?.templateTitle);
+            if (isStoryResponseTemplate(activeTemplateActivity?.templateTitle)) {
+                if (!values.title) return 'Activity Title is required.';
+                if (!values.content?.source_story_reading_material_id) return 'Select a published Story Reading activity.';
+                if (!values.content?.response_prompt) return 'Select a suggested prompt or create your own prompt.';
+                if (!values.weeks.length) return 'Select at least one week.';
+                return '';
+            }
             if (activeTemplateActivity?.templateTitle === "5W's Story Questions") {
                 if (!values.content?.sourceMaterialId) return 'Select a published story.';
                 if (!Array.isArray(values.content?.items) || !values.content.items.length) return 'Add at least one 5W question.';
@@ -18325,6 +18386,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     if (isAralReadingSetTemplate(activeTemplateActivity?.templateTitle)) {
                         activeTemplateActivity.aralReadingSetId = '';
                         syncAralReadingSet();
+                        renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
+                    } else if (isStoryResponseTemplate(activeTemplateActivity?.templateTitle)) {
                         renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
                     } else if (activeTemplateActivity?.templateTitle === 'Phrase Reading Practice') {
                         renderTemplateDynamicFields(activeTemplateActivity.templateTitle);

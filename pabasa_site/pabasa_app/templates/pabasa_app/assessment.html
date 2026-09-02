@@ -1137,6 +1137,7 @@
                 const soundDetectiveUrl = "{% url 'sound_detective_page' %}";
                 // Canonical activity route: /dashboard/assessment/activity/sound-detective/
                 const storyReadingUrl = "{% url 'story_reading_page' %}";
+                const storyResponseUrl = "{% url 'story_response_page' %}";
                 const phraseReadingUrl = "{% url 'phrase_reading_page' %}";
                 const sentenceBotUrl = "{% url 'sentence_bot_page' %}";
                 const wordMeaningMatchUrl = "{% url 'aral_template_activity_page' activity_slug='word-meaning-match' %}";
@@ -1319,6 +1320,7 @@
                             const isStoryReading = [m.template_title, m.template_type, m.content_json?.template_title,
                                 m.content_json?.template_lesson, m.content_json?.template_type, m.content_json?.activity_type]
                                 .some(value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === 'story_reading');
+                            const isStoryResponse = String(m.content_json?.activity_type || '').trim().toLowerCase() === 'story_response';
                             const isPhraseReading = [templateActivityName, m.template_title, m.template_type,
                                 m.content_json?.template_title, m.content_json?.template_lesson, m.content_json?.template_type]
                                 .some(value => ['phrase_reading', 'phrase_reading_practice'].includes(String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')));
@@ -1340,6 +1342,8 @@
                                 ? `${sentenceBotUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
                                 : isPhraseReading
                                 ? `${phraseReadingUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
+                                : isStoryResponse
+                                ? `${storyResponseUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
                                 : isStoryReading
                                 ? `${storyReadingUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
                                 : isClapCountSyllables
