@@ -70,7 +70,7 @@ def _upsert_account(User, account):
 
 def ensure_default_test_accounts(User=None):
     """
-    Create default teacher/student/principal accounts when missing.
+    Create default teacher and student accounts when missing.
     Returns a list of (custom_id, created) tuples.
     """
     if User is None:
