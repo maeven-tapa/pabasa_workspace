@@ -10,8 +10,8 @@ PRESEEDED_CUSTOM_IDS = (
 
 
 def remove_preseeded_accounts(apps, schema_editor):
-    User = apps.get_model("pabasa_app", "User")
-    User.objects.filter(custom_id__in=PRESEEDED_CUSTOM_IDS).delete()
+    # These records are permanent fixtures in the shipped database.
+    pass
 
 
 class Migration(migrations.Migration):

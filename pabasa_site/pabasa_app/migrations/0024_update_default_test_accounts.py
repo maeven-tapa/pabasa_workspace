@@ -1,16 +1,11 @@
 from django.db import migrations
 
-from pabasa_app.test_accounts import ensure_default_test_accounts, remove_default_test_accounts
-
-
 def update_default_test_accounts(apps, schema_editor):
-    User = apps.get_model("pabasa_app", "User")
-    ensure_default_test_accounts(User=User)
+    pass
 
 
 def revert_default_test_accounts(apps, schema_editor):
-    User = apps.get_model("pabasa_app", "User")
-    remove_default_test_accounts(User=User)
+    pass
 
 
 class Migration(migrations.Migration):

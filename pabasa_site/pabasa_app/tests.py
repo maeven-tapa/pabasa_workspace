@@ -16,6 +16,9 @@ import uuid
 from urllib.parse import parse_qs, urlparse
 from unittest.mock import patch
 
+PRINCIPAL_DEFAULT_CUSTOM_ID = "PRN-DEFAULT"
+PRINCIPAL_DEFAULT_PASSWORD = "Principal123"
+
 from pypdf import PdfReader
 from reportlab.pdfgen import canvas
 
@@ -45,7 +48,6 @@ def test_section_create(**kwargs):
         suffix = uuid.uuid4().hex.upper()
         school = School.objects.create(name=f"Fixture School {suffix}", code=f"FIXTURE-{suffix}")
     return Section.objects.create(school=school, **kwargs)
-from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
 from .management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
 from .views import _active_school_calendar, _apply_progression_unlock_override, _aral_eligible_classification, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _primary_school, _save_admin_practice_material, _selected_school_calendar, _sync_assessment_workflow_state, _official_crla_assessment_labels, _official_assessment_availability_for_student
 from .weekly_digest import send_weekly_digest
