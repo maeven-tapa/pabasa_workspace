@@ -6363,6 +6363,23 @@ def admin_school_detail(request, school_id):
     grouped = {grade: [] for grade in SCHOOL_GRADE_LEVELS}
     for section in _school_sections_queryset(school, selected_calendar):
         grouped.setdefault(section.grade_level, []).append(section)
+    active_grade_two_sections = Section.objects.filter(
+        school=school,
+        school_calendar=selected_calendar,
+        is_active=True,
+        grade_level=NEW_USER_GRADE_LEVEL,
+        teacher__isnull=False,
+    ).select_related('teacher').order_by('section')
+    teacher_assignment_map = {
+        str(section.teacher_id): {
+            'teacher_id': section.teacher_id,
+            'teacher_name': f"{section.teacher.first_name} {section.teacher.last_name}".strip(),
+            'section_id': section.id,
+            'section_name': section.section,
+        }
+        for section in active_grade_two_sections
+        if section.teacher_id
+    }
     context.update({
         'school': school,
         'principal': context.get('principal', _active_principal_for_school(school)),
@@ -6375,15 +6392,8 @@ def admin_school_detail(request, school_id):
         'sections_by_grade': grouped,
         'eligible_teachers': User.objects.filter(
             role='teacher', is_archived=False, school_record=school,
-        ).exclude(
-            id__in=Section.objects.filter(
-                school=school,
-                school_calendar=selected_calendar,
-                is_active=True,
-                grade_level=NEW_USER_GRADE_LEVEL,
-                teacher__isnull=False,
-            ).values_list('teacher_id', flat=True)
         ).order_by('last_name', 'first_name', 'custom_id'),
+        'teacher_assignment_map': json.dumps(teacher_assignment_map),
         'returning_students': returning_students,
         'returning_school_calendar': selected_calendar,
     })
@@ -6419,19 +6429,62 @@ def admin_school_section_update(request, section_id):
         if not teacher:
             messages.error(request, 'Choose a valid active teacher from this school.')
         else:
+            confirm_swap = str(request.POST.get('confirm_swap') or '').strip().lower() in {'1', 'true', 'yes', 'on'}
+            selected_teacher_current_section = Section.objects.filter(
+                school_id=section.school_id,
+                school_calendar_id=section.school_calendar_id,
+                is_active=True,
+                teacher=teacher,
+                grade_level=NEW_USER_GRADE_LEVEL,
+            ).exclude(pk=section.pk).first()
+            current_target_teacher = section.teacher
+            if selected_teacher_current_section and current_target_teacher and current_target_teacher.id != teacher.id and not confirm_swap:
+                messages.error(
+                    request,
+                    f"{teacher.first_name} {teacher.last_name} is currently assigned to {selected_teacher_current_section.section}. "
+                    f"Swap assignments with the teacher currently assigned to {section.section}?",
+                )
+                return redirect('admin_school_detail', school_id=section.school_id)
             try:
-                section.assign_teacher(teacher, replace_existing=(action == 'change_teacher'))
-                Enrollment.objects.filter(
-                    section=section, school_calendar=section.school_calendar,
-                    status='awaiting_assignment', is_active=False,
-                ).update(assigned_teacher=teacher, status='active', is_active=True)
-                Enrollment.objects.filter(
-                    section=section, school_calendar=section.school_calendar,
-                    status='active', is_active=True,
-                ).update(assigned_teacher=teacher)
-                section.sync_legacy_student_fields()
-                verb = 'changed' if action == 'change_teacher' else 'assigned'
-                messages.success(request, f'{teacher.first_name} {teacher.last_name} was {verb} for {section.class_name}.')
+                with transaction.atomic():
+                    section_locked = Section.objects.select_for_update().get(pk=section.pk)
+                    source_section = None
+                    if selected_teacher_current_section:
+                        source_section = Section.objects.select_for_update().get(pk=selected_teacher_current_section.pk)
+                    if source_section and current_target_teacher and current_target_teacher.id != teacher.id:
+                        other_teacher = current_target_teacher
+                        source_section.teacher = other_teacher
+                        section_locked.teacher = teacher
+                        source_section.save(update_fields=['teacher', 'updated_at'])
+                        section_locked.save(update_fields=['teacher', 'updated_at'])
+                        for target in (source_section, section_locked):
+                            Enrollment.objects.filter(
+                                section=target, school_calendar=target.school_calendar,
+                                status='active', is_active=True,
+                            ).update(assigned_teacher=target.teacher)
+                            target.sync_legacy_student_fields()
+                        messages.success(
+                            request,
+                            f"{teacher.first_name} {teacher.last_name} and {other_teacher.first_name} {other_teacher.last_name} were swapped for {source_section.section} and {section_locked.section}.",
+                        )
+                    else:
+                        if source_section and source_section.teacher_id == teacher.id:
+                            source_section.unassign_teacher()
+                        if action == 'change_teacher' or (section_locked.teacher_id and section_locked.teacher_id != teacher.id):
+                            section_locked.assign_teacher(teacher, replace_existing=True)
+                        else:
+                            section_locked.assign_teacher(teacher, replace_existing=False)
+                        Enrollment.objects.filter(
+                            section=section_locked, school_calendar=section_locked.school_calendar,
+                            status='awaiting_assignment', is_active=False,
+                        ).update(assigned_teacher=teacher, status='active', is_active=True)
+                        Enrollment.objects.filter(
+                            section=section_locked, school_calendar=section_locked.school_calendar,
+                            status='active', is_active=True,
+                        ).update(assigned_teacher=teacher)
+                        section_locked.sync_legacy_student_fields()
+                        verb = 'changed' if action == 'change_teacher' else 'assigned'
+                        messages.success(request, f'{teacher.first_name} {teacher.last_name} was {verb} for {section_locked.class_name}.')
             except ValidationError as exc:
                 logger.warning(
                     'Admin teacher assignment rejected section_id=%s teacher_id=%s calendar_id=%s errors=%s',
