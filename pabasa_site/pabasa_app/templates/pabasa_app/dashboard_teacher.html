@@ -141,6 +141,10 @@
     .teacher-calendar-filter button.active { background:#10466e; color:#fff; }
     .teacher-calendar-card .teacher-calendar-filter { width:100%; }
     .teacher-calendar-card .teacher-calendar-filter button { flex:1 1 50%; min-width:0; text-align:center; }
+    .teacher-aral-form { border-top:1px solid rgba(16,70,110,.1); margin-top:.9rem; padding-top:.9rem; }
+    .teacher-aral-form h4 { color:#10466e; font-size:.92rem; font-weight:900; margin:0 0 .65rem; }
+    .teacher-aral-form .form-label { color:#6b7d8f; font-size:.75rem; font-weight:800; margin-bottom:.2rem; }
+    .teacher-aral-form .form-control, .teacher-aral-form .form-select { font-size:.82rem; min-height:2.2rem; }
     .teacher-calendar-nav { display:flex; gap:.35rem; margin-bottom:.7rem; }
     .teacher-calendar-nav button { border:1px solid #cfe0ec; background:#fff; border-radius:999px; color:#10466e; padding:.32rem .55rem; font-size:.72rem; font-weight:800; }
     .teacher-calendar-month { color:#10466e; font-size:1.05rem; font-weight:900; margin-bottom:.55rem; }
@@ -1531,6 +1535,27 @@
         <div class="teacher-calendar-month" id="teacherCalendarMonth"></div>
         <div class="teacher-calendar-meta">School Year: <strong>{{ student_calendar_school_year|default:"Not set" }}</strong> · <strong>{{ student_calendar_current_term|default:"Not set" }}</strong></div>
         <div class="teacher-calendar-grid" id="teacherCalendarGrid"></div>
+        {% if teacher_aral_sections %}
+        <form class="teacher-aral-form" method="post" action="{% url 'teacher_create_aral_schedule' %}">
+            {% csrf_token %}
+            <h4>My ARAL Schedule</h4>
+            <label class="form-label" for="teacherAralSection">Section</label>
+            <select class="form-select mb-2" id="teacherAralSection" name="section_id" required>
+                {% for section in teacher_aral_sections %}<option value="{{ section.id }}">{{ section.class_name }}</option>{% endfor %}
+            </select>
+            <label class="form-label" for="teacherAralWeekday">Day of the Week</label>
+            <select class="form-select mb-2" id="teacherAralWeekday" name="weekday" required>
+                <option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option><option value="3">Thursday</option><option value="4">Friday</option><option value="5">Saturday</option><option value="6">Sunday</option>
+            </select>
+            <label class="form-label" for="teacherAralRemark">Schedule / Remark</label>
+            <input class="form-control mb-2" id="teacherAralRemark" name="remark" maxlength="200" placeholder="After every class" required>
+            <label class="form-label" for="teacherAralAppliesTo">Applies To</label>
+            <select class="form-select mb-2" id="teacherAralAppliesTo" name="applies_to" required>
+                {% for value, label in teacher_aral_schedule_choices %}<option value="{{ value }}">{{ label }}{% if value == 'current' %} (Term {{ teacher_aral_current_term }}){% endif %}</option>{% endfor %}
+            </select>
+            <button class="btn btn-primary btn-sm w-100" type="submit"><i class="bi bi-plus-circle me-1"></i>Add ARAL Schedule</button>
+        </form>
+        {% endif %}
         <button type="button" class="btn btn-primary teacher-calendar-expand" data-bs-toggle="modal" data-bs-target="#teacherCalendarExpanded">Expand Calendar</button>
     </aside>
     <section class="teacher-upcoming-card" aria-labelledby="teacherUpcomingTitle">
@@ -1575,7 +1600,7 @@
     const colors = {school_opening:'#22c55e', pre_assessment:'#3b82f6', midline_assessment:'#14b8a6', post_assessment:'#a855f7', school_closing:'#ef4444', holiday:'#f59e0b', examination:'#f97316', other:'#6b7280'};
     const parseDate = value => { const p = String(value || '').slice(0, 10).split('-').map(Number); return p.length === 3 && p.every(Number.isFinite) ? new Date(p[0], p[1] - 1, p[2]) : null; };
     const key = date => date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate();
-    const visibleEvents = () => events.filter(event => event.scope === filter);
+    const visibleEvents = () => events.filter(event => event.scope === filter || event.scope === 'teacher');
     const eventContains = (event, date) => { const start = parseDate(event.start_date || event.start); const end = parseDate(event.end_date || event.end || event.start); return start && end && key(start) <= key(date) && key(date) <= key(end); };
     function drawCompact() {
         const grid = document.getElementById('teacherCalendarGrid'); if (!grid) return;

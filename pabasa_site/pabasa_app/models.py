@@ -1671,6 +1671,56 @@ class CalendarEvent(models.Model):
         return f"{self.school_calendar.school_year} - {self.get_event_type_display()}"
 
 
+class TeacherAralSchedule(models.Model):
+    WEEKDAY_CHOICES = [(0, "Monday"), (1, "Tuesday"), (2, "Wednesday"), (3, "Thursday"), (4, "Friday"), (5, "Saturday"), (6, "Sunday")]
+    APPLIES_TO_CURRENT = "current"
+    APPLIES_TO_ALL = "all"
+    APPLIES_TO_CHOICES = [
+        (APPLIES_TO_CURRENT, "Current Term"),
+        (APPLIES_TO_ALL, "All Terms"),
+    ]
+
+    teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name="aral_schedules")
+    section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name="teacher_aral_schedules")
+    school_calendar = models.ForeignKey(SchoolCalendar, on_delete=models.CASCADE, related_name="teacher_aral_schedules")
+    weekday = models.PositiveSmallIntegerField(choices=WEEKDAY_CHOICES, validators=[MinValueValidator(0), MaxValueValidator(6)])
+    remark = models.CharField(max_length=200)
+    applies_to = models.CharField(max_length=10, choices=APPLIES_TO_CHOICES, default=APPLIES_TO_CURRENT)
+    term = models.PositiveSmallIntegerField(choices=SchoolCalendar.TERM_CHOICES, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "teacher_aral_schedules"
+        ordering = ["weekday", "section__class_name", "id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(applies_to="all", term__isnull=True)
+                    | models.Q(applies_to="current", term__isnull=False)
+                ),
+                name="teacher_aral_schedule_term_matches_scope",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.teacher_id and self.teacher.role != "teacher":
+            raise ValidationError({"teacher": "Only a teacher account can own an ARAL schedule."})
+        if self.section_id and self.teacher_id and self.section.teacher_id != self.teacher_id:
+            raise ValidationError({"section": "ARAL schedules may only use the teacher's assigned sections."})
+        if self.section_id and self.school_calendar_id and self.section.school_calendar_id != self.school_calendar_id:
+            raise ValidationError({"school_calendar": "The schedule calendar must match the section calendar."})
+        if self.applies_to == self.APPLIES_TO_ALL:
+            self.term = None
+        elif self.applies_to == self.APPLIES_TO_CURRENT and self.term is None:
+            raise ValidationError({"term": "Current Term schedules require a term."})
+
+    def __str__(self):
+        return f"{self.teacher} - {self.section} - {self.get_weekday_display()}"
+
+
 class Course(models.Model):
     """
     Courses group assessments and materials and allow per-section scheduling/tracking.

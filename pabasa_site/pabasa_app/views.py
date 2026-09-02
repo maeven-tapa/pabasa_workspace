@@ -55,7 +55,7 @@ from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_
 from django.db import transaction
 import re
 import traceback
-from .models import User, School, Section, Enrollment, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress
+from .models import User, School, Section, Enrollment, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, TeacherAralSchedule, StoryReadingProgress
 from .section_configuration import ensure_salawag_grade_two_sections
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
 from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
@@ -4873,6 +4873,8 @@ def _dashboard_context(request, nav_role=None, extra=None):
                 }
                 for event in CalendarEvent.objects.filter(school_calendar=active_school_calendar).filter(event_filter).order_by('start_date', 'end_date', 'created_at')
             ]
+            if nav_role == 'teacher' and user and user.role == 'teacher':
+                student_calendar_events.extend(_teacher_aral_schedule_events(user, active_school_calendar))
             print("AFTER student_calendar_events_query")
         context['active_school_calendar'] = active_school_calendar
         print("CONTEXT_KEY_DONE", "active_school_calendar")
@@ -4894,6 +4896,10 @@ def _dashboard_context(request, nav_role=None, extra=None):
         context['calendar_weekday_labels'] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
         print("CONTEXT_KEY_DONE", "month_weeks")
         context['calendar_legend'] = calendar_widget.get('calendar_legend')
+        if nav_role == 'teacher' and user and user.role == 'teacher':
+            context['teacher_aral_sections'] = list(_teacher_current_sections(user).filter(school_calendar=active_school_calendar))
+            context['teacher_aral_current_term'] = current_term or active_school_calendar.current_term
+            context['teacher_aral_schedule_choices'] = TeacherAralSchedule.APPLIES_TO_CHOICES
         print("CONTEXT_KEY_DONE", "calendar_legend")
         perf_log('student_calendar_built', 'student_calendar_start', {
             'student_calendar_events_count': len(student_calendar_events),
@@ -5127,6 +5133,43 @@ def dashboard_teacher(request):
         return redirect('auth')
     
     return render(request, 'pabasa_app/dashboard_teacher.html', _dashboard_context(request, 'teacher'))
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+def teacher_create_aral_schedule(request):
+    if not _check_auth(request) or request.session.get('user_role') != 'teacher':
+        return redirect('auth')
+    teacher = _current_user(request)
+    if not teacher or teacher.role != 'teacher' or teacher.is_archived:
+        return redirect('auth')
+    active_calendar, _, _ = _selected_school_calendar(request)
+    section = _teacher_current_sections(teacher).filter(
+        pk=request.POST.get('section_id'), school_calendar=active_calendar,
+    ).first()
+    if not section:
+        messages.error(request, 'Choose one of your assigned sections.')
+        return redirect('dashboard_teacher')
+    try:
+        weekday = int(request.POST.get('weekday', ''))
+    except (TypeError, ValueError):
+        weekday = -1
+    applies_to = request.POST.get('applies_to', TeacherAralSchedule.APPLIES_TO_CURRENT)
+    remark = request.POST.get('remark', '').strip()
+    current_term = _calendar_current_term(active_calendar) if active_calendar else None
+    if weekday not in range(7) or not remark or applies_to not in dict(TeacherAralSchedule.APPLIES_TO_CHOICES):
+        messages.error(request, 'Enter a day and schedule remark.')
+        return redirect('dashboard_teacher')
+    if applies_to == TeacherAralSchedule.APPLIES_TO_CURRENT and not current_term:
+        messages.error(request, 'The active term is not configured yet.')
+        return redirect('dashboard_teacher')
+    TeacherAralSchedule.objects.create(
+        teacher=teacher, section=section, school_calendar=active_calendar,
+        weekday=weekday, remark=remark[:200], applies_to=applies_to,
+        term=current_term if applies_to == TeacherAralSchedule.APPLIES_TO_CURRENT else None,
+    )
+    messages.success(request, 'ARAL schedule added to your private teacher calendar.')
+    return redirect('dashboard_teacher')
 
 def dashboard_admin(request):
     if not _check_auth(request):
@@ -6997,7 +7040,51 @@ def _calendar_fixed_title(event_type, fallback=''):
 
 
 def _calendar_event_type_label(event_type):
-    return dict(CalendarEvent.EVENT_TYPE_CHOICES).get(event_type, 'Other Activity')
+    return dict(CalendarEvent.EVENT_TYPE_CHOICES).get(event_type, 'ARAL Schedule' if event_type == 'aral_schedule' else 'Other Activity')
+
+
+def _teacher_aral_schedule_events(teacher, school_calendar):
+    """Expand private recurring schedules into date events for this teacher only."""
+    if not teacher or not school_calendar:
+        return []
+    blocks = _calendar_term_blocks(school_calendar)
+    schedules = TeacherAralSchedule.objects.filter(
+        teacher=teacher,
+        section__teacher=teacher,
+        section__is_active=True,
+        school_calendar=school_calendar,
+        is_active=True,
+    ).select_related('section')
+    expanded = []
+    for schedule in schedules:
+        terms = [schedule.term] if schedule.applies_to == TeacherAralSchedule.APPLIES_TO_CURRENT else list(blocks)
+        for term in terms:
+            block = blocks.get(term, {})
+            opening = block.get('opening')
+            closing = block.get('closing')
+            if not opening or not closing:
+                continue
+            start_date = opening.start_date
+            end_date = closing.end_date or closing.start_date
+            occurrence = start_date + timedelta(days=(schedule.weekday - start_date.weekday()) % 7)
+            while occurrence <= end_date:
+                expanded.append({
+                    'id': f'aral-{schedule.id}-{occurrence.isoformat()}',
+                    'title': schedule.remark,
+                    'event_type': 'aral_schedule',
+                    'event_type_label': 'ARAL Schedule',
+                    'term': term,
+                    'start': occurrence.isoformat(),
+                    'end': (occurrence + timedelta(days=1)).isoformat(),
+                    'start_date': occurrence.isoformat(),
+                    'end_date': occurrence.isoformat(),
+                    'description': f'{schedule.section.class_name} - {schedule.remark}',
+                    'school_calendar_id': school_calendar.id,
+                    'scope': 'teacher',
+                    'section_id': schedule.section_id,
+                })
+                occurrence += timedelta(days=7)
+    return expanded
 
 
 def _school_year_event_types():
