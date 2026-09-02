@@ -14248,6 +14248,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         };
         const PICTURE_WORD_CATALOG = JSON.parse(document.getElementById('picture-word-catalog')?.textContent || '{}');
         const SOUND_DETECTIVE_CATALOG = JSON.parse(document.getElementById('sound-detective-catalog')?.textContent || '{}');
+        const SYLLABLE_BLENDING_CATALOG = JSON.parse(document.getElementById('syllable-blending-catalog')?.textContent || '{}');
+        const CLAP_COUNT_WORD_BANK = JSON.parse(document.getElementById('clap-count-word-bank')?.textContent || '{}');
         const PICTURE_WORD_PRESCRIBED_SETS = Array.isArray(PICTURE_WORD_CATALOG.prescribedSets) ? PICTURE_WORD_CATALOG.prescribedSets : [];
         const PICTURE_WORD_CUSTOM_MAX_ITEMS = 5;
         const PICTURE_WORD_CUSTOM_LIBRARY = [
@@ -16193,8 +16195,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const informationGrid = document.querySelector('.template-information-grid');
             const informationDescription = document.getElementById('templateInformationDescription');
             const languageField = document.getElementById('templateLanguageField');
-            const previousSyllableTitleField = document.getElementById('syllableActivityTitleField');
-            previousSyllableTitleField?.remove();
             if (informationGrid && languageField && !informationGrid.contains(languageField)) informationGrid.appendChild(languageField);
             const isSyllableBuilder = isSyllableBlendingTemplate(title);
             informationGrid?.classList.toggle('is-syllable-blending', isSyllableBuilder);
@@ -16260,10 +16260,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 const formatLabel = currentFormat === 'big_box' ? 'Big Box — Word Building' : 'Syllable Combination';
                 templateDynamicFields.innerHTML = `
                     <div class="row g-3">
-                        <div class="col-12" id="syllableActivityTitleField">
-                            <label class="form-label fw-bold" for="syllableActivityTitle">Title <span class="text-danger">*</span></label>
-                            <input type="text" id="syllableActivityTitle" class="form-control" maxlength="200" value="${escapeAttr(activeTemplateActivity?.title || '')}" placeholder="Enter an activity title" autocomplete="off">
-                        </div>
                         <div class="col-12" id="syllableLanguageFieldSlot"></div>
                         <div class="col-12">
                             <label class="form-label fw-bold" for="syllableActivityFormat">Activity Format <span class="text-danger">*</span></label>
@@ -16296,19 +16292,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             </div>
                         </div>
                     </div>`;
-                const syllableTitleField = document.getElementById('syllableActivityTitleField');
                 const syllableLanguageFieldSlot = document.getElementById('syllableLanguageFieldSlot');
-                if (informationGrid && syllableTitleField) informationGrid.appendChild(syllableTitleField);
                 if (syllableLanguageFieldSlot && languageField) syllableLanguageFieldSlot.appendChild(languageField);
                 document.getElementById('syllableActivityFormat')?.addEventListener('change', event => {
                     activeTemplateActivity.activityFormat = event.target.value;
                     activeTemplateActivity.selectedActivityId = null;
                     renderTemplateDynamicFields(title);
-                    renderTemplatePreview();
-                });
-                document.getElementById('syllableActivityTitle')?.addEventListener('input', event => {
-                    activeTemplateActivity.title = event.target.value;
-                    if (templateActivityTitle) templateActivityTitle.value = event.target.value;
                     renderTemplatePreview();
                 });
                 templateDynamicFields.querySelectorAll('.syllable-select-btn').forEach(button => button.addEventListener('click', () => {
@@ -16778,17 +16767,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     templateActivityTitle.value = isSoundDetectiveTemplate(templateTitle) ? 'Sound Detective' : (isStoryResponseTemplate(templateTitle) ? 'Story Response' : '');
                 }
                 if (isAralReadingSetTemplate(templateTitle)) templateActivityTitle.value = templateTitle;
-                templateActivityTitle.closest('.template-title-field')?.classList.toggle('d-none', isSyllableBlendingTemplate(templateTitle));
+                templateActivityTitle.closest('.template-title-field')?.classList.toggle('d-none', templateTitle === "5W's Story Questions");
             }
             renderTemplateDynamicFields(templateTitle);
             renderTemplateWeeks();
             renderTemplatePreview();
             window.requestAnimationFrame(() => {
                 templateBuilderPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                const firstField = isSyllableBlendingTemplate(templateTitle)
-                    ? document.getElementById('syllableActivityTitle')
-                    : templateActivityTitle;
-                firstField?.focus({ preventScroll: true });
+                templateActivityTitle?.focus({ preventScroll: true });
             });
         }
 
@@ -16934,7 +16920,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
             return {
                 title: isSyllableBlendingTemplate(activeTemplateActivity?.templateTitle)
-                    ? (document.getElementById('syllableActivityTitle')?.value || activeTemplateActivity?.title || '').trim()
+                    ? (templateActivityTitle?.value || activeTemplateActivity?.title || '').trim()
                     : (templateActivityTitle?.value || '').trim(),
                 language,
                 weeks: getTemplateWeeks(),
