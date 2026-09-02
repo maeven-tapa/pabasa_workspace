@@ -1,0 +1,92 @@
+{% load static %}
+
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Story Call</title>
+    <link rel="stylesheet" href="{% static 'pabasa_app/vendor/bootstrap-icons/bootstrap-icons.css' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+    html, body { width: 100%; min-height: 100%; margin: 0; }
+    html { overflow: hidden; }
+    body { overflow: hidden; }
+    body { font-family: Nunito, Arial, sans-serif; }
+    .story-call-page { box-sizing: border-box; width: 100vw; height: 100vh; padding: clamp(10px, 1.8vh, 20px) clamp(10px, 1.8vw, 26px); overflow: hidden; background: #eef8fc; }
+    .story-call-shell { box-sizing: border-box; width: 100%; max-width: none; height: 100%; margin: 0; padding: clamp(14px, 2vh, 24px) clamp(18px, 2.8vw, 44px); border-radius: 30px; background: #fffdf9; box-shadow: 0 15px 45px rgba(38, 76, 111, .12); }
+    .story-call-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; color: #183c68; }
+    .story-title { display: flex; align-items: center; gap: 14px; text-align: left; }
+    .story-book { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 18px; background: #eaf6fb; color: #176e9a; font-size: 2rem; }
+    .story-call-heading h1 { margin: 0; font-size: clamp(1.65rem, 3vw, 2.45rem); font-weight: 900; letter-spacing: .09em; }
+    .story-call-heading p { margin: 4px 0 0; color: #775d42; font-size: 1rem; }
+    .story-header-meta { display: flex; align-items: center; gap: 22px; color: #183c68; font-size: 1.05rem; font-weight: 800; }
+    .story-tag { padding: 10px 18px; border: 2px solid #ccebf4; border-radius: 30px; background: #f4fbfd; }
+    .story-progress { display: flex; justify-content: center; gap: clamp(8px, 2vw, 22px); margin-bottom: 19px; }
+    .story-step { display: flex; flex-direction: column; align-items: center; gap: 6px; color: #91a7bb; font-size: .68rem; font-weight: 800; letter-spacing: .08em; }
+    .story-step span { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: #e6eff4; color: #6d879b; font-size: .75rem; }
+    .story-step.active { color: #183c68; }
+    .story-step.active span { background: #42a8d2; color: #fff; box-shadow: 0 5px 12px rgba(61, 157, 201, .28); }
+    .story-counter { margin: 0 0 12px; text-align: right; color: #183c68; font-weight: 800; font-size: .9rem; }
+    .story-video { position: relative; width: min(100%, 1080px); height: clamp(340px, 46vh, 500px); margin: 0 auto; overflow: hidden; border: 7px solid #164e6b; border-radius: 29px; background: #b9dce5 url("{% static 'pabasa_app/images/story_call/maya_background.jpg' %}") center/cover; box-shadow: 0 10px 20px rgba(19, 65, 89, .16); }
+    .story-video::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(19, 52, 87, .06), rgba(19, 52, 87, .17)); pointer-events: none; }
+    .maya { position: absolute; z-index: 1; bottom: -8px; left: clamp(24px, 6vw, 70px); width: clamp(240px, 43%, 395px); max-height: 98%; object-fit: contain; object-position: bottom; filter: drop-shadow(0 10px 8px rgba(31, 68, 87, .18)); }
+    .maya-listening { display: block; }
+    .story-call-label { position: absolute; z-index: 3; top: 22px; left: 25px; padding: 10px 17px; border-radius: 24px; background: rgba(24, 39, 54, .82); color: #fff; font-weight: 800; letter-spacing: .03em; }
+    .story-bubble { position: absolute; z-index: 2; top: 50%; right: clamp(30px, 7vw, 100px); width: min(48%, 520px); transform: translateY(-50%); padding: 29px 34px; border-radius: 28px; background: #fff; color: #183c68; font-size: clamp(1.25rem, 2.5vw, 2rem); font-weight: 900; line-height: 1.3; text-align: left; box-shadow: 0 12px 22px rgba(34, 67, 92, .17); }
+    .story-bubble::before { content: ""; position: absolute; left: -19px; top: 48%; border-width: 12px 20px 12px 0; border-style: solid; border-color: transparent #fff transparent transparent; }
+    .call-controls { position: absolute; z-index: 3; right: 0; bottom: 0; left: 0; display: flex; justify-content: center; gap: 13px; padding: 13px; background: rgba(20, 54, 91, .93); }
+    .call-control { display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 50%; background: rgba(255,255,255,.16); color: #fff; font-size: 1.1rem; }
+    .call-control.end { background: #e76d6d; }
+    .answer-area { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 205px; margin: 20px auto 0; padding: 14px 30px 14px; width: min(100%, 1080px); box-sizing: border-box; border: 2px dashed #c8eaf5; border-radius: 25px; color: #55728e; }
+    .answer-copy.right { text-align: center; margin-top: 8px; }
+    .answer-mic { position: relative; z-index: 1; display: grid; place-items: center; width: 106px; height: 106px; border: 9px solid #fff; border-radius: 50%; background: #218fc4; color: #fff; font-size: 2.7rem; box-shadow: 0 8px 20px rgba(29, 119, 164, .3); }
+    .answer-mic:active { transform: translateY(3px); box-shadow: 0 5px 0 #d98939; }
+    .answer-area strong { display: block; color: #183c68; font-size: 1.15rem; }
+    .answer-area small { display: block; margin-top: 3px; font-size: .95rem; }
+    .story-actions { display: flex; justify-content: space-between; align-items: center; gap: 16px; width: 100%; margin: auto 0 0; }
+    .story-action { min-width: 128px; height: 48px; padding: 11px 23px; border-radius: 24px; font-weight: 800; }
+    .story-next { background: #183c68; color: #fff; }
+    @media (max-width: 650px) { html, body { overflow: auto; } .story-call-page { min-height: 100vh; height: auto; overflow: visible; padding: 10px; } .story-call-shell { height: auto; padding: 20px 14px; border-radius: 22px; } .story-call-heading { align-items: flex-start; flex-direction: column; } .story-header-meta { width: 100%; justify-content: space-between; } .story-video { height: 500px; } .maya { left: 50%; bottom: 35px; width: 66%; transform: translateX(-50%); } .story-bubble { top: 26px; right: 7%; width: 86%; padding: 17px 20px; font-size: 1.08rem; transform: none; } .story-bubble::before { top: auto; right: 42%; bottom: -18px; left: auto; border-width: 19px 12px 0; border-color: #fff transparent transparent; } .answer-area { padding: 16px 20px; } .story-actions { margin-top: 18px; } }
+</style>
+</head>
+<body>
+
+<main class="story-call-page">
+    <section class="story-call-shell" aria-label="Story Call">
+        <header class="story-call-heading">
+            <div class="story-title"><div class="story-book"><i class="bi bi-book-half"></i></div><div><h1>STORY CALL</h1><p>Let’s talk about the story!</p></div></div>
+            <div class="story-header-meta"><span>Question 2 of 5</span><span class="story-tag"><i class="bi bi-book-fill me-2"></i>Story</span></div>
+        </header>
+
+        <nav class="story-progress" aria-label="Story question progress">
+            <div class="story-step"><span>1</span>WHO</div>
+            <div class="story-step active"><span>2</span>WHAT</div>
+            <div class="story-step"><span>3</span>WHEN</div>
+            <div class="story-step"><span>4</span>WHERE</div>
+            <div class="story-step"><span>5</span>WHY</div>
+        </nav>
+        <div class="story-video">
+            <div class="story-call-label"><i class="bi bi-camera-video-fill me-2"></i>MAYA <span class="text-success">●</span></div>
+            <img class="maya maya-listening" src="{% static 'pabasa_app/images/story_call/girl_listening.png' %}" alt="Maya listening">
+            <div class="story-bubble">What did the little bird find in the garden?</div>
+            <div class="call-controls" aria-label="Video call controls">
+                <button class="call-control" type="button" aria-label="Camera"><i class="bi bi-camera-video-fill"></i></button>
+                <button class="call-control" type="button" aria-label="Speaker"><i class="bi bi-volume-up-fill"></i></button>
+                <button class="call-control end" type="button" aria-label="End call"><i class="bi bi-telephone-fill"></i></button>
+                <button class="call-control" type="button" aria-label="Fullscreen"><i class="bi bi-fullscreen"></i></button>
+            </div>
+        </div>
+
+        <div class="answer-area">
+            <button class="answer-mic" type="button" aria-label="Tap to answer"><i class="bi bi-mic-fill"></i></button>
+            <div class="answer-copy right"><strong>Tap the microphone</strong><small>and tell me your answer.</small></div>
+            <div class="story-actions">
+                <a class="btn btn-outline-secondary story-action" href="{% url 'assessment' %}">Back</a>
+                <button class="btn story-action story-next" type="button">Next <i class="bi bi-arrow-right ms-1"></i></button>
+            </div>
+        </div>
+    </section>
+</main>
+</body>
+</html>

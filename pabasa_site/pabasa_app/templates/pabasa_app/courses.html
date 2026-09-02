@@ -17184,6 +17184,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         weeks: values.weeks || [],
                         items: Array.isArray(activeTemplateActivity?.items) ? activeTemplateActivity.items : [],
                     });
+                    if (activeTemplateActivity?.templateTitle === "5W's Story Questions") {
+                        contentPayload.activity_variant = 'five_w_story_questions';
+                    }
                     if (isAralReadingSetTemplate(activeTemplateActivity?.templateTitle)) {
                         const set = getAralReadingSets(activeTemplateActivity.templateTitle, values.language)
                             .find(entry => entry.id === values.content?.reading_set_id);

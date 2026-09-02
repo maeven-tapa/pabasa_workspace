@@ -10186,8 +10186,10 @@ def assessment(request):
         ).filter(
             Q(pk=material.section_id) | Q(assigned_materials=material)
         ).first()
-        launch_url = (
-            f"{reverse('reading_word_page')}?test={quote(material.title or 'Reading Assessment')}"
+        content_template_title = content_json.get('template_title') if isinstance(content_json, dict) else ''
+        launch_view_name = 'story_call_page' if content_template_title == "5W's Story Questions" else 'reading_word_page'
+        launch_url = reverse(launch_view_name) if launch_view_name == 'story_call_page' else (
+            f"{reverse(launch_view_name)}?test={quote(material.title or 'Reading Assessment')}"
             f"&section_id={getattr(launch_section, 'id', '') or ''}"
             f"&id={material.id}"
             f"&content={quote(content_text)}"
@@ -10478,6 +10480,39 @@ def reading_word_page(request):
     return render(request, 'pabasa_app/reading_word_page.html', context)
 
 
+@xframe_options_sameorigin
+def story_questions_page(request):
+    """Dedicated student reader for the persisted 5W story-question template."""
+    access_response = _enforce_student_access_for_request(request)
+    if access_response:
+        return access_response
+    canonical_response = _canonicalize_custom_material_reading_url(request)
+    if canonical_response:
+        return canonical_response
+    prefix, material_id = _parse_prefixed_id(request.GET.get('id'))
+    material = Material.objects.filter(pk=material_id).first() if material_id else None
+    content_json = getattr(material, 'content_json', None) or {} if material else {}
+    if not material or not isinstance(content_json, dict) or content_json.get('template_title') != "5W's Story Questions":
+        return redirect('assessment')
+    context = _dashboard_context(request)
+    context.update(_custom_material_reading_context(request))
+    context['activity_variant'] = 'five_w_story_questions'
+    context['story_call_enabled'] = True
+    context['student_end_assessment_state_json'] = json.dumps(
+        (_get_user_state(User.objects.filter(id=request.session.get('user_id')).first()).get('student_end_assessment_state') or {}),
+        default=str, separators=(',', ':'),
+    )
+    return render(request, 'pabasa_app/story_questions_page.html', context)
+
+
+@xframe_options_sameorigin
+def story_call_page(request):
+    """Minimal landing page for the 5W's Story Question activity."""
+    if not _check_auth(request):
+        return redirect('auth')
+    return render(request, 'pabasa_app/story_call_page.html', _dashboard_context(request))
+
+
 def _canonicalize_custom_material_reading_url(request):
     """Remove CRLA-only launch state when the persisted record is custom.
 
@@ -10535,6 +10570,9 @@ def _custom_material_reading_context(request):
 
     content_json = material.content_json if isinstance(material.content_json, dict) else {}
     content = material.content_text or material.prompt_text or ''
+    activity_variant = content_json.get('activity_variant', '')
+    if content_json.get('template_title') == "5W's Story Questions":
+        activity_variant = 'five_w_story_questions'
     payload = {
         'id': f'material-{material.id}',
         'raw_id': material.id,
@@ -10546,6 +10584,7 @@ def _custom_material_reading_context(request):
         'language': content_json.get('language') or material.language or request.GET.get('language') or '',
         'content': content,
         'content_json': content_json,
+        'activity_variant': activity_variant,
         'items': content_json.get('items') if isinstance(content_json.get('items'), list) else [],
         'source_type': material.source_type or 'personal',
         'assessment_kind': _assessment_kind_value(material),
@@ -12290,6 +12329,13 @@ def story_answer_matches(expected_answer, submitted_answer):
 
 def _official_story_questions(material, story_title):
     content = material.content_json if isinstance(material.content_json, dict) else {}
+    if content.get('template_title') == "5W's Story Questions":
+        return [
+            item for item in (content.get('questions') or [])
+            if isinstance(item, dict)
+            and str(item.get('question') or '').strip()
+            and str(item.get('answer') or '').strip()
+        ]
     story_qas = content.get('story_qas') if isinstance(content.get('story_qas'), list) else []
     wanted_title = str(story_title or '').strip().casefold()
     questions = []
@@ -12322,7 +12368,12 @@ def check_story_answer_api(request):
     story_title = str(payload.get('story_title') or '').strip()
     if not submitted_answer or not story_title or question_index < 0:
         return JsonResponse({'success': False, 'error': 'Story, question, and answer are required'}, status=400)
-    material = Material.objects.filter(pk=material_id, is_official_reading=True).first()
+    material = Material.objects.filter(pk=material_id).first()
+    if not material or not (
+        material.is_official_reading
+        or (isinstance(material.content_json, dict) and material.content_json.get('template_title') == "5W's Story Questions")
+    ):
+        material = None
     if not material:
         return JsonResponse({'success': False, 'error': 'Assessment not found'}, status=404)
     questions = _official_story_questions(material, story_title)
@@ -12347,7 +12398,12 @@ def transcribe_story_answer_api(request):
         return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
     if not audio or not story_title or question_index < 0:
         return JsonResponse({'success': False, 'error': 'Audio and question details are required'}, status=400)
-    material = Material.objects.filter(pk=material_id, is_official_reading=True).first()
+    material = Material.objects.filter(pk=material_id).first()
+    if not material or not (
+        material.is_official_reading
+        or (isinstance(material.content_json, dict) and material.content_json.get('template_title') == "5W's Story Questions")
+    ):
+        material = None
     if not material:
         return JsonResponse({'success': False, 'error': 'Assessment not found'}, status=404)
     questions = _official_story_questions(material, story_title)
@@ -20297,6 +20353,8 @@ def add_reading_material(request):
                     template_payload.get('template_lesson') or template_payload.get('template_title')
                     or data.get('template_lesson') or data.get('template_title') or ''
                 ).strip().lower()
+                if template_identity == "5w's story questions":
+                    template_payload['activity_variant'] = 'five_w_story_questions'
                 aral_error = _normalize_aral_template_payload(
                     template_payload,
                     template_title=data.get('template_title') or template_payload.get('template_title'),
@@ -20740,6 +20798,8 @@ def teacher_update_material(request):
                 'assigned_weeks': list(material.assigned_weeks or []),
                 'randomize_order': randomize_order if randomize_order is not None else bool(template_payload.get('randomize_order')),
             })
+            if template_title.lower() == "5w's story questions":
+                template_payload['activity_variant'] = 'five_w_story_questions'
             if template_title == 'Clap & Count Syllables':
                 try:
                     bank_items = validate_configuration(template_payload)

@@ -50,6 +50,9 @@
         const storyQuestionNextBtn = document.getElementById("storyQuestionNextBtn");
         const storyQuestionFinishBtn = document.getElementById("storyQuestionFinishBtn");
         const storyQuestionCompletion = document.getElementById("storyQuestionCompletion");
+        const storyCallMaya = document.getElementById("storyCallMaya");
+        const storyCallStatus = document.getElementById("storyCallStatus");
+        const storyCallConcepts = document.querySelectorAll("[data-story-concept]");
         const completionCount = document.getElementById("completionCount");
         const completionLevel = document.getElementById("completionLevel");
         const btnStartReading = document.getElementById("btnStartReading");
@@ -84,6 +87,7 @@
         const isMyMaterials = window.__PABASA_MY_MATERIALS__ === true;
         const officialAssessmentId = urlParams.get("official_assessment_id") || "";
         const customMaterialData = window.__PABASA_CUSTOM_MATERIAL__ || null;
+        const isFiveWStoryQuestions = window.__PABASA_STORY_CALL__ === true;
         let officialAssessmentData = officialAssessmentId
             ? (window.__PABASA_OFFICIAL_ASSESSMENT__ || null)
             : null;
@@ -200,6 +204,8 @@
         let readAloudAudioUrl = "";
         let isReadAloudLoading = false;
         let isTestingMic = false;
+        let storyCallSpeakingTimer = null;
+        let storyCallSpeakingFrame = 0;
         let micTestWasRecording = false;
         let micSampleAudioUrl = "";
         let micSampleAudio = null;
@@ -625,7 +631,11 @@
 
         function getStoryQuestionsForTitle(storyTitle) {
             const normalizedTitle = String(storyTitle || "").trim().toLowerCase();
-            const grouped = Array.isArray(officialAssessmentData?.story_qas) ? officialAssessmentData.story_qas : [];
+            const customQuestions = isFiveWStoryQuestions && Array.isArray(customMaterialData?.content_json?.questions)
+                ? customMaterialData.content_json.questions
+                : [];
+            const grouped = customQuestions.length ? [{ story_title: customMaterialData.content_json.storyTitle || storyTitle, questions: customQuestions }]
+                : (Array.isArray(officialAssessmentData?.story_qas) ? officialAssessmentData.story_qas : []);
             const questions = [];
             grouped.forEach(entry => {
                 if (!entry || typeof entry !== "object") return;
@@ -673,6 +683,25 @@
                 storyQuestionNextBtn.disabled = currentStoryResults[currentStoryQuestionIndex] === null;
                 storyQuestionNextBtn.textContent = isLast ? "Finish" : "Next →";
             }
+            storyCallConcepts.forEach((node, index) => node.classList.toggle("is-current", index === currentStoryQuestionIndex));
+        }
+
+        function setStoryCallMaya(state) {
+            if (!storyCallMaya) return;
+            clearInterval(storyCallSpeakingTimer);
+            storyCallSpeakingTimer = null;
+            const base = "/static/pabasa_app/images/story_call/";
+            if (state === "speaking") {
+                const frames = ["girl_speaking_1.png", "girl_speaking_2.png", "girl_speaking_3.png"];
+                storyCallSpeakingFrame = 0;
+                storyCallMaya.src = base + frames[0];
+                storyCallSpeakingTimer = setInterval(() => {
+                    storyCallSpeakingFrame = (storyCallSpeakingFrame + 1) % frames.length;
+                    storyCallMaya.src = base + frames[storyCallSpeakingFrame];
+                }, 180);
+            } else {
+                storyCallMaya.src = base + `girl_${state}.png`;
+            }
         }
 
         function renderCurrentStoryQuestion() {
@@ -683,6 +712,8 @@
             if (storyQuestionText) {
                 storyQuestionText.textContent = question?.question || "No comprehension question is available for this story.";
             }
+            setStoryCallMaya("idle");
+            if (storyCallStatus) storyCallStatus.textContent = "Maya is waiting for your answer.";
             syncStoryAnswerText();
             updateStoryQuestionProgress();
             if (storyQuestionFinishReadingBtn) {
@@ -822,6 +853,8 @@
                         }
                     };
                     storyAnswerRecording = true;
+                    setStoryCallMaya("listening");
+                    if (storyCallStatus) storyCallStatus.textContent = "Listening... Tell Maya your answer.";
                     storyBrowserRecognition.start();
                     storyQuestionFinishReadingBtn.textContent = "Finish Reading";
                     storyQuestionFinishReadingBtn.classList.add("is-recording");
@@ -847,6 +880,8 @@
                 };
                 storyAnswerRecorder.start();
                 storyAnswerRecording = true;
+                setStoryCallMaya("listening");
+                if (storyCallStatus) storyCallStatus.textContent = "Listening... Tell Maya your answer.";
                 storyQuestionFinishReadingBtn.textContent = "Finish Reading";
                 storyQuestionFinishReadingBtn.classList.add("is-recording");
                 storyQuestionBackBtn.disabled = true;
@@ -865,6 +900,8 @@
             if (!storyAnswerRecording) return;
             const questionIndex = currentStoryQuestionIndex;
             storyAnswerRecording = false;
+            setStoryCallMaya("thinking");
+            if (storyCallStatus) storyCallStatus.textContent = "Maya is thinking about your answer...";
             storyQuestionFinishReadingBtn.disabled = true;
             storyQuestionFinishReadingBtn.textContent = "Checking…";
             if (storyBrowserRecognition) {
@@ -902,6 +939,8 @@
             storyQuestionFinishReadingBtn.textContent = "Start Reading";
             storyQuestionFinishReadingBtn.classList.remove("is-recording");
             updateStoryQuestionProgress();
+            setStoryCallMaya("idle");
+            if (storyCallStatus) storyCallStatus.textContent = "Maya is waiting for your answer.";
         }
 
         async function submitStoryResponse() {
@@ -1781,6 +1820,18 @@
                         requested_assessment_type: testTitle,
                         requested_system_assessment_key: testCode,
                     });
+                    if (isFiveWStoryQuestions) {
+                        currentSelectedStory = {
+                            title: customMaterialData.content_json?.storyTitle || customMaterialData.title || "Selected story",
+                            content: customMaterialData.content_json?.storyText || customMaterialData.content || "",
+                        };
+                        currentStoryQuestions = getStoryQuestionsForTitle(currentSelectedStory.title).slice(0, 5);
+                        currentStoryQuestionIndex = 0;
+                        currentStoryAnswers = new Array(currentStoryQuestions.length).fill("");
+                        currentStoryResults = new Array(currentStoryQuestions.length).fill(null);
+                        renderStoryComprehensionState(currentSelectedStory.title);
+                        return;
+                    }
                     items = customMaterialData
                         ? parseItems(customMaterialData, liveItemType || mode)
                         : parseLiveContent(liveContent, liveItemType || mode);
@@ -5343,6 +5394,17 @@
         storyQuestionFinishReadingBtn?.addEventListener("click", () => {
             if (storyAnswerRecording) finishStoryAnswerRecording();
             else startStoryAnswerRecording();
+        });
+
+        storyQuestionReadAloudBtn?.addEventListener("click", () => {
+            if (!storyQuestionText?.textContent || !window.speechSynthesis) return;
+            speechSynthesis.cancel();
+            setStoryCallMaya("speaking");
+            if (storyCallStatus) storyCallStatus.textContent = "Maya is asking the question...";
+            const utterance = new SpeechSynthesisUtterance(storyQuestionText.textContent);
+            utterance.lang = /filipino|fil\b/i.test(currentMaterialLanguage || "") ? "fil-PH" : "en-US";
+            utterance.onend = () => { setStoryCallMaya("idle"); if (storyCallStatus) storyCallStatus.textContent = "Maya is waiting for your answer."; };
+            speechSynthesis.speak(utterance);
         });
 
         storyQuestionNextBtn?.addEventListener("click", () => {

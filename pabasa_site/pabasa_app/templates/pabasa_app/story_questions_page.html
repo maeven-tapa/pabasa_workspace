@@ -1,0 +1,13 @@
+{% extends "pabasa_app/reading_assessment_base.html" %}
+{% load static %}
+
+{% block page_title %}Story Call{% endblock %}
+{% block mode_class %}reader-paragraph story-call-reader{% endblock %}
+{% block level_mark %}S{% endblock %}
+{% block completion_level %}Story{% endblock %}
+{% block eyebrow %}Story Call{% endblock %}
+{% block counter_text %}Question 1 of 5{% endblock %}
+{% block content_class %}content-paragraph{% endblock %}
+{% block watermark %}story-call{% endblock %}
+{% block initial_text %}Loading Maya's questions...{% endblock %}
+{% block script %}<script src="{% static 'pabasa_app/js/assessment_reader.js' %}?v={% now 'U' %}"></script>{% endblock %}
