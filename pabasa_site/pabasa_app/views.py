@@ -8875,6 +8875,7 @@ def _official_assessment_edit_context(request, material=None):
         'reading_passages': passages,
         'reading_items_json': json.dumps({
             'words': words,
+            'rhyme_pairs': rhyme_pairs,
             'sentences': sentences,
             'passages': passages,
             'stories': passages,
@@ -8939,6 +8940,11 @@ def _save_official_reading_assessment(request, material=None):
         return [str(item).strip() for item in values if str(item).strip()]
 
     words = _clean_list(content_items.get('words'))
+    rhyme_pairs = [
+        {'word_a': str(pair.get('word_a') or '').strip(), 'word_b': str(pair.get('word_b') or '').strip()}
+        for pair in content_items.get('rhyme_pairs', [])
+        if isinstance(pair, dict) and str(pair.get('word_a') or '').strip() and str(pair.get('word_b') or '').strip()
+    ] if isinstance(content_items.get('rhyme_pairs'), list) else []
     sentences = _clean_list(content_items.get('sentences'))
     passages = []
     story_qas = []
@@ -9024,6 +9030,8 @@ def _save_official_reading_assessment(request, material=None):
 
     if len(words) < 10:
         field_errors['words'] = 'Add at least 10 word items.'
+    if len(rhyme_pairs) < 10:
+        field_errors['rhyme_pairs'] = 'Add at least 10 rhyming pairs.'
     if len(sentences) < 3:
         field_errors['sentences'] = 'Add at least 3 sentence items.'
     if not passages:
@@ -9064,6 +9072,7 @@ def _save_official_reading_assessment(request, material=None):
             'school_year_label': school_year_value,
             'calendar_id': selected_calendar.id if selected_calendar else None,
             'words': words,
+            'rhyme_pairs': rhyme_pairs,
             'sentences': sentences,
             'passages': passages,
             'story_qas': story_qas,
