@@ -1601,6 +1601,34 @@ class StoryReadingProgress(models.Model):
         ]
 
 
+class StoryResponseSubmission(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Pending Grade"),
+        ("graded", "Graded"),
+    ]
+
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="story_response_submissions")
+    material = models.ForeignKey("Material", on_delete=models.CASCADE, related_name="story_response_submissions")
+    enrollment = models.ForeignKey("Enrollment", null=True, blank=True, on_delete=models.SET_NULL, related_name="story_response_submissions")
+    story_material = models.ForeignKey("Material", null=True, blank=True, on_delete=models.SET_NULL, related_name="story_response_source_submissions")
+    prompt = models.TextField(blank=True, default="")
+    response_text = models.TextField(blank=True, default="")
+    audio_file = models.FileField(upload_to="story_responses/%Y/%m/%d/", null=True, blank=True)
+    duration_seconds = models.PositiveIntegerField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    grade = models.PositiveSmallIntegerField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(5)])
+    graded_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="graded_story_response_submissions")
+    graded_at = models.DateTimeField(null=True, blank=True)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "story_response_submissions"
+        constraints = [
+            models.UniqueConstraint(fields=["student", "material"], name="unique_story_response_student_material"),
+        ]
+
+
 class SchoolCalendar(models.Model):
     TERM_CHOICES = [(1, "Term 1"), (2, "Term 2"), (3, "Term 3"), (4, "Term 4")]
 

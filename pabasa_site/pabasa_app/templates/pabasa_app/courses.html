@@ -9663,6 +9663,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 </div>
                             ` : ''}
                         </div>
+                        ${assessment.review_responses ? `<button type="button" class="course-assessment-export-btn story-response-review-btn" data-material-id="${escapeHtml(exportMaterialId)}"><i class="bi bi-mic"></i>Review Responses</button>` : ''}
                         ${canExport ? `
                             <a class="course-assessment-export-btn"
                                href="/material/export-results/?material_id=${encodeURIComponent(exportMaterialId)}"
@@ -9688,6 +9689,39 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 : ''}
         `;
     }
+
+    async function openStoryResponseReview(materialId) {
+        let modal = document.getElementById('storyResponseReviewModal');
+        if (!modal) {
+            document.body.insertAdjacentHTML('beforeend', `<div class="modal fade" id="storyResponseReviewModal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Review Responses</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="storyResponseReviewBody"></div></div></div></div>`);
+            modal = document.getElementById('storyResponseReviewModal');
+        }
+        const body = document.getElementById('storyResponseReviewBody');
+        body.innerHTML = '<div class="text-muted">Loading responses...</div>';
+        bootstrap.Modal.getOrCreateInstance(modal).show();
+        const response = await fetch(`/api/teacher/story-response/review/?material_id=${encodeURIComponent(materialId)}`, { credentials: 'same-origin' });
+        const data = await response.json();
+        if (!response.ok || !data.success) { body.innerHTML = `<div class="text-danger">${escapeHtml(data.error || 'Unable to load responses.')}</div>`; return; }
+        body.innerHTML = data.submissions.map(row => `<div class="border rounded p-3 mb-2"><div class="d-flex justify-content-between gap-3"><strong>${escapeHtml(row.student_name)}</strong><span class="badge bg-secondary">${escapeHtml(row.status)}</span></div>${row.story_title ? `<div class="small text-muted mt-2">Story: ${escapeHtml(row.story_title)}</div>` : ''}${row.prompt ? `<div class="small mt-1">Prompt: ${escapeHtml(row.prompt)}</div>` : ''}${row.recording_url ? `<audio class="w-100 mt-2" controls preload="none" src="${escapeHtml(row.recording_url)}"></audio><div class="mt-2 d-flex align-items-center gap-2"><label class="small fw-semibold">Grade</label><select class="form-select form-select-sm story-response-grade" style="width:90px" data-submission-id="${row.id}">${[0,1,2,3,4,5].map(value => `<option value="${value}" ${Number(row.grade) === value ? 'selected' : ''}>${value}</option>`).join('')}</select><button type="button" class="btn btn-sm btn-primary story-response-save-grade" data-submission-id="${row.id}">Save</button></div>` : ''}</div>`).join('') || '<div class="text-muted">No enrolled students found.</div>';
+    }
+
+    document.addEventListener('click', async event => {
+        const reviewButton = event.target.closest('.story-response-review-btn');
+        if (reviewButton) {
+            event.preventDefault();
+            await openStoryResponseReview(reviewButton.dataset.materialId);
+            return;
+        }
+        const saveButton = event.target.closest('.story-response-save-grade');
+        if (!saveButton) return;
+        const select = document.querySelector(`.story-response-grade[data-submission-id="${saveButton.dataset.submissionId}"]`);
+        const token = document.querySelector('[name=csrfmiddlewaretoken]')?.value || await ensureCsrfToken();
+        const response = await fetch('/api/teacher/story-response/grade/', { method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-CSRFToken': token}, body: JSON.stringify({submission_id: saveButton.dataset.submissionId, grade: select?.value}) });
+        const data = await response.json();
+        if (!response.ok || !data.success) { showToast(data.error || 'Grade could not be saved', 'error'); return; }
+        saveButton.closest('.border')?.querySelector('.badge')?.replaceChildren(document.createTextNode('Graded'));
+        showToast('Grade saved', 'success');
+    });
 
     function initializeCourseAssessmentTableHandlers() {
         if (courseAssessmentTableInitialized) return;

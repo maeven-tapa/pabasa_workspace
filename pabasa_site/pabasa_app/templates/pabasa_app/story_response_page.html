@@ -19,6 +19,7 @@
 .prompt{margin:0;padding:0;border:0;border-radius:0;background:transparent;color:#1e3550;font-size:clamp(1rem,1.65vw,1.45rem);line-height:1.24;text-align:center;box-shadow:none;text-shadow:none;}
 #stack:not([hidden]){display:flex;flex-direction:row;align-items:center;justify-content:center;flex-wrap:wrap;gap:clamp(8px,1vw,12px);max-width:100%;min-width:0;box-sizing:border-box;margin-top:clamp(12px,1.6vw,18px);}
 #stack .story-response-action{display:inline-flex;align-items:center;justify-content:center;gap:.45em;min-height:40px;min-width:0;margin:0;padding:.45rem .7rem;border:1px solid #c8983d;border-bottom-width:4px;border-radius:12px;font-family:R;font-size:clamp(.78rem,1vw,.9rem);font-weight:400;line-height:1.2;text-align:center;box-shadow:0 5px 10px rgba(48,21,40,.2);transition:transform .15s ease,box-shadow .15s ease;}
+#finish{margin-left:8px;background:#54c2f0;color:#15324a;}
 #stack .story-response-action:hover{transform:translateY(-1px);box-shadow:0 7px 12px rgba(48,21,40,.25);}
 #stack .story-response-action:active{transform:translateY(2px);box-shadow:0 2px 5px rgba(48,21,40,.2);}
 #stack .answer{order:2;background:#e94f52;border-color:#9f3439;color:#fff;}
@@ -31,7 +32,7 @@
 .story-response-state>.recording.show .time{font-size:1rem;line-height:1;}
 .story-response-state>.processing.show{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(6px,1vw,10px);}
 .story-response-state>.playback{width:min(100%,300px);padding:0;background:transparent;border-radius:0;}
-.story-response-state>.playback.show{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(6px,1vw,10px);}
+.story-response-state>.playback .story-response-actions{display:flex;align-items:center;justify-content:center;gap:8px;}
 .story-response-state>.playback .row{width:min(100%,240px);}
 .story-response-state>.playback .time-display{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:6px;white-space:nowrap;margin:0;}
 .story-response-state>.playback .again{margin-top:6px;}
@@ -60,4 +61,39 @@ const setResponseActionLabels=()=>{$('hear').textContent='🔊 Hear';if(r?.state
 const renderResponseUi=ui;
 ui=x=>{renderResponseUi(x);responseState.dataset.phase=x;$('prompt').hidden=x==='think'||x==='review';if(x==='ready'){$('hear').hidden=!a.read_aloud_enabled;$('record').hidden=!a.voice_recording_enabled}else if(x==='rec'){$('hear').hidden=true;$('record').hidden=false}setResponseActionLabels();};
 setResponseActionLabels();
+const finishButton=document.createElement('button');
+finishButton.id='finish';
+finishButton.className='btn again';
+finishButton.type='button';
+finishButton.textContent='Finish';
+const responseActions=document.createElement('div');
+responseActions.className='story-response-actions';
+const againButton=$('again');
+againButton.replaceWith(responseActions);
+responseActions.append(againButton,finishButton);
+finishButton.addEventListener('click',async()=>{
+	if(!c.length||finishButton.disabled)return;
+	finishButton.disabled=true;
+	finishButton.textContent='Saving...';
+	try{
+		const blob=new Blob(c,{type:'audio/webm'});
+		const form=new FormData();
+		form.append('material_id',String(a.material_id||a.id));
+		form.append('response_text','');
+		form.append('duration_seconds','0');
+		form.append('audio',blob,`story-response-${Date.now()}.webm`);
+		const response=await fetch('/api/story-response/submit/',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':document.querySelector('[name=csrfmiddlewaretoken]')?.value||''},body:form});
+		const result=await response.json().catch(()=>({}));
+		if(!response.ok||!result.success)throw new Error(result.error||'Your response could not be submitted. Please try again.');
+		audio?.pause();
+		responseState.innerHTML='<div class="story-response-submitted"><h2>🎉 Response Submitted!</h2><p>Great job! Your response has been submitted.</p><strong>🎙️ Recording Saved</strong><p>Status: Waiting for Teacher Review</p><small>Your teacher will listen to your response and review your answer.</small></div>';
+	}catch(error){
+		finishButton.disabled=false;
+		finishButton.textContent='Finish';
+		const feedback=document.createElement('div');
+		feedback.className='submission-error';
+		feedback.textContent=error.message;
+		$('playback').appendChild(feedback);
+	}
+});
 </script>

@@ -238,6 +238,7 @@
         let storyAnswerStream = null;
         let storyAnswerRecording = false;
         let storyAnswerUploadChain = Promise.resolve();
+        let storyAnswerChunks = [];
         let storyAnswerRecordingToken = 0;
         let storyBrowserRecognition = null;
         let storyBrowserFinalTranscript = "";
@@ -828,7 +829,6 @@
                     storyQuestionNextBtn.disabled = true;
                     storyAnswerFeedback.textContent = "Listening… Speak your answer clearly.";
                     storyAnswerFeedback.classList.remove("d-none");
-                    return;
                 }
                 storyAnswerStream = await navigator.mediaDevices.getUserMedia(microphoneConstraints());
                 const mimeType = pickAudioMimeType();
@@ -836,6 +836,7 @@
                 storyAnswerUploadChain = Promise.resolve();
                 storyAnswerRecorder.ondataavailable = event => {
                     if (!event.data?.size) return;
+                    storyAnswerChunks.push(event.data);
                     storyAnswerUploadChain = storyAnswerUploadChain
                         .then(() => uploadStoryAnswerChunk(event.data, questionIndex, recordingToken))
                         .catch(error => {
@@ -903,6 +904,23 @@
             updateStoryQuestionProgress();
         }
 
+        async function submitStoryResponse() {
+            if (!storyAnswerChunks.length || !materialId) return null;
+            const formData = new FormData();
+            const blob = new Blob(storyAnswerChunks, { type: storyAnswerChunks[0].type || "audio/webm" });
+            formData.append("audio", blob, `story-response.${audioExtensionForBlob(blob)}`);
+            formData.append("material_id", String(materialId));
+            formData.append("response_text", currentStoryAnswers.filter(Boolean).join(" "));
+            formData.append("duration_seconds", String(Math.max(0, Math.round((Date.now() - (startTime || Date.now())) / 1000))));
+            const response = await fetch("/api/story-response/submit/", {
+                method: "POST", credentials: "same-origin",
+                headers: { "X-CSRFToken": getCsrfToken() }, body: formData,
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.error || "Response submission failed");
+            return result;
+        }
+
         async function showStoryCompletionScreen() {
             currentStoryState = "story_complete";
             const readingScores = calculateScores();
@@ -968,6 +986,11 @@
                 words_read: correctWordsRead(),
                 classification,
             });
+            try {
+                await submitStoryResponse();
+            } catch (error) {
+                console.warn("PABASA: Story response submission failed", error);
+            }
             await showCompletion(true);
             if (!isAssistMode && persistedState?.next_url) {
                 window.location.assign(persistedState.next_url);

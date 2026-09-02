@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
-from django.http import JsonResponse, HttpResponseForbidden, HttpResponse, HttpResponseNotAllowed
+from django.http import JsonResponse, HttpResponseForbidden, HttpResponse, HttpResponseNotAllowed, FileResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from django.views.decorators.clickjacking import xframe_options_sameorigin
@@ -55,7 +55,7 @@ from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_
 from django.db import transaction
 import re
 import traceback
-from .models import User, School, Section, Enrollment, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, TeacherAralSchedule, StoryReadingProgress
+from .models import User, School, Section, Enrollment, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, TeacherAralSchedule, StoryReadingProgress, StoryResponseSubmission
 from .section_configuration import ensure_salawag_grade_two_sections
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
 from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
@@ -17057,6 +17057,8 @@ def get_teacher_assessments_api(request):
                 'assessment_type': a.assessment_type,
                 'source_type': source_type,
                 'template_title': template_title,
+                'is_story_response': _is_story_response_material(source_material),
+                'review_responses': _is_story_response_material(source_material),
                 'status': a.status,
                 'is_active': a.is_active,
                 'attempt_count': len(attempts),
@@ -17123,7 +17125,7 @@ def get_teacher_assessments_api(request):
                 
                 # Only include materials that have attempt rows
                 # (materials with no assessment_id and no attempts shouldn't be displayed)
-                if not attempts_qs.exists():
+                if not attempts_qs.exists() and not _is_story_response_material(m):
                     continue
                     
                 accs = [a.accuracy for a in attempts_qs if a.accuracy is not None]
@@ -17163,6 +17165,8 @@ def get_teacher_assessments_api(request):
                     'avg_time_score': avg_list(tms),
                     'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
                     'updated_at': m.updated_at.isoformat() if getattr(m, 'updated_at', None) else None,
+                    'is_story_response': _is_story_response_material(m),
+                    'review_responses': _is_story_response_material(m),
                 })
         except Exception:
             logger.exception('Failed to include material-based assessments in teacher assessments API')
@@ -17417,6 +17421,11 @@ def export_material_results(request):
         ).select_related('student', 'material').order_by('-completed_at', '-updated_at', '-id')
         if assessment.student_id is not None
     }
+    story_submissions_by_student = {
+        submission.student_id: submission for submission in StoryResponseSubmission.objects.filter(
+            material=material, student_id__in=student_ids,
+        )
+    } if _is_story_response_material(material) else {}
 
     wb = Workbook()
     ws = wb.active
@@ -17454,12 +17463,18 @@ def export_material_results(request):
     for student in students:
         row_idx += 1
         result = results_by_student.get(student.id)
+        story_submission = story_submissions_by_student.get(student.id)
         completed = bool(result and str(result.attempt_status or '').strip().lower() == 'completed')
         score_display = '—'
         percent_display = '—'
         status_display = 'Not Attempted'
         date_display = '—'
-        if result and completed:
+        if story_submission:
+            score_display = str(story_submission.grade) if story_submission.grade is not None else '—'
+            percent_display = f"{story_submission.grade * 20:g}%" if story_submission.grade is not None else '—'
+            status_display = 'Graded' if story_submission.grade is not None else 'Pending Grade'
+            date_display = timezone.localtime(story_submission.submitted_at).strftime('%B %d, %Y')
+        elif result and completed:
             score_display = _material_result_score_display(result)
             percent_display = _material_result_percentage_display(result)
             status_display = 'Completed'
@@ -17657,6 +17672,15 @@ def get_teacher_material_attempts_api(request):
 
         if not _teacher_can_access_material(teacher_user, material):
             return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+
+        if _is_story_response_material(material):
+            submissions = StoryResponseSubmission.objects.filter(material=material).select_related('student', 'story_material').order_by('submitted_at')
+            enriched = []
+            for submission in submissions:
+                row = _story_response_review_payload(submission)
+                row.update({'status': 'completed', 'completed_at': submission.submitted_at.isoformat(), 'score': submission.grade})
+                enriched.append(row)
+            return JsonResponse({'success': True, 'assessment': {'id': f'material-{material.id}', 'code': material.code, 'title': material.title, 'materials': [], 'attempts': enriched, 'is_story_response': True, 'review_responses': True}})
 
         attempts_qs = Assessment.objects.filter(material=material).order_by('created_at')
 
@@ -22934,10 +22958,13 @@ def story_response_page(request):
 @require_http_methods(["POST"])
 def story_response_submit(request):
     """Submit a student's story response."""
-    try:
-        payload = json.loads(request.body or '{}')
-    except (TypeError, ValueError):
-        return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
+    if request.content_type and request.content_type.startswith('multipart/form-data'):
+        payload = request.POST
+    else:
+        try:
+            payload = json.loads(request.body or '{}')
+        except (TypeError, ValueError):
+            return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
     
     user = User.objects.filter(id=request.session.get('user_id'), role='student', is_archived=False).first()
     if not user:
@@ -22948,12 +22975,131 @@ def story_response_submit(request):
     
     if not material or not _is_story_response_material(material):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
+    access_response = _enforce_student_access_for_request(request, material=material)
+    if access_response:
+        return access_response
     
-    # TODO: Store response in a dedicated StoryResponse model
-    # For now, return success
+    student_section = next((
+        section for section in Section.objects.filter(is_active=True).select_related('school_calendar')
+        if section.has_student(user, active_only=True)
+    ), None)
+    if not student_section:
+        return JsonResponse({'success': False, 'error': 'You are not enrolled in an active class.'}, status=403)
+    source_story_id = (material.content_json or {}).get('source_story_reading_material_id')
+    source_story = Material.objects.filter(pk=source_story_id).first() if source_story_id else None
+    if not source_story or not _is_story_reading_material(source_story):
+        return JsonResponse({'success': False, 'error': 'The activity story is unavailable.'}, status=400)
+    audio = request.FILES.get('audio')
+    if not audio:
+        return JsonResponse({'success': False, 'error': 'A recording is required.'}, status=400)
+    duration = payload.get('duration_seconds')
+    try:
+        duration = max(0, int(duration)) if duration is not None else None
+    except (TypeError, ValueError):
+        duration = None
+    submission, _ = StoryResponseSubmission.objects.update_or_create(
+        student=user,
+        material=material,
+        defaults={
+            'enrollment': Enrollment.objects.filter(student=user, section=student_section, status='active', is_active=True).order_by('id').first(),
+            'story_material': source_story,
+            'prompt': str((material.content_json or {}).get('response_prompt') or '').strip(),
+            'response_text': str(payload.get('response_text') or '').strip(),
+            'duration_seconds': duration,
+            'status': 'pending',
+            'grade': None,
+            'graded_by': None,
+            'graded_at': None,
+        },
+    )
+    submission.audio_file.save(audio.name, audio, save=True)
     
     return JsonResponse({
         'success': True,
         'message': 'Your response has been recorded.',
-        'submitted_at': timezone.now().isoformat() if 'timezone' in globals() else str(date.today()),
+        'submitted_at': submission.submitted_at.isoformat(),
+        'submission_id': submission.id,
     })
+
+
+def _story_response_review_payload(submission):
+    content = submission.story_material.content_json if submission.story_material_id else {}
+    return {
+        'id': submission.id,
+        'student_id': submission.student_id,
+        'student_name': f'{submission.student.first_name} {submission.student.last_name}'.strip() or submission.student.custom_id,
+        'status': 'Graded' if submission.grade is not None else 'Pending Grade',
+        'recording_available': bool(submission.audio_file),
+        'recording_url': reverse('teacher_story_response_audio', args=[submission.id]) if submission.audio_file else None,
+        'story_title': str(content.get('storyTitle') or submission.story_material.title or '').strip(),
+        'prompt': submission.prompt,
+        'grade': submission.grade,
+        'submitted_at': submission.submitted_at.isoformat(),
+    }
+
+
+@require_http_methods(["GET"])
+@login_required(role='teacher')
+def teacher_story_response_review(request):
+    _, material_id = _parse_prefixed_id(request.GET.get('material_id'))
+    material = Material.objects.filter(pk=material_id).first() if material_id else None
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    if not material or not _is_story_response_material(material):
+        return JsonResponse({'success': False, 'error': 'Response to Story activity not found.'}, status=404)
+    if not teacher or not _teacher_can_access_material(teacher, material):
+        return JsonResponse({'success': False, 'error': 'Access denied.'}, status=403)
+    section_ids = set(material.assigned_sections.filter(is_active=True).values_list('id', flat=True))
+    if material.section_id:
+        section_ids.add(material.section_id)
+    for course in material.courses.filter(is_active=True):
+        section_ids.update(course.sections.filter(is_active=True).values_list('id', flat=True))
+    student_ids = set()
+    for section in Section.objects.filter(id__in=section_ids, is_active=True):
+        student_ids.update(entry.get('student_id') for entry in section.get_enrolled_students(active_only=True) if entry.get('student_id'))
+    submissions = {row.student_id: row for row in StoryResponseSubmission.objects.filter(material=material, student_id__in=student_ids).select_related('student', 'story_material')}
+    students = User.objects.filter(id__in=student_ids, role='student').order_by('last_name', 'first_name')
+    rows = []
+    for student in students:
+        row = submissions.get(student.id)
+        rows.append(_story_response_review_payload(row) if row else {
+            'student_id': student.id,
+            'student_name': f'{student.first_name} {student.last_name}'.strip() or student.custom_id,
+            'status': 'No Submission', 'recording_available': False, 'recording_url': None,
+            'story_title': '', 'prompt': '', 'grade': None,
+        })
+    return JsonResponse({'success': True, 'activity': {'id': material.id, 'title': material.title}, 'submissions': rows})
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def teacher_story_response_grade(request):
+    try:
+        payload = json.loads(request.body or '{}')
+        submission = StoryResponseSubmission.objects.select_related('material').get(pk=payload.get('submission_id'))
+        teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+        if not teacher or not _teacher_can_access_material(teacher, submission.material):
+            return JsonResponse({'success': False, 'error': 'Access denied.'}, status=403)
+        grade = int(payload.get('grade'))
+        if grade < 0 or grade > 5:
+            raise ValueError
+    except (TypeError, ValueError, StoryResponseSubmission.DoesNotExist):
+        return JsonResponse({'success': False, 'error': 'A valid submission and grade from 0 to 5 are required.'}, status=400)
+    submission.grade = grade
+    submission.status = 'graded'
+    submission.graded_by = teacher
+    submission.graded_at = timezone.now()
+    submission.save(update_fields=['grade', 'status', 'graded_by', 'graded_at', 'updated_at'])
+    return JsonResponse({'success': True, 'submission': _story_response_review_payload(submission)})
+
+
+@require_http_methods(["GET"])
+@login_required(role='teacher')
+def teacher_story_response_audio(request, submission_id):
+    submission = StoryResponseSubmission.objects.select_related('material').filter(pk=submission_id).first()
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    if not submission or not submission.audio_file or not teacher or not _teacher_can_access_material(teacher, submission.material):
+        return HttpResponseForbidden('Recording unavailable.')
+    response = FileResponse(submission.audio_file.open('rb'), content_type='audio/webm')
+    response['Content-Disposition'] = 'inline'
+    return response
