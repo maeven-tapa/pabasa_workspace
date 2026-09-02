@@ -10410,6 +10410,20 @@ def reading_word_page(request):
     access_response = _enforce_student_access_for_request(request)
     if access_response:
         return access_response
+    live_session_id = str(request.GET.get('live_session_id') or '').strip()
+    if live_session_id:
+        live_session = LiveAssessmentSession.objects.filter(id=live_session_id).first()
+        current_user_id = request.session.get('user_id')
+        _, requested_material_id = _parse_prefixed_id(request.GET.get('official_assessment_id'))
+        if (
+            request.session.get('user_role') != 'student'
+            or not live_session
+            or live_session.status not in LIVE_ASSESSMENT_ACTIVE_STATUSES
+            or str(current_user_id) not in {str(value) for value in (live_session.student_ids or [])}
+            or str(requested_material_id or '') != str(live_session.material_id)
+            or not _is_live_crla_material(live_session.material)
+        ):
+            return HttpResponseForbidden('You are not authorized to join this live CRLA assessment.')
     canonical_response = _canonicalize_custom_material_reading_url(request)
     if canonical_response:
         return canonical_response
@@ -12722,35 +12736,18 @@ def _build_live_assessment_action_url(material, session_id, start_at, countdown_
     if not material:
         return ''
 
-    item_type = (material.item_type or '').strip().lower()
-    if item_type == 'sentence':
-        mode = 'sentence'
-    elif item_type == 'paragraph':
-        mode = 'para'
-    else:
-        mode = 'word'
-
-    title = (material.title or material.prompt_text or 'Assessment').strip() or 'Assessment'
-    code = (material.code or '').strip() or 'LIVE'
-    content = (material.content_text or material.prompt_text or '').strip()
-    content_json = material.content_json or {}
-    if isinstance(content_json, dict):
-        content = content or (content_json.get('content_text') or '').strip()
-    language = (content_json.get('language') if isinstance(content_json, dict) else '') or 'English'
+    # Live CRLA only adds a release gate. The reader must resolve the same
+    # official payload and fresh-attempt marker used by the normal workflow.
     params = {
-        'id': str(material.id),
-        'test': title,
-        'code': code,
+        'official_assessment_id': str(material.id),
+        'crla_fresh': '1',
         'live': '1',
         'live_session_id': session_id,
         'start_at': start_at,
         'countdown': str(countdown_seconds),
-        'content': content,
-        'item_type': item_type or 'word',
-        'language': language,
     }
     query = '&'.join(f'{key}={quote(str(value), safe="")}' for key, value in params.items())
-    return f'/dashboard/assessment/reading_ui/{mode}/?{query}'
+    return f'{reverse("reading_word_page")}?{query}'
 
 
 def _build_live_assessment_control_url(session_id):
@@ -12773,6 +12770,37 @@ def _build_live_assessment_session_url(session_id):
 
 LIVE_ASSESSMENT_ACTIVE_STATUSES = ['waiting', 'countdown', 'started', 'paused']
 LIVE_ASSESSMENT_STALE_HOURS = 24
+LIVE_ASSESSMENT_MAX_STUDENTS = 10
+
+
+def _is_live_crla_material(material):
+    return bool(
+        material
+        and material.is_active
+        and material.is_official_reading
+        and str(material.assessment_kind or '').strip().lower() == 'crla'
+    )
+
+
+def _live_assessment_section_is_available(section):
+    return bool(
+        section
+        and section.is_active
+        and section.assessment_week_enabled
+        and _section_assessment_week_status(section) == 'during'
+    )
+
+
+def _live_assessment_sections(session):
+    if getattr(session, 'section_id', None) and session.section and session.section.is_active:
+        return [session.section]
+    if session.course:
+        sections = list(session.course.sections.filter(is_active=True))
+        if sections:
+            return sections
+    if session.material and session.material.section and session.material.section.is_active:
+        return [session.material.section]
+    return []
 
 
 def _live_end_trace_state_counts(session):
@@ -14348,6 +14376,9 @@ def live_assessment_active_invitation(request):
 
     candidate_sessions = LiveAssessmentSession.objects.filter(
         status__in=LIVE_ASSESSMENT_ACTIVE_STATUSES,
+        material__is_active=True,
+        material__is_official_reading=True,
+        material__assessment_kind='crla',
     ).select_related('material', 'course', 'teacher').order_by('-created_at')
 
     session = None
@@ -14488,7 +14519,12 @@ def start_live_assessment(request):
     material = None
     if material_id:
         material = Material.objects.filter(id=material_id).first()
-        if material and teacher_user.role != 'admin' and material.teacher_id != teacher_user.id:
+        is_official_crla = bool(
+            material
+            and material.is_official_reading
+            and str(material.assessment_kind or '').strip().lower() == 'crla'
+        )
+        if material and teacher_user.role != 'admin' and material.teacher_id != teacher_user.id and not is_official_crla:
             is_course_linked = bool(
                 course and (
                     course.sections.filter(id=material.section_id).exists()
@@ -14507,6 +14543,17 @@ def start_live_assessment(request):
 
     if not material:
         return JsonResponse({'success': False, 'error': 'Material not found'}, status=404)
+
+    if not selected_section or not _live_assessment_section_is_available(selected_section):
+        return JsonResponse(
+            {'success': False, 'error': 'Live CRLA assessments require an active Assessment Week for this section.'},
+            status=403,
+        )
+    if not _is_live_crla_material(material):
+        return JsonResponse(
+            {'success': False, 'error': 'Live Assessment is available only for the official CRLA assessment.'},
+            status=400,
+        )
 
     sections = []
     if selected_section:
@@ -14544,6 +14591,7 @@ def start_live_assessment(request):
         id=session_id,
         teacher=teacher_user,
         course=course,
+        section=selected_section,
         material=material,
         student_ids=[],
         student_count=0,
@@ -14586,6 +14634,8 @@ def live_assessment_session_entry(request, session_id):
     session = LiveAssessmentSession.objects.filter(id=session_id).select_related('teacher', 'course', 'material').first()
     if not session:
         return HttpResponse('Live assessment session not found', status=404)
+    if not _is_live_crla_material(session.material):
+        return HttpResponseForbidden('Only official CRLA assessments can use Live Assessment.')
 
     _maybe_auto_end_live_session(session)
 
@@ -14614,6 +14664,8 @@ def live_assessment_session_page(request, session_id):
     session = LiveAssessmentSession.objects.filter(id=session_id).select_related('teacher', 'course', 'material').first()
     if not session:
         return HttpResponse('Live assessment session not found', status=404)
+    if not _is_live_crla_material(session.material):
+        return HttpResponseForbidden('Only official CRLA assessments can use Live Assessment.')
 
     _maybe_auto_end_live_session(session)
 
@@ -14639,13 +14691,7 @@ def live_assessment_session_page(request, session_id):
     # Also provide the roster of available students for selection (teacher picks participants)
     available_ids = []
     try:
-        sections = []
-        if session.course:
-            sections = list(session.course.sections.filter(is_active=True))
-            if not sections and session.material and session.material.section and session.material.section.is_active:
-                sections = [session.material.section]
-        elif session.material and session.material.section and session.material.section.is_active:
-            sections = [session.material.section]
+        sections = _live_assessment_sections(session)
         seen = set()
         for section in sections:
             for entry in section.get_enrolled_students(active_only=True):
@@ -14718,6 +14764,8 @@ def live_assessment_session_state(request, session_id):
     session = LiveAssessmentSession.objects.filter(id=session_id).select_related('material', 'course').first()
     if not session:
         return JsonResponse({'success': False, 'error': 'Session not found'}, status=404)
+    if not _is_live_crla_material(session.material):
+        return JsonResponse({'success': False, 'error': 'Only official CRLA assessments can use Live Assessment.'}, status=400)
 
     _trace_live_end_flow(
         'state_endpoint_enter',
@@ -14764,13 +14812,7 @@ def live_assessment_session_state(request, session_id):
     # Provide available roster for teachers so the UI can render the selection list
     available_profiles = []
     try:
-        src_sections = []
-        if session.course:
-            src_sections = list(session.course.sections.filter(is_active=True))
-            if not src_sections and session.material and session.material.section and session.material.section.is_active:
-                src_sections = [session.material.section]
-        elif session.material and session.material.section and session.material.section.is_active:
-            src_sections = [session.material.section]
+        src_sections = _live_assessment_sections(session)
         seen = set()
         avail_ids = []
         for section in src_sections:
@@ -14826,6 +14868,8 @@ def live_assessment_student_state_update(request, session_id):
     session = LiveAssessmentSession.objects.filter(id=session_id).select_related('material', 'course').first()
     if not session:
         return JsonResponse({'success': False, 'error': 'Session not found'}, status=404)
+    if not _is_live_crla_material(session.material):
+        return JsonResponse({'success': False, 'error': 'Only official CRLA assessments can use Live Assessment.'}, status=400)
 
     _trace_live_end_flow(
         'student_update_enter',
@@ -14940,6 +14984,8 @@ def live_assessment_session_action(request, session_id):
 
     if user_role not in ['teacher', 'admin'] or user_id != session.teacher_id:
         return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
+    if not _is_live_crla_material(session.material):
+        return JsonResponse({'success': False, 'error': 'Live Assessment is available only for the official CRLA assessment.'}, status=400)
 
     try:
         data = json.loads(request.body or '{}')
@@ -14965,13 +15011,7 @@ def live_assessment_session_action(request, session_id):
     if selected_student_ids is not None and session.status == 'waiting':
         available_ids = set()
         try:
-            src_sections = []
-            if session.course:
-                src_sections = list(session.course.sections.filter(is_active=True))
-                if not src_sections and session.material and session.material.section and session.material.section.is_active:
-                    src_sections = [session.material.section]
-            elif session.material and session.material.section and session.material.section.is_active:
-                src_sections = [session.material.section]
+            src_sections = _live_assessment_sections(session)
             for section in src_sections:
                 for entry in section.get_enrolled_students(active_only=True):
                     sid = entry.get('student_id')
@@ -14980,7 +15020,19 @@ def live_assessment_session_action(request, session_id):
         except Exception:
             available_ids = set()
 
-        filtered_ids = [int(sid) for sid in selected_student_ids if int(sid) in available_ids]
+        filtered_ids = []
+        for sid in selected_student_ids[:LIVE_ASSESSMENT_MAX_STUDENTS]:
+            try:
+                normalized_id = int(sid)
+            except (TypeError, ValueError):
+                continue
+            if normalized_id in available_ids and normalized_id not in filtered_ids:
+                filtered_ids.append(normalized_id)
+        if len(selected_student_ids) > LIVE_ASSESSMENT_MAX_STUDENTS:
+            return JsonResponse(
+                {'success': False, 'error': f'Live Assessment supports at most {LIVE_ASSESSMENT_MAX_STUDENTS} students.'},
+                status=400,
+            )
         session.student_ids = filtered_ids
         session.student_count = len(filtered_ids)
         existing_states = session.student_states or {}
@@ -15095,20 +15147,27 @@ def live_assessment_session_action(request, session_id):
 
         valid_student_ids = []
         try:
-            src_sections = []
-            if session.course:
-                src_sections = list(session.course.sections.filter(is_active=True))
-                if not src_sections and session.material and session.material.section and session.material.section.is_active:
-                    src_sections = [session.material.section]
-            elif session.material and session.material.section and session.material.section.is_active:
-                src_sections = [session.material.section]
+            src_sections = _live_assessment_sections(session)
             allowed_ids = set()
             for section in src_sections:
                 for entry in section.get_enrolled_students(active_only=True):
                     sid = entry.get('student_id')
                     if sid:
                         allowed_ids.add(int(sid))
-            valid_student_ids = [int(sid) for sid in (selected_student_ids or []) if int(sid) in allowed_ids]
+            raw_selected_ids = selected_student_ids or []
+            if len(raw_selected_ids) > LIVE_ASSESSMENT_MAX_STUDENTS:
+                return JsonResponse(
+                    {'success': False, 'error': f'Live Assessment supports at most {LIVE_ASSESSMENT_MAX_STUDENTS} students.'},
+                    status=400,
+                )
+            valid_student_ids = []
+            for sid in raw_selected_ids:
+                try:
+                    normalized_id = int(sid)
+                except (TypeError, ValueError):
+                    continue
+                if normalized_id in allowed_ids and normalized_id not in valid_student_ids:
+                    valid_student_ids.append(normalized_id)
         except Exception:
             valid_student_ids = []
 
@@ -16338,6 +16397,14 @@ def class_management_view(request):
 
     roster_students, _, _ = _teacher_student_roster_payload(teacher_user, section=section)
     students_table = []
+    live_crla_material = None
+    live_crla_student_ids = [student.get('id') for student in roster_students if student.get('id')]
+    first_student = User.objects.filter(id__in=live_crla_student_ids, role='student', is_archived=False).first()
+    if first_student:
+        live_availability = _official_assessment_availability_for_student(first_student, request)
+        live_crla_material = _official_crla_material_for_student(
+            first_student, live_availability.get('assessment_type')
+        ) if live_availability.get('available') else None
     finalization_open = _teacher_year_end_finalization_open(section)
     section_enrollments = {e.student_id: e for e in _current_section_enrollments(
         section, statuses=('active', 'completed')
@@ -16345,6 +16412,7 @@ def class_management_view(request):
     for student in roster_students:
         enrollment = section_enrollments.get(student.get('id'))
         students_table.append({
+            'id': student.get('id'),
             'name': student.get('name', ''),
             'pabasa_id': student.get('custom_id', ''),
             'email': student.get('email', ''),
@@ -16374,6 +16442,8 @@ def class_management_view(request):
         'assessment_week_toggle_available': _section_assessment_week_status(section) == 'during',
         'sections': all_sections,
         'available_students': available_students,
+        'live_crla_material': live_crla_material,
+        'live_crla_student_ids': live_crla_student_ids,
         'students_table': students_table,
         'page_title': f"Manage {section.class_name}"
         ,'finalization_open': finalization_open,
