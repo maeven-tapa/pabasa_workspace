@@ -10705,6 +10705,11 @@ def _is_story_reading_material(material):
     content = getattr(material, 'content_json', None) if material else None
     if not isinstance(content, dict):
         return False
+    # 5W's Story Questions may retain Story Reading-related metadata because
+    # it references a story. It is never itself a valid Story Reading source.
+    five_w_title = str(content.get('template_title') or '').strip().casefold()
+    if five_w_title == "5w's story questions".casefold():
+        return False
     values = (
         content.get('template_title'), content.get('template_lesson'),
         content.get('template_type'), content.get('activity_type'),
@@ -18748,7 +18753,7 @@ def get_class_materials(request):
         combined.sort(key=lambda tup: getattr(tup[1], 'created_at', timezone.now()), reverse=True)
 
         all_materials_flat = []
-        materials = {'word': [], 'sentence': [], 'paragraph': [], 'vowel': []}
+        materials = {'word': [], 'sentence': [], 'paragraph': [], 'story_reading': [], 'vowel': []}
         official_assessments = []
 
         for kind, obj in combined:
@@ -18834,6 +18839,15 @@ def get_class_materials(request):
                     'selected_set_name': content_json.get('activity_name') or '',
                     'student_access': bool(getattr(m, 'student_access', False)),
                 }
+                # Keep the general paragraph bucket unchanged, but provide a
+                # backend-classified source list for selectors that require
+                # actual Story Reading activities (not 5W question templates).
+                # Keep the selector's source list aligned with the material
+                # list.  Material status is user-entered/legacy data in a few
+                # places, so do not make Story Reading classification depend
+                # on the exact casing of "published".
+                if _is_story_reading_material(m) and str(m.status or '').strip().lower() == 'published':
+                    materials['story_reading'].append(item)
             elif kind == 'assessment':
                 a = obj
                 content_value = a.content or ''

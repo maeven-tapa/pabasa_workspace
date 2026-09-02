@@ -6942,6 +6942,22 @@
 .template-builder-heading p { color: var(--activity-muted); font: 400 .94rem/1.5 "Quattrocento Sans", "Segoe UI", sans-serif; margin: .45rem 0 0; max-width: 620px; }
 .template-builder-lesson-pill { background: var(--activity-brand-soft); border-color: #cce3e9; border-radius: 9px; color: var(--activity-brand-deep); font-size: .8rem; padding: .5rem .7rem; }
 .template-builder-form { gap: 0; }
+#templateDynamicFields .five-w-row { min-width: 0; }
+#templateDynamicFields .five-w-indicator { color: var(--activity-brand-deep); font: 900 1rem/1.2 "Nunito", sans-serif; }
+#templateDynamicFields .five-w-question-wrap,
+#templateDynamicFields .five-w-answer-wrap { min-width: 0; }
+#templateDynamicFields .five-w-question-wrap > label,
+#templateDynamicFields .five-w-answer-wrap > label { color: var(--activity-muted); display: block; font: 800 .72rem/1.2 "Nunito", sans-serif; letter-spacing: .05em; margin-bottom: .35rem; text-transform: uppercase; }
+#templateDynamicFields .five-w-answer-chips { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .45rem; min-height: 0; width: 100%; }
+#templateDynamicFields .five-w-answer-chip { align-items: center; background: var(--activity-brand-soft); border: 1px solid #c7e2e8; border-radius: 999px; color: var(--activity-brand-deep); display: inline-flex; gap: .35rem; max-width: 100%; padding: .35rem .55rem .35rem .7rem; white-space: normal; overflow-wrap: anywhere; }
+#templateDynamicFields .five-w-answer-chip .btn-close { flex: 0 0 auto; font-size: .55rem; }
+#templateDynamicFields .five-w-answer-add { align-items: center; background: var(--activity-brand); border: 1px solid var(--activity-brand); color: #fff; display: inline-flex; font-size: 1.15rem; justify-content: center; min-width: 2.65rem; padding-inline: .65rem; }
+#templateDynamicFields .five-w-answer-add:hover,
+#templateDynamicFields .five-w-answer-add:focus { background: var(--activity-brand-deep); border-color: var(--activity-brand-deep); color: #fff; }
+@media (max-width: 700px) {
+    #templateDynamicFields .five-w-row { grid-template-columns: 1fr !important; gap: .45rem !important; }
+    #templateDynamicFields .five-w-indicator { padding-top: 0 !important; }
+}
 .template-builder-section { background: transparent; border: 0; border-bottom: 1px solid var(--activity-border); border-radius: 0; padding: 1.5rem 0; }
 .template-section-heading { align-items: flex-start; display: flex; gap: .8rem; margin-bottom: 1rem; }
 .template-section-index { align-items: center; background: var(--activity-brand-soft); border-radius: 8px; color: var(--activity-brand); display: inline-flex; flex: 0 0 34px; font: 900 .72rem/1 "Nunito", sans-serif; height: 30px; justify-content: center; letter-spacing: .05em; }
@@ -11691,7 +11707,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         </div>
                         <i class="bi bi-bar-chart text-primary"></i>
                     </div>`;
-                return;
             }
 
             if (selectedStudents.length > 1) {
@@ -12361,7 +12376,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (!course) return;
             // Collect section codes
             const sectionCodes = (course.sections || []).map(s => s.code).filter(Boolean);
-            const aggregated = { word: [], sentence: [], paragraph: [], vowel: [] };
+            const aggregated = { word: [], sentence: [], paragraph: [], story_reading: [], vowel: [] };
             const stored = JSON.parse(localStorage.getItem('pabasa_section_readings') || '{}');
             for (const section of (course.sections || [])) {
                 const code = section.code;
@@ -12375,13 +12390,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 if (!r) {
                     r = stored[code] || stored[String(code).toUpperCase()] || stored[String(code).toLowerCase()] || {};
                 }
-                ['word','sentence','paragraph','vowel'].forEach(t => {
+                ['word','sentence','paragraph','story_reading','vowel'].forEach(t => {
                     if (Array.isArray(r[t])) aggregated[t] = aggregated[t].concat(r[t]);
                     else if (Array.isArray(r[t+'s'])) aggregated[t] = aggregated[t].concat(r[t+'s']);
                 });
             }
             const seenMaterialIds = new Set();
-            const allMaterials = activeRecords([...aggregated.word, ...aggregated.sentence, ...aggregated.paragraph, ...aggregated.vowel]).filter(material => {
+            const allMaterials = activeRecords([...aggregated.word, ...aggregated.sentence, ...aggregated.paragraph, ...aggregated.story_reading, ...aggregated.vowel]).filter(material => {
                 const key = String(material.id || `${material.type || ''}-${material.title || ''}-${material.created_at || ''}`);
                 if (seenMaterialIds.has(key)) return false;
                 seenMaterialIds.add(key);
@@ -12845,6 +12860,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     word: activeRecords(data.materials.word || []),
                     sentence: activeRecords(data.materials.sentence || []),
                     paragraph: activeRecords(data.materials.paragraph || []),
+                    story_reading: activeRecords(data.materials.story_reading || []),
                     vowel: activeRecords(data.materials.vowel || [])
                 };
                 const flat = [...materials.word, ...materials.sentence, ...materials.paragraph, ...materials.vowel];
@@ -12971,9 +12987,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     function ensureClassReadings(sectionId) {
         const sectionKey = sectionCacheKey(sectionId);
         if (!classReadings[sectionKey]) {
-            classReadings[sectionKey] = { word: [], sentence: [], paragraph: [], vowel: [] };
+            classReadings[sectionKey] = { word: [], sentence: [], paragraph: [], story_reading: [], vowel: [] };
         }
-        ['word', 'sentence', 'paragraph', 'vowel'].forEach(readingType => {
+        ['word', 'sentence', 'paragraph', 'story_reading', 'vowel'].forEach(readingType => {
             if (!Array.isArray(classReadings[sectionKey][readingType])) {
                 classReadings[sectionKey][readingType] = [];
             }
@@ -15143,10 +15159,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function getPublishedStoryMaterials() {
             const readings = typeof currentSectionId !== 'undefined' ? (classReadings[currentSectionId] || {}) : {};
-            const stories = (Array.isArray(readings.paragraph) ? readings.paragraph : []).filter(item => {
-                const status = String(item.status || item.publication_status || 'published').toLowerCase();
-                return status === 'published' || status === 'active';
-            }).map(item => {
+            const stories = (Array.isArray(readings.story_reading) ? readings.story_reading : []).map(item => {
                 let content = item.content || item.text || item.passage || '';
                 if (!content && typeof getMaterialContentItemsForEdit === 'function') {
                     content = getMaterialContentItemsForEdit(item).join('\n\n');
@@ -15170,7 +15183,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const stories = getPublishedStoryMaterials();
             syncFiveWSelection();
             const selected = stories.find(story => String(story.id) === String(activeTemplateActivity?.fiveW?.storyId));
-            templateDynamicFields.innerHTML = `<div class="row g-3"><div class="col-12"><label class="form-label fw-bold" for="fiveWStory">Published story <span class="text-danger">*</span></label><select id="fiveWStory" class="form-select"><option value="">Choose a published story</option>${stories.map(story => `<option value="${escapeAttr(story.id)}" ${selected && String(selected.id) === String(story.id) ? 'selected' : ''}>${escapeHtml(story.title)}</option>`).join('')}</select>${stories.length ? '<div class="form-text">Only published stories for this class are available.</div>' : '<div class="alert alert-warning mt-2 mb-0">No published stories are available for this class yet.</div>'}</div><div class="col-12"><label class="form-label fw-bold" for="fiveWQuestion">Question</label><input id="fiveWQuestion" class="form-control template-item-field" data-field-key="question" placeholder="Type the question"></div><div class="col-md-5"><label class="form-label fw-bold" for="fiveWCategory">5W category</label><select id="fiveWCategory" class="form-select template-item-field" data-field-key="questionType">${['Who','What','When','Where','Why'].map(opt => `<option value="${opt}">${opt}</option>`).join('')}</select></div><div class="col-md-7"><label class="form-label fw-bold" for="fiveWAnswer">Answer</label><input id="fiveWAnswer" class="form-control template-item-field" data-field-key="answer" placeholder="Type the correct answer"></div><div class="col-12"><button type="button" class="btn btn-primary" id="templateAddItemBtn">Add Question</button></div></div><div class="mt-3"><div class="d-flex justify-content-between mb-2"><h6 class="mb-0 fw-bold">Added Questions</h6><small class="text-muted">Add as many as needed.</small></div><div id="templateItemList"></div></div>`;
+            const fiveWIndicators = ['WHO', 'WHAT', 'WHEN', 'WHERE', 'WHY'].map((label, index) => `<div class="five-w-row" style="display:grid;grid-template-columns:minmax(5rem,.7fr) minmax(0,1.5fr) minmax(0,1.5fr);gap:.75rem;align-items:start;margin-bottom:1rem"><div class="five-w-indicator" style="padding-top:2.25rem;font-weight:700">${index + 1} ${label}</div><div class="five-w-question-wrap"><label>Question</label><input class="form-control five-w-question" data-five-w-index="${index}" placeholder="Type the ${label} question" aria-label="${label} question"></div><div class="five-w-answer-wrap"><label>Answer</label><div class="input-group"><input class="form-control five-w-answer" data-five-w-index="${index}" placeholder="Type an acceptable answer" aria-label="${label} answer"><button type="button" class="btn five-w-answer-add" data-five-w-index="${index}" aria-label="Add ${label} answer">+</button></div><div class="five-w-answer-chips" data-five-w-index="${index}"></div></div></div>`).join('');
+            templateDynamicFields.innerHTML = `<div class="row g-3"><div class="col-12"><label class="form-label" for="fiveWStory">Published story <span class="text-danger">*</span></label><select id="fiveWStory" class="form-select"><option value="">Choose a published story</option>${stories.map(story => `<option value="${escapeAttr(story.id)}" ${selected && String(selected.id) === String(story.id) ? 'selected' : ''}>${escapeHtml(story.title)}</option>`).join('')}</select>${stories.length ? '<div class="form-text">Only published stories for this class are available.</div>' : '<div class="alert alert-warning mt-2 mb-0">No published stories are available for this class yet.</div>'}</div><div class="col-12">${fiveWIndicators}</div></div>`;
             const storyField = templateDynamicFields.querySelector('#fiveWStory')?.closest('.col-12');
             const informationGrid = document.querySelector('.template-information-grid');
             const languageField = document.getElementById('templateLanguageField');
@@ -15178,33 +15192,31 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 storyField.classList.add('template-field');
                 informationGrid.insertBefore(storyField, languageField || informationGrid.firstChild);
             }
-            renderTemplateItemList("5W's Story Questions");
-            activeTemplateActivity.fiveWAnswerDraft = [];
-            const answerInput = document.getElementById('fiveWAnswer');
-            const answerChips = document.createElement('div');
-            answerChips.id = 'fiveWAnswerChips';
-            answerChips.className = 'd-flex flex-wrap gap-2 mt-2';
-            answerInput?.parentElement?.appendChild(answerChips);
-            const addAnswerButton = document.createElement('button');
-            addAnswerButton.type = 'button';
-            addAnswerButton.id = 'fiveWAddAnswer';
-            addAnswerButton.className = 'btn btn-outline-primary btn-sm mt-2';
-            addAnswerButton.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Add';
-            answerInput?.parentElement?.appendChild(addAnswerButton);
-            const renderAnswerChips = () => { answerChips.innerHTML = (activeTemplateActivity.fiveWAnswerDraft || []).map((answer, index) => `<span class="badge rounded-pill bg-light text-dark border px-2 py-2">${escapeHtml(answer)} <button type="button" class="btn-close ms-1" aria-label="Remove answer" data-answer-index="${index}"></button></span>`).join(''); };
-            activeTemplateActivity.renderFiveWAnswerChips = renderAnswerChips;
-            const addAnswer = () => { const answer = String(answerInput?.value || '').trim(); if (!answer) return; const answers = activeTemplateActivity.fiveWAnswerDraft || []; if (!answers.some(value => value.toLowerCase() === answer.toLowerCase())) answers.push(answer); activeTemplateActivity.fiveWAnswerDraft = answers; if (answerInput) answerInput.value = ''; renderAnswerChips(); };
-            document.getElementById('fiveWAddAnswer')?.addEventListener('click', addAnswer);
-            answerInput?.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); addAnswer(); } });
-            answerChips.addEventListener('click', event => { const button = event.target.closest('[data-answer-index]'); if (!button) return; activeTemplateActivity.fiveWAnswerDraft.splice(Number(button.dataset.answerIndex), 1); renderAnswerChips(); });
-            renderAnswerChips();
-            document.getElementById('fiveWCategory')?.closest('.col-md-5')?.remove();
-            document.getElementById('fiveWQuestion')?.closest('.col-12')?.classList.add('col-md-6');
-            const fiveWQuestionField = document.getElementById('fiveWQuestion')?.closest('.col-12');
-            const fiveWAnswerField = document.getElementById('fiveWAnswer')?.closest('.col-md-7');
-            fiveWQuestionField?.classList.add('col-md-6');
-            fiveWAnswerField?.classList.remove('col-md-7');
-            fiveWAnswerField?.classList.add('col-12', 'col-md-6');
+            const existingItems = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items.slice(0, 5) : [];
+            activeTemplateActivity.items = existingItems;
+            ['WHO', 'WHAT', 'WHEN', 'WHERE', 'WHY'].forEach((label, index) => {
+                const item = existingItems[index] || {};
+                const question = templateDynamicFields.querySelector(`.five-w-question[data-five-w-index="${index}"]`);
+                const answer = templateDynamicFields.querySelector(`.five-w-answer[data-five-w-index="${index}"]`);
+                if (question) question.value = item.question || '';
+                const answers = Array.isArray(item.answers) ? item.answers : (item.answer ? String(item.answer).split(/\s*\/\s*/).filter(Boolean) : []);
+                if (answer) answer.value = '';
+                const chips = templateDynamicFields.querySelector(`.five-w-answer-chips[data-five-w-index="${index}"]`);
+                const renderAnswers = () => { if (chips) chips.innerHTML = answers.map((value, answerIndex) => `<span class="badge five-w-answer-chip">${escapeHtml(value)} <button type="button" class="btn-close" data-five-w-remove-answer="${index}:${answerIndex}" aria-label="Remove answer"></button></span>`).join(''); };
+                const syncItem = () => {
+                    const nextItems = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : [];
+                    while (nextItems.length < 5) nextItems.push({});
+                    nextItems[index] = Object.assign({}, nextItems[index], { question: question?.value.trim() || '', answer: answers.join(' / '), answers: [...answers] });
+                    activeTemplateActivity.items = nextItems.slice(0, 5);
+                    renderTemplatePreview();
+                };
+                question?.addEventListener('input', syncItem);
+                const addAnswer = () => { const value = answer?.value.trim() || ''; if (!value || answers.some(existing => existing.toLowerCase() === value.toLowerCase())) return; answers.push(value); if (answer) answer.value = ''; renderAnswers(); syncItem(); };
+                templateDynamicFields.querySelector(`.five-w-answer-add[data-five-w-index="${index}"]`)?.addEventListener('click', addAnswer);
+                answer?.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); addAnswer(); } });
+                chips?.addEventListener('click', event => { const button = event.target.closest('[data-five-w-remove-answer]'); if (!button) return; answers.splice(Number(button.dataset.fiveWRemoveAnswer.split(':')[1]), 1); renderAnswers(); syncItem(); });
+                renderAnswers();
+            });
             document.getElementById('fiveWStory')?.addEventListener('change', event => {
                 activeTemplateActivity.fiveW = { storyId: event.target.value };
                 activeTemplateActivity.items = [];
@@ -16721,7 +16733,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             });
         }
 
-        function showTemplateBuilder(templateTitle) {
+        async function showTemplateBuilder(templateTitle) {
             const def = getTemplateDefinition(templateTitle);
             window.__templateEditStateRestored = false;
             const templateLanguage = isStoryResponseTemplate(templateTitle) ? 'English' : 'Filipino';
@@ -16802,6 +16814,18 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 }
                 if (isAralReadingSetTemplate(templateTitle)) templateActivityTitle.value = templateTitle;
                 templateActivityTitle.closest('.template-title-field')?.classList.toggle('d-none', templateTitle === "5W's Story Questions");
+            }
+            // The course modal starts its class-material request in parallel.
+            // Refresh the authoritative current-class data before rendering
+            // the Story Questions source selector so it cannot read the old
+            // local cache during that request race.
+            if (templateTitle === "5W's Story Questions"
+                && typeof currentSectionId !== 'undefined'
+                && currentSectionId
+                && typeof window.loadReadings === 'function') {
+                try { await window.loadReadings(currentSectionId); } catch (error) {
+                    console.warn('Could not refresh Story Reading materials before selector render', error);
+                }
             }
             renderTemplateDynamicFields(templateTitle);
             renderTemplateWeeks();
@@ -17086,6 +17110,20 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         function addOrUpdateTemplateItem() {
             if (!activeTemplateActivity || (!isTemplateItemListType(activeTemplateActivity.templateTitle) && activeTemplateActivity.templateTitle !== "5W's Story Questions") || isPictureWordMatchingTemplate(activeTemplateActivity.templateTitle)) return;
             const title = activeTemplateActivity.templateTitle;
+            if (title === "5W's Story Questions") {
+                activeTemplateActivity.items = Array.from({ length: 5 }, (_, index) => {
+                    const existing = activeTemplateActivity.items?.[index] || {};
+                    const values = Array.isArray(existing.answers) ? existing.answers : [];
+                    return {
+                        question: templateDynamicFields.querySelector(`.five-w-question[data-five-w-index="${index}"]`)?.value.trim() || '',
+                        answer: values.join(' / '),
+                        answers: values
+                    };
+                });
+                renderTemplateItemList(title);
+                renderTemplatePreview();
+                return;
+            }
             const values = readTemplateItemValues(title);
             if (title === "5W's Story Questions") values.answers = Array.isArray(activeTemplateActivity.fiveWAnswerDraft) ? [...activeTemplateActivity.fiveWAnswerDraft] : [];
             const requiredKeys = getTemplateItemFields(title).map(field => field.key);
@@ -17127,6 +17165,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             activeTemplateItemEditIndex = index;
             const title = activeTemplateActivity.templateTitle;
             const fields = getTemplateItemFields(title);
+            if (title === "5W's Story Questions") {
+                const question = document.querySelector(`.five-w-question[data-five-w-index="${index}"]`);
+                const answer = document.querySelector(`.five-w-answer[data-five-w-index="${index}"]`);
+                if (question) question.value = item.question || '';
+                if (answer) answer.value = item.answer || '';
+                return;
+            }
             fields.forEach(field => {
                 const el = document.querySelector(`#templateDynamicFields [data-field-key="${field.key}"]`);
                 if (!el) return;
@@ -17136,11 +17181,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     el.value = item[field.key] ?? '';
                 }
             });
-            if (title === "5W's Story Questions") {
-                activeTemplateActivity.fiveWAnswerDraft = Array.isArray(item.answers) && item.answers.length ? [...item.answers] : (item.answer ? String(item.answer).split(/\s*\/\s*/).filter(Boolean) : []);
-                document.getElementById('fiveWAnswer').value = '';
-                activeTemplateActivity.renderFiveWAnswerChips?.();
-            }
             const addBtn = document.getElementById('templateAddItemBtn');
             if (addBtn) addBtn.textContent = 'Update Item';
         }
