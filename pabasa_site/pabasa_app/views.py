@@ -10313,6 +10313,75 @@ def _is_dedicated_aral_template_material(material, activity_key):
     )
 
 
+ARAL_RESULT_PREFIXES = {
+    'word-meaning-match': 'WORD_MEANING_MATCH_RESULT:',
+    'fluency-reading': 'FLUENCY_READING_RESULT:',
+}
+
+
+def _aral_completed_result(material, student):
+    if not material or not student:
+        return None
+    return material.assessment_results.filter(
+        student=student,
+        attempt_status='completed',
+    ).order_by('-completed_at', '-created_at', '-id').first()
+
+
+def _serialize_aral_result(result, activity_slug):
+    if result is None:
+        return {'completed': False}
+    details = {}
+    remarks = str(getattr(result, 'remarks', '') or '')
+    prefix = ARAL_RESULT_PREFIXES.get(activity_slug, '')
+    if prefix and remarks.startswith(prefix):
+        try:
+            parsed = json.loads(remarks[len(prefix):])
+            details = parsed if isinstance(parsed, dict) else {}
+        except (TypeError, ValueError, json.JSONDecodeError):
+            details = {}
+    return {
+        'completed': True,
+        'correct_items': int(getattr(result, 'correct_items', 0) or 0),
+        'items_completed': int(getattr(result, 'items_completed', 0) or 0),
+        'accuracy': round(float(getattr(result, 'accuracy', 0) or 0), 2),
+        'wpm': round(float(getattr(result, 'wpm', 0) or 0), 2),
+        'duration_seconds': int(getattr(result, 'duration_seconds', 0) or 0),
+        'passed': bool(getattr(result, 'passed', False)),
+        'transcript': str(getattr(result, 'transcript', '') or ''),
+        'details': details,
+    }
+
+
+def _aral_request_material(request, activity_slug):
+    page = ARAL_TEMPLATE_ACTIVITY_PAGES.get(activity_slug)
+    if not page:
+        return None
+    raw_id = (
+        request.POST.get('material_id')
+        or request.POST.get('id')
+        or request.GET.get('material_id')
+        or request.GET.get('id')
+    )
+    if not raw_id and request.content_type == 'application/json':
+        try:
+            body = json.loads(request.body or '{}')
+        except (TypeError, ValueError, json.JSONDecodeError):
+            body = {}
+        raw_id = (body.get('material_id') or body.get('id')) if isinstance(body, dict) else None
+    _, material_id = _parse_prefixed_id(raw_id)
+    material = Material.objects.filter(pk=material_id).first() if material_id else None
+    return material if _is_dedicated_aral_template_material(material, page['activity_key']) else None
+
+
+def _bounded_activity_duration(raw_value, maximum=600):
+    try:
+        duration = int(round(float(raw_value)))
+    except (TypeError, ValueError):
+        return 0
+    return max(0, min(duration, maximum))
+
+
 @login_required(role='student')
 @xframe_options_sameorigin
 def aral_template_activity_page(request, activity_slug):
@@ -10331,6 +10400,8 @@ def aral_template_activity_page(request, activity_slug):
         return access_response
 
     content = dict(material.content_json or {})
+    student = User.objects.filter(pk=request.session.get('user_id'), role='student').first()
+    completion = _serialize_aral_result(_aral_completed_result(material, student), activity_slug)
     payload = {
         'id': material.id,
         'material_id': f'material-{material.id}',
@@ -10340,6 +10411,9 @@ def aral_template_activity_page(request, activity_slug):
         'instructions': content.get('instructions'), 'reading_set': content.get('reading_set'),
         'assigned_week': material.assigned_week,
         'assigned_week_display': format_assigned_week_display(material.assigned_week),
+        'completion': completion,
+        'completion_url': reverse('aral_template_activity_complete', kwargs={'activity_slug': activity_slug}),
+        'tts_url': reverse('reading_read_aloud_api'),
     }
     if page['activity_key'] == 'word_meaning_match':
         payload['items'] = content.get('items', []) if isinstance(content.get('items'), list) else []
@@ -10353,6 +10427,180 @@ def aral_template_activity_page(request, activity_slug):
     # string would make the browser receive a string instead of an object.
     context = {page['context_name']: payload}
     return render(request, page['template'], context)
+
+
+@login_required(role='student')
+@csrf_protect
+@require_http_methods(['POST'])
+def aral_template_activity_complete(request, activity_slug):
+    page = ARAL_TEMPLATE_ACTIVITY_PAGES.get(activity_slug)
+    if not page:
+        return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
+    material = _aral_request_material(request, activity_slug)
+    if not material:
+        return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
+    access_response = _enforce_student_access_for_request(request, material=material, json_response=True)
+    if access_response:
+        return access_response
+    student = User.objects.filter(pk=request.session.get('user_id'), role='student').first()
+    if not _student_can_complete_assessment(student, material=material):
+        return JsonResponse({'success': False, 'error': 'You are not authorized to complete this activity.'}, status=403)
+
+    existing = _aral_completed_result(material, student)
+    if existing:
+        return JsonResponse({
+            'success': True,
+            'already_completed': True,
+            'result': _serialize_aral_result(existing, activity_slug),
+        })
+
+    content = dict(material.content_json or {})
+    if activity_slug == 'word-meaning-match':
+        try:
+            data = json.loads(request.body or '{}')
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return JsonResponse({'success': False, 'error': 'Invalid completion data.'}, status=400)
+        submitted = data.get('answers') if isinstance(data.get('answers'), list) else []
+        items = content.get('items') if isinstance(content.get('items'), list) else []
+        answers_by_index = {}
+        for answer in submitted:
+            if not isinstance(answer, dict):
+                continue
+            try:
+                item_index = int(answer.get('item_index'))
+                first_choice_index = int(answer.get('first_choice_index'))
+                final_choice_index = int(answer.get('final_choice_index'))
+                attempts = max(1, int(answer.get('attempts') or 1))
+            except (TypeError, ValueError):
+                continue
+            if item_index in answers_by_index or item_index not in range(len(items)):
+                continue
+            answers_by_index[item_index] = {
+                'item_index': item_index,
+                'first_choice_index': first_choice_index,
+                'final_choice_index': final_choice_index,
+                'attempts': min(attempts, 50),
+            }
+        if not items or set(answers_by_index) != set(range(len(items))):
+            return JsonResponse({'success': False, 'error': 'Complete every word before saving.'}, status=400)
+
+        normalized_answers = []
+        first_try_correct = 0
+        mastered_words = 0
+        for index, item in enumerate(items):
+            if not isinstance(item, dict):
+                return JsonResponse({'success': False, 'error': 'Activity content is invalid.'}, status=400)
+            choices = item.get('choices') if isinstance(item.get('choices'), list) else []
+            try:
+                correct_index = int(item.get('answer_index'))
+            except (TypeError, ValueError):
+                return JsonResponse({'success': False, 'error': 'Activity answer key is invalid.'}, status=400)
+            answer = answers_by_index[index]
+            if correct_index not in range(len(choices)):
+                return JsonResponse({'success': False, 'error': 'Activity answer key is invalid.'}, status=400)
+            is_first_try_correct = answer['first_choice_index'] == correct_index
+            is_mastered = answer['final_choice_index'] == correct_index
+            first_try_correct += int(is_first_try_correct)
+            mastered_words += int(is_mastered)
+            normalized_answers.append({
+                **answer,
+                'word': str(item.get('word') or '')[:100],
+                'correct_choice_index': correct_index,
+                'first_try_correct': is_first_try_correct,
+                'mastered': is_mastered,
+            })
+        if mastered_words != len(items):
+            return JsonResponse({'success': False, 'error': 'Every word must be answered correctly before saving.'}, status=400)
+        duration = _bounded_activity_duration(data.get('duration_seconds'), maximum=3600)
+        accuracy = round((first_try_correct / len(items)) * 100, 2)
+        attempt_payload = {
+            'status': 'completed', 'attempt_status': 'completed',
+            'correct_items': first_try_correct, 'items_completed': len(items),
+            'accuracy': accuracy, 'total_score': accuracy, 'passed': accuracy >= 75,
+            'duration_seconds': duration, 'word_count': len(items),
+            'speech_recognition_used': False, 'mic_used': False,
+            'remarks': ARAL_RESULT_PREFIXES[activity_slug] + json.dumps({
+                'activity_type': 'word_meaning_match',
+                'reading_set_id': content.get('reading_set_id'),
+                'first_try_correct': first_try_correct,
+                'mastered_words': mastered_words,
+                'answers': normalized_answers,
+            }, separators=(',', ':')),
+        }
+    else:
+        audio = request.FILES.get('audio')
+        if not audio or not getattr(audio, 'size', 0):
+            return JsonResponse({'success': False, 'error': 'A reading recording is required.'}, status=400)
+        if audio.size > 12 * 1024 * 1024:
+            return JsonResponse({'success': False, 'error': 'The recording is too large.'}, status=400)
+        passage = str(content.get('passage') or '').strip()
+        if not passage:
+            return JsonResponse({'success': False, 'error': 'This activity has no reading passage.'}, status=400)
+        duration = _bounded_activity_duration(request.POST.get('duration_seconds'), maximum=600)
+        if duration < 1:
+            return JsonResponse({'success': False, 'error': 'Reading time is required.'}, status=400)
+        language = content.get('language') or material.language or 'English'
+        language_code = language_code_for(language, 'paragraph')
+        api_key = getattr(settings, 'GOOGLE_STT_API_KEY', '').strip()
+        project_id = getattr(settings, 'GOOGLE_CLOUD_PROJECT_ID', '').strip()
+        location = getattr(settings, 'GOOGLE_STT_LOCATION', 'global').strip()
+        model = getattr(settings, 'GOOGLE_STT_MODEL', 'chirp_3').strip()
+        credentials_file = str(getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', '') or '')
+        try:
+            transcript, model_used, fallback_reason = transcribe_audio_bytes_with_model(
+                audio.read(), api_key, language_code=language_code,
+                phrase_hints=list(dict.fromkeys(target_phrase_hints(passage, language_code))),
+                model=model, project_id=project_id, location=location,
+                mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
+                credentials_file=credentials_file,
+            )
+        except Exception:
+            logger.exception('Dedicated fluency transcription failed')
+            return JsonResponse({
+                'success': False,
+                'error': 'Recording analysis failed. Please try again.',
+            }, status=502)
+        transcript = str(transcript or '').strip()
+        if not transcript:
+            return JsonResponse({'success': False, 'error': 'No speech was detected. Please record again.'}, status=422)
+        alignment = align_story_transcript(passage, transcript, language_code)
+        total_words = int(alignment.get('total_words') or 0)
+        correct_words = int(alignment.get('correct_words') or 0)
+        miscues = int(alignment.get('miscues') or 0)
+        accuracy = round(float(alignment.get('accuracy') or 0), 2)
+        correct_wpm = round(correct_words / (duration / 60.0), 2) if duration else 0.0
+        recognized_count = len(alignment.get('recognized_words') or [])
+        gross_wpm = round(recognized_count / (duration / 60.0), 2) if duration else 0.0
+        attempt_payload = {
+            'status': 'completed', 'attempt_status': 'completed',
+            'correct_items': correct_words, 'items_completed': total_words,
+            'accuracy': accuracy, 'total_score': accuracy, 'pronunciation_score': accuracy,
+            'fluency_score': accuracy, 'passed': accuracy >= 75,
+            'duration_seconds': duration, 'word_count': total_words, 'wpm': correct_wpm,
+            'transcript': transcript[:5000], 'speech_recognition_used': True, 'mic_used': True,
+            'needs_manual_review': accuracy < 50,
+            'remarks': ARAL_RESULT_PREFIXES[activity_slug] + json.dumps({
+                'activity_type': 'fluency_reading',
+                'reading_set_id': content.get('reading_set_id'),
+                'language_code': language_code, 'stt_model': model_used,
+                'stt_fallback_reason': fallback_reason, 'correct_words': correct_words,
+                'total_words': total_words, 'miscues': miscues,
+                'gross_wpm': gross_wpm, 'correct_wpm': correct_wpm,
+                'word_results': alignment.get('word_results', []),
+            }, separators=(',', ':')),
+        }
+
+    with transaction.atomic():
+        locked_material = Material.objects.select_for_update().get(pk=material.pk)
+        existing = _aral_completed_result(locked_material, student)
+        if existing is None:
+            locked_material.record_assessment_result(student, **attempt_payload)
+        result = _aral_completed_result(locked_material, student)
+    return JsonResponse({
+        'success': True,
+        'already_completed': existing is not None,
+        'result': _serialize_aral_result(result, activity_slug),
+    })
 
 
 FILIPINO_STORY_READING_SETS = {
