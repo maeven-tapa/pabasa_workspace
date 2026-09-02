@@ -303,10 +303,8 @@ def _signup_section_for_request(data, role):
     if not section_value:
         return school, None, 'Choose an available Section.'
     section_id = int(section_value) if section_value.isdigit() else None
-    # Teacher signup is limited to Grade 2; client-submitted grades are not trusted.
-    grade_level = NEW_USER_GRADE_LEVEL if role == 'teacher' else str(
-        data.get('grade_level') or NEW_USER_GRADE_LEVEL
-    ).strip()
+    # Students are always enrolled in Grade 2; client-submitted grades are not trusted.
+    grade_level = NEW_USER_GRADE_LEVEL
     section = _active_canonical_section(
         grade_level,
         section_value if section_id is None else '',
@@ -4050,7 +4048,7 @@ def register_student(request):
         # exactly the address to which the OTP was delivered.
         signup_data = data.copy()
         signup_data['email'] = raw_email
-        signup_data['grade_level'] = selected_section.grade_level
+        signup_data['grade_level'] = NEW_USER_GRADE_LEVEL
         otp = _store_pending_student_signup(request, signup_data)
         logger.debug("STUDENT REGISTRATION PENDING CREATED session_keys=%s", sorted(list(request.session.keys())))
         try:

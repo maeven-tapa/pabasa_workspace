@@ -598,12 +598,6 @@
                                title="Enter exactly 12 digits." required>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label" for="studentGradeLevel">Grade</label>
-                        <select class="form-select" name="grade_level" id="studentGradeLevel" required disabled>
-                            <option value="" selected disabled>Loading grades…</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
                         <label class="form-label" for="studentSection">Section</label>
                         <select class="form-select" name="section" id="studentSection" required disabled>
                             <option value="" selected disabled>Loading sections…</option>
@@ -778,7 +772,7 @@
         const passwordToggles = form.querySelectorAll("[data-password-toggle]");
         const privacyConsentCheckbox = form.querySelector('input[name="privacy_consent"]');
         const sectionSelect = form.querySelector('#studentSection');
-        const gradeSelect = form.querySelector('#studentGradeLevel');
+        const fixedStudentGradeLevel = 'Grade 2';
         const birthMonthInput = form.querySelector('#studentBirthMonth');
         const birthDayInput = form.querySelector('#studentBirthDay');
         const birthYearInput = form.querySelector('#studentBirthYear');
@@ -843,35 +837,20 @@
             sectionSelect.disabled = false;
         }
 
-        function renderGradeOptions(grades) {
-            gradeSelect.innerHTML = '<option value="" selected disabled>Select Grade</option>' + grades.map((grade) =>
-                `<option value="${grade.value}">${grade.label}</option>`
-            ).join('');
-            gradeSelect.disabled = grades.length === 0;
-        }
-
         async function loadSections() {
             sectionSelect.disabled = true;
             sectionSelect.innerHTML = '<option value="" selected disabled>Loading sections…</option>';
             try {
-                const gradeLevel = gradeSelect.value;
-                const query = new URLSearchParams({role: 'student'});
-                if (gradeLevel) query.set('grade_level', gradeLevel);
+                const query = new URLSearchParams({role: 'student', grade_level: fixedStudentGradeLevel});
                 const response = await fetch('{% url "signup_sections" %}?' + query.toString());
                 const data = await response.json();
                 if (!response.ok || !data.success) throw new Error(data.error || 'Unable to load sections');
-                if (!gradeLevel) {
-                    renderGradeOptions(data.grades || []);
-                    sectionSelect.innerHTML = '<option value="" selected disabled>Select Grade first</option>';
-                    return;
-                }
                 renderSectionOptions(data.sections || []);
             } catch (_) {
                 sectionSelect.innerHTML = '<option value="" selected>Unable to load sections</option>';
             }
         }
         loadSections();
-        gradeSelect.addEventListener('change', loadSections);
         
         const passwordRules = {
             length: form.querySelector("[data-rule='length']"),

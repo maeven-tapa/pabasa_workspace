@@ -3090,6 +3090,14 @@ class StudentSignupTemplateTests(TestCase):
         self.assertIn("I agree to the Privacy Policy and Terms of Service", content)
         self.assertIn("Step ${currentStep + 1} of ${steps.length}", content)
 
+    def test_student_signup_template_removes_grade_selector_and_enforces_grade_2(self):
+        template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "student_signup.html"
+        content = template_path.read_text(encoding="utf-8")
+
+        self.assertNotIn('id="studentGradeLevel"', content)
+        self.assertNotIn('name="grade_level"', content)
+        self.assertIn('Grade 2', content)
+
 
 class AssessmentResultsPageTests(TestCase):
     def test_completion_page_uses_child_friendly_summary_copy(self):
