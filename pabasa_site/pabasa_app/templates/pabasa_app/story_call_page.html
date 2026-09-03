@@ -127,7 +127,7 @@
         </div>
     </section>
 </main>
-<div class="story-complete-modal" id="storyCompleteModal" hidden role="dialog" aria-modal="true"><div class="story-complete-card"><h2>Activity Complete! 🌟</h2><span id="storyCompleteScore">0 / 5</span><p>You did a great job talking about the story! Maya is proud of you.</p><a class="btn story-intro-continue" href="{% url 'assessment' %}">Back to Reading Assessment</a></div></div>
+<div class="story-complete-modal" id="storyCompleteModal" hidden role="dialog" aria-modal="true"><div class="story-complete-card"><h2>Activity Complete! 🌟</h2><span id="storyCompleteScore">0 / 5</span><p id="storyCompleteMessage"></p><a class="btn story-intro-continue" href="{% url 'assessment' %}">Back to Reading Assessment</a></div></div>
 {{ story_call_questions_json|json_script:"story_call_questions_json" }}
 {{ story_call_material_id|json_script:"story_call_material_id" }}
 {{ story_call_completion|json_script:"story_call_completion" }}
@@ -156,6 +156,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const savedCompletion = JSON.parse(document.getElementById('story_call_completion')?.textContent || '{"completed":false}');
     const completionModal = document.getElementById('storyCompleteModal');
     const completionScore = document.getElementById('storyCompleteScore');
+    const completionMessage = document.getElementById('storyCompleteMessage');
     const answers = Array(questions.length).fill('');
     let recognition = null;
     const evaluated = Array(questions.length).fill(false);
@@ -283,7 +284,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (next) { next.innerHTML = index === questions.length - 1 ? 'Finish <i class="bi bi-check2 ms-1"></i>' : 'Next <i class="bi bi-arrow-right ms-1"></i>'; next.disabled = !answers[index]; }
         if (back) back.setAttribute('aria-disabled', index === 0 ? 'true' : 'false');
     }
-    function showCompletion(earned, total) { completionScore.textContent = `${earned} / ${total}`; completionModal.hidden = false; }
+    function showCompletion(earned, total) { const score = Number(earned) || 0; const maximum = Number(total) || 0; completionScore.textContent = `${score} / ${maximum}`; completionMessage.textContent = score >= maximum && maximum > 0 ? 'Excellent job! 🌟' : score > 0 ? 'Great effort! Keep practicing! 💗' : 'Nice try! 💗 Keep practicing and try again!'; completionModal.hidden = false; }
     function csrfToken() {
         const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
         return match ? match[1] : '';
