@@ -1286,12 +1286,6 @@
                             const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
                             const isDone = isAssessmentCompleted(m, mId);
                             const isLocked = !Boolean(m.student_access);
-                            const latestAttemptSummary = m.latest_attempt_summary || {};
-                            const completionSeconds = latestAttemptSummary.duration_seconds != null && latestAttemptSummary.duration_seconds !== '' ? Number(latestAttemptSummary.duration_seconds) : null;
-                            const timeScoreMarkup = isDone && completionSeconds != null && !Number.isNaN(completionSeconds) && completionSeconds > 0
-                                ? `<span class="assessment-time-score-badge"><i class="bi bi-stopwatch"></i> ${formatAssessmentDuration(completionSeconds)}</span>`
-                                : '';
-
                             const materialSourceType = String(m.source_type || m.material_source || '').trim().toLowerCase();
                             const templateActivityName = materialSourceType === 'template'
                                 ? String(
@@ -1387,7 +1381,6 @@
                                             ${getMaterialLanguageBadgeHtml(m)}
                                         </div>
                                                 <span>${templateActivityName || `${labelMap[m.category]} - ${Array.isArray(m.items) ? m.items.length : (m.items || 0)} items`}</span>
-                                                ${timeScoreMarkup}
                                             </div>
                                         </div>
                                         <i class="bi ${isDone ? 'bi-check-circle-fill text-success' : 'bi-play-circle-fill text-primary'}"></i>

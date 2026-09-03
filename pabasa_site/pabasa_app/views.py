@@ -11582,7 +11582,11 @@ def letter_sound_correspondence_page(request):
     context['letter_sound_correspondence_completion_json'] = json.dumps(
         completion_payload or {}, default=str, separators=(',', ':'),
     )
-    return render(request, 'pabasa_app/letter_sound_correspondence_page.html', context)
+    # This view reflects the student's live completion state.  Do not let the
+    # browser reuse a prior activity document after an assessment finishes.
+    response = render(request, 'pabasa_app/letter_sound_correspondence_page.html', context)
+    response['Cache-Control'] = 'no-store, max-age=0'
+    return response
 
 
 PICTURE_WORD_IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webp'}
@@ -18842,6 +18846,28 @@ def get_class_materials(request):
                         latest_attempt_summary = m.assessment.get_latest_attempt_summary(request_user)
                         if latest_attempt_summary.get('time_score') is not None:
                             latest_time_score = _clamp_score(latest_attempt_summary.get('time_score'))
+
+                        # Legacy material attempts may have been created before
+                        # enrollment was retained on their result row.  Their
+                        # direct material result is still authoritative for the
+                        # student's completed state in this activity card.
+                        if not student_has_completed:
+                            completed_result = m.assessment_results.filter(
+                                student=request_user,
+                                attempt_status='completed',
+                                completed_at__isnull=False,
+                            ).order_by('-completed_at', '-created_at', '-id').first()
+                            if completed_result:
+                                student_has_completed = True
+                                completed_attempt_count = 1
+                                latest_attempt_summary = {
+                                    'student_id': completed_result.student_id,
+                                    'status': completed_result.attempt_status,
+                                    'completed_at': completed_result.completed_at.isoformat() if completed_result.completed_at else None,
+                                    'duration_seconds': completed_result.duration_seconds,
+                                    'accuracy': completed_result.accuracy,
+                                    'total_score': completed_result.total_score,
+                                }
                     elif teacher_user and teacher_user.role == 'teacher':
                         # Teachers see 0 completions for themselves on the hub
                         attempt_count = 0
