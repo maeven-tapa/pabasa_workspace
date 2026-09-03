@@ -30,7 +30,6 @@ urlpatterns = [
     path('api/signup/sections/', views.student_signup_sections, name='signup_sections'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('dashboard/teacher/', views.dashboard_teacher, name='dashboard_teacher'),
-    path('dashboard/teacher/aral-schedules/create/', views.teacher_create_aral_schedule, name='teacher_create_aral_schedule'),
     path('dashboard/admin/', views.dashboard_admin, name='dashboard_admin'),
     path('dashboard/admin/students/', views.admin_students, name='admin_students'),
     path('dashboard/admin/students/<int:user_id>/', views.admin_student_detail, name='admin_student_detail'),

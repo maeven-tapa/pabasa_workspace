@@ -226,7 +226,7 @@
                                 <input class="form-control" id="term{{ value }}Opening" name="term_{{ value }}_opening" type="date" data-term-opening="{{ value }}">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label small fw-bold text-secondary" for="term{{ value }}Closing">End-of-Term Block (Start Date · 10 School Days)</label>
+                                <label class="form-label small fw-bold text-secondary" for="term{{ value }}Closing">Closing Block (Start Date · 10 School Days)</label>
                                 <input class="form-control" id="term{{ value }}Closing" name="term_{{ value }}_closing" type="date" data-term-closing="{{ value }}">
                             </div>
                         </div>
@@ -264,7 +264,9 @@
                             <select class="form-select" id="eventType" name="event_type" required>
                                 <option value="" selected>Select Event Type</option>
                                 {% for value, label in event_type_options %}
+                                {% if value not in 'pre_assessment midline_assessment post_assessment' %}
                                 <option value="{{ value }}">{{ label }}</option>
+                                {% endif %}
                                 {% endfor %}
                             </select>
                         </div>
@@ -432,6 +434,8 @@
         end_of_classes: '#7c3aed',
         school_opening: '#facc15',
         school_closing: '#ef4444',
+        aral_1: '#6b7280',
+        aral_2: '#d1d5db',
         pre_assessment: '#3b82f6',
         midline_assessment: '#14b8a6',
         post_assessment: '#a855f7',
@@ -445,7 +449,9 @@
             { key: 'pre_assessment', label: 'Pre-Assessment' },
             { key: 'midline_assessment', label: 'Mid-Assessment' },
             { key: 'post_assessment', label: 'Post-Assessment' },
-            { key: 'school_closing', label: 'Ending Block' },
+            { key: 'school_closing', label: 'Closing Block' },
+            { key: 'aral_1', label: 'ARAL 1 — After Class' },
+            { key: 'aral_2', label: 'ARAL 2 — End of Term (last 1–5 days)' },
         ];
         const calendarLegend = document.getElementById('calendarLegend');
         if (calendarLegend) {
@@ -459,6 +465,8 @@
         const calendarBackgrounds = {
             school_opening: 'rgba(250, 204, 21, 0.30)',
             school_closing: 'rgba(239, 68, 68, 0.28)',
+            aral_1: 'rgba(107, 114, 128, 0.24)',
+            aral_2: 'rgba(209, 213, 219, 0.72)',
             holiday: 'rgba(249, 115, 22, 0.28)',
         };
         const assessmentEventTypes = new Set(['pre_assessment', 'midline_assessment', 'post_assessment', 'examination']);
@@ -535,6 +543,7 @@
                 }
                 return segments;
             }
+            if (eventType === 'aral_1' || eventType === 'aral_2') return [event];
             if (!calendarBackgrounds[eventType]) return [event];
             if (eventType === 'holiday') {
                 return [
@@ -1210,8 +1219,9 @@
             },
             eventContent: (arg) => {
                 if (arg.event.extendedProps.is_calendar_background) return { html: '' };
+                const textColor = arg.event.extendedProps.event_type === 'aral_2' ? '#374151' : '#fff';
                 return {
-                    html: `<div class="event-pill" style="background:${colors[arg.event.extendedProps.event_type] || colors.other};"><span class="event-dot"></span><span>${arg.event.title}</span></div>`
+                    html: `<div class="event-pill" style="background:${colors[arg.event.extendedProps.event_type] || colors.other};color:${textColor};"><span class="event-dot" style="background:${textColor};"></span><span>${arg.event.title}</span></div>`
                 };
             },
             eventDidMount: (info) => {
@@ -1445,7 +1455,7 @@
                 const opening = termInput(term, 'opening').value;
                 const closing = termInput(term, 'closing').value;
                 if (Boolean(opening) !== Boolean(closing)) {
-                    window.alert(`Term ${term} needs both an Opening Block and an End-of-Term Block date.`);
+                    window.alert(`Term ${term} needs both an Opening Block and a Closing Block date.`);
                     return;
                 }
                 if (opening && opening > closing) {

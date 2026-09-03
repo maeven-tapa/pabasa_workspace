@@ -23,7 +23,7 @@ from pypdf import PdfReader
 from reportlab.pdfgen import canvas
 
 from .forms import AdminPracticeMaterialForm
-from .models import Material, User, Section, Assessment, Notification, Course, Note, LiveAssessmentSession, School, SchoolCalendar, CalendarEvent, StoryReadingProgress, TeacherAralSchedule
+from .models import Material, User, Section, Assessment, Notification, Course, Note, LiveAssessmentSession, School, SchoolCalendar, CalendarEvent, StoryReadingProgress
 from .reading_stt import (
     ReadingMatcher,
     align_story_transcript,
@@ -52,64 +52,6 @@ from .management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CO
 from .views import _active_school_calendar, _apply_progression_unlock_override, _aral_eligible_classification, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _primary_school, _save_admin_practice_material, _selected_school_calendar, _sync_assessment_workflow_state, _official_crla_assessment_labels, _official_assessment_availability_for_student
 from .weekly_digest import send_weekly_digest
 from .scoring import build_assessment_score_payload
-
-
-class TeacherAralScheduleTests(TestCase):
-    def test_dashboard_supports_multi_day_aral_selection_without_section_field(self):
-        school = School.objects.create(name="Schedule School", code="SCH-SCHED")
-        school_calendar = SchoolCalendar.objects.create(school_year="2026-2027", current_term=1, is_active=True)
-        teacher = User.objects.create(
-            custom_id="TCHR-ARAL-01",
-            role="teacher",
-            first_name="Ari",
-            last_name="Teacher",
-            school_record=school,
-            sex="female",
-            birth_month=1,
-            birth_day=1,
-            birth_year=1990,
-            email="aralteacher@example.com",
-            password_hash=make_password("teacher-password"),
-        )
-        section = Section.objects.create(
-            school=school,
-            teacher=teacher,
-            school_calendar=school_calendar,
-            class_name="Section A",
-            class_code="SEC-A",
-            subject="Reading",
-            is_active=True,
-        )
-
-        session = self.client.session
-        session["user_id"] = teacher.id
-        session["user_role"] = teacher.role
-        session.save()
-
-        dashboard_response = self.client.get(reverse("dashboard_teacher"))
-        self.assertEqual(dashboard_response.status_code, 200)
-        self.assertContains(dashboard_response, "My ARAL Schedule")
-        self.assertNotContains(dashboard_response, 'id="teacherAralSection"')
-
-        response = self.client.post(
-            reverse("teacher_create_aral_schedule"),
-            {
-                "weekday": ["0", "2", "4"],
-                "remark": "Reading practice",
-                "applies_to": TeacherAralSchedule.APPLIES_TO_CURRENT,
-            },
-            follow=False,
-        )
-
-        self.assertEqual(response.status_code, 302)
-        schedules = list(TeacherAralSchedule.objects.filter(
-            teacher=teacher,
-            school_calendar=school_calendar,
-            remark="Reading practice",
-        ).order_by("weekday"))
-        self.assertEqual(len(schedules), 3)
-        self.assertEqual([schedule.weekday for schedule in schedules], [0, 2, 4])
-        self.assertEqual(schedules[0].section_id, section.id)
 
 
 class ClassMaterialsApiTests(TestCase):
@@ -348,7 +290,7 @@ class SchoolCalendarAdminTests(TestCase):
         session["email"] = admin.email
         session.save()
 
-    def test_admin_school_calendar_can_save_midline_assessment_week_event(self):
+    def test_admin_school_calendar_calculates_assessment_week_from_term_blocks(self):
         admin = User.objects.create(
             custom_id="ADM-1001",
             role="admin",
@@ -386,30 +328,23 @@ class SchoolCalendarAdminTests(TestCase):
         )
         self._login_admin(admin)
 
-        response = self.client.post(
-            reverse("admin_school_calendar"),
-            {
-                "action": "save_event",
-                "calendar_id": calendar.id,
-                "term": 1,
-                "event_type": "midline_assessment",
-                "title": "",
-                "start_date": "2026-11-09",
-                "end_date": "2026-11-13",
-                "description": "Midline assessment week",
-            },
-        )
+        response = self.client.post(reverse("admin_school_calendar"), {
+            "action": "save_term_blocks",
+            "calendar_id": calendar.id,
+            "term_1_opening": "2026-08-01",
+            "term_1_closing": "2027-05-01",
+        })
 
         self.assertEqual(response.status_code, 302)
-        event = CalendarEvent.objects.get(school_calendar=calendar, event_type="midline_assessment")
-        self.assertEqual(event.title, "Midline Assessment Week")
-        self.assertEqual(event.start_date, date(2026, 11, 9))
-        self.assertEqual(event.end_date, date(2026, 11, 13))
+        event = CalendarEvent.objects.get(school_calendar=calendar, event_type="pre_assessment")
+        self.assertEqual(event.title, "Pre-Assessment Week")
+        self.assertEqual(event.start_date, date(2026, 8, 3))
+        self.assertEqual(event.end_date, date(2026, 8, 7))
 
         page = self.client.get(reverse("admin_school_calendar"), {"calendar_id": calendar.id})
         self.assertEqual(page.status_code, 200)
-        self.assertContains(page, "Midline Assessment Week")
-        self.assertContains(page, '"event_type": "midline_assessment"')
+        self.assertContains(page, "Pre-Assessment Week")
+        self.assertContains(page, '"event_type": "pre_assessment"')
 
     def test_admin_school_calendar_renders_year_view_and_soft_yellow_opening_block(self):
         admin = User.objects.create(

@@ -5,12 +5,14 @@
     const prevBtn = document.getElementById("calendarPrevBtn");
     const nextBtn = document.getElementById("calendarNextBtn");
     const todayBtn = document.getElementById("calendarTodayBtn");
+    const agenda = document.getElementById("calendarAgenda");
 
     if (!monthLabel || !body || !prevBtn || !nextBtn || !todayBtn) {
         return;
     }
 
     const today = new Date();
+    const events = Array.isArray(window.PABASA_CALENDAR_EVENTS) ? window.PABASA_CALENDAR_EVENTS : [];
     let active = new Date(today.getFullYear(), today.getMonth(), 1);
 
     function renderCalendar() {
@@ -47,11 +49,28 @@
                 const classes = [];
                 if (cell.muted) classes.push("is-muted");
                 if (cell.today) classes.push("is-today");
-                return '<td class="' + classes.join(" ") + '">' + cell.day + "</td>";
+                const cellDate = new Date(year, month, cell.day);
+                const iso = cellDate.toISOString().slice(0, 10);
+                const dayEvents = cell.muted ? [] : events.filter((event) => {
+                    const end = event.end_date || event.end || event.start;
+                    return event.start <= iso && iso <= end;
+                });
+                const eventMarkup = dayEvents.map((event) => '<div class="small text-start text-truncate mt-1" title="' + event.title + '">' + event.title + '</div>').join("");
+                return '<td class="' + classes.join(" ") + '">' + cell.day + eventMarkup + "</td>";
             }).join("") + "</tr>";
         }
 
         body.innerHTML = rows;
+        if (agenda) {
+            const monthEvents = events.filter((event) => event.start.slice(0, 7) === isoMonth(year, month));
+            agenda.innerHTML = monthEvents.length
+                ? monthEvents.map((event) => '<div class="calendar-list-item"><div class="calendar-list-name"><span class="calendar-dot bg-secondary"></span><span>' + event.title + '</span></div></div>').join("")
+                : 'No Admin-configured events for this month.';
+        }
+    }
+
+    function isoMonth(year, month) {
+        return year + '-' + String(month + 1).padStart(2, '0');
     }
 
     prevBtn.addEventListener("click", function () {

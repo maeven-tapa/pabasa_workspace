@@ -250,27 +250,7 @@
                         <h3 class="h6 mb-0">Agenda</h3>
                         <button class="btn btn-outline-secondary btn-sm py-0 px-2" type="button" aria-label="Add agenda item">+</button>
                     </div>
-                    <div class="calendar-list-item">
-                        <div class="calendar-list-name">
-                            <span class="calendar-dot bg-primary"></span>
-                            <span>8:30 AM - Grade 2 Reading Warm-up</span>
-                        </div>
-                        <button class="btn btn-light btn-sm py-0 px-2" type="button" aria-label="More options">...</button>
-                    </div>
-                    <div class="calendar-list-item">
-                        <div class="calendar-list-name">
-                            <span class="calendar-dot bg-success"></span>
-                            <span>10:00 AM - Oral Reading Practice</span>
-                        </div>
-                        <button class="btn btn-light btn-sm py-0 px-2" type="button" aria-label="More options">...</button>
-                    </div>
-                    <div class="calendar-list-item">
-                        <div class="calendar-list-name">
-                            <span class="calendar-dot" style="background:#6e10ee;"></span>
-                            <span>1:30 PM - Parent Progress Update Call</span>
-                        </div>
-                        <button class="btn btn-light btn-sm py-0 px-2" type="button" aria-label="More options">...</button>
-                    </div>
+                    <div id="calendarAgenda" class="text-secondary small">No Admin-configured events for this month.</div>
                 </div>
             </div>
             <div class="dash-card">
@@ -280,8 +260,7 @@
                         <span class="dash-pill">Sync</span>
                     </div>
                     <div class="calendar-feed-note">
-                        <p class="small text-secondary mb-2">Import external events or connect your school calendar feed.</p>
-                        <button class="btn btn-primary btn-sm w-100" type="button">Import or Sync</button>
+                        <p class="small text-secondary mb-0">This calendar reflects the schedule configured by Admin.</p>
                     </div>
                 </div>
             </div>
@@ -289,5 +268,8 @@
     </div>
 </section>
 
+<script>
+    window.PABASA_CALENDAR_EVENTS = {{ student_calendar_events_json|default:"[]"|safe }};
+</script>
 <script src="{% static 'pabasa_app/js/calendar.js' %}"></script>
 {% endblock %}

@@ -257,6 +257,9 @@
         font-size: .78rem;
         line-height: 1.2;
     }
+
+    .teacher-aral-current { display:flex; align-items:center; justify-content:space-between; gap:.6rem; flex-wrap:wrap; color:#10466e; font-size:.82rem; font-weight:800; }
+    .teacher-aral-current .btn { flex:0 0 auto; }
     .teacher-upcoming-card { background:#fff; border:1px solid rgba(16,70,110,.1); border-radius:22px; padding:1rem; box-shadow:0 12px 28px rgba(16,70,110,.08); display:flex; flex-direction:column; min-width:0; }
     .teacher-upcoming-head { margin-bottom:.75rem; }
     .teacher-upcoming-head h3 { margin:0; color:#10466e; font-size:1.08rem; font-weight:900; }
@@ -1712,56 +1715,11 @@
     <aside class="teacher-calendar-card" aria-label="School Calendar">
         <div class="teacher-calendar-head"><h3><i class="bi bi-calendar3"></i> School Calendar</h3></div>
         <div class="teacher-calendar-section">
-            <div class="teacher-calendar-filter" role="group" aria-label="Calendar filter"><button type="button" class="active" data-teacher-calendar-filter="global">System-wide</button><button type="button" data-teacher-calendar-filter="school">School</button></div>
             <div class="teacher-calendar-month" id="teacherCalendarMonth"></div>
             <div class="teacher-calendar-meta">School Year: <strong>{{ student_calendar_school_year|default:"Not set" }}</strong> · <strong>{{ student_calendar_current_term|default:"Not set" }}</strong></div>
             <div class="teacher-calendar-grid" id="teacherCalendarGrid"></div>
             <button type="button" class="btn btn-primary teacher-calendar-expand" data-bs-toggle="modal" data-bs-target="#teacherCalendarExpanded">Expand Calendar</button>
         </div>
-        {% if teacher_aral_sections %}
-        <form class="teacher-aral-form" method="post" action="{% url 'teacher_create_aral_schedule' %}">
-            {% csrf_token %}
-            <h4>My ARAL Schedule</h4>
-            <label class="form-label" for="teacherAralWeekday">Day of the Week</label>
-            <div class="mb-2" id="teacherAralWeekday">
-                <div class="d-flex flex-wrap gap-2">
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" id="teacherAralWeekday0" name="weekday" value="0" {% if 0 in teacher_aral_scheduled_weekdays %}disabled{% endif %}>
-                        <label class="form-check-label" for="teacherAralWeekday0">Mon</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" id="teacherAralWeekday1" name="weekday" value="1" {% if 1 in teacher_aral_scheduled_weekdays %}disabled{% endif %}>
-                        <label class="form-check-label" for="teacherAralWeekday1">Tue</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" id="teacherAralWeekday2" name="weekday" value="2" {% if 2 in teacher_aral_scheduled_weekdays %}disabled{% endif %}>
-                        <label class="form-check-label" for="teacherAralWeekday2">Wed</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" id="teacherAralWeekday3" name="weekday" value="3" {% if 3 in teacher_aral_scheduled_weekdays %}disabled{% endif %}>
-                        <label class="form-check-label" for="teacherAralWeekday3">Thu</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" id="teacherAralWeekday4" name="weekday" value="4" {% if 4 in teacher_aral_scheduled_weekdays %}disabled{% endif %}>
-                        <label class="form-check-label" for="teacherAralWeekday4">Fri</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" id="teacherAralWeekday5" name="weekday" value="5" {% if 5 in teacher_aral_scheduled_weekdays %}disabled{% endif %}>
-                        <label class="form-check-label" for="teacherAralWeekday5">Sat</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" id="teacherAralWeekday6" name="weekday" value="6" {% if 6 in teacher_aral_scheduled_weekdays %}disabled{% endif %}>
-                        <label class="form-check-label" for="teacherAralWeekday6">Sun</label>
-                    </div>
-                </div>
-            </div>
-            <label for="teacherAralAppliesTo">Aral Program</label>
-            <select class="form-select" id="teacherAralAppliesTo" name="applies_to" required>
-                {% for value, label in teacher_aral_schedule_choices %}<option value="{{ value }}">{{ label }}{% if value == 'current' %} (Term {{ teacher_aral_current_term }}){% endif %}</option>{% endfor %}
-            </select>
-            <button class="btn btn-primary btn-sm w-100" type="submit"><i class="bi bi-plus-circle me-1"></i>Add ARAL Schedule</button>
-        </form>
-        {% endif %}
     </aside>
     <section class="teacher-upcoming-card" aria-labelledby="teacherUpcomingTitle">
         <div class="teacher-upcoming-head"><h3 id="teacherUpcomingTitle">Upcoming This Week</h3><p>For your advisory class</p></div>
@@ -1772,7 +1730,7 @@
     </div>
 </section>
 
-<div class="modal fade teacher-calendar-expanded" id="teacherCalendarExpanded" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-xl"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">School Calendar</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><div class="teacher-expanded-toolbar mb-3"><div class="teacher-expanded-nav"><button type="button" class="btn btn-sm btn-outline-primary" id="teacherExpandedPrev">Previous</button><button type="button" class="btn btn-sm btn-outline-primary" id="teacherExpandedToday">Today</button><button type="button" class="btn btn-sm btn-outline-primary" id="teacherExpandedNext">Next</button></div><strong id="teacherExpandedMonth"></strong><div class="teacher-calendar-filter" role="group" aria-label="Expanded calendar filter"><button type="button" class="active" data-teacher-expanded-filter="global">System-wide</button><button type="button" data-teacher-expanded-filter="school">School</button></div></div><div class="teacher-gantt" id="teacherExpandedGrid"></div></div></div></div></div>
+<div class="modal fade teacher-calendar-expanded" id="teacherCalendarExpanded" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-xl"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">School Calendar</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><div class="teacher-expanded-toolbar mb-3"><div class="teacher-expanded-nav"><button type="button" class="btn btn-sm btn-outline-primary" id="teacherExpandedPrev">Previous</button><button type="button" class="btn btn-sm btn-outline-primary" id="teacherExpandedToday">Today</button><button type="button" class="btn btn-sm btn-outline-primary" id="teacherExpandedNext">Next</button></div><strong id="teacherExpandedMonth"></strong></div><div class="teacher-gantt" id="teacherExpandedGrid"></div></div></div></div></div>
 
 <div id="teacherDashboardConfig"
      hidden
@@ -1803,10 +1761,11 @@
     let cursor = new Date(today.getFullYear(), today.getMonth(), 1);
     let filter = 'global';
     const colors = {school_opening:'#22c55e', pre_assessment:'#3b82f6', midline_assessment:'#14b8a6', post_assessment:'#a855f7', school_closing:'#ef4444', holiday:'#f59e0b', examination:'#f97316', other:'#6b7280'};
+    const weekdayOnlyEventTypes = new Set(['school_opening','school_closing','pre_assessment','midline_assessment','post_assessment','aral_1','aral_2']);
     const parseDate = value => { const p = String(value || '').slice(0, 10).split('-').map(Number); return p.length === 3 && p.every(Number.isFinite) ? new Date(p[0], p[1] - 1, p[2]) : null; };
     const key = date => date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate();
     const visibleEvents = () => events.filter(event => event.scope === filter || event.scope === 'teacher');
-    const eventContains = (event, date) => { const start = parseDate(event.start_date || event.start); const end = parseDate(event.end_date || event.end || event.start); return start && end && key(start) <= key(date) && key(date) <= key(end); };
+    const eventContains = (event, date) => { const start = parseDate(event.start_date || event.start); const end = parseDate(event.end_date || event.end || event.start); return start && end && (!weekdayOnlyEventTypes.has(event.event_type) || (date.getDay() !== 0 && date.getDay() !== 6)) && key(start) <= key(date) && key(date) <= key(end); };
     function drawCompact() {
         const grid = document.getElementById('teacherCalendarGrid'); if (!grid) return;
         document.getElementById('teacherCalendarMonth').textContent = cursor.toLocaleDateString(undefined, {month:'long', year:'numeric'});
@@ -1830,7 +1789,7 @@
         for (let week = 0; week < Math.ceil((first + days) / 7); week += 1) {
             const weekStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1 - first + week * 7);
             const weekEnd = new Date(cursor.getFullYear(), cursor.getMonth(), 7 - first + week * 7);
-            const segments = visibleEvents().map(event => { const start=parseDate(event.start_date||event.start), end=parseDate(event.end_date||event.end||event.start); if(!start||!end) return null; const a=key(start)>key(weekStart)?start:weekStart, b=key(end)<key(weekEnd)?end:weekEnd; if(key(a)>key(b)) return null; const column=a.getDay()+1, span=Math.round((b-a)/86400000)+1; return {event,column,span,endColumn:column+span-1}; }).filter(Boolean).sort((a,b)=>a.column-b.column||a.endColumn-b.endColumn);
+            const segments = visibleEvents().flatMap(event => { const start=parseDate(event.start_date||event.start), end=parseDate(event.end_date||event.end||event.start); if(!start||!end) return []; const a=key(start)>key(weekStart)?start:weekStart, b=key(end)<key(weekEnd)?end:weekEnd; if(key(a)>key(b)) return []; const ranges=[]; for(let day=new Date(a); key(day)<=key(b); day.setDate(day.getDate()+1)){ if(weekdayOnlyEventTypes.has(event.event_type) && (day.getDay()===0 || day.getDay()===6)) continue; ranges.push({event,column:day.getDay()+1,span:1,endColumn:day.getDay()+1}); } return ranges; }).sort((a,b)=>a.column-b.column||a.endColumn-b.endColumn);
             const lanes=[]; segments.forEach(segment => { let lane=lanes.findIndex(items=>items.every(existing=>segment.endColumn<existing.column||existing.endColumn<segment.column)); if(lane<0){lane=lanes.length;lanes.push([]);} lanes[lane].push(segment); segment.lane=lane+1; });
             html += '<div class="teacher-gantt-week"><div class="teacher-gantt-days">';
             for(let column=0;column<7;column+=1){const date=new Date(weekStart.getFullYear(),weekStart.getMonth(),weekStart.getDate()+column);html+='<div class="teacher-gantt-day '+(date.getMonth()!==cursor.getMonth()?'adjacent':'')+'"><div class="teacher-gantt-day-number">'+date.getDate()+'</div></div>';}

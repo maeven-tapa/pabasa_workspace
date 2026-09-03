@@ -630,11 +630,14 @@
     .student-calendar-event[data-event-type="start_of_classes"] { background: rgba(14, 165, 233, 0.16); }
     .student-calendar-event[data-event-type="end_of_classes"] { background: rgba(124, 58, 237, 0.16); }
     .student-calendar-event[data-event-type="pre_assessment"] { background: rgba(59, 130, 246, 0.16); }
+    .student-calendar-event[data-event-type="midline_assessment"] { background: rgba(20, 184, 166, 0.16); }
     .student-calendar-event[data-event-type="post_assessment"] { background: rgba(20, 184, 166, 0.16); }
     .student-calendar-event[data-event-type="examination"] { background: rgba(248, 113, 113, 0.16); }
     .student-calendar-event[data-event-type="holiday"] { background: rgba(251, 191, 36, 0.2); }
-    .student-calendar-event[data-event-type="school_opening"] { background: rgba(34, 197, 94, 0.16); }
-    .student-calendar-event[data-event-type="school_closing"] { background: rgba(168, 85, 247, 0.16); }
+    .student-calendar-event[data-event-type="school_opening"] { background: rgba(250, 204, 21, 0.30); }
+    .student-calendar-event[data-event-type="school_closing"] { background: rgba(239, 68, 68, 0.28); }
+    .student-calendar-event[data-event-type="aral_1"] { background: #6b7280; color: #fff; }
+    .student-calendar-event[data-event-type="aral_2"] { background: #d1d5db; color: #374151; }
     .student-calendar-event[data-event-type="other"] { background: rgba(148, 163, 184, 0.18); }
 
     .student-calendar-swatch {
@@ -647,11 +650,14 @@
     .student-calendar-swatch[data-event-type="start_of_classes"] { background: rgba(14, 165, 233, 0.9); }
     .student-calendar-swatch[data-event-type="end_of_classes"] { background: rgba(124, 58, 237, 0.9); }
     .student-calendar-swatch[data-event-type="pre_assessment"] { background: rgba(59, 130, 246, 0.9); }
+    .student-calendar-swatch[data-event-type="midline_assessment"] { background: rgba(20, 184, 166, 0.9); }
     .student-calendar-swatch[data-event-type="post_assessment"] { background: rgba(20, 184, 166, 0.9); }
     .student-calendar-swatch[data-event-type="examination"] { background: rgba(248, 113, 113, 0.9); }
     .student-calendar-swatch[data-event-type="holiday"] { background: rgba(251, 191, 36, 0.95); }
-    .student-calendar-swatch[data-event-type="school_opening"] { background: rgba(34, 197, 94, 0.9); }
-    .student-calendar-swatch[data-event-type="school_closing"] { background: rgba(168, 85, 247, 0.9); }
+    .student-calendar-swatch[data-event-type="school_opening"] { background: #facc15; }
+    .student-calendar-swatch[data-event-type="school_closing"] { background: #ef4444; }
+    .student-calendar-swatch[data-event-type="aral_1"] { background: #6b7280; }
+    .student-calendar-swatch[data-event-type="aral_2"] { background: #d1d5db; }
     .student-calendar-swatch[data-event-type="other"] { background: rgba(148, 163, 184, 0.95); }
 
     .student-calendar-empty {
@@ -2098,7 +2104,6 @@
             <article class="student-calendar-card">
                 <div class="student-calendar-head">
                     <h3><i class="bi bi-calendar3"></i> School Calendar</h3>
-                    <div class="student-calendar-filter" role="group"><button type="button" class="active" data-student-calendar-filter="global">System-wide</button><button type="button" data-student-calendar-filter="school">School</button></div>
                 </div>
                 <div class="student-calendar-month" id="studentCalendarMonth"></div>
                 <div class="student-calendar-meta">School Year: <strong>{{ student_calendar_school_year|default:"Not set" }}</strong> · <strong>{{ student_calendar_current_term|default:"Not set" }}</strong></div>
@@ -2184,12 +2189,12 @@
             <div class="modal-body">
                 <div class="student-calendar-modal-shell">
                     <div class="student-calendar-expanded-grid">
-                        <div class="student-expanded-toolbar mb-3"><div class="student-expanded-nav"><button type="button" class="btn btn-sm btn-outline-primary" data-calendar-nav="prev">Previous</button><button type="button" class="btn btn-sm btn-outline-primary" data-calendar-nav="today">Today</button><button type="button" class="btn btn-sm btn-outline-primary" data-calendar-nav="next">Next</button></div><strong id="studentCalendarExpandedMonth"></strong><div class="student-calendar-filter" role="group" aria-label="Expanded calendar filter"><button type="button" class="active" data-student-calendar-filter="global">System-wide</button><button type="button" data-student-calendar-filter="school">School</button></div></div>
+                        <div class="student-expanded-toolbar mb-3"><div class="student-expanded-nav"><button type="button" class="btn btn-sm btn-outline-primary" data-calendar-nav="prev">Previous</button><button type="button" class="btn btn-sm btn-outline-primary" data-calendar-nav="today">Today</button><button type="button" class="btn btn-sm btn-outline-primary" data-calendar-nav="next">Next</button></div><strong id="studentCalendarExpandedMonth"></strong></div>
                         <div class="student-calendar-expanded-calendar" data-student-calendar-expanded aria-label="Expanded current month calendar" aria-readonly="true"></div>
                     </div>
                     <div class="student-calendar-footer">
                         <div class="student-calendar-legend" aria-label="Calendar legend">
-                            {% for event_type, label in calendar_legend %}
+                            {% for event_type, label in student_calendar_legend %}
                                 <span class="student-calendar-legend-item">
                                     <span class="student-calendar-swatch" data-event-type="{{ event_type }}"></span>
                                     <span>{{ label }}</span>
@@ -2400,13 +2405,16 @@
             start_of_classes: { bg: "rgba(14, 165, 233, 0.16)", swatch: "rgba(14, 165, 233, 0.9)" },
             end_of_classes: { bg: "rgba(124, 58, 237, 0.16)", swatch: "rgba(124, 58, 237, 0.9)" },
             pre_assessment: { bg: "rgba(59, 130, 246, 0.16)", swatch: "rgba(59, 130, 246, 0.9)" },
-            post_assessment: { bg: "rgba(20, 184, 166, 0.16)", swatch: "rgba(20, 184, 166, 0.9)" },
-            examination: { bg: "rgba(248, 113, 113, 0.16)", swatch: "rgba(248, 113, 113, 0.9)" },
-            holiday: { bg: "rgba(251, 191, 36, 0.2)", swatch: "rgba(251, 191, 36, 0.95)" },
-            school_opening: { bg: "rgba(34, 197, 94, 0.16)", swatch: "rgba(34, 197, 94, 0.9)" },
-            school_closing: { bg: "rgba(168, 85, 247, 0.16)", swatch: "rgba(168, 85, 247, 0.9)" },
-            other: { bg: "rgba(148, 163, 184, 0.18)", swatch: "rgba(148, 163, 184, 0.95)" },
+            post_assessment: { bg: "rgba(168, 85, 247, 0.16)", swatch: "rgba(168, 85, 247, 0.9)" },
+            examination: { bg: "rgba(249, 115, 22, 0.16)", swatch: "rgba(249, 115, 22, 0.9)" },
+            holiday: { bg: "rgba(245, 158, 11, 0.16)", swatch: "rgba(245, 158, 11, 0.9)" },
+            school_opening: { bg: "rgba(250, 204, 21, 0.30)", swatch: "rgba(250, 204, 21, 1)" },
+            school_closing: { bg: "rgba(239, 68, 68, 0.28)", swatch: "rgba(239, 68, 68, 1)" },
+            aral_1: { bg: "#6b7280", swatch: "#6b7280" },
+            aral_2: { bg: "#d1d5db", swatch: "#d1d5db" },
+            other: { bg: "rgba(107, 114, 128, 0.16)", swatch: "rgba(107, 114, 128, 0.95)" },
         };
+        const weekdayOnlyEventTypes = new Set(['school_opening', 'school_closing', 'pre_assessment', 'midline_assessment', 'post_assessment', 'aral_1', 'aral_2']);
 
         const formatMonthLabel = (date) => new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(date);
 
@@ -2444,16 +2452,15 @@
             student_calendar_events_count: studentCalendarEvents.length,
         });
 
-        let studentCalendarFilter = 'global';
-        document.querySelectorAll('[data-student-calendar-filter]').forEach((button) => button.addEventListener('click', () => { studentCalendarFilter = button.dataset.studentCalendarFilter; document.querySelectorAll('[data-student-calendar-filter]').forEach((item) => item.classList.toggle('active', item === button)); renderStudentCompactCalendar(); renderExpandedCalendar(currentMonthDate); }));
+        const studentCalendarFilter = 'all';
         const getEventsForDay = (date) => {
             const iso = localIsoDate(date);
-            return studentCalendarEvents.filter((event) => studentCalendarFilter === 'all' || (studentCalendarFilter === 'global' && event.scope === 'global') || (studentCalendarFilter === 'school' && event.scope === 'school')).filter((event) => {
+            return studentCalendarEvents.filter((event) => {
                 const start = parseIsoDate(event.start);
                 const end = parseIsoDate(event.end_date || event.end || event.start);
                 if (!start || !end) return false;
                 const current = parseIsoDate(iso);
-                return current >= start && current <= end;
+                return current >= start && current <= end && (!weekdayOnlyEventTypes.has(event.event_type) || (date.getDay() !== 0 && date.getDay() !== 6));
             });
         };
 
@@ -2483,17 +2490,20 @@
             for (let week = 0; week < Math.ceil((first + days) / 7); week += 1) {
                 const weekStart = new Date(date.getFullYear(), date.getMonth(), 1 - first + week * 7);
                 const weekEnd = new Date(date.getFullYear(), date.getMonth(), 7 - first + week * 7);
-                const segments = studentCalendarEvents.filter(event => event.scope === studentCalendarFilter).map(event => {
+                const segments = studentCalendarEvents.flatMap(event => {
                     const start = parseIsoDate(event.start_date || event.start);
                     const end = parseIsoDate(event.end_date || event.end || event.start);
-                    if (!start || !end) return null;
+                    if (!start || !end) return [];
                     const a = start > weekStart ? start : weekStart;
                     const b = end < weekEnd ? end : weekEnd;
-                    if (a > b) return null;
-                    const column = a.getDay() + 1;
-                    const span = Math.round((b - a) / 86400000) + 1;
-                    return {event, column, span, endColumn: column + span - 1};
-                }).filter(Boolean).sort((a,b) => a.column - b.column || a.endColumn - b.endColumn);
+                    if (a > b) return [];
+                    const ranges = [];
+                    for (let day = new Date(a); day <= b; day.setDate(day.getDate() + 1)) {
+                        if (weekdayOnlyEventTypes.has(event.event_type) && (day.getDay() === 0 || day.getDay() === 6)) continue;
+                        ranges.push({event, column: day.getDay() + 1, span: 1, endColumn: day.getDay() + 1});
+                    }
+                    return ranges;
+                }).sort((a,b) => a.column - b.column || a.endColumn - b.endColumn);
                 const lanes = [];
                 segments.forEach(segment => { let lane = lanes.findIndex(items => items.every(existing => segment.endColumn < existing.column || existing.endColumn < segment.column)); if (lane < 0) { lane = lanes.length; lanes.push([]); } lanes[lane].push(segment); segment.lane = lane + 1; });
                 html += '<div class="student-gantt-week"><div class="student-gantt-days">';
