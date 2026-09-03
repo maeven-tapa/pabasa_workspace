@@ -105,14 +105,15 @@
             </div>
             <label class="form-label fw-bold">Rhyming</label>
             <div class="item-input-row mb-2">
-              <input id="rhymingWordAInput" class="form-control" disabled>
+              <input id="rhymingWordAInput" class="form-control" placeholder="___________________" disabled>
               <span class="pt-2">-</span>
-              <input id="rhymingWordBInput" class="form-control" disabled>
+              <input id="rhymingWordBInput" class="form-control" placeholder="_________________" disabled>
               <button type="button" class="btn btn-primary" id="addRhymingBtn" style="min-width:52px" disabled><i class="bi bi-plus-lg"></i></button>
             </div>
             <div class="d-flex justify-content-between align-items-center mb-2">
-              <div class="locked-hint" id="rhymingProgress">0 / 10 rhyming pairs</div>
+              <div class="locked-hint" id="rhymingProgress">Add rhyming pairs</div>
             </div>
+            <div class="text-danger small mb-2" id="rhymingError" role="alert" aria-live="polite"></div>
             <div id="rhymingChips" class="item-box d-flex flex-wrap gap-2 align-content-start">
               <div class="text-center w-100 text-secondary py-3">No rhyming pairs added yet.</div>
             </div>
@@ -227,6 +228,7 @@
   const wordProgress = document.getElementById('wordProgress');
   const sentenceProgress = document.getElementById('sentenceProgress');
   const rhymingProgress = document.getElementById('rhymingProgress');
+  const rhymingError = document.getElementById('rhymingError');
   const paragraphProgress = document.getElementById('paragraphProgress');
   const materialsHint = document.getElementById('materialsHint');
   const stepTitle = document.getElementById('stepTitle');
@@ -375,7 +377,7 @@
     const typeEnabled = titleReady;
     const typeReady = typeEnabled && typeCommitted;
     const wordsReady = state.words.length >= 10;
-    const rhymingReady = state.rhyme_pairs.length >= 10;
+    const rhymingReady = state.rhyme_pairs.length === 10;
     const sentencesReady = state.sentences.length >= 4;
     const storiesReady = sentencesReady && state.stories.length > 0 && state.stories.every((story) => {
       const storyTitleReady = String(story.title || '').trim().length > 0;
@@ -390,11 +392,12 @@
     addWordBtn.disabled = !typeReady;
     sentenceInput.disabled = !rhymingReady;
     addSentenceBtn.disabled = !rhymingReady;
-    rhymingWordAInput.disabled = !wordsReady;
-    rhymingWordBInput.disabled = !wordsReady;
-    addRhymingBtn.disabled = !wordsReady || rhymingReady;
+    const rhymingLimitReached = state.rhyme_pairs.length >= 10;
+    rhymingWordAInput.disabled = !wordsReady || rhymingLimitReached;
+    rhymingWordBInput.disabled = !wordsReady || rhymingLimitReached;
+    addRhymingBtn.disabled = !wordsReady || rhymingLimitReached;
     addStoryBtn.disabled = !sentencesReady;
-    saveBtn.disabled = !(titleReady && typeReady && wordsReady && sentencesReady && storiesReady);
+    saveBtn.disabled = !(titleReady && typeReady && wordsReady && rhymingReady && sentencesReady && storiesReady);
 
     const wordCount = state.words.length;
     const sentenceCount = state.sentences.length;
@@ -424,20 +427,46 @@
     paragraphState.textContent = sentencesReady ? (storiesReady ? 'Completed' : 'Current') : 'Locked';
 
     wordProgress.textContent = wordCount >= 10 ? `10 / 10 words ✓` : `${wordCount} / 10 words`;
-    rhymingProgress.textContent = state.rhyme_pairs.length >= 10 ? `10 / 10 rhyming pairs ✓` : `${state.rhyme_pairs.length} / 10 rhyming pairs`;
+    rhymingProgress.textContent = rhymingLimitReached
+      ? '10 / 10 rhyming pairs - limit reached'
+      : `${state.rhyme_pairs.length} / 10 rhyming pairs`;
     sentenceProgress.textContent = sentenceCount >= 4 ? `${sentenceCount} / 4 sentences ✓` : `${sentenceCount} / 4 sentences`;
     paragraphProgress.textContent = sentencesReady ? 'Stories are now available' : 'Available after 4 sentences';
     materialsHint.textContent = !titleReady ? 'Choose the assessment type to unlock the reading materials editor.' : (materialsComplete ? 'All required reading materials have been completed.' : 'Complete the Word, Sentence, Story Reading, and Question and Answer requirements.');
   }
   function addWord() { const value = String(wordInput.value || '').trim(); if (!value) return; if (state.words.length >= 10) { wordInput.value = ''; render(); return; } state.words.push(value); wordInput.value = ''; render(); }
   function addSentence() { const value = String(sentenceInput.value || '').trim(); if (!value) return; state.sentences.push(value); sentenceInput.value = ''; render(); }
-  function addRhyming() { const wordA = String(rhymingWordAInput.value || '').trim(); const wordB = String(rhymingWordBInput.value || '').trim(); if (!wordA || !wordB) return; state.rhyme_pairs.push({ word_a: wordA, word_b: wordB }); rhymingWordAInput.value = ''; rhymingWordBInput.value = ''; render(); }
+  function addRhyming() {
+    if (state.rhyme_pairs.length >= 10) return;
+    const wordA = String(rhymingWordAInput.value || '').trim();
+    const wordB = String(rhymingWordBInput.value || '').trim();
+    if (!wordA || !wordB) {
+      rhymingError.textContent = 'Enter both words to add a rhyming pair.';
+      if (!wordA) rhymingWordAInput.focus();
+      else rhymingWordBInput.focus();
+      return;
+    }
+    rhymingError.textContent = '';
+    state.rhyme_pairs.push({ word_a: wordA, word_b: wordB });
+    rhymingWordAInput.value = '';
+    rhymingWordBInput.value = '';
+    render();
+    if (state.rhyme_pairs.length < 10) rhymingWordAInput.focus();
+  }
   wordChips.addEventListener('click', (e) => { const btn = e.target.closest('[data-remove-word]'); if (!btn) return; state.words.splice(Number(btn.getAttribute('data-remove-word')), 1); render(); });
   sentenceChips.addEventListener('click', (e) => { const btn = e.target.closest('[data-remove-sentence]'); if (!btn) return; state.sentences.splice(Number(btn.getAttribute('data-remove-sentence')), 1); render(); });
   rhymingChips.addEventListener('click', (e) => { const btn = e.target.closest('[data-remove-rhyme]'); if (!btn) return; state.rhyme_pairs.splice(Number(btn.getAttribute('data-remove-rhyme')), 1); render(); });
   addWordBtn.addEventListener('click', addWord);
   addSentenceBtn.addEventListener('click', addSentence);
   addRhymingBtn.addEventListener('click', addRhyming);
+  [rhymingWordAInput, rhymingWordBInput].forEach((input) => {
+    input.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      addRhyming();
+    });
+    input.addEventListener('input', () => { rhymingError.textContent = ''; });
+  });
   addStoryBtn.addEventListener('click', addStory);
   titleInput.addEventListener('input', render);
   assessmentTypeInput.addEventListener('change', () => { if (!assessmentTypeInput.disabled && titleInput.value.trim()) { typeCommitted = true; } render(); });
