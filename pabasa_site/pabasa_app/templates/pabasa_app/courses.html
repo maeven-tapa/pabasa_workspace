@@ -5919,6 +5919,120 @@
         transform: translateY(-1px);
     }
 
+    .story-response-review-row {
+        border: 1px solid rgba(31, 111, 139, 0.14);
+        border-radius: 12px;
+        margin-bottom: .6rem;
+        padding: .75rem .9rem;
+    }
+    .story-response-review-header {
+        align-items: center;
+        display: flex;
+        gap: .75rem;
+        justify-content: space-between;
+    }
+    .story-response-student-name {
+        color: var(--dash-ink);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: .98rem;
+        font-weight: 800;
+        line-height: 1.25;
+    }
+    .story-response-status-badge {
+        background: #f1f5f6;
+        border: 1px solid #d7e1e4;
+        border-radius: 999px;
+        color: #5d7078;
+        font-size: .68rem;
+        font-weight: 700;
+        line-height: 1;
+        padding: .32rem .52rem;
+    }
+    .story-response-status-badge.is-graded {
+        background: rgba(25, 135, 84, .1);
+        border-color: rgba(25, 135, 84, .2);
+        color: #16704a;
+    }
+    .story-response-story {
+        color: var(--dash-muted);
+        font-size: .78rem;
+        margin-top: .35rem;
+    }
+    .story-response-prompt {
+        color: var(--dash-muted);
+        font-size: .76rem;
+        line-height: 1.35;
+        margin-top: .28rem;
+    }
+    .story-response-prompt-label {
+        font-size: .68rem;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+    }
+    .story-response-prompt-text {
+        color: var(--dash-ink);
+        font-size: .84rem;
+    }
+    .story-response-review-row audio {
+        display: block;
+        margin: .6rem 0 .55rem;
+    }
+    .story-response-score-row {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .4rem;
+    }
+    .story-response-score-label {
+        color: var(--dash-ink);
+        font-size: .78rem;
+        font-weight: 700;
+    }
+    .story-response-grade {
+        background: #fff;
+        border: 1px solid #b8cbd2;
+        border-radius: 7px;
+        color: var(--dash-ink);
+        font-size: .82rem;
+        font-weight: 700;
+        min-height: 32px;
+        padding: .25rem .35rem;
+        text-align: center;
+        width: 52px !important;
+    }
+    .story-response-grade:focus {
+        border-color: var(--dash-primary);
+        box-shadow: 0 0 0 3px rgba(31, 111, 139, .14);
+    }
+    .story-response-score-out-of {
+        color: var(--dash-muted);
+        font-size: .78rem;
+        font-weight: 700;
+    }
+    .story-response-save-grade {
+        background: var(--dash-primary);
+        border: 1px solid var(--dash-primary);
+        border-radius: 7px;
+        color: #fff;
+        font-size: .76rem;
+        font-weight: 700;
+        min-height: 32px;
+        padding: .25rem .65rem;
+        transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+    }
+    .story-response-save-grade:hover {
+        background: var(--dash-primary-deep);
+        border-color: var(--dash-primary-deep);
+    }
+    .story-response-save-grade:active { transform: translateY(1px); }
+    .story-response-save-grade:disabled { opacity: .65; }
+    .story-response-saved-score {
+        color: #16704a;
+        font-size: .78rem;
+        font-weight: 800;
+        margin-left: .15rem;
+    }
+
     .course-assessment-results-table thead th {
         background: #f4f9fc;
         border-bottom: 1px solid rgba(31, 111, 139, 0.14);
@@ -9641,7 +9755,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const response = await fetch(`/api/teacher/story-response/review/?material_id=${encodeURIComponent(materialId)}`, { credentials: 'same-origin' });
         const data = await response.json();
         if (!response.ok || !data.success) { body.innerHTML = `<div class="text-danger">${escapeHtml(data.error || 'Unable to load responses.')}</div>`; return; }
-        body.innerHTML = data.submissions.map(row => `<div class="border rounded p-3 mb-2"><div class="d-flex justify-content-between gap-3"><strong>${escapeHtml(row.student_name)}</strong><span class="badge bg-secondary">${escapeHtml(row.status)}</span></div>${row.story_title ? `<div class="small text-muted mt-2">Story: ${escapeHtml(row.story_title)}</div>` : ''}${row.prompt ? `<div class="small mt-1">Prompt: ${escapeHtml(row.prompt)}</div>` : ''}${row.response_text ? `<div class="small mt-2"><strong>Answer:</strong> ${escapeHtml(row.response_text)}</div>` : ''}${row.recording_url ? `<audio class="w-100 mt-2" controls preload="none" src="${escapeHtml(row.recording_url)}"></audio><div class="mt-2 d-flex align-items-center gap-2"><label class="small fw-semibold" for="story-response-score-${row.id}">Score: __/5</label><select id="story-response-score-${row.id}" class="form-select form-select-sm story-response-grade" style="width:90px" data-submission-id="${row.id}">${[0,1,2,3,4,5].map(value => `<option value="${value}" ${Number(row.grade) === value ? 'selected' : ''}>${value}</option>`).join('')}</select><button type="button" class="btn btn-sm btn-primary story-response-save-grade" data-submission-id="${row.id}">Submit Score</button>${row.grade !== null && row.grade !== undefined ? `<strong class="story-response-saved-score">${escapeHtml(row.grade)}/5</strong>` : ''}</div>` : ''}</div>`).join('') || '<div class="text-muted">No enrolled students found.</div>';
+        body.innerHTML = data.submissions.map(row => `<div class="story-response-review-row"><div class="story-response-review-header"><strong class="story-response-student-name">${escapeHtml(row.student_name)}</strong><span class="story-response-status-badge ${row.grade_locked ? 'is-graded' : ''}">${escapeHtml(row.status)}</span></div>${row.story_title ? `<div class="story-response-story">Story · ${escapeHtml(row.story_title)}</div>` : ''}${row.prompt ? `<div class="story-response-prompt"><span class="story-response-prompt-label">Prompt</span><span class="story-response-prompt-text"> ${escapeHtml(row.prompt)}</span></div>` : ''}${row.response_text ? `<div class="story-response-prompt"><span class="story-response-prompt-label">Answer</span><span class="story-response-prompt-text"> ${escapeHtml(row.response_text)}</span></div>` : ''}${row.recording_url ? `<audio class="w-100" controls preload="none" src="${escapeHtml(row.recording_url)}"></audio><div class="story-response-score-row"><label class="story-response-score-label" for="story-response-score-${row.id}">Score</label><select id="story-response-score-${row.id}" class="story-response-grade" data-submission-id="${row.id}" ${row.grade_locked ? 'disabled' : ''}>${[0,1,2,3,4,5].map(value => `<option value="${value}" ${Number(row.grade) === value ? 'selected' : ''}>${value}</option>`).join('')}</select><span class="story-response-score-out-of">/ 5</span><button type="button" class="story-response-save-grade" data-submission-id="${row.id}" ${row.grade_locked ? 'disabled' : ''}>${row.grade_locked ? 'Score Submitted' : 'Submit Score'}</button>${row.grade !== null && row.grade !== undefined ? `<strong class="story-response-saved-score">Saved ${escapeHtml(row.grade)}/5</strong>` : ''}</div>` : ''}</div>`).join('') || '<div class="text-muted">No enrolled students found.</div>';
     }
 
     document.addEventListener('click', async event => {
@@ -9658,8 +9772,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const response = await fetch('/api/teacher/story-response/grade/', { method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-CSRFToken': token}, body: JSON.stringify({submission_id: saveButton.dataset.submissionId, grade: select?.value}) });
         const data = await response.json();
         if (!response.ok || !data.success) { showToast(data.error || 'Grade could not be saved', 'error'); return; }
-        const row = saveButton.closest('.border');
-        row?.querySelector('.badge')?.replaceChildren(document.createTextNode('Graded'));
+        const row = saveButton.closest('.story-response-review-row');
+        row?.querySelector('.story-response-status-badge')?.replaceChildren(document.createTextNode('Graded'));
+        row?.querySelector('.story-response-status-badge')?.classList.add('is-graded');
+        if (select) select.disabled = true;
+        saveButton.disabled = true;
+        saveButton.textContent = 'Score Submitted';
         row?.querySelector('.story-response-saved-score')?.remove();
         const savedScore = document.createElement('strong');
         savedScore.className = 'story-response-saved-score';

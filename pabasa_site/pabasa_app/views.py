@@ -19028,6 +19028,7 @@ def get_class_materials(request):
                 attempt_count = 0
                 completed_attempt_count = 0
                 student_has_completed = False
+                story_response_submission = None
                 latest_attempt_summary = {}
                 latest_time_score = None
                 if m.assessment:
@@ -19068,6 +19069,18 @@ def get_class_materials(request):
                         attempt_count = 0
                     else:
                         attempt_count = 0
+                elif is_requesting_student and _is_story_response_material(m):
+                    story_response_submission = StoryResponseSubmission.objects.filter(
+                        student=request_user, material=m,
+                    ).only('id', 'grade', 'status', 'submitted_at').first()
+                    if story_response_submission:
+                        student_has_completed = True
+                        completed_attempt_count = 1
+                        latest_attempt_summary = {
+                            'status': 'completed',
+                            'completed_at': story_response_submission.submitted_at.isoformat(),
+                            'score': story_response_submission.grade,
+                        }
 
                 content_json = getattr(m, 'content_json', None) or {}
                 language_value = ''
@@ -19101,6 +19114,9 @@ def get_class_materials(request):
                     'attempt_count': attempt_count,
                     'completed_attempt_count': completed_attempt_count,
                     'student_has_completed': student_has_completed,
+                    'story_response_submitted': bool(story_response_submission),
+                    'story_response_grade': story_response_submission.grade if story_response_submission else None,
+                    'story_response_status': story_response_submission.status if story_response_submission else '',
                     'latest_time_score': latest_time_score,
                     'latest_attempt_summary': latest_attempt_summary,
                     'assigned_sections': [s.class_code for s in m.assigned_sections.all()] if hasattr(m, 'assigned_sections') else [],
@@ -23307,6 +23323,10 @@ def story_response_page(request):
     if access_response:
         return access_response
     
+    student = User.objects.filter(id=request.session.get('user_id'), role='student', is_archived=False).first()
+    if StoryResponseSubmission.objects.filter(student=student, material=material).exists():
+        return redirect('assessment')
+
     content_json = material.content_json or {}
     source_story_id = content_json.get('source_story_reading_material_id')
     source_story = Material.objects.filter(id=source_story_id).first() if source_story_id else None
@@ -23367,6 +23387,8 @@ def story_response_submit(request):
     access_response = _enforce_student_access_for_request(request, material=material)
     if access_response:
         return access_response
+    if StoryResponseSubmission.objects.filter(student=user, material=material).exists():
+        return JsonResponse({'success': False, 'error': 'This Story Response activity is already completed.'}, status=409)
     
     student_section = next((
         section for section in Section.objects.filter(is_active=True).select_related('school_calendar')
@@ -23425,6 +23447,7 @@ def _story_response_review_payload(submission):
         'story_title': str(content.get('storyTitle') or submission.story_material.title or '').strip(),
         'prompt': submission.prompt,
         'grade': submission.grade,
+        'grade_locked': submission.grade is not None,
         'submitted_at': submission.submitted_at.isoformat(),
     }
 
@@ -23471,6 +23494,8 @@ def teacher_story_response_grade(request):
         teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
         if not teacher or not _teacher_can_access_material(teacher, submission.material):
             return JsonResponse({'success': False, 'error': 'Access denied.'}, status=403)
+        if submission.grade is not None:
+            return JsonResponse({'success': False, 'error': 'This Story Response score is already locked.'}, status=409)
         grade = int(payload.get('grade'))
         if grade < 0 or grade > 5:
             raise ValueError

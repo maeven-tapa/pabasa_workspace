@@ -42,6 +42,9 @@ class StoryResponseReviewTests(TestCase):
         submission.refresh_from_db()
         self.assertEqual(submission.grade, 4)
         self.assertEqual(submission.status, "graded")
+        self.assertTrue(self.client.get(reverse("teacher_story_response_review"), {"material_id": self.material.id}).json()["submissions"][0]["grade_locked"])
+        locked = self.client.post(reverse("teacher_story_response_grade"), data=json.dumps({"submission_id": submission.id, "grade": 5}), content_type="application/json")
+        self.assertEqual(locked.status_code, 409)
 
         export = self.client.get(reverse("export_material_results"), {"material_id": self.material.id})
         self.assertEqual(export.status_code, 200)
@@ -49,6 +52,29 @@ class StoryResponseReviewTests(TestCase):
         self.assertEqual(sheet["G5"].value, "4")
         self.assertEqual(sheet["H5"].value, "80%")
         self.assertEqual(sheet["I5"].value, "Graded")
+
+    def test_student_completion_payload_is_submission_backed_and_route_blocks_retake(self):
+        self.login_as(self.student)
+        first = self.client.post(reverse("story_response_submit"), {
+            "material_id": f"material-{self.material.id}",
+            "audio": SimpleUploadedFile("answer.webm", b"audio"),
+        })
+        self.assertEqual(first.status_code, 200)
+
+        materials = self.client.get(reverse("get_class_materials"), {"section_id": self.section.id})
+        self.assertEqual(materials.status_code, 200)
+        story_item = next(item for item in materials.json()["materials"]["paragraph"] if item["raw_id"] == self.material.id)
+        self.assertTrue(story_item["student_has_completed"])
+        self.assertTrue(story_item["story_response_submitted"])
+        self.assertIsNone(story_item["story_response_grade"])
+
+        activity_page = self.client.get(reverse("story_response_page"), {"id": f"material-{self.material.id}"})
+        self.assertEqual(activity_page.status_code, 302)
+        duplicate = self.client.post(reverse("story_response_submit"), {
+            "material_id": f"material-{self.material.id}",
+            "audio": SimpleUploadedFile("answer-again.webm", b"audio"),
+        })
+        self.assertEqual(duplicate.status_code, 409)
 
     def test_submission_accepts_csrf_protected_browser_request(self):
         self.login_as(self.student)

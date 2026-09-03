@@ -1316,6 +1316,11 @@
                                 m.content_json?.template_lesson, m.content_json?.template_type, m.content_json?.activity_type]
                                 .some(value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === 'story_reading');
                             const isStoryResponse = String(m.content_json?.activity_type || '').trim().toLowerCase() === 'story_response';
+                            const isRetiredStoryResponse = isStoryResponse && isDone;
+                            const storyResponseGrade = m.story_response_grade;
+                            const storyResponseCompletionText = storyResponseGrade === null || storyResponseGrade === undefined || storyResponseGrade === ''
+                                ? 'Your response has been recorded. Awaiting teacher review.'
+                                : `Your response has been reviewed. ${escapeHtml(storyResponseGrade)}/5`;
                             const isFiveWStoryQuestions = String(m.content_json?.template_title || '').trim() === "5W's Story Questions";
                             const isPhraseReading = [templateActivityName, m.template_title, m.template_type,
                                 m.content_json?.template_title, m.content_json?.template_lesson, m.content_json?.template_type]
@@ -1330,7 +1335,7 @@
                             const isWordMeaningMatch = activityKey === 'word_meaning_match';
                             const isFluencyReading = activityKey === 'fluency_reading';
                             const sectionId = m.section_id || classData.id || classData.section_id || '';
-                            const generatedStartUrl = isLocked ? '#' : (isWordMeaningMatch
+                            const generatedStartUrl = isLocked || isRetiredStoryResponse ? '#' : (isWordMeaningMatch
                                 ? `${wordMeaningMatchUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
                                 : isFluencyReading
                                 ? `${fluencyReadingUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
@@ -1372,15 +1377,15 @@
                             });
                             renderedRows.push(`
                                 <div class="assessment-card-shell ${isLocked ? 'is-locked' : ''}">
-                                    <a href="${generatedStartUrl}" class="assessment-type-link type-${m.category} ${isDone ? 'is-done' : ''} ${isLocked ? 'is-disabled is-locked' : ''}" data-section-id="${escapeHtml(classData.id || classData.section_id || '')}" data-class-code="${escapeHtml(classData.code)}" ${isLocked ? 'tabindex="-1" aria-disabled="true" onclick="return false;"' : ''}>
+                                    <a href="${generatedStartUrl}" class="assessment-type-link type-${m.category} ${isDone ? 'is-done' : ''} ${isLocked || isRetiredStoryResponse ? 'is-disabled is-locked' : ''}" data-section-id="${escapeHtml(classData.id || classData.section_id || '')}" data-class-code="${escapeHtml(classData.code)}" ${isLocked || isRetiredStoryResponse ? 'tabindex="-1" aria-disabled="true" onclick="return false;"' : ''}>
                                         <div class="type-meta">
                                             <span class="type-icon"><i class="bi ${iconMap[m.category]}"></i></span>
                                             <div class="type-info">
                                         <div class="d-flex align-items-center gap-2 flex-wrap">
-                                            <strong>${escapeHtml(m.title)} ${isDone ? '<span class="badge bg-success ms-1 assessment-done-pill" style="font-size: 0.6rem;">DONE</span>' : ''}</strong>
+                                                    <strong>${escapeHtml(m.title)} ${isDone ? '<span class="badge bg-success ms-1 assessment-done-pill" style="font-size: 0.6rem;">DONE</span>' : ''}</strong>
                                             ${getMaterialLanguageBadgeHtml(m)}
                                         </div>
-                                                <span>${templateActivityName || `${labelMap[m.category]} - ${Array.isArray(m.items) ? m.items.length : (m.items || 0)} items`}</span>
+                                                <span>${isStoryResponse && isDone ? `Story Response Completed - ${storyResponseCompletionText}` : (templateActivityName || `${labelMap[m.category]} - ${Array.isArray(m.items) ? m.items.length : (m.items || 0)} items`)}</span>
                                             </div>
                                         </div>
                                         <i class="bi ${isDone ? 'bi-check-circle-fill text-success' : 'bi-play-circle-fill text-primary'}"></i>
