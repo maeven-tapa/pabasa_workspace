@@ -9516,7 +9516,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
             return false;
         });
-
         const totalAssessments = new Set(filtered.map(item => String(item.assessment_id || ''))).size;
         const completedCount = filtered.filter(item => getAssessmentStatus(item).label === 'Completed').length;
         const scoredRows = filtered.filter(item => item.score !== null && item.score !== undefined && item.score !== '');
@@ -9554,8 +9553,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const sortedAssessments = courseAssessmentCatalog
             .filter(assessment => visibleAssessmentIds.has(String(assessment.id)))
             .filter(assessment => {
-                const assessmentId = Number(assessment.id);
-                return Number.isInteger(assessmentId) && assessmentId > 0;
+                const assessmentId = rawRecordId(assessment.id);
+                return /^\d+$/.test(assessmentId) && Number(assessmentId) > 0;
             })
             .slice()
             .sort((a, b) => {
@@ -9603,7 +9602,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 </div>
                             ` : ''}
                         </div>
-                        ${assessment.review_responses ? `<button type="button" class="course-assessment-export-btn story-response-review-btn" data-material-id="${escapeHtml(exportMaterialId)}"><i class="bi bi-mic"></i>Review Responses</button>` : ''}
+                        ${assessment.review_responses ? `<button type="button" class="course-assessment-export-btn story-response-review-btn" data-material-id="${escapeHtml(exportMaterialId)}"><i class="bi bi-mic"></i>Recordings</button>` : ''}
                         ${canExport ? `
                             <a class="course-assessment-export-btn"
                                href="/material/export-results/?material_id=${encodeURIComponent(exportMaterialId)}"
@@ -9642,7 +9641,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const response = await fetch(`/api/teacher/story-response/review/?material_id=${encodeURIComponent(materialId)}`, { credentials: 'same-origin' });
         const data = await response.json();
         if (!response.ok || !data.success) { body.innerHTML = `<div class="text-danger">${escapeHtml(data.error || 'Unable to load responses.')}</div>`; return; }
-        body.innerHTML = data.submissions.map(row => `<div class="border rounded p-3 mb-2"><div class="d-flex justify-content-between gap-3"><strong>${escapeHtml(row.student_name)}</strong><span class="badge bg-secondary">${escapeHtml(row.status)}</span></div>${row.story_title ? `<div class="small text-muted mt-2">Story: ${escapeHtml(row.story_title)}</div>` : ''}${row.prompt ? `<div class="small mt-1">Prompt: ${escapeHtml(row.prompt)}</div>` : ''}${row.recording_url ? `<audio class="w-100 mt-2" controls preload="none" src="${escapeHtml(row.recording_url)}"></audio><div class="mt-2 d-flex align-items-center gap-2"><label class="small fw-semibold">Grade</label><select class="form-select form-select-sm story-response-grade" style="width:90px" data-submission-id="${row.id}">${[0,1,2,3,4,5].map(value => `<option value="${value}" ${Number(row.grade) === value ? 'selected' : ''}>${value}</option>`).join('')}</select><button type="button" class="btn btn-sm btn-primary story-response-save-grade" data-submission-id="${row.id}">Save</button></div>` : ''}</div>`).join('') || '<div class="text-muted">No enrolled students found.</div>';
+        body.innerHTML = data.submissions.map(row => `<div class="border rounded p-3 mb-2"><div class="d-flex justify-content-between gap-3"><strong>${escapeHtml(row.student_name)}</strong><span class="badge bg-secondary">${escapeHtml(row.status)}</span></div>${row.story_title ? `<div class="small text-muted mt-2">Story: ${escapeHtml(row.story_title)}</div>` : ''}${row.prompt ? `<div class="small mt-1">Prompt: ${escapeHtml(row.prompt)}</div>` : ''}${row.response_text ? `<div class="small mt-2"><strong>Answer:</strong> ${escapeHtml(row.response_text)}</div>` : ''}${row.recording_url ? `<audio class="w-100 mt-2" controls preload="none" src="${escapeHtml(row.recording_url)}"></audio><div class="mt-2 d-flex align-items-center gap-2"><label class="small fw-semibold" for="story-response-score-${row.id}">Score: __/5</label><select id="story-response-score-${row.id}" class="form-select form-select-sm story-response-grade" style="width:90px" data-submission-id="${row.id}">${[0,1,2,3,4,5].map(value => `<option value="${value}" ${Number(row.grade) === value ? 'selected' : ''}>${value}</option>`).join('')}</select><button type="button" class="btn btn-sm btn-primary story-response-save-grade" data-submission-id="${row.id}">Submit Score</button>${row.grade !== null && row.grade !== undefined ? `<strong class="story-response-saved-score">${escapeHtml(row.grade)}/5</strong>` : ''}</div>` : ''}</div>`).join('') || '<div class="text-muted">No enrolled students found.</div>';
     }
 
     document.addEventListener('click', async event => {
@@ -9659,7 +9658,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const response = await fetch('/api/teacher/story-response/grade/', { method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-CSRFToken': token}, body: JSON.stringify({submission_id: saveButton.dataset.submissionId, grade: select?.value}) });
         const data = await response.json();
         if (!response.ok || !data.success) { showToast(data.error || 'Grade could not be saved', 'error'); return; }
-        saveButton.closest('.border')?.querySelector('.badge')?.replaceChildren(document.createTextNode('Graded'));
+        const row = saveButton.closest('.border');
+        row?.querySelector('.badge')?.replaceChildren(document.createTextNode('Graded'));
+        row?.querySelector('.story-response-saved-score')?.remove();
+        const savedScore = document.createElement('strong');
+        savedScore.className = 'story-response-saved-score';
+        savedScore.textContent = `${data.submission.grade}/5`;
+        saveButton.parentElement?.appendChild(savedScore);
         showToast('Grade saved', 'success');
     });
 
@@ -11149,7 +11154,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const materialClassContext = resolveMaterialClassContext(course.id);
             if (materialClassContext.classId) currentSectionId = materialClassContext.classId;
             try { if (typeof loadCourseOverview === 'function') loadCourseOverview(course.id); } catch (err) { console.warn('loadCourseOverview error', err); }
-            try { if (typeof loadCourseAssessments === 'function') loadCourseAssessments(course.id); } catch (err) { console.warn('loadCourseAssessments error', err); }
+            try { if (typeof loadCourseAssessments === 'function') loadCourseAssessments(course.id, course); } catch (err) { console.warn('loadCourseAssessments error', err); }
             try { if (typeof loadCourseReports === 'function') loadCourseReports(course.id); } catch (err) { console.warn('loadCourseReports error', err); }
             try { if (typeof setupCourseUpdates === 'function') setupCourseUpdates(course.id); } catch (err) { console.warn('setupCourseUpdates error', err); }
             try { if (typeof loadCourseReadings === 'function') loadCourseReadings(course.id); } catch (err) { console.warn('loadCourseReadings error', err); }
@@ -11464,14 +11469,19 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return Object.fromEntries(entries);
         }
 
-        async function loadCourseAssessments(courseId) {
+        async function loadCourseAssessments(courseId, courseCatalog = null) {
             initializeCourseAssessmentTableHandlers();
             resetCourseAssessmentFilters();
             courseAssessmentsTableData = [];
             courseAssessmentCatalog = [];
+            const courseForResults = courseCatalog || findCourseById(courseId);
+            const sectionId = courseForResults?.section_id || courseForResults?.sections?.[0]?.id;
+            const resultsCourseId = String(courseId || '').startsWith('section-')
+                ? courseId
+                : (sectionId ? `section-${sectionId}` : courseId);
 
             try {
-                const res = await fetch(`/dashboard/teacher/assessments/?course_id=${encodeURIComponent(courseId)}`, {
+                const res = await fetch(`/dashboard/teacher/assessments/?course_id=${encodeURIComponent(resultsCourseId)}`, {
                     method: 'GET',
                     credentials: 'same-origin',
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -11516,6 +11526,38 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             } catch (e) {
                 console.warn('loadCourseAssessments failed', e);
             }
+
+                const openCourse = courseForResults;
+                const existingCatalogIds = new Set(courseAssessmentCatalog.map(assessment => String(assessment.material_id || '')));
+                (Array.isArray(openCourse?.materials) ? openCourse.materials : [])
+                    .filter(material => {
+                        const activityType = String(
+                            material.content_json?.activity_type
+                            || material.activity_type
+                            || material.template_title
+                            || material.template_type
+                            || ''
+                        ).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+                        return activityType === 'story_response';
+                    })
+                    .forEach(material => {
+                        if (existingCatalogIds.has(String(material.id))) return;
+                        courseAssessmentCatalog.push({
+                            id: `material-${material.id}`,
+                            raw_id: material.id,
+                            material_id: material.id,
+                            title: material.title,
+                            assessment_type: material.item_type,
+                            source_type: material.source_type,
+                            template_title: material.content_json?.template_title || 'Story Response',
+                            status: material.status,
+                            is_active: material.is_active,
+                            review_responses: true,
+                            created_at: material.created_at,
+                            updated_at: material.updated_at,
+                        });
+                        existingCatalogIds.add(String(material.id));
+                    });
 
             refreshCourseAssessmentTable();
         }

@@ -85,10 +85,11 @@ finishButton.addEventListener('click',async()=>{
 		form.append('audio',blob,`story-response-${Date.now()}.webm`);
 		const csrfToken=document.querySelector('[name="csrfmiddlewaretoken"]')?.value||document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
 		audio?.pause();
-		responseState.innerHTML='<div class="story-response-submitted"><h2>🎉 Response Submitted!</h2><p>Great job! Your response has been submitted.</p><strong>🎙️ Recording Saved</strong><p>Status: Waiting for Teacher Review</p><small>Your teacher will listen to your response and review your answer.</small></div>';
 		const response=await fetch('{% url "story_response_submit" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':decodeURIComponent(csrfToken)},body:form});
 		const result=await response.json().catch(()=>({}));
 		if(!response.ok||!result.success)throw new Error(result.error||'Your response could not be submitted. Please try again.');
+		responseState.textContent='Recording Saved';
+		window.setTimeout(()=>window.location.assign(a.return_url||'{% url "assessment" %}'),1500);
 	}catch(error){
 		const feedback=document.createElement('div');
 		feedback.className='submission-error';

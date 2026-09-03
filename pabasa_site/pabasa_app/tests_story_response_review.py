@@ -1,6 +1,8 @@
 import json
+from io import BytesIO
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from openpyxl import load_workbook
 from django.test import Client
 from django.test import TestCase
 from django.urls import reverse
@@ -34,11 +36,19 @@ class StoryResponseReviewTests(TestCase):
         self.login_as(self.teacher)
         review = self.client.get(reverse("teacher_story_response_review"), {"material_id": self.material.id})
         self.assertEqual(review.json()["submissions"][0]["status"], "Pending Grade")
+        self.assertEqual(review.json()["submissions"][0]["response_text"], "It happened.")
         grade = self.client.post(reverse("teacher_story_response_grade"), data=json.dumps({"submission_id": submission.id, "grade": 4}), content_type="application/json")
         self.assertEqual(grade.status_code, 200)
         submission.refresh_from_db()
         self.assertEqual(submission.grade, 4)
         self.assertEqual(submission.status, "graded")
+
+        export = self.client.get(reverse("export_material_results"), {"material_id": self.material.id})
+        self.assertEqual(export.status_code, 200)
+        sheet = load_workbook(BytesIO(export.content), data_only=True).active
+        self.assertEqual(sheet["G5"].value, "4")
+        self.assertEqual(sheet["H5"].value, "80%")
+        self.assertEqual(sheet["I5"].value, "Graded")
 
     def test_submission_accepts_csrf_protected_browser_request(self):
         self.login_as(self.student)
