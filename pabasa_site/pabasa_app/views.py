@@ -11506,6 +11506,29 @@ def _story_reading_key(content_json, language):
     )
 
 
+def _story_reading_sentences(material):
+    """Return the sentence list displayed and scored by Story Reading."""
+    content_json = material.content_json if isinstance(material.content_json, dict) else {}
+    story_config = content_json.get('storyReading') if isinstance(content_json.get('storyReading'), dict) else {}
+    language = str(content_json.get('language') or material.language or 'English').strip()
+    story_key = _story_reading_key(content_json, language)
+    if not story_key and language.lower() == 'filipino' and material.id == 30:
+        story_key = 'filipino-set-1'
+    if story_key:
+        stories = FILIPINO_STORY_READING_SETS if language.lower() == 'filipino' else ENGLISH_STORY_READING_SETS
+        story = stories.get(story_key)
+        if story:
+            return [str(sentence).strip() for sentence in story.get('sentences', []) if str(sentence).strip()]
+    text = str(
+        content_json.get('storyText')
+        or story_config.get('storyText')
+        or material.content_text
+        or material.prompt_text
+        or ''
+    ).strip()
+    return [sentence.strip() for sentence in re.split(r'\n\s*\n', text) if sentence.strip()]
+
+
 @xframe_options_sameorigin
 def clap_count_syllables_page(request):
     access_response = _enforce_student_access_for_request(request)
@@ -12373,13 +12396,16 @@ def story_reading_page(request):
     if story_key:
         stories = FILIPINO_STORY_READING_SETS if language.lower() == 'filipino' else ENGLISH_STORY_READING_SETS
         story = stories[story_key]
+        story_sentences = _story_reading_sentences(material)
         image_language = 'Filipino' if language.lower() == 'filipino' else 'English'
         story_payload.update({
             'story_key': story_key,
             'title': story['title'],
-            'text': '\n\n'.join(story['sentences']),
+            'text': '\n\n'.join(story_sentences),
             'images': [f'/static/pabasa_app/images/story_reading/{image_language}/Set_{story_key[-1]}/{index}.png' for index in range(1, 7)],
         })
+    else:
+        story_payload['text'] = '\n\n'.join(_story_reading_sentences(material))
     current_enrollment = _student_current_enrollment(student)
     progress = StoryReadingProgress.objects.filter(
         student=student, material=material, enrollment=current_enrollment,
@@ -12392,7 +12418,7 @@ def story_reading_page(request):
             'words_read': progress.words_read,
             'progress_percent': progress.progress_percent,
             'correct_sentences': progress.correct_sentences,
-            'reading_score': progress.reading_score,
+            'reading_score': progress.correct_sentences,
             'duration_seconds': progress.duration_seconds,
             'story_key': progress.story_key,
             'current_scene': progress.current_scene,
@@ -12431,8 +12457,9 @@ def story_reading_complete(request):
         correct_words = max(0, int(payload.get('correct_words') or (words_read if total_words == 0 else 0)))
         miscues = max(0, int(payload.get('miscues') or max(0, total_words - correct_words)))
         progress_percent = max(0.0, min(100.0, float(payload.get('progress_percent') or 0)))
-        correct_sentences = max(0, min(6, int(payload.get('correct_sentences') or 0)))
-        reading_score = correct_sentences / 6 * 100
+        total_sentences = len(_story_reading_sentences(material))
+        correct_sentences = max(0, min(total_sentences, int(payload.get('correct_sentences') or 0)))
+        reading_score = correct_sentences
         duration_seconds = payload.get('duration_seconds')
         duration_seconds = max(0, int(duration_seconds)) if duration_seconds is not None else None
         accuracy = float(payload.get('accuracy') if payload.get('accuracy') is not None else (correct_words / total_words * 100 if total_words else 0.0))
@@ -12485,7 +12512,7 @@ def story_reading_complete(request):
         'words_read': progress.words_read,
         'progress_percent': progress.progress_percent,
         'correct_sentences': progress.correct_sentences,
-        'reading_score': progress.reading_score,
+        'reading_score': progress.correct_sentences,
         'completed_at': progress.completed_at.isoformat() if progress.completed_at else None,
     })
 
