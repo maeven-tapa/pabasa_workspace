@@ -557,6 +557,45 @@ def synthesize_read_aloud_audio(text, api_key="", language_code="en-US", speakin
     return _post_google_tts(tts_url, payload, headers=headers)
 
 
+def synthesize_maya_read_aloud_audio(text, api_key="", language_code="en-US", credentials_file=None):
+    clean_text = " ".join(str(text or "").split())
+    if not clean_text:
+        raise RuntimeError("Text is required for Maya read aloud.")
+
+    is_filipino = str(language_code or "").lower() in {"fil", "fil-ph", "tl", "tl-ph"}
+    tts_language = "fil-PH" if is_filipino else "en-US"
+    voice_name = "fil-PH-Wavenet-A" if is_filipino else "en-US-Chirp3-HD-Leda"
+    payload = {
+        "input": {"text": clean_text},
+        "voice": {
+            "languageCode": tts_language,
+            "name": voice_name,
+            "ssmlGender": "FEMALE",
+        },
+        "audioConfig": {
+            "audioEncoding": "MP3",
+            "speakingRate": 1.08,
+            "pitch": 5.0,
+            "volumeGainDb": 1.5,
+        },
+    }
+    headers = None
+    tts_url = "https://texttospeech.googleapis.com/v1/text:synthesize"
+    if api_key:
+        tts_url = f"{tts_url}?key={api_key}"
+    else:
+        try:
+            from google.auth.transport.requests import Request
+            from google.oauth2 import service_account
+        except ImportError as exc:
+            raise RuntimeError("Install Google authentication libraries to use service-account TTS.") from exc
+        credentials = google_stt_credentials(service_account, credentials_file)
+        credentials.refresh(Request())
+        headers = {"Authorization": f"Bearer {credentials.token}"}
+
+    return _post_google_tts(tts_url, payload, headers=headers)
+
+
 def _post_google_tts(url, payload, headers=None):
     request_headers = {"Content-Type": "application/json"}
     if headers:

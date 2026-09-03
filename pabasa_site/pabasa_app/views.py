@@ -70,6 +70,7 @@ from .reading_stt import (
     target_aware_syllable_stitching,
     syllable_context_metrics,
     synthesize_read_aloud_audio,
+    synthesize_maya_read_aloud_audio,
     transcribe_audio_bytes_with_model,
     word_numbers_in_transcript,
 )
@@ -10807,6 +10808,26 @@ def story_call_complete_api(request):
     return JsonResponse({'success': True, 'completed': True, 'earned': earned, 'total': total})
 
 
+@csrf_protect
+@require_http_methods(["POST"])
+def story_call_check_answer_api(request):
+    """Evaluate one Story Call answer without changing completion state."""
+    if not _check_auth(request) or request.session.get('user_role') != 'student':
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+    try:
+        payload = json.loads(request.body or '{}')
+        material_id = int(payload.get('material_id'))
+        question_index = int(payload.get('question_index'))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+    material = Material.objects.filter(pk=material_id, status='published', is_active=True).first()
+    content = material.content_json if material and isinstance(material.content_json, dict) else {}
+    questions = [item for item in (content.get('items') or []) if isinstance(item, dict) and str(item.get('question') or '').strip()][:5]
+    if not material or content.get('template_title') != "5W's Story Questions" or question_index not in range(len(questions)):
+        return JsonResponse({'success': False, 'error': 'Question not found'}, status=404)
+    return JsonResponse({'success': True, 'is_correct': bool(story_answer_matches(questions[question_index].get('answer'), payload.get('answer')) )})
+
+
 def _canonicalize_custom_material_reading_url(request):
     """Remove CRLA-only launch state when the persisted record is custom.
 
@@ -12982,6 +13003,27 @@ def reading_read_aloud_api(request):
         })
     except Exception as exc:
         logger.exception('Read aloud synthesis failed')
+        return JsonResponse({'success': False, 'error': str(exc)}, status=502)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+def maya_read_aloud_api(request):
+    if not _check_auth(request):
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+    target_text = (request.POST.get('target_text') or '').strip()
+    language = (request.POST.get('language') or '').strip()
+    api_key = getattr(settings, 'GOOGLE_STT_API_KEY', '').strip()
+    credentials_file = getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', None)
+    if not target_text:
+        return JsonResponse({'success': False, 'error': 'Maya speech text is required.'}, status=400)
+    try:
+        audio_content = synthesize_maya_read_aloud_audio(
+            target_text, api_key, language_code_for(language), credentials_file=credentials_file,
+        )
+        return JsonResponse({'success': True, 'audio_content': audio_content, 'mime_type': 'audio/mpeg'})
+    except Exception as exc:
+        logger.exception('Maya TTS synthesis failed')
         return JsonResponse({'success': False, 'error': str(exc)}, status=502)
 
 

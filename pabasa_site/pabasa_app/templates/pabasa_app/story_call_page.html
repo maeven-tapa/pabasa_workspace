@@ -76,6 +76,8 @@
     .story-complete-modal[hidden] { display: none; }
     .story-complete-card { width: min(100%, 430px); padding: 34px 28px 28px; border: 5px solid #fff; border-radius: 36px; background: linear-gradient(145deg,#fffdf9,#fff0f6); color: #183c68; text-align: center; box-shadow: 0 0 0 4px #f4b4ca, 0 24px 50px rgba(24,60,104,.28); }
     .story-complete-card h2 { margin: 0 0 12px; font-weight: 900; } .story-complete-card span { display:block; margin: 12px 0; color:#c65378; font-size: 3rem; font-weight: 900; } .story-complete-card p { font-weight: 700; }
+    .story-answer-feedback { min-height: 2.4em; margin: 12px auto 0; padding: 9px 18px; border: 2px solid #f3bfd1; border-radius: 999px; background: #fff5fa; color: #c65378; font-weight: 900; text-align: center; }
+    .story-answer-feedback.is-correct { border-color: #a9dfd0; background: #effcf8; color: #23816d; }
     @media (max-width: 650px) { html, body { overflow: auto; } .story-call-page { min-height: 100vh; height: auto; overflow: visible; padding: 10px; } .story-call-shell { height: auto; padding: 20px 14px; border-radius: 22px; } .story-call-heading { align-items: flex-start; flex-direction: column; } .story-header-meta { width: 100%; justify-content: space-between; } .story-video { height: 500px; } .maya { left: 50%; bottom: 35px; width: 66%; transform: translateX(-50%); } .story-bubble { top: 26px; right: 7%; width: 86%; padding: 17px 20px; font-size: 1.08rem; transform: none; } .story-bubble::before { top: auto; right: 42%; bottom: -18px; left: auto; border-width: 19px 12px 0; border-color: #fff transparent transparent; } .answer-area { padding: 16px 20px; } .story-actions { margin-top: 18px; } }
 </style>
 </head>
@@ -113,6 +115,7 @@
         </div>
 
         <div class="answer-area">
+            <div class="story-answer-feedback" id="storyAnswerFeedback" aria-live="polite" hidden></div>
             <div class="story-actions">
                 <a class="btn btn-outline-secondary story-action" href="{% url 'assessment' %}">Back</a>
                 <div class="story-reading-control">
@@ -155,6 +158,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const completionScore = document.getElementById('storyCompleteScore');
     const answers = Array(questions.length).fill('');
     let recognition = null;
+    const evaluated = Array(questions.length).fill(false);
+    let evaluating = false;
+    let advanceTimer = null;
     const introModal = document.getElementById('storyIntroModal');
     const introContinue = document.getElementById('storyIntroContinue');
     let isMuted = true;
@@ -207,13 +213,13 @@ document.addEventListener('DOMContentLoaded', function () {
         form.append('language', currentQuestion.language || '');
         console.log('Story Call TTS request:', {
             method: 'POST',
-            url: '/api/reading/read-aloud/',
+            url: '/api/story-call/maya-read-aloud/',
             target_text: text.trim(),
             mode: 'paragraph',
             language: currentQuestion.language || '',
         });
         try {
-            const response = await fetch('/api/reading/read-aloud/', {
+            const response = await fetch('/api/story-call/maya-read-aloud/', {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'X-CSRFToken': document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || '' },
@@ -278,16 +284,55 @@ document.addEventListener('DOMContentLoaded', function () {
         if (back) back.setAttribute('aria-disabled', index === 0 ? 'true' : 'false');
     }
     function showCompletion(earned, total) { completionScore.textContent = `${earned} / ${total}`; completionModal.hidden = false; }
-    next?.addEventListener('click', async () => { if (!answers[index]) return; if (index < questions.length - 1) { index += 1; render(); speakCurrentQuestion(); return; } if (savedCompletion.completed) return showCompletion(savedCompletion.earned, savedCompletion.total); const response = await fetch('/api/story-call/complete/', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || ''}, body:JSON.stringify({material_id:materialId, answers}) }); const result = await response.json(); if (!response.ok || !result.success) return alert(result.error || 'Could not save completion.'); savedCompletion.completed = true; showCompletion(result.earned, result.total); });
-    back?.addEventListener('click', event => { if (index > 0) { event.preventDefault(); index -= 1; render(); speakCurrentQuestion(); } });
-    steps.forEach((step, stepIndex) => step.addEventListener('click', () => { if (questions[stepIndex]) { index = stepIndex; render(); speakCurrentQuestion(); } }));
+    function csrfToken() {
+        const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
+        return match ? match[1] : '';
+    }
+    function setFeedback(correct) { const node = document.getElementById('storyAnswerFeedback'); node.hidden = false; node.classList.toggle('is-correct', correct); node.textContent = correct ? 'Correct! ✓ You did a great job!' : 'Nice try! 💗 Keep going!'; }
+    /*
+    async function advanceAfterAnswer(questionIndex, correct) { if (questionIndex !== index || evaluated[questionIndex]) return; evaluated[questionIndex] = true; setFeedback(correct); startReading.disabled = true; next.disabled = true; clearTimeout(advanceTimer); advanceTimer = setTimeout(async () => { if (index < questions.length - 1) { index += 1; render(); document.getElementById('storyAnswerFeedback').hidden = true; startReading.disabled = false; speakCurrentQuestion(); return; } const response = await fetch('/api/story-call/complete/', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken:document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || ''}, body:JSON.stringify({material_id:materialId, answers}) }); const result = await response.json(); if (!response.ok || !result.success) return alert(result.error || 'Could not save completion.'); savedCompletion.completed = true; showCompletion(result.earned, result.total); }, 1100); }
+    */
+    async function advanceAfterAnswer(questionIndex, correct) {
+        if (questionIndex !== index || evaluated[questionIndex]) return;
+        evaluated[questionIndex] = true;
+        setFeedback(correct);
+        startReading.disabled = true;
+        next.disabled = true;
+        clearTimeout(advanceTimer);
+        advanceTimer = setTimeout(async () => {
+            advanceTimer = null;
+            if (index < questions.length - 1) {
+                index += 1;
+                render();
+                document.getElementById('storyAnswerFeedback').hidden = true;
+                startReading.disabled = false;
+                speakCurrentQuestion();
+                return;
+            }
+            try {
+                const response = await fetch('/api/story-call/complete/', {
+                    method: 'POST', credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+                    body: JSON.stringify({ materialId: materialId, answers: answers })
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'Could not save completion.');
+                savedCompletion.completed = true;
+                showCompletion(result.earned, result.total);
+            } catch (error) { alert(error.message); }
+        }, 1100);
+    }
+    next?.addEventListener('click', () => { if (evaluated[index]) return; if (answers[index]) evaluateAnswer(index, answers[index]); });
+    back?.addEventListener('click', event => { if (evaluating || advanceTimer) return; if (index > 0) { event.preventDefault(); index -= 1; render(); speakCurrentQuestion(); } });
+    steps.forEach((step, stepIndex) => step.addEventListener('click', () => { if (evaluating || advanceTimer) return; if (questions[stepIndex] && !evaluated[stepIndex]) { index = stepIndex; render(); speakCurrentQuestion(); } }));
     readAloudToggle?.addEventListener('click', () => {
         isMuted = !isMuted;
         console.log('Story Call read-aloud button clicked:', { isMuted, index, buttonFound: Boolean(readAloudToggle) });
         if (isMuted) stopSpeaking(); else speakCurrentQuestion();
         updateReadAloudToggle();
     });
-    startReading?.addEventListener('click', () => { if (savedCompletion.completed) return; if (isReading) { recognition?.stop(); isReading = false; updateReadingButton(); return; } const Speech = window.SpeechRecognition || window.webkitSpeechRecognition; if (!Speech) return alert('Speech recognition is unavailable in this browser.'); recognition = new Speech(); recognition.lang = (questions[index]?.language || 'English').toLowerCase().startsWith('fil') ? 'fil-PH' : 'en-US'; recognition.onresult = event => { answers[index] = event.results[0][0].transcript.trim(); next.disabled = !answers[index]; }; recognition.onend = () => { isReading = false; updateReadingButton(); }; isReading = true; updateReadingButton(); recognition.start(); });
+    async function evaluateAnswer(questionIndex, answer) { if (evaluating || evaluated[questionIndex] || questionIndex !== index) return; evaluating = true; const current = questionIndex; startReading.disabled = true; try { const response = await fetch('/api/story-call/check/', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || ''}, body:JSON.stringify({material_id:materialId, question_index:current, answer}) }); const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.error || 'Answer check failed.'); await advanceAfterAnswer(current, Boolean(result.is_correct)); } catch (error) { await advanceAfterAnswer(current, false); } finally { evaluating = false; } }
+    startReading?.addEventListener('click', () => { if (savedCompletion.completed || evaluated[index] || evaluating) return; if (isReading) { recognition?.stop(); isReading = false; updateReadingButton(); return; } const Speech = window.SpeechRecognition || window.webkitSpeechRecognition; if (!Speech) return alert('Speech recognition is unavailable in this browser.'); const current = index; recognition = new Speech(); recognition.lang = (questions[current]?.language || 'English').toLowerCase().startsWith('fil') ? 'fil-PH' : 'en-US'; recognition.onresult = event => { if (current !== index || evaluated[current]) return; answers[current] = event.results[0][0].transcript.trim(); evaluateAnswer(current, answers[current]); }; recognition.onend = () => { isReading = false; updateReadingButton(); }; isReading = true; updateReadingButton(); recognition.start(); });
     introContinue?.addEventListener('click', () => {
         if (introModal) introModal.hidden = true;
     });
