@@ -11032,7 +11032,8 @@ def aral_template_activity_complete(request, activity_slug):
         passage = str(content.get('passage') or '').strip()
         if not passage:
             return JsonResponse({'success': False, 'error': 'This activity has no reading passage.'}, status=400)
-        duration = _bounded_activity_duration(request.POST.get('duration_seconds'), maximum=600)
+        # The dedicated Grade 2 fluency ride is a one-minute oral-reading check.
+        duration = _bounded_activity_duration(request.POST.get('duration_seconds'), maximum=60)
         if duration < 1:
             return JsonResponse({'success': False, 'error': 'Reading time is required.'}, status=400)
         language = content.get('language') or material.language or 'English'
