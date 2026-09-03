@@ -58,6 +58,7 @@ import traceback
 from .models import User, School, Section, Enrollment, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission
 from .section_configuration import ensure_salawag_grade_two_sections
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
+from .student_session_lock import claim_student_session, release_student_session
 from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
 from .reading_stt import (
     align_story_transcript,
@@ -4518,18 +4519,12 @@ def login_user(request):
             request.session.save()
         session_key = request.session.session_key
         if user.role == 'student':
-            from django.contrib.sessions.models import Session
-            with transaction.atomic():
-                locked_user = User.objects.select_for_update().get(pk=user.pk)
-                active_key = locked_user.active_session_key
-                active_exists = active_key and Session.objects.filter(session_key=active_key, expire_date__gt=timezone.now()).exists()
-                if active_exists and active_key != session_key:
-                    return JsonResponse({'success': False, 'error': 'Account Already in Use: This student account is currently logged in on another device. Please log out from that device before logging in here.'}, status=409)
-                now = timezone.now()
-                locked_user.active_session_key = session_key
-                locked_user.active_session_created_at = locked_user.active_session_created_at or now
-                locked_user.last_activity = now
-                locked_user.save(update_fields=['active_session_key', 'active_session_created_at', 'last_activity', 'updated_at'])
+            # Student auth cookies are browser-session cookies, so a client
+            # clock change cannot make the browser discard a valid session.
+            # Django's server-side session expiry remains authoritative.
+            request.session.set_expiry(0)
+            if not claim_student_session(user.id, session_key):
+                return JsonResponse({'success': False, 'error': 'Account Already in Use: This student account is currently logged in on another device. Please log out from that device before logging in here.'}, status=409)
 
         # Create session
         request.session['user_id'] = user.id
@@ -4611,7 +4606,7 @@ def principal_change_temporary_password(request):
 def logout_user(request):
     """Logout user and destroy session"""
     if request.session.get('user_role') == 'student':
-        User.objects.filter(pk=request.session.get('user_id'), active_session_key=request.session.session_key).update(active_session_key=None, active_session_created_at=None, last_activity=None)
+        release_student_session(request.session.get('user_id'), request.session.session_key)
     request.session.flush()
     return redirect('home')
 

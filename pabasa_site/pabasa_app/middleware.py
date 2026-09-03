@@ -4,6 +4,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 
 from .models import User
+from .student_session_lock import release_student_session, student_session_is_active
 
 
 class PrincipalPasswordChangeMiddleware:
@@ -37,7 +38,9 @@ class StudentSessionLockMiddleware:
         if request.session.get("user_role") == "student":
             user = User.objects.filter(id=request.session.get("user_id"), role="student").first()
             key = request.session.session_key
-            if not (user and key and user.active_session_key == key):
+            if not student_session_is_active(user, key):
+                if user and key == user.active_session_key:
+                    release_student_session(user.id, key)
                 request.session.flush()
                 accept = request.META.get("HTTP_ACCEPT", "") or ""
                 if request.META.get("HTTP_X_REQUESTED_WITH") == "XMLHttpRequest" or accept.startswith("application/json"):

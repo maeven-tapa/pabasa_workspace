@@ -2,8 +2,11 @@ from django.contrib.auth.hashers import make_password
 from django.contrib.sessions.models import Session
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
+from datetime import timedelta
 
 from .models import User
+from .student_session_lock import STUDENT_SESSION_IDLE_TIMEOUT
 
 
 class StudentSessionLockTests(TestCase):
@@ -66,3 +69,23 @@ class StudentSessionLockTests(TestCase):
         for client in (self.client, self.client_class()):
             response = client.post(reverse('login_user'), {'custom_id': teacher.custom_id, 'password': 'password'})
             self.assertEqual(response.status_code, 200)
+
+    def test_student_session_cookie_has_no_client_clock_expiry(self):
+        response = self.login(self.client)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.cookies['sessionid']['max-age'], '')
+
+    def test_expired_server_session_no_longer_blocks_login(self):
+        self.assertEqual(self.login(self.client).status_code, 200)
+        active_key = self.client.session.session_key
+        Session.objects.filter(session_key=active_key).update(expire_date=timezone.now() - timedelta(seconds=1))
+        replacement = self.client_class()
+        self.assertEqual(self.login(replacement).status_code, 200)
+
+    def test_idle_server_activity_no_longer_blocks_login(self):
+        self.assertEqual(self.login(self.client).status_code, 200)
+        self.student.refresh_from_db()
+        self.student.last_activity = timezone.now() - STUDENT_SESSION_IDLE_TIMEOUT - timedelta(seconds=1)
+        self.student.save(update_fields=['last_activity'])
+        replacement = self.client_class()
+        self.assertEqual(self.login(replacement).status_code, 200)
