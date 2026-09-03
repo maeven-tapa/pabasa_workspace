@@ -2362,10 +2362,14 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
         if latest_score is None:
             latest_score = latest.get('wpm')
 
+        aral_state = _reader_assessment_state(user)
         sdata.update({
             'name': f"{user.first_name} {user.last_name}".strip() or sdata.get('name', ''),
             'email': user.email or sdata.get('email', ''),
             'custom_id': user.custom_id or sdata.get('custom_id', ''),
+            'aral_eligible': bool(aral_state.get('aral_eligible')),
+            'aral_status': aral_state.get('aral_status', ''),
+            'aral_assessment_completed': bool(aral_state.get('pre_test_completed')),
             'lrn': user.lrn or '',
             'grade_level': getattr(user, 'grade_level', '') or profile.get('grade_level') or profile.get('grade') or '',
             'level': reading_level,
@@ -10489,6 +10493,74 @@ def activate_aral_intervention(request):
     _set_user_state(student_user, state)
     return redirect(f"{reverse('assessment')}?workflow=original")
 
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def teacher_aral_action(request):
+    """Persist a teacher's manual ARAL placement or exit decision."""
+    try:
+        data = json.loads(request.body or '{}')
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({'success': False, 'error': 'Invalid request body.'}, status=400)
+
+    teacher = User.objects.filter(
+        id=request.session.get('user_id'), role='teacher', is_archived=False,
+    ).first()
+    if not teacher:
+        return JsonResponse({'success': False, 'error': 'Teacher not found.'}, status=403)
+
+    action = str(data.get('action') or '').strip().lower()
+    reading_level = str(data.get('reading_level') or '').strip()
+    allowed_levels = {
+        'Low Emerging Readers', 'High Emerging Readers',
+        'Developing Readers', 'Transitioning Readers',
+    }
+    student = User.objects.filter(
+        pk=data.get('student_id'), role='student', is_archived=False,
+    ).first()
+    if not student:
+        return JsonResponse({'success': False, 'error': 'Student not found.'}, status=404)
+
+    enrolled = Enrollment.objects.filter(
+        section__teacher=teacher, student=student, status='active', is_active=True,
+        section__is_active=True,
+    ).exists()
+    if not enrolled:
+        return JsonResponse({'success': False, 'error': 'This student is not currently enrolled in your section.'}, status=403)
+
+    state = _get_user_state(student)
+    if not state.get('crla_pretest_completed'):
+        return JsonResponse({'success': False, 'error': 'The student must complete the reading assessment first.'}, status=400)
+
+    if action == 'move':
+        if reading_level not in allowed_levels:
+            return JsonResponse({'success': False, 'error': 'Choose a valid ARAL reading level.'}, status=400)
+        state.update({
+            'reader_classification': reading_level,
+            'aral_eligible': True,
+            'aral_status': 'active',
+            'current_phase': 'materials',
+            'classification_workflow_status': 'completed',
+        })
+    elif action == 'exit':
+        state.update({
+            'aral_eligible': False,
+            'aral_status': 'ineligible',
+            'current_phase': 'complete',
+        })
+    else:
+        return JsonResponse({'success': False, 'error': 'Unsupported ARAL action.'}, status=400)
+
+    _set_user_state(student, state)
+    return JsonResponse({
+        'success': True,
+        'student_id': student.id,
+        'aral_status': state.get('aral_status'),
+        'aral_eligible': bool(state.get('aral_eligible')),
+        'reading_level': state.get('reader_classification') or '',
+    })
+
 @xframe_options_sameorigin
 def reading_word_page(request):
     access_response = _enforce_student_access_for_request(request)
@@ -16661,11 +16733,16 @@ def create_reading_class(request):
     }, status=410)
 
 def _teacher_year_end_finalization_open(section, on_date=None):
-    """Finalization opens at the configured Term 3 closing period and stays open."""
+    """Finalization is available only during the configured Term 3 closing period."""
     calendar = getattr(section, 'school_calendar', None)
     closing = _calendar_term_blocks(calendar).get(3, {}).get('closing') if calendar else None
     check_date = on_date or timezone.localdate()
-    return bool(closing and check_date >= closing.start_date)
+    return bool(
+        closing
+        and closing.start_date
+        and closing.end_date
+        and closing.start_date <= check_date <= closing.end_date
+    )
 
 
 @csrf_protect

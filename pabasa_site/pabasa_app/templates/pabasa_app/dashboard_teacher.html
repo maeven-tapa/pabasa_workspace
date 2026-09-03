@@ -1135,7 +1135,7 @@
         align-content: start;
         grid-template-columns: 1fr;
         gap: .45rem;
-        min-height: 0;
+        min-height: 11.5rem;
         overflow: hidden;
         padding-right: 0;
     }
@@ -1694,16 +1694,16 @@
                     <article class="teacher-panel h-100">
                         <div class="teacher-panel-head">
                             <div>
-                                <h3>Enrolled Students</h3>
-                                <p class="small text-secondary mb-0">Students assigned to your advisory class.</p>
+                                <h3>Students Under ARAL Program</h3>
+                                <p class="small text-secondary mb-0">Students currently active in the ARAL program.</p>
                             </div>
                         </div>
                 <div class="student-row" id="dashboardStudentRow">
                             <div id="noStudentsMessage" style="text-align: center; padding: 2rem; color: var(--dash-muted); width: 100%;">
-                                <p class="small">No students are enrolled in this Grade + Section yet.</p>
+                                <p class="small">No students are currently under the ARAL Program.</p>
                             </div>
                 </div>
-                <div class="student-pagination" id="studentPagination" aria-label="Enrolled students pages"></div>
+                <div class="student-pagination" id="studentPagination" aria-label="Enrolled students pages"><button type="button" data-student-page="prev" aria-label="Previous page" disabled>‹</button><button type="button" class="active" data-student-page="1" aria-current="page">1</button><button type="button" data-student-page="next" aria-label="Next page" disabled>›</button></div>
             </article>
                 </div>
             </div>
@@ -2024,6 +2024,9 @@ async function loadPersistedStudents() {
                     classes: Array.isArray(s.classes) ? s.classes : (s.class ? [s.class] : []),
                     section_ids: Array.isArray(s.section_ids) ? s.section_ids : [],
                     level: s.reading_level || s.level || s.adapted_reading_level || '',
+                    aral_eligible: s.aral_eligible === true,
+                    aral_status: s.aral_status || '',
+                    aral_assessment_completed: s.aral_assessment_completed === true,
                     wpm: s.wpm || '0',
                     accuracy: s.accuracy || '0',
                     has_completed_assessment: s.has_completed_assessment === true,
@@ -2040,9 +2043,11 @@ async function loadPersistedStudents() {
     const noStudentsMsg = document.getElementById("noStudentsMessage");
 
     // If a class is selected, only show students enrolled in that class.
-    let studentsToShow = students;
+    // Require the relevant CRLA pre-assessment and explicit active placement
+    // in the persisted ARAL workflow; eligibility alone is not placement.
+    let enrolledStudents = students;
     if (selectedSectionId || selectedClassName) {
-        studentsToShow = students.filter(s => {
+        enrolledStudents = enrolledStudents.filter(s => {
             const studentSections = Array.isArray(s.section_ids) ? s.section_ids.map(String) : [];
             const studentClassNames = Array.isArray(s.classes) ? s.classes : (s.class ? [s.class] : []);
             return (
@@ -2052,18 +2057,23 @@ async function loadPersistedStudents() {
             );
         });
     }
+    let studentsToShow = enrolledStudents.filter(
+        s => s.aral_assessment_completed === true && s.aral_status === 'active'
+    );
 
     if (!studentsToShow || studentsToShow.length === 0) {
         if (noStudentsMsg) {
             noStudentsMsg.style.display = "block";
-            noStudentsMsg.innerHTML = selectedClassName
-                ? `<p class="small mb-0">No students are enrolled in ${selectedClassName} yet.</p>`
-                : `<p class="small mb-0">Select a class to see enrolled students.</p>`;
+            noStudentsMsg.innerHTML = enrolledStudents.length === 0
+                ? (selectedClassName
+                    ? `<p class="small mb-0">No students are enrolled in ${selectedClassName} yet.</p>`
+                    : `<p class="small mb-0">Select a class to see enrolled students.</p>`)
+                : `<p class="small mb-0">No students are currently under the ARAL Program.</p>`;
         }
         // Clear existing student cards
         studentRow.querySelectorAll(".student-card").forEach(card => card.remove());
         const studentPagination = document.getElementById('studentPagination');
-        if (studentPagination) studentPagination.innerHTML = '';
+        if (studentPagination) studentPagination.innerHTML = '<button type="button" data-student-page="prev" aria-label="Previous page" disabled>‹</button><button type="button" class="active" data-student-page="1" aria-current="page">1</button><button type="button" data-student-page="next" aria-label="Next page" disabled>›</button>';
         return;
     }
 
@@ -2086,8 +2096,7 @@ async function loadPersistedStudents() {
     studentRow.querySelectorAll(".student-card").forEach(card => card.remove());
     const studentPagination = document.getElementById('studentPagination');
     let studentPage = Number(studentPagination?.dataset.page || 1);
-    const measuredPageSize = getDashboardStudentPageSize(studentRow);
-    const studentPageSize = measuredPageSize || dedupedStudents.length;
+    const studentPageSize = 4;
     const studentPageCount = Math.ceil(dedupedStudents.length / studentPageSize);
     studentPage = Math.min(studentPage, Math.max(studentPageCount, 1));
     const renderStudentPage = () => {
@@ -2121,11 +2130,6 @@ async function loadPersistedStudents() {
         console.log("✓ Added student to dashboard:", studentData.name);
         });
         if (!studentPagination) return;
-        if (studentPageCount <= 1) {
-            studentPagination.dataset.page = '1';
-            studentPagination.innerHTML = '';
-            return;
-        }
         studentPagination.dataset.page = studentPage;
         studentPagination.innerHTML = '<button type="button" data-student-page="prev" aria-label="Previous page">‹</button>' + Array.from({length: studentPageCount}, (_, index) => '<button type="button" class="' + (index + 1 === studentPage ? 'active' : '') + '" data-student-page="' + (index + 1) + '">' + (index + 1) + '</button>').join('') + '<button type="button" data-student-page="next" aria-label="Next page">›</button>';
         studentPagination.querySelector('[data-student-page="prev"]').disabled = studentPage === 1;

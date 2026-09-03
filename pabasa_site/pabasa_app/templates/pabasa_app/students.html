@@ -251,9 +251,11 @@
 
     .student-directory {
         display: grid;
+        align-content: start;
+        align-items: start;
         gap: 0.75rem;
-        max-height: 680px;
-        overflow-y: auto;
+        min-height: 72rem;
+        overflow: visible;
         padding-left: 8px;
         padding-right: 8px;
     }
@@ -349,7 +351,7 @@
     .student-meta {
         display: grid;
         gap: 0.55rem;
-        grid-template-columns: minmax(180px, 1.4fr) repeat(2, minmax(120px, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         align-items: stretch;
     }
 
@@ -382,11 +384,18 @@
         overflow-wrap: anywhere;
     }
 
+    .student-aral-action {
+        align-self: stretch;
+        min-height: 58px;
+        width: 100%;
+    }
+
     .level-chip {
         border-radius: 999px;
-        font-size: 0.74rem;
+        font-size: 0.8rem;
         font-weight: 800;
-        padding: 0.28rem 0.58rem;
+        line-height: 1.2;
+        padding: 0.38rem 0.72rem;
         white-space: nowrap;
     }
 
@@ -396,6 +405,16 @@
     .level-grade { background: #dcfce7; color: #166534; }
     .level-high { background: #d9eef4; color: #155e75; }
     .level-pending { background: #f3f4f6; color: #4b5563; }
+
+    .student-aral-indicator {
+        border-radius: 999px;
+        background: rgba(22, 95, 143, 0.1);
+        color: var(--dash-primary-deep);
+        font-size: 0.68rem;
+        font-weight: 800;
+        padding: 0.24rem 0.55rem;
+        white-space: nowrap;
+    }
 
     .reading-band {
         background: #eef6f8;
@@ -624,6 +643,32 @@
         background: rgba(255, 255, 255, 0.98);
         outline: none;
     }
+
+    .student-directory-pagination {
+        align-items: center;
+        display: flex;
+        gap: .45rem;
+        justify-content: center;
+        margin: .9rem 0 .15rem;
+        min-height: 2.35rem;
+    }
+
+    .student-directory-pagination button {
+        background: transparent;
+        border: 1px solid rgba(16,70,110,.14);
+        border-radius: 8px;
+        color: #10466e;
+        font-size: .84rem;
+        font-weight: 900;
+        min-height: 2rem;
+        padding: .32rem .6rem;
+    }
+
+    .student-directory-pagination button.active { background: #10466e; color: #fff; }
+    .student-directory-pagination button:disabled { color: #b8c5ce; cursor: not-allowed; }
+
+    .student-aral-action { border: 1px solid rgba(16,70,110,.18); border-radius: 10px; background: #eff8fc; color: #10466e; font-size: .78rem; font-weight: 800; padding: .5rem .65rem; }
+    .student-aral-action:disabled { cursor: not-allowed; opacity: .45; }
 
     :is(.student-directory-controls, .crla-directory-controls) .student-export-btn {
         align-items: center;
@@ -1309,10 +1354,14 @@
                     <p class="small mb-0 mt-1">Try a different name, class, or reading level.</p>
                 </div>
             </div>
+            <nav class="student-directory-pagination" id="studentDirectoryPagination" aria-label="Student directory pages"></nav>
         </article>
 
     </div>
 
+    <div class="modal fade" id="teacherAralActionModal" tabindex="-1" aria-labelledby="teacherAralActionTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h3 class="modal-title h6" id="teacherAralActionTitle">ARAL Program</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p id="teacherAralActionCopy"></p><div id="teacherAralLevelWrap"><label class="form-label" for="teacherAralLevel">Reading Level</label><select class="form-select" id="teacherAralLevel"><option value="">Choose reading level</option><option>Low Emerging Readers</option><option>High Emerging Readers</option><option>Developing Readers</option><option>Transitioning Readers</option></select></div><div class="text-danger small mt-2" id="teacherAralActionError" hidden></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="teacherAralActionConfirm">Confirm</button></div></div></div>
+    </div>
     <div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -1485,6 +1534,8 @@ function normalizeStudentPayload(students) {
 let latestStudentDirectoryStudents = [];
 let latestStudentDirectoryTotal = 0;
 let studentDirectoryRequestId = 0;
+let studentDirectoryPage = 1;
+const studentDirectoryPageSize = 10;
 
 function getStudentDirectoryDisplayName(student) {
     const directName = String(student?.name || student?.full_name || student?.display_name || '').trim();
@@ -1890,6 +1941,7 @@ function renderStudentDirectory(sourceStudents) {
     const searchInput = document.getElementById('studentSearchInput');
     const levelFilterValue = document.getElementById('readingLevelFilterValue');
     const levelFilterWrap = document.getElementById('readingLevelFilterWrap');
+    const pagination = document.getElementById('studentDirectoryPagination');
     if (!directory || !emptyState) return;
 
     const query = String(searchInput?.value || '').trim().toLowerCase();
@@ -1923,19 +1975,32 @@ function renderStudentDirectory(sourceStudents) {
         countEl.textContent = String(filtered.length);
     }
 
-    const cards = filtered.map(student => {
+    const pageCount = Math.max(1, Math.ceil(filtered.length / studentDirectoryPageSize));
+    studentDirectoryPage = Math.min(studentDirectoryPage, pageCount);
+    const pageStudents = filtered.slice(
+        (studentDirectoryPage - 1) * studentDirectoryPageSize,
+        studentDirectoryPage * studentDirectoryPageSize
+    );
+
+    const cards = pageStudents.map(student => {
         const name = student.name || `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unnamed Student';
-        const classList = toStudentClassList(student);
-        const className = classList.join(', ') || 'No class';
         const accuracy = formatStudentMetric(student.accuracy, '%');
         const wpm = formatStudentMetric(student.wpm);
         const levelText = resolveStudentReadingLevel(student);
         student.level = levelText;
-        const levelDisclaimer = student.adapted_reading_level_disclaimer || student.reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || 'This assessment result is based on the student\'s reading accuracy, fluency, pronunciation, and pacing during the assessment. The Reading Level and Overall Score reflect the student\'s current reading performance and may help identify strengths and areas for improvement.';
+        const levelIndications = {
+            'Low Emerging Readers': 'Needs immediate word-level support',
+            'High Emerging Readers': 'Ready for guided sentence work',
+            'Developing Readers': 'Building accuracy and pacing',
+            'Transitioning Readers': 'Moving toward grade level',
+            'Readers at Grade Level': 'Ready for enrichment passages',
+            'Pending': 'Awaiting assessment'
+        };
+        const levelIndication = levelIndications[levelText] || levelIndications.Pending;
         const levelClass = getReadingLevelChipClass(levelText);
-        const levelBadgeHtml = levelDisclaimer
-            ? `<div class="d-flex flex-column align-items-end gap-1"><span class="badge rounded-pill level-chip ${levelClass}">${escapeStudentDirectoryHtml(levelText)}</span><span class="small text-secondary" style="max-width: 240px; text-align: right;">${escapeStudentDirectoryHtml(levelDisclaimer)}</span></div>`
-            : `<span class="badge rounded-pill level-chip ${levelClass}">${escapeStudentDirectoryHtml(levelText)}</span>`;
+        const aralLevels = new Set(['Low Emerging Readers', 'High Emerging Readers', 'Developing Readers', 'Transitioning Readers']);
+        const aralIndicatorHtml = aralLevels.has(levelText) ? '<span class="student-aral-indicator">ARAL Program</span>' : '';
+        const levelBadgeHtml = `<div class="d-flex flex-column align-items-end gap-1"><span class="badge rounded-pill level-chip ${levelClass}">${escapeStudentDirectoryHtml(levelText)}</span>${aralIndicatorHtml}<span class="small text-secondary" style="max-width: 240px; text-align: right;">${escapeStudentDirectoryHtml(levelIndication)}</span></div>`;
         return `
             <article class="student-card-row">
                 <div class="student-avatar" aria-hidden="true">${escapeStudentDirectoryHtml(getStudentInitials(name))}</div>
@@ -1949,9 +2014,9 @@ function renderStudentDirectory(sourceStudents) {
                         ${levelBadgeHtml}
                     </div>
                     <div class="student-meta">
-                        <div class="student-meta-box"><span>Class</span><strong>${escapeStudentDirectoryHtml(className)}</strong></div>
                         <div class="student-meta-box"><span>Accuracy</span><strong>${escapeStudentDirectoryHtml(accuracy)}</strong></div>
                         <div class="student-meta-box"><span>WPM</span><strong>${escapeStudentDirectoryHtml(wpm)}</strong></div>
+                        ${(() => { const pending = levelText === 'Pending'; const active = student.aral_status === 'active'; const move = levelText === 'Readers at Grade Level'; const label = move ? 'Move to ARAL Program' : 'Exit ARAL Program'; return `<button type="button" class="student-aral-action" data-student-id="${student.id || ''}" data-student-name="${escapeStudentDirectoryHtml(name)}" data-aral-action="${move ? 'move' : 'exit'}" ${pending || (!move && !active) ? 'disabled' : ''}>${label}</button>`; })()}
                     </div>
                 </div>
             </article>
@@ -1959,6 +2024,19 @@ function renderStudentDirectory(sourceStudents) {
     }).join('');
 
     emptyState.insertAdjacentHTML('beforebegin', cards);
+
+    if (pagination) {
+        pagination.innerHTML = '<button type="button" data-directory-page="prev" aria-label="Previous page">‹</button>'
+            + Array.from({ length: pageCount }, (_, index) => '<button type="button" class="' + (index + 1 === studentDirectoryPage ? 'active' : '') + '" data-directory-page="' + (index + 1) + '" aria-current="' + (index + 1 === studentDirectoryPage ? 'page' : 'false') + '">' + (index + 1) + '</button>').join('')
+            + '<button type="button" data-directory-page="next" aria-label="Next page">›</button>';
+        pagination.querySelector('[data-directory-page="prev"]').disabled = studentDirectoryPage === 1;
+        pagination.querySelector('[data-directory-page="next"]').disabled = studentDirectoryPage === pageCount;
+        pagination.querySelectorAll('button').forEach(button => button.onclick = () => {
+            const target = button.dataset.directoryPage;
+            studentDirectoryPage = target === 'prev' ? studentDirectoryPage - 1 : target === 'next' ? studentDirectoryPage + 1 : Number(target);
+            renderStudentDirectory();
+        });
+    }
 }
 
 function bindStudentDirectoryFilters() {
@@ -2005,6 +2083,7 @@ function bindStudentDirectoryFilters() {
     if (searchInput && !searchInput.dataset.autoFilterBound) {
         searchInput.dataset.autoFilterBound = 'true';
         searchInput.addEventListener('input', function () {
+            studentDirectoryPage = 1;
             renderStudentDirectory();
         });
     }
@@ -2023,6 +2102,7 @@ function bindStudentDirectoryFilters() {
                 option.classList.toggle('is-selected', isSelected);
                 option.setAttribute('aria-selected', isSelected ? 'true' : 'false');
             });
+            studentDirectoryPage = 1;
             renderStudentDirectory();
         }
 
@@ -2057,6 +2137,48 @@ function bindStudentDirectoryFilters() {
         });
     }
 }
+
+function bindTeacherAralActions() {
+    const modalEl = document.getElementById('teacherAralActionModal');
+    const confirmBtn = document.getElementById('teacherAralActionConfirm');
+    const copy = document.getElementById('teacherAralActionCopy');
+    const levelWrap = document.getElementById('teacherAralLevelWrap');
+    const level = document.getElementById('teacherAralLevel');
+    const error = document.getElementById('teacherAralActionError');
+    if (!modalEl || !confirmBtn) return;
+    let pending = null;
+    document.addEventListener('click', event => {
+        const button = event.target.closest('.student-aral-action');
+        if (!button || button.disabled) return;
+        pending = button;
+        const move = button.dataset.aralAction === 'move';
+        copy.textContent = move ? `Manually place ${button.dataset.studentName} into the ARAL Program?` : `Remove ${button.dataset.studentName} from the ARAL Program?`;
+        levelWrap.hidden = !move; level.value = ''; error.hidden = true;
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    });
+    confirmBtn.addEventListener('click', async () => {
+        if (!pending) return;
+        const action = pending.dataset.aralAction;
+        if (action === 'move' && !level.value) { error.textContent = 'Choose a reading level.'; error.hidden = false; return; }
+        confirmBtn.disabled = true;
+        try {
+            const response = await fetch('{% url "teacher_aral_action" %}', { method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name="csrfmiddlewaretoken"]')?.value || ''}, body: JSON.stringify({student_id: pending.dataset.studentId, action, reading_level: level.value}) });
+            const payload = await response.json();
+            if (!response.ok || !payload.success) throw new Error(payload.error || 'ARAL update failed.');
+            const updatedStudent = latestStudentDirectoryStudents.find(student => String(student.id || student.student_id || '') === String(pending.dataset.studentId));
+            if (updatedStudent) {
+                updatedStudent.aral_status = payload.aral_status;
+                updatedStudent.aral_eligible = payload.aral_eligible;
+                if (action === 'move') updatedStudent.reading_level = payload.reading_level;
+            }
+            bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+            renderStudentDirectory();
+        } catch (err) { error.textContent = err.message; error.hidden = false; }
+        finally { confirmBtn.disabled = false; }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', bindTeacherAralActions);
 
 // Fetch student data from the server API.
 async function refreshStudentOverview() {

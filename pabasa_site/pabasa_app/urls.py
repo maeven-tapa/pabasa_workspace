@@ -76,6 +76,7 @@ urlpatterns = [
     path('dashboard/courses/', views.courses, name='courses'),
     path('dashboard/assessment/', views.assessment, name='assessment'),
     path('dashboard/assessment/activate-aral-intervention/', views.activate_aral_intervention, name='activate_aral_intervention'),
+    path('dashboard/teacher/students/aral-action/', views.teacher_aral_action, name='teacher_aral_action'),
     path('material/export-results/', views.export_material_results, name='export_material_results'),
     path('assessment/<int:assessment_id>/export-crla/', views.export_crla_assessment, name='export_crla_assessment'),
     path('dashboard/assessment/reading_ui/word/', views.reading_word_page, name='reading_word_page'),

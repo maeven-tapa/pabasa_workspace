@@ -324,6 +324,54 @@
         letter-spacing: 0.04em;
     }
 
+    .assessment-confirm-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 1060;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        background: rgba(7, 18, 38, 0.68);
+        backdrop-filter: blur(7px);
+        -webkit-backdrop-filter: blur(7px);
+    }
+
+    .assessment-confirm-modal.is-visible { display: flex; }
+
+    .assessment-confirm-dialog {
+        width: min(100%, 30rem);
+        max-width: 30rem;
+        border: 1px solid rgba(110, 168, 255, 0.28);
+        border-radius: 22px;
+        background: linear-gradient(145deg, #102746, #0a1930);
+        color: #eaf3ff;
+        box-shadow: 0 24px 70px rgba(2, 10, 24, 0.45);
+    }
+
+    .assessment-confirm-body { padding: 1.6rem; }
+    .assessment-confirm-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.8rem;
+        height: 2.8rem;
+        margin-bottom: 1rem;
+        border-radius: 14px;
+        background: rgba(74, 144, 226, 0.18);
+        color: #8fc5ff;
+        font-size: 1.25rem;
+    }
+    .assessment-confirm-title { margin: 0 0 .55rem; font-size: 1.35rem; font-weight: 800; }
+    .assessment-confirm-copy { margin: 0; color: #bfd0e7; line-height: 1.55; }
+    .assessment-confirm-error { margin: .9rem 0 0; color: #ffb4b4; font-size: .9rem; }
+    .assessment-confirm-actions { display: flex; justify-content: flex-end; gap: .65rem; margin-top: 1.4rem; }
+    .assessment-confirm-actions button { min-width: 6.5rem; border-radius: 10px; font-weight: 700; }
+    .assessment-confirm-cancel { border: 1px solid rgba(191, 208, 231, .35); color: #dce9f9; background: transparent; }
+    .assessment-confirm-cancel:hover, .assessment-confirm-cancel:focus-visible { background: rgba(255,255,255,.08); }
+    .assessment-confirm-submit { border: 0; background: #4d9bff; color: #071226; }
+    .assessment-confirm-submit:hover, .assessment-confirm-submit:focus-visible { background: #76b4ff; }
+
     .finalization-status-card {
         display: grid;
         gap: 0.5rem;
@@ -390,6 +438,65 @@
         color: #64748b;
         font-size: 0.76rem;
         line-height: 1.3;
+    }
+
+    .section-information-name {
+        margin: 0;
+        color: #1f2933;
+        font-size: 1.35rem;
+        font-weight: 900;
+        line-height: 1.25;
+        white-space: nowrap;
+    }
+
+    .section-information-summary {
+        display: flex;
+        grid-column: 1 / -1;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.35rem;
+        max-width: 100%;
+    }
+
+    .section-information-calendar {
+        margin: 0;
+        color: #64748b;
+        font-size: 0.9rem;
+        font-style: italic;
+        font-weight: 600;
+        line-height: 1.35;
+        white-space: nowrap;
+    }
+
+    .section-information-students {
+        margin-top: 0.65rem;
+        padding: 0.9rem 1rem 1rem;
+        border: 1px solid rgba(100, 116, 139, 0.16);
+        border-radius: 16px;
+        background: rgba(248, 250, 252, 0.72);
+        box-shadow: inset 0 1px rgba(255, 255, 255, 0.9);
+    }
+
+    .section-information-card > .section-information-divider {
+        margin-top: 1rem;
+        border: 0;
+        border-top: 1px solid rgba(100, 116, 139, 0.2);
+    }
+
+    .section-information-card > .section-information-summary-form {
+        margin-top: 0;
+    }
+
+    .section-information-card {
+        width: 100%;
+        margin-inline: auto;
+    }
+
+    @media (max-width: 576px) {
+        .section-information-name,
+        .section-information-calendar {
+            white-space: normal;
+        }
     }
 
     .card {
@@ -562,6 +669,75 @@
         padding: 0.34rem 0.72rem;
     }
 
+    .student-table-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        margin: 0 0 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .student-search-input,
+    .student-sort-select,
+    .student-sort-direction {
+        min-height: 38px;
+        border: 1px solid rgba(100, 116, 139, 0.2);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.88);
+        color: var(--text-high);
+        font-size: 0.84rem;
+    }
+
+    .student-search-input {
+        flex: 1 1 220px;
+        min-width: 180px;
+        padding: 0.45rem 0.75rem;
+    }
+
+    .student-sort-select,
+    .student-sort-direction {
+        padding: 0.35rem 0.6rem;
+    }
+
+    .student-search-input:focus,
+    .student-sort-select:focus,
+    .student-sort-direction:focus {
+        outline: 3px solid rgba(22, 95, 143, 0.16);
+        border-color: var(--primary);
+    }
+
+    .student-no-results {
+        display: none;
+    }
+
+    .student-pagination {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        margin: 0.85rem 0 0.15rem;
+    }
+
+    .student-pagination button {
+        min-width: 34px;
+        min-height: 34px;
+        padding: 0.3rem 0.55rem;
+        border: 1px solid rgba(22, 95, 143, 0.16);
+        border-radius: 9px;
+        background: rgba(255, 255, 255, 0.8);
+        color: var(--primary);
+        font-size: 0.84rem;
+        font-weight: 700;
+    }
+
+    .student-pagination button.is-active,
+    .student-pagination button:hover:not(:disabled) {
+        background: var(--primary);
+        color: #fff;
+    }
+
+    .student-pagination button:disabled { cursor: not-allowed; opacity: 0.45; }
+
     .table-frame {
         overflow: hidden;
         border-radius: 18px;
@@ -570,6 +746,10 @@
         backdrop-filter: blur(18px) saturate(140%);
         -webkit-backdrop-filter: blur(18px) saturate(140%);
         box-shadow: 0 18px 38px rgba(15, 23, 42, 0.08);
+    }
+
+    .section-information-students .table-frame {
+        min-height: 34rem;
     }
 
     .student-table {
@@ -1131,32 +1311,42 @@
         </section>
         {% endif %}
 
-        <section class="card">
-            <div class="card-header">
-                <div class="section-heading">
-                    <p class="card-title">Section Information</p>
-                    <p class="card-subtitle">Keep the section title concise for easy scanning.</p>
+        {% if finalization_open %}
+        <section class="card finalization-status-card" aria-labelledby="yearEndFinalizationHeading">
+            <div class="finalization-status-heading"><i class="bi bi-flag" aria-hidden="true"></i><strong id="yearEndFinalizationHeading">Year-End Finalization</strong></div>
+            <div class="finalization-status-summary">{{ finalization_counts.finalized }} of {{ finalization_counts.total }} students finalized</div>
+            <div class="finalization-status-counts"><span>Not Finalized: <strong>{{ finalization_counts.not_finalized }}</strong></span><span>Promoted: <strong>{{ finalization_counts.promoted }}</strong></span><span>Retained: <strong>{{ finalization_counts.retained }}</strong></span></div>
+        </section>
+        {% endif %}
+
+        <div class="assessment-confirm-modal" id="assessmentConfirmModal" role="presentation" aria-hidden="true">
+            <div class="assessment-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="assessmentConfirmTitle" aria-describedby="assessmentConfirmCopy">
+                <div class="assessment-confirm-body">
+                    <span class="assessment-confirm-icon" aria-hidden="true"><i class="bi bi-clipboard2-check"></i></span>
+                    <h2 class="assessment-confirm-title" id="assessmentConfirmTitle">Enable Assessment Week?</h2>
+                    <p class="assessment-confirm-copy" id="assessmentConfirmCopy"></p>
+                    <p class="assessment-confirm-error" id="assessmentConfirmError" role="alert" hidden></p>
+                    <div class="assessment-confirm-actions">
+                        <button type="button" class="btn assessment-confirm-cancel" id="assessmentConfirmCancel">Cancel</button>
+                        <button type="button" class="btn assessment-confirm-submit" id="assessmentConfirmSubmit">Confirm</button>
+                    </div>
                 </div>
             </div>
-            <form id="updateClassForm" class="class-form">
+        </div>
+
+        <section class="card section-information-card" aria-label="Section Information">
+            <form id="updateClassForm" class="class-form section-information-summary-form">
                 {% csrf_token %}
                 <input type="hidden" name="section_id" value="{{ section.id }}">
-
-                <div class="form-group col-span-12">
-                    <label for="className">Title / Section Name</label>
-                    <input id="className" type="text" class="form-control" name="class_name" value="{{ section.class_name }}" readonly aria-readonly="true">
+                <div class="section-information-summary">
+                    <h2 class="section-information-name">{{ section.grade_level }} - {{ section.section|default:section.class_name }}</h2>
+                    <p class="section-information-calendar">School Year {{ section.school_calendar.school_year }} | Term {{ section.school_calendar.current_term }}</p>
                 </div>
             </form>
 
-            <div class="alert {% if finalization_open %}alert-info{% else %}alert-secondary{% endif %} finalization-status-card mx-3 mt-3 mb-0">
-                <div class="finalization-status-heading"><i class="bi bi-flag" aria-hidden="true"></i><strong>Year-End Finalization</strong></div>
-                <div class="finalization-status-summary">{{ finalization_counts.finalized }} of {{ finalization_counts.total }} students finalized</div>
-                <div class="finalization-status-counts"><span>Not Finalized: <strong>{{ finalization_counts.not_finalized }}</strong></span><span>Promoted: <strong>{{ finalization_counts.promoted }}</strong></span><span>Retained: <strong>{{ finalization_counts.retained }}</strong></span></div>
-                {% if not finalization_open %}<div class="finalization-status-note">Available during the configured Term 3 closing period.</div>{% endif %}
-            </div>
-        </section>
+            <hr class="section-information-divider">
 
-        <section class="card">
+        <section class="card section-information-students">
             <div class="card-header">
                 <div class="section-title-group">
                     <div class="section-heading">
@@ -1167,6 +1357,20 @@
                 <div class="card-actions">
                     <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addStudentModal"><i class="bi bi-person-plus-fill me-1"></i> Add Student</button>
                 </div>
+            </div>
+
+            <div class="student-table-controls" aria-label="Student list controls">
+                <label class="visually-hidden" for="enrolledStudentSearch">Search enrolled students</label>
+                <input class="student-search-input" id="enrolledStudentSearch" type="search" placeholder="Search name, PABASA ID, or email" autocomplete="off">
+                <label class="visually-hidden" for="studentSort">Sort enrolled students by</label>
+                <select class="student-sort-select" id="studentSort">
+                    <option value="name">Sort: Name</option>
+                    <option value="pabasa">Sort: PABASA ID</option>
+                    <option value="reading">Sort: Reading Level</option>
+                    <option value="joined">Sort: Joined Date</option>
+                    <option value="outcome">Sort: Year-End Outcome</option>
+                </select>
+                <button type="button" class="student-sort-direction" id="studentSortDirection" aria-label="Sort ascending" aria-pressed="false">A–Z</button>
             </div>
 
             <div class="table-frame">
@@ -1183,7 +1387,7 @@
                     </thead>
                     <tbody>
                         {% for student in students_table %}
-                        <tr data-student-key="{{ student.pabasa_id|default_if_none:'' }}" data-student-name="{{ student.name|default_if_none:'' }}">
+                        <tr data-student-key="{{ student.pabasa_id|default_if_none:'' }}" data-student-name="{{ student.name|default_if_none:'' }}" data-search="{{ student.name|default_if_none:'' }} {{ student.pabasa_id|default_if_none:'' }} {{ student.email|default_if_none:'' }}" data-sort-name="{{ student.name|default_if_none:'' }}" data-sort-pabasa="{{ student.pabasa_id|default_if_none:'' }}" data-sort-reading="{{ student.reading_level|default:'Pending' }}" data-sort-joined="{{ student.joined_at|default_if_none:'' }}" data-sort-outcome="{{ student.outcome_label|default:'Not Finalized' }}">
                             <td><strong>{{ student.name }}</strong></td>
                             <td><span class="pabasa-badge">{{ student.pabasa_id }}</span></td>
                             <td>{{ student.email }}</td>
@@ -1203,13 +1407,16 @@
                             <td colspan="5" class="text-center py-4 text-muted">No students have joined yet.</td>
                         </tr>
                         {% endfor %}
+                        <tr class="student-no-results" id="studentNoResults"><td colspan="6" class="text-center py-4 text-muted">No students found.</td></tr>
                     </tbody>
                 </table>
             </div>
 
+            <nav class="student-pagination" id="studentPagination" aria-label="Enrolled students pages"></nav>
+
             <div class="student-cards" aria-label="Enrolled students list">
                 {% for student in students_table %}
-                <article class="student-card" data-student-key="{{ student.pabasa_id|default_if_none:'' }}" data-student-name="{{ student.name|default_if_none:'' }}">
+                <article class="student-card" data-student-key="{{ student.pabasa_id|default_if_none:'' }}" data-student-name="{{ student.name|default_if_none:'' }}" data-search="{{ student.name|default_if_none:'' }} {{ student.pabasa_id|default_if_none:'' }} {{ student.email|default_if_none:'' }}" data-sort-name="{{ student.name|default_if_none:'' }}" data-sort-pabasa="{{ student.pabasa_id|default_if_none:'' }}" data-sort-reading="{{ student.reading_level|default:'Pending' }}" data-sort-joined="{{ student.joined_at|default_if_none:'' }}" data-sort-outcome="{{ student.outcome_label|default:'Not Finalized' }}">
                     <div class="student-card-top">
                         <div>
                             <h3 class="student-card-name">{{ student.name }}</h3>
@@ -1233,6 +1440,7 @@
                 <div class="student-card text-muted">No students have joined yet.</div>
                 {% endfor %}
             </div>
+        </section>
         </section>
     </main>
 </div>
@@ -1362,6 +1570,71 @@ window.hideClassStudentLoading = function () {
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('enrolledStudentSearch');
+    const sortSelect = document.getElementById('studentSort');
+    const directionButton = document.getElementById('studentSortDirection');
+    const tableBody = document.querySelector('.student-table tbody');
+    const noResults = document.getElementById('studentNoResults');
+    const pagination = document.getElementById('studentPagination');
+    const rows = Array.from(document.querySelectorAll('.student-table tbody tr[data-search]'));
+    const cards = Array.from(document.querySelectorAll('.student-cards .student-card[data-search]'));
+    if (!searchInput || !sortSelect || !directionButton || !tableBody) return;
+
+    let descending = false;
+    let currentPage = 1;
+    const pageSize = 10;
+    function refreshStudents() {
+        const query = searchInput.value.trim().toLocaleLowerCase();
+        const sortKey = sortSelect.value;
+        const visible = rows.filter(row => (row.dataset.search || '').toLocaleLowerCase().includes(query));
+        const compare = (a, b) => {
+            const dataKey = `sort${sortKey[0].toUpperCase()}${sortKey.slice(1)}`;
+            return (a.dataset[dataKey] || '').localeCompare(b.dataset[dataKey] || '', undefined, { numeric: true, sensitivity: 'base' }) * (descending ? -1 : 1);
+        };
+        visible.sort(compare);
+        const totalPages = Math.max(1, Math.ceil(visible.length / pageSize));
+        currentPage = Math.min(currentPage, totalPages);
+        const pageItems = visible.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+        pageItems.forEach(row => tableBody.appendChild(row));
+        const cardContainer = document.querySelector('.student-cards');
+        const matchingCards = cards.filter(card => (card.dataset.search || '').toLocaleLowerCase().includes(query)).sort(compare);
+        if (cardContainer) matchingCards.forEach(card => cardContainer.appendChild(card));
+        rows.forEach(row => { row.hidden = !pageItems.includes(row); });
+        matchingCards.forEach((card, index) => { card.hidden = index < (currentPage - 1) * pageSize || index >= currentPage * pageSize; });
+        if (noResults) noResults.style.display = visible.length ? 'none' : 'table-row';
+        if (pagination) {
+            pagination.innerHTML = '';
+            pagination.style.display = 'flex';
+            const previous = document.createElement('button');
+            previous.type = 'button'; previous.textContent = '‹'; previous.disabled = currentPage === 1;
+            previous.setAttribute('aria-label', 'Previous page');
+            previous.addEventListener('click', () => { currentPage--; refreshStudents(); });
+            pagination.appendChild(previous);
+            for (let page = 1; page <= totalPages; page++) {
+                const button = document.createElement('button');
+                button.type = 'button'; button.textContent = page; button.classList.toggle('is-active', page === currentPage);
+                button.setAttribute('aria-label', `Page ${page}`); button.setAttribute('aria-current', page === currentPage ? 'page' : 'false');
+                button.addEventListener('click', () => { currentPage = page; refreshStudents(); });
+                pagination.appendChild(button);
+            }
+            const next = document.createElement('button');
+            next.type = 'button'; next.textContent = '›'; next.disabled = currentPage === totalPages;
+            next.setAttribute('aria-label', 'Next page');
+            next.addEventListener('click', () => { currentPage++; refreshStudents(); });
+            pagination.appendChild(next);
+        }
+        directionButton.textContent = descending ? 'Z–A' : 'A–Z';
+        directionButton.setAttribute('aria-label', descending ? 'Sort descending' : 'Sort ascending');
+        directionButton.setAttribute('aria-pressed', String(descending));
+    }
+    searchInput.addEventListener('input', () => { currentPage = 1; refreshStudents(); });
+    sortSelect.addEventListener('change', () => { currentPage = 1; refreshStudents(); });
+    directionButton.addEventListener('click', () => { descending = !descending; refreshStudents(); });
+    refreshStudents();
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 <script>
@@ -1371,16 +1644,39 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!toggle || !status) return;
 
     const csrfToken = document.querySelector('#updateClassForm input[name="csrfmiddlewaretoken"]')?.value || '';
-    toggle.addEventListener('change', async function () {
-        const enabled = toggle.checked;
-        const confirmation = enabled
-            ? 'Enable Assessment Week for this section?\n\nStudents in this section will only be able to access the assessment while Assessment Week is enabled. Other sections will not be affected.'
-            : 'Disable Assessment Week for this section?\n\nStudents in this section will return to the normal learning and prompt flow.';
-        if (!window.confirm(confirmation)) {
-            toggle.checked = !enabled;
-            return;
-        }
+    const modal = document.getElementById('assessmentConfirmModal');
+    const title = document.getElementById('assessmentConfirmTitle');
+    const copy = document.getElementById('assessmentConfirmCopy');
+    const error = document.getElementById('assessmentConfirmError');
+    const cancel = document.getElementById('assessmentConfirmCancel');
+    const submit = document.getElementById('assessmentConfirmSubmit');
+    let previousState = toggle.checked;
+    let requestedState = previousState;
+    let lastFocused = null;
 
+    function closeModal(restore = true) {
+        if (restore) toggle.checked = previousState;
+        modal.classList.remove('is-visible');
+        modal.setAttribute('aria-hidden', 'true');
+        lastFocused?.focus();
+    }
+
+    function openModal() {
+        requestedState = toggle.checked;
+        title.textContent = requestedState ? 'Enable Assessment Week?' : 'Disable Assessment View?';
+        copy.textContent = requestedState
+            ? 'Students in this section will only be able to access assessments while Assessment Week is enabled. Other sections will not be affected.'
+            : 'Students in this section will return to the normal learning and prompt flow.';
+        error.hidden = true;
+        lastFocused = document.activeElement;
+        modal.classList.add('is-visible');
+        modal.setAttribute('aria-hidden', 'false');
+        submit.focus();
+    }
+
+    async function applyChange() {
+        submit.disabled = true;
+        cancel.disabled = true;
         toggle.disabled = true;
         try {
             const response = await fetch('{% url "update_section_assessment_week" %}', {
@@ -1393,7 +1689,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 },
                 body: JSON.stringify({
                     section_id: {{ section.id }},
-                    assessment_week_enabled: enabled,
+                    assessment_week_enabled: requestedState,
                 }),
             });
             const payload = await response.json();
@@ -1402,13 +1698,25 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             toggle.checked = Boolean(payload.assessment_week_enabled);
             status.textContent = toggle.checked ? 'ON' : 'OFF';
-            if (toggle.checked && window.openLiveCrlaPrompt) window.openLiveCrlaPrompt();
+            previousState = toggle.checked;
+            window.location.reload();
         } catch (error) {
-            toggle.checked = !enabled;
-            window.alert(error.message || 'Assessment Week could not be updated.');
+            toggle.checked = previousState;
+            document.getElementById('assessmentConfirmError').textContent = error.message || 'Assessment Week could not be updated.';
+            document.getElementById('assessmentConfirmError').hidden = false;
         } finally {
             toggle.disabled = false;
+            submit.disabled = false;
+            cancel.disabled = false;
         }
+    }
+
+    toggle.addEventListener('change', function () { openModal(); });
+    cancel.addEventListener('click', () => closeModal(true));
+    submit.addEventListener('click', applyChange);
+    modal.addEventListener('click', event => { if (event.target === modal && !submit.disabled) closeModal(true); });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && modal.classList.contains('is-visible') && !submit.disabled) closeModal(true);
     });
 });
 </script>
