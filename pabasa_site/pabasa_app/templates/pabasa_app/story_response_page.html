@@ -77,14 +77,14 @@ finishButton.addEventListener('click',async()=>{
 	finishButton.disabled=true;
 	finishButton.textContent='Saving...';
 	try{
-		const blob=new Blob(c,{type:'audio/webm'});
+		const blob=new Blob(c,{type:c[0]?.type||'audio/webm'});
 		const form=new FormData();
 		form.append('material_id',String(a.material_id||a.id));
 		form.append('response_text','');
-		form.append('duration_seconds','0');
+		form.append('duration_seconds',String(Math.max(0,Math.round(audio?.duration||0))));
 		form.append('audio',blob,`story-response-${Date.now()}.webm`);
-		const csrfToken=document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
-		const response=await fetch('/api/story-response/submit/',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':decodeURIComponent(csrfToken)},body:form});
+		const csrfToken=document.querySelector('[name="csrfmiddlewaretoken"]')?.value||document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
+		const response=await fetch('{% url "story_response_submit" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':decodeURIComponent(csrfToken)},body:form});
 		const result=await response.json().catch(()=>({}));
 		if(!response.ok||!result.success)throw new Error(result.error||'Your response could not be submitted. Please try again.');
 		audio?.pause();
