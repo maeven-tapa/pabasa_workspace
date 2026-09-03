@@ -765,26 +765,13 @@ class Assessment(models.Model):
             return first_material.content_text or first_material.prompt_text or ''
         return ''
 
+    def __str__(self):
+        return f"{self.code} - {self.title}"
+
     class Meta:
         db_table = "assessments"
         ordering = ["-created_at"]
 
-class AssessmentRequest(models.Model):
-    STATUS_CHOICES = [("pending", "Pending"), ("approved", "Approved"), ("declined", "Declined")]
-    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="assessment_requests")
-    section = models.ForeignKey("Section", on_delete=models.CASCADE, related_name="assessment_requests")
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
-    requested_at = models.DateTimeField(auto_now_add=True)
-    reviewed_at = models.DateTimeField(null=True, blank=True)
-    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="reviewed_assessment_requests")
-    class Meta:
-        db_table = "assessment_requests"
-        ordering = ["requested_at", "id"]
-        constraints = [models.UniqueConstraint(fields=["student", "section"], condition=models.Q(status="pending"), name="one_pending_assessment_request")]
-
-    def __str__(self):
-        return f"{self.code} - {self.title}"
-    
     # Attempt Management Methods
     def _group_assessment(self):
         return self.source_assessment or self
@@ -1049,6 +1036,21 @@ class AssessmentRequest(models.Model):
             group.save(update_fields=['attempt_no', 'updated_at'])
             return True
         return False
+
+
+class AssessmentRequest(models.Model):
+    STATUS_CHOICES = [("pending", "Pending"), ("approved", "Approved"), ("declined", "Declined")]
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="assessment_requests")
+    section = models.ForeignKey("Section", on_delete=models.CASCADE, related_name="assessment_requests")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    requested_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="reviewed_assessment_requests")
+
+    class Meta:
+        db_table = "assessment_requests"
+        ordering = ["requested_at", "id"]
+        constraints = [models.UniqueConstraint(fields=["student", "section"], condition=models.Q(status="pending"), name="one_pending_assessment_request")]
 
 
 class Practice(models.Model):

@@ -737,6 +737,7 @@
         const readingsStorageKey = "pabasa_section_readings";
         const completedAssessmentIdsKey = "pabasa_completed_assessment_ids";
         const materialTypes = ["word", "sentence", "paragraph", "vowel"];
+        const serverJoinedSectionIds = {{ student_section_ids|default:'[]'|safe }};
         const requestedSectionId = (new URLSearchParams(window.location.search).get("section_id") || "").trim();
         const selectedSectionId = requestedSectionId;
 
@@ -843,6 +844,9 @@
                 return [requestedSectionId];
             }
             const sectionIds = getStoredArray(studentClassCodesKey).filter(Boolean);
+            if (!sectionIds.length && Array.isArray(serverJoinedSectionIds)) {
+                sectionIds.push(...serverJoinedSectionIds.map(String));
+            }
             const legacySectionId = window.localStorage.getItem(legacyStudentClassCodeKey);
             if (!sectionIds.length && legacySectionId) {
                 sectionIds.push(legacySectionId);
@@ -1348,7 +1352,7 @@
                                 : isFiveWStoryQuestions
                                 ? `${storyCallUrl}?id=${encodeURIComponent(m.content_json?.sourceMaterialId || '')}&section_id=${encodeURIComponent(sectionId)}`
                                 : isStoryReading
-                                ? `${storyReadingUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
+                                ? `${storyReadingUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}&return_to=reading_assessment`
                                 : isClapCountSyllables
                                 ? `${clapCountSyllablesUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
                                 : isSoundDetective

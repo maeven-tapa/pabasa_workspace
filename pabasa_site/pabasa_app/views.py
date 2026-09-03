@@ -20,7 +20,7 @@ from django.db import IntegrityError, transaction, OperationalError, connection
 from django.db.models import Count, F, Prefetch, Q
 from django.utils.text import slugify
 from functools import wraps
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, urlencode, urlparse
 import logging
 import json
 import os
@@ -10054,11 +10054,30 @@ def assessment(request):
         selected_section = next((section for section in joined_sections if section.id in current_section_ids), None)
     if selected_section is None and len(joined_sections) == 1:
         selected_section = joined_sections[0]
+    returning_to_reading_assessment = (
+        str(request.GET.get('return_to') or '').strip().lower() == 'reading_assessment'
+    )
+    reading_access_state = workflow.get('eligibility') or _reader_assessment_state(user)
     section_week_status = _section_assessment_week_status(selected_section) if selected_section else 'none'
     section_assessment_completed = _student_completed_section_assessment(user, selected_section)
     approved_assessment_request = _student_has_approved_assessment_request(user, selected_section)
+    has_reading_assessment_access = bool(
+        reading_access_state.get('aral_eligible')
+        and not reading_access_state.get('reading_at_grade_level_complete')
+        and (section_assessment_completed or approved_assessment_request)
+    )
+    if returning_to_reading_assessment and has_reading_assessment_access:
+        # A student returning from an already-authorized Reading Assessment
+        # activity must get the activity-selection hub, even if the section's
+        # Assessment Week flag is still enabled.  This is scoped to the
+        # originating context and does not bypass the normal entry flow.
+        assessment_week_section = None
     if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status == 'after':
-        if not section_assessment_completed and not _student_has_approved_assessment_request(user, selected_section):
+        if (
+            not section_assessment_completed
+            and not _student_has_approved_assessment_request(user, selected_section)
+            and not (returning_to_reading_assessment and has_reading_assessment_access)
+        ):
             context = _dashboard_context(request, 'student')
             pending_request = AssessmentRequest.objects.filter(student=user, section=selected_section, status='pending').first()
             context.update({
@@ -10409,6 +10428,7 @@ def assessment(request):
         'assessment_week_enabled': bool(assessment_week_section),
         'assessment_week_section': assessment_week_section,
         'joined_sections_count': len(joined_sections),
+        'student_section_ids': [section.id for section in joined_sections],
         'active_school_calendar': official_calendar,
     })
     try:
@@ -12307,6 +12327,31 @@ def story_reading_page(request):
     content_json = material.content_json if isinstance(material.content_json, dict) else {}
     story_config = content_json.get('storyReading') if isinstance(content_json.get('storyReading'), dict) else {}
     student = User.objects.filter(id=request.session.get('user_id'), role='student').first()
+    reader_state = _reader_assessment_state(student)
+    has_reading_assessment_access = bool(
+        reader_state.get('aral_eligible')
+        and not reader_state.get('reading_at_grade_level_complete')
+    )
+    section_id_value = request.GET.get('section_id') or material.section_id or ''
+    return_section = Section.objects.filter(pk=section_id_value).first() if section_id_value else None
+    assessment_return_url = reverse('assessment')
+    return_params = {'section_id': section_id_value}
+    has_completed_return_section = bool(
+        return_section
+        and (
+            _student_completed_section_assessment(student, return_section)
+            or _student_has_approved_assessment_request(student, return_section)
+        )
+    )
+    if has_reading_assessment_access and has_completed_return_section:
+        # Preserve the originating activity-selection context.  The marker is
+        # emitted only for students who already have the persisted post-CRLA
+        # Reading Assessment access state.  This also keeps direct/reloaded
+        # Story Reading URLs from losing their originating context.
+        return_params['return_to'] = 'reading_assessment'
+    return_query = urlencode({key: value for key, value in return_params.items() if value not in (None, '')})
+    if return_query:
+        assessment_return_url = f'{assessment_return_url}?{return_query}'
     story_payload = {
         'id': material.id,
         'material_id': f'material-{material.id}',
@@ -12318,7 +12363,7 @@ def story_reading_page(request):
         'images': content_json.get('images') if isinstance(content_json.get('images'), list) else [],
         'first_name': str(getattr(student, 'first_name', '') or '').strip().split(' ')[0],
         'section_id': request.GET.get('section_id') or '',
-        'return_url': reverse('dashboard'),
+        'return_url': assessment_return_url,
         'completion': None,
     }
     language = str(story_payload['language']).strip()
