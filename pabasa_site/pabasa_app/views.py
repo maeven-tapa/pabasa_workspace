@@ -11773,6 +11773,7 @@ def _normalize_picture_word_matching_content(content_json):
     catalog = _picture_word_catalog()
 
     normalized_items = []
+    seen_images = set()
     for raw_item in result.get('items') or []:
         if not isinstance(raw_item, dict):
             continue
@@ -11801,6 +11802,10 @@ def _normalize_picture_word_matching_content(content_json):
             set_key = raw_set
             source_type = 'custom' if mode == 'custom' or str(item.get('sourceType') or '').lower() == 'custom' else 'prescribed'
             image_url = str(item.get('image_path') or item.get('imagePreview') or '')
+        image_identity = filename.casefold()
+        if image_identity in seen_images:
+            continue
+        seen_images.add(image_identity)
         item.update({
             'image': filename, 'image_asset': filename, 'sourceImage': filename,
             'image_path': image_url, 'imagePreview': image_url,

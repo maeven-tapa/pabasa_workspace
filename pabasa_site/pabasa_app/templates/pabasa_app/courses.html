@@ -14226,13 +14226,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const CLAP_COUNT_WORD_BANK = JSON.parse(document.getElementById('clap-count-word-bank')?.textContent || '{}');
         const PICTURE_WORD_PRESCRIBED_SETS = Array.isArray(PICTURE_WORD_CATALOG.prescribedSets) ? PICTURE_WORD_CATALOG.prescribedSets : [];
         const PICTURE_WORD_CUSTOM_MAX_ITEMS = 5;
-        const PICTURE_WORD_CUSTOM_LIBRARY = [
+        const PICTURE_WORD_CUSTOM_LIBRARY = Array.from(new Map([
             ...PICTURE_WORD_PRESCRIBED_SETS.flatMap(set => Array.isArray(set.items) ? set.items : []),
             ...(Array.isArray(PICTURE_WORD_CATALOG.customItems) ? PICTURE_WORD_CATALOG.customItems : [])
-        ].map(item => ({
+        ].map(item => [String(item.image || '').trim().toLowerCase(), item]).filter(([image]) => image).map(([image, item]) => [image, {
             ...item,
             searchText: [item.englishWord, item.filipinoWord, item.image?.replace(/\.[^.]+$/, '') || '', item.setKey].join(' ').toLowerCase()
-        }));
+        }]))).map(([, item]) => item);
         const TEMPLATE_ITEM_TITLE_KEYS = {
             'Phrase Reading Practice': 'phrase',
             'Sentence Reading Practice': 'sentence'
@@ -14791,13 +14791,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (!activeTemplateActivity) return;
             const normalized = Array.from(new Map((items || []).map(item => {
                 const normalizedItem = normalizePictureWordCustomItem(item);
-                return normalizedItem ? [`${normalizedItem.setKey}:${normalizedItem.image}`, normalizedItem] : null;
+                return normalizedItem ? [normalizedItem.image.toLowerCase(), normalizedItem] : null;
             }).filter(Boolean)).values()).slice(0, PICTURE_WORD_CUSTOM_MAX_ITEMS);
             activeTemplateActivity.pictureWordMatchingCustom = { items: normalized };
         }
 
         function isPictureWordCustomSelected(item) {
-            return getPictureWordCustomSelection().some(selected => selected.setKey === item.setKey && selected.image === item.image);
+            return getPictureWordCustomSelection().some(selected => selected.image.toLowerCase() === item.image.toLowerCase());
         }
 
         function searchPictureWordLibrary(query) {
@@ -14833,8 +14833,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             <img src="${escapeAttr(imagePath)}" alt="${escapeAttr(item.englishWord)}" loading="lazy">
                             <div class="p-2 text-center">
                                 <div class="fw-semibold text-truncate">${escapeHtml(getPictureWordMatchingWord(item, language))}</div>
-                                <button type="button" class="btn btn-sm ${selected ? 'btn-outline-danger' : 'btn-primary'} w-100 mt-2" data-picture-word-custom-toggle="${escapeAttr(`${item.setKey}:${item.image}`)}" ${!selected && !canAddMore ? 'disabled' : ''}>
-                                    ${selected ? 'Selected' : 'Add'}
+                                <button type="button" class="btn template-btn template-btn-primary picture-word-custom-toggle ${selected ? 'is-selected' : ''} w-100 mt-2" data-picture-word-custom-toggle="${escapeAttr(`${item.setKey}:${item.image}`)}" ${!selected && !canAddMore ? 'disabled' : ''}>
+                                    ${selected ? '<i class="bi bi-check2" aria-hidden="true"></i>Selected' : '<i class="bi bi-plus-lg" aria-hidden="true"></i>Add'}
                                 </button>
                             </div>
                         </article>
@@ -15704,6 +15704,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         text-overflow: ellipsis;
                         white-space: nowrap;
                     }
+                    .picture-word-custom-toggle.is-selected,
+                    .picture-word-custom-toggle.is-selected:hover {
+                        background: var(--activity-brand-deep, #15556c);
+                        border-color: var(--activity-brand-deep, #15556c);
+                        box-shadow: 0 0 0 2px rgba(31,111,139,.16);
+                    }
                     @media (min-width: 576px) {
                         .picture-word-result-card { width: 112px; }
                         .picture-word-result-card { max-width: 112px; }
@@ -15732,13 +15738,17 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     }
                     .picture-word-carousel-shell {
                         position: relative;
+                        width: 100%;
                         max-width: 100%;
+                        min-width: 0;
+                        box-sizing: border-box;
+                        contain: inline-size;
                         overflow: hidden;
                     }
                     .picture-word-carousel {
                         display: flex;
                         gap: 1rem;
-                        overflow-x: auto;
+                        overflow-x: hidden;
                         scroll-snap-type: x mandatory;
                         scroll-behavior: smooth;
                         padding: 0.25rem 0.1rem 0.5rem;
@@ -15829,7 +15839,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         <input type="radio" class="btn-check" name="pictureWordMode" id="pictureWordModeCustom" value="custom" ${currentMode === 'custom' ? 'checked' : ''}>
                         <label class="btn btn-outline-primary" for="pictureWordModeCustom">Custom Set</label>
                     </div>
-                    <div class="picture-word-carousel-shell ${currentMode === 'custom' ? 'd-none' : ''}" data-picture-word-prescribed-panel>
+                    <div class="picture-word-carousel-shell picture-word-custom-search ${currentMode === 'custom' ? 'd-none' : ''}" data-picture-word-prescribed-panel>
                     <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
                         <div>
                             <div class="small text-muted text-uppercase">Prescribed Sets</div>
@@ -15883,7 +15893,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                     <div class="small text-muted text-uppercase">Custom Picture-Word Set</div>
                                     <div class="fw-semibold">Search existing materials and build your own set</div>
                                 </div>
-                                <span class="badge text-bg-light">${selectedCount}/${PICTURE_WORD_CUSTOM_MAX_ITEMS} selected</span>
                             </div>
                             <div class="input-group mb-3">
                                 <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
@@ -15899,8 +15908,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                                 <img src="${escapeAttr(imagePath)}" alt="${escapeAttr(item.englishWord)}" loading="lazy">
                                                 <div class="p-2 text-center">
                                                     <div class="fw-semibold text-truncate">${escapeHtml(getPictureWordMatchingWord(item, language))}</div>
-                                                    <button type="button" class="btn btn-sm ${selected ? 'btn-outline-danger' : 'btn-primary'} w-100 mt-2" data-picture-word-custom-toggle="${escapeAttr(`${item.setKey}:${item.image}`)}" ${!selected && !canAddMore ? 'disabled' : ''}>
-                                                        ${selected ? 'Selected' : 'Add'}
+                                                    <button type="button" class="btn template-btn template-btn-primary picture-word-custom-toggle ${selected ? 'is-selected' : ''} w-100 mt-2" data-picture-word-custom-toggle="${escapeAttr(`${item.setKey}:${item.image}`)}" ${!selected && !canAddMore ? 'disabled' : ''}>
+                                                        ${selected ? '<i class="bi bi-check2" aria-hidden="true"></i>Selected' : '<i class="bi bi-plus-lg" aria-hidden="true"></i>Add'}
                                                     </button>
                                                 </div>
                                             </article>
@@ -15923,7 +15932,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 `).join('') : '<div class="text-muted small">No items selected yet.</div>'}
                             </div>
                             <div class="d-flex flex-wrap gap-2 align-items-center">
-                                <button type="button" class="btn btn-primary" data-picture-word-start-activity ${selectedCount === PICTURE_WORD_CUSTOM_MAX_ITEMS ? '' : 'disabled'}>Start Activity</button>
                                 <div class="small text-muted">${selectedCount === PICTURE_WORD_CUSTOM_MAX_ITEMS ? 'Ready to launch.' : `Select ${PICTURE_WORD_CUSTOM_MAX_ITEMS} items to continue.`}</div>
                             </div>
                         </div>
