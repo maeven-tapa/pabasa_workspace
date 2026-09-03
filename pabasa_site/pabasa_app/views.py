@@ -8985,21 +8985,24 @@ def _save_official_reading_assessment(request, material=None):
             if not isinstance(story, dict):
                 continue
             story_title = str(story.get('story_title') or story.get('title') or '').strip()
-            questions = story.get('questions')
-            if not story_title or not isinstance(questions, list):
+            if not story_title:
                 continue
-            for qa in questions:
+            questions = story.get('questions')
+            if isinstance(questions, list):
+                qa_items = questions
+            else:
+                qa_items = [story]
+            for qa in qa_items:
                 if not isinstance(qa, dict):
                     continue
                 question = str(qa.get('question') or '').strip()
                 answer = str(qa.get('answer') or '').strip()
-                if not question or not answer:
-                    continue
-                story_qas.append({
-                    'story_title': story_title,
-                    'question': question,
-                    'answer': answer,
-                })
+                if question and answer:
+                    story_qas.append({
+                        'story_title': story_title,
+                        'question': question,
+                        'answer': answer,
+                    })
     elif isinstance(stories, list):
         for story in stories:
             if not isinstance(story, dict):
