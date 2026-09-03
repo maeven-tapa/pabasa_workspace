@@ -20680,6 +20680,7 @@ def add_reading_material(request):
                     title = title or 'Syllable Blending'
                 if template_identity in {'syllable awareness', 'clap & count syllables', 'clap count syllables'}:
                     try:
+                        template_payload['number_of_words'] = len(template_payload.get('selected_word_ids') or [])
                         bank_items = validate_configuration(template_payload)
                     except ValueError as exc:
                         return JsonResponse({'success': False, 'errors': {'content': str(exc)}}, status=400)
@@ -20688,8 +20689,8 @@ def add_reading_material(request):
                         'template_title': 'Clap & Count Syllables', 'template_lesson': 'Syllable Awareness',
                         'template_type': 'Clap & Count Syllables', 'template_source': 'template',
                         'activity_type': 'clap_count_syllables', 'items': bank_items[:limit],
-                        'randomize_order': bool(template_payload.get('randomize_order')),
-                        'allow_retry': bool(template_payload.get('allow_retry', True)),
+                        'randomize_order': True,
+                        'allow_retry': True,
                     })
                     title = title or 'Clap & Count Syllables'
                 if template_identity in {'phonological awareness', 'sound detective'}:
@@ -21101,10 +21102,13 @@ def teacher_update_material(request):
                 template_payload['activity_variant'] = 'five_w_story_questions'
             if template_title == 'Clap & Count Syllables':
                 try:
+                    template_payload['number_of_words'] = len(template_payload.get('selected_word_ids') or [])
                     bank_items = validate_configuration(template_payload)
                 except ValueError as exc:
                     return JsonResponse({'success': False, 'error': str(exc)}, status=400)
-                template_payload['items'] = bank_items[:int(template_payload['number_of_words'])]
+                template_payload['items'] = bank_items
+                template_payload['randomize_order'] = True
+                template_payload['allow_retry'] = True
                 template_payload['activity_type'] = 'clap_count_syllables'
             if template_title == 'Sound Detective':
                 try:

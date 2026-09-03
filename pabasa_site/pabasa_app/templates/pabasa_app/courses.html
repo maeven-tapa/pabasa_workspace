@@ -20771,6 +20771,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     new MutationObserver(enforceRequiredAudio).observe(promptFields, {childList: true, subtree: true});
     enforceRequiredAudio();
+
+    const removeClapCountOptions = () => {
+        ['clapNumber', 'clapRandomize', 'clapRetry'].forEach(id => {
+            promptFields.querySelector(`#${id}`)?.closest('.col-md-4')?.remove();
+        });
+    };
+    new MutationObserver(removeClapCountOptions).observe(promptFields, {childList: true, subtree: true});
+    removeClapCountOptions();
 });
 </script>
 {% endblock %}
