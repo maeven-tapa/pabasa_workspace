@@ -5067,6 +5067,7 @@
             formData.append("target_text", getCurrentDisplayText() || items[currentIndex] || "");
             formData.append("mode", mode);
             formData.append("language", currentMaterialLanguage || "");
+            formData.append("tts_profile", "crla");
 
             try {
                 const response = await fetch("/api/reading/read-aloud/", {

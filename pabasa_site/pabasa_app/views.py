@@ -12987,7 +12987,9 @@ def reading_read_aloud_api(request):
     try:
         # Hunt uses the same clear female Assessment voice at a slower teaching
         # pace so young readers can hear each sound. Assessment keeps its defaults.
-        tts_options = {'speaking_rate': 0.80, 'prosody_rate': '82%'} if tts_profile == 'hunt' else {}
+        tts_options = ({'speaking_rate': 0.80, 'prosody_rate': '82%'} if tts_profile == 'hunt'
+                       else {'speaking_rate': 1.0, 'prosody_rate': '100%'} if tts_profile == 'crla'
+                       else {})
         audio_content = synthesize_read_aloud_audio(
             target_text,
             api_key,
@@ -23668,6 +23670,28 @@ def story_response_page(request):
 
 @csrf_protect
 @require_http_methods(["POST"])
+@csrf_protect
+@login_required(role='student')
+@require_http_methods(["POST"])
+def story_response_read_aloud_api(request):
+    """Synthesize Story Response prompts with the established Google voice."""
+    target_text = ' '.join(str(request.POST.get('target_text') or '').split())
+    language_code = language_code_for(request.POST.get('language') or '')
+    if not target_text:
+        return JsonResponse({'success': False, 'error': 'Text is required.'}, status=400)
+    try:
+        audio_content = synthesize_read_aloud_audio(
+            target_text,
+            getattr(settings, 'GOOGLE_STT_API_KEY', '').strip(),
+            language_code=language_code,
+            credentials_file=getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', None),
+        )
+        return JsonResponse({'success': True, 'audio_content': audio_content, 'mime_type': 'audio/mpeg', 'language_code': language_code})
+    except Exception as exc:
+        logger.exception('Story Response TTS failed')
+        return JsonResponse({'success': False, 'error': str(exc)}, status=502)
+
+
 def story_response_submit(request):
     """Submit a student's story response."""
     if request.content_type and request.content_type.startswith('multipart/form-data'):

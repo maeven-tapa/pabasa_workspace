@@ -97,4 +97,7 @@ finishButton.addEventListener('click',async()=>{
 		responseState.appendChild(feedback);
 	}
 });
+const storyResponseTtsBlob=base64=>{const binary=atob(base64||'');const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return new Blob([bytes],{type:'audio/mpeg'});};
+let storyResponseTtsAudio=null,storyResponseTtsUrl='';
+$('hear').onclick=async()=>{state('listening');$('hear').disabled=true;try{const form=new FormData();form.append('target_text',a.response_prompt||'');form.append('language',a.language||'');const response=await fetch('{% url "story_response_read_aloud_api" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||''},body:form});const result=await response.json();if(!response.ok||!result.success)throw new Error(result.error||'Audio unavailable.');if(storyResponseTtsAudio)storyResponseTtsAudio.pause();if(storyResponseTtsUrl)URL.revokeObjectURL(storyResponseTtsUrl);storyResponseTtsUrl=URL.createObjectURL(storyResponseTtsBlob(result.audio_content));storyResponseTtsAudio=new Audio(storyResponseTtsUrl);storyResponseTtsAudio.onended=()=>state('idle');await storyResponseTtsAudio.play();}catch(error){state('idle');alert(error.message);}finally{$('hear').disabled=false;}};
 </script>
