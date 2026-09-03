@@ -10751,8 +10751,60 @@ def story_call_page(request):
     context.update({
         'story_call_questions_json': story_call_questions_json,
         'story_call_story_title': story_material.title if story_material else '',
+        'story_call_material_id': questions_material.id if questions_material else '',
+        'story_call_completion': ({'completed': True, 'earned': int((completed_result.correct_items or completed_result.score or completed_result.total_score or 0)), 'total': int(completed_result.total_practice_items or len(questions[:5]) or 5)} if questions_material and (completed_result := questions_material.assessment_results.filter(student_id=request.session.get('user_id'), attempt_status='completed').order_by('-completed_at', '-id').first()) else {'completed': False}),
     })
     return render(request, 'pabasa_app/story_call_page.html', context)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+def story_call_complete_api(request):
+    """Score and persist the isolated 5W Story Call activity."""
+    if not _check_auth(request):
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+    if request.session.get('user_role') != 'student':
+        return JsonResponse({'success': False, 'error': 'Forbidden: insufficient role'}, status=403)
+    try:
+        payload = json.loads(request.body or '{}')
+        material_id = int(payload.get('material_id'))
+        answers = payload.get('answers') if isinstance(payload.get('answers'), list) else []
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+    material = Material.objects.filter(pk=material_id, status='published', is_active=True).first()
+    content = material.content_json if material and isinstance(material.content_json, dict) else {}
+    if not material or content.get('template_title') != "5W's Story Questions":
+        return JsonResponse({'success': False, 'error': 'Story Call assessment not found'}, status=404)
+    access_response = _enforce_student_access_for_request(request, material=material, json_response=True)
+    if access_response:
+        return access_response
+    student = User.objects.filter(pk=request.session.get('user_id')).first()
+    existing = material.assessment_results.filter(student=student, attempt_status='completed').order_by('-completed_at', '-id').first()
+    if existing:
+        score = int(existing.correct_items or existing.score or existing.total_score or 0)
+        total = int(existing.total_practice_items or len(content.get('items') or []) or 5)
+        return JsonResponse({'success': True, 'completed': True, 'earned': score, 'total': total})
+    questions = [item for item in (content.get('items') or []) if isinstance(item, dict) and str(item.get('question') or '').strip()][:5]
+    total = len(questions)
+    if total == 0 or len(answers) < total:
+        return JsonResponse({'success': False, 'error': 'All Story Call questions must be answered.'}, status=400)
+    results = [bool(story_answer_matches(item.get('answer'), answers[index])) for index, item in enumerate(questions)]
+    earned = sum(1 for result in results if result)
+    material.record_assessment_result(
+        student,
+        status='completed',
+        score=earned,
+        total_score=earned,
+        correct_items=earned,
+        correct_responses=earned,
+        incorrect_responses=total - earned,
+        items_completed=total,
+        total_practice_items=total,
+        transcript=' | '.join(str(answer or '').strip() for answer in answers[:total]),
+        speech_recognition_used=True,
+        crla_score_data={'activity': 'story_call', 'question_results': results, 'total': total},
+    )
+    return JsonResponse({'success': True, 'completed': True, 'earned': earned, 'total': total})
 
 
 def _canonicalize_custom_material_reading_url(request):

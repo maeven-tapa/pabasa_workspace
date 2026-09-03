@@ -148,6 +148,7 @@ urlpatterns = [
     path('api/assessment/end-state/', views.persist_student_end_assessment_state, name='persist_student_end_assessment_state'),
     path('api/assessment/story-answer/check/', views.check_story_answer_api, name='check_story_answer_api'),
     path('api/assessment/story-answer/transcribe/', views.transcribe_story_answer_api, name='transcribe_story_answer_api'),
+    path('api/story-call/complete/', views.story_call_complete_api, name='story_call_complete_api'),
     path('what-is-pabasa/', views.pabasa_info, name='pabasa_info'),
     path('about/', views.about, name='about'),
     path('faq/', views.faq, name='faq'),
