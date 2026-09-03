@@ -2322,14 +2322,17 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
 
         latest = latest_scores.get(sid_key, {})
         has_completed_assessment = bool(attempts)
+        persisted_crla_classification = (
+            latest.get('crla_classification') or latest.get('classification')
+        )
         latest_reading_level_payload = _build_latest_reading_level_payload({
             'final_score': latest.get('total_score'),
             'total_score': latest.get('total_score'),
             'score': latest.get('total_score'),
-            'reading_level': latest.get('adapted_reading_level'),
-            'adapted_reading_level': latest.get('adapted_reading_level'),
-            'crla_classification': latest.get('crla_classification') or latest.get('classification'),
-            'classification': latest.get('classification') or latest.get('crla_classification'),
+            'reading_level': persisted_crla_classification or latest.get('adapted_reading_level'),
+            'adapted_reading_level': persisted_crla_classification or latest.get('adapted_reading_level'),
+            'crla_classification': persisted_crla_classification,
+            'classification': persisted_crla_classification,
             'adapted_reading_level_disclaimer': latest.get('adapted_reading_level_disclaimer'),
         }, fallback='Pending' if not has_completed_assessment else None)
         reading_level = latest_reading_level_payload.get('reading_level') or 'Pending'

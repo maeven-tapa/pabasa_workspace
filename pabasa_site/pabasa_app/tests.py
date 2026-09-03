@@ -9766,6 +9766,48 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(data["students"][0]["level"], "Transitioning Readers")
         self.assertTrue(data["students"][0]["has_completed_assessment"])
 
+    def test_teacher_students_api_prefers_persisted_crla_classification_over_score(self):
+        assessment = Assessment.objects.create(
+            teacher=self.teacher,
+            section=self.section_a,
+            title="Official CRLA",
+            code="CRLA-DIR-AUTHORITY",
+            assessment_type="paragraph",
+            status="published",
+            is_active=True,
+        )
+        Material.objects.create(
+            assessment=assessment,
+            teacher=self.teacher,
+            section=self.section_a,
+            title=assessment.title,
+            code="CRLA-DIR-AUTHORITY-MAT",
+            item_type="paragraph",
+            type="assessment",
+            assessment_kind="crla",
+            status="published",
+            is_active=True,
+            is_official_reading=True,
+        )
+        assessment.record_attempt(
+            self.student,
+            status="completed",
+            completed_at="2026-06-01T09:00:00+00:00",
+            total_score=95,
+        )
+        attempt = Assessment.objects.get(source_assessment=assessment, student=self.student)
+        attempt.crla_classification = "Low Emerging Readers"
+        attempt.classification = "Low Emerging Readers"
+        attempt.save(update_fields=["crla_classification", "classification", "updated_at"])
+
+        response = self.client.get(reverse("get_teacher_students_api"))
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["students"][0]["level"], "Low Emerging Readers")
+        self.assertEqual(data["level_counts"]["Low Emerging Readers"], 1)
+        self.assertEqual(data["dashboard_metrics"]["grade_level_ready_count"], 0)
+
     def test_teacher_students_api_uses_adapted_level_from_attempt_history(self):
         word_assessment = Assessment.objects.create(
             teacher=self.teacher,
