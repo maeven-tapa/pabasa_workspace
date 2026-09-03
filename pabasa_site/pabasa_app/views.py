@@ -9040,8 +9040,8 @@ def _save_official_reading_assessment(request, material=None):
         field_errors['words'] = 'Add at least 10 word items.'
     if len(rhyme_pairs) < 10:
         field_errors['rhyme_pairs'] = 'Add at least 10 rhyming pairs.'
-    if len(sentences) < 3:
-        field_errors['sentences'] = 'Add at least 3 sentence items.'
+    if len(sentences) < 4:
+        field_errors['sentences'] = 'Add at least 4 sentence items.'
     if not passages:
         field_errors['passages'] = 'Add at least one paragraph item.'
 

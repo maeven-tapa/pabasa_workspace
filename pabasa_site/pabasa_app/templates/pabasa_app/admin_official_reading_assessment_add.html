@@ -130,7 +130,7 @@
               <button type="button" class="btn btn-primary" id="addSentenceBtn" style="min-width:52px" disabled><i class="bi bi-plus-lg"></i></button>
             </div>
             <div class="d-flex justify-content-between align-items-center mb-2">
-              <div class="locked-hint" id="sentenceProgress">Minimum: 3 sentences</div>
+              <div class="locked-hint" id="sentenceProgress">Minimum: 4 sentences</div>
             </div>
             <div id="sentenceChips" class="item-box d-flex flex-wrap gap-2 align-content-start">
               {% for item in reading_sentences %}
@@ -151,7 +151,7 @@
           <label class="form-label fw-bold mb-0">Story Reading <span class="text-danger">*</span></label>
           <button type="button" class="btn btn-outline-primary btn-sm" id="addStoryBtn" disabled>+ Add Story</button>
         </div>
-        <div class="locked-hint mb-3" id="paragraphProgress">Available after 3 sentences</div>
+        <div class="locked-hint mb-3" id="paragraphProgress">Available after 4 sentences</div>
         <div id="storyList" class="d-grid gap-3"></div>
         {% if official_field_errors.passages %}<div class="text-danger small mt-2">{{ official_field_errors.passages }}</div>{% endif %}
       </div>
@@ -376,7 +376,7 @@
     const typeReady = typeEnabled && typeCommitted;
     const wordsReady = state.words.length >= 10;
     const rhymingReady = state.rhyme_pairs.length >= 10;
-    const sentencesReady = state.sentences.length >= 3;
+    const sentencesReady = state.sentences.length >= 4;
     const storiesReady = sentencesReady && state.stories.length > 0 && state.stories.every((story) => {
       const storyTitleReady = String(story.title || '').trim().length > 0;
       const storyContentReady = String(story.content || '').trim().length > 0;
@@ -425,8 +425,8 @@
 
     wordProgress.textContent = wordCount >= 10 ? `10 / 10 words ✓` : `${wordCount} / 10 words`;
     rhymingProgress.textContent = state.rhyme_pairs.length >= 10 ? `10 / 10 rhyming pairs ✓` : `${state.rhyme_pairs.length} / 10 rhyming pairs`;
-    sentenceProgress.textContent = sentenceCount >= 3 ? `${sentenceCount} / 3 sentences ✓` : `${sentenceCount} / 3 sentences`;
-    paragraphProgress.textContent = sentencesReady ? 'Stories are now available' : 'Available after 3 sentences';
+    sentenceProgress.textContent = sentenceCount >= 4 ? `${sentenceCount} / 4 sentences ✓` : `${sentenceCount} / 4 sentences`;
+    paragraphProgress.textContent = sentencesReady ? 'Stories are now available' : 'Available after 4 sentences';
     materialsHint.textContent = !titleReady ? 'Choose the assessment type to unlock the reading materials editor.' : (materialsComplete ? 'All required reading materials have been completed.' : 'Complete the Word, Sentence, Story Reading, and Question and Answer requirements.');
   }
   function addWord() { const value = String(wordInput.value || '').trim(); if (!value) return; if (state.words.length >= 10) { wordInput.value = ''; render(); return; } state.words.push(value); wordInput.value = ''; render(); }
