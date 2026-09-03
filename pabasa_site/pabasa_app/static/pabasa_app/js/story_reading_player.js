@@ -251,8 +251,34 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
         }
     }
     function endActivity() {
-        const exitLink = document.getElementById('backToAssessmentButton');
-        if (exitLink?.href) window.location.assign(exitLink.href);
+        let modal = document.getElementById('storyScoreModal');
+        if (!modal) {
+            const style = document.createElement('style');
+            style.textContent = '.story-score-modal{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:16px;background:rgba(3,18,34,.78);backdrop-filter:blur(4px)}.story-score-modal[hidden]{display:none}.story-score-card{position:relative;width:min(490px,100%);padding:30px 30px 25px;border:1px solid rgba(76,214,224,.42);border-radius:24px;background:linear-gradient(145deg,#102c46,#071c31);box-shadow:0 0 0 1px rgba(39,185,201,.08),0 24px 70px rgba(0,0,0,.48),0 0 35px rgba(22,151,174,.16);color:#f5fbff;text-align:center;overflow:hidden}.story-score-card:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 0,rgba(40,201,208,.16),transparent 42%);pointer-events:none}.story-score-close{position:absolute;z-index:1;top:12px;right:16px;border:0;background:transparent;color:#e4f6fb;font-size:1.8rem;line-height:1;cursor:pointer}.story-score-icon{position:relative;display:grid;place-items:center;width:64px;height:64px;margin:0 auto 14px;border:2px solid #48d4d0;border-radius:50%;background:linear-gradient(145deg,#39cfc5,#138b9b);box-shadow:0 0 24px rgba(54,213,208,.4);color:#fff;font-size:2rem;font-weight:900}.story-score-card h2{position:relative;margin:0 0 4px;font-size:1.75rem}.story-score-great{position:relative;margin:0 0 22px;color:#fff;font-size:1.2rem;font-weight:900}.story-score-label{position:relative;margin:0;color:#41d1c7;font-size:1rem;font-weight:900}.story-score-value{position:relative;margin:3px 0 8px;color:#49d8d1;font-size:4rem;font-weight:900;line-height:1;text-shadow:0 0 18px rgba(54,213,208,.28)}.story-score-message{position:relative;margin:0 0 25px;color:#edf8fc;font-size:.98rem}.story-score-done,.story-score-back{position:relative;width:100%;min-height:50px;border-radius:14px;font:inherit;font-weight:900;cursor:pointer}.story-score-done{border:1px solid #24c5c0;background:linear-gradient(135deg,#12b7ac,#168d9c);color:#fff;box-shadow:0 8px 20px rgba(7,190,183,.22)}.story-score-back{margin-top:11px;border:1px solid rgba(213,240,247,.75);background:transparent;color:#f4fbff}.story-score-done:hover,.story-score-done:focus-visible{background:#18c9bf;outline:3px solid rgba(72,212,208,.3);outline-offset:2px}.story-score-back:hover,.story-score-back:focus-visible{background:rgba(255,255,255,.08);outline:3px solid rgba(185,232,239,.2);outline-offset:2px}@media(max-width:520px){.story-score-card{padding:28px 20px 20px}.story-score-value{font-size:3.4rem}.story-score-card h2{font-size:1.5rem}}';
+            style.textContent += '.story-score-done:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}.story-score-done:disabled:hover,.story-score-done:disabled:focus-visible{background:linear-gradient(135deg,#12b7ac,#168d9c);outline:none}';
+            document.head.appendChild(style);
+            modal = document.createElement('div');
+            modal.id = 'storyScoreModal'; modal.className = 'story-score-modal'; modal.hidden = true;
+            modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true'); modal.setAttribute('aria-labelledby', 'storyScoreTitle');
+            modal.innerHTML = '<section class="story-score-card"><button class="story-score-close" type="button" aria-label="Close score">&times;</button><div class="story-score-icon" aria-hidden="true">★</div><p class="story-score-great">Great job!</p><h2 id="storyScoreTitle">Activity Complete!</h2><p class="story-score-label">Your Score</p><p class="story-score-value">85%</p><p class="story-score-message">Keep it up! You\'re doing amazing! 🎉</p><button class="story-score-done" type="button" disabled>Proceed to 5W\'s Questions <span aria-hidden="true">→</span></button><button class="story-score-back" type="button">Back on Reading Assessment Page</button></section>';
+            document.body.appendChild(modal);
+            const close = () => { modal.hidden = true; document.body.style.overflow = ''; };
+            modal.querySelector('.story-score-close').onclick = close;
+            modal.querySelector('.story-score-done').onclick = () => { close(); window.location.assign(`/dashboard/assessment/story-call?id=${encodeURIComponent(data.material_id || data.id || '')}&section_id=${encodeURIComponent(data.section_id || '')}`); };
+            modal.querySelector('.story-score-back').onclick = () => { close(); const exitLink = document.getElementById('backToAssessmentButton'); if (exitLink?.href) window.location.assign(exitLink.href); };
+            modal.onclick = event => { if (event.target === modal) close(); };
+        }
+        const proceedButton = modal.querySelector('.story-score-done');
+        proceedButton.disabled = true;
+        modal.hidden = false; document.body.style.overflow = 'hidden'; proceedButton.focus();
+        fetch(`/api/class/materials/?section_id=${encodeURIComponent(data.section_id || '')}`, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+            .then(response => response.json()).then(payload => {
+                const materials = Object.values(payload.materials || {}).flat();
+                const normalizeMaterialId = value => String(value ?? '').trim().replace(/^material-/, '');
+                const storyId = normalizeMaterialId(data.material_id || data.id);
+                const available = materials.some(material => { const content = material?.content_json || {}; return String(material?.status || '').toLowerCase() === 'published' && String(content.template_title || '').trim() === "5W's Story Questions" && normalizeMaterialId(content.sourceMaterialId || content.source_material_id) === storyId; });
+                proceedButton.disabled = !available;
+            }).catch(() => { proceedButton.disabled = true; });
     }
     progress.oninput = event => seek(event.target.value); previousButton.onclick = restartStory; listenButton.onclick = listenOneSegment; oralButton.onclick = () => { if (state.time >= totalDuration) endActivity(); else startOral(); }; document.querySelectorAll('.scene-marker').forEach(marker => marker.onclick = () => seek(marker.dataset.time));
     window.addEventListener('beforeunload', () => { persist(); stopOral(true); stopTts(); });

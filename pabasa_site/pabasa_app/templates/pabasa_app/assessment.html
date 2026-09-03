@@ -1341,7 +1341,7 @@
                                 : isStoryResponse
                                 ? `${storyResponseUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
                                 : isFiveWStoryQuestions
-                                ? `${storyCallUrl}`
+                                ? `${storyCallUrl}?id=${encodeURIComponent(m.content_json?.sourceMaterialId || '')}&section_id=${encodeURIComponent(sectionId)}`
                                 : isStoryReading
                                 ? `${storyReadingUrl}?id=${encodeURIComponent(m.id)}&section_id=${encodeURIComponent(sectionId)}`
                                 : isClapCountSyllables

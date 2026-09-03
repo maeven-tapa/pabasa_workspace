@@ -10215,14 +10215,21 @@ def assessment(request):
         ).first()
         content_template_title = content_json.get('template_title') if isinstance(content_json, dict) else ''
         launch_view_name = 'story_call_page' if content_template_title == "5W's Story Questions" else 'reading_word_page'
-        launch_url = reverse(launch_view_name) if launch_view_name == 'story_call_page' else (
+        if launch_view_name == 'story_call_page':
+            source_story_id = content_json.get('sourceMaterialId') if isinstance(content_json, dict) else None
+            launch_url = (
+                f"{reverse('story_call_page')}?id={quote(str(source_story_id or ''))}"
+                f"&section_id={quote(str(getattr(launch_section, 'id', '') or ''))}"
+            )
+        else:
+            launch_url = (
             f"{reverse(launch_view_name)}?test={quote(material.title or 'Reading Assessment')}"
             f"&section_id={getattr(launch_section, 'id', '') or ''}"
             f"&id={material.id}"
             f"&content={quote(content_text)}"
             f"&item_type={quote(item_type)}"
             f"&language={quote(getattr(material, 'language', '') or '')}"
-        )
+            )
         student_assessment_materials.append({
             'id': material.id,
             'section_id': getattr(launch_section, 'id', None),
@@ -10534,10 +10541,55 @@ def story_questions_page(request):
 
 @xframe_options_sameorigin
 def story_call_page(request):
-    """Minimal landing page for the 5W's Story Question activity."""
+    """Render the 5W story-call activity for the selected published story."""
     if not _check_auth(request):
         return redirect('auth')
-    return render(request, 'pabasa_app/story_call_page.html', _dashboard_context(request))
+    context = _dashboard_context(request)
+    _, story_id = _parse_prefixed_id(request.GET.get('id') or request.GET.get('material_id'))
+    print('STORY CALL material_id:', story_id)
+    print('STORY CALL section_id:', request.GET.get('section_id') or '')
+    story_material = Material.objects.filter(pk=story_id).first() if story_id else None
+    questions_material = None
+    if story_material:
+        # sourceMaterialId is the authoritative relationship. Do not narrow
+        # by section first: the published 5W material can be assigned through
+        # a different section while still belonging to this selected story.
+        questions_material = Material.objects.filter(
+            status='published', is_active=True,
+        ).order_by('-updated_at', '-id')
+        for candidate in questions_material:
+            content = candidate.content_json if isinstance(candidate.content_json, dict) else {}
+            if (
+                str(content.get('template_title') or '').strip() == "5W's Story Questions"
+                or str(content.get('activity_variant') or '').strip() == 'five_w_story_questions'
+            ):
+                source_id = _parse_prefixed_id(content.get('sourceMaterialId') or content.get('source_material_id'))[1]
+                if source_id == story_material.id:
+                    questions_material = candidate
+                    print('STORY CALL 5W MATERIAL:', candidate.id)
+                    print('STORY CALL sourceMaterialId:', content.get('sourceMaterialId') or content.get('source_material_id'))
+                    break
+        else:
+            questions_material = None
+    content = questions_material.content_json if questions_material and isinstance(questions_material.content_json, dict) else {}
+    # The teacher 5W editor publishes its rows under content.items. Keep this
+    # response contract small and predictable for the Story Call frontend.
+    questions = content.get('items') if isinstance(content.get('items'), list) else []
+    question_language = str(content.get('language') or (questions_material.language if questions_material else '') or 'English').strip()
+    print('STORY CALL ITEMS:', questions)
+    story_call_questions_json = [
+            {
+                'question': str(item.get('question') or '').strip(),
+                'language': question_language,
+            } if isinstance(item, dict) else {'question': '', 'language': question_language}
+            for item in questions[:5]
+        ]
+    print('STORY CALL QUESTIONS:', story_call_questions_json)
+    context.update({
+        'story_call_questions_json': story_call_questions_json,
+        'story_call_story_title': story_material.title if story_material else '',
+    })
+    return render(request, 'pabasa_app/story_call_page.html', context)
 
 
 def _canonicalize_custom_material_reading_url(request):
@@ -12635,17 +12687,21 @@ def reading_read_aloud_api(request):
     tts_profile = (request.POST.get('tts_profile') or '').strip().lower()
     language_code = language_code_for(language, mode)
     api_key = getattr(settings, 'GOOGLE_STT_API_KEY', '').strip()
+    credentials_file = getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', None)
 
     if not target_text:
         return JsonResponse({'success': False, 'error': 'Reading text is required.'}, status=400)
-    if not api_key:
-        return JsonResponse({'success': False, 'error': 'Google Text-to-Speech is not configured.'}, status=503)
-
     try:
         # Hunt uses the same clear female Assessment voice at a slower teaching
         # pace so young readers can hear each sound. Assessment keeps its defaults.
         tts_options = {'speaking_rate': 0.80, 'prosody_rate': '82%'} if tts_profile == 'hunt' else {}
-        audio_content = synthesize_read_aloud_audio(target_text, api_key, language_code, **tts_options)
+        audio_content = synthesize_read_aloud_audio(
+            target_text,
+            api_key,
+            language_code,
+            credentials_file=credentials_file,
+            **tts_options,
+        )
         return JsonResponse({
             'success': True,
             'audio_content': audio_content,
