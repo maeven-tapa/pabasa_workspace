@@ -31,6 +31,25 @@ class OfficialReadingPayloadTests(SimpleTestCase):
         self.assertEqual(sections["passages"][0]["content"], "Ang pagong at ang kuneho.")
         self.assertEqual(sections["items"], ["Binti", "Naglalaba si Tatay sa palanggana.", "Ang pagong at ang kuneho."])
 
+    def test_rehydrates_sections_from_legacy_flattened_items(self):
+        material = SimpleNamespace(
+            system_assessment_key="midline_crla_midtest",
+            content_json={
+                "items": [
+                    *[f"Word {index}" for index in range(10)],
+                    *[f"Sentence {index}" for index in range(4)],
+                    "Story one.",
+                    "Story two.",
+                ],
+            },
+        )
+
+        sections = _official_reading_item_sections(material)
+
+        self.assertEqual(len(sections["words"]), 10)
+        self.assertEqual(len(sections["sentences"]), 4)
+        self.assertEqual([item["content"] for item in sections["passages"]], ["Story one.", "Story two."])
+
     def test_official_crla_story_qas_are_seeded_in_pairs_by_story(self):
         from pabasa_app.management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
 

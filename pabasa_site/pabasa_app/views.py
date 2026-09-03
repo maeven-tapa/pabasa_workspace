@@ -722,16 +722,18 @@ def _official_crla_assessment_phase(student=None, request=None, on_date=None):
     if not joined_sections:
         return 'intervention'
 
-    active_calendar = _active_school_calendar(check_date)
+    active_calendar = _school_calendar_for_user(student) or _active_school_calendar(check_date)
     current_term = _calendar_current_term(active_calendar, on_date=check_date) if active_calendar else None
     current_term = current_term or getattr(active_calendar, 'current_term', None)
     if active_calendar and current_term:
-        if _calendar_is_in_preassessment_window(active_calendar, current_term, on_date=check_date):
-            return 'pretest'
-        if _calendar_is_in_midlineassessment_window(active_calendar, current_term, on_date=check_date):
-            return 'midtest'
-        if _calendar_is_in_postassessment_window(active_calendar, current_term, on_date=check_date):
-            return 'posttest'
+        terms_to_check = [current_term, 1, 2, 3, 4]
+        for term in dict.fromkeys(terms_to_check):
+            if _calendar_is_in_preassessment_window(active_calendar, term, on_date=check_date):
+                return 'pretest'
+            if _calendar_is_in_midlineassessment_window(active_calendar, term, on_date=check_date):
+                return 'midtest'
+            if _calendar_is_in_postassessment_window(active_calendar, term, on_date=check_date):
+                return 'posttest'
 
         pre_block = _calendar_preassessment_block(active_calendar, current_term)
         post_block = _calendar_postassessment_block(active_calendar, current_term)
@@ -8264,6 +8266,17 @@ def _official_reading_item_sections(material):
                 if text:
                     items.append(text)
 
+    # Older official assessments persisted only the flattened item list. The
+    # reader still needs the stage-specific arrays to launch each CRLA section.
+    if items and not words and not sentences and not passages:
+        words = items[:10]
+        sentences = items[10:14]
+        passages = [
+            {'title': '', 'content': text}
+            for text in items[14:]
+            if text
+        ]
+
     if not items and not words and not sentences and not passages:
         words = [str(item).strip() for item in (content_json.get('words') or []) if str(item).strip()]
         sentences = [str(item).strip() for item in (content_json.get('sentences') or []) if str(item).strip()]
@@ -8387,6 +8400,7 @@ def _official_assessment_availability_for_student(student, request=None):
     target_key = _official_crla_phase_to_key(assessment_type)
     matching_materials = _official_reading_active_materials_queryset().filter(
         Q(system_assessment_key=target_key, system_assessment_phase=assessment_type) |
+        Q(is_official_reading=True, system_assessment_phase=assessment_type) |
         Q(content_json__assessment_type='both')
     )
     if not matching_materials.exists():
@@ -8486,12 +8500,17 @@ def _official_reading_assessments_for_student(student, availability):
         return []
 
     assessment_type = str(availability.get('assessment_type') or '').strip().lower()
-    if assessment_type not in {'pretest', 'posttest'}:
+    if assessment_type not in {'pretest', 'midtest', 'posttest'}:
         return []
 
-    assessment_key = 'bosy_crla_pretest' if assessment_type == 'pretest' else 'eosy_crla_posttest'
+    assessment_key = {
+        'pretest': 'bosy_crla_pretest',
+        'midtest': 'midline_crla_midtest',
+        'posttest': 'eosy_crla_posttest',
+    }[assessment_type]
     school_year_materials = _official_reading_active_materials_queryset().filter(
         Q(system_assessment_key=assessment_key, system_assessment_phase=assessment_type) |
+        Q(system_assessment_phase=assessment_type, is_official_reading=True) |
         Q(content_json__assessment_type='both')
     )
     print(
@@ -8548,10 +8567,13 @@ def _official_reading_assessments_for_student(student, availability):
         student_subjects = ['English']
 
     matching_assessments = []
+    fallback_material = next(iter(subject_materials.values()), None) if len(subject_materials) == 1 else None
+    selected_material_ids = set()
     for subject in student_subjects:
-        material = subject_materials.get(subject)
-        if not material:
+        material = subject_materials.get(subject) or fallback_material
+        if not material or material.id in selected_material_ids:
             continue
+        selected_material_ids.add(material.id)
         payload = _official_reading_material_payload(material)
         payload['subject'] = subject
         payload['assessment_type'] = assessment_type
@@ -9094,7 +9116,7 @@ def _save_official_reading_assessment(request, material=None):
             target.system_assessment_key = ''
         elif not target.is_system_owned and not getattr(target, 'system_assessment_key', None):
             target.system_assessment_key = None
-        target.status = 'published' if _official_reading_material_available_now(term) else 'draft'
+        target.status = 'published'
         target.is_active = True
         target.save()
         if target.is_active:
@@ -20302,6 +20324,17 @@ def _enforce_student_access_for_request(request, material=None, json_response=Fa
         return _assessment_week_block_response(json_response=json_response)
 
     if not is_assessment_material:
+        return None
+
+    official_phase = str(getattr(material, 'system_assessment_phase', '') or '').strip().lower()
+    active_student_phase = _official_crla_assessment_phase(persisted_user)
+    if (
+        bool(getattr(material, 'is_official_reading', False))
+        and _assessment_kind_value(material) == 'crla'
+        and bool(getattr(material, 'is_active', False))
+        and str(getattr(material, 'status', '') or '').strip().lower() == 'published'
+        and official_phase == active_student_phase
+    ):
         return None
 
     if bool(getattr(material, 'student_access', False)):
