@@ -1635,8 +1635,9 @@ def _crla_grade2_next_stage(assessment_type, score_payload=None):
             else score_payload.get('correct_items')
         )
         correct_words = _to_int(score_payload.get('correct_words')) or 0
-        cumulative_correct = correct_words + (correct_sentences or 0)
-        return 'early_completed_sentences' if cumulative_correct <= 10 else 'transition_to_story'
+        sentence_score = crla_sentence_score(correct_sentences)
+        cumulative_score = correct_words + sentence_score
+        return 'early_completed_sentences' if cumulative_score <= 10 else 'transition_to_story'
     if assessment_type == 'paragraph':
         story_read_percent = _to_float(
             score_payload.get('story_read_percent')
@@ -2619,6 +2620,8 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
                 student_end_state['classification'] = 'High Emerging Reader'
                 state['reader_classification'] = 'High Emerging Reader'
                 state['aral_eligible'] = bool(_aral_eligible_classification('High Emerging Reader'))
+            elif workflow_stage == 'transition_to_story':
+                student_end_state['classification'] = 'High Emerging Reader'
         elif assessment_type == 'paragraph':
             student_end_state['stage'] = 'completed'
             student_end_state['next_stage'] = 'completed'
