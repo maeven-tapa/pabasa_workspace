@@ -4514,6 +4514,23 @@ def login_user(request):
             # Students are considered active by default
             pass
             
+        if not request.session.session_key:
+            request.session.save()
+        session_key = request.session.session_key
+        if user.role == 'student':
+            from django.contrib.sessions.models import Session
+            with transaction.atomic():
+                locked_user = User.objects.select_for_update().get(pk=user.pk)
+                active_key = locked_user.active_session_key
+                active_exists = active_key and Session.objects.filter(session_key=active_key, expire_date__gt=timezone.now()).exists()
+                if active_exists and active_key != session_key:
+                    return JsonResponse({'success': False, 'error': 'Account Already in Use: This student account is currently logged in on another device. Please log out from that device before logging in here.'}, status=409)
+                now = timezone.now()
+                locked_user.active_session_key = session_key
+                locked_user.active_session_created_at = locked_user.active_session_created_at or now
+                locked_user.last_activity = now
+                locked_user.save(update_fields=['active_session_key', 'active_session_created_at', 'last_activity', 'updated_at'])
+
         # Create session
         request.session['user_id'] = user.id
         request.session['custom_id'] = user.custom_id
@@ -4593,6 +4610,8 @@ def principal_change_temporary_password(request):
 
 def logout_user(request):
     """Logout user and destroy session"""
+    if request.session.get('user_role') == 'student':
+        User.objects.filter(pk=request.session.get('user_id'), active_session_key=request.session.session_key).update(active_session_key=None, active_session_created_at=None, last_activity=None)
     request.session.flush()
     return redirect('home')
 
@@ -13730,6 +13749,8 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             'items_completed': data.get('items_completed', 0),
             **score_payload,
         }
+        if request is not None and request.session.get('user_role') == 'student':
+            attempt_payload['attempt_session_key'] = request.session.session_key or ''
         _log_completion_timing('attempt_payload_prepared')
         if is_practice:
             material_content = dict(getattr(material, 'content_json', None) or {}) if material else {}

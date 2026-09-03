@@ -1,5 +1,7 @@
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.http import JsonResponse
+from django.utils import timezone
 
 from .models import User
 
@@ -23,4 +25,23 @@ class PrincipalPasswordChangeMiddleware:
                 ).exists()
                 if must_change:
                     return redirect("principal_change_temporary_password")
+        return self.get_response(request)
+
+
+class StudentSessionLockMiddleware:
+    """Reject student requests whose Django session is no longer the active one."""
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.session.get("user_role") == "student":
+            user = User.objects.filter(id=request.session.get("user_id"), role="student").first()
+            key = request.session.session_key
+            if not (user and key and user.active_session_key == key):
+                request.session.flush()
+                accept = request.META.get("HTTP_ACCEPT", "") or ""
+                if request.META.get("HTTP_X_REQUESTED_WITH") == "XMLHttpRequest" or accept.startswith("application/json"):
+                    return JsonResponse({"success": False, "error": "This student session is no longer valid. Please log in again."}, status=401)
+                return redirect("auth")
+            User.objects.filter(pk=user.pk, active_session_key=key).update(last_activity=timezone.now())
         return self.get_response(request)

@@ -116,6 +116,9 @@ class User(models.Model):
     animal_avatar = models.CharField(max_length=20, default="cat", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    active_session_key = models.CharField(max_length=64, null=True, blank=True, db_index=True)
+    active_session_created_at = models.DateTimeField(null=True, blank=True)
+    last_activity = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "users"
@@ -713,6 +716,7 @@ class Assessment(models.Model):
     # Immutable-at-completion CRLA task and Part 2 inputs.  This is kept
     # separate from legacy aggregate score columns so an attempt is auditable.
     crla_score_data = models.JSONField(default=dict, blank=True)
+    attempt_session_key = models.CharField(max_length=64, blank=True, default="")
 
     @property
     def attempt_history(self):
@@ -836,7 +840,9 @@ class Assessment(models.Model):
         for key, value in attempt_data.items():
             if key in {'attempt_id', 'attempt_number', 'student', 'student_id'}:
                 continue
-            if key == 'device_info':
+            if key == 'attempt_session_key':
+                attempt_row.attempt_session_key = str(value or '')
+            elif key == 'device_info':
                 attempt_row.device_info = str(value or '')
             elif key == 'mic_used':
                 attempt_row.mic_used = bool(value)
@@ -977,6 +983,7 @@ class Assessment(models.Model):
             attempt_id=str(attempt_id),
             attempt_number=attempt_number,
             attempt_status=str(attempt_data.pop('status', 'completed') or 'completed'),
+            attempt_session_key=str(attempt_data.pop('attempt_session_key', '') or ''),
             started_at=started_at_value,
             completed_at=completed_at_value,
         )
@@ -1568,6 +1575,7 @@ class Material(models.Model):
             completed_at=result_completed_at,
             is_active=True,
             source_assessment=parent_assessment,  # Link to parent assessment
+            attempt_session_key=str(attempt_data.pop('attempt_session_key', '') or ''),
         )
         result._apply_attempt_payload(result, attempt_data)
         return result._serialize_attempt()
