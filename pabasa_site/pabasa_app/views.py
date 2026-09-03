@@ -9119,8 +9119,6 @@ def _save_official_reading_assessment(request, material=None):
         target.status = 'published'
         target.is_active = True
         target.save()
-        if target.is_active:
-            _archive_conflicting_official_materials(target)
 
     return target, None
 
@@ -9151,7 +9149,6 @@ def _toggle_official_material_state(material, activate):
     with transaction.atomic():
         material = Material.objects.select_for_update().get(pk=material.pk)
         if activate:
-            _archive_conflicting_official_materials(material)
             material.is_active = True
         else:
             material.is_active = False
