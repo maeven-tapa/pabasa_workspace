@@ -313,7 +313,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const response = await fetch('/api/story-call/complete/', {
                     method: 'POST', credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
-                    body: JSON.stringify({ materialId: materialId, answers: answers })
+                    body: JSON.stringify({ material_id: materialId, answers: answers })
                 });
                 const result = await response.json();
                 if (!response.ok || !result.success) throw new Error(result.error || 'Could not save completion.');

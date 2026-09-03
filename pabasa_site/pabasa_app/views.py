@@ -10789,7 +10789,7 @@ def story_call_complete_api(request):
     total = len(questions)
     if total == 0 or len(answers) < total:
         return JsonResponse({'success': False, 'error': 'All Story Call questions must be answered.'}, status=400)
-    results = [bool(story_answer_matches(item.get('answer'), answers[index])) for index, item in enumerate(questions)]
+    results = [any(story_answer_matches(expected, answers[index]) for expected in _story_call_answer_options(item)) for index, item in enumerate(questions)]
     earned = sum(1 for result in results if result)
     material.record_assessment_result(
         student,
@@ -10825,7 +10825,17 @@ def story_call_check_answer_api(request):
     questions = [item for item in (content.get('items') or []) if isinstance(item, dict) and str(item.get('question') or '').strip()][:5]
     if not material or content.get('template_title') != "5W's Story Questions" or question_index not in range(len(questions)):
         return JsonResponse({'success': False, 'error': 'Question not found'}, status=404)
-    return JsonResponse({'success': True, 'is_correct': bool(story_answer_matches(questions[question_index].get('answer'), payload.get('answer')) )})
+    is_correct = any(story_answer_matches(expected, payload.get('answer')) for expected in _story_call_answer_options(questions[question_index]))
+    return JsonResponse({'success': True, 'is_correct': is_correct, 'score': 1 if is_correct else 0})
+
+
+def _story_call_answer_options(item):
+    configured = item.get('answers') if isinstance(item, dict) else None
+    options = [str(value).strip() for value in configured if str(value).strip()] if isinstance(configured, list) else []
+    if options:
+        return options
+    fallback = str((item or {}).get('answer') or '').strip() if isinstance(item, dict) else ''
+    return [part.strip() for part in re.split(r'\s*/\s*', fallback) if part.strip()] if fallback else []
 
 
 def _canonicalize_custom_material_reading_url(request):
