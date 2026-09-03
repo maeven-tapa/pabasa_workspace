@@ -21111,6 +21111,18 @@ def teacher_update_material(request):
                     template_payload.update(validate_sound_detective(template_payload))
                 except (TypeError, ValueError) as exc:
                     return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+            if template_title == 'Story Response':
+                template_payload['read_aloud_enabled'] = True
+                template_payload['voice_recording_enabled'] = True
+                custom_prompt = str(template_payload.get('custom_prompt') or '').strip()
+                selected_prompt = str(template_payload.get('response_prompt') or '').strip()
+                if str(template_payload.get('prompt_source') or '').strip().lower() == 'custom' and custom_prompt:
+                    template_payload['response_prompt'] = custom_prompt
+                    template_payload['prompt_source'] = 'custom'
+                else:
+                    template_payload['response_prompt'] = selected_prompt
+                    template_payload['prompt_source'] = 'suggested'
+                template_payload.pop('custom_prompt', None)
             template_payload = _normalize_picture_word_matching_content(template_payload)
             template_items = template_payload.get('items') if isinstance(template_payload.get('items'), list) else []
 

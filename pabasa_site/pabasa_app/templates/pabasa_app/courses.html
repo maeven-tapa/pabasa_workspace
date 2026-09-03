@@ -50,83 +50,6 @@
     }
     
     body.dark-theme {
-        background: #0f172a !important;
-        background-image: none !important;
-    }
-
-    .classes-grid {
-        display: grid;
-        gap: 1.5rem;
-        grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
-    }
-
-    /* A canonical Section is the class card.  A single assigned class deserves
-       the center of the workspace instead of a narrow, left-aligned tile. */
-    .classes-grid:has(> .course-dashboard-card:only-child) {
-        grid-template-columns: minmax(360px, 620px);
-        justify-content: center;
-    }
-    .classes-grid:has(> .course-dashboard-card:only-child) .course-dashboard-card {
-        min-height: 380px;
-    }
-    @media (max-width: 575.98px) {
-        .classes-grid:has(> .course-dashboard-card:only-child) { grid-template-columns: minmax(0, 1fr); }
-    }
-
-    .class-card-full {
-        background: var(--surface-glass) !important;
-        backdrop-filter: blur(12px) saturate(130%);
-        -webkit-backdrop-filter: blur(12px) saturate(130%);
-        border: 1px solid rgba(255,255,255,0.92) !important;
-        border-radius: var(--radius-xl);
-        box-shadow: var(--dash-shadow);
-        cursor: pointer;
-        display: grid;
-        gap: 1rem;
-        height: 100%;
-        min-height: 280px;
-        overflow: hidden;
-        padding: 1.25rem;
-        position: relative;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-    }
-
-    .class-card-full:hover {
-        border-color: rgba(31, 111, 139, 0.3);
-        box-shadow: 0 24px 42px rgba(27, 26, 23, 0.12);
-        transform: translateY(-3px);
-    }
-
-    .class-card-full::before {
-        content: "";
-        inset: 0;
-        pointer-events: none;
-        position: absolute;
-        background: linear-gradient(135deg, rgba(31, 111, 139, 0.08), transparent 46%);
-    }
-
-    .class-card-full > * {
-        position: relative;
-        z-index: 1;
-    }
-
-    .class-card-header {
-        display: grid;
-        gap: 0.5rem;
-    }
-
-    .class-code-badge {
-        background: var(--dash-primary-soft);
-        border-radius: 6px;
-        color: var(--dash-primary-deep);
-        font-size: 0.75rem;
-        font-weight: 800;
-        letter-spacing: 0.08em;
-        padding: 0.35rem 0.6rem;
-        width: fit-content;
-    }
-
-    .class-card-full h3 {
         font-family: "Nunito", "Segoe UI", sans-serif;
         font-size: 1.35rem;
         font-weight: 900;
@@ -5773,6 +5696,7 @@
 {% block content %}
 <script>
     // Global JS context variables used elsewhere
+
     window.PABASA_USER_ROLE = "{{ nav_role|default:'teacher'|escapejs }}";
     window.PABASA_USER_EMAIL = "{{ email|default:''|escapejs }}";
     window.TEACHER_NAME = "{{ user_full_name|default:''|escapejs }}";
@@ -20765,4 +20689,88 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
+<style>
+#templateDynamicFields #storyResponseReadAloud:disabled,
+#templateDynamicFields #storyResponseVoiceRecording:disabled,
+#templateDynamicFields #storyResponseReadAloud:disabled ~ label,
+#templateDynamicFields #storyResponseVoiceRecording:disabled ~ label {
+    opacity: 1;
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const promptFields = document.getElementById('templateDynamicFields');
+    if (!promptFields) return;
+    const syncStoryPromptChoice = () => {
+        const customPrompt = promptFields.querySelector('#storyResponseCustomPrompt');
+        const promptButtons = [...promptFields.querySelectorAll('[data-story-response-prompt]')];
+        if (!customPrompt || !promptButtons.length) return;
+        const selectedButton = promptButtons.find(button => button.classList.contains('border-primary'));
+        const customActive = customPrompt.value.trim().length > 0;
+        customPrompt.disabled = Boolean(selectedButton) && !customActive;
+        customPrompt.setAttribute('aria-disabled', String(customPrompt.disabled));
+        promptButtons.forEach(button => button.setAttribute('aria-pressed', String(button === selectedButton)));
+        let switchButton = promptFields.querySelector('[data-story-response-custom-toggle]');
+        if (!switchButton) {
+            switchButton = document.createElement('button');
+            switchButton.type = 'button';
+            switchButton.className = 'btn btn-outline-primary btn-sm mt-2';
+            switchButton.dataset.storyResponseCustomToggle = 'true';
+            customPrompt.insertAdjacentElement('afterend', switchButton);
+        }
+        switchButton.textContent = customActive ? 'Using Your Own Prompt' : 'Create Your Own Prompt';
+        switchButton.hidden = customActive;
+        let status = promptFields.querySelector('[data-story-response-prompt-status]');
+        if (!status) {
+            status = document.createElement('div');
+            status.className = 'alert alert-info small mt-2 mb-0 py-2';
+            status.dataset.storyResponsePromptStatus = 'true';
+            switchButton.insertAdjacentElement('afterend', status);
+        }
+        status.textContent = selectedButton ? 'Suggested prompt selected. Create Your Own Prompt to switch methods.' : customActive ? 'Your own prompt is active.' : 'Choose a suggested prompt or create your own.';
+    };
+    promptFields.addEventListener('click', event => {
+        const suggestedButton = event.target.closest('[data-story-response-prompt]');
+        const customToggle = event.target.closest('[data-story-response-custom-toggle]');
+        const customPrompt = promptFields.querySelector('#storyResponseCustomPrompt');
+        if (suggestedButton && customPrompt) {
+            customPrompt.value = '';
+            promptFields.querySelectorAll('[data-story-response-prompt]').forEach(button => button.classList.remove('border-primary', 'bg-primary-subtle'));
+            suggestedButton.classList.add('border-primary', 'bg-primary-subtle');
+            syncStoryPromptChoice();
+        } else if (customToggle && customPrompt) {
+            promptFields.querySelectorAll('[data-story-response-prompt]').forEach(button => button.classList.remove('border-primary', 'bg-primary-subtle'));
+            customPrompt.disabled = false;
+            customPrompt.focus();
+            syncStoryPromptChoice();
+        }
+    });
+    promptFields.addEventListener('input', event => {
+        if (event.target.id !== 'storyResponseCustomPrompt') return;
+        if (event.target.value.trim()) promptFields.querySelectorAll('[data-story-response-prompt]').forEach(button => button.classList.remove('border-primary', 'bg-primary-subtle'));
+        syncStoryPromptChoice();
+    });
+    syncStoryPromptChoice();
+
+    const enforceRequiredAudio = () => {
+        ['storyResponseReadAloud', 'storyResponseVoiceRecording'].forEach(id => {
+            const checkbox = document.getElementById(id);
+            if (!checkbox) return;
+            checkbox.checked = true;
+            checkbox.disabled = true;
+            checkbox.setAttribute('aria-required', 'true');
+            const label = document.querySelector(`label[for="${id}"]`);
+            if (label && !label.querySelector('[data-required-audio-label]')) {
+                const required = document.createElement('span');
+                required.className = 'badge text-bg-info ms-2';
+                required.dataset.requiredAudioLabel = 'true';
+                required.textContent = 'Required';
+                label.append(required);
+            }
+        });
+    };
+    new MutationObserver(enforceRequiredAudio).observe(promptFields, {childList: true, subtree: true});
+    enforceRequiredAudio();
+});
+</script>
 {% endblock %}
