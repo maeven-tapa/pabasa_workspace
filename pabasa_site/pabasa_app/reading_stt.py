@@ -517,9 +517,7 @@ def synthesize_read_aloud_audio(text, api_key="", language_code="en-US", speakin
         voice_name = "fil-ph-Neural2-A"
     else:
         tts_language = "en-US"
-        # Neural2 supports the SSML and pace controls used by this teaching
-        # prompt; Chirp HD voices do not support those controls.
-        voice_name = "en-US-Neural2-F"
+        voice_name = "en-US-Chirp3-HD-Vindemiatrix"
     teaching_ssml = (
         '<speak>'
         f'<prosody rate="{prosody_rate}" pitch="+0st" volume="medium">'
