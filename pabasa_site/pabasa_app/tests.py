@@ -5819,6 +5819,58 @@ class LiveAssessmentStartTests(TestCase):
         self.assertContains(response, 'Live Assessment Available')
         self.assertNotContains(response, 'Live Assessment in Progress')
 
+    def test_live_session_assigns_roster_into_sequential_batches(self):
+        from .views import _ensure_live_session_batches
+
+        roster = [self.student.id] + list(range(1001, 1027))
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=self.material,
+            student_ids=roster, student_count=len(roster),
+        )
+        assignments = _ensure_live_session_batches(session)
+
+        self.assertEqual(session.batch_size, 10)
+        self.assertEqual(session.total_batches, 3)
+        self.assertEqual([sid for sid in roster if assignments[str(sid)] == 1], roster[:10])
+        self.assertEqual([sid for sid in roster if assignments[str(sid)] == 2], roster[10:20])
+        self.assertEqual([sid for sid in roster if assignments[str(sid)] == 3], roster[20:])
+
+    def test_live_session_next_batch_is_sequential_and_idempotently_guarded(self):
+        from .views import _ensure_live_session_batches
+
+        roster = [self.student.id]
+        for index in range(10):
+            student = User.objects.create(
+                custom_id=f"BATCH-{uuid.uuid4().hex[:8].upper()}", role='student',
+                first_name=f'Student{index}', last_name='Batch', email=f'batch-{uuid.uuid4().hex}@example.com',
+                password_hash=make_password('student-password'), grade_level='Grade 2',
+                middle_initial='', suffix='', sex='female', birth_month=6, birth_day=2, birth_year=2012,
+            )
+            roster.append(student.id)
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=self.material,
+            student_ids=roster, student_count=len(roster), status='started', start_at=timezone.now(),
+            student_states={str(student_id): {'status': 'completed'} for student_id in roster[:10]},
+        )
+        _ensure_live_session_batches(session)
+        session.save(update_fields=['batch_assignments', 'batch_size', 'current_batch', 'total_batches'])
+
+        response = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'start_next_batch', 'target_batch': 2}), content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        session.refresh_from_db()
+        self.assertEqual(session.current_batch, 2)
+
+        duplicate = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'start_next_batch', 'target_batch': 2}), content_type='application/json',
+        )
+        self.assertEqual(duplicate.status_code, 409)
+        session.refresh_from_db()
+        self.assertEqual(session.current_batch, 2)
+
     def test_student_active_invitation_endpoint_only_returns_late_joiner_modal(self):
         session = LiveAssessmentSession.objects.create(
             id=uuid.uuid4().hex,

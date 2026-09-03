@@ -311,6 +311,12 @@
       return;
     }
 
+    const assignedBatch = state.batch_assignments?.[String({{ request.session.user_id|default:'0' }})];
+    if (assignedBatch && state.current_batch && Number(assignedBatch) > Number(state.current_batch)) {
+      setText('waitingMessage', `Please wait. Your assessment will begin in Batch ${assignedBatch}.`);
+      return;
+    }
+
     if (state.status === 'paused') {
       setText('waitingMessage', 'Session has been paused by the teacher. Please wait...');
       return;

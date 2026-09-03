@@ -741,6 +741,19 @@
                         </div>
                     </div>
                 </div>
+                <div id="batchProgressPanel" class="alert alert-info py-2 px-3 mb-3 d-none">
+                    <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+                        <div>
+                            <strong id="batchLabel">Batch 1 of 1</strong>
+                            <div id="batchProgressText" class="small">0 / 0 completed</div>
+                            <div id="overallProgressText" class="small">Overall: 0 / 0 students assessed</div>
+                        </div>
+                        <div id="batchTransition" class="d-none text-end">
+                            <div id="batchTransitionText" class="small mb-2"></div>
+                            <button id="startNextBatchBtn" type="button" class="btn btn-primary btn-sm">Start Next Batch</button>
+                        </div>
+                    </div>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-borderless table-monitor student-monitor-table mb-0 align-middle">
                         <thead>
@@ -750,6 +763,7 @@
                                 <th>Progress</th>
                                 <th>Time</th>
                                 <th>Score</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="studentsTableBody">
@@ -774,10 +788,11 @@
                                     </td>
                                     <td class="small text-muted" data-elapsed-col="{{ student.id }}">--</td>
                                     <td class="small text-muted fw-semibold" data-score-col="{{ student.id }}">--</td>
+                                    <td><button type="button" class="btn btn-outline-secondary btn-sm" data-skip-student="{{ student.id }}">Skip for follow-up</button></td>
                                 </tr>
                                 {% endfor %}
                             {% else %}
-                                <tr class="text-muted"><td colspan="5" class="small text-center py-4">
+                                <tr class="text-muted"><td colspan="6" class="small text-center py-4">
                                     <strong>No participants selected yet.</strong><br>
                                     Select students from Session Configuration below or click <strong>Select All</strong> to add participants.
                                 </td></tr>
@@ -1502,8 +1517,38 @@
             }
         } catch (e) {}
 
-        const selectedIds = Array.from(new Set([...serverIds, ...Array.from(selectedStudentIds)]));
-        updateMonitorRows(session, selectedIds);
+        const batchIds = Array.isArray(session.current_batch_student_ids) ? session.current_batch_student_ids.map(String) : null;
+        const selectedIds = Array.from(new Set([...(batchIds || serverIds), ...Array.from(selectedStudentIds)]));
+        const monitorIds = summaryCurrentStatus === 'waiting' || !batchIds ? selectedIds : batchIds;
+        updateMonitorRows(session, monitorIds);
+
+        const batchPanel = document.getElementById('batchProgressPanel');
+        if (batchPanel && session.total_batches) {
+            batchPanel.classList.remove('d-none');
+            setText('#batchLabel', `Batch ${session.current_batch} of ${session.total_batches}`);
+            setText('#batchProgressText', `${session.current_batch_completed} / ${session.current_batch_total} completed`);
+            setText('#overallProgressText', `Overall: ${session.overall_completed} / ${session.student_count} students assessed`);
+            const transition = document.getElementById('batchTransition');
+            const nextButton = document.getElementById('startNextBatchBtn');
+            const isFinal = session.assessment_complete;
+            if (session.batch_complete && !isFinal) {
+                transition?.classList.remove('d-none');
+                setText('#batchTransitionText', `Batch ${session.current_batch} complete. Next: Batch ${Number(session.current_batch) + 1}`);
+                if (nextButton) {
+                    nextButton.disabled = false;
+                    nextButton.dataset.targetBatch = String(Number(session.current_batch) + 1);
+                }
+            } else {
+                transition?.classList.add('d-none');
+            }
+            if (isFinal) {
+                setText('#batchTransitionText', session.overall_completed < session.student_count
+                    ? 'CRLA Live Assessment Complete. Some students need follow-up.'
+                    : 'CRLA Live Assessment Complete. All batches completed.');
+                transition?.classList.remove('d-none');
+                if (nextButton) nextButton.classList.add('d-none');
+            }
+        }
 
         const log = (session.activity_log || []);
         const timeline = document.getElementById('activityTimeline');
@@ -1572,6 +1617,17 @@
 
     document.getElementById('pauseBtn').addEventListener('click', () => sendAction('pause'));
     document.getElementById('resumeBtn').addEventListener('click', () => sendAction('resume'));
+    document.getElementById('studentsTableBody')?.addEventListener('click', async (event) => {
+        const button = event.target.closest('[data-skip-student]');
+        if (!button) return;
+        const confirmed = await showConfirm('Skip student', 'Mark this student for follow-up without creating a score?');
+        if (confirmed) await sendAction('skip_student', { student_id: Number(button.dataset.skipStudent) });
+    });
+    document.getElementById('startNextBatchBtn')?.addEventListener('click', async (event) => {
+        const button = event.currentTarget;
+        button.disabled = true;
+        await sendAction('start_next_batch', { target_batch: Number(button.dataset.targetBatch) });
+    });
     document.getElementById('endBtn').addEventListener('click', async () => {
         const ok = await showConfirm('End session', 'End session for all students?');
         if (ok) {
@@ -1712,6 +1768,7 @@
             </td>
             <td class="small text-muted" data-elapsed-col="${studentId}">--</td>
             <td class="small text-muted fw-semibold" data-score-col="${studentId}">--</td>
+            <td><button type="button" class="btn btn-outline-secondary btn-sm" data-skip-student="${studentId}">Skip for follow-up</button></td>
         `;
         tbody.appendChild(tr);
         return tr;
@@ -1722,7 +1779,7 @@
         if (!tbody) return;
         const ids = Array.from(selectedIds || []);
         if (ids.length === 0) {
-            tbody.innerHTML = '<tr class="text-muted"><td colspan="5" class="small text-center py-4"><strong>No participants selected yet.</strong><br>Select students from the Session Configuration panel or click <strong>Select All</strong> to add participants.</td></tr>';
+            tbody.innerHTML = '<tr class="text-muted"><td colspan="6" class="small text-center py-4"><strong>No participants selected yet.</strong><br>Select students from the Session Configuration panel or click <strong>Select All</strong> to add participants.</td></tr>';
             return;
         }
 

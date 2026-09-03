@@ -12977,7 +12977,84 @@ def _build_live_assessment_session_url(session_id):
 
 LIVE_ASSESSMENT_ACTIVE_STATUSES = ['waiting', 'countdown', 'started', 'paused']
 LIVE_ASSESSMENT_STALE_HOURS = 24
+LIVE_ASSESSMENT_BATCH_SIZE = 10
 LIVE_ASSESSMENT_MAX_STUDENTS = 10
+
+
+def _ensure_live_session_batches(session, student_ids=None):
+    roster = [int(student_id) for student_id in (student_ids if student_ids is not None else session.student_ids or [])]
+    assignments = session.batch_assignments or {}
+    if not isinstance(assignments, dict) or set(assignments) != {str(student_id) for student_id in roster}:
+        assignments = {
+            str(student_id): (index // LIVE_ASSESSMENT_BATCH_SIZE) + 1
+            for index, student_id in enumerate(roster)
+        }
+    session.batch_assignments = assignments
+    session.batch_size = LIVE_ASSESSMENT_BATCH_SIZE
+    session.total_batches = math.ceil(len(roster) / LIVE_ASSESSMENT_BATCH_SIZE) if roster else 0
+    session.current_batch = min(max(int(session.current_batch or 1), 1), session.total_batches or 1)
+    return assignments
+
+
+def _live_batch_student_ids(session, batch_number=None):
+    batch_number = int(batch_number or session.current_batch or 1)
+    assignments = session.batch_assignments or {}
+    return [
+        int(student_id) for student_id in (session.student_ids or [])
+        if int(assignments.get(str(student_id), 0) or 0) == batch_number
+    ]
+
+
+def _live_batch_progress(session, batch_number=None):
+    student_ids = _live_batch_student_ids(session, batch_number)
+    states = session.student_states or {}
+    completed = sum(
+        1 for student_id in student_ids
+        if str((states.get(str(student_id), {}) or {}).get('status', '')).lower() in {'completed', 'skipped'}
+    )
+    return completed, len(student_ids)
+
+
+def _live_session_batch_payload(session):
+    assignments = _ensure_live_session_batches(session)
+    current_batch = int(session.current_batch or 1)
+    current_completed, current_total = _live_batch_progress(session, current_batch)
+    overall_completed = sum(
+        1 for student_id in (session.student_ids or [])
+        if str(((session.student_states or {}).get(str(student_id), {}) or {}).get('status', '')).lower() in {'completed', 'skipped'}
+    )
+    return {
+        'batch_size': session.batch_size,
+        'current_batch': current_batch,
+        'total_batches': session.total_batches,
+        'batch_assignments': assignments,
+        'current_batch_student_ids': _live_batch_student_ids(session, current_batch),
+        'current_batch_completed': current_completed,
+        'current_batch_total': current_total,
+        'overall_completed': overall_completed,
+        'batch_complete': bool(current_total and current_completed >= current_total),
+        'assessment_complete': bool(session.total_batches and current_batch >= session.total_batches and current_completed >= current_total),
+    }
+
+
+def _start_next_live_batch(session_id, requested_batch):
+    with transaction.atomic():
+        session = LiveAssessmentSession.objects.select_for_update().select_related('material', 'course').get(id=session_id)
+        if session.status not in ['started', 'paused']:
+            return None, 'Only an active session can advance batches'
+        _ensure_live_session_batches(session)
+        if requested_batch != session.current_batch + 1:
+            return None, 'Only the next batch can be started'
+        completed, total = _live_batch_progress(session)
+        if completed < total:
+            return None, 'The current batch is not complete'
+        if requested_batch > session.total_batches:
+            return None, 'There is no next batch'
+        session.current_batch = requested_batch
+        _ensure_live_session_student_states(session, _live_batch_student_ids(session))
+        _append_live_session_activity(session, f'Teacher started batch {requested_batch} of {session.total_batches}.')
+        session.save(update_fields=['current_batch', 'batch_assignments', 'batch_size', 'total_batches', 'student_states', 'activity_log', 'updated_at'])
+        return session, None
 
 
 def _is_live_crla_material(material):
@@ -14999,6 +15076,7 @@ def live_assessment_session_state(request, session_id):
 
     _advance_live_assessment_state(session)
     _maybe_auto_end_live_session(session)
+    _ensure_live_session_batches(session)
     _trace_live_end_flow(
         'state_endpoint_before_response',
         session,
@@ -15008,7 +15086,13 @@ def live_assessment_session_state(request, session_id):
     )
 
     reader_url = ''
-    if user_role == 'student' and session.start_at:
+    student_state = (session.student_states or {}).get(str(user_id), {}) if isinstance(session.student_states, dict) else {}
+    student_completed = str(student_state.get('status') or '').lower() in {'completed', 'skipped'}
+    student_batch_is_active = (
+        user_role != 'student'
+        or str(session.batch_assignments.get(str(user_id), 0)) == str(session.current_batch)
+    )
+    if user_role == 'student' and session.start_at and student_batch_is_active and not student_completed:
         reader_url = _build_live_assessment_action_url(
             session.material,
             session.id,
@@ -15061,6 +15145,7 @@ def live_assessment_session_state(request, session_id):
             'student_states': session.student_states or {},
             'activity_log': session.activity_log or [],
             'available_students': available_profiles,
+            **_live_session_batch_payload(session),
         },
     })
 
@@ -15091,6 +15176,9 @@ def live_assessment_student_state_update(request, session_id):
         return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
     if user_id not in session.student_ids:
         return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
+    _ensure_live_session_batches(session)
+    if str(session.batch_assignments.get(str(user_id), 0)) != str(session.current_batch):
+        return JsonResponse({'success': False, 'error': 'Your batch has not started yet'}, status=400)
     if session.status not in ['started', 'countdown', 'paused']:
         return JsonResponse({'success': False, 'error': 'Session is not active'}, status=400)
 
@@ -15233,20 +15321,17 @@ def live_assessment_session_action(request, session_id):
             available_ids = set()
 
         filtered_ids = []
-        for sid in selected_student_ids[:LIVE_ASSESSMENT_MAX_STUDENTS]:
+        for sid in selected_student_ids:
             try:
                 normalized_id = int(sid)
             except (TypeError, ValueError):
                 continue
             if normalized_id in available_ids and normalized_id not in filtered_ids:
                 filtered_ids.append(normalized_id)
-        if len(selected_student_ids) > LIVE_ASSESSMENT_MAX_STUDENTS:
-            return JsonResponse(
-                {'success': False, 'error': f'Live Assessment supports at most {LIVE_ASSESSMENT_MAX_STUDENTS} students.'},
-                status=400,
-            )
         session.student_ids = filtered_ids
         session.student_count = len(filtered_ids)
+        session.current_batch = 1
+        _ensure_live_session_batches(session, filtered_ids)
         existing_states = session.student_states or {}
         session.student_states = {k: v for k, v in existing_states.items() if k in [str(sid) for sid in filtered_ids]}
         _ensure_live_session_student_states(session, filtered_ids)
@@ -15288,8 +15373,9 @@ def live_assessment_session_action(request, session_id):
             activity_message = 'Teacher started the session.'
 
         _ensure_live_session_student_states(session, session.student_ids)
+        _ensure_live_session_batches(session)
         _append_live_session_activity(session, activity_message)
-        session.save(update_fields=['status', 'start_at', 'countdown_seconds', 'timing_mode', 'duration_seconds', 'ends_at', 'student_states', 'student_count', 'activity_log', 'updated_at'])
+        session.save(update_fields=['status', 'start_at', 'countdown_seconds', 'timing_mode', 'duration_seconds', 'ends_at', 'student_states', 'student_count', 'batch_assignments', 'batch_size', 'current_batch', 'total_batches', 'activity_log', 'updated_at'])
         _trace_live_end_flow('action_start_after_save', session, user_id=user_id)
 
         try:
@@ -15315,6 +15401,37 @@ def live_assessment_session_action(request, session_id):
                 )
         except Exception:
             logger.exception('Failed to notify students on session start')
+    elif action == 'start_next_batch':
+        requested_batch = data.get('target_batch')
+        try:
+            requested_batch = int(requested_batch)
+        except (TypeError, ValueError):
+            requested_batch = None
+        transitioned_session, error = _start_next_live_batch(session.id, requested_batch)
+        if error:
+            return JsonResponse({'success': False, 'error': error}, status=409)
+        session = transitioned_session
+    elif action == 'skip_student':
+        if session.status not in ['started', 'paused']:
+            return JsonResponse({'success': False, 'error': 'Only an active session can skip a student'}, status=400)
+        try:
+            skipped_student_id = int(data.get('student_id'))
+        except (TypeError, ValueError):
+            return JsonResponse({'success': False, 'error': 'A valid student is required'}, status=400)
+        if skipped_student_id not in _live_batch_student_ids(session):
+            return JsonResponse({'success': False, 'error': 'Student is not in the current batch'}, status=400)
+        state = (session.student_states or {}).get(str(skipped_student_id), {})
+        if str(state.get('status', '')).lower() in {'completed', 'skipped'}:
+            return JsonResponse({'success': True, 'session': {'id': session.id, **_live_session_batch_payload(session)}})
+        _update_live_student_state(session, skipped_student_id, {
+            'status': 'skipped',
+            'connection_status': 'disconnected',
+            'follow_up': True,
+            'progress': 0,
+            'final_score': None,
+        })
+        _append_live_session_activity(session, f'Student {skipped_student_id} was skipped for follow-up.')
+        session.save(update_fields=['student_states', 'activity_log', 'updated_at'])
     elif action == 'pause':
         if session.status != 'started':
             return JsonResponse({'success': False, 'error': 'Only an active session can be paused'}, status=400)
@@ -15367,11 +15484,6 @@ def live_assessment_session_action(request, session_id):
                     if sid:
                         allowed_ids.add(int(sid))
             raw_selected_ids = selected_student_ids or []
-            if len(raw_selected_ids) > LIVE_ASSESSMENT_MAX_STUDENTS:
-                return JsonResponse(
-                    {'success': False, 'error': f'Live Assessment supports at most {LIVE_ASSESSMENT_MAX_STUDENTS} students.'},
-                    status=400,
-                )
             valid_student_ids = []
             for sid in raw_selected_ids:
                 try:
@@ -15385,6 +15497,8 @@ def live_assessment_session_action(request, session_id):
 
         session.student_ids = valid_student_ids
         session.student_count = len(valid_student_ids)
+        session.current_batch = 1
+        _ensure_live_session_batches(session, valid_student_ids)
         _ensure_live_session_student_states(session, valid_student_ids)
         _append_live_session_activity(session, 'Teacher saved session configuration and invited students to the waiting room.')
         session.save(update_fields=['countdown_seconds', 'timing_mode', 'duration_seconds', 'ends_at', 'student_ids', 'student_count', 'student_states', 'updated_at', 'activity_log'])
@@ -15450,6 +15564,7 @@ def live_assessment_session_action(request, session_id):
             'student_states': session.student_states or {},
             'activity_log': session.activity_log or [],
             'available_students': [],
+            **_live_session_batch_payload(session),
         },
     })
 
