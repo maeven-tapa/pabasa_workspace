@@ -341,36 +341,38 @@
     state.stories.push({ title: '', content: '', qas: Array.from({ length: 6 }, () => ({ question: '', answer: '' })) });
     render();
   }
-  function render() {
+  function render(renderStories = true) {
     normalizeStories();
     renderList(wordChips, state.words, 'No word items added yet.', (item, index) => `<span class="item-chip" data-word-chip="${index}">${item} <button type="button" aria-label="Remove word" data-remove-word="${index}">&times;</button></span>`);
     renderList(sentenceChips, state.sentences, 'No sentence items added yet.', (item, index) => `<span class="item-chip" data-sentence-chip="${index}">${item} <button type="button" aria-label="Remove sentence" data-remove-sentence="${index}">&times;</button></span>`);
     renderList(rhymingChips, state.rhyme_pairs, 'No rhyming pairs added yet.', (pair, index) => `<span class="item-chip" data-rhyme-chip="${index}">${pair.word_a} - ${pair.word_b} <button type="button" aria-label="Remove rhyming pair" data-remove-rhyme="${index}">&times;</button></span>`);
-    storyList.innerHTML = state.stories.map((story, storyIndex) => {
-      const qasHtml = story.qas.map((qa, qaIndex) => makeQaCard(storyIndex, qaIndex, qa)).join('');
-      return `<div class="story-qa-card" data-story-card="${storyIndex}">
-        <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
-          <div>
-            <div class="fw-bold fs-5">Story Reading ${storyIndex + 1} <span class="text-danger">*</span></div>
-            <div class="locked-hint">Story content and all 6 pairs are required.</div>
+    if (renderStories) {
+      storyList.innerHTML = state.stories.map((story, storyIndex) => {
+        const qasHtml = story.qas.map((qa, qaIndex) => makeQaCard(storyIndex, qaIndex, qa)).join('');
+        return `<div class="story-qa-card" data-story-card="${storyIndex}">
+          <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+            <div>
+              <div class="fw-bold fs-5">Story Reading ${storyIndex + 1} <span class="text-danger">*</span></div>
+              <div class="locked-hint">Story content and all 6 pairs are required.</div>
+            </div>
+            ${state.stories.length > 1 ? `<button type="button" class="btn btn-outline-danger btn-sm" data-remove-story="${storyIndex}">Remove Story</button>` : ''}
           </div>
-          ${state.stories.length > 1 ? `<button type="button" class="btn btn-outline-danger btn-sm" data-remove-story="${storyIndex}">Remove Story</button>` : ''}
-        </div>
-        <div class="item-input-row mb-3">
-          <textarea class="form-control" data-story-title="${storyIndex}" placeholder="Story reading title..." rows="2" required>${story.title || ''}</textarea>
-        </div>
-        <div class="item-input-row mb-3">
-          <textarea class="form-control" data-story-content="${storyIndex}" placeholder="Add story reading text..." rows="4" required>${story.content || ''}</textarea>
-        </div>
-        <div class="story-qa-grid mt-4">
-          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-            <div class="fw-bold text-secondary">Question and Answer Pairs</div>
-            <div class="locked-hint">All 6 pairs are required.</div>
+          <div class="item-input-row mb-3">
+            <textarea class="form-control" data-story-title="${storyIndex}" placeholder="Story reading title..." rows="2" required>${story.title || ''}</textarea>
           </div>
-          <div class="story-qa-grid">${qasHtml}</div>
-        </div>
-      </div>`;
-    }).join('');
+          <div class="item-input-row mb-3">
+            <textarea class="form-control" data-story-content="${storyIndex}" placeholder="Add story reading text..." rows="4" required>${story.content || ''}</textarea>
+          </div>
+          <div class="story-qa-grid mt-4">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+              <div class="fw-bold text-secondary">Question and Answer Pairs</div>
+              <div class="locked-hint">All 6 pairs are required.</div>
+            </div>
+            <div class="story-qa-grid">${qasHtml}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
     syncHidden();
 
     const titleReady = Boolean(titleInput.value.trim());
@@ -484,7 +486,7 @@
     else if (questionKey !== null) { const [storyIndex, qaIndex] = questionKey.split('-').map(Number); const story = state.stories[storyIndex]; if (story?.qas?.[qaIndex]) story.qas[qaIndex].question = target.value; }
     else if (answerKey !== null) { const [storyIndex, qaIndex] = answerKey.split('-').map(Number); const story = state.stories[storyIndex]; if (story?.qas?.[qaIndex]) story.qas[qaIndex].answer = target.value; }
     else return;
-    render();
+    render(false);
   });
   form.addEventListener('click', (e) => { const btn = e.target.closest('[data-remove-story]'); if (!btn || state.stories.length <= 1) return; state.stories.splice(Number(btn.getAttribute('data-remove-story')), 1); render(); });
   form.addEventListener('submit', (e) => { render(); if (saveBtn.disabled) e.preventDefault(); });
