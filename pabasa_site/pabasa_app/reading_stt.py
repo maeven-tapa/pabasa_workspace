@@ -512,9 +512,10 @@ def synthesize_read_aloud_audio(text, api_key="", language_code="en-US", speakin
     # Google TTS provides Filipino voices under the fil-PH locale.  The reading
     # APIs pass Tagalog and Filipino materials in with this language code, so
     # preserve it instead of always using the English assessment voice.
-    if str(language_code or "").lower() in {"fil", "fil-ph", "tl", "tl-ph"}:
+    is_filipino = str(language_code or "").lower() in {"fil", "fil-ph", "tl", "tl-ph"}
+    if is_filipino:
         tts_language = "fil-PH"
-        voice_name = "fil-ph-Neural2-A"
+        voice_name = "fil-PH-Wavenet-A"
     else:
         tts_language = "en-US"
         voice_name = "en-US-Chirp3-HD-Vindemiatrix"
@@ -526,7 +527,7 @@ def synthesize_read_aloud_audio(text, api_key="", language_code="en-US", speakin
         '</speak>'
     )
     payload = {
-        "input": {"ssml": teaching_ssml},
+        "input": {"text": clean_text} if is_filipino else {"ssml": teaching_ssml},
         "voice": {
             "languageCode": tts_language,
             "name": voice_name,
@@ -534,9 +535,9 @@ def synthesize_read_aloud_audio(text, api_key="", language_code="en-US", speakin
         },
         "audioConfig": {
             "audioEncoding": "MP3",
-            "speakingRate": speaking_rate,
-            "pitch": 0,
-            "volumeGainDb": 0,
+            "speakingRate": 1.05 if is_filipino else speaking_rate,
+            "pitch": 3.2 if is_filipino else 0,
+            "volumeGainDb": 1.5 if is_filipino else 0,
         },
     }
     headers = None
