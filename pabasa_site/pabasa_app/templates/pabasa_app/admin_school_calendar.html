@@ -19,9 +19,11 @@
     .term-progress-arrow { color: #a7b6c3; font-size: 1rem; }
     .calendar-top-action { display: flex; flex-direction: column; gap: .5rem; align-items: stretch; }
     .calendar-top-action .btn { border-radius: 18px; font-weight: 800; min-width: 120px; }
-    .calendar-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.75rem; align-items: center; margin-bottom: 0.9rem; }
+    .calendar-toolbar { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.9rem; }
     .calendar-toolbar-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .calendar-toolbar .btn { border-radius: 999px; font-weight: 800; }
+    .calendar-toolbar > .calendar-toolbar-group:last-child { justify-content: flex-end; }
+    .calendar-month-title { display: inline-flex; align-items: center; justify-content: center; min-width: 13rem; padding: 0.25rem 0.75rem; color: #10466E; font-size: 1.35rem; font-weight: 900 !important; line-height: 1.25; text-align: center; }
     .calendar-stage { min-height: calc(100dvh - 17rem); padding: 1rem; }
     #calendar { min-height: 44rem; }
     .calendar-stage .fc-view-harness,
@@ -98,6 +100,7 @@
     .term-block-heading { color: #10466E; font-size: 1rem; font-weight: 900; margin-bottom: .8rem; }
     .term-block-hint { color: #6b7f95; font-size: .82rem; font-weight: 700; }
     @media (max-width: 991.98px) { .calendar-top { grid-template-columns: 1fr; } .calendar-stage { min-height: 32rem; } }
+    @media (max-width: 767.98px) { .calendar-toolbar { grid-template-columns: 1fr 1fr; } .calendar-month-title { grid-column: 1 / -1; grid-row: 1; justify-self: center; } .calendar-toolbar > .calendar-toolbar-group:first-child { grid-column: 1; grid-row: 2; } .calendar-toolbar > .calendar-toolbar-group:last-child { grid-column: 2; grid-row: 2; } }
 </style>
 
 <div class="calendar-page">
@@ -144,11 +147,11 @@
                 <button type="button" class="btn btn-outline-secondary btn-sm" id="calendarTodayBtn">Today</button>
                 <button type="button" class="btn btn-outline-secondary btn-sm" id="calendarNextBtn">Next</button>
             </div>
+            <span class="calendar-month-title" id="calendarMonthTitle" aria-live="polite">Month</span>
             <div class="calendar-toolbar-group" aria-label="Calendar view selector">
                 <button type="button" class="btn btn-outline-secondary btn-sm" id="calendarMonthBtn">Month</button>
                 <button type="button" class="btn btn-outline-secondary btn-sm" id="calendarWeekBtn">Week</button>
                 <button type="button" class="btn btn-outline-secondary btn-sm" id="calendarYearBtn">Year</button>
-                <span class="visually-hidden" id="calendarMonthTitle" aria-live="polite">Month</span>
             </div>
         </div>
         <div id="calendar"></div>
@@ -1149,6 +1152,7 @@
         function setView(viewName) {
             activeViewName = viewName;
             if (viewName === 'year') {
+                calendarMonthTitle.textContent = `Year ${getSelectedYearMonthRange().start.getFullYear()}`;
                 calendarYearView?.classList.remove('d-none');
                 calendarEl.style.display = 'none';
                 calendarYearBtn.classList.add('btn-primary');
@@ -1263,6 +1267,8 @@
                     calendarMonthTitle.textContent = formatMonthTitle(info.view.currentStart);
                 } else if (activeViewName === 'timeGridWeek') {
                     calendarMonthTitle.textContent = 'Week';
+                } else if (activeViewName === 'year') {
+                    calendarMonthTitle.textContent = `Year ${getSelectedYearMonthRange().start.getFullYear()}`;
                 }
                 updateEmptyState();
             },
