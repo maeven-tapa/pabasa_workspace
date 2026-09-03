@@ -1501,6 +1501,20 @@ class Material(models.Model):
         official_term = _configured_term_for_date(result_completed_at, system_assessment_phase) if self.is_official_reading or self.is_system_owned else None
         if official_term is None:
             official_term = self.official_term
+
+        # Keep each material attempt in the student's active class enrollment.
+        # The parent assessment uses this relationship when reporting completion
+        # in the student's week-assessment cards.
+        result_enrollment = None
+        if student is not None:
+            enrollment_qs = Enrollment.objects.filter(student=student, is_active=True)
+            if self.section_id:
+                enrollment_qs = enrollment_qs.filter(section_id=self.section_id)
+            else:
+                assigned_section_ids = list(self.assigned_sections.values_list('id', flat=True))
+                if assigned_section_ids:
+                    enrollment_qs = enrollment_qs.filter(section_id__in=assigned_section_ids)
+            result_enrollment = enrollment_qs.order_by('-joined_at', '-id').first()
         
         # Ensure parent assessment exists for this material
         parent_assessment = self.assessment
@@ -1546,6 +1560,7 @@ class Material(models.Model):
             section=self.section,
             material=self,
             student=student,
+            enrollment=result_enrollment,
             attempt_id=str(attempt_id),
             attempt_number=attempt_number,
             attempt_status=status_value,
