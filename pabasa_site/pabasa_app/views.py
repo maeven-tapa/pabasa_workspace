@@ -11032,7 +11032,8 @@ def aral_template_activity_complete(request, activity_slug):
         passage = str(content.get('passage') or '').strip()
         if not passage:
             return JsonResponse({'success': False, 'error': 'This activity has no reading passage.'}, status=400)
-        duration = _bounded_activity_duration(request.POST.get('duration_seconds'), maximum=600)
+        # The dedicated Grade 2 fluency ride is a one-minute oral-reading check.
+        duration = _bounded_activity_duration(request.POST.get('duration_seconds'), maximum=60)
         if duration < 1:
             return JsonResponse({'success': False, 'error': 'Reading time is required.'}, status=400)
         language = content.get('language') or material.language or 'English'
@@ -11516,6 +11517,30 @@ def letter_sound_correspondence_page(request):
 
     content = dict(material.content_json or {})
     items = content.get('items') if isinstance(content.get('items'), list) else []
+    student_user = User.objects.filter(id=request.session.get('user_id'), role='student').first()
+    completed_result = None
+    if student_user:
+        completed_result = material.assessment_results.filter(
+            student=student_user,
+            attempt_status='completed',
+        ).order_by('-completed_at', '-created_at', '-id').first()
+
+    completion_payload = None
+    if completed_result:
+        total_items = int(getattr(completed_result, 'items_completed', 0) or len(items))
+        correct_items = min(total_items, int(getattr(completed_result, 'correct_items', 0) or 0))
+        accuracy = getattr(completed_result, 'accuracy', None)
+        if accuracy is None:
+            accuracy = getattr(completed_result, 'total_score', None)
+        if accuracy is None:
+            accuracy = round((correct_items / total_items) * 100, 2) if total_items else 0
+        completion_payload = {
+            'completed': True,
+            'correct_items': correct_items,
+            'total_items': total_items,
+            'accuracy': accuracy,
+        }
+
     context = _dashboard_context(request)
     context['letter_sound_correspondence_material_json'] = json.dumps({
         'id': material.id,
@@ -11524,6 +11549,9 @@ def letter_sound_correspondence_page(request):
         'reading_set_id': content.get('reading_set_id') or '',
         'items': items,
     }, default=str, separators=(',', ':'))
+    context['letter_sound_correspondence_completion_json'] = json.dumps(
+        completion_payload or {}, default=str, separators=(',', ':'),
+    )
     return render(request, 'pabasa_app/letter_sound_correspondence_page.html', context)
 
 
