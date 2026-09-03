@@ -42,6 +42,7 @@
 @media(max-width:760px){html,body{overflow:auto}.set{min-height:100dvh;height:auto}.show{min-height:calc(100dvh - 28px)}.stage{grid-template-columns:1fr;gap:clamp(8px,2vh,16px);padding:12px 0 18px}.tv{width:min(540px,94vw);max-height:none;justify-self:start;transform:none;order:0}.talk{width:min(500px,94vw);padding:21% 11% 33%;transform:none;order:1}.response-interaction{margin-top:clamp(10px,2vh,18px)}.prompt{font-size:clamp(1rem,4vw,1.3rem)}.back{padding:8px 0 2px}}
 @media(max-height:620px) and (min-width:761px){.tv{width:min(560px,46vw)}.talk{width:min(370px,38vw)}.prompt{font-size:clamp(.88rem,1.45vw,1.05rem)}#stack:not([hidden]){margin-top:7px}.turn{margin-top:6px}}
 </style>
+<form class="d-none">{% csrf_token %}</form>
 <script>
 document.querySelector('.hostlabel').textContent='STORY EXPLORER';
 document.querySelector('.turn')?.remove();
@@ -82,7 +83,8 @@ finishButton.addEventListener('click',async()=>{
 		form.append('response_text','');
 		form.append('duration_seconds','0');
 		form.append('audio',blob,`story-response-${Date.now()}.webm`);
-		const response=await fetch('/api/story-response/submit/',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':document.querySelector('[name=csrfmiddlewaretoken]')?.value||''},body:form});
+		const csrfToken=document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
+		const response=await fetch('/api/story-response/submit/',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':decodeURIComponent(csrfToken)},body:form});
 		const result=await response.json().catch(()=>({}));
 		if(!response.ok||!result.success)throw new Error(result.error||'Your response could not be submitted. Please try again.');
 		audio?.pause();
