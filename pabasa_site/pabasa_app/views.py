@@ -55,7 +55,7 @@ from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_
 from django.db import transaction
 import re
 import traceback
-from .models import User, School, Section, Enrollment, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission
+from .models import User, School, Section, Enrollment, Assessment, AssessmentRequest, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission
 from .section_configuration import ensure_salawag_grade_two_sections
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
 from .student_session_lock import claim_student_session, release_student_session
@@ -7549,6 +7549,9 @@ def _student_completed_section_assessment(student, section):
         Q(section=section) | Q(material__section=section) | Q(material__assigned_sections=section)
     ).exists()
 
+def _student_has_approved_assessment_request(student, section):
+    return bool(student and section and AssessmentRequest.objects.filter(student=student, section=section, status='approved').exists())
+
 
 def _format_calendar_date(value):
     if not value:
@@ -9983,6 +9986,37 @@ def courses(request):
     
     return redirect('dashboard')
 
+@csrf_protect
+@require_http_methods(["POST"])
+def request_assessment_access(request):
+    if not _check_auth(request) or request.session.get('user_role') != 'student':
+        return JsonResponse({'success': False, 'error': 'Student access required.'}, status=403)
+    student = User.objects.filter(id=request.session.get('user_id'), role='student', is_archived=False).first()
+    section_id = request.POST.get('section_id')
+    section = Section.objects.filter(id=section_id, is_active=True).first()
+    if not student or not section or not section.has_student(student, active_only=True):
+        return JsonResponse({'success': False, 'error': 'Active section enrollment required.'}, status=400)
+    item, created = AssessmentRequest.objects.get_or_create(student=student, section=section, status='pending')
+    return JsonResponse({'success': True, 'pending': True, 'created': created})
+
+@login_required(role='teacher')
+@require_http_methods(["GET"])
+def teacher_assessment_requests(request):
+    teacher = User.objects.filter(id=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    rows = AssessmentRequest.objects.filter(section__teacher=teacher, status='pending').select_related('student', 'section')
+    return JsonResponse({'success': True, 'requests': [{'id': r.id, 'student_name': f'{r.student.first_name} {r.student.last_name}'.strip(), 'pabasa_id': r.student.custom_id, 'section': r.section.class_name, 'requested_at': r.requested_at.isoformat(), 'assessment_status': 'Assessment Not Taken'} for r in rows]})
+
+@csrf_protect
+@login_required(role='teacher')
+@require_http_methods(["POST"])
+def approve_assessment_request(request, request_id):
+    teacher = User.objects.filter(id=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    item = AssessmentRequest.objects.filter(id=request_id, section__teacher=teacher, status='pending').first()
+    if not item:
+        return JsonResponse({'success': False, 'error': 'Request not found.'}, status=404)
+    item.status = 'approved'; item.reviewed_by = teacher; item.reviewed_at = timezone.now(); item.save(update_fields=['status', 'reviewed_by', 'reviewed_at'])
+    return JsonResponse({'success': True})
+
 def assessment(request):
     if not _check_auth(request):
         return redirect('auth')
@@ -10019,14 +10053,18 @@ def assessment(request):
         selected_section = joined_sections[0]
     section_week_status = _section_assessment_week_status(selected_section) if selected_section else 'none'
     section_assessment_completed = _student_completed_section_assessment(user, selected_section)
+    approved_assessment_request = _student_has_approved_assessment_request(user, selected_section)
     if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status == 'after':
-        if not section_assessment_completed:
+        if not section_assessment_completed and not _student_has_approved_assessment_request(user, selected_section):
             context = _dashboard_context(request, 'student')
+            pending_request = AssessmentRequest.objects.filter(student=user, section=selected_section, status='pending').first()
             context.update({
                 'stage': 'assessment_not_taken',
                 'workflow_title': 'Assessment Not Taken',
                 'workflow_subtitle': selected_section.class_name,
                 'workflow_message': "You didn’t complete the Assessment Week assessment, so this reading assessment isn’t available to you yet.",
+                'assessment_request_pending': bool(pending_request),
+                'assessment_request_section_id': selected_section.id,
             })
             return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
         if _finalized_grade_level_crla_result_exists(user):
@@ -10094,6 +10132,16 @@ def assessment(request):
     official_availability = _official_assessment_availability_for_student(user, request)
     official_crla_material = _official_crla_material_for_student(user, official_availability.get('assessment_type'))
     has_active_crla_window = bool(official_availability.get('available'))
+    if approved_assessment_request and not section_assessment_completed:
+        approved_phase = _official_crla_assessment_phase(user, request=request)
+        if approved_phase not in {'pretest', 'midtest', 'posttest'}:
+            approved_term = _calendar_current_term(_active_school_calendar())
+            approved_phase = {1: 'pretest', 2: 'midtest', 3: 'posttest'}.get(approved_term)
+        if approved_phase in {'pretest', 'midtest', 'posttest'}:
+            official_availability = dict(official_availability)
+            official_availability.update({'available': True, 'assessment_type': approved_phase})
+            official_crla_material = _official_crla_material_for_student(user, approved_phase)
+            has_active_crla_window = bool(official_crla_material)
     official_calendar = _active_school_calendar()
     school_year_value = official_availability.get('school_year') or (official_calendar.school_year if official_calendar else '')
     has_crla_completion_record = _official_crla_completion_exists(user, active_phase, school_year_value)
@@ -19013,7 +19061,7 @@ def get_class_materials(request):
             request_user.role == 'student' and section.assessment_week_enabled
         )
         if request_user.role == 'student' and _section_assessment_week_status(section) == 'after':
-            if not _student_completed_section_assessment(request_user, section):
+            if not _student_completed_section_assessment(request_user, section) and not _student_has_approved_assessment_request(request_user, section):
                 return JsonResponse({
                     'success': False,
                     'error': 'Assessment Week assessment was not completed; reading assessments are unavailable.',
@@ -21607,6 +21655,15 @@ def get_unread_notification_count(request):
     user = User.objects.get(id=request.session.get('user_id'))
     count = Notification.objects.filter(recipient=user, is_read=False).count()
     return JsonResponse({'success': True, 'unread_count': count})
+
+@require_http_methods(["GET"])
+@login_required(role='teacher')
+def get_teacher_assessment_request_count(request):
+    teacher = User.objects.filter(id=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    if not teacher:
+        return JsonResponse({'success': False, 'error': 'Teacher not found.'}, status=403)
+    count = AssessmentRequest.objects.filter(section__teacher=teacher, status='pending').count()
+    return JsonResponse({'success': True, 'count': count})
 
 @csrf_protect
 @require_http_methods(["POST"])

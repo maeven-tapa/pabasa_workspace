@@ -8,6 +8,36 @@
         gap: 1rem;
     }
 
+    .student-assessment-request-card { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-top:1rem; margin-bottom:1.15rem; padding:1rem 1.15rem; border:1px solid rgba(31,111,139,.18); border-radius:20px; background:linear-gradient(135deg,rgba(232,247,252,.96),rgba(255,255,255,.94)); box-shadow:0 16px 34px rgba(15,78,100,.10); }
+    .student-assessment-request-card h2 { margin:0; color:#10466e; font-size:1rem; font-weight:900; }
+    .student-assessment-request-card p { margin:.25rem 0 0; color:#58676f; font-size:.88rem; }
+    @media (max-width:575.98px) { .student-assessment-request-card { align-items:flex-start; flex-direction:column; } }
+
+    #studentAssessmentRequestsModal .modal-dialog { max-width: 620px; }
+    #studentAssessmentRequestsModal .modal-content { overflow:hidden; border:0; border-radius:24px; box-shadow:0 24px 70px rgba(15,45,69,.28); }
+    #studentAssessmentRequestsModal .modal-header { min-height:78px; padding:1.25rem 1.4rem 1.1rem; color:#fff; border:0; background:linear-gradient(135deg,#10466e,#2ea8e5); }
+    #studentAssessmentRequestsModal .modal-header { display:flex; align-items:center; }
+    #studentAssessmentRequestsModal .modal-header .assessment-request-modal-icon { display:grid; place-items:center; flex:0 0 auto; width:2.45rem; height:2.45rem; margin-right:.8rem; border-radius:14px; color:#10466e; background:#fff; font-size:1.25rem; }
+    #studentAssessmentRequestsModal .modal-title { font-size:1.08rem; font-weight:900; }
+    #studentAssessmentRequestsModal .btn-close { filter:brightness(0) invert(1); opacity:.8; }
+    #studentAssessmentRequestsModal .modal-header .btn-close { margin-left:auto; }
+    #studentAssessmentRequestsModal .modal-body { min-height:300px; padding:1.15rem 1.4rem 1.35rem; background:#f7fbfd; }
+    #studentAssessmentRequestsModal .assessment-request-empty-state { display:flex; align-items:center; justify-content:center; min-height:300px; color:#7890a3; font-size:.95rem; font-weight:700; text-align:center; }
+    .assessment-request-item { padding:1rem; margin-bottom:.75rem; border:1px solid rgba(16,70,110,.12); border-radius:17px; background:#fff; box-shadow:0 8px 22px rgba(16,70,110,.07); }
+    .assessment-request-item:last-child { margin-bottom:0; }
+    .assessment-request-item__name { color:#10466e; font-size:1rem; font-weight:900; }
+    .assessment-request-item__meta { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.65rem .9rem; margin-top:.8rem; }
+    .assessment-request-item__field { display:flex; flex-direction:column; gap:.12rem; min-width:0; }
+    .assessment-request-item__label { color:#7890a3; font-size:.68rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+    .assessment-request-item__value { color:#243b53; font-size:.84rem; font-weight:700; overflow-wrap:anywhere; }
+    .assessment-request-item__status { display:inline-flex; width:max-content; padding:.28rem .58rem; border-radius:999px; color:#8a5a00; background:#fff4d6; font-size:.75rem; font-weight:800; }
+    .assessment-request-item .btn { margin-top:.95rem; width:100%; }
+    .assessment-request-pagination { display:flex; align-items:center; justify-content:center; gap:.35rem; margin-top:1rem; }
+    .assessment-request-pagination button { min-width:2rem; height:2rem; padding:.2rem .55rem; border:1px solid rgba(16,70,110,.14); border-radius:10px; color:#10466e; background:#fff; font-weight:800; }
+    .assessment-request-pagination button.active { color:#fff; border-color:#10466e; background:#10466e; }
+    .assessment-request-pagination button:disabled { cursor:not-allowed; opacity:.45; }
+    @media (max-width:575.98px) { #studentAssessmentRequestsModal .modal-body, #studentAssessmentRequestsModal .modal-header { padding-left:1rem; padding-right:1rem; } .assessment-request-item__meta { grid-template-columns:1fr; } }
+
     /* Reset margin for main content area when sidebar is hidden on mobile/tablet */
     @media (max-width: 991.98px) {
         .dashboard-main {
@@ -1137,6 +1167,68 @@
 
 {% block header %}
     {% include "pabasa_app/partials/_header.html" with page_title="Students" page_date="" %}
+{% endblock %}
+
+{% block dashboard_header_after %}
+<section class="student-assessment-request-card" aria-labelledby="studentAssessmentRequestTitle">
+    <div><h2 id="studentAssessmentRequestTitle">Student Requests to Take Assessment</h2><p id="studentAssessmentRequestCount">0 requests</p></div>
+    <button class="btn btn-primary btn-sm" type="button" id="viewStudentAssessmentRequests">View</button>
+</section>
+<div class="modal fade" id="studentAssessmentRequestsModal" tabindex="-1" aria-labelledby="studentAssessmentRequestsModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+        <div class="modal-header"><span class="assessment-request-modal-icon" aria-hidden="true"><i class="bi bi-clipboard2-check-fill"></i></span><div><h2 class="modal-title" id="studentAssessmentRequestsModalTitle">Student Requests to Take Assessment</h2><small>Review requests from your students</small></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+        <div class="modal-body" id="studentAssessmentRequestsModalBody"><div class="assessment-request-empty-state">No pending assessment requests.</div><div id="studentAssessmentRequestsPagination"></div></div>
+    </div></div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const countElement = document.getElementById('studentAssessmentRequestCount');
+    const viewButton = document.getElementById('viewStudentAssessmentRequests');
+    const modalElement = document.getElementById('studentAssessmentRequestsModal');
+    const modalBody = document.getElementById('studentAssessmentRequestsModalBody');
+    const paginationElement = document.getElementById('studentAssessmentRequestsPagination');
+    let requests = [];
+    let currentPage = 1;
+    const renderRequests = function () {
+        if (!requests.length) { modalBody.innerHTML = '<div class="assessment-request-empty-state">No pending assessment requests.</div>'; return; }
+        currentPage = Math.min(Math.max(currentPage, 1), requests.length);
+        const item = requests[currentPage - 1];
+        modalBody.innerHTML = '<article class="assessment-request-item"><div class="assessment-request-item__name">' + item.student_name + '</div><div class="assessment-request-item__meta"><div class="assessment-request-item__field"><span class="assessment-request-item__label">PABASA ID</span><span class="assessment-request-item__value">' + item.pabasa_id + '</span></div><div class="assessment-request-item__field"><span class="assessment-request-item__label">Section</span><span class="assessment-request-item__value">' + item.section + '</span></div><div class="assessment-request-item__field"><span class="assessment-request-item__label">Request date</span><span class="assessment-request-item__value">' + new Date(item.requested_at).toLocaleString() + '</span></div><div class="assessment-request-item__field"><span class="assessment-request-item__label">Assessment status</span><span class="assessment-request-item__status">' + item.assessment_status + '</span></div></div><button class="btn btn-primary btn-sm" type="button" data-approve-request="' + item.id + '"><i class="bi bi-check2-circle me-1"></i> Check / Approve</button></article>';
+        const pagination = document.createElement('div'); pagination.className = 'assessment-request-pagination';
+        const previous = document.createElement('button'); previous.type = 'button'; previous.textContent = '‹'; previous.disabled = currentPage === 1; previous.onclick = function () { currentPage--; renderRequests(); }; pagination.appendChild(previous);
+        requests.forEach(function (_, index) { const page = document.createElement('button'); page.type = 'button'; page.textContent = index + 1; page.className = index + 1 === currentPage ? 'active' : ''; page.setAttribute('aria-current', index + 1 === currentPage ? 'page' : 'false'); page.onclick = function () { currentPage = index + 1; renderRequests(); }; pagination.appendChild(page); });
+        const next = document.createElement('button'); next.type = 'button'; next.textContent = '›'; next.disabled = currentPage === requests.length; next.onclick = function () { currentPage++; renderRequests(); }; pagination.appendChild(next);
+        modalBody.appendChild(pagination);
+        const approveButton = modalBody.querySelector('[data-approve-request]');
+        approveButton.addEventListener('click', async function () { approveButton.disabled = true; await fetch('/api/teacher/assessment-requests/' + item.id + '/approve/', { method:'POST', credentials:'same-origin', headers:{'X-CSRFToken': document.cookie.split('; ').find(function (row) { return row.startsWith('csrftoken='); })?.split('=')[1] || ''} }); await loadRequests(); refresh(); });
+    };
+    const loadRequests = async function () {
+        if (!modalBody) return;
+        try {
+            const response = await fetch('{% url "teacher_assessment_requests" %}', { credentials:'same-origin', cache:'no-store' });
+            const data = await response.json();
+            requests = data.requests || [];
+            renderRequests();
+        } catch (error) { modalBody.innerHTML = '<p class="text-danger mb-0">Unable to load requests.</p>'; }
+    };
+    if (viewButton && modalElement && window.bootstrap) {
+        viewButton.addEventListener('click', function () {
+            loadRequests();
+            bootstrap.Modal.getOrCreateInstance(modalElement).show();
+        });
+    }
+    if (!countElement) return;
+    const refresh = async function () {
+        try {
+            const response = await fetch('{% url "get_teacher_assessment_request_count" %}', { credentials:'same-origin', headers:{'X-Requested-With':'XMLHttpRequest'}, cache:'no-store' });
+            const data = await response.json();
+            if (response.ok && data.success) { const count = Number(data.count) || 0; countElement.textContent = count + (count === 1 ? ' request' : ' requests'); }
+        } catch (error) {}
+    };
+    refresh();
+    window.setInterval(refresh, 30000);
+});
+</script>
 {% endblock %}
 
 {% block content %}

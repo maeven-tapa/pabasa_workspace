@@ -3088,6 +3088,8 @@
                     {% include "pabasa_app/partials/_header.html" with page_title="Dashboard" page_date="April 2, 2026" %}
                 {% endblock %}
 
+                {% block dashboard_header_after %}{% endblock %}
+
                 <main class="dashboard-content-wrap">
                     {% block content %}{% endblock %}
                 </main>

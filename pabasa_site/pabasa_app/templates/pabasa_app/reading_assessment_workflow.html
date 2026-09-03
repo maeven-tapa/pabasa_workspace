@@ -89,6 +89,17 @@
         line-height: 1.1;
     }
 
+    .workflow-card h1.assessment-request-pending-title {
+        max-width: none;
+        font-size: clamp(1.35rem, 2.4vw, 1.9rem);
+        line-height: 1.15;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 575.98px) {
+        .workflow-card h1.assessment-request-pending-title { white-space: normal; }
+    }
+
     .workflow-card p {
         margin: 0;
         color: var(--dash-muted);
@@ -97,6 +108,32 @@
 
     .workflow-message {
         font-size: 1rem;
+    }
+
+    .assessment-not-taken-message {
+        max-width: 600px;
+        margin: 0.45rem auto 0;
+        line-height: 1.6;
+    }
+
+    .assessment-request-toast {
+        position: fixed;
+        top: 1.25rem;
+        right: 1.25rem;
+        z-index: 1080;
+        width: min(360px, calc(100vw - 2.5rem));
+        padding: 0.9rem 1rem;
+        border-left: 4px solid #2e7d32;
+        border-radius: 12px;
+        background: #fff;
+        color: var(--dash-primary-deep);
+        box-shadow: 0 12px 30px rgba(21, 94, 117, 0.2);
+        line-height: 1.45;
+    }
+
+    .assessment-request-toast strong {
+        display: block;
+        margin-bottom: 0.2rem;
     }
 
     .workflow-summary {
@@ -251,11 +288,17 @@
                 <span class="workflow-icon" aria-hidden="true"><i class="bi bi-calendar-x"></i></span>
                 <div class="workflow-copy">
                     <p class="workflow-subtitle">{{ workflow_subtitle }}</p>
-                    <h1>{{ workflow_title }}</h1>
-                    <p class="workflow-message">{{ workflow_message }}</p>
+                    {% if assessment_request_pending %}<h1 class="assessment-request-pending-title">Request to Take Assessment<br>is Pending</h1>{% else %}<h1>{{ workflow_title }}</h1>{% endif %}
+                    <p class="workflow-message{% if stage == 'assessment_not_taken' and not assessment_request_pending %} assessment-not-taken-message{% endif %}">{% if assessment_request_pending %}Your request to take the assessment has been sent to your teacher.{% elif stage == 'assessment_not_taken' %}You didn’t complete the Assessment Week assessment,<br>so this reading assessment isn’t available to you yet.{% else %}{{ workflow_message }}{% endif %}</p>
                 </div>
             </div>
-            <div class="workflow-actions">
+            <div class="workflow-actions" id="assessmentRequestActions">
+                {% if not assessment_request_pending %}
+                <form method="post" action="{% url 'request_assessment_access' %}" id="assessmentRequestForm">
+                    {% csrf_token %}<input type="hidden" name="section_id" value="{{ assessment_request_section_id }}">
+                    <button class="btn btn-primary workflow-button primary" type="submit" id="requestAssessmentButton"><i class="bi bi-send"></i> Request to Take Assessment</button>
+                </form>
+                {% endif %}
                 <a class="workflow-button secondary" href="{% url 'dashboard' %}"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
             </div>
         {% elif stage == "unavailable" %}
@@ -393,9 +436,47 @@
                 </section>
             {% endif %}
         {% endif %}
-    </article>
+</article>
 </section>
+<div class="modal fade" id="assessmentRequestConfirmModal" tabindex="-1" aria-labelledby="assessmentRequestConfirmTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header"><h2 class="modal-title fs-5" id="assessmentRequestConfirmTitle">Request Assessment</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+    <div class="modal-body">Are you sure you want to request access to take the CRLA assessment?</div>
+    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="confirmAssessmentRequest">Request Assessment</button></div>
+  </div></div>
+</div>
 <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('assessmentRequestForm');
+        if (!form) return;
+        const button = document.getElementById('requestAssessmentButton');
+        const confirmModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('assessmentRequestConfirmModal'));
+        form.addEventListener('submit', function (event) { event.preventDefault(); confirmModal.show(); });
+        document.getElementById('confirmAssessmentRequest').addEventListener('click', async function () {
+            const confirmButton = this; confirmButton.disabled = true; button.disabled = true; confirmModal.hide();
+            try {
+                const response = await fetch(form.action, { method:'POST', body:new FormData(form), credentials:'same-origin', headers:{'X-Requested-With':'XMLHttpRequest'} });
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.error || 'Unable to send your request.');
+                const toast = document.createElement('div');
+                toast.className = 'assessment-request-toast';
+                toast.setAttribute('role', 'status');
+                toast.innerHTML = '<strong>✓ Assessment request sent successfully.</strong><span>Please wait for your teacher to approve your request.</span>';
+                document.body.appendChild(toast);
+                const pendingTitle = document.querySelector('.workflow-copy h1');
+                pendingTitle.classList.add('assessment-request-pending-title');
+                pendingTitle.innerHTML = 'Request to Take Assessment<br>is Pending';
+                document.querySelector('.workflow-copy .workflow-message').textContent = 'Your request to take the assessment has been sent to your teacher.';
+                document.getElementById('assessmentRequestActions').innerHTML = '<a class="workflow-button secondary" href="{% url 'dashboard' %}"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>';
+                window.setTimeout(() => toast.remove(), 5000);
+            } catch (error) {
+                button.disabled = false;
+                confirmButton.disabled = false;
+                window.alert(error.message);
+            }
+        });
+    });
+
     (function () {
         const button = document.getElementById('startCrlaAssessmentBtn');
         const itemsNode = document.getElementById('crlaAssessmentItems');

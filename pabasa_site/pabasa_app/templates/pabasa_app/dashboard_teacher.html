@@ -36,6 +36,43 @@
         box-shadow: 0 16px 40px rgba(15,78,100,0.14);
     }
 
+    .teacher-assessment-request-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1.15rem;
+        padding: 1rem 1.15rem;
+        border: 1px solid rgba(31,111,139,0.18);
+        border-radius: var(--radius-xl);
+        background: linear-gradient(135deg, rgba(232,247,252,0.96), rgba(255,255,255,0.94));
+        box-shadow: 0 16px 34px rgba(15,78,100,0.10), inset 0 1px rgba(255,255,255,0.9);
+    }
+
+    .teacher-assessment-request-card h2 {
+        margin: 0;
+        color: var(--dash-primary-deep);
+        font-size: 1rem;
+        font-weight: 900;
+    }
+
+    .teacher-assessment-request-card p {
+        margin: 0.25rem 0 0;
+        color: var(--dash-ink-soft);
+        font-size: 0.88rem;
+    }
+
+    .teacher-assessment-request-card .btn {
+        flex: 0 0 auto;
+    }
+
+    @media (max-width: 575.98px) {
+        .teacher-assessment-request-card {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+    }
+
     .dashboard-topbar h1 {
         font-family: "Nunito", "Segoe UI", sans-serif;
         font-size: 1.25rem;
@@ -1623,6 +1660,9 @@
 
 {% block header %}
     {% include "pabasa_app/partials/_header.html" with page_title="Teacher Dashboard" page_date="" %}
+{% endblock %}
+
+{% block dashboard_header_after %}
 {% endblock %}
 
 {% block content %}
