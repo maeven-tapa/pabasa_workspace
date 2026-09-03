@@ -623,7 +623,6 @@ def _finalized_grade_level_crla_result_exists(student):
         enrollment=current_enrollment,
         attempt_status='completed',
         completed_at__isnull=False,
-        is_active=True,
     ).filter(
         Q(material__assessment_kind='crla')
         | Q(system_assessment_key__in=('bosy_crla_pretest', 'midline_crla_midtest', 'eosy_crla_posttest'))
@@ -639,7 +638,7 @@ def _reader_assessment_state(student):
     if current_enrollment:
         current_classification = Assessment.objects.filter(
             student=student, enrollment=current_enrollment,
-            attempt_status='completed', is_active=True,
+            attempt_status='completed', completed_at__isnull=False,
         ).exclude(crla_classification='').order_by('-completed_at', '-id').values_list('crla_classification', flat=True).first() or ''
     classification = current_classification or (state.get('reader_classification') if not current_enrollment else '') or (getattr(student, 'reading_level', '') if not current_enrollment else '') or ''
     # Always re-evaluate eligibility from the current classification when we have one,
@@ -7540,13 +7539,17 @@ def _section_assessment_week_status(section, on_date=None):
 
 
 def _student_completed_section_assessment(student, section):
+    """Return whether the student has any historical completed assessment.
+
+    This is deliberately account-level.  A calendar edit can change the
+    current section/material relationships (and can archive the old
+    assessment), but it must not turn a persisted completion into an
+    incomplete assessment or create a duplicate requirement.
+    """
     if not student or not section:
         return False
     return Assessment.objects.filter(
         student=student, attempt_status='completed', completed_at__isnull=False,
-        is_active=True,
-    ).filter(
-        Q(section=section) | Q(material__section=section) | Q(material__assigned_sections=section)
     ).exists()
 
 def _student_has_approved_assessment_request(student, section):
@@ -10076,7 +10079,7 @@ def assessment(request):
                 'workflow_message': 'Keep up the great work. You can continue practicing whenever you like.',
             })
             return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
-    if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status in {'before', 'during'} and not selected_section.assessment_week_enabled:
+    if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status in {'before', 'during'} and not selected_section.assessment_week_enabled and not section_assessment_completed:
         context = _dashboard_context(request, 'student')
         context.update({
             'stage': 'assessment_week_locked',
