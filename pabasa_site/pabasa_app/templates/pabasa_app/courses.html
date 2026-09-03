@@ -16998,7 +16998,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (activeTemplateActivity?.templateTitle === "5W's Story Questions") {
                 if (!values.content?.sourceMaterialId) return 'Select a published story.';
                 if (!Array.isArray(values.content?.items) || !values.content.items.length) return 'Add at least one 5W question.';
-                if (values.content.items.some(item => !item.question || !(Array.isArray(item.answers) ? item.answers.length : item.answer))) return 'Each question needs a question and answer.';
+                if (values.content.items.some(item => {
+                    const hasQuestion = String(item?.question || '').trim().length > 0;
+                    const acceptedAnswers = Array.isArray(item?.answers)
+                        ? item.answers.filter(answer => String(answer || '').trim().length > 0)
+                        : [];
+                    const legacyAnswer = String(item?.answer || '').split(/\s*\/\s*/).filter(answer => answer.trim().length > 0);
+                    return !hasQuestion || !(acceptedAnswers.length || legacyAnswer.length);
+                })) return 'Each question needs a question and answer.';
                 if (!values.weeks.length) return 'Select at least one week.';
                 return '';
             }

@@ -504,7 +504,7 @@ def transcribe_audio_bytes_v1(
     )
 
 
-def synthesize_read_aloud_audio(text, api_key, language_code="en-US", speaking_rate=0.95, prosody_rate="92%"):
+def synthesize_read_aloud_audio(text, api_key="", language_code="en-US", speaking_rate=0.95, prosody_rate="92%", credentials_file=None):
     clean_text = " ".join(str(text or "").split())
     if not clean_text:
         raise RuntimeError("Text is required for read aloud.")
@@ -541,17 +541,31 @@ def synthesize_read_aloud_audio(text, api_key, language_code="en-US", speaking_r
             "volumeGainDb": 0,
         },
     }
-    return _post_google_tts(
-        f"https://texttospeech.googleapis.com/v1/text:synthesize?key={api_key}",
-        payload,
-    )
+    headers = None
+    tts_url = "https://texttospeech.googleapis.com/v1/text:synthesize"
+    if api_key:
+        tts_url = f"{tts_url}?key={api_key}"
+    else:
+        try:
+            from google.auth.transport.requests import Request
+            from google.oauth2 import service_account
+        except ImportError as exc:
+            raise RuntimeError("Install Google authentication libraries to use service-account TTS.") from exc
+        credentials = google_stt_credentials(service_account, credentials_file)
+        credentials.refresh(Request())
+        headers = {"Authorization": f"Bearer {credentials.token}"}
+
+    return _post_google_tts(tts_url, payload, headers=headers)
 
 
-def _post_google_tts(url, payload):
+def _post_google_tts(url, payload, headers=None):
+    request_headers = {"Content-Type": "application/json"}
+    if headers:
+        request_headers.update(headers)
     request = urllib.request.Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers=request_headers,
         method="POST",
     )
     try:
