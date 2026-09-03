@@ -89,6 +89,7 @@ from .scoring import (
     clamp_score,
     crla_classification,
     crla_task1_next_task,
+    crla_sentence_score,
     derive_classification_equivalents,
     normalize_adapted_level_score,
     normalize_assessment_type,
@@ -2521,6 +2522,7 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
             if score_payload.get('sentence_count') is not None
             else score_payload.get('correct_items')
         )
+        submitted_sentence_count = submitted_sentences_score
         part1_total_score = _safe_int(score_payload.get('part1_total_score'))
         student_end_state.update({
             'assessment_type': assessment_type,
@@ -2532,6 +2534,7 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
             'task1_score': task1_score,
             'task2_rhymes_score': submitted_rhymes_score,
             'task2_sentences_score': submitted_sentences_score,
+            'sentences_read': submitted_sentence_count,
             'part1_total_score': part1_total_score,
         })
         if assessment_type == 'word':
@@ -2596,7 +2599,8 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
             student_end_state['branch'] = 'sentences'
             correct_words = _safe_int(student_end_state.get('correct_words')) or 0
             correct_sentences = _safe_int(student_end_state.get('correct_sentences')) or 0
-            part1_total = correct_words + correct_sentences
+            sentence_score = crla_sentence_score(correct_sentences)
+            part1_total = correct_words + sentence_score
             student_end_state['sentence_items_administered'] = _safe_int(score_payload.get('items_completed')) or 0
             student_end_state['cumulative_correct'] = correct_words + correct_sentences
             student_end_state['routing_score'] = part1_total
@@ -2606,7 +2610,8 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
                 part1_total,
             )
             student_end_state['task2_rhymes_score'] = None
-            student_end_state['task2_sentences_score'] = correct_sentences
+            student_end_state['sentences_read'] = correct_sentences
+            student_end_state['task2_sentences_score'] = sentence_score
             student_end_state['part1_total_score'] = part1_total
             if workflow_stage == 'early_completed_sentences':
                 student_end_state['classification'] = 'High Emerging Reader'

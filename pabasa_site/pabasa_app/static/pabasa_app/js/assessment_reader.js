@@ -260,6 +260,8 @@
         let itemLocked = [];
         let itemScores = [];
         let autoAdvanceTimer = null;
+        let sentenceItemTimer = null;
+        const sentenceItemLimitMs = 25000;
         let liveServerTimeOffsetMs = 0;
         const liveSessionId = urlParams.get("live_session_id");
         const liveSessionStateUrl = liveSessionId ? `/api/live-assessment/session/${liveSessionId}/` : null;
@@ -2010,6 +2012,10 @@
             return "Grade Ready";
         }
 
+        function getCrlaSentenceScore(sentencesRead) {
+            return [0, 3, 5, 7, 10][Math.max(0, Math.min(4, Number(sentencesRead) || 0))];
+        }
+
         function calculateScores() {
             const targetText = items.join(" ");
             const targetWords = normalizeWords(targetText);
@@ -2022,7 +2028,7 @@
                 const itemWordCount = readableWordCount(item);
                 return total + (itemWordCount > 0 && Number(correctWordCounts[index] || 0) >= itemWordCount ? 1 : 0);
             }, 0);
-            const sentenceWordScore = isOfficialAssessmentLaunch && mode === "sentence" ? matchedWords : null;
+            const sentenceWordScore = isOfficialAssessmentLaunch && mode === "sentence" ? correctItems : null;
             const needsManualReview = !speechRecognitionUsed;
 
             return {
@@ -2172,6 +2178,7 @@
                 ?? source.task2_rhymes_score
                 ?? source.task2_sentences_score
                 ?? null;
+            const sentencesRead = source.sentences_read ?? source.correct_sentences ?? source.sentence_count ?? null;
             const storyTotalWords = source.total_story_words ?? source.story_total_words ?? null;
             const wordsRead = source.words_read ?? source.total_words_read ?? null;
             const miscues = source.miscues ?? null;
@@ -2184,6 +2191,7 @@
                 task1_score: task1Score,
                 task2_type: source.task2_type ?? (source.task2_rhymes_score != null ? "Task 2L / Rhymes" : source.task2_sentences_score != null ? "Task 2H / Sentences" : null),
                 task2_score: task2Score,
+                sentences_read: sentencesRead,
                 part1_total_score: source.part1_total_score ?? null,
                 story_number: source.story_number ?? currentSelectedStory?.key ?? null,
                 story_total_words: storyTotalWords,
@@ -3157,6 +3165,7 @@
                 );
 
                 if (data.complete) {
+                    clearSentenceItemTimer();
                     itemLocked[currentIndex] = true;
                     itemScores[currentIndex] = {
                         correct_words: correctWordCounts[currentIndex],
@@ -3423,7 +3432,8 @@
                 const nextHint = data.next_syllable && data.next_word ? `Try again from: ${data.next_syllable} in ${data.next_word}` : "Keep reading.";
                 setSpeechStatus(transcript ? nextHint : "Listening with Google Speech...", speechDetail, true);
 
-                if (isStrictAssessmentMode && !itemLocked[currentIndex] && transcript && Number(data.matched || 0) === 0) {
+                if (isStrictAssessmentMode && !itemLocked[currentIndex] && transcript && Number(data.matched || 0) === 0
+                    && !(isOfficialAssessmentLaunch && mode === "sentence")) {
                     // Preserve original retry behavior for unmatched non-miscue responses.
                     if (autoAdvanceTimer) {
                         window.clearTimeout(autoAdvanceTimer);
@@ -3873,6 +3883,7 @@
                 window.clearTimeout(autoAdvanceTimer);
                 autoAdvanceTimer = null;
             }
+            clearSentenceItemTimer();
             currentIndex = nextIndex;
             currentPageIndex = 0;
             currentSyllableIndex = 0;
@@ -3902,6 +3913,42 @@
             }
             updateAssessmentNavigationButtons();
             updateSpeechProcessingControls();
+            startSentenceItemTimer();
+        }
+
+        function clearSentenceItemTimer() {
+            if (sentenceItemTimer) {
+                window.clearTimeout(sentenceItemTimer);
+                sentenceItemTimer = null;
+            }
+        }
+
+        function advanceSentenceAfterTimeout() {
+            if (!isOfficialAssessmentLaunch || mode !== "sentence" || !isRecording || itemLocked[currentIndex]) return;
+            sentenceItemTimer = null;
+            itemLocked[currentIndex] = true;
+            itemScores[currentIndex] = {
+                correct_words: Number(correctWordCounts[currentIndex] || 0),
+                word_results: sentenceWordResults[currentIndex] || [],
+                timed_out: true,
+                timestamp: new Date().toISOString(),
+            };
+            persistLockedItemResult(currentIndex);
+            itemResultVersion += 1;
+            isAdvancingItem = true;
+            if (currentIndex >= items.length - 1) {
+                isRecording = false;
+                stopSpeechRecognition();
+                showCompletion(true);
+            } else {
+                transitionToItem(currentIndex + 1, "Time reached for this sentence.", "Moving to the next sentence.");
+            }
+        }
+
+        function startSentenceItemTimer() {
+            clearSentenceItemTimer();
+            if (!isOfficialAssessmentLaunch || mode !== "sentence" || !isRecording || itemLocked[currentIndex]) return;
+            sentenceItemTimer = window.setTimeout(advanceSentenceAfterTimeout, sentenceItemLimitMs);
         }
 
         function showCompletion(isFullCompletion) {
@@ -3971,12 +4018,14 @@
                 }
             } else if (currentAssessmentBranch === "sentences_low" || currentAssessmentBranch === "sentences_high" || currentAssessmentBranch === "sentences") {
                 const correctWords = Number(previousEndState.correct_words ?? 0);
-                const cumulativeCorrect = correctWords + branchScore;
+                const sentenceScore = getCrlaSentenceScore(branchScore);
+                const cumulativeCorrect = correctWords + sentenceScore;
                 const part1Total = cumulativeCorrect;
                 branchState.stage = part1Total <= 10 ? "early_completed_sentences" : "transition_to_story";
                 branchState.next_stage = part1Total <= 10 ? "completed" : "story_selection";
                 branchState.correct_words = correctWords;
                 branchState.correct_sentences = branchScore;
+                branchState.sentences_read = branchScore;
                 branchState.sentence_items_administered = items.length;
                 branchState.cumulative_correct = cumulativeCorrect;
                 branchState.routing_score = part1Total;
@@ -3985,7 +4034,7 @@
                 branchState.branch = "sentences";
                 branchState.task1_score = correctWords;
                 branchState.task2_rhymes_score = null;
-                branchState.task2_sentences_score = branchScore;
+                branchState.task2_sentences_score = sentenceScore;
                 branchState.part1_total_score = part1Total;
                 branchState.part1_reading_level = part1Total <= 10
                     ? "Full Refresher"
@@ -4936,6 +4985,7 @@
                 updateUI();
                 animateCurrentItem();
                 startSpeechRecognition();
+                startSentenceItemTimer();
             }
             if (currentSelectedStory && currentStoryState === "story_reading") {
                 updateStudentEndState({
@@ -4952,6 +5002,7 @@
         const stopReading = async () => {
             if (isReviewMode || isSpeechResponsePending()) return;
             if (!isRecording) return;
+            clearSentenceItemTimer();
             // CRLA Official Assessment: Cleanup auto-advance timer
             if (autoAdvanceTimer) {
                 window.clearTimeout(autoAdvanceTimer);

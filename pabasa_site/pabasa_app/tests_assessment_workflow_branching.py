@@ -193,8 +193,8 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
         self.assertEqual(payload["crla_score_data"]["task1_correct_words"], 7)
         self.assertEqual(payload["crla_score_data"]["task1_score"], 7)
         self.assertEqual(payload["crla_score_data"]["task2_type"], "Task 2H / Sentences")
-        self.assertEqual(payload["crla_score_data"]["task2_score"], 4)
-        self.assertEqual(payload["crla_score_data"]["part1_total_score"], 11)
+        self.assertEqual(payload["crla_score_data"]["task2_score"], 10)
+        self.assertEqual(payload["crla_score_data"]["part1_total_score"], 17)
         self.assertEqual(payload["crla_classification"], "Transitioning Reader")
         self.assertEqual(payload["crla_score_data"]["crla_classification"], "Transitioning Reader")
 
@@ -372,15 +372,15 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
     def test_high_branch_persists_workbook_fields(self):
         end_state = self._run_sync({
             "assessment_type": "sentence",
-            "correct_sentences": 6,
+            "correct_sentences": 2,
             "items_completed": 4,
             "correct_words": 8,
         }, {"correct_words": 8, "stage": "sentences_high"})
         self.assertEqual(end_state.get("branch"), "sentences")
         self.assertEqual(end_state.get("task1_score"), 8)
         self.assertIsNone(end_state.get("task2_rhymes_score"))
-        self.assertEqual(end_state.get("task2_sentences_score"), 6)
-        self.assertEqual(end_state.get("part1_total_score"), 14)
+        self.assertEqual(end_state.get("task2_sentences_score"), 5)
+        self.assertEqual(end_state.get("part1_total_score"), 13)
         self.assertEqual(end_state.get("part1_reading_level"), "Moderate Refresher")
 
     def test_weighted_score_does_not_override_word_branch(self):
@@ -395,16 +395,16 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
         self.assertEqual(end_state.get("correct_words"), 7)
         self.assertEqual(end_state.get("stage"), "transition_to_sentence")
 
-    def test_seven_words_plus_three_sentences_is_ten_and_stops(self):
+    def test_seven_words_plus_three_sentences_uses_weighted_score(self):
         end_state = self._run_sync({
             "assessment_type": "sentence",
             "correct_sentences": 3,
             "items_completed": 4,
             "final_score": 58,
         }, {"correct_words": 7, "stage": "sentences_high"})
-        self.assertEqual(end_state.get("stage"), "early_completed_sentences")
-        self.assertEqual(end_state.get("next_stage"), "completed")
-        self.assertEqual(end_state.get("routing_score"), 10)
+        self.assertEqual(end_state.get("stage"), "transition_to_story")
+        self.assertEqual(end_state.get("next_stage"), "story_selection")
+        self.assertEqual(end_state.get("routing_score"), 14)
         self.assertEqual(end_state.get("correct_sentences"), 3)
         self.assertEqual(end_state.get("sentence_items_administered"), 4)
         self.assertEqual(end_state.get("classification"), "High Emerging Reader")
@@ -418,7 +418,7 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
         }, {"correct_words": 7, "stage": "sentences_high"})
         self.assertEqual(end_state.get("stage"), "transition_to_story")
         self.assertEqual(end_state.get("next_stage"), "story_selection")
-        self.assertEqual(end_state.get("routing_score"), 11)
+        self.assertEqual(end_state.get("routing_score"), 17)
 
     def test_ten_words_plus_zero_sentences_stops_at_ten(self):
         end_state = self._run_sync({

@@ -13,6 +13,7 @@ CRLA_CLASSIFICATIONS = [
 ]
 
 CRLA_TASK1_ITEM_COUNT = 10
+CRLA_SENTENCE_SCORE_BY_COUNT = {0: 0, 1: 3, 2: 5, 3: 7, 4: 10}
 
 PHIL_IRI_CLASSIFICATION_MAP = {
     "Low Emerging Readers": "Frustration",
@@ -122,6 +123,12 @@ def crla_task1_next_task(correct_words: Any) -> str:
     return "Task 2L / Rhymes" if score <= 6 else "Task 2H / Sentences"
 
 
+def crla_sentence_score(sentences_read: Any) -> int:
+    """Return the official Task 2H score for up to four sentences."""
+    count = max(0, min(4, _coerce_int(sentences_read) or 0))
+    return CRLA_SENTENCE_SCORE_BY_COUNT[count]
+
+
 def crla_part1_total(task1_score: Any, task2l_score: Any = None, task2h_score: Any = None) -> int:
     """Sum Task 1 and exactly one applicable Task 2 raw correct count."""
     task1 = max(0, _coerce_int(task1_score) or 0)
@@ -201,6 +208,7 @@ def normalize_crla_score_data(data: Dict[str, Any]) -> Dict[str, Any]:
         "task1_correct_words": ("task1_correct_words", "task1_score"),
         "task1_score": ("task1_score", "task1_correct_words"),
         "task2_type": ("task2_type",), "task2_score": ("task2_score",),
+        "sentences_read": ("sentences_read", "correct_sentences", "sentence_count"),
         "part1_total_score": ("part1_total_score",), "story_number": ("story_number",),
         "story_total_words": ("story_total_words", "total_story_words"),
         "words_read": ("words_read", "total_words_read"), "miscues": ("miscues",),
@@ -375,6 +383,11 @@ def build_assessment_score_payload(data: Dict[str, Any]) -> Dict[str, Any]:
     crla_score_data = normalize_crla_score_data(crla_input) if is_crla_attempt else {}
     if is_crla_attempt:
         crla_score_data["task1_total_words"] = CRLA_TASK1_ITEM_COUNT
+        if "h" in str(crla_score_data.get("task2_type") or "").lower():
+            if crla_score_data.get("sentences_read") is None and crla_score_data.get("task2_score") is not None:
+                crla_score_data["sentences_read"] = min(_coerce_int(crla_score_data["task2_score"]) or 0, 4)
+            if crla_score_data.get("sentences_read") is not None:
+                crla_score_data["task2_score"] = crla_sentence_score(crla_score_data["sentences_read"])
     correct_items = _coerce_int(data.get("correct_items"))
     if correct_items is None:
         correct_items = _coerce_int(payload.get("correct_items", raw_metrics.get("correct_items")))
@@ -465,10 +478,9 @@ def build_assessment_score_payload(data: Dict[str, Any]) -> Dict[str, Any]:
             incoming_time_score = None
         time_score_value = derived_time_score if derived_time_score > 0 else (incoming_time_score if incoming_time_score is not None else 0.0)
 
-    # CRLA Part 1 is a count of correct responses.  A completed word task is
-    # Task 1 (0-10); sentence/rhyme scores are likewise raw correct-item
-    # counts.  When the reader supplies an accumulated Part 1 total, that is
-    # the authoritative score.  Part 2 retains its independent profile.
+    # CRLA Part 1 uses the Task 1 score plus the applicable Task 2 score. The
+    # sentence branch maps its raw completed-sentence count to the official
+    # 0/3/5/7/10 Task 2H score before persistence.
     if assessment_type == "word":
         task_score = max(0, correct_words)
     else:
@@ -476,13 +488,23 @@ def build_assessment_score_payload(data: Dict[str, Any]) -> Dict[str, Any]:
     part1_total = _coerce_int(data.get("part1_total_score"))
     if part1_total is None:
         part1_total = _coerce_int(payload.get("part1_total_score"))
+    if is_crla_attempt and "h" in str(crla_score_data.get("task2_type") or "").lower() and crla_score_data.get("sentences_read") is not None:
+        part1_total = crla_part1_total(
+            crla_score_data.get("task1_score"),
+            task2h_score=crla_score_data.get("task2_score"),
+        )
+        crla_score_data["part1_total_score"] = part1_total
     if part1_total is None and is_crla_attempt:
         part1_total = _coerce_int(crla_score_data.get("part1_total_score"))
     if part1_total is None and is_crla_attempt and crla_score_data.get("task2_score") is not None:
+        task2_type = str(crla_score_data.get("task2_type") or "").lower()
+        task2_score = crla_score_data.get("task2_score")
+        if "h" in task2_type and crla_score_data.get("sentences_read") is not None:
+            task2_score = crla_sentence_score(crla_score_data.get("sentences_read"))
         part1_total = crla_part1_total(
             crla_score_data.get("task1_score"),
-            crla_score_data.get("task2_score") if "l" in str(crla_score_data.get("task2_type") or "").lower() else None,
-            crla_score_data.get("task2_score") if "h" in str(crla_score_data.get("task2_type") or "").lower() else None,
+            task2_score if "l" in task2_type else None,
+            task2_score if "h" in task2_type else None,
         )
     if part1_total is not None and assessment_type != "paragraph":
         overall_raw_score = max(0, part1_total)

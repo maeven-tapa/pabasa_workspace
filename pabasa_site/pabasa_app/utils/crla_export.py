@@ -22,6 +22,7 @@ from .crla_mapping import (
     STUDENT_END_ROW,
     STUDENT_START_ROW,
 )
+from ..scoring import crla_sentence_score
 
 
 TEMPLATE_FILENAME = "CRLA3_Grade2TagalogScoresheet_v3.xlsx"
@@ -286,17 +287,27 @@ def _student_values(student, attempt, state, assessment):
     minutes, seconds = divmod(duration, 60) if duration is not None else (None, None)
 
     task_1_score = _bounded_integer(score_data.get("task1_score"), 0, 10)
-    task_2_score = _bounded_integer(score_data.get("task2_score"), 0, 30)
+    task_2_score = _bounded_integer(score_data.get("task2_score"), 0, 10)
     task_2_type = str(score_data.get("task2_type") or "").lower()
     rhyme_score = task_2_score if "l" in task_2_type else None
     sentence_score = task_2_score if "h" in task_2_type else None
+
+    if "h" in task_2_type:
+        sentence_count = score_data.get("sentences_read")
+        if sentence_count is None:
+            sentence_count = min(task_2_score or 0, 4)
+        sentence_score = crla_sentence_score(sentence_count)
 
     if task_1_score is not None:
         if 0 <= task_1_score <= 6:
             rhyme_score = _bounded_integer(task_2_score, 0, 10)
             sentence_score = None
         elif 7 <= task_1_score <= 10:
-            sentence_score = _bounded_integer(task_2_score, 0, 30)
+            sentence_score = crla_sentence_score(
+                score_data.get("sentences_read")
+                if score_data.get("sentences_read") is not None
+                else min(task_2_score or 0, 4)
+            )
             rhyme_score = None
 
     part_1_total = None

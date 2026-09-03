@@ -7,6 +7,7 @@ from openpyxl import load_workbook
 import uuid
 
 from .models import Assessment, Material, School, Section, StoryReadingProgress, User
+from .scoring import crla_sentence_score
 from .utils.crla_export import _part_1_reading_level, _row_formulas, _story_number, export_crla_excel
 
 
@@ -19,6 +20,12 @@ def test_section_create(**kwargs):
 
 
 class CrlaExportResultTests(TestCase):
+    def test_sentence_score_uses_official_four_sentence_table(self):
+        self.assertEqual(
+            [crla_sentence_score(count) for count in range(5)],
+            [0, 3, 5, 7, 10],
+        )
+
     def test_part_1_reading_level_uses_column_i_boundaries(self):
         expected = {
             0: "Full Refresher", 10: "Full Refresher",
@@ -141,7 +148,7 @@ class CrlaExportResultTests(TestCase):
         self.assertEqual(sheet["C6"].value, "Maria Santos")
         self.assertEqual(sheet["F11"].value, 10)
         self.assertIsNone(sheet["G11"].value)
-        self.assertEqual(sheet["H11"].value, 4)
+        self.assertEqual(sheet["H11"].value, 10)
         self.assertTrue(str(sheet["I11"].value).startswith("="))
         self.assertTrue(str(sheet["J11"].value).startswith("="))
         self.assertIsNone(sheet["K11"].value)
@@ -242,7 +249,7 @@ class CrlaExportResultTests(TestCase):
 
         sheet = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)["G2 MT Reading Scoresheet"]
         self.assertEqual(sheet["F11"].value, 8)
-        self.assertEqual(sheet["H11"].value, 7)
+        self.assertEqual(sheet["H11"].value, 10)
         self.assertTrue(str(sheet["I11"].value).startswith("="))
         self.assertTrue(str(sheet["J11"].value).startswith("="))
         self.assertEqual(sheet["K11"].value, 2)
