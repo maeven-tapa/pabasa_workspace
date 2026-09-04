@@ -31,6 +31,10 @@
         const completionClassificationValue = document.getElementById("completionClassificationValue");
         const completionClassificationPanel = document.getElementById("completionClassificationPanel");
         const completionClassificationLabel = document.getElementById("completionClassificationLabel");
+        const learnerExperiencePage = document.getElementById("learnerExperiencePage");
+        const learnerExperienceOptions = Array.from(document.querySelectorAll("#learnerExperiencePage .rating-option"));
+        const learnerExperienceContinue = document.getElementById("learnerExperienceContinue");
+        const learnerExperienceFeedback = document.getElementById("learnerExperienceFeedback");
         const storySelectionPanel = document.getElementById("storySelectionPanel");
         const storySelectionGrid = document.getElementById("storySelectionGrid");
         const storySelectionTitle = document.getElementById("storySelectionTitle");
@@ -253,6 +257,7 @@
         let currentStoryQuestions = [];
         let currentStoryAnswers = [];
         let currentStoryResults = [];
+        let selectedLearnerExperienceRating = null;
         let storyMiscueCount = 0;
         let storyMiscueResponseKeys = new Set();
         let storyAnswerRecorder = null;
@@ -490,16 +495,19 @@
             }
         }
 
-        function writeStudentEndState(nextState) {
+        function writeStudentEndState(nextState, options = {}) {
+            const deferLocalStorage = options.deferLocalStorage === true;
             const savedState = {
                 version: studentEndStateVersion,
                 ...(nextState || {}),
                 material_id: String(officialAssessmentId || materialId || "").trim(),
                 updated_at: new Date().toISOString(),
             };
-            try {
-                localStorage.setItem(getStudentEndStateKey(), JSON.stringify(savedState));
-            } catch (error) {}
+            if (!deferLocalStorage) {
+                try {
+                    localStorage.setItem(getStudentEndStateKey(), JSON.stringify(savedState));
+                } catch (error) {}
+            }
             if (savedState.stage) {
                 return fetch('/api/assessment/end-state/', {
                     method: 'POST',
@@ -515,7 +523,13 @@
                             response: result,
                         });
                     }
-                    return response.ok ? result : null;
+                    const accepted = response.ok && result.success !== false;
+                    if (accepted && deferLocalStorage) {
+                        try {
+                            localStorage.setItem(getStudentEndStateKey(), JSON.stringify(savedState));
+                        } catch (error) {}
+                    }
+                    return accepted ? result : null;
                 }).catch((error) => {
                     console.warn('PABASA: CRLA end-state request failed', {
                         stage: savedState.stage,
@@ -527,12 +541,12 @@
             return Promise.resolve(null);
         }
 
-        function updateStudentEndState(patch) {
+        function updateStudentEndState(patch, options = {}) {
             const current = readStudentEndState();
             return writeStudentEndState({
                 ...current,
                 ...(patch || {}),
-            });
+            }, options);
         }
 
         // CRLA Official Assessment: Persist item score immediately when locked
@@ -1254,17 +1268,20 @@
             const persisted = readStudentEndState();
             const storyReadPercent = Number(persisted.story_read_percent ?? persisted.passage_accuracy_percent ?? 0);
             const classification = getStoryClassificationFromResult(storyReadPercent, correctAnswers);
-            const completion = await updateStudentEndState({
-                stage: "completed", selected_story: currentSelectedStory?.title || "",
+            const comprehensionState = await updateStudentEndState({
+                stage: "story_comprehension", selected_story: currentSelectedStory?.title || "",
+                selected_story_content: currentSelectedStory?.content || "",
+                crla_question_index: currentStoryQuestionIndex,
+                crla_answers: currentStoryAnswers.slice(),
+                crla_results: currentStoryResults.slice(),
                 story_read_percent: storyReadPercent, passage_accuracy_percent: storyReadPercent,
                 story_total_words: persisted.story_total_words, total_story_words: persisted.total_story_words,
                 words_read: persisted.words_read, total_words_read: persisted.total_words_read,
                 miscues: persisted.miscues, duration_seconds: persisted.duration_seconds, wpm: persisted.wpm,
                 correct_answers: correctAnswers, total_questions: currentStoryQuestions.length,
                 comprehension_correct: correctAnswers, comprehension_total: currentStoryQuestions.length,
-                classification,
             });
-            if (!completion) {
+            if (!comprehensionState) {
                 if (crlaAnswerFeedback) { crlaAnswerFeedback.textContent = "We could not save your assessment. Please try again."; crlaAnswerFeedback.classList.remove("d-none"); }
                 return;
             }
@@ -1283,8 +1300,72 @@
                 comprehension_correct: correctAnswers,
                 total_questions: currentStoryQuestions.length,
             };
+            await showLearnerExperience();
+        }
+
+        function renderLearnerExperienceState() {
+            hideStoryPanels();
+            shell.classList.remove("is-complete");
+            learnerExperiencePage?.classList.remove("d-none");
+            learnerExperienceOptions.forEach(option => {
+                option.classList.remove("is-selected");
+                option.setAttribute("aria-checked", "false");
+            });
+            if (learnerExperienceContinue) learnerExperienceContinue.disabled = true;
+            if (learnerExperienceFeedback) learnerExperienceFeedback.textContent = "";
+            currentStoryState = "learner_experience";
+            updateFooterForStoryState("learner_experience");
+        }
+
+        async function showLearnerExperience() {
+            const persisted = readStudentEndState();
+            const saved = await updateStudentEndState({
+                ...persisted,
+                stage: "learner_experience",
+            });
+            if (saved) renderLearnerExperienceState();
+            return Boolean(saved);
+        }
+
+        async function saveLearnerExperienceRating(rating) {
+            const selectedRating = Number.parseInt(rating, 10);
+            if (!Number.isInteger(selectedRating) || selectedRating < 1 || selectedRating > 5) return;
+            if (learnerExperienceContinue) learnerExperienceContinue.disabled = true;
+            if (learnerExperienceFeedback) learnerExperienceFeedback.textContent = "Saving your rating...";
+            const persisted = readStudentEndState();
+            const saved = await updateStudentEndState({
+                ...persisted,
+                stage: "completed",
+                learner_experience_rating: selectedRating,
+                learner_experience: selectedRating,
+                classification: persisted.classification || getStoryClassificationFromResult(
+                    Number(persisted.story_read_percent ?? persisted.passage_accuracy_percent ?? 0),
+                    Number(persisted.comprehension_correct ?? persisted.correct_answers ?? 0),
+                ),
+            }, { deferLocalStorage: true });
+            if (!saved) {
+                if (learnerExperienceContinue) learnerExperienceContinue.disabled = false;
+                if (learnerExperienceFeedback) learnerExperienceFeedback.textContent = "We could not save your rating. Please try again.";
+                return;
+            }
+            learnerExperiencePage?.classList.add("d-none");
             await showCompletion(true);
         }
+
+        learnerExperienceOptions.forEach(option => {
+            option.addEventListener("click", () => {
+                selectedLearnerExperienceRating = option.dataset.rating;
+                learnerExperienceOptions.forEach(item => {
+                    const isSelected = item === option;
+                    item.classList.toggle("is-selected", isSelected);
+                    item.setAttribute("aria-checked", String(isSelected));
+                });
+                if (learnerExperienceContinue) learnerExperienceContinue.disabled = false;
+            });
+        });
+        learnerExperienceContinue?.addEventListener("click", () => {
+            if (selectedLearnerExperienceRating) saveLearnerExperienceRating(selectedLearnerExperienceRating);
+        });
 
         function startCRLASpokenAttempt() {
             if (crlaSpeechAttemptActive || !currentStoryQuestions.length) return;
@@ -1881,7 +1962,7 @@
                     activeStage = persistedNextStage;
                 } else if (stageMap[persistedStage]) {
                     activeStage = persistedStage;
-                } else if (["story_selection", "story_ready", "story_reading"].includes(persistedStage)) {
+                } else if (["story_selection", "story_ready", "story_reading", "story_comprehension", "learner_experience"].includes(persistedStage)) {
                     activeStage = "story";
                 } else if (persistedStage.startsWith("completed_")) {
                     activeStage = persistedStage;
@@ -1930,6 +2011,10 @@
                         currentStorySegmentIndex = Number.isFinite(persistedSegmentIndex) ? Math.max(0, persistedSegmentIndex) : 0;
                         if (persistedStage === "story_comprehension") {
                             renderCRLAComprehensionState(restoredStory.title, persistedEndState);
+                            return;
+                        }
+                        if (persistedStage === "learner_experience") {
+                            renderLearnerExperienceState();
                             return;
                         }
                         updateStudentEndState({

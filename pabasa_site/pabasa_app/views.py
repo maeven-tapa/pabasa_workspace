@@ -12680,7 +12680,7 @@ def persist_student_end_assessment_state(request):
     allowed_stages = {
         'transition_to_rhymes', 'transition_to_sentence', 'transition_to_story', 'story_selection',
         'story_ready', 'early_completed_words', 'early_completed_sentences',
-        'story_reading', 'story_comprehension', 'completed',
+        'story_reading', 'story_comprehension', 'learner_experience', 'completed',
         'completed_high_emerging', 'completed_developing', 'completed_transitioning', 'completed_grade_level',
     }
     stage = str(payload.get('stage') or '').strip().lower()

@@ -354,10 +354,36 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
         self.assertIn("correct_answers: correctAnswers", handler)
         self.assertIn("comprehension_correct: correctAnswers", handler)
         self.assertIn("total_questions: currentStoryQuestions.length", handler)
+        self.assertIn('stage: "story_comprehension"', handler)
+        self.assertIn("await showLearnerExperience();", handler)
         self.assertLess(
             handler.index("latestScores = {"),
-            handler.index("await showCompletion(true);"),
+            handler.index("await showLearnerExperience();"),
         )
+        rating = source.split("async function saveLearnerExperienceRating", 1)[1].split("function startCRLASpokenAttempt", 1)[0]
+        self.assertIn("learner_experience_rating: selectedRating", rating)
+        self.assertIn('stage: "completed"', rating)
+        self.assertIn("deferLocalStorage: true", rating)
+        self.assertIn("await showCompletion(true);", rating)
+
+        restore = source.split("function loadItems", 1)[1].split("function updateUI", 1)[0]
+        self.assertIn("renderPersistedEndState(persistedEndState)", restore)
+        self.assertIn("renderCRLAComprehensionState(restoredStory.title, persistedEndState)", restore)
+        comprehension_restore = source.split("function renderCRLAComprehensionState", 1)[1].split("function renderStorySelection", 1)[0]
+        self.assertIn("persistedState.crla_question_index", comprehension_restore)
+        self.assertIn("persistedState.crla_answers", comprehension_restore)
+        self.assertIn("persistedState.crla_results", comprehension_restore)
+        self.assertIn("currentStoryQuestions = questions.slice(0, 6)", comprehension_restore)
+        self.assertIn("persistCRLAComprehensionState", comprehension_restore)
+
+        writer = source.split("function writeStudentEndState", 1)[1].split("// CRLA Official Assessment", 1)[0]
+        self.assertIn("deferLocalStorage", writer)
+        self.assertIn("if (accepted && deferLocalStorage)", writer)
+        self.assertIn("return accepted ? result : null;", writer)
+
+        endpoint = (Path(__file__).parent / "views.py").read_text(encoding="utf-8")
+        allowed_stages = endpoint.split("allowed_stages =", 1)[1].split("allowed_fields =", 1)[0]
+        self.assertIn("'learner_experience'", allowed_stages)
 
     def test_official_story_choices_have_stable_one_based_keys(self):
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
