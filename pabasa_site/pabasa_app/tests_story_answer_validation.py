@@ -29,6 +29,55 @@ class StoryAnswerMeaningMatchTests(SimpleTestCase):
 
 
 class StoryReadingClassificationTests(SimpleTestCase):
+    def test_part2_profile_reading_bands_include_25_percent(self):
+        cases = (
+            (0, 0),
+            (24, 0),
+            (24.99, 0),
+            (25, 0),
+            (25.01, 1),
+            (26, 1),
+            (50, 1),
+            (50.01, 2),
+            (51, 2),
+            (75, 2),
+            (75.01, 3),
+            (76, 3),
+            (100, 3),
+        )
+        for percentage, expected_band in cases:
+            with self.subTest(percentage=percentage):
+                denominator = 10000 if percentage % 1 else 100
+                words_read = round(denominator * percentage / 100)
+                profile = crla_part2_profile(denominator, words_read, 0, 60, 0)
+                self.assertEqual(profile["reading_band"], expected_band)
+
+    def test_part2_profile_comprehension_bands_use_official_5_to_6_highest_band(self):
+        expected_bands = {
+            0: 0,
+            1: 1,
+            2: 1,
+            3: 2,
+            4: 2,
+            5: 3,
+            6: 3,
+        }
+        for answers, expected_band in expected_bands.items():
+            with self.subTest(answers=answers):
+                profile = crla_part2_profile(100, 80, 20, 60, answers)
+                self.assertEqual(profile["comprehension_band"], expected_band)
+
+    def test_part2_profile_uses_5_and_6_answers_for_grade_level(self):
+        for answers in (5, 6):
+            with self.subTest(answers=answers):
+                profile = crla_part2_profile(100, 80, 20, 60, answers)
+                self.assertEqual(profile["classification"], "Reading At Grade Level")
+
+    def test_part2_profile_preserves_existing_mismatch_behavior(self):
+        profile = crla_part2_profile(100, 55, 45, 60, 5)
+        self.assertEqual(profile["comprehension_band"], 3)
+        self.assertNotEqual(profile["classification"], "Reading At Grade Level")
+
     def test_alignment_counts_substitution_omission_and_insertion(self):
         cases = (
             ("THE CAT SAT", "THE DOG SAT", 2, 1),
@@ -75,7 +124,7 @@ class StoryReadingClassificationTests(SimpleTestCase):
         cases = (
             (80, 20, 6, "Reading At Grade Level"),
             (50, 50, 3, "Developing Reader"),
-            (25, 75, 1, "High Emerging Reader"),
+            (25, 75, 1, "Low Emerging Reader"),
         )
         for words_read, miscues, answers, expected in cases:
             with self.subTest(words_read=words_read, miscues=miscues, answers=answers):

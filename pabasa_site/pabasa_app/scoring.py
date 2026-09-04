@@ -168,9 +168,9 @@ def crla_part2_profile(total_story_words: Any, words_read: Any, miscues: Any,
     answers = _coerce_int(comprehension_correct)
     reading_band = None
     if passage_accuracy_percent is not None:
-        reading_band = (0 if passage_accuracy_percent < 25 else 1 if passage_accuracy_percent <= 50
+        reading_band = (0 if passage_accuracy_percent <= 25 else 1 if passage_accuracy_percent <= 50
                         else 2 if passage_accuracy_percent <= 75 else 3)
-    comprehension_band = None if answers is None else (0 if answers <= 0 else 1 if answers <= 2 else 2 if answers <= 5 else 3)
+    comprehension_band = None if answers is None else (0 if answers <= 0 else 1 if answers <= 2 else 2 if answers <= 4 else 3)
     classification = "NOT AVAILABLE"
     if reading_band is not None and comprehension_band is not None:
         if abs(reading_band - comprehension_band) >= 2 or (reading_band == 3 and comprehension_band == 2 and answers < 5):
