@@ -1703,16 +1703,14 @@ def _crla_grade2_part2_profile(correct_words_read, correct_answers):
     if percent is None or answers is None:
         return 'NOT AVAILABLE'
     reading_band = 0 if percent <= 25 else 1 if percent <= 50 else 2 if percent <= 75 else 3
-    comprehension_band = 0 if answers <= 0 else 1 if answers <= 2 else 2 if answers <= 5 else 3
-    if abs(reading_band - comprehension_band) >= 2 or (reading_band == 3 and comprehension_band == 2 and answers < 5):
-        return 'NOT AVAILABLE'
-    if reading_band == 3 and comprehension_band == 3:
-        return 'Reading At Grade Level'
-    if percent > 50 and (answers == 3 or answers >= 5):
-        return 'Transitioning Reader'
-    if percent >= 50 and answers >= 3:
-        return 'Developing Reader'
-    return ('Low Emerging Reader', 'High Emerging Reader', 'Developing Reader', 'Transitioning Reader')[min(reading_band, comprehension_band)]
+    comprehension_band = 0 if answers <= 0 else 1 if answers <= 2 else 2 if answers <= 4 else 3
+    # Final classification is based on comprehension band per teacher-confirmed rule
+    return (
+        "High Emerging Reader",
+        "Developing Reader",
+        "Transitioning Reader",
+        "Reading At Grade Level",
+    )[comprehension_band]
 
 
 def _osps_multiplier(assessment_type):
@@ -2640,11 +2638,18 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
             ):
                 if score_payload.get(field) is not None:
                     student_end_state[field] = score_payload.get(field)
-            student_end_state['routing_score'] = score_payload.get('story_read_percent') or score_payload.get('story_percent') or score_payload.get('read_percent')
-            student_end_state['classification'] = _crla_grade2_part2_profile(
-                student_end_state.get('story_read_percent') or student_end_state.get('routing_score'),
-                score_payload.get('correct_answers') or score_payload.get('comprehension_correct') or score_payload.get('correct_items') or score_payload.get('items_correct'),
+            story_read_percent = next((score_payload.get(field) for field in (
+                'story_read_percent', 'story_percent', 'read_percent'
+            ) if score_payload.get(field) is not None), None)
+            correct_answers = next((score_payload.get(field) for field in (
+                'correct_answers', 'comprehension_correct', 'correct_items', 'items_correct'
+            ) if score_payload.get(field) is not None), None)
+            student_end_state['routing_score'] = story_read_percent
+            derived_classification = _crla_grade2_part2_profile(
+                story_read_percent,
+                correct_answers,
             )
+            student_end_state['classification'] = derived_classification
 
         terminal_stage = student_end_state.get('stage') in {
             'early_completed_words', 'early_completed_sentences', 'completed',
@@ -12706,7 +12711,11 @@ def persist_student_end_assessment_state(request):
     final_classification = str(saved.get('classification') or '').strip()
     _, material_id = _parse_prefixed_id(saved.get('material_id'))
     material = Material.objects.filter(pk=material_id, is_official_reading=True).first() if material_id else None
-    if terminal_stage and final_classification and material:
+    has_part2_scores = (
+        any(saved.get(field) is not None for field in ('story_read_percent', 'passage_accuracy_percent'))
+        and any(saved.get(field) is not None for field in ('correct_answers', 'comprehension_correct'))
+    )
+    if (stage == 'completed' and has_part2_scores) or (stage != 'completed' and material and final_classification):
         if stage == 'completed':
             _sync_assessment_workflow_state(student, score_payload={
                 'assessment_type': 'paragraph',
@@ -12716,7 +12725,7 @@ def persist_student_end_assessment_state(request):
                 'words_read': saved.get('words_read') or saved.get('total_words_read'),
                 'miscues': saved.get('miscues'),
                 'duration_seconds': saved.get('duration_seconds'),
-                'story_read_percent': saved.get('story_read_percent'),
+                'story_read_percent': saved.get('story_read_percent') if saved.get('story_read_percent') is not None else saved.get('passage_accuracy_percent'),
                 'correct_answers': saved.get('correct_answers'),
                 'comprehension_correct': saved.get('comprehension_correct'),
                 'crla_classification': final_classification,

@@ -73,10 +73,30 @@ class StoryReadingClassificationTests(SimpleTestCase):
                 profile = crla_part2_profile(100, 80, 20, 60, answers)
                 self.assertEqual(profile["classification"], "Reading At Grade Level")
 
-    def test_part2_profile_preserves_existing_mismatch_behavior(self):
-        profile = crla_part2_profile(100, 55, 45, 60, 5)
-        self.assertEqual(profile["comprehension_band"], 3)
-        self.assertNotEqual(profile["classification"], "Reading At Grade Level")
+    def test_part2_profile_uses_comprehension_for_cross_band_final_classification(self):
+        cross_band_cases = (
+            (80, 0, "High Emerging Reader"),
+            (80, 2, "Developing Reader"),
+            (80, 4, "Transitioning Reader"),
+            (40, 5, "Reading At Grade Level"),
+            (20, 3, "Transitioning Reader"),
+        )
+        for words_read, answers, expected in cross_band_cases:
+            with self.subTest(words_read=words_read, answers=answers):
+                profile = crla_part2_profile(100, words_read, 100 - words_read, 60, answers)
+                self.assertEqual(profile["classification"], expected)
+
+    def test_part2_profile_keeps_same_band_cases(self):
+        same_band_cases = (
+            (20, 0, "High Emerging Reader"),
+            (40, 2, "Developing Reader"),
+            (60, 4, "Transitioning Reader"),
+            (80, 6, "Reading At Grade Level"),
+        )
+        for words_read, answers, expected in same_band_cases:
+            with self.subTest(words_read=words_read, answers=answers):
+                profile = crla_part2_profile(100, words_read, 100 - words_read, 60, answers)
+                self.assertEqual(profile["classification"], expected)
 
     def test_alignment_counts_substitution_omission_and_insertion(self):
         cases = (
@@ -101,6 +121,14 @@ class StoryReadingClassificationTests(SimpleTestCase):
         completion = source.split("async function showStoryCompletionScreen", 1)[1].split("function hideStoryCompletionScreen", 1)[0]
         self.assertIn("miscues: storyMiscueCount", completion)
 
+    def test_story_browser_passage_accuracy_fallback_does_not_subtract_miscues(self):
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        self.assertIn(
+            "Math.round((Math.max(0, wordsRead) / storyTotalWords) * 10000) / 100",
+            source,
+        )
+        self.assertNotIn("wordsRead - (miscues || 0)", source)
+
     def test_part2_profile_does_not_double_subtract_miscues(self):
         cases = (
             (80, 20, 80.0),
@@ -123,8 +151,8 @@ class StoryReadingClassificationTests(SimpleTestCase):
     def test_part2_profile_classification_uses_corrected_percentage(self):
         cases = (
             (80, 20, 6, "Reading At Grade Level"),
-            (50, 50, 3, "Developing Reader"),
-            (25, 75, 1, "Low Emerging Reader"),
+            (50, 50, 3, "Transitioning Reader"),
+            (25, 75, 1, "Developing Reader"),
         )
         for words_read, miscues, answers, expected in cases:
             with self.subTest(words_read=words_read, miscues=miscues, answers=answers):
@@ -133,10 +161,10 @@ class StoryReadingClassificationTests(SimpleTestCase):
 
     def test_classifies_each_reading_and_comprehension_band(self):
         cases = (
-            (24, 0, 'Low Emerging Reader'),
-            (50, 2, 'High Emerging Reader'),
-            (75, 4, 'Developing Reader'),
-            (76, 5, 'Transitioning Reader'),
+            (24, 0, 'High Emerging Reader'),
+            (50, 2, 'Developing Reader'),
+            (75, 4, 'Transitioning Reader'),
+            (76, 5, 'Reading At Grade Level'),
             (100, 6, 'Reading At Grade Level'),
         )
         for reading_percent, correct_answers, expected in cases:
@@ -146,7 +174,7 @@ class StoryReadingClassificationTests(SimpleTestCase):
                     expected,
                 )
 
-    def test_uses_lower_band_when_reading_and_comprehension_differ(self):
-        self.assertEqual(_crla_grade2_part2_profile(90, 0), 'NOT AVAILABLE')
-        self.assertEqual(_crla_grade2_part2_profile(20, 6), 'NOT AVAILABLE')
-        self.assertEqual(_crla_grade2_part2_profile(80, 3), 'NOT AVAILABLE')
+    def test_comprehension_priority_when_reading_and_comprehension_differ(self):
+        self.assertEqual(_crla_grade2_part2_profile(90, 0), 'High Emerging Reader')
+        self.assertEqual(_crla_grade2_part2_profile(20, 6), 'Reading At Grade Level')
+        self.assertEqual(_crla_grade2_part2_profile(80, 3), 'Transitioning Reader')

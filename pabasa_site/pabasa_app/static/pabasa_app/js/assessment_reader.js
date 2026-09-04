@@ -596,12 +596,13 @@
                 if (!Number.isFinite(percent) || !Number.isFinite(correct)) return "";
             const readingBand = percent <= 25 ? 0 : percent <= 50 ? 1 : percent <= 75 ? 2 : 3;
             const comprehensionBand = correct <= 0 ? 0 : correct <= 2 ? 1 : correct <= 4 ? 2 : 3;
+            // Final classification follows the comprehension-priority rule when reading and comprehension differ.
             return [
                 "High Emerging Reader",
                 "Developing Reader",
                 "Transitioning Reader",
-                "Reading at Grade Level",
-            ][Math.min(readingBand, comprehensionBand)];
+                "Reading At Grade Level",
+            ][comprehensionBand];
         }
 
         function getStoryChoicesFromAssessment() {
@@ -2188,7 +2189,7 @@
             const miscues = source.miscues ?? null;
             const passageAccuracy = source.passage_accuracy_percent
                 ?? source.story_read_percent
-                ?? (storyTotalWords && wordsRead != null ? Math.round((Math.max(0, wordsRead - (miscues || 0)) / storyTotalWords) * 10000) / 100 : null);
+                ?? (storyTotalWords && wordsRead != null ? Math.round((Math.max(0, wordsRead) / storyTotalWords) * 10000) / 100 : null);
             return {
                 task1_total_words: 10,
                 task1_correct_words: task1Score,

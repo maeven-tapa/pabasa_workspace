@@ -173,22 +173,14 @@ def crla_part2_profile(total_story_words: Any, words_read: Any, miscues: Any,
     comprehension_band = None if answers is None else (0 if answers <= 0 else 1 if answers <= 2 else 2 if answers <= 4 else 3)
     classification = "NOT AVAILABLE"
     if reading_band is not None and comprehension_band is not None:
-        if abs(reading_band - comprehension_band) >= 2 or (reading_band == 3 and comprehension_band == 2 and answers < 5):
-            classification = "NOT AVAILABLE"
-        elif reading_band == 3 and comprehension_band == 3:
-            classification = "Reading At Grade Level"
-        elif (passage_accuracy_percent >= 60 and answers == 3) or (passage_accuracy_percent > 50 and answers >= 5):
-            classification = "Transitioning Reader"
-        elif passage_accuracy_percent >= 50 and answers >= 3:
-            classification = "Developing Reader"
-        else:
-            classification = (
-                "Low Emerging Reader",
-                "High Emerging Reader",
-                "Developing Reader",
-                "Transitioning Reader",
-            )[min(reading_band, comprehension_band)]
-    final_band = min(reading_band, comprehension_band) if reading_band is not None and comprehension_band is not None else None
+        # Final classification follows the teacher-confirmed comprehension-priority rule.
+        classification = (
+            "High Emerging Reader",
+            "Developing Reader",
+            "Transitioning Reader",
+            "Reading At Grade Level",
+        )[comprehension_band]
+    final_band = comprehension_band if reading_band is not None and comprehension_band is not None else None
     return {
         "total_story_words": total_words, "words_read": read, "miscues": error_count,
         "duration_seconds": duration, "wpm": wpm, "correct_word_percent": passage_accuracy_percent,
@@ -598,6 +590,9 @@ def _part2_classification(reading_percent: Any, correct_answers: Any) -> str:
         return "High Emerging Reader"
     reading_band = 0 if percent <= 25 else 1 if percent <= 50 else 2 if percent <= 75 else 3
     comprehension_band = 0 if answers <= 0 else 1 if answers <= 2 else 2 if answers <= 4 else 3
-    if abs(reading_band - comprehension_band) >= 2:
-        return "NOT AVAILABLE"
-    return ("Low Emerging Reader", "High Emerging Reader", "Developing Reader", "Transitioning Reader")[min(reading_band, comprehension_band)] if min(reading_band, comprehension_band) < 3 else "Reading At Grade Level"
+    return (
+        "High Emerging Reader",
+        "Developing Reader",
+        "Transitioning Reader",
+        "Reading At Grade Level",
+    )[comprehension_band]

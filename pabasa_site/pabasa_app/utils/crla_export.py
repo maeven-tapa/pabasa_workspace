@@ -164,12 +164,13 @@ def _reading_profile(part_1_total, percent, correct_answers, persisted=""):
     if percent is not None and correct_answers is not None:
         reading_band = 0 if percent <= 25 else 1 if percent <= 50 else 2 if percent <= 75 else 3
         answer_band = 0 if correct_answers <= 0 else 1 if correct_answers <= 2 else 2 if correct_answers <= 4 else 3
+        # Final classification follows the comprehension-priority rule when reading and comprehension differ.
         return (
             "High Emerging Reader",
             "Developing Reader",
             "Transitioning Reader",
             "Reading At Grade Level",
-        )[min(reading_band, answer_band)]
+        )[answer_band]
     normalized = str(persisted or "").strip().lower()
     return {
         "low emerging readers": "Low Emerging Reader",

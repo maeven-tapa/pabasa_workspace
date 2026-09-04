@@ -1,9 +1,10 @@
+import json
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.template.loader import render_to_string
-from django.test import SimpleTestCase
+from django.test import RequestFactory, SimpleTestCase
 from django.urls import reverse
 
 from pabasa_app.views import (
@@ -12,6 +13,7 @@ from pabasa_app.views import (
     _crla_grade2_part2_profile,
     _is_finalized_grade_level_crla_result,
     _reader_assessment_state,
+    persist_student_end_assessment_state,
     _sync_assessment_workflow_state,
 )
 from pabasa_app.scoring import (
@@ -147,7 +149,7 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
             "correct_words": 49,
         })
         self.assertIsNone(payload["crla_score_data"]["task1_score"])
-        self.assertEqual(payload["crla_classification"], "Low Emerging Reader")
+        self.assertEqual(payload["crla_classification"], "High Emerging Reader")
 
     def test_crla_task1_always_reports_official_ten_items(self):
         payload = build_assessment_score_payload({
@@ -263,10 +265,10 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
         self.assertEqual(payload["total_score"], 56)
 
     def test_part2_server_helper_matches_authoritative_band_mapping(self):
-        self.assertEqual(_crla_grade2_part2_profile(53.68, 6), "Transitioning Reader")
+        self.assertEqual(_crla_grade2_part2_profile(53.68, 6), "Reading At Grade Level")
 
     def test_other_part2_classification_bands_remain_available(self):
-        self.assertEqual(_crla_grade2_part2_profile(50, 3), "Developing Reader")
+        self.assertEqual(_crla_grade2_part2_profile(50, 3), "Transitioning Reader")
         self.assertEqual(_crla_grade2_part2_profile(100, 6), "Reading At Grade Level")
 
     def test_part2_classification_persists_through_completed_state_sync(self):
@@ -282,7 +284,49 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
             "correct_answers": 6,
             "crla_classification": "Transitioning Reader",
         })
-        self.assertEqual(end_state["classification"], "Transitioning Reader")
+        self.assertEqual(end_state["classification"], "Reading At Grade Level")
+        self.assertEqual(_crla_grade2_part2_profile(53.68, 6), "Reading At Grade Level")
+        # teacher rule: cross-band final classification follows comprehension band
+        self.assertEqual(_crla_grade2_part2_profile(70, 4), "Transitioning Reader")
+
+    def test_completed_part2_persistence_uses_server_classification_without_material(self):
+        student = SimpleNamespace(id=1, pk=1, reading_level="")
+        factory = RequestFactory()
+        endpoint = persist_student_end_assessment_state.__wrapped__.__wrapped__
+        cases = (
+            ({"material_id": "material-1", "classification": "Reading At Grade Level"}, True),
+            ({"material_id": "material-invalid", "classification": "Reading At Grade Level"}, False),
+            ({"classification": "Reading At Grade Level"}, False),
+        )
+        for client_fields, material_found in cases:
+            with self.subTest(client_fields=client_fields), \
+                 patch("pabasa_app.views._check_auth", return_value=True), \
+                 patch("pabasa_app.views.User.objects.filter") as user_filter, \
+                 patch("pabasa_app.views.Material.objects.filter") as material_filter:
+                state = {}
+                user_filter.return_value.first.return_value = student
+                material_filter.return_value.first.return_value = SimpleNamespace(
+                    id=1, is_official_reading=True, assessment_kind="crla",
+                ) if material_found else None
+                student.preference = {"reading_assessment_state": state}
+                request = factory.post(
+                    "/api/assessment/end-state/",
+                    data=json.dumps({
+                        "stage": "completed",
+                        "story_read_percent": 80,
+                        "correct_answers": 0,
+                        **client_fields,
+                    }),
+                    content_type="application/json",
+                )
+                request.session = {"user_id": 1}
+                with patch("pabasa_app.views._get_user_state", return_value=state), \
+                     patch("pabasa_app.views._set_user_state", side_effect=lambda _student, value: state.update(value)):
+                    response = endpoint(request)
+
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(state["reader_classification"], "High Emerging Reader")
+                self.assertEqual(state["student_end_assessment_state"]["classification"], "High Emerging Reader")
 
     def test_overlay_prefers_authoritative_crla_classification(self):
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
@@ -551,10 +595,10 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
                 "crla_classification": "Readers at Grade Level",
             }, assessment=assessment)
 
-        self.assertEqual(state["reader_classification"], "Developing Reader")
+        self.assertEqual(state["reader_classification"], "Transitioning Reader")
         self.assertTrue(state["aral_eligible"])
         self.assertEqual(state["aral_status"], "active")
-        self.assertEqual(state["crla_windows"]["pretest"]["classification"], "Developing Reader")
+        self.assertEqual(state["crla_windows"]["pretest"]["classification"], "Transitioning Reader")
 
     def test_pre_midline_and_post_use_the_same_word_threshold(self):
         for phase in ("pretest", "midtest", "posttest"):
