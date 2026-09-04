@@ -44,8 +44,8 @@
         const storyQuestionText = document.getElementById("storyQuestionText") || document.getElementById("crlaQuestionText");
         const storyAnswerText = document.getElementById("storyAnswerText") || document.getElementById("crlaAnswerInput");
         const storyAnswerFeedback = document.getElementById("storyAnswerFeedback") || document.getElementById("crlaAnswerFeedback");
-        const storyQuestionFinishReadingBtn = document.getElementById("storyQuestionFinishReadingBtn") || document.getElementById("crlaQuestionStartReadingBtn");
-        const storyQuestionReadAloudBtn = document.getElementById("storyQuestionReadAloudBtn") || document.getElementById("crlaQuestionReadAloudBtn");
+        const storyQuestionFinishReadingBtn = document.getElementById("storyQuestionFinishReadingBtn");
+        const storyQuestionReadAloudBtn = document.getElementById("storyQuestionReadAloudBtn");
         const storyQuestionBackBtn = document.getElementById("storyQuestionBackBtn");
         const storyQuestionNextBtn = document.getElementById("storyQuestionNextBtn");
         const storyQuestionFinishBtn = document.getElementById("storyQuestionFinishBtn");
@@ -56,6 +56,8 @@
         const crlaQuestionText = document.getElementById("crlaQuestionText");
         const crlaAnswerInput = document.getElementById("crlaAnswerInput");
         const crlaAnswerFeedback = document.getElementById("crlaAnswerFeedback");
+        const crlaQuestionStartReadingBtn = document.getElementById("crlaQuestionStartReadingBtn");
+        const crlaQuestionReadAloudBtn = document.getElementById("crlaQuestionReadAloudBtn");
         const crlaQuestionBackBtn = document.getElementById("crlaQuestionBackBtn");
         const crlaQuestionNextBtn = document.getElementById("crlaQuestionNextBtn");
         const crlaQuestionCompletion = document.getElementById("crlaQuestionCompletion");
@@ -1216,6 +1218,97 @@
             }
             if (crlaAnswerFeedback) crlaAnswerFeedback.classList.add("d-none");
             if (crlaQuestionBackBtn) crlaQuestionBackBtn.disabled = currentStoryQuestionIndex === 0;
+            if (crlaQuestionStartReadingBtn) {
+                crlaQuestionStartReadingBtn.disabled = false;
+                crlaQuestionStartReadingBtn.classList.remove("is-recording");
+                crlaQuestionStartReadingBtn.textContent = "🎙 Start Reading";
+            }
+            const progress = document.getElementById("crlaQuestionProgressFill");
+            if (progress) progress.style.width = `${((currentStoryQuestionIndex + 1) / Math.max(1, currentStoryQuestions.length)) * 100}%`;
+        }
+
+        let crlaSpeechRecognition = null;
+        let crlaSpeechAttemptActive = false;
+
+        async function completeCRLASpokenAttempt(transcript, questionIndex) {
+            const answer = String(transcript || "").trim();
+            currentStoryAnswers[questionIndex] = answer;
+            if (crlaAnswerInput) {
+                crlaAnswerInput.textContent = answer || "No speech detected.";
+                crlaAnswerInput.classList.toggle("is-empty", !answer);
+            }
+            let result = false;
+            if (answer) {
+                try { result = await checkStoryAnswerTranscript(answer, questionIndex); }
+                catch (error) { result = false; }
+            }
+            currentStoryResults[questionIndex] = Boolean(result);
+            await persistCRLAComprehensionState();
+            if (currentStoryQuestionIndex !== questionIndex) return;
+            if (currentStoryQuestionIndex < currentStoryQuestions.length - 1) {
+                currentStoryQuestionIndex += 1;
+                renderCRLAQuestion();
+                return;
+            }
+            const correctAnswers = currentStoryResults.filter(Boolean).length;
+            const persisted = readStudentEndState();
+            const storyReadPercent = Number(persisted.story_read_percent ?? persisted.passage_accuracy_percent ?? 0);
+            const classification = getStoryClassificationFromResult(storyReadPercent, correctAnswers);
+            const completion = await updateStudentEndState({
+                stage: "completed", selected_story: currentSelectedStory?.title || "",
+                story_read_percent: storyReadPercent, passage_accuracy_percent: storyReadPercent,
+                story_total_words: persisted.story_total_words, total_story_words: persisted.total_story_words,
+                words_read: persisted.words_read, total_words_read: persisted.total_words_read,
+                miscues: persisted.miscues, duration_seconds: persisted.duration_seconds, wpm: persisted.wpm,
+                correct_answers: correctAnswers, total_questions: currentStoryQuestions.length,
+                comprehension_correct: correctAnswers, comprehension_total: currentStoryQuestions.length,
+                classification,
+            });
+            if (!completion) {
+                if (crlaAnswerFeedback) { crlaAnswerFeedback.textContent = "We could not save your assessment. Please try again."; crlaAnswerFeedback.classList.remove("d-none"); }
+                return;
+            }
+            crlaQuestionCompletion?.classList.remove("d-none");
+            crlaQuestionText?.classList.add("d-none"); crlaAnswerInput?.classList.add("d-none");
+            crlaQuestionBackBtn?.classList.add("d-none"); crlaQuestionNextBtn?.classList.add("d-none");
+        }
+
+        function startCRLASpokenAttempt() {
+            if (crlaSpeechAttemptActive || !currentStoryQuestions.length) return;
+            const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!Recognition) {
+                if (crlaAnswerFeedback) { crlaAnswerFeedback.textContent = "Speech recognition is unavailable in this browser."; crlaAnswerFeedback.classList.remove("d-none"); }
+                return;
+            }
+            const questionIndex = currentStoryQuestionIndex;
+            crlaSpeechAttemptActive = true;
+            crlaSpeechRecognition = new Recognition();
+            crlaSpeechRecognition.lang = /filipino|fil\b/i.test(currentMaterialLanguage || "") ? "fil-PH" : "en-US";
+            crlaSpeechRecognition.continuous = false;
+            crlaSpeechRecognition.interimResults = false;
+            crlaSpeechRecognition.onresult = event => {
+                const transcript = String(event.results?.[0]?.[0]?.transcript || "").trim();
+                try { crlaSpeechRecognition.stop(); } catch (error) {}
+                crlaSpeechRecognition = null;
+                crlaSpeechAttemptActive = false;
+                completeCRLASpokenAttempt(transcript, questionIndex);
+            };
+            crlaSpeechRecognition.onerror = () => {
+                if (!crlaSpeechAttemptActive) return;
+                crlaSpeechAttemptActive = false; crlaSpeechRecognition = null;
+                completeCRLASpokenAttempt("", questionIndex);
+            };
+            crlaSpeechRecognition.onend = () => {
+                if (!crlaSpeechAttemptActive) return;
+                crlaSpeechAttemptActive = false; crlaSpeechRecognition = null;
+                completeCRLASpokenAttempt("", questionIndex);
+            };
+            if (crlaAnswerFeedback) { crlaAnswerFeedback.textContent = "Listening… Speak your answer once."; crlaAnswerFeedback.classList.remove("d-none"); }
+            crlaQuestionStartReadingBtn.disabled = true;
+            crlaQuestionBackBtn.disabled = true; crlaQuestionNextBtn.disabled = true;
+            crlaQuestionStartReadingBtn.classList.add("is-recording");
+            crlaQuestionStartReadingBtn.textContent = "Listening…";
+            try { crlaSpeechRecognition.start(); } catch (error) { crlaSpeechRecognition.onerror(error); }
         }
 
         function renderCRLAComprehensionState(storyTitle, persistedState = {}) {
@@ -5584,28 +5677,16 @@
         });
 
         crlaQuestionBackBtn?.addEventListener("click", () => {
-            if (crlaAnswerInput && crlaAnswerInput.tagName === "TEXTAREA") currentStoryAnswers[currentStoryQuestionIndex] = crlaAnswerInput.value;
             if (currentStoryQuestionIndex > 0) { currentStoryQuestionIndex -= 1; renderCRLAQuestion(); }
             persistCRLAComprehensionState();
         });
-        crlaQuestionNextBtn?.addEventListener("click", async () => {
-            const answer = String(currentStoryAnswers[currentStoryQuestionIndex] || crlaAnswerInput?.textContent || "").replace("Your spoken answer will appear here.", "").trim();
-            if (!answer || !currentStoryQuestions.length) return;
-            currentStoryAnswers[currentStoryQuestionIndex] = answer;
-            crlaQuestionNextBtn.disabled = true;
-            try {
-                currentStoryResults[currentStoryQuestionIndex] = await checkStoryAnswerTranscript(answer, currentStoryQuestionIndex);
-                if (currentStoryQuestionIndex < currentStoryQuestions.length - 1) { await persistCRLAComprehensionState(); currentStoryQuestionIndex += 1; renderCRLAQuestion(); }
-                else {
-                    const correctAnswers = currentStoryResults.filter(Boolean).length;
-                    const persisted = readStudentEndState();
-                    const storyReadPercent = Number(persisted.story_read_percent ?? persisted.passage_accuracy_percent ?? 0);
-                    const classification = getStoryClassificationFromResult(storyReadPercent, correctAnswers);
-                    const completion = await updateStudentEndState({ stage: "completed", selected_story: currentSelectedStory?.title || "", story_read_percent: storyReadPercent, passage_accuracy_percent: storyReadPercent, story_total_words: persisted.story_total_words, total_story_words: persisted.total_story_words, words_read: persisted.words_read, total_words_read: persisted.total_words_read, miscues: persisted.miscues, duration_seconds: persisted.duration_seconds, wpm: persisted.wpm, correct_answers: correctAnswers, total_questions: currentStoryQuestions.length, comprehension_correct: correctAnswers, comprehension_total: currentStoryQuestions.length, classification });
-                    if (!completion) throw new Error("CRLA completion could not be saved.");
-                    crlaQuestionCompletion?.classList.remove("d-none"); crlaQuestionText?.classList.add("d-none"); crlaAnswerInput?.classList.add("d-none"); crlaQuestionBackBtn?.classList.add("d-none"); crlaQuestionNextBtn?.classList.add("d-none");
-                }
-            } catch (error) { if (crlaAnswerFeedback) { crlaAnswerFeedback.textContent = "We could not evaluate that answer. Please try again."; crlaAnswerFeedback.classList.remove("d-none"); } crlaQuestionNextBtn.disabled = false; }
+        crlaQuestionStartReadingBtn?.addEventListener("click", startCRLASpokenAttempt);
+        crlaQuestionReadAloudBtn?.addEventListener("click", () => {
+            if (!crlaQuestionText?.textContent || !window.speechSynthesis) return;
+            speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(crlaQuestionText.textContent);
+            utterance.lang = /filipino|fil\b/i.test(currentMaterialLanguage || "") ? "fil-PH" : "en-US";
+            speechSynthesis.speak(utterance);
         });
         crlaQuestionFinishBtn?.addEventListener("click", () => goBackToAssessments());
 
