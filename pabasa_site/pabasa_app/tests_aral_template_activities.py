@@ -106,6 +106,55 @@ class DedicatedAralTemplateActivityTests(TestCase):
         self.assertEqual(correct.context["fluency_activity"]["passage"], "Maaga akong gumising. Handa na ako sa paaralan.")
         self.assertRedirects(wrong, reverse("assessment"), fetch_redirect_response=False)
 
+    def test_fluency_page_ignores_non_fluency_completed_results(self):
+        material = self.make_material(
+            "fluency_reading", language="English", reading_set="My Pet",
+            passage="My pet dog runs in the yard.",
+        )
+        material.record_assessment_result(
+            self.student,
+            status="completed",
+            attempt_status="completed",
+            remarks="A result from another activity must not complete Fluency Reading.",
+        )
+        self.login_student()
+
+        response = self.client.get(
+            reverse("aral_template_activity_page", kwargs={"activity_slug": "fluency-reading"}),
+            {"id": material.id},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["fluency_activity"]["completion"]["completed"])
+
+    @patch("pabasa_app.views.transcribe_audio_bytes_with_model")
+    def test_fluency_completion_ignores_non_fluency_completed_results(self, transcribe):
+        passage = "My pet dog runs in the yard."
+        transcribe.return_value = (passage, "chirp_3", "")
+        material = self.make_material(
+            "fluency_reading", language="English", reading_set="My Pet", passage=passage,
+        )
+        material.record_assessment_result(
+            self.student,
+            status="completed",
+            attempt_status="completed",
+            remarks="A generic completed row.",
+        )
+        self.login_student()
+
+        response = self.client.post(
+            reverse("aral_template_activity_complete", kwargs={"activity_slug": "fluency-reading"}),
+            {"material_id": str(material.id), "duration_seconds": "30",
+             "audio": SimpleUploadedFile("reading.webm", b"recorded-audio", "audio/webm")},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["already_completed"])
+        fluency_result = material.assessment_results.get(
+            student=self.student, remarks__startswith="FLUENCY_READING_RESULT:",
+        )
+        self.assertEqual(fluency_result.attempt_status, "completed")
+
     def test_crla_material_cannot_enter_dedicated_aral_route(self):
         material = self.make_material("word_meaning_match")
         material.assessment_kind = "crla"

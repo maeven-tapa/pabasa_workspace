@@ -11149,6 +11149,17 @@ def _aral_completed_result(material, student):
     ).order_by('-completed_at', '-created_at', '-id').first()
 
 
+def _fluency_reading_completed_result(material, student):
+    """Return only a result produced by the dedicated Fluency Reading activity."""
+    if not material or not student:
+        return None
+    return material.assessment_results.filter(
+        student=student,
+        attempt_status='completed',
+        remarks__startswith=ARAL_RESULT_PREFIXES['fluency-reading'],
+    ).order_by('-completed_at', '-created_at', '-id').first()
+
+
 def _serialize_aral_result(result, activity_slug):
     if result is None:
         return {'completed': False}
@@ -11222,7 +11233,12 @@ def aral_template_activity_page(request, activity_slug):
 
     content = dict(material.content_json or {})
     student = User.objects.filter(pk=request.session.get('user_id'), role='student').first()
-    completion = _serialize_aral_result(_aral_completed_result(material, student), activity_slug)
+    completed_result = (
+        _fluency_reading_completed_result(material, student)
+        if activity_slug == 'fluency-reading'
+        else _aral_completed_result(material, student)
+    )
+    completion = _serialize_aral_result(completed_result, activity_slug)
     payload = {
         'id': material.id,
         'material_id': f'material-{material.id}',
@@ -11267,7 +11283,11 @@ def aral_template_activity_complete(request, activity_slug):
     if not _student_can_complete_assessment(student, material=material):
         return JsonResponse({'success': False, 'error': 'You are not authorized to complete this activity.'}, status=403)
 
-    existing = _aral_completed_result(material, student)
+    existing = (
+        _fluency_reading_completed_result(material, student)
+        if activity_slug == 'fluency-reading'
+        else _aral_completed_result(material, student)
+    )
     if existing:
         return JsonResponse({
             'success': True,
@@ -11414,10 +11434,18 @@ def aral_template_activity_complete(request, activity_slug):
 
     with transaction.atomic():
         locked_material = Material.objects.select_for_update().get(pk=material.pk)
-        existing = _aral_completed_result(locked_material, student)
+        existing = (
+            _fluency_reading_completed_result(locked_material, student)
+            if activity_slug == 'fluency-reading'
+            else _aral_completed_result(locked_material, student)
+        )
         if existing is None:
             locked_material.record_assessment_result(student, **attempt_payload)
-        result = _aral_completed_result(locked_material, student)
+        result = (
+            _fluency_reading_completed_result(locked_material, student)
+            if activity_slug == 'fluency-reading'
+            else _aral_completed_result(locked_material, student)
+        )
     return JsonResponse({
         'success': True,
         'already_completed': existing is not None,
@@ -19337,7 +19365,26 @@ def get_class_materials(request):
                 story_response_submission = None
                 latest_attempt_summary = {}
                 latest_time_score = None
-                if m.assessment:
+                is_dedicated_fluency_reading = bool(
+                    isinstance(m.content_json, dict)
+                    and m.content_json.get('activity_key') == 'fluency_reading'
+                )
+                if is_requesting_student and request_user and is_dedicated_fluency_reading:
+                    # A Fluency card is complete only after its dedicated audio
+                    # submission is scored.  Generic rows must not mark it done.
+                    completed_result = _fluency_reading_completed_result(m, request_user)
+                    if completed_result:
+                        student_has_completed = True
+                        completed_attempt_count = 1
+                        latest_attempt_summary = {
+                            'student_id': completed_result.student_id,
+                            'status': completed_result.attempt_status,
+                            'completed_at': completed_result.completed_at.isoformat() if completed_result.completed_at else None,
+                            'duration_seconds': completed_result.duration_seconds,
+                            'accuracy': completed_result.accuracy,
+                            'total_score': completed_result.total_score,
+                        }
+                elif m.assessment:
                     if is_requesting_student and request_user:
                         attempt_count = m.assessment.get_student_attempt_count(request_user)
                         completed_attempt_count = len([
