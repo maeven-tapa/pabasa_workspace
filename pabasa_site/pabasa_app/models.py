@@ -312,6 +312,9 @@ class Section(models.Model):
     def save(self, *args, **kwargs):
         if self.school_id is None:
             raise ValidationError({"school": "A Section must belong to an explicit School."})
+        # Ensure assessment_week_enabled defaults to False (never NULL)
+        if self.assessment_week_enabled is None:
+            self.assessment_week_enabled = False
         super().save(*args, **kwargs)
 
     def clean(self):
