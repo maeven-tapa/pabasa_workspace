@@ -1,5 +1,8 @@
+from pathlib import Path
+
 from django.test import SimpleTestCase
 
+from .reading_stt import align_story_transcript
 from .scoring import crla_part2_profile
 from .views import _crla_grade2_part2_profile, story_answer_matches
 
@@ -26,6 +29,29 @@ class StoryAnswerMeaningMatchTests(SimpleTestCase):
 
 
 class StoryReadingClassificationTests(SimpleTestCase):
+    def test_alignment_counts_substitution_omission_and_insertion(self):
+        cases = (
+            ("THE CAT SAT", "THE DOG SAT", 2, 1),
+            ("THE CAT SAT", "THE CAT", 2, 1),
+            ("THE CAT SAT", "THE BIG CAT SAT", 3, 1),
+            ("aa bb cc dd ee ff", "aa aa cc aa dd ee", 4, 3),
+        )
+        for expected, spoken, correct_words, miscues in cases:
+            with self.subTest(expected=expected, spoken=spoken):
+                result = align_story_transcript(expected, spoken)
+                self.assertEqual(result["correct_words"], correct_words)
+                self.assertEqual(result["miscues"], miscues)
+
+    def test_story_browser_uses_deduplicated_alignment_miscues(self):
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        self.assertIn("let storyMiscueResponseKeys = new Set();", source)
+        self.assertIn("if (storyMiscueResponseKeys.has(responseKey)) return;", source)
+        self.assertIn("recordStoryAlignmentMiscues(data, context);", source)
+        self.assertIn("storyMiscueCount += alignmentMiscues;", source)
+        self.assertNotIn("miscues: Math.max(0, totalStoryWords - correctWordsRead())", source)
+        completion = source.split("async function showStoryCompletionScreen", 1)[1].split("function hideStoryCompletionScreen", 1)[0]
+        self.assertIn("miscues: storyMiscueCount", completion)
+
     def test_part2_profile_does_not_double_subtract_miscues(self):
         cases = (
             (80, 20, 80.0),

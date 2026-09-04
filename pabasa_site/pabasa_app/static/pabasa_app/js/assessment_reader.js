@@ -240,6 +240,8 @@
         let currentStoryQuestions = [];
         let currentStoryAnswers = [];
         let currentStoryResults = [];
+        let storyMiscueCount = 0;
+        let storyMiscueResponseKeys = new Set();
         let storyAnswerRecorder = null;
         let storyAnswerStream = null;
         let storyAnswerRecording = false;
@@ -981,7 +983,7 @@
                 story_read_percent: storyReadPercent,
                 total_story_words: totalStoryWords,
                 words_read: correctWordsRead(),
-                miscues: Math.max(0, totalStoryWords - correctWordsRead()),
+                miscues: storyMiscueCount,
                 total_questions: currentStoryQuestions.length,
             };
             storyQuestionPanel?.classList.add("is-complete");
@@ -1016,7 +1018,7 @@
                 correct_words_percentage: storyReadPercent,
                 total_words_read: correctWordsRead(),
                 total_story_words: totalStoryWords,
-                miscues: Math.max(0, totalStoryWords - correctWordsRead()),
+                miscues: storyMiscueCount,
                 duration_seconds: readingScores.duration_seconds ?? null,
                 wpm: readingScores.wpm ?? null,
                 correct_answers: correctAnswers,
@@ -1252,6 +1254,7 @@
             const choice = story && typeof story === "object" ? story : null;
             if (!choice || !choice.title) return;
             currentSelectedStory = choice;
+            resetStoryMiscueTracking();
             updateStudentEndState({
                 stage: "story_ready",
                 selected_story: choice.title,
@@ -1744,6 +1747,7 @@
                 currentStoryChoices = getStoryChoicesFromAssessment();
                 const persistedStoryTitle = String(persistedEndState.selected_story || "").trim().toLowerCase();
                 if (activeStage === "story") {
+                    resetStoryMiscueTracking(persistedEndState.miscues);
                     const restoredStory = currentStoryChoices.find(item => String(item.title || "").trim().toLowerCase() === persistedStoryTitle);
                     if (restoredStory) {
                         currentSelectedStory = restoredStory;
@@ -2732,6 +2736,29 @@
             syllableStitchingContextAt = 0;
         }
 
+        function resetStoryMiscueTracking(initialCount = 0) {
+            storyMiscueCount = Math.max(0, Number(initialCount) || 0);
+            storyMiscueResponseKeys = new Set();
+        }
+
+        function recordStoryAlignmentMiscues(data, context) {
+            if (currentStoryState !== "story_reading") return;
+            const alignment = data?.word_alignment;
+            const alignmentMiscues = Number(alignment?.miscues);
+            if (!Number.isFinite(alignmentMiscues) || alignmentMiscues <= 0) return;
+
+            const responseKey = JSON.stringify({
+                segment: currentPageIndex,
+                syllable_index: context?.syllableIndex,
+                transcript: data?.raw_transcript || data?.transcript || "",
+                recognized_words: alignment?.recognized_words || [],
+                word_results: data?.word_results || [],
+            });
+            if (storyMiscueResponseKeys.has(responseKey)) return;
+            storyMiscueResponseKeys.add(responseKey);
+            storyMiscueCount += alignmentMiscues;
+        }
+
         function resetStorySegmentState(previousSegmentIndex, nextSegmentIndex, reason) {
             const before = {
                 currentSyllableIndex,
@@ -3116,6 +3143,8 @@
             if (hasProgressRegression && !data.complete) {
                 return;
             }
+
+            recordStoryAlignmentMiscues(data, context);
 
             const itemCorrectWords = Math.max(
                 previousCorrectWords,
@@ -5029,7 +5058,7 @@
                     total_story_words: totalStoryWords,
                     words_read: wordsRead,
                     total_words_read: wordsRead,
-                    miscues: Math.max(0, totalStoryWords - wordsRead),
+                    miscues: storyMiscueCount,
                     duration_seconds: readingScores.duration_seconds,
                     wpm: readingScores.wpm,
                     comprehension_total: currentStoryQuestions.length,
