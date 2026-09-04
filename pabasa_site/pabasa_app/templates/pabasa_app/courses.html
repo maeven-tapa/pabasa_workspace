@@ -8475,6 +8475,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                                 <div class="template-field template-title-field">
                                                     <label class="form-label" for="templateActivityTitle">Activity title <span class="template-required" aria-hidden="true">*</span></label>
                                                     <input type="text" id="templateActivityTitle" class="form-control" placeholder="e.g., Animals Around Us" aria-required="true">
+                                                    <select id="templateActivityTitleSelect" class="form-select d-none" aria-required="true"><option value="">Choose a published Story Reading story</option></select>
                                                 </div>
                                                 <div class="template-field" id="templateLanguageField">
                                                     <label class="form-label d-block">Language <span class="template-required" aria-hidden="true">*</span></label>
@@ -8488,7 +8489,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                             </div>
                                         </section>
 
-                                        <section class="template-builder-section" aria-labelledby="templateConfigurationHeading">
+                                        <section class="template-builder-section" id="templateConfigurationSection" aria-labelledby="templateConfigurationHeading">
                                             <div class="template-section-heading">
                                                 <span class="template-section-index">02</span>
                                                 <div><h6 id="templateConfigurationHeading">Activity Configuration</h6><p id="templateActivityContentHint"></p></div>
@@ -13994,7 +13995,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             'Fluency Reading': { lesson: 'Reading Fluency', hint: 'Choose a Grade 2 language and a ready-to-use fluency passage.', fields: [], addLabel: 'Select Reading Set' },
             'Story Reading': { lesson: 'Story Reading', hint: 'Select a prescribed story for reading practice.', fields: [], addLabel: 'Select Story' },
             "5W's Story Questions": { lesson: 'Reading Comprehension', hint: 'Select a published story, then add questions and correct answers.', fields: [], addLabel: 'Add Question' },
-            'Retell the Story': { lesson: 'Story Retelling', hint: 'Guide students to retell the story in their own words.', fields: [{ key: 'story', label: 'Story/passage', type: 'textarea' }, { key: 'guideQuestions', label: 'Optional guide questions', type: 'textarea' }], addLabel: 'Add Prompt' },
+            'Retell the Story': { lesson: 'Story Retelling', hint: 'Choose a published Story Reading story for students to retell.', fields: [], addLabel: '' },
             'Story Response': { lesson: 'Response to Story', hint: 'Prompt students for a response or reflection.', fields: [{ key: 'story', label: 'Story/passage', type: 'textarea' }, { key: 'prompt', label: 'Response question/prompt', type: 'textarea' }, { key: 'guidance', label: 'Optional response guidance', type: 'textarea' }], addLabel: 'Add Prompt' }
         };
         const TEMPLATE_META = [
@@ -16330,6 +16331,17 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (!templateDynamicFields) return;
             document.getElementById('fiveWStory')?.closest('.template-field')?.remove();
             const def = getTemplateDefinition(title);
+            const retell = title === 'Retell the Story';
+            const configSection = document.getElementById('templateConfigurationSection');
+            const scheduleIndex = document.querySelector('[aria-labelledby="templateScheduleHeading"] .template-section-index');
+            const previewIndex = document.querySelector('[aria-labelledby="templatePreviewHeading"] .template-section-index');
+            configSection?.classList.toggle('d-none', retell);
+            if (retell) { if (scheduleIndex) scheduleIndex.textContent = '02'; if (previewIndex) previewIndex.textContent = '03'; }
+            else { if (scheduleIndex) scheduleIndex.textContent = '03'; if (previewIndex) previewIndex.textContent = '04'; }
+            const titleInput = document.getElementById('templateActivityTitle');
+            const titleSelect = document.getElementById('templateActivityTitleSelect');
+            titleInput?.classList.toggle('d-none', retell);
+            titleSelect?.classList.toggle('d-none', !retell);
             const informationGrid = document.querySelector('.template-information-grid');
             const informationDescription = document.getElementById('templateInformationDescription');
             const languageField = document.getElementById('templateLanguageField');
@@ -16363,6 +16375,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             document.querySelector('.template-title-field')?.classList.toggle('d-none', title === "5W's Story Questions");
             if (title === "5W's Story Questions") { if (templateActivityTitle) templateActivityTitle.value = ''; renderFiveWEditor(); return; }
             if (isStoryResponseTemplate(title)) { renderStoryResponseEditor(); return; }
+            if (retell) { renderRetellStorySelector(); return; }
             updateStoryReadingLanguageAvailability();
             updateSentenceReadingLanguageAvailability();
             if (isPhraseReadingTemplate(title)) {
@@ -16612,9 +16625,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     : empty('Add the story and response prompt to begin the preview.');
             } else if (templateTitle === 'Retell the Story') {
                 instruction = learnerCopy.retell;
-                const item = {}; templateDynamicFields?.querySelectorAll('.template-content-field').forEach(field => item[field.dataset.fieldKey] = field.value);
-                const prompt = item.prompt || item.guideQuestions || item.guidance || '';
-                previewBody = item.story || prompt ? `<article class="preview-reading-card mb-3">${escapeHtml(item.story || '')}</article>${prompt ? `<div class="preview-question mb-3">${escapeHtml(prompt)}</div>` : ''}<div class="preview-writing-area" aria-label="Learner writing area"><div class="preview-writing-line"></div><div class="preview-writing-line"></div><div class="preview-writing-line"></div></div>` : empty('Add the story and response prompt to begin the preview.');
+                const story = activeTemplateActivity.content || {};
+                previewBody = story.storyText ? `<article class="preview-reading-card mb-3"><strong>${escapeHtml(story.storyTitle || title)}</strong><div class="mt-2">${escapeHtml(story.storyText)}</div></article><div class="preview-writing-area" aria-label="Learner writing area"><div class="preview-writing-line"></div><div class="preview-writing-line"></div><div class="preview-writing-line"></div></div>` : empty('Select a published Story Reading story to begin the preview.');
             } else {
                 previewBody = summary.body?.length ? cards(summary.body.map(line => `<div class="preview-learning-card">${escapeHtml(line)}</div>`).join('')) : empty(summary.emptyMessage || 'Add content to begin the preview.');
             }
@@ -16639,6 +16651,36 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 templatePreviewPanel.querySelector('[data-clap-preview-done]')?.addEventListener('click', () => { updateStatus(previewClaps ? `You clapped ${previewClaps} time${previewClaps === 1 ? '' : 's'}.` : 'Tap to clap before finishing.'); });
                 templatePreviewPanel.querySelector('[data-clap-preview-prev]')?.addEventListener('click', () => { config.previewIndex = Math.max(0, (Number(config.previewIndex) || 0) - 1); renderTemplatePreview(); });
                 templatePreviewPanel.querySelector('[data-clap-preview-next]')?.addEventListener('click', () => { config.previewIndex = (Number(config.previewIndex) || 0) + 1; renderTemplatePreview(); });
+            }
+        }
+
+        async function renderRetellStorySelector() {
+            if (!activeTemplateActivity) return;
+            const select = document.getElementById('templateActivityTitleSelect');
+            if (!select) return;
+            select.disabled = true;
+            select.innerHTML = '<option value="">Loading published stories…</option>';
+            try {
+                const response = await fetch('{% url "get_published_stories_api" %}', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
+                const data = await response.json();
+                const stories = data.success && Array.isArray(data.stories) ? data.stories : [];
+                if (!activeTemplateActivity || activeTemplateActivity.templateTitle !== 'Retell the Story') return;
+                activeTemplateActivity.retellStories = stories;
+                const currentId = activeTemplateActivity.content?.source_story_reading_material_id || '';
+                select.innerHTML = `<option value="">Choose a published Story Reading story</option>${stories.map(story => `<option value="${escapeAttr(story.id)}" ${String(story.id) === String(currentId) ? 'selected' : ''}>${escapeHtml(story.title)}${story.language ? ` — ${escapeHtml(story.language)}` : ''}</option>`).join('')}`;
+                select.disabled = !stories.length;
+                if (!stories.length) select.innerHTML = '<option value="">No published Story Reading activities available</option>';
+                const sync = () => {
+                    const story = stories.find(item => String(item.id) === String(select.value));
+                    activeTemplateActivity.content = story ? { source_story_reading_material_id: Number(story.id), storyTitle: story.title, storyText: story.story_text || '' } : {};
+                    if (templateActivityTitle) templateActivityTitle.value = story?.title || '';
+                    renderTemplatePreview();
+                };
+                select.addEventListener('change', sync);
+                sync();
+            } catch (error) {
+                select.innerHTML = '<option value="">Unable to load published stories</option>';
+                select.disabled = true;
             }
         }
 
@@ -16967,6 +17009,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     response_prompt: response.prompt || '', prompt_source: response.promptSource || 'suggested',
                     read_aloud_enabled: response.readAloud !== false, voice_recording_enabled: response.voiceRecording !== false
                 });
+            } else if (activeTemplateActivity?.templateTitle === 'Retell the Story') {
+                const story = activeTemplateActivity.content || {};
+                Object.assign(content, {
+                    activity_type: 'retell_story',
+                    source_story_reading_material_id: Number(story.source_story_reading_material_id) || null,
+                    story_title: story.storyTitle || '',
+                    story_text: story.storyText || '',
+                    story_language: language
+                });
             } else if (isAralReadingSetTemplate(activeTemplateActivity?.templateTitle)) {
                 activeTemplateActivity.language = language;
                 syncAralReadingSet();
@@ -17084,6 +17135,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 if (!values.title) return 'Activity Title is required.';
                 if (!values.content?.source_story_reading_material_id) return 'Select a published Story Reading activity.';
                 if (!values.content?.response_prompt) return 'Select a suggested prompt or create your own prompt.';
+                if (!values.weeks.length) return 'Select at least one week.';
+                return '';
+            }
+            if (activeTemplateActivity?.templateTitle === 'Retell the Story') {
+                if (!values.title) return 'Select a published Story Reading activity.';
+                if (!values.content?.source_story_reading_material_id) return 'Select a published Story Reading activity.';
                 if (!values.weeks.length) return 'Select at least one week.';
                 return '';
             }
