@@ -4971,6 +4971,9 @@ def home(request):
         'reading_animation_first_frame': reading_animation_frames[0] if reading_animation_frames else '',
     })
 
+def learner_experience_rating(request):
+    return render(request, 'pabasa_app/learner_experience_rating.html')
+
 def auth(request):
     return render(request, 'pabasa_app/auth.html')
 

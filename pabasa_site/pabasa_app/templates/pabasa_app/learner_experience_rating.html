@@ -1,0 +1,230 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Learner Experience Rating | PABASA</title>
+    <style>
+        @font-face {
+            font-family: 'Schoolbell';
+            src: url("{% static 'pabasa_app/font/Schoolbell.ttf' %}") format('truetype');
+            font-weight: 400;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        :root {
+            --ink: #234b3b;
+            --ink-soft: #527462;
+            --selected: #e4b83f;
+        }
+
+        * { box-sizing: border-box; }
+
+        html,
+        body {
+            min-height: 100%;
+            margin: 0;
+        }
+
+        body {
+            align-items: center;
+            background: linear-gradient(135deg, #fff8df 0%, #e6f3e9 100%);
+            color: var(--ink);
+            display: grid;
+            font-family: 'Schoolbell', cursive;
+            min-height: 100vh;
+            overflow: hidden;
+            padding: 3vh 4vw;
+        }
+
+        .board {
+            align-items: center;
+            display: flex;
+            height: 100%;
+            justify-content: center;
+            margin: auto;
+            position: relative;
+            width: 100%;
+        }
+
+        .board-content {
+            align-items: center;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(1rem, 2.4vh, 1.65rem);
+            height: auto;
+            justify-content: center;
+            padding: 4vh 0 2vh;
+            text-align: center;
+            transform: translateY(2vh);
+            width: min(1240px, 100%);
+        }
+
+        h1 {
+            color: var(--ink);
+            font-family: 'Schoolbell', cursive;
+            font-size: clamp(2.1rem, 5vw, 4.4rem);
+            line-height: 1;
+            margin: 0;
+        }
+
+        .instruction {
+            color: var(--ink-soft);
+            font-size: clamp(1.3rem, 2.7vw, 2.25rem);
+            font-weight: 400;
+            margin: 0.45rem 0 0;
+        }
+
+        .rating-form {
+            align-items: stretch;
+            display: flex;
+            gap: clamp(0.1rem, 0.6vw, 0.55rem);
+            justify-content: center;
+            max-width: 1120px;
+            width: 100%;
+        }
+
+        .rating-option {
+            align-items: center;
+            background: transparent;
+            border: 2px solid transparent;
+            border-radius: 14px;
+            color: var(--ink);
+            cursor: pointer;
+            display: flex;
+            flex: 1 1 0;
+            flex-direction: column;
+            gap: clamp(0.15rem, 0.5vw, 0.45rem);
+            min-width: 0;
+            padding: clamp(0.25rem, 0.65vw, 0.7rem);
+            transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+        }
+
+        .rating-option:hover,
+        .rating-option:focus-visible {
+            background: rgba(255, 255, 255, 0.45);
+            outline: none;
+            transform: translateY(-4px);
+        }
+
+        .rating-option:focus-visible {
+            box-shadow: 0 0 0 3px rgba(35, 75, 59, 0.25);
+        }
+
+        .rating-option.is-selected {
+            background: transparent;
+            border-color: var(--selected);
+            box-shadow: 0 0 0 2px rgba(228, 184, 63, 0.42);
+            transform: translateY(-4px) scale(1.025);
+        }
+
+        .rating-option img {
+            display: block;
+            height: auto;
+            max-height: 30vh;
+            object-fit: contain;
+            transform: scale(1.9);
+            width: 100%;
+        }
+
+        .rating-number {
+            color: var(--ink);
+            font-family: 'Schoolbell', cursive;
+            font-size: clamp(1.8rem, 3.6vw, 3.15rem);
+            font-weight: 400;
+            line-height: 1;
+        }
+
+        .continue-button {
+            background: #e4b83f;
+            border: 0;
+            border-radius: 999px;
+            box-shadow: 0 5px 10px rgba(10, 30, 20, 0.25);
+            color: #234b3b;
+            cursor: pointer;
+            font: 400 clamp(1.15rem, 2vw, 1.7rem) 'Schoolbell', cursive;
+            min-height: 3.2rem;
+            padding: 0.65rem 2.5rem;
+            transition: filter 160ms ease, transform 160ms ease;
+        }
+
+        .continue-button:not(:disabled):hover,
+        .continue-button:not(:disabled):focus-visible {
+            filter: brightness(1.08);
+            outline: 3px solid rgba(35, 75, 59, 0.25);
+            outline-offset: 2px;
+            transform: translateY(-2px);
+        }
+
+        .continue-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.48;
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 2vh 2vw; }
+
+            .board-content {
+                gap: 1.1rem;
+                height: auto;
+                padding: 3vh 0 1vh;
+                width: 100%;
+            }
+
+            .rating-form { gap: 0.1rem; }
+            .rating-option { padding-inline: 0.1rem; }
+            .rating-option img { max-height: 20vh; transform: scale(1.55); }
+            .continue-button { min-height: 2.7rem; padding: 0.45rem 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <main class="board" aria-labelledby="page-title">
+        <div class="board-content">
+            <header>
+                <h1 id="page-title">How did your reading go?</h1>
+                <p class="instruction">Choose the face that matches!</p>
+            </header>
+
+            <div class="rating-form" role="radiogroup" aria-label="Learner experience rating">
+                {% for rating in "12345" %}
+                <button class="rating-option" type="button" role="radio" aria-checked="false" data-rating="{{ rating }}" aria-label="Rating {{ rating }}">
+                    <img src="{% static 'pabasa_app/images/learner_experience/' %}{{ rating }}.png" alt="Rating {{ rating }}">
+                    <span class="rating-number">{{ rating }}</span>
+                </button>
+                {% endfor %}
+            </div>
+
+            <button class="continue-button" id="continueButton" type="button" disabled>Continue</button>
+        </div>
+    </main>
+
+    <script>
+        (() => {
+            const options = Array.from(document.querySelectorAll(".rating-option"));
+            const continueButton = document.getElementById("continueButton");
+            let selectedRating = null;
+
+            options.forEach((option) => {
+                option.addEventListener("click", () => {
+                    selectedRating = option.dataset.rating;
+                    options.forEach((item) => {
+                        const isSelected = item === option;
+                        item.classList.toggle("is-selected", isSelected);
+                        item.setAttribute("aria-checked", String(isSelected));
+                    });
+                    continueButton.disabled = false;
+                });
+            });
+
+            continueButton.addEventListener("click", () => {
+                if (selectedRating) {
+                    console.log(`Learner Experience rating selected: ${selectedRating}`);
+                }
+            });
+        })();
+    </script>
+</body>
+</html>
