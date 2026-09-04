@@ -13997,7 +13997,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             'Blend the Syllables': { lesson: 'Syllable Blending', hint: 'Choose a language and one ready-made activity format.', fields: [], addLabel: 'Pre-built content' },
             'Syllable Blending': { lesson: 'Syllable Blending', hint: 'Choose a language and one ready-made activity format.', fields: [], addLabel: 'Pre-built content' },
             'Picture-Word Matching': { lesson: 'Word Recognition', hint: 'Choose a prescribed language and set, then preview the ready-made picture-word pairs.', fields: [], addLabel: 'Select Prescribed Set' },
-            'Decode the Word': { lesson: 'Word Decoding', hint: 'Break a word into sounds and decode it.', fields: [{ key: 'word', label: 'Word', type: 'text' }, { key: 'prompt', label: 'Decoding prompt', type: 'text', placeholder: 'Say the sounds then blend them.' }], addLabel: 'Add Item' },
+            'Decode the Word': { lesson: 'Word Decoding', hint: 'Choose a language and a ready-to-play word set. The bubble activity, read-aloud prompt, and decoding sequence are supplied by the system.', fields: [], addLabel: 'Select Reading Set' },
             'Word Meaning Match': { lesson: 'Vocabulary Development', hint: 'Choose a Grade 2 language and a ready-to-use word meaning set.', fields: [], addLabel: 'Select Reading Set' },
             'Phrase Reading Practice': { lesson: 'Phrase Reading', hint: 'Create short phrases for reading practice.', fields: [{ key: 'phrase', label: 'Phrase', type: 'text' }], addLabel: 'Add Phrase' },
             'Sentence Reading Practice': { lesson: 'Sentence Reading', hint: 'Select a prescribed sentence set for reading practice.', fields: [], addLabel: 'Select Sentence Set' },
@@ -14598,6 +14598,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 items: [{letter:'B',sound:'B'},{letter:'C',sound:'C'},{letter:'D',sound:'D'},{letter:'F',sound:'F'},{letter:'G',sound:'G'}]
             }
         };
+        // Word Decoding — prescribed, language-isolated sets for the bubble activity.
+        const WORD_DECODING_READING_SETS = {
+            filipino_payak: { id: 'filipino_payak', label: 'Filipino — Payak na Salita', language: 'Filipino', items: [{word:'bata'},{word:'mesa'},{word:'susi'},{word:'puno'},{word:'gabi'}] },
+            filipino_pantig: { id: 'filipino_pantig', label: 'Filipino — Salitang May Pantig', language: 'Filipino', items: [{word:'bahay'},{word:'gatas'},{word:'lapis'},{word:'kapatid'},{word:'laruan'}] },
+            english_cvc: { id: 'english_cvc', label: 'English — Short Vowel Words', language: 'English', items: [{word:'cat'},{word:'bed'},{word:'pig'},{word:'hot'},{word:'sun'}] },
+            english_blends: { id: 'english_blends', label: 'English — Everyday Words', language: 'English', items: [{word:'ship'},{word:'flag'},{word:'frog'},{word:'clock'},{word:'brush'}] }
+        };
         let activeTemplateActivity = null;
         let activeTemplateItemEditIndex = null;
         let createdTemplateActivities = [];
@@ -14784,6 +14791,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return title === 'Match the Letter to Its Sound';
         }
 
+        function isWordDecodingTemplate(title) {
+            return title === 'Decode the Word';
+        }
+
         function getLetterSoundMatchingReadingSets(language) {
             const allSets = Object.values(LETTER_SOUND_MATCHING_READING_SETS);
             return allSets.filter(set => set.language === language);
@@ -14819,6 +14830,34 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             );
             if (!set) return null;
             activeTemplateActivity.letterSoundCorrespondence = { readingSetId: set.id, language: set.language };
+            activeTemplateActivity.items = set.items.map(item => ({...item}));
+            return set;
+        }
+
+        function getWordDecodingReadingSets(language) {
+            const normalizedLanguage = language === 'English' ? 'English' : 'Filipino';
+            return Object.values(WORD_DECODING_READING_SETS).filter(set => set.language === normalizedLanguage);
+        }
+
+        function getWordDecodingReadingSetById(setId) {
+            return WORD_DECODING_READING_SETS[setId] || null;
+        }
+
+        function getWordDecodingReadingSet(language, setId = '') {
+            const sets = getWordDecodingReadingSets(language);
+            const selectedSet = getWordDecodingReadingSetById(setId);
+            return selectedSet && selectedSet.language === (language === 'English' ? 'English' : 'Filipino')
+                ? selectedSet
+                : sets[0] || null;
+        }
+
+        function syncWordDecodingSet() {
+            if (!activeTemplateActivity || !isWordDecodingTemplate(activeTemplateActivity.templateTitle)) return null;
+            const set = getWordDecodingReadingSet(
+                getSelectedTemplateLanguage(), activeTemplateActivity.wordDecoding?.readingSetId
+            );
+            if (!set) return null;
+            activeTemplateActivity.wordDecoding = { readingSetId: set.id, language: set.language };
             activeTemplateActivity.items = set.items.map(item => ({...item}));
             return set;
         }
@@ -15176,6 +15215,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 } : null,
                 letterSoundCorrespondence: isLetterSoundCorrespondenceTemplate(templateTitle) ? {
                     readingSetId: String(contentJson.reading_set_id || (restoredLanguage === 'English' ? 'english_vowels' : 'tagalog_vowels')),
+                    language: String(contentJson.language || restoredLanguage || 'Filipino').trim() || 'Filipino'
+                } : null,
+                wordDecoding: isWordDecodingTemplate(templateTitle) ? {
+                    readingSetId: String(contentJson.reading_set_id || (restoredLanguage === 'English' ? 'english_cvc' : 'filipino_payak')),
                     language: String(contentJson.language || restoredLanguage || 'Filipino').trim() || 'Filipino'
                 } : null,
                 clapCount: isClapCountTemplate(templateTitle) ? {
@@ -15715,6 +15758,38 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 activeTemplateActivity.letterSoundCorrespondence = { readingSetId: selectedSet.id, language: selectedSet.language };
                 activeTemplateActivity.items = selectedSet.items.map(item => ({...item}));
                 renderLetterSoundCorrespondenceSelector();
+                renderTemplatePreview();
+            });
+        }
+
+        function renderWordDecodingSelector() {
+            if (!templateDynamicFields || !activeTemplateActivity) return;
+            const set = syncWordDecodingSet();
+            if (!set) return;
+            const availableSets = getWordDecodingReadingSets(set.language);
+            templateDynamicFields.innerHTML = `
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label fw-bold" for="wordDecodingReadingSet">Reading Set</label>
+                        <select class="form-select mb-2" id="wordDecodingReadingSet">
+                            ${availableSets.map(option => `<option value="${escapeAttr(option.id)}" ${option.id === set.id ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}
+                        </select>
+                        <div class="form-text mb-3">Only ${escapeHtml(set.language)} word sets are available. The word, read-aloud prompt, and letter sequence are ready to use.</div>
+                        <div class="letter-sound-items-preview">
+                            <h6 class="letter-sound-preview-title">${escapeHtml(set.label)}</h6>
+                            <div class="letter-sound-items-grid">
+                                ${set.items.map(item => `<div class="letter-sound-item-card"><div class="letter-sound-item-letter">${escapeHtml(item.word)}</div></div>`).join('')}
+                            </div>
+                            <div class="letter-sound-items-count"><small class="text-muted">${set.items.length} prescribed words</small></div>
+                        </div>
+                    </div>
+                </div>`;
+            document.getElementById('wordDecodingReadingSet')?.addEventListener('change', event => {
+                const selectedSet = getWordDecodingReadingSet(set.language, event.target.value);
+                if (!selectedSet) return;
+                activeTemplateActivity.wordDecoding = { readingSetId: selectedSet.id, language: selectedSet.language };
+                activeTemplateActivity.items = selectedSet.items.map(item => ({...item}));
+                renderWordDecodingSelector();
                 renderTemplatePreview();
             });
         }
@@ -16485,6 +16560,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 renderLetterSoundCorrespondenceSelector();
                 return;
             }
+            if (isWordDecodingTemplate(title)) {
+                Array.from(document.querySelectorAll('input[name="templateLanguage"]')).forEach(input => {
+                    input.disabled = false;
+                    input.parentElement?.classList.remove('opacity-50');
+                    input.parentElement?.setAttribute('title', '');
+                });
+                renderWordDecodingSelector();
+                return;
+            }
             if (isPictureWordMatchingTemplate(title)) {
                 Array.from(document.querySelectorAll('input[name="templateLanguage"]')).forEach(input => {
                     input.disabled = false;
@@ -16601,8 +16685,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 previewBody = pictureItems.length ? cards(pictureItems.slice(0, 6).map(item => { const image = item.previewImage; return `<div class="preview-learning-card text-center">${image ? `<img src="${escapeAttr(image)}" alt="${escapeAttr(item.word || '')}" style="width:72px;height:72px;object-fit:contain">` : '<i class="bi bi-image fs-2 text-muted" aria-hidden="true"></i>'}<div class="preview-answer-token mt-2">${escapeHtml(item.word || '?')}</div></div>`; }).join('')) : empty('Choose a picture-word set to begin the preview.');
             } else if (templateTitle === 'Decode the Word') {
                 instruction = learnerCopy.decode;
-                const values = {}; templateDynamicFields?.querySelectorAll('.template-content-field').forEach(field => values[field.dataset.fieldKey] = field.value);
-                previewBody = values.word ? `<div class="preview-learning-card text-center"><div class="preview-syllable-pieces justify-content-center">${Array.from(String(values.word)).map(char => `<span class="preview-syllable-piece">${escapeHtml(char)}</span>`).join('')}</div><div class="preview-found-word mt-4">${escapeHtml(values.word)}</div></div>` : empty('Enter a word to see the decoding task.');
+                const word = String(activeTemplateActivity.items?.[0]?.word || '');
+                previewBody = word ? `<div class="preview-learning-card text-center"><div class="preview-syllable-pieces justify-content-center">${Array.from(word).map(char => `<span class="preview-syllable-piece">${escapeHtml(char)}</span>`).join('')}</div><div class="preview-found-word mt-4">${escapeHtml(word)}</div></div>` : empty('Choose a prescribed word set to preview the decoding task.');
             } else if (templateTitle === 'Word Meaning Match') {
                 instruction = learnerCopy.meaning;
                 const item = items[0];
@@ -16945,6 +17029,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 activeTemplateActivity.title = 'Match the Letter to Its Sound';
                 if (templateActivityTitle) templateActivityTitle.value = activeTemplateActivity.title;
             }
+            if (isWordDecodingTemplate(templateTitle)) {
+                const defaultSet = getWordDecodingReadingSet('Filipino');
+                activeTemplateActivity.wordDecoding = { readingSetId: defaultSet.id, language: 'Filipino' };
+                activeTemplateActivity.items = defaultSet.items.map(item => ({...item}));
+                activeTemplateActivity.title = 'Decode the Word';
+                if (templateActivityTitle) templateActivityTitle.value = activeTemplateActivity.title;
+            }
             if (isPictureWordMatchingTemplate(templateTitle)) {
                 activeTemplateActivity.pictureWordMatching = Object.assign({}, normalizePictureWordMatchingSelection('A', templateLanguage), { mode: 'prescribed' });
                 activeTemplateActivity.pictureWordMatchingCustom = { items: [], searchQuery: '' };
@@ -16976,7 +17067,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             window.__addMaterialDefaultMode = 'template';
             setTemplateBuilderActive(true);
             if (templateActivityTitle) {
-                if (!isLetterSoundMatchingTemplate(templateTitle) && !isLetterSoundCorrespondenceTemplate(templateTitle)) {
+                if (!isLetterSoundMatchingTemplate(templateTitle) && !isLetterSoundCorrespondenceTemplate(templateTitle) && !isWordDecodingTemplate(templateTitle)) {
                     templateActivityTitle.value = isSoundDetectiveTemplate(templateTitle) ? 'Sound Detective' : (isStoryResponseTemplate(templateTitle) ? 'Story Response' : '');
                 }
                 if (isAralReadingSetTemplate(templateTitle)) templateActivityTitle.value = templateTitle;
@@ -17092,6 +17183,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 );
                 content.language = readingSet.language;
                 content.activity_type = 'letter_sound_correspondence';
+                content.reading_set_id = readingSet.id;
+                content.items = readingSet.items.map(item => ({...item}));
+            } else if (isWordDecodingTemplate(activeTemplateActivity?.templateTitle)) {
+                const readingSet = getWordDecodingReadingSet(language, activeTemplateActivity.wordDecoding?.readingSetId);
+                content.language = readingSet.language;
+                content.activity_type = 'word_decoding';
                 content.reading_set_id = readingSet.id;
                 content.items = readingSet.items.map(item => ({...item}));
             } else if (isPictureWordMatchingTemplate(activeTemplateActivity?.templateTitle)) {
@@ -17227,6 +17324,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
             if (isLetterSoundCorrespondenceTemplate(activeTemplateActivity?.templateTitle)) {
                 const set = getLetterSoundCorrespondenceReadingSetById(values.content?.reading_set_id);
+                if (!['Filipino', 'English'].includes(values.language)) return 'Choose Filipino or English.';
+                if (!set || set.language !== values.language || values.content?.items?.length !== 5) return 'Choose a prescribed reading set for the selected language.';
+                if (!values.weeks.length) return 'Select at least one week.';
+                return '';
+            }
+            if (isWordDecodingTemplate(activeTemplateActivity?.templateTitle)) {
+                const set = getWordDecodingReadingSetById(values.content?.reading_set_id);
                 if (!['Filipino', 'English'].includes(values.language)) return 'Choose Filipino or English.';
                 if (!set || set.language !== values.language || values.content?.items?.length !== 5) return 'Choose a prescribed reading set for the selected language.';
                 if (!values.weeks.length) return 'Select at least one week.';
@@ -17475,6 +17579,22 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             template_source: 'template',
                             weeks: values.weeks || [],
                             items: readingSet.items
+                        });
+                    }
+                    if (isWordDecodingTemplate(activeTemplateActivity?.templateTitle)) {
+                        const readingSet = getWordDecodingReadingSetById(values.content?.reading_set_id);
+                        if (!readingSet || readingSet.language !== values.language) throw new Error('Choose a reading set for the selected language.');
+                        Object.assign(contentPayload, {
+                            activity_slug: 'word-decoding',
+                            activity_type: 'word_decoding',
+                            reading_set_id: readingSet.id,
+                            language: readingSet.language,
+                            template_title: 'Decode the Word',
+                            template_lesson: 'Word Decoding',
+                            template_type: 'Decode the Word',
+                            template_source: 'template',
+                            weeks: values.weeks || [],
+                            items: readingSet.items.map(item => ({...item}))
                         });
                     }
                     if (isClapCountTemplate(activeTemplateActivity?.templateTitle)) {
@@ -18662,6 +18782,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
                     } else if (isLetterSoundCorrespondenceTemplate(activeTemplateActivity?.templateTitle)) {
                         syncLetterSoundCorrespondenceSet();
+                        renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
+                    } else if (isWordDecodingTemplate(activeTemplateActivity?.templateTitle)) {
+                        syncWordDecodingSet();
                         renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
                     }
                     renderTemplatePreview();

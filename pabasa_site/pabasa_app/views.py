@@ -11027,12 +11027,19 @@ def _is_letter_sound_matching_material(material):
 
 
 LETTER_SOUND_CORRESPONDENCE_SLUG = 'letter-sound-correspondence'
+WORD_DECODING_SLUG = 'word-decoding'
 
 
 def _is_letter_sound_correspondence_material(material):
     """Identify the carnival activity solely by its immutable activity slug."""
     content = getattr(material, 'content_json', None) if material else None
     return isinstance(content, dict) and content.get('activity_slug') == LETTER_SOUND_CORRESPONDENCE_SLUG
+
+
+def _is_word_decoding_material(material):
+    """Identify the bubble activity solely by its immutable activity slug."""
+    content = getattr(material, 'content_json', None) if material else None
+    return isinstance(content, dict) and content.get('activity_slug') == WORD_DECODING_SLUG
 
 
 def _is_story_reading_material(material):
@@ -11941,6 +11948,48 @@ def letter_sound_correspondence_page(request):
     # This view reflects the student's live completion state.  Do not let the
     # browser reuse a prior activity document after an assessment finishes.
     response = render(request, 'pabasa_app/letter_sound_correspondence_page.html', context)
+    response['Cache-Control'] = 'no-store, max-age=0'
+    return response
+
+
+@xframe_options_sameorigin
+def word_decoding_page(request):
+    """Render the isolated bubble-themed Word Decoding activity."""
+    access_response = _enforce_student_access_for_request(request)
+    if access_response:
+        return access_response
+    _, material_id = _parse_prefixed_id(request.GET.get('id') or request.GET.get('material_id'))
+    material = Material.objects.filter(pk=material_id).first() if material_id else None
+    if not material or not _is_word_decoding_material(material):
+        return redirect('assessment')
+
+    content = dict(material.content_json or {})
+    items = content.get('items') if isinstance(content.get('items'), list) else []
+    student_user = User.objects.filter(id=request.session.get('user_id'), role='student').first()
+    completed_result = material.assessment_results.filter(
+        student=student_user, attempt_status='completed',
+    ).order_by('-completed_at', '-created_at', '-id').first() if student_user else None
+    completion_payload = None
+    if completed_result:
+        total_items = int(getattr(completed_result, 'items_completed', 0) or len(items))
+        correct_items = min(total_items, int(getattr(completed_result, 'correct_items', 0) or 0))
+        completion_payload = {
+            'completed': True,
+            'correct_items': correct_items,
+            'total_items': total_items,
+            'accuracy': getattr(completed_result, 'accuracy', None) or getattr(completed_result, 'total_score', 0) or 0,
+        }
+
+    context = _dashboard_context(request)
+    context['word_decoding_material_json'] = json.dumps({
+        'id': material.id,
+        'title': material.title or 'Decode the Word',
+        'language': content.get('language') or 'Filipino',
+        'reading_set_id': content.get('reading_set_id') or '',
+        'items': items,
+    }, default=str, separators=(',', ':'))
+    context['word_decoding_completion_json'] = json.dumps(completion_payload or {}, default=str, separators=(',', ':'))
+    response = render(request, 'pabasa_app/word_decoding_page.html', context)
     response['Cache-Control'] = 'no-store, max-age=0'
     return response
 
@@ -13730,6 +13779,10 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         str(activity_type or '').strip().lower() == 'letter_sound_correspondence'
         and bool(material and _is_letter_sound_correspondence_material(material))
     )
+    is_word_decoding = (
+        str(activity_type or '').strip().lower() == 'word_decoding'
+        and bool(material and _is_word_decoding_material(material))
+    )
     is_crla_assessment = bool(
         data.get('crla_score_data')
         or getattr(material, 'assessment_kind', '') == 'crla'
@@ -13862,6 +13915,38 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             'passed': objective_score >= 75,
             'remarks': 'LETTER_SOUND_CORRESPONDENCE_RESULT:' + json.dumps({
                 'activity_slug': LETTER_SOUND_CORRESPONDENCE_SLUG,
+                'answers': normalized_answers,
+            }, separators=(',', ':')),
+        }
+    elif is_word_decoding:
+        raw_scores = data.get('scores') if isinstance(data.get('scores'), dict) else {}
+        activity_items = (material.content_json or {}).get('items') if material else []
+        activity_items = activity_items if isinstance(activity_items, list) else []
+        submitted_answers = raw_scores.get('answers') if isinstance(raw_scores.get('answers'), list) else []
+        normalized_answers = []
+        correct_items = 0
+        for index, item in enumerate(activity_items):
+            expected_word = str((item or {}).get('word') or '').strip() if isinstance(item, dict) else ''
+            submitted = submitted_answers[index] if index < len(submitted_answers) and isinstance(submitted_answers[index], dict) else {}
+            spoken_word = str(submitted.get('word') or '').strip()
+            completed = bool(submitted.get('word_completed')) and spoken_word.casefold() == expected_word.casefold()
+            correct_items += int(completed)
+            normalized_answers.append({
+                'word': expected_word,
+                'letter_sounds_completed': bool(submitted.get('letter_sounds_completed')),
+                'word_completed': completed,
+            })
+        total_items = len(activity_items)
+        objective_score = round((correct_items / total_items) * 100) if total_items else 0
+        score_payload = {
+            'accuracy': objective_score,
+            'total_score': objective_score,
+            'correct_items': correct_items,
+            'items_completed': total_items,
+            'duration_seconds': max(0, int(raw_scores.get('duration_seconds') or 0)),
+            'passed': objective_score >= 75,
+            'remarks': 'WORD_DECODING_RESULT:' + json.dumps({
+                'activity_slug': WORD_DECODING_SLUG,
                 'answers': normalized_answers,
             }, separators=(',', ':')),
         }
@@ -14054,7 +14139,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         }
     else:
         score_payload = _practice_score_payload(data) if is_practice else _assessment_score_payload(data)
-    if (is_phrase_reading or is_picture_word_matching or is_syllable_blending or is_clap_count_syllables or is_letter_sound_matching or is_letter_sound_correspondence) and already_completed and not is_retake:
+    if (is_phrase_reading or is_picture_word_matching or is_syllable_blending or is_clap_count_syllables or is_letter_sound_matching or is_letter_sound_correspondence or is_word_decoding) and already_completed and not is_retake:
         existing_result = material.assessment_results.filter(
             student=student_user,
             attempt_status='completed',
@@ -14066,7 +14151,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             'items_completed': getattr(existing_result, 'items_completed', 0) or 0,
             'accuracy': getattr(existing_result, 'accuracy', 0) or 0,
         })
-    if not is_practice and not is_phrase_reading and not is_picture_word_matching and not is_syllable_blending and not is_letter_sound_matching and not is_letter_sound_correspondence and not is_crla_assessment:
+    if not is_practice and not is_phrase_reading and not is_picture_word_matching and not is_syllable_blending and not is_letter_sound_matching and not is_letter_sound_correspondence and not is_word_decoding and not is_crla_assessment:
         account_assessment_type = (
             getattr(assessment, 'assessment_type', None)
             or assessment_type_hint
@@ -14147,7 +14232,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 material.save(update_fields=['teacher', 'updated_at'])
                 _log_completion_timing('assessment_teacher_save')
             _log_completion_timing('assessment_record_attempt_start')
-            if is_phrase_reading or is_clap_count_syllables or is_letter_sound_matching or is_letter_sound_correspondence:
+            if is_phrase_reading or is_clap_count_syllables or is_letter_sound_matching or is_letter_sound_correspondence or is_word_decoding:
                 # Lock this material row while checking/creating so concurrent final submits
                 # cannot create more than one completed result for this student/material.
                 with transaction.atomic():
@@ -14172,7 +14257,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 student=student_user,
                 attempt_status='completed',
             ).order_by('-completed_at', '-created_at').select_related('source_assessment').first()
-        if not is_practice and not is_picture_word_matching and not is_syllable_blending and not is_clap_count_syllables and not is_letter_sound_matching and not is_letter_sound_correspondence and not is_crla_assessment:
+        if not is_practice and not is_picture_word_matching and not is_syllable_blending and not is_clap_count_syllables and not is_letter_sound_matching and not is_letter_sound_correspondence and not is_word_decoding and not is_crla_assessment:
             _log_completion_timing('student_profile_save_start')
             _update_student_reading_profile(student_user, score_payload)
             _log_completion_timing('student_profile_save_end')
