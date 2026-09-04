@@ -1268,9 +1268,7 @@
                 if (crlaAnswerFeedback) { crlaAnswerFeedback.textContent = "We could not save your assessment. Please try again."; crlaAnswerFeedback.classList.remove("d-none"); }
                 return;
             }
-            crlaQuestionCompletion?.classList.remove("d-none");
-            crlaQuestionText?.classList.add("d-none"); crlaAnswerInput?.classList.add("d-none");
-            crlaQuestionBackBtn?.classList.add("d-none"); crlaQuestionNextBtn?.classList.add("d-none");
+            await showCompletion(true);
         }
 
         function startCRLASpokenAttempt() {
