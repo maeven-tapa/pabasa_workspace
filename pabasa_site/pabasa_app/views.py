@@ -8517,6 +8517,7 @@ def _official_reading_launch_data(material):
         'code': official_code,
         'language': payload['language'] or '',
         'assessment_type': assessment_type,
+        'assessment_kind': _assessment_kind_value(material),
         'item_type': payload['item_type'] or 'word',
         'words': payload['words'],
         'rhyme_pairs': content_json.get('rhyme_pairs', []),
@@ -12676,7 +12677,7 @@ def persist_student_end_assessment_state(request):
     allowed_stages = {
         'transition_to_rhymes', 'transition_to_sentence', 'transition_to_story', 'story_selection',
         'story_ready', 'early_completed_words', 'early_completed_sentences',
-        'story_reading', 'completed',
+        'story_reading', 'story_comprehension', 'completed',
         'completed_high_emerging', 'completed_developing', 'completed_transitioning', 'completed_grade_level',
     }
     stage = str(payload.get('stage') or '').strip().lower()
@@ -12694,6 +12695,7 @@ def persist_student_end_assessment_state(request):
         'miscues', 'duration_seconds', 'wpm', 'correct_words_percentage',
         'comprehension_total', 'total_questions', 'comprehension_correct', 'correct_answers',
         'passage_accuracy_percent', 'story_number', 'selected_story_content',
+        'story_segment_index', 'crla_question_index', 'crla_answers', 'crla_results',
     }
     saved = {key: payload.get(key) for key in allowed_fields if key in payload}
     saved['stage'] = stage

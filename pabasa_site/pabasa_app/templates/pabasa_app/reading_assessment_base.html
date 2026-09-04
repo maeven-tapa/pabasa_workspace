@@ -3319,6 +3319,18 @@
                         </div>
                     </div>
                 </section>{% endif %}
+                {% if crla_official_assessment_id %}<section class="story-question-panel crla-question-panel d-none" id="crlaQuestionPanel" aria-live="polite" aria-atomic="true">
+                    <div class="story-question-shell">
+                        <div class="story-question-head">
+                            <p class="story-question-kicker">CRLA COMPREHENSION</p>
+                            <div class="story-question-titlebar"><h2 class="story-question-title" id="crlaQuestionTitle">Reading Comprehension</h2><span class="story-question-counter" id="crlaQuestionCounter">Question 1 of 1</span></div>
+                        </div>
+                        <div class="story-question-card"><p class="story-question-label">Question</p><div class="story-question-body" id="crlaQuestionText"></div></div>
+                        <div class="story-answer-card"><label class="story-answer-label" for="crlaAnswerInput">Your answer</label><textarea class="form-control" id="crlaAnswerInput" rows="3"></textarea><p class="story-answer-feedback d-none" id="crlaAnswerFeedback" role="status"></p></div>
+                        <div class="story-question-nav"><button class="btn btn-outline-secondary" id="crlaQuestionBackBtn" type="button">← Back</button><button class="btn btn-primary" id="crlaQuestionNextBtn" type="button">Next →</button></div>
+                        <div class="story-completion-card d-none" id="crlaQuestionCompletion"><div class="story-results-mark" aria-hidden="true">A</div><div class="story-results-kicker">CRLA Results</div><div class="story-results-heading"><h3>🎉 You did it!</h3><p>Great work finishing your comprehension questions.</p></div><button class="btn btn-primary story-results-action" id="crlaQuestionFinishBtn" type="button">Back to Assessment <span aria-hidden="true">→</span></button></div>
+                    </div>
+                </section>{% endif %}
                 <div class="speech-panel d-none" id="speechPanel" hidden aria-hidden="true">
                     <strong id="speechStatus">Ready to start reading</strong>
                     <span class="speech-transcript" id="speechTranscript">No words recognized yet. Keep reading clearly.</span>
