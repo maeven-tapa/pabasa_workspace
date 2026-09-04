@@ -35,6 +35,7 @@ from .reading_stt import (
     target_phrase_hints,
     target_aware_syllable_stitching,
     syllable_context_metrics,
+    strict_syllabic_word_match,
     transcribe_audio_bytes_v2_chirp3,
     v1_model_for_language,
     word_numbers_in_transcript,
@@ -3456,6 +3457,14 @@ class ReadingMatcherTests(TestCase):
         self.assertEqual(analysis_text, "day")
         self.assertEqual(context, "")
         self.assertFalse(applied)
+
+    def test_strict_syllabic_word_match_uses_authoritative_parts(self):
+        self.assertTrue(strict_syllabic_word_match("mansanas", "mansanas", ["man", "sa", "nas"], "fil-PH"))
+        self.assertTrue(strict_syllabic_word_match("mansanas", "man sa nas", ["man", "sa", "nas"], "fil-PH"))
+        self.assertTrue(strict_syllabic_word_match("mansanas", "man-sa-nas", ["man", "sa", "nas"], "fil-PH"))
+        self.assertFalse(strict_syllabic_word_match("mansanas", "mansa nas", ["man", "sa", "nas"], "fil-PH"))
+        self.assertFalse(strict_syllabic_word_match("mansanas", "mansa-nas", ["man", "sa", "nas"], "fil-PH"))
+        self.assertFalse(strict_syllabic_word_match("mansanas", "", ["man", "sa", "nas"], "fil-PH"))
 
     def test_filipino_joined_syllables_allow_one_stt_vowel_error(self):
         result = analyze_reading("puno", 0, "po no", language_code="fil-PH")

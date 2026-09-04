@@ -237,9 +237,10 @@ def target_aware_syllable_stitching(
     prior_context,
     transcript,
     language_code,
+    allow_non_filipino=False,
 ):
     """Join short Filipino STT results only while they prefix the target word."""
-    if str(language_code).lower() != "fil-ph":
+    if str(language_code).lower() != "fil-ph" and not allow_non_filipino:
         return transcript, "", False
 
     matcher = ReadingMatcher(target_text, current_syllable_index, language_code)
@@ -267,9 +268,9 @@ def target_aware_syllable_stitching(
     return transcript, "", False
 
 
-def syllable_context_metrics(target_text, current_syllable_index, context, language_code):
+def syllable_context_metrics(target_text, current_syllable_index, context, language_code, allow_non_filipino=False, target_syllables=None):
     """Count TASS progress against target syllables, not STT token boundaries."""
-    if str(language_code).lower() != "fil-ph":
+    if str(language_code).lower() != "fil-ph" and not allow_non_filipino:
         return 0, 0, 0
 
     matcher = ReadingMatcher(target_text, current_syllable_index, language_code)
@@ -277,7 +278,7 @@ def syllable_context_metrics(target_text, current_syllable_index, context, langu
         return 0, 0, 0
 
     target_word = matcher.normalize_word(matcher.words[matcher.current_word_index])
-    target_syllables = matcher.split_syllables(target_word)
+    target_syllables = [matcher.normalize_word(part) for part in (target_syllables or []) if matcher.normalize_word(part)] or matcher.split_syllables(target_word)
     context_word = "".join(matcher.normalize_spoken_words(context))
     if not target_syllables or not context_word or not target_word.startswith(context_word):
         return 0, len(target_syllables), 0
@@ -293,6 +294,25 @@ def syllable_context_metrics(target_text, current_syllable_index, context, langu
 
     progress = round((matched_count / len(target_syllables)) * 100, 2)
     return matched_count, len(target_syllables), progress
+
+
+def strict_syllabic_word_match(target_text, transcript, target_syllables=None, language_code="en-US"):
+    """Require an exact target word or its authoritative syllable sequence."""
+    matcher = ReadingMatcher(target_text, 0, language_code)
+    target_words = matcher.normalize_spoken_words(target_text)
+    spoken_words = matcher.normalize_spoken_words(transcript)
+    if len(target_words) != 1 or not spoken_words:
+        return False
+    target_word = target_words[0]
+    explicit_parts = re.split(r"[-\u2010-\u2015]", str(transcript or "").strip())
+    if len(explicit_parts) > 1:
+        spoken_words = [matcher.normalize_word(part) for part in explicit_parts if matcher.normalize_word(part)]
+        expected_parts = [matcher.normalize_word(part) for part in (target_syllables or []) if matcher.normalize_word(part)]
+        return bool(expected_parts and spoken_words == expected_parts and "".join(spoken_words) == target_word)
+    if len(spoken_words) == 1 and spoken_words[0] == target_word:
+        return True
+    expected_parts = [matcher.normalize_word(part) for part in (target_syllables or []) if matcher.normalize_word(part)]
+    return bool(expected_parts and spoken_words == expected_parts and "".join(spoken_words) == target_word)
 
 
 def v1_model_for_language(model, language_code):

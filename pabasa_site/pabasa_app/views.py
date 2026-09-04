@@ -69,6 +69,7 @@ from .reading_stt import (
     target_phrase_hints,
     target_aware_syllable_stitching,
     syllable_context_metrics,
+    strict_syllabic_word_match,
     synthesize_read_aloud_audio,
     synthesize_maya_read_aloud_audio,
     transcribe_audio_bytes_with_model,
@@ -12927,12 +12928,19 @@ def reading_transcribe_api(request):
             credentials_file=credentials_file,
         )
         syllable_context = (request.POST.get('syllable_context') or '')[:80]
+        try:
+            activity_syllables = json.loads(request.POST.get('syllables') or '[]')
+        except (TypeError, ValueError, json.JSONDecodeError):
+            activity_syllables = []
+        if not isinstance(activity_syllables, list):
+            activity_syllables = []
         analysis_transcript, next_syllable_context, stitching_applied = target_aware_syllable_stitching(
             target_text,
             current_syllable_index,
             syllable_context,
             transcript,
             language_code,
+            allow_non_filipino=mode == "word",
         )
         if mode == "sentence" and request.POST.get('crla_sentence_word_scoring') == '1':
             try:
@@ -12951,6 +12959,8 @@ def reading_transcribe_api(request):
             current_syllable_index,
             metrics_context,
             language_code,
+            allow_non_filipino=mode == "word",
+            target_syllables=activity_syllables if mode == "word" else None,
         )
         analysis['raw_transcript'] = transcript
         analysis['transcript'] = word_numbers_in_transcript(transcript, language_code)
@@ -12960,6 +12970,13 @@ def reading_transcribe_api(request):
         analysis['syllable_context_count'] = context_count
         analysis['target_syllable_count'] = target_count
         analysis['syllable_context_progress'] = context_progress
+        analysis['phase2_correct'] = bool(
+            mode == 'word'
+            and analysis.get('complete')
+            and strict_syllabic_word_match(
+                target_text, transcript, activity_syllables, language_code,
+            )
+        )
         
         # For Story Reading (paragraph mode): Add word-level alignment results
         # This enables precise miscue detection: distinguishes between STT segmentation artifacts 
