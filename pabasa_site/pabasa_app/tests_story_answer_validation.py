@@ -1,5 +1,6 @@
 from django.test import SimpleTestCase
 
+from .scoring import crla_part2_profile
 from .views import _crla_grade2_part2_profile, story_answer_matches
 
 
@@ -25,6 +26,36 @@ class StoryAnswerMeaningMatchTests(SimpleTestCase):
 
 
 class StoryReadingClassificationTests(SimpleTestCase):
+    def test_part2_profile_does_not_double_subtract_miscues(self):
+        cases = (
+            (80, 20, 80.0),
+            (50, 50, 50.0),
+            (25, 75, 25.0),
+            (100, 0, 100.0),
+        )
+        for words_read, miscues, expected_percent in cases:
+            with self.subTest(words_read=words_read, miscues=miscues):
+                profile = crla_part2_profile(100, words_read, miscues, 60, 0)
+                self.assertEqual(profile["words_read"], words_read)
+                self.assertEqual(profile["miscues"], miscues)
+                self.assertEqual(profile["correct_word_percent"], expected_percent)
+                self.assertEqual(profile["passage_accuracy_percent"], expected_percent)
+
+    def test_part2_profile_wpm_uses_correct_word_count(self):
+        profile = crla_part2_profile(100, 80, 20, 60, 0)
+        self.assertEqual(profile["wpm"], 80.0)
+
+    def test_part2_profile_classification_uses_corrected_percentage(self):
+        cases = (
+            (80, 20, 6, "Reading At Grade Level"),
+            (50, 50, 3, "Developing Reader"),
+            (25, 75, 1, "High Emerging Reader"),
+        )
+        for words_read, miscues, answers, expected in cases:
+            with self.subTest(words_read=words_read, miscues=miscues, answers=answers):
+                profile = crla_part2_profile(100, words_read, miscues, 60, answers)
+                self.assertEqual(profile["classification"], expected)
+
     def test_classifies_each_reading_and_comprehension_band(self):
         cases = (
             (24, 0, 'Low Emerging Reader'),

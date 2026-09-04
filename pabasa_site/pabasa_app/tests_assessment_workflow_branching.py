@@ -259,7 +259,7 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
                 "comprehension_correct": 3,
             },
         })
-        self.assertEqual(payload["crla_classification"], "Developing Reader")
+        self.assertEqual(payload["crla_classification"], "Transitioning Reader")
         self.assertEqual(payload["total_score"], 56)
 
     def test_part2_server_helper_matches_authoritative_band_mapping(self):
@@ -468,7 +468,7 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
             "items_completed": 4,
         }, {"correct_words": 7, "stage": "sentences_high"})
         self.assertEqual(ready.get("part1_total_score"), 17)
-        self.assertEqual(ready.get("part1_reading_level"), "Grade Ready")
+        self.assertEqual(ready.get("part1_reading_level"), "Light Refresher")
 
         maximum = self._run_sync({
             "assessment_type": "sentence",
@@ -476,7 +476,7 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
             "items_completed": 4,
         }, {"correct_words": 10, "stage": "sentences_high"})
         self.assertEqual(maximum.get("part1_total_score"), 20)
-        self.assertEqual(maximum.get("part1_reading_level"), "Grade Ready")
+        self.assertEqual(maximum.get("part1_reading_level"), "Light Refresher")
 
     def test_story_branch_uses_comprehension_and_reading_percentage(self):
         end_state = self._run_sync({

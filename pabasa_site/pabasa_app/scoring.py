@@ -161,7 +161,7 @@ def crla_part2_profile(total_story_words: Any, words_read: Any, miscues: Any,
     read = max(0, _coerce_int(words_read) or 0)
     error_count = max(0, _coerce_int(miscues) or 0)
     duration = max(0.0, _coerce_float(duration_seconds) or 0.0)
-    correct_words = max(0, min(read, read - error_count))
+    correct_words = max(0, min(read, total_words))
     passage_accuracy_percent = round((correct_words / total_words) * 100, 2) if total_words else None
     words_read_percent = round((min(read, total_words) / total_words) * 100, 2) if total_words else 0.0
     wpm = round(correct_words / (duration / 60.0), 2) if duration else 0.0
