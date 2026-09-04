@@ -41,11 +41,11 @@
         const storyQuestionTitle = document.getElementById("storyQuestionTitle");
         const storyQuestionCounter = document.getElementById("storyQuestionCounter");
         const storyQuestionProgressFill = document.getElementById("storyQuestionProgressFill");
-        const storyQuestionText = document.getElementById("storyQuestionText");
-        const storyAnswerText = document.getElementById("storyAnswerText");
-        const storyAnswerFeedback = document.getElementById("storyAnswerFeedback");
-        const storyQuestionFinishReadingBtn = document.getElementById("storyQuestionFinishReadingBtn");
-        const storyQuestionReadAloudBtn = document.getElementById("storyQuestionReadAloudBtn");
+        const storyQuestionText = document.getElementById("storyQuestionText") || document.getElementById("crlaQuestionText");
+        const storyAnswerText = document.getElementById("storyAnswerText") || document.getElementById("crlaAnswerInput");
+        const storyAnswerFeedback = document.getElementById("storyAnswerFeedback") || document.getElementById("crlaAnswerFeedback");
+        const storyQuestionFinishReadingBtn = document.getElementById("storyQuestionFinishReadingBtn") || document.getElementById("crlaQuestionStartReadingBtn");
+        const storyQuestionReadAloudBtn = document.getElementById("storyQuestionReadAloudBtn") || document.getElementById("crlaQuestionReadAloudBtn");
         const storyQuestionBackBtn = document.getElementById("storyQuestionBackBtn");
         const storyQuestionNextBtn = document.getElementById("storyQuestionNextBtn");
         const storyQuestionFinishBtn = document.getElementById("storyQuestionFinishBtn");
@@ -1210,7 +1210,10 @@
             if (crlaQuestionTitle) crlaQuestionTitle.textContent = currentSelectedStory?.title || "Reading Comprehension";
             if (crlaQuestionText) crlaQuestionText.textContent = question.question || "No comprehension question is available for this story.";
             if (crlaQuestionCounter) crlaQuestionCounter.textContent = `Question ${currentStoryQuestionIndex + 1} of ${currentStoryQuestions.length}`;
-            if (crlaAnswerInput) crlaAnswerInput.value = currentStoryAnswers[currentStoryQuestionIndex] || "";
+            if (crlaAnswerInput) {
+                crlaAnswerInput.textContent = currentStoryAnswers[currentStoryQuestionIndex] || "Your spoken answer will appear here.";
+                crlaAnswerInput.classList.toggle("is-empty", !currentStoryAnswers[currentStoryQuestionIndex]);
+            }
             if (crlaAnswerFeedback) crlaAnswerFeedback.classList.add("d-none");
             if (crlaQuestionBackBtn) crlaQuestionBackBtn.disabled = currentStoryQuestionIndex === 0;
         }
@@ -5581,12 +5584,12 @@
         });
 
         crlaQuestionBackBtn?.addEventListener("click", () => {
-            if (crlaAnswerInput) currentStoryAnswers[currentStoryQuestionIndex] = crlaAnswerInput.value;
+            if (crlaAnswerInput && crlaAnswerInput.tagName === "TEXTAREA") currentStoryAnswers[currentStoryQuestionIndex] = crlaAnswerInput.value;
             if (currentStoryQuestionIndex > 0) { currentStoryQuestionIndex -= 1; renderCRLAQuestion(); }
             persistCRLAComprehensionState();
         });
         crlaQuestionNextBtn?.addEventListener("click", async () => {
-            const answer = String(crlaAnswerInput?.value || "").trim();
+            const answer = String(currentStoryAnswers[currentStoryQuestionIndex] || crlaAnswerInput?.textContent || "").replace("Your spoken answer will appear here.", "").trim();
             if (!answer || !currentStoryQuestions.length) return;
             currentStoryAnswers[currentStoryQuestionIndex] = answer;
             crlaQuestionNextBtn.disabled = true;
