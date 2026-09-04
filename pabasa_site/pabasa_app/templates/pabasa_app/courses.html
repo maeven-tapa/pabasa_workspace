@@ -7063,6 +7063,15 @@
 .five-w-preview .preview-question { align-items: baseline; display:flex; gap:.45rem; padding:.7rem .85rem; }
 .five-w-preview .preview-question strong { color:var(--activity-brand-deep); flex:0 0 auto; font:900 .82rem/1.3 "Nunito",sans-serif; }
 .five-w-preview .preview-question-text { line-height:1.45; }
+.teacher-story-call-preview { background:#fffdf9; border:1px solid #baddec; border-radius:24px; padding:18px; box-shadow:0 12px 28px rgba(38,76,111,.12); }
+.teacher-story-call-preview .story-call-heading { display:flex; justify-content:space-between; gap:16px; color:#183c68; }
+.teacher-story-call-preview .story-title { display:flex; align-items:center; gap:10px; }.teacher-story-call-preview .story-book { display:grid; place-items:center; width:46px; height:46px; border-radius:14px; background:#eaf6fb; color:#176e9a; font-size:1.5rem; }.teacher-story-call-preview h1 { margin:0; font-size:1.55rem; font-weight:900; letter-spacing:.08em; }.teacher-story-call-preview .story-title p { margin:2px 0 0; color:#775d42; }.teacher-story-call-preview .story-header-meta { display:flex; align-items:center; gap:10px; font-weight:800; }.teacher-story-call-preview .story-tag { padding:7px 12px; border:2px solid #ccebf4; border-radius:20px; background:#f4fbfd; }.teacher-story-call-preview .story-progress { display:flex; justify-content:center; gap:18px; margin:10px 0 16px; }.teacher-story-call-preview .story-step { display:flex; flex-direction:column; align-items:center; gap:4px; color:#91a7bb; font-size:.62rem; font-weight:900; }.teacher-story-call-preview .story-step span { display:grid; place-items:center; width:32px; height:32px; border-radius:50%; background:#e6eff4; color:#6d879b; }.teacher-story-call-preview .story-step.active { color:#c65378; }.teacher-story-call-preview .story-step.active span { background:#ef8fb2; color:#fff; }.teacher-story-call-preview .story-video { position:relative; min-height:300px; overflow:hidden; border:5px solid #164e6b; border-radius:28px; background:#b9dce5 url("{% static 'pabasa_app/images/story_call/maya_background.jpg' %}") center/cover; }.teacher-story-call-preview .maya { position:absolute; bottom:-8px; left:6%; width:42%; max-height:98%; object-fit:contain; }.teacher-story-call-preview .story-call-label { position:absolute; z-index:3; top:14px; left:16px; padding:7px 12px; border-radius:20px; background:rgba(24,39,54,.82); color:#fff; font-weight:800; }.teacher-story-call-preview .story-bubble { position:absolute; z-index:2; top:50%; right:7%; width:45%; transform:translateY(-50%); padding:20px; border:4px solid #fff; border-radius:24px 24px 24px 10px; background:#fff8fc; color:#183c68; font-size:1.15rem; font-weight:900; box-shadow:0 7px 0 #f2b6cc; }.teacher-story-call-preview .story-read-aloud-toggle { position:absolute; right:14px; bottom:14px; z-index:4; width:42px; height:42px; border:0; border-radius:50%; background:#183c68; color:#fff; }.teacher-story-call-preview .answer-area { margin:16px auto 0; padding:12px 18px; border:2px dashed #e9b6ca; border-radius:22px; }.teacher-story-call-preview .story-answer-feedback { padding:7px 14px; border:2px solid #f3bfd1; border-radius:999px; color:#c65378; text-align:center; }.teacher-story-call-preview .story-actions { display:grid; grid-template-columns:1fr auto 1fr; gap:12px; margin-top:10px; }.teacher-story-call-preview .story-action { border-radius:999px; font-weight:900; }.teacher-story-call-preview .story-next { justify-self:end; background:#183c68; color:#fff; }
+.teacher-story-call-preview .story-actions > .story-action,
+.teacher-story-call-preview .story-actions > .story-reading-control,
+.teacher-story-call-preview .story-reading-control > .story-action { width: max-content; max-width: max-content; flex: 0 0 auto; }
+.teacher-story-call-preview .story-actions > :first-child { justify-self: start; min-width: 140px; }
+.teacher-story-call-preview .story-reading-control { justify-self: center; }
+.teacher-story-call-preview .story-next { min-width: 140px; }
 .template-builder-actions { align-items: center; background: #fff; display: flex; gap: 1rem; justify-content: space-between; padding-top: 1.25rem; }
 .template-action-buttons { display: flex; flex-wrap: wrap; gap: .65rem; justify-content: flex-end; margin-left: auto; }
 .template-btn { align-items: center; border-radius: 10px !important; display: inline-flex; font: 900 .88rem/1 "Nunito", sans-serif; gap: .45rem; justify-content: center; min-height: 44px; padding: .68rem 1rem; transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .1s ease; }
@@ -16607,13 +16616,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 previewBody = passage ? `<article class="preview-reading-card"><div class="d-flex align-items-center justify-content-between gap-3 mb-3"><div class="d-flex flex-wrap gap-2"><span class="badge text-bg-primary">1. ${language === 'Filipino' ? 'Makinig' : 'Listen'}</span><span class="badge text-bg-light">2. ${language === 'Filipino' ? 'Magsanay' : 'Practice'}</span><span class="badge text-bg-light">3. ${language === 'Filipino' ? 'Bumasa' : 'Read'}</span></div><img src="{% static 'pabasa_app/images/footer-mascot.png' %}" alt="PABASA reading buddy" width="64" height="64" style="object-fit:contain"></div><div class="fs-5 lh-lg text-center">${escapeHtml(passage)}</div><div class="d-flex flex-wrap justify-content-center gap-2 mt-3"><button class="btn btn-primary" type="button" tabindex="-1">🔊 ${language === 'Filipino' ? 'Pakinggan' : 'Listen'}</button><button class="btn btn-outline-primary" type="button" tabindex="-1">${language === 'Filipino' ? 'Magsanay' : 'Start Practice'} →</button></div></article>` : empty('Choose a fluency reading set to begin the preview.');
             } else if (templateTitle === "5W's Story Questions") {
                 instruction = learnerCopy.questions;
-                const storyTitle = activeTemplateActivity.content?.storyTitle || 'Selected story';
-                let story = String(activeTemplateActivity.content?.storyText || '').trim();
+                const storyTitle = activeTemplateActivity.content?.storyTitle || 'Story 1 — Ang Umaga ni Lito';
+                let story = String(activeTemplateActivity.content?.storyText || '').trim() || 'Si Lito ay gumising nang maaga. Tinulungan niya ang kanyang ina bago pumasok sa paaralan.';
                 if (story.toLowerCase().startsWith(String(storyTitle).toLowerCase())) {
                     story = story.slice(String(storyTitle).length).trim();
                 }
-                const questions = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : [];
-                previewBody = story || questions.length ? `<article class="preview-reading-card five-w-story-card mb-2"><strong>${escapeHtml(storyTitle)}</strong><div class="mt-2">${escapeHtml(story)}</div></article><div class="five-w-question-list">${questions.map((question, index) => `<div class="preview-question mb-2"><strong>Question ${index + 1}</strong><span class="preview-question-text">${escapeHtml(question.question || '')}</span></div>`).join('')}</div>` : empty('Select a published story and add a question to begin the preview.');
+                const questions = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items.filter(question => String(question?.question || '').trim()) : [];
+                if (!questions.length) questions.push({ question: 'Who is the story about?', answers: ['Preview answer'] });
+                previewBody = story || questions.length ? `<section class="story-call-shell teacher-story-call-preview" aria-label="Learner Story Call preview"><header class="story-call-heading"><div class="story-title"><div class="story-book"><i class="bi bi-book-half"></i></div><div><h1>STORY CALL</h1><p>Let’s talk about the story!</p></div></div><div class="story-header-meta"><span>Question 1 of ${Math.max(questions.length, 1)}</span><span class="story-tag"><i class="bi bi-book-fill me-2"></i>${escapeHtml(storyTitle)}</span></div></header><nav class="story-progress" aria-label="Story question progress">${['WHO','WHAT','WHEN','WHERE','WHY'].map((label, index) => `<div class="story-step ${index === 0 ? 'active' : ''}"><span>${index + 1}</span>${label}</div>`).join('')}</nav><div class="story-video"><div class="story-call-label"><i class="bi bi-camera-video-fill me-2"></i>MAYA <span class="text-success">●</span></div><img class="maya maya-listening" src="{% static 'pabasa_app/images/story_call/girl_listening.png' %}" alt="Maya listening"><div class="story-bubble">${escapeHtml(questions[0]?.question || 'Maya will ask the configured 5W question here.')}</div><button class="story-read-aloud-toggle" type="button" tabindex="-1" aria-label="Hear Maya"><i class="bi bi-volume-mute-fill" aria-hidden="true"></i></button></div><div class="answer-area"><div class="story-answer-feedback">Your answer will appear here.</div><div class="story-actions"><button class="btn btn-outline-secondary story-action" type="button" tabindex="-1">Back</button><button class="btn story-action story-call-mic" type="button" tabindex="-1"><i class="bi bi-play-fill"></i> Start Reading</button><button class="btn story-action story-next" type="button" tabindex="-1">Next <i class="bi bi-arrow-right ms-1"></i></button></div></div></section>` : empty('Select a published story and add a question to begin the preview.');
             } else if (isStoryResponseTemplate(templateTitle)) {
                 const response = activeTemplateActivity.storyResponse || {};
                 const story = (response.stories || []).find(item => String(item.id) === String(response.storyId));
@@ -16635,6 +16645,29 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 <div class="activity-preview-chrome"><span class="activity-preview-label"><i class="bi bi-eye" aria-hidden="true"></i>Preview</span><span class="activity-preview-meta">${escapeHtml(language)}${weeks.length ? ` · ${weeks.map(escapeHtml).join(', ')}` : ' · No week selected'}</span></div>
                 <div class="activity-preview-stage ${templateTitle === "5W's Story Questions" ? 'five-w-preview' : ''}"><h6 class="activity-preview-title">${escapeHtml(title || templateTitle)}</h6><p class="activity-preview-instruction">${escapeHtml(instruction || summary.meta || '')}</p><div class="activity-preview-content">${previewBody}</div></div>
             `;
+            if (templateTitle === "5W's Story Questions") {
+                const preview = templatePreviewPanel.querySelector('.teacher-story-call-preview');
+                if (preview) {
+                    preview.querySelector('.story-answer-feedback')?.remove();
+                    const configured = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : [];
+                    const previewQuestions = ['Who is the story about?', 'What happened in the story?', 'When did it happen?', 'Where did it happen?', 'Why did it happen?'].map((fallback, index) => String(configured[index]?.question || '').trim() || fallback);
+                    let questionIndex = 0;
+                    const updateStoryCall = () => {
+                        const meta = preview.querySelector('.story-header-meta span');
+                        if (meta) meta.textContent = `Question ${questionIndex + 1} of 5`;
+                        const bubble = preview.querySelector('.story-bubble');
+                        if (bubble) bubble.textContent = previewQuestions[questionIndex];
+                        preview.querySelectorAll('.story-step').forEach((step, index) => step.classList.toggle('active', index === questionIndex));
+                        const back = preview.querySelector('.story-actions > :first-child');
+                        const next = preview.querySelector('.story-next');
+                        if (next) next.disabled = questionIndex === 4;
+                    };
+                    preview.querySelector('.story-next')?.addEventListener('click', () => { questionIndex = Math.min(4, questionIndex + 1); updateStoryCall(); });
+                    preview.querySelector('.story-actions > :first-child')?.addEventListener('click', () => { questionIndex = Math.max(0, questionIndex - 1); updateStoryCall(); });
+                    preview.querySelector('.story-call-mic')?.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); });
+                    updateStoryCall();
+                }
+            }
             if (templateTitle === 'Clap & Count Syllables') {
                 const config = activeTemplateActivity.clapCount || {};
                 let previewClaps = 0;
