@@ -12934,13 +12934,14 @@ def reading_transcribe_api(request):
             activity_syllables = []
         if not isinstance(activity_syllables, list):
             activity_syllables = []
+        is_clap_phase2 = request.POST.get('phase2_strict') == '1'
         analysis_transcript, next_syllable_context, stitching_applied = target_aware_syllable_stitching(
             target_text,
             current_syllable_index,
             syllable_context,
             transcript,
             language_code,
-            allow_non_filipino=mode == "word",
+            allow_non_filipino=is_clap_phase2 and mode == "word",
         )
         if mode == "sentence" and request.POST.get('crla_sentence_word_scoring') == '1':
             try:
@@ -12959,8 +12960,8 @@ def reading_transcribe_api(request):
             current_syllable_index,
             metrics_context,
             language_code,
-            allow_non_filipino=mode == "word",
-            target_syllables=activity_syllables if mode == "word" else None,
+            allow_non_filipino=is_clap_phase2 and mode == "word",
+            target_syllables=activity_syllables if is_clap_phase2 and mode == "word" else None,
         )
         analysis['raw_transcript'] = transcript
         analysis['transcript'] = word_numbers_in_transcript(transcript, language_code)
@@ -12971,7 +12972,8 @@ def reading_transcribe_api(request):
         analysis['target_syllable_count'] = target_count
         analysis['syllable_context_progress'] = context_progress
         analysis['phase2_correct'] = bool(
-            mode == 'word'
+            is_clap_phase2
+            and mode == 'word'
             and analysis.get('complete')
             and strict_syllabic_word_match(
                 target_text, transcript, activity_syllables, language_code,

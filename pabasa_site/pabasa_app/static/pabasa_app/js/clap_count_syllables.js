@@ -133,6 +133,7 @@
         form.append("syllables", JSON.stringify(syllables()));
         form.append("mode", "word");
         form.append("language", data.language || "");
+        form.append("phase2_strict", "1");
         const response = await fetch("/api/reading/transcribe/", { method: "POST", credentials: "same-origin", headers: { "X-CSRFToken": csrfToken() }, body: form });
         const result = await response.json();
         if (!response.ok || !result.success) throw new Error(result.error || "Speech recognition failed.");
