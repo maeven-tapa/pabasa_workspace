@@ -347,6 +347,10 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
         handler = source.split("async function completeCRLASpokenAttempt", 1)[1].split("function startCRLASpokenAttempt", 1)[0]
         self.assertIn("const correctAnswers = currentStoryResults.filter(Boolean).length;", handler)
+        self.assertIn("story_read_percent: storyReadPercent", handler)
+        self.assertIn("words_read: persisted.words_read", handler)
+        self.assertIn("miscues: persisted.miscues", handler)
+        self.assertIn("wpm: persisted.wpm", handler)
         self.assertIn("correct_answers: correctAnswers", handler)
         self.assertIn("comprehension_correct: correctAnswers", handler)
         self.assertIn("total_questions: currentStoryQuestions.length", handler)

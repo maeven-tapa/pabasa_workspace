@@ -1270,6 +1270,15 @@
             }
             latestScores = {
                 ...(latestScores || {}),
+                story_read_percent: storyReadPercent,
+                passage_accuracy_percent: storyReadPercent,
+                story_total_words: persisted.story_total_words,
+                total_story_words: persisted.total_story_words,
+                words_read: persisted.words_read,
+                total_words_read: persisted.total_words_read,
+                miscues: persisted.miscues,
+                duration_seconds: persisted.duration_seconds,
+                wpm: persisted.wpm,
                 correct_answers: correctAnswers,
                 comprehension_correct: correctAnswers,
                 total_questions: currentStoryQuestions.length,
