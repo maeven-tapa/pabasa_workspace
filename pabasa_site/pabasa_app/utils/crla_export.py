@@ -244,6 +244,8 @@ def _row_formulas(row):
     return {
         "I": f'=IF(AND(F{row}="",G{row}="",H{row}=""),"",SUM(F{row}:H{row}))',
         "J": f'=IF(I{row}="","",IF(I{row}<=10,"Full Refresher",IF(I{row}<17,"Moderate Refresher",IF(I{row}<27,"Light Refresher","Grade Ready"))))',
+        "P": f'=IF(AND(M{row}>0,OR(N{row}>0,O{row}>0)),(M{row}/((N{row}*60)+O{row}))*60,"")',
+        "Q": f'=IFERROR(M{row}/IF(K{row}=2,$P$7,$M$7),"")',
     }
 
 
@@ -277,13 +279,8 @@ def _assessment_students(assessment, latest_attempts):
 
 def _student_values(student, attempt, state, assessment):
     score_data = _crla_score_data(attempt)
-    state = state if isinstance(state, dict) else {}
     duration = _bounded_integer(
-        _first_value(
-            score_data.get("duration_seconds"),
-            state.get("duration_seconds"),
-            getattr(attempt, "duration_seconds", None),
-        ),
+        score_data.get("duration_seconds"),
         0,
         24 * 60 * 60,
     )
@@ -319,31 +316,16 @@ def _student_values(student, attempt, state, assessment):
         part_1_total = task_1_score + (rhyme_score or 0) + (sentence_score or 0)
 
     story_words_read = _bounded_integer(
-        _first_value(
-            score_data.get("words_read"),
-            score_data.get("total_words_read"),
-            state.get("words_read"),
-            state.get("total_words_read"),
-            getattr(attempt, "word_count", None),
-        ),
+        score_data.get("words_read"),
         0,
         100000,
     )
     miscues = _bounded_integer(
-        _first_value(score_data.get("miscues"), state.get("miscues")),
+        score_data.get("miscues"),
         0,
         100000,
     )
-    percent = _number(_first_value(
-        score_data.get("passage_accuracy_percent"),
-        score_data.get("story_read_percent"),
-        score_data.get("correct_words_percentage"),
-        state.get("passage_accuracy_percent"),
-        state.get("story_read_percent"),
-        state.get("correct_words_percentage"),
-        state.get("accuracy"),
-        getattr(attempt, "accuracy", None),
-    ))
+    percent = _number(score_data.get("passage_accuracy_percent"))
     correct_answers = _bounded_integer(
         score_data.get("comprehension_correct"),
         0,
@@ -365,11 +347,7 @@ def _student_values(student, attempt, state, assessment):
     sex = {"m": "Male", "male": "Male", "f": "Female", "female": "Female"}.get(raw_sex, "")
 
     words_per_minute = _number(
-        _first_value(
-            score_data.get("wpm"),
-            state.get("wpm"),
-            getattr(attempt, "wpm", None),
-        )
+        score_data.get("wpm")
     )
 
     return {
@@ -463,7 +441,7 @@ def export_crla_excel(assessment_id):
             assessment,
         )
         for field, column in STUDENT_COLUMNS.items():
-            if column in FORMULA_COLUMNS and column not in {"P", "Q"}:
+            if column in FORMULA_COLUMNS:
                 worksheet[f"{column}{row}"] = _row_formulas(row)[column]
                 continue
             worksheet[f"{column}{row}"] = values[field]

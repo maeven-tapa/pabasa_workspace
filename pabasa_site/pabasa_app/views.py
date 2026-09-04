@@ -8517,6 +8517,7 @@ def _official_reading_launch_data(material):
         'code': official_code,
         'language': payload['language'] or '',
         'assessment_type': assessment_type,
+        'assessment_kind': _assessment_kind_value(material),
         'item_type': payload['item_type'] or 'word',
         'words': payload['words'],
         'rhyme_pairs': content_json.get('rhyme_pairs', []),
@@ -10752,14 +10753,14 @@ def story_call_page(request):
                 'question': str(item.get('question') or '').strip(),
                 'language': question_language,
             } if isinstance(item, dict) else {'question': '', 'language': question_language}
-            for item in questions[:6]
+            for item in questions[:5]
         ]
     print('STORY CALL QUESTIONS:', story_call_questions_json)
     context.update({
         'story_call_questions_json': story_call_questions_json,
         'story_call_story_title': story_material.title if story_material else '',
         'story_call_material_id': questions_material.id if questions_material else '',
-        'story_call_completion': ({'completed': True, 'earned': int((completed_result.correct_items or completed_result.score or completed_result.total_score or 0)), 'total': int(completed_result.total_practice_items or len(questions[:6]) or 6)} if questions_material and (completed_result := questions_material.assessment_results.filter(student_id=request.session.get('user_id'), attempt_status='completed').order_by('-completed_at', '-id').first()) else {'completed': False}),
+        'story_call_completion': ({'completed': True, 'earned': int((completed_result.correct_items or completed_result.score or completed_result.total_score or 0)), 'total': int(completed_result.total_practice_items or len(questions[:5]) or 5)} if questions_material and (completed_result := questions_material.assessment_results.filter(student_id=request.session.get('user_id'), attempt_status='completed').order_by('-completed_at', '-id').first()) else {'completed': False}),
     })
     return render(request, 'pabasa_app/story_call_page.html', context)
 
@@ -10791,7 +10792,7 @@ def story_call_complete_api(request):
         score = int(existing.correct_items or existing.score or existing.total_score or 0)
         total = int(existing.total_practice_items or len(content.get('items') or []) or 5)
         return JsonResponse({'success': True, 'completed': True, 'earned': score, 'total': total})
-    questions = [item for item in (content.get('items') or []) if isinstance(item, dict) and str(item.get('question') or '').strip()][:6]
+    questions = [item for item in (content.get('items') or []) if isinstance(item, dict) and str(item.get('question') or '').strip()][:5]
     total = len(questions)
     if total == 0 or len(answers) < total:
         return JsonResponse({'success': False, 'error': 'All Story Call questions must be answered.'}, status=400)
@@ -10828,7 +10829,7 @@ def story_call_check_answer_api(request):
         return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
     material = Material.objects.filter(pk=material_id, status='published', is_active=True).first()
     content = material.content_json if material and isinstance(material.content_json, dict) else {}
-    questions = [item for item in (content.get('items') or []) if isinstance(item, dict) and str(item.get('question') or '').strip()][:6]
+    questions = [item for item in (content.get('items') or []) if isinstance(item, dict) and str(item.get('question') or '').strip()][:5]
     if not material or content.get('template_title') != "5W's Story Questions" or question_index not in range(len(questions)):
         return JsonResponse({'success': False, 'error': 'Question not found'}, status=404)
     is_correct = any(story_answer_matches(expected, payload.get('answer')) for expected in _story_call_answer_options(questions[question_index]))
@@ -12676,7 +12677,7 @@ def persist_student_end_assessment_state(request):
     allowed_stages = {
         'transition_to_rhymes', 'transition_to_sentence', 'transition_to_story', 'story_selection',
         'story_ready', 'early_completed_words', 'early_completed_sentences',
-        'story_reading', 'completed',
+        'story_reading', 'story_comprehension', 'completed',
         'completed_high_emerging', 'completed_developing', 'completed_transitioning', 'completed_grade_level',
     }
     stage = str(payload.get('stage') or '').strip().lower()
@@ -12694,6 +12695,7 @@ def persist_student_end_assessment_state(request):
         'miscues', 'duration_seconds', 'wpm', 'correct_words_percentage',
         'comprehension_total', 'total_questions', 'comprehension_correct', 'correct_answers',
         'passage_accuracy_percent', 'story_number', 'selected_story_content',
+        'story_segment_index', 'crla_question_index', 'crla_answers', 'crla_results',
     }
     saved = {key: payload.get(key) for key in allowed_fields if key in payload}
     saved['stage'] = stage

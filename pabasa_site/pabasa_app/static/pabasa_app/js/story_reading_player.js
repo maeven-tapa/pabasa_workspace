@@ -300,9 +300,6 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
                 const storyId = normalizeMaterialId(data.material_id || data.id);
                 const available = materials.some(material => { const content = material?.content_json || {}; return String(material?.status || '').toLowerCase() === 'published' && String(content.template_title || '').trim() === "5W's Story Questions" && normalizeMaterialId(content.sourceMaterialId || content.source_material_id) === storyId; });
                 proceedButton.disabled = !available;
-                if (available) {
-                    window.location.assign(`/dashboard/assessment/story-call?id=${encodeURIComponent(data.material_id || data.id || '')}&section_id=${encodeURIComponent(data.section_id || '')}`);
-                }
             }).catch(() => { proceedButton.disabled = true; });
     }
     function endActivity() { finishCompletion(); }
