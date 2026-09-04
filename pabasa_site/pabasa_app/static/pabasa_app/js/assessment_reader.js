@@ -1268,6 +1268,12 @@
                 if (crlaAnswerFeedback) { crlaAnswerFeedback.textContent = "We could not save your assessment. Please try again."; crlaAnswerFeedback.classList.remove("d-none"); }
                 return;
             }
+            latestScores = {
+                ...(latestScores || {}),
+                correct_answers: correctAnswers,
+                comprehension_correct: correctAnswers,
+                total_questions: currentStoryQuestions.length,
+            };
             await showCompletion(true);
         }
 

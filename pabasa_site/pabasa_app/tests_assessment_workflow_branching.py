@@ -343,6 +343,18 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
         completion = source.split("async function showStoryCompletionScreen", 1)[1].split("function hideStoryCompletionScreen", 1)[0]
         self.assertIn("await showCompletion(true);", completion)
 
+    def test_official_crla_comprehension_count_survives_final_completion(self):
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        handler = source.split("async function completeCRLASpokenAttempt", 1)[1].split("function startCRLASpokenAttempt", 1)[0]
+        self.assertIn("const correctAnswers = currentStoryResults.filter(Boolean).length;", handler)
+        self.assertIn("correct_answers: correctAnswers", handler)
+        self.assertIn("comprehension_correct: correctAnswers", handler)
+        self.assertIn("total_questions: currentStoryQuestions.length", handler)
+        self.assertLess(
+            handler.index("latestScores = {"),
+            handler.index("await showCompletion(true);"),
+        )
+
     def test_official_story_choices_have_stable_one_based_keys(self):
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
         choices = source.split("function getStoryChoicesFromAssessment", 1)[1].split("function shortStoryPreview", 1)[0]
