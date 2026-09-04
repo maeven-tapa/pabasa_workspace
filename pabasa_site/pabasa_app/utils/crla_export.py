@@ -341,7 +341,7 @@ def _student_values(student, attempt, state, assessment):
 
     learner_rating = _bounded_integer(
         _first_value(state.get("learner_experience_rating"), state.get("learner_experience")), 1, 5
-    ) if story_number else None
+    ) if _first_value(state.get("learner_experience_rating"), state.get("learner_experience")) is not None else None
 
     raw_sex = str(student.sex or "").strip().lower()
     sex = {"m": "Male", "male": "Male", "f": "Female", "female": "Female"}.get(raw_sex, "")

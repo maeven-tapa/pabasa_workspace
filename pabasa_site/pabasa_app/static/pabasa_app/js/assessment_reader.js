@@ -1954,6 +1954,15 @@
                     sentences: { items: officialSentences, type: "sentence", label: "Sentences" },
                     story: { items: [], type: "paragraph", label: "Story Reading" },
                 };
+                if (persistedStage === "learner_experience") {
+                    currentAssessmentBranch = persistedEndState.branch === "sentences"
+                        ? "sentences"
+                        : persistedEndState.branch === "rhymes"
+                            ? "rhymes"
+                            : "story";
+                    renderLearnerExperienceState();
+                    return;
+                }
                 const requestedStage = requestedCrlaStage === "story_selection" ? "story" : requestedCrlaStage;
                 let activeStage = "words";
                 if (stageMap[requestedStage]) {
@@ -4275,6 +4284,11 @@
                 classification: "",
                 next_stage: "",
             };
+            const persistedLearnerExperienceRating = Number.parseInt(previousEndState.learner_experience_rating ?? previousEndState.learner_experience, 10);
+            if (Number.isInteger(persistedLearnerExperienceRating) && persistedLearnerExperienceRating >= 1 && persistedLearnerExperienceRating <= 5) {
+                branchState.learner_experience_rating = persistedLearnerExperienceRating;
+                branchState.learner_experience = persistedLearnerExperienceRating;
+            }
             if (currentAssessmentBranch === "words") {
                 branchState.stage = branchScore <= 6 ? "transition_to_rhymes" : "transition_to_sentence";
                 branchState.next_stage = branchScore <= 6 ? "rhymes" : "sentences";
@@ -4386,6 +4400,31 @@
                 branchState.comprehension_correct = Number.isFinite(correctAnswers) ? correctAnswers : null;
                 branchState.comprehension_total = latestScores.total_questions ?? currentStoryQuestions.length;
                 branchState.total_questions = latestScores.total_questions ?? currentStoryQuestions.length;
+            }
+            if (previousEndState.stage === "learner_experience"
+                && Number.isInteger(persistedLearnerExperienceRating)
+                && persistedLearnerExperienceRating >= 1 && persistedLearnerExperienceRating <= 5) {
+                Object.assign(branchState, previousEndState, {
+                    stage: "completed",
+                    next_stage: "completed",
+                });
+            }
+            const isPart1LearnerExperienceTerminal = ["early_completed_words", "early_completed_sentences"].includes(branchState.stage);
+            const hasLearnerExperienceRating = Number.isInteger(persistedLearnerExperienceRating)
+                && persistedLearnerExperienceRating >= 1 && persistedLearnerExperienceRating <= 5;
+            if (isPart1LearnerExperienceTerminal && !hasLearnerExperienceRating) {
+                const learnerExperienceState = {
+                    ...branchState,
+                    stage: "learner_experience",
+                    next_stage: "completed",
+                };
+                if (!isMyMaterials) writeStudentEndState(learnerExperienceState);
+                renderLearnerExperienceState();
+                return;
+            }
+            if (isPart1LearnerExperienceTerminal && hasLearnerExperienceRating) {
+                branchState.stage = "completed";
+                branchState.next_stage = "completed";
             }
             if (!isMyMaterials && branchState.stage) {
                 writeStudentEndState(branchState);

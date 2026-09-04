@@ -385,6 +385,36 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
         allowed_stages = endpoint.split("allowed_stages =", 1)[1].split("allowed_fields =", 1)[0]
         self.assertIn("'learner_experience'", allowed_stages)
 
+    def test_part1_terminal_states_share_learner_experience_gate(self):
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        completion = source.split("function showCompletion(isFullCompletion)", 1)[1].split("function startAssessmentTimer", 1)[0]
+        self.assertIn('"early_completed_words", "early_completed_sentences"', completion)
+        self.assertIn('stage: "learner_experience"', completion)
+        self.assertIn("renderLearnerExperienceState();", completion)
+        self.assertLess(completion.index("renderLearnerExperienceState();"), completion.index("completionSubmitted = true;"))
+        self.assertLess(completion.index("renderLearnerExperienceState();"), completion.index("recordAssessmentCompletion.request"))
+        self.assertIn('stage: "completed"', completion)
+        self.assertIn("learner_experience_rating", completion)
+
+    def test_learner_experience_restores_before_branch_resume(self):
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        restore = source.split("function loadItems", 1)[1].split("function updateUI", 1)[0]
+        self.assertIn('persistedStage === "learner_experience"', restore)
+        self.assertIn("renderLearnerExperienceState();", restore)
+        self.assertLess(restore.index('persistedStage === "learner_experience"'), restore.index("const requestedStage"))
+
+    def test_rating_save_is_integer_bounded_and_failure_safe(self):
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        rating = source.split("async function saveLearnerExperienceRating", 1)[1].split("function startCRLASpokenAttempt", 1)[0]
+        template = (Path(__file__).parent / "templates" / "pabasa_app" / "learner_experience_rating.html").read_text(encoding="utf-8")
+        self.assertIn('{% for rating in "12345" %}', template)
+        self.assertIn("Number.parseInt(rating, 10)", rating)
+        self.assertIn("selectedRating < 1 || selectedRating > 5", rating)
+        self.assertIn('stage: "completed"', rating)
+        self.assertIn("deferLocalStorage: true", rating)
+        self.assertIn("We could not save your rating. Please try again.", rating)
+        self.assertIn("learnerExperienceContinue.disabled = false", rating)
+
     def test_official_story_choices_have_stable_one_based_keys(self):
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
         choices = source.split("function getStoryChoicesFromAssessment", 1)[1].split("function shortStoryPreview", 1)[0]

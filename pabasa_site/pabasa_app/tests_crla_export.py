@@ -158,7 +158,7 @@ class CrlaExportResultTests(TestCase):
         self.assertTrue(str(sheet["P11"].value).startswith("="))
         self.assertTrue(str(sheet["Q11"].value).startswith("="))
         self.assertEqual(sheet["R11"].value, 4)
-        self.assertIsNone(sheet["S11"].value)
+        self.assertEqual(sheet["S11"].value, 4)
         self.assertEqual(sheet["T11"].value, "Level 3")
         self.assertEqual(sheet["U11"].value, "Transitioning Reader")
         self.assertEqual(sheet["V11"].value, "Needs continued reading practice")
@@ -181,7 +181,7 @@ class CrlaExportResultTests(TestCase):
         student.preference = {"reading_assessment_state": {"student_end_assessment_state": {
             "material_id": str(material.id), "stage": "early_completed_words", "branch": "rhymes",
             "task1_score": 1, "task2_rhymes_score": 9, "part1_total_score": 10,
-            "classification": "Low Emerging Reader",
+            "classification": "Low Emerging Reader", "learner_experience_rating": 3,
         }}}
         student.save(update_fields=["preference", "updated_at"])
         Assessment.objects.create(
@@ -197,8 +197,9 @@ class CrlaExportResultTests(TestCase):
         self.assertIsNone(sheet["H11"].value)
         self.assertTrue(str(sheet["I11"].value).startswith("="))
         self.assertTrue(str(sheet["J11"].value).startswith("="))
-        for column in ("K", "N", "O", "R", "S", "T"):
+        for column in ("K", "N", "O", "R", "T"):
             self.assertIsNone(sheet[f"{column}11"].value)
+        self.assertEqual(sheet["S11"].value, 3)
         self.assertTrue(str(sheet["P11"].value).startswith("="))
         self.assertTrue(str(sheet["Q11"].value).startswith("="))
         self.assertEqual(sheet["U11"].value, "Low Emerging Reader")
