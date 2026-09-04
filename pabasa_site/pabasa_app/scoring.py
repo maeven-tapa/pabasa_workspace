@@ -147,10 +147,10 @@ def crla_part1_classification(part1_total_score: Any) -> str:
         return "Full Refresher"
     if total <= 16:
         return "Moderate Refresher"
-    if total >= 17 and total <= 30:
-        return "Grade Ready"
-    if total <= 16:
+    if total <= 26:
         return "Light Refresher"
+    if total <= 30:
+        return "Grade Ready"
     return "NOT AVAILABLE"
 
 

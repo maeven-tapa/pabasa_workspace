@@ -1683,10 +1683,10 @@ def _crla_grade2_part1_level(task1_score, total_score):
         return 'Full Refresher'
     if total <= 16:
         return 'Moderate Refresher'
-    if total >= 17 and total <= 30:
-        return 'Grade Ready'
-    if total <= 16:
+    if total <= 26:
         return 'Light Refresher'
+    if total <= 30:
+        return 'Grade Ready'
     return 'NOT AVAILABLE'
 
 

@@ -8,15 +8,42 @@ from django.urls import reverse
 
 from pabasa_app.views import (
     _aral_eligible_classification,
+    _crla_grade2_part1_level,
     _crla_grade2_part2_profile,
     _is_finalized_grade_level_crla_result,
     _reader_assessment_state,
     _sync_assessment_workflow_state,
 )
-from pabasa_app.scoring import build_assessment_score_payload
+from pabasa_app.scoring import (
+    build_assessment_score_payload,
+    crla_part1_classification,
+    crla_part1_total,
+    crla_task1_next_task,
+)
 
 
 class AssessmentWorkflowBranchingTests(SimpleTestCase):
+    def test_part1_classification_matches_official_boundaries(self):
+        expected = {
+            10: "Full Refresher",
+            11: "Moderate Refresher",
+            16: "Moderate Refresher",
+            17: "Light Refresher",
+            26: "Light Refresher",
+            27: "Grade Ready",
+            30: "Grade Ready",
+        }
+        for total, classification in expected.items():
+            with self.subTest(total=total):
+                self.assertEqual(crla_part1_classification(total), classification)
+                self.assertEqual(_crla_grade2_part1_level(10, total), classification)
+
+    def test_word_branching_and_part1_total_remain_unchanged(self):
+        self.assertEqual(crla_task1_next_task(6), "Task 2L / Rhymes")
+        self.assertEqual(crla_task1_next_task(7), "Task 2H / Sentences")
+        self.assertEqual(crla_part1_total(6, task2l_score=4), 10)
+        self.assertEqual(crla_part1_total(7, task2h_score=10), 17)
+
     @staticmethod
     def _result(classification="Reading At Grade Level", status="completed", completed=True, crla=True, official=None):
         return SimpleNamespace(
