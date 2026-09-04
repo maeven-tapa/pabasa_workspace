@@ -1,0 +1,462 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retell the Story</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            padding: clamp(1rem, 3vh, 2.5rem) clamp(1rem, 4vw, 3.5rem) clamp(1rem, 2.5vh, 2rem);
+            box-sizing: border-box;
+            background: #fffdf9;
+        }
+
+        .scene-card {
+            width: min(100%, 72rem);
+            min-height: 0;
+            height: 100%;
+            box-sizing: border-box;
+            margin: 0 auto;
+            padding: clamp(0.55rem, 1.2vw, 0.9rem);
+            border: 0.35rem solid #fff;
+            border-radius: clamp(1.25rem, 3vw, 2.25rem);
+            background: #fff;
+            box-shadow: 0 1.25rem 2.75rem rgba(88, 67, 49, 0.14);
+        }
+
+        .scene-card img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: clamp(0.9rem, 2.2vw, 1.75rem);
+        }
+
+        .retell-page {
+            position: relative;
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr) auto;
+            height: 100%;
+            width: min(100%, 72rem);
+            margin: 0 auto;
+        }
+
+        .retell-header {
+            position: relative;
+            z-index: 2;
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            align-items: center;
+            gap: 0.8rem;
+            margin: 0 0 0.9rem 0.25rem;
+            color: #29416d;
+        }
+
+        .back-link {
+            grid-column: 1 / -1;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            width: fit-content;
+            margin-bottom: 0.2rem;
+            padding: 0.5rem 0.9rem;
+            border: 1px solid rgba(41, 65, 109, 0.16);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #29416d;
+            text-decoration: none;
+            font: 700 0.82rem Nunito, "Segoe UI", sans-serif;
+            box-shadow: 0 0.3rem 0.7rem rgba(31, 30, 54, 0.1);
+        }
+
+        .back-link:hover { background: #fff; color: #20365f; }
+
+        .retell-header-icon {
+            display: grid;
+            width: clamp(3rem, 6vw, 4.5rem);
+            height: clamp(3rem, 6vw, 4.5rem);
+            place-items: center;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.92);
+            color: #29416d;
+            font-size: clamp(1.6rem, 3vw, 2.4rem);
+            text-shadow: none;
+            box-shadow: 0 0.5rem 1rem rgba(31, 30, 54, 0.16);
+        }
+
+        .retell-header h1 {
+            margin: 0;
+            font: 800 clamp(1.35rem, 3vw, 2.25rem)/1.1 Nunito, "Segoe UI", sans-serif;
+        }
+
+        .retell-header p {
+            margin: 0.25rem 0 0;
+            font: 600 clamp(0.8rem, 1.6vw, 1.1rem)/1.2 Nunito, "Segoe UI", sans-serif;
+        }
+
+        .retell-card {
+            position: absolute;
+            top: 50%;
+            right: 2.5%;
+            transform: translateY(-50%);
+            z-index: 2;
+            width: min(49%, 35rem);
+            padding: clamp(1.15rem, 2.1vw, 1.9rem) clamp(1.35rem, 2.6vw, 2.25rem);
+            border: 1px solid rgba(255, 255, 255, 0.82);
+            border-radius: clamp(1.5rem, 3vw, 2.5rem);
+            background: rgba(255, 253, 248, 0.96);
+            color: #20365f;
+            text-align: center;
+            box-shadow: 0 1.25rem 2.5rem rgba(31, 30, 54, 0.2);
+        }
+
+        .story-icon {
+            margin-bottom: 0.25rem;
+            color: #efad39;
+            font-size: clamp(1.7rem, 3vw, 2.35rem);
+        }
+
+        .retell-card h2 {
+            margin: 0;
+            font: 800 clamp(1.15rem, 2.25vw, 1.8rem)/1.25 Nunito, "Segoe UI", sans-serif;
+        }
+
+        .story-title {
+            margin: 0.7rem 0 0.85rem;
+            padding: 0.6rem 0.9rem;
+            border-radius: 999px;
+            background: #fff0d0;
+            color: #243d70;
+            font: 800 clamp(1rem, 1.8vw, 1.35rem)/1.2 Nunito, "Segoe UI", sans-serif;
+        }
+
+        .retell-instructions {
+            margin: 0;
+            font: 600 clamp(0.85rem, 1.45vw, 1rem)/1.45 Nunito, "Segoe UI", sans-serif;
+        }
+
+        .record-button {
+            display: grid;
+            width: clamp(6rem, 10vw, 8rem);
+            height: clamp(6rem, 10vw, 8rem);
+            margin: 0.9rem auto 0.45rem;
+            place-items: center;
+            border: 0.7rem solid #ffd1d0;
+            border-radius: 50%;
+            background: #ef4b4f;
+            color: #fff;
+            cursor: pointer;
+            font-size: clamp(2.1rem, 4vw, 3rem);
+            box-shadow: 0 0.55rem 1rem rgba(202, 54, 63, 0.25);
+            transition: transform 160ms ease, background 160ms ease;
+        }
+
+        .record-button:hover { transform: translateY(-2px); }
+        .record-button.is-recording { background: #c93445; }
+
+        .record-label {
+            margin: 0;
+            color: #e94448;
+            font: 800 clamp(1rem, 1.8vw, 1.3rem)/1.2 Nunito, "Segoe UI", sans-serif;
+        }
+
+        .record-status {
+            min-height: 1.35rem;
+            margin: 0.35rem 0 0;
+            color: #a94b51;
+            font: 700 0.82rem/1.3 Nunito, "Segoe UI", sans-serif;
+        }
+
+        .tip-box {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            margin-top: 0.7rem;
+            padding: 0.7rem 0.85rem;
+            border-radius: 1.25rem;
+            background: #f8eee1;
+            color: #59545a;
+            text-align: left;
+            font: 700 clamp(0.78rem, 1.35vw, 0.92rem)/1.35 Nunito, "Segoe UI", sans-serif;
+        }
+
+        .tip-icon { color: #f5aa32; font-size: 1.55rem; }
+
+        .retell-nav {
+            position: relative;
+            z-index: 3;
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 1.25rem;
+            padding: 0;
+        }
+
+        .nav-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.55rem;
+            min-width: 8.5rem;
+            padding: 0.8rem 1.45rem;
+            border: 0;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.94);
+            color: #29416d;
+            cursor: pointer;
+            font: 800 1rem Nunito, "Segoe UI", sans-serif;
+            box-shadow: 0 0.45rem 1rem rgba(31, 30, 54, 0.14);
+        }
+
+        .nav-button:disabled {
+            background: rgba(255, 255, 255, 0.65);
+            color: #9a9eaa;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 10;
+            display: grid;
+            place-items: center;
+            padding: 1rem;
+            background: rgba(32, 54, 95, 0.28);
+        }
+
+        .modal-backdrop[hidden] { display: none; }
+
+        .confirm-modal {
+            width: min(100%, 28rem);
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            border-radius: 1.75rem;
+            background: #fffdf8;
+            color: #20365f;
+            text-align: center;
+            box-shadow: 0 1.5rem 3rem rgba(31, 30, 54, 0.24);
+        }
+
+        .confirm-icon { color: #efad39; font-size: 2.3rem; }
+        .confirm-modal h2 { margin: 0.5rem 0; font: 800 1.5rem Nunito, "Segoe UI", sans-serif; }
+        .confirm-modal p { margin: 0 0 1.35rem; color: #59545a; font: 600 0.95rem/1.45 Nunito, "Segoe UI", sans-serif; }
+        .confirm-actions { display: flex; justify-content: center; gap: 0.7rem; }
+        .confirm-actions button { min-width: 7.5rem; padding: 0.7rem 1rem; border: 1px solid rgba(41, 65, 109, 0.16); border-radius: 999px; cursor: pointer; font: 800 0.88rem Nunito, "Segoe UI", sans-serif; }
+        #cancelRecordAgain { background: #fff; color: #29416d; }
+        #confirmRecordAgain { border-color: #e94448; background: #e94448; color: #fff; }
+        .success-modal .confirm-icon { color: #49a36a; }
+
+        @media (max-width: 800px) {
+            .retell-card {
+                position: relative;
+                top: auto;
+                right: auto;
+                transform: none;
+                width: min(100% - 2rem, 34rem);
+                margin: -20% auto 0;
+            }
+
+            .retell-header { margin: 0 0 1rem 0.5rem; }
+            .retell-nav { margin-top: 1.25rem; padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <main class="retell-page">
+        <header class="retell-header">
+            <a class="back-link" href="{% url 'assessment' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i><span>Back to reading assessment tab</span></a>
+            <span class="retell-header-icon" aria-hidden="true"><i class="bi bi-book-half"></i></span>
+            <div>
+                <h1>Retell the Story</h1>
+                <p>Share what you remember!</p>
+            </div>
+        </header>
+
+        <section class="scene-card" aria-label="Retell the Story scene">
+            <img src="{% static 'pabasa_app/images/retell_story/retell-the-story-bg.png' %}" alt="">
+        </section>
+
+        <section class="retell-card" aria-labelledby="retell-prompt">
+            <div class="story-icon" aria-hidden="true"><i class="bi bi-stars"></i> <i class="bi bi-book-half"></i> <i class="bi bi-stars"></i></div>
+            <h2 id="retell-prompt">Retell the story on me about...</h2>
+            <div class="story-title">{{ custom_material_launch_data.title|default:request.GET.test|default:"This story" }}</div>
+            <p class="retell-instructions">Speak clearly and tell the story in your own words.<br>Try to include the important parts from beginning to end.</p>
+            <button class="record-button" id="recordButton" type="button" aria-label="Start recording"><i class="bi bi-mic-fill"></i></button>
+            <p class="record-label" id="recordLabel">Start Recording</p>
+            <p class="record-status" id="recordStatus" aria-live="polite"></p>
+            <div class="tip-box"><span class="tip-icon" aria-hidden="true"><i class="bi bi-lightbulb-fill"></i></span><span>Take your time. Tell the story just like you would to a friend!</span></div>
+        </section>
+
+        <nav class="retell-nav" aria-label="Retell activity navigation">
+            <button class="nav-button" id="finishButton" type="button" disabled><span>Finish</span><i class="bi bi-arrow-right" aria-hidden="true"></i></button>
+        </nav>
+        <audio id="recordingPreview" controls hidden></audio>
+    </main>
+    <div class="modal-backdrop" id="recordAgainModal" role="presentation" hidden>
+        <section class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="recordAgainTitle">
+            <div class="confirm-icon" aria-hidden="true"><i class="bi bi-mic-fill"></i></div>
+            <h2 id="recordAgainTitle">Record again?</h2>
+            <p>Are you sure you want to record again? Your current recording will be replaced.</p>
+            <div class="confirm-actions">
+                <button id="cancelRecordAgain" type="button">Cancel</button>
+                <button id="confirmRecordAgain" type="button">Yes, record again</button>
+            </div>
+        </section>
+    </div>
+    <div class="modal-backdrop" id="successModal" role="presentation" hidden>
+        <section class="confirm-modal success-modal" role="dialog" aria-modal="true" aria-labelledby="successTitle">
+            <div class="confirm-icon" aria-hidden="true"><i class="bi bi-check-circle-fill"></i></div>
+            <h2 id="successTitle">Recording Sent</h2>
+            <p>Your recording has been sent to your teacher.<br>Please wait for your teacher to review it.</p>
+            <div class="confirm-actions"><button id="successOk" type="button">OK</button></div>
+        </section>
+    </div>
+    <script>
+        (() => {
+            const recordButton = document.getElementById('recordButton');
+            const recordLabel = document.getElementById('recordLabel');
+            const recordStatus = document.getElementById('recordStatus');
+            const finishButton = document.getElementById('finishButton');
+            const preview = document.getElementById('recordingPreview');
+            const recordAgainModal = document.getElementById('recordAgainModal');
+            const cancelRecordAgain = document.getElementById('cancelRecordAgain');
+            const confirmRecordAgain = document.getElementById('confirmRecordAgain');
+            const successModal = document.getElementById('successModal');
+            const successOk = document.getElementById('successOk');
+            let recorder;
+            let stream;
+            let chunks = [];
+            let recordingUrl;
+            let recordingStartedAt = 0;
+            let submitting = false;
+
+            function supportedMimeType() {
+                const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'];
+                return types.find((type) => window.MediaRecorder && MediaRecorder.isTypeSupported(type)) || '';
+            }
+
+            function stopTracks() {
+                if (stream) stream.getTracks().forEach((track) => track.stop());
+                stream = null;
+            }
+
+            async function toggleRecording() {
+                if (recorder && recorder.state === 'recording') {
+                    recorder.stop();
+                    return;
+                }
+                if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+                    recordStatus.textContent = 'Audio recording is not supported in this browser.';
+                    return;
+                }
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    chunks = [];
+                    const mimeType = supportedMimeType();
+                    recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+                    recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+                    recorder.onstop = () => {
+                        const blob = new Blob(chunks, { type: mimeType || 'audio/webm' });
+                        stopTracks();
+                        if (recordingUrl) URL.revokeObjectURL(recordingUrl);
+                        recordingUrl = URL.createObjectURL(blob);
+                        preview.src = recordingUrl;
+                        preview.hidden = true;
+                        finishButton.disabled = blob.size === 0;
+                        recordButton.classList.remove('is-recording');
+                        recordButton.innerHTML = '<i class="bi bi-mic-fill"></i>';
+                        recordButton.setAttribute('aria-label', 'Record again');
+                        recordLabel.textContent = 'Record Again';
+                        recordStatus.textContent = 'Recording ready.';
+                    };
+                    recorder.onerror = () => {
+                        stopTracks();
+                        recordButton.classList.remove('is-recording');
+                        recordLabel.textContent = 'Start Recording';
+                        recordStatus.textContent = 'The recording could not be completed.';
+                    };
+                    recorder.start();
+                    recordingStartedAt = Date.now();
+                    recordButton.classList.add('is-recording');
+                    recordButton.innerHTML = '<i class="bi bi-stop-fill"></i>';
+                    recordButton.setAttribute('aria-label', 'Stop recording');
+                    recordLabel.textContent = 'Stop Recording';
+                    recordStatus.textContent = 'Recording…';
+                } catch (error) {
+                    stopTracks();
+                    recordStatus.textContent = error.name === 'NotAllowedError' ? 'Please allow microphone access to record.' : 'Unable to start recording.';
+                }
+            }
+
+            function openRecordAgainModal() {
+                recordAgainModal.hidden = false;
+                cancelRecordAgain.focus();
+            }
+
+            function closeRecordAgainModal() {
+                recordAgainModal.hidden = true;
+                recordButton.focus();
+            }
+
+            function resetRecording() {
+                if (recordingUrl) URL.revokeObjectURL(recordingUrl);
+                recordingUrl = null;
+                preview.removeAttribute('src');
+                preview.hidden = true;
+                recorder = null;
+                chunks = [];
+                finishButton.disabled = true;
+                recordButton.classList.remove('is-recording');
+                recordButton.innerHTML = '<i class="bi bi-mic-fill"></i>';
+                recordButton.setAttribute('aria-label', 'Start recording');
+                recordLabel.textContent = 'Start Recording';
+                recordStatus.textContent = '';
+            }
+
+            recordButton.addEventListener('click', () => {
+                if (recorder?.state === 'recording') return toggleRecording();
+                if (recordingUrl) return openRecordAgainModal();
+                return toggleRecording();
+            });
+            cancelRecordAgain.addEventListener('click', closeRecordAgainModal);
+            confirmRecordAgain.addEventListener('click', () => { closeRecordAgainModal(); resetRecording(); });
+            recordAgainModal.addEventListener('click', (event) => { if (event.target === recordAgainModal) closeRecordAgainModal(); });
+            async function submitRecording() {
+                if (!recordingUrl || submitting) return;
+                submitting = true;
+                finishButton.disabled = true;
+                finishButton.querySelector('span').textContent = 'Sending...';
+                try {
+                    const response = await fetch('{% url "story_response_submit" %}', {
+                        method: 'POST', credentials: 'same-origin',
+                        headers: { 'X-CSRFToken': document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || '' },
+                        body: (() => { const form = new FormData(); form.append('material_id', '{{ custom_material_launch_data.id }}'); form.append('audio', new Blob(chunks, { type: recorder?.mimeType || 'audio/webm' }), 'retell-story.webm'); form.append('duration_seconds', String(Math.max(0, Math.round((Date.now() - recordingStartedAt) / 1000)))); return form; })()
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result.success) throw new Error(result.error || 'Your recording could not be sent. Please try again.');
+                    successModal.hidden = false;
+                    successOk.focus();
+                } catch (error) {
+                    recordStatus.textContent = error.message || 'Your recording could not be sent. Please try again.';
+                    finishButton.disabled = false;
+                } finally {
+                    submitting = false;
+                    finishButton.querySelector('span').textContent = 'Finish';
+                }
+            }
+            finishButton.addEventListener('click', submitRecording);
+            successOk.addEventListener('click', () => { window.location.href = '{% url "assessment" %}'; });
+        })();
+    </script>
+</body>
+</html>

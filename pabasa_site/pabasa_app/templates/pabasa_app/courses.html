@@ -9726,6 +9726,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 </div>
                             ` : ''}
                         </div>
+                        ${assessment.review_retell_recordings ? `<button type="button" class="course-assessment-export-btn retell-recordings-btn" data-material-id="${escapeHtml(exportMaterialId)}"><i class="bi bi-mic"></i>Recordings</button>` : ''}
                         ${assessment.review_responses ? `<button type="button" class="course-assessment-export-btn story-response-review-btn" data-material-id="${escapeHtml(exportMaterialId)}"><i class="bi bi-mic"></i>Recordings</button>` : ''}
                         ${canExport ? `
                             <a class="course-assessment-export-btn"
@@ -9768,11 +9769,80 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         body.innerHTML = data.submissions.map(row => `<div class="story-response-review-row"><div class="story-response-review-header"><strong class="story-response-student-name">${escapeHtml(row.student_name)}</strong><span class="story-response-status-badge ${row.grade_locked ? 'is-graded' : ''}">${escapeHtml(row.status)}</span></div>${row.story_title ? `<div class="story-response-story">Story · ${escapeHtml(row.story_title)}</div>` : ''}${row.prompt ? `<div class="story-response-prompt"><span class="story-response-prompt-label">Prompt</span><span class="story-response-prompt-text"> ${escapeHtml(row.prompt)}</span></div>` : ''}${row.response_text ? `<div class="story-response-prompt"><span class="story-response-prompt-label">Answer</span><span class="story-response-prompt-text"> ${escapeHtml(row.response_text)}</span></div>` : ''}${row.recording_url ? `<audio class="w-100" controls preload="none" src="${escapeHtml(row.recording_url)}"></audio><div class="story-response-score-row"><label class="story-response-score-label" for="story-response-score-${row.id}">Score</label><select id="story-response-score-${row.id}" class="story-response-grade" data-submission-id="${row.id}" ${row.grade_locked ? 'disabled' : ''}>${[0,1,2,3,4,5].map(value => `<option value="${value}" ${Number(row.grade) === value ? 'selected' : ''}>${value}</option>`).join('')}</select><span class="story-response-score-out-of">/ 5</span><button type="button" class="story-response-save-grade" data-submission-id="${row.id}" ${row.grade_locked ? 'disabled' : ''}>${row.grade_locked ? 'Score Submitted' : 'Submit Score'}</button>${row.grade !== null && row.grade !== undefined ? `<strong class="story-response-saved-score">Saved ${escapeHtml(row.grade)}/5</strong>` : ''}</div>` : ''}</div>`).join('') || '<div class="text-muted">No enrolled students found.</div>';
     }
 
+    async function openRetellRecordings(materialId) {
+        let modal = document.getElementById('retellRecordingsModal');
+        if (!modal) {
+            document.body.insertAdjacentHTML('beforeend', `<style>.retell-recordings-table{table-layout:fixed}.retell-recordings-table th:nth-child(1),.retell-recordings-table td:nth-child(1){width:25%}.retell-recordings-table th:nth-child(2),.retell-recordings-table td:nth-child(2){width:25%}.retell-recordings-table th:nth-child(3),.retell-recordings-table td:nth-child(3){width:50%}.retell-recordings-table td{vertical-align:middle}.retell-recordings-table .retell-student{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.retell-recording-player{display:flex;align-items:center;gap:.55rem;width:min(100%,280px);padding:.35rem .55rem;border:1px solid #dce4ec;border-radius:999px;background:#f7f9fb}.retell-player-btn{width:30px;height:30px;padding:0;border:0;border-radius:50%;color:#fff;background:#2483a4;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}.retell-player-time{font-size:.75rem;color:#526274;white-space:nowrap;min-width:72px}.retell-player-progress{width:100%;accent-color:#2483a4}</style><div class="modal fade retell-recordings-modal" id="retellRecordingsModal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><div><h5 class="modal-title">Retell the Story Recordings</h5><div class="text-muted small" id="retellRecordingsActivity"></div></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="d-flex gap-2 mb-3"><input class="form-control" id="retellRecordingsSearch" placeholder="Search student..."><select class="form-select" id="retellRecordingsSort" style="max-width:180px"><option value="oldest">Oldest submitted</option><option value="newest">Newest submitted</option></select></div><div class="table-responsive rounded border"><div id="retellRecordingsBody"></div></div><div class="d-flex align-items-center justify-content-between mt-3" id="retellRecordingsPagination"></div></div></div></div></div>`);
+            modal = document.getElementById('retellRecordingsModal');
+        }
+        const body = document.getElementById('retellRecordingsBody');
+        body.innerHTML = '<div class="text-muted">Loading recordings...</div>';
+        bootstrap.Modal.getOrCreateInstance(modal).show();
+        const response = await fetch(`{% url 'teacher_retell_recordings' %}?material_id=${encodeURIComponent(materialId)}`, { credentials: 'same-origin' });
+        const data = await response.json();
+        if (!response.ok || !data.success) { body.innerHTML = `<div class="text-danger">${escapeHtml(data.error || 'Unable to load recordings.')}</div>`; return; }
+        document.getElementById('retellRecordingsActivity').textContent = data.activity?.title || '';
+        const rows = data.submissions || [];
+        const search = document.getElementById('retellRecordingsSearch');
+        const sort = document.getElementById('retellRecordingsSort');
+        let page = 1;
+        function render() {
+            const query = search.value.trim().toLowerCase();
+            const filtered = rows.filter(row => String(row.student_name || '').toLowerCase().includes(query)).sort((a, b) => { const diff = new Date(a.submitted_at) - new Date(b.submitted_at); return sort.value === 'newest' ? -diff : diff; });
+            const pages = Math.max(1, Math.ceil(filtered.length / 10)); page = Math.min(page, pages);
+            const visible = filtered.slice((page - 1) * 10, page * 10);
+            body.innerHTML = visible.length ? `<table class="table align-middle mb-0 retell-recordings-table"><thead><tr><th>Student</th><th>Submitted</th><th>Recording</th></tr></thead><tbody>${visible.map(row => `<tr><td class="retell-student" title="${escapeHtml(row.student_name)}">${escapeHtml(row.student_name)}</td><td>${new Date(row.submitted_at).toLocaleString()}</td><td>${row.recording_url ? `<div class="retell-recording-player"><button type="button" class="retell-player-btn" data-submission-id="${escapeHtml(row.id)}" data-url="${escapeHtml(row.recording_url)}" aria-label="Play recording"><i class="bi bi-play-fill"></i></button><span class="retell-player-time">0:00 / --:--</span><input class="retell-player-progress" type="range" min="0" max="0" value="0" step="0.1" aria-label="Recording progress"></div>` : '<span class="text-muted">Recording unavailable</span>'}</td></tr>`).join('')}</tbody></table>` : '<div class="text-muted py-4 text-center">No recordings yet.</div>';
+            document.getElementById('retellRecordingsPagination').innerHTML = filtered.length > 10 ? `<span class="small text-muted">${(page - 1) * 10 + 1}–${Math.min(page * 10, filtered.length)} of ${filtered.length}</span><span><button class="btn btn-sm btn-outline-secondary" id="retellPrev" ${page === 1 ? 'disabled' : ''}>Previous</button> <span class="mx-2 small">${page} / ${pages}</span><button class="btn btn-sm btn-outline-secondary" id="retellNext" ${page === pages ? 'disabled' : ''}>Next</button></span>` : '';
+        }
+        search.oninput = () => { page = 1; render(); }; sort.onchange = () => { page = 1; render(); };
+        modal.querySelector('#retellPrev')?.remove(); render();
+        if (!document.documentElement.dataset.retellPaginationBound) {
+            document.addEventListener('click', event => {
+                if (event.target.id === 'retellPrev') { page--; render(); }
+                if (event.target.id === 'retellNext') { page++; render(); }
+                const button = event.target.closest('.retell-player-btn');
+                if (!button) return;
+                const player = button.closest('.retell-recording-player');
+                const time = player.querySelector('.retell-player-time');
+                const progress = player.querySelector('.retell-player-progress');
+                const formatTime = value => `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`;
+                if (window.retellAudio && window.retellAudio.dataset?.submissionId === button.dataset.submissionId) {
+                    if (window.retellAudio.paused) window.retellAudio.play();
+                    else window.retellAudio.pause();
+                    return;
+                }
+                if (window.retellAudio) window.retellAudio.pause();
+                const audio = new Audio(button.dataset.url);
+                audio.dataset.submissionId = button.dataset.submissionId;
+                window.retellAudio = audio;
+                document.querySelectorAll('.retell-player-btn').forEach(item => item.innerHTML = '<i class="bi bi-play-fill"></i>');
+                audio.addEventListener('loadedmetadata', () => { progress.max = audio.duration || 0; time.textContent = `0:00 / ${formatTime(audio.duration)}`; });
+                audio.addEventListener('timeupdate', () => { progress.value = audio.currentTime; time.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration || 0)}`; });
+                audio.addEventListener('play', () => { button.innerHTML = '<i class="bi bi-pause-fill"></i>'; });
+                audio.addEventListener('pause', () => { if (!audio.ended) button.innerHTML = '<i class="bi bi-play-fill"></i>'; });
+                audio.addEventListener('ended', () => { button.innerHTML = '<i class="bi bi-play-fill"></i>'; progress.value = 0; });
+                audio.addEventListener('error', () => { time.textContent = 'Unavailable'; button.disabled = true; });
+                audio.play().catch(() => { time.textContent = 'Unavailable'; button.disabled = true; });
+            });
+            document.addEventListener('input', event => {
+                const progress = event.target.closest('.retell-player-progress');
+                if (progress && window.retellAudio) window.retellAudio.currentTime = Number(progress.value) || 0;
+            });
+            document.documentElement.dataset.retellPaginationBound = 'true';
+        }
+    }
+
     document.addEventListener('click', async event => {
         const reviewButton = event.target.closest('.story-response-review-btn');
         if (reviewButton) {
             event.preventDefault();
             await openStoryResponseReview(reviewButton.dataset.materialId);
+            return;
+        }
+        const retellButton = event.target.closest('.retell-recordings-btn');
+        if (retellButton) {
+            event.preventDefault();
+            await openRetellRecordings(retellButton.dataset.materialId);
             return;
         }
         const saveButton = event.target.closest('.story-response-save-grade');
@@ -11666,7 +11736,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             || material.template_type
                             || ''
                         ).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-                        return activityType === 'story_response';
+                        return activityType === 'story_response' || activityType === 'retell_story';
                     })
                     .forEach(material => {
                         if (existingCatalogIds.has(String(material.id))) return;
@@ -11677,10 +11747,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             title: material.title,
                             assessment_type: material.item_type,
                             source_type: material.source_type,
-                            template_title: material.content_json?.template_title || 'Story Response',
+                            template_title: material.content_json?.template_title || (activityType === 'retell_story' ? 'Retell the Story' : 'Story Response'),
                             status: material.status,
                             is_active: material.is_active,
-                            review_responses: true,
+                            review_responses: activityType === 'story_response',
+                            review_retell_recordings: activityType === 'retell_story',
                             created_at: material.created_at,
                             updated_at: material.updated_at,
                         });

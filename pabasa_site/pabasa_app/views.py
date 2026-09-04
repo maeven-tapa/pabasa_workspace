@@ -24,6 +24,7 @@ from urllib.parse import quote, urlencode, urlparse
 import logging
 import json
 import os
+import mimetypes
 import shutil
 import math
 import calendar as py_calendar
@@ -12479,6 +12480,10 @@ def reading_para_page(request):
         return canonical_response
     context = _dashboard_context(request)
     context.update(_custom_material_reading_context(request))
+    custom_material = context.get('custom_material_launch_data') or {}
+    content_json = custom_material.get('content_json') if isinstance(custom_material, dict) else {}
+    if isinstance(content_json, dict) and content_json.get('activity_type') == 'retell_story':
+        return render(request, 'pabasa_app/retell_story_background_page.html', context)
     context['student_end_assessment_state_json'] = json.dumps(
         (_get_user_state(User.objects.filter(id=request.session.get('user_id')).first()).get('student_end_assessment_state') or {}),
         default=str, separators=(',', ':'),
@@ -17838,6 +17843,7 @@ def get_teacher_assessments_api(request):
                 'template_title': template_title,
                 'is_story_response': _is_story_response_material(source_material),
                 'review_responses': _is_story_response_material(source_material),
+                'review_retell_recordings': _is_retell_story_material(source_material),
                 'status': a.status,
                 'is_active': a.is_active,
                 'attempt_count': len(attempts),
@@ -19540,7 +19546,7 @@ def get_class_materials(request):
                         attempt_count = 0
                     else:
                         attempt_count = 0
-                elif is_requesting_student and _is_story_response_material(m):
+                elif is_requesting_student and (_is_story_response_material(m) or _is_retell_story_material(m)):
                     story_response_submission = StoryResponseSubmission.objects.filter(
                         student=request_user, material=m,
                     ).only('id', 'grade', 'status', 'submitted_at').first()
@@ -23671,6 +23677,35 @@ def _is_story_response_material(material):
     return content_json.get('activity_type') == 'story_response'
 
 
+def _is_retell_story_material(material):
+    """Check if a material is a Retell the Story activity."""
+    if not material or not isinstance(material, Material):
+        return False
+    content_json = material.content_json if isinstance(material.content_json, dict) else {}
+    return content_json.get('activity_type') == 'retell_story'
+
+
+def _retell_recording_component(value, fallback):
+    """Return a safe single Windows path component for Retell storage."""
+    cleaned = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', '-', str(value or '').strip())
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip(' .')
+    return cleaned[:150] or fallback
+
+
+def _retell_recording_name(material, section, student, submission_id, original_name):
+    content_json = material.content_json if isinstance(material.content_json, dict) else {}
+    story_title = content_json.get('story_title') or material.title or 'retell-story'
+    section_name = getattr(section, 'class_name', '') or str(getattr(section, 'section', '') or '') or 'Unassigned Section'
+    student_name = ' '.join(filter(None, [student.first_name, student.last_name])) or student.custom_id or 'Student'
+    suffix = Path(str(original_name or '')).suffix.lower() or '.webm'
+    return '/'.join([
+        'retell_the_story',
+        _retell_recording_component(section_name, 'Unassigned Section'),
+        _retell_recording_component(student_name, 'Student'),
+        f'{_retell_recording_component(story_title, "retell-story")}_{submission_id}{suffix}',
+    ])
+
+
 @require_http_methods(["GET"])
 def get_published_stories_api(request):
     """
@@ -23796,7 +23831,8 @@ def story_response_page(request):
     _, material_id = _parse_prefixed_id(request.GET.get('id') or request.GET.get('material_id'))
     material = Material.objects.filter(pk=material_id).first() if material_id else None
     
-    if not material or not _is_story_response_material(material):
+    is_retell_story = _is_retell_story_material(material)
+    if not material or (not _is_story_response_material(material) and not is_retell_story):
         return redirect('assessment')
     
     access_response = _enforce_student_access_for_request(request, material=material)
@@ -23867,6 +23903,9 @@ def story_response_read_aloud_api(request):
         return JsonResponse({'success': False, 'error': str(exc)}, status=502)
 
 
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='student')
 def story_response_submit(request):
     """Submit a student's story response."""
     if request.content_type and request.content_type.startswith('multipart/form-data'):
@@ -23884,12 +23923,13 @@ def story_response_submit(request):
     _, material_id = _parse_prefixed_id(payload.get('material_id'))
     material = Material.objects.filter(pk=material_id).first() if material_id else None
     
-    if not material or not _is_story_response_material(material):
+    is_retell_story = _is_retell_story_material(material)
+    if not material or (not _is_story_response_material(material) and not is_retell_story):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     access_response = _enforce_student_access_for_request(request, material=material)
     if access_response:
         return access_response
-    if StoryResponseSubmission.objects.filter(student=user, material=material).exists():
+    if not is_retell_story and StoryResponseSubmission.objects.filter(student=user, material=material).exists():
         return JsonResponse({'success': False, 'error': 'This Story Response activity is already completed.'}, status=409)
     
     student_section = next((
@@ -23910,22 +23950,50 @@ def story_response_submit(request):
         duration = max(0, int(duration)) if duration is not None else None
     except (TypeError, ValueError):
         duration = None
-    submission, _ = StoryResponseSubmission.objects.update_or_create(
-        student=user,
-        material=material,
-        defaults={
-            'enrollment': Enrollment.objects.filter(student=user, section=student_section, status='active', is_active=True).order_by('id').first(),
-            'story_material': source_story,
-            'prompt': str((material.content_json or {}).get('response_prompt') or '').strip(),
-            'response_text': str(payload.get('response_text') or '').strip(),
-            'duration_seconds': duration,
-            'status': 'pending',
-            'grade': None,
-            'graded_by': None,
-            'graded_at': None,
-        },
-    )
-    submission.audio_file.save(audio.name, audio, save=True)
+    with transaction.atomic():
+        submission, _ = StoryResponseSubmission.objects.update_or_create(
+            student=user,
+            material=material,
+            defaults={
+                'enrollment': Enrollment.objects.filter(student=user, section=student_section, status='active', is_active=True).order_by('id').first(),
+                'story_material': source_story,
+                'prompt': str((material.content_json or {}).get('response_prompt') or '').strip(),
+                'response_text': str(payload.get('response_text') or '').strip(),
+                'duration_seconds': duration,
+                'status': 'pending',
+                'grade': None,
+                'graded_by': None,
+                'graded_at': None,
+            },
+        )
+        if is_retell_story:
+            recording_name = _retell_recording_name(material, student_section, user, submission.id, audio.name)
+            retell_root = os.path.join(settings.BASE_DIR, 'retell_the_story')
+            student_dir = os.path.join(retell_root, *recording_name.split('/')[1:-1])
+            os.makedirs(student_dir, exist_ok=True)
+            destination_path = os.path.join(student_dir, recording_name.rsplit('/', 1)[-1])
+            with open(destination_path, 'wb+') as destination:
+                for chunk in audio.chunks():
+                    destination.write(chunk)
+            submission.audio_file.name = recording_name
+            submission.save(update_fields=['audio_file', 'updated_at'])
+        else:
+            submission.audio_file.save(audio.name, audio, save=True)
+        if is_retell_story:
+            completion = _complete_assessment_for_student(
+                user,
+                data={
+                    'material_id': f'material-{material.id}',
+                    'activity_type': 'retell_story',
+                    'assessment_type': material.item_type or 'paragraph',
+                    'status': 'completed',
+                    'items_completed': 1,
+                    'scores': {'activity_type': 'retell_story', 'duration_seconds': duration or 0, 'needs_manual_review': True},
+                },
+                request=request,
+            )
+            if getattr(completion, 'status_code', 500) >= 400:
+                raise RuntimeError('The recording was saved, but the activity could not be marked complete.')
     
     return JsonResponse({
         'success': True,
@@ -24018,6 +24086,88 @@ def teacher_story_response_audio(request, submission_id):
     teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
     if not submission or not submission.audio_file or not teacher or not _teacher_can_access_material(teacher, submission.material):
         return HttpResponseForbidden('Recording unavailable.')
-    response = FileResponse(submission.audio_file.open('rb'), content_type='audio/webm')
+    if _is_retell_story_material(submission.material):
+        retell_path = os.path.join(settings.BASE_DIR, 'retell_the_story', *str(submission.audio_file.name).replace('\\', '/').split('/')[1:])
+        if not os.path.isfile(retell_path):
+            return HttpResponseForbidden('Recording unavailable.')
+        response = FileResponse(open(retell_path, 'rb'), content_type='audio/webm')
+    else:
+        response = FileResponse(submission.audio_file.open('rb'), content_type='audio/webm')
+    response['Content-Disposition'] = 'inline'
+    return response
+
+
+@require_http_methods(["GET"])
+@login_required(role='teacher')
+def teacher_retell_recordings(request):
+    material_id = request.GET.get('material_id')
+    _, material_id = _parse_prefixed_id(material_id)
+    material = Material.objects.filter(pk=material_id).first() if material_id else None
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    if not material or not _is_retell_story_material(material):
+        return JsonResponse({'success': False, 'error': 'Retell activity not found.'}, status=404)
+    if not teacher or not _teacher_can_access_material(teacher, material):
+        return JsonResponse({'success': False, 'error': 'Access denied.'}, status=403)
+    rows = []
+    submissions = StoryResponseSubmission.objects.filter(
+        material=material,
+    ).select_related('student').order_by('submitted_at', 'id')
+    for submission in submissions:
+        name = ' '.join(filter(None, [submission.student.first_name, submission.student.last_name])) or submission.student.custom_id or 'Student'
+        path_parts = str(submission.audio_file.name or '').replace('\\', '/').split('/')
+        physical_path = os.path.join(settings.BASE_DIR, *path_parts) if path_parts and path_parts[0] == 'retell_the_story' else ''
+        available = bool(submission.audio_file and physical_path and os.path.isfile(physical_path))
+        rows.append({
+            'id': submission.id,
+            'student_name': name,
+            'submitted_at': submission.submitted_at.isoformat(),
+            'recording_url': reverse('teacher_retell_recording', args=[submission.id]) if available else None,
+            'recording_available': available,
+        })
+    return JsonResponse({'success': True, 'activity': {'id': material.id, 'title': material.title}, 'submissions': rows})
+
+
+@require_http_methods(["GET"])
+@login_required(role='teacher')
+def teacher_retell_recording(request, submission_id):
+    submission = StoryResponseSubmission.objects.select_related(
+        'material', 'student', 'enrollment__section'
+    ).filter(pk=submission_id).first()
+    teacher = User.objects.filter(
+        pk=request.session.get('user_id'), role='teacher', is_archived=False,
+    ).first()
+    if (
+        not submission
+        or not teacher
+        or not _is_retell_story_material(submission.material)
+        or not _teacher_can_access_material(teacher, submission.material)
+        or not submission.audio_file
+    ):
+        return HttpResponseNotFound('Recording unavailable.')
+
+    section = getattr(submission.enrollment, 'section', None)
+    if not section:
+        enrollment = _student_current_enrollment(submission.student)
+        section = getattr(enrollment, 'section', None)
+    if not section:
+        return HttpResponseNotFound('Recording unavailable.')
+
+    section_name = getattr(section, 'class_name', '') or str(getattr(section, 'section', '') or '')
+    student_name = ' '.join(filter(None, [submission.student.first_name, submission.student.last_name]))
+    filename = Path(str(submission.audio_file.name).replace('\\', '/')).name
+    if not filename or not student_name or not section_name:
+        return HttpResponseNotFound('Recording unavailable.')
+
+    recording_path = os.path.join(
+        settings.BASE_DIR,
+        'retell_the_story',
+        _retell_recording_component(section_name, 'Unassigned Section'),
+        _retell_recording_component(student_name, 'Student'),
+        filename,
+    )
+    if not os.path.isfile(recording_path):
+        return HttpResponseNotFound('Recording unavailable.')
+    content_type = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+    response = FileResponse(open(recording_path, 'rb'), content_type=content_type)
     response['Content-Disposition'] = 'inline'
     return response
