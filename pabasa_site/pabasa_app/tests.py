@@ -1274,6 +1274,21 @@ class ReadingLaunchClassificationTests(TestCase):
         self.assertIn('wpm: storyMetrics.wpm', stop_reading)
         self.assertNotIn('const wordsRead = correctWordsRead();', stop_reading)
 
+    def test_story_insertion_note_uses_deduplicated_alignment_without_target_highlight(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        recorder = content.split('function recordStoryAlignmentMiscues(', 1)[1].split('function storyAlignmentHasInsertionMiscue(', 1)[0]
+        insertion_detector = content.split('function storyAlignmentHasInsertionMiscue(', 1)[1].split('function resetStorySegmentState(', 1)[0]
+        callback = content.split('const recordedStoryMiscue = recordStoryAlignmentMiscues(data, context);', 1)[1].split('const itemCorrectWords =', 1)[0]
+
+        self.assertIn('if (storyMiscueResponseKeys.has(responseKey)) return false;', recorder)
+        self.assertIn('return true;', recorder)
+        self.assertIn('type || "").toLowerCase() === "insertion"', insertion_detector)
+        self.assertIn('recognizedWords.some((_, index) => !representedRecognizedIndexes.has(index))', insertion_detector)
+        self.assertIn('recordedStoryMiscue && storyAlignmentHasInsertionMiscue(data)', callback)
+        self.assertIn('Extra or repeated word detected.', content)
+        self.assertNotIn('paragraphWordResults["insertion"]', content)
+
     def test_shared_scoring_and_non_story_paths_remain_unchanged(self):
         script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
         content = script_path.read_text(encoding='utf-8')

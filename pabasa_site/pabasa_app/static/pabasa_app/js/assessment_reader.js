@@ -3071,10 +3071,10 @@
         }
 
         function recordStoryAlignmentMiscues(data, context) {
-            if (currentStoryState !== "story_reading") return;
+            if (currentStoryState !== "story_reading") return false;
             const alignment = data?.word_alignment;
             const alignmentMiscues = Number(alignment?.miscues);
-            if (!Number.isFinite(alignmentMiscues) || alignmentMiscues <= 0) return;
+            if (!Number.isFinite(alignmentMiscues) || alignmentMiscues <= 0) return false;
 
             const responseKey = JSON.stringify({
                 segment: currentPageIndex,
@@ -3083,9 +3083,32 @@
                 recognized_words: alignment?.recognized_words || [],
                 word_results: data?.word_results || [],
             });
-            if (storyMiscueResponseKeys.has(responseKey)) return;
+            if (storyMiscueResponseKeys.has(responseKey)) return false;
             storyMiscueResponseKeys.add(responseKey);
             storyMiscueCount += alignmentMiscues;
+            return true;
+        }
+
+        function storyAlignmentHasInsertionMiscue(data) {
+            const alignment = data?.word_alignment;
+            const results = Array.isArray(data?.word_results) ? data.word_results : [];
+            if (results.some((result) => String(result?.type || "").toLowerCase() === "insertion")) {
+                return true;
+            }
+
+            const recognizedWords = Array.isArray(alignment?.recognized_words) ? alignment.recognized_words : [];
+            const representedRecognizedIndexes = new Set();
+            results.forEach((result) => {
+                const start = Number(result?.recognized_start_index ?? result?.recognized_index);
+                const end = Number(result?.recognized_end_index);
+                if (!Number.isInteger(start) || start < 0) return;
+                if (Number.isInteger(end) && end > start) {
+                    for (let index = start; index < end; index += 1) representedRecognizedIndexes.add(index);
+                } else {
+                    representedRecognizedIndexes.add(start);
+                }
+            });
+            return recognizedWords.some((_, index) => !representedRecognizedIndexes.has(index));
         }
 
         function resetStorySegmentState(previousSegmentIndex, nextSegmentIndex, reason) {
@@ -3473,7 +3496,10 @@
                 return;
             }
 
-            recordStoryAlignmentMiscues(data, context);
+            const recordedStoryMiscue = recordStoryAlignmentMiscues(data, context);
+            const storyInsertionNote = recordedStoryMiscue && storyAlignmentHasInsertionMiscue(data)
+                ? "Extra or repeated word detected."
+                : "";
 
             const itemCorrectWords = Math.max(
                 previousCorrectWords,
@@ -3634,7 +3660,10 @@
                 
                 isAdvancingItem = true;
                 pendingAudioChunk = null;
-                setSpeechStatus("Great job! You finished this item.", transcript ? `Words: ${transcript}` : "", true);
+                setSpeechStatus("Great job! You finished this item.", [
+                    transcript ? `Words: ${transcript}` : "",
+                    storyInsertionNote,
+                ].filter(Boolean).join(" "), true);
                 if (currentStoryState === "story_reading") {
                     storyDebug({
                         event: "segment_completion",
@@ -3743,7 +3772,10 @@
                 if (paragraphChunkCompleted && currentStoryState === "story_reading") {
                     isAdvancingItem = true;
                     pendingAudioChunk = null;
-                    setSpeechStatus("Great job! You finished this item.", transcript ? `Words: ${transcript}` : "", true);
+                    setSpeechStatus("Great job! You finished this item.", [
+                        transcript ? `Words: ${transcript}` : "",
+                        storyInsertionNote,
+                    ].filter(Boolean).join(" "), true);
                     storyDebug({
                         event: "segment_completion",
                         navigation: "automatic_after_miscue_chunk",
@@ -3783,12 +3815,16 @@
                 }
                 setSpeechStatus(
                     `Matched ${correctWordsRead()} word${Number(correctWordsRead()) === 1 ? "" : "s"}.`,
-                    `${speechDetail}${data.formatted_syllables ? " | Syllables: " + data.formatted_syllables : ""}`,
+                    `${speechDetail}${data.formatted_syllables ? " | Syllables: " + data.formatted_syllables : ""}${storyInsertionNote ? ` ${storyInsertionNote}` : ""}`,
                     true
                 );
             } else {
                 const nextHint = data.next_syllable && data.next_word ? `Try again from: ${data.next_syllable} in ${data.next_word}` : "Keep reading.";
-                setSpeechStatus(transcript ? nextHint : "Listening with Google Speech...", speechDetail, true);
+                setSpeechStatus(
+                    transcript ? nextHint : "Listening with Google Speech...",
+                    `${speechDetail}${storyInsertionNote ? ` ${storyInsertionNote}` : ""}`,
+                    true
+                );
 
                 if (isStrictAssessmentMode && !itemLocked[currentIndex] && transcript && Number(data.matched || 0) === 0
                     && !(isOfficialAssessmentLaunch && mode === "sentence")) {
