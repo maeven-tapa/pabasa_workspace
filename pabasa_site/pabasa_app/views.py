@@ -12060,7 +12060,10 @@ def word_decoding_page(request):
     context['word_decoding_material_json'] = json.dumps({
         'id': material.id,
         'title': material.title or 'Decode the Word',
-        'language': content.get('language') or 'Filipino',
+        # The Material language is the source of truth for the activity and its
+        # Google Speech configuration. Content JSON can be from an older
+        # template revision, so do not let it override the saved material.
+        'language': material.language or content.get('language') or 'Filipino',
         'reading_set_id': content.get('reading_set_id') or '',
         'items': items,
     }, default=str, separators=(',', ':'))
@@ -13059,7 +13062,9 @@ def word_decoding_transcribe_api(request):
     if not normalized_target or normalized_target not in configured_words:
         return JsonResponse({'success': False, 'error': 'Invalid word for this activity.'}, status=400)
 
-    language_code = language_code_for(content.get('language') or '', 'word')
+    # Always use the language selected for this material when calling Google
+    # Speech-to-Text.  The content copy may be stale after a material edit.
+    language_code = language_code_for(material.language or content.get('language') or '', 'word')
     api_key = getattr(settings, 'GOOGLE_STT_API_KEY', '').strip()
     project_id = getattr(settings, 'GOOGLE_CLOUD_PROJECT_ID', '').strip()
     location = getattr(settings, 'GOOGLE_STT_LOCATION', 'global').strip()

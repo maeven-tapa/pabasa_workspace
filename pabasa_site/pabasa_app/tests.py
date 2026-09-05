@@ -55,6 +55,45 @@ from .weekly_digest import send_weekly_digest
 from .scoring import build_assessment_score_payload
 
 
+class WordDecodingLanguageTests(TestCase):
+    def setUp(self):
+        self.material = Material.objects.create(
+            title='English decoding',
+            item_type='word',
+            language='English',
+            content_json={
+                'activity_slug': 'word_decoding',
+                # Simulate a material whose template data predates a language edit.
+                'language': 'Filipino',
+                'items': [{'word': 'cat'}],
+            },
+        )
+
+    def test_page_uses_the_saved_material_language(self):
+        response = self.client.get(reverse('word_decoding_page'), {'material_id': self.material.id})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '"language":"English"')
+
+    @patch('pabasa_app.views.transcribe_audio_bytes_with_model', return_value=('cat', 'chirp_3', ''))
+    def test_google_speech_uses_the_saved_material_language(self, transcribe):
+        session = self.client.session
+        session['user_id'] = 1
+        session.save()
+
+        response = self.client.post(
+            reverse('word_decoding_transcribe_api'),
+            {
+                'audio': SimpleUploadedFile('word.webm', b'audio', content_type='audio/webm'),
+                'material_id': self.material.id,
+                'target_word': 'cat',
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(transcribe.call_args.kwargs['language_code'], 'en-PH')
+
+
 class ClassMaterialsApiTests(TestCase):
     def test_get_class_materials_groups_vowel_materials_under_vowel_bucket(self):
         teacher = User.objects.create(
