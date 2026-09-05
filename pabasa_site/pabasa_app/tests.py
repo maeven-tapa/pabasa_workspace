@@ -75,6 +75,7 @@ class WordDecodingLanguageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '"language":"English"')
         self.assertContains(response, 'word_decoding_google_tts.js')
+        self.assertContains(response, 'data-word-decoding-language="English"')
 
     @patch('pabasa_app.views.transcribe_audio_bytes_with_model', return_value=('cat', 'chirp_3', ''))
     def test_google_speech_uses_the_saved_material_language(self, transcribe):

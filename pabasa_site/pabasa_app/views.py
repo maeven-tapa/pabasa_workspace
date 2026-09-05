@@ -12056,6 +12056,7 @@ def word_decoding_page(request):
             'accuracy': getattr(completed_result, 'accuracy', None) or getattr(completed_result, 'total_score', 0) or 0,
         }
 
+    material_language = material.language or content.get('language') or 'Filipino'
     context = _dashboard_context(request)
     context['word_decoding_material_json'] = json.dumps({
         'id': material.id,
@@ -12063,7 +12064,7 @@ def word_decoding_page(request):
         # The Material language is the source of truth for the activity and its
         # Google Speech configuration. Content JSON can be from an older
         # template revision, so do not let it override the saved material.
-        'language': material.language or content.get('language') or 'Filipino',
+        'language': material_language,
         'reading_set_id': content.get('reading_set_id') or '',
         'items': items,
     }, default=str, separators=(',', ':'))
@@ -12075,6 +12076,9 @@ def word_decoding_page(request):
     tts_bridge = f'{settings.STATIC_URL.rstrip("/")}/pabasa_app/js/word_decoding_google_tts.js'
     response.content = response.content.replace(
         b'</head>', f'<script src="{tts_bridge}"></script></head>'.encode(), 1,
+    )
+    response.content = response.content.replace(
+        b'<body>', f'<body data-word-decoding-language="{escape(material_language)}">'.encode(), 1,
     )
     response['Cache-Control'] = 'no-store, max-age=0'
     return response
