@@ -7072,6 +7072,26 @@
 .teacher-story-call-preview .story-actions > :first-child { justify-self: start; min-width: 140px; }
 .teacher-story-call-preview .story-reading-control { justify-self: center; }
 .teacher-story-call-preview .story-next { min-width: 140px; }
+.teacher-retell-story-preview { position:relative; overflow:hidden; min-height:620px; padding:18px; border:1px solid #eadfce; border-radius:24px; background:#fffdf9; color:#20365f; }
+.teacher-retell-story-preview .retell-preview-page { position:relative; display:grid; grid-template-rows:auto minmax(0,1fr) auto; min-height:580px; }
+.teacher-retell-story-preview .retell-preview-header { position:relative; z-index:2; display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:10px; margin:0 0 12px 4px; color:#29416d; }
+.teacher-retell-story-preview .retell-preview-header-icon { display:grid; width:48px; height:48px; place-items:center; border-radius:50%; background:rgba(255,255,255,.92); color:#29416d; font-size:25px; box-shadow:0 8px 16px rgba(31,30,54,.16); }
+.teacher-retell-story-preview .retell-preview-header h2 { margin:0; font:800 26px/1.1 Nunito,"Segoe UI",sans-serif; }
+.teacher-retell-story-preview .retell-preview-header p { margin:4px 0 0; font:600 14px/1.2 Nunito,"Segoe UI",sans-serif; }
+.teacher-retell-story-preview .retell-preview-scene { position:relative; min-height:440px; margin:0 0 0; overflow:hidden; border:6px solid #fff; border-radius:28px; background:#fff; box-shadow:0 20px 44px rgba(88,67,49,.14); }
+.teacher-retell-story-preview .retell-preview-scene img { display:block; width:100%; height:100%; min-height:440px; object-fit:contain; border-radius:20px; }
+.teacher-retell-story-preview .retell-preview-card { position:absolute; top:50%; right:2.5%; z-index:2; width:min(49%,390px); transform:translateY(-50%); padding:22px 24px; border:1px solid rgba(255,255,255,.82); border-radius:34px; background:rgba(255,253,248,.96); text-align:center; box-shadow:0 20px 40px rgba(31,30,54,.2); }
+.teacher-retell-story-preview .retell-preview-card .story-icon { margin-bottom:4px; color:#efad39; font-size:28px; }
+.teacher-retell-story-preview .retell-preview-card h3 { margin:0; font:800 22px/1.25 Nunito,"Segoe UI",sans-serif; }
+.teacher-retell-story-preview .retell-preview-title { margin:11px 0 13px; padding:10px 14px; border-radius:999px; background:#fff0d0; color:#243d70; font:800 18px/1.2 Nunito,"Segoe UI",sans-serif; }
+.teacher-retell-story-preview .retell-preview-instructions { margin:0; font:600 14px/1.45 Nunito,"Segoe UI",sans-serif; }
+.teacher-retell-story-preview .retell-preview-mic { display:grid; width:92px; height:92px; margin:16px auto 7px; place-items:center; border:11px solid #ffd1d0; border-radius:50%; background:#ef4b4f; color:#fff; font-size:36px; box-shadow:0 9px 16px rgba(202,54,63,.25); }
+.teacher-retell-story-preview .retell-preview-record-label { margin:0; color:#e94448; font:800 18px/1.2 Nunito,"Segoe UI",sans-serif; }
+.teacher-retell-story-preview .retell-preview-tip { display:flex; align-items:center; gap:10px; margin-top:12px; padding:10px 12px; border-radius:20px; background:#f8eee1; color:#59545a; text-align:left; font:700 13px/1.35 Nunito,"Segoe UI",sans-serif; }
+.teacher-retell-story-preview .retell-preview-tip i { color:#f5aa32; font-size:22px; }
+.teacher-retell-story-preview .retell-preview-nav { display:flex; justify-content:flex-end; margin-top:16px; }
+.teacher-retell-story-preview .retell-preview-finish { display:inline-flex; align-items:center; gap:9px; padding:11px 22px; border:0; border-radius:999px; background:rgba(255,255,255,.94); color:#29416d; font:800 15px Nunito,"Segoe UI",sans-serif; box-shadow:0 7px 16px rgba(31,30,54,.14); }
+@media (max-width:800px) { .teacher-retell-story-preview .retell-preview-card { position:relative; top:auto; right:auto; width:calc(100% - 32px); margin:-120px auto 0; transform:none; } .teacher-retell-story-preview .retell-preview-scene { min-height:360px; } .teacher-retell-story-preview .retell-preview-scene img { min-height:360px; } }
 .template-builder-actions { align-items: center; background: #fff; display: flex; gap: 1rem; justify-content: space-between; padding-top: 1.25rem; }
 .template-action-buttons { display: flex; flex-wrap: wrap; gap: .65rem; justify-content: flex-end; margin-left: auto; }
 .template-btn { align-items: center; border-radius: 10px !important; display: inline-flex; font: 900 .88rem/1 "Nunito", sans-serif; gap: .45rem; justify-content: center; min-height: 44px; padding: .68rem 1rem; transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .1s ease; }
@@ -16697,6 +16717,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             });
         }
 
+        function renderRetellStoryPreview(content) {
+            const storyTitle = String(content?.storyTitle || '').trim() || 'This story';
+            return `<section class="teacher-retell-story-preview" aria-label="Learner Retell the Story preview"><div class="retell-preview-page"><header class="retell-preview-header"><span class="retell-preview-header-icon" aria-hidden="true"><i class="bi bi-book-half"></i></span><div><h2>Retell the Story</h2><p>Share what you remember!</p></div></header><div class="retell-preview-scene"><img src="{% static 'pabasa_app/images/retell_story/retell-the-story-bg.png' %}" alt="Retell the Story bedroom scene"><div class="retell-preview-card"><div class="story-icon" aria-hidden="true"><i class="bi bi-stars"></i> <i class="bi bi-book-half"></i> <i class="bi bi-stars"></i></div><h3>Retell the story on me about...</h3><div class="retell-preview-title">${escapeHtml(storyTitle)}</div><p class="retell-preview-instructions">Speak clearly and tell the story in your own words.<br>Try to include the important parts from beginning to end.</p><div class="retell-preview-mic" aria-hidden="true"><i class="bi bi-mic-fill"></i></div><p class="retell-preview-record-label">Start Recording</p><div class="retell-preview-tip"><i class="bi bi-lightbulb-fill" aria-hidden="true"></i><span>Take your time. Tell the story just like you would to a friend!</span></div></div></div><nav class="retell-preview-nav" aria-label="Retell activity navigation"><button class="retell-preview-finish" type="button" tabindex="-1" disabled>Finish <i class="bi bi-arrow-right" aria-hidden="true"></i></button></nav></div></section>`;
+        }
+
         function renderTemplatePreview() {
             if (!templatePreviewPanel || !activeTemplateActivity) return;
             const templateTitle = activeTemplateActivity.templateTitle;
@@ -16788,17 +16813,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 previewBody = story && prompt
                     ? `<div class="preview-story-response"><article class="preview-reading-card mb-3"><div class="d-flex align-items-center gap-3 mb-3"><img src="{% static 'pabasa_app/images/story_response/female_idle.png' %}" alt="Student avatar" style="width:54px;height:54px;object-fit:contain"><div><div class="small text-muted">${language === 'Filipino' ? 'Kuwento' : 'Story'}</div><strong style="font-family:'Righteous', 'Nunito', sans-serif">${escapeHtml(story.title || '')}</strong></div></div><div>${escapeHtml(storyText)}</div></article><div class="preview-question mb-3"><div class="small fw-bold text-muted mb-1">${language === 'Filipino' ? 'Iyong Tugon' : 'Your Response'}</div>${escapeHtml(prompt)}</div><div class="d-flex flex-wrap gap-2 mb-3">${response.readAloud !== false ? `<button class="btn btn-outline-primary btn-sm" type="button" tabindex="-1"><i class="bi bi-volume-up me-1"></i>${language === 'Filipino' ? 'Pakinggan' : 'Read Aloud'}</button>` : ''}${response.voiceRecording !== false ? `<button class="btn btn-primary btn-sm" type="button" tabindex="-1"><i class="bi bi-mic-fill me-1"></i>${language === 'Filipino' ? 'I-record ang Sagot' : 'Record Answer'}</button>` : ''}</div><div class="preview-writing-area" aria-label="Learner writing area"><div class="preview-writing-line"></div><div class="preview-writing-line"></div><div class="preview-writing-line"></div></div></div>`
                     : empty('Add the story and response prompt to begin the preview.');
-            } else if (templateTitle === 'Retell the Story') {
-                instruction = learnerCopy.retell;
-                const story = activeTemplateActivity.content || {};
-                previewBody = story.storyText ? `<article class="preview-reading-card mb-3"><strong>${escapeHtml(story.storyTitle || title)}</strong><div class="mt-2">${escapeHtml(story.storyText)}</div></article><div class="preview-writing-area" aria-label="Learner writing area"><div class="preview-writing-line"></div><div class="preview-writing-line"></div><div class="preview-writing-line"></div></div>` : empty('Select a published Story Reading story to begin the preview.');
+            } else if (activeTemplateActivity.content?.activity_type === 'retell_story') {
+                previewBody = renderRetellStoryPreview(activeTemplateActivity.content);
             } else {
                 previewBody = summary.body?.length ? cards(summary.body.map(line => `<div class="preview-learning-card">${escapeHtml(line)}</div>`).join('')) : empty(summary.emptyMessage || 'Add content to begin the preview.');
             }
 
+            const isRetellStoryPreview = activeTemplateActivity.content?.activity_type === 'retell_story';
             templatePreviewPanel.innerHTML = `
                 <div class="activity-preview-chrome"><span class="activity-preview-label"><i class="bi bi-eye" aria-hidden="true"></i>Preview</span><span class="activity-preview-meta">${escapeHtml(language)}${weeks.length ? ` · ${weeks.map(escapeHtml).join(', ')}` : ' · No week selected'}</span></div>
-                <div class="activity-preview-stage ${templateTitle === "5W's Story Questions" ? 'five-w-preview' : ''}"><h6 class="activity-preview-title">${escapeHtml(title || templateTitle)}</h6><p class="activity-preview-instruction">${escapeHtml(instruction || summary.meta || '')}</p><div class="activity-preview-content">${previewBody}</div></div>
+                <div class="activity-preview-stage ${templateTitle === "5W's Story Questions" ? 'five-w-preview' : ''} ${isRetellStoryPreview ? 'retell-w-preview' : ''}">${isRetellStoryPreview ? '' : `<h6 class="activity-preview-title">${escapeHtml(title || templateTitle)}</h6><p class="activity-preview-instruction">${escapeHtml(instruction || summary.meta || '')}</p>`}<div class="activity-preview-content">${previewBody}</div></div>
             `;
             if (templateTitle === "5W's Story Questions") {
                 const preview = templatePreviewPanel.querySelector('.teacher-story-call-preview');
@@ -16860,7 +16884,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 if (!stories.length) select.innerHTML = '<option value="">No published Story Reading activities available</option>';
                 const sync = () => {
                     const story = stories.find(item => String(item.id) === String(select.value));
-                    activeTemplateActivity.content = story ? { source_story_reading_material_id: Number(story.id), storyTitle: story.title, storyText: story.story_text || '' } : {};
+                    activeTemplateActivity.content = story ? { activity_type: 'retell_story', source_story_reading_material_id: Number(story.id), storyTitle: story.title, storyText: story.story_text || '' } : { activity_type: 'retell_story' };
                     if (templateActivityTitle) templateActivityTitle.value = story?.title || '';
                     renderTemplatePreview();
                 };
