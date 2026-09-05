@@ -12069,6 +12069,13 @@ def word_decoding_page(request):
     }, default=str, separators=(',', ':'))
     context['word_decoding_completion_json'] = json.dumps(completion_payload or {}, default=str, separators=(',', ':'))
     response = render(request, 'pabasa_app/word_decoding_page.html', context)
+    # This template's compact legacy script calls the Web Speech API directly.
+    # Load the Word Decoding-only bridge before it so its prompts use our Google
+    # TTS voice, rather than a browser-dependent system voice.
+    tts_bridge = f'{settings.STATIC_URL.rstrip("/")}/pabasa_app/js/word_decoding_google_tts.js'
+    response.content = response.content.replace(
+        b'</head>', f'<script src="{tts_bridge}"></script></head>'.encode(), 1,
+    )
     response['Cache-Control'] = 'no-store, max-age=0'
     return response
 
