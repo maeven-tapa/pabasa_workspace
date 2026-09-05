@@ -74,7 +74,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 // Check if material is live (published or scheduled time passed)
                 if (!m.status || m.status === 'published') return true;
                 if (m.status === 'scheduled' && m.schedule) {
-                    return new Date(m.schedule).getTime() <= Date.now();
+                    return new Date(m.schedule).getTime() <= window.pabasaServerNow();
                 }
                 return false;
             });

@@ -20294,7 +20294,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const badgeType = sourceType === 'template' && templateTag ? 'template' : (typeMap[reading.type] || reading.type);
                     let displayStatus = reading.status || 'published';
                     if (displayStatus === 'scheduled' && reading.schedule) {
-                        if (new Date(reading.schedule).getTime() <= Date.now()) displayStatus = 'published';
+                        if (new Date(reading.schedule).getTime() <= window.pabasaServerNow()) displayStatus = 'published';
                     }
                     const iconMap = { word: 'bi-spellcheck', sentence: 'bi-chat-left-text', paragraph: 'bi-file-text' };
                     const weekLabel = reading.assigned_week_display || formatAssignedWeek(reading.assigned_week);

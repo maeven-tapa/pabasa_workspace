@@ -27,6 +27,20 @@
     </section>
 
     <section class="admin-settings-grid" aria-label="Admin account settings">
+        <article class="admin-settings-card" aria-labelledby="systemTimeTitle">
+            <div class="admin-settings-card-header">
+                <span class="admin-settings-card-icon" aria-hidden="true">
+                    <i class="bi bi-clock-history"></i>
+                </span>
+                <div>
+                    <h3 id="systemTimeTitle">System Time</h3>
+                    <p>Authoritative server time, synchronized by the hosting platform.</p>
+                </div>
+            </div>
+            <time id="systemTime" class="admin-system-time" datetime="{{ system_time_iso }}">Loading…</time>
+            <p id="systemTimeDate" class="admin-system-time-date">{{ system_time_zone }}</p>
+        </article>
+
         <article class="admin-settings-card">
             <div class="admin-settings-card-header">
                 <span class="admin-settings-card-icon" aria-hidden="true">
@@ -109,4 +123,49 @@
         </article>
     </section>
 </div>
+<script>
+(() => {
+    const timeElement = document.getElementById('systemTime');
+    const dateElement = document.getElementById('systemTimeDate');
+    const timeZone = '{{ system_time_zone|escapejs }}';
+    let serverMillis = Date.parse('{{ system_time_iso|escapejs }}');
+    let syncedAt = performance.now();
+
+    const formatters = {
+        time: new Intl.DateTimeFormat('en-PH', {
+            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone,
+        }),
+        date: new Intl.DateTimeFormat('en-PH', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone,
+        }),
+    };
+
+    function renderSystemTime() {
+        const currentMillis = serverMillis + (performance.now() - syncedAt);
+        const currentTime = new Date(currentMillis);
+        timeElement.dateTime = currentTime.toISOString();
+        timeElement.textContent = formatters.time.format(currentTime);
+        dateElement.textContent = `${formatters.date.format(currentTime)} · ${timeZone}`;
+    }
+
+    async function syncSystemTime() {
+        try {
+            const response = await fetch('{% url "admin_system_time" %}', {headers: {'Accept': 'application/json'}});
+            const payload = await response.json();
+            const receivedMillis = Date.parse(payload.server_time);
+            if (response.ok && payload.success && Number.isFinite(receivedMillis)) {
+                serverMillis = receivedMillis;
+                syncedAt = performance.now();
+            }
+        } catch (_) {
+            // Keep rendering from the most recent trusted server-time response.
+        }
+    }
+
+    renderSystemTime();
+    syncSystemTime();
+    setInterval(renderSystemTime, 250);
+    setInterval(syncSystemTime, 60000);
+})();
+</script>
 {% endblock %}

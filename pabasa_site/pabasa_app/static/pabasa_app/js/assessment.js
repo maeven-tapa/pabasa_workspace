@@ -94,7 +94,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     if (m && m.type && (m.type.toLowerCase() === "assessment" || m.type.toLowerCase() === "both")) {
                          let isLive = !m.status || m.status === 'published';
                          if (m.status === 'scheduled' && m.schedule) {
-                             isLive = new Date(m.schedule).getTime() <= Date.now();
+                             isLive = new Date(m.schedule).getTime() <= window.pabasaServerNow();
                          }
                          if (isLive) {
                              totalAssigned++;

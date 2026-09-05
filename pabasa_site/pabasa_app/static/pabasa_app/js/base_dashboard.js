@@ -3,6 +3,35 @@
  * These are defined at the very top and attached to window to prevent ReferenceErrors 
  * in inline scripts (like the dashboard page).
  */
+var initialServerTimeMs = Date.parse(window.PABASA_SERVER_TIME || '');
+var serverClockMillis = Number.isFinite(initialServerTimeMs) ? initialServerTimeMs : 0;
+var serverClockSyncedAt = performance.now();
+
+window.pabasaServerNow = function() {
+    return serverClockMillis + (performance.now() - serverClockSyncedAt);
+};
+
+async function syncPabasaServerClock() {
+    try {
+        const response = await fetch('/api/live-assessment/server-time/', {
+            cache: 'no-store',
+            credentials: 'same-origin',
+            headers: { Accept: 'application/json' },
+        });
+        const payload = await response.json();
+        const receivedMillis = Date.parse(payload.server_time);
+        if (response.ok && payload.success && Number.isFinite(receivedMillis)) {
+            serverClockMillis = receivedMillis;
+            serverClockSyncedAt = performance.now();
+        }
+    } catch (_) {
+        // The server-rendered timestamp remains the fallback if a refresh fails.
+    }
+}
+
+syncPabasaServerClock();
+window.setInterval(syncPabasaServerClock, 60000);
+
 var getStudentSectionData = window.getStudentSectionData = function() {
     let sectionIds = [];
     try {
@@ -973,7 +1002,7 @@ var getStudentClassData = window.getStudentClassData = function() {
                         const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
                         if (!mId || notifiedIds.includes(mId)) return;
 
-                        if (new Date(m.schedule).getTime() <= Date.now()) {
+                        if (new Date(m.schedule).getTime() <= window.pabasaServerNow()) {
                             const studentName = window.PABASA_USER_NAME || window.localStorage.getItem("pabasaUserName") || "Student";
                             const notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
                             notifications.unshift({
@@ -1133,7 +1162,7 @@ var getStudentClassData = window.getStudentClassData = function() {
                         // Filter by visibility/status
                         let isLive = !m.status || m.status === 'published';
                         if (m.status === 'scheduled' && m.schedule) {
-                            isLive = new Date(m.schedule).getTime() <= Date.now();
+                            isLive = new Date(m.schedule).getTime() <= window.pabasaServerNow();
                         }
                         if (!isLive) return;
 

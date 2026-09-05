@@ -658,7 +658,7 @@ function initProfilePage() {
                                 // Check if material is live (published or scheduled time passed)
                                 let isLive = !m.status || m.status === 'published';
                                 if (m.status === 'scheduled' && m.schedule) {
-                                    isLive = new Date(m.schedule).getTime() <= Date.now();
+                                    isLive = new Date(m.schedule).getTime() <= window.pabasaServerNow();
                                 }
                                 if (!isLive) return;
 
@@ -777,7 +777,7 @@ function initProfilePage() {
                                 // Check if material is live (published or scheduled time passed)
                                 let isLive = !m.status || m.status === 'published';
                                 if (m.status === 'scheduled' && m.schedule) {
-                                    isLive = new Date(m.schedule).getTime() <= Date.now();
+                                    isLive = new Date(m.schedule).getTime() <= window.pabasaServerNow();
                                 }
                                 if (!isLive) return;
 
