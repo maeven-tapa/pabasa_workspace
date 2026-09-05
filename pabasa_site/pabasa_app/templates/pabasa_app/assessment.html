@@ -188,6 +188,9 @@
         flex-direction: column;
         gap: 1rem;
         align-items: stretch;
+        height: calc(100dvh - 190px);
+        min-height: 0;
+        overflow: hidden;
     }
 
     .subject-card {
@@ -206,6 +209,9 @@
         position: relative;
         text-decoration: none;
         width: 100%;
+        height: clamp(420px, calc(100vh - 190px), 720px);
+        min-height: 420px;
+        overflow: hidden;
     }
 
     .subject-card::before {
@@ -417,13 +423,17 @@
         align-items: start;
         display: grid;
         gap: 0.75rem;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
         width: 100%;
     }
 
     .assessment-grid-stack {
         display: grid;
         gap: 0.75rem;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: visible;
+        position: relative;
         width: 100%;
     }
 
@@ -434,12 +444,28 @@
         min-width: 0;
     }
 
+    .assessment-week-folder { align-items: center; background: linear-gradient(145deg, #fff8df, #e6f3e9); border: 1px solid rgba(31,111,139,.16); border-radius: 24px; box-shadow: 0 10px 22px rgba(27,26,23,.08); color: var(--dash-primary); cursor: pointer; display: flex; flex-direction: column; justify-content: center; min-height: 150px; padding: .8rem; text-align: center; transition: transform 160ms ease, box-shadow 160ms ease; width: 100%; }
+    .assessment-week-folder:hover, .assessment-week-folder:focus-visible { box-shadow: 0 14px 28px rgba(27,26,23,.14); outline: none; transform: translateY(-4px); }
+    .assessment-week-folder .week-folder-icon { font-size: 2.8rem; line-height: 1; margin-bottom: .55rem; }
+    .assessment-week-folder .week-folder-name { font-family: "Nunito", sans-serif; font-size: 1.05rem; font-weight: 900; }
+    .assessment-week-folder .week-activity-count { color: var(--dash-muted); font-size: .82rem; font-weight: 800; margin-top: .25rem; }
+    .week-activities-modal { align-items: center; background: rgba(27,26,23,.48); display: flex; inset: 0 0 0 clamp(0px, 18vw, 280px); justify-content: center; padding: 1rem; position: fixed; z-index: 1000; }
+    .week-activities-modal[hidden] { display: none; }
+    .week-activities-dialog { background: #fffdf7; border-radius: 26px; box-shadow: 0 24px 60px rgba(27,26,23,.24); contain: layout paint; display: flex; flex: 0 0 auto; flex-direction: column; height: min(500px, calc(100dvh - 2rem)); max-height: calc(100dvh - 2rem); width: min(620px, calc(100vw - 2rem)); }
+    .week-activities-header { align-items: center; border-bottom: 1px solid rgba(27,26,23,.1); display: flex; justify-content: space-between; padding: 1rem 1.25rem; }
+    .week-activities-title { color: var(--dash-primary); font-family: "Nunito", sans-serif; font-size: 1.25rem; font-weight: 900; }
+    .week-activities-close { align-items: center; background: #fff1c7; border: 2px solid rgba(31,111,139,.18); border-radius: 14px; color: var(--dash-primary); cursor: pointer; display: inline-flex; font-size: 2rem; font-weight: 900; height: 52px; justify-content: center; line-height: 1; min-width: 52px; padding: 0; }
+    .week-activities-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 1rem; }
+    @media (max-width: 767.98px) { .week-activities-modal { inset: 0; } }
+
     .assessment-week-cards {
         display: grid;
         gap: 0.35rem;
-        grid-auto-rows: 1fr;
+        grid-auto-rows: auto;
         min-width: 0;
     }
+
+    .assessment-week-folder[open] .assessment-week-cards { height: calc(100% - 58px); }
 
     .assessment-card-shell {
         display: flex;
@@ -468,7 +494,6 @@
     }
 
     .assessment-week-column .assessment-type-link {
-        height: 100%;
         min-height: 122px;
     }
 
@@ -481,6 +506,80 @@
         text-align: center;
         color: var(--dash-muted);
         grid-column: 1 / -1;
+    }
+
+    /* Keep the assessment hub inside the available viewport. The dashboard
+       owns the height; folders share the reserved class-card area instead of
+       increasing the document height as weeks are added. */
+    body:has(.assessment-dock) {
+        height: 100dvh;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    body:has(.assessment-dock) > main {
+        min-height: 0;
+        overflow: hidden;
+        padding-bottom: 1rem !important;
+        padding-top: 1rem !important;
+    }
+
+    body:has(.assessment-dock) > main > .container {
+        height: 100%;
+        min-height: 0;
+    }
+
+    .assessment-dock {
+        height: calc(100% - 0.75rem);
+        min-height: 0;
+        grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    .subject-grid {
+        height: auto;
+        min-height: 0;
+    }
+
+    .subject-card {
+        height: 100%;
+        min-height: 0;
+    }
+
+    .assessment-grid-stack,
+    .assessment-grid {
+        min-height: 0;
+    }
+
+    .assessment-grid-stack {
+        grid-template-rows: minmax(0, 1fr);
+    }
+
+    .assessment-grid {
+        grid-auto-rows: minmax(0, 1fr);
+        height: 100%;
+    }
+
+    .assessment-week-column {
+        min-height: 0;
+    }
+
+    .assessment-week-folder {
+        height: 100%;
+        min-height: 0;
+    }
+
+    @media (min-width: 992px) {
+        .assessment-grid {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            grid-template-rows: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 991.98px) {
+        .assessment-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-rows: repeat(5, minmax(0, 1fr));
+        }
     }
 
     .prep-icon {
@@ -501,7 +600,7 @@
         }
 
         .assessment-grid {
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            grid-template-columns: 1fr;
         }
 
         .status-ticket {
@@ -1082,12 +1181,9 @@
             }
 
             function chunkWeeksByRow(weeks, containerWidth) {
-                const columnsPerRow = getWeekColumnsPerRow(containerWidth);
-                const rows = [];
-                for (let index = 0; index < weeks.length; index += columnsPerRow) {
-                    rows.push(weeks.slice(index, index + columnsPerRow));
-                }
-                return rows;
+                // Week folders are intentionally a single vertical stack.
+                // Keep this helper so callers retain the same rendering flow.
+                return [weeks];
             }
 
             const getRecentClassOrder = () => {
@@ -1133,6 +1229,8 @@
                 return aPriority - bPriority;
             });
 
+            document.querySelectorAll('body > .week-activities-modal').forEach((modal) => modal.remove());
+            document.body.style.overflow = '';
             grid.innerHTML = orderedClassMaterials.map(({ classData, materials, officialAssessments = [] }) => {
                 const itemsToRender = [];
                 materialTypes.forEach(type => {
@@ -1147,6 +1245,16 @@
                     acc[week].push(m);
                     return acc;
                 }, {});
+
+                // Keep available activities first and completed activities at
+                // the bottom of their week folder without changing card UI.
+                Object.values(groups).forEach((weekItems) => {
+                    weekItems.sort((a, b) => {
+                        const aDone = isAssessmentCompleted(a, a.id) ? 1 : 0;
+                        const bDone = isAssessmentCompleted(b, b.id) ? 1 : 0;
+                        return aDone - bDone;
+                    });
+                });
 
                 const sortedWeeks = Object.keys(groups).sort((a, b) => assignedWeekSortValue(a) - assignedWeekSortValue(b));
                 const urlMap = { word: "{% url 'reading_word_page' %}", sentence: "{% url 'reading_sentence_page' %}", paragraph: "{% url 'reading_para_page' %}", vowel: "{% url 'reading_vowel_page' %}" };
@@ -1430,11 +1538,19 @@
                             `);
                         }
 
+                            const modalId = `weekActivitiesModal-${String(classData.id || classData.code || 'class').replace(/[^a-zA-Z0-9_-]/g, '')}-${assignedWeekSortValue(week)}`;
                             return `
                                 <div class="assessment-week-column">
-                                    <div class="assessment-week-chip">${escapeHtml(week)}</div>
-                                    <div class="assessment-week-cards">
-                                        ${renderedRows.join("")}
+                                    <button class="assessment-week-folder" type="button" data-week-modal-target="${modalId}">
+                                        <span class="week-folder-icon" aria-hidden="true">📁</span>
+                                        <span class="week-folder-name">${escapeHtml(week)}</span>
+                                        <span class="week-activity-count">${weekItems.length} ${weekItems.length === 1 ? 'activity' : 'activities'}</span>
+                                    </button>
+                                    <div class="week-activities-modal" id="${modalId}" hidden>
+                                        <div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="${escapeHtml(week)} activities">
+                                            <div class="week-activities-header"><span class="week-activities-title">📁 ${escapeHtml(week)} <small>— ${weekItems.length} ${weekItems.length === 1 ? 'activity' : 'activities'}</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div>
+                                            <div class="week-activities-list"><div class="assessment-week-cards">${renderedRows.join("")}</div></div>
+                                        </div>
                                     </div>
                                 </div>
                             `;
@@ -1465,6 +1581,23 @@
                         </div>` : '')}
                 </div>`;
             }).join("");
+            // Move modal layers out of the Grade card so they cannot inherit
+            // its sizing, overflow, or positioning constraints.
+            grid.querySelectorAll('.week-activities-modal').forEach((modal) => document.body.appendChild(modal));
+            grid.querySelectorAll('[data-week-modal-target]').forEach((folder) => {
+                folder.addEventListener('click', () => {
+                    const modal = document.getElementById(folder.dataset.weekModalTarget);
+                    if (!modal) return;
+                    modal.hidden = false;
+                    document.body.style.overflow = 'hidden';
+                    modal.querySelector('.week-activities-close')?.focus();
+                });
+            });
+            document.querySelectorAll('.week-activities-modal').forEach((modal) => {
+                const close = () => { modal.hidden = true; document.body.style.overflow = ''; };
+                modal.querySelector('.week-activities-close')?.addEventListener('click', close);
+                modal.addEventListener('click', (event) => { if (event.target === modal) close(); });
+            });
         }
 
         await updateAssessmentHub();
@@ -1472,6 +1605,11 @@
         window.addEventListener("pabasa:student-class-updated", () => {
             updateAssessmentHub();
             updateClassStatus();
+        });
+        window.addEventListener("pabasa:assessment-completed", () => {
+            // Re-read the teacher activity list so the existing card remains
+            // present and is re-rendered with its persisted DONE state/order.
+            updateAssessmentHub();
         });
         window.addEventListener("storage", (event) => {
             if ([studentClassCodesKey, legacyStudentClassCodeKey, teacherClassesKey, readingsStorageKey, completedAssessmentIdsKey].includes(event.key)) {

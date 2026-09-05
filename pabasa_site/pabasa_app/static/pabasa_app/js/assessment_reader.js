@@ -5080,6 +5080,7 @@
                     window.dispatchEvent(new CustomEvent('pabasa:assessment-completed', {
                         detail: {
                             assessmentType: mode,
+                            materialId: materialId,
                             totalScore: latestScores?.final_score ?? latestScores?.total_score,
                         }
                     }));

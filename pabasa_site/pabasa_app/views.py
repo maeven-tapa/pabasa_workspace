@@ -19648,6 +19648,25 @@ def get_class_materials(request):
                             'accuracy': completed_result.accuracy,
                             'total_score': completed_result.total_score,
                         }
+                elif is_requesting_student and request_user and _is_story_reading_material(m):
+                    # Story Reading completion is recorded directly against the
+                    # material. It is independent of any teacher grading state.
+                    completed_result = m.assessment_results.filter(
+                        student=request_user,
+                        attempt_status='completed',
+                        completed_at__isnull=False,
+                    ).order_by('-completed_at', '-created_at', '-id').first()
+                    if completed_result:
+                        student_has_completed = True
+                        completed_attempt_count = 1
+                        latest_attempt_summary = {
+                            'student_id': completed_result.student_id,
+                            'status': completed_result.attempt_status,
+                            'completed_at': completed_result.completed_at.isoformat() if completed_result.completed_at else None,
+                            'duration_seconds': completed_result.duration_seconds,
+                            'accuracy': completed_result.accuracy,
+                            'total_score': completed_result.total_score,
+                        }
                 elif is_requesting_student and request_user and (_is_story_response_material(m) or _is_retell_story_material(m)):
                     story_response_submission = StoryResponseSubmission.objects.filter(
                         student=request_user, material=m,
@@ -19657,8 +19676,21 @@ def get_class_materials(request):
                             story_response_submission.status == 'graded'
                             and story_response_submission.grade is not None
                         )
-                        student_has_completed = story_response_is_graded
-                        completed_attempt_count = 1 if story_response_is_graded else 0
+                        # Retell is complete when the student's recording has
+                        # been successfully submitted and the completion
+                        # service has created a completed assessment result.
+                        # Teacher grading is a separate, still-pending state.
+                        if _is_retell_story_material(m):
+                            completed_result = m.assessment_results.filter(
+                                student=request_user,
+                                attempt_status='completed',
+                                completed_at__isnull=False,
+                            ).order_by('-completed_at', '-created_at', '-id').first()
+                            student_has_completed = completed_result is not None
+                            completed_attempt_count = 1 if student_has_completed else 0
+                        else:
+                            student_has_completed = story_response_is_graded
+                            completed_attempt_count = 1 if story_response_is_graded else 0
                         latest_attempt_summary = {
                             'status': 'completed' if story_response_is_graded else 'pending',
                             'completed_at': story_response_submission.submitted_at.isoformat(),
