@@ -13022,6 +13022,66 @@ def transcribe_story_answer_api(request):
 
 @csrf_protect
 @require_http_methods(["POST"])
+def word_decoding_transcribe_api(request):
+    """Transcribe one Word Decoding response with Google Speech-to-Text."""
+    if not _check_auth(request):
+        return JsonResponse({'success': False, 'error': 'Authentication required.'}, status=401)
+
+    access_response = _enforce_student_access_for_request(request, json_response=True)
+    if access_response:
+        return access_response
+
+    audio = request.FILES.get('audio')
+    target_word = (request.POST.get('target_word') or '').strip()
+    try:
+        material_id = int(request.POST.get('material_id') or 0)
+    except (TypeError, ValueError):
+        material_id = 0
+    material = Material.objects.filter(pk=material_id).first() if material_id else None
+    if not audio or not target_word:
+        return JsonResponse({'success': False, 'error': 'Audio and target word are required.'}, status=400)
+    if not material or not _is_word_decoding_material(material):
+        return JsonResponse({'success': False, 'error': 'Word Decoding activity not found.'}, status=404)
+
+    content = material.content_json if isinstance(material.content_json, dict) else {}
+    configured_words = {
+        re.sub(r'[^a-z]+', '', str(item.get('word') or '').casefold())
+        for item in (content.get('items') or [])
+        if isinstance(item, dict)
+    }
+    normalized_target = re.sub(r'[^a-z]+', '', target_word.casefold())
+    if not normalized_target or normalized_target not in configured_words:
+        return JsonResponse({'success': False, 'error': 'Invalid word for this activity.'}, status=400)
+
+    language_code = language_code_for(content.get('language') or '', 'word')
+    api_key = getattr(settings, 'GOOGLE_STT_API_KEY', '').strip()
+    project_id = getattr(settings, 'GOOGLE_CLOUD_PROJECT_ID', '').strip()
+    location = getattr(settings, 'GOOGLE_STT_LOCATION', 'global').strip()
+    model = getattr(settings, 'GOOGLE_STT_MODEL', 'chirp_3').strip()
+    credentials_file = str(getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', '') or '')
+    if not api_key and model != 'chirp_3':
+        return JsonResponse({'success': False, 'error': 'Google Speech is not configured.'}, status=503)
+
+    try:
+        transcript, model_used, _ = transcribe_audio_bytes_with_model(
+            audio.read(), api_key, language_code=language_code,
+            phrase_hints=target_phrase_hints(target_word, language_code),
+            model=model, project_id=project_id, location=location,
+            mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
+            credentials_file=credentials_file,
+        )
+        return JsonResponse({
+            'success': True,
+            'transcript': str(transcript or '').strip(),
+            'stt_model': model_used,
+        })
+    except Exception as exc:
+        logger.exception('Word Decoding transcription failed')
+        return JsonResponse({'success': False, 'error': str(exc)}, status=502)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
 def reading_transcribe_api(request):
     if not _check_auth(request):
         return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
