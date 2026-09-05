@@ -1,11 +1,12 @@
 import json
-from datetime import date
+from datetime import date, timedelta
 
 from django.contrib.auth.hashers import make_password
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
-from .models import CalendarEvent, Material, School, SchoolCalendar, Section, User
+from .models import AssessmentRequest, CalendarEvent, Material, School, SchoolCalendar, Section, User
 
 
 class AssessmentWeekTests(TestCase):
@@ -56,6 +57,11 @@ class AssessmentWeekTests(TestCase):
         session = self.client.session
         session.update({'user_id': user.id, 'user_role': user.role, 'email': user.email})
         session.save()
+        if user.role == 'student':
+            User.objects.filter(pk=user.pk).update(
+                active_session_key=session.session_key,
+                last_activity=timezone.now(),
+            )
 
     def _toggle(self, section_id, enabled):
         return self.client.post(
@@ -142,6 +148,44 @@ class AssessmentWeekTests(TestCase):
             reverse('reading_word_page'), {'official_assessment_id': self.assessment_a.id}
         )
         self.assertEqual(response.status_code, 403)
+
+    def test_approved_overdue_request_bypasses_stale_assessment_week_switch_for_official_crla(self):
+        """Teacher approval remains usable after the calendar assessment window."""
+        CalendarEvent.objects.filter(school_calendar=self.calendar).update(
+            end_date=date.today() - timedelta(days=1)
+        )
+        self.section_a.assessment_week_enabled = True
+        self.section_a.save(update_fields=['assessment_week_enabled'])
+        official_material = Material.objects.filter(
+            is_official_reading=True,
+            assessment_kind='crla',
+            system_assessment_phase='pretest',
+        ).first()
+        self.assertIsNotNone(official_material)
+        official_material.student_access = True
+        official_material.is_active = True
+        official_material.status = 'published'
+        official_material.save(update_fields=['student_access', 'is_active', 'status'])
+        assessment_request = AssessmentRequest.objects.create(
+            student=self.student_a,
+            section=self.section_a,
+            status='approved',
+            reviewed_by=self.teacher_a,
+            reviewed_at=timezone.now(),
+        )
+        assessment_request.refresh_from_db()
+        self.assertEqual(assessment_request.status, 'approved')
+
+        self._login(self.student_a)
+        hub_response = self.client.get(reverse('assessment'), {'section_id': self.section_a.id})
+        self.assertEqual(hub_response.status_code, 200)
+        self.assertContains(hub_response, f'official_assessment_id={official_material.id}')
+        self.assertNotContains(hub_response, 'Assessment Week is enabled for this section')
+
+        launch_response = self.client.get(
+            reverse('reading_word_page'), {'official_assessment_id': official_material.id}
+        )
+        self.assertEqual(launch_response.status_code, 200)
 
     def test_multiple_enabled_sections_are_independently_restricted(self):
         Section.objects.filter(id__in=[self.section_a.id, self.section_b.id]).update(

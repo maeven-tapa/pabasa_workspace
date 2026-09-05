@@ -10084,6 +10084,11 @@ def assessment(request):
         # Assessment Week flag is still enabled.  This is scoped to the
         # originating context and does not bypass the normal entry flow.
         assessment_week_section = None
+    if approved_assessment_request and not section_assessment_completed:
+        # An approved overdue-assessment request is a student-specific grant.
+        # It must not be masked by the section-wide Assessment Week view, which
+        # may remain enabled after its calendar window has ended.
+        assessment_week_section = None
     if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status == 'after':
         if (
             not section_assessment_completed
@@ -10169,7 +10174,16 @@ def assessment(request):
     if approved_assessment_request and not section_assessment_completed:
         approved_phase = _official_crla_assessment_phase(user, request=request)
         if approved_phase not in {'pretest', 'midtest', 'posttest'}:
-            approved_term = _calendar_current_term(_active_school_calendar())
+            # After the calendar window, the global "active" calendar may no
+            # longer resolve a current assessment date.  The request belongs
+            # to this section, so use its configured school calendar to retain
+            # the term that the teacher approved the student to complete.
+            approved_calendar = (
+                getattr(selected_section, 'school_calendar', None)
+                or _active_school_calendar()
+            )
+            approved_term = _calendar_current_term(approved_calendar)
+            approved_term = approved_term or getattr(approved_calendar, 'current_term', None)
             approved_phase = {1: 'pretest', 2: 'midtest', 3: 'posttest'}.get(approved_term)
         if approved_phase in {'pretest', 'midtest', 'posttest'}:
             official_availability = dict(official_availability)
@@ -20977,6 +20991,18 @@ def _assessment_week_allows_material(student, material):
     """Require the enrolled section owning an assessment to have the toggle on."""
     if not student or not material:
         return False
+    # Official CRLA materials are shared rather than section-attached.  A
+    # teacher-approved overdue request is the explicit, section-scoped
+    # authorization for this student to launch one after Assessment Week.
+    # Do not extend this exception to ordinary teacher materials.
+    if _is_official_crla_material(material):
+        approved_requests = AssessmentRequest.objects.filter(
+            student=student,
+            status='approved',
+            section__is_active=True,
+        ).select_related('section')
+        if any(item.section.has_student(student, active_only=True) for item in approved_requests):
+            return True
     section_ids = set()
     if material.section_id:
         section_ids.add(material.section_id)
