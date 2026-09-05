@@ -21011,7 +21011,7 @@ def _student_has_assessment_week(student):
 
 
 def _assessment_week_allows_material(student, material):
-    """Require the enrolled section owning an assessment to have the toggle on."""
+    """Apply Assessment Week to official assessments, not expired teacher work."""
     if not student or not material:
         return False
     # Official CRLA materials are shared rather than section-attached.  A
@@ -21043,9 +21043,10 @@ def _assessment_week_allows_material(student, material):
                 and _section_assessment_week_status(section) == 'during'
             )
             or (
+                # A teacher-created activity can be saved as an assessment
+                # or as "both". Once the calendar window closes, its type
+                # must not keep showing the Assessment Week-only banner.
                 _section_assessment_week_status(section) == 'after'
-                and _student_completed_section_assessment(student, section)
-                and not _finalized_grade_level_crla_result_exists(student)
             )
         )
         for section in Section.objects.filter(id__in=section_ids, is_active=True)
