@@ -1919,18 +1919,33 @@
             const title = document.getElementById("completionTitle");
             const message = document.getElementById("completionMessage");
             const classificationText = endState.classification || "Assessment completed";
-            if (completionClassificationValue) completionClassificationValue.textContent = classificationText;
-            if (completionClassificationPanel) completionClassificationPanel.hidden = false;
-            if (title) title.textContent = stage === "completed" ? "Assessment complete" : "Assessment complete";
+            // Section transitions are not CRLA completion.  In particular, do
+            // not leak a routing/Part 1 level on the Word Reading screen.
+            const isFinalCompletion = ["completed", "early_completed_words", "early_completed_sentences"].includes(stage);
+            if (isFinalCompletion) {
+                if (completionClassificationValue) completionClassificationValue.textContent = classificationText;
+            } else {
+                // A section transition is not a result screen. Remove the
+                // classification panel entirely instead of leaving an empty
+                // placeholder in the Word Reading completion UI.
+                completionClassificationPanel?.remove();
+            }
+            if (title) title.textContent = stage === "transition_to_rhymes"
+                ? "Part 1: Word Reading complete"
+                : "Assessment complete";
             if (message) message.textContent = stage === "transition_to_rhymes"
-                ? "You completed Word Reading. You’re ready for Rhymes."
+                ? ""
                 : stage === "transition_to_sentence"
                     ? "You completed Word Reading. You’re ready for Sentence Reading."
-                : stage === "transition_to_story"
-                    ? (endState.branch === "rhymes"
+                    : stage === "transition_to_story"
+                        ? (endState.branch === "rhymes"
                         ? "You completed Rhymes. You’re ready for Story Reading."
                         : "You completed Sentence Reading. You’re ready for Story Reading.")
                     : "You completed the reading assessment.";
+            const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
+            if (disclaimer && stage === "transition_to_rhymes") {
+                disclaimer.textContent = "You’ve finished the Word Reading section. Next, you’ll continue with Rhymes.";
+            }
             if (finishBtn) {
                 finishBtn.dataset.transitionUrl = stage === "transition_to_sentence"
                     ? buildCrlaStageUrl("sentences", endState)
@@ -4550,7 +4565,9 @@
                 branchState.stage = branchScore <= 6 ? "transition_to_rhymes" : "transition_to_sentence";
                 branchState.next_stage = branchScore <= 6 ? "rhymes" : "sentences";
                 branchState.correct_words = branchScore;
-                branchState.classification = branchScore <= 6 ? "Low Emerging Reader" : "";
+                // Word Reading only determines which CRLA section comes next.
+                // Classification is derived after the complete assessment.
+                branchState.classification = "";
                 branchState.branch = "rhymes";
                 branchState.task1_score = branchScore;
                 branchState.task2_rhymes_score = null;

@@ -2496,6 +2496,7 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
         or ''
     )
     normalized_classification = str(classification or '').strip()
+    prior_reader_classification = state.get('reader_classification', '')
 
     state['reader_classification'] = normalized_classification
     state['aral_eligible'] = bool(_aral_eligible_classification(normalized_classification))
@@ -2580,12 +2581,17 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
                 student_end_state['task2_rhymes_score'] = None
                 student_end_state['task2_sentences_score'] = None
                 student_end_state['part1_total_score'] = None
-                student_end_state['part1_reading_level'] = 'Low Emerging Reader' if task1_score <= 6 else 'NOT AVAILABLE'
-                student_end_state['classification'] = 'Low Emerging Reader' if task1_score <= 6 else ''
+                student_end_state['part1_reading_level'] = ''
+                # Words is only the first CRLA section; it must not produce or
+                # persist a preliminary/final reading classification.
+                student_end_state['classification'] = ''
+                state['reader_classification'] = prior_reader_classification
                 student_end_state['routing_score'] = task1_score
                 student_end_state['score'] = task1_score
                 state['student_end_assessment_state'] = student_end_state
-                state['current_phase'] = 'complete'
+                # Word Reading is a CRLA transition, not completion of the
+                # assessment or its phase.
+                state['current_phase'] = 'pretest'
                 return _set_user_state(student_user, state)
             crla_data = score_payload.get('crla_score_data') if isinstance(score_payload.get('crla_score_data'), dict) else {}
             task1_score = _safe_int(previous_correct_words)

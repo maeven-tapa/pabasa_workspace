@@ -1377,30 +1377,33 @@
 
         #learnerExperiencePage {
             align-items: center;
-            background: linear-gradient(135deg, #fff8df 0%, #e6f3e9 100%);
+            background: linear-gradient(135deg, #fff8df 0%, #e6f3e9 52%, #dff1f5 100%);
             color: #234b3b;
             display: none;
             min-height: calc(100vh - clamp(0.85rem, 2vw, 1.5rem) * 2);
+            overflow: hidden;
             place-items: center;
             position: relative;
             z-index: 3;
         }
 
         #learnerExperiencePage:not(.d-none) { display: grid; }
-        #learnerExperiencePage .learner-experience-content { display: flex; flex-direction: column; gap: clamp(1rem, 2.4vh, 1.65rem); padding: 4vh 2vw 2vh; text-align: center; width: min(1240px, 100%); }
-        #learnerExperiencePage h1 { color: #234b3b; font-family: "Schoolbell", cursive; font-size: clamp(2.1rem, 5vw, 4.4rem); line-height: 1; margin: 0; }
-        #learnerExperiencePage .learner-experience-instruction { color: #527462; font-family: "Schoolbell", cursive; font-size: clamp(1.3rem, 2.7vw, 2.25rem); margin: 0.45rem 0 0; }
-        #learnerExperiencePage .rating-form { align-items: stretch; display: flex; gap: clamp(0.1rem, 0.6vw, 0.55rem); justify-content: center; max-width: 1120px; width: 100%; }
-        #learnerExperiencePage .rating-option { align-items: center; background: transparent; border: 2px solid transparent; border-radius: 14px; color: #234b3b; cursor: pointer; display: flex; flex: 1 1 0; flex-direction: column; font-family: "Schoolbell", cursive; gap: clamp(0.15rem, 0.5vw, 0.45rem); min-width: 0; padding: clamp(0.25rem, 0.65vw, 0.7rem); transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
+        #learnerExperiencePage::before, #learnerExperiencePage::after { content: "✦"; color: rgba(228, 184, 63, .55); font-size: clamp(1.5rem, 3vw, 2.8rem); position: absolute; pointer-events: none; }
+        #learnerExperiencePage::before { left: 8%; top: 13%; } #learnerExperiencePage::after { bottom: 14%; right: 9%; }
+        #learnerExperiencePage .learner-experience-content { align-items: center; background: rgba(255,255,255,.8); border: 2px solid rgba(255,255,255,.9); border-radius: 38px; box-shadow: 0 22px 55px rgba(35,75,59,.16); display: flex; flex-direction: column; gap: clamp(.8rem, 2vh, 1.35rem); max-height: 96%; padding: clamp(1.5rem, 4vh, 3rem) clamp(1.5rem, 4vw, 3.5rem); text-align: center; width: min(1180px, 94vw); }
+        #learnerExperiencePage h1 { color: #234b3b; font-family: "Schoolbell", cursive; font-size: clamp(2.5rem, 6vh, 4.8rem); line-height: 1; margin: 0; }
+        #learnerExperiencePage .learner-experience-instruction { color: #527462; font-family: "Schoolbell", cursive; font-size: clamp(1.45rem, 3.5vh, 2.35rem); margin: 0; }
+        #learnerExperiencePage .rating-form { align-items: stretch; display: flex; gap: clamp(.55rem, 1.2vw, 1.1rem); justify-content: center; max-width: 1080px; width: 100%; }
+        #learnerExperiencePage .rating-option { align-items: center; background: #fffdf7; border: 3px solid transparent; border-radius: 26px; color: #234b3b; cursor: pointer; display: flex; flex: 1 1 0; flex-direction: column; font-family: "Schoolbell", cursive; gap: .35rem; min-width: 0; padding: clamp(.65rem, 1.4vh, 1rem) clamp(.3rem, .8vw, .8rem); transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
         #learnerExperiencePage .rating-option:hover, #learnerExperiencePage .rating-option:focus-visible { background: rgba(255, 255, 255, 0.45); outline: none; transform: translateY(-4px); }
         #learnerExperiencePage .rating-option:focus-visible { box-shadow: 0 0 0 3px rgba(35, 75, 59, 0.25); }
-        #learnerExperiencePage .rating-option.is-selected { border-color: #e4b83f; box-shadow: 0 0 0 2px rgba(228, 184, 63, 0.42); transform: translateY(-4px) scale(1.025); }
-        #learnerExperiencePage .rating-option img { display: block; height: auto; max-height: 30vh; object-fit: contain; transform: scale(1.9); width: 100%; }
-        #learnerExperiencePage .rating-number { color: #234b3b; font-family: "Schoolbell", cursive; font-size: clamp(1.8rem, 3.6vw, 3.15rem); line-height: 1; }
-        #learnerExperiencePage .continue-button { background: #e4b83f; border: 0; border-radius: 999px; box-shadow: 0 5px 10px rgba(10, 30, 20, 0.25); color: #234b3b; cursor: pointer; font: 400 clamp(1.15rem, 2vw, 1.7rem) "Schoolbell", cursive; min-height: 3.2rem; padding: 0.65rem 2.5rem; }
+        #learnerExperiencePage .rating-option.is-selected { background: #fff0bd; border-color: #e4b83f; box-shadow: 0 0 0 3px rgba(228, 184, 63, .28), 0 10px 18px rgba(35,75,59,.12); transform: translateY(-5px) scale(1.025); }
+        #learnerExperiencePage .rating-option img { display: block; height: clamp(145px, 23vh, 225px); max-width: 100%; object-fit: contain; width: auto; }
+        #learnerExperiencePage .rating-number { color: #234b3b; font-family: "Schoolbell", cursive; font-size: clamp(1.6rem, 3.5vh, 2.45rem); line-height: 1; }
+        #learnerExperiencePage .continue-button { background: #e4b83f; border: 0; border-radius: 999px; box-shadow: 0 8px 16px rgba(10, 30, 20, .22); color: #234b3b; cursor: pointer; font: 400 clamp(1.35rem, 3vh, 1.9rem) "Schoolbell", cursive; min-height: 3.5rem; min-width: 280px; padding: .65rem 3.5rem; }
         #learnerExperiencePage .continue-button:disabled { cursor: not-allowed; opacity: 0.48; }
         #learnerExperienceFeedback { color: #a13d32; font-family: "Nunito", sans-serif; font-weight: 800; min-height: 1.25rem; }
-        @media (max-width: 600px) { #learnerExperiencePage .learner-experience-content { gap: 1.1rem; padding: 3vh 2vw 1vh; } #learnerExperiencePage .rating-option { padding-inline: 0.1rem; } #learnerExperiencePage .rating-option img { max-height: 20vh; transform: scale(1.55); } #learnerExperiencePage .continue-button { min-height: 2.7rem; padding: 0.45rem 1.5rem; } }
+        @media (max-width: 600px) { #learnerExperiencePage .learner-experience-content { border-radius: 24px; gap: .65rem; padding: 1rem .55rem; width: 96vw; } #learnerExperiencePage .rating-form { gap: .2rem; } #learnerExperiencePage .rating-option { border-radius: 16px; padding-inline: .1rem; } #learnerExperiencePage .rating-option img { height: clamp(78px, 17vh, 125px); } #learnerExperiencePage .continue-button { min-height: 2.8rem; min-width: 220px; padding: .45rem 2rem; } }
 
         .completion-card {
             background:
@@ -1607,6 +1610,10 @@
             justify-content: center;
             position: relative;
             z-index: 1;
+        }
+
+        .completion-actions--single {
+            margin-top: 0.25rem;
         }
 
         .completion-actions button,
@@ -3489,8 +3496,8 @@
                 </div>
 
                 <p class="completion-disclaimer is-encouragement" id="completionReadingLevelDisclaimer" aria-live="polite">{% if is_my_materials_completion %}Great job finishing this material! Keep practicing to grow your reading skills.{% else %}Keep practicing to improve your reading skills.{% endif %}</p>
-                <div class="completion-actions">
-                    <button class="completion-secondary" id="reviewBtn" type="button">{% if is_my_materials_completion %}Try Again{% else %}Start Again{% endif %}</button>
+                <div class="completion-actions{% if not is_my_materials_completion %} completion-actions--single{% endif %}">
+                    {% if is_my_materials_completion %}<button class="completion-secondary" id="reviewBtn" type="button">Try Again</button>{% endif %}
                     <button class="completion-primary" id="finishBtn" type="button">{% if is_my_materials_completion %}Done / Back to Materials{% else %}Back to Assessment{% endif %}</button>
                 </div>
             </article>
