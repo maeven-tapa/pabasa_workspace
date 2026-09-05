@@ -114,6 +114,7 @@ class LetterSoundCorrespondenceLanguageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '"language":"English"')
         self.assertContains(response, 'letter_sound_correspondence_google_tts.js')
+        self.assertContains(response, 'data-letter-correspondence-language="English"')
 
 
 class ClassMaterialsApiTests(TestCase):

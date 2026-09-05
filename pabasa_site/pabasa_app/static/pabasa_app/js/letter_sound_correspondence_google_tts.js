@@ -7,6 +7,30 @@
   const browserCancel = speech.cancel.bind(speech);
   let activeAudio = null;
   const csrfToken = () => document.cookie.split('; ').find((value) => value.startsWith('csrftoken='))?.split('=').slice(1).join('=') || '';
+  const isFilipino = () => String(document.body?.dataset.letterCorrespondenceLanguage || '').toLowerCase().startsWith('fil');
+  const filipinoText = {
+    'Tap a handle to hear its balloon, then pop the balloon that matches the letter.': 'Pindutin ang hawakan upang marinig ang tunog ng lobo, saka piliin ang lobong tumutugma sa letra.',
+    'Wonderful! That balloon matches the letter.': 'Magaling! Tumutugma ang lobong iyon sa letra.',
+    'Nice try! The next round is ready.': 'Magandang pagsubok! Handa na ang susunod na round.',
+    'Unable to play that balloon sound. Please try again.': 'Hindi ma-play ang tunog ng lobong iyon. Pakisubukan muli.',
+    'Your score could not be saved. Please try again.': 'Hindi nai-save ang iyong puntos. Pakisubukan muli.',
+    'This activity has no available reading sets.': 'Walang available na set ng babasahin para sa aktibidad na ito.',
+  };
+
+  const translateFeedback = () => {
+    if (!isFilipino()) return;
+    const feedback = document.getElementById('feedback');
+    const translated = filipinoText[feedback?.textContent.trim()];
+    if (translated) feedback.textContent = translated;
+  };
+
+  const localizePage = () => {
+    if (!isFilipino()) return;
+    const instruction = document.querySelector('.instruction');
+    if (instruction) instruction.textContent = filipinoText['Tap a handle to hear its balloon, then pop the balloon that matches the letter.'];
+    new MutationObserver(translateFeedback).observe(document.getElementById('feedback'), { childList: true, characterData: true, subtree: true });
+    translateFeedback();
+  };
 
   speech.cancel = () => {
     activeAudio?.pause();
@@ -18,7 +42,7 @@
     if (!text) return;
     speech.cancel();
     const formData = new FormData();
-    formData.append('target_text', text);
+    formData.append('target_text', isFilipino() ? (filipinoText[text] || text) : text);
     formData.append('language', utterance.lang || 'English');
     formData.append('mode', 'letter');
     formData.append('tts_profile', 'correspondence');
@@ -34,4 +58,5 @@
       browserSpeak(utterance);
     }
   };
+  document.addEventListener('DOMContentLoaded', localizePage, { once: true });
 })();

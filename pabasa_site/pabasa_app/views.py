@@ -12029,6 +12029,9 @@ def letter_sound_correspondence_page(request):
     response.content = response.content.replace(
         b'</head>', f'<script src="{tts_bridge}"></script></head>'.encode(), 1,
     )
+    response.content = response.content.replace(
+        b'<body>', f'<body data-letter-correspondence-language="{escape(material_language)}">'.encode(), 1,
+    )
     response['Cache-Control'] = 'no-store, max-age=0'
     return response
 
