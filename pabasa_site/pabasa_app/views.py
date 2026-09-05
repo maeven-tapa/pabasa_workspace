@@ -894,10 +894,16 @@ def _crla_creation_block_message(teacher_user=None, on_date=None):
 
 def _assessment_materials_for_student(student=None):
     kind_filters = Q(assessment_kind='regular') | Q(assessment_kind='crla')
+    now = timezone.now()
     queryset = Material.objects.filter(
         is_active=True,
         type='assessment',
-    ).filter(kind_filters)
+    ).filter(kind_filters).filter(
+        Q(status__isnull=True)
+        | Q(status='')
+        | Q(status='published')
+        | Q(status='scheduled', scheduled_at__lte=now)
+    )
     queryset = queryset.exclude(
         Q(assessment_kind='crla') & ~Q(is_official_reading=True, is_system_owned=True)
     )
@@ -935,6 +941,19 @@ def _material_available_for_week(material, current_week):
         return True
     week_values = _material_week_values(material)
     return not week_values or current_week in week_values
+
+
+def _material_is_released(material, now=None):
+    """Return whether a material is available according to the server clock."""
+    if not material or not getattr(material, 'is_active', False):
+        return False
+    status = str(getattr(material, 'status', '') or '').strip().lower()
+    if status == 'draft':
+        return False
+    if status != 'scheduled':
+        return True
+    scheduled_at = getattr(material, 'scheduled_at', None)
+    return bool(scheduled_at and scheduled_at <= (now or timezone.now()))
 
 
 def _template_reading_type(template_title):
@@ -10004,8 +10023,23 @@ def admin_settings(request):
         else:
             context['settings_error'] = 'Unknown settings action.'
 
+    system_time = timezone.localtime(timezone.now())
     context['notification_settings'] = notification_settings
+    context['system_time_iso'] = system_time.isoformat()
+    context['system_time_zone'] = timezone.get_current_timezone_name()
     return render(request, 'pabasa_app/admin_settings.html', context)
+
+
+@admin_required
+@require_http_methods(["GET"])
+def admin_system_time(request):
+    """Return the server clock for the admin settings time display."""
+    system_time = timezone.localtime(timezone.now())
+    return JsonResponse({
+        'success': True,
+        'server_time': system_time.isoformat(),
+        'time_zone': timezone.get_current_timezone_name(),
+    })
 
 def courses(request):
     if not _check_auth(request):
@@ -20993,8 +21027,8 @@ def _requested_material_from_request(request):
     return Material.objects.filter(id=material_id).first()
 
 
-def _student_access_block_response(json_response=False):
-    message = 'This assessment is currently unavailable. Please wait for your teacher to enable student access.'
+def _student_access_block_response(json_response=False, message=None):
+    message = message or 'This assessment is currently unavailable. Please wait for your teacher to enable student access.'
     if json_response:
         return JsonResponse({'success': False, 'error': message}, status=403)
     return HttpResponseForbidden(message)
@@ -21097,6 +21131,12 @@ def _enforce_student_access_for_request(request, material=None, json_response=Fa
     material = material or _requested_material_from_request(request)
     if not material:
         return None
+
+    if not _material_is_released(material):
+        return _student_access_block_response(
+            json_response=json_response,
+            message='This material is scheduled and is not available yet.',
+        )
 
     material_type = str(getattr(material, 'type', '') or '').strip().lower()
     is_assessment_material = material_type in {'assessment', 'both'} or bool(getattr(material, 'assessment_id', None))

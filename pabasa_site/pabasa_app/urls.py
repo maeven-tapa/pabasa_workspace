@@ -74,6 +74,7 @@ urlpatterns = [
     path('dashboard/admin/practice-assessment/<int:practice_id>/archive/', views.admin_practice_archive, name='admin_practice_archive'),
     path('dashboard/admin/practice-assessment/<int:practice_id>/delete/', views.admin_practice_delete, name='admin_practice_delete'),
     path('dashboard/admin/settings/', views.admin_settings, name='admin_settings'),
+    path('dashboard/admin/system-time/', views.admin_system_time, name='admin_system_time'),
     path('dashboard/courses/', views.courses, name='courses'),
     path('dashboard/assessment/', views.assessment, name='assessment'),
     path('api/assessment/request/', views.request_assessment_access, name='request_assessment_access'),
