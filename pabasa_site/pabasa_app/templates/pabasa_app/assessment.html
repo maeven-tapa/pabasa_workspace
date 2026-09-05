@@ -290,6 +290,14 @@
         filter: grayscale(1);
     }
 
+    .assessment-type-link.is-story-response-pending {
+        background: #f3f4f6;
+        border-color: #d1d5db;
+        color: #6b7280;
+        opacity: 1;
+        filter: grayscale(1);
+    }
+
     .assessment-card-shell.is-locked {
         position: relative;
     }
@@ -1289,7 +1297,7 @@
                             }
 
                             const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
-                            const isDone = isAssessmentCompleted(m, mId);
+                            let isDone = isAssessmentCompleted(m, mId);
                             const isLocked = !Boolean(m.student_access);
                             const materialSourceType = String(m.source_type || m.material_source || '').trim().toLowerCase();
                             const templateActivityName = materialSourceType === 'template'
@@ -1322,7 +1330,9 @@
                                 m.content_json?.template_lesson, m.content_json?.template_type, m.content_json?.activity_type]
                                 .some(value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === 'story_reading');
                             const isStoryResponse = String(m.content_json?.activity_type || '').trim().toLowerCase() === 'story_response';
-                            const isRetiredStoryResponse = isStoryResponse && isDone;
+                            if (isStoryResponse) isDone = m.student_has_completed === true;
+                            const isSubmittedStoryResponse = isStoryResponse && m.story_response_submitted === true;
+                            const isRetiredStoryResponse = isSubmittedStoryResponse && !isDone;
                             const storyResponseGrade = m.story_response_grade;
                             const storyResponseCompletionText = storyResponseGrade === null || storyResponseGrade === undefined || storyResponseGrade === ''
                                 ? 'Your response has been recorded. Awaiting teacher review.'
@@ -1385,7 +1395,7 @@
                             });
                             renderedRows.push(`
                                 <div class="assessment-card-shell ${isLocked ? 'is-locked' : ''}">
-                                    <a href="${generatedStartUrl}" class="assessment-type-link type-${m.category} ${isDone ? 'is-done' : ''} ${isLocked || isRetiredStoryResponse ? 'is-disabled is-locked' : ''}" data-section-id="${escapeHtml(classData.id || classData.section_id || '')}" data-class-code="${escapeHtml(classData.code)}" ${isLocked || isRetiredStoryResponse ? 'tabindex="-1" aria-disabled="true" onclick="return false;"' : ''}>
+                                    <a href="${generatedStartUrl}" class="assessment-type-link type-${m.category} ${isDone ? 'is-done' : ''} ${isSubmittedStoryResponse && !isDone ? 'is-story-response-pending' : ''} ${isLocked || isRetiredStoryResponse ? 'is-disabled is-locked' : ''}" data-section-id="${escapeHtml(classData.id || classData.section_id || '')}" data-class-code="${escapeHtml(classData.code)}" ${isLocked || isRetiredStoryResponse ? 'tabindex="-1" aria-disabled="true" onclick="return false;"' : ''}>
                                         <div class="type-meta">
                                             <span class="type-icon"><i class="bi ${iconMap[m.category]}"></i></span>
                                             <div class="type-info">
@@ -1393,7 +1403,7 @@
                                                     <strong>${escapeHtml(m.title)} ${isDone ? '<span class="badge bg-success ms-1 assessment-done-pill" style="font-size: 0.6rem;">DONE</span>' : ''}</strong>
                                             ${getMaterialLanguageBadgeHtml(m)}
                                         </div>
-                                                <span>${isStoryResponse && isDone ? `Story Response Completed - ${storyResponseCompletionText}` : (templateActivityName || `${labelMap[m.category]} - ${Array.isArray(m.items) ? m.items.length : (m.items || 0)} items`)}</span>
+                                                <span>${isStoryResponse && isSubmittedStoryResponse ? `Story Response Completed - ${storyResponseCompletionText}` : (templateActivityName || `${labelMap[m.category]} - ${Array.isArray(m.items) ? m.items.length : (m.items || 0)} items`)}</span>
                                             </div>
                                         </div>
                                         <i class="bi ${isDone ? 'bi-check-circle-fill text-success' : 'bi-play-circle-fill text-primary'}"></i>

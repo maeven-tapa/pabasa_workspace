@@ -19543,6 +19543,22 @@ def get_class_materials(request):
                             'accuracy': completed_result.accuracy,
                             'total_score': completed_result.total_score,
                         }
+                elif is_requesting_student and request_user and (_is_story_response_material(m) or _is_retell_story_material(m)):
+                    story_response_submission = StoryResponseSubmission.objects.filter(
+                        student=request_user, material=m,
+                    ).only('id', 'grade', 'status', 'submitted_at').first()
+                    if story_response_submission:
+                        story_response_is_graded = (
+                            story_response_submission.status == 'graded'
+                            and story_response_submission.grade is not None
+                        )
+                        student_has_completed = story_response_is_graded
+                        completed_attempt_count = 1 if story_response_is_graded else 0
+                        latest_attempt_summary = {
+                            'status': 'completed' if story_response_is_graded else 'pending',
+                            'completed_at': story_response_submission.submitted_at.isoformat(),
+                            'score': story_response_submission.grade,
+                        }
                 elif m.assessment:
                     if is_requesting_student and request_user:
                         attempt_count = m.assessment.get_student_attempt_count(request_user)
@@ -19581,19 +19597,6 @@ def get_class_materials(request):
                         attempt_count = 0
                     else:
                         attempt_count = 0
-                elif is_requesting_student and (_is_story_response_material(m) or _is_retell_story_material(m)):
-                    story_response_submission = StoryResponseSubmission.objects.filter(
-                        student=request_user, material=m,
-                    ).only('id', 'grade', 'status', 'submitted_at').first()
-                    if story_response_submission:
-                        student_has_completed = True
-                        completed_attempt_count = 1
-                        latest_attempt_summary = {
-                            'status': 'completed',
-                            'completed_at': story_response_submission.submitted_at.isoformat(),
-                            'score': story_response_submission.grade,
-                        }
-
                 content_json = getattr(m, 'content_json', None) or {}
                 language_value = ''
                 if isinstance(content_json, dict):
