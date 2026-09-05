@@ -1279,15 +1279,56 @@ class ReadingLaunchClassificationTests(TestCase):
         content = script_path.read_text(encoding='utf-8')
         recorder = content.split('function recordStoryAlignmentMiscues(', 1)[1].split('function storyAlignmentHasInsertionMiscue(', 1)[0]
         insertion_detector = content.split('function storyAlignmentHasInsertionMiscue(', 1)[1].split('function resetStorySegmentState(', 1)[0]
-        callback = content.split('const recordedStoryMiscue = recordStoryAlignmentMiscues(data, context);', 1)[1].split('const itemCorrectWords =', 1)[0]
+        callback = content.split('const storyMiscueEvent = recordStoryAlignmentMiscues(data, context);', 1)[1].split('const itemCorrectWords =', 1)[0]
 
-        self.assertIn('if (storyMiscueResponseKeys.has(responseKey)) return false;', recorder)
-        self.assertIn('return true;', recorder)
+        self.assertIn('if (storyMiscueResponseKeys.has(responseKey)) return { accepted: false };', recorder)
+        self.assertIn('return { accepted: true }', recorder)
         self.assertIn('type || "").toLowerCase() === "insertion"', insertion_detector)
         self.assertIn('recognizedWords.some((_, index) => !representedRecognizedIndexes.has(index))', insertion_detector)
-        self.assertIn('recordedStoryMiscue && storyAlignmentHasInsertionMiscue(data)', callback)
+        self.assertIn('storyMiscueEvent.accepted', callback)
         self.assertIn('Extra or repeated word detected.', content)
         self.assertNotIn('paragraphWordResults["insertion"]', content)
+
+    def test_story_self_correction_is_strict_and_story_scoped(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        recorder = content.split('function recordStoryAlignmentMiscues(', 1)[1].split('function storyAlignmentHasInsertionMiscue(', 1)[0]
+        same_callback = content.split('function storySameCallbackSelfCorrection(', 1)[1].split('function storySelfCorrectionCandidate(', 1)[0]
+        immediate = content.split('function isImmediateStorySelfCorrection(', 1)[1].split('function recordStoryAlignmentMiscues(', 1)[0]
+        stop_reading = content.split('const stopReading = async () => {', 1)[1].split('btnStartReading?.addEventListener', 1)[0]
+
+        self.assertIn('let pendingStorySelfCorrection = null;', content)
+        self.assertIn('alignmentMiscues !== 1 || substitutions.length !== 1', content)
+        self.assertIn('recognizedWords.length === 1', immediate)
+        self.assertIn('Number(context?.syllableIndex) === candidate.expectedWordEnd', immediate)
+        self.assertIn('wrongWord === expectedWord', same_callback)
+        self.assertIn('extraIndexes.size !== 1', same_callback)
+        self.assertIn('return { accepted: true, deferred: true }', recorder)
+        self.assertIn('return { accepted: true, selfCorrection: candidate }', recorder)
+        self.assertIn('paragraphWordResults[correctedIndex] = "correct";', content)
+        self.assertIn('commitPendingStorySelfCorrection();', stop_reading)
+        self.assertIn('!storyMiscueEvent.selfCorrection', content)
+
+    def test_story_self_correction_commits_before_a_nonqualifying_zero_miscue_callback(self):
+        """An intervening accepted callback must invalidate the one-callback correction window."""
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        recorder = content.split('function recordStoryAlignmentMiscues(', 1)[1].split('function storyAlignmentHasInsertionMiscue(', 1)[0]
+        pending_branch = recorder.split('if (hadPendingCandidate) {', 1)[1].split('if (!hasAlignmentMiscues) return { accepted: false };', 1)[0]
+
+        self.assertIn('const hasAlignmentMiscues = Number.isFinite(alignmentMiscues) && alignmentMiscues > 0;', recorder)
+        self.assertIn('if (storyMiscueResponseKeys.has(responseKey)) return { accepted: false };', pending_branch)
+        self.assertIn('if (isImmediateStorySelfCorrection(data, context, candidate))', pending_branch)
+        self.assertIn('commitPendingStorySelfCorrection();', pending_branch)
+        self.assertIn('if (!hasAlignmentMiscues) return { accepted: true };', pending_branch)
+        self.assertLess(
+            pending_branch.index('if (isImmediateStorySelfCorrection(data, context, candidate))'),
+            pending_branch.index('commitPendingStorySelfCorrection();'),
+        )
+        self.assertLess(
+            pending_branch.index('commitPendingStorySelfCorrection();'),
+            pending_branch.index('if (!hasAlignmentMiscues) return { accepted: true };'),
+        )
 
     def test_shared_scoring_and_non_story_paths_remain_unchanged(self):
         script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
@@ -3811,6 +3852,22 @@ class ReadingMatcherTests(TestCase):
             for item in result["word_results"]
             if item.get("expected_index") is not None
         ))
+
+    def test_story_alignment_same_callback_wrong_then_correct_is_one_raw_miscue(self):
+        result = align_story_transcript("pumunta", "punta pumunta", start_word_index=0)
+        self.assertEqual(result["miscues"], 1)
+        self.assertEqual(
+            [(item["recognized"], item["result"], item["type"]) for item in result["word_results"]],
+            [("punta", "miscue", "insertion"), ("pumunta", "correct", "correct")],
+        )
+
+    def test_story_alignment_pure_repetition_remains_one_raw_miscue(self):
+        result = align_story_transcript("pumunta", "pumunta pumunta", start_word_index=0)
+        self.assertEqual(result["miscues"], 1)
+        self.assertEqual(
+            [(item["recognized"], item["result"], item["type"]) for item in result["word_results"]],
+            [("pumunta", "miscue", "insertion"), ("pumunta", "correct", "correct")],
+        )
 
     def test_story_cursor_alignment_preserves_trailing_unread_word_handling(self):
         result = align_story_transcript(

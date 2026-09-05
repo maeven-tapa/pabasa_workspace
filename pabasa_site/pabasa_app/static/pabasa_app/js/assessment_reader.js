@@ -266,6 +266,7 @@
         let selectedLearnerExperienceRating = null;
         let storyMiscueCount = 0;
         let storyMiscueResponseKeys = new Set();
+        let pendingStorySelfCorrection = null;
         let storyAnswerRecorder = null;
         let storyAnswerStream = null;
         let storyAnswerRecording = false;
@@ -999,6 +1000,7 @@
         }
 
         async function showStoryCompletionScreen() {
+            commitPendingStorySelfCorrection();
             currentStoryState = "story_complete";
             const readingScores = calculateScores();
             const answered = currentStoryAnswers.filter(answer => String(answer || "").trim()).length;
@@ -3068,13 +3070,117 @@
         function resetStoryMiscueTracking(initialCount = 0) {
             storyMiscueCount = Math.max(0, Number(initialCount) || 0);
             storyMiscueResponseKeys = new Set();
+            pendingStorySelfCorrection = null;
+        }
+
+        function storyNormalizedSingleWord(value) {
+            const words = normalizeWords(String(value || ""));
+            return words.length === 1 ? words[0] : "";
+        }
+
+        function commitPendingStorySelfCorrection() {
+            if (!pendingStorySelfCorrection) return false;
+            storyMiscueCount += pendingStorySelfCorrection.miscues;
+            pendingStorySelfCorrection = null;
+            return true;
+        }
+
+        function storySameCallbackSelfCorrection(data) {
+            const alignment = data?.word_alignment;
+            const alignmentMiscues = Number(alignment?.miscues);
+            const results = Array.isArray(data?.word_results) ? data.word_results : [];
+            const recognizedWords = Array.isArray(alignment?.recognized_words) ? alignment.recognized_words : [];
+            if (alignmentMiscues !== 1 || !recognizedWords.length) return null;
+
+            const correctionResults = new Map();
+            const representedIndexes = new Set();
+            const extraIndexes = new Set();
+            results.forEach((result) => {
+                const recognizedIndex = Number(result?.recognized_index);
+                const type = String(result?.type || "").toLowerCase();
+                const status = String(result?.result || "").toLowerCase();
+                if (type === "insertion" && Number.isInteger(recognizedIndex) && recognizedIndex >= 0) {
+                    extraIndexes.add(recognizedIndex);
+                }
+                const start = Number(result?.recognized_start_index ?? recognizedIndex);
+                const end = Number(result?.recognized_end_index);
+                if (Number.isInteger(start) && start >= 0) {
+                    if (Number.isInteger(end) && end > start) {
+                        for (let index = start; index < end; index += 1) representedIndexes.add(index);
+                    } else {
+                        representedIndexes.add(start);
+                    }
+                }
+                if (status === "correct" && Number.isInteger(recognizedIndex) && recognizedIndex >= 0) {
+                    correctionResults.set(recognizedIndex, result);
+                }
+            });
+            recognizedWords.forEach((_, index) => {
+                if (!representedIndexes.has(index)) extraIndexes.add(index);
+            });
+            if (extraIndexes.size !== 1) return null;
+
+            const wrongIndex = Array.from(extraIndexes)[0];
+            const correction = correctionResults.get(wrongIndex + 1);
+            const wrongWord = storyNormalizedSingleWord(recognizedWords[wrongIndex]);
+            const expectedWord = storyNormalizedSingleWord(correction?.expected);
+            const correctedWord = storyNormalizedSingleWord(recognizedWords[wrongIndex + 1]);
+            const expectedIndex = Number(correction?.expected_index);
+            if (!wrongWord || !expectedWord || wrongWord === expectedWord
+                || correctedWord !== expectedWord || !Number.isInteger(expectedIndex)) {
+                return null;
+            }
+            return { expectedIndex, expectedWord };
+        }
+
+        function storySelfCorrectionCandidate(data, context, responseKey) {
+            const alignment = data?.word_alignment;
+            const alignmentMiscues = Number(alignment?.miscues);
+            const results = Array.isArray(data?.word_results) ? data.word_results : [];
+            const substitutions = results.filter((result) => (
+                String(result?.type || "").toLowerCase() === "substitution"
+                && String(result?.result || "").toLowerCase() === "miscue"
+                && Number.isInteger(Number(result?.expected_index))
+            ));
+            if (alignmentMiscues !== 1 || substitutions.length !== 1) return null;
+
+            const substitution = substitutions[0];
+            const expectedIndex = Number(substitution.expected_index);
+            const expectedWord = storyNormalizedSingleWord(substitution.expected);
+            const expectedWordEnd = Number(data?.word_syllable_ranges?.[expectedIndex]?.[1]);
+            if (!expectedWord || !Number.isFinite(expectedWordEnd)) return null;
+            return {
+                segmentIndex: currentPageIndex,
+                expectedIndex,
+                expectedWord,
+                expectedWordEnd,
+                sourceResponseKey: responseKey,
+                miscues: alignmentMiscues,
+                contextVersion: context?.version,
+            };
+        }
+
+        function isImmediateStorySelfCorrection(data, context, candidate) {
+            const alignment = data?.word_alignment;
+            const recognizedWords = Array.isArray(alignment?.recognized_words) ? alignment.recognized_words : [];
+            const alignmentMiscues = Number(alignment?.miscues);
+            return Boolean(
+                candidate
+                && currentStoryState === "story_reading"
+                && candidate.segmentIndex === currentPageIndex
+                && candidate.contextVersion === context?.version
+                && Number(context?.syllableIndex) === candidate.expectedWordEnd
+                && alignmentMiscues === 1
+                && recognizedWords.length === 1
+                && storyNormalizedSingleWord(recognizedWords[0]) === candidate.expectedWord
+            );
         }
 
         function recordStoryAlignmentMiscues(data, context) {
-            if (currentStoryState !== "story_reading") return false;
+            if (currentStoryState !== "story_reading") return { accepted: false };
             const alignment = data?.word_alignment;
             const alignmentMiscues = Number(alignment?.miscues);
-            if (!Number.isFinite(alignmentMiscues) || alignmentMiscues <= 0) return false;
+            const hasAlignmentMiscues = Number.isFinite(alignmentMiscues) && alignmentMiscues > 0;
 
             const responseKey = JSON.stringify({
                 segment: currentPageIndex,
@@ -3083,10 +3189,39 @@
                 recognized_words: alignment?.recognized_words || [],
                 word_results: data?.word_results || [],
             });
-            if (storyMiscueResponseKeys.has(responseKey)) return false;
+
+            const candidate = pendingStorySelfCorrection;
+            const hadPendingCandidate = Boolean(candidate);
+            if (hadPendingCandidate) {
+                if (storyMiscueResponseKeys.has(responseKey)) return { accepted: false };
+                storyMiscueResponseKeys.add(responseKey);
+                if (isImmediateStorySelfCorrection(data, context, candidate)) {
+                    pendingStorySelfCorrection = null;
+                    return { accepted: true, selfCorrection: candidate };
+                }
+                commitPendingStorySelfCorrection();
+                if (!hasAlignmentMiscues) return { accepted: true };
+            }
+
+            if (!hasAlignmentMiscues) return { accepted: false };
+            if (storyMiscueResponseKeys.has(responseKey)) return { accepted: false };
             storyMiscueResponseKeys.add(responseKey);
+
+            if (!hadPendingCandidate) {
+                const sameCallbackCorrection = storySameCallbackSelfCorrection(data);
+                if (sameCallbackCorrection) {
+                    return { accepted: true, selfCorrection: sameCallbackCorrection };
+                }
+
+                const nextCandidate = storySelfCorrectionCandidate(data, context, responseKey);
+                if (nextCandidate) {
+                    pendingStorySelfCorrection = nextCandidate;
+                    return { accepted: true, deferred: true };
+                }
+            }
+
             storyMiscueCount += alignmentMiscues;
-            return true;
+            return { accepted: true };
         }
 
         function storyAlignmentHasInsertionMiscue(data) {
@@ -3112,6 +3247,7 @@
         }
 
         function resetStorySegmentState(previousSegmentIndex, nextSegmentIndex, reason) {
+            commitPendingStorySelfCorrection();
             const before = {
                 currentSyllableIndex,
                 paragraphWordResults: { ...paragraphWordResults },
@@ -3157,6 +3293,7 @@
             currentPageIndex = 0;
             currentSyllableIndex = 0;
             paragraphWordResults = {};
+            pendingStorySelfCorrection = null;
             itemResultVersion += 1;
             resetSyllableStitching();
         }
@@ -3447,16 +3584,19 @@
             const activeWordIndex = mode === "paragraph"
                 ? evaluatedParagraphWordIndex(data.word_syllable_ranges, context?.syllableIndex)
                 : Number(data.current_word_index || 0);
+            const previousActiveParagraphState = mode === "paragraph"
+                ? paragraphWordResults[activeWordIndex]
+                : undefined;
             const activeTargetResult = mode === "paragraph"
                 ? recordParagraphWordResult(data.word_results, activeWordIndex)
                 : (Array.isArray(data.word_results)
                     ? data.word_results.find((item) => Number(item?.expected_index ?? -1) === activeWordIndex) || null
                     : null);
-            const currentTargetMisread = Boolean(
+            let currentTargetMisread = Boolean(
                 activeTargetResult
                 && String(activeTargetResult.result || "").trim().toLowerCase() === "miscue"
             );
-            const paragraphChunkMiscueResult = mode === "paragraph" && Array.isArray(data.word_results)
+            let paragraphChunkMiscueResult = mode === "paragraph" && Array.isArray(data.word_results)
                 ? data.word_results.find((result) => (
                     Number(result?.expected_index ?? -1) >= activeWordIndex
                     && String(result?.result || "").trim().toLowerCase() === "miscue"
@@ -3496,8 +3636,26 @@
                 return;
             }
 
-            const recordedStoryMiscue = recordStoryAlignmentMiscues(data, context);
-            const storyInsertionNote = recordedStoryMiscue && storyAlignmentHasInsertionMiscue(data)
+            const storyMiscueEvent = recordStoryAlignmentMiscues(data, context);
+            if (storyMiscueEvent.selfCorrection) {
+                const correctedIndex = Number(storyMiscueEvent.selfCorrection.expectedIndex);
+                if (Number.isInteger(correctedIndex) && correctedIndex >= 0) {
+                    paragraphWordResults[correctedIndex] = "correct";
+                }
+                if (activeWordIndex !== correctedIndex) {
+                    if (previousActiveParagraphState === undefined) {
+                        delete paragraphWordResults[activeWordIndex];
+                    } else {
+                        paragraphWordResults[activeWordIndex] = previousActiveParagraphState;
+                    }
+                }
+                currentTargetMisread = false;
+                paragraphChunkMiscueResult = null;
+            }
+            const storyInsertionNote = storyMiscueEvent.accepted
+                && !storyMiscueEvent.selfCorrection
+                && !storyMiscueEvent.deferred
+                && storyAlignmentHasInsertionMiscue(data)
                 ? "Extra or repeated word detected."
                 : "";
 
@@ -5451,6 +5609,7 @@
             isRecording = false;
             stopSpeechRecognition();
             if (currentStoryState === "story_reading" && currentSelectedStory) {
+                commitPendingStorySelfCorrection();
                 const readingScores = calculateScores();
                 const storyMetrics = calculateFinalizedStoryMetrics(
                     readableWordCount(currentSelectedStory.content || ""),
