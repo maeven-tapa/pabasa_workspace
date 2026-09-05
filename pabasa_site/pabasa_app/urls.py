@@ -123,6 +123,7 @@ urlpatterns = [
     ),
     path('dashboard/assessment/reading_ui/para/', views.reading_para_page, name='reading_para_page'),
     path('dashboard/assessment/reading_ui/vowel/', views.reading_vowel_page, name='reading_vowel_page'),
+    path('api/dashboard/assessment/activity/word-decoding/transcribe/', views.word_decoding_transcribe_api, name='word_decoding_transcribe_api'),
     path('api/reading/transcribe/', views.reading_transcribe_api, name='reading_transcribe_api'),
     path('api/reading/read-aloud/', views.reading_read_aloud_api, name='reading_read_aloud_api'),
     path('api/story-response/read-aloud/', views.story_response_read_aloud_api, name='story_response_read_aloud_api'),
