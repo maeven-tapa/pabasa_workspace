@@ -9,6 +9,14 @@
         src: url('{% static "pabasa_app/font/Righteous-Regular.ttf" %}') format('truetype');
     }
 
+    @font-face {
+        font-family: 'Super Bubble';
+        src: url('{% static "pabasa_app/font/Super Bubble.ttf" %}') format('truetype');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+    }
+
     :root {
         --dash-primary: #1f6f8b;
         --dash-primary-soft: rgba(31,111,139,0.08);
@@ -6032,6 +6040,168 @@
         font-weight: 800;
         margin-left: .15rem;
     }
+
+    /* Keep the editor preview's learner surface aligned with Story Response. */
+    .story-response-preview {
+        position: relative;
+        min-height: 430px;
+        overflow: hidden;
+        padding: clamp(1rem, 2vw, 1.5rem);
+        color: #fff;
+        background: #182f64 url("{% static 'pabasa_app/images/story_response/bg.jpg' %}") center / cover no-repeat;
+        font-family: "Righteous", "Nunito", sans-serif;
+    }
+    .story-response-preview::before {
+        content: "";
+        position: absolute;
+        inset: -18px;
+        pointer-events: none;
+        background: linear-gradient(110deg, rgba(13,36,86,.36), rgba(94,165,205,.12) 54%, rgba(255,198,133,.18)), url("{% static 'pabasa_app/images/story_response/bg.jpg' %}") center / cover no-repeat;
+        filter: blur(6px);
+        transform: scale(1.035);
+    }
+    .story-response-preview-inner { position: relative; z-index: 1; min-height: 398px; display: flex; flex-direction: column; }
+    .story-response-preview-brand { color: #fff4bc; font-size: 1.05rem; letter-spacing: .08em; text-shadow: 0 2px 4px rgba(5,18,57,.72); }
+    .story-response-preview-heading { margin: .15rem 0 0; color: #fff; font-size: 1rem; line-height: 1.2; text-shadow: 0 2px 3px #0008; }
+    .story-response-preview-story { margin: .1rem 0 0; color: #fff1b9; font-size: .78rem; line-height: 1.35; }
+    .story-response-preview-stage { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(220px, 1.2fr) minmax(190px, .8fr); align-items: center; gap: 1rem; }
+    .story-response-preview-tv { position: relative; width: min(100%, 360px); aspect-ratio: 1.52; justify-self: center; filter: drop-shadow(0 16px 14px rgba(24,25,71,.36)); }
+    .story-response-preview-tv-frame { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+    .story-response-preview-screen { position: absolute; z-index: 1; left: 14%; top: 20%; width: 61%; height: 54%; display: grid; place-items: end center; overflow: hidden; border-radius: 9% 8% 10% 9%; background: radial-gradient(circle at 50% 20%, #6dc0df, #183f67 62%, #10253f); }
+    .story-response-preview-host { width: auto; height: 115%; max-width: 108%; transform: translateY(5%); object-fit: contain; filter: drop-shadow(0 5px 4px #0008); }
+    .story-response-preview-live { position: absolute; z-index: 3; top: 12%; left: 17%; padding: 3px 6px; border-radius: 4px; background: #df3f44; color: #fff; font: .55rem/1 "Righteous", sans-serif; letter-spacing: .08em; }
+    .story-response-preview-host-label { position: absolute; z-index: 3; bottom: 24%; left: 20%; padding: 3px 6px; background: #182a45e8; color: #fff; font: .55rem/1 "Righteous", sans-serif; letter-spacing: .08em; }
+    .story-response-preview-bubble { position: relative; display: flex; min-width: 0; width: min(100%, 290px); aspect-ratio: 1; align-items: center; justify-content: center; padding: 20% 11% 28%; justify-self: center; overflow: hidden; background: url("{% static 'pabasa_app/images/story_response/bubble4.png' %}") center / contain no-repeat; filter: drop-shadow(0 10px 12px rgba(6,19,49,.24)); }
+    .story-response-preview-copy { width: 100%; color: #1e3550; text-align: center; }
+    .story-response-preview-label { margin: 0 0 .35rem; color: #42709b; font: .62rem/1.2 "Righteous", sans-serif; letter-spacing: .1em; }
+    .story-response-preview-prompt { margin: 0; font-size: clamp(.75rem, 1.5vw, 1rem); line-height: 1.25; }
+    .story-response-preview-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: .45rem; margin-top: .85rem; }
+    .story-response-preview-controls button { min-height: 34px; padding: .35rem .55rem; border: 1px solid #c8983d; border-bottom-width: 3px; border-radius: 10px; box-shadow: 0 5px 10px rgba(48,21,40,.2); font: .68rem/1.2 "Righteous", sans-serif; }
+    .story-response-preview-hear { background: #fff4ca; color: #554e52; }
+    .story-response-preview-record { background: #e94f52; border-color: #9f3439 !important; color: #fff; }
+    .story-response-preview-status { margin-top: .65rem; color: #753f55; font-size: .7rem; text-align: center; }
+    .story-response-preview-complete { margin-top: .55rem; color: #16704a; font: .68rem/1.2 "Nunito", sans-serif; font-weight: 800; text-align: center; }
+    @media (max-width: 700px) {
+        .story-response-preview-stage { grid-template-columns: 1fr; gap: .25rem; }
+        .story-response-preview-tv { width: min(280px, 85vw); }
+        .story-response-preview-bubble { width: min(300px, 88vw); }
+    }
+
+    .template-learner-preview { overflow: hidden; border-radius: 22px; font-family: "Nunito", "Segoe UI", sans-serif; }
+    .template-learner-preview button { pointer-events: none; }
+    .template-learner-preview-header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .72rem .9rem; font-weight: 900; }
+    .template-learner-preview-progress { min-width: 100px; color: #5f645f; font-size: .68rem; text-align: right; }
+    .template-learner-preview-track { height: 6px; margin-top: .28rem; overflow: hidden; border-radius: 999px; background: #dce9e4; }
+    .template-learner-preview-fill { width: 20%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #16786f, #f0b43c); }
+
+    .clap-learner-preview { padding: .75rem; color: #173b40; background: #e9f6f0; }
+    .clap-learner-preview .template-learner-preview-header { border: 2px solid #fff; border-radius: 16px; background: #fffdf5; box-shadow: 0 5px 0 #b8dbd1; color: #093f50; }
+    .clap-learner-preview-stage { min-height: 280px; margin-top: .8rem; padding: 1.15rem; border: 4px solid #fffdf4; border-radius: 25px; background: linear-gradient(#093f5042,#093f5026), url("{% static 'pabasa_app/images/forest2.jpg' %}") center / cover no-repeat; text-align: center; }
+    .clap-learner-preview-word { margin: 1rem auto .55rem; color: #fffdf2; font-size: clamp(2.2rem, 8vw, 4.5rem); font-weight: 950; letter-spacing: .05em; text-shadow: 0 3px 0 #155e75, 0 8px 15px #092f286b; }
+    .clap-learner-preview-listen { border: 2px solid #fff; border-radius: 999px; background: #fffdf5; color: #0d5065; padding: .35rem .8rem; font-weight: 900; }
+    .clap-learner-preview-syllables { display: flex; justify-content: center; gap: .6rem; margin: .8rem 0; }
+    .clap-learner-preview-syllable { min-width: 62px; padding: .45rem .65rem; border: 2px solid #d0e8dd; border-radius: 13px; background: linear-gradient(145deg,#fffef9,#f5fbf2); box-shadow: 0 4px 0 #9bc4b7; color: #0d5065; font-size: 1rem; font-weight: 950; }
+    .clap-learner-preview-clap { display: grid; place-items: center; width: 70px; height: 70px; margin: .7rem auto; border: 4px solid #fff5bd; border-radius: 50%; background: radial-gradient(circle at 34% 28%,#fffef6,#f6ca65); box-shadow: 0 6px 0 #bd8b28; color: #704800; font-size: .7rem; font-weight: 950; }
+    .clap-learner-preview-status { color: #fff; font-size: .75rem; font-weight: 800; }
+
+    .blend-learner-preview { border: 1px solid #1b1a1718; background: #fffdf7; color: #1b1a17; box-shadow: 0 12px 28px #1b1a1714; }
+    .blend-learner-preview .template-learner-preview-header { border-bottom: 1px solid #1b1a1718; color: #155e75; }
+    .blend-learner-preview .format-chip { border-radius: 999px; background: #fff4d9; color: #81591c; padding: .3rem .55rem; font-size: .65rem; }
+    .blend-learner-preview-body { padding: 1rem; background: linear-gradient(180deg,#f8fbfa,#fffdf7); }
+    .blend-learner-preview-board { display: flex; align-items: center; justify-content: center; gap: .55rem; padding: 1.35rem .7rem .8rem; border: 1px solid #1f6f8b20; border-radius: 17px; background: linear-gradient(135deg,#eaf7fa,#f8fbfa 50%,#fff8e8); }
+    .blend-learner-preview-piece, .blend-learner-preview-slot { display: grid; place-items: center; min-width: 75px; min-height: 55px; padding: .5rem; border-radius: 14px; font-size: 1.35rem; font-weight: 950; }
+    .blend-learner-preview-piece { border: 2px solid #55a9bd; background: #fff; box-shadow: 0 5px 0 #b9dfe7; color: #155e75; }
+    .blend-learner-preview-piece:nth-child(3) { border-color: #a58ae4; color: #7147c7; }
+    .blend-learner-preview-slot { border: 2px dashed #e3b75d; background: #fff9e9; color: #9a712c; }
+    .blend-learner-preview-choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; margin-top: .85rem; }
+    .blend-learner-preview-choice { padding: .55rem .35rem; border: 1px solid #1f6f8b35; border-radius: 11px; background: #fff; color: #155e75; font-weight: 900; }
+    .blend-learner-preview-discovery { display: grid; grid-template-columns: 1.25fr .75fr; gap: .65rem; }
+    .blend-learner-preview-zone { min-height: 145px; padding: .75rem; border: 1px solid #1f6f8b25; border-radius: 16px; background: linear-gradient(145deg,#eaf7fa,#f9fcfb); }
+    .blend-learner-preview-zone:last-child { background: linear-gradient(145deg,#fff8e9,#fffdf7); border-color: #e9b44d55; }
+    .blend-learner-preview-zone h4 { margin: 0 0 .3rem; color: #155e75; font-size: .72rem; letter-spacing: .1em; }
+    .blend-learner-preview-chips { display: flex; flex-wrap: wrap; gap: .45rem; }
+    .blend-learner-preview-chip { padding: .4rem .55rem; border: 1px solid #1f6f8b35; border-radius: 10px; background: #fff; color: #155e75; font-weight: 900; }
+    .blend-learner-preview-mic { margin-top: .7rem; padding: .55rem; border-radius: 14px; background: #f8fbfa; color: #155e75; font-size: .75rem; font-weight: 900; text-align: center; }
+
+    .phrase-learner-preview { min-height: 300px; padding: .9rem; background: linear-gradient(135deg,#dff4f4,#fff5dc); color: #126c65; }
+    .phrase-learner-preview .template-learner-preview-header { color: #126c65; }
+    .phrase-learner-preview-board { display: grid; grid-template-columns: repeat(5, 1fr); gap: .45rem; padding: 1rem .6rem; border: 2px solid #fff; border-radius: 18px; background: #ffffffaa; box-shadow: 0 8px 20px #126c6520; }
+    .phrase-learner-preview-envelope { min-height: 84px; border: 0; border-radius: 10px; background: linear-gradient(145deg,#fff,#f7c86a); box-shadow: 0 5px 0 #d39b3d; color: #126c65; font-size: 1.25rem; }
+    .phrase-learner-preview-paper { grid-column: 1 / -1; margin-top: .65rem; padding: .9rem; border-radius: 14px; background: #fffdf7; box-shadow: 0 7px 18px #126c6520; color: #28535a; text-align: center; }
+    .phrase-learner-preview-paper strong { display: block; margin-bottom: .45rem; color: #16786f; font-size: 1.2rem; }
+    .phrase-learner-preview-controls { display: flex; justify-content: center; gap: .45rem; margin-top: .7rem; }
+    .phrase-learner-preview-controls span { padding: .4rem .65rem; border: 2px solid #16786f; border-radius: 10px; background: #fff; font-size: .72rem; font-weight: 900; }
+    .phrase-learner-preview-board::before { content: "You have magical mail!"; grid-column: 1 / -1; color: #684f70; font: 900 1.15rem/1.1 "Patrick Hand", cursive; text-align: center; }
+    .phrase-learner-preview-envelope { position: relative; min-height: 0; aspect-ratio: 1.52; padding: 0; border: 0; border-radius: 10px; background: transparent; box-shadow: 0 5px 0 #d39b3d; color: #126c65; font-size: 1.25rem; overflow: visible; cursor: pointer; }
+    .phrase-learner-preview-envelope span { position: absolute; inset: 0; display: block; border-radius: 10px; pointer-events: none; }
+    .phrase-learner-preview-envelope-back { background: linear-gradient(145deg,#fff4d9,#f0cfae); border: 2px solid rgba(147,96,91,.18); }
+    .phrase-learner-preview-envelope-front { z-index: 2; overflow: hidden; background: linear-gradient(150deg,transparent 49%,#f2c9a8 50%) 0 0/50% 100% no-repeat,linear-gradient(210deg,transparent 49%,#f8d9b9 50%) 100% 0/50% 100% no-repeat,linear-gradient(#f6d1ae,#edbd9a); clip-path: polygon(0 30%,50% 70%,100% 30%,100% 100%,0 100%); transition: transform .2s ease, box-shadow .2s ease; }
+    .phrase-learner-preview-envelope-flap { z-index: 3; background: linear-gradient(160deg,#ffe5c2,#efc39f); clip-path: polygon(0 0,100% 0,50% 72%); transform-origin: top center; transition: transform .2s ease; }
+    .phrase-learner-preview-envelope-number { z-index: 4; inset: auto auto 8% 8% !important; display: grid !important; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #fffdf3; color: #9b596b; font-size: .65rem; font-weight: 900; }
+    .phrase-learner-preview-envelope.is-open .phrase-learner-preview-envelope-front { transform: translateY(3px) scale(.98); box-shadow: inset 0 0 0 2px rgba(18,108,101,.1); }
+    .phrase-learner-preview-envelope.is-open .phrase-learner-preview-envelope-flap { transform: rotateX(180deg); }
+
+    .sentence-learner-preview { padding: 1rem; background: linear-gradient(135deg,#d9eef4,#f7e7cf); color: #1b1a17; }
+    .sentence-learner-preview-top { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; align-items: center; padding: .65rem .75rem; border: 1px solid rgba(27,26,23,.1); border-radius: 15px; background: rgba(255,253,247,.86); box-shadow: 0 8px 18px rgba(27,26,23,.1); }
+    .sentence-learner-preview-title { display: flex; align-items: center; gap: .5rem; color: #155e75; font-size: .72rem; font-weight: 900; }
+    .sentence-learner-preview-mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 12px; background: #1f6f8b; color: #fff; font-size: .8rem; font-weight: 950; }
+    .sentence-learner-preview-progress { display: flex; justify-content: flex-end; align-items: center; gap: .35rem; color: #155e75; font-size: .65rem; font-weight: 900; }
+    .sentence-learner-preview-progress::after { content: ""; display: block; width: 48px; height: 6px; border-radius: 999px; background: linear-gradient(90deg,#f7e7cf 0 25%,#1f6f8b 25%); }
+    .sentence-learner-preview-card { margin-top: .7rem; padding: 1.1rem; border: 1px solid #1b1a1718; border-radius: 18px; background: #fffdf7ee; box-shadow: 0 12px 24px #1b1a1714; text-align: center; }
+    .sentence-learner-preview-text { margin: .8rem auto; color: #155e75; font-size: clamp(1.1rem, 3vw, 1.5rem); font-weight: 900; line-height: 1.35; }
+    .sentence-learner-preview-controls span { display: inline-flex; margin: .2rem; padding: .45rem .7rem; border: 1px solid #16786f; border-radius: 10px; background: #fff; color: #126c65; font-size: .72rem; font-weight: 900; }
+
+    .story-reading-learner-preview { min-height: 310px; padding: .9rem; background: radial-gradient(circle at 18% 0%,#19314c 0,transparent 32%), linear-gradient(145deg,#090e18,#101b2a 58%,#0a111d); color: #edf6ff; }
+    .story-reading-learner-preview .template-learner-preview-header { border: 1px solid rgba(151,205,240,.18); border-radius: 14px; background: rgba(13,24,39,.88); }
+    .story-reading-learner-preview-scene { display: grid; grid-template-columns: .95fr 1.05fr; align-items: center; gap: .8rem; min-height: 225px; margin-top: .7rem; padding: .9rem; border: 1px solid rgba(151,205,240,.22); border-radius: 17px; background: #090f19; box-shadow: 0 12px 25px #0005; }
+    .story-reading-learner-preview-art { display: grid; place-items: center; min-height: 170px; border-radius: 13px; background: radial-gradient(circle,#23384a,#070b12 72%); color: #aec7da; font-size: 2.8rem; }
+    .story-reading-learner-preview-copy { padding: .7rem; border: 1px solid rgba(255,255,255,.16); border-radius: 13px; background: rgba(5,10,18,.78); }
+    .story-reading-learner-preview-copy h3 { margin: 0 0 .45rem; color: #6ed5ff; font-size: 1rem; }
+    .story-reading-learner-preview-copy p { margin: 0; color: #edf6ff; font-size: .88rem; line-height: 1.5; }
+    .story-reading-learner-preview-copy .story-reading-preview-buttons { margin-top: .7rem; color: #fff; font-size: .72rem; font-weight: 900; }
+    @media (max-width: 620px) { .blend-learner-preview-discovery, .story-reading-learner-preview-scene { grid-template-columns: 1fr; } .phrase-learner-preview-board { grid-template-columns: repeat(3, 1fr); } }
+    .story-reading-preview-stage .activity-preview-title,
+    .story-reading-preview-stage .activity-preview-instruction { display: none; }
+    .storybook-learner-preview { position: relative; display: grid; grid-template-rows: auto minmax(0,1fr) auto; min-height: 390px; overflow: hidden; padding: .8rem; color: #193f49; background: radial-gradient(ellipse at 15% 13%,rgba(255,255,255,.72) 0 8%,transparent 8.4%), linear-gradient(155deg,#edf8f6 0,#dcefee 48%,#c4e0df 100%); font-family: "Nunito", sans-serif; }
+    .storybook-learner-preview::after { content: ""; position: absolute; z-index: 0; left: -5%; right: -5%; bottom: -8%; height: 28%; border-radius: 50% 50% 0 0; background: linear-gradient(180deg,#b9d58e,#91be78); pointer-events: none; }
+    .storybook-learner-header { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: .5rem; min-height: 38px; }
+    .storybook-learner-exit { justify-self: start; padding: .35rem .6rem; border: 1px solid rgba(16,93,103,.17); border-radius: 999px; background: rgba(255,255,255,.55); color: #105d67; font-size: .62rem; font-weight: 900; }
+    .storybook-learner-heading { color: #105d67; font-size: .68rem; font-weight: 900; letter-spacing: .14em; text-align: center; text-transform: uppercase; }
+    .storybook-learner-stage { position: relative; z-index: 1; display: grid; grid-template-columns: 35px minmax(0,1fr) 35px; align-items: center; gap: .35rem; min-height: 0; padding: .45rem 0; }
+    .storybook-learner-arrow { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid rgba(16,93,103,.18); border-radius: 50%; background: rgba(255,255,255,.78); color: #105d67; font-size: 1rem; }
+    .storybook-learner-book { position: relative; display: grid; place-items: center; width: min(100%,430px); min-height: 255px; margin: auto; padding: 1rem 1.25rem; border: 3px solid #d7a34e; border-radius: 15px 12px 12px 16px; background: #fffaf0; box-shadow: 0 7px 0 #865c2b, 0 15px 25px rgba(63,61,39,.2), inset 10px 0 18px rgba(99,72,31,.055); }
+    .storybook-learner-book::before { content: ""; position: absolute; top: 0; bottom: 0; left: 9px; width: 10px; border-radius: 15px 0 0 16px; background: linear-gradient(90deg,rgba(80,56,25,.18),rgba(255,255,255,.62),rgba(80,56,25,.045),transparent); }
+    .storybook-learner-content { width: min(100%,27ch); text-align: center; }
+    .storybook-learner-content h3 { margin: 0 0 .55rem; color: #174b54; font-size: clamp(1.1rem,2.5vw,1.55rem); line-height: 1.05; }
+    .storybook-learner-art { display: block; width: auto; max-width: 80%; height: 82px; margin: 0 auto .55rem; border-radius: 10px; object-fit: contain; filter: drop-shadow(0 7px 8px rgba(31,65,65,.13)); }
+    .storybook-learner-story { margin: 0; color: #173f49; font-size: clamp(.8rem,1.5vw,1rem); font-weight: 700; line-height: 1.5; }
+    .storybook-learner-controls { position: relative; z-index: 1; display: flex; justify-content: center; gap: .45rem; flex-wrap: wrap; padding-top: .4rem; }
+    .storybook-learner-controls span { display: inline-flex; align-items: center; justify-content: center; min-height: 31px; padding: .35rem .6rem; border-radius: 999px; font-size: .62rem; font-weight: 900; }
+    .storybook-learner-controls span:first-child { background: #16786f; color: #fff; }
+    .storybook-learner-controls span:last-child { border: 1px solid rgba(16,93,103,.2); background: rgba(255,255,255,.72); color: #105d67; }
+    .story-live-learner-preview { position: relative; display: flex; min-height: 390px; flex-direction: column; gap: .55rem; overflow: hidden; padding: .7rem; background: radial-gradient(circle at 18% 0%,#19314c 0,transparent 32%), linear-gradient(145deg,#090e18,#101b2a 58%,#0a111d); color: #edf6ff; font-family: "Nunito", sans-serif; }
+    .story-live-learner-header { display: flex; align-items: center; gap: .45rem; min-height: 34px; padding: .35rem .5rem; border: 1px solid rgba(151,205,240,.18); border-radius: 9px; background: rgba(13,24,39,.88); font-size: .7rem; }
+    .story-live-learner-logo { width: 22px; height: 22px; object-fit: contain; }
+    .story-live-learner-brand { color: #f4f9ff; font-weight: 900; white-space: nowrap; }
+    .story-live-learner-brand b { margin-left: .2rem; padding: .15rem .25rem; border-radius: 4px; background: #e94757; color: #fff; font-size: .48rem; letter-spacing: .1em; }
+    .story-live-learner-header em { color: #aec7da; font-size: .52rem; font-style: normal; }
+    .story-live-learner-layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(120px,25%); gap: .55rem; min-height: 0; flex: 1; }
+    .story-live-learner-main { display: flex; min-width: 0; flex-direction: column; gap: .4rem; }
+    .story-live-learner-media { position: relative; display: flex; min-height: 220px; flex: 1; align-items: center; justify-content: center; overflow: hidden; border: 1px solid rgba(151,205,240,.22); border-radius: 11px; background: radial-gradient(circle,#23384a,#070b12 72%); box-shadow: 0 10px 18px #0005; }
+    .story-live-learner-scene { width: 100%; height: 100%; object-fit: contain; }
+    .story-live-learner-shade { position: absolute; inset: 48% 0 0; background: linear-gradient(transparent,rgba(3,7,13,.86)); pointer-events: none; }
+    .story-live-learner-subtitle { position: absolute; bottom: .55rem; left: 50%; width: calc(100% - 1rem); transform: translateX(-50%); padding: .35rem .55rem; border: 1px solid rgba(255,255,255,.16); border-radius: 7px; background: rgba(5,10,18,.78); color: #fff; font-size: .7rem; font-weight: 800; line-height: 1.3; text-align: center; }
+    .story-live-learner-meta { color: #edf6ff; font-size: .7rem; font-weight: 900; }
+    .story-live-learner-meta small { display: block; margin-top: .1rem; color: #a9c0d5; font-size: .56rem; font-weight: 400; }
+    .story-live-learner-controls { display: flex; align-items: center; justify-content: space-between; gap: .35rem; padding: .35rem; border: 1px solid rgba(151,205,240,.16); background: linear-gradient(180deg,#142234,#0e1827); }
+    .story-live-learner-controls span { padding: .32rem .42rem; border: 1px solid rgba(151,205,240,.25); border-radius: 999px; background: #1d3650; color: #f3faff; font-size: .52rem; font-weight: 900; white-space: nowrap; }
+    .story-live-learner-controls .story-live-learner-progress { flex: 1; height: 4px; border: 0; border-radius: 999px; background: linear-gradient(90deg,#2d9fc3 16%,#294258 16%); }
+    .story-live-learner-read { padding: .38rem; border: 1px solid #52c8ef; border-radius: 7px; background: #147da9; color: #fff; font-size: .58rem; font-weight: 900; text-align: center; }
+    .story-live-learner-comments { display: flex; min-height: 0; flex-direction: column; overflow: hidden; border: 1px solid rgba(151,205,240,.2); border-radius: 11px; background: linear-gradient(180deg,#111f31,#0c1421); }
+    .story-live-learner-comments h4 { margin: 0; padding: .55rem; border-bottom: 1px solid rgba(151,205,240,.16); color: #f3faff; font-size: .58rem; letter-spacing: .08em; text-transform: uppercase; }
+    .story-live-learner-comment { margin: .45rem; padding: .45rem; border: 1px solid rgba(151,205,240,.12); border-radius: 7px; background: rgba(255,255,255,.045); color: #e3eef8; font-size: .55rem; line-height: 1.35; }
+    .story-live-learner-comment strong { display: block; color: #78d4f4; font-size: .52rem; }
+    @media (max-width: 620px) { .story-live-learner-layout { grid-template-columns: 1fr; } .story-live-learner-comments { display: none; } }
 
     .course-assessment-results-table thead th {
         background: #f4f9fc;
@@ -15348,10 +15518,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const sets = getSentenceReadingSets(language);
             const current = activeTemplateActivity.sentenceReading || {};
             const selectedSet = sets.find(set => set.key === current.setKey) || sets[0] || null;
-            const fallbackIndices = selectedSet ? selectedSet.items.map((_, index) => index) : [];
-            const selectedIndices = Array.isArray(current.selectedIndices)
+            const fullIndices = selectedSet ? selectedSet.items.map((_, index) => index) : [];
+            const currentSelection = Array.isArray(current.selectedIndices)
                 ? current.selectedIndices.filter(index => Number.isInteger(index) && selectedSet && index >= 0 && index < selectedSet.items.length)
-                : fallbackIndices;
+                : [];
+            const selectedIndices = selectedSet
+                ? (currentSelection.length === selectedSet.items.length ? currentSelection : fullIndices)
+                : [];
             activeTemplateActivity.sentenceReading = {
                 language,
                 setKey: selectedSet?.key || '',
@@ -15372,11 +15545,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const language = activeTemplateActivity.sentenceReading?.language || 'Tagalog';
             const sets = getSentenceReadingSets(language);
             const selectedSet = sets.find(set => set.key === activeTemplateActivity.sentenceReading?.setKey) || sets[0] || null;
+            const fullIndices = selectedSet ? selectedSet.items.map((_, index) => index) : [];
             const normalized = Array.from(new Set((selectedIndices || []).map(index => Number(index)).filter(index => Number.isInteger(index) && selectedSet && index >= 0 && index < selectedSet.items.length))).sort((a, b) => a - b);
+            const lockedSelection = selectedSet ? (normalized.length === selectedSet.items.length ? normalized : fullIndices) : [];
             activeTemplateActivity.sentenceReading = {
                 language,
                 setKey: selectedSet?.key || '',
-                selectedIndices: normalized
+                selectedIndices: lockedSelection
             };
             syncSentenceReadingItems();
         }
@@ -15489,10 +15664,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const sets = getPhraseReadingSets(language);
             const current = activeTemplateActivity.phraseReading || {};
             const selectedSet = sets.find(set => set.key === current.setKey) || sets[0] || null;
-            const fallbackIndices = selectedSet ? selectedSet.items.map((_, index) => index) : [];
-            const selectedIndices = Array.isArray(current.selectedIndices)
+            const fullIndices = selectedSet ? selectedSet.items.map((_, index) => index) : [];
+            const currentSelection = Array.isArray(current.selectedIndices)
                 ? current.selectedIndices.filter(index => Number.isInteger(index) && selectedSet && index >= 0 && index < selectedSet.items.length)
-                : fallbackIndices;
+                : [];
+            const selectedIndices = selectedSet
+                ? (currentSelection.length === selectedSet.items.length ? currentSelection : fullIndices)
+                : [];
             activeTemplateActivity.phraseReading = {
                 language,
                 setKey: selectedSet?.key || '',
@@ -15513,11 +15691,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const language = activeTemplateActivity.phraseReading?.language || getPhraseReadingLanguage();
             const sets = getPhraseReadingSets(language);
             const selectedSet = sets.find(set => set.key === activeTemplateActivity.phraseReading?.setKey) || sets[0] || null;
+            const fullIndices = selectedSet ? selectedSet.items.map((_, index) => index) : [];
             const normalized = Array.from(new Set((selectedIndices || []).map(index => Number(index)).filter(index => Number.isInteger(index) && selectedSet && index >= 0 && index < selectedSet.items.length))).sort((a, b) => a - b);
+            const lockedSelection = selectedSet ? (normalized.length === selectedSet.items.length ? normalized : fullIndices) : [];
             activeTemplateActivity.phraseReading = {
                 language,
                 setKey: selectedSet?.key || '',
-                selectedIndices: normalized
+                selectedIndices: lockedSelection
             };
             syncPhraseReadingItems();
         }
@@ -15666,7 +15846,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const language = activeTemplateActivity.phraseReading?.language || getPhraseReadingLanguage();
             const sets = getPhraseReadingSets(language);
             const selectedSet = sets.find(set => set.key === activeTemplateActivity.phraseReading?.setKey) || sets[0] || null;
-            const selectedIndices = new Set(activeTemplateActivity.phraseReading?.selectedIndices || []);
+            const selectedIndices = new Set((selectedSet ? selectedSet.items.map((_, index) => index) : []).filter(index => activeTemplateActivity.phraseReading?.selectedIndices?.includes(index) || true));
             const allSelected = Boolean(selectedSet && selectedSet.items.length && selectedIndices.size === selectedSet.items.length);
             templateDynamicFields.innerHTML = `
                 <div class="row g-3">
@@ -15676,7 +15856,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <div class="phrase-prescribed-header">
                                     <div class="phrase-prescribed-eyebrow">Prescribed Phrase Set</div>
                                     <h6 class="phrase-prescribed-heading">Choose a ready-made phrase set</h6>
-                                    <p class="phrase-prescribed-description">Select a prescribed set, then choose the complete set or individual phrases. Prescribed phrases cannot be edited.</p>
+                                    <p class="phrase-prescribed-description">Selected prescribed phrases are required and locked in place. Teachers may choose the set, but cannot remove any phrase from it.</p>
                                 </div>
                                 <div class="row g-3">
                                 ${sets.map(set => `
@@ -15705,17 +15885,17 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         <div class="col-12 phrase-selected-items">
                             <div class="phrase-selected-items-header">
                                 <h6 class="phrase-selected-items-title">Selected Prescribed Items</h6>
-                                <span class="phrase-selected-items-help">Choose the whole set or individual items.</span>
+                                <span class="phrase-selected-items-help">All items in this prescribed set are checked and locked.</span>
                             </div>
                             <div class="phrase-selected-items-list">
                                 <label class="phrase-select-all d-flex align-items-center gap-2 py-1">
-                                    <input type="checkbox" class="form-check-input mt-0" data-phrase-select-all ${allSelected ? 'checked' : ''}>
+                                    <input type="checkbox" class="form-check-input mt-0" data-phrase-select-all checked disabled>
                                     <span>Select All (${selectedSet.items.length} items)</span>
                                 </label>
                                 <div class="border-top my-2"></div>
                                 ${selectedSet.items.map((item, index) => `
                                     <label class="d-flex align-items-center gap-2 py-1">
-                                        <input type="checkbox" class="form-check-input mt-0" data-phrase-item-index="${index}" ${selectedIndices.has(index) ? 'checked' : ''}>
+                                        <input type="checkbox" class="form-check-input mt-0" data-phrase-item-index="${index}" checked disabled>
                                         <span>${index + 1}. ${escapeHtml(item)}</span>
                                     </label>
                                 `).join('')}
@@ -15736,20 +15916,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     renderTemplatePreview();
                 });
             });
-            Array.from(templateDynamicFields.querySelectorAll('[data-phrase-item-index]')).forEach(checkbox => {
-                checkbox.addEventListener('change', () => {
-                    const index = Number(checkbox.getAttribute('data-phrase-item-index'));
-                    const current = new Set(activeTemplateActivity.phraseReading?.selectedIndices || []);
-                    if (checkbox.checked) current.add(index);
-                    else current.delete(index);
-                    setPhraseReadingSelection(Array.from(current).sort((a, b) => a - b));
-                    renderTemplateDynamicFields(title);
-                    renderTemplatePreview();
-                });
-            });
             const selectAllCheckbox = templateDynamicFields.querySelector('[data-phrase-select-all]');
             selectAllCheckbox?.addEventListener('change', () => {
-                const indices = selectAllCheckbox.checked && selectedSet ? selectedSet.items.map((_, index) => index) : [];
+                if (!selectedSet) return;
+                const indices = selectedSet.items.map((_, index) => index);
                 setPhraseReadingSelection(indices);
                 renderTemplateDynamicFields(title);
                 renderTemplatePreview();
@@ -16746,9 +16916,332 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             let instruction = '';
             let previewBody = '';
 
-            if (templateTitle === 'Letter & Sound Matching' || templateTitle === 'Match the Letter to Its Sound') {
+            if (templateTitle === 'Letter & Sound Matching') {
                 instruction = learnerCopy.letter;
-                previewBody = items.length ? cards(items.slice(0, 6).map(item => `<div class="preview-learning-card preview-letter-pair"><span class="preview-letter-token">${escapeHtml(item.letter || '?')}</span><i class="bi bi-arrow-left-right preview-arrow" aria-hidden="true"></i><span class="preview-answer-token">${escapeHtml(item.sound || '?')}</span></div>`).join('')) : empty('Add a letter and sound pair to begin the preview.');
+                const setId = activeTemplateActivity?.letterSoundMatching?.readingSetId || '';
+                const setLabel = setId ? (getLetterSoundMatchingReadingSetById(setId)?.label || 'Reading set') : 'Reading set';
+                const previewItems = items.length ? items.slice(0, 4) : [];
+                const fishSvgTemplate = '{% static "pabasa_app/images/fish_1.svg" %}';
+                previewBody = previewItems.length ? `
+                    <style>
+                        .letter-sound-preview-live {
+                            position: relative;
+                            width: 100%;
+                            min-height: 430px;
+                            border-radius: 20px;
+                            overflow: hidden;
+                            border: 1px solid rgba(255,255,255,.18);
+                            background: linear-gradient(180deg, rgba(8,40,57,.72), rgba(3,18,25,.8));
+                            box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 18px 30px rgba(4,17,24,.18);
+                        }
+                        .letter-sound-preview-live .game-shell {
+                            position: relative;
+                            width: 100%;
+                            height: 100%;
+                            display: flex;
+                            flex-direction: column;
+                            background: rgba(7,34,43,.18);
+                        }
+                        .letter-sound-preview-live .topbar {
+                            position: relative;
+                            z-index: 3;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            gap: 12px;
+                            padding: 12px 18px;
+                            background: rgba(5,24,30,.38);
+                            border-bottom: 1px solid rgba(255,255,255,.14);
+                            backdrop-filter: blur(10px);
+                        }
+                        .letter-sound-preview-live .game-title-wrap {
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 8px;
+                        }
+                        .letter-sound-preview-live .game-title-wrap h1 {
+                            margin: 0;
+                            font-family: "Super Bubble","Segoe UI",sans-serif;
+                            font-size: 1.15rem;
+                            line-height: 1.2;
+                            color: #FF7F9F;
+                            font-weight: 400;
+                            letter-spacing: .03em;
+                            text-shadow: 2px 3px 0 rgba(0,55,80,.45), 0 0 8px rgba(255,255,255,.15);
+                        }
+                        .letter-sound-preview-live .progress-wrap {
+                            display: flex;
+                            flex-direction: column;
+                            align-items: flex-end;
+                            gap: 6px;
+                        }
+                        .letter-sound-preview-live .progress-label {
+                            color: #FFD76A;
+                            font-family: "Super Bubble","Segoe UI",sans-serif;
+                            font-size: .8rem;
+                            font-weight: 600;
+                            white-space: nowrap;
+                            letter-spacing: .02em;
+                            text-shadow: 1px 2px 3px rgba(0,55,80,.35);
+                        }
+                        .letter-sound-preview-live .progress-bar {
+                            width: min(180px, 28vw);
+                            height: 26px;
+                            overflow: visible;
+                        }
+                        .letter-sound-preview-live .progress-track,
+                        .letter-sound-preview-live .progress-fill {
+                            fill: none;
+                            stroke-linecap: round;
+                            stroke-linejoin: round;
+                            vector-effect: non-scaling-stroke;
+                        }
+                        .letter-sound-preview-live .progress-track {
+                            stroke: #4FBCC7;
+                            stroke-width: 7;
+                        }
+                        .letter-sound-preview-live .progress-fill {
+                            stroke: #FFD76A;
+                            stroke-width: 6;
+                            stroke-dasharray: 100;
+                            stroke-dashoffset: 32;
+                        }
+                        .letter-sound-preview-live .scene {
+                            position: relative;
+                            display: flex;
+                            flex-direction: column;
+                            flex: 1 1 auto;
+                            min-height: 0;
+                            overflow: hidden;
+                            background: rgba(7,34,43,.10);
+                            border-radius: 0 0 20px 20px;
+                        }
+                        .letter-sound-preview-live .scene-glow {
+                            position: absolute;
+                            inset: 0;
+                            background: radial-gradient(circle at 50% 25%, rgba(143,227,255,.28), rgba(143,227,255,.04) 40%, transparent 70%);
+                            pointer-events: none;
+                        }
+                        .letter-sound-preview-live .target-hud {
+                            position: absolute;
+                            top: 16px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            z-index: 12;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            gap: 9px;
+                            min-width: min(172px, 40vw);
+                            padding: 13px 22px 15px;
+                            border-radius: 46% 54% 48% 52% / 42% 45% 55% 58%;
+                            background: linear-gradient(155deg, rgba(91,213,235,.76), rgba(19,122,160,.68));
+                            border: 1px solid rgba(224,251,255,.58);
+                            box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 12px 24px rgba(3,41,61,.24);
+                            backdrop-filter: blur(10px);
+                        }
+                        .letter-sound-preview-live .target-label {
+                            margin: 0;
+                            color: #f2fdff;
+                            font-size: .72rem;
+                            letter-spacing: .12em;
+                            text-transform: uppercase;
+                            font-weight: 800;
+                        }
+                        .letter-sound-preview-live .speaker-button {
+                            width: 44px;
+                            height: 44px;
+                            border: none;
+                            border-radius: 50%;
+                            background: rgba(255,255,255,.18);
+                            color: #fff;
+                            display: grid;
+                            place-items: center;
+                            box-shadow: inset 0 1px 0 rgba(255,255,255,.3);
+                            font-size: 1.2rem;
+                            cursor: pointer;
+                        }
+                        .letter-sound-preview-live .fish-zone {
+                            position: relative;
+                            flex: 1 1 auto;
+                            min-height: 320px;
+                            overflow: hidden;
+                            background: linear-gradient(180deg, rgba(17,88,116,.12), rgba(2,18,25,.28));
+                        }
+                        .letter-sound-preview-live .fishing-rod {
+                            position: absolute;
+                            left: 22px;
+                            bottom: 0;
+                            width: 140px;
+                            z-index: 2;
+                            opacity: .8;
+                            pointer-events: none;
+                        }
+                        .letter-sound-preview-live .rod-svg {
+                            display: block;
+                            width: 100%;
+                            height: auto;
+                            filter: drop-shadow(0 10px 16px rgba(0,0,0,.18));
+                        }
+                        .letter-sound-preview-live .hook-line {
+                            position: absolute;
+                            inset: 0;
+                            width: 100%;
+                            height: 100%;
+                            z-index: 3;
+                            pointer-events: none;
+                        }
+                        .letter-sound-preview-live .fishing-line-path {
+                            fill: none;
+                            stroke: rgba(215,244,255,.8);
+                            stroke-width: 2.5;
+                            stroke-linecap: round;
+                            stroke-dasharray: 1 10;
+                        }
+                        .letter-sound-preview-live .fishing-hook-path {
+                            fill: none;
+                            stroke: rgba(240,253,255,.9);
+                            stroke-width: 2.2;
+                            stroke-linecap: round;
+                        }
+                        .letter-sound-preview-live .fish-layer {
+                            position: absolute;
+                            inset: 0;
+                            z-index: 4;
+                        }
+                        .letter-sound-preview-live .fish-choice {
+                            position: absolute;
+                            width: 240px;
+                            height: 160px;
+                            border: 0;
+                            background: transparent;
+                            padding: 0;
+                            cursor: pointer;
+                            filter: drop-shadow(0 12px 20px rgba(5,21,29,.42));
+                            animation: fishDrift 7s ease-in-out infinite alternate;
+                        }
+                        .letter-sound-preview-live .fish-image {
+                            display: block;
+                            width: 100%;
+                            height: 100%;
+                            pointer-events: none;
+                        }
+                        .letter-sound-preview-live .fish-letter {
+                            position: absolute;
+                            left: 50%;
+                            top: 50%;
+                            transform: translate(-50%, -52%);
+                            font-family: "Super Bubble","Segoe UI",sans-serif;
+                            font-size: 1.7rem;
+                            line-height: 1;
+                            color: #fff;
+                            letter-spacing: .02em;
+                            text-shadow: 1px 2px 0 rgba(0,0,0,.2);
+                        }
+                        .letter-sound-preview-live .fish-letter.is-long { font-size: 1.25rem; }
+                        .letter-sound-preview-live .fish-letter.is-syllable { font-size: 1.45rem; }
+                        .letter-sound-preview-live .bubble-field {
+                            position: absolute;
+                            inset: 0;
+                            pointer-events: none;
+                        }
+                        .letter-sound-preview-live .bubble {
+                            position: absolute;
+                            bottom: -30px;
+                            width: 12px;
+                            height: 12px;
+                            border-radius: 50%;
+                            background: rgba(255,255,255,.18);
+                            border: 1px solid rgba(255,255,255,.25);
+                            animation: bubbleRise 9s linear infinite;
+                            opacity: .8;
+                        }
+                        .letter-sound-preview-live .bubble:nth-child(1) { left: 10%; animation-delay: 0s; }
+                        .letter-sound-preview-live .bubble:nth-child(2) { left: 18%; animation-delay: 1.3s; }
+                        .letter-sound-preview-live .bubble:nth-child(3) { left: 34%; animation-delay: 2.8s; }
+                        .letter-sound-preview-live .bubble:nth-child(4) { left: 61%; animation-delay: 3.5s; }
+                        .letter-sound-preview-live .bubble:nth-child(5) { left: 75%; animation-delay: 5.2s; }
+                        .letter-sound-preview-live .bubble:nth-child(6) { left: 82%; animation-delay: 6s; }
+                        .letter-sound-preview-live .bubble:nth-child(7) { left: 91%; animation-delay: 1.8s; }
+                        @keyframes fishDrift {
+                            0% { transform: translate(0, 0) rotate(0deg); }
+                            50% { transform: translate(10px, -8px) rotate(2deg); }
+                            100% { transform: translate(-8px, 6px) rotate(-2deg); }
+                        }
+                        @keyframes bubbleRise {
+                            0% { transform: translateY(0) scale(.8); opacity: 0; }
+                            15% { opacity: .7; }
+                            100% { transform: translateY(-280px) scale(1.2); opacity: 0; }
+                        }
+                        @media (max-width: 576px) {
+                            .letter-sound-preview-live .fish-choice { width: 180px; height: 120px; }
+                            .letter-sound-preview-live .topbar { padding: 10px 12px; }
+                            .letter-sound-preview-live .game-title-wrap h1 { font-size: 1rem; }
+                        }
+                    </style>
+                    <section class="template-learner-preview letter-sound-preview-live" aria-label="Letter & Sound Matching learner preview">
+                        <div class="game-shell">
+                            <header class="topbar">
+                                <div class="game-title-wrap">
+                                    <span class="badge text-bg-warning">🎣</span>
+                                    <h1>Letter &amp; Sound Matching</h1>
+                                </div>
+                                <div class="progress-wrap">
+                                    <div class="progress-label"><strong>${previewItems.length}</strong> / ${previewItems.length}</div>
+                                    <svg class="progress-bar" viewBox="0 0 200 28" role="img" aria-label="Fishing progress">
+                                        <path class="progress-track" pathLength="100" d="M 5 17 C 30 3, 52 27, 78 13 S 126 4, 148 15 S 178 24, 195 9"></path>
+                                        <path class="progress-fill" pathLength="100" d="M 5 17 C 30 3, 52 27, 78 13 S 126 4, 148 15 S 178 24, 195 9"></path>
+                                    </svg>
+                                </div>
+                            </header>
+                            <section class="scene" aria-live="polite" aria-label="Fish catching game area">
+                                <div class="scene-glow" aria-hidden="true"></div>
+                                <div class="target-hud">
+                                    <p class="target-label">Listen Carefully!</p>
+                                    <button class="speaker-button" type="button" aria-label="Play sound"><i class="bi bi-volume-up-fill" aria-hidden="true"></i></button>
+                                </div>
+                                <div class="fish-zone">
+                                    <div class="fishing-rod" aria-hidden="true">
+                                        <img class="rod-svg" src="{% static 'pabasa_app/images/fishing_pole.svg' %}" alt="Fishing pole" />
+                                    </div>
+                                    <svg class="hook-line" aria-hidden="true" preserveAspectRatio="none">
+                                        <path class="fishing-line-path" pathLength="1" d="M 0 0"></path>
+                                        <path class="fishing-hook-path" d="M 0 0"></path>
+                                    </svg>
+                                    <div class="fish-layer">
+                                        ${previewItems.map((item, index) => {
+                                            const fishIndex = (index % 6) + 1;
+                                            const fishSvg = fishSvgTemplate.replace('fish_1.svg', `fish_${fishIndex}.svg`);
+                                            const letter = escapeHtml(item.letter || '?');
+                                            const sizeClass = String(item.letter || '').length >= 3 ? 'is-long' : (String(item.letter || '').length === 2 ? 'is-syllable' : '');
+                                            return `
+                                                <button type="button" class="fish-choice" aria-label="Catch fish with letter ${letter}" style="left:${(index * 18) + 12}%; top:${28 + (index % 2) * 22}%">
+                                                    <img class="fish-image" src="${fishSvg}" alt="" />
+                                                    <span class="fish-letter ${sizeClass}">${letter}</span>
+                                                </button>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                    <div class="bubble-field" aria-hidden="true">
+                                        <span class="bubble"></span><span class="bubble"></span><span class="bubble"></span>
+                                        <span class="bubble"></span><span class="bubble"></span><span class="bubble"></span><span class="bubble"></span>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                    </section>
+                ` : empty('Add a letter and sound pair to begin the preview.');
+            } else if (templateTitle === 'Match the Letter to Its Sound') {
+                instruction = learnerCopy.letter;
+                const previewItems = items.length ? items.slice(0, 6) : [];
+                previewBody = previewItems.length
+                    ? cards(previewItems.map(item => `
+                        <div class="preview-learning-card text-center">
+                            <div class="preview-answer-token fs-3">${escapeHtml(item.letter || '?')}</div>
+                            <div class="small text-muted mt-2">${escapeHtml(item.sound || '')}</div>
+                        </div>
+                    `).join(''))
+                    : empty('Add a letter and sound pair to begin the preview.');
             } else if (templateTitle === 'Sound Detective') {
                 instruction = learnerCopy.sound;
                 previewBody = items.length ? cards(items.slice(0, 6).map(item => {
@@ -16766,15 +17259,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 const previewIndex = Math.min(Math.max(0, Number(clapConfig.previewIndex) || 0), Math.max(0, configuredWords.length - 1));
                 clapConfig.previewIndex = previewIndex;
                 const previewWord = configuredWords[previewIndex];
-                previewBody = previewWord ? `<div class="clap-preview-card" data-clap-preview><div class="clap-preview-progress"><span>Clap &amp; Count</span><span>${previewIndex + 1} / ${configuredWords.length}</span></div><div class="clap-preview-word" data-clap-preview-word>${escapeHtml(previewWord.word || '')}</div><button class="clap-preview-listen" data-clap-preview-listen type="button">🔊 Listen to the word</button><p class="clap-preview-prompt">Clap each syllable!</p><button class="clap-preview-clap" data-clap-preview-clap type="button">👏 Tap to Clap</button><div class="clap-preview-status" data-clap-preview-status>Find the word's rhythm!</div><div class="clap-preview-actions"><button class="clap-preview-reset" data-clap-preview-reset type="button">Reset</button><button class="clap-preview-done" data-clap-preview-done type="button">Done Clapping →</button></div>${configuredWords.length > 1 ? `<div class="clap-preview-navigation"><button class="clap-preview-nav" data-clap-preview-prev type="button" ${previewIndex === 0 ? 'disabled' : ''}>← Previous Word</button><button class="clap-preview-nav" data-clap-preview-next type="button" ${previewIndex === configuredWords.length - 1 ? 'disabled' : ''}>Next Word →</button></div>` : ''}</div>` : empty('Choose a word set to preview the learner activity.');
+                previewBody = previewWord ? `<section class="template-learner-preview clap-learner-preview" data-clap-preview aria-label="Clap and Count learner preview"><div class="template-learner-preview-header"><strong>🌿 Clap &amp; Count Syllables</strong><div class="template-learner-preview-progress">Word ${previewIndex + 1} / ${configuredWords.length}<div class="template-learner-preview-track"><div class="template-learner-preview-fill" style="width:${configuredWords.length ? ((previewIndex + 1) / configuredWords.length) * 100 : 0}%"></div></div></div></div><div class="clap-learner-preview-stage"><div class="clap-learner-preview-word">${escapeHtml(previewWord.word || '')}</div><button class="clap-learner-preview-listen" type="button">🔊 Listen to the word</button><div class="clap-learner-preview-syllables">${String(previewWord.syllables || '').split(/[-\s]+/).filter(Boolean).map(syllable => `<span class="clap-learner-preview-syllable">${escapeHtml(syllable)}</span>`).join('')}</div><button class="clap-learner-preview-clap" type="button">👏<br>Tap to Clap</button><div class="clap-learner-preview-status">Find the word's rhythm!</div></div></section>` : empty('Choose a word set to preview the learner activity.');
             } else if (isSyllableBlendingTemplate(templateTitle)) {
                 instruction = learnerCopy.blend;
                 const choices = SYLLABLE_BLENDING_CATALOG?.[language]?.[activeTemplateActivity.activityFormat] || [];
                 const selected = choices.find(activity => activity.activity_id === activeTemplateActivity.selectedActivityId);
                 if (selected) {
-                    const first = selected.items?.[0] || {}; const pieces = first.syllables || selected.syllable_pool || [];
-                    previewBody = `<div class="preview-lost-found"><div><h7>Lost</h7><div class="preview-syllable-pieces">${pieces.map(piece => `<span class="preview-syllable-piece">${escapeHtml(piece)}</span>`).join('')}</div></div><div><h7>Found</h7><div class="preview-found-word">${escapeHtml(first.answer || '…')}</div></div></div>`;
-                } else previewBody = empty('Choose a prebuilt activity to see its Lost & Found experience.');
+                    const first = selected.items?.[0] || {}; const parts = first.syllables || []; const isBigBox = activeTemplateActivity.activityFormat === 'big_box';
+                    previewBody = `<section class="template-learner-preview blend-learner-preview" aria-label="Syllable Blending learner preview"><div class="template-learner-preview-header"><strong>Syllable Blending</strong><span class="format-chip">${isBigBox ? 'Big Box — Word Building' : 'Syllable Combination'}</span><div class="template-learner-preview-progress">Question 1 of ${selected.items?.length || 5}<div class="template-learner-preview-track"><div class="template-learner-preview-fill"></div></div></div></div><div class="blend-learner-preview-body">${isBigBox ? `<div class="blend-learner-preview-discovery"><div class="blend-learner-preview-zone"><h4>LOST</h4><div class="blend-learner-preview-chips">${(selected.syllable_pool || parts).slice(0, 6).map(piece => `<span class="blend-learner-preview-chip">${escapeHtml(String(piece).toUpperCase())}</span>`).join('')}</div></div><div class="blend-learner-preview-zone"><h4>FOUND</h4><div class="blend-learner-preview-chips"><span class="blend-learner-preview-chip">No words found yet.</span></div></div></div>` : `<div class="blend-learner-preview-board">${parts.slice(0, 2).map((piece, index) => `<span class="blend-learner-preview-piece">${escapeHtml(String(piece).toUpperCase())}</span>${index === 0 ? '<span aria-hidden="true">+</span>' : ''}`).join('')}<span aria-hidden="true">=</span><span class="blend-learner-preview-slot">?</span></div><div class="blend-learner-preview-choices">${[first.answer, ...(selected.items || []).slice(1, 3).map(item => item.answer)].filter(Boolean).map(answer => `<span class="blend-learner-preview-choice">${escapeHtml(String(answer).toUpperCase())}</span>`).join('')}</div>`}<div class="blend-learner-preview-mic">🎙 ${language === 'Filipino' ? 'Basahin nang malakas ang salita' : 'Read the word aloud'} · Preview only</div></div></section>`;
+                } else previewBody = empty('Choose a prebuilt activity to see its learner experience.');
             } else if (isPictureWordMatchingTemplate(templateTitle)) {
                 instruction = learnerCopy.picture;
                 const pictureItems = getPictureWordPreviewItems();
@@ -16789,11 +17282,25 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 previewBody = item ? `<article class="preview-reading-card text-center"><img src="{% static 'pabasa_app/images/footer-mascot.png' %}" alt="PABASA reading buddy" width="72" height="72" style="object-fit:contain"><div><span class="badge text-bg-warning mb-3">Word 1 of ${items.length}</span></div><div class="preview-answer-token fs-3">${escapeHtml(item.word || '')}</div><div class="mt-2 mb-3">${escapeHtml(item.sentence || '')}</div><div class="small fw-bold text-muted mb-2">${language === 'Filipino' ? 'Ano ang kahulugan ng salita?' : 'What does this word mean?'}</div><div class="d-grid gap-2">${(item.choices || []).map(choice => `<button class="btn btn-outline-success" type="button" tabindex="-1">${escapeHtml(choice)}</button>`).join('')}</div></article>` : empty('Choose a vocabulary reading set to begin the preview.');
             } else if (isPhraseReadingTemplate(templateTitle) || isSentenceReadingTemplate(templateTitle)) {
                 instruction = isPhraseReadingTemplate(templateTitle) ? learnerCopy.phrase : learnerCopy.sentence;
-                previewBody = summary.body?.length ? `<div class="preview-reading-card">${summary.body.slice(0, 8).map(line => `<div class="mb-2">${escapeHtml(String(line).replace(/^\d+\.\s*/, ''))}</div>`).join('')}</div>` : empty(summary.emptyMessage || 'Select reading content to begin the preview.');
+                if (isPhraseReadingTemplate(templateTitle)) {
+                    const languageSet = getPhraseReadingSets(language).find(set => set.key === (activeTemplateActivity.phraseReading?.setKey || '')) || getPhraseReadingSets(language)[0] || null;
+                    const phraseSource = Array.isArray(activeTemplateActivity.items) && activeTemplateActivity.items.length
+                        ? activeTemplateActivity.items
+                        : (languageSet?.items || []);
+                    const phraseItems = phraseSource.map(item => String(item?.phrase || item || '').replace(/^\d+\.\s*/, '').trim()).filter(Boolean);
+                    const previewCount = Math.max(phraseItems.length, 1);
+                    previewBody = `<section class="template-learner-preview phrase-learner-preview" aria-label="Phrase Reading learner preview"><div class="template-learner-preview-header"><strong>✉️ <span style="font-family:'Patrick Hand',cursive;font-size:1.35rem">Secret Messages</span></strong><div class="template-learner-preview-progress">Messages Read<br><strong class="phrase-learner-preview-count">0 / ${previewCount}</strong><div class="template-learner-preview-track"><div class="template-learner-preview-fill phrase-learner-preview-fill" style="width:0"></div></div></div></div><div class="phrase-learner-preview-board">${Array.from({length: previewCount}, (_, index) => {
+                        const phrase = phraseItems[index] || '';
+                        return `<button class="phrase-learner-preview-envelope${phrase ? '' : ' is-empty'}" data-phrase-index="${index + 1}" data-phrase-text="${escapeAttr(phrase)}" type="button" tabindex="0" aria-label="Envelope ${index + 1}" ${phrase ? '' : 'disabled'}><span class="phrase-learner-preview-envelope-back"></span><span class="phrase-learner-preview-envelope-front"></span><span class="phrase-learner-preview-envelope-flap"></span><span class="phrase-learner-preview-envelope-number">${index + 1}</span></button>`;
+                    }).join('')}<article class="phrase-learner-preview-paper"><strong class="phrase-learner-preview-message-title">Choose an envelope</strong><span class="phrase-learner-preview-message-text">Open a message to reveal the phrase.</span><div class="phrase-learner-preview-controls"><span>🎙 Start Reading</span><span>🔊 Read Aloud</span></div></article></div></section>`;
+                } else {
+                    const sentence = summary.body?.[0] || 'Si Ana ay nagbabasa ng libro.';
+                    previewBody = `<section class="template-learner-preview sentence-learner-preview" aria-label="Sentence Reading learner preview"><div class="sentence-learner-preview-top"><div class="sentence-learner-preview-title"><span class="sentence-learner-preview-mark">SB</span><span><small style="display:block;color:#155e75;text-transform:uppercase;letter-spacing:.08em">Sentence Bot</small>Assessment Reader</span></div><div class="sentence-learner-preview-progress">Training 01 / 01</div></div><div class="sentence-learner-preview-card"><div class="small text-muted">Ready to read</div><div class="sentence-learner-preview-text">${escapeHtml(String(sentence).replace(/^\d+\.\s*/, ''))}</div><div class="sentence-learner-preview-controls"><span>🔊 Read Aloud</span><span>🎙 Read With Me</span></div><div class="small text-muted mt-3">Your reading helper will appear here.</div></div></section>`;
+                }
             } else if (templateTitle === 'Fluency Reading' || isStoryReadingTemplate(templateTitle)) {
                 instruction = templateTitle === 'Fluency Reading' ? learnerCopy.fluency : learnerCopy.story;
                 const passage = templateTitle === 'Fluency Reading' ? (activeTemplateActivity?.aralReadingSet?.data?.[0] || '') : (summary.body?.[0] || templateDynamicFields?.querySelector('[data-field-key="passage"]')?.value || '');
-                previewBody = passage ? `<article class="preview-reading-card"><div class="d-flex align-items-center justify-content-between gap-3 mb-3"><div class="d-flex flex-wrap gap-2"><span class="badge text-bg-primary">1. ${language === 'Filipino' ? 'Makinig' : 'Listen'}</span><span class="badge text-bg-light">2. ${language === 'Filipino' ? 'Magsanay' : 'Practice'}</span><span class="badge text-bg-light">3. ${language === 'Filipino' ? 'Bumasa' : 'Read'}</span></div><img src="{% static 'pabasa_app/images/footer-mascot.png' %}" alt="PABASA reading buddy" width="64" height="64" style="object-fit:contain"></div><div class="fs-5 lh-lg text-center">${escapeHtml(passage)}</div><div class="d-flex flex-wrap justify-content-center gap-2 mt-3"><button class="btn btn-primary" type="button" tabindex="-1">🔊 ${language === 'Filipino' ? 'Pakinggan' : 'Listen'}</button><button class="btn btn-outline-primary" type="button" tabindex="-1">${language === 'Filipino' ? 'Magsanay' : 'Start Practice'} →</button></div></article>` : empty('Choose a fluency reading set to begin the preview.');
+                previewBody = passage ? (isStoryReadingTemplate(templateTitle) ? `<section class="template-learner-preview story-reading-learner-preview" aria-label="Story Reading learner preview"><div class="template-learner-preview-header"><strong>📖 Story Reading</strong><div class="template-learner-preview-progress">Scene 1 / 6<div class="template-learner-preview-track"><div class="template-learner-preview-fill" style="width:16%"></div></div></div></div><div class="story-reading-learner-preview-scene"><div class="story-reading-learner-preview-art" aria-hidden="true">📖</div><div class="story-reading-learner-preview-copy"><h3>${escapeHtml(summary.title || 'Story Reading')}</h3><p>${escapeHtml(passage)}</p><div class="story-reading-preview-buttons">🔊 Listen &nbsp; · &nbsp; ◀ Previous Scene &nbsp; · &nbsp; ▶ Read With Me</div></div></div></section>` : `<article class="preview-reading-card"><div class="d-flex align-items-center justify-content-between gap-3 mb-3"><div class="d-flex flex-wrap gap-2"><span class="badge text-bg-primary">1. ${language === 'Filipino' ? 'Makinig' : 'Listen'}</span><span class="badge text-bg-light">2. ${language === 'Filipino' ? 'Magsanay' : 'Practice'}</span><span class="badge text-bg-light">3. ${language === 'Filipino' ? 'Bumasa' : 'Read'}</span></div><img src="{% static 'pabasa_app/images/footer-mascot.png' %}" alt="PABASA reading buddy" width="64" height="64" style="object-fit:contain"></div><div class="fs-5 lh-lg text-center">${escapeHtml(passage)}</div><div class="d-flex flex-wrap justify-content-center gap-2 mt-3"><button class="btn btn-primary" type="button" tabindex="-1">🔊 ${language === 'Filipino' ? 'Pakinggan' : 'Listen'}</button><button class="btn btn-outline-primary" type="button" tabindex="-1">${language === 'Filipino' ? 'Magsanay' : 'Start Practice'} →</button></div></article>`) : empty('Choose a fluency reading set to begin the preview.');
             } else if (templateTitle === "5W's Story Questions") {
                 instruction = learnerCopy.questions;
                 const storyTitle = activeTemplateActivity.content?.storyTitle || 'Story 1 — Ang Umaga ni Lito';
@@ -16811,7 +17318,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 const prompt = String(response.prompt || '').trim();
                 instruction = language === 'Filipino' ? 'Basahin ang kuwento at ibahagi ang iyong tugon.' : 'Read the story and share your response.';
                 previewBody = story && prompt
-                    ? `<div class="preview-story-response"><article class="preview-reading-card mb-3"><div class="d-flex align-items-center gap-3 mb-3"><img src="{% static 'pabasa_app/images/story_response/female_idle.png' %}" alt="Student avatar" style="width:54px;height:54px;object-fit:contain"><div><div class="small text-muted">${language === 'Filipino' ? 'Kuwento' : 'Story'}</div><strong style="font-family:'Righteous', 'Nunito', sans-serif">${escapeHtml(story.title || '')}</strong></div></div><div>${escapeHtml(storyText)}</div></article><div class="preview-question mb-3"><div class="small fw-bold text-muted mb-1">${language === 'Filipino' ? 'Iyong Tugon' : 'Your Response'}</div>${escapeHtml(prompt)}</div><div class="d-flex flex-wrap gap-2 mb-3">${response.readAloud !== false ? `<button class="btn btn-outline-primary btn-sm" type="button" tabindex="-1"><i class="bi bi-volume-up me-1"></i>${language === 'Filipino' ? 'Pakinggan' : 'Read Aloud'}</button>` : ''}${response.voiceRecording !== false ? `<button class="btn btn-primary btn-sm" type="button" tabindex="-1"><i class="bi bi-mic-fill me-1"></i>${language === 'Filipino' ? 'I-record ang Sagot' : 'Record Answer'}</button>` : ''}</div><div class="preview-writing-area" aria-label="Learner writing area"><div class="preview-writing-line"></div><div class="preview-writing-line"></div><div class="preview-writing-line"></div></div></div>`
+                    ? `<section class="story-response-preview" aria-label="Story Response learner preview"><div class="story-response-preview-inner"><header><div class="story-response-preview-brand">THE STORYVENTURE</div><h2 class="story-response-preview-heading">${escapeHtml(story.title || (language === 'Filipino' ? 'Kuwento' : 'Story'))}</h2><p class="story-response-preview-story">${escapeHtml(storyText.slice(0, 150))}${storyText.length > 150 ? '…' : ''}</p></header><div class="story-response-preview-stage"><div class="story-response-preview-tv"><img class="story-response-preview-tv-frame" src="{% static 'pabasa_app/images/story_response/tv.png' %}" alt=""><div class="story-response-preview-screen"><img class="story-response-preview-host" src="{% static 'pabasa_app/images/story_response/female_idle.png' %}" alt="Story host"></div><span class="story-response-preview-live">ON AIR</span><span class="story-response-preview-host-label">STORY EXPLORER</span></div><div class="story-response-preview-bubble"><div class="story-response-preview-copy"><p class="story-response-preview-prompt">${escapeHtml(prompt)}</p><div class="story-response-preview-complete"><i class="bi bi-eye me-1" aria-hidden="true"></i>Preview only · no recording or submission</div></div></div></div></div></section>`
                     : empty('Add the story and response prompt to begin the preview.');
             } else if (activeTemplateActivity.content?.activity_type === 'retell_story') {
                 previewBody = renderRetellStoryPreview(activeTemplateActivity.content);
@@ -16824,6 +17331,21 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 <div class="activity-preview-chrome"><span class="activity-preview-label"><i class="bi bi-eye" aria-hidden="true"></i>Preview</span><span class="activity-preview-meta">${escapeHtml(language)}${weeks.length ? ` · ${weeks.map(escapeHtml).join(', ')}` : ' · No week selected'}</span></div>
                 <div class="activity-preview-stage ${templateTitle === "5W's Story Questions" ? 'five-w-preview' : ''} ${isRetellStoryPreview ? 'retell-w-preview' : ''}">${isRetellStoryPreview ? '' : `<h6 class="activity-preview-title">${escapeHtml(title || templateTitle)}</h6><p class="activity-preview-instruction">${escapeHtml(instruction || summary.meta || '')}</p>`}<div class="activity-preview-content">${previewBody}</div></div>
             `;
+            if (isStoryReadingTemplate(templateTitle)) {
+                const stage = templatePreviewPanel.querySelector('.activity-preview-stage');
+                const content = templatePreviewPanel.querySelector('.activity-preview-content');
+                const storyKey = String(activeTemplateActivity.storyReading?.storyKey || '').trim();
+                const storyLanguage = activeTemplateActivity.storyReading?.language === 'Filipino' ? 'Filipino' : 'English';
+                const selectedStory = getStoryReadingStories(storyLanguage).find(story => story.key === storyKey) || getStoryReadingStories(storyLanguage)[0] || null;
+                const storyText = selectedStory ? selectedStory.sentences.join(' ') : String(summary.body?.[0] || '').trim();
+                const storyNumber = (storyKey.match(/(?:story|set)[-_](\d+)/i) || [])[1] || '1';
+                const storyTitle = selectedStory?.title || summary.title || 'Story Reading';
+                const sceneUrl = `{% static 'pabasa_app/images/story_reading' %}/${storyLanguage}/Set_${storyNumber}/1.png`;
+                stage?.classList.add('story-reading-preview-stage');
+                if (content) {
+                    content.innerHTML = `<section class="story-live-learner-preview" aria-label="Story Reading live stream learner preview"><header class="story-live-learner-header"><img class="story-live-learner-logo" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt=""><span class="story-live-learner-brand">PABASA <b>LIVE</b></span><em>Story Reading</em><span style="margin-left:auto">Preview</span></header><div class="story-live-learner-layout"><div class="story-live-learner-main"><div class="story-live-learner-media"><img class="story-live-learner-scene" src="${sceneUrl}" alt="${escapeAttr(storyTitle)} scene"><div class="story-live-learner-shade"></div><div class="story-live-learner-subtitle">${escapeHtml(storyText.slice(0, 220))}${storyText.length > 220 ? '…' : ''}</div></div><div class="story-live-learner-meta"><strong>${escapeHtml(storyTitle)}</strong><small>${escapeHtml(storyLanguage)} · Story Reading</small></div><div class="story-live-learner-controls"><span>↻ Retry</span><span class="story-live-learner-progress"></span><span>🔊 Listen</span></div><div class="story-live-learner-read">▣ Read With Me</div></div><aside class="story-live-learner-comments"><h4>Live comments</h4><div class="story-live-learner-comment"><strong>Story Guide</strong>Listen to the story, then read with me.</div><div class="story-live-learner-comment"><strong>PABASA</strong>Scene 1 of 6</div></aside></div></section>`;
+                }
+            }
             if (templateTitle === "5W's Story Questions") {
                 const preview = templatePreviewPanel.querySelector('.teacher-story-call-preview');
                 if (preview) {
@@ -16845,6 +17367,51 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     preview.querySelector('.story-actions > :first-child')?.addEventListener('click', () => { questionIndex = Math.max(0, questionIndex - 1); updateStoryCall(); });
                     preview.querySelector('.story-call-mic')?.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); });
                     updateStoryCall();
+                }
+            }
+            if (isPhraseReadingTemplate(templateTitle)) {
+                const buttons = templatePreviewPanel.querySelectorAll('.phrase-learner-preview-envelope');
+                const messageTitle = templatePreviewPanel.querySelector('.phrase-learner-preview-message-title');
+                const messageText = templatePreviewPanel.querySelector('.phrase-learner-preview-message-text');
+                const count = templatePreviewPanel.querySelector('.phrase-learner-preview-count');
+                const fill = templatePreviewPanel.querySelector('.phrase-learner-preview-fill');
+                const enabledButtons = Array.from(buttons).filter(button => String(button.dataset.phraseText || '').trim() && !button.disabled);
+                const total = Math.max(enabledButtons.length, 1);
+                buttons.forEach((button) => {
+                    const phrase = String(button.dataset.phraseText || '').trim();
+                    if (!phrase) {
+                        button.disabled = true;
+                        button.setAttribute('aria-disabled', 'true');
+                        return;
+                    }
+                    const openEnvelope = (event) => {
+                        event?.preventDefault();
+                        event?.stopPropagation();
+                        const envelopeNumber = Number(button.dataset.phraseIndex || 0);
+                        buttons.forEach(item => item.classList.toggle('is-open', item === button));
+                        if (messageTitle) messageTitle.textContent = `Envelope ${envelopeNumber}`;
+                        if (messageText) messageText.textContent = phrase;
+                        if (count) count.textContent = `${envelopeNumber} / ${total}`;
+                        if (fill) fill.style.width = `${(envelopeNumber / total) * 100}%`;
+                    };
+                    button.addEventListener('click', openEnvelope);
+                    button.addEventListener('keydown', (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            openEnvelope(event);
+                        }
+                    });
+                });
+
+                if (buttons.length) {
+                    const firstButton = buttons[0];
+                    firstButton?.classList.add('is-open');
+                    if (messageTitle && firstButton.dataset.phraseText) {
+                        messageTitle.textContent = `Envelope 1`;
+                        messageText.textContent = String(firstButton.dataset.phraseText || '').trim();
+                        count.textContent = `1 / ${total}`;
+                        fill.style.width = `${(1 / total) * 100}%`;
+                    }
                 }
             }
             if (templateTitle === 'Clap & Count Syllables') {
@@ -16989,7 +17556,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const language = activeTemplateActivity.sentenceReading?.language || 'Tagalog';
             const sets = getSentenceReadingSets(language);
             const selectedSet = sets.find(set => set.key === activeTemplateActivity.sentenceReading?.setKey) || sets[0] || null;
-            const selectedIndices = new Set(activeTemplateActivity.sentenceReading?.selectedIndices || []);
+            const selectedIndices = new Set((selectedSet ? selectedSet.items.map((_, index) => index) : []).filter(index => activeTemplateActivity.sentenceReading?.selectedIndices?.includes(index) || true));
             const allSelected = Boolean(selectedSet && selectedSet.items.length && selectedIndices.size === selectedSet.items.length);
             templateDynamicFields.innerHTML = `
                 <div class="row g-3">
@@ -16999,7 +17566,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <div class="phrase-prescribed-header">
                                     <div class="phrase-prescribed-eyebrow">Prescribed Sentence Set</div>
                                     <h6 class="phrase-prescribed-heading">Choose a ready-made sentence set</h6>
-                                    <p class="phrase-prescribed-description">Select a prescribed set, then choose the complete set or individual sentences. Prescribed sentences cannot be edited.</p>
+                                    <p class="phrase-prescribed-description">Selected prescribed sentences are required and locked in place. Teachers may choose the set, but cannot remove any sentence from it.</p>
                                 </div>
                                 <div class="row g-3">
                                 ${sets.map(set => `
@@ -17028,17 +17595,17 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         <div class="col-12 phrase-selected-items">
                             <div class="phrase-selected-items-header">
                                 <h6 class="phrase-selected-items-title">Selected Prescribed Items</h6>
-                                <span class="phrase-selected-items-help">Choose the whole set or individual sentences.</span>
+                                <span class="phrase-selected-items-help">All items in this prescribed set are checked and locked.</span>
                             </div>
                             <div class="phrase-selected-items-list">
                                 <label class="phrase-select-all d-flex align-items-center gap-2 py-1">
-                                    <input type="checkbox" class="form-check-input mt-0" data-sentence-select-all ${allSelected ? 'checked' : ''}>
+                                    <input type="checkbox" class="form-check-input mt-0" data-sentence-select-all checked disabled>
                                     <span>Select All (${selectedSet.items.length} sentences)</span>
                                 </label>
                                 <div class="border-top my-2"></div>
                                 ${selectedSet.items.map((item, index) => `
                                     <label class="d-flex align-items-center gap-2 py-1">
-                                        <input type="checkbox" class="form-check-input mt-0" data-sentence-item-index="${index}" ${selectedIndices.has(index) ? 'checked' : ''}>
+                                        <input type="checkbox" class="form-check-input mt-0" data-sentence-item-index="${index}" checked disabled>
                                         <span>${index + 1}. ${escapeHtml(item)}</span>
                                     </label>
                                 `).join('')}
@@ -17059,20 +17626,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     renderTemplatePreview();
                 });
             });
-            Array.from(templateDynamicFields.querySelectorAll('[data-sentence-item-index]')).forEach(checkbox => {
-                checkbox.addEventListener('change', () => {
-                    const index = Number(checkbox.getAttribute('data-sentence-item-index'));
-                    const current = new Set(activeTemplateActivity.sentenceReading?.selectedIndices || []);
-                    if (checkbox.checked) current.add(index);
-                    else current.delete(index);
-                    setSentenceReadingSelection(Array.from(current).sort((a, b) => a - b));
-                    renderTemplateDynamicFields(title);
-                    renderTemplatePreview();
-                });
-            });
             const selectAllCheckbox = templateDynamicFields.querySelector('[data-sentence-select-all]');
             selectAllCheckbox?.addEventListener('change', () => {
-                const indices = selectAllCheckbox.checked && selectedSet ? selectedSet.items.map((_, index) => index) : [];
+                if (!selectedSet) return;
+                const indices = selectedSet.items.map((_, index) => index);
                 setSentenceReadingSelection(indices);
                 renderTemplateDynamicFields(title);
                 renderTemplatePreview();
