@@ -7549,6 +7549,25 @@ def _section_assessment_week_status(section, on_date=None):
     return 'none'
 
 
+def _expire_assessment_week_if_needed(section):
+    """Turn off a section's Assessment Week switch after its calendar closes.
+
+    The switch is intentionally persisted so it can be controlled by the
+    teacher during an active window. Once that window has ended, retaining an
+    ON value is stale state and must not keep restricting the class.
+    """
+    if not section or not section.assessment_week_enabled:
+        return False
+    if _section_assessment_week_status(section) != 'after':
+        return True
+
+    Section.objects.filter(
+        pk=section.pk, assessment_week_enabled=True,
+    ).update(assessment_week_enabled=False, updated_at=timezone.now())
+    section.assessment_week_enabled = False
+    return False
+
+
 def _student_completed_section_assessment(student, section):
     """Return whether the student has any historical completed assessment.
 
@@ -10046,6 +10065,8 @@ def assessment(request):
         for section in Section.objects.filter(is_active=True).select_related('teacher')
         if user and section.has_student(user, active_only=True)
     ] if user and getattr(user, 'role', '') == 'student' else []
+    for section in joined_sections:
+        _expire_assessment_week_if_needed(section)
     requested_section_id = request.GET.get('section_id')
     assessment_week_section = None
     if requested_section_id:
@@ -10055,7 +10076,7 @@ def assessment(request):
             requested_section_id = None
     if requested_section_id:
         assessment_week_section = next(
-            (section for section in joined_sections if section.id == requested_section_id and section.assessment_week_enabled),
+            (section for section in joined_sections if section.id == requested_section_id and _expire_assessment_week_if_needed(section)),
             None,
         )
     selected_section = None
@@ -19405,7 +19426,7 @@ def get_class_materials(request):
             | Q(system_assessment_phase__in=['pretest', 'posttest'])
         )
         assessment_week_enabled = bool(
-            request_user.role == 'student' and section.assessment_week_enabled
+            request_user.role == 'student' and _expire_assessment_week_if_needed(section)
         )
         if request_user.role == 'student' and _section_assessment_week_status(section) == 'after':
             if not _student_completed_section_assessment(request_user, section) and not _student_has_approved_assessment_request(request_user, section):
@@ -20983,6 +21004,7 @@ def _student_has_assessment_week(student):
         return False
     return any(
         section.has_student(student, active_only=True)
+        and _expire_assessment_week_if_needed(section)
         and _section_assessment_week_status(section) == 'during'
         for section in Section.objects.filter(is_active=True, assessment_week_enabled=True)
     )
@@ -21017,7 +21039,7 @@ def _assessment_week_allows_material(student, material):
         section.has_student(student, active_only=True)
         and (
             (
-                section.assessment_week_enabled
+                _expire_assessment_week_if_needed(section)
                 and _section_assessment_week_status(section) == 'during'
             )
             or (
@@ -21046,6 +21068,8 @@ def _material_assessment_week_section(student, material):
             # The switch controls access only while the matching calendar
             # event is in progress. It may remain stored as ON after the
             # event, but that stale value must never block teacher materials.
+            if not _expire_assessment_week_if_needed(section):
+                continue
             if _section_assessment_week_status(section) != 'during':
                 continue
             return section
