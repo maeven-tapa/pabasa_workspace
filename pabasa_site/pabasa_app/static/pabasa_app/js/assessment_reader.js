@@ -4,6 +4,11 @@
     const initReader = () => {
         const shell = document.querySelector(".reader-shell");
         if (!shell) return;
+        // These are the shared parents for all reading-phase UI: the assessment
+        // header and the card containing the material, story panels, speech
+        // panel, and reading navigation controls.
+        const readerTop = shell.querySelector(".reader-top");
+        const readerStage = shell.querySelector(".reader-stage");
 
         let mode = 'word'; 
         if (shell.classList.contains('reader-sentence')) mode = 'sentence';
@@ -1081,8 +1086,21 @@
         function hideStoryPanels() {
             storySelectionPanel?.classList.add("d-none");
             storyQuestionPanel?.classList.add("d-none");
+            crlaQuestionPanel?.classList.add("d-none");
             storyReadyInstruction?.classList.add("d-none");
             storyReadingProgress?.classList.add("d-none");
+        }
+
+        function setLearnerExperienceView(isActive) {
+            const shouldShowLearnerExperience = Boolean(isActive);
+            shell.classList.toggle("is-learner-experience", shouldShowLearnerExperience);
+            if (shouldShowLearnerExperience) hideStoryPanels();
+            [readerTop, readerStage].forEach((element) => {
+                if (!element) return;
+                element.classList.toggle("d-none", shouldShowLearnerExperience);
+                element.toggleAttribute("hidden", shouldShowLearnerExperience);
+                element.setAttribute("aria-hidden", String(shouldShowLearnerExperience));
+            });
         }
 
         function updateStandardAssessmentControls() {
@@ -1190,6 +1208,7 @@
         }
 
         function renderStoryComprehensionState(storyTitle) {
+            if (currentStoryState === "learner_experience") return;
             currentStoryState = "story_comprehension";
             currentAssessmentUiMode = "story";
             hideStoryPanels();
@@ -1304,8 +1323,10 @@
         }
 
         function renderLearnerExperienceState() {
+            currentStoryState = "learner_experience";
             hideStoryPanels();
             shell.classList.remove("is-complete");
+            setLearnerExperienceView(true);
             learnerExperiencePage?.classList.remove("d-none");
             learnerExperienceOptions.forEach(option => {
                 option.classList.remove("is-selected");
@@ -1313,8 +1334,8 @@
             });
             if (learnerExperienceContinue) learnerExperienceContinue.disabled = true;
             if (learnerExperienceFeedback) learnerExperienceFeedback.textContent = "";
-            currentStoryState = "learner_experience";
             updateFooterForStoryState("learner_experience");
+            window.scrollTo({ top: 0, left: 0, behavior: "auto" });
         }
 
         async function showLearnerExperience() {
@@ -1406,6 +1427,7 @@
         }
 
         function renderCRLAComprehensionState(storyTitle, persistedState = {}) {
+            if (currentStoryState === "learner_experience") return;
             currentStoryState = "story_comprehension";
             currentAssessmentUiMode = "story";
             hideStoryPanels();
@@ -1521,6 +1543,7 @@
 
         function updateFooterForStoryState(state) {
             const nextState = String(state || "story_selection");
+            setLearnerExperienceView(nextState === "learner_experience");
             shell?.classList.toggle("is-story-selection", nextState === "story_selection");
             shell?.classList.toggle("is-story-ready", nextState !== "story_selection");
             shell?.classList.toggle("is-story-ready-state", nextState === "story_ready");
@@ -4098,6 +4121,11 @@
         }
 
         function updateUI() {
+            if (currentStoryState === "learner_experience") {
+                setLearnerExperienceView(true);
+                return;
+            }
+            setLearnerExperienceView(false);
             if (!items.length) return;
             stopReadAloud();
             setCurrentItemMode(itemTypes[currentIndex] || mode);
