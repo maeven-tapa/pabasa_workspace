@@ -60,9 +60,10 @@
             try { payload = JSON.parse(init.body || "{}"); } catch (error) { payload = {}; }
             payload.material_id = material.id || payload.material_id;
             payload.activity_type = "sentence_bot";
-            payload.items_completed = state.total;
-            payload.correct_items = state.total;
-            payload.scores = { ...(payload.scores || {}), correct_sentences: state.total, total_sentences: state.total };
+            const submittedCorrect = Number(payload.scores?.correct_items);
+            if (Number.isFinite(submittedCorrect)) {
+                state.learned = Math.max(0, Math.min(state.total, submittedCorrect));
+            }
             return originalFetch(completionUrl, { ...init, body: JSON.stringify(payload) });
         };
     }
@@ -71,6 +72,7 @@
     const wordStage = root.querySelector(".word-stage");
     const footer = root.querySelector(".reader-footer");
     const startButton = document.getElementById("btnStartReading");
+    const nextButton = document.getElementById("nextBtn");
     const stopButton = document.getElementById("btnStopReading");
     const doneButton = document.getElementById("reviewBtn");
     const backButton = document.getElementById("finishBtn");
@@ -80,6 +82,7 @@
         <div class="sentence-bot-circuit" aria-hidden="true"></div>
         <img class="sentence-bot-particles" src="${assetRoot}particle1.png" alt="">
         <header class="sentence-bot-header">
+            <a class="sentence-bot-back" href="${backUrl}" aria-label="Back">←</a>
             <div><p class="sentence-bot-kicker">PABASA LANGUAGE LAB</p><h1>SENTENCE BOT</h1></div>
             <div class="sentence-bot-training-meta"><span class="sentence-bot-language">${language}</span><strong id="sentenceBotTraining">TRAINING 01 / ${pad(state.total)}</strong></div>
         </header>
@@ -106,6 +109,11 @@
     stage?.insertBefore(lab, card);
     lab.querySelector(".sentence-bot-sentence-slot")?.appendChild(wordStage);
     lab.querySelector(".sentence-bot-action-slot")?.appendChild(footer);
+    const advanceButton = document.createElement("button");
+    advanceButton.type = "button";
+    advanceButton.className = "sentence-bot-advance";
+    advanceButton.addEventListener("click", () => nextButton?.click());
+    footer?.querySelector(".recording-controls")?.appendChild(advanceButton);
     if (card) card.hidden = true;
     const robot = document.getElementById("sentenceBotRobot");
     const message = document.getElementById("sentenceBotMessage");
@@ -115,6 +123,12 @@
     const training = document.getElementById("sentenceBotTraining");
     const learned = document.getElementById("sentenceBotLearned");
     const chipBank = document.getElementById("sentenceBotChipBank");
+    function updateAdvanceButton() {
+        if (!advanceButton) return;
+        const isFinalSentence = state.index >= state.total - 1;
+        advanceButton.textContent = isFinalSentence ? "Finish" : "Skip";
+        advanceButton.setAttribute("aria-label", isFinalSentence ? "Finish sentence reading" : "Skip this sentence");
+    }
     function pad(value) { return String(Math.max(0, Number(value) || 0)).padStart(2, "0"); }
     function renderChips() {
         if (!chipBank) return;
@@ -133,6 +147,7 @@
         }));
         if (learned) learned.textContent = `${state.learned} / ${state.total} LEARNED`;
         if (training) training.textContent = `TRAINING ${pad(Math.min(state.index + 1, state.total))} / ${pad(state.total)}`;
+        updateAdvanceButton();
     }
     function setMode(mode, copy) {
         state.mode = mode; root.dataset.botState = mode;
@@ -196,12 +211,19 @@
         }
     }
 
+    function completionMessageFor(correct, total) {
+        if (correct >= total && total > 0) return "Woohoo! Pippo knows all the sentences now!";
+        if (correct === 0) return "Keep practicing! Pippo is still learning these sentences.";
+        if (correct / Math.max(1, total) >= 0.85) return `Great job! Pippo learned ${correct} out of ${total} sentences!`;
+        return `Nice work! Pippo learned ${correct} out of ${total} sentences!`;
+    }
+
     function renderCompletionFromEngine() {
         if (completionRendered || !root.classList.contains("is-complete")) return;
         completionRendered = true;
         state.learned = persistedCompletion.completed
             ? Math.min(state.total, Math.max(0, Number(persistedCompletion.correct_sentences) || 0))
-            : state.total;
+            : Math.min(state.total, Math.max(0, state.learned));
         state.index = state.total - 1;
         renderChips();
         setMode("success", "ROBOT TRAINING COMPLETE!");
@@ -219,7 +241,7 @@
         }
         if (kicker) kicker.textContent = "ROBOT TRAINING";
         if (title) title.textContent = "COMPLETE! 🤖";
-        if (completionMessage) completionMessage.textContent = "Woohoo! 🚀 Pippo knows all the sentences now! 🤖🎉";
+        if (completionMessage) completionMessage.textContent = completionMessageFor(state.learned, state.total);
         const sentenceResultValue = sentenceResult?.querySelector("strong");
         if (sentenceResultValue) sentenceResultValue.textContent = `${state.learned} / ${state.total}`;
         if (doneButton) doneButton.textContent = "Done";

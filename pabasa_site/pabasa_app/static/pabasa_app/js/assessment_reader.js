@@ -15,6 +15,7 @@
         if (shell.classList.contains('reader-paragraph')) mode = 'paragraph';
         if (shell.classList.contains('reader-vowel')) mode = 'vowel';
         if (shell.classList.contains('reader-phrase')) mode = 'phrase';
+        const isSentenceBot = shell.classList.contains('sentence-bot-root');
 
         const readingWord = document.getElementById("readingWord");
         const readingTitle = document.getElementById("readingTitle");
@@ -2993,7 +2994,7 @@
             if (nextBtn) {
                 nextBtn.disabled = speechResponsePending || (isReviewMode
                     ? (onLastItem && isLastPage)
-                    : (!isRecording || (onLastItem && isLastPage)));
+                    : (isSentenceBot ? false : (!isRecording || (onLastItem && isLastPage))));
             }
         }
 
@@ -5321,6 +5322,7 @@
                 isRecording
                 && (currentAssessmentUiMode === "standard" || currentStoryState === "story_reading")
             ) {
+                if (isSentenceBot) return;
                 stopReading();
                 return;
             }

@@ -1000,6 +1000,84 @@ class ReadingLaunchClassificationTests(TestCase):
         self.assertEqual(duplicate_response.status_code, 200)
         self.assertEqual(material.assessment_results.filter(student=student, attempt_status='completed').count(), 1)
 
+    def test_sentence_bot_skipped_sentences_do_not_become_perfect_score(self):
+        student = self._login_student()
+        material = self._sentence_material(code='SKIPPED-SENTENCE-BOT')
+        material.content_json['items'] = [
+            {'sentence': 'One sentence.'},
+            {'sentence': 'Two sentence.'},
+            {'sentence': 'Three sentence.'},
+            {'sentence': 'Four sentence.'},
+            {'sentence': 'Five sentence.'},
+            {'sentence': 'Six sentence.'},
+            {'sentence': 'Seven sentence.'},
+        ]
+        material.save(update_fields=['content_json'])
+
+        response = self.client.post(
+            reverse('sentence_bot_complete'),
+            data=json.dumps({
+                'material_id': f'material-{material.id}',
+                'activity_type': 'sentence_bot',
+                'scores': {'correct_items': 0, 'duration_seconds': 5},
+            }),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['correct_items'], 0)
+        result = material.assessment_results.get(student=student, attempt_status='completed')
+        self.assertEqual(result.items_completed, 7)
+        self.assertEqual(result.correct_items, 0)
+        self.assertEqual(result.accuracy, 0)
+        self.assertEqual(result.total_score, 0)
+
+    def test_sentence_bot_completion_persists_perfect_and_partial_sentence_counts(self):
+        student = self._login_student()
+        sentences = [{'sentence': f'Sentence {index}.'} for index in range(1, 8)]
+
+        for correct_items in (7, 5):
+            material = self._sentence_material(code=f'RESULT-{correct_items}-SENTENCE-BOT')
+            material.content_json['items'] = sentences
+            material.save(update_fields=['content_json'])
+            response = self.client.post(
+                reverse('sentence_bot_complete'),
+                data=json.dumps({
+                    'material_id': f'material-{material.id}',
+                    'activity_type': 'sentence_bot',
+                    'scores': {'correct_items': correct_items, 'duration_seconds': 8},
+                }),
+                content_type='application/json',
+            )
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()['correct_items'], correct_items)
+            reopened = self.client.get(reverse('sentence_bot_page'), {'id': f'material-{material.id}'})
+            completion = json.loads(reopened.context['sentence_bot_completion_json'])
+            self.assertEqual(completion['correct_sentences'], correct_items)
+            self.assertEqual(completion['total_sentences'], 7)
+            self.assertNotEqual(completion['correct_sentences'], 7 if correct_items == 5 else 0)
+
+    def test_sentence_bot_listening_control_is_not_a_navigation_control(self):
+        sentence_bot_source = (Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'sentence_bot.js').read_text(encoding='utf-8')
+        reader_source = (Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js').read_text(encoding='utf-8')
+
+        self.assertIn('advanceButton.textContent = isFinalSentence ? "Finish" : "Skip";', sentence_bot_source)
+        self.assertIn('advanceButton.addEventListener("click", () => nextButton?.click());', sentence_bot_source)
+        self.assertNotIn('payload.correct_items = state.total;', sentence_bot_source)
+        self.assertIn('if (isSentenceBot) return;', reader_source)
+        self.assertIn(': (isSentenceBot ? false : (!isRecording || (onLastItem && isLastPage)))', reader_source)
+
+    def test_sentence_bot_completion_message_has_perfect_and_partial_result_variants(self):
+        sentence_bot_source = (Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'sentence_bot.js').read_text(encoding='utf-8')
+
+        self.assertIn('function completionMessageFor(correct, total)', sentence_bot_source)
+        self.assertIn('Woohoo! Pippo knows all the sentences now!', sentence_bot_source)
+        self.assertIn('Great job! Pippo learned ${correct} out of ${total} sentences!', sentence_bot_source)
+        self.assertIn('Nice work! Pippo learned ${correct} out of ${total} sentences!', sentence_bot_source)
+        self.assertIn('Keep practicing! Pippo is still learning these sentences.', sentence_bot_source)
+        self.assertIn('completionMessageFor(state.learned, state.total)', sentence_bot_source)
+
     def test_custom_material_launch_is_redirected_to_clean_non_crla_url(self):
         material = Material.objects.create(
             title='English Reading',

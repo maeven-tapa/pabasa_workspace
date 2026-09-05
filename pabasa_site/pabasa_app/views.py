@@ -12380,7 +12380,7 @@ def sentence_bot_page(request):
     completion_payload = {}
     if completed_result:
         saved_total = max(0, int(getattr(completed_result, 'items_completed', 0) or total_sentences))
-        saved_correct = max(0, int(getattr(completed_result, 'correct_items', 0) or saved_total))
+        saved_correct = max(0, int(getattr(completed_result, 'correct_items', 0) or 0))
         if total_sentences:
             saved_total = total_sentences
             saved_correct = min(saved_correct, total_sentences)
@@ -12433,16 +12433,21 @@ def sentence_bot_complete(request):
         if existing is None:
             raw_scores = data.get('scores') if isinstance(data.get('scores'), dict) else {}
             duration_seconds = max(0, int(raw_scores.get('duration_seconds') or data.get('duration_seconds') or 0))
+            raw_correct_items = raw_scores.get('correct_items', data.get('correct_items'))
+            if raw_correct_items is None:
+                raw_correct_items = 1 if total_sentences == 1 else 0
+            correct_items = min(total_sentences, max(0, int(raw_correct_items or 0)))
+            accuracy = round((correct_items / total_sentences) * 100) if total_sentences else 0
             material.record_assessment_result(
                 student_user,
                 status='completed', completed_at=timezone.now(),
-                items_completed=total_sentences, correct_items=total_sentences,
-                accuracy=100, total_score=100, passed=True,
+                items_completed=total_sentences, correct_items=correct_items,
+                accuracy=accuracy, total_score=accuracy, passed=correct_items == total_sentences,
                 duration_seconds=duration_seconds,
                 transcript=str(raw_scores.get('transcript') or data.get('transcript') or '')[:5000],
                 speech_recognition_used=bool(raw_scores.get('speech_recognition_used') or data.get('speech_recognition_used')),
                 remarks='SENTENCE_BOT_RESULT:' + json.dumps({
-                    'correct_sentences': total_sentences,
+                    'correct_sentences': correct_items,
                     'total_sentences': total_sentences,
                 }, separators=(',', ':')),
             )
@@ -12452,11 +12457,11 @@ def sentence_bot_complete(request):
     return JsonResponse({
         'success': True,
         'already_completed': was_already_completed,
-        'correct_items': int(getattr(existing, 'correct_items', 0) or total_sentences),
-        'items_completed': int(getattr(existing, 'items_completed', 0) or total_sentences),
-        'accuracy': getattr(existing, 'accuracy', None) or 100,
-        'total_score': getattr(existing, 'total_score', None) or 100,
-        'final_score': getattr(existing, 'total_score', None) or 100,
+        'correct_items': int(getattr(existing, 'correct_items', 0) or 0),
+        'items_completed': int(getattr(existing, 'items_completed', 0) or 0),
+        'accuracy': getattr(existing, 'accuracy', None),
+        'total_score': getattr(existing, 'total_score', None),
+        'final_score': getattr(existing, 'total_score', None),
     })
 
 
