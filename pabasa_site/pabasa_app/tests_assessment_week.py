@@ -187,6 +187,31 @@ class AssessmentWeekTests(TestCase):
         )
         self.assertEqual(launch_response.status_code, 200)
 
+    def test_completed_official_assessment_unblocks_teacher_materials_after_assessment_week(self):
+        """A stale switch cannot strand a student after completing the official CRLA."""
+        CalendarEvent.objects.filter(school_calendar=self.calendar).update(
+            end_date=date.today() - timedelta(days=1)
+        )
+        self.section_a.assessment_week_enabled = True
+        self.section_a.save(update_fields=['assessment_week_enabled'])
+        official_material = Material.objects.filter(
+            is_official_reading=True,
+            assessment_kind='crla',
+            system_assessment_phase='pretest',
+        ).first()
+        self.assertIsNotNone(official_material)
+        official_material.record_assessment_result(
+            self.student_a,
+            status='completed',
+            completed_at=timezone.now(),
+        )
+
+        self._login(self.student_a)
+        response = self.client.get(
+            reverse('reading_word_page'), {'id': f'material-{self.normal_a.id}'}
+        )
+        self.assertEqual(response.status_code, 200)
+
     def test_multiple_enabled_sections_are_independently_restricted(self):
         Section.objects.filter(id__in=[self.section_a.id, self.section_b.id]).update(
             assessment_week_enabled=True

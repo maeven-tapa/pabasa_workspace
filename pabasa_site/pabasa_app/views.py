@@ -21027,7 +21027,7 @@ def _assessment_week_allows_material(student, material):
 
 
 def _material_assessment_week_section(student, material):
-    """Return the student's enabled Assessment Week section for this material."""
+    """Return an enabled Assessment Week section that still restricts this student."""
     if not student or not material:
         return None
     candidate_ids = set()
@@ -21039,6 +21039,15 @@ def _material_assessment_week_section(student, material):
         id__in=candidate_ids, is_active=True, assessment_week_enabled=True
     ):
         if section.has_student(student, active_only=True):
+            # A switch left on after its calendar event must not keep a
+            # student who completed the official assessment from progressing
+            # to their teacher's materials.  During the event, the switch
+            # retains its normal section-wide restriction.
+            if (
+                _section_assessment_week_status(section) == 'after'
+                and _student_completed_section_assessment(student, section)
+            ):
+                continue
             return section
     return None
 
