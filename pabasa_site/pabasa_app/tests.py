@@ -3689,6 +3689,77 @@ class ReadingMatcherTests(TestCase):
         resolved = [(item["expected_index"], item["result"]) for item in result["word_results"]]
         self.assertEqual(resolved, [(2, "correct"), (3, "correct"), (4, "correct")])
 
+    def test_story_cursor_alignment_keeps_complete_correct_sequence(self):
+        result = align_story_transcript(
+            "Ang bata ay pumunta",
+            "Ang bata ay pumunta",
+            start_word_index=0,
+        )
+        self.assertEqual(result["miscues"], 0)
+        self.assertEqual(
+            [(item["expected"], item["result"]) for item in result["word_results"]],
+            [("ang", "correct"), ("bata", "correct"), ("ay", "correct"), ("pumunta", "correct")],
+        )
+
+    def test_story_cursor_alignment_marks_middle_omission_and_keeps_following_word(self):
+        result = align_story_transcript(
+            "Ang bata ay pumunta",
+            "Ang bata pumunta",
+            start_word_index=0,
+        )
+        self.assertEqual(result["miscues"], 1)
+        self.assertEqual(
+            [(item["expected"], item["recognized"], item["result"], item["type"]) for item in result["word_results"]],
+            [
+                ("ang", "ang", "correct", "correct"),
+                ("bata", "bata", "correct", "correct"),
+                ("ay", None, "miscue", "omission"),
+                ("pumunta", "pumunta", "correct", "correct"),
+            ],
+        )
+
+    def test_story_cursor_alignment_preserves_substitution_behavior(self):
+        result = align_story_transcript(
+            "Ang bata ay pumunta",
+            "Ang bata ba pumunta",
+            start_word_index=0,
+        )
+        self.assertEqual(result["miscues"], 1)
+        self.assertEqual(
+            [(item["expected"], item["recognized"], item["type"]) for item in result["word_results"]],
+            [
+                ("ang", "ang", "correct"),
+                ("bata", "bata", "correct"),
+                ("ay", "ba", "substitution"),
+                ("pumunta", "pumunta", "correct"),
+            ],
+        )
+
+    def test_story_cursor_alignment_preserves_insertion_count(self):
+        result = align_story_transcript(
+            "Ang bata ay pumunta",
+            "Ang bata ay mabilis pumunta",
+            start_word_index=0,
+        )
+        self.assertEqual(result["miscues"], 1)
+        self.assertTrue(all(
+            item["result"] == "correct"
+            for item in result["word_results"]
+            if item.get("expected_index") is not None
+        ))
+
+    def test_story_cursor_alignment_preserves_trailing_unread_word_handling(self):
+        result = align_story_transcript(
+            "Ang bata ay pumunta sa bahay",
+            "Ang bata ay pumunta",
+            start_word_index=0,
+        )
+        self.assertEqual(result["miscues"], 0)
+        self.assertEqual(
+            [(item["expected_index"], item["result"]) for item in result["word_results"]],
+            [(0, "correct"), (1, "correct"), (2, "correct"), (3, "correct")],
+        )
+
     def test_story_cursor_relative_alignment_is_independent_of_chunk_boundaries(self):
         expected = "ako ang pinakamabilis tumakbo sa bahay"
         one_chunk = align_story_transcript(expected, "ako ang pinakamabilis tumakbo sa bahay", start_word_index=0)

@@ -791,8 +791,6 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
     cursor_relative = start_word_index is not None
     absolute_word_offset = min(max(0, int(start_word_index or 0)), len(all_expected_words))
     expected_words = all_expected_words[absolute_word_offset:] if cursor_relative else all_expected_words
-    if cursor_relative and recognized_words:
-        expected_words = expected_words[:len(recognized_words)]
     if not expected_words and not recognized_words:
         return {
             "expected_text": str(expected_text or ""),
