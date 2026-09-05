@@ -20983,6 +20983,7 @@ def _student_has_assessment_week(student):
         return False
     return any(
         section.has_student(student, active_only=True)
+        and _section_assessment_week_status(section) == 'during'
         for section in Section.objects.filter(is_active=True, assessment_week_enabled=True)
     )
 
@@ -21015,7 +21016,10 @@ def _assessment_week_allows_material(student, material):
     return any(
         section.has_student(student, active_only=True)
         and (
-            section.assessment_week_enabled
+            (
+                section.assessment_week_enabled
+                and _section_assessment_week_status(section) == 'during'
+            )
             or (
                 _section_assessment_week_status(section) == 'after'
                 and _student_completed_section_assessment(student, section)
@@ -21039,14 +21043,10 @@ def _material_assessment_week_section(student, material):
         id__in=candidate_ids, is_active=True, assessment_week_enabled=True
     ):
         if section.has_student(student, active_only=True):
-            # A switch left on after its calendar event must not keep a
-            # student who completed the official assessment from progressing
-            # to their teacher's materials.  During the event, the switch
-            # retains its normal section-wide restriction.
-            if (
-                _section_assessment_week_status(section) == 'after'
-                and _student_completed_section_assessment(student, section)
-            ):
+            # The switch controls access only while the matching calendar
+            # event is in progress. It may remain stored as ON after the
+            # event, but that stale value must never block teacher materials.
+            if _section_assessment_week_status(section) != 'during':
                 continue
             return section
     return None

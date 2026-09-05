@@ -212,6 +212,20 @@ class AssessmentWeekTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
 
+    def test_stale_assessment_week_switch_does_not_block_teacher_materials_after_window(self):
+        """An ON switch has no effect after the calendar assessment window closes."""
+        CalendarEvent.objects.filter(school_calendar=self.calendar).update(
+            end_date=date.today() - timedelta(days=1)
+        )
+        self.section_a.assessment_week_enabled = True
+        self.section_a.save(update_fields=['assessment_week_enabled'])
+
+        self._login(self.student_a)
+        response = self.client.get(
+            reverse('reading_word_page'), {'id': f'material-{self.normal_a.id}'}
+        )
+        self.assertEqual(response.status_code, 200)
+
     def test_multiple_enabled_sections_are_independently_restricted(self):
         Section.objects.filter(id__in=[self.section_a.id, self.section_b.id]).update(
             assessment_week_enabled=True
