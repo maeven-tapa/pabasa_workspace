@@ -703,6 +703,7 @@
 </section>
 
 
+{{ student_section_ids|json_script:"student-section-ids-data" }}
 <script>
     // --- Assessment click tracking and recent class order logic ---
 
@@ -745,7 +746,8 @@
         const readingsStorageKey = "pabasa_section_readings";
         const completedAssessmentIdsKey = "pabasa_completed_assessment_ids";
         const materialTypes = ["word", "sentence", "paragraph", "vowel"];
-        const serverJoinedSectionIds = {{ student_section_ids|default:'[]'|safe }};
+        const sectionIdsData = document.getElementById("student-section-ids-data");
+        const serverJoinedSectionIds = sectionIdsData ? JSON.parse(sectionIdsData.textContent) : [];
         const requestedSectionId = (new URLSearchParams(window.location.search).get("section_id") || "").trim();
         const selectedSectionId = requestedSectionId;
 
@@ -1008,6 +1010,13 @@
             };
 
             const isAssessmentCompleted = (material, materialId) => {
+                const isFluencyReading = String(material?.content_json?.activity_key || '') === 'fluency_reading';
+                if (isFluencyReading) {
+                    // Fluency is complete only after its dedicated recording is
+                    // server-scored; a cached reader ID must never color it done.
+                    return material.student_has_completed === true
+                        && Number(material.completed_attempt_count || 0) > 0;
+                }
                 return Boolean(
                     material &&
                     (
