@@ -1004,8 +1004,18 @@
             const answered = currentStoryAnswers.filter(answer => String(answer || "").trim()).length;
             const correctAnswers = currentStoryResults.filter(result => result === true).length;
             const accuracy = answered ? Math.round((correctAnswers / answered) * 100) : 0;
-            const totalStoryWords = Math.max(1, readableWordCount(currentSelectedStory?.content || ""));
-            const storyReadPercent = Math.min(100, Math.round((correctWordsRead() / totalStoryWords) * 100));
+            const persistedStoryState = readStudentEndState();
+            const persistedDurationSeconds = Number(persistedStoryState?.duration_seconds);
+            const finalizedDurationSeconds = Number.isFinite(persistedDurationSeconds) && persistedDurationSeconds > 0
+                ? persistedDurationSeconds
+                : readingScores.duration_seconds;
+            const storyMetrics = calculateFinalizedStoryMetrics(
+                readableWordCount(currentSelectedStory?.content || ""),
+                storyMiscueCount,
+                finalizedDurationSeconds,
+            );
+            const totalStoryWords = storyMetrics.totalStoryWords;
+            const storyReadPercent = storyMetrics.accuracy;
             const classification = getStoryClassificationFromResult(storyReadPercent, correctAnswers);
             latestScores = {
                 ...readingScores,
@@ -1016,8 +1026,10 @@
                 accuracy,
                 story_read_percent: storyReadPercent,
                 total_story_words: totalStoryWords,
-                words_read: correctWordsRead(),
-                miscues: storyMiscueCount,
+                words_read: storyMetrics.wordsRead,
+                miscues: storyMetrics.miscues,
+                duration_seconds: storyMetrics.durationSeconds,
+                wpm: storyMetrics.wpm,
                 total_questions: currentStoryQuestions.length,
             };
             storyQuestionPanel?.classList.add("is-complete");
@@ -1050,17 +1062,17 @@
                 selected_story: currentSelectedStory?.title || "",
                 story_read_percent: storyReadPercent,
                 correct_words_percentage: storyReadPercent,
-                total_words_read: correctWordsRead(),
+                total_words_read: storyMetrics.wordsRead,
                 total_story_words: totalStoryWords,
-                miscues: storyMiscueCount,
-                duration_seconds: readingScores.duration_seconds ?? null,
-                wpm: readingScores.wpm ?? null,
+                miscues: storyMetrics.miscues,
+                duration_seconds: storyMetrics.durationSeconds,
+                wpm: storyMetrics.wpm,
                 correct_answers: correctAnswers,
                 total_questions: currentStoryQuestions.length,
                 comprehension_correct: correctAnswers,
                 comprehension_total: currentStoryQuestions.length,
                 story_total_words: totalStoryWords,
-                words_read: correctWordsRead(),
+                words_read: storyMetrics.wordsRead,
                 classification,
             });
             try {
@@ -2363,6 +2375,26 @@
                 remarks: needsManualReview
                     ? "Speech recognition was unavailable or did not capture speech; teacher review is recommended."
                     : "Assessment scoring will be finalized by the server."
+            };
+        }
+
+        function calculateFinalizedStoryMetrics(totalStoryWords, storyMiscues, elapsedDurationSeconds) {
+            const totalWords = Math.max(0, Number(totalStoryWords) || 0);
+            const miscues = Math.max(0, Number(storyMiscues) || 0);
+            const wordsRead = Math.max(0, totalWords - miscues);
+            const durationSeconds = Math.max(1, Number(elapsedDurationSeconds) || 0);
+            const accuracy = totalWords
+                ? Math.min(100, Math.round((wordsRead / totalWords) * 100))
+                : 0;
+            const wpm = Math.round((wordsRead / Math.max(durationSeconds / 60, 1 / 60)) * 100) / 100;
+
+            return {
+                totalStoryWords: totalWords,
+                miscues,
+                wordsRead,
+                durationSeconds,
+                accuracy,
+                wpm,
             };
         }
 
@@ -5384,27 +5416,30 @@
             stopSpeechRecognition();
             if (currentStoryState === "story_reading" && currentSelectedStory) {
                 const readingScores = calculateScores();
-                const totalStoryWords = readableWordCount(currentSelectedStory.content || "");
-                const wordsRead = correctWordsRead();
+                const storyMetrics = calculateFinalizedStoryMetrics(
+                    readableWordCount(currentSelectedStory.content || ""),
+                    storyMiscueCount,
+                    readingScores.duration_seconds,
+                );
                 await updateStudentEndState({
                     stage: "story_reading",
                     selected_story: currentSelectedStory.title,
-                    story_total_words: totalStoryWords,
-                    total_story_words: totalStoryWords,
-                    words_read: wordsRead,
-                    total_words_read: wordsRead,
-                    miscues: storyMiscueCount,
-                    duration_seconds: readingScores.duration_seconds,
-                    wpm: readingScores.wpm,
+                    story_total_words: storyMetrics.totalStoryWords,
+                    total_story_words: storyMetrics.totalStoryWords,
+                    words_read: storyMetrics.wordsRead,
+                    total_words_read: storyMetrics.wordsRead,
+                    miscues: storyMetrics.miscues,
+                    duration_seconds: storyMetrics.durationSeconds,
+                    wpm: storyMetrics.wpm,
                     comprehension_total: currentStoryQuestions.length,
                     total_questions: currentStoryQuestions.length,
                 });
                 if (isCrla) renderCRLAComprehensionState(currentSelectedStory.title, {
-                    story_read_percent: Math.min(100, Math.round((wordsRead / Math.max(1, totalStoryWords)) * 100)),
-                    passage_accuracy_percent: Math.min(100, Math.round((wordsRead / Math.max(1, totalStoryWords)) * 100)),
-                    story_total_words: totalStoryWords, total_story_words: totalStoryWords,
-                    words_read: wordsRead, total_words_read: wordsRead,
-                    miscues: storyMiscueCount, duration_seconds: readingScores.duration_seconds, wpm: readingScores.wpm,
+                    story_read_percent: storyMetrics.accuracy,
+                    passage_accuracy_percent: storyMetrics.accuracy,
+                    story_total_words: storyMetrics.totalStoryWords, total_story_words: storyMetrics.totalStoryWords,
+                    words_read: storyMetrics.wordsRead, total_words_read: storyMetrics.wordsRead,
+                    miscues: storyMetrics.miscues, duration_seconds: storyMetrics.durationSeconds, wpm: storyMetrics.wpm,
                 });
                 else renderStoryComprehensionState(currentSelectedStory.title);
                 return;

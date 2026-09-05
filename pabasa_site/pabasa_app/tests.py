@@ -1234,6 +1234,55 @@ class ReadingLaunchClassificationTests(TestCase):
         self.assertIn('if (paragraphWordResults[activeWordIndex] !== "miscue")', recorder)
         self.assertNotIn('paragraphWordResults[activeWordIndex] = "correct"', recorder)
 
+    def test_story_finalized_metrics_use_total_words_minus_miscues(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        helper = content.split('function calculateFinalizedStoryMetrics(', 1)[1].split('function correctWordsRead()', 1)[0]
+
+        self.assertIn('const wordsRead = Math.max(0, totalWords - miscues);', helper)
+        self.assertIn('wordsRead / totalWords', helper)
+        self.assertIn('wordsRead / Math.max(durationSeconds / 60, 1 / 60)', helper)
+        self.assertNotIn('correctWordsRead()', helper)
+        self.assertNotIn('120', helper)
+
+        for scenario, total_words, miscues, expected_words_read, expected_accuracy, expected_wpm in (
+            ('zero miscues', 4, 0, 4, 100, 4),
+            ('one substitution', 4, 1, 3, 75, 3),
+            ('one omission', 4, 1, 3, 75, 3),
+            ('one insertion', 4, 1, 3, 75, 3),
+            ('multiple miscues', 6, 3, 3, 50, 3),
+        ):
+            self.assertEqual(max(0, total_words - miscues), expected_words_read)
+            self.assertEqual(round((expected_words_read / total_words) * 100), expected_accuracy, scenario)
+            self.assertEqual(expected_words_read / 1, expected_wpm, scenario)
+
+    def test_story_finalized_metrics_are_used_at_both_story_persistence_points(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        completion = content.split('async function showStoryCompletionScreen()', 1)[1].split('function hideStoryCompletionScreen()', 1)[0]
+        stop_reading = content.split('const stopReading = async () => {', 1)[1].split('btnStartReading?.addEventListener', 1)[0]
+
+        self.assertIn('calculateFinalizedStoryMetrics(', completion)
+        self.assertIn('persistedStoryState?.duration_seconds', completion)
+        self.assertIn('words_read: storyMetrics.wordsRead', completion)
+        self.assertIn('wpm: storyMetrics.wpm', completion)
+        self.assertNotIn('words_read: correctWordsRead()', completion)
+
+        self.assertIn('calculateFinalizedStoryMetrics(', stop_reading)
+        self.assertIn('words_read: storyMetrics.wordsRead', stop_reading)
+        self.assertIn('story_read_percent: storyMetrics.accuracy', stop_reading)
+        self.assertIn('wpm: storyMetrics.wpm', stop_reading)
+        self.assertNotIn('const wordsRead = correctWordsRead();', stop_reading)
+
+    def test_shared_scoring_and_non_story_paths_remain_unchanged(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        shared_scores = content.split('function calculateScores()', 1)[1].split('function calculateFinalizedStoryMetrics(', 1)[0]
+
+        self.assertIn('const matchedWords = correctWordsRead();', shared_scores)
+        self.assertIn('accuracy: targetWordCount && speechRecognitionUsed', shared_scores)
+        self.assertIn('wpm: Math.round((matchedWords', shared_scores)
+
     def test_story_segment_transitions_reset_segment_local_reading_state(self):
         script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
         content = script_path.read_text(encoding='utf-8')
