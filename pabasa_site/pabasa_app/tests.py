@@ -96,6 +96,26 @@ class WordDecodingLanguageTests(TestCase):
         self.assertEqual(transcribe.call_args.kwargs['language_code'], 'en-PH')
 
 
+class LetterSoundCorrespondenceLanguageTests(TestCase):
+    def test_page_uses_saved_material_language_and_male_tts_bridge(self):
+        material = Material.objects.create(
+            title='English correspondence',
+            item_type='word',
+            language='English',
+            content_json={
+                'activity_slug': 'letter-sound-correspondence',
+                'language': 'Filipino',
+                'items': [{'letter': 'A'}],
+            },
+        )
+
+        response = self.client.get(reverse('letter_sound_correspondence_page'), {'material_id': material.id})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '"language":"English"')
+        self.assertContains(response, 'letter_sound_correspondence_google_tts.js')
+
+
 class ClassMaterialsApiTests(TestCase):
     def test_get_class_materials_groups_vowel_materials_under_vowel_bucket(self):
         teacher = User.objects.create(

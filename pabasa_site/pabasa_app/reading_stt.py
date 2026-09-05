@@ -524,7 +524,7 @@ def transcribe_audio_bytes_v1(
     )
 
 
-def synthesize_read_aloud_audio(text, api_key="", language_code="en-US", speaking_rate=0.95, prosody_rate="92%", credentials_file=None):
+def synthesize_read_aloud_audio(text, api_key="", language_code="en-US", speaking_rate=0.95, prosody_rate="92%", credentials_file=None, voice_gender="FEMALE"):
     clean_text = " ".join(str(text or "").split())
     if not clean_text:
         raise RuntimeError("Text is required for read aloud.")
@@ -533,12 +533,13 @@ def synthesize_read_aloud_audio(text, api_key="", language_code="en-US", speakin
     # APIs pass Tagalog and Filipino materials in with this language code, so
     # preserve it instead of always using the English assessment voice.
     is_filipino = str(language_code or "").lower() in {"fil", "fil-ph", "tl", "tl-ph"}
+    is_male = str(voice_gender or "").upper() == "MALE"
     if is_filipino:
         tts_language = "fil-PH"
-        voice_name = "fil-PH-Wavenet-A"
+        voice_name = "fil-PH-Wavenet-D" if is_male else "fil-PH-Wavenet-A"
     else:
         tts_language = "en-US"
-        voice_name = "en-US-Chirp3-HD-Vindemiatrix"
+        voice_name = "en-US-Chirp3-HD-Charon" if is_male else "en-US-Chirp3-HD-Vindemiatrix"
     teaching_ssml = (
         '<speak>'
         f'<prosody rate="{prosody_rate}" pitch="+0st" volume="medium">'
@@ -546,20 +547,24 @@ def synthesize_read_aloud_audio(text, api_key="", language_code="en-US", speakin
         '</prosody>'
         '</speak>'
     )
+    # Chirp 3 HD accepts plain text, not SSML or rate/pitch controls. Its
+    # default delivery is intentionally used for the Correspondence male voice.
+    uses_chirp3_male = is_male and not is_filipino
     payload = {
-        "input": {"text": clean_text} if is_filipino else {"ssml": teaching_ssml},
+        "input": {"text": clean_text} if is_filipino or uses_chirp3_male else {"ssml": teaching_ssml},
         "voice": {
             "languageCode": tts_language,
             "name": voice_name,
-            "ssmlGender": "FEMALE",
+            "ssmlGender": "MALE" if is_male else "FEMALE",
         },
-        "audioConfig": {
-            "audioEncoding": "MP3",
+        "audioConfig": {"audioEncoding": "MP3"},
+    }
+    if not uses_chirp3_male:
+        payload["audioConfig"].update({
             "speakingRate": 1.05 if is_filipino else speaking_rate,
             "pitch": 3.2 if is_filipino else 0,
             "volumeGainDb": 1.5 if is_filipino else 0,
-        },
-    }
+        })
     headers = None
     tts_url = "https://texttospeech.googleapis.com/v1/text:synthesize"
     if api_key:

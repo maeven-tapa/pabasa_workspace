@@ -12010,11 +12010,12 @@ def letter_sound_correspondence_page(request):
             'accuracy': accuracy,
         }
 
+    material_language = material.language or content.get('language') or 'Filipino'
     context = _dashboard_context(request)
     context['letter_sound_correspondence_material_json'] = json.dumps({
         'id': material.id,
         'title': material.title or 'Match the Letter to Its Sound',
-        'language': content.get('language') or 'Filipino',
+        'language': material_language,
         'reading_set_id': content.get('reading_set_id') or '',
         'items': items,
     }, default=str, separators=(',', ':'))
@@ -12024,6 +12025,10 @@ def letter_sound_correspondence_page(request):
     # This view reflects the student's live completion state.  Do not let the
     # browser reuse a prior activity document after an assessment finishes.
     response = render(request, 'pabasa_app/letter_sound_correspondence_page.html', context)
+    tts_bridge = f'{settings.STATIC_URL.rstrip("/")}/pabasa_app/js/letter_sound_correspondence_google_tts.js'
+    response.content = response.content.replace(
+        b'</head>', f'<script src="{tts_bridge}"></script></head>'.encode(), 1,
+    )
     response['Cache-Control'] = 'no-store, max-age=0'
     return response
 
@@ -13268,7 +13273,8 @@ def reading_read_aloud_api(request):
     try:
         # Hunt uses the same clear female Assessment voice at a slower teaching
         # pace so young readers can hear each sound. Assessment keeps its defaults.
-        tts_options = ({'speaking_rate': 0.80, 'prosody_rate': '82%'} if tts_profile == 'hunt'
+        tts_options = ({'voice_gender': 'MALE'} if tts_profile == 'correspondence'
+                       else {'speaking_rate': 0.80, 'prosody_rate': '82%'} if tts_profile == 'hunt'
                        else {'speaking_rate': 1.0, 'prosody_rate': '100%'} if tts_profile == 'crla'
                        else {})
         audio_content = synthesize_read_aloud_audio(
