@@ -7549,6 +7549,25 @@ def _section_assessment_week_status(section, on_date=None):
     return 'none'
 
 
+def _expire_assessment_week_if_needed(section):
+    """Turn off a section's Assessment Week switch after its calendar closes.
+
+    The switch is intentionally persisted so it can be controlled by the
+    teacher during an active window. Once that window has ended, retaining an
+    ON value is stale state and must not keep restricting the class.
+    """
+    if not section or not section.assessment_week_enabled:
+        return False
+    if _section_assessment_week_status(section) != 'after':
+        return True
+
+    Section.objects.filter(
+        pk=section.pk, assessment_week_enabled=True,
+    ).update(assessment_week_enabled=False, updated_at=timezone.now())
+    section.assessment_week_enabled = False
+    return False
+
+
 def _student_completed_section_assessment(student, section):
     """Return whether the student has any historical completed assessment.
 
@@ -10046,6 +10065,8 @@ def assessment(request):
         for section in Section.objects.filter(is_active=True).select_related('teacher')
         if user and section.has_student(user, active_only=True)
     ] if user and getattr(user, 'role', '') == 'student' else []
+    for section in joined_sections:
+        _expire_assessment_week_if_needed(section)
     requested_section_id = request.GET.get('section_id')
     assessment_week_section = None
     if requested_section_id:
@@ -10055,7 +10076,7 @@ def assessment(request):
             requested_section_id = None
     if requested_section_id:
         assessment_week_section = next(
-            (section for section in joined_sections if section.id == requested_section_id and section.assessment_week_enabled),
+            (section for section in joined_sections if section.id == requested_section_id and _expire_assessment_week_if_needed(section)),
             None,
         )
     selected_section = None
@@ -10083,6 +10104,11 @@ def assessment(request):
         # activity must get the activity-selection hub, even if the section's
         # Assessment Week flag is still enabled.  This is scoped to the
         # originating context and does not bypass the normal entry flow.
+        assessment_week_section = None
+    if approved_assessment_request and not section_assessment_completed:
+        # An approved overdue-assessment request is a student-specific grant.
+        # It must not be masked by the section-wide Assessment Week view, which
+        # may remain enabled after its calendar window has ended.
         assessment_week_section = None
     if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status == 'after':
         if (
@@ -10169,7 +10195,16 @@ def assessment(request):
     if approved_assessment_request and not section_assessment_completed:
         approved_phase = _official_crla_assessment_phase(user, request=request)
         if approved_phase not in {'pretest', 'midtest', 'posttest'}:
-            approved_term = _calendar_current_term(_active_school_calendar())
+            # After the calendar window, the global "active" calendar may no
+            # longer resolve a current assessment date.  The request belongs
+            # to this section, so use its configured school calendar to retain
+            # the term that the teacher approved the student to complete.
+            approved_calendar = (
+                getattr(selected_section, 'school_calendar', None)
+                or _active_school_calendar()
+            )
+            approved_term = _calendar_current_term(approved_calendar)
+            approved_term = approved_term or getattr(approved_calendar, 'current_term', None)
             approved_phase = {1: 'pretest', 2: 'midtest', 3: 'posttest'}.get(approved_term)
         if approved_phase in {'pretest', 'midtest', 'posttest'}:
             official_availability = dict(official_availability)
@@ -19391,7 +19426,7 @@ def get_class_materials(request):
             | Q(system_assessment_phase__in=['pretest', 'posttest'])
         )
         assessment_week_enabled = bool(
-            request_user.role == 'student' and section.assessment_week_enabled
+            request_user.role == 'student' and _expire_assessment_week_if_needed(section)
         )
         if request_user.role == 'student' and _section_assessment_week_status(section) == 'after':
             if not _student_completed_section_assessment(request_user, section) and not _student_has_approved_assessment_request(request_user, section):
@@ -20969,14 +21004,28 @@ def _student_has_assessment_week(student):
         return False
     return any(
         section.has_student(student, active_only=True)
+        and _expire_assessment_week_if_needed(section)
+        and _section_assessment_week_status(section) == 'during'
         for section in Section.objects.filter(is_active=True, assessment_week_enabled=True)
     )
 
 
 def _assessment_week_allows_material(student, material):
-    """Require the enrolled section owning an assessment to have the toggle on."""
+    """Apply Assessment Week to official assessments, not expired teacher work."""
     if not student or not material:
         return False
+    # Official CRLA materials are shared rather than section-attached.  A
+    # teacher-approved overdue request is the explicit, section-scoped
+    # authorization for this student to launch one after Assessment Week.
+    # Do not extend this exception to ordinary teacher materials.
+    if _is_official_crla_material(material):
+        approved_requests = AssessmentRequest.objects.filter(
+            student=student,
+            status='approved',
+            section__is_active=True,
+        ).select_related('section')
+        if any(item.section.has_student(student, active_only=True) for item in approved_requests):
+            return True
     section_ids = set()
     if material.section_id:
         section_ids.add(material.section_id)
@@ -20989,11 +21038,15 @@ def _assessment_week_allows_material(student, material):
     return any(
         section.has_student(student, active_only=True)
         and (
-            section.assessment_week_enabled
+            (
+                _expire_assessment_week_if_needed(section)
+                and _section_assessment_week_status(section) == 'during'
+            )
             or (
+                # A teacher-created activity can be saved as an assessment
+                # or as "both". Once the calendar window closes, its type
+                # must not keep showing the Assessment Week-only banner.
                 _section_assessment_week_status(section) == 'after'
-                and _student_completed_section_assessment(student, section)
-                and not _finalized_grade_level_crla_result_exists(student)
             )
         )
         for section in Section.objects.filter(id__in=section_ids, is_active=True)
@@ -21001,7 +21054,7 @@ def _assessment_week_allows_material(student, material):
 
 
 def _material_assessment_week_section(student, material):
-    """Return the student's enabled Assessment Week section for this material."""
+    """Return an enabled Assessment Week section that still restricts this student."""
     if not student or not material:
         return None
     candidate_ids = set()
@@ -21013,6 +21066,13 @@ def _material_assessment_week_section(student, material):
         id__in=candidate_ids, is_active=True, assessment_week_enabled=True
     ):
         if section.has_student(student, active_only=True):
+            # The switch controls access only while the matching calendar
+            # event is in progress. It may remain stored as ON after the
+            # event, but that stale value must never block teacher materials.
+            if not _expire_assessment_week_if_needed(section):
+                continue
+            if _section_assessment_week_status(section) != 'during':
+                continue
             return section
     return None
 
