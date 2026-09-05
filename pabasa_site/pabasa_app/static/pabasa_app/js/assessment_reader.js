@@ -3952,6 +3952,8 @@
                 const classesBefore = previousVisualStates.get(readableWordIndex) || [];
                 if (String(result?.result || "").toLowerCase() === "miscue") {
                     word.classList.add("is-wrong");
+                } else if (String(result?.result || "").toLowerCase() === "correct") {
+                    word.classList.add("is-read");
                 }
                 word.textContent = part;
                 word.dataset.sentenceTargetIndex = String(readableWordIndex);
