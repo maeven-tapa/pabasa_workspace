@@ -203,27 +203,27 @@
                 {% csrf_token %}
                 <div class="col-12 col-md-4">
                   <label class="form-label" for="principalFirstName">First name</label>
-                  <input id="principalFirstName" name="first_name" class="form-control" value="{{ principal_form_data.first_name }}" required>
+                  <input id="principalFirstName" name="first_name" class="form-control" value="{{ principal_form_data.first_name }}" required maxlength="50" pattern="[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ .'-]*" title="Use letters, spaces, periods, hyphens, and apostrophes only." autocomplete="given-name">
                 </div>
                 <div class="col-6 col-md-2">
                   <label class="form-label" for="principalMiddleInitial">Middle initial</label>
-                  <input id="principalMiddleInitial" name="middle_initial" class="form-control" maxlength="1" value="{{ principal_form_data.middle_initial }}">
+                  <input id="principalMiddleInitial" name="middle_initial" class="form-control" maxlength="1" pattern="[A-Za-zÀ-ÖØ-öø-ÿ]" title="Enter one letter only." value="{{ principal_form_data.middle_initial }}" autocomplete="additional-name">
                 </div>
                 <div class="col-12 col-md-4">
                   <label class="form-label" for="principalLastName">Last name</label>
-                  <input id="principalLastName" name="last_name" class="form-control" value="{{ principal_form_data.last_name }}" required>
+                  <input id="principalLastName" name="last_name" class="form-control" value="{{ principal_form_data.last_name }}" required maxlength="50" pattern="[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ .'-]*" title="Use letters, spaces, periods, hyphens, and apostrophes only." autocomplete="family-name">
                 </div>
                 <div class="col-6 col-md-2">
                   <label class="form-label" for="principalSuffix">Suffix <span class="text-muted">(optional)</span></label>
-                  <input id="principalSuffix" name="suffix" class="form-control" maxlength="10" value="{{ principal_form_data.suffix }}" placeholder="e.g. III">
+                  <input id="principalSuffix" name="suffix" class="form-control" maxlength="10" pattern="[A-Za-z0-9. -]*" title="Use letters, numbers, spaces, periods, and hyphens only." value="{{ principal_form_data.suffix }}" placeholder="e.g. III" autocomplete="honorific-suffix">
                 </div>
                 <div class="col-12 col-md-6">
                   <label class="form-label" for="principalEmail">Email</label>
-                  <input id="principalEmail" name="email" type="email" class="form-control" value="{{ principal_form_data.email }}" required>
+                  <input id="principalEmail" name="email" type="email" class="form-control" value="{{ principal_form_data.email }}" required maxlength="254" autocomplete="email">
                 </div>
                 <div class="col-12 col-md-6">
                   <label class="form-label" for="principalContactNo">Contact number <span class="text-muted">(optional)</span></label>
-                  <input id="principalContactNo" name="contact_no" type="tel" class="form-control" value="{{ principal_form_data.contact_no }}">
+                  <input id="principalContactNo" name="contact_no" type="tel" class="form-control" value="{{ principal_form_data.contact_no }}" inputmode="tel" pattern="(?:09[0-9]{9}|\+639[0-9]{9})" maxlength="13" title="Enter 09XXXXXXXXX or +639XXXXXXXXX." placeholder="09XXXXXXXXX" autocomplete="tel">
                 </div>
                 <div class="col-12">
                   <div class="small text-muted">School: <strong>{{ school.name }}</strong> (read-only)</div>
@@ -332,7 +332,11 @@ document.addEventListener('DOMContentLoaded', function () {
   if (!form || !submitButton || !loadingModalElement) return;
 
   form.addEventListener('submit', function (event) {
-    if (!form.checkValidity()) return;
+    if (!form.checkValidity()) {
+      event.preventDefault();
+      form.classList.add('was-validated');
+      return;
+    }
     if (form.dataset.submitting === 'true') {
       event.preventDefault();
       return;

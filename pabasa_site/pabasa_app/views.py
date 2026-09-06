@@ -7,6 +7,7 @@ from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.cache import never_cache
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth.password_validation import validate_password
 from django.core.mail import EmailMultiAlternatives
@@ -5752,6 +5753,44 @@ def _active_principal_for_school(school):
     ).order_by('id').first()
 
 
+def _validate_principal_form_data(form_data):
+    """Return validation errors for the admin's principal-account form."""
+    errors = []
+    name_pattern = r"[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ .'-]*"
+
+    for label, key in (('First name', 'first_name'), ('Last name', 'last_name')):
+        value = form_data[key]
+        if not value:
+            errors.append(f'{label} is required.')
+        elif len(value) > 50 or not re.fullmatch(name_pattern, value):
+            errors.append(f'{label} may contain letters, spaces, periods, hyphens, and apostrophes only.')
+
+    middle_initial = form_data['middle_initial']
+    if middle_initial and not re.fullmatch(r'[A-Za-zÀ-ÖØ-öø-ÿ]', middle_initial):
+        errors.append('Middle initial must be one letter.')
+
+    suffix = form_data['suffix']
+    if suffix and (len(suffix) > 10 or not re.fullmatch(r"[A-Za-z0-9. -]+", suffix)):
+        errors.append('Suffix may contain letters, numbers, spaces, periods, and hyphens only.')
+
+    email = form_data['email']
+    if not email:
+        errors.append('Email address is required.')
+    elif len(email) > 254:
+        errors.append('Email address is too long.')
+    else:
+        try:
+            validate_email(email)
+        except ValidationError:
+            errors.append('Enter a valid email address.')
+
+    contact_no = form_data['contact_no']
+    if contact_no and not re.fullmatch(r'(?:09\d{9}|\+639\d{9})', contact_no):
+        errors.append('Contact number must be 09XXXXXXXXX or +639XXXXXXXXX.')
+
+    return errors
+
+
 def _create_principal_account(request, school, first_name, middle_initial, last_name, suffix, email, contact_no):
     if not school or school.status != 'active' or not school.is_active:
         raise ValueError('A Principal can only be created for an active School.')
@@ -6496,14 +6535,9 @@ def admin_school_detail(request, school_id):
                 'contact_no': request.POST.get('contact_no', '').strip(),
             }
             context['principal_form_data'] = form_data
-            required = {
-                'First name': form_data['first_name'],
-                'Last name': form_data['last_name'],
-                'Email address': form_data['email'],
-            }
-            missing = [label for label, value in required.items() if not value]
-            if missing:
-                context['principal_error'] = f"{', '.join(missing)} required."
+            form_errors = _validate_principal_form_data(form_data)
+            if form_errors:
+                context['principal_error'] = ' '.join(form_errors)
             else:
                 archived_principal = User.objects.filter(
                     role='principal', school_record=school, is_archived=True,
@@ -10111,10 +10145,23 @@ def admin_settings(request):
 @require_http_methods(["GET"])
 def admin_activity_log(request):
     """Show the audit trail; entries carry real server timestamps only."""
-    entries = ActivityLog.objects.select_related('actor').all()[:250]
+    selected_date_value = request.GET.get('date', '').strip()
+    selected_date = None
+    if selected_date_value:
+        try:
+            selected_date = date.fromisoformat(selected_date_value)
+        except ValueError:
+            selected_date_value = ''
+
+    entries = ActivityLog.objects.select_related('actor').all()
+    if selected_date:
+        entries = entries.filter(created_at__date=selected_date)
+
     context = _admin_context(request, 'Activity Log', [])
     context.update({
-        'activity_entries': entries,
+        'activity_entries': entries[:250],
+        'activity_log_dates': ActivityLog.objects.dates('created_at', 'day', order='DESC')[:90],
+        'selected_activity_log_date': selected_date_value,
         'activity_log_server_time': real_now(),
         'activity_log_time_zone': timezone.get_current_timezone_name(),
     })

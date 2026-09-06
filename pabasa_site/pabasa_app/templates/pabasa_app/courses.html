@@ -13758,21 +13758,38 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
     /* Students UI removed from class modal; student management remains in Class module */
 
-    function loadReports(sectionId) {
+    const classReportStudentCache = {};
+
+    async function loadReports(sectionId) {
         const classData = teacherClasses.find(c => String(c.section_id || c.id) === String(sectionId || ''));
         if (!classData) return;
-        
-        const allStudents = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-        const classStudents = allStudents.filter(s => 
-            s.class && classData.name && 
-            s.class.trim().toLowerCase() === classData.name.trim().toLowerCase() && 
-            s.name !== "Jay Park"
-        );
         const listContainer = document.getElementById("unifiedStudentReportList");
         const selectAll = document.getElementById("selectAllRecipients");
         if (!listContainer) return;
-        
+
         listContainer.innerHTML = "";
+        let classStudents = [];
+        try {
+            const response = await fetch('/dashboard/teacher/students-api/', {
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const payload = await response.json();
+            if (!response.ok || !payload?.success || !Array.isArray(payload.students)) {
+                throw new Error(payload?.error || 'Student database request failed.');
+            }
+            const targetSectionId = String(classData.section_id || classData.id || sectionId);
+            classStudents = payload.students.filter(student =>
+                (Array.isArray(student.section_ids) ? student.section_ids : []).some(id => String(id) === targetSectionId)
+            );
+            classReportStudentCache[String(sectionId)] = classStudents;
+        } catch (error) {
+            console.warn('Unable to load report students from the database.', error);
+            classReportStudentCache[String(sectionId)] = [];
+            listContainer.innerHTML = '<p class="text-center text-danger p-3">Could not load students from the database. Please refresh and try again.</p>';
+            return;
+        }
+
         if (selectAll) {
             selectAll.checked = false;
             if (!selectAll.dataset.bound) {
@@ -13799,7 +13816,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (acc > highestAccuracy) highestAccuracy = acc; if (acc < lowestAccuracy) lowestAccuracy = acc;
             if (wpm > highestWPM) highestWPM = wpm; if (wpm < lowestWPM) lowestWPM = wpm;
             
-            const studentUsername = s.name.toLowerCase().replace(/ /g, "_"), emailEnabled = JSON.parse(localStorage.getItem("pabasa_profile_settings_" + studentUsername) || "{}").emailNotifications !== false && s.email;
+            const emailEnabled = Boolean(s.email);
             const item = document.createElement("div"); item.className = "list-group-item p-3 border-0 border-bottom";
             item.innerHTML = `
                 <div class="d-flex align-items-center gap-3">
@@ -21505,9 +21522,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 exportExcelBtn.dataset.bound = 'true';
                 exportExcelBtn.addEventListener("click", function(e) {
                     e.preventDefault();
-                    const classData = teacherClasses.find(c => c.code === currentSectionId);
-                    const allStudents = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-                    const classStudents = allStudents.filter(s => s.class === classData.name && s.name !== "Jay Park");
+                    const classData = teacherClasses.find(c => String(c.section_id || c.id) === String(currentSectionId));
+                    const classStudents = classReportStudentCache[String(currentSectionId)] || [];
                     
                     if (classStudents.length === 0) {
                         alert("No data available to export for this class.");
@@ -21553,19 +21569,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             form.addEventListener("submit", async function(e) {
                 e.preventDefault();
                 const rawMessage = document.getElementById("parentUpdateMessage").value;
-                const classData = teacherClasses.find(c => c.code === currentSectionId);
+                const classData = teacherClasses.find(c => String(c.section_id || c.id) === String(currentSectionId));
                 if (!classData) return;
 
-                const allStudents = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-                const classStudents = allStudents.filter(s => 
-                    s.class && classData.name && 
-                    s.class.trim().toLowerCase() === classData.name.trim().toLowerCase() && 
-                    s.name !== "Jay Park"
-                );
+                const classStudents = classReportStudentCache[String(currentSectionId)] || [];
                 
                 const selectedIds = Array.from(document.querySelectorAll(".student-checkbox:checked")).map(cb => String(cb.value).trim());
                 const recipients = classStudents.filter(s => 
-                    selectedIds.includes(String(s.id || s.name).trim()) && s.email && (JSON.parse(localStorage.getItem("pabasa_profile_settings_" + s.name.toLowerCase().replace(/ /g, "_")) || "{}").emailNotifications !== false)
+                    selectedIds.includes(String(s.id || '').trim()) && s.email
                 );
 
                 if (recipients.length === 0) {

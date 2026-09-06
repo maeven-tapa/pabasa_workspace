@@ -2,20 +2,23 @@
 
 {% block content %}
 <style>
-    .activity-log-header { display:flex; gap:1rem; align-items:flex-start; justify-content:space-between; margin-bottom:1.5rem; }
+    .activity-log-header { align-items:flex-start; background:#fff; border:1px solid #e1e8f0; border-radius:18px; box-shadow:0 8px 24px rgba(24,49,83,.06); display:flex; gap:1rem; justify-content:space-between; margin-bottom:1.5rem; padding:1.25rem; }
     .activity-log-header h2 { margin:0; font-size:1.5rem; font-weight:800; color:#183153; }
     .activity-log-header p { margin:.35rem 0 0; color:#61738b; }
     .activity-log-server-time { background:#edf6ff; border:1px solid #cfe4fa; border-radius:12px; color:#24527a; font-size:.85rem; padding:.7rem .9rem; white-space:nowrap; }
+    .activity-log-controls { align-items:flex-end; display:flex; flex-direction:column; gap:.65rem; }
+    .activity-log-filter { align-items:center; display:flex; gap:.5rem; }
+    .activity-log-filter label { color:#52677f; font-size:.82rem; font-weight:700; white-space:nowrap; }
+    .activity-log-filter .form-select { border-color:#cfdcea; font-size:.85rem; min-width:190px; }
     .activity-log-card { background:#fff; border:1px solid #e1e8f0; border-radius:18px; box-shadow:0 8px 24px rgba(24,49,83,.06); overflow:hidden; }
-    .activity-log-table { margin:0; min-width:760px; }
+    .activity-log-table { margin:0; min-width:650px; }
     .activity-log-table th { background:#f6f9fc; border-bottom:1px solid #e1e8f0; color:#536a84; font-size:.74rem; letter-spacing:.05em; padding:1rem; text-transform:uppercase; }
     .activity-log-table td { border-color:#edf1f5; color:#29425f; padding:1rem; vertical-align:top; }
     .activity-log-title { color:#183153; font-weight:750; }
     .activity-log-message { color:#65768c; display:block; font-size:.9rem; margin-top:.2rem; }
-    .activity-log-badge { background:#e9f4ff; border-radius:999px; color:#24639a; display:inline-block; font-size:.75rem; font-weight:700; padding:.3rem .6rem; }
     .activity-log-time { color:#52677f; font-size:.86rem; white-space:nowrap; }
     .activity-log-empty { color:#697d93; padding:3.5rem 1rem !important; text-align:center; }
-    @media (max-width: 767px) { .activity-log-header { align-items:stretch; flex-direction:column; } .activity-log-server-time { white-space:normal; } }
+    @media (max-width: 767px) { .activity-log-header { align-items:stretch; flex-direction:column; } .activity-log-controls { align-items:stretch; } .activity-log-filter .form-select { min-width:0; } .activity-log-server-time { white-space:normal; } }
 </style>
 
 <section class="activity-log-header" aria-labelledby="activityLogHeading">
@@ -23,9 +26,21 @@
         <h2 id="activityLogHeading"><i class="bi bi-clipboard-data me-2" aria-hidden="true"></i>Activity Log</h2>
         <p>Administrative notifications and system-time debug changes. Entries use the real server time and are not affected by debug time.</p>
     </div>
-    <div class="activity-log-server-time">
-        <i class="bi bi-server me-1" aria-hidden="true"></i>
-        Server time: <time datetime="{{ activity_log_server_time|date:'c' }}">{{ activity_log_server_time|date:"M j, Y, g:i:s A T" }}</time>
+    <div class="activity-log-controls">
+        <div class="activity-log-server-time">
+            <i class="bi bi-server me-1" aria-hidden="true"></i>
+            Server time: <time datetime="{{ activity_log_server_time|date:'c' }}">{{ activity_log_server_time|date:"M j, Y, g:i:s A T" }}</time>
+        </div>
+        <form class="activity-log-filter" method="get">
+            <label for="activityLogDate">Date</label>
+            <select class="form-select" id="activityLogDate" name="date" onchange="this.form.submit()">
+                <option value="">All dates</option>
+                {% for log_date in activity_log_dates %}
+                    <option value="{{ log_date|date:'Y-m-d' }}" {% if selected_activity_log_date == log_date|date:'Y-m-d' %}selected{% endif %}>{{ log_date|date:"M j, Y" }}</option>
+                {% endfor %}
+            </select>
+            <noscript><button class="btn btn-primary btn-sm" type="submit">Filter</button></noscript>
+        </form>
     </div>
 </section>
 
@@ -36,7 +51,6 @@
                 <tr>
                     <th scope="col">Server timestamp</th>
                     <th scope="col">Activity</th>
-                    <th scope="col">Type</th>
                     <th scope="col">Performed by</th>
                 </tr>
             </thead>
@@ -48,11 +62,10 @@
                             <span class="activity-log-title">{{ entry.title }}</span>
                             {% if entry.message %}<span class="activity-log-message">{{ entry.message }}</span>{% endif %}
                         </td>
-                        <td><span class="activity-log-badge">{{ entry.get_event_type_display }}</span></td>
                         <td>{% if entry.actor %}{{ entry.actor.first_name }} {{ entry.actor.last_name }}{% else %}System{% endif %}</td>
                     </tr>
                 {% empty %}
-                    <tr><td class="activity-log-empty" colspan="4"><i class="bi bi-inbox fs-3 d-block mb-2" aria-hidden="true"></i>No activity has been recorded yet.</td></tr>
+                    <tr><td class="activity-log-empty" colspan="3"><i class="bi bi-inbox fs-3 d-block mb-2" aria-hidden="true"></i>No activity has been recorded yet.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

@@ -53,8 +53,37 @@ def test_section_create(**kwargs):
     return Section.objects.create(school=school, **kwargs)
 from .management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
 from .views import _active_school_calendar, _apply_progression_unlock_override, _aral_eligible_classification, _create_notification, _notify_admins, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _primary_school, _save_admin_practice_material, _selected_school_calendar, _sync_assessment_workflow_state, _official_crla_assessment_labels, _official_assessment_availability_for_student
+from .views import _validate_principal_form_data
 from .weekly_digest import send_weekly_digest
 from .scoring import build_assessment_score_payload
+
+
+class PrincipalFormValidationTests(TestCase):
+    def test_principal_form_validation_accepts_valid_values(self):
+        self.assertEqual(_validate_principal_form_data({
+            'first_name': 'Maria-Luz',
+            'middle_initial': 'D',
+            'last_name': "O'Connor",
+            'suffix': 'III',
+            'email': 'principal@example.com',
+            'contact_no': '09171234567',
+        }), [])
+
+    def test_principal_form_validation_rejects_invalid_values(self):
+        errors = _validate_principal_form_data({
+            'first_name': 'Maria123',
+            'middle_initial': 'AB',
+            'last_name': '',
+            'suffix': '<script>',
+            'email': 'not-an-email',
+            'contact_no': '12345',
+        })
+
+        self.assertGreaterEqual(len(errors), 6)
+        self.assertTrue(any('First name' in error for error in errors))
+        self.assertTrue(any('Last name is required' in error for error in errors))
+        self.assertTrue(any('valid email' in error for error in errors))
+        self.assertTrue(any('Contact number' in error for error in errors))
 
 
 class WordDecodingLanguageTests(TestCase):

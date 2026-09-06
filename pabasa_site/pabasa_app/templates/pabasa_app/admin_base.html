@@ -280,21 +280,57 @@
             overflow: hidden;
         }
 
-        body.admin-sidebar-collapsed .sidebar-collapse-btn {
-            position: absolute;
-            top: 50%;
-            right: -6px;
-            transform: translateY(-50%);
-            width: 32px;
-            min-width: 34px;
-            height: 32px;
-            padding: 0;
-            border-radius: 50%;
-            justify-content: center;
+        .admin-sidebar-collapse-row {
             align-items: center;
-            display: inline-flex !important;
-            opacity: 1;
-            z-index: 2;
+            justify-content: center;
+            margin-top: auto;
+            min-height: 48px;
+            padding: 0 0 0.85rem;
+            width: 100%;
+        }
+
+        .admin-sidebar .admin-sidebar-collapse-row .sidebar-collapse-btn {
+            align-items: center;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.16) !important;
+            border-radius: 16px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+            color: #fff;
+            display: inline-flex;
+            gap: 0.55rem;
+            height: auto;
+            justify-content: center;
+            min-height: 46px;
+            padding: 0.65rem 0.85rem;
+            transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+            width: 100%;
+        }
+
+        .admin-sidebar .admin-sidebar-collapse-row .sidebar-collapse-btn:hover,
+        .admin-sidebar .admin-sidebar-collapse-row .sidebar-collapse-btn:focus-visible {
+            background: rgba(255, 255, 255, 0.18);
+            border-color: rgba(255, 255, 255, 0.22) !important;
+            color: #fff;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+            transform: none;
+        }
+
+        body.admin-sidebar-collapsed .admin-sidebar .admin-sidebar-collapse-row {
+            padding-bottom: 0.85rem;
+            width: 56px;
+        }
+
+        body.admin-sidebar-collapsed .admin-sidebar .admin-sidebar-collapse-row .sidebar-collapse-btn {
+            flex: 0 0 48px;
+            gap: 0;
+            height: 48px;
+            max-width: 48px;
+            min-height: 48px;
+            min-width: 48px;
+            padding: 0;
+            position: static;
+            transform: none;
+            width: 48px;
         }
 
         body.admin-sidebar-collapsed .admin-brand-avatar {
@@ -2571,9 +2607,6 @@
                             {% include "pabasa_app/partials/_pabasa_logo.html" with logo_class="admin-logo-img" letters_class="pabasa-logo-letters" letter_yellow_class="lc-yellow" letter_blue_class="lc-blue" pnb_id="pnb-admin" pnbk_id="pnbk-admin" %}
                         </a>
 
-                    <button class="btn btn-sm sidebar-collapse-btn d-none d-lg-inline-flex" type="button" data-admin-collapse-btn aria-label="Collapse sidebar" title="Collapse sidebar">
-                        <i class="bi bi-chevron-left"></i>
-                    </button>
                 </div>
 
                 <div class="admin-profile-card mt-3">
@@ -2598,6 +2631,13 @@
                     <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_activity_log' %}active{% endif %}" href="{% url 'admin_activity_log' %}" data-admin-tooltip title="Activity Log"><i class="bi bi-clipboard-data"></i><span class="admin-nav-text">Activity Log</span></a>
                     <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_settings' %}active{% endif %}" href="{% url 'admin_settings' %}" data-admin-tooltip title="Settings"><i class="bi bi-gear"></i><span class="admin-nav-text">Settings</span></a>
                 </nav>
+            </div>
+
+            <div class="admin-sidebar-collapse-row d-none d-lg-flex">
+                <button class="btn btn-sm sidebar-collapse-btn" type="button" data-admin-collapse-btn aria-label="Collapse sidebar" title="Collapse sidebar">
+                    <i class="bi bi-chevron-left"></i>
+                    <span class="admin-nav-text admin-collapse-label">Collapse</span>
+                </button>
             </div>
 
             <div class="admin-sidebar-footer">
@@ -2793,18 +2833,20 @@
                 document.body.classList.toggle('admin-sidebar-collapsed', collapsed);
                 collapseBtn.setAttribute('title', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
                 collapseBtn.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
-                collapseBtn.innerHTML = collapsed ? '<i class="bi bi-chevron-right"></i>' : '<i class="bi bi-chevron-left"></i>';
+                collapseBtn.innerHTML = collapsed
+                    ? '<i class="bi bi-chevron-right"></i><span class="admin-nav-text admin-collapse-label">Expand</span>'
+                    : '<i class="bi bi-chevron-left"></i><span class="admin-nav-text admin-collapse-label">Collapse</span>';
             }
 
-            // Use sessionStorage to remember preference during the session
+            // Match Teacher and Student: preserve the preference across sessions.
             try {
-                setCollapsed(sessionStorage.getItem(key) === '1');
+                setCollapsed(localStorage.getItem(key) === '1');
             } catch (e) { /* ignore storage errors */ }
 
             collapseBtn.addEventListener('click', function() {
                 const next = !document.body.classList.contains('admin-sidebar-collapsed');
                 setCollapsed(next);
-                try { sessionStorage.setItem(key, next ? '1' : '0'); } catch (e) {}
+                try { localStorage.setItem(key, next ? '1' : '0'); } catch (e) {}
             });
         })();
         (function() {
