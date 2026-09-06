@@ -405,6 +405,15 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
         self.assertIn("await persistCRLAComprehensionState();", next_handler)
         self.assertIn("await finishCRLAComprehension();", next_handler)
 
+    def test_official_crla_navigation_hides_only_crla_back_controls(self):
+        template = (Path(__file__).parent / "templates" / "pabasa_app" / "reading_assessment_base.html").read_text(encoding="utf-8")
+        self.assertIn('reader-footer{% if crla_official_assessment_id %} is-official-crla-nav{% endif %}', template)
+        self.assertIn('.reader-footer.is-official-crla-nav .nav-prev', template)
+        self.assertIn('#crlaQuestionPanel #crlaQuestionBackBtn', template)
+        self.assertIn('grid-template-areas: "controls next"', template)
+        self.assertIn('#crlaQuestionPanel .story-question-nav', template)
+        self.assertIn('grid-template-columns: repeat(3, minmax(0, 210px))', template)
+
     def test_part1_terminal_states_share_learner_experience_gate(self):
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
         completion = source.split("function showCompletion(isFullCompletion)", 1)[1].split("function startAssessmentTimer", 1)[0]

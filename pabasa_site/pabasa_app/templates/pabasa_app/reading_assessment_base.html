@@ -2614,6 +2614,73 @@
         .nav-prev { grid-area: back; }
         .nav-next { grid-area: next; }
 
+        /* Official CRLA uses forward-only reading controls.  Keep the shared
+           Back controls in the DOM because the reader's navigation code
+           references them, but remove them from the CRLA UI only. */
+        .reader-footer.is-official-crla-nav {
+            grid-template-columns: auto auto;
+            grid-template-areas: "controls next";
+            justify-content: center;
+            gap: 0.85rem;
+        }
+
+        .reader-footer.is-official-crla-nav .nav-prev,
+        #crlaQuestionPanel #crlaQuestionBackBtn {
+            display: none;
+        }
+
+        .reader-footer.is-official-crla-nav .recording-controls {
+            justify-self: end;
+            max-width: none;
+            width: auto;
+        }
+
+        .reader-footer.is-official-crla-nav .nav-next {
+            justify-self: start;
+            width: auto;
+        }
+
+        #crlaQuestionPanel .story-question-nav {
+            grid-template-columns: repeat(3, minmax(0, 210px));
+            justify-content: center;
+        }
+
+        @media (max-width: 680px) {
+            #crlaQuestionPanel .story-question-nav {
+                grid-template-columns: repeat(2, minmax(0, 210px)) !important;
+                justify-content: center;
+            }
+
+            #crlaQuestionPanel .story-question-nav .btn:last-of-type {
+                grid-column: 1 / -1;
+                justify-self: center;
+                width: min(210px, 100%);
+            }
+        }
+
+        @media (max-width: 520px) {
+            .reader-footer.is-official-crla-nav {
+                grid-template-columns: minmax(0, 1fr);
+                grid-template-areas:
+                    "controls"
+                    "next";
+                justify-items: center;
+            }
+
+            .reader-footer.is-official-crla-nav .recording-controls {
+                max-width: 100%;
+            }
+
+            #crlaQuestionPanel .story-question-nav {
+                grid-template-columns: minmax(0, 230px) !important;
+            }
+
+            #crlaQuestionPanel .story-question-nav .btn:last-of-type {
+                grid-column: auto;
+                width: 100%;
+            }
+        }
+
         .mic-chip {
             justify-content: center;
         }
@@ -3401,7 +3468,7 @@
                         <code id="rawMicInput">Waiting for speech...</code>
                     </div>
                 </div>
-                <div class="reader-footer">
+                <div class="reader-footer{% if crla_official_assessment_id %} is-official-crla-nav{% endif %}">
                     <button class="nav-btn nav-prev" id="prevBtn" type="button" aria-label="Previous item">Back</button>
                     
                     <div class="recording-controls">
