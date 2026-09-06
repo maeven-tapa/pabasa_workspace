@@ -1,0 +1,62 @@
+{% extends "pabasa_app/admin_base.html" %}
+
+{% block content %}
+<div class="admin-panel">
+    <form class="row g-2 align-items-end mb-3" method="get" data-admin-auto-filter>
+        <div class="col-12 col-lg-6">
+            <label class="form-label small fw-bold text-secondary" for="userSearch">Search users</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input class="form-control" id="userSearch" type="search" name="q" value="{{ search_query }}" placeholder="Name, identifier, or email">
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <label class="form-label small fw-bold text-secondary" for="categoryFilter">Category</label>
+            <select class="form-select" id="categoryFilter" name="category">
+                {% for value, label in category_options %}
+                <option value="{{ value }}" {% if category_filter == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3 d-flex gap-2">
+            <a class="btn btn-outline-secondary admin-filter-clear-btn flex-fill" href="{% url 'admin_users' %}" aria-label="Clear filters"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table placeholder-table align-middle">
+            <thead><tr>{% for header in table_headers %}<th>{{ header }}</th>{% endfor %}</tr></thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td><span class="fw-bold d-block">{{ user.first_name }}{% if user.middle_initial %} {{ user.middle_initial }}.{% endif %} {{ user.last_name }}{% if user.suffix %} {{ user.suffix }}{% endif %}</span></td>
+                    <td>{{ user.custom_id }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                        <span class="badge rounded-pill {% if user.role == 'student' %}text-bg-primary{% else %}text-bg-info{% endif %}">{{ user.role|title }}</span>
+                        {% if user.account_status == 'pending_archive' %}<span class="badge rounded-pill text-bg-warning">Pending Archive</span>
+                        {% elif user.is_archived %}<span class="badge rounded-pill text-bg-secondary">Archived</span>
+                        {% else %}<span class="badge rounded-pill text-bg-success">Active</span>{% endif %}
+                    </td>
+                    <td>
+                        <div class="admin-table-actions">
+                            {% if user.role == 'student' %}
+                            <a class="btn btn-sm admin-action-btn admin-action-view" href="{% url 'admin_student_detail' user.id %}"><i class="bi bi-eye"></i><span>View</span></a>
+                            <a class="btn btn-sm admin-action-btn admin-action-edit" href="{% url 'admin_student_edit' user.id %}"><i class="bi bi-pencil"></i><span>Edit</span></a>
+                            <form method="post" action="{% url 'admin_student_archive' user.id %}">{% csrf_token %}<button class="btn btn-sm admin-action-btn admin-action-archive" type="submit" {% if user.is_archived %}disabled{% endif %}><i class="bi bi-archive"></i><span>Archive</span></button></form>
+                            {% else %}
+                            <a class="btn btn-sm admin-action-btn admin-action-view" href="{% url 'admin_teacher_detail' user.id %}"><i class="bi bi-eye"></i><span>View</span></a>
+                            <a class="btn btn-sm admin-action-btn admin-action-edit" href="{% url 'admin_teacher_edit' user.id %}"><i class="bi bi-pencil"></i><span>Edit</span></a>
+                            <form method="post" action="{% url 'admin_teacher_archive' user.id %}">{% csrf_token %}<button class="btn btn-sm admin-action-btn admin-action-archive" type="submit" {% if user.is_archived %}disabled{% endif %}><i class="bi bi-archive"></i><span>Archive</span></button></form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="{{ table_headers|length }}" class="text-center text-secondary py-5">No users found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

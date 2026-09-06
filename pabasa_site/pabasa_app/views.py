@@ -5716,11 +5716,13 @@ def admin_official_reading_override_request(request, material_id):
 
 @admin_required
 def admin_students(request):
-    return render(request, 'pabasa_app/admin_students.html', _admin_users_context(request, 'student', 'Students'))
+    """Compatibility route for the consolidated Admin Users directory."""
+    return redirect('admin_users')
 
 @admin_required
 def admin_teachers(request):
-    return render(request, 'pabasa_app/admin_teachers.html', _admin_users_context(request, 'teacher', 'Teachers'))
+    """Compatibility route for the consolidated Admin Users directory."""
+    return redirect('admin_users')
 
 PRINCIPAL_LOGOS_DIR = settings.BASE_DIR / 'pabasa_app' / 'static' / 'pabasa_app' / 'uploads' / 'school_logos'
 PRINCIPAL_LOGOS_STATIC_PREFIX = 'pabasa_app/uploads/school_logos'
@@ -5958,12 +5960,49 @@ def _admin_users_context(request, role, page_title):
     })
     return context
 
+
+@admin_required
+def admin_users(request):
+    """One directory for student and teacher accounts."""
+    search_query = request.GET.get('q', '').strip()
+    category_filter = request.GET.get('category', 'all').strip().lower()
+    users = User.objects.filter(role__in=('student', 'teacher'))
+    if search_query:
+        users = users.filter(
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(custom_id__icontains=search_query) |
+            Q(email__icontains=search_query)
+        )
+    if category_filter in ('student', 'teacher'):
+        users = users.filter(role=category_filter)
+    elif category_filter == 'active':
+        users = users.filter(is_archived=False, account_status='active')
+    elif category_filter == 'pending_archive':
+        users = users.filter(is_archived=False, account_status='pending_archive')
+    elif category_filter == 'archived':
+        users = users.filter(is_archived=True)
+
+    context = _admin_context(request, 'Users', ['Name', 'Identifier', 'Email', 'Category', 'Actions'])
+    context.update({
+        'users': users.order_by('last_name', 'first_name'),
+        'search_query': search_query,
+        'category_filter': category_filter,
+        'category_options': [
+            ('all', 'All Categories'),
+            ('student', 'Students'),
+            ('teacher', 'Teachers'),
+            ('active', 'Active'),
+            ('pending_archive', 'Pending Archive'),
+            ('archived', 'Archived'),
+        ],
+    })
+    return render(request, 'pabasa_app/admin_users.html', context)
+
 def _admin_user_redirect_name(role):
-    if role == 'student':
-        return 'admin_students'
     if role == 'principal':
         return 'admin_school'
-    return 'admin_teachers'
+    return 'admin_users'
 
 def _student_returning_eligibility(user, calendar=None):
     """Return the finalized prior enrollment that makes a student returnable."""
