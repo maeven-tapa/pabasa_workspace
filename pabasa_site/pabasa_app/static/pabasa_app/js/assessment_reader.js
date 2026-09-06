@@ -610,7 +610,7 @@
         }
 
         // CRLA Official Assessment: Persist item score immediately when locked
-        function persistLockedItemResult(itemIndex) {
+        function persistLockedItemResult(itemIndex, nextActiveItemIndex = null) {
             if (!isOfficialAssessmentLaunch || !itemLocked[itemIndex]) return;
             const itemScore = itemScores[itemIndex];
             if (!itemScore) return;
@@ -627,12 +627,16 @@
             
             // Notify server immediately
             const endState = readStudentEndState();
-            return updateStudentEndState({
+            const progressState = {
                 ...endState,
                 last_locked_item_index: itemIndex,
                 locked_items_count: (itemLocked.filter(Boolean) || []).length,
                 updated_at: new Date().toISOString(),
-            });
+            };
+            if (Number.isInteger(nextActiveItemIndex)) {
+                progressState.crla_question_index = nextActiveItemIndex;
+            }
+            return updateStudentEndState(progressState);
         }
 
         function restoreOfficialCrlaItemResults() {
@@ -1963,18 +1967,17 @@
             }
         }
 
-        async function skipFinalCrlaReadingItem() {
+        async function skipCrlaReadingItem() {
             const isStoryReading = currentStoryState === "story_reading" && currentSelectedStory;
             const isStandardReading = currentAssessmentUiMode === "standard";
             const isOnFinalRenderedItem = isStoryReading
                 ? currentPageIndex >= getCurrentPageCount() - 1
                 : currentIndex >= items.length - 1 && currentPageIndex >= getCurrentPageCount() - 1;
-            if (!isCrla || !isOnFinalRenderedItem || (!isStoryReading && !isStandardReading)) return false;
+            if (!isCrla || (!isStoryReading && !isStandardReading)) return false;
             if (isAdvancingItem) return true;
 
-            // Treat a final Next exactly as an unanswered CRLA item: lock and
-            // persist its zero-score result before using the established section
-            // completion path.  The guard also makes repeated clicks harmless.
+            // Next means skip for standard CRLA items. Lock and persist the
+            // zero-score result before the established item or branch transition.
             isAdvancingItem = true;
             if (nextBtn) nextBtn.disabled = true;
             clearSentenceItemTimer();
@@ -1984,6 +1987,9 @@
             }
             itemResultVersion += 1;
             if (!itemLocked[currentIndex]) {
+                const nextActiveItemIndex = isStandardReading && !isOnFinalRenderedItem
+                    ? currentIndex + 1
+                    : null;
                 itemLocked[currentIndex] = true;
                 itemScores[currentIndex] = {
                     correct_words: Number(correctWordCounts[currentIndex] || 0),
@@ -1992,7 +1998,7 @@
                     ...(isStoryReading ? { story_segment_index: currentPageIndex } : {}),
                     timestamp: new Date().toISOString(),
                 };
-                await persistLockedItemResult(currentIndex);
+                await persistLockedItemResult(currentIndex, nextActiveItemIndex);
             }
 
             if (isStoryReading) {
@@ -2001,6 +2007,8 @@
                 // rather than introducing a separate story scoring pathway.
                 storyMiscueCount += readableWordCount(getCurrentDisplayText());
                 await stopReading({ allowIdleStoryCompletion: true });
+            } else if (!isOnFinalRenderedItem) {
+                transitionToItem(currentIndex + 1, "Next item loaded.", "Keep reading clearly.");
             } else {
                 isRecording = false;
                 stopSpeechRecognition();
@@ -3941,7 +3949,10 @@
                         transcript: spokenTranscript,
                         timestamp: new Date().toISOString(),
                     };
-                    persistLockedItemResult(currentIndex);
+                    persistLockedItemResult(
+                        currentIndex,
+                        currentIndex < items.length - 1 ? currentIndex + 1 : null
+                    );
                     sentenceDebug("[SENTENCE DEBUG][COMPLETE]", {
                         final_per_word_results: results,
                         total_correct_words: correctWordCounts[currentIndex],
@@ -4038,7 +4049,10 @@
                         result: itemScores[currentIndex],
                     });
                     // Persist immediately to backend and localStorage
-                    persistLockedItemResult(currentIndex);
+                    persistLockedItemResult(
+                        currentIndex,
+                        currentIndex < items.length - 1 ? currentIndex + 1 : null
+                    );
                 }
                 
                 isAdvancingItem = true;
@@ -4237,7 +4251,10 @@
                             auto_advanced: true,
                             auto_advanced_reason: 'no_match',
                         };
-                        persistLockedItemResult(currentIndex);
+                        persistLockedItemResult(
+                            currentIndex,
+                            currentIndex < items.length - 1 ? currentIndex + 1 : null
+                        );
                         
                         if (currentIndex >= items.length - 1) {
                             isRecording = false;
@@ -4728,7 +4745,10 @@
                 timed_out: true,
                 timestamp: new Date().toISOString(),
             };
-            persistLockedItemResult(currentIndex);
+            persistLockedItemResult(
+                currentIndex,
+                currentIndex < items.length - 1 ? currentIndex + 1 : null
+            );
             itemResultVersion += 1;
             isAdvancingItem = true;
             if (currentIndex >= items.length - 1) {
@@ -6400,7 +6420,7 @@
                     logStorySegmentInitialization("manual_next");
                     animateCurrentItem();
                 } else {
-                    if (await skipFinalCrlaReadingItem()) return;
+                    if (await skipCrlaReadingItem()) return;
                     stopReading();
                 }
                 return;
@@ -6409,7 +6429,7 @@
                 (isCrla ? crlaQuestionNextBtn : storyQuestionNextBtn)?.click();
                 return;
             }
-            if (await skipFinalCrlaReadingItem()) return;
+            if (await skipCrlaReadingItem()) return;
             goToNextPageOrItem();
         });
 

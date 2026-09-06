@@ -1271,25 +1271,40 @@ class ReadingLaunchClassificationTests(TestCase):
         self.assertIn('&& isCrla', speech_controls)
         self.assertIn('button.disabled = true;', speech_controls)
 
-    def test_official_crla_final_reading_next_persists_a_skip_before_existing_completion(self):
+    def test_official_crla_reading_next_persists_each_skip_before_advancing_or_completing(self):
         script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
         content = script_path.read_text(encoding='utf-8')
-        final_skip = content.split('async function skipFinalCrlaReadingItem() {', 1)[1].split('function goToNextPageOrItem()', 1)[0]
+        skip = content.split('async function skipCrlaReadingItem() {', 1)[1].split('function goToNextPageOrItem()', 1)[0]
         navigation = content.split('function updateAssessmentNavigationButtons() {', 1)[1].split('function updateSpeechProcessingControls()', 1)[0]
         next_handler = content.split('nextBtn?.addEventListener("click", async () => {', 1)[1].split('function isInteractiveElement', 1)[0]
         comprehension = content.split('crlaQuestionNextBtn?.addEventListener("click", async () => {', 1)[1].split('crlaQuestionReadAloudBtn?.addEventListener', 1)[0]
 
         self.assertIn('const isCrlaReading = isCrla', navigation)
         self.assertIn('!isCrlaReading && (!isRecording || (onLastItem && isLastPage))', navigation)
-        self.assertIn('itemScores[currentIndex] = {', final_skip)
-        self.assertIn('skipped: true,', final_skip)
-        self.assertIn('await persistLockedItemResult(currentIndex);', final_skip)
-        self.assertLess(final_skip.index('await persistLockedItemResult(currentIndex);'), final_skip.index('showCompletion(true);'))
-        self.assertIn('await stopReading({ allowIdleStoryCompletion: true });', final_skip)
-        self.assertIn('storyMiscueCount += readableWordCount(getCurrentDisplayText());', final_skip)
-        self.assertEqual(next_handler.count('await skipFinalCrlaReadingItem()'), 2)
+        self.assertIn('itemScores[currentIndex] = {', skip)
+        self.assertIn('skipped: true,', skip)
+        self.assertIn('await persistLockedItemResult(currentIndex, nextActiveItemIndex);', skip)
+        self.assertLess(skip.index('await persistLockedItemResult(currentIndex, nextActiveItemIndex);'), skip.index('transitionToItem(currentIndex + 1'))
+        self.assertLess(skip.index('await persistLockedItemResult(currentIndex, nextActiveItemIndex);'), skip.index('showCompletion(true);'))
+        self.assertIn('if (isAdvancingItem) return true;', skip)
+        self.assertIn('await stopReading({ allowIdleStoryCompletion: true });', skip)
+        self.assertIn('storyMiscueCount += readableWordCount(getCurrentDisplayText());', skip)
+        self.assertEqual(next_handler.count('await skipCrlaReadingItem()'), 2)
         self.assertIn('await completeCRLASpokenAttempt("", questionIndex);', comprehension)
         self.assertIn('await finishCRLAComprehension();', comprehension)
+
+    def test_crla_locked_result_persists_the_next_active_item_before_auto_advance(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        persistence = content.split('function persistLockedItemResult(', 1)[1].split('function restoreOfficialCrlaItemResults()', 1)[0]
+        handler = content.split('function handleSpeechResult', 1)[1].split('function renderSyllableDisplay', 1)[0]
+        generic_word_result = handler.split('if (transcript || Number(data.matched || 0) > 0) {', 1)[1]
+
+        self.assertIn('nextActiveItemIndex = null', content)
+        self.assertIn('progressState.crla_question_index = nextActiveItemIndex;', persistence)
+        self.assertIn('currentIndex < items.length - 1 ? currentIndex + 1 : null', handler)
+        self.assertIn('renderSyllableDisplay(data, previousCorrectWords);', generic_word_result)
+        self.assertLess(generic_word_result.index('renderSyllableDisplay(data, previousCorrectWords);'), generic_word_result.index('itemLocked[currentIndex] = true;'))
 
     def test_crla_miscue_branch_advances_local_paragraph_cursor(self):
         script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
