@@ -1271,6 +1271,9 @@
                 crlaQuestionStartReadingBtn.classList.remove("is-recording");
                 crlaQuestionStartReadingBtn.textContent = "🎙 Start Reading";
             }
+            // Next doubles as Skip for official CRLA comprehension.  It must
+            // remain available even before the learner records an answer.
+            if (crlaQuestionNextBtn) crlaQuestionNextBtn.disabled = false;
             const progress = document.getElementById("crlaQuestionProgressFill");
             if (progress) progress.style.width = `${((currentStoryQuestionIndex + 1) / Math.max(1, currentStoryQuestions.length)) * 100}%`;
         }
@@ -1298,6 +1301,10 @@
                 renderCRLAQuestion();
                 return;
             }
+            await finishCRLAComprehension();
+        }
+
+        async function finishCRLAComprehension() {
             const correctAnswers = currentStoryResults.filter(Boolean).length;
             const persisted = readStudentEndState();
             const storyReadPercent = Number(persisted.story_read_percent ?? persisted.passage_accuracy_percent ?? 0);
@@ -1435,7 +1442,7 @@
             };
             if (crlaAnswerFeedback) { crlaAnswerFeedback.textContent = "Listening… Speak your answer once."; crlaAnswerFeedback.classList.remove("d-none"); }
             crlaQuestionStartReadingBtn.disabled = true;
-            crlaQuestionBackBtn.disabled = true; crlaQuestionNextBtn.disabled = true;
+            crlaQuestionBackBtn.disabled = true;
             crlaQuestionStartReadingBtn.classList.add("is-recording");
             crlaQuestionStartReadingBtn.textContent = "Listening…";
             try { crlaSpeechRecognition.start(); } catch (error) { crlaSpeechRecognition.onerror(error); }
@@ -6098,6 +6105,31 @@
             persistCRLAComprehensionState();
         });
         crlaQuestionStartReadingBtn?.addEventListener("click", startCRLASpokenAttempt);
+        crlaQuestionNextBtn?.addEventListener("click", async () => {
+            if (!currentStoryQuestions.length) return;
+            const questionIndex = currentStoryQuestionIndex;
+            // A captured answer is already being graded and will advance
+            // automatically through completeCRLASpokenAttempt.
+            if (currentStoryAnswers[questionIndex]) return;
+            if (currentStoryResults[questionIndex] === null) {
+                // Stop an in-progress recording before skipping so a delayed
+                // recognition callback cannot replace the skipped result.
+                crlaSpeechAttemptActive = false;
+                try { crlaSpeechRecognition?.abort(); } catch (error) {}
+                crlaSpeechRecognition = null;
+                // The established completion path records an empty response
+                // as false, persists it, and advances/completes the assessment.
+                await completeCRLASpokenAttempt("", questionIndex);
+                return;
+            }
+            if (questionIndex < currentStoryQuestions.length - 1) {
+                currentStoryQuestionIndex += 1;
+                renderCRLAQuestion();
+                await persistCRLAComprehensionState();
+                return;
+            }
+            await finishCRLAComprehension();
+        });
         crlaQuestionReadAloudBtn?.addEventListener("click", () => {
             if (!crlaQuestionText?.textContent || !window.speechSynthesis) return;
             speechSynthesis.cancel();

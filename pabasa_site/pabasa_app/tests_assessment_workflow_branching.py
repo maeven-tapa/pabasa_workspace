@@ -346,19 +346,23 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
     def test_official_crla_comprehension_count_survives_final_completion(self):
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
         handler = source.split("async function completeCRLASpokenAttempt", 1)[1].split("function startCRLASpokenAttempt", 1)[0]
-        self.assertIn("const correctAnswers = currentStoryResults.filter(Boolean).length;", handler)
-        self.assertIn("story_read_percent: storyReadPercent", handler)
-        self.assertIn("words_read: persisted.words_read", handler)
-        self.assertIn("miscues: persisted.miscues", handler)
-        self.assertIn("wpm: persisted.wpm", handler)
-        self.assertIn("correct_answers: correctAnswers", handler)
-        self.assertIn("comprehension_correct: correctAnswers", handler)
-        self.assertIn("total_questions: currentStoryQuestions.length", handler)
-        self.assertIn('stage: "story_comprehension"', handler)
-        self.assertIn("await showLearnerExperience();", handler)
+        completion = source.split("async function finishCRLAComprehension", 1)[1].split("function renderLearnerExperienceState", 1)[0]
+        self.assertIn("await finishCRLAComprehension();", handler)
+        self.assertIn("currentStoryResults[questionIndex] = Boolean(result);", handler)
+        self.assertIn("await persistCRLAComprehensionState();", handler)
+        self.assertIn("const correctAnswers = currentStoryResults.filter(Boolean).length;", completion)
+        self.assertIn("story_read_percent: storyReadPercent", completion)
+        self.assertIn("words_read: persisted.words_read", completion)
+        self.assertIn("miscues: persisted.miscues", completion)
+        self.assertIn("wpm: persisted.wpm", completion)
+        self.assertIn("correct_answers: correctAnswers", completion)
+        self.assertIn("comprehension_correct: correctAnswers", completion)
+        self.assertIn("total_questions: currentStoryQuestions.length", completion)
+        self.assertIn('stage: "story_comprehension"', completion)
+        self.assertIn("await showLearnerExperience();", completion)
         self.assertLess(
-            handler.index("latestScores = {"),
-            handler.index("await showLearnerExperience();"),
+            completion.index("latestScores = {"),
+            completion.index("await showLearnerExperience();"),
         )
         rating = source.split("async function saveLearnerExperienceRating", 1)[1].split("function startCRLASpokenAttempt", 1)[0]
         self.assertIn("learner_experience_rating: selectedRating", rating)
@@ -384,6 +388,22 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
         endpoint = (Path(__file__).parent / "views.py").read_text(encoding="utf-8")
         allowed_stages = endpoint.split("allowed_stages =", 1)[1].split("allowed_fields =", 1)[0]
         self.assertIn("'learner_experience'", allowed_stages)
+
+    def test_official_crla_comprehension_next_skips_unanswered_questions(self):
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        renderer = source.split("function renderCRLAQuestion", 1)[1].split("async function completeCRLASpokenAttempt", 1)[0]
+        self.assertIn("crlaQuestionNextBtn.disabled = false", renderer)
+
+        recording = source.split("function startCRLASpokenAttempt", 1)[1].split("function renderCRLAComprehensionState", 1)[0]
+        self.assertNotIn("crlaQuestionNextBtn.disabled = true", recording)
+
+        next_handler = source.split('crlaQuestionNextBtn?.addEventListener("click", async () => {', 1)[1].split('crlaQuestionReadAloudBtn?.addEventListener', 1)[0]
+        self.assertIn("if (currentStoryAnswers[questionIndex]) return;", next_handler)
+        self.assertIn("currentStoryResults[questionIndex] === null", next_handler)
+        self.assertIn("crlaSpeechRecognition?.abort()", next_handler)
+        self.assertIn('await completeCRLASpokenAttempt("", questionIndex);', next_handler)
+        self.assertIn("await persistCRLAComprehensionState();", next_handler)
+        self.assertIn("await finishCRLAComprehension();", next_handler)
 
     def test_part1_terminal_states_share_learner_experience_gate(self):
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
