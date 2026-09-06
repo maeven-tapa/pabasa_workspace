@@ -1271,6 +1271,26 @@ class ReadingLaunchClassificationTests(TestCase):
         self.assertIn('&& isCrla', speech_controls)
         self.assertIn('button.disabled = true;', speech_controls)
 
+    def test_official_crla_final_reading_next_persists_a_skip_before_existing_completion(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        final_skip = content.split('async function skipFinalCrlaReadingItem() {', 1)[1].split('function goToNextPageOrItem()', 1)[0]
+        navigation = content.split('function updateAssessmentNavigationButtons() {', 1)[1].split('function updateSpeechProcessingControls()', 1)[0]
+        next_handler = content.split('nextBtn?.addEventListener("click", async () => {', 1)[1].split('function isInteractiveElement', 1)[0]
+        comprehension = content.split('crlaQuestionNextBtn?.addEventListener("click", async () => {', 1)[1].split('crlaQuestionReadAloudBtn?.addEventListener', 1)[0]
+
+        self.assertIn('const isCrlaReading = isCrla', navigation)
+        self.assertIn('!isCrlaReading && (!isRecording || (onLastItem && isLastPage))', navigation)
+        self.assertIn('itemScores[currentIndex] = {', final_skip)
+        self.assertIn('skipped: true,', final_skip)
+        self.assertIn('await persistLockedItemResult(currentIndex);', final_skip)
+        self.assertLess(final_skip.index('await persistLockedItemResult(currentIndex);'), final_skip.index('showCompletion(true);'))
+        self.assertIn('await stopReading({ allowIdleStoryCompletion: true });', final_skip)
+        self.assertIn('storyMiscueCount += readableWordCount(getCurrentDisplayText());', final_skip)
+        self.assertEqual(next_handler.count('await skipFinalCrlaReadingItem()'), 2)
+        self.assertIn('await completeCRLASpokenAttempt("", questionIndex);', comprehension)
+        self.assertIn('await finishCRLAComprehension();', comprehension)
+
     def test_crla_miscue_branch_advances_local_paragraph_cursor(self):
         script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
         content = script_path.read_text(encoding='utf-8')

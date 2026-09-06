@@ -2640,6 +2640,23 @@
             width: auto;
         }
 
+        /* Official CRLA reading only: keep Next in the same visual family as
+           the primary reading controls without changing its neutral hierarchy. */
+        .reader-shell:not(.is-story-comprehension) .reader-footer.is-official-crla-nav {
+            gap: 0.75rem;
+        }
+
+        .reader-shell:not(.is-story-comprehension) .reader-footer.is-official-crla-nav #nextBtn {
+            min-height: 52px;
+            padding-inline: 1.3rem;
+            border-radius: 999px;
+        }
+
+        .reader-shell:not(.is-story-comprehension):has(.reader-footer.is-official-crla-nav) #retryBtn,
+        .reader-shell:not(.is-story-comprehension):has(.reader-footer.is-official-crla-nav) #quitBtn {
+            display: none;
+        }
+
         #crlaQuestionPanel .story-question-nav {
             grid-template-columns: repeat(3, minmax(0, 210px));
             justify-content: center;

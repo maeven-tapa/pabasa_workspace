@@ -1869,6 +1869,52 @@
             }
         }
 
+        async function skipFinalCrlaReadingItem() {
+            const isStoryReading = currentStoryState === "story_reading" && currentSelectedStory;
+            const isStandardReading = currentAssessmentUiMode === "standard";
+            const isOnFinalRenderedItem = isStoryReading
+                ? currentPageIndex >= getCurrentPageCount() - 1
+                : currentIndex >= items.length - 1 && currentPageIndex >= getCurrentPageCount() - 1;
+            if (!isCrla || !isOnFinalRenderedItem || (!isStoryReading && !isStandardReading)) return false;
+            if (isAdvancingItem) return true;
+
+            // Treat a final Next exactly as an unanswered CRLA item: lock and
+            // persist its zero-score result before using the established section
+            // completion path.  The guard also makes repeated clicks harmless.
+            isAdvancingItem = true;
+            if (nextBtn) nextBtn.disabled = true;
+            clearSentenceItemTimer();
+            if (autoAdvanceTimer) {
+                window.clearTimeout(autoAdvanceTimer);
+                autoAdvanceTimer = null;
+            }
+            itemResultVersion += 1;
+            if (!itemLocked[currentIndex]) {
+                itemLocked[currentIndex] = true;
+                itemScores[currentIndex] = {
+                    correct_words: Number(correctWordCounts[currentIndex] || 0),
+                    word_results: sentenceWordResults[currentIndex] || [],
+                    skipped: true,
+                    ...(isStoryReading ? { story_segment_index: currentPageIndex } : {}),
+                    timestamp: new Date().toISOString(),
+                };
+                await persistLockedItemResult(currentIndex);
+            }
+
+            if (isStoryReading) {
+                // A skipped final story segment is an incorrect segment.  Feed
+                // its words into the existing miscue-based story finalization
+                // rather than introducing a separate story scoring pathway.
+                storyMiscueCount += readableWordCount(getCurrentDisplayText());
+                await stopReading({ allowIdleStoryCompletion: true });
+            } else {
+                isRecording = false;
+                stopSpeechRecognition();
+                showCompletion(true);
+            }
+            return true;
+        }
+
         function goToNextPageOrItem() {
             if (isSpeechResponsePending()) return;
             const totalPages = getCurrentPageCount();
@@ -3042,6 +3088,10 @@
             const hasPreviousItem = currentIndex > 0;
             const isLastPage = currentPageIndex >= getCurrentPageCount() - 1;
             const onLastItem = currentIndex === items.length - 1;
+            const isCrlaReading = isCrla && (
+                currentAssessmentUiMode === "standard"
+                || currentStoryState === "story_reading"
+            );
             if (prevBtn) {
                 prevBtn.disabled = speechResponsePending || (isReviewMode
                     ? !(hasPreviousPage || hasPreviousItem)
@@ -3050,7 +3100,7 @@
             if (nextBtn) {
                 nextBtn.disabled = speechResponsePending || (isReviewMode
                     ? (onLastItem && isLastPage)
-                    : (isSentenceBot ? false : (!isRecording || (onLastItem && isLastPage))));
+                    : (isSentenceBot ? false : (!isCrlaReading && (!isRecording || (onLastItem && isLastPage)))));
             }
         }
 
@@ -5637,9 +5687,14 @@
             console.log("PABASA: Assessment recording and timer started.");
         };
 
-        const stopReading = async () => {
+        const stopReading = async ({ allowIdleStoryCompletion = false } = {}) => {
             if (isReviewMode || isSpeechResponsePending()) return;
-            if (!isRecording) return;
+            if (!isRecording && !(
+                allowIdleStoryCompletion
+                && isCrla
+                && currentStoryState === "story_reading"
+                && currentSelectedStory
+            )) return;
             clearSentenceItemTimer();
             // CRLA Official Assessment: Cleanup auto-advance timer
             if (autoAdvanceTimer) {
@@ -6187,7 +6242,7 @@
             goToPreviousPageOrItem();
         });
 
-        nextBtn?.addEventListener("click", () => {
+        nextBtn?.addEventListener("click", async () => {
             if (currentStoryState === "story_reading" && currentSelectedStory) {
                 if (currentPageIndex < getCurrentPageCount() - 1) {
                     const previousSegmentIndex = currentPageIndex;
@@ -6200,6 +6255,7 @@
                     logStorySegmentInitialization("manual_next");
                     animateCurrentItem();
                 } else {
+                    if (await skipFinalCrlaReadingItem()) return;
                     stopReading();
                 }
                 return;
@@ -6208,6 +6264,7 @@
                 (isCrla ? crlaQuestionNextBtn : storyQuestionNextBtn)?.click();
                 return;
             }
+            if (await skipFinalCrlaReadingItem()) return;
             goToNextPageOrItem();
         });
 
