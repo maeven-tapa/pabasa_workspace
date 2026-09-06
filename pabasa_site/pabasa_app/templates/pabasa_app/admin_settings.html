@@ -25,6 +25,10 @@
                 <time id="systemTime" class="admin-system-time" datetime="{{ system_time_iso }}">Loading…</time>
                 <p id="systemTimeDate" class="admin-system-time-date">{{ system_time_zone }}</p>
             </div>
+            <button class="btn btn-outline-warning btn-sm admin-system-time-debug-button" id="systemTimeDebugButton" type="button" aria-expanded="false" aria-controls="systemTimeDebugPanel">
+                <i class="bi bi-bug-fill" aria-hidden="true"></i>
+                <span>Debug System Time</span>
+            </button>
         </div>
         <div class="admin-account-avatar" aria-hidden="true">
             <i class="bi bi-person-gear"></i>
@@ -36,23 +40,22 @@
         </div>
     </section>
 
-    <section class="admin-settings-card" aria-labelledby="systemTimeDebugHeading">
-        <div class="admin-settings-card-header">
-            <span class="admin-settings-card-icon" aria-hidden="true"><i class="bi bi-bug"></i></span>
-            <div>
-                <h3 id="systemTimeDebugHeading">System Time Debug</h3>
-                <p>Simulate an advancing system time across all PABASA components. Use this only for testing.</p>
-            </div>
-        </div>
-        <button class="btn btn-outline-warning btn-sm" id="systemTimeDebugButton" type="button" aria-expanded="false" aria-controls="systemTimeDebugPanel">
-            <i class="bi bi-bug-fill" aria-hidden="true"></i> Debug System Time
-        </button>
-        <form id="systemTimeDebugPanel" method="post" class="d-grid gap-3 mt-3" hidden>
+    <section id="systemTimeDebugPanel" class="admin-settings-card" aria-labelledby="systemTimeDebugHeading" hidden>
+        <form method="post" class="d-grid gap-3">
             {% csrf_token %}
             <input type="hidden" name="settings_action" value="save_system_time_debug">
-            <div class="admin-setting-row">
-                <label for="systemTimeDebugEnabled">Enable debug time</label>
-                <input class="form-check-input" type="checkbox" id="systemTimeDebugEnabled" name="system_time_debug_enabled" {% if system_time_debug_enabled %}checked{% endif %}>
+            <div class="admin-settings-card-header admin-system-time-debug-header">
+                <div class="d-flex align-items-start gap-3">
+                    <span class="admin-settings-card-icon" aria-hidden="true"><i class="bi bi-bug"></i></span>
+                    <div>
+                        <h3 id="systemTimeDebugHeading">System Time Debug</h3>
+                        <p>Simulate an advancing system time across all PABASA components. Use this only for testing.</p>
+                    </div>
+                </div>
+                <label class="admin-setting-row admin-system-time-debug-toggle" for="systemTimeDebugEnabled">
+                    <span>Enable debug time</span>
+                    <input class="form-check-input" type="checkbox" id="systemTimeDebugEnabled" name="system_time_debug_enabled" {% if system_time_debug_enabled %}checked{% endif %}>
+                </label>
             </div>
             <div>
                 <label class="form-label small" for="systemTimeDebugValue">Simulated date and time</label>
@@ -127,15 +130,24 @@
                 <input type="hidden" name="settings_action" value="change_password">
                 <div>
                     <label class="form-label small" for="currentPassword">Current Password</label>
-                    <input class="form-control" id="currentPassword" name="current_password" type="password" autocomplete="current-password" required>
+                    <div class="admin-password-field">
+                        <input class="form-control" id="currentPassword" name="current_password" type="password" autocomplete="current-password" required>
+                        <button class="admin-password-toggle" type="button" data-password-toggle="currentPassword" aria-pressed="false" aria-label="Show current password">Show</button>
+                    </div>
                 </div>
                 <div>
                     <label class="form-label small" for="newPassword">New Password</label>
-                    <input class="form-control" id="newPassword" name="new_password" type="password" autocomplete="new-password" minlength="8" required>
+                    <div class="admin-password-field">
+                        <input class="form-control" id="newPassword" name="new_password" type="password" autocomplete="new-password" minlength="8" required>
+                        <button class="admin-password-toggle" type="button" data-password-toggle="newPassword" aria-pressed="false" aria-label="Show new password">Show</button>
+                    </div>
                 </div>
                 <div>
                     <label class="form-label small" for="confirmPassword">Confirm Password</label>
-                    <input class="form-control" id="confirmPassword" name="confirm_password" type="password" autocomplete="new-password" minlength="8" required>
+                    <div class="admin-password-field">
+                        <input class="form-control" id="confirmPassword" name="confirm_password" type="password" autocomplete="new-password" minlength="8" required>
+                        <button class="admin-password-toggle" type="button" data-password-toggle="confirmPassword" aria-pressed="false" aria-label="Show confirm password">Show</button>
+                    </div>
                 </div>
 
                 <div class="admin-settings-actions">
@@ -198,6 +210,19 @@
         const isHidden = debugPanel.hidden;
         debugPanel.hidden = !isHidden;
         debugButton.setAttribute('aria-expanded', String(isHidden));
+    });
+
+    document.querySelectorAll('[data-password-toggle]').forEach((button) => {
+        const input = document.getElementById(button.dataset.passwordToggle);
+        if (!input) return;
+        button.addEventListener('click', () => {
+            const isHidden = input.type === 'password';
+            input.type = isHidden ? 'text' : 'password';
+            button.textContent = isHidden ? 'Hide' : 'Show';
+            button.setAttribute('aria-pressed', String(isHidden));
+            button.setAttribute('aria-label', `${isHidden ? 'Hide' : 'Show'} ${input.labels?.[0]?.textContent?.trim().toLowerCase() || 'password'}`);
+            input.focus();
+        });
     });
 })();
 </script>

@@ -26,7 +26,8 @@
             --admin-muted: #4A6680;
             --admin-border: rgba(16, 70, 110, 0.14);
             --admin-shadow: 0 18px 40px rgba(16, 70, 110, 0.12);
-            --admin-sidebar-width: 300px;
+            /* Keep the admin navigation shell in lockstep with teacher/student. */
+            --admin-sidebar-width: 320px;
         }
 
         * {
@@ -195,11 +196,11 @@
 
         /* Collapsible admin sidebar support */
         body.admin-sidebar-collapsed .admin-sidebar {
-            width: 90px;
+            width: 88px;
         }
 
         body.admin-sidebar-collapsed {
-            --admin-sidebar-width: 90px;
+            --admin-sidebar-width: 88px;
         }
 
         body.admin-sidebar-collapsed .admin-brand-text,
@@ -624,6 +625,96 @@
             background: rgba(255, 255, 255, 0.2);
             color: #fff;
             transform: translateY(-1px);
+        }
+
+        /* Shared dashboard sidebar treatment (admin uses its own link names, but
+           deliberately follows the teacher/student sidebar geometry and states). */
+        .admin-sidebar {
+            height: 100dvh;
+            min-height: 100dvh;
+            overflow: hidden;
+            padding: 0;
+            backdrop-filter: blur(24px) saturate(180%);
+        }
+
+        .admin-sidebar > .d-flex {
+            padding: 1.25rem 1rem;
+        }
+
+        .admin-logo-row {
+            justify-content: center;
+        }
+
+        .admin-logo-link {
+            gap: 0;
+            justify-content: center;
+            min-height: 58px;
+            padding: 0.45rem 0.2rem;
+            width: 100%;
+        }
+
+        .admin-logo-img {
+            background: transparent;
+            border-radius: 0;
+            box-shadow: none;
+            height: clamp(2rem, 2.7vw, 2.4rem);
+            object-fit: contain;
+            padding: 0;
+            width: auto;
+        }
+
+        .admin-profile-card {
+            backdrop-filter: blur(10px) saturate(160%);
+            -webkit-backdrop-filter: blur(10px) saturate(160%);
+            min-height: 66px;
+            padding: 0.8rem;
+        }
+
+        .admin-nav-label {
+            margin: 0.25rem 0 0.35rem;
+        }
+
+        .admin-sidebar-scroll {
+            margin: 0.7rem 0 0;
+            padding: 0.85rem 0.1rem 0.5rem;
+        }
+
+        .admin-sidebar-scroll nav {
+            border-top: 1px solid rgba(255, 255, 255, 0.18);
+            padding-top: 0.85rem;
+        }
+
+        .admin-nav-link {
+            color: rgba(255, 255, 255, 0.92);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .admin-nav-link:hover,
+        .admin-nav-link.active {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.16);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+            color: #fff;
+            transform: translateX(2px);
+        }
+
+        .admin-sidebar-collapse-row {
+            padding: 0 0 0.85rem;
+        }
+
+        .admin-sidebar .admin-sidebar-collapse-row .sidebar-collapse-btn,
+        .admin-sidebar-footer .btn-outline-danger {
+            border-radius: 16px;
+            min-height: 46px;
+            padding: 0.65rem 0.85rem;
+        }
+
+        .admin-sidebar-footer {
+            background: transparent;
+            margin: 0;
+            padding: 0.75rem 0 calc(0.75rem + env(safe-area-inset-bottom));
+            position: static;
+            width: 100%;
         }
 
         .admin-topbar,
@@ -2596,9 +2687,129 @@
                 padding-right: 0.5rem;
             }
         }
+        /* Admin settings: place the debug trigger in the System Time strip and
+           keep its enable control aligned with the expanded debug heading. */
+        .admin-system-time-debug-button {
+            align-items: center;
+            display: inline-flex;
+            flex: 0 0 auto;
+            gap: 0.4rem;
+            justify-content: center;
+            margin-left: auto;
+            white-space: nowrap;
+        }
+
+        .admin-system-time-debug-header {
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .admin-system-time-debug-header > .d-flex {
+            min-width: 0;
+        }
+
+        .admin-system-time-debug-toggle {
+            flex: 0 0 auto;
+            min-height: 46px;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 991.98px) {
+            .admin-system-time-strip {
+                align-items: flex-start;
+                flex-wrap: wrap;
+            }
+
+            .admin-system-time-debug-button {
+                margin-left: 0;
+            }
+
+            .admin-system-time-debug-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .admin-system-time-debug-toggle {
+                align-items: center !important;
+                flex-direction: row !important;
+                width: 100%;
+            }
+        }
+
+        .admin-password-field {
+            position: relative;
+        }
+
+        .admin-password-field .form-control {
+            padding-right: 5rem;
+        }
+
+        .admin-password-toggle {
+            background: transparent;
+            border: 0;
+            color: var(--admin-primary-deep);
+            font-size: 0.82rem;
+            font-weight: 700;
+            line-height: 1;
+            padding: 0.25rem 0;
+            position: absolute;
+            right: 0.9rem;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 2;
+        }
+
+        .admin-password-toggle:hover,
+        .admin-password-toggle:focus-visible {
+            color: var(--admin-text);
+            text-decoration: underline;
+        }
+
+        .admin-page-loader {
+            background: #fff;
+            bottom: 0;
+            display: grid;
+            left: var(--admin-sidebar-width);
+            opacity: 0;
+            place-items: center;
+            pointer-events: none;
+            position: fixed;
+            right: 0;
+            top: 0;
+            transition: opacity 0.08s ease, visibility 0.08s ease;
+            visibility: hidden;
+            z-index: 99999;
+        }
+
+        .admin-page-loader.is-visible,
+        body.admin-preloading .admin-page-loader {
+            opacity: 1;
+            pointer-events: auto;
+            visibility: visible;
+        }
+
+        .admin-page-loader__spinner {
+            animation: admin-page-loader-spin 0.85s linear infinite;
+            border: 4px solid rgba(84, 194, 240, 0.22);
+            border-radius: 50%;
+            border-top-color: #54c2f0;
+            height: 42px;
+            width: 42px;
+        }
+
+        @keyframes admin-page-loader-spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 991.98px) {
+            .admin-page-loader { left: 0; }
+        }
     </style>
 </head>
-<body>
+<body class="admin-preloading">
+    <div class="admin-page-loader" id="adminPageLoader" aria-hidden="false" role="status" aria-label="Loading page">
+        <div class="admin-page-loader__spinner"></div>
+    </div>
     <aside class="admin-sidebar">
         <div class="d-flex flex-column h-100">
             <div class="admin-sidebar-top">
@@ -2747,6 +2958,44 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script src="{% static 'pabasa_app/js/notifications_shared.js' %}"></script>
+    <script>
+        (() => {
+            const loader = document.getElementById('adminPageLoader');
+            if (!loader) return;
+
+            const hideLoader = () => {
+                document.body.classList.remove('admin-preloading');
+                loader.classList.remove('is-visible');
+                loader.setAttribute('aria-hidden', 'true');
+            };
+
+            const showLoader = () => {
+                loader.classList.add('is-visible');
+                loader.setAttribute('aria-hidden', 'false');
+            };
+
+            window.addEventListener('pageshow', hideLoader);
+            document.addEventListener('DOMContentLoaded', () => {
+                window.requestAnimationFrame(hideLoader);
+            });
+
+            document.addEventListener('click', (event) => {
+                const link = event.target.closest('a[href]');
+                if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                if (link.target && link.target !== '_self' || link.hasAttribute('download') || link.dataset.bsToggle) return;
+
+                const destination = new URL(link.href, window.location.href);
+                if (destination.origin !== window.location.origin || destination.pathname === window.location.pathname && destination.search === window.location.search && destination.hash) return;
+                showLoader();
+            });
+
+            document.addEventListener('submit', (event) => {
+                const form = event.target;
+                if (!(form instanceof HTMLFormElement) || event.defaultPrevented || !form.checkValidity()) return;
+                showLoader();
+            });
+        })();
+    </script>
     <script>
         (function() {
             let cleanupTimer = null;
