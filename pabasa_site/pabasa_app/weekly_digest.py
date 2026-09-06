@@ -7,6 +7,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.templatetags.static import static
 from django.utils import timezone
+from .system_clock import now as system_now
 from django.utils.dateparse import parse_datetime
 
 from .models import Assessment, Course, Practice, Section, User
@@ -526,7 +527,7 @@ def render_digest_html(digest):
                     <tr>
                         <td align="center" style="padding: 22px 24px 28px; color: #60777b; font-size: 12px; line-height: 20px;">
                             <strong style="color: #134e4a;">PABASA</strong><br>
-                            Copyright &copy; {timezone.now().year} PABASA. This email was generated automatically from your account activity.
+                            Copyright &copy; {system_now().year} PABASA. This email was generated automatically from your account activity.
                         </td>
                     </tr>
                 </table>
@@ -576,7 +577,7 @@ def send_weekly_digest(user, start, end, dry_run=False, force=False):
             html_message=html_body,
         )
         prefs["weekly_digest"] = {
-            "last_sent_at": timezone.now().isoformat(),
+            "last_sent_at": system_now().isoformat(),
             "last_window_start": start.isoformat(),
             "last_window_end": end.isoformat(),
             "last_window_key": window_key,
@@ -587,7 +588,7 @@ def send_weekly_digest(user, start, end, dry_run=False, force=False):
 
 
 def send_weekly_digests(start=None, end=None, user_id=None, dry_run=False, force=False):
-    end = end or timezone.now()
+    end = end or system_now()
     start = start or (end - timedelta(days=7))
     users = User.objects.filter(role__in=["teacher", "student"], is_archived=False)
     if user_id:

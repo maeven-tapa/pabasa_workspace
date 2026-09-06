@@ -7,6 +7,7 @@ from django.db import models, transaction
 from django.db.models.functions import Lower
 from django.utils import timezone
 from datetime import datetime
+from .system_clock import now as system_now
 
 
 def _configured_term_for_date(value, phase=''):
@@ -171,7 +172,7 @@ class User(models.Model):
     def set_account_status(self, status, changed_by=None, reason=""):
         if status not in dict(self.ACCOUNT_STATUS_CHOICES):
             raise ValidationError({"account_status": "Invalid account status."})
-        now = timezone.now()
+        now = system_now()
         self.account_status = status
         self.is_archived = status == "archived"
         self.archived_at = now if self.is_archived else None
@@ -422,13 +423,13 @@ class Section(models.Model):
             'first_name': user.first_name,
             'last_name': user.last_name,
             'email': user.email,
-            'joined_at': joined_at or timezone.now().isoformat(),
+            'joined_at': joined_at or system_now().isoformat(),
             'is_active': is_active,
         }
     
     def _save_enrollment(self):
         """Save updated students list to database"""
-        self.updated_at = timezone.now()
+        self.updated_at = system_now()
         self.save(update_fields=['students', 'updated_at'])
     
     def add_student(self, user):
@@ -627,7 +628,7 @@ class Enrollment(models.Model):
             self.outcome = outcome
             self.status = "completed"
             self.finalized_by = finalized_by
-            self.finalized_at = timezone.now()
+            self.finalized_at = system_now()
             self.save(update_fields=["outcome", "status", "is_active", "finalized_by", "finalized_at", "updated_at"])
             self.student.set_account_status(
                 "pending_archive" if outcome == "promoted" else "active",
@@ -833,13 +834,13 @@ class Assessment(models.Model):
             try:
                 attempt_row.started_at = self._coerce_attempt_datetime(started_at) or started_at
             except Exception:
-                attempt_row.started_at = timezone.now()
+                attempt_row.started_at = system_now()
         completed_at = attempt_data.pop('completed_at', None)
         if completed_at is not None:
             try:
                 attempt_row.completed_at = self._coerce_attempt_datetime(completed_at) or completed_at
             except Exception:
-                attempt_row.completed_at = timezone.now()
+                attempt_row.completed_at = system_now()
         for key, value in attempt_data.items():
             if key in {'attempt_id', 'attempt_number', 'student', 'student_id'}:
                 continue
@@ -893,7 +894,7 @@ class Assessment(models.Model):
                 attempt_row.attempt_number = value
             elif key == 'student':
                 attempt_row.student = value
-        attempt_row.updated_at = timezone.now()
+        attempt_row.updated_at = system_now()
         attempt_row.save()
         return attempt_row
 
@@ -953,10 +954,10 @@ class Assessment(models.Model):
         if attempt_number is None:
             attempt_number = self.get_student_attempt_count(student) + 1
 
-        started_at_value = self._coerce_attempt_datetime(attempt_data.pop('started_at', None)) or timezone.now()
+        started_at_value = self._coerce_attempt_datetime(attempt_data.pop('started_at', None)) or system_now()
         completed_at_value = attempt_data.pop('completed_at', None)
         completed_at_value = self._coerce_attempt_datetime(completed_at_value)
-        attempt_completed_at = completed_at_value or timezone.now()
+        attempt_completed_at = completed_at_value or system_now()
         official_term = _configured_term_for_date(attempt_completed_at, self.system_assessment_phase) if self.is_system_owned else None
         if official_term is None:
             official_term = getattr(self.material, 'official_term', None) if self.material_id else self.official_term
@@ -993,7 +994,7 @@ class Assessment(models.Model):
 
         self._apply_attempt_payload(attempt_row, attempt_data)
         if completed_at_value is None and attempt_row.attempt_status == 'completed':
-            attempt_row.completed_at = timezone.now()
+            attempt_row.completed_at = system_now()
             attempt_row.save(update_fields=['completed_at', 'updated_at'])
         self._sync_attempt_count()
         return attempt_row._serialize_attempt()
@@ -1022,7 +1023,7 @@ class Assessment(models.Model):
         for attempt_row in attempt_rows:
             if attempt_row.attempt_status != 'cancelled':
                 attempt_row.attempt_status = 'cancelled'
-                attempt_row.updated_at = timezone.now()
+                attempt_row.updated_at = system_now()
                 attempt_row.save(update_fields=['attempt_status', 'updated_at'])
                 changed = True
         return changed
@@ -1035,7 +1036,7 @@ class Assessment(models.Model):
             child_rows.delete()
         if group.pk:
             group.attempt_no = 0
-            group.updated_at = timezone.now()
+            group.updated_at = system_now()
             group.save(update_fields=['attempt_no', 'updated_at'])
             return True
         return False
@@ -1257,7 +1258,7 @@ class Practice(models.Model):
         enrollment = kwargs.pop("enrollment", None)
         entry = {
             "student_id": student.id,
-            "started_at": started_at or timezone.now().isoformat(),
+            "started_at": started_at or system_now().isoformat(),
             "status": status,
         }
         if enrollment is not None:
@@ -1278,7 +1279,7 @@ class Practice(models.Model):
         return entry
 
     def _save_attempts(self):
-        self.updated_at = timezone.now()
+        self.updated_at = system_now()
         self.save(update_fields=["attempts", "updated_at"])
 
     def record_attempt(self, student, replace=True, **attempt_data):
@@ -1484,11 +1485,11 @@ class Material(models.Model):
         status_value = str(attempt_data.pop("status", "completed") or "completed")
         completed_at_value = attempt_data.pop("completed_at", None)
         if isinstance(completed_at_value, str):
-            completed_at_value = timezone.now()
-        started_at_value = attempt_data.pop("started_at", None) or timezone.now()
+            completed_at_value = system_now()
+        started_at_value = attempt_data.pop("started_at", None) or system_now()
         if isinstance(started_at_value, str):
-            started_at_value = timezone.now()
-        result_completed_at = completed_at_value or (timezone.now() if status_value == "completed" else None)
+            started_at_value = system_now()
+        result_completed_at = completed_at_value or (system_now() if status_value == "completed" else None)
 
         teacher = self.teacher or (self.section.teacher if self.section_id and self.section else None)
         if teacher is None and student is not None:

@@ -48,9 +48,3 @@ def today():
 
 def invalidate_override_cache():
     cache.delete(_CACHE_KEY)
-
-
-def install_timezone_override():
-    """Route Django's timezone-aware clock through this app-wide clock."""
-    if timezone.now is not now:
-        timezone.now = now

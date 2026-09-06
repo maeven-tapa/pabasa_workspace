@@ -57,7 +57,7 @@ from django.db import transaction
 import re
 import traceback
 from .models import User, School, Section, Enrollment, Assessment, AssessmentRequest, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride
-from .system_clock import invalidate_override_cache, real_now, today as system_today
+from .system_clock import invalidate_override_cache, now as system_now, real_now, today as system_today
 from .section_configuration import ensure_salawag_grade_two_sections
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
 from .student_session_lock import claim_student_session, release_student_session
@@ -895,7 +895,7 @@ def _crla_creation_block_message(teacher_user=None, on_date=None):
 
 def _assessment_materials_for_student(student=None):
     kind_filters = Q(assessment_kind='regular') | Q(assessment_kind='crla')
-    now = timezone.now()
+    now = system_now()
     queryset = Material.objects.filter(
         is_active=True,
         type='assessment',
@@ -954,7 +954,7 @@ def _material_is_released(material, now=None):
     if status != 'scheduled':
         return True
     scheduled_at = getattr(material, 'scheduled_at', None)
-    return bool(scheduled_at and scheduled_at <= (now or timezone.now()))
+    return bool(scheduled_at and scheduled_at <= (now or system_now()))
 
 
 def _template_reading_type(template_title):
@@ -1165,7 +1165,7 @@ def _student_section_entry(user, joined_at=None, is_active=True):
         'first_name': user.first_name,
         'last_name': user.last_name,
         'email': user.email,
-        'joined_at': joined_at or timezone.now().isoformat(),
+        'joined_at': joined_at or system_now().isoformat(),
         'is_active': is_active,
     }
 
@@ -1357,7 +1357,7 @@ def _principal_users():
 def _notification_recently_sent(recipient, title, message, window_minutes=1440):
     if not recipient:
         return False
-    window_start = timezone.now() - timedelta(minutes=window_minutes)
+    window_start = system_now() - timedelta(minutes=window_minutes)
     return Notification.objects.filter(
         recipient=recipient,
         title=title,
@@ -1401,7 +1401,7 @@ def _notify_principal_performance_events(student_user, assessment=None, material
     if not section:
         return []
 
-    now = timezone.now()
+    now = system_now()
     week_start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
     week_end = week_start + timedelta(days=7)
 
@@ -1581,7 +1581,7 @@ def _assessment_completion_message(student_name, title_text, class_name=None):
 
 def _assessment_completion_notif_exists(recipient, student_user, message, is_retake=False):
     """Prevent duplicate in-app notifications for the same completion event."""
-    window_start = timezone.now() - timedelta(minutes=10)
+    window_start = system_now() - timedelta(minutes=10)
     qs = Notification.objects.filter(
         recipient=recipient,
         created_by=student_user,
@@ -2140,7 +2140,7 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
 
     user_ids = [sdata['id'] for sdata in student_map.values()]
     users = User.objects.filter(id__in=user_ids).in_bulk()
-    now = timezone.now()
+    now = system_now()
     thirty_days_ago = now - timedelta(days=30)
     seven_days_ago = now - timedelta(days=7)
     attempt_history = {}
@@ -2469,7 +2469,7 @@ def _update_student_reading_profile(student_user, score_payload):
         'adapted_level_score': score_payload.get('adapted_level_score'),
         'adapted_reading_level': adapted_level,
         'adapted_reading_level_disclaimer': score_payload.get('adapted_reading_level_disclaimer') or ADAPTED_READING_LEVEL_DISCLAIMER,
-        'last_assessment_at': timezone.now().isoformat(),
+        'last_assessment_at': system_now().isoformat(),
     })
     student_user.reading_level = adapted_level
     _set_profile_dict(student_user, 'student_profile', profile)
@@ -2559,7 +2559,7 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
             'correct_words': submitted_correct_words if submitted_correct_words is not None else previous_correct_words,
             'correct_sentences': score_payload.get('correct_sentences') if score_payload.get('correct_sentences') is not None else score_payload.get('sentence_count') if score_payload.get('sentence_count') is not None else score_payload.get('correct_items'),
             'classification': normalized_classification,
-            'updated_at': timezone.now().isoformat(),
+            'updated_at': system_now().isoformat(),
             'task1_score': task1_score,
             'task2_rhymes_score': submitted_rhymes_score,
             'task2_sentences_score': submitted_sentences_score,
@@ -3078,7 +3078,7 @@ def _build_certificate_pdf(student_name='', issued_on=None, school_name='PABASA'
     )
 
     if issued_on is None:
-        issued_on = timezone.localtime(timezone.now(), timezone.get_default_timezone()).strftime('%B %d, %Y')
+        issued_on = timezone.localtime(system_now(), timezone.get_default_timezone()).strftime('%B %d, %Y')
 
     elements = []
     elements.append(Paragraph('PABASA', title_style))
@@ -3201,7 +3201,7 @@ def _build_reading_report_pdf(report, message='', course=None, teacher=None, rec
         except Exception:
             return str(dt_str)
 
-    generated_at = timezone.localtime(timezone.now(), timezone.get_default_timezone()).strftime('%B %d, %Y %I:%M %p')
+    generated_at = timezone.localtime(system_now(), timezone.get_default_timezone()).strftime('%B %d, %Y %I:%M %p')
     student_name = report.get('student_name') or 'Student'
     joined_classes = report.get('joined_classes') or []
     if isinstance(joined_classes, str):
@@ -3387,7 +3387,7 @@ def _send_course_update_to_student(
         include_attachment = True
     elif normalized_update_type == 'commendation':
         subject = "Performance Commendation - PABASA"
-        certificate_date = timezone.localtime(timezone.now(), timezone.get_default_timezone()).strftime('%B %d, %Y')
+        certificate_date = timezone.localtime(system_now(), timezone.get_default_timezone()).strftime('%B %d, %Y')
         certificate_pdf = _build_certificate_pdf(
             student_name=student_name,
             issued_on=certificate_date,
@@ -4570,7 +4570,7 @@ def login_user(request):
         request.session['first_name'] = user.first_name
         request.session['last_name'] = user.last_name
         request.session['email'] = user.email
-        request.session['login_at'] = timezone.now().isoformat()
+        request.session['login_at'] = system_now().isoformat()
         
         if user.role == 'admin':
             redirect_url = '/dashboard/admin/'
@@ -4634,7 +4634,7 @@ def principal_change_temporary_password(request):
                 user.must_change_password = False
                 user.save(update_fields=['password_hash', 'must_change_password', 'updated_at'])
                 request.session.cycle_key()
-                request.session['login_at'] = timezone.now().isoformat()
+                request.session['login_at'] = system_now().isoformat()
                 request.session.modified = True
                 return redirect('dashboard_principal')
 
@@ -4868,7 +4868,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
                 account_status_class = 'status-pending'
                 account_status_tooltip = 'No activity recorded yet.'
             else:
-                now = timezone.now()
+                now = system_now()
                 if last_activity:
                     delta = now - last_activity
                     days = delta.days
@@ -5343,8 +5343,8 @@ def _official_override_lockout_cache_key(user_id):
 
 def _official_override_rate_limited(user_id):
     cache_key = _official_override_lockout_cache_key(user_id)
-    state = cache.get(cache_key) or {'count': 0, 'window_started': timezone.now().timestamp()}
-    now_ts = timezone.now().timestamp()
+    state = cache.get(cache_key) or {'count': 0, 'window_started': system_now().timestamp()}
+    now_ts = system_now().timestamp()
     window_started = float(state.get('window_started') or now_ts)
     if (now_ts - window_started) > OFFICIAL_READING_OVERRIDE_RATE_LIMIT_WINDOW_SECONDS:
         state = {'count': 0, 'window_started': now_ts}
@@ -5361,12 +5361,12 @@ def _official_override_lockout_active(reviewer_id):
     lockout = _get_official_override_lockout(reviewer_id)
     if not lockout or not lockout.lockout_expires_at:
         return False
-    if lockout.lockout_expires_at <= timezone.now():
+    if lockout.lockout_expires_at <= system_now():
         if lockout.failed_attempt_count or lockout.lockout_expires_at:
             lockout.failed_attempt_count = 0
             lockout.last_failed_at = None
             lockout.lockout_expires_at = None
-            lockout.audit_payload = {'cleared_at': timezone.now().isoformat()}
+            lockout.audit_payload = {'cleared_at': system_now().isoformat()}
             lockout.save(update_fields=['failed_attempt_count', 'last_failed_at', 'lockout_expires_at', 'audit_payload', 'updated_at'])
         return False
     return True
@@ -5384,7 +5384,7 @@ def _official_override_lockout_payload(lockout):
 
 def _official_override_record_failed_attempt(reviewer):
     lockout, _ = OfficialReadingOverrideSecurityLockout.objects.get_or_create(reviewer=reviewer)
-    now = timezone.now()
+    now = system_now()
     failed_attempts = lockout.failed_attempt_count + 1
     lockout.failed_attempt_count = failed_attempts
     lockout.last_failed_at = now
@@ -5405,7 +5405,7 @@ def _official_override_reset_attempts(reviewer):
     lockout.failed_attempt_count = 0
     lockout.last_failed_at = None
     lockout.lockout_expires_at = None
-    lockout.audit_payload = {'reset_at': timezone.now().isoformat()}
+    lockout.audit_payload = {'reset_at': system_now().isoformat()}
     lockout.save(update_fields=['failed_attempt_count', 'last_failed_at', 'lockout_expires_at', 'audit_payload', 'updated_at'])
 
 
@@ -5438,7 +5438,7 @@ def _official_reading_override_authorized(request, material):
         is_active=True,
         revoked_at__isnull=True,
         used_at__isnull=True,
-        expires_at__gt=timezone.now(),
+        expires_at__gt=system_now(),
     ).first()
     override = _official_reading_override_session(request)
     return bool(
@@ -5544,7 +5544,7 @@ def admin_official_reading_assessment_override_authorize(request, material_id):
     if lockout and lockout.failed_attempt_count:
         _official_override_reset_attempts(reviewer)
 
-    now = timezone.now()
+    now = system_now()
     expires_at = now + timedelta(hours=OFFICIAL_READING_OVERRIDE_WINDOW_HOURS)
     override_request.status = 'approved'
     override_request.reviewed_at = now
@@ -5598,7 +5598,7 @@ def admin_official_reading_override_request(request, material_id):
     deped_reference, material_change, justification, supporting_links, errors = _official_override_request_payload(request)
     if errors:
         return JsonResponse({'success': False, 'errors': errors, 'error': 'Please fix the highlighted fields.'}, status=400)
-    request_id = f"IR-{timezone.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6].upper()}"
+    request_id = f"IR-{system_now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6].upper()}"
     override_request = OfficialReadingIntegrityOverrideRequest.objects.create(
         request_id=request_id,
         requested_by=admin_user,
@@ -5750,7 +5750,7 @@ def _create_principal_account(request, school, first_name, middle_initial, last_
         sex='N/A',
         birth_month=1,
         birth_day=1,
-        birth_year=timezone.now().year,
+        birth_year=system_now().year,
         email=email,
         contact_no=contact_no,
         school=school.name,
@@ -6285,7 +6285,7 @@ def admin_principal_deactivate(request, user_id):
         user.save(update_fields=['is_archived', 'archived_at', 'updated_at'])
     elif action == 'deactivate' and not user.is_archived:
         user.is_archived = True
-        user.archived_at = timezone.now()
+        user.archived_at = system_now()
         user.save(update_fields=['is_archived', 'archived_at', 'updated_at'])
 
     return redirect('admin_principal_detail', user_id=user.id)
@@ -6381,7 +6381,7 @@ def admin_school_principal_status(request, school_id, user_id):
             messages.error(request, 'This School already has an active Principal account.')
     elif action == 'deactivate' and not user.is_archived:
         user.is_archived = True
-        user.archived_at = timezone.now()
+        user.archived_at = system_now()
         user.save(update_fields=['is_archived', 'archived_at', 'updated_at'])
         messages.success(request, 'Principal account deactivated.')
     return redirect('admin_school_detail', school_id=school.id)
@@ -6399,7 +6399,7 @@ def _admin_archive_user(request, user_id, role):
             user.set_account_status('archived', changed_by=_current_admin_user(request), reason='Admin archived account')
         else:
             user.is_archived = True
-            user.archived_at = timezone.now()
+            user.archived_at = system_now()
             user.save(update_fields=['is_archived', 'archived_at', 'updated_at'])
 
     return redirect(_admin_user_redirect_name(role))
@@ -7589,7 +7589,7 @@ def _expire_assessment_week_if_needed(section):
 
     Section.objects.filter(
         pk=section.pk, assessment_week_enabled=True,
-    ).update(assessment_week_enabled=False, updated_at=timezone.now())
+    ).update(assessment_week_enabled=False, updated_at=system_now())
     section.assessment_week_enabled = False
     return False
 
@@ -10054,7 +10054,7 @@ def admin_settings(request):
         else:
             context['settings_error'] = 'Unknown settings action.'
 
-    system_time = timezone.localtime(timezone.now())
+    system_time = timezone.localtime(system_now())
     system_time_override = SystemTimeOverride.objects.filter(pk=1).first()
     context['notification_settings'] = notification_settings
     context['system_time_iso'] = system_time.isoformat()
@@ -10071,7 +10071,7 @@ def admin_settings(request):
 @require_http_methods(["GET"])
 def admin_system_time(request):
     """Return the server clock for the admin settings time display."""
-    system_time = timezone.localtime(timezone.now())
+    system_time = timezone.localtime(system_now())
     return JsonResponse({
         'success': True,
         'server_time': system_time.isoformat(),
@@ -10119,7 +10119,7 @@ def approve_assessment_request(request, request_id):
     item = AssessmentRequest.objects.filter(id=request_id, section__teacher=teacher, status='pending').first()
     if not item:
         return JsonResponse({'success': False, 'error': 'Request not found.'}, status=404)
-    item.status = 'approved'; item.reviewed_by = teacher; item.reviewed_at = timezone.now(); item.save(update_fields=['status', 'reviewed_by', 'reviewed_at'])
+    item.status = 'approved'; item.reviewed_by = teacher; item.reviewed_at = system_now(); item.save(update_fields=['status', 'reviewed_by', 'reviewed_at'])
     return JsonResponse({'success': True})
 
 def assessment(request):
@@ -12533,7 +12533,7 @@ def sentence_bot_complete(request):
             accuracy = round((correct_items / total_sentences) * 100) if total_sentences else 0
             material.record_assessment_result(
                 student_user,
-                status='completed', completed_at=timezone.now(),
+                status='completed', completed_at=system_now(),
                 items_completed=total_sentences, correct_items=correct_items,
                 accuracy=accuracy, total_score=accuracy, passed=correct_items == total_sentences,
                 duration_seconds=duration_seconds,
@@ -12806,7 +12806,7 @@ def story_reading_complete(request):
             'current_scene': current_scene,
             'current_time_seconds': current_time_seconds,
             'completed': requested_completed or bool(existing_progress and existing_progress.completed),
-            'completed_at': timezone.now() if requested_completed else (existing_progress.completed_at if existing_progress else None),
+            'completed_at': system_now() if requested_completed else (existing_progress.completed_at if existing_progress else None),
         },
     )
     return JsonResponse({
@@ -12902,7 +12902,7 @@ def persist_student_end_assessment_state(request):
     }
     saved = {key: payload.get(key) for key in allowed_fields if key in payload}
     saved['stage'] = stage
-    saved['updated_at'] = timezone.now().isoformat()
+    saved['updated_at'] = system_now().isoformat()
     state = _get_user_state(student)
     state['student_end_assessment_state'] = saved
     _, saved_material_id = _parse_prefixed_id(saved.get('material_id'))
@@ -13401,7 +13401,7 @@ def _record_material_practice_completion(material, student_user, attempt_payload
     completion = {
         'student_id': student_user.id,
         'status': 'completed',
-        'completed_at': attempt_payload.get('completed_at') or timezone.now().isoformat(),
+        'completed_at': attempt_payload.get('completed_at') or system_now().isoformat(),
         'stars_earned': saved_stars,
         'items_completed': attempt_payload.get('items_completed', 0),
         'total_practice_items': attempt_payload.get('total_practice_items', 0),
@@ -13653,7 +13653,7 @@ def _mutate_live_session_state(session_id, mutation, max_retries=LIVE_ASSESSMENT
         values = {field: getattr(session, field) for field in fields}
         values.update({
             'state_version': F('state_version') + 1,
-            'updated_at': timezone.now(),
+            'updated_at': system_now(),
         })
         try:
             updated = LiveAssessmentSession.objects.filter(
@@ -13829,19 +13829,19 @@ def _append_live_session_activity(session, message):
         if not isinstance(log, list):
             log = []
         log.append({
-            'timestamp': timezone.now().isoformat(),
+            'timestamp': system_now().isoformat(),
             'message': str(message),
         })
         session.activity_log = log[-200:]
     except Exception:
-        session.activity_log = [{'timestamp': timezone.now().isoformat(), 'message': str(message)}]
+        session.activity_log = [{'timestamp': system_now().isoformat(), 'message': str(message)}]
 
 
 def _is_live_assessment_session_stale(session):
     if not session or session.status not in LIVE_ASSESSMENT_ACTIVE_STATUSES:
         return False
 
-    now = timezone.now()
+    now = system_now()
     reference_time = session.start_at or session.created_at or now
     return (now - reference_time) >= timedelta(hours=LIVE_ASSESSMENT_STALE_HOURS)
 
@@ -14139,7 +14139,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             'discovered_words': discovered_words,
             'used_syllables': used_syllables,
             'discovery_attempts': discovery_attempts,
-            'updated_at': timezone.now().isoformat(),
+            'updated_at': system_now().isoformat(),
         }
         state['interactive_activity_progress'] = progress_store
         _set_user_state(student_user, state)
@@ -14475,7 +14475,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         }
         attempt_payload = {
             'status': 'completed',
-            'completed_at': timezone.now(),
+            'completed_at': system_now(),
             'device_info': device_info,
             'game_mode': str(data.get('game_mode') or '').strip().lower(),
             'stars_earned': data.get('stars_earned', 0),
@@ -14908,7 +14908,7 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
     if not session:
         return session
 
-    ended_at = ended_at or timezone.now()
+    ended_at = ended_at or system_now()
     was_already_ended = session.status == 'ended'
     _trace_live_end_flow(
         'end_session_enter',
@@ -15101,10 +15101,10 @@ def _end_active_live_assessment_sessions_for_teacher(teacher_user):
 
 def _advance_live_assessment_state(session):
     if session.status == 'countdown' and session.start_at:
-        if timezone.now() >= session.start_at:
+        if system_now() >= session.start_at:
             _trace_live_end_flow('advance_state_countdown_to_started_before', session)
             def apply_countdown_advance(current):
-                if current.status != 'countdown' or not current.start_at or timezone.now() < current.start_at:
+                if current.status != 'countdown' or not current.start_at or system_now() < current.start_at:
                     return None
                 current.status = 'started'
                 _append_live_session_activity(current, 'Live assessment countdown completed and session is now active.')
@@ -15118,7 +15118,7 @@ def _advance_live_assessment_state(session):
 
 def _maybe_auto_end_live_session(session):
     if session.status == 'started':
-        now = timezone.now()
+        now = system_now()
         if session.timing_mode == 'duration' and session.duration_seconds and session.start_at:
             if session.start_at + timedelta(seconds=session.duration_seconds) <= now:
                 _trace_live_end_flow('auto_end_duration_triggered', session)
@@ -15134,14 +15134,14 @@ def _maybe_auto_end_live_session(session):
 def _get_live_session_remaining_seconds(session):
     if session.timing_mode != 'duration' or not session.duration_seconds or not session.start_at:
         return None
-    remaining = int((session.start_at + timedelta(seconds=session.duration_seconds) - timezone.now()).total_seconds())
+    remaining = int((session.start_at + timedelta(seconds=session.duration_seconds) - system_now()).total_seconds())
     return max(0, remaining)
 
 
 def _get_live_session_start_countdown_seconds(session):
     if not session.start_at:
         return None
-    remaining = math.ceil((session.start_at - timezone.now()).total_seconds())
+    remaining = math.ceil((session.start_at - system_now()).total_seconds())
     return max(0, remaining)
 
 
@@ -15179,7 +15179,7 @@ def _update_live_student_state(session, student_id, state_values):
         incoming_state=state_values or {},
     )
     student_record.update(state_values or {})
-    student_record['updated_at'] = timezone.now().isoformat()
+    student_record['updated_at'] = system_now().isoformat()
     states[student_key] = student_record
     session.student_states = states
     _trace_live_end_flow(
@@ -15560,7 +15560,7 @@ def live_assessment_active_invitation(request):
 def live_assessment_server_time(request):
     return JsonResponse({
         'success': True,
-        'server_time': timezone.now().isoformat(),
+        'server_time': system_now().isoformat(),
     })
 
 
@@ -15709,7 +15709,7 @@ def start_live_assessment(request):
         'session': {
             'id': session.id,
             'url': control_url,
-            'start_at': session.created_at.isoformat() if session.created_at else timezone.now().isoformat(),
+            'start_at': session.created_at.isoformat() if session.created_at else system_now().isoformat(),
             'student_count': 0,
             'action_url': control_url,
             'student_url': waiting_url,
@@ -16182,7 +16182,7 @@ def live_assessment_session_action(request, session_id):
             return JsonResponse({'success': False, 'error': 'No students selected for the live session'}, status=400)
 
         _trace_live_end_flow('action_start_before_status_change', session, user_id=user_id)
-        session.start_at = timezone.now() + timedelta(seconds=session.countdown_seconds or 0)
+        session.start_at = system_now() + timedelta(seconds=session.countdown_seconds or 0)
         if session.countdown_seconds and session.countdown_seconds > 0:
             session.status = 'countdown'
             activity_message = f'Teacher started countdown for {session.countdown_seconds}s.'
@@ -17291,7 +17291,7 @@ def send_course_update(request):
                 include_attachment = True
             elif normalized_update_type == 'commendation':
                 subject = "Performance Commendation – PABASA"
-                certificate_date = timezone.localtime(timezone.now(), timezone.get_default_timezone()).strftime('%B %d, %Y')
+                certificate_date = timezone.localtime(system_now(), timezone.get_default_timezone()).strftime('%B %d, %Y')
                 certificate_pdf = _build_certificate_pdf(
                     student_name=student_name,
                     issued_on=certificate_date,
@@ -19857,7 +19857,7 @@ def get_class_materials(request):
             combined.append(('assessment', a))
         for p in practices_qs:
             combined.append(('practice', p))
-        combined.sort(key=lambda tup: getattr(tup[1], 'created_at', timezone.now()), reverse=True)
+        combined.sort(key=lambda tup: getattr(tup[1], 'created_at', system_now()), reverse=True)
 
         all_materials_flat = []
         materials = {'word': [], 'sentence': [], 'paragraph': [], 'story_reading': [], 'vowel': []}
@@ -22527,7 +22527,7 @@ def get_teacher_students_api(request):
             'total_students': len(results),
         })
 
-        now = timezone.now()
+        now = system_now()
         thirty_days_ago = now - timedelta(days=30)
         seven_days_ago = now - timedelta(days=7)
 
@@ -22991,7 +22991,7 @@ def _principal_analytics(user):
         for grade in grade_keys
     }
 
-    now = timezone.now()
+    now = system_now()
     current_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     previous_month_end = current_month_start - timedelta(seconds=1)
     previous_month_start = previous_month_end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -23376,7 +23376,7 @@ def _principal_report_preview_rows(analytics, report_type='school', grade_filter
 
 
 def _principal_report_csv_response(report_type, headers, rows):
-    filename = f"principal_{report_type}_report_{timezone.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    filename = f"principal_{report_type}_report_{system_now().strftime('%Y%m%d_%H%M%S')}.csv"
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     writer = csv.writer(response)
@@ -23580,7 +23580,7 @@ def _principal_report_pdf_response(request, analytics, report_type, grade_filter
         'assessment': 'Assessment',
     }.get(report_type, 'School Performance')
 
-    local_now = timezone.localtime(timezone.now(), timezone.get_default_timezone())
+    local_now = timezone.localtime(system_now(), timezone.get_default_timezone())
     generated_at = local_now.strftime('%B %d, %Y %I:%M %p')
     report_title = 'PABASA Principal Report'
     school_name = analytics.get('school_name') or 'Salawag Elementary School'
@@ -24532,7 +24532,7 @@ def teacher_story_response_grade(request):
     submission.grade = grade
     submission.status = 'graded'
     submission.graded_by = teacher
-    submission.graded_at = timezone.now()
+    submission.graded_at = system_now()
     submission.save(update_fields=['grade', 'status', 'graded_by', 'graded_at', 'updated_at'])
     return JsonResponse({'success': True, 'submission': _story_response_review_payload(submission)})
 

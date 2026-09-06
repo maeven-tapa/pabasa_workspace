@@ -42,6 +42,7 @@ from .reading_stt import (
     word_numbers_in_transcript,
 )
 from .hunt_scoring import classify_speech, normalize_speech, stars_for_points
+from .system_clock import now as system_now
 
 
 def test_section_create(**kwargs):
@@ -9291,12 +9292,40 @@ class AdminSettingsRenderTests(TestCase):
         override = SystemTimeOverride.objects.get(pk=1)
         self.assertTrue(override.enabled)
         self.assertContains(response, "System time debug mode enabled")
-        self.assertGreaterEqual(timezone.now(), override.reference_time)
+        self.assertGreaterEqual(system_now(), override.reference_time)
+        self.assertLess(timezone.now(), override.reference_time)
 
         response = self.client.post(reverse("admin_settings"), {"settings_action": "save_system_time_debug"})
         override.refresh_from_db()
         self.assertFalse(override.enabled)
         self.assertContains(response, "real system clock is active")
+
+    def test_crla_end_state_still_saves_with_debug_time_enabled(self):
+        SystemTimeOverride.objects.create(
+            enabled=True,
+            reference_time=timezone.make_aware(datetime(2040, 1, 2, 3, 4)),
+            configured_at=timezone.now(),
+        )
+        from .system_clock import invalidate_override_cache
+        invalidate_override_cache()
+        student = User.objects.create(
+            custom_id="STU-CLOCK-TEST", role="student", first_name="Clock", last_name="Student",
+            middle_initial="", suffix="", sex="female", birth_month=1, birth_day=1, birth_year=2018,
+            email="student-clock-test@example.com", password_hash=make_password("student-password"),
+        )
+        session = self.client.session
+        session["user_id"] = student.id
+        session["user_role"] = "student"
+        session.save()
+
+        response = self.client.post(
+            reverse("persist_student_end_assessment_state"),
+            data=json.dumps({"stage": "learner_experience", "material_id": ""}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
 
 
 class PrincipalNotificationTests(TestCase):
