@@ -3058,6 +3058,16 @@
             const speechResponsePending = isSpeechResponsePending();
             [btnStartReading, btnStopReading, btnReadAloud].forEach((button) => {
                 if (!button) return;
+                if (
+                    button === btnStartReading
+                    && isCrla
+                    && isRecording
+                    && (currentAssessmentUiMode === "standard" || currentAssessmentUiMode === "story")
+                ) {
+                    button.disabled = true;
+                    button.setAttribute("aria-busy", "true");
+                    return;
+                }
                 if (speechResponsePending) {
                     // Phrase Reading uses the start button as a listening toggle.
                     // Keep it clickable so the learner can cancel listening without
@@ -4442,9 +4452,19 @@
                     currentAssessmentUiMode === "standard"
                     || currentAssessmentUiMode === "story"
                 );
-                btnStartReading.innerHTML = isActiveReading
-                    ? '<i class="bi bi-stop-fill"></i> Finish Reading'
-                    : '<i class="bi bi-play-fill"></i> Start Reading';
+                if (isCrla && isActiveReading) {
+                    btnStartReading.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span><span>Reading...</span>';
+                    btnStartReading.disabled = true;
+                    btnStartReading.setAttribute("aria-label", "Reading in progress");
+                    btnStartReading.setAttribute("aria-busy", "true");
+                } else {
+                    btnStartReading.innerHTML = '<i class="bi bi-play-fill"></i> Start Reading';
+                    if (isCrla) {
+                        btnStartReading.disabled = false;
+                        btnStartReading.setAttribute("aria-label", "Start Reading");
+                        btnStartReading.removeAttribute("aria-busy");
+                    }
+                }
                 btnStartReading.classList.toggle("is-playing", isActiveReading);
             }
         }
@@ -5575,6 +5595,9 @@
                 isRecording
                 && (currentAssessmentUiMode === "standard" || currentStoryState === "story_reading")
             ) {
+                // CRLA completion is driven by its recognition/timer lifecycle.
+                // Its primary control is start-only while a reading attempt is active.
+                if (isCrla) return;
                 if (isSentenceBot) return;
                 stopReading();
                 return;

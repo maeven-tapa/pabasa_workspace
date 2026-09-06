@@ -1253,6 +1253,24 @@ class ReadingLaunchClassificationTests(TestCase):
         self.assertNotIn('phraseReadingCompleted', reset_branch)
         self.assertLess(start_branch.index('if (resetPhraseListening()) return;'), start_branch.index('if (isSpeechResponsePending()) return;'))
 
+    def test_official_crla_start_button_cannot_manually_finish_an_active_reading_attempt(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        start_reading = content.split('const startReading = () => {', 1)[1].split('startAssessmentTimer();', 1)[0]
+        update_ui = content.split('function updateUI() {', 1)[1].split('function animateCurrentItem()', 1)[0]
+        speech_controls = content.split('function updateSpeechProcessingControls() {', 1)[1].split('function resetSyllableStitching()', 1)[0]
+
+        self.assertIn('if (isCrla) return;', start_reading)
+        self.assertLess(start_reading.index('if (isCrla) return;'), start_reading.index('stopReading();'))
+        self.assertIn('spinner-border spinner-border-sm', update_ui)
+        self.assertIn('<span>Reading...</span>', update_ui)
+        self.assertIn('btnStartReading.disabled = true;', update_ui)
+        self.assertIn('btnStartReading.disabled = false;', update_ui)
+        self.assertNotIn('Finish Reading', update_ui)
+        self.assertIn('button === btnStartReading', speech_controls)
+        self.assertIn('&& isCrla', speech_controls)
+        self.assertIn('button.disabled = true;', speech_controls)
+
     def test_crla_miscue_branch_advances_local_paragraph_cursor(self):
         script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
         content = script_path.read_text(encoding='utf-8')
