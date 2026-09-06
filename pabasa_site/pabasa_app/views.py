@@ -12834,6 +12834,9 @@ def persist_student_end_assessment_state(request):
     except (TypeError, ValueError):
         return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
     allowed_stages = {
+        # Active official CRLA sections are resumable progress states.  They
+        # are deliberately distinct from the transition/completion stages.
+        'words', 'rhymes', 'sentences',
         'transition_to_rhymes', 'transition_to_sentence', 'transition_to_story', 'story_selection',
         'story_ready', 'early_completed_words', 'early_completed_sentences',
         'story_reading', 'story_comprehension', 'learner_experience', 'completed',
@@ -12842,6 +12845,16 @@ def persist_student_end_assessment_state(request):
     stage = str(payload.get('stage') or '').strip().lower()
     if stage not in allowed_stages:
         return JsonResponse({'success': False, 'error': 'Invalid assessment state'}, status=400)
+    active_crla_stages = {'words', 'rhymes', 'sentences'}
+    if stage in active_crla_stages:
+        _, active_material_id = _parse_prefixed_id(payload.get('material_id'))
+        is_official_crla_material = bool(active_material_id and Material.objects.filter(
+            pk=active_material_id,
+            is_official_reading=True,
+            assessment_kind='crla',
+        ).exists())
+        if not is_official_crla_material:
+            return JsonResponse({'success': False, 'error': 'Invalid official CRLA progress state'}, status=400)
     allowed_fields = {
         'version', 'material_id', 'stage', 'branch', 'next_stage', 'score', 'routing_score',
         'correct_words', 'correct_sentences', 'sentence_items_administered',

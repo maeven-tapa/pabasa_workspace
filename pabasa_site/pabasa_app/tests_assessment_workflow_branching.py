@@ -343,6 +343,53 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
         completion = source.split("async function showStoryCompletionScreen", 1)[1].split("function hideStoryCompletionScreen", 1)[0]
         self.assertIn("await showCompletion(true);", completion)
 
+    def test_active_crla_section_wins_over_stale_transition_target_on_refresh(self):
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        loader = source.split("function loadItems()", 1)[1].split("if (!isOfficialAssessmentLaunch)", 1)[0]
+
+        self.assertIn('const isActiveReaderStage = ["words", "rhymes", "sentences"].includes(persistedStage);', loader)
+        self.assertIn('} else if (isActiveReaderStage) {', loader)
+        self.assertIn('activeStage = persistedStage;', loader)
+        self.assertIn('} else if (stageMap[persistedNextStage]) {', loader)
+        self.assertLess(
+            loader.index('} else if (isActiveReaderStage) {'),
+            loader.index('} else if (stageMap[persistedNextStage]) {'),
+        )
+        self.assertIn('next_stage: "",', source)
+
+    def test_official_crla_reader_restores_explicit_index_not_locked_result_position(self):
+        """Fresh Word/Rhyme/Sentence starts cannot skip Item 1 from stale locks."""
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        loader = source.split("function loadItems()", 1)[1].split("if (!isOfficialAssessmentLaunch)", 1)[0]
+        restore = loader.split("const persistedQuestionIndex", 1)[1].split("resetCurrentPageState();", 1)[0]
+
+        self.assertIn("const hasPersistedQuestionIndex = Number.isInteger(persistedQuestionIndex);", restore)
+        self.assertIn("currentIndex = hasPersistedQuestionIndex", restore)
+        self.assertIn(": 0;", restore)
+        self.assertNotIn("firstUnlockedItemIndex", restore)
+        self.assertIn("const shouldPersistInitialIndex = isFreshOfficialCrlaLaunch || !hasPersistedQuestionIndex;", restore)
+        self.assertIn("persistOfficialCrlaReaderProgress();", restore)
+
+        # Explicit zero (fresh Item 1) and later active indexes are both valid
+        # resume positions; only an absent/invalid value uses the Item 1 default.
+        for persisted_index, expected_index in ((0, 0), (4, 4), (None, 0)):
+            resolved_index = persisted_index if isinstance(persisted_index, int) else 0
+            self.assertEqual(resolved_index, expected_index)
+
+    def test_official_crla_reading_result_restore_rebuilds_only_single_page_score_state(self):
+        """Refresh must preserve locked Word/Rhyme/Sentence totals without touching Story."""
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        restore = source.split("function restoreOfficialCrlaItemResults()", 1)[1].split("function persistOfficialCrlaReaderProgress()", 1)[0]
+
+        self.assertIn("const restoredCorrectWords = Number(savedScore.correct_words || 0);", restore)
+        self.assertIn("correctWordCounts[itemIndex] = restoredCorrectWords;", restore)
+        self.assertIn('if (["words", "rhymes", "sentences"].includes(currentAssessmentBranch)) {', restore)
+        self.assertIn("pageCorrectWordCounts[itemIndex] = [restoredCorrectWords];", restore)
+        self.assertLess(
+            restore.index('if (["words", "rhymes", "sentences"].includes(currentAssessmentBranch)) {'),
+            restore.index("if (Array.isArray(savedScore.word_results)) {"),
+        )
+
     def test_official_crla_comprehension_count_survives_final_completion(self):
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
         handler = source.split("async function completeCRLASpokenAttempt", 1)[1].split("function startCRLASpokenAttempt", 1)[0]

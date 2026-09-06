@@ -123,6 +123,9 @@
             }
         }
         const isCrla = officialAssessmentData?.assessment_kind === "crla";
+        const isFreshOfficialCrlaLaunch = isOfficialAssessmentLaunch
+            && isCrla
+            && urlParams.get("crla_fresh") === "1";
         const testTitle = (officialAssessmentData && officialAssessmentData.official_title) || customMaterialData?.title || urlParams.get("test") || "Assessment";
         const testCode = (officialAssessmentData && officialAssessmentData.official_code) || customMaterialData?.code || urlParams.get("code") || "TST-000";
         const sectionId = customMaterialData?.section_id || urlParams.get("section_id") || "";
@@ -311,6 +314,35 @@
                     at: new Date().toISOString(),
                     ...details,
                 });
+            } catch (error) {}
+        }
+
+        // Diagnostic trace for the official CRLA refresh investigation. This
+        // records the caller stack at showCompletion's entry without changing
+        // assessment state, scoring, or branching behavior.
+        function traceOfficialCrlaCompletion(event, details = {}) {
+            if (!isOfficialAssessmentLaunch || !isCrla) return;
+            const endState = readStudentEndState();
+            const traceState = {
+                event,
+                currentIndex,
+                crlaQuestionIndex: currentStoryQuestionIndex,
+                persistedStage: normalizeStudentEndStatus(endState.stage),
+                persistedNextStage: normalizeStudentEndStatus(endState.next_stage),
+                currentStage: currentAssessmentBranch,
+                isLastItem: items.length > 0 && currentIndex === items.length - 1,
+                isLastPage: currentPageIndex >= getCurrentPageCount() - 1,
+                isRecording,
+                itemCount: items.length,
+                pageIndex: currentPageIndex,
+                ...details,
+            };
+            console.trace('CRLA showCompletion called', traceState);
+            try {
+                sessionStorage.setItem('pabasaCrlaShowCompletionTrace', JSON.stringify({
+                    ...traceState,
+                    at: new Date().toISOString(),
+                }));
             } catch (error) {}
         }
 
@@ -565,7 +597,7 @@
             // Save to localStorage for resilience
             try {
                 const savedResults = JSON.parse(localStorage.getItem('crla_item_results') || '{}');
-                const key = `${officialAssessmentId}_${itemIndex}`;
+                const key = `${officialAssessmentId}_${currentAssessmentBranch}_${itemIndex}`;
                 savedResults[key] = itemScore;
                 localStorage.setItem('crla_item_results', JSON.stringify(savedResults));
             } catch (error) {
@@ -579,6 +611,44 @@
                 last_locked_item_index: itemIndex,
                 locked_items_count: (itemLocked.filter(Boolean) || []).length,
                 updated_at: new Date().toISOString(),
+            });
+        }
+
+        function restoreOfficialCrlaItemResults() {
+            if (!isOfficialAssessmentLaunch || !isCrla) return;
+            try {
+                const savedResults = JSON.parse(localStorage.getItem('crla_item_results') || '{}');
+                items.forEach((_, itemIndex) => {
+                    const savedScore = savedResults[`${officialAssessmentId}_${currentAssessmentBranch}_${itemIndex}`];
+                    if (!savedScore || typeof savedScore !== 'object') return;
+                    itemLocked[itemIndex] = true;
+                    itemScores[itemIndex] = savedScore;
+                    const restoredCorrectWords = Number(savedScore.correct_words || 0);
+                    correctWordCounts[itemIndex] = restoredCorrectWords;
+                    // Word, Rhyme, and Sentence items have one display page.
+                    // Rebuild their transient page count so the established
+                    // aggregate scorer cannot replace a restored result with 0.
+                    if (["words", "rhymes", "sentences"].includes(currentAssessmentBranch)) {
+                        pageCorrectWordCounts[itemIndex] = [restoredCorrectWords];
+                    }
+                    if (Array.isArray(savedScore.word_results)) {
+                        sentenceWordResults[itemIndex] = savedScore.word_results;
+                    }
+                });
+            } catch (error) {
+                console.warn('[CRLA_STRICT_ASSESSMENT] Failed to restore item results', error);
+            }
+        }
+
+        function persistOfficialCrlaReaderProgress() {
+            if (!isOfficialAssessmentLaunch || !isCrla) return;
+            if (!['words', 'rhymes', 'sentences'].includes(currentAssessmentBranch)) return;
+            updateStudentEndState({
+                // These are active section states, not completion or routing states.
+                stage: currentAssessmentBranch,
+                branch: currentAssessmentBranch,
+                next_stage: "",
+                crla_question_index: currentIndex,
             });
         }
 
@@ -2019,6 +2089,16 @@
             const persistedEndState = readStudentEndState();
             const persistedStage = normalizeStudentEndStatus(persistedEndState.stage);
             const persistedNextStage = normalizeStudentEndStatus(persistedEndState.next_stage);
+            if (isOfficialAssessmentLaunch && isCrla) {
+                console.info('CRLA refresh initialization', {
+                    requestedCrlaStage,
+                    persistedStage,
+                    persistedNextStage,
+                    crlaQuestionIndex: persistedEndState.crla_question_index,
+                    currentIndex,
+                    isRecording,
+                });
+            }
             if (isOfficialAssessmentLaunch && officialAssessmentData) {
                 const hasExplicitStageRequest = ["rhymes", "sentences", "story_selection"].includes(requestedCrlaStage);
                 // A completed CRLA attempt must remain completed after refresh, even
@@ -2071,8 +2151,14 @@
                 }
                 const requestedStage = requestedCrlaStage === "story_selection" ? "story" : requestedCrlaStage;
                 let activeStage = "words";
+                const isActiveReaderStage = ["words", "rhymes", "sentences"].includes(persistedStage);
                 if (stageMap[requestedStage]) {
                     activeStage = requestedStage;
+                } else if (isActiveReaderStage) {
+                    // A saved active section always wins over a leftover
+                    // transition target. A refresh must resume Word/Rhyme/
+                    // Sentence, not branch to its old next_stage.
+                    activeStage = persistedStage;
                 } else if (stageMap[persistedNextStage]) {
                     activeStage = persistedNextStage;
                 } else if (stageMap[persistedStage]) {
@@ -2115,6 +2201,7 @@
                 // CRLA Official Assessment: Initialize item locking
                 itemLocked = new Array(items.length).fill(false);
                 itemScores = new Array(items.length).fill(null);
+                restoreOfficialCrlaItemResults();
                 currentStoryChoices = getStoryChoicesFromAssessment();
                 const persistedStoryTitle = String(persistedEndState.selected_story || "").trim().toLowerCase();
                 if (activeStage === "story") {
@@ -2126,6 +2213,26 @@
                         currentStorySegmentIndex = Number.isFinite(persistedSegmentIndex) ? Math.max(0, persistedSegmentIndex) : 0;
                         if (persistedStage === "story_comprehension") {
                             renderCRLAComprehensionState(restoredStory.title, persistedEndState);
+                            return;
+                        }
+                        if (persistedStage === "story_reading") {
+                            currentStoryState = "story_reading";
+                            currentAssessmentUiMode = "story";
+                            setCurrentItemMode("paragraph");
+                            items = [restoredStory.content || ""];
+                            itemTypes = ["paragraph"];
+                            itemPages = buildItemPages(items, itemTypes);
+                            itemTitles = [restoredStory.title];
+                            pageCorrectWordCounts = items.map(() => []);
+                            correctWordCounts = new Array(items.length).fill(0);
+                            currentIndex = 0;
+                            currentPageIndex = Math.min(
+                                currentStorySegmentIndex,
+                                Math.max(0, getCurrentPageCount() - 1)
+                            );
+                            updateUI();
+                            renderStoryReadingState(restoredStory);
+                            animateCurrentItem();
                             return;
                         }
                         if (persistedStage === "learner_experience") {
@@ -2186,7 +2293,19 @@
                         ? "Story Reading"
                         : `${stageMap[activeStage]?.label || "Word"} 1/${items.length}`;
                 }
-                currentIndex = 0;
+                const persistedQuestionIndex = Number.parseInt(persistedEndState.crla_question_index, 10);
+                const hasPersistedQuestionIndex = Number.isInteger(persistedQuestionIndex);
+                currentIndex = hasPersistedQuestionIndex
+                    ? Math.min(Math.max(persistedQuestionIndex, 0), items.length - 1)
+                    : 0;
+                // Locked-result cache records scored items only. It must never
+                // decide where a reader starts. A fresh section, or a legacy
+                // active state without an explicit position, starts at Item 1
+                // and immediately becomes resumable at index 0.
+                const shouldPersistInitialIndex = isFreshOfficialCrlaLaunch || !hasPersistedQuestionIndex;
+                if (shouldPersistInitialIndex) {
+                    persistOfficialCrlaReaderProgress();
+                }
                 resetCurrentPageState();
                 updateUI();
                 if (activeStage !== "story") {
@@ -4540,6 +4659,7 @@
             currentSyllableIndex = 0;
             paragraphWordResults = {};
             setCurrentItemMode(itemTypes[currentIndex] || mode);
+            persistOfficialCrlaReaderProgress();
             updateUI();
             animateCurrentItem();
             if (isCurrentLiveAssessment()) {
@@ -4603,6 +4723,7 @@
         }
 
         function showCompletion(isFullCompletion) {
+            traceOfficialCrlaCompletion('showCompletion.entry', { isFullCompletion });
             traceEndSession('showCompletion.enter', {
                 isFullCompletion,
                 completionSubmitted,
@@ -6384,6 +6505,13 @@
             }
         }
 
+        if (isOfficialAssessmentLaunch && isCrla) {
+            console.info('CRLA initReader before loadItems', {
+                currentIndex,
+                crlaQuestionIndex: currentStoryQuestionIndex,
+                isRecording,
+            });
+        }
         loadItems();
         startLiveCountdown();
         window.setTimeout(() => {
