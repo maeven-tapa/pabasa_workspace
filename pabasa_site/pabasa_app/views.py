@@ -56,7 +56,8 @@ from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_
 from django.db import transaction
 import re
 import traceback
-from .models import User, School, Section, Enrollment, Assessment, AssessmentRequest, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission
+from .models import User, School, Section, Enrollment, Assessment, AssessmentRequest, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride
+from .system_clock import invalidate_override_cache, real_now, today as system_today
 from .section_configuration import ensure_salawag_grade_two_sections
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
 from .student_session_lock import claim_student_session, release_student_session
@@ -713,7 +714,7 @@ def _assessment_kind_value(material):
 
 
 def _official_crla_assessment_phase(student=None, request=None, on_date=None):
-    check_date = on_date or date.today()
+    check_date = on_date or system_today()
     if not student or getattr(student, 'role', '') != 'student':
         return 'intervention'
 
@@ -880,7 +881,7 @@ def _existing_crla_assessment_for_school_year(teacher_user=None):
 
 
 def _crla_creation_block_message(teacher_user=None, on_date=None):
-    check_date = on_date or date.today()
+    check_date = on_date or system_today()
     active_calendar = _active_school_calendar(check_date)
     current_term = _calendar_current_term(active_calendar, on_date=check_date) if active_calendar else None
     current_term = current_term or getattr(active_calendar, 'current_term', None)
@@ -7305,7 +7306,7 @@ def _calendar_configured_term_bounds(school_calendar):
 
 def _calendar_is_current_from_term_blocks(school_calendar, on_date=None):
     start_date, end_date = _calendar_configured_term_bounds(school_calendar)
-    check_date = on_date or date.today()
+    check_date = on_date or system_today()
     return bool(start_date and end_date and start_date <= check_date <= end_date)
 
 
@@ -7315,7 +7316,7 @@ def _can_start_next_school_year(calendars, on_date=None):
         return True
     latest_calendar = max(calendars, key=lambda calendar: int(calendar.school_year[5:]))
     _start_date, end_date = _calendar_configured_term_bounds(latest_calendar)
-    return bool(end_date and (on_date or date.today()) > end_date)
+    return bool(end_date and (on_date or system_today()) > end_date)
 
 
 def _calendar_events_for_school_calendar(school_calendar):
@@ -7363,7 +7364,7 @@ def _calendar_events_for_school_calendar(school_calendar):
 def _calendar_current_term(school_calendar, on_date=None):
     perf_started_at = time.perf_counter()
     query_start = len(connection.queries) if settings.DEBUG else None
-    today = on_date or date.today()
+    today = on_date or system_today()
     blocks_started_at = time.perf_counter()
     blocks = _calendar_term_blocks(school_calendar)
     blocks_elapsed_ms = round((time.perf_counter() - blocks_started_at) * 1000, 2)
@@ -7412,7 +7413,7 @@ def _calendar_instructional_events(school_calendar, base_events):
 def _active_school_calendar(on_date=None):
     perf_started_at = time.perf_counter()
     query_start = len(connection.queries) if settings.DEBUG else None
-    check_date = on_date or date.today()
+    check_date = on_date or system_today()
     calendars = list(SchoolCalendar.objects.prefetch_related('events').all().order_by('-updated_at', '-created_at'))
     active = None
     best_start = None
@@ -7507,7 +7508,7 @@ def _calendar_postassessment_block(school_calendar, term):
 
 
 def _calendar_is_in_preassessment_window(school_calendar, term, on_date=None):
-    check_date = on_date or date.today()
+    check_date = on_date or system_today()
     block = _calendar_preassessment_block(school_calendar, term)
     if not block:
         return False
@@ -7515,7 +7516,7 @@ def _calendar_is_in_preassessment_window(school_calendar, term, on_date=None):
 
 
 def _calendar_is_in_midlineassessment_window(school_calendar, term, on_date=None):
-    check_date = on_date or date.today()
+    check_date = on_date or system_today()
     block = _calendar_midlineassessment_block(school_calendar, term)
     if not block:
         return False
@@ -7523,7 +7524,7 @@ def _calendar_is_in_midlineassessment_window(school_calendar, term, on_date=None
 
 
 def _calendar_is_in_postassessment_window(school_calendar, term, on_date=None):
-    check_date = on_date or date.today()
+    check_date = on_date or system_today()
     block = _calendar_postassessment_block(school_calendar, term)
     if not block:
         return False
@@ -7640,7 +7641,7 @@ def _selected_school_calendar(request=None):
 
     active_calendar = None
     best_start = None
-    check_date = date.today()
+    check_date = system_today()
     for school_calendar in calendars:
         start_event, end_event = _school_year_bounds(school_calendar)
         if not start_event or not end_event:
@@ -7766,7 +7767,7 @@ def _calendar_month_view(school_calendar):
             'calendar_id': getattr(school_calendar, 'id', None) if school_calendar else None,
         },
     )
-    today = _date.today()
+    today = system_today()
     logger.warning(
         "PABASA_DASHBOARD_PROFILE %s",
         {
@@ -10026,13 +10027,43 @@ def admin_settings(request):
             _set_profile_dict(user, 'notification_settings', notification_settings)
             context['settings_success'] = 'Push notification preferences saved.'
 
+        elif action == 'save_system_time_debug':
+            debug_enabled = request.POST.get('system_time_debug_enabled') == 'on'
+            override, _ = SystemTimeOverride.objects.get_or_create(pk=1)
+            if not debug_enabled:
+                override.enabled = False
+                override.reference_time = None
+                override.configured_at = None
+                override.save(update_fields=['enabled', 'reference_time', 'configured_at'])
+                invalidate_override_cache()
+                context['settings_success'] = 'System time debug mode disabled. The real system clock is active.'
+            else:
+                requested_time = parse_datetime(request.POST.get('system_time_debug_value', '').strip())
+                if not requested_time:
+                    context['settings_error'] = 'Enter a valid debug date and time.'
+                else:
+                    if timezone.is_naive(requested_time):
+                        requested_time = timezone.make_aware(requested_time, timezone.get_current_timezone())
+                    override.enabled = True
+                    override.reference_time = requested_time
+                    override.configured_at = real_now()
+                    override.save(update_fields=['enabled', 'reference_time', 'configured_at'])
+                    invalidate_override_cache()
+                    context['settings_success'] = 'System time debug mode enabled for the entire application.'
+
         else:
             context['settings_error'] = 'Unknown settings action.'
 
     system_time = timezone.localtime(timezone.now())
+    system_time_override = SystemTimeOverride.objects.filter(pk=1).first()
     context['notification_settings'] = notification_settings
     context['system_time_iso'] = system_time.isoformat()
     context['system_time_zone'] = timezone.get_current_timezone_name()
+    context['system_time_debug_enabled'] = bool(system_time_override and system_time_override.enabled)
+    context['system_time_debug_value'] = (
+        timezone.localtime(system_time_override.reference_time).strftime('%Y-%m-%dT%H:%M')
+        if system_time_override and system_time_override.enabled and system_time_override.reference_time else ''
+    )
     return render(request, 'pabasa_app/admin_settings.html', context)
 
 
@@ -19795,7 +19826,7 @@ def get_class_materials(request):
             practices_qs = practices_qs.none()
         teacher_user = request_user if request_user.role == 'teacher' else None
         # Requesting user (could be student or teacher) used to compute attempt counts
-        effective_date = date.today()
+        effective_date = system_today()
         is_requesting_student = bool(request_user and request_user.role == 'student')
         # Archived records should not appear in class/course readings, even for the owning teacher.
         materials_qs = materials_qs.filter(is_active=True).exclude(status__iexact='archived')

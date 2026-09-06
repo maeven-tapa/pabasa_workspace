@@ -36,6 +36,35 @@
         </div>
     </section>
 
+    <section class="admin-settings-card" aria-labelledby="systemTimeDebugHeading">
+        <div class="admin-settings-card-header">
+            <span class="admin-settings-card-icon" aria-hidden="true"><i class="bi bi-bug"></i></span>
+            <div>
+                <h3 id="systemTimeDebugHeading">System Time Debug</h3>
+                <p>Simulate an advancing system time across all PABASA components. Use this only for testing.</p>
+            </div>
+        </div>
+        <button class="btn btn-outline-warning btn-sm" id="systemTimeDebugButton" type="button" aria-expanded="false" aria-controls="systemTimeDebugPanel">
+            <i class="bi bi-bug-fill" aria-hidden="true"></i> Debug System Time
+        </button>
+        <form id="systemTimeDebugPanel" method="post" class="d-grid gap-3 mt-3" hidden>
+            {% csrf_token %}
+            <input type="hidden" name="settings_action" value="save_system_time_debug">
+            <div class="admin-setting-row">
+                <label for="systemTimeDebugEnabled">Enable debug time</label>
+                <input class="form-check-input" type="checkbox" id="systemTimeDebugEnabled" name="system_time_debug_enabled" {% if system_time_debug_enabled %}checked{% endif %}>
+            </div>
+            <div>
+                <label class="form-label small" for="systemTimeDebugValue">Simulated date and time</label>
+                <input class="form-control" id="systemTimeDebugValue" name="system_time_debug_value" type="datetime-local" value="{{ system_time_debug_value }}">
+                <p class="small text-muted mt-2 mb-0">Once applied, this time continues to advance in real time until disabled.</p>
+            </div>
+            <div class="admin-settings-actions">
+                <button class="btn btn-warning" type="submit"><i class="bi bi-clock-history" aria-hidden="true"></i> Apply Debug Time</button>
+            </div>
+        </form>
+    </section>
+
     <section class="admin-settings-grid" aria-label="Admin account settings">
         <article class="admin-settings-card">
             <div class="admin-settings-card-header">
@@ -162,6 +191,14 @@
     syncSystemTime();
     setInterval(renderSystemTime, 250);
     setInterval(syncSystemTime, 60000);
+
+    const debugButton = document.getElementById('systemTimeDebugButton');
+    const debugPanel = document.getElementById('systemTimeDebugPanel');
+    debugButton?.addEventListener('click', () => {
+        const isHidden = debugPanel.hidden;
+        debugPanel.hidden = !isHidden;
+        debugButton.setAttribute('aria-expanded', String(isHidden));
+    });
 })();
 </script>
 {% endblock %}

@@ -24,7 +24,7 @@ from pypdf import PdfReader
 from reportlab.pdfgen import canvas
 
 from .forms import AdminPracticeMaterialForm
-from .models import Material, User, Section, Assessment, Notification, Course, Note, LiveAssessmentSession, School, SchoolCalendar, CalendarEvent, StoryReadingProgress
+from .models import Material, User, Section, Assessment, Notification, Course, Note, LiveAssessmentSession, School, SchoolCalendar, CalendarEvent, StoryReadingProgress, SystemTimeOverride
 from .reading_stt import (
     ReadingMatcher,
     align_story_transcript,
@@ -9276,6 +9276,27 @@ class AdminSettingsRenderTests(TestCase):
         self.assertContains(response, "Confirm Password")
         self.assertContains(response, "Update Password")
         self.assertNotContains(response, "Settings placeholder. CRUD is not implemented yet.")
+
+    def test_admin_can_enable_and_disable_the_shared_debug_clock(self):
+        response = self.client.post(
+            reverse("admin_settings"),
+            {
+                "settings_action": "save_system_time_debug",
+                "system_time_debug_enabled": "on",
+                "system_time_debug_value": "2040-01-02T03:04",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        override = SystemTimeOverride.objects.get(pk=1)
+        self.assertTrue(override.enabled)
+        self.assertContains(response, "System time debug mode enabled")
+        self.assertGreaterEqual(timezone.now(), override.reference_time)
+
+        response = self.client.post(reverse("admin_settings"), {"settings_action": "save_system_time_debug"})
+        override.refresh_from_db()
+        self.assertFalse(override.enabled)
+        self.assertContains(response, "real system clock is active")
 
 
 class PrincipalNotificationTests(TestCase):

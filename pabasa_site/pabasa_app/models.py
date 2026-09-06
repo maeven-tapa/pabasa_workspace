@@ -1982,3 +1982,18 @@ class LiveAssessmentSession(models.Model):
 
     def __str__(self):
         return f"Live assessment session {self.id} ({self.status})"
+
+
+class SystemTimeOverride(models.Model):
+    """Singleton configuration for the administrator's advancing debug clock."""
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    enabled = models.BooleanField(default=False)
+    reference_time = models.DateTimeField(null=True, blank=True)
+    configured_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'system_time_override'
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        return super().save(*args, **kwargs)
