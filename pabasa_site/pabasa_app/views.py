@@ -56,7 +56,7 @@ from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_
 from django.db import transaction
 import re
 import traceback
-from .models import User, School, Section, Enrollment, Assessment, AssessmentRequest, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride
+from .models import User, School, Section, Enrollment, Assessment, AssessmentRequest, Material, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride
 from .system_clock import invalidate_override_cache, now as system_now, real_now, today as system_today
 from .section_configuration import ensure_salawag_grade_two_sections
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
@@ -1311,6 +1311,19 @@ def _current_user(request):
 def _admin_users():
     return User.objects.filter(role='admin', is_archived=False)
 
+
+def _log_activity(event_type, title, message='', actor=None, metadata=None):
+    """Write an admin audit entry with a timestamp from the real server clock."""
+    return ActivityLog.objects.create(
+        actor=actor,
+        event_type=event_type,
+        title=title,
+        message=message,
+        metadata=metadata or {},
+        created_at=real_now(),
+    )
+
+
 def _create_notification(recipient, title, message, notification_type='info', action_url='', created_by=None, email_subject=None, email_body=None, send_email=True, force_in_app=False):
     if not recipient:
         return None
@@ -1346,8 +1359,17 @@ def _create_notification(recipient, title, message, notification_type='info', ac
     return notification
 
 def _notify_admins(title, message, notification_type='info', action_url='', created_by=None, send_email=True):
+    _log_activity(
+        'notification',
+        title,
+        message,
+        actor=created_by,
+        metadata={'notification_type': notification_type, 'action_url': action_url or ''},
+    )
     for admin_user in _admin_users():
-        _create_notification(admin_user, title, message, notification_type, action_url, created_by, send_email=send_email)
+        # Admin alerts are available in the notification bell and Activity Log.
+        # They must not attempt external email delivery for local/default accounts.
+        _create_notification(admin_user, title, message, notification_type, action_url, created_by, send_email=False)
 
 
 def _principal_users():
@@ -10030,12 +10052,20 @@ def admin_settings(request):
         elif action == 'save_system_time_debug':
             debug_enabled = request.POST.get('system_time_debug_enabled') == 'on'
             override, _ = SystemTimeOverride.objects.get_or_create(pk=1)
+            was_debug_enabled = override.enabled
             if not debug_enabled:
                 override.enabled = False
                 override.reference_time = None
                 override.configured_at = None
                 override.save(update_fields=['enabled', 'reference_time', 'configured_at'])
                 invalidate_override_cache()
+                _log_activity(
+                    'system_time_debug',
+                    'System time debug disabled',
+                    'The real system clock is active.',
+                    actor=user,
+                    metadata={'enabled': False},
+                )
                 context['settings_success'] = 'System time debug mode disabled. The real system clock is active.'
             else:
                 requested_time = parse_datetime(request.POST.get('system_time_debug_value', '').strip())
@@ -10049,6 +10079,16 @@ def admin_settings(request):
                     override.configured_at = real_now()
                     override.save(update_fields=['enabled', 'reference_time', 'configured_at'])
                     invalidate_override_cache()
+                    _log_activity(
+                        'system_time_debug',
+                        'System time debug updated' if was_debug_enabled else 'System time debug enabled',
+                        f"Simulated time set to {timezone.localtime(requested_time).strftime('%Y-%m-%d %H:%M:%S %Z')}.",
+                        actor=user,
+                        metadata={
+                            'enabled': True,
+                            'simulated_time': requested_time.isoformat(),
+                        },
+                    )
                     context['settings_success'] = 'System time debug mode enabled for the entire application.'
 
         else:
@@ -10065,6 +10105,20 @@ def admin_settings(request):
         if system_time_override and system_time_override.enabled and system_time_override.reference_time else ''
     )
     return render(request, 'pabasa_app/admin_settings.html', context)
+
+
+@admin_required
+@require_http_methods(["GET"])
+def admin_activity_log(request):
+    """Show the audit trail; entries carry real server timestamps only."""
+    entries = ActivityLog.objects.select_related('actor').all()[:250]
+    context = _admin_context(request, 'Activity Log', [])
+    context.update({
+        'activity_entries': entries,
+        'activity_log_server_time': real_now(),
+        'activity_log_time_zone': timezone.get_current_timezone_name(),
+    })
+    return render(request, 'pabasa_app/admin_activity_log.html', context)
 
 
 @admin_required

@@ -24,7 +24,7 @@ from pypdf import PdfReader
 from reportlab.pdfgen import canvas
 
 from .forms import AdminPracticeMaterialForm
-from .models import Material, User, Section, Assessment, Notification, Course, Note, LiveAssessmentSession, School, SchoolCalendar, CalendarEvent, StoryReadingProgress, SystemTimeOverride
+from .models import Material, User, Section, Assessment, Notification, ActivityLog, Course, Note, LiveAssessmentSession, School, SchoolCalendar, CalendarEvent, StoryReadingProgress, SystemTimeOverride
 from .reading_stt import (
     ReadingMatcher,
     align_story_transcript,
@@ -52,7 +52,7 @@ def test_section_create(**kwargs):
         school = School.objects.create(name=f"Fixture School {suffix}", code=f"FIXTURE-{suffix}")
     return Section.objects.create(school=school, **kwargs)
 from .management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
-from .views import _active_school_calendar, _apply_progression_unlock_override, _aral_eligible_classification, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _primary_school, _save_admin_practice_material, _selected_school_calendar, _sync_assessment_workflow_state, _official_crla_assessment_labels, _official_assessment_availability_for_student
+from .views import _active_school_calendar, _apply_progression_unlock_override, _aral_eligible_classification, _create_notification, _notify_admins, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _primary_school, _save_admin_practice_material, _selected_school_calendar, _sync_assessment_workflow_state, _official_crla_assessment_labels, _official_assessment_availability_for_student
 from .weekly_digest import send_weekly_digest
 from .scoring import build_assessment_score_payload
 
@@ -9294,11 +9294,30 @@ class AdminSettingsRenderTests(TestCase):
         self.assertContains(response, "System time debug mode enabled")
         self.assertGreaterEqual(system_now(), override.reference_time)
         self.assertLess(timezone.now(), override.reference_time)
+        entry = ActivityLog.objects.get(title="System time debug enabled")
+        self.assertEqual(entry.event_type, "system_time_debug")
+        self.assertLess(entry.created_at, override.reference_time)
 
         response = self.client.post(reverse("admin_settings"), {"settings_action": "save_system_time_debug"})
         override.refresh_from_db()
         self.assertFalse(override.enabled)
         self.assertContains(response, "real system clock is active")
+        self.assertTrue(ActivityLog.objects.filter(title="System time debug disabled").exists())
+
+    @patch("pabasa_app.views.send_mail")
+    def test_admin_notifications_are_logged_without_sending_email(self, mock_send_mail):
+        _notify_admins("New teacher account", "Teacher User created a teacher account.")
+
+        self.assertTrue(Notification.objects.filter(recipient=self.user, title="New teacher account").exists())
+        entry = ActivityLog.objects.get(title="New teacher account")
+        self.assertEqual(entry.event_type, "notification")
+        self.assertEqual(entry.created_at.tzinfo, timezone.now().tzinfo)
+        mock_send_mail.assert_not_called()
+
+        response = self.client.get(reverse("admin_activity_log"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pabasa_app/admin_activity_log.html")
+        self.assertContains(response, "New teacher account")
 
     def test_crla_end_state_still_saves_with_debug_time_enabled(self):
         SystemTimeOverride.objects.create(

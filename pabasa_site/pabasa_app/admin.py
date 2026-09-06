@@ -9,6 +9,7 @@ from .models import (
 	Material,
 	Note,
 	Notification,
+	ActivityLog,
 	Course,
 	SchoolCalendar,
 	CalendarEvent,
@@ -158,6 +159,14 @@ class NotificationAdmin(admin.ModelAdmin):
 		"created_by__custom_id",
 	)
 	ordering = ("-created_at",)
+
+
+@admin.register(ActivityLog)
+class ActivityLogAdmin(admin.ModelAdmin):
+	list_display = ("created_at", "event_type", "title", "actor")
+	list_filter = ("event_type", "created_at")
+	search_fields = ("title", "message", "actor__custom_id", "actor__last_name")
+	ordering = ("-created_at", "-id")
 
 
 @admin.register(Course)

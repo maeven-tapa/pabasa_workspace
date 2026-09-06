@@ -7,7 +7,7 @@ from django.db import models, transaction
 from django.db.models.functions import Lower
 from django.utils import timezone
 from datetime import datetime
-from .system_clock import now as system_now
+from .system_clock import now as system_now, real_now
 
 
 def _configured_term_for_date(value, phase=''):
@@ -1940,6 +1940,36 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.title} -> {self.recipient.custom_id}"
+
+
+class ActivityLog(models.Model):
+    """Administrator-facing audit trail, always dated by the real server clock."""
+
+    EVENT_TYPE_CHOICES = [
+        ("notification", "Notification"),
+        ("system_time_debug", "System Time Debug"),
+    ]
+
+    actor = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name="activity_log_entries",
+        null=True,
+        blank=True,
+    )
+    event_type = models.CharField(max_length=32, choices=EVENT_TYPE_CHOICES)
+    title = models.CharField(max_length=150)
+    message = models.TextField(blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    # Do not use system_now(): audit records must never be affected by debug time.
+    created_at = models.DateTimeField(default=real_now, editable=False, db_index=True)
+
+    class Meta:
+        db_table = "activity_logs"
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return f"{self.get_event_type_display()}: {self.title}"
 
 
 class LiveAssessmentSession(models.Model):
