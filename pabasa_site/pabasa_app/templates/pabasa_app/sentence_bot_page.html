@@ -17,6 +17,7 @@ window.__PABASA_SENTENCE_BOT_COMPLETION__ = {{ sentence_bot_completion_json|defa
 window.__PABASA_SENTENCE_BOT_COMPLETE_URL__ = "{% url 'sentence_bot_complete' %}";
 window.__PABASA_SENTENCE_BOT_BACK_URL__ = "{% url 'assessment' %}";
 </script>
+<script>document.addEventListener('DOMContentLoaded',()=>{if(window.__PABASA_SENTENCE_BOT_COMPLETION__?.completed)return;const x=document.createElement('section');x.className='sentence-intro';x.innerHTML=`<style>.sentence-intro{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:18px;background:#eef6f7;font-family:"Segoe UI",sans-serif}.sentence-intro>div{width:min(600px,100%);padding:28px;border-radius:24px;background:#fff;border:1px solid #b7d9dd;box-shadow:0 20px 44px #164f5530;text-align:center}.sentence-intro h1{color:#155e75}.sentence-demo{padding:18px;border-radius:18px;background:#eaf7fa;color:#155e75;font-size:clamp(1.2rem,3vw,1.65rem);font-weight:900}.sentence-intro button{margin-top:18px;border:0;border-radius:14px;background:#1f6f8b;color:#fff;padding:12px 25px;font:inherit;font-weight:900;cursor:pointer}</style><div><h1>Sentence Reading</h1><p>Read the sentence aloud, clearly and smoothly.</p><div class="sentence-demo">The cat is sleeping.<br><small>🎙 Read it aloud</small></div><button>Let’s Start!</button></div>`;x.querySelector('button').onclick=()=>x.remove();document.body.append(x)})</script>
 {% if not sentence_bot_completed %}
 <script src="{% static 'pabasa_app/js/assessment_reader.js' %}?v={% now 'U' %}"></script>
 {% endif %}
