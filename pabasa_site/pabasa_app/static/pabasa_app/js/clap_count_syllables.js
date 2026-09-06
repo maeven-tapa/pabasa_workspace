@@ -358,6 +358,13 @@
     navStepper.innerHTML = steps();
   }
 
+  function renderIntro() {
+    stage.innerHTML = `<section class="clap-count-intro" aria-labelledby="clapCountIntroTitle"><div class="clap-count-intro-card"><div class="clap-count-intro-icon" aria-hidden="true">👏</div><h2 id="clapCountIntroTitle">Clap &amp; Count!</h2><p class="clap-count-intro-lead">Listen to the word, then clap for each syllable.</p><div class="clap-count-intro-example" aria-label="Banana has three syllables and three claps"><div class="clap-count-intro-word">BANANA</div><div class="clap-count-intro-claps"><span>BA 👏</span><span>NA 👏</span><span>NA 👏</span></div></div><p class="clap-count-intro-key">ONE CLAP = ONE SYLLABLE</p><button class="clap-count-intro-start" id="startClapCountButton" type="button">Let’s Start!</button></div></section>`;
+    document.querySelector('#startClapCountButton')?.addEventListener('click', () => {
+      render();
+    }, { once: true });
+  }
+
   function render() {
     if (!item()) return finish();
     if (phase === 'listen') resetBuildState();
@@ -583,6 +590,6 @@
     fill.style.width = '100%';
     stage.innerHTML = card(`<div class="clap-count-content"><section class="clap-count-success"><div class="clap-count-phase">Completed ✓</div><h2>Activity finished!</h2><p>${+completed.correct_items || 0} of ${+completed.total_items || 0} correct · ${+completed.accuracy || 0}%</p><a class="clap-count-button" href="/dashboard/assessment/">Back to Assessments →</a></section></div>`);
   } else if (items.length) {
-    render();
+    renderIntro();
   }
 })();
