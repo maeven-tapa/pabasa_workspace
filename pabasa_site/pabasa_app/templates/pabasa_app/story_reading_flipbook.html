@@ -1,5 +1,72 @@
 {% load static %}
 <script>document.addEventListener('DOMContentLoaded',()=>{const x=document.createElement('section');x.className='live-intro';x.innerHTML=`<style>.live-intro{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:18px;background:#08111d;color:#edf6ff;font-family:Arial,sans-serif}.live-intro>div{width:min(650px,100%);padding:28px;border:1px solid #97cdf044;border-radius:20px;background:#101e30;text-align:center;box-shadow:0 24px 55px #0008}.live-intro img{width:92px;height:92px;object-fit:contain;animation:live-pulse 1.8s ease-in-out infinite}.live-intro h1{margin:7px 0;color:#f5fbff}.live-preview{padding:16px;border-radius:14px;background:#090f19;text-align:left}.live-preview b{color:#78d4f4}.live-intro button{margin-top:18px;border:0;border-radius:12px;background:#147da9;color:#fff;padding:12px 25px;font:inherit;font-weight:700;cursor:pointer}@keyframes live-pulse{50%{transform:scale(1.07)}}@media(prefers-reduced-motion:reduce){.live-intro img{animation:none}}</style><div><img src="${window.pabasaStoryLogoUrl}" alt="EduPABASA Live"><h1>EduPABASA Live</h1><p>Your story broadcast is ready.</p><div class="live-preview"><b>● LIVE STORY</b><br><br>Read the story, follow each scene, and read with me.</div><button>Let’s Start!</button></div>`;x.querySelector('button').onclick=()=>x.remove();document.body.append(x)})</script>
+<style>
+    .live-intro {
+        background: radial-gradient(circle at 17% 12%, rgba(82, 180, 221, .2), transparent 26%), linear-gradient(145deg, #07111e, #0d2032 58%, #07121f) !important;
+        font-family: "Nunito", Arial, sans-serif !important;
+    }
+    .live-intro > .live-intro-card {
+        position: relative;
+        width: min(620px, 100%);
+        overflow: hidden;
+        padding: clamp(22px, 4vw, 34px);
+        border: 1px solid rgba(132, 212, 241, .38);
+        border-radius: 24px;
+        background: linear-gradient(155deg, rgba(24, 52, 77, .98), rgba(10, 26, 43, .98));
+        box-shadow: 0 28px 65px rgba(0, 0, 0, .48), inset 0 1px rgba(255, 255, 255, .1);
+        text-align: center;
+        animation: live-intro-enter .35s ease-out both;
+    }
+    .live-intro-card::before { content: ""; position: absolute; inset: 9px; border: 1px solid rgba(150, 219, 243, .15); border-radius: 17px; pointer-events: none; }
+    .live-intro-logo { position: relative; z-index: 1; width: 58px !important; height: 58px !important; margin-bottom: 5px; object-fit: contain; animation: none !important; }
+    .live-intro-brand { position: relative; z-index: 1; margin: 0 !important; color: #f6fcff !important; font-family: "Fredoka One", "Nunito", sans-serif; font-size: clamp(1.7rem, 5vw, 2.4rem); letter-spacing: .01em; }
+    .live-intro-brand span { color: #77daf7; }
+    .live-intro-kicker { position: relative; z-index: 1; margin: 5px 0 16px !important; color: #b8ddef; font-size: .74rem; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; }
+    .live-intro-content { position: relative; z-index: 1; display: grid; gap: 14px; padding: clamp(16px, 3vw, 22px); border: 1px solid rgba(143, 213, 239, .2); border-radius: 16px; background: rgba(3, 13, 25, .48) !important; text-align: left !important; }
+    .live-on-air { display: inline-flex; align-items: center; justify-self: start; gap: 7px; padding: 5px 9px; border-radius: 999px; color: #ffbec3; background: rgba(234, 74, 86, .14); font-size: .7rem; font-weight: 900; letter-spacing: .1em; }
+    .live-on-air i { width: 8px; height: 8px; border-radius: 50%; background: #f0525d; box-shadow: 0 0 0 4px rgba(240, 82, 93, .14); animation: live-on-air-pulse 1.7s ease-in-out infinite; }
+    .live-intro-story { padding: 12px 14px; border-left: 4px solid #f2bb52; border-radius: 9px; background: rgba(255, 255, 255, .06); }
+    .live-intro-story span { display: block; color: #f3c967; font-size: .68rem; font-weight: 900; letter-spacing: .12em; }
+    .live-intro-story strong { display: block; margin-top: 4px; color: #f4fbff; font-size: clamp(1.05rem, 3.4vw, 1.35rem); line-height: 1.25; overflow-wrap: anywhere; }
+    .live-intro-instructions { margin: 0; color: #d6e8f2; font-size: .93rem; font-weight: 700; line-height: 1.5; }
+    .live-intro-card button { position: relative; z-index: 1; width: min(240px, 100%); margin-top: 18px !important; border: 1px solid #75d8f6 !important; border-radius: 12px !important; background: linear-gradient(135deg, #1d9dcc, #147da9) !important; box-shadow: 0 7px 0 #0b5d82, 0 11px 22px rgba(0, 0, 0, .28); font-weight: 900 !important; letter-spacing: .02em; }
+    .live-intro-card button:active { transform: translateY(3px); box-shadow: 0 4px 0 #0b5d82; }
+    @keyframes live-intro-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    @keyframes live-on-air-pulse { 50% { box-shadow: 0 0 0 7px transparent; } }
+    @media (max-width: 460px) { .live-intro { padding: 12px !important; } .live-intro > .live-intro-card { padding: 20px 16px; } .live-intro-content { padding: 15px; } }
+    @media (prefers-reduced-motion: reduce) { .live-intro > .live-intro-card, .live-on-air i { animation: none; } }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const intro = document.querySelector('.live-intro');
+    const card = intro?.querySelector(':scope > div');
+    if (!intro || !card) return;
+
+    const storyTitle = document.querySelector('#storyPlayerApp .video-meta h1')?.textContent.trim() || 'Your Story';
+    const logo = card.querySelector('img');
+    const brand = card.querySelector('h1');
+    const kicker = card.querySelector('p');
+    const preview = card.querySelector('.live-preview');
+    const startButton = card.querySelector('button');
+
+    card.classList.add('live-intro-card');
+    logo?.classList.add('live-intro-logo');
+    if (brand) {
+        brand.className = 'live-intro-brand';
+        brand.innerHTML = 'Edu<span>PABASA</span> Live';
+    }
+    if (kicker) {
+        kicker.className = 'live-intro-kicker';
+        kicker.textContent = 'Story Reading';
+    }
+    if (preview) {
+        preview.className = 'live-intro-content';
+        preview.innerHTML = '<div class="live-on-air"><i aria-hidden="true"></i>LIVE · ON AIR</div><div class="live-intro-story"><span>📖 TODAY\'S STORY</span><strong></strong></div><p class="live-intro-instructions">Read the whole story aloud and follow it as each part unfolds.</p>';
+        preview.querySelector('.live-intro-story strong').textContent = storyTitle;
+    }
+    if (startButton) startButton.textContent = 'Go Live!';
+});
+</script>
 <link rel="stylesheet" href="{% static 'pabasa_app/vendor/bootstrap-icons/bootstrap-icons.css' %}">
 <script>window.pabasaStoryLogoUrl = "{% static 'pabasa_app/images/pabasalogo.png' %}";</script>
 <script>
