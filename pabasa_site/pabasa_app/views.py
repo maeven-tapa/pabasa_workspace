@@ -4804,6 +4804,8 @@ def _dashboard_context(request, nav_role=None, extra=None):
         'active_teacher_class_count': len(joined_classes),
     }
     if user and user.role == 'student':
+        avatar_slug = user.animal_avatar if user.animal_avatar in STUDENT_AVATAR_BY_SLUG else 'owl'
+        context['sidebar_selected_avatar'] = STUDENT_AVATAR_BY_SLUG[avatar_slug]
         context['student_reading_level'] = (
             _reader_assessment_state(user).get('reader_classification')
             or getattr(user, 'reading_level', '')

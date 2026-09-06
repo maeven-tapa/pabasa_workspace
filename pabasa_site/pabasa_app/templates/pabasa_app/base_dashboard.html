@@ -1329,6 +1329,7 @@
         }
 
         .sidebar-footer {
+            border-top: 1px solid rgba(255, 255, 255, 0.18) !important;
             margin-top: 0;
             flex-shrink: 0;
             padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
@@ -1451,28 +1452,28 @@
 
         .sidebar-profile-summary {
             align-items: center;
-            background:
-                linear-gradient(145deg, rgba(255, 240, 231, 0.98), rgba(239, 224, 255, 0.96));
-            border: 1px solid rgba(255, 255, 255, 0.62);
-            box-shadow: 0 12px 24px rgba(6, 23, 38, 0.2);
-            color: #17334a;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+            color: #fff;
             display: flex;
             flex-direction: column;
             gap: 0.35rem;
+            margin: 0.5rem 0 0;
             padding: 1rem 0.9rem 0.85rem;
             text-align: center;
         }
 
         .sidebar-profile-avatar {
             align-items: center;
-            background-color: #fff;
+            background-color: rgba(255, 255, 255, 0.18);
             background-position: center;
             background-repeat: no-repeat;
             background-size: cover;
-            border: 3px solid rgba(255, 255, 255, 0.95);
+            border: 3px solid rgba(255, 255, 255, 0.72);
             border-radius: 50%;
             box-shadow: 0 5px 12px rgba(68, 45, 98, 0.18);
-            color: var(--dash-primary-deep);
+            color: #fff;
             display: flex;
             font-family: "Nunito", "Segoe UI", sans-serif;
             font-size: 1rem;
@@ -1482,8 +1483,57 @@
             width: 52px;
         }
 
+        .sidebar-profile-avatar.sidebar-student-avatar {
+            background:
+                radial-gradient(circle at 28% 20%, rgba(255,255,255,.9), transparent 26%),
+                linear-gradient(145deg, #fff8d8, #dff0c7 58%, #bfe1d3);
+            border-color: rgba(255,255,255,.9);
+            border-radius: 16px;
+            box-shadow: 0 5px 12px rgba(49,111,72,.16), inset 0 -8px 18px rgba(49,111,72,.08);
+            color: #234b34;
+            font-size: 1.9rem;
+            transform: rotate(-2deg);
+        }
+
+        .sidebar-student-avatar span {
+            line-height: 1;
+        }
+
+        .sidebar-collapsed-profile {
+            display: none;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-collapsed-profile {
+            align-items: center;
+            background: rgba(255, 255, 255, 0.16);
+            border: 2px solid rgba(255, 255, 255, 0.72);
+            border-radius: 50%;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+            color: #fff;
+            display: flex;
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: 1rem;
+            font-weight: 900;
+            height: 48px;
+            justify-content: center;
+            margin: 0.45rem auto 0.7rem;
+            text-decoration: none;
+            width: 48px;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-collapsed-profile span {
+            font-size: 1.65rem;
+            line-height: 1;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-collapsed-profile:hover,
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-collapsed-profile:focus-visible {
+            background: rgba(255, 255, 255, 0.26);
+            color: #fff;
+        }
+
         .sidebar-profile-name {
-            color: #17334a;
+            color: #fff;
             font-family: "Nunito", "Segoe UI", sans-serif;
             font-size: 0.94rem;
             font-weight: 900;
@@ -1495,7 +1545,7 @@
         }
 
         .sidebar-profile-section {
-            color: #51677a;
+            color: rgba(255, 255, 255, 0.78);
             font-size: 0.72rem;
             font-weight: 700;
             line-height: 1.2;
@@ -1508,9 +1558,9 @@
 
         .sidebar-profile-view-btn {
             align-items: center;
-            background: #111827;
+            background: var(--dash-accent);
             border-radius: 999px;
-            color: #fff !important;
+            color: var(--dash-primary-deep) !important;
             display: inline-flex;
             font-family: "Nunito", "Segoe UI", sans-serif;
             font-size: 0.75rem;
@@ -1526,8 +1576,8 @@
 
         .sidebar-profile-view-btn:hover,
         .sidebar-profile-view-btn:focus-visible {
-            background: #253348;
-            color: #fff !important;
+            background: #f5b800;
+            color: var(--dash-primary-deep) !important;
             transform: translateY(-1px);
         }
 
