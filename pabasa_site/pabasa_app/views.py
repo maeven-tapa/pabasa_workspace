@@ -13595,6 +13595,58 @@ LIVE_ASSESSMENT_ACTIVE_STATUSES = ['waiting', 'countdown', 'started', 'paused']
 LIVE_ASSESSMENT_STALE_HOURS = 24
 LIVE_ASSESSMENT_BATCH_SIZE = 10
 LIVE_ASSESSMENT_MAX_STUDENTS = 10
+LIVE_ASSESSMENT_STATE_MAX_RETRIES = 3
+
+
+def _mutate_live_session_state(session_id, mutation, max_retries=LIVE_ASSESSMENT_STATE_MAX_RETRIES):
+    """Apply a semantic shared-session mutation with optimistic CAS.
+
+    ``mutation`` receives a freshly loaded session and returns the additional
+    model fields it changed.  It may return ``None`` for a harmless no-op.
+    The whole student_states document is conditionally replaced only when the
+    version that was read is still current; on conflict the mutation is
+    reapplied to the newest document rather than writing a stale snapshot.
+    """
+    last_error = None
+    for _attempt in range(max_retries):
+        session = LiveAssessmentSession.objects.select_related('material', 'course', 'teacher').filter(id=session_id).first()
+        if not session:
+            return None, 'Session not found'
+        expected_version = int(session.state_version or 0)
+        changed_fields = mutation(session)
+        if changed_fields is None:
+            return session, None
+
+        fields = set(changed_fields)
+        fields.add('student_states')
+        values = {field: getattr(session, field) for field in fields}
+        values.update({
+            'state_version': F('state_version') + 1,
+            'updated_at': timezone.now(),
+        })
+        try:
+            updated = LiveAssessmentSession.objects.filter(
+                id=session_id,
+                state_version=expected_version,
+            ).update(**values)
+        except OperationalError as exc:
+            # SQLite may report a transient writer lock; retry from fresh
+            # state just as for a normal CAS conflict.
+            last_error = exc
+            continue
+        if updated:
+            return LiveAssessmentSession.objects.select_related('material', 'course', 'teacher').get(id=session_id), None
+    return None, 'Live session state changed concurrently; please retry.' if last_error is None else 'Live session is busy; please retry.'
+
+
+def _live_student_update_is_allowed(session, student_id):
+    """Student-originated writes cannot reverse teacher/system authority."""
+    if session.status != 'started':
+        return False
+    if str((session.batch_assignments or {}).get(str(student_id), 0)) != str(session.current_batch):
+        return False
+    state = ((session.student_states or {}).get(str(student_id), {}) or {})
+    return str(state.get('status') or '').lower() not in {'skipped', 'completed', 'missed'}
 
 
 def _ensure_live_session_batches(session, student_ids=None):
@@ -13654,23 +13706,43 @@ def _live_session_batch_payload(session):
 
 
 def _start_next_live_batch(session_id, requested_batch):
-    with transaction.atomic():
-        session = LiveAssessmentSession.objects.select_for_update().select_related('material', 'course').get(id=session_id)
+    advanced = False
+
+    def advance(session):
+        nonlocal advanced
+        advanced = False
         if session.status not in ['started', 'paused']:
-            return None, 'Only an active session can advance batches'
+            return None
         _ensure_live_session_batches(session)
         if requested_batch != session.current_batch + 1:
-            return None, 'Only the next batch can be started'
+            return None
         completed, total = _live_batch_progress(session)
         if completed < total:
-            return None, 'The current batch is not complete'
+            return None
         if requested_batch > session.total_batches:
-            return None, 'There is no next batch'
+            return None
         session.current_batch = requested_batch
         _ensure_live_session_student_states(session, _live_batch_student_ids(session))
         _append_live_session_activity(session, f'Teacher started batch {requested_batch} of {session.total_batches}.')
-        session.save(update_fields=['current_batch', 'batch_assignments', 'batch_size', 'total_batches', 'student_states', 'activity_log', 'updated_at'])
+        advanced = True
+        return {'current_batch', 'batch_assignments', 'batch_size', 'total_batches', 'activity_log'}
+
+    session, error = _mutate_live_session_state(session_id, advance)
+    if session and advanced:
         return session, None
+    # Re-read for the user-facing guard reason after a semantic no-op.
+    current = LiveAssessmentSession.objects.filter(id=session_id).first()
+    if not current or current.status not in ['started', 'paused']:
+        return None, 'Only an active session can advance batches'
+    _ensure_live_session_batches(current)
+    if requested_batch != current.current_batch + 1:
+        return None, 'Only the next batch can be started'
+    completed, total = _live_batch_progress(current)
+    if completed < total:
+        return None, 'The current batch is not complete'
+    if requested_batch > current.total_batches:
+        return None, 'There is no next batch'
+    return None, error or 'Unable to advance batch'
 
 
 def _is_live_crla_material(material):
@@ -14551,8 +14623,21 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                     student_id=getattr(student_user, 'id', None),
                     state_update=state_update,
                 )
-                _update_live_student_state(live_session, student_user.id, state_update)
-                live_session.save(update_fields=['student_states', 'updated_at'])
+                def apply_completion_state(current):
+                    _ensure_live_session_batches(current)
+                    # The individual Assessment result has already been
+                    # persisted.  Live state must not overturn a teacher skip,
+                    # session end, or later-batch boundary.
+                    if not _live_student_update_is_allowed(current, student_user.id):
+                        return None
+                    _update_live_student_state(current, student_user.id, state_update)
+                    return set()
+
+                synced_session, sync_error = _mutate_live_session_state(live_session.id, apply_completion_state)
+                if synced_session is not None:
+                    live_session = synced_session
+                elif sync_error:
+                    logger.warning('Live completion state sync deferred for session %s: %s', live_session.id, sync_error)
                 _trace_live_end_flow(
                     'complete_assessment_live_state_sync_after',
                     live_session,
@@ -14890,7 +14975,38 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
         if not activity_message:
             activity_message = 'Live assessment session ended.'
         _append_live_session_activity(session, activity_message)
-    session.save(update_fields=['status', 'student_states', 'activity_log', 'updated_at', 'ends_at'])
+    planned_states = session.student_states or {}
+    planned_log = session.activity_log or []
+    planned_ends_at = session.ends_at
+
+    def apply_end(current):
+        # End is teacher/system terminal authority. Reapply terminalization to
+        # the latest state so an in-flight heartbeat cannot restore activity.
+        if current.status == 'ended':
+            return None
+        latest_states = current.student_states or {}
+        merged_states = {}
+        for student_key, latest_state in latest_states.items():
+            latest_state = latest_state if isinstance(latest_state, dict) else {}
+            planned_state = planned_states.get(student_key, {})
+            if str(latest_state.get('status') or '').lower() == 'completed':
+                merged_states[student_key] = latest_state
+            elif str(planned_state.get('status') or '').lower() == 'completed':
+                merged_states[student_key] = planned_state
+            else:
+                merged = dict(latest_state)
+                merged.update({'status': 'missed', 'connection_status': 'disconnected', 'final_score': None, 'progress': 0})
+                merged_states[student_key] = merged
+        current.student_states = merged_states
+        current.status = 'ended'
+        current.ends_at = current.ends_at or planned_ends_at or ended_at
+        current.activity_log = planned_log
+        return {'status', 'ends_at', 'activity_log'}
+
+    persisted_session, persist_error = _mutate_live_session_state(session.id, apply_end)
+    if persisted_session is None:
+        raise OperationalError(persist_error or 'Unable to end live session safely')
+    session = persisted_session
 
     if session.teacher and session.teacher.email and not was_already_ended:
         try:
@@ -14956,9 +15072,15 @@ def _advance_live_assessment_state(session):
     if session.status == 'countdown' and session.start_at:
         if timezone.now() >= session.start_at:
             _trace_live_end_flow('advance_state_countdown_to_started_before', session)
-            session.status = 'started'
-            _append_live_session_activity(session, 'Live assessment countdown completed and session is now active.')
-            session.save(update_fields=['status', 'activity_log', 'updated_at'])
+            def apply_countdown_advance(current):
+                if current.status != 'countdown' or not current.start_at or timezone.now() < current.start_at:
+                    return None
+                current.status = 'started'
+                _append_live_session_activity(current, 'Live assessment countdown completed and session is now active.')
+                return {'status', 'activity_log'}
+            advanced, _error = _mutate_live_session_state(session.id, apply_countdown_advance)
+            if advanced:
+                session = advanced
             _trace_live_end_flow('advance_state_countdown_to_started_after', session)
     return session
 
@@ -15899,8 +16021,19 @@ def live_assessment_student_state_update(request, session_id):
     if not state_values:
         return JsonResponse({'success': False, 'error': 'No update data provided'}, status=400)
 
-    _update_live_student_state(session, user_id, state_values)
-    session.save(update_fields=['student_states', 'updated_at'])
+    def apply_student_update(current):
+        _ensure_live_session_batches(current)
+        # A retry must validate against the newest teacher/system state.  A
+        # stale heartbeat after skip, completion, pause, end, or batch advance
+        # is intentionally a successful no-op.
+        if not _live_student_update_is_allowed(current, user_id):
+            return None
+        _update_live_student_state(current, user_id, state_values)
+        return set()
+
+    session, mutation_error = _mutate_live_session_state(session_id, apply_student_update)
+    if not session:
+        return JsonResponse({'success': False, 'error': mutation_error or 'Unable to save live state'}, status=409)
     _trace_live_end_flow(
         'student_update_saved',
         session,
@@ -16029,7 +16162,23 @@ def live_assessment_session_action(request, session_id):
         _ensure_live_session_student_states(session, session.student_ids)
         _ensure_live_session_batches(session)
         _append_live_session_activity(session, activity_message)
-        session.save(update_fields=['status', 'start_at', 'countdown_seconds', 'timing_mode', 'duration_seconds', 'ends_at', 'student_states', 'student_count', 'batch_assignments', 'batch_size', 'current_batch', 'total_batches', 'activity_log', 'updated_at'])
+        start_values = {
+            field: getattr(session, field) for field in (
+                'status', 'start_at', 'countdown_seconds', 'timing_mode',
+                'duration_seconds', 'ends_at', 'student_ids', 'student_count',
+                'batch_assignments', 'batch_size', 'current_batch',
+                'total_batches', 'activity_log', 'student_states',
+            )
+        }
+        def apply_start(current):
+            if current.status != 'waiting':
+                return None
+            for field, value in start_values.items():
+                setattr(current, field, value)
+            return set(start_values) - {'student_states'}
+        session, mutation_error = _mutate_live_session_state(session.id, apply_start)
+        if not session:
+            return JsonResponse({'success': False, 'error': mutation_error or 'Unable to start session'}, status=409)
         _trace_live_end_flow('action_start_after_save', session, user_id=user_id)
 
         try:
@@ -16077,43 +16226,62 @@ def live_assessment_session_action(request, session_id):
         state = (session.student_states or {}).get(str(skipped_student_id), {})
         if str(state.get('status', '')).lower() in {'completed', 'skipped'}:
             return JsonResponse({'success': True, 'session': {'id': session.id, **_live_session_batch_payload(session)}})
-        _update_live_student_state(session, skipped_student_id, {
-            'status': 'skipped',
-            'connection_status': 'disconnected',
-            'follow_up': True,
-            'progress': 0,
-            'final_score': None,
-        })
-        _append_live_session_activity(session, f'Student {skipped_student_id} was skipped for follow-up.')
-        session.save(update_fields=['student_states', 'activity_log', 'updated_at'])
+        def apply_skip(current):
+            _ensure_live_session_batches(current)
+            if current.status not in ['started', 'paused'] or skipped_student_id not in _live_batch_student_ids(current):
+                return None
+            current_state = (current.student_states or {}).get(str(skipped_student_id), {}) or {}
+            if str(current_state.get('status') or '').lower() in {'completed', 'skipped', 'missed'}:
+                return None
+            _update_live_student_state(current, skipped_student_id, {
+                'status': 'skipped', 'connection_status': 'disconnected',
+                'follow_up': True, 'progress': 0, 'final_score': None,
+            })
+            _append_live_session_activity(current, f'Student {skipped_student_id} was skipped for follow-up.')
+            return {'activity_log'}
+        session, mutation_error = _mutate_live_session_state(session.id, apply_skip)
+        if not session:
+            return JsonResponse({'success': False, 'error': mutation_error or 'Unable to skip student'}, status=409)
     elif action == 'pause':
         if session.status != 'started':
             return JsonResponse({'success': False, 'error': 'Only an active session can be paused'}, status=400)
         _trace_live_end_flow('action_pause_before_status_change', session, user_id=user_id)
-        session.status = 'paused'
-        states = session.student_states or {}
-        for student_key, student_state in states.items():
-            if student_state.get('status') != 'paused':
-                student_state['previous_status'] = student_state.get('status', 'reading')
-                student_state['status'] = 'paused'
-            states[student_key] = student_state
-        session.student_states = states
-        _append_live_session_activity(session, 'Teacher paused the live session.')
-        session.save(update_fields=['status', 'student_states', 'activity_log', 'updated_at'])
+        def apply_pause(current):
+            if current.status != 'started':
+                return None
+            current.status = 'paused'
+            states = current.student_states or {}
+            for student_key, student_state in states.items():
+                if str(student_state.get('status') or '').lower() not in {'paused', 'completed', 'skipped', 'missed'}:
+                    student_state['previous_status'] = student_state.get('status', 'reading')
+                    student_state['status'] = 'paused'
+                states[student_key] = student_state
+            current.student_states = states
+            _append_live_session_activity(current, 'Teacher paused the live session.')
+            return {'status', 'activity_log'}
+        session, mutation_error = _mutate_live_session_state(session.id, apply_pause)
+        if not session:
+            return JsonResponse({'success': False, 'error': mutation_error or 'Unable to pause session'}, status=409)
         _trace_live_end_flow('action_pause_after_save', session, user_id=user_id)
     elif action == 'resume':
         if session.status != 'paused':
             return JsonResponse({'success': False, 'error': 'Only a paused session can be resumed'}, status=400)
         _trace_live_end_flow('action_resume_before_status_change', session, user_id=user_id)
-        session.status = 'started'
-        states = session.student_states or {}
-        for student_key, student_state in states.items():
-            if student_state.get('status') == 'paused':
-                student_state['status'] = student_state.pop('previous_status', 'reading')
-            states[student_key] = student_state
-        session.student_states = states
-        _append_live_session_activity(session, 'Teacher resumed the live session.')
-        session.save(update_fields=['status', 'student_states', 'activity_log', 'updated_at'])
+        def apply_resume(current):
+            if current.status != 'paused':
+                return None
+            current.status = 'started'
+            states = current.student_states or {}
+            for student_key, student_state in states.items():
+                if student_state.get('status') == 'paused':
+                    student_state['status'] = student_state.pop('previous_status', 'reading')
+                states[student_key] = student_state
+            current.student_states = states
+            _append_live_session_activity(current, 'Teacher resumed the live session.')
+            return {'status', 'activity_log'}
+        session, mutation_error = _mutate_live_session_state(session.id, apply_resume)
+        if not session:
+            return JsonResponse({'success': False, 'error': mutation_error or 'Unable to resume session'}, status=409)
         _trace_live_end_flow('action_resume_after_save', session, user_id=user_id)
     elif action == 'end':
         _trace_live_end_flow('action_end_before_finalize', session, user_id=user_id, user_role=user_role)
@@ -16155,7 +16323,22 @@ def live_assessment_session_action(request, session_id):
         _ensure_live_session_batches(session, valid_student_ids)
         _ensure_live_session_student_states(session, valid_student_ids)
         _append_live_session_activity(session, 'Teacher saved session configuration and invited students to the waiting room.')
-        session.save(update_fields=['countdown_seconds', 'timing_mode', 'duration_seconds', 'ends_at', 'student_ids', 'student_count', 'student_states', 'updated_at', 'activity_log'])
+        settings_values = {
+            field: getattr(session, field) for field in (
+                'countdown_seconds', 'timing_mode', 'duration_seconds', 'ends_at',
+                'student_ids', 'student_count', 'student_states', 'batch_assignments',
+                'batch_size', 'current_batch', 'total_batches', 'activity_log',
+            )
+        }
+        def apply_settings(current):
+            if current.status != 'waiting':
+                return None
+            for field, value in settings_values.items():
+                setattr(current, field, value)
+            return set(settings_values) - {'student_states'}
+        session, mutation_error = _mutate_live_session_state(session.id, apply_settings)
+        if not session:
+            return JsonResponse({'success': False, 'error': mutation_error or 'Unable to save settings'}, status=409)
         _trace_live_end_flow('action_save_settings_after_save', session, user_id=user_id, valid_student_ids=valid_student_ids)
 
         try:

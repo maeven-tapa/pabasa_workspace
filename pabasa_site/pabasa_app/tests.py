@@ -5,6 +5,7 @@ from django.contrib.auth.hashers import check_password, make_password
 from openpyxl import load_workbook
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
+from django.db.models import F
 from datetime import date, datetime, timedelta
 from io import BytesIO
 from pathlib import Path
@@ -6264,6 +6265,207 @@ class LiveAssessmentStartTests(TestCase):
         self.assertEqual(duplicate.status_code, 409)
         session.refresh_from_db()
         self.assertEqual(session.current_batch, 2)
+
+    def test_live_state_cas_retries_a_forced_version_conflict_without_losing_state(self):
+        """A deterministic conflict proves retries reapply the mutation fresh."""
+        from .views import _mutate_live_session_state, _update_live_student_state
+
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=self.material,
+            student_ids=[self.student.id], student_count=1, status='started',
+            student_states={str(self.student.id): {'status': 'reading', 'progress': 0}},
+        )
+        calls = {'count': 0}
+
+        def mutate(current):
+            calls['count'] += 1
+            if calls['count'] == 1:
+                # Simulate another writer winning after this request loaded its
+                # version but before its conditional UPDATE.
+                LiveAssessmentSession.objects.filter(id=current.id).update(
+                    state_version=F('state_version') + 1,
+                )
+            _update_live_student_state(current, self.student.id, {'progress': 0.5})
+            return set()
+
+        saved, error = _mutate_live_session_state(session.id, mutate)
+        self.assertIsNone(error)
+        self.assertIsNotNone(saved)
+        self.assertEqual(calls['count'], 2)
+        session.refresh_from_db()
+        self.assertEqual(session.student_states[str(self.student.id)]['progress'], 0.5)
+        self.assertEqual(session.state_version, 2)
+
+    def test_live_state_cas_same_student_has_last_successful_mutation_semantics(self):
+        from .views import _mutate_live_session_state, _update_live_student_state
+
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=self.material,
+            student_ids=[self.student.id], student_count=1, status='started',
+            student_states={str(self.student.id): {'status': 'reading', 'progress': 0}},
+        )
+        calls = {'count': 0}
+
+        def update_progress(current):
+            calls['count'] += 1
+            if calls['count'] == 1:
+                # A competing accepted update wins first; this request is
+                # retried and becomes the later successful mutation.
+                states = current.student_states.copy()
+                states[str(self.student.id)] = {'status': 'reading', 'progress': 0.8}
+                LiveAssessmentSession.objects.filter(id=current.id).update(
+                    student_states=states, state_version=F('state_version') + 1,
+                )
+            _update_live_student_state(current, self.student.id, {'progress': 0.5})
+            return set()
+
+        saved, error = _mutate_live_session_state(session.id, update_progress)
+        self.assertIsNone(error)
+        self.assertIsNotNone(saved)
+        session.refresh_from_db()
+        self.assertEqual(session.student_states[str(self.student.id)]['progress'], 0.5)
+
+    def test_terminal_student_state_rejects_stale_student_authority(self):
+        from .views import _live_student_update_is_allowed
+
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=self.material,
+            student_ids=[self.student.id], student_count=1, status='started',
+            batch_assignments={str(self.student.id): 1}, current_batch=1,
+            student_states={str(self.student.id): {'status': 'skipped'}},
+        )
+        self.assertFalse(_live_student_update_is_allowed(session, self.student.id))
+        session.student_states[str(self.student.id)]['status'] = 'completed'
+        self.assertFalse(_live_student_update_is_allowed(session, self.student.id))
+        session.status = 'ended'
+        session.student_states[str(self.student.id)]['status'] = 'reading'
+        self.assertFalse(_live_student_update_is_allowed(session, self.student.id))
+
+    def test_stale_student_heartbeat_cannot_reverse_teacher_pause_or_skip(self):
+        """The endpoint treats a stale student update as a successful no-op."""
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=self.material,
+            student_ids=[self.student.id], student_count=1, status='started',
+            batch_assignments={str(self.student.id): 1}, current_batch=1,
+            student_states={str(self.student.id): {'status': 'reading', 'progress': 0}},
+        )
+        paused = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'pause'}), content_type='application/json',
+        )
+        self.assertEqual(paused.status_code, 200)
+
+        student_client = Client()
+        student_session = student_client.session
+        student_session['user_id'] = self.student.id
+        student_session['user_role'] = 'student'
+        student_session.save()
+        heartbeat = student_client.post(
+            reverse('live_assessment_student_state_update', kwargs={'session_id': session.id}),
+            json.dumps({'status': 'reading', 'progress': 0.75, 'connection_status': 'connected'}),
+            content_type='application/json',
+        )
+        self.assertEqual(heartbeat.status_code, 200)
+        session.refresh_from_db()
+        self.assertEqual(session.status, 'paused')
+        self.assertEqual(session.student_states[str(self.student.id)]['status'], 'paused')
+
+        resumed = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'resume'}), content_type='application/json',
+        )
+        self.assertEqual(resumed.status_code, 200)
+        skipped = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'skip_student', 'student_id': self.student.id}),
+            content_type='application/json',
+        )
+        self.assertEqual(skipped.status_code, 200)
+        heartbeat = student_client.post(
+            reverse('live_assessment_student_state_update', kwargs={'session_id': session.id}),
+            json.dumps({'status': 'reading', 'progress': 0.9, 'connection_status': 'connected'}),
+            content_type='application/json',
+        )
+        self.assertEqual(heartbeat.status_code, 200)
+        session.refresh_from_db()
+        self.assertEqual(session.student_states[str(self.student.id)]['status'], 'skipped')
+
+    def test_live_state_cas_preserves_ten_distinct_participant_entries(self):
+        from .views import _mutate_live_session_state, _update_live_student_state
+
+        roster = [self.student.id] + list(range(2001, 2010))
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=self.material,
+            student_ids=roster, student_count=len(roster), status='started',
+            student_states={str(student_id): {'status': 'reading', 'progress': 0} for student_id in roster},
+        )
+        for index, student_id in enumerate(roster):
+            def mutate(current, sid=student_id, progress=(index + 1) / 10):
+                _update_live_student_state(current, sid, {'progress': progress})
+                return set()
+            saved, error = _mutate_live_session_state(session.id, mutate)
+            self.assertIsNone(error)
+            self.assertIsNotNone(saved)
+        session.refresh_from_db()
+        self.assertEqual(set(session.student_states), {str(student_id) for student_id in roster})
+        self.assertEqual(session.state_version, len(roster))
+
+    def test_live_state_cas_preserves_two_completion_mutations_after_conflict(self):
+        """Completion-style mutations are reapplied to the latest JSON state."""
+        from .views import _mutate_live_session_state, _update_live_student_state
+
+        other = User.objects.create(
+            custom_id=f"COMPLETE-{uuid.uuid4().hex[:8].upper()}", role='student',
+            first_name='Other', last_name='Student', email=f'complete-{uuid.uuid4().hex}@example.com',
+            password_hash=make_password('student-password'), grade_level='Grade 2',
+            middle_initial='', suffix='', sex='female', birth_month=6, birth_day=2, birth_year=2012,
+        )
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=self.material,
+            student_ids=[self.student.id, other.id], student_count=2, status='started',
+            student_states={
+                str(self.student.id): {'status': 'reading'},
+                str(other.id): {'status': 'reading'},
+            },
+        )
+        calls = {'count': 0}
+
+        def complete_first(current):
+            calls['count'] += 1
+            if calls['count'] == 1:
+                # The other completion wins the first version race.
+                states = current.student_states.copy()
+                states[str(other.id)] = {'status': 'completed', 'final_score': 80}
+                LiveAssessmentSession.objects.filter(id=current.id).update(
+                    student_states=states, state_version=F('state_version') + 1,
+                )
+            _update_live_student_state(current, self.student.id, {
+                'status': 'completed', 'final_score': 90,
+            })
+            return set()
+
+        saved, error = _mutate_live_session_state(session.id, complete_first)
+        self.assertIsNone(error)
+        self.assertIsNotNone(saved)
+        session.refresh_from_db()
+        self.assertEqual(session.student_states[str(self.student.id)]['status'], 'completed')
+        self.assertEqual(session.student_states[str(other.id)]['status'], 'completed')
+
+    def test_live_session_batch_assignments_cover_25_and_30_students(self):
+        from .views import _ensure_live_session_batches
+
+        for size, expected_sizes in ((25, [10, 10, 5]), (30, [10, 10, 10])):
+            roster = [self.student.id] + list(range(3000, 3000 + size - 1))
+            session = LiveAssessmentSession.objects.create(
+                id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=self.material,
+                student_ids=roster, student_count=len(roster),
+            )
+            assignments = _ensure_live_session_batches(session)
+            self.assertEqual(session.total_batches, 3)
+            self.assertEqual(
+                [sum(1 for sid in roster if assignments[str(sid)] == batch) for batch in (1, 2, 3)],
+                expected_sizes,
+            )
 
     def test_student_active_invitation_endpoint_only_returns_late_joiner_modal(self):
         session = LiveAssessmentSession.objects.create(

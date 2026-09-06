@@ -1959,6 +1959,9 @@ class LiveAssessmentSession(models.Model):
     student_ids = models.JSONField(default=list, blank=True)
     student_count = models.IntegerField(default=0)
     student_states = models.JSONField(default=dict, blank=True)
+    # Explicit optimistic-concurrency token for the shared student_states JSON
+    # document.  Timestamps are not suitable version tokens on SQLite.
+    state_version = models.PositiveIntegerField(default=0)
     batch_assignments = models.JSONField(default=dict, blank=True)
     current_batch = models.IntegerField(default=1)
     total_batches = models.IntegerField(default=0)
