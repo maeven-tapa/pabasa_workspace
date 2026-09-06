@@ -10214,6 +10214,33 @@ def request_assessment_access(request):
     item, created = AssessmentRequest.objects.get_or_create(student=student, section=section, status='pending')
     return JsonResponse({'success': True, 'pending': True, 'created': created})
 
+
+@require_http_methods(["GET"])
+@login_required(role='student')
+def student_assessment_access_status(request):
+    """Return the live access state used by the student assessment workflow."""
+    student = User.objects.filter(
+        id=request.session.get('user_id'), role='student', is_archived=False,
+    ).first()
+    try:
+        section_id = int(request.GET.get('section_id'))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'A valid section is required.'}, status=400)
+
+    section = Section.objects.filter(id=section_id, is_active=True).first()
+    if not student or not section or not section.has_student(student, active_only=True):
+        return JsonResponse({'success': False, 'error': 'Section access was not found.'}, status=404)
+
+    assessment_week_enabled = bool(
+        _expire_assessment_week_if_needed(section)
+        and _section_assessment_week_status(section) == 'during'
+    )
+    return JsonResponse({
+        'success': True,
+        'assessment_week_enabled': assessment_week_enabled,
+        'request_approved': _student_has_approved_assessment_request(student, section),
+    })
+
 @login_required(role='teacher')
 @require_http_methods(["GET"])
 def teacher_assessment_requests(request):
@@ -22594,8 +22621,14 @@ def mark_notification_read(request):
         data = json.loads(request.body)
         notif_id = data.get('notification_id')
         user = User.objects.get(id=request.session.get('user_id'))
-        Notification.objects.filter(id=notif_id, recipient=user).update(is_read=True)
-        return JsonResponse({'success': True})
+        notifications = Notification.objects.filter(recipient=user)
+        if data.get('mark_all'):
+            updated_count = notifications.filter(is_read=False).update(is_read=True)
+        elif notif_id:
+            updated_count = notifications.filter(id=notif_id, is_read=False).update(is_read=True)
+        else:
+            return JsonResponse({'success': False, 'error': 'A notification is required.'}, status=400)
+        return JsonResponse({'success': True, 'updated_count': updated_count})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 

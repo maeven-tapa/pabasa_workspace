@@ -79,6 +79,7 @@ urlpatterns = [
     path('dashboard/courses/', views.courses, name='courses'),
     path('dashboard/assessment/', views.assessment, name='assessment'),
     path('api/assessment/request/', views.request_assessment_access, name='request_assessment_access'),
+    path('api/assessment/access-status/', views.student_assessment_access_status, name='student_assessment_access_status'),
     path('api/teacher/assessment-requests/', views.teacher_assessment_requests, name='teacher_assessment_requests'),
     path('api/teacher/assessment-requests/<int:request_id>/approve/', views.approve_assessment_request, name='approve_assessment_request'),
     path('dashboard/assessment/activate-aral-intervention/', views.activate_aral_intervention, name='activate_aral_intervention'),

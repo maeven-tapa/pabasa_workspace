@@ -196,6 +196,62 @@
         });
     }
 
+    function getCsrfToken() {
+        const cookieMatch = document.cookie
+            .split("; ")
+            .find(function (row) { return row.startsWith("csrftoken="); });
+        return cookieMatch ? cookieMatch.split("=")[1] : "";
+    }
+
+    function markLocalNotificationsRead() {
+        try {
+            const raw = window.localStorage.getItem("pabasa_notifications") || "[]";
+            const entries = JSON.parse(raw);
+            if (!Array.isArray(entries)) return;
+            window.localStorage.setItem("pabasa_notifications", JSON.stringify(entries.map(function (entry) {
+                return Object.assign({}, entry, { read: true, is_read: true });
+            })));
+        } catch (error) {
+            // Server notifications still mark as read if local storage is unavailable.
+        }
+    }
+
+    async function markAllNotificationsRead(pane) {
+        const url = pane && pane.dataset.markNotificationsReadUrl;
+        if (!url || pane.dataset.markingNotificationsRead === "true") return;
+        pane.dataset.markingNotificationsRead = "true";
+        try {
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCsrfToken(),
+                    "Accept": "application/json"
+                },
+                credentials: "same-origin",
+                body: JSON.stringify({ mark_all: true })
+            });
+            if (response.ok) {
+                markLocalNotificationsRead();
+                document.querySelectorAll("#notifBadge, [data-notification-header-badge]").forEach(function (badge) {
+                    badge.classList.add("is-hidden");
+                });
+                window.dispatchEvent(new Event("pabasa:notifications-updated"));
+            }
+        } catch (error) {
+            // Leave the badge unchanged if the request cannot be completed.
+        } finally {
+            delete pane.dataset.markingNotificationsRead;
+        }
+    }
+
+    document.addEventListener("show.bs.offcanvas", function (event) {
+        const pane = event.target && event.target.matches("[data-mark-notifications-read-url]")
+            ? event.target
+            : null;
+        if (pane) markAllNotificationsRead(pane);
+    });
+
     window.PabasaNotificationsShared = {
         renderNotificationsMarkup: renderNotificationsMarkup,
         renderNotificationErrorState: renderNotificationErrorState,

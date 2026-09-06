@@ -87,7 +87,7 @@
     .event-dot { width: .55rem; height: .55rem; border-radius: 999px; background: rgba(255,255,255,.92); }
     .calendar-empty { display: none; padding: .9rem 1rem; margin-bottom: .9rem; border-radius: 16px; background: rgba(16,70,110,0.04); color: #5d7288; font-weight: 700; }
     .calendar-empty.is-visible { display: block; }
-    .calendar-legend { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; padding: 0.85rem 1rem; margin-top: 0.5rem; border-radius: 16px; background: rgba(16, 70, 110, 0.03); border: 1px solid rgba(16, 70, 110, 0.08); }
+    .calendar-legend { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; justify-content: center; margin-top: 0.5rem; padding: 0.3rem 0; }
     .calendar-legend-item { display: inline-flex; align-items: center; gap: 0.5rem; color: #294a66; font-size: 0.82rem; font-weight: 800; }
     .calendar-legend-swatch { width: 0.8rem; height: 0.8rem; border-radius: 0.35rem; box-shadow: inset 0 0 0 1px rgba(16, 70, 110, 0.18); }
     .modal-content { border: 1px solid rgba(16, 70, 110, 0.10); border-radius: 22px; box-shadow: 0 24px 70px rgba(6, 23, 38, 0.18); overflow: hidden; }
@@ -119,18 +119,29 @@
         </div>
 
         <div class="calendar-card calendar-card-inner">
+            {% if has_saved_term_blocks %}
             <div class="calendar-label">Current Term</div>
-            <div class="term-progress" aria-label="Current term: {{ selected_term_label }}">
-                <span class="term-progress-step{% if selected_term == 1 %} is-active{% endif %}">Term 1</span>
-                <span class="term-progress-arrow" aria-hidden="true">→</span>
-                <span class="term-progress-step{% if selected_term == 2 %} is-active{% endif %}">Term 2</span>
-                <span class="term-progress-arrow" aria-hidden="true">→</span>
-                <span class="term-progress-step{% if selected_term == 3 %} is-active{% endif %}">Term 3</span>
+            <div class="d-flex align-items-center justify-content-between gap-2">
+                <div class="term-progress" aria-label="Current term: {{ selected_term_label }}">
+                    <span class="term-progress-step{% if selected_term == 1 %} is-active{% endif %}">Term 1</span>
+                    <span class="term-progress-arrow" aria-hidden="true">→</span>
+                    <span class="term-progress-step{% if selected_term == 2 %} is-active{% endif %}">Term 2</span>
+                    <span class="term-progress-arrow" aria-hidden="true">→</span>
+                    <span class="term-progress-step{% if selected_term == 3 %} is-active{% endif %}">Term 3</span>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-circle" id="editTermBlocksBtn" aria-label="Edit term blocks" title="Edit term blocks"><i class="bi bi-pencil"></i></button>
             </div>
+            {% else %}
+            <div class="calendar-label">Term Setup</div>
+            <div class="d-flex align-items-center justify-content-between gap-3">
+                <span class="small text-muted fw-semibold">Start a term to set up this school year.</span>
+                <button type="button" class="btn btn-primary btn-sm text-nowrap" id="startTermBtn" {% if not selected_calendar %}disabled{% endif %}>Start a Term</button>
+            </div>
+            {% endif %}
         </div>
 
         <div class="calendar-top-action justify-content-end">
-            <button type="button" class="btn {% if has_saved_term_blocks %}btn-success{% else %}btn-primary{% endif %} px-4" id="addEventBtn" {% if not selected_calendar %}disabled{% endif %}>{% if has_saved_term_blocks %}Edit Event{% else %}+ Add Event{% endif %}</button>
+            <button type="button" class="btn btn-primary px-4" id="addEventBtn" {% if not has_saved_term_blocks %}disabled{% endif %}>Add Custom Event</button>
             <button type="button" class="btn btn-outline-primary px-4" id="addSuspensionBtn" {% if not has_saved_term_blocks %}disabled{% endif %}>Add Suspensions</button>
         </div>
     </div>
@@ -208,7 +219,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <div>
-                    <h5 class="modal-title mb-0" id="termBlocksModalTitle">Add Term Blocks</h5>
+                    <h5 class="modal-title mb-0" id="termBlocksModalTitle">Start a Term</h5>
                     <div class="text-secondary small">Set each term's opening and end-of-term dates.</div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -261,26 +272,9 @@
                     <input type="hidden" name="action" value="save_event">
                     <input type="hidden" name="calendar_id" value="{% if selected_calendar %}{{ selected_calendar.id }}{% endif %}">
                     <input type="hidden" name="event_id" id="eventId">
+                    <input type="hidden" name="event_type" id="eventType" value="other">
+                    <input type="hidden" name="term" id="eventTerm" value="{{ selected_term|default:1 }}">
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary" for="eventType">Event Type</label>
-                            <select class="form-select" id="eventType" name="event_type" required>
-                                <option value="" selected>Select Event Type</option>
-                                {% for value, label in event_type_options %}
-                                {% if value not in 'pre_assessment midline_assessment post_assessment' %}
-                                <option value="{{ value }}">{{ label }}</option>
-                                {% endif %}
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary" for="eventTerm">Term</label>
-                            <select class="form-select" id="eventTerm" name="term" required>
-                                {% for value, label in term_options %}
-                                <option value="{{ value }}" {% if selected_term|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-secondary" for="eventStart">Start Date</label>
                             <input class="form-control" id="eventStart" name="start_date" type="date" required>
@@ -289,9 +283,9 @@
                             <label class="form-label small fw-bold text-secondary" for="eventEnd">End Date</label>
                             <input class="form-control" id="eventEnd" name="end_date" type="date">
                         </div>
-                        <div class="col-12 d-none" id="eventTitleWrap">
-                            <label class="form-label small fw-bold text-secondary" for="eventTitle">Title</label>
-                            <input class="form-control" id="eventTitle" name="title" type="text" autocomplete="off">
+                        <div class="col-12" id="eventTitleWrap">
+                            <label class="form-label small fw-bold text-secondary" for="eventTitle">Event Name</label>
+                            <input class="form-control" id="eventTitle" name="title" type="text" autocomplete="off" required>
                         </div>
                         <div class="col-12">
                             <label class="form-label small fw-bold text-secondary" for="eventDescription">Description</label>
@@ -395,6 +389,8 @@
         const eventEndInput = document.getElementById('eventEnd');
         const eventDescriptionInput = document.getElementById('eventDescription');
         const addEventBtn = document.getElementById('addEventBtn');
+        const startTermBtn = document.getElementById('startTermBtn');
+        const editTermBlocksBtn = document.getElementById('editTermBlocksBtn');
         const addSuspensionBtn = document.getElementById('addSuspensionBtn');
         const suspensionModalEl = document.getElementById('suspensionModal');
         const suspensionModal = window.bootstrap ? new bootstrap.Modal(suspensionModalEl) : null;
@@ -687,7 +683,7 @@
 
         function openTermBlocksModal() {
             loadTermBlocks(currentCalendarId);
-            document.getElementById('termBlocksModalTitle').textContent = hasSavedTermBlocks ? 'Edit Event' : 'Add Term Blocks';
+            document.getElementById('termBlocksModalTitle').textContent = hasSavedTermBlocks ? 'Edit Term Blocks' : 'Start a Term';
             termBlocksModal?.show();
         }
 
@@ -709,7 +705,7 @@
                 id: eventData?.id || '',
                 school_calendar_id: eventData?.school_calendar_id || calendarIdInput?.value || '',
                 title: eventData?.title || '',
-                event_type: eventData?.event_type || '',
+                event_type: eventData?.event_type || 'other',
                 term: String(eventData?.term || '{% if selected_term %}{{ selected_term }}{% else %}1{% endif %}'),
                 start_date: start,
                 end_date: end,
@@ -1282,7 +1278,9 @@
         calendar.render();
         setView('dayGridMonth');
 
-        addEventBtn?.addEventListener('click', openTermBlocksModal);
+        addEventBtn?.addEventListener('click', () => openEventModal());
+        startTermBtn?.addEventListener('click', openTermBlocksModal);
+        editTermBlocksBtn?.addEventListener('click', openTermBlocksModal);
         addSuspensionBtn?.addEventListener('click', openSuspensionModal);
         calendarPrevBtn?.addEventListener('click', () => {
             if (activeViewName === 'year') {

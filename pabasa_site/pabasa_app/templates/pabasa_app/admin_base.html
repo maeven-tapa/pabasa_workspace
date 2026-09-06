@@ -674,10 +674,58 @@
         }
 
         .admin-profile-card {
+            align-items: center;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.16);
             backdrop-filter: blur(10px) saturate(160%);
             -webkit-backdrop-filter: blur(10px) saturate(160%);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            justify-content: center;
+            margin: 0.7rem 0 0;
             min-height: 66px;
-            padding: 0.8rem;
+            padding: 1rem 0.9rem 0.9rem;
+            text-align: center;
+        }
+
+        .admin-profile-avatar {
+            align-items: center;
+            background: rgba(255, 255, 255, 0.18);
+            border: 3px solid rgba(255, 255, 255, 0.72);
+            border-radius: 50%;
+            box-shadow: 0 5px 12px rgba(68, 45, 98, 0.18);
+            color: #fff;
+            display: flex;
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: 1rem;
+            font-weight: 900;
+            height: 52px;
+            justify-content: center;
+            width: 52px;
+        }
+
+        .admin-profile-name {
+            color: #fff;
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: 0.94rem;
+            font-weight: 900;
+            line-height: 1.15;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .admin-profile-role {
+            color: rgba(255, 255, 255, 0.78);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: normal;
+            margin-top: 0;
+            text-transform: none;
         }
 
         .admin-nav-label {
@@ -2831,10 +2879,9 @@
                 </div>
 
                 <div class="admin-profile-card mt-3">
-                    <span class="admin-brand-text">
-                        <span class="admin-brand-name">{{ first_name|default:"PABASA" }} {{ last_name|default:"Admin" }}</span>
-                        <span class="admin-profile-role">Admin</span>
-                    </span>
+                    <div class="admin-profile-avatar" aria-hidden="true">{{ first_name|default:"A"|slice:":1"|upper }}{{ last_name|default:"D"|slice:":1"|upper }}</div>
+                    <div class="admin-profile-name">{{ first_name|default:"PABASA" }} {{ last_name|default:"Admin" }}</div>
+                    <div class="admin-profile-role">Admin</div>
                 </div>
             </div>
 
@@ -2887,10 +2934,9 @@
                         </div>
 
                         <div class="admin-profile-card mt-3">
-                            <span class="admin-brand-text">
-                                <span class="admin-brand-name">{{ first_name|default:"PABASA" }} {{ last_name|default:"Admin" }}</span>
-                                <span class="admin-profile-role">Admin</span>
-                            </span>
+                            <div class="admin-profile-avatar" aria-hidden="true">{{ first_name|default:"A"|slice:":1"|upper }}{{ last_name|default:"D"|slice:":1"|upper }}</div>
+                            <div class="admin-profile-name">{{ first_name|default:"PABASA" }} {{ last_name|default:"Admin" }}</div>
+                            <div class="admin-profile-role">Admin</div>
                         </div>
                     </div>
 

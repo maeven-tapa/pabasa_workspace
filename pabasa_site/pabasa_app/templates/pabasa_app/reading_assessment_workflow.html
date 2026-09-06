@@ -490,5 +490,41 @@
             }
         });
     })();
+
+    (function () {
+        const stage = '{{ stage|escapejs }}';
+        const sectionId = '{{ assessment_week_section.id|default:assessment_request_section_id|default:"" }}';
+        const waitingForAssessmentWeek = stage === 'assessment_week_locked';
+        const waitingForApproval = stage === 'assessment_not_taken' && {{ assessment_request_pending|yesno:"true,false" }};
+        if ((!waitingForAssessmentWeek && !waitingForApproval) || !sectionId) return;
+
+        let checking = false;
+        const checkAccess = async function () {
+            if (checking || document.visibilityState !== 'visible') return;
+            checking = true;
+            try {
+                const url = new URL('{% url "student_assessment_access_status" %}', window.location.origin);
+                url.searchParams.set('section_id', sectionId);
+                const response = await fetch(url, {
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                    headers: { Accept: 'application/json' },
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) return;
+                if ((waitingForAssessmentWeek && data.assessment_week_enabled) || (waitingForApproval && data.request_approved)) {
+                    window.location.reload();
+                }
+            } catch (error) {
+                // A later poll will retry if the connection is temporarily unavailable.
+            } finally {
+                checking = false;
+            }
+        };
+
+        window.setInterval(checkAccess, 5000);
+        document.addEventListener('visibilitychange', checkAccess);
+        checkAccess();
+    })();
 </script>
 {% endblock %}
