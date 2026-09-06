@@ -973,6 +973,22 @@
         box-shadow: 0 10px 24px rgba(16, 70, 110, 0.18);
     }
 
+    /* Course popup actions use the same solid primary treatment as the rest
+       of the teacher workspace; do not fade primary buttons into white. */
+    .modal .btn.btn-primary {
+        background: #1f6f8b !important;
+        background-image: none !important;
+        border-color: #1f6f8b !important;
+        color: #fff !important;
+    }
+
+    .modal .btn.btn-primary:hover,
+    .modal .btn.btn-primary:focus-visible {
+        background: #15556c !important;
+        border-color: #15556c !important;
+        color: #fff !important;
+    }
+
     #deleteConfirmModal .text-muted {
         color: #475569 !important;
     }
@@ -2610,8 +2626,9 @@
     #courseDetailModal #btnAddMaterialToCourse,
     #courseDetailModal #materialsPane .course-readings-add-btn {
         align-items: center;
-        background: linear-gradient(135deg, var(--dash-primary) 0%, var(--dash-primary-soft) 100%) !important;
-        border: 1px solid rgba(255, 255, 255, 0.26) !important;
+        background: #1f6f8b !important;
+        background-image: none !important;
+        border: 1px solid #1f6f8b !important;
         border-radius: 999px !important;
         box-shadow: 0 6px 14px rgba(31, 111, 139, 0.16) !important;
         color: #fff !important;
@@ -2630,7 +2647,7 @@
 
     #courseDetailModal #btnAddMaterialToCourse:hover,
     #courseDetailModal #materialsPane .course-readings-add-btn:hover {
-        background: linear-gradient(135deg, #2e8aa7 0%, #58b7cf 100%) !important;
+        background: #15556c !important;
         box-shadow: 0 10px 18px rgba(31, 111, 139, 0.22) !important;
         filter: brightness(1.02);
         transform: translateY(-1px);
@@ -7737,7 +7754,9 @@ body.dark-theme .template-builder-panel :is(.form-control,.form-select), body.da
     min-height:48px;
     padding-left:1rem;
     padding-right:1rem;
-    background: linear-gradient(135deg, var(--dash-primary), var(--dash-primary-soft));
+    background: #1f6f8b;
+    background-image: none;
+    border-color: #1f6f8b;
     box-shadow:0 8px 20px rgba(31,111,139,0.12);
     font-family: "Nunito", "Segoe UI", sans-serif;
     font-weight: 900;

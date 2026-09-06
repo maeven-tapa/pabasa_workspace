@@ -343,7 +343,12 @@
                 <div class="modal-body">
                     <div class="mb-0">
                         <label class="form-label small fw-bold text-secondary" for="newSchoolYear">School Year</label>
-                        <input class="form-control" id="newSchoolYear" name="school_year" type="text" placeholder="2026-2027" inputmode="numeric" pattern="[0-9]{4}-[0-9]{4}" autocomplete="off">
+                        <select class="form-select" id="newSchoolYear" name="school_year" required>
+                            <option value="" selected disabled>Select School Year</option>
+                            {% for school_year in school_year_options %}
+                            <option value="{{ school_year }}">{{ school_year }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                 </div>
                 <div class="modal-footer">

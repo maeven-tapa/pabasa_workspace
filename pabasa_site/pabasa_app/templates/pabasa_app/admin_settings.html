@@ -59,7 +59,7 @@
             </div>
             <div>
                 <label class="form-label small" for="systemTimeDebugValue">Simulated date and time</label>
-                <input class="form-control" id="systemTimeDebugValue" name="system_time_debug_value" type="datetime-local" value="{{ system_time_debug_value }}">
+                <input class="form-control" id="systemTimeDebugValue" name="system_time_debug_value" type="datetime-local" value="{{ system_time_debug_value }}" {% if not system_time_debug_enabled %}disabled{% endif %}>
                 <p class="small text-muted mt-2 mb-0">Once applied, this time continues to advance in real time until disabled.</p>
             </div>
             <div class="admin-settings-actions">
@@ -211,6 +211,16 @@
         debugPanel.hidden = !isHidden;
         debugButton.setAttribute('aria-expanded', String(isHidden));
     });
+
+    const debugTimeEnabled = document.getElementById('systemTimeDebugEnabled');
+    const debugTimeValue = document.getElementById('systemTimeDebugValue');
+    const syncDebugTimeInput = () => {
+        if (debugTimeEnabled && debugTimeValue) {
+            debugTimeValue.disabled = !debugTimeEnabled.checked;
+        }
+    };
+    debugTimeEnabled?.addEventListener('change', syncDebugTimeInput);
+    syncDebugTimeInput();
 
     document.querySelectorAll('[data-password-toggle]').forEach((button) => {
         const input = document.getElementById(button.dataset.passwordToggle);

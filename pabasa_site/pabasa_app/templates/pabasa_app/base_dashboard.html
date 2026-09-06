@@ -1449,6 +1449,88 @@
             min-height: 66px;
         }
 
+        .sidebar-profile-summary {
+            align-items: center;
+            background:
+                linear-gradient(145deg, rgba(255, 240, 231, 0.98), rgba(239, 224, 255, 0.96));
+            border: 1px solid rgba(255, 255, 255, 0.62);
+            box-shadow: 0 12px 24px rgba(6, 23, 38, 0.2);
+            color: #17334a;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            padding: 1rem 0.9rem 0.85rem;
+            text-align: center;
+        }
+
+        .sidebar-profile-avatar {
+            align-items: center;
+            background-color: #fff;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: cover;
+            border: 3px solid rgba(255, 255, 255, 0.95);
+            border-radius: 50%;
+            box-shadow: 0 5px 12px rgba(68, 45, 98, 0.18);
+            color: var(--dash-primary-deep);
+            display: flex;
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: 1rem;
+            font-weight: 900;
+            height: 52px;
+            justify-content: center;
+            width: 52px;
+        }
+
+        .sidebar-profile-name {
+            color: #17334a;
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: 0.94rem;
+            font-weight: 900;
+            line-height: 1.15;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sidebar-profile-section {
+            color: #51677a;
+            font-size: 0.72rem;
+            font-weight: 700;
+            line-height: 1.2;
+            max-width: 100%;
+            min-height: 0.86rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sidebar-profile-view-btn {
+            align-items: center;
+            background: #111827;
+            border-radius: 999px;
+            color: #fff !important;
+            display: inline-flex;
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: 0.75rem;
+            font-weight: 800;
+            gap: 0.4rem;
+            justify-content: center;
+            margin-top: 0.45rem;
+            min-height: 34px;
+            padding: 0.45rem 0.9rem;
+            text-decoration: none;
+            transition: background-color 0.18s ease, transform 0.18s ease;
+        }
+
+        .sidebar-profile-view-btn:hover,
+        .sidebar-profile-view-btn:focus-visible {
+            background: #253348;
+            color: #fff !important;
+            transform: translateY(-1px);
+        }
+
         .sidebar-brand-row a {
             min-width: 0;
         }

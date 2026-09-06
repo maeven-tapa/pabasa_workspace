@@ -7743,6 +7743,12 @@ def _selected_school_calendar(request=None):
 
 def _calendar_context(request):
     selected_calendar, calendars, active_calendar = _selected_school_calendar(request)
+    existing_school_years = {school_calendar.school_year for school_calendar in calendars}
+    school_year_options = []
+    for start_year in range(system_today().year - 1, system_today().year + 7):
+        school_year = f'{start_year}-{start_year + 1}'
+        if school_year not in existing_school_years:
+            school_year_options.append(school_year)
     current_calendar_ids = [
         school_calendar.id
         for school_calendar in calendars
@@ -7805,6 +7811,7 @@ def _calendar_context(request):
         'has_saved_term_blocks': has_saved_term_blocks,
         'current_calendar_ids': current_calendar_ids,
         'can_create_school_year': can_create_school_year,
+        'school_year_options': school_year_options,
         'term_options': [(1, 'Term 1'), (2, 'Term 2'), (3, 'Term 3')],
         'event_type_options': CalendarEvent.EVENT_TYPE_CHOICES,
     }

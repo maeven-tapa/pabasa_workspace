@@ -243,17 +243,27 @@
         body.admin-sidebar-collapsed .admin-logo-row {
             justify-content: center;
             position: relative;
-            width: 66px;
+            width: 56px;
         }
 
         body.admin-sidebar-collapsed .admin-logo-link {
+            gap: 0 !important;
             justify-content: center;
+            min-height: 54px;
+            padding: 0;
+            width: 56px;
         }
 
         body.admin-sidebar-collapsed .admin-logo-img {
             flex-basis: 42px;
             height: 42px;
             width: 42px;
+        }
+
+        /* Match the teacher/student collapsed logo: retain only the bird mark. */
+        body.admin-sidebar-collapsed .admin-logo-link .pabasa-logo-letters,
+        body.admin-sidebar-collapsed .admin-collapse-label {
+            display: none !important;
         }
 
         body.admin-sidebar-collapsed .admin-brand-text,
@@ -3083,7 +3093,7 @@
                 collapseBtn.setAttribute('title', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
                 collapseBtn.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
                 collapseBtn.innerHTML = collapsed
-                    ? '<i class="bi bi-chevron-right"></i><span class="admin-nav-text admin-collapse-label">Expand</span>'
+                    ? '<i class="bi bi-chevron-right"></i>'
                     : '<i class="bi bi-chevron-left"></i><span class="admin-nav-text admin-collapse-label">Collapse</span>';
             }
 

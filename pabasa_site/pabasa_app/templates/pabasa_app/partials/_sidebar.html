@@ -5,12 +5,19 @@
             {% include "pabasa_app/partials/_pabasa_logo.html" with logo_class="pabasa-logo-svg" letters_class="pabasa-logo-letters" letter_yellow_class="lc-yellow" letter_blue_class="lc-blue" %}
         </a>
 
-        <div class="sidebar-brand-row sidebar-profile-card d-flex align-items-center justify-content-between gap-2 mt-3">
-            <a class="d-flex align-items-center gap-2 text-decoration-none text-reset" href="{% url 'profile' %}?role={{ nav_role|default:'student' }}" aria-label="Go to profile">
-                <div class="sidebar-text">
-                    <div class="sidebar-user-name">{% if user_full_name %}{{ user_full_name }}{% else %}PABASA User{% endif %}</div>
-                    <div class="brand-note mt-1 small">{% if nav_role == 'teacher' %}Teacher{% else %}Student{% endif %}</div>
-                </div>
+        <div class="sidebar-profile-card sidebar-profile-summary mt-3">
+            <div class="sidebar-profile-avatar" {% if profile_photo_url %}style="background-image: url('{{ profile_photo_url }}');"{% endif %} aria-hidden="true">
+                {% if not profile_photo_url %}{{ initials|default:'P' }}{% endif %}
+            </div>
+            <div class="sidebar-profile-name">{% if user_full_name %}{{ user_full_name }}{% else %}PABASA User{% endif %}</div>
+            <div class="sidebar-profile-section">
+                {% with current_section=joined_classes|first %}
+                    {% if current_section %}{{ current_section.name|default:current_section.code }}{% else %}No section assigned{% endif %}
+                {% endwith %}
+            </div>
+            <a class="sidebar-profile-view-btn" href="{% url 'profile' %}?role={{ nav_role|default:'student' }}">
+                <i class="bi bi-person-circle" aria-hidden="true"></i>
+                <span>View Profile</span>
             </a>
         </div>
     </div>
@@ -31,7 +38,6 @@
     {% if nav_role != 'student' %}
     <div class="d-grid gap-0">
         <div class="sidebar-section-label">Tools</div>
-        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'profile' %}?role=teacher" data-nav-tooltip title="Profile"><i class="bi bi-person"></i><span class="sidebar-text">Profile</span></a>
         <button class="nav-link dash-link d-flex align-items-center gap-2 border-0 bg-transparent text-start" type="button" data-help-toggle data-nav-tooltip title="Help" aria-expanded="false" aria-controls="helpPanel" aria-label="Open help panel">
             <i class="bi bi-question-circle"></i><span class="sidebar-text">Help</span>
         </button>
@@ -40,7 +46,6 @@
     <div class="d-grid gap-1 sidebar-account-section">
         <div class="sidebar-section-label">Account</div>
         <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'theme_shop' %}" data-nav-tooltip title="Theme Shop"><i class="bi bi-palette"></i><span class="sidebar-text">Theme Shop</span></a>
-        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'profile' %}?role=student" data-nav-tooltip title="Profile"><i class="bi bi-person"></i><span class="sidebar-text">Profile</span></a>
     </div>
     {% endif %}
 
