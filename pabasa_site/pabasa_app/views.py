@@ -1347,12 +1347,16 @@ def _create_notification(recipient, title, message, notification_type='info', ac
     # REAL-TIME EMAIL DISPATCH: Send email immediately if user preference allows
     try:
         if settings_dict.get('email_notifications') is True and getattr(recipient, 'email', ''):
-            send_mail(
-                email_subject if email_subject is not None else title,
+            notification_subject = email_subject if email_subject is not None else title
+            _send_pabasa_email(
+                notification_subject,
                 email_body if email_body is not None else message,
-                settings.DEFAULT_FROM_EMAIL,
                 [recipient.email],
-                fail_silently=True
+                heading=notification_subject,
+                eyebrow='PABASA notification',
+                action_url=action_url or None,
+                action_label='View in PABASA',
+                fail_silently=True,
             )
     except Exception as e:
         logger.error(f"Failed to send real-time notification email: {e}")
@@ -3484,6 +3488,10 @@ def _send_course_update_to_student(
     )
 
     email_message = EmailMultiAlternatives(subject, email_body, sender, [student.email])
+    email_message.attach_alternative(
+        _pabasa_email_shell(subject, 'PABASA course update', _email_paragraphs(email_body)),
+        'text/html',
+    )
     if include_attachment:
         try:
             if normalized_update_type == 'commendation':
@@ -3850,6 +3858,49 @@ def _send_pabasa_otp_email(subject, text_message, recipient_email, first_name, o
     email.attach_alternative(html_message, "text/html")
     email.send(fail_silently=False)
 
+
+def _email_paragraphs(text):
+    """Turn plain-text email copy into safe, email-client-friendly markup."""
+    paragraphs = []
+    for paragraph in str(text or '').strip().split('\n\n'):
+        cleaned = paragraph.strip()
+        if cleaned:
+            paragraphs.append(
+                '<p style="color: #4A6680; font-family: Arial, sans-serif; font-size: 15px; '
+                'line-height: 1.65; margin: 0 0 16px;">'
+                f'{escape(cleaned).replace(chr(10), "<br>")}</p>'
+            )
+    return ''.join(paragraphs)
+
+
+def _send_pabasa_email(subject, text_message, recipients, *, heading=None, eyebrow='PABASA update',
+                       action_url=None, action_label='Open PABASA', fail_silently=False):
+    """Send standard PABASA messages in the same visual shell as OTP emails."""
+    safe_heading = escape(heading or subject)
+    safe_eyebrow = escape(eyebrow)
+    safe_action_url = escape(action_url or '')
+    safe_action_label = escape(action_label)
+    action_html = ''
+    if action_url:
+        action_html = f'''<tr><td align="center" style="padding: 4px 0 18px;"><a href="{safe_action_url}" style="display: inline-block; background: #2EA8E5; color: #ffffff; font-family: Arial, sans-serif; font-size: 14px; font-weight: 800; text-decoration: none; padding: 13px 22px; border-radius: 999px; box-shadow: 0 10px 22px rgba(46, 168, 229, 0.22);">{safe_action_label}</a></td></tr>'''
+    html_message = f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{safe_heading}</title></head>
+<body style="margin: 0; padding: 0; background: #F0F8FF;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background: #F0F8FF; margin: 0; padding: 32px 12px;"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 620px; background: #ffffff; border-radius: 28px; overflow: hidden; border: 1px solid rgba(16, 70, 110, 0.12); box-shadow: 0 18px 42px rgba(16, 70, 110, 0.12);">
+<tr><td style="background: linear-gradient(135deg, #10466E 0%, #2EA8E5 72%, #FFD639 100%); padding: 28px 30px;"><div style="display: inline-block; background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.28); border-radius: 18px; color: #ffffff; font-family: Arial, sans-serif; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; padding: 8px 12px; text-transform: uppercase;">PABASA</div><h1 style="color: #ffffff; font-family: Arial, sans-serif; font-size: 30px; line-height: 1.15; margin: 18px 0 8px;">{safe_heading}</h1><p style="color: rgba(255,255,255,0.86); font-family: Arial, sans-serif; font-size: 14px; line-height: 1.55; margin: 0;">{safe_eyebrow}</p></td></tr>
+<tr><td style="padding: 30px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td>{_email_paragraphs(text_message)}</td></tr>{action_html}<tr><td style="padding-top: 6px;"><p style="color: #0F2D45; font-family: Arial, sans-serif; font-size: 14px; font-weight: 700; line-height: 1.6; margin: 0;">Thank you,<br>The PABASA Team</p></td></tr></table></td></tr>
+</table></td></tr></table></body></html>'''
+    email = EmailMultiAlternatives(subject, text_message, settings.DEFAULT_FROM_EMAIL, recipients)
+    email.attach_alternative(html_message, 'text/html')
+    email.send(fail_silently=fail_silently)
+
+
+def _pabasa_email_shell(heading, eyebrow, content_html):
+    """Use the OTP email's visual language for rich emails and attachments too."""
+    return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{escape(heading)}</title></head>
+<body style="margin:0;padding:0;background:#F0F8FF;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#F0F8FF;padding:32px 12px;"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#ffffff;border-radius:28px;overflow:hidden;border:1px solid rgba(16,70,110,.12);box-shadow:0 18px 42px rgba(16,70,110,.12);">
+<tr><td style="background:linear-gradient(135deg,#10466E 0%,#2EA8E5 72%,#FFD639 100%);padding:28px 30px;"><div style="display:inline-block;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);border-radius:18px;color:#fff;font-family:Arial,sans-serif;font-size:12px;font-weight:800;letter-spacing:.12em;padding:8px 12px;">PABASA</div><h1 style="color:#fff;font-family:Arial,sans-serif;font-size:30px;line-height:1.15;margin:18px 0 8px;">{escape(heading)}</h1><p style="color:rgba(255,255,255,.86);font-family:Arial,sans-serif;font-size:14px;line-height:1.55;margin:0;">{escape(eyebrow)}</p></td></tr>
+<tr><td style="padding:30px;">{content_html}<p style="color:#0F2D45;font-family:Arial,sans-serif;font-size:14px;font-weight:700;line-height:1.6;margin:20px 0 0;">Thank you,<br>The PABASA Team</p></td></tr>
+</table></td></tr></table></body></html>'''
+
 def send_teacher_signup_otp_email(request, email, otp, first_name):
     auth_url = request.build_absolute_uri(reverse('auth'))
     subject = "PABASA Teacher Signup OTP"
@@ -3887,7 +3938,12 @@ def send_teacher_confirmation_email(request, user, teacher_code):
         f"You can now log in at: {auth_url}\n\n"
         "Thank you for joining PABASA.\n"
     )
-    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
+    _send_pabasa_email(
+        subject, message, [user.email],
+        heading='Your teacher account is ready',
+        eyebrow='Welcome to the PABASA teaching community',
+        action_url=auth_url, action_label='Log in to PABASA',
+    )
 
 def send_student_signup_otp_email(request, email, otp, first_name):
     auth_url = request.build_absolute_uri(reverse('auth'))
@@ -3925,7 +3981,12 @@ def send_student_confirmation_email(request, user):
         f"You can now log in at: {auth_url}\n\n"
         "Thank you for joining PABASA.\n"
     )
-    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
+    _send_pabasa_email(
+        subject, message, [user.email],
+        heading='Your student account is ready',
+        eyebrow='Welcome to your PABASA reading journey',
+        action_url=auth_url, action_label='Log in to PABASA',
+    )
 
 
 def _store_pending_password_reset(request, email):
@@ -3977,7 +4038,12 @@ def send_password_reset_confirmation_email(request, user):
         "If you did not make this change, please contact support immediately.\n\n"
         "Thank you,\nPABASA Team"
     )
-    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
+    _send_pabasa_email(
+        subject, message, [user.email],
+        heading='Your password has been reset',
+        eyebrow='Your PABASA account is ready to use',
+        action_url=auth_url, action_label='Log in to PABASA',
+    )
 
 
 @csrf_protect
@@ -5637,12 +5703,12 @@ def admin_official_reading_override_request(request, material_id):
     )
     supporting_lines = '\n'.join(f"{idx}. {link}" for idx, link in enumerate(supporting_links, start=1)) or 'No supporting documentation links provided.'
     try:
-        send_mail(
+        _send_pabasa_email(
             '[PABASA] Official Assessment Integrity Override Request — Review Required',
             f"Integrity Override Request\n\nRequest ID: {request_id}\nRequested by: {admin_user.first_name} {admin_user.last_name}\nAdmin account: {admin_user.custom_id} / {admin_user.email}\nDate/Time submitted: {timezone.localtime(override_request.submitted_at).strftime('%B %d, %Y %I:%M %p')}\nOfficial Material Set: {material.title}\n\nDepEd Source / Reference\n{deped_reference}\n\nMaterial to Be Changed\n{material_change}\n\nJustification\n{justification}\n\nSupporting Documentation\n{supporting_lines}\n\nStatus\nPending Review\n\nPlease review this request through the PABASA Admin interface and determine whether the requested integrity override should be authorized.",
-            settings.DEFAULT_FROM_EMAIL,
             ['im.donapalacios@gmail.com'],
-            fail_silently=False,
+            heading='Integrity override review required',
+            eyebrow='PABASA assessment administration',
         )
     except Exception as exc:
         logger.warning('Unable to send override request email for %s: %s', request_id, exc)
@@ -5726,7 +5792,12 @@ def _send_principal_credentials_email(request, user, school_name, temporary_pass
         "After logging in, you will be required to create a new private password before continuing.\n\n"
         "Thank you,\nPABASA Team"
     )
-    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
+    _send_pabasa_email(
+        subject, message, [user.email],
+        heading='Your principal account is ready' if not is_reset else 'Your temporary password',
+        eyebrow='PABASA school administration',
+        action_url=auth_url, action_label='Log in to PABASA',
+    )
 
 
 def _try_send_principal_credentials_email(request, user, school_name, temporary_password, *, is_reset=False):
@@ -15209,11 +15280,12 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
                 f"- {student.first_name} {student.last_name}".strip()
                 for student in missed_students
             ] or ['- None'])
-            send_mail(
+            _send_pabasa_email(
                 f"Live Assessment Summary: {session.material.title or 'Reading Activity'}",
                 "\n".join(body_lines),
-                getattr(settings, 'DEFAULT_FROM_EMAIL', None),
                 [session.teacher.email],
+                heading='Live assessment summary',
+                eyebrow='PABASA classroom activity',
                 fail_silently=True,
             )
         except Exception:
@@ -17275,10 +17347,17 @@ def send_parent_email(request):
         
         if html_message:
             email = EmailMultiAlternatives(subject, message or "Reading Report", sender, [recipient])
-            email.attach_alternative(html_message, "text/html")
+            email.attach_alternative(
+                _pabasa_email_shell(subject or 'PABASA reading update', 'PABASA reading report', html_message),
+                "text/html",
+            )
             email.send(fail_silently=False)
         else:
-            send_mail(subject, message, sender, [recipient], fail_silently=False)
+            _send_pabasa_email(
+                subject, message, [recipient],
+                heading=subject,
+                eyebrow='Message from PABASA',
+            )
         return JsonResponse({'success': True})
 
     except Exception as e:
@@ -17505,6 +17584,10 @@ def send_course_update(request):
                 sender,
                 [student.email],
             )
+            email_message.attach_alternative(
+                _pabasa_email_shell(subject, 'PABASA course update', _email_paragraphs(email_body)),
+                'text/html',
+            )
             if include_attachment:
                 try:
                     if normalized_update_type == 'commendation':
@@ -17608,7 +17691,12 @@ def unenroll_class(request):
             # Send email to teacher (best-effort)
             try:
                 subject = f"Student unenrolled from {section.class_name}"
-                send_mail(subject, message, getattr(settings, 'DEFAULT_FROM_EMAIL', None), [teacher_user.email], fail_silently=True)
+                _send_pabasa_email(
+                    subject, message, [teacher_user.email],
+                    heading='Student unenrolled',
+                    eyebrow='PABASA course update',
+                    fail_silently=True,
+                )
             except Exception:
                 logger.exception('Failed to send unenroll email')
 

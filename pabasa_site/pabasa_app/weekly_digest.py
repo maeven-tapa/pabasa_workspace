@@ -498,16 +498,16 @@ def render_digest_html(digest):
         }}
     </style>
 </head>
-<body style="margin: 0; padding: 0; background: #eef7f8; font-family: Arial, Helvetica, sans-serif; color: #20393d;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #eef7f8;">
+<body style="margin: 0; padding: 0; background: #F0F8FF; font-family: Arial, Helvetica, sans-serif; color: #0F2D45;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #F0F8FF;">
         <tr>
             <td align="center" style="padding: 24px 12px;">
-                <table role="presentation" class="email-container" width="640" cellspacing="0" cellpadding="0" style="width: 640px; max-width: 640px; background: #f8fcfc; border-radius: 18px; overflow: hidden;">
+                <table role="presentation" class="email-container" width="640" cellspacing="0" cellpadding="0" style="width: 640px; max-width: 640px; background: #ffffff; border-radius: 28px; overflow: hidden; border: 1px solid rgba(16, 70, 110, 0.12); box-shadow: 0 18px 42px rgba(16, 70, 110, 0.12);">
                     <tr>
-                        <td class="mobile-padding" style="padding: 24px; background: #0f766e;">
+                        <td class="mobile-padding" style="padding: 28px 30px; background: linear-gradient(135deg, #10466E 0%, #2EA8E5 72%, #FFD639 100%);">
                             <img src="{escape(logo_url)}" alt="PABASA" width="72" style="display: block; border: 0; margin-bottom: 14px;">
                             <h1 style="margin: 0; color: #ffffff; font-size: 26px; line-height: 34px;">Your Weekly PABASA Digest</h1>
-                            <p style="margin: 8px 0 0; color: #dff7f4; font-size: 14px; line-height: 22px;">{escape(start)} to {escape(end)}</p>
+                            <p style="margin: 8px 0 0; color: rgba(255,255,255,0.86); font-size: 14px; line-height: 22px;">{escape(start)} to {escape(end)}</p>
                         </td>
                     </tr>
                     <tr>
@@ -526,7 +526,7 @@ def render_digest_html(digest):
                     {''.join(detail_cards)}
                     <tr>
                         <td align="center" style="padding: 22px 24px 28px; color: #60777b; font-size: 12px; line-height: 20px;">
-                            <strong style="color: #134e4a;">PABASA</strong><br>
+                            <strong style="color: #10466E;">PABASA</strong><br>
                             Copyright &copy; {system_now().year} PABASA. This email was generated automatically from your account activity.
                         </td>
                     </tr>
