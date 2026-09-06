@@ -504,6 +504,7 @@
         const studentEndStateKeyBase = "pabasa_student_end_assessment_state";
         const studentEndStateVersion = "crla_grade2_v1";
         const studentEndStateResetKey = "pabasa_student_end_assessment_state_reset";
+        const officialCrlaItemResultsStorageKey = "crla_item_results";
 
         function getStoredData(key, fallback = []) {
             try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); } catch (e) { return fallback; }
@@ -513,6 +514,26 @@
             const userId = String(window.PABASA_USER_ID || localStorage.getItem("pabasaUserId") || "").trim();
             const materialKey = String(materialId || testCode || "assessment").trim();
             return `${studentEndStateKeyBase}:${userId || "guest"}:${materialKey}`;
+        }
+
+        function getOfficialCrlaItemResultKey(branch, itemIndex) {
+            // Item locks must belong to the same learner/material state as the
+            // resumable CRLA position. The legacy assessment/branch/index key
+            // could be reused by another learner or a fresh attempt.
+            return `${getStudentEndStateKey()}:${String(branch || "").trim()}:${itemIndex}`;
+        }
+
+        function clearOfficialCrlaItemResults() {
+            try {
+                const savedResults = JSON.parse(localStorage.getItem(officialCrlaItemResultsStorageKey) || '{}');
+                const keyPrefix = `${getStudentEndStateKey()}:`;
+                Object.keys(savedResults).forEach((key) => {
+                    if (key.startsWith(keyPrefix)) delete savedResults[key];
+                });
+                localStorage.setItem(officialCrlaItemResultsStorageKey, JSON.stringify(savedResults));
+            } catch (error) {
+                console.warn("[CRLA_STRICT_ASSESSMENT] Failed to clear item results for fresh attempt", error);
+            }
         }
 
         function readStudentEndState() {
@@ -596,10 +617,10 @@
             
             // Save to localStorage for resilience
             try {
-                const savedResults = JSON.parse(localStorage.getItem('crla_item_results') || '{}');
-                const key = `${officialAssessmentId}_${currentAssessmentBranch}_${itemIndex}`;
+                const savedResults = JSON.parse(localStorage.getItem(officialCrlaItemResultsStorageKey) || '{}');
+                const key = getOfficialCrlaItemResultKey(currentAssessmentBranch, itemIndex);
                 savedResults[key] = itemScore;
-                localStorage.setItem('crla_item_results', JSON.stringify(savedResults));
+                localStorage.setItem(officialCrlaItemResultsStorageKey, JSON.stringify(savedResults));
             } catch (error) {
                 console.warn("[CRLA_STRICT_ASSESSMENT] Failed to persist item result to localStorage", error);
             }
@@ -617,9 +638,9 @@
         function restoreOfficialCrlaItemResults() {
             if (!isOfficialAssessmentLaunch || !isCrla) return;
             try {
-                const savedResults = JSON.parse(localStorage.getItem('crla_item_results') || '{}');
+                const savedResults = JSON.parse(localStorage.getItem(officialCrlaItemResultsStorageKey) || '{}');
                 items.forEach((_, itemIndex) => {
-                    const savedScore = savedResults[`${officialAssessmentId}_${currentAssessmentBranch}_${itemIndex}`];
+                    const savedScore = savedResults[getOfficialCrlaItemResultKey(currentAssessmentBranch, itemIndex)];
                     if (!savedScore || typeof savedScore !== 'object') return;
                     itemLocked[itemIndex] = true;
                     itemScores[itemIndex] = savedScore;
@@ -666,6 +687,9 @@
         // override the reset server state, while transition URLs remain resumable.
         if (urlParams.get("crla_fresh") === "1") {
             clearStudentEndState();
+            if (isOfficialAssessmentLaunch && isCrla) {
+                clearOfficialCrlaItemResults();
+            }
             urlParams.delete("crla_fresh");
             const cleanLaunchUrl = new URL(window.location.href);
             cleanLaunchUrl.searchParams.delete("crla_fresh");

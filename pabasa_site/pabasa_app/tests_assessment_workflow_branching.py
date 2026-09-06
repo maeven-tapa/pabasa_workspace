@@ -390,6 +390,23 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
             restore.index("if (Array.isArray(savedScore.word_results)) {"),
         )
 
+    def test_official_crla_item_locks_are_student_scoped_and_fresh_attempts_clear_them(self):
+        """A stale lock must never cause a valid active-item STT response to be rejected."""
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        key_helper = source.split("function getOfficialCrlaItemResultKey", 1)[1].split("function clearOfficialCrlaItemResults", 1)[0]
+        clear_helper = source.split("function clearOfficialCrlaItemResults", 1)[1].split("function readStudentEndState", 1)[0]
+        persistence = source.split("function persistLockedItemResult", 1)[1].split("function restoreOfficialCrlaItemResults", 1)[0]
+        restore = source.split("function restoreOfficialCrlaItemResults", 1)[1].split("function persistOfficialCrlaReaderProgress", 1)[0]
+        fresh_launch = source.split('if (urlParams.get("crla_fresh") === "1") {', 1)[1].split("function normalizeStudentEndStatus", 1)[0]
+
+        self.assertIn("getStudentEndStateKey()", key_helper)
+        self.assertIn("currentAssessmentBranch", persistence)
+        self.assertIn("getOfficialCrlaItemResultKey(currentAssessmentBranch, itemIndex)", persistence)
+        self.assertIn("getOfficialCrlaItemResultKey(currentAssessmentBranch, itemIndex)", restore)
+        self.assertNotIn("`${officialAssessmentId}_${currentAssessmentBranch}_${itemIndex}`", restore)
+        self.assertIn("const keyPrefix = `${getStudentEndStateKey()}:`;", clear_helper)
+        self.assertIn("clearOfficialCrlaItemResults();", fresh_launch)
+
     def test_official_crla_comprehension_count_survives_final_completion(self):
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
         handler = source.split("async function completeCRLASpokenAttempt", 1)[1].split("function startCRLASpokenAttempt", 1)[0]
