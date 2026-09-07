@@ -23,10 +23,20 @@
     </div>
     {% endif %}
 
-    <form method="post" onsubmit="return confirm('Save these student changes? If the section changes, the current school-year enrollment will be updated and historical enrollments will be preserved.');">
+    <form method="post" onsubmit="return confirm('Save these student changes?');">
         {% csrf_token %}
+        {% if managed_role == 'student' %}
         <div class="row g-3">
             <div class="col-12 col-md-6">
+                <label class="form-label fw-bold" for="username">Username</label>
+                <input class="form-control bg-light" id="username" type="text" value="{{ managed_user.custom_id }}" readonly aria-readonly="true">
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label fw-bold" for="sectionDisplay">Section</label>
+                <input class="form-control bg-light" id="sectionDisplay" type="text" value="Grade 2 - {{ current_section|default:'Not assigned' }}" readonly aria-readonly="true">
+                <div class="form-text">Section placement can only be changed from the School tab.</div>
+            </div>
+            <div class="col-12 col-md-3">
                 <label class="form-label fw-bold" for="firstName">First name</label>
                 <input class="form-control" id="firstName" type="text" name="first_name" value="{{ managed_user.first_name }}" required>
             </div>
@@ -34,7 +44,7 @@
                 <label class="form-label fw-bold" for="middleInitial">Middle initial</label>
                 <input class="form-control" id="middleInitial" type="text" name="middle_initial" maxlength="1" value="{{ managed_user.middle_initial }}">
             </div>
-            <div class="col-12 col-md-6">
+            <div class="col-12 col-md-3">
                 <label class="form-label fw-bold" for="lastName">Last name</label>
                 <input class="form-control" id="lastName" type="text" name="last_name" value="{{ managed_user.last_name }}" required>
             </div>
@@ -43,38 +53,24 @@
                 <input class="form-control" id="suffix" type="text" name="suffix" value="{{ managed_user.suffix }}">
             </div>
             <div class="col-12 col-md-6">
-                <label class="form-label fw-bold" for="username">Username</label>
-                <input class="form-control" id="username" type="text" name="custom_id" value="{{ managed_user.custom_id }}" required>
-            </div>
-            <div class="col-12 col-md-6">
                 <label class="form-label fw-bold" for="email">Email</label>
                 <input class="form-control" id="email" type="email" name="email" value="{{ managed_user.email }}" required>
             </div>
-            {% if managed_role == 'teacher' or managed_role == 'student' %}
             <div class="col-12 col-md-6">
-                <label class="form-label fw-bold" for="gradeLevel">Grade level</label>
-                <select class="form-select" id="gradeLevel" name="grade_level">
-                    <option value="">Keep current</option>
-                    {% for grade in school_grades %}
-                    <option value="{{ grade }}">{{ grade }}</option>
-                    {% endfor %}
-                </select>
+                <label class="form-label fw-bold" for="contactNo">Contact number</label>
+                <input class="form-control" id="contactNo" type="text" name="contact_no" value="{{ managed_user.contact_no }}">
             </div>
-            <div class="col-12 col-md-6">
-                <label class="form-label fw-bold" for="section">Section</label>
-                <select class="form-select" id="section" name="section">
-                    <option value="">Keep current</option>
-                    {% for grade, sections in all_sections_by_grade.items %}
-                        <optgroup label="{{ grade }}">
-                            {% for section in sections %}
-                                <option value="{{ section.id }}">{{ section.section }}{% if managed_role == 'teacher' and section.teacher and section.teacher.id != managed_user.id %} - Assigned{% endif %}</option>
-                            {% endfor %}
-                        </optgroup>
-                    {% endfor %}
-                </select>
-            </div>
-            {% endif %}
         </div>
+        {% else %}
+        <div class="row g-3">
+            <div class="col-12 col-md-6"><label class="form-label fw-bold" for="firstName">First name</label><input class="form-control" id="firstName" type="text" name="first_name" value="{{ managed_user.first_name }}" required></div>
+            <div class="col-12 col-md-3"><label class="form-label fw-bold" for="middleInitial">Middle initial</label><input class="form-control" id="middleInitial" type="text" name="middle_initial" maxlength="1" value="{{ managed_user.middle_initial }}"></div>
+            <div class="col-12 col-md-6"><label class="form-label fw-bold" for="lastName">Last name</label><input class="form-control" id="lastName" type="text" name="last_name" value="{{ managed_user.last_name }}" required></div>
+            <div class="col-12 col-md-3"><label class="form-label fw-bold" for="suffix">Suffix</label><input class="form-control" id="suffix" type="text" name="suffix" value="{{ managed_user.suffix }}"></div>
+            <div class="col-12 col-md-6"><label class="form-label fw-bold" for="username">Username</label><input class="form-control" id="username" type="text" name="custom_id" value="{{ managed_user.custom_id }}" required></div>
+            <div class="col-12 col-md-6"><label class="form-label fw-bold" for="email">Email</label><input class="form-control" id="email" type="email" name="email" value="{{ managed_user.email }}" required></div>
+        </div>
+        {% endif %}
 
         <div class="d-flex flex-wrap justify-content-end gap-2 mt-4">
             <a class="btn btn-outline-secondary" href="{% if managed_role == 'student' %}{% url 'admin_student_detail' managed_user.id %}{% else %}{% url 'admin_teacher_detail' managed_user.id %}{% endif %}">Cancel</a>

@@ -6480,6 +6480,8 @@ def _admin_edit_user(request, user_id, role):
     if request.method == 'POST':
         email = request.POST.get('email', '').strip()
         username = request.POST.get('custom_id', '').strip()
+        if role == 'student':
+            username = user.custom_id
         if not username:
             context = _admin_user_template_context(request, user, f'Edit {role.title()}')
             context['error_message'] = 'Username is required.'
@@ -6495,6 +6497,11 @@ def _admin_edit_user(request, user_id, role):
 
         destination_grade = str(request.POST.get('grade_level') or '').strip()
         destination_section_value = str(request.POST.get('section') or '').strip()
+        if role == 'student':
+            # Student grade level is system-managed (currently Grade 2), not
+            # an editable value on the admin student form.
+            destination_grade = ''
+            destination_section_value = ''
         destination_section = None
         if destination_section_value.isdigit():
             destination_section = Section.objects.filter(pk=destination_section_value).first()
@@ -6591,6 +6598,8 @@ def _admin_edit_user(request, user_id, role):
         user.last_name = request.POST.get('last_name', '').strip()
         user.suffix = request.POST.get('suffix', '').strip()
         user.email = email
+        if role == 'student':
+            user.contact_no = request.POST.get('contact_no', '').strip()
 
         user.save()
         return redirect('admin_student_detail' if role == 'student' else 'admin_teacher_detail', user_id=user.id)
