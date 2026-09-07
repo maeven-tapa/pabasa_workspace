@@ -6,11 +6,22 @@
         </a>
 
         {% if nav_role == 'teacher' or nav_role == 'student' %}
+        <a class="sidebar-collapsed-profile" href="{% url 'profile' %}?role={{ nav_role|default:'student' }}" data-nav-tooltip title="View Profile" aria-label="View Profile">
+            {% if nav_role == 'student' %}
+                <span>{{ sidebar_selected_avatar.emoji|default:'🦉' }}</span>
+            {% else %}
+                {{ initials|default:'P' }}
+            {% endif %}
+        </a>
+        {% endif %}
+
+        {% if nav_role == 'teacher' or nav_role == 'student' %}
             {% include "pabasa_app/partials/_sidebar_profile_card.html" %}
         {% endif %}
 
     </div>
 
+    <div class="sidebar-upper-navigation">
     <nav class="sidebar-nav-section nav nav-pills flex-column gap-1 mb-2 sidebar-main-section">
         <div class="sidebar-section-label">Main</div>
         <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% if nav_role == 'teacher' %}{% url 'dashboard_teacher' %}{% else %}{% url 'dashboard' %}{% endif %}" data-nav-tooltip data-active-path="{% if nav_role == 'teacher' %}{% url 'dashboard_teacher' %}{% else %}{% url 'dashboard' %}{% endif %}" title="Dashboard"><i class="bi bi-grid"></i><span class="sidebar-text">Dashboard</span></a>
@@ -23,14 +34,6 @@
         <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'students' %}" data-nav-tooltip title="Students"><i class="bi bi-people"></i><span class="sidebar-text">ARAL Program</span></a>
         {% endif %}
     </nav>
-
-    <a class="sidebar-collapsed-profile" href="{% url 'profile' %}?role={{ nav_role|default:'student' }}" data-nav-tooltip title="View Profile" aria-label="View Profile">
-        {% if nav_role == 'student' %}
-            <span>{{ sidebar_selected_avatar.emoji|default:'🦉' }}</span>
-        {% else %}
-            {{ initials|default:'P' }}
-        {% endif %}
-    </a>
 
     {% if nav_role != 'student' %}
     <div class="d-grid gap-0 sidebar-account-section">
@@ -45,6 +48,7 @@
         <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'theme_shop' %}" data-nav-tooltip title="Theme Shop"><i class="bi bi-palette"></i><span class="sidebar-text">Theme Shop</span></a>
     </div>
     {% endif %}
+    </div>
 
     <div class="sidebar-collapse-row d-none d-lg-flex">
         <button class="btn btn-sm btn-light sidebar-collapse-btn" type="button" data-sidebar-collapse-btn aria-label="Collapse sidebar" title="Collapse sidebar">

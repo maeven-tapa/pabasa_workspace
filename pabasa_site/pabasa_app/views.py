@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.cache import never_cache
 from django.core.cache import cache
+from django.core.paginator import Paginator
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.contrib.auth.hashers import make_password, check_password
@@ -6104,7 +6105,7 @@ def admin_users(request):
     elif category_filter == 'archived':
         users = users.filter(is_archived=True)
 
-    context = _admin_context(request, 'Users', ['Name', 'Identifier', 'Email', 'Category', 'Actions'])
+    context = _admin_context(request, 'Users', ['Name', 'Identifier', 'Email', 'Category', 'Created At', 'Actions'])
     context.update({
         'users': users.order_by('last_name', 'first_name'),
         'search_query': search_query,
@@ -6254,12 +6255,7 @@ def admin_student_archive_action(request, user_id):
 @admin_required
 @require_http_methods(["POST"])
 def admin_student_restore(request, user_id):
-    user = _get_managed_user(user_id, 'student')
-    if not user or not user.is_archived:
-        return redirect('admin_students')
-    user.set_account_status('active', changed_by=_current_admin_user(request), reason='Admin restored account')
-    messages.success(request, 'Student account restored and historical records preserved.')
-    return redirect('admin_student_detail', user_id=user.id)
+    return _admin_restore_user(request, user_id, 'student')
 
 
 @admin_required
@@ -6563,6 +6559,11 @@ def admin_teacher_archive(request, user_id):
 
 @admin_required
 @require_http_methods(["POST"])
+def admin_teacher_restore(request, user_id):
+    return _admin_restore_user(request, user_id, 'teacher')
+
+@admin_required
+@require_http_methods(["POST"])
 def admin_principal_deactivate(request, user_id):
     user = _get_managed_user(user_id, 'principal')
     if not user:
@@ -6689,12 +6690,18 @@ def _admin_archive_user(request, user_id, role):
         return redirect(_admin_user_redirect_name(role))
 
     if not user.is_archived:
-        if role == 'student':
-            user.set_account_status('archived', changed_by=_current_admin_user(request), reason='Admin archived account')
-        else:
-            user.is_archived = True
-            user.archived_at = system_now()
-            user.save(update_fields=['is_archived', 'archived_at', 'updated_at'])
+        user.set_account_status('archived', changed_by=_current_admin_user(request), reason='Admin archived account')
+
+    return redirect(_admin_user_redirect_name(role))
+
+
+def _admin_restore_user(request, user_id, role):
+    user = _get_managed_user(user_id, role)
+    if not user:
+        return redirect(_admin_user_redirect_name(role))
+
+    if user.is_archived:
+        user.set_account_status('active', changed_by=_current_admin_user(request), reason='Admin restored account')
 
     return redirect(_admin_user_redirect_name(role))
 
@@ -7209,6 +7216,8 @@ def admin_course_detail(request, material_id):
 @admin_required
 @require_http_methods(["GET", "POST"])
 def admin_course_edit(request, material_id):
+    return HttpResponseForbidden('Admin course content is view-only. Use the authorized instructional workflow to edit materials.')
+
     material = _get_managed_material(material_id)
     if not material:
         return redirect('admin_courses')
@@ -10102,6 +10111,10 @@ def _admin_practice_context(request, page_title):
 
     practice_rows = [_practice_row_summary(item) for item in practice_items]
     practice_rows = _sort_practice_rows(practice_rows, sort_value)
+    practice_paginator = Paginator(practice_rows, 10)
+    practice_page = practice_paginator.get_page(request.GET.get('page', 1))
+    pagination_query = request.GET.copy()
+    pagination_query.pop('page', None)
 
     context = _admin_context(request, page_title, [
         'Mode',
@@ -10115,7 +10128,9 @@ def _admin_practice_context(request, page_title):
         'Actions',
     ])
     context.update({
-        'practice_items': practice_rows,
+        'practice_items': practice_page,
+        'practice_page': practice_page,
+        'pagination_query': pagination_query.urlencode(),
         'search_query': search_query,
         'mode_filter': mode_filter,
         'status_filter': status_filter,

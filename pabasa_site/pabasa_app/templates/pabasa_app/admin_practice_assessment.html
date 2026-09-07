@@ -61,6 +61,21 @@
         text-align: left;
     }
 
+    .practice-results {
+        display: flex;
+        flex-direction: column;
+        min-height: 38rem;
+    }
+
+    .practice-results .table-responsive {
+        flex: 0 0 auto;
+    }
+
+    .practice-results .practice-pagination {
+        margin-top: auto !important;
+        padding-top: 1rem;
+    }
+
     @media (max-width: 575.98px) {
         .practice-language-filter {
             width: 100%;
@@ -70,6 +85,7 @@
         .practice-language-filter select {
             min-width: 0;
         }
+
     }
 </style>
 <div class="admin-panel">
@@ -147,15 +163,38 @@
             margin-left: auto;
         }
 
-        .practice-filter-row--secondary .practice-filter-actions {
-            align-self: flex-end;
-        }
+    .practice-filter-row--secondary .practice-filter-actions {
+        align-self: flex-end;
+    }
+
+    .practice-filter-row--controls {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.2fr) auto;
+        gap: 1rem;
+        align-items: end;
+    }
+
+    .practice-filter-row--controls .practice-filter-control {
+        flex: none;
+        min-width: 0;
+        max-width: none;
+        width: 100%;
+    }
+
+    .practice-filter-row--controls .practice-filter-actions {
+        margin-left: 0;
+        flex-wrap: nowrap;
+    }
 
         .practice-filter-actions .btn {
             min-width: 120px;
         }
 
         @media (max-width: 767.98px) {
+            .practice-filter-row--controls {
+                grid-template-columns: 1fr;
+            }
+
             .practice-filter-actions {
                 width: 100%;
                 justify-content: flex-start;
@@ -183,7 +222,7 @@
             </div>
         </div>
 
-        <div class="practice-filter-row practice-filter-row--primary">
+        <div class="practice-filter-row practice-filter-row--controls">
             <div class="practice-filter-control">
                 <label class="form-label small fw-bold text-secondary" for="modeFilter">Mode</label>
                 <select class="form-select" id="modeFilter" name="mode">
@@ -208,9 +247,6 @@
                     {% endfor %}
                 </select>
             </div>
-        </div>
-
-        <div class="practice-filter-row practice-filter-row--secondary">
             <div class="practice-filter-control">
                 <label class="form-label small fw-bold text-secondary" for="statusFilter">Status</label>
                 <select class="form-select" id="statusFilter" name="status">
@@ -235,6 +271,7 @@
         </div>
     </form>
 
+    <div class="practice-results">
     <div class="table-responsive">
         <table class="table placeholder-table align-middle">
             <thead>
@@ -329,6 +366,41 @@
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+
+    {% if practice_page.paginator.num_pages > 1 %}
+    <nav class="practice-pagination" aria-label="Practice content pages">
+        <ul class="pagination pagination-sm justify-content-center mb-0">
+            {% if practice_page.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ practice_page.previous_page_number }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" aria-label="Previous page">&lsaquo;</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link" aria-hidden="true">&lsaquo;</span>
+            </li>
+            {% endif %}
+
+            {% for page_number in practice_page.paginator.page_range %}
+                {% if page_number == practice_page.number %}
+                <li class="page-item active" aria-current="page"><span class="page-link">{{ page_number }}</span></li>
+                {% else %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_number }}{% if pagination_query %}&{{ pagination_query }}{% endif %}">{{ page_number }}</a></li>
+                {% endif %}
+            {% endfor %}
+
+            {% if practice_page.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ practice_page.next_page_number }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" aria-label="Next page">&rsaquo;</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link" aria-hidden="true">&rsaquo;</span>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
     </div>
 
     {% for row in practice_items %}

@@ -1,7 +1,23 @@
 {% extends "pabasa_app/admin_base.html" %}
+{% load tz %}
 
 {% block content %}
-<div class="admin-panel">
+<style>
+    .admin-users-panel .admin-user-badge {
+        border: 1px solid transparent;
+        font-weight: 800;
+    }
+
+    .admin-users-panel .admin-category-admin { background: #e9edfa; border-color: #c3cdeb; color: #3f4f85; }
+    .admin-users-panel .admin-category-principal { background: #f0ebf8; border-color: #d2c4e5; color: #5b477a; }
+    .admin-users-panel .admin-category-teacher { background: #e5f4f2; border-color: #b4d9d4; color: #17665f; }
+    .admin-users-panel .admin-category-student { background: #e8f2fb; border-color: #bdd3e7; color: #24527a; }
+
+    .admin-users-panel .admin-status-active { background: #e8f5ed; border-color: #b9dcc5; color: #2d6b49; }
+    .admin-users-panel .admin-status-pending { background: #fbf2dc; border-color: #e8d39e; color: #80621e; }
+    .admin-users-panel .admin-status-archived { background: #eef0f2; border-color: #cdd2d8; color: #59636d; }
+</style>
+<div class="admin-panel admin-users-panel">
     <form class="row g-2 align-items-end mb-3" method="get" data-admin-auto-filter>
         <div class="col-12 col-lg-6">
             <label class="form-label small fw-bold text-secondary" for="userSearch">Search users</label>
@@ -33,21 +49,28 @@
                     <td>{{ user.custom_id }}</td>
                     <td>{{ user.email }}</td>
                     <td>
-                        <span class="badge rounded-pill {% if user.role == 'student' %}text-bg-primary{% else %}text-bg-info{% endif %}">{{ user.role|title }}</span>
-                        {% if user.account_status == 'pending_archive' %}<span class="badge rounded-pill text-bg-warning">Pending Archive</span>
-                        {% elif user.is_archived %}<span class="badge rounded-pill text-bg-secondary">Archived</span>
-                        {% else %}<span class="badge rounded-pill text-bg-success">Active</span>{% endif %}
+                        <span class="badge rounded-pill admin-user-badge admin-category-{{ user.role|lower }}">{{ user.role|title }}</span>
+                        {% if user.account_status == 'pending_archive' %}<span class="badge rounded-pill admin-user-badge admin-status-pending">Pending Archive</span>
+                        {% elif user.is_archived %}<span class="badge rounded-pill admin-user-badge admin-status-archived">Archived</span>
+                        {% else %}<span class="badge rounded-pill admin-user-badge admin-status-active">Active</span>{% endif %}
                     </td>
+                    <td class="text-secondary text-nowrap">{{ user.created_at|localtime|date:"M j, Y · g:i A" }}</td>
                     <td>
                         <div class="admin-table-actions">
                             {% if user.role == 'student' %}
                             <a class="btn btn-sm admin-action-btn admin-action-view" href="{% url 'admin_student_detail' user.id %}"><i class="bi bi-eye"></i><span>View</span></a>
-                            <a class="btn btn-sm admin-action-btn admin-action-edit" href="{% url 'admin_student_edit' user.id %}"><i class="bi bi-pencil"></i><span>Edit</span></a>
-                            <form method="post" action="{% url 'admin_student_archive' user.id %}">{% csrf_token %}<button class="btn btn-sm admin-action-btn admin-action-archive" type="submit" {% if user.is_archived %}disabled{% endif %}><i class="bi bi-archive"></i><span>Archive</span></button></form>
+                            {% if user.is_archived %}
+                            <button class="btn btn-sm admin-action-btn admin-action-restore" type="button" data-bs-toggle="modal" data-bs-target="#restoreUserModal" data-restore-action="{% url 'admin_student_restore' user.id %}"><i class="bi bi-arrow-counterclockwise"></i><span>Restore</span></button>
+                            {% else %}
+                            <form method="post" action="{% url 'admin_student_archive' user.id %}">{% csrf_token %}<button class="btn btn-sm admin-action-btn admin-action-archive" type="submit"><i class="bi bi-archive"></i><span>Archive</span></button></form>
+                            {% endif %}
                             {% else %}
                             <a class="btn btn-sm admin-action-btn admin-action-view" href="{% url 'admin_teacher_detail' user.id %}"><i class="bi bi-eye"></i><span>View</span></a>
-                            <a class="btn btn-sm admin-action-btn admin-action-edit" href="{% url 'admin_teacher_edit' user.id %}"><i class="bi bi-pencil"></i><span>Edit</span></a>
-                            <form method="post" action="{% url 'admin_teacher_archive' user.id %}">{% csrf_token %}<button class="btn btn-sm admin-action-btn admin-action-archive" type="submit" {% if user.is_archived %}disabled{% endif %}><i class="bi bi-archive"></i><span>Archive</span></button></form>
+                            {% if user.is_archived %}
+                            <button class="btn btn-sm admin-action-btn admin-action-restore" type="button" data-bs-toggle="modal" data-bs-target="#restoreUserModal" data-restore-action="{% url 'admin_teacher_restore' user.id %}"><i class="bi bi-arrow-counterclockwise"></i><span>Restore</span></button>
+                            {% else %}
+                            <form method="post" action="{% url 'admin_teacher_archive' user.id %}">{% csrf_token %}<button class="btn btn-sm admin-action-btn admin-action-archive" type="submit"><i class="bi bi-archive"></i><span>Archive</span></button></form>
+                            {% endif %}
                             {% endif %}
                         </div>
                     </td>
@@ -59,4 +82,32 @@
         </table>
     </div>
 </div>
+<div class="modal fade" id="restoreUserModal" tabindex="-1" aria-labelledby="restoreUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header">
+                <h2 class="modal-title h5 fw-bold" id="restoreUserModalLabel"><i class="bi bi-arrow-counterclockwise me-2"></i>Restore User</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cancel"></button>
+            </div>
+            <div class="modal-body">Restore this user account and allow the user to become active again?</div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" id="restoreUserForm">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-counterclockwise me-1"></i>Restore</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const restoreForm = document.getElementById('restoreUserForm');
+        document.querySelectorAll('[data-restore-action]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                if (restoreForm) restoreForm.action = button.dataset.restoreAction;
+            });
+        });
+    });
+</script>
 {% endblock %}
