@@ -3,6 +3,31 @@
 
 {% block extra_head %}
 <style>
+    /* Keep this compact account-choice screen within the browser viewport. */
+    html,
+    body.auth-layout {
+        height: 100%;
+        min-height: 100svh;
+        overflow: hidden;
+    }
+
+    .auth-nav-wrap {
+        width: 100%;
+        left: auto;
+        right: auto;
+        margin-inline: 0;
+    }
+
+    body.auth-layout > main.flex-grow-1 {
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    body.auth-layout > main.flex-grow-1 > .container {
+        max-height: 100%;
+        overflow: hidden;
+    }
+
     body {
         background:
             linear-gradient(135deg, rgba(8, 24, 38, 0.45), rgba(8, 24, 38, 0.28)),

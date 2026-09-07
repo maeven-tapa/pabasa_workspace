@@ -6,7 +6,7 @@ from django.utils import timezone
 from openpyxl import load_workbook
 import uuid
 
-from .models import Assessment, Enrollment, Material, School, Section, StoryReadingProgress, User
+from .models import Assessment, Material, School, Section, StoryReadingProgress, User
 from .scoring import crla_sentence_score
 from .utils.crla_export import _part_1_reading_level, _row_formulas, _story_number, export_crla_excel
 
@@ -20,6 +20,49 @@ def test_section_create(**kwargs):
 
 
 class CrlaExportResultTests(TestCase):
+    def test_reading_profile_matches_each_column_u_branch_and_boundary(self):
+        cases = (
+            # Column J Full Refresher overrides all Part 2 inputs.
+            (10, None, None, None, "Low Emerging Reader"),
+            # High Emerging: Q <= 25, or Q 26-50 with no correct answer.
+            (11, 1, 25, 5, "High Emerging Reader"),
+            (11, 1, 50, 0, "High Emerging Reader"),
+            # Developing: Q 26-50 with at least one answer, or Q 51-75 with <=2.
+            (11, 1, 26, 1, "Developing Reader"),
+            (11, 1, 75, 2, "Developing Reader"),
+            # Transitioning: Q 51-75 with >=3, or Q >75 with <=4.
+            (11, 1, 51, 3, "Transitioning Reader"),
+            (11, 1, 76, 4, "Transitioning Reader"),
+            (11, 1, 76, 5, "Reading At Grade Level"),
+        )
+        for part1, story, percentage, answers, expected in cases:
+            with self.subTest(part1=part1, percentage=percentage, answers=answers):
+                self.assertEqual(
+                    crla_reading_profile(part1, story, percentage, answers), expected,
+                )
+        self.assertIsNone(crla_reading_profile(11, None, 80, 5))
+        self.assertIsNone(crla_reading_profile(11, 1, None, 5))
+        self.assertIsNone(crla_reading_profile(11, 1, 80, None))
+
+    def test_completion_payload_persists_column_u_profile_not_client_label(self):
+        payload = build_assessment_score_payload({
+            "assessment_type": "paragraph",
+            "classification": "High Emerging Reader",  # must not override Column U
+            "crla_score_data": {
+                "task1_score": 8,
+                "task2_type": "Task 2H / Sentences",
+                "sentences_read": 4,
+                "story_number": 1,
+                "story_total_words": 100,
+                "words_read": 76,
+                "miscues": 24,
+                "duration_seconds": 60,
+                "comprehension_correct": 5,
+            },
+        })
+        self.assertEqual(payload["crla_classification"], "Reading At Grade Level")
+        self.assertEqual(payload["crla_score_data"]["crla_classification"], "Reading At Grade Level")
+
     def test_sentence_score_uses_official_four_sentence_table(self):
         self.assertEqual(
             [crla_sentence_score(count) for count in range(5)],
@@ -137,9 +180,9 @@ class CrlaExportResultTests(TestCase):
             student=student, title="CRLA result", code="CRLA-EXPORT-RESULT",
             assessment_type="paragraph", status="published", attempt_status="completed",
             completed_at=timezone.now(), duration_seconds=125, word_count=70, wpm=33.6,
-            accuracy=70, correct_items=3, crla_score_data={
+            accuracy=70, correct_items=3, crla_classification="Transitioning Reader", crla_score_data={
                 "task1_score": 10, "task2_type": "Task 2H / Sentences", "task2_score": 4,
-                "part1_total_score": 14, "story_number": None, "story_total_words": 96,
+                "part1_total_score": 14, "story_number": 1, "story_total_words": 96,
                 "words_read": 96, "miscues": 0, "duration_seconds": 519.99, "wpm": 11.08,
                 "passage_accuracy_percent": 100, "comprehension_total": 6,
                 "comprehension_correct": 4,
@@ -288,14 +331,7 @@ class CrlaExportResultTests(TestCase):
             student=student, title="early result", code="CRLA-EARLY-RESULT",
             assessment_type="word", status="published", attempt_status="completed",
             completed_at=timezone.now(), duration_seconds=20, word_count=6, wpm=18, accuracy=60,
-            # Deliberately includes stale-looking Story values.  The early
-            # Part 1 state must keep every Part 2 export cell blank.
-            crla_score_data={
-                "task1_score": 6, "task2_type": "Task 2L / Rhymes", "task2_score": 3,
-                "story_number": 2, "words_read": 70, "miscues": 3,
-                "duration_seconds": 125, "wpm": 33.6,
-                "passage_accuracy_percent": 70, "comprehension_correct": 3,
-            },
+            crla_score_data={"task1_score": 6, "task2_type": "Task 2L / Rhymes", "task2_score": 3},
         )
 
         sheet = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)["G2 MT Reading Scoresheet"]
@@ -343,7 +379,7 @@ class CrlaExportResultTests(TestCase):
             student=student, title="story result", code="CRLA-STORY-RESULT",
             assessment_type="paragraph", status="published", attempt_status="completed",
             completed_at=timezone.now(), duration_seconds=125, word_count=70, wpm=33.6,
-            accuracy=70, correct_items=3, crla_score_data={
+            accuracy=70, correct_items=3, crla_classification="Transitioning Reader", crla_score_data={
                 "task1_score": 8, "task2_type": "Task 2H / Sentences", "task2_score": 7,
                 "story_number": 2, "words_read": 70, "miscues": 3,
                 "duration_seconds": 125, "wpm": 33.6, "passage_accuracy_percent": 70,
