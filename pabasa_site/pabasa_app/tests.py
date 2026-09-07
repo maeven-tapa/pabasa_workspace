@@ -6356,6 +6356,15 @@ class LiveAssessmentStartTests(TestCase):
         self.assertEqual(response.status_code, 200)
         session.refresh_from_db()
         self.assertEqual(session.current_batch, 2)
+        self.assertEqual(session.status, 'batch_loaded')
+
+        started = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'start'}), content_type='application/json',
+        )
+        self.assertEqual(started.status_code, 200)
+        session.refresh_from_db()
+        self.assertIn(session.status, ['started', 'countdown'])
 
         duplicate = self.client.post(
             reverse('live_assessment_session_action', kwargs={'session_id': session.id}),

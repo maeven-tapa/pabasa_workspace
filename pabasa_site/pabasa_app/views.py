@@ -14243,11 +14243,12 @@ def _live_session_batch_payload(session):
         'current_batch_total': current_total,
         'overall_completed': overall_completed,
         'batch_complete': bool(current_total and current_completed >= current_total),
+        'batch_loaded': session.status == 'batch_loaded',
         'assessment_complete': bool(session.total_batches and current_batch >= session.total_batches and current_completed >= current_total),
     }
 
 
-def _start_next_live_batch(session_id, requested_batch):
+def _load_next_live_batch(session_id, requested_batch):
     advanced = False
 
     def advance(session):
@@ -14264,10 +14265,19 @@ def _start_next_live_batch(session_id, requested_batch):
         if requested_batch > session.total_batches:
             return None
         session.current_batch = requested_batch
-        _ensure_live_session_student_states(session, _live_batch_student_ids(session))
-        _append_live_session_activity(session, f'Teacher started batch {requested_batch} of {session.total_batches}.')
+        next_batch_ids = _live_batch_student_ids(session)
+        _ensure_live_session_student_states(session, next_batch_ids)
+        for student_id in next_batch_ids:
+            session.student_states[str(student_id)] = {
+                **(session.student_states.get(str(student_id), {}) or {}),
+                'status': 'waiting', 'connection_status': 'waiting', 'progress': 0,
+                'current_item': '', 'elapsed_seconds': 0, 'final_score': None,
+            }
+        session.status = 'batch_loaded'
+        session.start_at = None
+        _append_live_session_activity(session, f'Teacher loaded batch {requested_batch} of {session.total_batches}; students are waiting to begin.')
         advanced = True
-        return {'current_batch', 'batch_assignments', 'batch_size', 'total_batches', 'activity_log'}
+        return {'current_batch', 'status', 'start_at', 'batch_assignments', 'batch_size', 'total_batches', 'activity_log'}
 
     session, error = _mutate_live_session_state(session_id, advance)
     if session and advanced:
@@ -14275,10 +14285,10 @@ def _start_next_live_batch(session_id, requested_batch):
     # Re-read for the user-facing guard reason after a semantic no-op.
     current = LiveAssessmentSession.objects.filter(id=session_id).first()
     if not current or current.status not in ['started', 'paused']:
-        return None, 'Only an active session can advance batches'
+        return None, 'Only an active session can load the next batch'
     _ensure_live_session_batches(current)
     if requested_batch != current.current_batch + 1:
-        return None, 'Only the next batch can be started'
+        return None, 'Only the next batch can be loaded'
     completed, total = _live_batch_progress(current)
     if completed < total:
         return None, 'The current batch is not complete'
@@ -16690,7 +16700,7 @@ def live_assessment_session_action(request, session_id):
             session.ends_at = None
 
     if action == 'start':
-        if session.status != 'waiting':
+        if session.status not in ['waiting', 'batch_loaded']:
             return JsonResponse({'success': False, 'error': 'Live assessment session already started or ended'}, status=400)
         if session.student_count <= 0:
             return JsonResponse({'success': False, 'error': 'No students selected for the live session'}, status=400)
@@ -16702,7 +16712,8 @@ def live_assessment_session_action(request, session_id):
             activity_message = f'Teacher started countdown for {session.countdown_seconds}s.'
         else:
             session.status = 'started'
-            activity_message = 'Teacher started the session.'
+            activity_message = (f'Teacher started batch {session.current_batch} of {session.total_batches}.'
+                                if session.status == 'batch_loaded' else 'Teacher started the session.')
 
         _ensure_live_session_student_states(session, session.student_ids)
         _ensure_live_session_batches(session)
@@ -16716,7 +16727,7 @@ def live_assessment_session_action(request, session_id):
             )
         }
         def apply_start(current):
-            if current.status != 'waiting':
+            if current.status not in ['waiting', 'batch_loaded']:
                 return None
             for field, value in start_values.items():
                 setattr(current, field, value)
@@ -16733,7 +16744,7 @@ def live_assessment_session_action(request, session_id):
                 f"Your teacher has started the live assessment countdown for {session.material.title or 'this reading'}. "
                 'Please stay in the waiting room while the assessment begins.'
             )
-            for sid in session.student_ids:
+            for sid in _live_batch_student_ids(session):
                 student_user = User.objects.filter(id=sid).first()
                 if not student_user:
                     continue
@@ -16749,13 +16760,13 @@ def live_assessment_session_action(request, session_id):
                 )
         except Exception:
             logger.exception('Failed to notify students on session start')
-    elif action == 'start_next_batch':
+    elif action in ['load_next_batch', 'start_next_batch']:
         requested_batch = data.get('target_batch')
         try:
             requested_batch = int(requested_batch)
         except (TypeError, ValueError):
             requested_batch = None
-        transitioned_session, error = _start_next_live_batch(session.id, requested_batch)
+        transitioned_session, error = _load_next_live_batch(session.id, requested_batch)
         if error:
             return JsonResponse({'success': False, 'error': error}, status=409)
         session = transitioned_session
