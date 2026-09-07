@@ -17,7 +17,7 @@ from django.utils import timezone
 from openpyxl import load_workbook
 from openpyxl.worksheet.properties import PageSetupProperties
 
-from pabasa_app.models import Assessment, User
+from pabasa_app.models import Assessment, Section, User
 
 from .crla_mapping import (
     FORMULA_COLUMNS,
@@ -446,7 +446,7 @@ def _student_values(student, attempt, state, assessment):
     }
 
 
-def export_crla_excel(assessment_id):
+def export_crla_excel(assessment_id, section_id=None):
     """Return an in-memory CRLA workbook for a root assessment.
 
     The returned ``BytesIO`` is positioned at byte zero and has a ``name``
@@ -473,6 +473,16 @@ def export_crla_excel(assessment_id):
     workbook.calculation.forceFullCalc = True
 
     latest_attempts = _latest_attempts(assessment)
+    if section_id is not None:
+        # The shared official material has one root assessment.  Keep the
+        # established workbook generator, but scope its existing result set to
+        # the finalized section's persisted enrollment before filling it.
+        latest_attempts = {
+            student_id: attempt for student_id, attempt in latest_attempts.items()
+            if getattr(attempt, 'enrollment_id', None)
+            and getattr(attempt.enrollment, 'section_id', None) == int(section_id)
+        }
+        assessment.section = Section.objects.get(pk=section_id)
     students = _assessment_students(assessment, latest_attempts)
     if len(students) > (STUDENT_END_ROW - STUDENT_START_ROW + 1):
         raise ValueError("The official CRLA template supports at most 100 learners.")
