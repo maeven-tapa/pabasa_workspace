@@ -7920,6 +7920,24 @@ def _student_has_approved_assessment_request(student, section):
     return bool(student and section and AssessmentRequest.objects.filter(student=student, section=section, status='approved').exists())
 
 
+def _student_has_active_live_assessment(student, section):
+    """Return whether the student is rostered in an active Live session."""
+    if not student or not section:
+        return False
+    student_id = int(student.id)
+    sessions = LiveAssessmentSession.objects.filter(
+        section=section,
+        status__in=('countdown', 'started', 'paused'),
+    ).only('student_ids')
+    return any(
+        student_id in {
+            int(value) for value in (session.student_ids or [])
+            if str(value).isdigit()
+        }
+        for session in sessions
+    )
+
+
 def _format_calendar_date(value):
     if not value:
         return ''
@@ -10506,6 +10524,27 @@ def teacher_assessment_requests(request):
     rows = AssessmentRequest.objects.filter(section__teacher=teacher, status='pending').select_related('student', 'section')
     return JsonResponse({'success': True, 'requests': [{'id': r.id, 'student_name': f'{r.student.first_name} {r.student.last_name}'.strip(), 'pabasa_id': r.student.custom_id, 'section': r.section.class_name, 'requested_at': r.requested_at.isoformat(), 'assessment_status': 'Assessment Not Taken'} for r in rows]})
 
+def _ensure_assessment_request_live_session(teacher, section, student):
+    """Connect an approved request to the existing Live Assessment session."""
+    phase = _official_crla_assessment_phase(student)
+    material = _official_crla_material_for_student(student, phase) or _official_reading_active_materials_queryset().first()
+    if not material or not _is_live_crla_material(material):
+        raise ValidationError('The official CRLA assessment is not available.')
+    session = LiveAssessmentSession.objects.filter(teacher=teacher, section=section, material=material, status='waiting').order_by('-created_at').first()
+    if not session:
+        session = LiveAssessmentSession.objects.create(id=uuid.uuid4().hex, teacher=teacher, section=section, material=material, status='waiting', countdown_seconds=10)
+    student_id = int(student.id)
+    roster = [int(value) for value in (session.student_ids or []) if str(value).isdigit()]
+    if student_id not in roster:
+        roster.append(student_id)
+        session.student_ids, session.student_count = roster, len(roster)
+        _ensure_live_session_batches(session, roster)
+        _ensure_live_session_student_states(session, roster)
+        session.save(update_fields=['student_ids', 'student_count', 'batch_assignments', 'batch_size', 'total_batches', 'current_batch', 'student_states', 'updated_at'])
+    waiting_url = _build_live_assessment_waiting_url(session.id)
+    _create_notification(student, 'You have been approved for the live assessment', f'Your teacher approved your request for {material.title or "the reading assessment"}. Please enter the waiting room.', 'assessment', waiting_url, teacher, send_email=False, force_in_app=True)
+    return session
+
 @csrf_protect
 @login_required(role='teacher')
 @require_http_methods(["POST"])
@@ -10514,8 +10553,17 @@ def approve_assessment_request(request, request_id):
     item = AssessmentRequest.objects.filter(id=request_id, section__teacher=teacher, status='pending').first()
     if not item:
         return JsonResponse({'success': False, 'error': 'Request not found.'}, status=404)
-    item.status = 'approved'; item.reviewed_by = teacher; item.reviewed_at = system_now(); item.save(update_fields=['status', 'reviewed_by', 'reviewed_at'])
-    return JsonResponse({'success': True})
+    try:
+        with transaction.atomic():
+            item.status = 'approved'
+            item.reviewed_by = teacher
+            item.reviewed_at = system_now()
+            item.save(update_fields=['status', 'reviewed_by', 'reviewed_at'])
+            session = _ensure_assessment_request_live_session(teacher, item.section, item.student)
+    except ValidationError as exc:
+        item.status, item.reviewed_by, item.reviewed_at = 'pending', None, None
+        return JsonResponse({'success': False, 'error': str(exc)}, status=409)
+    return JsonResponse({'success': True, 'session_id': session.id, 'control_url': _build_live_assessment_control_url(session.id), 'waiting_url': _build_live_assessment_waiting_url(session.id)})
 
 def assessment(request):
     if not _check_auth(request):
@@ -10586,10 +10634,11 @@ def assessment(request):
     )
     section_assessment_completed = _student_completed_section_assessment(user, selected_section)
     approved_assessment_request = _student_has_approved_assessment_request(user, selected_section)
+    student_live_assessment = _student_has_active_live_assessment(user, selected_section)
     has_reading_assessment_access = bool(
         reading_access_state.get('aral_eligible')
         and not reading_access_state.get('reading_at_grade_level_complete')
-        and (section_assessment_completed or approved_assessment_request)
+        and (section_assessment_completed or (approved_assessment_request and student_live_assessment))
     )
     if returning_to_reading_assessment and has_reading_assessment_access:
         # A student returning from an already-authorized Reading Assessment
@@ -10597,7 +10646,7 @@ def assessment(request):
         # Assessment Week flag is still enabled.  This is scoped to the
         # originating context and does not bypass the normal entry flow.
         assessment_week_section = None
-    if approved_assessment_request and not section_assessment_completed:
+    if approved_assessment_request and assessment_week_live and student_live_assessment and not section_assessment_completed:
         # An approved overdue-assessment request is a student-specific grant.
         # It must not be masked by the section-wide Assessment Week view, which
         # may remain enabled after its calendar window has ended.
@@ -10628,7 +10677,7 @@ def assessment(request):
                 'workflow_message': 'Keep up the great work. You can continue practicing whenever you like.',
             })
             return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
-    if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status in {'before', 'during'} and (not selected_section.assessment_week_enabled or not assessment_week_live) and not section_assessment_completed and not aral_week_mode:
+    if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status in {'before', 'during'} and (not selected_section.assessment_week_enabled or not assessment_week_live or not student_live_assessment) and not section_assessment_completed and not aral_week_mode:
         context = _dashboard_context(request, 'student')
         context.update({
             'stage': 'assessment_week_locked',
@@ -10688,7 +10737,7 @@ def assessment(request):
     official_availability = _official_assessment_availability_for_student(user, request)
     official_crla_material = _official_crla_material_for_student(user, official_availability.get('assessment_type'))
     has_active_crla_window = bool(official_availability.get('available'))
-    if approved_assessment_request and not section_assessment_completed:
+    if approved_assessment_request and student_live_assessment and not section_assessment_completed:
         approved_phase = _official_crla_assessment_phase(user, request=request)
         if approved_phase not in {'pretest', 'midtest', 'posttest'}:
             # After the calendar window, the global "active" calendar may no

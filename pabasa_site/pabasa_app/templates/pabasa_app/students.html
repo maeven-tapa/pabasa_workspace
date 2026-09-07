@@ -62,6 +62,33 @@
     .assessment-request-pagination button { min-width:2rem; height:2rem; padding:.2rem .55rem; border:1px solid rgba(16,70,110,.14); border-radius:10px; color:#10466e; background:#fff; font-weight:800; }
     .assessment-request-pagination button.active { color:#fff; border-color:#10466e; background:#10466e; }
     .assessment-request-pagination button:disabled { cursor:not-allowed; opacity:.45; }
+    .assessment-request-toolbar { display:flex; align-items:center; justify-content:flex-end; gap:.75rem; margin-bottom:.75rem; }
+    .assessment-request-select-all { display:flex; align-items:center; gap:.5rem; color:#10466e; font-size:.82rem; font-weight:800; }
+    .assessment-request-select-all input, .assessment-request-table input { width:1.05rem; height:1.05rem; accent-color:#176fa8; cursor:pointer; }
+    .assessment-request-table-wrap { border:1px solid rgba(16,70,110,.12); border-radius:15px; }
+    #studentAssessmentRequestsModal .modal-dialog { width:min(900px, calc(100% - 1rem)); max-width:900px; }
+    #studentAssessmentRequestsModal .modal-content { height:min(680px, calc(100vh - 2rem)); }
+    #studentAssessmentRequestsModal .modal-body { min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+    .assessment-request-table-wrap { min-height:0; flex:1 1 auto; height:100%; overflow:hidden; }
+    .assessment-request-table { width:100%; height:100%; table-layout:fixed; border-collapse:collapse; background:#fff; }
+    .assessment-request-table th { padding:.58rem .5rem; color:#7890a3; background:#f5fafc; font-size:.64rem; font-weight:900; letter-spacing:.04em; text-align:left; text-transform:uppercase; }
+    .assessment-request-table td { padding:.62rem .5rem; border-top:1px solid rgba(16,70,110,.09); color:#243b53; font-size:.76rem; font-weight:700; vertical-align:middle; overflow-wrap:anywhere; }
+    .assessment-request-table th:nth-child(1), .assessment-request-table td:nth-child(1) { width:27%; }
+    .assessment-request-table th:nth-child(2), .assessment-request-table td:nth-child(2) { width:18%; }
+    .assessment-request-table th:nth-child(3), .assessment-request-table td:nth-child(3) { width:23%; }
+    .assessment-request-table th:nth-child(4), .assessment-request-table td:nth-child(4) { width:24%; }
+    .assessment-request-table th:last-child, .assessment-request-table td:last-child { width:8%; text-align:center; }
+    .assessment-request-table thead, .assessment-request-table tbody { display:block; width:100%; }
+    .assessment-request-table tbody { height:calc(100% - 2.4rem); max-height:none; overflow-y:auto; overflow-x:hidden; }
+    .assessment-request-table tr { display:table; width:100%; table-layout:fixed; }
+    .assessment-request-table .request-student-name { color:#10466e; font-weight:900; }
+    .assessment-request-table .request-status { display:inline-flex; padding:.25rem .55rem; border-radius:999px; color:#8a5a00; background:#fff4d6; font-size:.7rem; font-weight:800; white-space:nowrap; }
+    .assessment-request-bulk-action { display:flex; justify-content:flex-end; margin-top:.8rem; }
+    body.dark-theme .assessment-request-table-wrap { border-color:rgba(255,255,255,.1); }
+    body.dark-theme .assessment-request-table { background:#1e293b; }
+    body.dark-theme .assessment-request-table th { color:#94a3b8; background:#0f172a; }
+    body.dark-theme .assessment-request-table td { border-color:rgba(255,255,255,.1); color:#e2e8f0; }
+    body.dark-theme .assessment-request-table .request-student-name, body.dark-theme .assessment-request-select-all { color:#7dd3fc; }
     @media (max-width:575.98px) { #studentAssessmentRequestsModal .modal-body, #studentAssessmentRequestsModal .modal-header { padding-left:1rem; padding-right:1rem; } .assessment-request-item__meta { grid-template-columns:1fr; } }
 
     /* Reset margin for main content area when sidebar is hidden on mobile/tablet */
@@ -1219,7 +1246,7 @@
 <div class="modal fade" id="studentAssessmentRequestsModal" tabindex="-1" aria-labelledby="studentAssessmentRequestsModalTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
         <div class="modal-header"><span class="assessment-request-modal-icon" aria-hidden="true"><i class="bi bi-clipboard2-check-fill"></i></span><div><h2 class="modal-title" id="studentAssessmentRequestsModalTitle">Student Requests to Take Assessment</h2><small>Review requests from your students</small></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
-        <div class="modal-body" id="studentAssessmentRequestsModalBody"><div class="assessment-request-empty-state">No pending assessment requests.</div><div id="studentAssessmentRequestsPagination"></div></div>
+        <div class="modal-body" id="studentAssessmentRequestsModalBody"><div class="assessment-request-empty-state">No pending assessment requests.</div></div>
     </div></div>
 </div>
 <script>
@@ -1228,21 +1255,23 @@ document.addEventListener('DOMContentLoaded', function () {
     const viewButton = document.getElementById('viewStudentAssessmentRequests');
     const modalElement = document.getElementById('studentAssessmentRequestsModal');
     const modalBody = document.getElementById('studentAssessmentRequestsModalBody');
-    const paginationElement = document.getElementById('studentAssessmentRequestsPagination');
     let requests = [];
-    let currentPage = 1;
+    const csrfToken = function () { return document.cookie.split('; ').find(function (row) { return row.startsWith('csrftoken='); })?.split('=')[1] || ''; };
+    const escapeHtml = function (value) { return String(value ?? '').replace(/[&<>'"]/g, function (char) { return ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[char]; }); };
+    const approveRequest = async function (requestId) {
+        const response = await fetch('/api/teacher/assessment-requests/' + encodeURIComponent(requestId) + '/approve/', { method:'POST', credentials:'same-origin', headers:{'X-CSRFToken': csrfToken(), 'X-Requested-With':'XMLHttpRequest'} });
+        if (!response.ok) throw new Error('Unable to approve this request.');
+    };
     const renderRequests = function () {
         if (!requests.length) { modalBody.innerHTML = '<div class="assessment-request-empty-state">No pending assessment requests.</div>'; return; }
-        currentPage = Math.min(Math.max(currentPage, 1), requests.length);
-        const item = requests[currentPage - 1];
-        modalBody.innerHTML = '<article class="assessment-request-item"><div class="assessment-request-item__name">' + item.student_name + '</div><div class="assessment-request-item__meta"><div class="assessment-request-item__field"><span class="assessment-request-item__label">PABASA ID</span><span class="assessment-request-item__value">' + item.pabasa_id + '</span></div><div class="assessment-request-item__field"><span class="assessment-request-item__label">Section</span><span class="assessment-request-item__value">' + item.section + '</span></div><div class="assessment-request-item__field"><span class="assessment-request-item__label">Request date</span><span class="assessment-request-item__value">' + new Date(item.requested_at).toLocaleString() + '</span></div><div class="assessment-request-item__field"><span class="assessment-request-item__label">Assessment status</span><span class="assessment-request-item__status">' + item.assessment_status + '</span></div></div><button class="btn btn-primary btn-sm" type="button" data-approve-request="' + item.id + '"><i class="bi bi-check2-circle me-1"></i> Check / Approve</button></article>';
-        const pagination = document.createElement('div'); pagination.className = 'assessment-request-pagination';
-        const previous = document.createElement('button'); previous.type = 'button'; previous.textContent = '‹'; previous.disabled = currentPage === 1; previous.onclick = function () { currentPage--; renderRequests(); }; pagination.appendChild(previous);
-        requests.forEach(function (_, index) { const page = document.createElement('button'); page.type = 'button'; page.textContent = index + 1; page.className = index + 1 === currentPage ? 'active' : ''; page.setAttribute('aria-current', index + 1 === currentPage ? 'page' : 'false'); page.onclick = function () { currentPage = index + 1; renderRequests(); }; pagination.appendChild(page); });
-        const next = document.createElement('button'); next.type = 'button'; next.textContent = '›'; next.disabled = currentPage === requests.length; next.onclick = function () { currentPage++; renderRequests(); }; pagination.appendChild(next);
-        modalBody.appendChild(pagination);
-        const approveButton = modalBody.querySelector('[data-approve-request]');
-        approveButton.addEventListener('click', async function () { approveButton.disabled = true; await fetch('/api/teacher/assessment-requests/' + item.id + '/approve/', { method:'POST', credentials:'same-origin', headers:{'X-CSRFToken': document.cookie.split('; ').find(function (row) { return row.startsWith('csrftoken='); })?.split('=')[1] || ''} }); await loadRequests(); refresh(); });
+        modalBody.innerHTML = '<div class="assessment-request-toolbar"><label class="assessment-request-select-all"><span>Select All</span><input type="checkbox" id="assessmentRequestSelectAll"></label></div><div class="assessment-request-table-wrap"><table class="assessment-request-table"><thead><tr><th scope="col">Student name</th><th scope="col">PABASA ID</th><th scope="col">Section</th><th scope="col">Request date</th><th scope="col"><span class="visually-hidden">Select</span></th></tr></thead><tbody>' + requests.map(function (item) { return '<tr><td class="request-student-name">' + escapeHtml(item.student_name) + '</td><td>' + escapeHtml(item.pabasa_id) + '</td><td>' + escapeHtml(item.section) + '</td><td>' + escapeHtml(new Date(item.requested_at).toLocaleDateString()) + '</td><td><input type="checkbox" class="assessment-request-checkbox" value="' + escapeHtml(item.id) + '" aria-label="Select ' + escapeHtml(item.student_name) + '"></td></tr>'; }).join('') + '</tbody></table></div><div class="assessment-request-bulk-action"><button class="btn btn-primary btn-sm" type="button" id="approveSelectedRequests" disabled><i class="bi bi-check2-all me-1"></i> Approve Selected</button></div>';
+        const selectAll = document.getElementById('assessmentRequestSelectAll');
+        const selectedButton = document.getElementById('approveSelectedRequests');
+        const checkboxes = Array.from(modalBody.querySelectorAll('.assessment-request-checkbox'));
+        const syncSelection = function () { const selected = checkboxes.filter(function (checkbox) { return checkbox.checked; }); selectedButton.disabled = !selected.length; selectAll.checked = selected.length === checkboxes.length; selectAll.indeterminate = selected.length > 0 && selected.length < checkboxes.length; };
+        selectAll.addEventListener('change', function () { checkboxes.forEach(function (checkbox) { checkbox.checked = selectAll.checked; }); syncSelection(); });
+        checkboxes.forEach(function (checkbox) { checkbox.addEventListener('change', syncSelection); });
+        selectedButton.addEventListener('click', async function () { const selectedIds = checkboxes.filter(function (checkbox) { return checkbox.checked; }).map(function (checkbox) { return checkbox.value; }); selectedButton.disabled = true; try { const results = []; for (const requestId of selectedIds) { const response = await fetch('/api/teacher/assessment-requests/' + encodeURIComponent(requestId) + '/approve/', { method:'POST', credentials:'same-origin', headers:{'X-CSRFToken': csrfToken(), 'X-Requested-With':'XMLHttpRequest'} }); const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.error || 'Unable to approve request.'); results.push(data); } const controlUrl = results.find(function (result) { return result.control_url; })?.control_url; if (controlUrl) { window.location.assign(controlUrl); return; } await loadRequests(); refresh(); } catch (error) { await loadRequests(); } });
     };
     const loadRequests = async function () {
         if (!modalBody) return;
@@ -1264,7 +1293,7 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             const response = await fetch('{% url "get_teacher_assessment_request_count" %}', { credentials:'same-origin', headers:{'X-Requested-With':'XMLHttpRequest'}, cache:'no-store' });
             const data = await response.json();
-            if (response.ok && data.success) { const count = Number(data.count) || 0; countElement.textContent = count + (count === 1 ? ' request' : ' requests'); }
+            if (response.ok && data.success) { const count = Number(data.count) || 0; countElement.textContent = count === 1 ? '1 student is waiting for approval' : count + ' students are waiting for approval'; }
         } catch (error) {}
     };
     refresh();
