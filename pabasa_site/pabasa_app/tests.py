@@ -6260,6 +6260,75 @@ class LiveAssessmentStartTests(TestCase):
         self.assertEqual([sid for sid in roster if assignments[str(sid)] == 2], roster[10:20])
         self.assertEqual([sid for sid in roster if assignments[str(sid)] == 3], roster[20:])
 
+    def test_live_session_automatic_batches_sort_students_by_name(self):
+        from .views import _ensure_live_session_batches
+
+        zebra = User.objects.create(
+            custom_id=f"STD-{uuid.uuid4().hex[:8].upper()}", role="student",
+            first_name="Zebra", last_name="Zulu", middle_initial="", suffix="", sex="female",
+            birth_month=1, birth_day=1, birth_year=2012,
+            email=f"zebra-{uuid.uuid4().hex[:8]}@example.com", password_hash=make_password("password"),
+        )
+        alpha_students = []
+        for index in range(9):
+            alpha_students.append(User.objects.create(
+                custom_id=f"STD-{uuid.uuid4().hex[:8].upper()}", role="student",
+                first_name=f"Alpha {index}", last_name="Able", middle_initial="", suffix="", sex="female",
+                birth_month=1, birth_day=1, birth_year=2012,
+                email=f"alpha-{index}-{uuid.uuid4().hex[:8]}@example.com", password_hash=make_password("password"),
+            ))
+        session = LiveAssessmentSession(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=self.material,
+            student_ids=[zebra.id, self.student.id] + [student.id for student in reversed(alpha_students)],
+            student_count=11,
+        )
+
+        assignments = _ensure_live_session_batches(session)
+
+        self.assertEqual(assignments[str(zebra.id)], 2)
+        self.assertTrue(all(assignments[str(student.id)] == 1 for student in alpha_students))
+        self.assertEqual(assignments[str(self.student.id)], 1)
+
+    def test_live_session_automatic_batch_counts_use_ten_per_batch(self):
+        from .views import _ensure_live_session_batches
+
+        for roster_size, expected_batches in ((1, 1), (9, 1), (10, 1), (11, 2), (20, 2), (21, 3), (30, 3)):
+            roster = list(range(1, roster_size + 1))
+            session = LiveAssessmentSession(
+                id=uuid.uuid4().hex,
+                teacher=self.teacher,
+                course=self.course,
+                material=self.material,
+                student_ids=roster,
+                student_count=roster_size,
+            )
+            assignments = _ensure_live_session_batches(session)
+            self.assertEqual(session.total_batches, expected_batches)
+            self.assertTrue(all(1 <= batch <= expected_batches for batch in assignments.values()))
+            self.assertTrue(all(
+                sum(1 for batch in assignments.values() if batch == batch_number) <= 10
+                for batch_number in range(1, expected_batches + 1)
+            ))
+
+    def test_manual_live_batch_assignments_validate_and_persist_mapping_shape(self):
+        from .views import _validate_live_batch_assignments
+
+        valid, error = _validate_live_batch_assignments(
+            [1, 2, 3], {'1': 1, '2': 1, '3': 2}, [1, 2, 3],
+        )
+        self.assertIsNone(error)
+        self.assertEqual(valid, {'1': 1, '2': 1, '3': 2})
+
+        invalid_cases = [
+            ([1, 2, 3], {'1': 1, '2': 1}, [1, 2, 3], 'Every selected student'),
+            ([1, 2, 3], {'1': 1, '2': 1, '3': 3}, [1, 2, 3], 'sequential'),
+            (list(range(1, 12)), {str(index): 1 for index in range(1, 12)}, list(range(1, 12)), 'at most 10'),
+            ([1, 2, 3, 99], {'1': 1, '2': 1, '3': 1, '99': 2}, [1, 2, 3], 'authorized roster'),
+        ]
+        for selected_ids, assignments, allowed_ids, expected_error in invalid_cases:
+            _, error = _validate_live_batch_assignments(selected_ids, assignments, allowed_ids)
+            self.assertIn(expected_error, error)
+
     def test_live_session_next_batch_is_sequential_and_idempotently_guarded(self):
         from .views import _ensure_live_session_batches
 

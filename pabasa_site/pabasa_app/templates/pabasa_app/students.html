@@ -2097,6 +2097,10 @@ function renderStudentDirectory(sourceStudents) {
         const aralLevels = new Set(['Low Emerging Reader', 'High Emerging Reader', 'Developing Reader', 'Transitioning Reader']);
         const aralIndicatorHtml = aralLevels.has(levelText) ? '<span class="student-aral-indicator">ARAL Program</span>' : '';
         const levelBadgeHtml = `<div class="d-flex flex-column align-items-end gap-1"><span class="badge rounded-pill level-chip ${levelClass}">${escapeStudentDirectoryHtml(levelText)}</span>${aralIndicatorHtml}<span class="small text-secondary" style="max-width: 240px; text-align: right;">${escapeStudentDirectoryHtml(levelIndication)}</span></div>`;
+        const pendingAralAction = levelText === 'Pending';
+        const moveToAral = levelText === 'Readers at Grade Level';
+        const aralActionLabel = moveToAral ? 'Move to ARAL Program' : 'Exit ARAL Program';
+        const aralActionHtml = `<button type="button" class="student-aral-action" data-student-id="${student.id || ''}" data-student-name="${escapeStudentDirectoryHtml(name)}" data-aral-action="${moveToAral ? 'move' : 'exit'}" ${pendingAralAction || (!moveToAral && student.aral_status !== 'active') ? 'disabled' : ''}>${aralActionLabel}</button>`;
         return `
             <article class="student-card-row">
                 <div class="student-avatar" aria-hidden="true">${escapeStudentDirectoryHtml(getStudentInitials(name))}</div>
@@ -2112,7 +2116,7 @@ function renderStudentDirectory(sourceStudents) {
                     <div class="student-meta">
                         <div class="student-meta-box"><span>Accuracy</span><strong>${escapeStudentDirectoryHtml(accuracy)}</strong></div>
                         <div class="student-meta-box"><span>WPM</span><strong>${escapeStudentDirectoryHtml(wpm)}</strong></div>
-                        ${(() => { const pending = levelText === 'Pending'; const active = student.aral_status === 'active'; const move = levelText === 'Readers at Grade Level'; const label = move ? 'Move to ARAL Program' : 'Exit ARAL Program'; return `<button type="button" class="student-aral-action" data-student-id="${student.id || ''}" data-student-name="${escapeStudentDirectoryHtml(name)}" data-aral-action="${move ? 'move' : 'exit'}" ${pending || (!move && !active) ? 'disabled' : ''}>${label}</button>`; })()}
+                        ${aralActionHtml}
                     </div>
                 </div>
             </article>
