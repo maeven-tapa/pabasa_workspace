@@ -58,7 +58,7 @@ from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_
 from django.db import transaction
 import re
 import traceback
-from .models import User, School, Section, Enrollment, Assessment, AssessmentRequest, Material, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride
+from .models import User, School, Section, Enrollment, Assessment, AssessmentRequest, Material, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride, ClassCrlaFinalization
 from .system_clock import invalidate_override_cache, now as system_now, real_now, today as system_today
 from .section_configuration import ensure_salawag_grade_two_sections
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
@@ -105,7 +105,7 @@ from .scoring import (
     performance_interpretation,
 )
 from .management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
-from .utils.crla_export import export_crla_excel
+from .utils.crla_export import convert_crla_workbook_to_pdf, export_crla_excel
 from .utils.crla_results import (
     VALID_CRLA_CLASSIFICATIONS,
     latest_completed_official_crla_results,
@@ -8610,6 +8610,26 @@ def _is_official_crla_material(material):
     return bool(key and key in OFFICIAL_CRLA_CONTENT)
 
 
+def _section_crla_finalization(section, material):
+    """Return the class-level close record for this exact official material."""
+    if not section or not material:
+        return None
+    return ClassCrlaFinalization.objects.filter(section=section, material=material).first()
+
+
+def _student_crla_finalized_for_material(student, material):
+    """A finalized enrolled section closes this official CRLA for the student."""
+    if not student or not material or not _is_official_crla_material(material):
+        return False
+    return ClassCrlaFinalization.objects.filter(
+        material=material,
+        section__enrollments__student=student,
+        section__enrollments__status='active',
+        section__enrollments__is_active=True,
+        section__enrollments__school_calendar=F('section__school_calendar'),
+    ).exists()
+
+
 def _official_reading_assessment_type(material):
     key = str(getattr(material, 'system_assessment_key', '') or '').strip().lower()
     if key in OFFICIAL_CRLA_CONTENT:
@@ -13421,6 +13441,12 @@ def persist_student_end_assessment_state(request):
     state = _get_user_state(student)
     state['student_end_assessment_state'] = saved
     _, saved_material_id = _parse_prefixed_id(saved.get('material_id'))
+    saved_material = Material.objects.filter(pk=saved_material_id).first() if saved_material_id else None
+    if _is_official_crla_material(saved_material) and _student_crla_finalized_for_material(student, saved_material):
+        return JsonResponse({
+            'success': False,
+            'error': 'This CRLA assessment has been finalized for your class.',
+        }, status=403)
     if saved_material_id:
         result_states = state.get('crla_result_states')
         result_states = dict(result_states) if isinstance(result_states, dict) else {}
@@ -15107,15 +15133,21 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 material.save(update_fields=['teacher', 'updated_at'])
                 _log_completion_timing('assessment_teacher_save')
             _log_completion_timing('assessment_record_attempt_start')
-            if is_phrase_reading or is_clap_count_syllables or is_letter_sound_matching or is_letter_sound_correspondence or is_word_decoding:
+            needs_material_lock = _is_official_crla_material(material) or is_phrase_reading or is_clap_count_syllables or is_letter_sound_matching or is_letter_sound_correspondence or is_word_decoding
+            if needs_material_lock:
                 # Lock this material row while checking/creating so concurrent final submits
-                # cannot create more than one completed result for this student/material.
+                # and CRLA class finalization cannot cross a result submission.
                 with transaction.atomic():
                     locked_material = Material.objects.select_for_update().get(pk=material.pk)
+                    if _is_official_crla_material(locked_material) and _student_crla_finalized_for_material(student_user, locked_material):
+                        return JsonResponse({
+                            'success': False,
+                            'error': 'This CRLA assessment has been finalized for your class.',
+                        }, status=403)
                     completed_result_row = locked_material.assessment_results.filter(
                         student=student_user, attempt_status='completed',
                     ).order_by('-completed_at', '-created_at', '-id').first()
-                    if completed_result_row is None:
+                    if completed_result_row is None or not _is_official_crla_material(locked_material):
                         locked_material.record_assessment_result(student_user, **attempt_payload)
             else:
                 material.record_assessment_result(student_user, **attempt_payload)
@@ -15904,6 +15936,8 @@ def _student_can_complete_assessment(student_user, assessment=None, material=Non
     if linked_material and not _assessment_week_allows_material(student_user, linked_material):
         return False
     if official:
+        if _student_crla_finalized_for_material(student_user, linked_material):
+            return False
         if not _student_has_assessment_week(student_user):
             return False
         availability = _official_assessment_availability_for_student(student_user)
@@ -19132,21 +19166,148 @@ def _teacher_can_export_directory_crla(teacher_user, assessment):
     )
 
 
+def _ensure_crla_material_parent_assessment(material, teacher):
+    """Create the normal material parent row when a never-started class needs one."""
+    if material.assessment_id:
+        return material.assessment
+    # Material.record_assessment_result creates this same parent lazily for a
+    # student result. A zero-roster class has no result through which to do
+    # that, so create the equivalent parent once while the material is locked.
+    code = f"ASS{uuid.uuid4().hex[:8].upper()}"
+    while Assessment.objects.filter(code=code).exists():
+        code = f"ASS{uuid.uuid4().hex[:8].upper()}"
+    parent = Assessment.objects.create(
+        title=material.title or material.prompt_text or 'Assessment', code=code,
+        is_system_owned=bool(material.is_system_owned),
+        system_assessment_key=material.system_assessment_key or '',
+        system_assessment_period=material.system_assessment_period or '',
+        system_assessment_phase=material.system_assessment_phase or '',
+        official_term=material.official_term, assessment_type=material.item_type,
+        status=material.status, scheduled_at=material.scheduled_at if material.status == 'scheduled' else None,
+        teacher=teacher, section=material.section, is_active=True,
+    )
+    material.assessment = parent
+    material.save(update_fields=['assessment', 'updated_at'])
+    return parent
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def finalize_class_crla_assessment(request):
+    """Close one official CRLA material for one teacher-owned section."""
+    try:
+        payload = json.loads(request.body or '{}')
+        section_id = int(payload.get('section_id'))
+        material_id = int(payload.get('material_id'))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({'success': False, 'error': 'A valid class and CRLA assessment are required.'}, status=400)
+
+    teacher = User.objects.filter(id=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    if not teacher:
+        return JsonResponse({'success': False, 'error': 'Teacher authorization is required.'}, status=403)
+
+    try:
+        # Material is the common lock for submissions and finalization.  A
+        # submit that acquired it first is retained; one after finalization is
+        # rejected by the same authoritative state below.
+        with transaction.atomic():
+            material = Material.objects.select_for_update().filter(pk=material_id, is_active=True).first()
+            section = Section.objects.select_for_update().filter(
+                pk=section_id, teacher=teacher, is_active=True,
+            ).first()
+            if not section:
+                return JsonResponse({'success': False, 'error': 'You are not authorized for this class or section.'}, status=403)
+            if not material or not _is_official_crla_material(material):
+                return JsonResponse({'success': False, 'error': 'The selected assessment is not an active official CRLA assessment.'}, status=400)
+            parent_assessment = _ensure_crla_material_parent_assessment(material, teacher)
+
+            finalization, created = ClassCrlaFinalization.objects.get_or_create(
+                section=section, material=material,
+                defaults={'finalized_by': teacher, 'finalized_at': system_now()},
+            )
+            if not created:
+                return JsonResponse({
+                    'success': True, 'already_finalized': True,
+                    'message': 'CRLA assessment is already finalized for this class.',
+                    'assessment_id': parent_assessment.id,
+                })
+
+            enrollments = list(Enrollment.objects.select_for_update().filter(
+                section=section, school_calendar=section.school_calendar,
+                status='active', is_active=True, student__role='student', student__is_archived=False,
+            ).select_related('student'))
+            students = [enrollment.student for enrollment in enrollments]
+            completed_ids = set(official_crla_result_queryset().filter(
+                material=material, student_id__in=[student.id for student in students],
+            ).values_list('student_id', flat=True))
+            zero_classification = crla_reading_profile(0, None, None, None)
+            if not zero_classification:
+                raise ValueError('The authoritative CRLA zero-score classification is unavailable.')
+
+            missing_count = 0
+            for student in students:
+                if student.id in completed_ids:
+                    continue
+                # Reuse the normal persisted-result architecture; no separate
+                # finalization-only result or classification system is used.
+                material.record_assessment_result(student,
+                    status='completed', completed_at=system_now(), total_score=0,
+                    correct_items=0, items_completed=0, word_count=0,
+                    crla_classification=zero_classification, classification=zero_classification,
+                    crla_score_data={
+                        'task1_score': 0, 'task1_total_words': 10,
+                        'task2_type': 'Task 2L / Rhymes', 'task2_score': 0,
+                        'part1_total_score': 0, 'crla_classification': zero_classification,
+                    },
+                    remarks='Finalized without a submitted CRLA assessment.',
+                )
+                _sync_assessment_workflow_state(student, score_payload={
+                    'assessment_type': 'paragraph', 'total_score': 0, 'final_score': 0,
+                    'part1_total_score': 0, 'correct_items': 0,
+                    'crla_classification': zero_classification, 'classification': zero_classification,
+                }, material=material)
+                missing_count += 1
+
+            return JsonResponse({
+                'success': True, 'already_finalized': False,
+                'message': 'CRLA assessment finalized for the whole class.',
+                'assessment_id': parent_assessment.id,
+                'missing_students_processed': missing_count,
+                'finalized_at': finalization.finalized_at.isoformat(),
+            })
+    except Exception:
+        logger.exception('Failed to finalize CRLA material %s for section %s', material_id, section_id)
+        return JsonResponse({'success': False, 'error': 'CRLA finalization failed. No changes were saved.'}, status=500)
+
+
 @require_http_methods(["GET"])
 def export_crla_assessment(request, assessment_id):
-    """Download an assessment using the official Grade 2 Filipino CRLA template."""
+    """Download the official Grade 2 Filipino CRLA scoresheet as a PDF."""
     if not _check_auth(request):
         return redirect("auth")
 
     user = User.objects.filter(id=request.session.get("user_id")).first()
     if not user or user.role not in {"teacher", "admin"}:
-        return HttpResponseForbidden("Only teachers and administrators can export CRLA workbooks.")
+        return HttpResponseForbidden("Only teachers and administrators can export CRLA scoresheets.")
 
     assessment = Assessment.objects.filter(id=assessment_id).select_related("section").first()
     if not assessment:
         return HttpResponse("Assessment not found.", status=404)
     root_assessment = assessment.source_assessment or assessment
     is_directory_export = request.GET.get('source') == 'student-directory'
+    try:
+        section_id = int(request.GET.get('section_id'))
+        material_id = int(request.GET.get('material_id'))
+    except (TypeError, ValueError):
+        return HttpResponse('A finalized class and CRLA assessment are required before export.', status=400)
+    finalization = ClassCrlaFinalization.objects.select_related('section', 'material').filter(
+        section_id=section_id, material_id=material_id,
+    ).first()
+    if not finalization or finalization.material.assessment_id != root_assessment.id:
+        return HttpResponseForbidden('CRLA results can be exported only after this class assessment is finalized.')
+    if user.role != 'admin' and finalization.section.teacher_id != user.id:
+        return HttpResponseForbidden('You do not have access to this class CRLA export.')
     has_export_access = _teacher_can_access_assessment(user, root_assessment)
     if is_directory_export and not has_export_access:
         has_export_access = _teacher_can_export_directory_crla(user, root_assessment)
@@ -19154,19 +19315,20 @@ def export_crla_assessment(request, assessment_id):
         return HttpResponseForbidden("You do not have access to this assessment.")
 
     try:
-        workbook = export_crla_excel(root_assessment.id)
-    except (FileNotFoundError, ValueError) as exc:
-        logger.warning("Unable to export CRLA workbook for assessment %s: %s", assessment_id, exc)
-        return HttpResponse(str(exc), status=400)
+        workbook = export_crla_excel(root_assessment.id, section_id=finalization.section_id)
+        scoresheet = convert_crla_workbook_to_pdf(workbook)
+    except (FileNotFoundError, ValueError, RuntimeError) as exc:
+        logger.warning("Unable to export CRLA PDF scoresheet for assessment %s: %s", assessment_id, exc)
+        return HttpResponse(str(exc), status=503 if isinstance(exc, RuntimeError) else 400)
     except Exception:
-        logger.exception("CRLA export failed for assessment %s", assessment_id)
-        return HttpResponse("Unable to generate the CRLA workbook.", status=500)
+        logger.exception("CRLA PDF export failed for assessment %s", assessment_id)
+        return HttpResponse("Unable to generate the CRLA PDF scoresheet.", status=500)
 
     response = HttpResponse(
-        workbook.getvalue(),
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        scoresheet.getvalue(),
+        content_type="application/pdf",
     )
-    response["Content-Disposition"] = f'attachment; filename="{workbook.name}"'
+    response["Content-Disposition"] = f'attachment; filename="{scoresheet.name}"'
     response["Content-Length"] = str(len(response.content))
     return response
 
@@ -22229,6 +22391,11 @@ def _enforce_student_access_for_request(request, material=None, json_response=Fa
         and str(getattr(material, 'status', '') or '').strip().lower() == 'published'
         and official_phase == active_student_phase
     ):
+        if _student_crla_finalized_for_material(persisted_user, material):
+            return _student_access_block_response(
+                json_response=json_response,
+                message='This CRLA assessment has been finalized for your class.',
+            )
         return None
 
     if bool(getattr(material, 'student_access', False)):
@@ -23242,17 +23409,36 @@ def get_teacher_students_api(request):
         teacher = User.objects.get(id=user_id)
         term_value = str(request.GET.get('term') or '').strip()
         phase_value = str(request.GET.get('assessment') or '').strip().lower()
+        section_value = str(request.GET.get('section_id') or '').strip()
         crla_term = int(term_value) if term_value in {'1', '2', '3'} else None
         crla_phase = phase_value if phase_value in {'pretest', 'midtest', 'posttest'} else None
+        selected_section = None
+        if section_value:
+            selected_section = Section.objects.filter(pk=section_value, teacher=teacher, is_active=True).first()
+            if not selected_section:
+                return JsonResponse({'success': False, 'error': 'You are not authorized for this class or section.'}, status=403)
         results, level_counts, dashboard_metrics = _teacher_student_roster_payload(
-            teacher, crla_term=crla_term, crla_phase=crla_phase
+            teacher, section=selected_section, crla_term=crla_term, crla_phase=crla_phase
         )
+        crla_material = None
+        if crla_term and crla_phase:
+            crla_material = _official_reading_active_materials_queryset().filter(
+                official_term=crla_term, system_assessment_phase=crla_phase,
+            ).order_by('-updated_at', '-id').first()
+        finalization = _section_crla_finalization(selected_section, crla_material) if selected_section and crla_material else None
         return JsonResponse({
             'success': True,
             'students': results,
             'level_counts': level_counts,
             'dashboard_metrics': dashboard_metrics,
             'total_students': len(results),
+            'crla': {
+                'section_id': selected_section.id if selected_section else None,
+                'material_id': crla_material.id if crla_material else None,
+                'assessment_id': crla_material.assessment_id if crla_material else None,
+                'finalized': bool(finalization),
+                'finalized_at': finalization.finalized_at.isoformat() if finalization else None,
+            },
         })
 
         now = system_now()

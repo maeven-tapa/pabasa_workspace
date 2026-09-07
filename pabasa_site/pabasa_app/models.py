@@ -1600,6 +1600,19 @@ class Material(models.Model):
         return result._serialize_attempt()
 
 
+class ClassCrlaFinalization(models.Model):
+    """One teacher-close event for an official CRLA material in a section."""
+    section = models.ForeignKey("Section", on_delete=models.CASCADE, related_name="crla_finalizations")
+    material = models.ForeignKey("Material", on_delete=models.CASCADE, related_name="class_finalizations")
+    finalized_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="crla_finalizations")
+    finalized_at = models.DateTimeField(default=system_now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["section", "material"], name="unique_section_crla_finalization"),
+        ]
+
+
 # Assessment attempts are stored in the Assessment `attempts` JSONField.
 
 

@@ -449,9 +449,9 @@
     .assessment-week-folder .week-folder-icon { font-size: 2.8rem; line-height: 1; margin-bottom: .55rem; }
     .assessment-week-folder .week-folder-name { font-family: "Nunito", sans-serif; font-size: 1.05rem; font-weight: 900; }
     .assessment-week-folder .week-activity-count { color: var(--dash-muted); font-size: .82rem; font-weight: 800; margin-top: .25rem; }
-    .week-activities-modal { align-items: center; background: rgba(27,26,23,.48); display: flex; inset: 0 0 0 clamp(0px, 18vw, 280px); justify-content: center; padding: 1rem; position: fixed; z-index: 1000; }
+    .week-activities-modal { align-items: center; background: rgba(27,26,23,.48); box-sizing: border-box; display: flex; height: 100vh; inset: 0; justify-content: center; overflow-y: auto; padding: 1rem; position: fixed; width: 100vw; z-index: 9999; }
     .week-activities-modal[hidden] { display: none; }
-    .week-activities-dialog { background: #fffdf7; border-radius: 26px; box-shadow: 0 24px 60px rgba(27,26,23,.24); contain: layout paint; display: flex; flex: 0 0 auto; flex-direction: column; height: min(500px, calc(100dvh - 2rem)); max-height: calc(100dvh - 2rem); width: min(620px, calc(100vw - 2rem)); }
+    .week-activities-dialog { background: #fffdf7; border-radius: 26px; box-shadow: 0 24px 60px rgba(27,26,23,.24); contain: layout paint; display: flex; flex: 0 0 auto; flex-direction: column; height: min(500px, calc(100dvh - 2rem)); margin: 0 auto; max-height: calc(100dvh - 2rem); width: min(620px, calc(100vw - 2rem)); }
     .week-activities-header { align-items: center; border-bottom: 1px solid rgba(27,26,23,.1); display: flex; justify-content: space-between; padding: 1rem 1.25rem; }
     .week-activities-title { color: var(--dash-primary); font-family: "Nunito", sans-serif; font-size: 1.25rem; font-weight: 900; }
     .week-activities-close { align-items: center; background: #fff1c7; border: 2px solid rgba(31,111,139,.18); border-radius: 14px; color: var(--dash-primary); cursor: pointer; display: inline-flex; font-size: 2rem; font-weight: 900; height: 52px; justify-content: center; line-height: 1; min-width: 52px; padding: 0; }

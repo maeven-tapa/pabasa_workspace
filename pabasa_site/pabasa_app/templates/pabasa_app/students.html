@@ -755,8 +755,8 @@
     /* Keep directory filters together while anchoring export at the far edge. */
     .student-directory-header { flex-wrap:wrap; }
     .student-directory-header > div:first-child { flex:0 0 100%; }
-    .student-directory-controls { align-items:center; flex:1 1 100%; gap:12px!important; justify-content:space-between; margin-left:0; min-width:0; }
-    .student-directory-filter-group { display:flex; align-items:center; flex:1 1 auto; gap:12px; min-width:0; }
+    .student-directory-controls { align-items:center; flex:1 1 100%; gap:12px!important; justify-content:stretch; margin-left:0; min-width:0; width:100%; }
+    .student-directory-filter-group { align-items:center; display:flex; flex:1 1 100%; gap:12px; min-width:0; width:100%; }
     .student-directory-controls .student-search-wrap { flex:1 1 240px; max-width:none; }
     .student-directory-controls .student-filter-wrap { flex:0 1 220px; max-width:250px; }
     .student-directory-controls #assessmentPeriodFilterWrap { flex:0 0 265px; min-width:265px; max-width:265px; }
@@ -764,7 +764,18 @@
     .student-directory-controls .form-control#studentSearchInput,
     .student-directory-controls .student-export-btn { min-height:40px; }
     .student-directory-controls .student-export-btn { flex:0 0 auto; width:fit-content; margin-left:auto; white-space:nowrap; }
-    @media (max-width:767.98px) { .student-directory-controls { flex-wrap:wrap; } .student-directory-filter-group { flex:1 1 100%; flex-wrap:wrap; } .student-directory-controls .student-search-wrap { flex-basis:100%; max-width:none; } .student-directory-controls .student-filter-wrap { flex:1 1 190px; } .student-directory-controls #assessmentPeriodFilterWrap { flex:1 1 265px; max-width:none; } .student-directory-controls .student-export-btn { margin-left:0; } }
+    .crla-finalization-actions { align-items:center; display:flex; flex:1 1 100%; gap:.75rem; justify-content:space-between; margin-top:.75rem; width:100%; }
+    .crla-finalization-actions > span { align-items:center; display:inline-flex; line-height:1; margin-right:auto; min-height:40px; }
+    .crla-finalization-buttons { align-items:center; display:flex; flex-wrap:wrap; gap:.65rem; justify-content:flex-end; }
+    .crla-finalize-btn,
+    .crla-finalization-actions .student-export-btn { align-items:center; border-radius:12px; display:inline-flex; font-family:"Nunito", "Segoe UI", sans-serif; font-size:.9rem; font-weight:800; gap:.5rem; justify-content:center; line-height:1; min-height:40px; padding:.5rem 1rem; white-space:nowrap; }
+    .crla-finalize-btn { background:#f59e0b; border:1px solid #d97706; box-shadow:0 8px 18px rgba(217,119,6,.14); color:#fff; }
+    .crla-finalize-btn:hover:not(:disabled) { background:#d97706; color:#fff; }
+    .crla-finalize-btn:disabled { cursor:not-allowed; opacity:.55; }
+    .crla-finalization-actions .student-export-btn { background:rgba(239,248,252,.95); border:1px solid rgba(22,95,143,.24); border-radius:12px; box-shadow:0 8px 18px rgba(15,23,42,.05); color:var(--dash-primary-deep); margin-left:0; padding:.5rem 1rem; }
+    .crla-finalization-actions .student-export-btn:hover:not([aria-disabled="true"]) { background:rgba(226,242,248,.98); border-color:rgba(22,95,143,.38); color:var(--dash-primary-deep); transform:translateY(-1px); }
+    .crla-finalization-actions .student-export-btn i { color:var(--dash-primary); font-size:.95rem; line-height:1; }
+    @media (max-width:767.98px) { .student-directory-controls { flex-wrap:wrap; } .student-directory-filter-group { flex:1 1 100%; flex-wrap:wrap; } .student-directory-controls .student-search-wrap { flex-basis:100%; max-width:none; } .student-directory-controls .student-filter-wrap { flex:1 1 190px; } .student-directory-controls #assessmentPeriodFilterWrap { flex:1 1 265px; max-width:none; } .crla-finalization-actions { align-items:flex-start; flex-direction:column; } .crla-finalization-buttons { justify-content:flex-start; width:100%; } }
     .student-aral-action:disabled { cursor: not-allowed; opacity: .45; }
 
     :is(.student-directory-controls, .crla-directory-controls) .student-export-btn {
@@ -1493,9 +1504,17 @@ document.addEventListener('DOMContentLoaded', function () {
                         </div>
                     </div>
                     </div>
+                </div>
+                <div class="crla-finalization-actions">
+                    <span class="small fw-semibold text-secondary" id="crlaFinalizationStatus">CRLA Assessment: Open</span>
+                    <div class="crla-finalization-buttons">
+                    <button class="btn btn-sm crla-finalize-btn" type="button" id="finalizeCrlaBtn" disabled>
+                        <i class="bi bi-lock-fill" aria-hidden="true"></i><span>Finalize CRLA Assessment</span>
+                    </button>
                     <a class="btn btn-sm student-export-btn" id="exportStudentsBtn" href="#" aria-disabled="true" tabindex="-1">
-                        <i class="bi bi-filetype-xlsx" aria-hidden="true"></i><span>Export CRLA Result</span>
+                        <i class="bi bi-filetype-pdf" aria-hidden="true"></i><span>Export CRLA Result</span>
                     </a>
+                    </div>
                 </div>
             </div>
 
@@ -1512,6 +1531,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <div class="modal fade" id="teacherAralActionModal" tabindex="-1" aria-labelledby="teacherAralActionTitle" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h3 class="modal-title h6" id="teacherAralActionTitle">ARAL Program</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p id="teacherAralActionCopy"></p><div id="teacherAralLevelWrap"><label class="form-label" for="teacherAralLevel">Reading Level</label><select class="form-select" id="teacherAralLevel"><option value="">Choose reading level</option><option>Low Emerging Readers</option><option>High Emerging Readers</option><option>Developing Readers</option><option>Transitioning Readers</option></select></div><div class="text-danger small mt-2" id="teacherAralActionError" hidden></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="teacherAralActionConfirm">Confirm</button></div></div></div>
+    </div>
+    <div class="modal fade" id="finalizeCrlaModal" tabindex="-1" aria-labelledby="finalizeCrlaTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h3 class="modal-title h6" id="finalizeCrlaTitle">Finalize CRLA Assessment?</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p>This will close the CRLA assessment for the whole class/section.</p><p>Students who have not completed the assessment will receive a score of 0 and be processed using the existing ARAL eligibility rules.</p><p class="mb-0"><strong>Students will no longer be able to continue or submit this CRLA assessment for this class.</strong></p><div class="text-danger small mt-2" id="finalizeCrlaError" hidden></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-danger" id="confirmFinalizeCrlaBtn">Finalize Assessment</button></div></div></div>
     </div>
     <div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -1673,6 +1695,8 @@ let latestStudentDirectoryTotal = 0;
 let studentDirectoryRequestId = 0;
 let studentDirectoryPage = 1;
 const studentDirectoryPageSize = 10;
+let currentCrlaFinalization = null;
+const studentDirectorySectionId = {{ assessment_week_section.id|default:'null' }};
 
 function getStudentDirectoryDisplayName(student) {
     const directName = String(student?.name || student?.full_name || student?.display_name || '').trim();
@@ -1984,13 +2008,27 @@ function setStudentExportState(students) {
     window.filteredStudentDirectoryRows = Array.isArray(students) ? students.slice() : [];
     const exportBtn = document.getElementById('exportStudentsBtn');
     if (exportBtn) {
-        const assessmentId = window.filteredStudentDirectoryRows
-            .map(student => String(student?.assessment_id || '').trim())
-            .find(Boolean);
-        exportBtn.href = assessmentId ? `/assessment/${encodeURIComponent(assessmentId)}/export-crla/?source=student-directory` : '#';
-        exportBtn.setAttribute('aria-disabled', assessmentId ? 'false' : 'true');
-        exportBtn.tabIndex = assessmentId ? 0 : -1;
+        const state = currentCrlaFinalization || {};
+        const assessmentId = state.assessment_id;
+        const canExport = Boolean(state.finalized && assessmentId && state.material_id && state.section_id);
+        exportBtn.href = canExport ? `/assessment/${encodeURIComponent(assessmentId)}/export-crla/?source=student-directory&section_id=${encodeURIComponent(state.section_id)}&material_id=${encodeURIComponent(state.material_id)}` : '#';
+        exportBtn.setAttribute('aria-disabled', canExport ? 'false' : 'true');
+        exportBtn.tabIndex = canExport ? 0 : -1;
     }
+}
+
+function updateCrlaFinalizationUi(state) {
+    currentCrlaFinalization = state || null;
+    const button = document.getElementById('finalizeCrlaBtn');
+    const status = document.getElementById('crlaFinalizationStatus');
+    const finalized = Boolean(state?.finalized);
+    const ready = Boolean(state?.material_id && state?.section_id);
+    if (status) status.textContent = finalized ? 'CRLA Assessment: Finalized' : 'CRLA Assessment: Open';
+    if (button) {
+        button.disabled = finalized || !ready;
+        button.hidden = finalized;
+    }
+    setStudentExportState(latestStudentDirectoryStudents);
 }
 
 function getReadingLevelChipClass(level) {
@@ -2313,7 +2351,46 @@ function bindTeacherAralActions() {
     });
 }
 
+function csrfToken() {
+    const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
+}
+
+function bindCrlaFinalization() {
+    const button = document.getElementById('finalizeCrlaBtn');
+    const modal = document.getElementById('finalizeCrlaModal');
+    const confirm = document.getElementById('confirmFinalizeCrlaBtn');
+    const error = document.getElementById('finalizeCrlaError');
+    if (!button || !modal || !confirm) return;
+    button.addEventListener('click', () => {
+        if (!currentCrlaFinalization?.material_id || !currentCrlaFinalization?.section_id) return;
+        error.hidden = true;
+        bootstrap.Modal.getOrCreateInstance(modal).show();
+    });
+    confirm.addEventListener('click', async () => {
+        confirm.disabled = true;
+        error.hidden = true;
+        try {
+            const response = await fetch('{% url "finalize_class_crla_assessment" %}', {
+                method: 'POST', credentials: 'same-origin',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken()},
+                body: JSON.stringify({section_id: currentCrlaFinalization.section_id, material_id: currentCrlaFinalization.material_id}),
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.error || 'CRLA finalization failed.');
+            bootstrap.Modal.getOrCreateInstance(modal).hide();
+            await refreshStudentOverview();
+        } catch (err) {
+            error.textContent = err.message;
+            error.hidden = false;
+        } finally {
+            confirm.disabled = false;
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', bindTeacherAralActions);
+document.addEventListener('DOMContentLoaded', bindCrlaFinalization);
 
 // Fetch student data from the server API.
 async function refreshStudentOverview() {
@@ -2327,6 +2404,7 @@ async function refreshStudentOverview() {
         const selectedTerm = assessmentPeriod?.dataset.value || '1';
         const selectedAssessment = assessmentPeriod?.dataset.assessment || 'pretest';
         const params = new URLSearchParams({ term: selectedTerm, assessment: selectedAssessment, ts: Date.now() });
+        if (studentDirectorySectionId) params.set('section_id', studentDirectorySectionId);
         const response = await fetch(`/dashboard/teacher/students-api/?${params.toString()}`, {
             method: 'GET',
             credentials: 'same-origin',
@@ -2350,6 +2428,7 @@ async function refreshStudentOverview() {
                     apiLevelCounts = data.level_counts;
                 }
                 window.latestDashboardMetrics = data.dashboard_metrics || {};
+                updateCrlaFinalizationUi(data.crla || null);
                 if (Number.isFinite(Number(data?.total_students))) {
                     apiTotalStudents = Number(data.total_students);
                 }

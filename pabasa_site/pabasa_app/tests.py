@@ -10989,17 +10989,22 @@ class TeacherStudentsDirectoryTests(TestCase):
         normal_response = self.client.get(reverse('export_crla_assessment', args=[root.id]))
         self.assertEqual(normal_response.status_code, 403)
 
-        response = self.client.get(
-            reverse('export_crla_assessment', args=[root.id]),
-            {'source': 'student-directory'},
-        )
+        converted_pdf = BytesIO(b'%PDF-1.4\n')
+        converted_pdf.name = 'CRLA_Official_CRLA_Post.pdf'
+        with patch('pabasa_app.views.convert_crla_workbook_to_pdf', return_value=converted_pdf) as converter:
+            response = self.client.get(
+                reverse('export_crla_assessment', args=[root.id]),
+                {'source': 'student-directory'},
+            )
+        converter.assert_called_once()
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response['Content-Type'],
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/pdf',
         )
         self.assertIn('attachment; filename="CRLA_', response['Content-Disposition'])
-        self.assertTrue(response.content.startswith(b'PK'))
+        self.assertIn('.pdf"', response['Content-Disposition'])
+        self.assertTrue(response.content.startswith(b'%PDF'))
 
     def test_course_detail_refresh_script_reloads_students_after_assessment_change(self):
         response = self.client.get(reverse("courses"))

@@ -14,6 +14,7 @@ RUN apt-get update \
         tesseract-ocr \
         tesseract-ocr-eng \
         tesseract-ocr-fil \
+        libreoffice-calc \
     && rm -rf /var/lib/apt/lists/* \
     && tesseract --list-langs
 

@@ -62,7 +62,8 @@ frontend components, browser media features, and cloud speech processing.
 - **Google Cloud Speech-to-Text** transcribes reading activities for automated
   assessment, while Google Cloud text-to-speech services support read-aloud audio.
 - **Tesseract OCR**, **pytesseract**, and **Pillow** extract and prepare text from
-  uploaded images.
+  uploaded images. **LibreOffice Calc** renders complete CRLA workbook exports to
+  PDF, retaining the workbook's sheets, formulas, and print layout.
 - **pypdf** extracts text from PDF learning materials, and **ReportLab** generates PDF
   reports.
 
