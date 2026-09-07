@@ -7892,6 +7892,16 @@ def _expire_assessment_week_if_needed(section):
     return False
 
 
+def _section_has_live_assessment(section):
+    """Return whether this section currently has a teacher-published live CRLA."""
+    if not section:
+        return False
+    return LiveAssessmentSession.objects.filter(
+        section=section,
+        status__in=('countdown', 'started', 'paused'),
+    ).exists()
+
+
 def _student_completed_section_assessment(student, section):
     """Return whether the student has any historical completed assessment.
 
@@ -10481,9 +10491,11 @@ def student_assessment_access_status(request):
         _expire_assessment_week_if_needed(section)
         and _section_assessment_week_status(section) == 'during'
     )
+    assessment_live = assessment_week_enabled and _section_has_live_assessment(section)
     return JsonResponse({
         'success': True,
         'assessment_week_enabled': assessment_week_enabled,
+        'assessment_live': assessment_live,
         'request_approved': _student_has_approved_assessment_request(student, section),
     })
 
@@ -10567,6 +10579,11 @@ def assessment(request):
         # section-wide CRLA assessment-week branches below.
         assessment_week_section = None
     section_week_status = _section_assessment_week_status(selected_section) if selected_section else 'none'
+    assessment_week_live = bool(
+        selected_section
+        and selected_section.assessment_week_enabled
+        and _section_has_live_assessment(selected_section)
+    )
     section_assessment_completed = _student_completed_section_assessment(user, selected_section)
     approved_assessment_request = _student_has_approved_assessment_request(user, selected_section)
     has_reading_assessment_access = bool(
@@ -10611,14 +10628,16 @@ def assessment(request):
                 'workflow_message': 'Keep up the great work. You can continue practicing whenever you like.',
             })
             return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
-    if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status in {'before', 'during'} and not selected_section.assessment_week_enabled and not section_assessment_completed and not aral_week_mode:
+    if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status in {'before', 'during'} and (not selected_section.assessment_week_enabled or not assessment_week_live) and not section_assessment_completed and not aral_week_mode:
         context = _dashboard_context(request, 'student')
         context.update({
             'stage': 'assessment_week_locked',
             'assessment_week_section': selected_section,
-            'workflow_title': 'Waiting for Assessment Week',
+            'assessment_week_enabled': bool(selected_section.assessment_week_enabled),
+            'assessment_week_live': assessment_week_live,
+            'workflow_title': 'Assessment Week is ON' if selected_section.assessment_week_enabled else 'Waiting for Assessment Week',
             'workflow_subtitle': selected_section.class_name,
-            'workflow_message': 'Your teacher has not enabled Assessment Week yet. Please wait until it is enabled; your assessment will appear here once it becomes available.',
+            'workflow_message': ('Assessment Week is ON. Your teacher has enabled Assessment Week for your section. Please wait for the assessment to go live.') if selected_section.assessment_week_enabled else ('Your teacher has not enabled Assessment Week yet. Please wait until it is enabled; your assessment will appear here once it becomes available.'),
         })
         return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
 
