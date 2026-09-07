@@ -1690,11 +1690,11 @@
                         <span>Selected class</span>
                     </div>
                     <div class="teacher-reading-grid" role="list">
-                        <div class="teacher-reading-item level-low" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">Low Emerging</span><strong class="teacher-reading-count" id="dashLowEmergingCount">0</strong></div>
-                        <div class="teacher-reading-item level-high" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">High Emerging</span><strong class="teacher-reading-count" id="dashHighEmergingCount">0</strong></div>
-                        <div class="teacher-reading-item level-developing" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">Developing</span><strong class="teacher-reading-count" id="dashDevelopingCount">0</strong></div>
-                        <div class="teacher-reading-item level-transitioning" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">Transitioning</span><strong class="teacher-reading-count" id="dashTransitioningCount">0</strong></div>
-                        <div class="teacher-reading-item level-grade" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">At Grade Level</span><strong class="teacher-reading-count" id="dashGradeLevelCount">0</strong></div>
+                        <div class="teacher-reading-item level-low" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">Low Emerging Reader</span><strong class="teacher-reading-count" id="dashLowEmergingCount">0</strong></div>
+                        <div class="teacher-reading-item level-high" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">High Emerging Reader</span><strong class="teacher-reading-count" id="dashHighEmergingCount">0</strong></div>
+                        <div class="teacher-reading-item level-developing" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">Developing Reader</span><strong class="teacher-reading-count" id="dashDevelopingCount">0</strong></div>
+                        <div class="teacher-reading-item level-transitioning" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">Transitioning Reader</span><strong class="teacher-reading-count" id="dashTransitioningCount">0</strong></div>
+                        <div class="teacher-reading-item level-grade" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">Reading At Grade Level</span><strong class="teacher-reading-count" id="dashGradeLevelCount">0</strong></div>
                     </div>
                 </div>
             </section>
@@ -1882,6 +1882,18 @@
 <script>
 let teacherDashboardStudents = [];
 
+// Shared by the summary and the ARAL panel card renderer.  Keep the
+// canonical labels used by the CRLA dashboard payload intact.
+function normalizeLevelLabel(value) {
+    const text = String(value || '').trim().toLowerCase().replace(/[_-]+/g, ' ');
+    if (text.includes('low') && text.includes('emerging')) return 'Low Emerging Reader';
+    if (text.includes('high') && text.includes('emerging')) return 'High Emerging Reader';
+    if (text.includes('develop')) return 'Developing Reader';
+    if (text.includes('transition')) return 'Transitioning Reader';
+    if (text.includes('grade')) return 'Reading At Grade Level';
+    return null;
+}
+
 function renderTeacherAtGlance(providedStudents = null) {
     const dashboardConfig = document.getElementById('teacherDashboardConfig');
     const configData = dashboardConfig ? dashboardConfig.dataset : {};
@@ -1902,19 +1914,7 @@ function renderTeacherAtGlance(providedStudents = null) {
         })
         : teacherDashboardStudents.slice();
     const numericValue = value => Number.isFinite(Number(value)) ? Number(value) : 0;
-    const normalizeLevelLabel = value => {
-        if (window.PABASA_READING_LEVEL && typeof window.PABASA_READING_LEVEL.normalizeReadingLevelLabel === 'function') {
-            return window.PABASA_READING_LEVEL.normalizeReadingLevelLabel(value);
-        }
-        const text = String(value || '').trim().toLowerCase().replace(/[_-]+/g, ' ');
-        if (text.includes('low') && text.includes('emerging')) return 'Low Emerging Readers';
-        if (text.includes('high') && text.includes('emerging')) return 'High Emerging Readers';
-        if (text.includes('develop')) return 'Developing Readers';
-        if (text.includes('transition')) return 'Transitioning Readers';
-        if (text.includes('grade')) return 'Readers at Grade Level';
-        return null;
-    };
-    const isLowEmerging = student => normalizeLevelLabel(student.level) === 'Low Emerging Readers';
+    const isLowEmerging = student => normalizeLevelLabel(student.level) === 'Low Emerging Reader';
     const hasNoAssessment = student => student.has_completed_assessment !== true;
     const isInactive = student => {
         const lastActive = Date.parse(student.last_active_at || '');
@@ -1938,11 +1938,11 @@ function renderTeacherAtGlance(providedStudents = null) {
         ? students.reduce((sum, student) => sum + numericValue(student.improvement_30d), 0) / students.length
         : 0;
     const levelCounts = {
-        'Low Emerging Readers': 0,
-        'High Emerging Readers': 0,
-        'Developing Readers': 0,
-        'Transitioning Readers': 0,
-        'Readers at Grade Level': 0
+        'Low Emerging Reader': 0,
+        'High Emerging Reader': 0,
+        'Developing Reader': 0,
+        'Transitioning Reader': 0,
+        'Reading At Grade Level': 0
     };
     students.forEach(student => {
         const level = normalizeLevelLabel(student.level);
@@ -1954,14 +1954,15 @@ function renderTeacherAtGlance(providedStudents = null) {
     };
 
     setMetric('glanceTotalStudents', String(students.length));
-    setMetric('glanceNeedsAttention', String(studentsNeedingAttention.length));
+    // Needs Support is the official Low Emerging classification only.
+    setMetric('glanceNeedsAttention', String(levelCounts['Low Emerging Reader']));
     setMetric('glanceAssessed', String(assessedCount));
     setMetric('glanceProgress', `${averageProgress >= 0 ? '+' : ''}${averageProgress.toFixed(1)}%`);
-    setMetric('dashLowEmergingCount', String(levelCounts['Low Emerging Readers']));
-    setMetric('dashHighEmergingCount', String(levelCounts['High Emerging Readers']));
-    setMetric('dashDevelopingCount', String(levelCounts['Developing Readers']));
-    setMetric('dashTransitioningCount', String(levelCounts['Transitioning Readers']));
-    setMetric('dashGradeLevelCount', String(levelCounts['Readers at Grade Level']));
+    setMetric('dashLowEmergingCount', String(levelCounts['Low Emerging Reader']));
+    setMetric('dashHighEmergingCount', String(levelCounts['High Emerging Reader']));
+    setMetric('dashDevelopingCount', String(levelCounts['Developing Reader']));
+    setMetric('dashTransitioningCount', String(levelCounts['Transitioning Reader']));
+    setMetric('dashGradeLevelCount', String(levelCounts['Reading At Grade Level']));
 
     const list = document.getElementById('teacherAttentionList');
     if (!list) return;
@@ -2097,6 +2098,9 @@ async function loadPersistedStudents() {
             );
         });
     }
+    // Restore the panel's established selection contract.  The API marks a
+    // student active only when their latest finalized official CRLA Reading
+    // Profile is ARAL eligible.
     let studentsToShow = enrolledStudents.filter(
         s => s.aral_assessment_completed === true && s.aral_status === 'active'
     );
@@ -2144,11 +2148,11 @@ async function loadPersistedStudents() {
         const pageStudents = dedupedStudents.slice((studentPage - 1) * studentPageSize, studentPage * studentPageSize);
         pageStudents.forEach(studentData => {
         const levelClass = {
-            "Low Emerging Readers": "level-low",
-            "High Emerging Readers": "level-high",
-            "Developing Readers": "level-developing",
-            "Transitioning Readers": "level-transitioning",
-            "Readers at Grade Level": "level-grade",
+            "Low Emerging Reader": "level-low",
+            "High Emerging Reader": "level-high",
+            "Developing Reader": "level-developing",
+            "Transitioning Reader": "level-transitioning",
+            "Reading At Grade Level": "level-grade",
             "Pending": "level-pending"
         }[studentData.level] || "level-high";
 
@@ -2160,7 +2164,7 @@ async function loadPersistedStudents() {
         
         const studentCard = document.createElement("div");
         studentCard.className = "student-card";
-        const needsAttention = studentData.has_completed_assessment !== true || normalizeLevelLabel(studentData.level) === 'Low Emerging Readers';
+        const needsAttention = studentData.has_completed_assessment !== true || normalizeLevelLabel(studentData.level) === 'Low Emerging Reader';
         studentCard.innerHTML = `
             <span class="student-avatar">${initials}</span>
             <div class="student-inline-details"><strong>${studentData.name}</strong>${needsAttention ? '<span class="student-attention-indicator"><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>Needs attention</span>' : ''}<span class="student-separator">|</span><span class="student-email">${studentData.email || 'No email captured'}</span></div>

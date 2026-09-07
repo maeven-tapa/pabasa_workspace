@@ -22,7 +22,8 @@ from .crla_mapping import (
     STUDENT_END_ROW,
     STUDENT_START_ROW,
 )
-from ..scoring import crla_sentence_score
+from ..scoring import crla_reading_profile, crla_sentence_score
+from .crla_results import latest_completed_official_crla_results
 
 
 TEMPLATE_FILENAME = "CRLA3_Grade2TagalogScoresheet_v3.xlsx"
@@ -86,21 +87,8 @@ def _attempt_sort_key(attempt):
 
 
 def _latest_attempts(assessment):
-    attempts = (
-        Assessment.objects.filter(
-            source_assessment=assessment,
-            student__isnull=False,
-            attempt_status="completed",
-        )
-        .select_related("student", "teacher", "section", "section__teacher", "material")
-        .order_by("student_id", "attempt_number", "created_at", "id")
-    )
-    latest = {}
-    for attempt in attempts:
-        current = latest.get(attempt.student_id)
-        if current is None or _attempt_sort_key(attempt) >= _attempt_sort_key(current):
-            latest[attempt.student_id] = attempt
-    return latest
+    # Share the dashboard's authoritative final-result selection exactly.
+    return latest_completed_official_crla_results(source_assessment=assessment)
 
 
 def _assigned_teacher(assessment, latest_attempts):
@@ -158,27 +146,13 @@ def _crla_score_data(attempt):
     return score_data if isinstance(score_data, dict) else {}
 
 
-def _reading_profile(part_1_total, percent, correct_answers, persisted=""):
-    if part_1_total is not None and part_1_total <= 10:
-        return "Low Emerging Reader"
-    if percent is not None and correct_answers is not None:
-        reading_band = 0 if percent <= 25 else 1 if percent <= 50 else 2 if percent <= 75 else 3
-        answer_band = 0 if correct_answers <= 0 else 1 if correct_answers <= 2 else 2 if correct_answers <= 4 else 3
-        # Final classification follows the comprehension-priority rule when reading and comprehension differ.
-        return (
-            "High Emerging Reader",
-            "Developing Reader",
-            "Transitioning Reader",
-            "Reading At Grade Level",
-        )[answer_band]
-    normalized = str(persisted or "").strip().lower()
-    return {
-        "low emerging readers": "Low Emerging Reader",
-        "high emerging readers": "High Emerging Reader",
-        "developing readers": "Developing Reader",
-        "transitioning readers": "Transitioning Reader",
-        "readers at grade level": "Reading At Grade Level",
-    }.get(normalized, str(persisted or "").strip())
+def _reading_profile(part_1_total, story_number, percent, correct_answers):
+    """Return Column U using the shared official CRLA formula.
+
+    The workbook's Reading Profile is the final classification.  It is never
+    replaced by a stale persisted label or by a separate export-only rule.
+    """
+    return crla_reading_profile(part_1_total, story_number, percent, correct_answers)
 
 
 def _part_1_reading_level(part_1_total):
@@ -331,7 +305,10 @@ def _student_values(student, attempt, state, assessment):
         0,
         6,
     )
-    profile = _reading_profile(part_1_total, percent, correct_answers, state.get("classification"))
+    # Column U is the official final Reading Profile.  Use the same canonical
+    # formula as completion persistence; never substitute a legacy stored
+    # label for the scoring result.
+    profile = _reading_profile(part_1_total, story_number, percent, correct_answers)
 
     completed_at = None
     if attempt:

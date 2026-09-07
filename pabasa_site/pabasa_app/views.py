@@ -94,6 +94,7 @@ from .scoring import (
     calculate_fluency_score,
     clamp_score,
     crla_classification,
+    crla_reading_profile,
     crla_task1_next_task,
     crla_sentence_score,
     derive_classification_equivalents,
@@ -104,6 +105,11 @@ from .scoring import (
 )
 from .management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
 from .utils.crla_export import export_crla_excel
+from .utils.crla_results import (
+    VALID_CRLA_CLASSIFICATIONS,
+    latest_completed_official_crla_results,
+    official_crla_result_queryset,
+)
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 
@@ -2080,15 +2086,30 @@ def _crla_attempt_phase_and_term(attempt, completed_on=None):
     return is_official, phase, term
 
 
+CRLA_DASHBOARD_CLASSIFICATIONS = VALID_CRLA_CLASSIFICATIONS
+
+
+def _latest_completed_official_crla_results(student_ids, crla_term=None, crla_phase=None):
+    """Latest finalized official CRLA row per student, used by every dashboard."""
+    if not student_ids:
+        return {}
+    candidates = latest_completed_official_crla_results(student_ids=student_ids)
+    latest = {}
+    for student_id, result in candidates.items():
+        if crla_term or crla_phase:
+            is_official, phase, term = _crla_attempt_phase_and_term(
+                result, completed_on=timezone.localtime(result.completed_at).date()
+            )
+            if not is_official or (crla_phase and phase != crla_phase) or (crla_term and term != crla_term):
+                continue
+        latest.setdefault(str(student_id), result)
+    return latest
+
+
 def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, crla_phase=None):
     sections = [section] if section else list(_teacher_current_sections(teacher_user))
-    level_counts = {
-        'Low Emerging Readers': 0,
-        'High Emerging Readers': 0,
-        'Developing Readers': 0,
-        'Transitioning Readers': 0,
-        'Readers at Grade Level': 0,
-    }
+    level_counts = {label: 0 for label in CRLA_DASHBOARD_CLASSIFICATIONS}
+    level_counts['Pending'] = 0
     student_map = {}
 
     for current_section in sections:
@@ -2167,6 +2188,9 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
 
     user_ids = [sdata['id'] for sdata in student_map.values()]
     users = User.objects.filter(id__in=user_ids).in_bulk()
+    official_crla_results = _latest_completed_official_crla_results(
+        user_ids, crla_term=crla_term, crla_phase=crla_phase,
+    )
     now = system_now()
     thirty_days_ago = now - timedelta(days=30)
     seven_days_ago = now - timedelta(days=7)
@@ -2373,24 +2397,20 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
                     break
 
         latest = latest_scores.get(sid_key, {})
-        has_completed_assessment = bool(attempts)
-        persisted_crla_classification = (
-            latest.get('crla_classification') or latest.get('classification')
-        )
-        latest_reading_level_payload = _build_latest_reading_level_payload({
-            'final_score': latest.get('total_score'),
-            'total_score': latest.get('total_score'),
-            'score': latest.get('total_score'),
-            'reading_level': persisted_crla_classification or latest.get('adapted_reading_level'),
-            'adapted_reading_level': persisted_crla_classification or latest.get('adapted_reading_level'),
-            'crla_classification': persisted_crla_classification,
-            'classification': persisted_crla_classification,
-            'adapted_reading_level_disclaimer': latest.get('adapted_reading_level_disclaimer'),
-        }, fallback='Pending' if not has_completed_assessment else None)
-        reading_level = latest_reading_level_payload.get('reading_level') or 'Pending'
-        disclaimer = latest_reading_level_payload.get('adapted_reading_level_disclaimer') or ADAPTED_READING_LEVEL_DISCLAIMER
+        official_result = official_crla_results.get(sid_key)
+        # Direct persisted result read: no profile, adapted-level, or score
+        # fallback is permitted for dashboard classifications.
+        reading_level = official_result.crla_classification if official_result else 'Pending'
+        has_completed_assessment = official_result is not None
+        disclaimer = ADAPTED_READING_LEVEL_DISCLAIMER
 
-        history = sorted(attempt_history.get(sid_key, []), key=lambda item: item['completed_at'])
+        # Improvement is a separate CRLA-result trend.  It never mixes
+        # generic activities with official assessment scores.
+        crla_history = [
+            {'completed_at': row.completed_at, 'score': _as_float(row.total_score, default=None)}
+            for row in official_crla_result_queryset().filter(student_id=user.id)
+        ]
+        history = sorted(crla_history, key=lambda item: item['completed_at'])
         recent_history = [
             item for item in history
             if item.get('completed_at') and item['completed_at'] >= thirty_days_ago and item.get('score') is not None
@@ -2402,27 +2422,31 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
         else:
             improvement = 0
 
-        last_active = history[-1]['completed_at'] if history else None
+        # Active is intentionally activity-based and not synonymous with CRLA.
+        last_active = max((item['completed_at'] for item in attempt_history.get(sid_key, [])), default=None)
         latest_score = latest.get('total_score')
         if latest_score is None:
             latest_score = latest.get('accuracy')
         if latest_score is None:
             latest_score = latest.get('wpm')
 
-        aral_state = _reader_assessment_state(user)
         sdata.update({
             'name': f"{user.first_name} {user.last_name}".strip() or sdata.get('name', ''),
             'email': user.email or sdata.get('email', ''),
             'custom_id': user.custom_id or sdata.get('custom_id', ''),
-            'aral_eligible': bool(aral_state.get('aral_eligible')),
-            'aral_status': aral_state.get('aral_status', ''),
-            'aral_assessment_completed': bool(aral_state.get('pre_test_completed')),
+            'crla_classification': reading_level if official_result else '',
+            'aral_eligible': bool(official_result and _aral_eligible_classification(reading_level)),
+            # Preserve the established dashboard ARAL contract.  Its active
+            # state is now derived exclusively from the finalized official
+            # CRLA Reading Profile above, never from workflow/profile flags.
+            'aral_status': 'active' if official_result and _aral_eligible_classification(reading_level) else 'ineligible',
+            'aral_assessment_completed': has_completed_assessment,
             'lrn': user.lrn or '',
             'grade_level': getattr(user, 'grade_level', '') or profile.get('grade_level') or profile.get('grade') or '',
             'level': reading_level,
             'reading_level': reading_level,
             'adapted_reading_level': reading_level,
-            'adapted_level_score': adapted_payload.get('adapted_level_score') if has_completed_assessment else None,
+            'adapted_level_score': latest.get('adapted_level_score') if has_completed_assessment else None,
             'adapted_reading_level_disclaimer': disclaimer,
             'reading_level_disclaimer': disclaimer,
             'accuracy': (
@@ -2435,19 +2459,18 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
             'pronunciation_score': latest.get('pronunciation_score', profile.get('pronunciation_score')),
             'time_score': latest.get('time_score', profile.get('time_score')),
             'duration_seconds': latest.get('duration_seconds'),
-            'total_score': latest.get('total_score'),
-            'completed_at': latest.get('completed_at'),
-            'assessment_title': latest.get('assessment_title'),
-            'assessment_type': latest.get('assessment_type'),
-            'assessment_id': latest.get('assessment_id'),
+            'total_score': official_result.total_score if official_result else None,
+            'completed_at': official_result.completed_at.isoformat() if official_result else None,
+            'assessment_title': (official_result.source_assessment.title if official_result and official_result.source_assessment else official_result.title) if official_result else None,
+            'assessment_type': 'crla' if official_result else None,
+            'assessment_id': official_result.source_assessment_id if official_result else None,
             'has_completed_assessment': has_completed_assessment,
             'latest_score': latest_score,
             'last_active_at': last_active.isoformat() if last_active else None,
             'improvement_30d': round(improvement, 1),
         })
 
-        if reading_level in level_counts:
-            level_counts[reading_level] += 1
+        level_counts[reading_level if official_result else 'Pending'] += 1
         results.append(sdata)
 
     active_this_week = len({
@@ -2467,8 +2490,8 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
 
     dashboard_metrics = {
         'total_students': len(results),
-        'needs_support_count': level_counts['Low Emerging Readers'] + level_counts['High Emerging Readers'],
-        'grade_level_ready_count': level_counts['Readers at Grade Level'],
+        'needs_support_count': level_counts['Low Emerging Reader'],
+        'grade_level_ready_count': level_counts['Reading At Grade Level'],
         'avg_improvement_30d': round(sum(improvement_values) / len(improvement_values), 1) if improvement_values else 0,
         'active_this_week_count': active_this_week,
         'top_performer_name': top_student['name'] if top_student else '—',
@@ -13177,7 +13200,17 @@ def persist_student_end_assessment_state(request):
         state['crla_result_states'] = result_states
     next_url = ''
     terminal_stage = stage in {'early_completed_words', 'early_completed_sentences', 'completed'}
-    final_classification = str(saved.get('classification') or '').strip()
+    # Column U (Reading Profile) is the official final CRLA classification.
+    # Never trust a browser-provided label when the server has the score inputs
+    # required by that workbook formula.
+    final_classification = crla_reading_profile(
+        saved.get('part1_total_score'),
+        saved.get('story_number'),
+        saved.get('story_read_percent') if saved.get('story_read_percent') is not None else saved.get('passage_accuracy_percent'),
+        saved.get('correct_answers') if saved.get('correct_answers') is not None else saved.get('comprehension_correct'),
+    )
+    if final_classification:
+        saved['classification'] = final_classification
     _, material_id = _parse_prefixed_id(saved.get('material_id'))
     material = Material.objects.filter(pk=material_id, is_official_reading=True).first() if material_id else None
     has_part2_scores = (

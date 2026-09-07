@@ -1258,7 +1258,7 @@ document.addEventListener('DOMContentLoaded', function () {
         <article class="students-chart-panel">
             <div>
                 <h3 class="students-section-title">Reading Level Distribution</h3>
-                <p class="students-section-subtitle">Proficiency levels across cohort</p>
+                <p class="students-section-subtitle">Proficiency levels across assessed students.</p>
             </div>
             <div class="chart-container">
                 <canvas id="readingLevelChart"></canvas>
@@ -1365,37 +1365,37 @@ document.addEventListener('DOMContentLoaded', function () {
                                 </span>
                                 <i class="bi bi-check2 student-filter-check" aria-hidden="true"></i>
                             </button>
-                            <button type="button" class="student-filter-option" role="option" aria-selected="false" data-level="Low Emerging Readers">
+                            <button type="button" class="student-filter-option" role="option" aria-selected="false" data-level="Low Emerging Reader">
                                 <span class="student-filter-option-text">
-                                    <span class="student-filter-option-title">Low Emerging Readers</span>
+                                    <span class="student-filter-option-title">Low Emerging Reader</span>
                                     <span class="student-filter-option-subtitle">Needs immediate support</span>
                                 </span>
                                 <i class="bi bi-check2 student-filter-check" aria-hidden="true"></i>
                             </button>
-                            <button type="button" class="student-filter-option" role="option" aria-selected="false" data-level="High Emerging Readers">
+                            <button type="button" class="student-filter-option" role="option" aria-selected="false" data-level="High Emerging Reader">
                                 <span class="student-filter-option-text">
-                                    <span class="student-filter-option-title">High Emerging Readers</span>
+                                    <span class="student-filter-option-title">High Emerging Reader</span>
                                     <span class="student-filter-option-subtitle">Ready for guided work</span>
                                 </span>
                                 <i class="bi bi-check2 student-filter-check" aria-hidden="true"></i>
                             </button>
-                            <button type="button" class="student-filter-option" role="option" aria-selected="false" data-level="Developing Readers">
+                            <button type="button" class="student-filter-option" role="option" aria-selected="false" data-level="Developing Reader">
                                 <span class="student-filter-option-text">
-                                    <span class="student-filter-option-title">Developing Readers</span>
+                                    <span class="student-filter-option-title">Developing Reader</span>
                                     <span class="student-filter-option-subtitle">Building accuracy and pacing</span>
                                 </span>
                                 <i class="bi bi-check2 student-filter-check" aria-hidden="true"></i>
                             </button>
-                            <button type="button" class="student-filter-option" role="option" aria-selected="false" data-level="Transitioning Readers">
+                            <button type="button" class="student-filter-option" role="option" aria-selected="false" data-level="Transitioning Reader">
                                 <span class="student-filter-option-text">
-                                    <span class="student-filter-option-title">Transitioning Readers</span>
+                                    <span class="student-filter-option-title">Transitioning Reader</span>
                                     <span class="student-filter-option-subtitle">Moving toward grade level</span>
                                 </span>
                                 <i class="bi bi-check2 student-filter-check" aria-hidden="true"></i>
                             </button>
-                            <button type="button" class="student-filter-option" role="option" aria-selected="false" data-level="Readers at Grade Level">
+                            <button type="button" class="student-filter-option" role="option" aria-selected="false" data-level="Reading At Grade Level">
                                 <span class="student-filter-option-text">
-                                    <span class="student-filter-option-title">Readers at Grade Level</span>
+                                    <span class="student-filter-option-title">Reading At Grade Level</span>
                                     <span class="student-filter-option-subtitle">Ready for enrichment</span>
                                 </span>
                                 <i class="bi bi-check2 student-filter-check" aria-hidden="true"></i>
@@ -1544,37 +1544,23 @@ document.addEventListener('DOMContentLoaded', function () {
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 function normalizeStudentLevel(level) {
-    const helper = window.PABASA_READING_LEVEL;
-    if (helper && helper.normalizeReadingLevelLabel) {
-        return helper.normalizeReadingLevelLabel(level);
-    }
     const text = String(level || '').trim();
     if (!text) return 'Pending';
     const normalized = text.toLowerCase();
     if (normalized.includes('pending')) return 'Pending';
-    if (normalized.includes('low') && normalized.includes('emerging')) return 'Low Emerging Readers';
-    if (normalized.includes('high') && normalized.includes('emerging')) return 'High Emerging Readers';
-    if (normalized.includes('develop')) return 'Developing Readers';
-    if (normalized.includes('transition')) return 'Transitioning Readers';
-    if (normalized.includes('grade') || normalized.includes('ready')) return 'Readers at Grade Level';
+    if (normalized.includes('low') && normalized.includes('emerging')) return 'Low Emerging Reader';
+    if (normalized.includes('high') && normalized.includes('emerging')) return 'High Emerging Reader';
+    if (normalized.includes('develop')) return 'Developing Reader';
+    if (normalized.includes('transition')) return 'Transitioning Reader';
+    if (normalized.includes('grade') || normalized.includes('ready')) return 'Reading At Grade Level';
     return 'Pending';
 }
 
 function resolveStudentReadingLevel(student) {
     if (!student || typeof student !== 'object') return 'Pending';
 
-    const explicitLevel = normalizeStudentLevel(
-        student.level || student.reading_level || student.adapted_reading_level || student.classification || student.crla_classification || ''
-    );
+    const explicitLevel = normalizeStudentLevel(student.crla_classification || student.reading_level || student.level || '');
     if (explicitLevel !== 'Pending') return explicitLevel;
-
-    const scoreValue = student.final_score ?? student.total_score ?? student.latest_score;
-    if (scoreValue !== null && scoreValue !== undefined && scoreValue !== '') {
-        const helper = window.PABASA_READING_LEVEL;
-        if (helper && helper.getClassificationFromScore) {
-            return normalizeStudentLevel(helper.getClassificationFromScore(scoreValue));
-        }
-    }
 
     return 'Pending';
 }
@@ -1678,11 +1664,12 @@ function updateStudentStatistics(sourceStudents, providedLevelCounts = null, pro
 
     // Initialize counts by reading level
     const levelCounts = {
-        "Low Emerging Readers": 0,
-        "High Emerging Readers": 0,
-        "Developing Readers": 0,
-        "Transitioning Readers": 0,
-        "Readers at Grade Level": 0
+        "Low Emerging Reader": 0,
+        "High Emerging Reader": 0,
+        "Developing Reader": 0,
+        "Transitioning Reader": 0,
+        "Reading At Grade Level": 0,
+        "Pending": 0
     };
 
     const hasServerCounts = providedLevelCounts && Object.keys(providedLevelCounts).length > 0;
@@ -1713,8 +1700,8 @@ function updateStudentStatistics(sourceStudents, providedLevelCounts = null, pro
     students = allStudents;
     
     // Calculate statistics
-    const needsSupportCount = levelCounts["Low Emerging Readers"] + levelCounts["High Emerging Readers"];
-    const gradeLevelReadyCount = levelCounts["Readers at Grade Level"];
+    const needsSupportCount = levelCounts["Low Emerging Reader"];
+    const gradeLevelReadyCount = levelCounts["Reading At Grade Level"];
     const needsSupportPercent = totalStudents > 0 ? Math.round((needsSupportCount / totalStudents) * 100) : 0;
     const gradeLevelReadyPercent = totalStudents > 0 ? Math.round((gradeLevelReadyCount / totalStudents) * 100) : 0;
     
@@ -1752,31 +1739,26 @@ function updateStudentStatistics(sourceStudents, providedLevelCounts = null, pro
     });
 
     const avgWpmVal = totalStudents > 0 ? (totalWPM / totalStudents) : 0;
-    const computedImprovementVal = avgWpmVal > 0 ? Math.round((avgWpmVal / 60) * 12) : 0; // Weighted improvement logic
-    const avgImprovementMetric = computedImprovementVal;
+    // Supplied by the API from completed official CRLA score series only.
+    const avgImprovementMetric = Number(window.latestDashboardMetrics?.avg_improvement_30d || 0);
 
     document.getElementById("avgImprovement").textContent = totalStudents > 0 ? `+${avgImprovementMetric}%` : "—";
-    document.getElementById("activeThisWeek").textContent = totalStudents > 0 ? activeThisWeekCount : "0";
+    document.getElementById("activeThisWeek").textContent = String(window.latestDashboardMetrics?.active_this_week_count ?? activeThisWeekCount);
     document.getElementById("topPerformer").textContent = highestScore > 0 ? topStudentName : "No data yet";
     
     // Update reading level distribution
-    document.getElementById("distLowCount").textContent = levelCounts["Low Emerging Readers"] + " (" + 
-        (totalStudents > 0 ? Math.round((levelCounts["Low Emerging Readers"] / totalStudents) * 100) : 0) + "%)";
-    document.getElementById("distHighCount").textContent = levelCounts["High Emerging Readers"] + " (" + 
-        (totalStudents > 0 ? Math.round((levelCounts["High Emerging Readers"] / totalStudents) * 100) : 0) + "%)";
-    document.getElementById("distDevCount").textContent = levelCounts["Developing Readers"] + " (" + 
-        (totalStudents > 0 ? Math.round((levelCounts["Developing Readers"] / totalStudents) * 100) : 0) + "%)";
-    document.getElementById("distTransCount").textContent = levelCounts["Transitioning Readers"] + " (" + 
-        (totalStudents > 0 ? Math.round((levelCounts["Transitioning Readers"] / totalStudents) * 100) : 0) + "%)";
-    document.getElementById("distGradeCount").textContent = levelCounts["Readers at Grade Level"] + " (" + 
-        (totalStudents > 0 ? Math.round((levelCounts["Readers at Grade Level"] / totalStudents) * 100) : 0) + "%)";
+    document.getElementById("distLowCount").textContent = levelCounts["Low Emerging Reader"] + " (" + (totalStudents > 0 ? Math.round((levelCounts["Low Emerging Reader"] / totalStudents) * 100) : 0) + "%)";
+    document.getElementById("distHighCount").textContent = levelCounts["High Emerging Reader"] + " (" + (totalStudents > 0 ? Math.round((levelCounts["High Emerging Reader"] / totalStudents) * 100) : 0) + "%)";
+    document.getElementById("distDevCount").textContent = levelCounts["Developing Reader"] + " (" + (totalStudents > 0 ? Math.round((levelCounts["Developing Reader"] / totalStudents) * 100) : 0) + "%)";
+    document.getElementById("distTransCount").textContent = levelCounts["Transitioning Reader"] + " (" + (totalStudents > 0 ? Math.round((levelCounts["Transitioning Reader"] / totalStudents) * 100) : 0) + "%)";
+    document.getElementById("distGradeCount").textContent = levelCounts["Reading At Grade Level"] + " (" + (totalStudents > 0 ? Math.round((levelCounts["Reading At Grade Level"] / totalStudents) * 100) : 0) + "%)";
     
     // Update distribution bars
-    const lowPercent = totalStudents > 0 ? (levelCounts["Low Emerging Readers"] / totalStudents) * 100 : 0;
-    const highPercent = totalStudents > 0 ? (levelCounts["High Emerging Readers"] / totalStudents) * 100 : 0;
-    const devPercent = totalStudents > 0 ? (levelCounts["Developing Readers"] / totalStudents) * 100 : 0;
-    const transPercent = totalStudents > 0 ? (levelCounts["Transitioning Readers"] / totalStudents) * 100 : 0;
-    const gradePercent = totalStudents > 0 ? (levelCounts["Readers at Grade Level"] / totalStudents) * 100 : 0;
+    const lowPercent = totalStudents > 0 ? (levelCounts["Low Emerging Reader"] / totalStudents) * 100 : 0;
+    const highPercent = totalStudents > 0 ? (levelCounts["High Emerging Reader"] / totalStudents) * 100 : 0;
+    const devPercent = totalStudents > 0 ? (levelCounts["Developing Reader"] / totalStudents) * 100 : 0;
+    const transPercent = totalStudents > 0 ? (levelCounts["Transitioning Reader"] / totalStudents) * 100 : 0;
+    const gradePercent = totalStudents > 0 ? (levelCounts["Reading At Grade Level"] / totalStudents) * 100 : 0;
     
     document.getElementById("distLowBar").style.width = lowPercent + "%";
     document.getElementById("distHighBar").style.width = highPercent + "%";
@@ -1796,8 +1778,15 @@ function updateReadingLevelChart(levelCounts) {
     const chartCanvas = document.getElementById("readingLevelChart");
     const emptyState = document.getElementById("readingLevelChartEmptyState");
     if (!chartCanvas || !window.Chart) return;
-    
-    const total = Object.values(levelCounts).reduce((a, b) => a + b, 0);
+
+    // This chart represents only finalized CRLA Reading Profiles.  Pending
+    // students remain in the roster but deliberately have no chart category.
+    const chartLabels = [
+        "Reading At Grade Level", "Transitioning Reader", "Developing Reader",
+        "High Emerging Reader", "Low Emerging Reader"
+    ];
+    const chartData = chartLabels.map(label => Number(levelCounts[label]) || 0);
+    const total = chartData.reduce((sum, count) => sum + count, 0);
     const chartCtx = chartCanvas.getContext("2d");
     const isDark = document.body.classList.contains('dark-theme');
     
@@ -1822,21 +1811,9 @@ function updateReadingLevelChart(levelCounts) {
     chartCanvas.chart = new Chart(chartCtx, {
         type: "doughnut",
         data: {
-            labels: [
-                "Readers at Grade Level",
-                "Transitioning Readers",
-                "Developing Readers",
-                "High Emerging Readers",
-                "Low Emerging Readers"
-            ],
+            labels: chartLabels,
             datasets: [{
-                data: [
-                    total > 0 ? Math.round((levelCounts["Readers at Grade Level"] / total) * 100) : 0,
-                    total > 0 ? Math.round((levelCounts["Transitioning Readers"] / total) * 100) : 0,
-                    total > 0 ? Math.round((levelCounts["Developing Readers"] / total) * 100) : 0,
-                    total > 0 ? Math.round((levelCounts["High Emerging Readers"] / total) * 100) : 0,
-                    total > 0 ? Math.round((levelCounts["Low Emerging Readers"] / total) * 100) : 0
-                ],
+                data: chartData,
                 backgroundColor: [
                     "#16a34a",  // Grade Level - Green
                     "#0284c7",  // Transitioning - Blue
@@ -1870,7 +1847,7 @@ function updateReadingLevelChart(levelCounts) {
                     bodyFont: { size: 12 },
                     callbacks: {
                         label: function(context) {
-                            return context.label + ": " + context.parsed + "%";
+                            return context.label + ": " + context.parsed;
                         }
                     }
                 }
@@ -1960,11 +1937,11 @@ function setStudentExportState(students) {
 function getReadingLevelChipClass(level) {
     const normalized = normalizeStudentLevel(level);
     const classMap = {
-        'Low Emerging Readers': 'level-low',
-        'High Emerging Readers': 'level-high',
-        'Developing Readers': 'level-developing',
-        'Transitioning Readers': 'level-transitioning',
-        'Readers at Grade Level': 'level-grade',
+        'Low Emerging Reader': 'level-low',
+        'High Emerging Reader': 'level-high',
+        'Developing Reader': 'level-developing',
+        'Transitioning Reader': 'level-transitioning',
+        'Reading At Grade Level': 'level-grade',
         'Pending': 'level-pending',
     };
     return classMap[normalized] || 'level-pending';
@@ -2090,7 +2067,7 @@ function renderStudentDirectory(sourceStudents) {
         };
         const levelIndication = levelIndications[levelText] || levelIndications.Pending;
         const levelClass = getReadingLevelChipClass(levelText);
-        const aralLevels = new Set(['Low Emerging Readers', 'High Emerging Readers', 'Developing Readers', 'Transitioning Readers']);
+        const aralLevels = new Set(['Low Emerging Reader', 'High Emerging Reader', 'Developing Reader', 'Transitioning Reader']);
         const aralIndicatorHtml = aralLevels.has(levelText) ? '<span class="student-aral-indicator">ARAL Program</span>' : '';
         const levelBadgeHtml = `<div class="d-flex flex-column align-items-end gap-1"><span class="badge rounded-pill level-chip ${levelClass}">${escapeStudentDirectoryHtml(levelText)}</span>${aralIndicatorHtml}<span class="small text-secondary" style="max-width: 240px; text-align: right;">${escapeStudentDirectoryHtml(levelIndication)}</span></div>`;
         return `
@@ -2305,6 +2282,7 @@ async function refreshStudentOverview() {
                 if (data && data.level_counts && typeof data.level_counts === 'object') {
                     apiLevelCounts = data.level_counts;
                 }
+                window.latestDashboardMetrics = data.dashboard_metrics || {};
                 if (Number.isFinite(Number(data?.total_students))) {
                     apiTotalStudents = Number(data.total_students);
                 }
