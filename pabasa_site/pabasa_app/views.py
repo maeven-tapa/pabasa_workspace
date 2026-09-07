@@ -14161,6 +14161,20 @@ def _ensure_live_session_batches(session, student_ids=None):
     roster = [int(student_id) for student_id in (student_ids if student_ids is not None else session.student_ids or [])]
     assignments = session.batch_assignments or {}
     if not isinstance(assignments, dict) or set(assignments) != {str(student_id) for student_id in roster}:
+        # Automatic batches should be predictable for teachers and students,
+        # regardless of the order in which the roster was selected.
+        roster_positions = {student_id: index for index, student_id in enumerate(roster)}
+        students_by_id = User.objects.filter(id__in=roster).in_bulk()
+
+        def automatic_batch_sort_key(student_id):
+            student = students_by_id.get(student_id)
+            if student:
+                name = _display_user_name(student)
+                return (0, unicodedata.normalize('NFKD', name).casefold(), student_id)
+            # Retain the supplied order for legacy/unresolvable roster IDs.
+            return (1, '', roster_positions[student_id])
+
+        roster = sorted(roster, key=automatic_batch_sort_key)
         assignments = {
             str(student_id): (index // LIVE_ASSESSMENT_BATCH_SIZE) + 1
             for index, student_id in enumerate(roster)
@@ -14170,6 +14184,45 @@ def _ensure_live_session_batches(session, student_ids=None):
     session.total_batches = math.ceil(len(roster) / LIVE_ASSESSMENT_BATCH_SIZE) if roster else 0
     session.current_batch = min(max(int(session.current_batch or 1), 1), session.total_batches or 1)
     return assignments
+
+
+def _validate_live_batch_assignments(selected_student_ids, raw_assignments, allowed_student_ids):
+    """Validate a teacher-supplied student-to-batch mapping."""
+    if not isinstance(raw_assignments, dict):
+        return None, 'Manual batch assignments are required.'
+
+    selected_ids = [int(student_id) for student_id in selected_student_ids]
+    selected_set = set(selected_ids)
+    allowed_set = {int(student_id) for student_id in allowed_student_ids}
+    assignments = {}
+    for raw_student_id, raw_batch_number in raw_assignments.items():
+        try:
+            student_id = int(raw_student_id)
+            batch_number = int(raw_batch_number)
+        except (TypeError, ValueError):
+            return None, 'Manual batch assignments must use numeric student and batch IDs.'
+        if student_id in assignments:
+            return None, 'A student cannot be assigned more than once.'
+        if student_id not in allowed_set:
+            return None, 'Every assigned student must belong to the authorized roster.'
+        if batch_number < 1:
+            return None, 'Batch numbers must be positive.'
+        assignments[student_id] = batch_number
+
+    if set(assignments) != selected_set:
+        return None, 'Every selected student must be assigned to exactly one batch.'
+
+    batch_numbers = sorted(set(assignments.values()))
+    if batch_numbers != list(range(1, len(batch_numbers) + 1)):
+        return None, 'Batch numbers must be sequential and cannot contain empty batches.'
+
+    batch_sizes = {}
+    for batch_number in assignments.values():
+        batch_sizes[batch_number] = batch_sizes.get(batch_number, 0) + 1
+    if any(size > LIVE_ASSESSMENT_BATCH_SIZE for size in batch_sizes.values()):
+        return None, f'Each batch may contain at most {LIVE_ASSESSMENT_BATCH_SIZE} students.'
+
+    return {str(student_id): assignments[student_id] for student_id in selected_ids}, None
 
 
 def _live_batch_student_ids(session, batch_number=None):
@@ -14209,11 +14262,12 @@ def _live_session_batch_payload(session):
         'current_batch_total': current_total,
         'overall_completed': overall_completed,
         'batch_complete': bool(current_total and current_completed >= current_total),
+        'batch_loaded': session.status == 'batch_loaded',
         'assessment_complete': bool(session.total_batches and current_batch >= session.total_batches and current_completed >= current_total),
     }
 
 
-def _start_next_live_batch(session_id, requested_batch):
+def _load_next_live_batch(session_id, requested_batch):
     advanced = False
 
     def advance(session):
@@ -14230,10 +14284,19 @@ def _start_next_live_batch(session_id, requested_batch):
         if requested_batch > session.total_batches:
             return None
         session.current_batch = requested_batch
-        _ensure_live_session_student_states(session, _live_batch_student_ids(session))
-        _append_live_session_activity(session, f'Teacher started batch {requested_batch} of {session.total_batches}.')
+        next_batch_ids = _live_batch_student_ids(session)
+        _ensure_live_session_student_states(session, next_batch_ids)
+        for student_id in next_batch_ids:
+            session.student_states[str(student_id)] = {
+                **(session.student_states.get(str(student_id), {}) or {}),
+                'status': 'waiting', 'connection_status': 'waiting', 'progress': 0,
+                'current_item': '', 'elapsed_seconds': 0, 'final_score': None,
+            }
+        session.status = 'batch_loaded'
+        session.start_at = None
+        _append_live_session_activity(session, f'Teacher loaded batch {requested_batch} of {session.total_batches}; students are waiting to begin.')
         advanced = True
-        return {'current_batch', 'batch_assignments', 'batch_size', 'total_batches', 'activity_log'}
+        return {'current_batch', 'status', 'start_at', 'batch_assignments', 'batch_size', 'total_batches', 'activity_log'}
 
     session, error = _mutate_live_session_state(session_id, advance)
     if session and advanced:
@@ -14241,10 +14304,10 @@ def _start_next_live_batch(session_id, requested_batch):
     # Re-read for the user-facing guard reason after a semantic no-op.
     current = LiveAssessmentSession.objects.filter(id=session_id).first()
     if not current or current.status not in ['started', 'paused']:
-        return None, 'Only an active session can advance batches'
+        return None, 'Only an active session can load the next batch'
     _ensure_live_session_batches(current)
     if requested_batch != current.current_batch + 1:
-        return None, 'Only the next batch can be started'
+        return None, 'Only the next batch can be loaded'
     completed, total = _live_batch_progress(current)
     if completed < total:
         return None, 'The current batch is not complete'
@@ -16598,6 +16661,8 @@ def live_assessment_session_action(request, session_id):
         payload_keys=sorted(list(data.keys())) if isinstance(data, dict) else [],
     )
     selected_student_ids = data.get('selected_student_ids') if isinstance(data.get('selected_student_ids'), list) else None
+    batch_mode = str(data.get('batch_mode') or 'automatic').strip().lower()
+    manual_batch_assignments = data.get('batch_assignments')
     countdown_seconds = data.get('countdown_seconds')
     timing_mode = (data.get('timing_mode') or session.timing_mode or 'none').strip().lower()
     duration_seconds = data.get('duration_seconds')
@@ -16654,7 +16719,7 @@ def live_assessment_session_action(request, session_id):
             session.ends_at = None
 
     if action == 'start':
-        if session.status != 'waiting':
+        if session.status not in ['waiting', 'batch_loaded']:
             return JsonResponse({'success': False, 'error': 'Live assessment session already started or ended'}, status=400)
         if session.student_count <= 0:
             return JsonResponse({'success': False, 'error': 'No students selected for the live session'}, status=400)
@@ -16666,7 +16731,8 @@ def live_assessment_session_action(request, session_id):
             activity_message = f'Teacher started countdown for {session.countdown_seconds}s.'
         else:
             session.status = 'started'
-            activity_message = 'Teacher started the session.'
+            activity_message = (f'Teacher started batch {session.current_batch} of {session.total_batches}.'
+                                if session.status == 'batch_loaded' else 'Teacher started the session.')
 
         _ensure_live_session_student_states(session, session.student_ids)
         _ensure_live_session_batches(session)
@@ -16680,7 +16746,7 @@ def live_assessment_session_action(request, session_id):
             )
         }
         def apply_start(current):
-            if current.status != 'waiting':
+            if current.status not in ['waiting', 'batch_loaded']:
                 return None
             for field, value in start_values.items():
                 setattr(current, field, value)
@@ -16697,7 +16763,7 @@ def live_assessment_session_action(request, session_id):
                 f"Your teacher has started the live assessment countdown for {session.material.title or 'this reading'}. "
                 'Please stay in the waiting room while the assessment begins.'
             )
-            for sid in session.student_ids:
+            for sid in _live_batch_student_ids(session):
                 student_user = User.objects.filter(id=sid).first()
                 if not student_user:
                     continue
@@ -16713,13 +16779,13 @@ def live_assessment_session_action(request, session_id):
                 )
         except Exception:
             logger.exception('Failed to notify students on session start')
-    elif action == 'start_next_batch':
+    elif action in ['load_next_batch', 'start_next_batch']:
         requested_batch = data.get('target_batch')
         try:
             requested_batch = int(requested_batch)
         except (TypeError, ValueError):
             requested_batch = None
-        transitioned_session, error = _start_next_live_batch(session.id, requested_batch)
+        transitioned_session, error = _load_next_live_batch(session.id, requested_batch)
         if error:
             return JsonResponse({'success': False, 'error': error}, status=409)
         session = transitioned_session
@@ -16826,10 +16892,27 @@ def live_assessment_session_action(request, session_id):
         except Exception:
             valid_student_ids = []
 
+        if not valid_student_ids:
+            return JsonResponse({'success': False, 'error': 'At least one authorized student must be selected.'}, status=400)
+        if batch_mode not in {'automatic', 'manual'}:
+            return JsonResponse({'success': False, 'error': 'Invalid batch assignment mode.'}, status=400)
+
         session.student_ids = valid_student_ids
         session.student_count = len(valid_student_ids)
         session.current_batch = 1
-        _ensure_live_session_batches(session, valid_student_ids)
+        if batch_mode == 'manual':
+            manual_assignments, assignment_error = _validate_live_batch_assignments(
+                valid_student_ids,
+                manual_batch_assignments,
+                valid_student_ids,
+            )
+            if assignment_error:
+                return JsonResponse({'success': False, 'error': assignment_error}, status=400)
+            session.batch_assignments = manual_assignments
+            session.batch_size = LIVE_ASSESSMENT_BATCH_SIZE
+            session.total_batches = max(manual_assignments.values())
+        else:
+            _ensure_live_session_batches(session, valid_student_ids)
         _ensure_live_session_student_states(session, valid_student_ids)
         _append_live_session_activity(session, 'Teacher saved session configuration and invited students to the waiting room.')
         settings_values = {

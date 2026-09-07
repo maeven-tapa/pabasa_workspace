@@ -1975,6 +1975,7 @@ class ActivityLog(models.Model):
 class LiveAssessmentSession(models.Model):
     STATUS_CHOICES = [
         ('waiting', 'Waiting'),
+        ('batch_loaded', 'Batch Loaded'),
         ('countdown', 'Countdown'),
         ('started', 'Started'),
         ('paused', 'Paused'),
