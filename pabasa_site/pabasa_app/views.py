@@ -18038,6 +18038,7 @@ def _section_course_payload(section):
         'code': practice.code,
     } for practice in practices_qs]
     enrolled_students = section.get_enrolled_students(active_only=True)
+    average_progress = _section_course_average_progress(materials_qs, enrolled_students)
     return {
         'id': f'section-{section.id}', 'section_id': section.id, 'source': 'class',
         'code': section.class_code, 'title': section.class_name,
@@ -18046,9 +18047,42 @@ def _section_course_payload(section):
         'assessments': assessments, 'materials': materials, 'practices': practices,
         'metrics': {'sections': 1, 'assessments': len(assessments),
                     'materials': len(materials) + len(practices),
-                    'students': len(enrolled_students), 'average_progress': 0},
+                    'students': len(enrolled_students), 'average_progress': average_progress},
         'metadata': {'class_code': section.class_code},
     }
+
+
+def _section_course_average_progress(materials, enrolled_students):
+    """Return the completed-material percentage for a teacher's class card.
+
+    Course cards in the teacher account are section-backed.  A student's
+    progress is therefore the share of this section's active materials for
+    which they have a completed material result.  Materials not yet attempted
+    intentionally count as zero, so the class average does not overstate
+    progress after only one activity is completed.
+    """
+    student_ids = {
+        student_id
+        for entry in enrolled_students
+        if (student_id := _normalized_student_entry_id(entry))
+    }
+    material_ids = [material.id for material in materials]
+    if not student_ids or not material_ids:
+        return 0.0
+
+    # Activity completion is persisted as an Assessment row linked directly
+    # to its Material by Material.record_assessment_result().  Query those
+    # rows once for the entire class rather than inspecting each card item.
+    completed_pairs = set(
+        Assessment.objects.filter(
+            material_id__in=material_ids,
+            student_id__in=student_ids,
+            attempt_status='completed',
+            is_active=True,
+        ).values_list('student_id', 'material_id')
+    )
+    total_assignments = len(student_ids) * len(material_ids)
+    return round((len(completed_pairs) / total_assignments) * 100, 2)
 
 
 def _derive_attempt_completion_percentage(attempt):

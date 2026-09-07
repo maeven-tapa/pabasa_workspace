@@ -7,7 +7,7 @@ from openpyxl import load_workbook
 import uuid
 
 from .models import Assessment, Material, School, Section, StoryReadingProgress, User
-from .scoring import build_assessment_score_payload, crla_reading_profile, crla_sentence_score
+from .scoring import crla_sentence_score
 from .utils.crla_export import _part_1_reading_level, _row_formulas, _story_number, export_crla_excel
 
 
@@ -105,7 +105,7 @@ class CrlaExportResultTests(TestCase):
         )
         self.assertEqual(
             formulas["Q"],
-            '=IFERROR(M20/IF(K20=2,$P$7,$M$7),"")',
+            '=IF(AND(K20<>"",M20>0),IFERROR(M20/IF(K20=2,$P$7,$M$7),""),"")',
         )
         for task1, rhymes, sentences, total, level in cases:
             with self.subTest(task1=task1, rhymes=rhymes, sentences=sentences):
@@ -128,8 +128,8 @@ class CrlaExportResultTests(TestCase):
             role=role,
             first_name=first_name,
             last_name=last_name,
-            middle_initial="",
-            suffix="",
+            middle_initial=extra.pop("middle_initial", ""),
+            suffix=extra.pop("suffix", ""),
             sex=extra.pop("sex", "female"),
             birth_month=1,
             birth_day=1,
@@ -141,12 +141,17 @@ class CrlaExportResultTests(TestCase):
 
     def test_export_uses_assigned_teacher_and_persisted_story_two_results(self):
         admin = self.make_user("CRLA-ADMIN", "admin", "PABASA", "Admin")
-        teacher = self.make_user("CRLA-TEACHER", "teacher", "Maria", "Santos", school="Mabini School")
+        teacher = self.make_user(
+            "CRLA-TEACHER", "teacher", "Maria", "Santos",
+            middle_initial="G", suffix="Jr.", school="Incorrect profile school",
+        )
         student = self.make_user("CRLA-STUDENT", "student", "Lina", "Reyes", lrn="123456789012")
+        school = School.objects.create(name="Mabini Elementary School", code="MABINI-ES")
         section = test_section_create(
             class_code="G2-RIZAL", class_name="Grade 2 Rizal", teacher=teacher,
-            subject="Filipino", students=[{"student_id": student.id, "is_active": True}],
+            school=school, subject="Filipino", students=[{"student_id": student.id, "is_active": True}],
         )
+        enrollment = Enrollment.objects.create(student=student, section=section)
         root = Assessment.objects.create(
             teacher=admin, title="Official CRLA", code="CRLA-EXPORT-VALUES",
             assessment_type="paragraph", status="published", is_system_owned=True,
@@ -158,21 +163,20 @@ class CrlaExportResultTests(TestCase):
             assessment_kind="crla", is_system_owned=True, is_official_reading=True,
             content_json={"passages": [{"title": "Story One"}, {"title": "Story Two"}]},
         )
-        student.preference = {
-            "reading_assessment_state": {
-                "student_end_assessment_state": {
-                    "material_id": str(material.id), "stage": "completed", "branch": "sentences",
-                    "task1_score": 1, "task2_rhymes_score": 9, "task2_sentences_score": 29,
-                    "part1_total_score": 10, "selected_story": "Story One", "total_words_read": 1,
-                    "duration_seconds": 1, "wpm": 1, "story_read_percent": 1,
-                    "correct_answers": 1, "learner_experience_rating": 4,
-                    "classification": "Transitioning Reader",
-                }
-            }
-        }
+        student.preference = {"reading_assessment_state": {"crla_result_states": {
+            str(material.id): {
+                "material_id": str(material.id), "stage": "completed", "branch": "story",
+                "task1_score": 10, "task2_sentences_score": 4, "part1_total_score": 14,
+                "selected_story": "Si Pagong at Kuneho", "story_total_words": 96,
+                "words_read": 96, "miscues": 0, "duration_seconds": 520,
+                "wpm": 11.08, "story_read_percent": 100, "correct_answers": 4,
+                "comprehension_correct": 4, "learner_experience_rating": 4,
+                "classification": "Transitioning Reader",
+            },
+        }}}
         student.save(update_fields=["preference", "updated_at"])
         Assessment.objects.create(
-            teacher=teacher, section=section, material=material, source_assessment=root,
+            teacher=admin, enrollment=enrollment, material=material, source_assessment=root,
             student=student, title="CRLA result", code="CRLA-EXPORT-RESULT",
             assessment_type="paragraph", status="published", attempt_status="completed",
             completed_at=timezone.now(), duration_seconds=125, word_count=70, wpm=33.6,
@@ -188,7 +192,10 @@ class CrlaExportResultTests(TestCase):
         workbook = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)
         sheet = workbook["G2 MT Reading Scoresheet"]
 
-        self.assertEqual(sheet["C6"].value, "Maria Santos")
+        self.assertEqual(sheet["C4"].value, "MABINI-ES")
+        self.assertEqual(sheet["C5"].value, "Mabini Elementary School")
+        self.assertEqual(sheet["C6"].value, "Maria G. Santos Jr.")
+        self.assertEqual(sheet["C8"].value, "Grade 2 Rizal")
         self.assertEqual(sheet["F11"].value, 10)
         self.assertIsNone(sheet["G11"].value)
         self.assertEqual(sheet["H11"].value, 10)
@@ -205,6 +212,98 @@ class CrlaExportResultTests(TestCase):
         self.assertEqual(sheet["T11"].value, "Level 3")
         self.assertEqual(sheet["U11"].value, "Transitioning Reader")
         self.assertEqual(sheet["V11"].value, "Needs continued reading practice")
+
+    def test_export_metadata_leaves_teacher_blank_without_assigned_teacher(self):
+        admin = self.make_user("CRLA-META-ADMIN", "admin", "PABASA", "Admin")
+        student = self.make_user("CRLA-META-STUDENT", "student", "Nilo", "Reyes")
+        school = School.objects.create(name="Metadata School", code="META-SCHOOL")
+        section = test_section_create(
+            class_code="G2-META", class_name="Grade 2 Metadata", school=school,
+            teacher=None, subject="Filipino",
+        )
+        enrollment = Enrollment.objects.create(student=student, section=section)
+        root = Assessment.objects.create(
+            teacher=admin, title="Official CRLA", code="CRLA-META-NO-TEACHER",
+            assessment_type="paragraph", status="published", is_system_owned=True,
+            system_assessment_key="bosy_crla_pretest",
+        )
+        Assessment.objects.create(
+            teacher=admin, enrollment=enrollment, source_assessment=root, student=student,
+            title="CRLA result", code="CRLA-META-NO-TEACHER-RESULT",
+            assessment_type="paragraph", status="published", attempt_status="completed",
+            completed_at=timezone.now(),
+        )
+
+        sheet = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)["G2 MT Reading Scoresheet"]
+
+        self.assertEqual(sheet["C4"].value, "META-SCHOOL")
+        self.assertEqual(sheet["C5"].value, "Metadata School")
+        self.assertIsNone(sheet["C6"].value)
+        self.assertEqual(sheet["C8"].value, "Grade 2 Metadata")
+
+    def test_export_metadata_does_not_fallback_when_school_fields_are_empty(self):
+        admin = self.make_user("CRLA-NO-SCHOOL-ADMIN", "admin", "PABASA", "Admin", school="Admin School")
+        teacher = self.make_user("CRLA-NO-SCHOOL-TEACHER", "teacher", "Ana", "Cruz")
+        student = self.make_user("CRLA-NO-SCHOOL-STUDENT", "student", "Rosa", "Santos")
+        school = School.objects.create(name="", code="")
+        section = test_section_create(
+            class_code="G2-NO-SCHOOL", class_name="Grade 2 No School", school=school,
+            teacher=teacher, subject="Filipino",
+        )
+        enrollment = Enrollment.objects.create(student=student, section=section)
+        root = Assessment.objects.create(
+            teacher=admin, title="Official CRLA", code="CRLA-META-NO-SCHOOL",
+            assessment_type="paragraph", status="published", is_system_owned=True,
+            system_assessment_key="midline_crla_midtest",
+        )
+        Assessment.objects.create(
+            teacher=admin, enrollment=enrollment, source_assessment=root, student=student,
+            title="CRLA result", code="CRLA-META-NO-SCHOOL-RESULT",
+            assessment_type="paragraph", status="published", attempt_status="completed",
+            completed_at=timezone.now(),
+        )
+
+        sheet = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)["G2 MT Reading Scoresheet"]
+
+        self.assertFalse(sheet["C4"].value)
+        self.assertFalse(sheet["C5"].value)
+        self.assertEqual(sheet["C6"].value, "Ana Cruz")
+        self.assertEqual(sheet["C8"].value, "Grade 2 No School")
+
+    def test_export_metadata_blanks_ambiguous_mixed_section_results(self):
+        admin = self.make_user("CRLA-MIXED-ADMIN", "admin", "PABASA", "Admin")
+        teacher_one = self.make_user("CRLA-MIXED-T1", "teacher", "Ana", "Cruz")
+        teacher_two = self.make_user("CRLA-MIXED-T2", "teacher", "Luz", "Reyes")
+        student_one = self.make_user("CRLA-MIXED-S1", "student", "Lina", "Santos")
+        student_two = self.make_user("CRLA-MIXED-S2", "student", "Nilo", "Garcia")
+        school_one = School.objects.create(name="North School", code="NORTH")
+        school_two = School.objects.create(name="South School", code="SOUTH")
+        section_one = test_section_create(
+            class_code="G2-NORTH", class_name="Grade 2 North", school=school_one,
+            teacher=teacher_one, subject="Filipino",
+        )
+        section_two = test_section_create(
+            class_code="G2-SOUTH", class_name="Grade 2 South", school=school_two,
+            teacher=teacher_two, subject="Filipino",
+        )
+        root = Assessment.objects.create(
+            teacher=admin, title="Official CRLA", code="CRLA-META-MIXED",
+            assessment_type="paragraph", status="published", is_system_owned=True,
+            system_assessment_key="eosy_crla_posttest",
+        )
+        for index, (student, section) in enumerate(((student_one, section_one), (student_two, section_two)), start=1):
+            enrollment = Enrollment.objects.create(student=student, section=section)
+            Assessment.objects.create(
+                teacher=admin, enrollment=enrollment, source_assessment=root, student=student,
+                title="CRLA result", code=f"CRLA-META-MIXED-RESULT-{index}",
+                assessment_type="paragraph", status="published", attempt_status="completed",
+                completed_at=timezone.now(),
+            )
+
+        sheet = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)["G2 MT Reading Scoresheet"]
+
+        for cell in ("C4", "C5", "C6", "C8"):
+            self.assertIsNone(sheet[cell].value)
 
     def test_low_emerging_branch_leaves_part_two_cells_blank(self):
         teacher = self.make_user("CRLA-T2", "teacher", "Ana", "Cruz")
@@ -232,7 +331,7 @@ class CrlaExportResultTests(TestCase):
             student=student, title="early result", code="CRLA-EARLY-RESULT",
             assessment_type="word", status="published", attempt_status="completed",
             completed_at=timezone.now(), duration_seconds=20, word_count=6, wpm=18, accuracy=60,
-            crla_classification="Low Emerging Reader", crla_score_data={"task1_score": 6, "task2_type": "Task 2L / Rhymes", "task2_score": 3},
+            crla_score_data={"task1_score": 6, "task2_type": "Task 2L / Rhymes", "task2_score": 3},
         )
 
         sheet = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)["G2 MT Reading Scoresheet"]
@@ -240,7 +339,7 @@ class CrlaExportResultTests(TestCase):
         self.assertIsNone(sheet["H11"].value)
         self.assertTrue(str(sheet["I11"].value).startswith("="))
         self.assertTrue(str(sheet["J11"].value).startswith("="))
-        for column in ("K", "N", "O", "R", "T"):
+        for column in ("K", "L", "M", "N", "O", "R", "T"):
             self.assertIsNone(sheet[f"{column}11"].value)
         self.assertEqual(sheet["S11"].value, 3)
         self.assertTrue(str(sheet["P11"].value).startswith("="))
@@ -264,12 +363,15 @@ class CrlaExportResultTests(TestCase):
             item_type="paragraph", type="assessment", assessment_kind="crla",
             content_json={"passages": [{"title": "Story One"}, {"title": "Story Two"}]},
         )
-        student.preference = {"reading_assessment_state": {"student_end_assessment_state": {
-            "material_id": str(material.id), "stage": "completed", "branch": "story",
-            "task1_score": 1, "task2_rhymes_score": 9, "task2_sentences_score": 29,
-            "part1_total_score": 10, "selected_story": "Story One", "total_words_read": 1, "miscues": 99,
-            "duration_seconds": 1, "wpm": 1, "story_read_percent": 1,
-            "correct_answers": 1, "classification": "Transitioning Reader",
+        student.preference = {"reading_assessment_state": {"crla_result_states": {
+            str(material.id): {
+                "material_id": str(material.id), "stage": "completed", "branch": "story",
+                "task1_score": 8, "task2_sentences_score": 7, "part1_total_score": 15,
+                "selected_story": "Isang Kakaibang Araw", "story_total_words": 100,
+                "words_read": 70, "miscues": 3, "duration_seconds": 125,
+                "wpm": 33.6, "story_read_percent": 70, "correct_answers": 3,
+                "comprehension_correct": 3, "classification": "Transitioning Reader",
+            },
         }}}
         student.save(update_fields=["preference", "updated_at"])
         Assessment.objects.create(
@@ -303,3 +405,104 @@ class CrlaExportResultTests(TestCase):
         self.assertTrue(str(sheet["P11"].value).startswith("="))
         self.assertTrue(str(sheet["Q11"].value).startswith("="))
         self.assertEqual(sheet["R11"].value, 3)
+
+    def test_transition_to_story_without_story_reading_keeps_part_two_blank(self):
+        teacher = self.make_user("CRLA-T4", "teacher", "Tina", "Reyes")
+        student = self.make_user("CRLA-S4", "student", "Noel", "Ramos")
+        section = test_section_create(
+            class_code="G2-TRANSITION", class_name="Grade 2 Transition", teacher=teacher,
+            subject="Filipino", students=[{"student_id": student.id, "is_active": True}],
+        )
+        root = Assessment.objects.create(
+            teacher=teacher, section=section, title="CRLA Transition", code="CRLA-TRANSITION",
+            assessment_type="sentence", status="published",
+        )
+        material = Material.objects.create(
+            assessment=root, section=section, teacher=teacher, code="CRLA-TRANSITION-MAT",
+            item_type="sentence", type="assessment", assessment_kind="crla",
+        )
+        student.preference = {"reading_assessment_state": {"crla_result_states": {
+            str(material.id): {
+                "material_id": str(material.id), "stage": "transition_to_story",
+                "selected_story": "Si Pagong at Kuneho", "story_total_words": 96,
+                "words_read": 96, "duration_seconds": 300, "story_read_percent": 100,
+            },
+        }}}
+        student.save(update_fields=["preference", "updated_at"])
+        Assessment.objects.create(
+            teacher=teacher, section=section, material=material, source_assessment=root,
+            student=student, title="transition result", code="CRLA-TRANSITION-RESULT",
+            assessment_type="sentence", status="published", attempt_status="completed",
+            completed_at=timezone.now(), crla_score_data={
+                "task1_score": 8, "task2_type": "Task 2H / Sentences", "task2_score": 7,
+                "words_read": 96, "duration_seconds": 300, "passage_accuracy_percent": 100,
+            },
+        )
+
+        workbook = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)
+        sheet = workbook["G2 MT Reading Scoresheet"]
+        for column in ("K", "L", "M", "N", "O", "R"):
+            self.assertIsNone(sheet[f"{column}11"].value)
+        self.assertTrue(str(sheet["P11"].value).startswith("="))
+        self.assertTrue(str(sheet["Q11"].value).startswith("="))
+        calculated = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=True)["G2 MT Reading Scoresheet"]
+        self.assertIsNone(calculated["Q11"].value)
+
+    def test_story_metrics_export_for_each_official_crla_phase(self):
+        phases = (
+            ("bosy", "pretest", "bosy_crla_pretest"),
+            ("midline", "midtest", "midline_crla_midtest"),
+            ("eosy", "posttest", "eosy_crla_posttest"),
+        )
+        for index, (period, phase, key) in enumerate(phases, start=1):
+            with self.subTest(phase=phase):
+                teacher = self.make_user(f"CRLA-T-PH-{index}", "teacher", "Phase", f"Teacher{index}")
+                student = self.make_user(f"CRLA-S-PH-{index}", "student", "Phase", f"Student{index}")
+                section = test_section_create(
+                    class_code=f"G2-PHASE-{index}", class_name=f"Grade 2 Phase {index}", teacher=teacher,
+                    subject="Filipino", students=[{"student_id": student.id, "is_active": True}],
+                )
+                root = Assessment.objects.create(
+                    teacher=teacher, section=section, title=f"CRLA {period}", code=f"CRLA-PHASE-{index}",
+                    assessment_type="paragraph", status="published", is_system_owned=True,
+                    system_assessment_key=key, system_assessment_period=period,
+                    system_assessment_phase=phase,
+                )
+                material = Material.objects.create(
+                    assessment=root, section=section, teacher=teacher, code=f"CRLA-PHASE-MAT-{index}",
+                    item_type="paragraph", type="assessment", assessment_kind="crla",
+                    is_system_owned=True, is_official_reading=True,
+                    system_assessment_key=f"{key}-MATERIAL", system_assessment_period=period,
+                    system_assessment_phase=phase,
+                )
+                student.preference = {"reading_assessment_state": {"crla_result_states": {
+                    str(material.id): {
+                        "material_id": str(material.id), "stage": "completed",
+                        "selected_story": "Si Pagong at Kuneho", "story_total_words": 96,
+                        "words_read": 72, "miscues": 24, "duration_seconds": 125,
+                        "wpm": 34.56, "story_read_percent": 75,
+                        "comprehension_correct": 3, "classification": "Transitioning Reader",
+                    },
+                }}}
+                student.save(update_fields=["preference", "updated_at"])
+                Assessment.objects.create(
+                    teacher=teacher, section=section, material=material, source_assessment=root,
+                    student=student, title=f"{period} result", code=f"CRLA-PHASE-RESULT-{index}",
+                    assessment_type="paragraph", status="published", attempt_status="completed",
+                    completed_at=timezone.now(), crla_score_data={
+                        "task1_score": 8, "task2_type": "Task 2H / Sentences", "task2_score": 7,
+                        # Generic fields disagree on purpose; only the
+                        # material-scoped Story Reading values may export.
+                        "duration_seconds": 9, "words_read": 1, "passage_accuracy_percent": 1,
+                    },
+                )
+
+                sheet = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)["G2 MT Reading Scoresheet"]
+                self.assertEqual(sheet["C4"].value, section.school.code)
+                self.assertEqual(sheet["C5"].value, section.school.name)
+                self.assertEqual(sheet["C6"].value, f"Phase Teacher{index}")
+                self.assertEqual(sheet["C8"].value, section.class_name)
+                self.assertEqual(sheet["K11"].value, 1)
+                self.assertEqual((sheet["N11"].value, sheet["O11"].value), (2, 5))
+                self.assertEqual(sheet["M11"].value, 72)
+                self.assertTrue(str(sheet["Q11"].value).startswith("="))

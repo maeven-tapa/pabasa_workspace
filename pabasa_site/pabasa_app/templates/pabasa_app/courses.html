@@ -6522,7 +6522,7 @@
                     <div class="single-class-progress-area">
                         <div class="single-class-progress-heading"><span>Average Progress</span><strong>{{ course.metrics.average_progress|default:0|floatformat:0 }}%</strong></div>
                         <p class="single-class-progress-state">{% if course.metrics.average_progress|default:0 %}In progress{% else %}Getting started{% endif %}</p>
-                        <div class="single-class-progress" role="progressbar" aria-label="Average progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ course.metrics.average_progress|default:0|floatformat:0 }}"><div class="single-class-progress-bar{% if course.metrics.average_progress|default:0 %} has-progress{% endif %}" style="width: {{ course.metrics.average_progress|default:0 }}%;"></div></div>
+                        <div class="single-class-progress" role="progressbar" aria-label="Average progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ course.metrics.average_progress|default:0|floatformat:0 }}"><div class="single-class-progress-bar{% if course.metrics.average_progress|default:0 %} has-progress{% endif %}" data-progress="{{ course.metrics.average_progress|default:0 }}"></div></div>
                         <p class="single-class-progress-note">{% if course.metrics.average_progress|default:0 %}Learner progress is underway—keep the reading journey going.{% else %}No learner progress yet—ready for the first step.{% endif %}</p>
                     </div>
                     <footer class="single-class-footer">
@@ -6593,6 +6593,10 @@
                 (function(){
                     try {
                         window.__PABASA_SERVER_RENDERED_COURSES__ = true;
+                        document.querySelectorAll('.single-class-progress-bar[data-progress]').forEach((bar) => {
+                            const progress = Number(bar.dataset.progress);
+                            bar.style.width = `${Math.max(0, Math.min(100, Number.isFinite(progress) ? progress : 0))}%`;
+                        });
                         const serverCoursesJson = document.getElementById('teacherCoursesInitial')?.textContent || '[]';
                         const serverCourses = JSON.parse(serverCoursesJson);
                         window.__PABASA_SERVER_COURSE_IDS__ = Array.isArray(serverCourses)
@@ -12081,6 +12085,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         </div>
                         <i class="bi bi-bar-chart text-primary"></i>
                     </div>`;
+                return;
             }
 
             if (selectedStudents.length > 1) {
@@ -12102,6 +12107,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
 
             const student = selectedStudents[0];
+            if (!student) return;
             const studentName = student.name || `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unnamed Student';
             const latestAssessment = student.completed_at ? formatDateTime(student.completed_at) : 'No completed assessment yet';
             const assessmentTitle = student.assessment_title ? ` - ${escapeHtml(student.assessment_title)}` : '';

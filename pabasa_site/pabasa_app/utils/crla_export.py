@@ -87,29 +87,88 @@ def _attempt_sort_key(attempt):
 
 
 def _latest_attempts(assessment):
-    # Share the dashboard's authoritative final-result selection exactly.
-    return latest_completed_official_crla_results(source_assessment=assessment)
-
-
-def _assigned_teacher(assessment, latest_attempts):
-    """Resolve the teacher from the persisted class/result assignment."""
-    if assessment.section_id and assessment.section:
-        return assessment.section.teacher
-
-    assigned = {}
-    for attempt in latest_attempts.values():
-        teacher = (
-            attempt.section.teacher
-            if attempt.section_id and attempt.section
-            else attempt.teacher
+    attempts = (
+        Assessment.objects.filter(
+            source_assessment=assessment,
+            student__isnull=False,
+            attempt_status="completed",
         )
-        if teacher:
-            assigned[teacher.id] = teacher
-    if len(assigned) == 1:
-        return next(iter(assigned.values()))
-    if not assessment.is_system_owned and getattr(assessment.teacher, "role", None) == "teacher":
-        return assessment.teacher
+        .select_related("student", "teacher", "section", "section__teacher", "material")
+        .order_by("student_id", "attempt_number", "created_at", "id")
+    )
+    latest = {}
+    for attempt in attempts:
+        current = latest.get(attempt.student_id)
+        if current is None or _attempt_sort_key(attempt) >= _attempt_sort_key(current):
+            latest[attempt.student_id] = attempt
+    return latest
+
+
+def _valid_section_teacher(section):
+    """Return a current section teacher only when it is a valid assignment."""
+    teacher = getattr(section, "teacher", None)
+    if (
+        teacher
+        and getattr(teacher, "role", None) == "teacher"
+        and not getattr(teacher, "is_archived", False)
+    ):
+        return teacher
     return None
+
+
+def _attempt_section_context(attempt):
+    """Return the persisted class context for one exported result attempt.
+
+    Official CRLA result rows commonly have no direct ``section`` because the
+    system-owned material is shared.  Their enrollment preserves the class in
+    which the learner completed the assessment, so it is the authoritative
+    fallback.  The assessment/result owner is deliberately never metadata.
+    """
+    enrollment = getattr(attempt, "enrollment", None)
+    section = getattr(attempt, "section", None) or getattr(enrollment, "section", None)
+    if not section:
+        return None
+
+    school = getattr(enrollment, "school", None) or getattr(section, "school", None)
+    return {
+        "section": section,
+        "school": school,
+        "teacher": _valid_section_teacher(section),
+    }
+
+
+def _export_metadata_context(assessment, latest_attempts):
+    """Resolve one truthful class context for the workbook header.
+
+    A single CRLA workbook header cannot represent different sections or
+    schools.  In that case, or when any exported result has no class context,
+    return blanks rather than borrowing metadata from an assessment owner.
+    """
+    if assessment.section_id and assessment.section:
+        context = {
+            "section": assessment.section,
+            "school": getattr(assessment.section, "school", None),
+            "teacher": _valid_section_teacher(assessment.section),
+        }
+        return context
+
+    contexts = []
+    for attempt in latest_attempts.values():
+        context = _attempt_section_context(attempt)
+        if context is None:
+            return {"section": None, "school": None, "teacher": None}
+        contexts.append(context)
+
+    if not contexts:
+        return {"section": None, "school": None, "teacher": None}
+
+    context_keys = {
+        (context["section"].id, getattr(context["school"], "id", None))
+        for context in contexts
+    }
+    if len(context_keys) != 1:
+        return {"section": None, "school": None, "teacher": None}
+    return contexts[0]
 
 
 def _state_material_id(value):
@@ -139,6 +198,56 @@ def _student_end_state(student, material_ids):
     if material_ids and state_material_id not in material_ids:
         return {}
     return state
+
+
+def _attempt_end_state(student, attempt):
+    """Return CRLA workflow state only when it belongs to this exact result material.
+
+    A student's last generic end-state may describe a different CRLA phase or
+    a prior retake.  It must never be used as evidence for the attempt being
+    exported.
+    """
+    material_id = getattr(attempt, "material_id", None)
+    if not material_id:
+        return {}
+
+    preference = student.preference if isinstance(student.preference, dict) else {}
+    workflow = preference.get("reading_assessment_state")
+    workflow = workflow if isinstance(workflow, dict) else {}
+    result_states = workflow.get("crla_result_states")
+    result_states = result_states if isinstance(result_states, dict) else {}
+    persisted = result_states.get(str(material_id))
+    if isinstance(persisted, dict):
+        return persisted
+
+    # Compatibility for a material-scoped state saved before crla_result_states
+    # was introduced.  Do not accept an unscoped state here.
+    state = workflow.get("student_end_assessment_state")
+    state = state if isinstance(state, dict) else {}
+    return state if _state_material_id(state.get("material_id")) == material_id else {}
+
+
+def _story_reading_evidence(state):
+    """Return true only for material-scoped, persisted Story Reading work.
+
+    Part 1 completions also have elapsed time.  They are not Story Reading
+    duration and must not populate the Part 2 columns of the CRLA workbook.
+    """
+    if not isinstance(state, dict):
+        return False
+    if str(state.get("stage") or "").strip().lower() not in {
+        "story_reading", "story_comprehension", "learner_experience", "completed",
+    }:
+        return False
+    selected_story = str(state.get("selected_story") or "").strip()
+    total_words = _bounded_integer(
+        _first_value(state.get("story_total_words"), state.get("total_story_words")), 1, 100000
+    )
+    words_read = _bounded_integer(
+        _first_value(state.get("words_read"), state.get("total_words_read")), 0, 100000
+    )
+    duration = _bounded_integer(state.get("duration_seconds"), 1, 24 * 60 * 60)
+    return bool(selected_story and total_words is not None and words_read is not None and duration is not None)
 
 
 def _crla_score_data(attempt):
@@ -219,7 +328,9 @@ def _row_formulas(row):
         "I": f'=IF(AND(F{row}="",G{row}="",H{row}=""),"",SUM(F{row}:H{row}))',
         "J": f'=IF(I{row}="","",IF(I{row}<=10,"Full Refresher",IF(I{row}<17,"Moderate Refresher",IF(I{row}<27,"Light Refresher","Grade Ready"))))',
         "P": f'=IF(AND(M{row}>0,OR(N{row}>0,O{row}>0)),(M{row}/((N{row}*60)+O{row}))*60,"")',
-        "Q": f'=IFERROR(M{row}/IF(K{row}=2,$P$7,$M$7),"")',
+        # A blank Part 2 row must remain blank in Excel.  Without this guard,
+        # a blank M cell is treated as zero and produces a misleading 0%.
+        "Q": f'=IF(AND(K{row}<>"",M{row}>0),IFERROR(M{row}/IF(K{row}=2,$P$7,$M$7),""),"")',
     }
 
 
@@ -253,12 +364,10 @@ def _assessment_students(assessment, latest_attempts):
 
 def _student_values(student, attempt, state, assessment):
     score_data = _crla_score_data(attempt)
-    duration = _bounded_integer(
-        score_data.get("duration_seconds"),
-        0,
-        24 * 60 * 60,
-    )
-    story_number = _story_number(score_data, state)
+    story_state = _attempt_end_state(student, attempt)
+    has_story_reading = _story_reading_evidence(story_state)
+    duration = _bounded_integer(story_state.get("duration_seconds"), 1, 24 * 60 * 60) if has_story_reading else None
+    story_number = _story_number({}, story_state) if has_story_reading else None
     minutes, seconds = divmod(duration, 60) if duration is not None else (None, None)
 
     task_1_score = _bounded_integer(score_data.get("task1_score"), 0, 10)
@@ -290,25 +399,18 @@ def _student_values(student, attempt, state, assessment):
         part_1_total = task_1_score + (rhyme_score or 0) + (sentence_score or 0)
 
     story_words_read = _bounded_integer(
-        score_data.get("words_read"),
-        0,
-        100000,
-    )
-    miscues = _bounded_integer(
-        score_data.get("miscues"),
-        0,
-        100000,
-    )
-    percent = _number(score_data.get("passage_accuracy_percent"))
+        _first_value(story_state.get("words_read"), story_state.get("total_words_read")), 0, 100000,
+    ) if has_story_reading else None
+    miscues = _bounded_integer(story_state.get("miscues"), 0, 100000) if has_story_reading else None
+    percent = _number(_first_value(
+        story_state.get("passage_accuracy_percent"), story_state.get("story_read_percent"),
+    )) if has_story_reading else None
     correct_answers = _bounded_integer(
         score_data.get("comprehension_correct"),
         0,
         6,
     )
-    # Column U is the official final Reading Profile.  Use the same canonical
-    # formula as completion persistence; never substitute a legacy stored
-    # label for the scoring result.
-    profile = _reading_profile(part_1_total, story_number, percent, correct_answers)
+    profile = _reading_profile(part_1_total, percent, correct_answers, state.get("classification"))
 
     completed_at = None
     if attempt:
@@ -323,9 +425,7 @@ def _student_values(student, attempt, state, assessment):
     raw_sex = str(student.sex or "").strip().lower()
     sex = {"m": "Male", "male": "Male", "f": "Female", "female": "Female"}.get(raw_sex, "")
 
-    words_per_minute = _number(
-        score_data.get("wpm")
-    )
+    words_per_minute = _number(story_state.get("wpm")) if has_story_reading else None
 
     return {
         # LRN is an official learner identifier. Never substitute an internal
@@ -361,12 +461,12 @@ def export_crla_excel(assessment_id):
     attribute containing the download filename.
     """
     assessment = (
-        Assessment.objects.select_related("teacher", "section", "section__teacher")
+        Assessment.objects.select_related("teacher", "section", "section__teacher", "section__school")
         .get(pk=assessment_id)
     )
     if assessment.source_assessment_id:
         assessment = (
-            Assessment.objects.select_related("teacher", "section", "section__teacher")
+            Assessment.objects.select_related("teacher", "section", "section__teacher", "section__school")
             .get(pk=assessment.source_assessment_id)
         )
 
@@ -385,9 +485,11 @@ def export_crla_excel(assessment_id):
     if len(students) > (STUDENT_END_ROW - STUDENT_START_ROW + 1):
         raise ValueError("The official CRLA template supports at most 100 learners.")
 
-    teacher = _assigned_teacher(assessment, latest_attempts)
+    metadata = _export_metadata_context(assessment, latest_attempts)
+    teacher = metadata["teacher"]
+    section = metadata["section"]
+    school = metadata["school"]
     material_ids = _assessment_material_ids(assessment, latest_attempts)
-    section = assessment.section
     male_count = sum(str(student.sex or "").strip().lower() == "male" for student in students)
     female_count = sum(str(student.sex or "").strip().lower() == "female" for student in students)
     school_values = {
@@ -399,8 +501,8 @@ def export_crla_excel(assessment_id):
             "crla_assessment_type",
             "crla_assessment_period",
         ) or "BoSY",
-        "school_id": _profile_value(teacher, "school_id", "schoolId"),
-        "school_name": getattr(teacher, "school", "") or "",
+        "school_id": getattr(school, "code", "") or "",
+        "school_name": getattr(school, "name", "") or "",
         "teacher": _full_name(teacher),
         "male_enrollment": male_count,
         "female_enrollment": female_count,
