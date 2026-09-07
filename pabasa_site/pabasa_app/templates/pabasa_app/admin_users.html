@@ -15,6 +15,7 @@
 
     .admin-users-panel .admin-status-active { background: #e8f5ed; border-color: #b9dcc5; color: #2d6b49; }
     .admin-users-panel .admin-status-pending { background: #fbf2dc; border-color: #e8d39e; color: #80621e; }
+    .admin-users-panel .admin-status-dropped { background: #fff1f2; border-color: #fecdd3; color: #9f1239; }
     .admin-users-panel .admin-status-archived { background: #eef0f2; border-color: #cdd2d8; color: #59636d; }
 </style>
 <div class="admin-panel admin-users-panel">
@@ -51,6 +52,7 @@
                     <td>
                         <span class="badge rounded-pill admin-user-badge admin-category-{{ user.role|lower }}">{{ user.role|title }}</span>
                         {% if user.account_status == 'pending_archive' %}<span class="badge rounded-pill admin-user-badge admin-status-pending">Pending Archive</span>
+                        {% elif user.account_status == 'dropped' %}<span class="badge rounded-pill admin-user-badge admin-status-dropped">Dropped</span>
                         {% elif user.is_archived %}<span class="badge rounded-pill admin-user-badge admin-status-archived">Archived</span>
                         {% else %}<span class="badge rounded-pill admin-user-badge admin-status-active">Active</span>{% endif %}
                     </td>
@@ -58,10 +60,20 @@
                     <td>
                         <div class="admin-table-actions">
                             {% if user.role == 'student' %}
+                            {% if user.account_status == 'pending_archive' %}
+                            <form method="post" action="{% url 'admin_student_archive_action' user.id %}">{% csrf_token %}<input type="hidden" name="action" value="approve_archive"><button class="btn btn-sm admin-action-btn admin-action-archive" type="submit"><i class="bi bi-archive"></i><span>Approve Archive</span></button></form>
+                            <form method="post" action="{% url 'admin_student_archive_action' user.id %}">{% csrf_token %}<input type="hidden" name="action" value="revert_retained"><button class="btn btn-sm admin-action-btn admin-action-restore" type="submit"><i class="bi bi-arrow-counterclockwise"></i><span>Revert to Retained</span></button></form>
+                            {% elif user.is_returnable_student %}
                             <a class="btn btn-sm admin-action-btn admin-action-view" href="{% url 'admin_student_detail' user.id %}"><i class="bi bi-eye"></i><span>View</span></a>
-                            {% if user.is_archived %}
+                            <form method="post" action="{% url 'admin_student_returning_enrollment' user.id %}">{% csrf_token %}<button class="btn btn-sm admin-action-btn admin-action-restore" type="submit"><i class="bi bi-arrow-counterclockwise"></i><span>Revert to Retained</span></button></form>
+                            {% elif user.account_status == 'dropped' %}
+                            <a class="btn btn-sm admin-action-btn admin-action-view" href="{% url 'admin_student_detail' user.id %}"><i class="bi bi-eye"></i><span>View</span></a>
+                            <button class="btn btn-sm admin-action-btn admin-action-restore" type="button" data-bs-toggle="modal" data-bs-target="#restoreUserModal" data-restore-action="{% url 'admin_student_restore' user.id %}"><i class="bi bi-arrow-counterclockwise"></i><span>Reactivate</span></button>
+                            {% elif user.is_archived %}
+                            <a class="btn btn-sm admin-action-btn admin-action-view" href="{% url 'admin_student_detail' user.id %}"><i class="bi bi-eye"></i><span>View</span></a>
                             <button class="btn btn-sm admin-action-btn admin-action-restore" type="button" data-bs-toggle="modal" data-bs-target="#restoreUserModal" data-restore-action="{% url 'admin_student_restore' user.id %}"><i class="bi bi-arrow-counterclockwise"></i><span>Restore</span></button>
                             {% else %}
+                            <a class="btn btn-sm admin-action-btn admin-action-view" href="{% url 'admin_student_detail' user.id %}"><i class="bi bi-eye"></i><span>View</span></a>
                             <form method="post" action="{% url 'admin_student_archive' user.id %}">{% csrf_token %}<button class="btn btn-sm admin-action-btn admin-action-archive" type="submit"><i class="bi bi-archive"></i><span>Archive</span></button></form>
                             {% endif %}
                             {% else %}

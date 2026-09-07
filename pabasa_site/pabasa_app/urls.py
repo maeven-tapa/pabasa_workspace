@@ -224,6 +224,7 @@ urlpatterns = [
     ),
     path('dashboard/teacher/finalize-student/', views.teacher_finalize_student, name='teacher_finalize_student'),
     path('dashboard/teacher/correct-student-outcome/', views.teacher_correct_student_outcome, name='teacher_correct_student_outcome'),
+    path('dashboard/teacher/drop-student/', views.teacher_drop_student, name='teacher_drop_student'),
     path(
         'dashboard/teacher/update-class/',
         views.update_class_info,

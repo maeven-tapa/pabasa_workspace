@@ -615,11 +615,84 @@
         border-spacing: 0;
     }
 
+    .section-information-students .student-table {
+        min-width: 0;
+    }
+
     .student-table th,
     .student-table td {
         padding: 0.8rem 0.95rem;
         text-align: left;
         vertical-align: middle;
+    }
+
+    .drop-student-btn {
+        white-space: nowrap;
+    }
+
+    .section-information-students .student-table th:nth-child(5),
+    .section-information-students .student-table td:nth-child(5) {
+        min-width: 14rem;
+    }
+
+    .section-information-students .student-table th:nth-child(6),
+    .section-information-students .student-table td:nth-child(6) {
+        min-width: 9.5rem;
+    }
+
+    .year-end-outcome-group {
+        display: grid;
+        justify-items: start;
+        gap: 0.55rem;
+        min-width: 13.5rem;
+    }
+
+    .year-end-outcome-status {
+        min-height: 1.9rem;
+    }
+
+    .year-end-outcome-form {
+        display: grid;
+        gap: 0.45rem;
+        width: 100%;
+        max-width: 12.5rem;
+        margin: 0 !important;
+    }
+
+    .year-end-outcome-form .form-select {
+        width: 100%;
+        min-height: 2.25rem;
+        max-width: none !important;
+    }
+
+    .year-end-outcome-form .btn {
+        justify-self: start;
+        min-width: 7.2rem;
+    }
+
+    .year-end-outcome-group.is-finalization-open {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        min-width: 0;
+    }
+
+    .year-end-outcome-group.is-finalization-open .year-end-outcome-form {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        width: auto;
+        max-width: none;
+    }
+
+    .year-end-outcome-group.is-finalization-open .year-end-outcome-form .form-select {
+        width: 9.2rem;
+        min-height: 2.15rem;
+    }
+
+    .year-end-outcome-group.is-finalization-open .year-end-outcome-form .btn {
+        min-width: auto;
+        white-space: nowrap;
     }
 
     .student-table th {
@@ -1158,7 +1231,7 @@
                     <div class="section-heading">
                         <h2>Enrolled Students</h2>
                     </div>
-                    <span class="student-count">{{ students_table|length }} enrolled</span>
+                    <span class="student-count" id="enrolledStudentCount">{{ students_table|length }} enrolled</span>
                 </div>
             </div>
 
@@ -1184,8 +1257,8 @@
                             <th>PABASA ID</th>
                             <th>Email</th>
                             <th>Reading Level</th>
-                            <th>Joined Date</th>
                             <th>Year-End Outcome</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1195,22 +1268,26 @@
                             <td><span class="pabasa-badge">{{ student.pabasa_id }}</span></td>
                             <td>{{ student.email }}</td>
                             <td><span class="status-chip reading-level-chip" data-reading-level="{{ student.reading_level|default:'Pending' }}">{{ student.reading_level|default:'Pending' }}</span></td>
-                            <td><small class="text-muted">{{ student.joined_at }}</small></td>
                             <td>
-                                {% if student.enrollment.student.is_archived %}<span class="status-chip"><i class="bi bi-archive me-1"></i>Archived</span>
-                                {% elif student.enrollment.outcome == 'promoted' %}<span class="status-chip"><i class="bi bi-hourglass-split me-1"></i>Promoted — Pending Admin Archive</span>
-                                {% elif student.enrollment.outcome == 'retained' %}<span class="status-chip"><i class="bi bi-check-circle me-1"></i>Retained</span>
-                                {% else %}<span class="status-chip">Not Finalized</span>{% endif %}
-                                {% if student.can_finalize %}<form method="post" action="{% url 'teacher_finalize_student' %}" class="mt-2" onsubmit="return confirm(this.outcome.value === 'promoted' ? 'Promoted students will be submitted to the Admin for account archival because PABASA currently supports Grade 2 only.' : 'Retained students will keep their account and may be reassigned to a Grade 2 section for the next school year.');">{% csrf_token %}<input type="hidden" name="student_id" value="{{ student.enrollment.student_id }}"><input type="hidden" name="section_id" value="{{ section.id }}"><select name="outcome" class="form-select form-select-sm d-inline-block" style="max-width:10rem" required><option value="">Choose outcome</option><option value="promoted">Promoted</option><option value="retained">Retained</option></select><button class="btn btn-sm btn-outline-primary ms-1" type="submit"><i class="bi bi-check2-square me-1"></i>Finalize</button></form>{% endif %}
-                                {% if finalization_open and student.enrollment.status == 'completed' and student.enrollment.finalized_by_id == request.session.user_id and not student.enrollment.student.is_archived %}<form method="post" action="{% url 'teacher_correct_student_outcome' %}" class="mt-2" onsubmit="return confirm('Correct this year-end outcome? The account status will be updated, but the completed enrollment will remain historical.');">{% csrf_token %}<input type="hidden" name="student_id" value="{{ student.enrollment.student_id }}"><input type="hidden" name="section_id" value="{{ section.id }}"><select name="outcome" class="form-select form-select-sm" required><option value="">Correct to…</option><option value="promoted">Promoted</option><option value="retained">Retained</option></select><button class="btn btn-sm btn-outline-warning mt-1" type="submit"><i class="bi bi-arrow-counterclockwise me-1"></i>Correct</button></form>{% endif %}
+                                <div class="year-end-outcome-group{% if finalization_open and student.can_finalize %} is-finalization-open{% endif %}">
+                                    {% if not finalization_open or not student.can_finalize %}<div class="year-end-outcome-status">
+                                        {% if student.enrollment.student.is_archived %}<span class="status-chip"><i class="bi bi-archive me-1"></i>Archived</span>
+                                        {% elif student.enrollment.outcome == 'promoted' %}<span class="status-chip"><i class="bi bi-hourglass-split me-1"></i>Promoted — Pending Admin Archive</span>
+                                        {% elif student.enrollment.outcome == 'retained' %}<span class="status-chip"><i class="bi bi-check-circle me-1"></i>Retained</span>
+                                        {% else %}<span class="status-chip">Not Finalized</span>{% endif %}
+                                    </div>{% endif %}
+                                    {% if student.can_finalize %}<form method="post" action="{% url 'teacher_finalize_student' %}" class="year-end-outcome-form" data-finalize-form="true">{% csrf_token %}<input type="hidden" name="student_id" value="{{ student.enrollment.student_id }}"><input type="hidden" name="section_id" value="{{ section.id }}"><select name="outcome" class="form-select form-select-sm" required><option value="">Choose outcome</option><option value="promoted">Promoted</option><option value="retained">Retained</option></select><button class="btn btn-sm btn-outline-primary" type="submit"><i class="bi bi-check2-square me-1"></i>Finalize</button></form>{% endif %}
+                                    {% if finalization_open and student.enrollment.status == 'completed' and student.enrollment.finalized_by_id == request.session.user_id and not student.enrollment.student.is_archived %}<form method="post" action="{% url 'teacher_correct_student_outcome' %}" class="year-end-outcome-form" data-finalize-form="true" data-correction-form="true">{% csrf_token %}<input type="hidden" name="student_id" value="{{ student.enrollment.student_id }}"><input type="hidden" name="section_id" value="{{ section.id }}"><select name="outcome" class="form-select form-select-sm" required><option value="">Correct to…</option><option value="promoted">Promoted</option><option value="retained">Retained</option></select><button class="btn btn-sm btn-outline-warning" type="submit"><i class="bi bi-arrow-counterclockwise me-1"></i>Correct</button></form>{% endif %}
+                                </div>
                             </td>
+                            <td><button type="button" class="btn btn-sm btn-outline-danger drop-student-btn" data-bs-toggle="modal" data-bs-target="#dropStudentModal" data-student-id="{{ student.id }}" data-student-name="{{ student.name }}"><i class="bi bi-person-dash me-1"></i>Drop Student</button></td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" class="text-center py-4 text-muted">No students have joined yet.</td>
+                            <td colspan="6" class="text-center py-4 text-muted">No students have joined yet.</td>
                         </tr>
                         {% endfor %}
-                        <tr class="student-no-results" id="studentNoResults"><td colspan="6" class="text-center py-4 text-muted">No students found.</td></tr>
+                        {% if students_table %}<tr class="student-no-results" id="studentNoResults"><td colspan="6" class="text-center py-4 text-muted">No students found.</td></tr>{% endif %}
                     </tbody>
                 </table>
             </div>
@@ -1235,8 +1312,8 @@
                     </div>
                     <div class="student-card-actions">
                         <span class="status-chip reading-level-chip" data-reading-level="{{ student.reading_level|default:'Pending' }}">{{ student.reading_level|default:'Pending' }}</span>
-                        <span class="status-chip">Joined {{ student.joined_at }}</span>
                         <span class="status-chip">{{ student.outcome_label }}</span>
+                        <button type="button" class="btn btn-sm btn-outline-danger drop-student-btn" data-bs-toggle="modal" data-bs-target="#dropStudentModal" data-student-id="{{ student.id }}" data-student-name="{{ student.name }}"><i class="bi bi-person-dash me-1"></i>Drop Student</button>
                     </div>
                 </article>
                 {% empty %}
@@ -1246,6 +1323,72 @@
         </section>
         </section>
     </main>
+</div>
+
+<!-- Drop Student Confirmation Modal (action intentionally not implemented yet) -->
+<div class="modal fade" id="dropStudentModal" tabindex="-1" aria-labelledby="dropStudentModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="dropStudentModalTitle">Drop Student</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">Are you sure you want to drop “<strong id="dropStudentName"></strong>”?</p>
+                <p class="mb-0 text-muted">This change cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="continueDropStudentButton">Continue</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="dropStudentLoadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content"><div class="modal-body text-center py-4">
+        <div class="spinner-border text-primary mb-3" role="status" aria-label="Dropping student"></div>
+        <p class="mb-0">Dropping student…</p>
+    </div></div></div>
+</div>
+
+<div class="modal fade" id="dropStudentSuccessModal" tabindex="-1" aria-labelledby="dropStudentSuccessTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title fw-bold" id="dropStudentSuccessTitle">Student Dropped</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+        <div class="modal-body"><p class="mb-0" id="dropStudentSuccessMessage"></p></div>
+        <div class="modal-footer"><button type="button" class="btn btn-primary" id="dropStudentSuccessOk">OK</button></div>
+    </div></div>
+</div>
+
+<div class="modal fade" id="finalizeOutcomeModal" tabindex="-1" aria-labelledby="finalizeOutcomeTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="finalizeOutcomeTitle">Finalize Student Outcome</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2" id="finalizeOutcomeQuestion"></p>
+                <p class="mb-0 text-muted" id="finalizeOutcomeWarning">Once finalized, this student's year-end outcome cannot be changed.</p>
+                <div class="alert alert-danger d-none mt-3 mb-0" id="finalizeOutcomeError" role="alert"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmFinalizeOutcomeButton">
+                    <span class="confirm-finalize-label">Confirm Finalize</span>
+                    <span class="confirm-finalize-loading d-none"><span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Saving…</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="finalizeOutcomeSuccessModal" tabindex="-1" aria-labelledby="finalizeOutcomeSuccessTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title fw-bold" id="finalizeOutcomeSuccessTitle">Outcome Finalized</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+        <div class="modal-body"><p class="mb-0" id="finalizeOutcomeSuccessMessage"></p></div>
+        <div class="modal-footer"><button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button></div>
+    </div></div>
 </div>
 
 <!-- Add Student Modal -->
@@ -1311,6 +1454,134 @@
 </div>
 
 <script>
+document.addEventListener('DOMContentLoaded', function () {
+    const dropStudentModal = document.getElementById('dropStudentModal');
+    const dropStudentName = document.getElementById('dropStudentName');
+    const continueButton = document.getElementById('continueDropStudentButton');
+    const loadingModal = document.getElementById('dropStudentLoadingModal');
+    const successModal = document.getElementById('dropStudentSuccessModal');
+    const successMessage = document.getElementById('dropStudentSuccessMessage');
+    const successOk = document.getElementById('dropStudentSuccessOk');
+    const finalizeOutcomeModal = document.getElementById('finalizeOutcomeModal');
+    const finalizeOutcomeQuestion = document.getElementById('finalizeOutcomeQuestion');
+    const confirmFinalizeButton = document.getElementById('confirmFinalizeOutcomeButton');
+    const confirmFinalizeLabel = confirmFinalizeButton?.querySelector('.confirm-finalize-label');
+    const confirmFinalizeLoading = confirmFinalizeButton?.querySelector('.confirm-finalize-loading');
+    const finalizeOutcomeError = document.getElementById('finalizeOutcomeError');
+    const finalizeSuccessModal = document.getElementById('finalizeOutcomeSuccessModal');
+    const finalizeSuccessMessage = document.getElementById('finalizeOutcomeSuccessMessage');
+    let pendingTrigger = null;
+    let pendingName = '';
+    let loadingInstance = null;
+    let successInstance = null;
+    let pendingFinalizeForm = null;
+    let finalizeInstance = null;
+    let finalizeSuccessInstance = null;
+    if (!dropStudentModal || !dropStudentName || !continueButton) return;
+
+    function hideModalAndWait(instance, element) {
+        if (!instance || !element || !element.classList.contains('show')) return Promise.resolve();
+        return new Promise(resolve => {
+            element.addEventListener('hidden.bs.modal', resolve, {once: true});
+            instance.hide();
+        });
+    }
+
+    dropStudentModal.addEventListener('show.bs.modal', function (event) {
+        const trigger = event.relatedTarget;
+        pendingTrigger = trigger;
+        pendingName = trigger ? (trigger.dataset.studentName || '') : '';
+        dropStudentName.textContent = pendingName;
+    });
+
+    continueButton.addEventListener('click', async function () {
+        continueButton.disabled = true;
+        const modalInstance = bootstrap.Modal.getInstance(dropStudentModal);
+        await hideModalAndWait(modalInstance, dropStudentModal);
+        loadingInstance = bootstrap.Modal.getOrCreateInstance(loadingModal);
+        loadingInstance.show();
+        try {
+            const response = await fetch('{% url "teacher_drop_student" %}', {
+                method: 'POST', credentials: 'same-origin',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name="csrfmiddlewaretoken"]')?.value || ''},
+                body: JSON.stringify({section_id: '{{ section.id }}', student_id: pendingTrigger?.dataset.studentId || ''})
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.error || 'Unable to drop the student.');
+            await hideModalAndWait(loadingInstance, loadingModal);
+            successMessage.textContent = `Student “${pendingName}” has been dropped from your class.`;
+            successInstance = bootstrap.Modal.getOrCreateInstance(successModal);
+            successInstance.show();
+        } catch (error) {
+            await hideModalAndWait(loadingInstance, loadingModal);
+            window.alert(error.message || 'Unable to drop the student right now.');
+        } finally {
+            continueButton.disabled = false;
+        }
+    });
+
+    successOk.addEventListener('click', function () {
+        const row = pendingTrigger?.closest('tr');
+        const card = pendingTrigger?.closest('.student-card');
+        row?.remove();
+        card?.remove();
+        const count = document.getElementById('enrolledStudentCount');
+        if (count) count.textContent = `${Math.max(0, (parseInt(count.textContent, 10) || 0) - 1)} enrolled`;
+        successInstance?.hide();
+        pendingTrigger = null;
+    });
+
+    if (finalizeOutcomeModal && finalizeOutcomeQuestion && confirmFinalizeButton) {
+        finalizeInstance = bootstrap.Modal.getOrCreateInstance(finalizeOutcomeModal);
+        document.querySelectorAll('form[data-finalize-form="true"]').forEach(form => {
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
+                pendingFinalizeForm = form;
+                const studentName = form.closest('tr')?.querySelector('td strong')?.textContent?.trim() || 'this student';
+                const selectedOutcome = form.querySelector('select[name="outcome"]')?.value || '';
+                const outcomeLabel = selectedOutcome === 'promoted' ? 'Promoted' : selectedOutcome === 'retained' ? 'Retained' : 'the selected outcome';
+                finalizeOutcomeQuestion.textContent = `Are you sure you want to finalize ${studentName} as ${outcomeLabel}?`;
+                finalizeOutcomeError.classList.add('d-none');
+                finalizeOutcomeError.textContent = '';
+                finalizeOutcomeModal.querySelector('.modal-title').textContent = form.dataset.correctionForm === 'true' ? 'Correct Student Outcome' : 'Finalize Student Outcome';
+                finalizeOutcomeModal.querySelector('#finalizeOutcomeWarning').textContent = form.dataset.correctionForm === 'true'
+                    ? 'The completed enrollment will remain historical.'
+                    : "Once finalized, this student's year-end outcome cannot be changed.";
+                confirmFinalizeLabel.textContent = form.dataset.correctionForm === 'true' ? 'Confirm Correction' : 'Confirm Finalize';
+                finalizeInstance.show();
+            });
+        });
+
+        finalizeSuccessInstance = bootstrap.Modal.getOrCreateInstance(finalizeSuccessModal);
+        confirmFinalizeButton.addEventListener('click', async function () {
+            if (!pendingFinalizeForm) return;
+            confirmFinalizeButton.disabled = true;
+            confirmFinalizeLabel.classList.add('d-none');
+            confirmFinalizeLoading.classList.remove('d-none');
+            try {
+                const response = await fetch(pendingFinalizeForm.action, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {'X-Requested-With': 'XMLHttpRequest'},
+                    body: new FormData(pendingFinalizeForm),
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'Unable to finalize this outcome.');
+                await hideModalAndWait(finalizeInstance, finalizeOutcomeModal);
+                finalizeSuccessMessage.textContent = `Student outcome finalized as ${result.outcome === 'promoted' ? 'Promoted' : 'Retained'}.`;
+                finalizeSuccessInstance.show();
+            } catch (error) {
+                finalizeOutcomeError.textContent = error.message || 'Unable to finalize this outcome.';
+                finalizeOutcomeError.classList.remove('d-none');
+            } finally {
+                confirmFinalizeButton.disabled = false;
+                confirmFinalizeLabel.classList.remove('d-none');
+                confirmFinalizeLoading.classList.add('d-none');
+            }
+        });
+    }
+});
+
 window.showClassStudentLoading = function () {
     const loadingModal = document.getElementById('addStudentLoadingModal');
     if (loadingModal) {

@@ -50,6 +50,7 @@ class User(models.Model):
     ACCOUNT_STATUS_CHOICES = [
         ("active", "Active"),
         ("pending_archive", "Pending Archive"),
+        ("dropped", "Dropped"),
         ("archived", "Archived"),
     ]
     ROLE_CHOICES = [
@@ -543,6 +544,7 @@ class Enrollment(models.Model):
         ("active", "Active"),
         ("completed", "Completed"),
         ("awaiting_assignment", "Awaiting Assignment"),
+        ("dropped", "Dropped"),
     ]
     OUTCOME_CHOICES = [
         ("not_finalized", "Not Finalized"),

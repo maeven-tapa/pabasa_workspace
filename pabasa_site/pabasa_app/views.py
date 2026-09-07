@@ -6031,6 +6031,8 @@ def admin_principals(request):
 def _admin_user_status(user):
     if getattr(user, 'account_status', '') == 'pending_archive':
         return 'Pending Archive'
+    if getattr(user, 'account_status', '') == 'dropped':
+        return 'Dropped'
     return 'Archived' if getattr(user, 'is_archived', False) else 'Active'
 
 def _admin_user_full_name(user):
@@ -6102,12 +6104,28 @@ def admin_users(request):
         users = users.filter(is_archived=False, account_status='active')
     elif category_filter == 'pending_archive':
         users = users.filter(is_archived=False, account_status='pending_archive')
+    elif category_filter == 'dropped':
+        users = users.filter(is_archived=False, account_status='dropped')
     elif category_filter == 'archived':
         users = users.filter(is_archived=True)
 
+    users = list(users.order_by('last_name', 'first_name'))
+    active_calendar = _active_school_calendar_for_new_workflows()
+    for user in users:
+        user.is_returnable_student = bool(
+            user.role == 'student'
+            and user.account_status == 'active'
+            and not Enrollment.objects.filter(
+                student=user,
+                school_calendar=active_calendar,
+                status__in=('active', 'awaiting_assignment'),
+            ).exists()
+            and _student_returning_eligibility(user, active_calendar)
+        ) if active_calendar else False
+
     context = _admin_context(request, 'Users', ['Name', 'Identifier', 'Email', 'Category', 'Created At', 'Actions'])
     context.update({
-        'users': users.order_by('last_name', 'first_name'),
+        'users': users,
         'search_query': search_query,
         'category_filter': category_filter,
         'category_options': [
@@ -6116,6 +6134,7 @@ def admin_users(request):
             ('teacher', 'Teachers'),
             ('active', 'Active'),
             ('pending_archive', 'Pending Archive'),
+            ('dropped', 'Dropped'),
             ('archived', 'Archived'),
         ],
     })
@@ -6140,7 +6159,7 @@ def _student_returning_eligibility(user, calendar=None):
         return None
     # Both fields are set by Enrollment.finalize_outcome; requiring them keeps
     # legacy/default Not Finalized rows from being treated as retained.
-    return Enrollment.objects.filter(
+    prior = Enrollment.objects.filter(
         student=user,
         school_calendar=previous_calendar,
         status='completed',
@@ -6148,6 +6167,11 @@ def _student_returning_eligibility(user, calendar=None):
         finalized_by__isnull=False,
         finalized_at__isnull=False,
     ).select_related('school').order_by('-finalized_at', '-updated_at').first()
+    if prior:
+        return prior
+    if user.account_status == 'dropped':
+        return Enrollment.objects.filter(student=user, status='dropped', is_active=False).select_related('school').order_by('-updated_at', '-id').first()
+    return None
 
 def _admin_user_template_context(request, user, page_title):
     context = _admin_context(request, page_title, [])
@@ -6176,7 +6200,7 @@ def _admin_user_template_context(request, user, page_title):
         'student_enrollments': (Enrollment.objects.filter(student=user).select_related('section__teacher', 'school', 'school_calendar').order_by('-school_calendar__created_at', '-joined_at') if user.role == 'student' else []),
         'current_return_enrollment': current_return_enrollment,
         'can_prepare_returning_student': bool(
-            user.role == 'student' and user.account_status == 'active'
+            user.role == 'student' and user.account_status in ('active', 'dropped')
             and not current_return_enrollment
             and _student_returning_eligibility(user, active_calendar)
         ),
@@ -6255,6 +6279,9 @@ def admin_student_archive_action(request, user_id):
 @admin_required
 @require_http_methods(["POST"])
 def admin_student_restore(request, user_id):
+    user = _get_managed_user(user_id, 'student')
+    if user and user.account_status == 'dropped':
+        return admin_student_returning_enrollment(request, user_id)
     return _admin_restore_user(request, user_id, 'student')
 
 
@@ -6263,13 +6290,16 @@ def admin_student_restore(request, user_id):
 def admin_student_returning_enrollment(request, user_id):
     user = _get_managed_user(user_id, 'student')
     calendar = _active_school_calendar_for_new_workflows()
-    if not user or user.is_archived or user.account_status != 'active' or not calendar:
-        messages.error(request, 'Only an active retained student can be prepared for return.')
+    was_dropped = bool(user and user.account_status == 'dropped')
+    if not user or user.is_archived or user.account_status not in ('active', 'dropped') or not calendar:
+        messages.error(request, 'Only an active or dropped student can be prepared for return.')
         return redirect('admin_student_detail', user_id=user_id)
     prior = _student_returning_eligibility(user, calendar)
     if not prior:
-        messages.error(request, 'A completed Retained enrollment is required.')
+        messages.error(request, 'A completed Retained or Dropped enrollment is required.')
         return redirect('admin_student_detail', user_id=user.id)
+    if was_dropped:
+        user.set_account_status('active', changed_by=_current_admin_user(request), reason='Admin reactivated dropped student as returnee')
     returning = Enrollment.objects.filter(student=user, school_calendar=calendar).order_by('-updated_at', '-id').first()
     if returning:
         if returning.status == 'completed' or returning.outcome not in ('not_finalized', 'retained'):
@@ -20351,6 +20381,39 @@ def teacher_add_student(request):
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def teacher_drop_student(request):
+    """Drop a student from a teacher-owned section without deleting the account."""
+    try:
+        data = json.loads(request.body or '{}')
+        section_id = data.get('section_id')
+        student_id = data.get('student_id')
+        teacher = User.objects.filter(id=request.session.get('user_id'), role='teacher').first()
+        section = _teacher_current_sections(teacher).filter(pk=section_id).first() if teacher and section_id else None
+        student = User.objects.filter(Q(id=student_id) | Q(custom_id=student_id), role='student').first()
+        if not section or not student:
+            return JsonResponse({'success': False, 'error': 'Section or student not found.'}, status=404)
+
+        with transaction.atomic():
+            enrollment = Enrollment.objects.select_for_update().filter(
+                student=student, section=section,
+                status='active', is_active=True,
+            ).first()
+            if not enrollment:
+                return JsonResponse({'success': False, 'error': 'Student is not currently enrolled in this section.'}, status=409)
+            section.deactivate_student(student)
+            enrollment.status = 'dropped'
+            enrollment.is_active = False
+            enrollment.save(update_fields=['status', 'is_active', 'updated_at'])
+            student.set_account_status('dropped', changed_by=teacher, reason=f'Dropped from {section.class_name} by teacher')
+
+        return JsonResponse({'success': True, 'student_name': f'{student.first_name} {student.last_name}'.strip()})
+    except Exception as error:
+        logger.error('Error dropping student from section: %s', error)
+        return JsonResponse({'success': False, 'error': 'Unable to drop the student right now.'}, status=500)
 
 @csrf_protect
 @require_http_methods(["POST"])
