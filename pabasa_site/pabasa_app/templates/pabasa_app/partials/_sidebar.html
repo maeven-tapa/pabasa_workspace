@@ -1,9 +1,13 @@
 {% load static %}
-<div class="sidebar-inner d-flex flex-column p-3 p-xl-4{% if nav_role == 'student' %} student-sidebar{% endif %}">
+<div class="sidebar-inner d-flex flex-column p-3 p-xl-4{% if nav_role == 'student' %} student-sidebar{% elif nav_role == 'teacher' %} teacher-sidebar{% endif %}">
     <div class="sidebar-top-section flex-shrink-0 mb-4">
         <a class="sidebar-logo-link" href="{% if nav_role == 'teacher' %}{% url 'dashboard_teacher' %}{% else %}{% url 'dashboard' %}{% endif %}" aria-label="Go to dashboard">
             {% include "pabasa_app/partials/_pabasa_logo.html" with logo_class="pabasa-logo-svg" letters_class="pabasa-logo-letters" letter_yellow_class="lc-yellow" letter_blue_class="lc-blue" %}
         </a>
+
+        {% if nav_role == 'teacher' or nav_role == 'student' %}
+            {% include "pabasa_app/partials/_sidebar_profile_card.html" %}
+        {% endif %}
 
     </div>
 
@@ -16,29 +20,9 @@
         {% else %}
         <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'courses' %}" data-nav-tooltip title="Course"><i class="bi bi-folder2-open"></i><span class="sidebar-text">Course</span></a>
         <a id="sidebarClassLink" class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'class_management' %}" data-nav-tooltip data-active-path="{% url 'class_management' %}" title="Section"><i class="bi bi-door-open"></i><span class="sidebar-text">Section</span></a>
-        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'students' %}" data-nav-tooltip title="Students"><i class="bi bi-people"></i><span class="sidebar-text">Students</span></a>
+        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'students' %}" data-nav-tooltip title="Students"><i class="bi bi-people"></i><span class="sidebar-text">ARAL Program</span></a>
         {% endif %}
     </nav>
-
-    <div class="sidebar-profile-card sidebar-profile-summary">
-        <div class="sidebar-profile-avatar{% if nav_role == 'student' %} sidebar-student-avatar{% endif %}" aria-hidden="true">
-            {% if nav_role == 'student' %}
-                <span>{{ sidebar_selected_avatar.emoji|default:'🦉' }}</span>
-            {% else %}
-                {{ initials|default:'P' }}
-            {% endif %}
-        </div>
-        <div class="sidebar-profile-name">{% if user_full_name %}{{ user_full_name }}{% else %}PABASA User{% endif %}</div>
-        <div class="sidebar-profile-section">
-            {% with current_section=joined_classes|first %}
-                {% if current_section %}{{ current_section.name|default:current_section.code }}{% else %}No section assigned{% endif %}
-            {% endwith %}
-        </div>
-        <a class="sidebar-profile-view-btn" href="{% url 'profile' %}?role={{ nav_role|default:'student' }}">
-            <i class="bi bi-person-circle" aria-hidden="true"></i>
-            <span>View Profile</span>
-        </a>
-    </div>
 
     <a class="sidebar-collapsed-profile" href="{% url 'profile' %}?role={{ nav_role|default:'student' }}" data-nav-tooltip title="View Profile" aria-label="View Profile">
         {% if nav_role == 'student' %}
