@@ -225,7 +225,26 @@
         }
 
         body.admin-sidebar-collapsed .admin-profile-card {
+            align-items: center;
+            display: flex !important;
+            flex: 0 0 48px;
+            justify-content: center;
+            margin: 0.45rem auto 0.7rem !important;
+            min-height: 48px;
+            padding: 0;
+            width: 48px;
+        }
+
+        body.admin-sidebar-collapsed .admin-profile-card .admin-profile-name,
+        body.admin-sidebar-collapsed .admin-profile-card .admin-profile-role {
             display: none !important;
+        }
+
+        body.admin-sidebar-collapsed .admin-profile-card .admin-profile-avatar {
+            flex: 0 0 48px;
+            height: 48px;
+            margin: 0;
+            width: 48px;
         }
 
         body.admin-sidebar-collapsed .admin-brand-link {
@@ -246,7 +265,7 @@
             width: 56px;
         }
 
-        body.admin-sidebar-collapsed .admin-logo-link {
+        body.admin-sidebar-collapsed .sidebar-logo-link {
             gap: 0 !important;
             justify-content: center;
             min-height: 54px;
@@ -254,14 +273,14 @@
             width: 56px;
         }
 
-        body.admin-sidebar-collapsed .admin-logo-img {
+        body.admin-sidebar-collapsed .sidebar-logo-link .pabasa-logo-svg {
             flex-basis: 42px;
             height: 42px;
             width: 42px;
         }
 
         /* Match the teacher/student collapsed logo: retain only the bird mark. */
-        body.admin-sidebar-collapsed .admin-logo-link .pabasa-logo-letters,
+        body.admin-sidebar-collapsed .sidebar-logo-link .pabasa-logo-letters,
         body.admin-sidebar-collapsed .admin-collapse-label {
             display: none !important;
         }
@@ -399,42 +418,52 @@
             justify-content: space-between;
         }
 
-        .admin-logo-link {
+        .sidebar-logo-link {
             align-items: center;
             color: #fff;
             display: flex;
-            gap: 0.85rem;
-            min-width: 0;
+            gap: 0;
+            justify-content: center;
+            min-height: 58px;
+            padding: 0.45rem 0.2rem;
             text-decoration: none;
+            width: 100%;
         }
 
-        .admin-logo-link:hover,
-        .admin-logo-link:focus {
+        .sidebar-logo-link:hover,
+        .sidebar-logo-link:focus {
             color: #fff;
         }
 
-        .admin-logo-img {
-            width: 64px;
-            height: 54px;
-            flex-shrink: 0;
+        .sidebar-logo-link .pabasa-logo-svg {
+            background: transparent;
+            border-radius: 0;
+            box-shadow: none;
+            flex: 0 0 auto;
+            height: clamp(2rem, 2.7vw, 2.4rem);
+            object-fit: contain;
+            padding: 0;
+            width: auto;
         }
 
         .pabasa-logo-letters {
-            display: flex;
             align-items: center;
-            margin-left: -20px;
-            margin-top: 4px;
+            display: flex;
+            gap: 0;
+            margin-left: -0.68rem;
+            margin-top: 0.1rem;
+            overflow: visible;
         }
 
         .pabasa-logo-letters span {
-            font-family: 'Coiny', cursive;
-            font-size: 2.1rem;
             display: inline-block;
-            -webkit-text-stroke: 5px #10466E;
-            paint-order: stroke fill;
-            letter-spacing: -2px;
-            filter: drop-shadow(0px 2px 0px rgba(16,70,110,0.18));
+            filter: drop-shadow(0 2px 0 rgba(16, 70, 110, 0.18));
+            font-family: 'Coiny', var(--font-display), cursive;
+            font-size: clamp(1.35rem, 2vw, 1.75rem);
+            letter-spacing: -1px;
             line-height: 1;
+            paint-order: stroke fill;
+            -webkit-text-stroke: 3px #10466e;
         }
 
         .lc-blue   { color: #54C2F0; }
@@ -653,24 +682,6 @@
 
         .admin-logo-row {
             justify-content: center;
-        }
-
-        .admin-logo-link {
-            gap: 0;
-            justify-content: center;
-            min-height: 58px;
-            padding: 0.45rem 0.2rem;
-            width: 100%;
-        }
-
-        .admin-logo-img {
-            background: transparent;
-            border-radius: 0;
-            box-shadow: none;
-            height: clamp(2rem, 2.7vw, 2.4rem);
-            object-fit: contain;
-            padding: 0;
-            width: auto;
         }
 
         .admin-profile-card {
@@ -2949,8 +2960,8 @@
         <div class="d-flex flex-column h-100">
             <div class="admin-sidebar-top">
                     <div class="admin-logo-row">
-                        <a class="admin-logo-link" href="{% url 'dashboard_admin' %}" aria-label="Go to admin dashboard">
-                            {% include "pabasa_app/partials/_pabasa_logo.html" with logo_class="admin-logo-img" letters_class="pabasa-logo-letters" letter_yellow_class="lc-yellow" letter_blue_class="lc-blue" pnb_id="pnb-admin" pnbk_id="pnbk-admin" %}
+                        <a class="sidebar-logo-link" href="{% url 'dashboard_admin' %}" aria-label="Go to admin dashboard">
+                            {% include "pabasa_app/partials/_pabasa_logo.html" with logo_class="pabasa-logo-svg" letters_class="pabasa-logo-letters" letter_yellow_class="lc-yellow" letter_blue_class="lc-blue" pnb_id="pnb-admin" pnbk_id="pnbk-admin" %}
                         </a>
 
                 </div>
@@ -3004,8 +3015,8 @@
                 <div class="d-flex flex-column h-100">
                     <div class="admin-sidebar-top">
                         <div class="admin-logo-row">
-                            <a class="admin-logo-link" href="{% url 'dashboard_admin' %}" aria-label="Go to admin dashboard">
-                                {% include "pabasa_app/partials/_pabasa_logo.html" with logo_class="admin-logo-img" letters_class="pabasa-logo-letters" letter_yellow_class="lc-yellow" letter_blue_class="lc-blue" pnb_id="pnb-admin-mobile" pnbk_id="pnbk-admin-mobile" %}
+                            <a class="sidebar-logo-link" href="{% url 'dashboard_admin' %}" aria-label="Go to admin dashboard">
+                                {% include "pabasa_app/partials/_pabasa_logo.html" with logo_class="pabasa-logo-svg" letters_class="pabasa-logo-letters" letter_yellow_class="lc-yellow" letter_blue_class="lc-blue" pnb_id="pnb-admin-mobile" pnbk_id="pnbk-admin-mobile" %}
                             </a>
                         </div>
 

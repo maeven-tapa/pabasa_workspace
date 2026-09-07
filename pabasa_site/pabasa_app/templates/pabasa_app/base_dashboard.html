@@ -342,6 +342,21 @@
             padding: 1.15rem 0 !important;
         }
 
+        /* Keep the collapsed upper navigation sequence together so the
+           profile is laid out immediately after the primary links. */
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-upper-navigation {
+            flex: 0 0 auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            width: 56px !important;
+            margin: 0 auto !important;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-top-section {
+            margin-bottom: 1rem !important;
+        }
+
         body.sidebar-collapsed .dashboard-sidebar .sidebar-top-section,
         body.sidebar-collapsed .dashboard-sidebar .sidebar-nav-section,
         body.sidebar-collapsed .dashboard-sidebar .d-grid,

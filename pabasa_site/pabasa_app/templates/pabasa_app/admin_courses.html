@@ -76,9 +76,6 @@
                             <a class="btn btn-sm admin-action-btn admin-action-view" href="{% url 'admin_course_detail' material.id %}">
                                 <i class="bi bi-eye"></i><span>View</span>
                             </a>
-                            <a class="btn btn-sm admin-action-btn admin-action-edit" href="{% url 'admin_course_edit' material.id %}">
-                                <i class="bi bi-pencil"></i><span>Edit</span>
-                            </a>
                             <form method="post" action="{% url 'admin_course_archive' material.id %}">
                                 {% csrf_token %}
                                 {% if material.is_active %}
