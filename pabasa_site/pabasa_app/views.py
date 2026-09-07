@@ -16763,7 +16763,38 @@ def course_student_view(request):
     return render(request, 'pabasa_app/course_student_view.html', _dashboard_context(request))
 
 def students(request):
-    return render(request, 'pabasa_app/students.html', _dashboard_context(request, 'teacher'))
+    teacher = User.objects.filter(
+        id=request.session.get('user_id'), role='teacher', is_archived=False,
+    ).first()
+    section = _teacher_current_sections(teacher).order_by('class_name', 'id').first()
+    live_crla_material = None
+    assessment_week_students = []
+    if section:
+        roster_students, _, _ = _teacher_student_roster_payload(teacher, section=section)
+        assessment_week_students = [
+            {'id': student['id'], 'name': student['name']}
+            for student in roster_students
+            if student.get('id')
+        ]
+        first_student = User.objects.filter(
+            id__in=[student['id'] for student in assessment_week_students],
+            role='student', is_archived=False,
+        ).first()
+        if first_student:
+            live_availability = _official_assessment_availability_for_student(first_student, request)
+            if live_availability.get('available'):
+                live_crla_material = _official_crla_material_for_student(
+                    first_student, live_availability.get('assessment_type'),
+                )
+
+    return render(request, 'pabasa_app/students.html', _dashboard_context(request, 'teacher', {
+        'assessment_week_section': section,
+        'assessment_week_toggle_available': bool(
+            section and _section_assessment_week_status(section) == 'during'
+        ),
+        'assessment_week_students': assessment_week_students,
+        'live_crla_material': live_crla_material,
+    }))
 
 def student_detail(request):
     return render(request, 'pabasa_app/student_detail.html')

@@ -437,10 +437,10 @@
     /* One shared desktop grid keeps both columns and both card rows aligned. */
     .dashboard-main-layout {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
         grid-template-areas:
             "classes calendar"
-            "achievements journey";
+            "journey achievements";
         gap: 1.25rem;
         margin-top: 1.25rem;
         align-items: stretch;
@@ -1141,55 +1141,6 @@
         color: #fff;
     }
 
-    .class-card-menu {
-        position: absolute;
-        right: 0.85rem;
-        top: 0.85rem;
-        z-index: 3;
-    }
-
-    .class-card-more-btn {
-        align-items: center;
-        background: rgba(255, 255, 255, 0.9);
-        border: 1px solid rgba(15, 23, 42, 0.08);
-        border-radius: 999px;
-        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
-        color: #0F172A;
-        display: inline-flex;
-        height: 2.2rem;
-        justify-content: center;
-        width: 2.2rem;
-    }
-
-    .class-card-more-btn:hover,
-    .class-card-more-btn:focus {
-        background: #fff;
-        color: #0F172A;
-    }
-
-    .class-card-more-btn.dropdown-toggle::after {
-        display: none;
-    }
-
-    .class-card-menu .dropdown-menu {
-        border: 1px solid rgba(15, 23, 42, 0.08);
-        border-radius: 16px;
-        box-shadow: 0 18px 36px rgba(15, 23, 42, 0.14);
-        padding: 0.4rem;
-        min-width: 11rem;
-    }
-
-    .class-card-menu .dropdown-item {
-        border-radius: 12px;
-        font-size: 0.86rem;
-        font-weight: 700;
-        padding: 0.55rem 0.75rem;
-    }
-
-    .class-card-menu .dropdown-item:active {
-        background: #1FB6FF;
-    }
-
     .unenroll-modal .modal-content {
         border: none;
         border-radius: 28px;
@@ -1833,6 +1784,61 @@
         display: flex;
     }
 
+    /* Compact, consistent dashboard cards.  The desktop grid supplies equal
+       row heights; content returns to its natural height when stacked. */
+    .student-studio { display: block; border-radius: 20px; padding: 1.1rem 1.25rem; }
+    .student-studio-copy { gap: 0.25rem; }
+    .student-studio-copy h2 { font-size: clamp(1.55rem, 2.4vw, 2rem); }
+    .greeting-kicker { display: none; }
+    .welcome-message { color: #526b82; font-family: "Quattrocento Sans", "Segoe UI", sans-serif; font-size: 0.92rem; margin: 0; }
+    .student-dashboard.has-class .learning-context { display: none; }
+
+    .dashboard-main-layout { gap: 1rem; margin-top: 1rem; }
+    .my-classes-section, .student-calendar-card, .my-reading-journey, .my-achievements {
+        border: 1px solid rgba(16, 70, 110, 0.11); border-radius: 18px;
+        box-shadow: 0 8px 20px rgba(16, 70, 110, 0.07); padding: 1rem;
+    }
+    .my-classes-section { gap: 0.75rem; }
+    .my-classes-header, .section-title, .student-calendar-card .student-calendar-head h3 { font-size: 1.08rem; }
+    .my-classes-header { padding-bottom: 0.55rem; }
+    .my-classes-section .class-list { gap: 0.75rem; padding-bottom: 0; }
+    .my-classes-section .class-list > .class-card { height: auto; }
+
+    .class-card { border-radius: 14px; box-shadow: none; padding: 0.85rem; }
+    .class-card h3 { font-size: 1rem; margin-bottom: 0.45rem; }
+    .class-card-meta { gap: 0.4rem; font-size: 0.82rem; }
+    .class-card-actions { margin-top: 0; padding-top: 0.75rem; }
+    .continue-learning-btn { border-radius: 11px; padding: 0.65rem 0.85rem; }
+    .class-detail, .class-card-new-info, .class-card-bg-icon { display: none !important; }
+    .reading-level-badge { margin-top: 0.2rem; }
+    .class-card .alert { border-radius: 10px; font-size: 0.75rem; line-height: 1.35; margin: 0.65rem 0 0 !important; }
+
+    .student-calendar-card { gap: 0.55rem; grid-template-rows: auto auto auto 1fr auto; }
+    .student-calendar-card .student-calendar-grid > div { min-height: 2.3rem; }
+    .student-calendar-card .student-calendar-weekday { font-size: 0.58rem; }
+    .student-calendar-card .student-calendar-day-number { font-size: 0.68rem; }
+    .student-calendar-card .student-calendar-expand { border-radius: 10px; font-size: 0.8rem; padding: 0.55rem 0.75rem; }
+    .student-calendar-meta { font-size: 0.78rem; line-height: 1.3; }
+
+    .my-reading-journey, .my-achievements { gap: 0.8rem; }
+    .my-reading-journey { grid-template-rows: auto auto auto; }
+    .progress-item { gap: 0.4rem; }
+    .stats-container { gap: 0.55rem; }
+    .stat-item { border-radius: 11px; gap: 0.2rem; padding: 0.65rem; }
+    .stat-item-value { font-size: 1.25rem; }
+    .stat-item-label { font-size: 0.64rem; }
+    .achievements-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.55rem; }
+    .achievement-badge { border-radius: 12px; border-width: 1px; gap: 0.25rem; padding: 0.55rem 0.35rem; }
+    .achievement-icon { font-size: 1.4rem; }
+    .achievement-name { font-size: 0.68rem; }
+    .achievement-lock { bottom: 0.2rem; right: 0.2rem; height: 16px; width: 16px; font-size: 0.58rem; }
+
+    @media (min-width: 992px) {
+        .achievements-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+        .achievement-badge { min-height: 96px; }
+        .achievement-name { font-size: 0.62rem; }
+    }
+
     /* Balanced card interiors for the paired desktop rows. */
     .student-calendar-card {
         display: grid !important;
@@ -1875,6 +1881,46 @@
         justify-content: center;
     }
 
+    /* Keep the student calendar at the same comfortable scale and density as
+       the Teacher Dashboard calendar. Student data and controls stay intact. */
+    .student-calendar-card {
+        background: #fff;
+        border: 1px solid rgba(16, 70, 110, .1);
+        border-radius: 22px;
+        box-shadow: 0 12px 28px rgba(16, 70, 110, .08);
+        display: flex !important;
+        flex-direction: column;
+        gap: .7rem;
+        padding: 1.05rem;
+    }
+
+    .student-calendar-card .student-calendar-head { margin-bottom: 0; }
+    .student-calendar-card .student-calendar-head h3 { color: #10466e; font-size: 1.08rem; }
+    .student-calendar-section {
+        border-bottom: 1px solid rgba(16, 70, 110, .1);
+        display: grid;
+        gap: .65rem;
+        padding-bottom: .85rem;
+    }
+    .student-calendar-card .student-calendar-month { line-height: 1.25; margin: 0; }
+    .student-calendar-card .student-calendar-meta { color: #6b7d8f; font-size: .84rem; line-height: 1.3; margin: -.2rem 0 0; }
+    .student-calendar-card .student-calendar-grid {
+        grid-auto-rows: unset;
+        grid-template-rows: 1.55rem repeat(6, minmax(0, 1fr));
+        height: 17.5rem;
+    }
+    .student-calendar-card .student-calendar-grid > div { min-height: 0; padding: .25rem; }
+    .student-calendar-card .student-calendar-weekday { font-size: .72rem; padding: .35rem .1rem !important; }
+    .student-calendar-card .student-calendar-day-number { font-size: .8rem; }
+    .student-calendar-card .student-calendar-event { height: 4px; margin-top: .3rem; }
+    .student-calendar-card .student-calendar-expand {
+        font-size: .78rem;
+        line-height: 1.2;
+        margin: .1rem 0 0;
+        min-height: 2rem;
+        padding: .38rem .65rem;
+    }
+
     .my-achievements {
         grid-template-rows: auto minmax(0, 1fr);
     }
@@ -1904,8 +1950,8 @@
             grid-template-areas:
                 "classes"
                 "calendar"
-                "achievements"
-                "journey";
+                "journey"
+                "achievements";
             gap: 1.25rem;
         }
 
@@ -1915,8 +1961,8 @@
 
         .my-classes-section { order: 1; }
         .student-calendar-card { order: 2; }
-        .my-achievements { order: 3; }
-        .my-reading-journey { order: 4; }
+        .my-reading-journey { order: 3; }
+        .my-achievements { order: 4; }
 
         .dashboard-main-layout > *,
         .dashboard-card-column > * {
@@ -1938,6 +1984,15 @@
         .my-achievements,
         .my-reading-journey {
             grid-template-rows: none;
+        }
+
+        .student-calendar-card .student-calendar-grid {
+            grid-template-rows: none;
+            height: auto;
+        }
+
+        .student-calendar-card .student-calendar-grid > div {
+            min-height: 2.8rem;
         }
     }
 
@@ -2019,7 +2074,7 @@
         }
 
         .achievements-grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
         }
     }
 </style>
@@ -2033,10 +2088,8 @@
 <section class="student-dashboard" data-student-dashboard>
     <div class="student-studio" aria-labelledby="student-dashboard-greeting">
         <div class="student-studio-copy">
-            <div class="greeting-row">
-                <span class="greeting-kicker"><i class="bi bi-book" aria-hidden="true"></i>Your Learning Today</span>
-            </div>
             <h2 id="student-dashboard-greeting" data-dashboard-greeting>Good morning, Student</h2>
+            <p class="welcome-message">Ready to read and learn?</p>
         </div>
 
         <aside class="learning-context is-warning" data-learning-context aria-live="polite">
@@ -2082,10 +2135,10 @@
     <!-- Shared grid aligns the four dashboard cards into two balanced rows. -->
     <div class="dashboard-main-layout" data-dashboard-main-layout style="display: none;">
         <div class="dashboard-card-column left-column">
-            <!-- My Classes -->
+            <!-- My Class -->
             <div class="my-classes-section">
                 <div class="my-classes-header">
-                    <span>My Classes</span>
+                    <span>My Class</span>
                 </div>
                 <div class="class-list" data-class-list aria-live="polite"></div>
             </div>
@@ -2105,24 +2158,26 @@
                 <div class="student-calendar-head">
                     <h3><i class="bi bi-calendar3"></i> School Calendar</h3>
                 </div>
-                <div class="student-calendar-month" id="studentCalendarMonth"></div>
-                <div class="student-calendar-meta">School Year: <strong>{{ student_calendar_school_year|default:"Not set" }}</strong> · <strong>{{ student_calendar_current_term|default:"Not set" }}</strong></div>
+                <div class="student-calendar-section">
+                    <div class="student-calendar-month" id="studentCalendarMonth"></div>
+                    <div class="student-calendar-meta">School Year: <strong>{{ student_calendar_school_year|default:"Not set" }}</strong> · <strong>{{ student_calendar_current_term|default:"Not set" }}</strong></div>
 
-                <div class="student-calendar-grid" id="studentCalendarGrid" aria-label="Current month calendar" aria-readonly="true">
-                    <div class="student-calendar-weekdays" aria-hidden="true">
-                        <div class="student-calendar-weekday">Sun</div>
-                        <div class="student-calendar-weekday">Mon</div>
-                        <div class="student-calendar-weekday">Tue</div>
-                        <div class="student-calendar-weekday">Wed</div>
-                        <div class="student-calendar-weekday">Thu</div>
-                        <div class="student-calendar-weekday">Fri</div>
-                        <div class="student-calendar-weekday">Sat</div>
+                    <div class="student-calendar-grid" id="studentCalendarGrid" aria-label="Current month calendar" aria-readonly="true">
+                        <div class="student-calendar-weekdays" aria-hidden="true">
+                            <div class="student-calendar-weekday">Sun</div>
+                            <div class="student-calendar-weekday">Mon</div>
+                            <div class="student-calendar-weekday">Tue</div>
+                            <div class="student-calendar-weekday">Wed</div>
+                            <div class="student-calendar-weekday">Thu</div>
+                            <div class="student-calendar-weekday">Fri</div>
+                            <div class="student-calendar-weekday">Sat</div>
+                        </div>
                     </div>
-                </div>
 
-                <button type="button" class="btn btn-primary student-calendar-expand" data-bs-toggle="modal" data-bs-target="#studentCalendarModal">
-                    <i class="bi bi-arrows-fullscreen me-2"></i>Expand Calendar
-                </button>
+                    <button type="button" class="btn btn-primary student-calendar-expand" data-bs-toggle="modal" data-bs-target="#studentCalendarModal">
+                        <i class="bi bi-arrows-fullscreen me-2"></i>Expand Calendar
+                    </button>
+                </div>
             </article>
 
             <!-- My Reading Journey -->
@@ -2632,39 +2687,39 @@
         const ACHIEVEMENTS = [
             {
                 id: 'first-steps',
-                name: '🌱 First Steps',
+                name: 'First Steps',
                 description: 'Complete your first assessment',
-                icon: '🌱'
+                icon: '<i class="bi bi-tree-fill" aria-hidden="true"></i>'
             },
             {
                 id: 'book-explorer',
-                name: '📘 Book Explorer',
+                name: 'Book Explorer',
                 description: 'Complete all 3 assessments',
-                icon: '📘'
+                icon: '<i class="bi bi-book-fill" aria-hidden="true"></i>'
             },
             {
                 id: 'reading-streak',
-                name: '🔥 Reading Streak',
+                name: 'Reading Streak',
                 description: 'Read for 7 consecutive days',
-                icon: '🔥'
+                icon: '<i class="bi bi-lightning-charge-fill" aria-hidden="true"></i>'
             },
             {
                 id: 'rising-reader',
-                name: '⭐ Rising Reader',
+                name: 'Rising Reader',
                 description: 'Reach 50% reading progress',
-                icon: '⭐'
+                icon: '<i class="bi bi-star-fill" aria-hidden="true"></i>'
             },
             {
                 id: 'practice-star',
-                name: '✨ Practice Star',
+                name: 'Practice Star',
                 description: 'Complete every level in Free Mode, Color Mode, and Hunt Mode',
-                icon: '✨'
+                icon: '<i class="bi bi-award-fill" aria-hidden="true"></i>'
             },
             {
                 id: 'reading-champion',
-                name: '🏆 Reading Champion',
+                name: 'Reading Champion',
                 description: 'Complete 100% of the course',
-                icon: '🏆'
+                icon: '<i class="bi bi-trophy-fill" aria-hidden="true"></i>'
             }
         ];
 
@@ -2969,22 +3024,9 @@
                             'bi-book'
                         }"></i>
                     </div>
-                    <div class="class-card-menu dropdown">
-                        <button class="class-card-more-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More options for ${escapeHtml(classData.name || "Reading Class")}">
-                            <i class="bi bi-three-dots-vertical"></i>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li>
-                <button class="dropdown-item text-danger" type="button" data-unenroll-section-id="${escapeHtml(classData.section_id || classData.id || '')}" data-unenroll-class-code="${escapeHtml(classData.code || '')}">
-                                    <i class="bi bi-box-arrow-left me-2"></i>Unenroll
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
                     <h3>${escapeHtml(classData.name || "Reading Class")}</h3>
                     <div class="class-card-meta">
                         <span><i class="bi bi-person-badge me-2 text-primary"></i> Teacher: <strong>${escapeHtml(classData.teacher || classData.teacher_name || classData.teacherName || "Your teacher")}</strong></span>
-                        <span><i class="bi bi-stars me-2 text-info"></i> ${escapeHtml(classData.subject || classData.header || "Reading")} class</span>
                         <span class="reading-level-badge" data-reading-level><i class="bi bi-bar-chart-fill"></i> Reading Level: ${escapeHtml(window.PABASA_STUDENT_READING_LEVEL || 'Pending')}</span>
                     </div>
                     ${classData.assessmentWeekEnabled ? `
@@ -2992,19 +3034,7 @@
                         <i class="bi bi-clipboard2-check me-1"></i><strong>Assessment Week</strong> is active. Only assessments are available for this section.
                     </div>
                     ` : ''}
-                    ${classData.currentLesson ? `
-                    <div class="class-card-new-info">
-                        <div class="current-lesson-item">
-                            <span class="current-lesson-label">Current Lesson</span>
-                            <span class="current-lesson-value">${escapeHtml(classData.currentLesson.title)}</span>
-                        </div>
-                    </div>
-                    ` : ''}
-                    <div class="class-detail" data-class-detail>
-                        <ul class="class-detail-list">
-                            <li><i class="bi bi-info-circle text-primary"></i> ${escapeHtml(classData.description || "No class description yet.")}</li>
-                        </ul>
-                        ${classData.removedByTeacher ? `
+                    ${classData.removedByTeacher ? `
                         <div class="mt-3 alert alert-warning d-flex justify-content-between align-items-center" role="alert">
                             <div>
                                 <strong>Class removed by teacher</strong>
@@ -3014,8 +3044,7 @@
                                 <button class="btn btn-sm btn-outline-danger remove-deleted-class-btn" data-code="${escapeHtml(classData.code)}">Remove</button>
                             </div>
                         </div>
-                        ` : ''}
-                    </div>
+                    ` : ''}
                     <div class="class-card-actions">
                         <button class="continue-learning-btn" type="button" data-continue-learning data-section-id="${escapeHtml(classData.section_id || classData.id || '')}" data-class-code="${escapeHtml(classData.code)}">
                             <i class="bi ${classData.assessmentWeekEnabled ? 'bi-clipboard2-check' : 'bi-play-circle'} me-1"></i>${classData.assessmentWeekEnabled ? 'Open Assessment' : 'Continue Learning'}

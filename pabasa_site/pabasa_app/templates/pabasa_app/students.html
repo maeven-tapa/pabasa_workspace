@@ -13,6 +13,32 @@
     .student-assessment-request-card p { margin:.25rem 0 0; color:#58676f; font-size:.88rem; }
     @media (max-width:575.98px) { .student-assessment-request-card { align-items:flex-start; flex-direction:column; } }
 
+    .assessment-week-card { overflow:hidden; margin-top:1rem; border:1px solid rgba(15,45,69,.12); border-radius:20px; background:#fff; box-shadow:0 12px 28px rgba(15,45,69,.08); }
+    .assessment-week-card .card-header { margin:0; padding:1.2rem 1.25rem 1.1rem; border:0; background:transparent; }
+    .assessment-week-header { display:flex; align-items:flex-start; justify-content:space-between; gap:1.25rem; }
+    .assessment-week-copy { display:flex; flex:1 1 auto; min-width:0; flex-direction:column; align-items:flex-start; }
+    .assessment-week-title { display:flex; align-items:center; gap:.7rem; min-width:0; }
+    .assessment-week-heading-icon { display:inline-flex; align-items:center; justify-content:center; flex:0 0 2.65rem; width:2.65rem; height:2.65rem; border-radius:14px; background:#eef5fa; color:#10466e; font-size:1.2rem; }
+    .assessment-week-title h2 { margin:0; color:#193247; font-size:1.12rem; font-weight:900; letter-spacing:-.01em; }
+    .assessment-week-state-dot { width:.52rem; height:.52rem; border-radius:50%; background:#a8b4bd; }
+    .assessment-week-card--enabled .assessment-week-state-dot { background:#3a8d5f; box-shadow:0 0 0 4px rgba(58,141,95,.12); }
+    .assessment-week-card .card-subtitle { max-width:58ch; margin:.48rem 0 0 3.35rem; color:#6c7d89; font-size:.84rem; line-height:1.45; }
+    .assessment-week-card .form-check { display:flex; align-items:center; gap:.5rem; flex:0 0 auto; margin-top:.12rem; padding:.42rem .62rem; border:1px solid #e0e7ec; border-radius:999px; background:#f8fafb; }
+    .assessment-week-card--enabled .form-check { border-color:rgba(58,141,95,.24); background:#f3faf5; }
+    .assessment-week-card .form-check-input { width:2.05rem; height:1.1rem; margin:0; cursor:pointer; }
+    .assessment-week-card .form-check-label { color:#687780; font-size:.72rem; font-weight:800; letter-spacing:.06em; }
+    .assessment-week-card--enabled .form-check-label { color:#2d7650; }
+    .assessment-week-live-action { min-height:auto; margin:0 1.25rem; padding:.85rem 0 1rem; border:0; border-top:1px solid #e8edf0; background:transparent; }
+    .assessment-week-live-copy { color:#687780; font-size:.82rem; line-height:1.4; }
+    .assessment-week-live-action .btn { min-height:2.1rem; padding:.42rem .78rem; border-radius:10px; font-size:.8rem; font-weight:800; box-shadow:0 5px 12px rgba(13,110,253,.16); }
+    .assessment-confirm-modal { position:fixed; inset:0; z-index:1060; display:none; align-items:center; justify-content:center; padding:1rem; background:rgba(7,18,38,.68); backdrop-filter:blur(7px); -webkit-backdrop-filter:blur(7px); }
+    .assessment-confirm-modal.is-visible { display:flex; }
+    .assessment-confirm-dialog { width:min(100%,30rem); max-width:30rem; border:1px solid rgba(110,168,255,.28); border-radius:22px; background:linear-gradient(145deg,#102746,#0a1930); color:#eaf3ff; box-shadow:0 24px 70px rgba(2,10,24,.45); }
+    .assessment-confirm-body { padding:1.6rem; }
+    .assessment-confirm-icon { display:inline-flex; align-items:center; justify-content:center; width:2.8rem; height:2.8rem; margin-bottom:1rem; border-radius:14px; background:rgba(74,144,226,.18); color:#8fc5ff; font-size:1.25rem; }
+    .assessment-confirm-title { margin:0 0 .55rem; font-size:1.35rem; font-weight:800; }.assessment-confirm-copy { margin:0; color:#bfd0e7; line-height:1.55; }.assessment-confirm-error { margin:.9rem 0 0; color:#ffb4b4; font-size:.9rem; }.assessment-confirm-actions { display:flex; justify-content:flex-end; gap:.65rem; margin-top:1.4rem; }.assessment-confirm-actions button { min-width:6.5rem; border-radius:10px; font-weight:700; }.assessment-confirm-cancel { border:1px solid rgba(191,208,231,.35); color:#dce9f9; background:transparent; }.assessment-confirm-cancel:hover,.assessment-confirm-cancel:focus-visible { background:rgba(255,255,255,.08); }.assessment-confirm-submit { border:0; background:#4d9bff; color:#071226; }.assessment-confirm-submit:hover,.assessment-confirm-submit:focus-visible { background:#76b4ff; }
+    @media (max-width:575.98px) { .assessment-week-card .card-header { padding:1rem; }.assessment-week-header { gap:.9rem; }.assessment-week-card .card-subtitle { margin-left:0; }.assessment-week-card .form-check { align-self:flex-start; }.assessment-week-live-action { align-items:flex-start!important; flex-direction:column; margin:0 1rem; padding:.85rem 0 1rem; }.assessment-week-live-action .btn { width:100%; } }
+
     #studentAssessmentRequestsModal .modal-dialog { max-width: 620px; }
     #studentAssessmentRequestsModal .modal-content { overflow:hidden; border:0; border-radius:24px; box-shadow:0 24px 70px rgba(15,45,69,.28); }
     #studentAssessmentRequestsModal .modal-header { min-height:78px; padding:1.25rem 1.4rem 1.1rem; color:#fff; border:0; background:linear-gradient(135deg,#10466e,#2ea8e5); }
@@ -1170,6 +1196,7 @@
 {% endblock %}
 
 {% block dashboard_header_after %}
+{% include "pabasa_app/partials/_assessment_week_card.html" %}
 <section class="student-assessment-request-card" aria-labelledby="studentAssessmentRequestTitle">
     <div><h2 id="studentAssessmentRequestTitle">Student Requests to Take Assessment</h2><p id="studentAssessmentRequestCount">0 requests</p></div>
     <button class="btn btn-primary btn-sm" type="button" id="viewStudentAssessmentRequests">View</button>

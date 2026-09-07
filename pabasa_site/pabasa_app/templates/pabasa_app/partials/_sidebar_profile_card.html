@@ -1,0 +1,19 @@
+<div class="sidebar-profile-card sidebar-profile-summary mt-3">
+    <div class="sidebar-profile-avatar{% if nav_role == 'student' %} sidebar-student-avatar{% endif %}" aria-hidden="true">
+        {% if nav_role == 'student' %}
+            <span>{{ sidebar_selected_avatar.emoji|default:'🦉' }}</span>
+        {% else %}
+            {{ initials|default:'P' }}
+        {% endif %}
+    </div>
+    <div class="sidebar-profile-name">{% if user_full_name %}{{ user_full_name }}{% else %}PABASA User{% endif %}</div>
+    <div class="sidebar-profile-section">
+        {% with current_section=joined_classes|first %}
+            {% if current_section %}{{ current_section.name|default:current_section.code }}{% else %}No section assigned{% endif %}
+        {% endwith %}
+    </div>
+    <a class="sidebar-profile-view-btn" href="{% url 'profile' %}?role={{ nav_role|default:'student' }}">
+        <i class="bi bi-person-circle" aria-hidden="true"></i>
+        <span>View Profile</span>
+    </a>
+</div>
