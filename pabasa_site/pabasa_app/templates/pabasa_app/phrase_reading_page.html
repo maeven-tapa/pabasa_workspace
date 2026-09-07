@@ -15,19 +15,23 @@
 <body>
 <style>.phrase-intro{position:fixed;inset:0;z-index:3000;display:grid;place-items:center;padding:18px;background:linear-gradient(#cbeefe,#f8ddef);font-family:"Segoe UI",sans-serif}.phrase-intro-letter{position:relative;width:min(540px,100%);padding:clamp(90px,14vw,130px) clamp(22px,5vw,42px) 26px;border-radius:10px;background:#fffaf2;color:#584a66;box-shadow:0 24px 45px #7f628744;transform:translateY(20px);animation:letter-rise .9s .45s ease-out both;text-align:center}.phrase-intro-letter:before{content:'';position:absolute;inset:-70px 0 auto;height:130px;background:linear-gradient(135deg,#f6b9c9 50%,#ef9fb8 50%);clip-path:polygon(0 0,100% 0,50% 100%);transform-origin:top;animation:flap-open .8s ease-in forwards}.phrase-intro h1{margin:0;color:#8066ab;font-size:clamp(1.55rem,4vw,2.2rem)}.phrase-intro p{margin:8px auto 14px;font-weight:700;line-height:1.45}.phrase-example{padding:12px;border:1px dashed #c79cbd;border-radius:12px;background:#fff4ca;color:#453153;font-size:clamp(1.1rem,3vw,1.35rem);font-weight:900}.phrase-intro button{margin-top:18px;min-height:48px;border:0;border-radius:13px;background:#8066ab;color:#fff;padding:10px 25px;font:inherit;font-weight:900;box-shadow:0 5px 0 #5d477d;cursor:pointer}@keyframes flap-open{to{transform:rotateX(160deg)}}@keyframes letter-rise{to{transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.phrase-intro-letter,.phrase-intro-letter:before{animation:none}.phrase-intro-letter{transform:none}}</style><section class="phrase-intro" id="phraseIntro" aria-labelledby="phraseIntroTitle"><article class="phrase-intro-letter"><h1 id="phraseIntroTitle">A Reading Message</h1><p>Read the phrase aloud. Take your time and read clearly.</p><div class="phrase-example">the happy puppy</div><button id="startPhrase" type="button">Let’s Start!</button></article></section><script>document.getElementById('startPhrase').onclick=()=>document.getElementById('phraseIntro').remove()</script>
     <style>
-        .phrase-reading-intro { position:fixed; inset:0; z-index:3001; display:grid; place-items:center; padding:18px; overflow:hidden; background:linear-gradient(#cbeefe,#f8ddef); font-family:"Segoe UI",sans-serif; }
-        .phrase-reading-intro-card { position:relative; display:grid; place-items:center; width:min(680px,100%); min-height:min(540px,calc(100dvh - 36px)); color:#584a66; text-align:center; }
-        .phrase-reading-intro-lottie { width:min(500px,82vw); max-height:min(520px,74dvh); transform:scale(1); transform-origin:center; opacity:1; pointer-events:none; transition:opacity .56s ease,transform .56s cubic-bezier(.22,.8,.3,1); }
+        @font-face { font-family:"Phrase Intro Patrick Hand"; src:url("{% static 'pabasa_app/font/patrick-hand.regular.ttf' %}") format("truetype"); font-display:swap; }
+        .phrase-reading-intro { position:fixed; inset:0; z-index:3001; display:grid; place-items:center; padding:48px; overflow:hidden; background:linear-gradient(#cbeefe,#f8ddef); font-family:"Segoe UI",sans-serif; }
+        .phrase-reading-intro-card { position:relative; display:grid; place-items:center; width:100%; height:100%; color:#584a66; text-align:center; }
+        .phrase-reading-intro-lottie { width:min(455px,72vw); max-height:min(470px,calc(100dvh - 96px)); aspect-ratio:414 / 896; height:auto; transform:scale(1); transform-origin:center; opacity:1; pointer-events:none; transition:opacity .56s ease,transform .56s cubic-bezier(.22,.8,.3,1); }
         .phrase-reading-intro-card.is-playing .phrase-reading-intro-lottie { animation:phraseIntroEnvelopeEmphasis 3.08s cubic-bezier(.22,.8,.3,1) both; }
         .phrase-reading-intro-card.is-fading .phrase-reading-intro-lottie { animation:none; opacity:0; transform:scale(1.07); }
         .phrase-reading-intro-card.is-envelope-gone .phrase-reading-intro-lottie { visibility:hidden; }
-        .phrase-reading-intro-paper { position:absolute; inset:0; display:grid; align-content:center; justify-items:center; width:min(540px,100%); min-height:clamp(385px,62vh,500px); margin:auto; padding:clamp(24px,5vw,42px); border-radius:10px; background:#fffaf2; box-shadow:0 24px 45px #7f628744; opacity:0; visibility:hidden; pointer-events:none; transform:translateY(18px) scale(.985); transition:opacity .44s ease,transform .44s cubic-bezier(.22,.8,.3,1),visibility 0s linear .44s; }
+        .phrase-reading-intro-paper { position:absolute; inset:0; display:grid; align-content:center; justify-items:center; width:min(420px,100%); min-height:clamp(300px,48vh,390px); max-height:calc(100dvh - 96px); margin:auto; padding:clamp(20px,4vw,30px); border-radius:10px; background:#fffaf2; box-shadow:0 24px 45px #7f628744; opacity:0; visibility:hidden; pointer-events:none; transform:translateY(18px) scale(.985); transition:opacity .44s ease,transform .44s cubic-bezier(.22,.8,.3,1),visibility 0s linear .44s; }
         .phrase-reading-intro-card.is-revealed .phrase-reading-intro-paper { opacity:1; visibility:visible; pointer-events:auto; transform:translateY(0) scale(1); transition-delay:0s; }
+        .phrase-reading-intro-paper > * { position:relative; top:-10px; }
         .phrase-reading-intro-paper h1 { margin:0; color:#8066ab; font-size:clamp(1.55rem,4vw,2.2rem); }
-        .phrase-reading-intro-paper p { margin:8px auto 14px; font-weight:700; line-height:1.45; }
+        .phrase-reading-intro-paper p { margin:8px auto 14px; font-family:"Phrase Intro Patrick Hand","Patrick Hand",cursive; font-size:clamp(1.08rem,2.8vw,1.25rem); font-weight:400; line-height:1.55; }
+        .phrase-reading-intro-paper p strong { display:block; margin-bottom:12px; color:#584a66; font-weight:400; }
         .phrase-reading-intro-paper .phrase-example { width:100%; padding:12px; border:1px dashed #c79cbd; border-radius:12px; background:#fff4ca; color:#453153; font-size:clamp(1.1rem,3vw,1.35rem); font-weight:900; }
-        .phrase-reading-intro-paper button { margin-top:18px; min-height:48px; border:0; border-radius:13px; background:#8066ab; color:#fff; padding:10px 25px; font:inherit; font-weight:900; box-shadow:0 5px 0 #5d477d; cursor:pointer; }
+        .phrase-reading-intro-paper button { margin-top:10px; min-height:48px; border:0; border-radius:13px; background:#8066ab; color:#fff; padding:10px 25px; font:inherit; font-weight:900; box-shadow:0 5px 0 #5d477d; cursor:pointer; }
         @keyframes phraseIntroEnvelopeEmphasis { from { transform:scale(.98); } 72%,to { transform:scale(1.07); } }
+        @media (max-height:550px) { .phrase-reading-intro { padding:24px; } .phrase-reading-intro-paper { min-height:0; max-height:calc(100dvh - 48px); padding:14px 20px; } .phrase-reading-intro-paper p { margin:6px auto 10px; line-height:1.42; } .phrase-reading-intro-paper p strong { margin-bottom:7px; } .phrase-reading-intro-paper button { margin-top:10px; min-height:44px; } }
         @media (prefers-reduced-motion:reduce) { .phrase-reading-intro-lottie, .phrase-reading-intro-paper { animation:none; transition:none; } }
     </style>
     <section class="phrase-reading-intro" id="phraseReadingIntro" aria-labelledby="phraseIntroTitle">
@@ -56,9 +60,9 @@
             const title = paper.querySelector('#phraseIntroTitle');
             const instructions = paper.querySelector('p');
             const example = paper.querySelector('.phrase-example');
-            if (title) title.textContent = '💌 A Message for You!';
+            if (title) title.textContent = 'A Message for You!';
             if (instructions) {
-                instructions.innerHTML = '<strong>Your Reading Mission</strong><br><br>📬 Look at the words carefully.<br>🗣️ Read the whole phrase aloud.<br>⭐ Do your best and keep going!';
+                instructions.innerHTML = '<strong>Your Reading Mission</strong>Look at each phrase carefully.<br>Read each phrase aloud.<br>Do your best and keep going!';
             }
             example?.remove();
 
