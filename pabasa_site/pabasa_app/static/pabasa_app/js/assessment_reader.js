@@ -4553,6 +4553,13 @@
         }
 
         function getCurrentSectionLabel(type = mode) {
+            // Official CRLA uses separate item branches. The item type remains
+            // "word" for Rhymes, so the branch must take precedence here.
+            const branch = String(currentAssessmentBranch || "").trim().toLowerCase();
+            if (branch === "rhymes") return "Rhymes";
+            if (branch === "words") return "Word";
+            if (["sentences", "sentences_low", "sentences_high"].includes(branch)) return "Sentence";
+            if (branch === "story" || branch === "story_reading") return "Story";
             const normalizedType = String(type || mode || "word").toLowerCase();
             if (normalizedType === "sentence") return "Sentence";
             if (normalizedType === "paragraph" || normalizedType === "para" || normalizedType === "story") return "Story/Paragraph";

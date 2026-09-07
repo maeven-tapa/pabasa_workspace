@@ -110,6 +110,69 @@
         font-size: 1rem;
     }
 
+    .assessment-waiting-copy {
+        max-width: 680px;
+    }
+
+    .assessment-waiting-loader {
+        width: 156px;
+        height: 156px;
+        border: 14px solid rgba(31, 111, 139, 0.12);
+        border-top-color: #3f8eea;
+        border-right-color: #72b9d2;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        animation: assessment-waiting-spin 1.5s linear infinite;
+        box-shadow: 0 12px 28px rgba(31, 111, 139, 0.10);
+    }
+
+    .assessment-waiting-loader-icon {
+        width: 92px;
+        height: 92px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: #fff;
+        color: #1871b7;
+        font-size: 3rem;
+        animation: assessment-waiting-counter-spin 1.5s linear infinite;
+    }
+
+    .assessment-waiting-info {
+        width: min(680px, 100%);
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.9rem 1rem;
+        border-radius: 16px;
+        background: rgba(232, 244, 255, 0.9);
+        color: var(--dash-primary-deep);
+        text-align: left;
+        font-weight: 700;
+        line-height: 1.45;
+    }
+
+    .assessment-waiting-info i {
+        color: #3185df;
+        font-size: 1.35rem;
+        line-height: 1.2;
+        flex: 0 0 auto;
+    }
+
+    @keyframes assessment-waiting-spin {
+        to { transform: rotate(360deg); }
+    }
+
+    @keyframes assessment-waiting-counter-spin {
+        to { transform: rotate(-360deg); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .assessment-waiting-loader,
+        .assessment-waiting-loader-icon { animation: none; }
+    }
+
     .assessment-not-taken-message {
         max-width: 600px;
         margin: 0.45rem auto 0;
@@ -271,13 +334,33 @@
     <article class="workflow-card {% if stage == 'complete' or stage == 'grade_level_complete' %}success{% endif %}">
         {% if stage == "assessment_week_locked" %}
             <div class="workflow-center">
-                <span class="workflow-pill">ASSESSMENT WEEK LOCKED</span>
-                <span class="workflow-icon" aria-hidden="true"><i class="bi bi-lock-fill"></i></span>
-                <div class="workflow-copy">
-                    <p class="workflow-subtitle">{{ workflow_subtitle }}</p>
-                    <h1>{{ workflow_title }}</h1>
-                    <p class="workflow-message">{{ workflow_message }}</p>
-                </div>
+                {% if assessment_week_enabled %}
+                    <span class="workflow-pill">ASSESSMENT WEEK ON</span>
+                    <div class="assessment-waiting-loader" role="status" aria-label="Preparing your assessment">
+                        <span class="assessment-waiting-loader-icon" aria-hidden="true"><i class="bi bi-book-half"></i></span>
+                    </div>
+                    <div class="workflow-copy assessment-waiting-copy">
+                        <p class="workflow-subtitle">{{ workflow_subtitle }}</p>
+                        <h1>Getting Ready…</h1>
+                        <p class="workflow-message">Your teacher has turned on Assessment Week for your section.<br>Please wait while your teacher prepares the assessment.</p>
+                    </div>
+                    <div class="assessment-waiting-info" role="note">
+                        <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+                        <span>You can start the assessment when your teacher makes it live. Stay on this page and check back soon!</span>
+                    </div>
+                {% else %}
+                    <span class="workflow-pill">ASSESSMENT WEEK NOT OPEN</span>
+                    <span class="workflow-icon" aria-hidden="true"><i class="bi bi-lock-fill"></i></span>
+                    <div class="workflow-copy assessment-waiting-copy">
+                        <p class="workflow-subtitle">{{ workflow_subtitle }}</p>
+                        <h1>Assessment Week is Not Open Yet</h1>
+                        <p class="workflow-message">Assessment Week has not started for your section yet.<br>Please wait for your teacher to open it.</p>
+                    </div>
+                    <div class="assessment-waiting-info" role="note">
+                        <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+                        <span>Your teacher will let you know when it’s time to take your reading assessment.</span>
+                    </div>
+                {% endif %}
             </div>
             <div class="workflow-actions">
                 <a class="workflow-button secondary" href="{% url 'dashboard' %}"><i class="bi bi-arrow-left"></i> Return to Dashboard</a>
@@ -493,8 +576,9 @@
 
     (function () {
         const stage = '{{ stage|escapejs }}';
-        const sectionId = '{% if assessment_week_section %}{{ assessment_week_section.id }}{% elif assessment_request_section_id %}{{ assessment_request_section_id }}{% endif %}';
-        const waitingForAssessmentWeek = stage === 'assessment_week_locked';
+            const sectionId = '{% if assessment_week_section %}{{ assessment_week_section.id }}{% elif assessment_request_section_id %}{{ assessment_request_section_id }}{% endif %}';
+            const waitingForAssessmentWeek = stage === 'assessment_week_locked';
+            const waitingAssessmentWeekEnabled = {{ assessment_week_enabled|yesno:"true,false" }};
         const waitingForApproval = stage === 'assessment_not_taken' && {{ assessment_request_pending|yesno:"true,false" }};
         if ((!waitingForAssessmentWeek && !waitingForApproval) || !sectionId) return;
 
@@ -512,7 +596,8 @@
                 });
                 const data = await response.json();
                 if (!response.ok || !data.success) return;
-                if ((waitingForAssessmentWeek && data.assessment_week_enabled) || (waitingForApproval && data.request_approved)) {
+                const assessmentWeekStateChanged = waitingForAssessmentWeek && Boolean(data.assessment_week_enabled) !== waitingAssessmentWeekEnabled;
+                if ((waitingForAssessmentWeek && (data.assessment_live || assessmentWeekStateChanged)) || (waitingForApproval && data.request_approved)) {
                     window.location.reload();
                 }
             } catch (error) {
