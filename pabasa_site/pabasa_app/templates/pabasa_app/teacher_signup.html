@@ -232,6 +232,31 @@
         grid-column: span 2;
     }
 
+    /* Keep School 2/4 as a stable 2x2 grid; feedback never participates in layout. */
+    .signup-step[data-signup-step="1"] {
+        grid-auto-rows: 7.8rem;
+    }
+
+    .signup-step[data-signup-step="1"] > .col-md-6 {
+        position: relative;
+        display: block;
+        min-height: 7.8rem;
+    }
+
+    .signup-step[data-signup-step="1"] > .col-md-6 > .form-label {
+        min-height: 3.2rem;
+        margin-bottom: 0.45rem;
+    }
+
+    .signup-step[data-signup-step="1"] .signup-duplicate-feedback {
+        position: absolute;
+        top: 6.5rem;
+        left: 0;
+        right: 0;
+        min-height: 1.25rem;
+        margin: 0;
+    }
+
     .birth-fields-row {
         display: grid;
         grid-template-columns: minmax(160px, 1.4fr) minmax(200px, 2.2fr) minmax(110px, 1fr) minmax(110px, 1fr);
@@ -340,6 +365,13 @@
     .field-feedback.is-visible {
         display: block;
     }
+
+    .signup-duplicate-feedback.is-checking,
+    .signup-duplicate-feedback.is-available,
+    .signup-duplicate-feedback.is-duplicate { display: block; }
+    .signup-duplicate-feedback.is-checking { color: #6c757d; }
+    .signup-duplicate-feedback.is-available { color: #198754; }
+    .signup-duplicate-feedback.is-duplicate { color: #dc3545; }
 
     .signup-step[data-signup-step="2"] > .password-input-column {
         align-self: start;
@@ -604,10 +636,12 @@
                     <div class="col-md-6">
                         <label class="form-label">Email address</label>
                         <input class="form-control" type="email" name="email" placeholder="you@example.com" required>
+                        <div class="field-feedback signup-duplicate-feedback" data-duplicate-email></div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Contact number</label>
                         <input class="form-control" type="tel" name="contact_no" placeholder="09XXXXXXXXX">
+                        <div class="field-feedback signup-duplicate-feedback" data-duplicate-contact></div>
                     </div>
                     <div class="col-12">
                         <label class="form-label">Section</label>
@@ -915,6 +949,7 @@
 
             const privacyConsentChecked = privacyConsentCheckbox ? privacyConsentCheckbox.checked : true;
             submitButton.disabled = !form.checkValidity() || !passwordIsValid || !isPasswordMatch || !privacyConsentChecked;
+            nextStepBtn.disabled = currentStep === 1 && (duplicateState.pending || duplicateState.email === true || duplicateState.contact === true);
             if (privacyConsentCheckbox && currentStep === steps.length - 1) {
                 privacyConsentCheckbox.setCustomValidity(privacyConsentChecked ? "" : "Please agree to the privacy notice to continue.");
             }
@@ -953,11 +988,47 @@
             return tokenInput ? tokenInput.value : '';
         };
 
+        const duplicateState = { email: null, contact: null, pending: false, timer: null, requestId: 0 };
+        const duplicateEmail = form.querySelector('[data-duplicate-email]');
+        const duplicateContact = form.querySelector('[data-duplicate-contact]');
+        const duplicateInputs = { email: form.elements.email, contact: form.elements.contact_no };
+        const setDuplicateStatus = (kind, state, message = '') => {
+            const output = kind === 'email' ? duplicateEmail : duplicateContact;
+            output.textContent = message;
+            output.className = `field-feedback signup-duplicate-feedback ${state ? `is-${state}` : ''}`;
+            duplicateInputs[kind].setCustomValidity(state === 'duplicate' ? message : '');
+        };
+        const checkDuplicates = async () => {
+            const email = duplicateInputs.email.value.trim();
+            const contact = duplicateInputs.contact.value.trim();
+            duplicateState.pending = Boolean(email || contact);
+            if (!email && !contact) { duplicateState.email = duplicateState.contact = null; return true; }
+            const requestId = ++duplicateState.requestId;
+            if (email) setDuplicateStatus('email', 'checking', 'Checking email address…'); else setDuplicateStatus('email', '');
+            if (contact) setDuplicateStatus('contact', 'checking', 'Checking contact number…'); else setDuplicateStatus('contact', '');
+            try {
+                const query = new URLSearchParams({ email, contact_no: contact });
+                const response = await fetch('{% url "check_signup_duplicates" %}?' + query.toString());
+                const data = await response.json();
+                if (requestId !== duplicateState.requestId) return false;
+                duplicateState.email = Boolean(data.email_exists); duplicateState.contact = Boolean(data.contact_exists); duplicateState.pending = false;
+                setDuplicateStatus('email', duplicateState.email ? 'duplicate' : (email ? 'available' : ''), duplicateState.email ? 'This email address is already registered.' : (email ? 'Email address is available.' : ''));
+                setDuplicateStatus('contact', duplicateState.contact ? 'duplicate' : (contact ? 'available' : ''), duplicateState.contact ? 'This contact number is already registered.' : (contact ? 'Contact number is available.' : ''));
+                updateValidation();
+                return !duplicateState.email && !duplicateState.contact;
+            } catch (_) { duplicateState.pending = true; setDuplicateStatus('email', 'checking', 'Unable to verify yet.'); return false; }
+        };
+        Object.entries(duplicateInputs).forEach(([kind, input]) => input.addEventListener('input', () => {
+            duplicateState[kind] = null; duplicateState.pending = true; clearTimeout(duplicateState.timer);
+            duplicateState.timer = setTimeout(checkDuplicates, 350);
+        }));
+
         form.addEventListener("input", updateValidation);
         form.addEventListener("change", updateValidation);
 
-        nextStepBtn.addEventListener("click", () => {
+        nextStepBtn.addEventListener("click", async () => {
             if (!validateCurrentStep()) return;
+            if (currentStep === 1 && !(await checkDuplicates())) return;
             setStep(currentStep + 1);
         });
 

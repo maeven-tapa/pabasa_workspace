@@ -4336,9 +4336,12 @@ def register_teacher(request):
             return JsonResponse({'success': False, 'error': 'Passwords do not match'}, status=400)
         
         email = _normalize_registration_value(data.get('email'))
+        contact_no = _normalize_registration_value(data.get('contact_no'))
         # Check if email already exists
         if User.objects.filter(email__iexact=email).exists():
-            return JsonResponse({'success': False, 'error': 'Email already registered'}, status=400)
+            return JsonResponse({'success': False, 'error': 'This email address is already registered.'}, status=400)
+        if contact_no and User.objects.filter(contact_no=contact_no).exists():
+            return JsonResponse({'success': False, 'error': 'This contact number is already registered.'}, status=400)
         
         # Create pending signup and send OTP
         signup_data = data.copy()
@@ -4408,7 +4411,10 @@ def register_student(request):
         email_matches = list(User.objects.filter(email__iexact=raw_email).values('id', 'custom_id', 'email', 'is_archived'))
         logger.debug("STUDENT REGISTRATION DUPLICATE CHECK email=%s matches=%s", raw_email, email_matches)
         if User.objects.filter(email__iexact=raw_email, is_archived=False).exists():
-            return JsonResponse({'success': False, 'error': 'Email already registered'}, status=400)
+            return JsonResponse({'success': False, 'error': 'This email address is already registered.'}, status=400)
+        contact_no = _normalize_registration_value(data.get('contact_no'))
+        if contact_no and User.objects.filter(contact_no=contact_no).exists():
+            return JsonResponse({'success': False, 'error': 'This contact number is already registered.'}, status=400)
         
         # Store the canonical recipient so verification and confirmation use
         # exactly the address to which the OTP was delivered.
@@ -4432,6 +4438,16 @@ def register_student(request):
     except Exception:
         logger.exception("Student signup OTP request failed")
         return JsonResponse({'success': False, 'error': 'Unable to start registration right now. Please try again.'}, status=400)
+
+
+@require_http_methods(["GET"])
+def check_signup_duplicates(request):
+    email = _normalize_registration_value(request.GET.get('email'))
+    contact_no = _normalize_registration_value(request.GET.get('contact_no'))
+    return JsonResponse({
+        'email_exists': bool(email and User.objects.filter(email__iexact=email).exists()),
+        'contact_exists': bool(contact_no and User.objects.filter(contact_no=contact_no).exists()),
+    })
 
 @csrf_protect
 @require_http_methods(["POST"])
@@ -4464,6 +4480,10 @@ def verify_teacher_otp(request):
         if User.objects.filter(email=pending['email']).exists():
             _clear_pending_teacher_signup(request)
             return JsonResponse({'success': False, 'error': 'Email already registered'}, status=400)
+        pending_contact = _normalize_registration_value(pending.get('contact_no'))
+        if pending_contact and User.objects.filter(contact_no=pending_contact).exists():
+            _clear_pending_teacher_signup(request)
+            return JsonResponse({'success': False, 'error': 'This contact number is already registered.'}, status=400)
 
         school, canonical_section, signup_error = _signup_section_for_request(pending, 'teacher')
         if signup_error:
@@ -4612,7 +4632,12 @@ def verify_student_otp(request):
 
         if User.objects.filter(email__iexact=pending_email, is_archived=False).exists():
             _clear_pending_student_signup(request)
-            return JsonResponse({'success': False, 'error': 'Email already registered'}, status=400)
+            return JsonResponse({'success': False, 'error': 'This email address is already registered.'}, status=400)
+
+        pending_contact = _normalize_registration_value(pending.get('contact_no'))
+        if pending_contact and User.objects.filter(contact_no=pending_contact).exists():
+            _clear_pending_student_signup(request)
+            return JsonResponse({'success': False, 'error': 'This contact number is already registered.'}, status=400)
 
         lrn = pending_lrn
         if lrn and not re.fullmatch(r'\d{12}', lrn):

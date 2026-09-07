@@ -10,6 +10,7 @@ urlpatterns = [
     path('api/register/teacher/verify-otp/', views.verify_teacher_otp, name='verify_teacher_otp'),
     path('api/register/teacher/resend-otp/', views.resend_teacher_signup_otp, name='resend_teacher_signup_otp'),
     path('api/register/student/', views.register_student, name='register_student'),
+    path('api/register/check-duplicates/', views.check_signup_duplicates, name='check_signup_duplicates'),
     path('api/register/student/verify-otp/', views.verify_student_otp, name='verify_student_otp'),
     path('api/register/student/resend-otp/', views.resend_student_signup_otp, name='resend_student_signup_otp'),
     path('api/login/', views.login_user, name='login_user'),
