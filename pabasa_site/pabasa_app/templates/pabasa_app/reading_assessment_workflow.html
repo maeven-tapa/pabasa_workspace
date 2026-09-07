@@ -493,7 +493,7 @@
 
     (function () {
         const stage = '{{ stage|escapejs }}';
-        const sectionId = '{{ assessment_week_section.id|default:assessment_request_section_id|default:"" }}';
+        const sectionId = '{% if assessment_week_section %}{{ assessment_week_section.id }}{% elif assessment_request_section_id %}{{ assessment_request_section_id }}{% endif %}';
         const waitingForAssessmentWeek = stage === 'assessment_week_locked';
         const waitingForApproval = stage === 'assessment_not_taken' && {{ assessment_request_pending|yesno:"true,false" }};
         if ((!waitingForAssessmentWeek && !waitingForApproval) || !sectionId) return;

@@ -10836,8 +10836,10 @@ def assessment(request):
         context['workflow_title'] = 'CRLA Assessment Currently Unavailable'
         context['workflow_subtitle'] = 'No active CRLA assessment window'
         context['workflow_message'] = (
-            'There is currently no active assessment schedule. Please check back again once your assessment period is open. Thank you!'
+            'There is currently no active assessment schedule. '
+            'Please check back again once your assessment period is open. Thank you!'
         )
+
         try:
             logger.warning(
                 "DEBUG: RENDER WORKFLOW TEMPLATE %s",
@@ -10850,7 +10852,22 @@ def assessment(request):
             )
         except Exception:
             pass
-        return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
+
+        try:
+            return render(
+                request,
+                'pabasa_app/reading_assessment_workflow.html',
+                context
+            )
+        except Exception:
+            logger.exception(
+                "ASSESSMENT WORKFLOW TEMPLATE RENDER FAILED "
+                "user_id=%s stage=%s template=%s",
+                getattr(user, 'id', None),
+                stage,
+                'pabasa_app/reading_assessment_workflow.html',
+            )
+            raise
 
     if stage == 'original':
         try:
