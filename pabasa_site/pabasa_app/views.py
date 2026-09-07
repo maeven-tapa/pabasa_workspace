@@ -105,7 +105,7 @@ from .scoring import (
     performance_interpretation,
 )
 from .management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
-from .utils.crla_export import export_crla_excel
+from .utils.crla_export import convert_crla_workbook_to_pdf, export_crla_excel
 from .utils.crla_results import (
     VALID_CRLA_CLASSIFICATIONS,
     latest_completed_official_crla_results,
@@ -19066,13 +19066,13 @@ def _teacher_can_export_directory_crla(teacher_user, assessment):
 
 @require_http_methods(["GET"])
 def export_crla_assessment(request, assessment_id):
-    """Download an assessment using the official Grade 2 Filipino CRLA template."""
+    """Download the official Grade 2 Filipino CRLA scoresheet as a PDF."""
     if not _check_auth(request):
         return redirect("auth")
 
     user = User.objects.filter(id=request.session.get("user_id")).first()
     if not user or user.role not in {"teacher", "admin"}:
-        return HttpResponseForbidden("Only teachers and administrators can export CRLA workbooks.")
+        return HttpResponseForbidden("Only teachers and administrators can export CRLA scoresheets.")
 
     assessment = Assessment.objects.filter(id=assessment_id).select_related("section").first()
     if not assessment:
@@ -19087,18 +19087,19 @@ def export_crla_assessment(request, assessment_id):
 
     try:
         workbook = export_crla_excel(root_assessment.id)
-    except (FileNotFoundError, ValueError) as exc:
-        logger.warning("Unable to export CRLA workbook for assessment %s: %s", assessment_id, exc)
-        return HttpResponse(str(exc), status=400)
+        scoresheet = convert_crla_workbook_to_pdf(workbook)
+    except (FileNotFoundError, ValueError, RuntimeError) as exc:
+        logger.warning("Unable to export CRLA PDF scoresheet for assessment %s: %s", assessment_id, exc)
+        return HttpResponse(str(exc), status=503 if isinstance(exc, RuntimeError) else 400)
     except Exception:
-        logger.exception("CRLA export failed for assessment %s", assessment_id)
-        return HttpResponse("Unable to generate the CRLA workbook.", status=500)
+        logger.exception("CRLA PDF export failed for assessment %s", assessment_id)
+        return HttpResponse("Unable to generate the CRLA PDF scoresheet.", status=500)
 
     response = HttpResponse(
-        workbook.getvalue(),
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        scoresheet.getvalue(),
+        content_type="application/pdf",
     )
-    response["Content-Disposition"] = f'attachment; filename="{workbook.name}"'
+    response["Content-Disposition"] = f'attachment; filename="{scoresheet.name}"'
     response["Content-Length"] = str(len(response.content))
     return response
 

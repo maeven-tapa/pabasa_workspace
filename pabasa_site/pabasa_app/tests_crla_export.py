@@ -1,5 +1,9 @@
 from io import BytesIO
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.test import TestCase
 from django.utils import timezone
@@ -8,7 +12,13 @@ import uuid
 
 from .models import Assessment, Enrollment, Material, School, Section, StoryReadingProgress, User
 from .scoring import build_assessment_score_payload, crla_reading_profile, crla_sentence_score
-from .utils.crla_export import _part_1_reading_level, _row_formulas, _story_number, export_crla_excel
+from .utils.crla_export import (
+    _part_1_reading_level,
+    _row_formulas,
+    _story_number,
+    convert_crla_workbook_to_pdf,
+    export_crla_excel,
+)
 
 
 def test_section_create(**kwargs):
@@ -20,6 +30,42 @@ def test_section_create(**kwargs):
 
 
 class CrlaExportResultTests(TestCase):
+    def test_pdf_conversion_renders_every_template_sheet_in_order(self):
+        source = BytesIO((Path(settings.BASE_DIR) / "templates" / "CRLA3_Grade2TagalogScoresheet_v3.xlsx").read_bytes())
+        source.name = "complete.xlsx"
+        expected_sheets = [
+            "G2 MT Reading Scoresheet",
+            "G2 FIL Reading Scoresheet",
+            "Class Record",
+            "Class Summary",
+            "Scoring Reference",
+            "List",
+        ]
+
+        def render_with_fake_libreoffice(command, **kwargs):
+            rendered_workbook = load_workbook(command[-1], data_only=False)
+            self.assertEqual(rendered_workbook.sheetnames, expected_sheets)
+            self.assertTrue(all(sheet.sheet_state == "visible" for sheet in rendered_workbook.worksheets))
+            for sheet in rendered_workbook.worksheets:
+                self.assertEqual(sheet.page_setup.orientation, sheet.ORIENTATION_LANDSCAPE)
+                self.assertEqual(sheet.page_setup.fitToWidth, 1)
+                self.assertEqual(sheet.page_setup.fitToHeight, 0)
+                self.assertTrue(sheet.sheet_properties.pageSetUpPr.fitToPage)
+            self.assertEqual(rendered_workbook["G2 MT Reading Scoresheet"].page_setup.paperSize, 8)
+            self.assertEqual(rendered_workbook["Class Record"].page_setup.paperSize, 8)
+            self.assertEqual(rendered_workbook["Scoring Reference"].page_setup.paperSize, 9)
+            output_dir = Path(command[command.index("--outdir") + 1])
+            (output_dir / "complete.pdf").write_bytes(b"%PDF-1.4\ncomplete workbook\n")
+            return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+        with patch("pabasa_app.utils.crla_export._libreoffice_executable", return_value="soffice"), patch(
+            "pabasa_app.utils.crla_export.subprocess.run", side_effect=render_with_fake_libreoffice
+        ):
+            pdf = convert_crla_workbook_to_pdf(source)
+
+        self.assertEqual(pdf.name, "complete.pdf")
+        self.assertTrue(pdf.getvalue().startswith(b"%PDF"))
+
     def test_reading_profile_matches_each_column_u_branch_and_boundary(self):
         cases = (
             # Column J Full Refresher overrides all Part 2 inputs.
@@ -190,6 +236,14 @@ class CrlaExportResultTests(TestCase):
         )
 
         workbook = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)
+        self.assertEqual(workbook.sheetnames, [
+            "G2 MT Reading Scoresheet",
+            "G2 FIL Reading Scoresheet",
+            "Class Record",
+            "Class Summary",
+            "Scoring Reference",
+            "List",
+        ])
         sheet = workbook["G2 MT Reading Scoresheet"]
 
         self.assertEqual(sheet["C4"].value, "MABINI-ES")

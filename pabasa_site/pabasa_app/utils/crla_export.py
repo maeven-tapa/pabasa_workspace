@@ -5,12 +5,17 @@ from __future__ import annotations
 from datetime import datetime
 from io import BytesIO
 import math
+import os
 import re
+import shutil
+import subprocess
+import tempfile
 from pathlib import Path
 
 from django.conf import settings
 from django.utils import timezone
 from openpyxl import load_workbook
+from openpyxl.worksheet.properties import PageSetupProperties
 
 from pabasa_app.models import Assessment, User
 
@@ -517,3 +522,92 @@ def export_crla_excel(assessment_id):
     workbook.save(output)
     output.seek(0)
     return output
+
+
+def _libreoffice_executable():
+    """Find the deployment-configured LibreOffice command without guessing."""
+    configured = getattr(settings, "LIBREOFFICE_BIN", "") or os.environ.get("LIBREOFFICE_BIN", "")
+    executable = configured or shutil.which("soffice") or shutil.which("libreoffice")
+    if not executable:
+        raise RuntimeError(
+            "CRLA PDF export requires LibreOffice. Install LibreOffice and set "
+            "LIBREOFFICE_BIN to the soffice executable."
+        )
+    return executable
+
+
+def _configure_crla_pdf_print_layout(worksheet):
+    """Set page scaling only on the disposable workbook sent to LibreOffice.
+
+    The official template has no paper-size or fit-to-page settings.  Calc
+    therefore splits each wide sheet into horizontal tiles.  Keep all cells,
+    drawings, formulas, merged ranges, and sheet order intact, but make the
+    print layout one page wide with natural vertical pagination.
+    """
+    wide_sheets = {
+        "G2 MT Reading Scoresheet",
+        "G2 FIL Reading Scoresheet",
+        "Class Record",
+        "Class Summary",
+    }
+    worksheet.page_setup.orientation = worksheet.ORIENTATION_LANDSCAPE
+    worksheet.page_setup.paperSize = (
+        worksheet.PAPERSIZE_A3 if worksheet.title in wide_sheets else worksheet.PAPERSIZE_A4
+    )
+    worksheet.page_setup.scale = None
+    worksheet.page_setup.fitToWidth = 1
+    worksheet.page_setup.fitToHeight = 0
+    worksheet.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True, autoPageBreaks=False)
+
+
+def convert_crla_workbook_to_pdf(workbook):
+    """Render the complete generated CRLA workbook with LibreOffice.
+
+    The temporary workbook is the existing XLSX export.  No CRLA values,
+    formulas, sheets, or formatting are recreated in Python.  Hidden support
+    sheets are made visible only in the conversion copy so every workbook
+    sheet appears in the PDF; the source workbook is never changed.
+    """
+    workbook_name = Path(getattr(workbook, "name", "CRLA_Scoresheet.xlsx")).stem
+    with tempfile.TemporaryDirectory(prefix="pabasa-crla-pdf-") as temp_dir:
+        temp_path = Path(temp_dir)
+        xlsx_path = temp_path / f"{workbook_name}.xlsx"
+        pdf_dir = temp_path / "pdf"
+        profile_dir = temp_path / "libreoffice-profile"
+        pdf_dir.mkdir()
+        profile_dir.mkdir()
+
+        # The exporter already generated this workbook with openpyxl. Reloading
+        # only changes hidden sheets in the conversion copy, preserving order,
+        # formulas, values, merged cells, and existing sheet formatting.
+        workbook.seek(0)
+        conversion_workbook = load_workbook(workbook)
+        for worksheet in conversion_workbook.worksheets:
+            worksheet.sheet_state = "visible"
+            _configure_crla_pdf_print_layout(worksheet)
+        conversion_workbook.save(xlsx_path)
+
+        command = [
+            _libreoffice_executable(),
+            "--headless",
+            f"-env:UserInstallation={profile_dir.as_uri()}",
+            "--convert-to",
+            "pdf:calc_pdf_Export",
+            "--outdir",
+            str(pdf_dir),
+            str(xlsx_path),
+        ]
+        try:
+            completed = subprocess.run(command, capture_output=True, text=True, timeout=120, check=False)
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise RuntimeError(f"Unable to run LibreOffice CRLA PDF conversion: {exc}") from exc
+
+        pdf_path = pdf_dir / f"{workbook_name}.pdf"
+        if completed.returncode != 0 or not pdf_path.is_file() or not pdf_path.stat().st_size:
+            detail = (completed.stderr or completed.stdout or "no converter output").strip()
+            raise RuntimeError(f"LibreOffice could not convert the CRLA workbook to PDF: {detail}")
+
+        output = BytesIO(pdf_path.read_bytes())
+        output.name = f"{workbook_name}.pdf"
+        output.seek(0)
+        return output
