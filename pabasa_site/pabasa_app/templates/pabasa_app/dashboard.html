@@ -1141,6 +1141,38 @@
         color: #fff;
     }
 
+    .aral-week-card {
+        background: rgba(239, 248, 252, 0.82);
+        border: 1px solid rgba(31, 182, 255, 0.18);
+        border-radius: 16px;
+        display: grid;
+        gap: 0.35rem;
+        margin-top: 0.25rem;
+        padding: 0.9rem;
+    }
+
+    .aral-week-card h4 {
+        color: #10466e;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.92rem;
+        font-weight: 900;
+        margin: 0;
+        text-transform: uppercase;
+    }
+
+    .aral-week-card .aral-week-label {
+        color: #176b91;
+        font-size: 1.15rem;
+        font-weight: 900;
+    }
+
+    .aral-week-card .aral-week-status,
+    .aral-week-card .aral-week-progress {
+        color: #475569;
+        font-size: 0.82rem;
+        line-height: 1.35;
+    }
+
     .unenroll-modal .modal-content {
         border: none;
         border-radius: 28px;
@@ -2946,7 +2978,10 @@
                     }
 
                     classData.students = classData.student_count || 0; // Use database student count
-                    const assessmentWeekEnabled = Boolean(classData.assessment_week_enabled);
+                    const officialCrlaCompleted = Boolean(classData.official_crla_completed);
+                    const assessmentWeekEnabled = Boolean(classData.assessment_week_enabled) && !officialCrlaCompleted;
+                    const aralEligible = Boolean(classData.aral_eligible);
+                    const currentAralWeek = Number(classData.current_aral_week) || null;
                     
                     let pCount = 0;
                     let aCount = 0;
@@ -3004,6 +3039,11 @@
                         progress: progress,
                         currentLesson: assessmentWeekEnabled ? null : currentLesson,
                         assessmentWeekEnabled: assessmentWeekEnabled,
+                        officialCrlaCompleted: officialCrlaCompleted,
+                        aralEligible: aralEligible,
+                        currentAralWeek: currentAralWeek,
+                        aralWeekTotal: Number(classData.aral_week_total) || 0,
+                        aralWeekCompleted: Number(classData.aral_week_completed) || 0,
                         hasUnreadMaterial: hasUnreadMaterial
                     };
                 })
@@ -3016,7 +3056,7 @@
             showJoinedLearningContext(validClasses);
 
             classList.innerHTML = validClasses.map((classData) => `
-                <article class="class-card${(classData.progress || 0) < 100 && (classData.practiceCount || classData.assessmentCount) ? ' is-ready' : ''}${classData.currentLesson ? ' has-current-lesson' : ''}" data-class-card data-section-id="${escapeHtml(classData.section_id || classData.id || '')}" data-class-card-code="${escapeHtml(classData.code)}">
+                <article class="class-card${(classData.progress || 0) < 100 && (classData.practiceCount || classData.assessmentCount) ? ' is-ready' : ''}${classData.currentLesson ? ' has-current-lesson' : ''}" data-class-card data-completed-crla="${classData.officialCrlaCompleted ? 'true' : 'false'}" data-section-id="${escapeHtml(classData.section_id || classData.id || '')}" data-class-card-code="${escapeHtml(classData.code)}">
                     <div class="class-card-bg-icon">
                         <i class="bi ${
                             (classData.subject || '').toLowerCase().includes('english') ? 'bi-alphabet-uppercase' : 
@@ -3034,6 +3074,19 @@
                         <i class="bi bi-clipboard2-check me-1"></i><strong>Assessment Week</strong> is active. Only assessments are available for this section.
                     </div>
                     ` : ''}
+                    ${classData.officialCrlaCompleted && classData.aralEligible && classData.currentAralWeek ? `
+                    <div class="aral-week-card" data-aral-week-card>
+                        <h4><i class="bi bi-book-half me-1"></i>ARAL Reading Practice</h4>
+                        <div class="aral-week-label">Week ${escapeHtml(classData.currentAralWeek)}</div>
+                        <div class="aral-week-status">${classData.aralWeekTotal === 0 ? 'No activity available yet.' : classData.aralWeekCompleted >= classData.aralWeekTotal ? 'Week completed!' : classData.aralWeekCompleted > 0 ? 'Keep going!' : 'Your activities are ready!'}</div>
+                        <div class="aral-week-progress">${classData.aralWeekCompleted} of ${classData.aralWeekTotal} completed</div>
+                        <div class="class-card-actions">
+                            <button class="continue-learning-btn" type="button" data-open-aral-week data-section-id="${escapeHtml(classData.section_id || classData.id || '')}" data-aral-week="${escapeHtml(classData.currentAralWeek)}">
+                                <i class="bi bi-folder2-open me-1"></i>${classData.aralWeekTotal > 0 && classData.aralWeekCompleted >= classData.aralWeekTotal ? 'Review This Week' : classData.aralWeekCompleted > 0 ? "Continue This Week's Activities" : "Start This Week's Activities"} <span aria-hidden="true">&rarr;</span>
+                            </button>
+                        </div>
+                    </div>
+                    ` : ''}
                     ${classData.removedByTeacher ? `
                         <div class="mt-3 alert alert-warning d-flex justify-content-between align-items-center" role="alert">
                             <div>
@@ -3045,11 +3098,11 @@
                             </div>
                         </div>
                     ` : ''}
-                    <div class="class-card-actions">
+                    ${!classData.officialCrlaCompleted ? `<div class="class-card-actions">
                         <button class="continue-learning-btn" type="button" data-continue-learning data-section-id="${escapeHtml(classData.section_id || classData.id || '')}" data-class-code="${escapeHtml(classData.code)}">
                             <i class="bi ${classData.assessmentWeekEnabled ? 'bi-clipboard2-check' : 'bi-play-circle'} me-1"></i>${classData.assessmentWeekEnabled ? 'Open Assessment' : 'Continue Learning'}
                         </button>
-                    </div>
+                    </div>` : ''}
                 </article>
             `).join("");
 
@@ -3296,6 +3349,19 @@
                 return;
             }
 
+            const aralWeekButton = event.target.closest("[data-open-aral-week]");
+            if (aralWeekButton) {
+                event.stopPropagation();
+                const sectionId = aralWeekButton.dataset.sectionId;
+                const week = aralWeekButton.dataset.aralWeek;
+                if (sectionId && week) {
+                    // The assessment hub owns the established ARAL week-folder
+                    // UI.  Supplying week selects and opens that exact folder.
+                    window.location.href = `{% url 'assessment' %}?section_id=${encodeURIComponent(sectionId)}&week=${encodeURIComponent(week)}`;
+                }
+                return;
+            }
+
             const continueButton = event.target.closest("[data-continue-learning]");
             if (continueButton) {
                 event.stopPropagation();
@@ -3308,6 +3374,12 @@
 
             const card = event.target.closest("[data-class-card]");
             if (!card) {
+                return;
+            }
+
+            // Completed-CRLA cards use a dedicated ARAL week launcher;
+            // clicking their remaining card surface must not reopen CRLA.
+            if (card.dataset.completedCrla === 'true') {
                 return;
             }
 

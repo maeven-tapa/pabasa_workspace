@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import AssessmentRequest, CalendarEvent, Material, School, SchoolCalendar, Section, User
+from .models import Assessment, AssessmentRequest, CalendarEvent, Material, School, SchoolCalendar, Section, User
 
 
 class AssessmentWeekTests(TestCase):
@@ -70,6 +70,47 @@ class AssessmentWeekTests(TestCase):
             content_type='application/json',
         )
 
+    def _make_completed_aral_student(self):
+        official_root = Assessment.objects.create(
+            teacher=self.teacher_a, title='Official CRLA', code='AWS-CRLA-ARAL',
+            assessment_type='paragraph', system_assessment_key='bosy_crla_pretest',
+        )
+        official_material = Material.objects.create(
+            teacher=self.teacher_a, section=self.section_a, assessment=official_root,
+            title='Official CRLA', code='AWS-CRLA-ARAL-MATERIAL', item_type='paragraph',
+            type='assessment', status='published', assessment_kind='crla',
+            is_official_reading=True, is_system_owned=True,
+        )
+        Assessment.objects.create(
+            teacher=self.teacher_a, student=self.student_a, material=official_material,
+            source_assessment=official_root, title='Completed CRLA', code='AWS-CRLA-ARAL-RESULT',
+            assessment_type='paragraph', attempt_status='completed',
+            completed_at=timezone.now(), crla_classification='Transitioning Reader',
+        )
+        self.student_a.preference = {
+            'reading_assessment_state': {
+                'reader_classification': 'Transitioning Reader',
+                'aral_eligible': True,
+                'aral_status': 'active',
+                'current_phase': 'materials',
+            },
+        }
+        self.student_a.save(update_fields=['preference', 'updated_at'])
+
+    def _aral_materials(self, week, count):
+        materials = []
+        for index in range(count):
+            materials.append(self._material(self.section_a, f'Week {week} Activity {index + 1}', 'assessment'))
+            materials[-1].assigned_week = week
+            materials[-1].save(update_fields=['assigned_week', 'updated_at'])
+        return materials
+
+    def _class_payload(self):
+        self._login(self.student_a)
+        response = self.client.get(reverse('get_student_joined_classes'))
+        self.assertEqual(response.status_code, 200)
+        return next(item for item in response.json()['classes'] if item['section_id'] == self.section_a.id)
+
     def test_teacher_toggles_only_assigned_section(self):
         self._login(self.teacher_a)
         response = self._toggle(self.section_a.id, True)
@@ -113,6 +154,220 @@ class AssessmentWeekTests(TestCase):
         self.assertEqual(response_b.status_code, 200)
         returned_ids = {item['id'] for item in response_b.json()['all_materials']}
         self.assertIn(f'material-{self.normal_b.id}', returned_ids)
+
+    def test_completed_official_crla_prioritizes_teacher_materials_during_assessment_week(self):
+        """The class-card API must use a persisted official result, not reading level."""
+        self.section_a.assessment_week_enabled = True
+        self.section_a.save(update_fields=['assessment_week_enabled'])
+        official_root = Assessment.objects.create(
+            teacher=self.teacher_a, title='Official CRLA', code='AWS-CRLA-ROOT',
+            assessment_type='paragraph', system_assessment_key='bosy_crla_pretest',
+        )
+        official_material = Material.objects.create(
+            teacher=self.teacher_a, section=self.section_a, assessment=official_root,
+            title='Official CRLA', code='AWS-CRLA-MATERIAL', item_type='paragraph',
+            type='assessment', status='published', assessment_kind='crla',
+            is_official_reading=True, is_system_owned=True,
+        )
+        Assessment.objects.create(
+            teacher=self.teacher_a, student=self.student_a, material=official_material,
+            source_assessment=official_root, title='Completed CRLA', code='AWS-CRLA-RESULT',
+            assessment_type='paragraph', attempt_status='completed',
+            completed_at=timezone.now(), crla_classification='Transitioning Reader',
+        )
+        self.student_a.preference = {
+            'reading_assessment_state': {
+                'reader_classification': 'Transitioning Reader',
+                'aral_eligible': True,
+                'current_week': 1,
+            },
+        }
+        self.student_a.save(update_fields=['preference', 'updated_at'])
+        self.normal_a.assigned_week = 1
+        self.normal_a.save(update_fields=['assigned_week'])
+        self.assessment_a.assigned_week = 1
+        self.assessment_a.save(update_fields=['assigned_week'])
+
+        self._login(self.student_a)
+        classes_response = self.client.get(reverse('get_student_joined_classes'))
+        self.assertEqual(classes_response.status_code, 200)
+        class_payload = next(item for item in classes_response.json()['classes'] if item['section_id'] == self.section_a.id)
+        self.assertTrue(class_payload['official_crla_completed'])
+        self.assertTrue(class_payload['aral_eligible'])
+        self.assertEqual(class_payload['current_aral_week'], 1)
+
+        materials_response = self.client.get(reverse('get_class_materials'), {'section_id': self.section_a.id})
+        self.assertEqual(materials_response.status_code, 200)
+        materials_payload = materials_response.json()
+        self.assertTrue(materials_payload['official_crla_completed'])
+        returned_ids = {item['id'] for item in materials_payload['all_materials']}
+        self.assertIn(f'material-{self.normal_a.id}', returned_ids)
+        self.assertNotIn(f'material-{official_material.id}', returned_ids)
+        material_payload = next(item for item in materials_payload['all_materials'] if item['id'] == f'material-{self.normal_a.id}')
+        self.assertEqual(material_payload['assigned_weeks'], [1])
+
+        launch_response = self.client.get(
+            reverse('reading_word_page'), {'id': f'material-{self.normal_a.id}'}
+        )
+        self.assertEqual(launch_response.status_code, 200)
+
+    def test_student_class_payload_reports_live_weekly_aral_progress(self):
+        official_root = Assessment.objects.create(
+            teacher=self.teacher_a, title='Official CRLA', code='AWS-CRLA-PROGRESS',
+            assessment_type='paragraph', system_assessment_key='bosy_crla_pretest',
+        )
+        official_material = Material.objects.create(
+            teacher=self.teacher_a, section=self.section_a, assessment=official_root,
+            title='Official CRLA', code='AWS-CRLA-PROGRESS-MATERIAL', item_type='paragraph',
+            type='assessment', status='published', assessment_kind='crla',
+            is_official_reading=True, is_system_owned=True,
+        )
+        Assessment.objects.create(
+            teacher=self.teacher_a, student=self.student_a, material=official_material,
+            source_assessment=official_root, title='Completed CRLA', code='AWS-CRLA-PROGRESS-RESULT',
+            assessment_type='paragraph', attempt_status='completed',
+            completed_at=timezone.now(), crla_classification='Transitioning Reader',
+        )
+        self.student_a.preference = {
+            'reading_assessment_state': {
+                'reader_classification': 'Transitioning Reader',
+                'aral_eligible': True,
+                'current_week': 1,
+            },
+        }
+        self.student_a.save(update_fields=['preference', 'updated_at'])
+        aral_materials = [self.assessment_a]
+        for index in range(2):
+            aral_materials.append(self._material(self.section_a, f'ARAL {index + 2}', 'assessment'))
+        for material in aral_materials:
+            material.assigned_week = 1
+            material.student_access = True
+            material.save(update_fields=['assigned_week', 'student_access', 'updated_at'])
+
+        aral_materials[0].record_assessment_result(self.student_a, status='completed')
+        self._login(self.student_a)
+
+        response = self.client.get(reverse('get_student_joined_classes'))
+        self.assertEqual(response.status_code, 200)
+        payload = next(item for item in response.json()['classes'] if item['section_id'] == self.section_a.id)
+        self.assertEqual(payload['aral_week_total'], 3)
+        self.assertEqual(payload['aral_week_completed'], 1)
+
+        added_material = self._material(self.section_a, 'ARAL 4', 'assessment')
+        added_material.assigned_week = 1
+        added_material.student_access = True
+        added_material.save(update_fields=['assigned_week', 'student_access', 'updated_at'])
+
+        response = self.client.get(reverse('get_student_joined_classes'))
+        payload = next(item for item in response.json()['classes'] if item['section_id'] == self.section_a.id)
+        self.assertEqual(payload['aral_week_total'], 4)
+        self.assertEqual(payload['aral_week_completed'], 1)
+
+    def test_current_week_is_earliest_assigned_week_not_fully_completed(self):
+        self._make_completed_aral_student()
+        week_one = self._aral_materials(1, 3)
+        self._aral_materials(2, 4)
+        for material in week_one:
+            material.record_assessment_result(self.student_a, status='completed')
+
+        payload = self._class_payload()
+        self.assertEqual(payload['current_aral_week'], 2)
+        self.assertEqual(payload['aral_week_completed'], 0)
+        self.assertEqual(payload['aral_week_total'], 4)
+
+    def test_current_week_moves_to_week_three_after_weeks_one_and_two_complete(self):
+        self._make_completed_aral_student()
+        week_one = self._aral_materials(1, 3)
+        week_two = self._aral_materials(2, 4)
+        self._aral_materials(3, 2)
+        for material in week_one + week_two:
+            material.record_assessment_result(self.student_a, status='completed')
+
+        payload = self._class_payload()
+        self.assertEqual(payload['current_aral_week'], 3)
+        self.assertEqual(payload['aral_week_completed'], 0)
+        self.assertEqual(payload['aral_week_total'], 2)
+
+    def test_completing_week_one_automatically_moves_to_week_two(self):
+        self._make_completed_aral_student()
+        week_one = self._aral_materials(1, 2)
+        self._aral_materials(2, 4)
+        week_one[0].record_assessment_result(self.student_a, status='completed')
+
+        payload = self._class_payload()
+        self.assertEqual(payload['current_aral_week'], 1)
+        self.assertEqual(payload['aral_week_completed'], 1)
+
+        week_one[1].record_assessment_result(self.student_a, status='completed')
+        payload = self._class_payload()
+        self.assertEqual(payload['current_aral_week'], 2)
+        self.assertEqual(payload['aral_week_completed'], 0)
+        self.assertEqual(payload['aral_week_total'], 4)
+
+    def test_new_activity_in_completed_week_resurfaces_that_earlier_week(self):
+        self._make_completed_aral_student()
+        week_one = self._aral_materials(1, 2)
+        week_two = self._aral_materials(2, 2)
+        for material in week_one + week_two:
+            material.record_assessment_result(self.student_a, status='completed')
+
+        payload = self._class_payload()
+        self.assertEqual(payload['current_aral_week'], 2)
+        self.assertEqual(payload['aral_week_completed'], 2)
+
+        new_activity = self._aral_materials(1, 1)[0]
+        payload = self._class_payload()
+        self.assertEqual(payload['current_aral_week'], 1)
+        self.assertEqual(payload['aral_week_completed'], 2)
+        self.assertEqual(payload['aral_week_total'], 3)
+        self.assertFalse(new_activity.has_student_completed(self.student_a))
+
+    def test_aral_week_route_selects_week_folder_without_official_crla(self):
+        self._make_completed_aral_student()
+        week_one = self._aral_materials(1, 2)
+        self._aral_materials(2, 1)
+        response = self.client.get(
+            reverse('assessment'),
+            {'section_id': self.section_a.id, 'week': 1},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'pabasa_app/assessment.html')
+        self.assertTrue(response.context['aral_week_mode'])
+        self.assertTrue(response.context['aral_week_launch'])
+        self.assertEqual(response.context['requested_aral_week'], 1)
+        self.assertEqual(
+            {item['id'] for item in response.context['student_assessment_materials']},
+            {material.id for material in week_one},
+        )
+        self.assertNotContains(response, 'Official CRLA')
+        self.assertContains(response, 'aralWeekMode')
+
+    def test_aral_week_route_does_not_expose_unassigned_week_materials(self):
+        self._make_completed_aral_student()
+        self._aral_materials(1, 2)
+        response = self.client.get(
+            reverse('assessment'),
+            {'section_id': self.section_a.id, 'week': 2},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['aral_week_mode'])
+        self.assertTrue(response.context['aral_week_launch'])
+        self.assertEqual(response.context['student_assessment_materials'], [])
+
+    def test_invalid_aral_week_does_not_expose_activities(self):
+        self._make_completed_aral_student()
+        self._aral_materials(1, 2)
+        response = self.client.get(
+            reverse('assessment'),
+            {'section_id': self.section_a.id, 'week': 'not-a-week'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['aral_week_mode'])
+        self.assertFalse(response.context['aral_week_launch'])
+        self.assertEqual(response.context['student_assessment_materials'], [])
 
     def test_direct_normal_material_request_is_denied_during_assessment_week(self):
         self.section_a.assessment_week_enabled = True

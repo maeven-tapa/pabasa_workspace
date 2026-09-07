@@ -670,6 +670,18 @@ def _reader_assessment_state(student):
     }
 
 
+def _student_has_completed_official_crla(student):
+    """Return the persisted official-CRLA completion state for a student.
+
+    This deliberately uses the same finalized-result query used by CRLA
+    reporting/dashboard code.  A display reading level (or browser state) is
+    not evidence that an official CRLA was completed.
+    """
+    if not student or not getattr(student, 'pk', None):
+        return False
+    return bool(latest_completed_official_crla_results(student_ids=[student.pk]))
+
+
 def _assessment_workflow_context(student):
     state = _reader_assessment_state(student)
     completed_pretest = state['pre_test_completed']
@@ -1012,6 +1024,80 @@ def _student_current_week(request=None, student=None):
         if 1 <= week_num <= 10:
             return week_num
     return None
+
+
+def _student_completed_material(material, student):
+    """Use the activity's existing completion record for weekly progress."""
+    if isinstance(getattr(material, 'content_json', None), dict) and material.content_json.get('activity_key') == 'fluency_reading':
+        return bool(_fluency_reading_completed_result(material, student))
+    if _is_story_response_material(material):
+        submission = StoryResponseSubmission.objects.filter(
+            student=student,
+            material=material,
+            status='graded',
+        ).exclude(grade__isnull=True).exists()
+        return submission
+    if _is_retell_story_material(material):
+        return material.assessment_results.filter(
+            student=student,
+            attempt_status='completed',
+            completed_at__isnull=False,
+        ).exists()
+    if material.assessment_id:
+        attempts = material.assessment.get_attempts(student)
+        if attempts:
+            return any(attempt.get('status') == 'completed' for attempt in attempts)
+    return material.assessment_results.filter(
+        student=student,
+        attempt_status='completed',
+        completed_at__isnull=False,
+    ).exists()
+
+
+def _student_current_aral_progress(student, section):
+    """Resolve the earliest incomplete assigned week and its live progress."""
+    if not student or not section:
+        return {'week': None, 'total': 0, 'completed': 0}
+    materials = Material.objects.filter(
+        Q(section=section) | Q(assigned_sections=section) | Q(courses__sections=section),
+        is_active=True,
+        student_access=True,
+        type__in=('assessment', 'both'),
+    ).exclude(
+        Q(assessment_kind='crla')
+        | Q(is_official_reading=True)
+        | Q(is_system_owned=True)
+        | Q(system_assessment_key__in=list(OFFICIAL_CRLA_CONTENT.keys()))
+        | Q(system_assessment_phase__in=('pretest', 'posttest'))
+    ).distinct()
+    weekly_progress = {}
+    for material in materials:
+        if not _material_is_released(material):
+            continue
+        assigned_weeks = _material_week_values(material)
+        if not assigned_weeks:
+            continue
+        is_completed = _student_completed_material(material, student)
+        for week in assigned_weeks:
+            progress = weekly_progress.setdefault(week, {'total': 0, 'completed': 0})
+            progress['total'] += 1
+            if is_completed:
+                progress['completed'] += 1
+
+    if not weekly_progress:
+        return {'week': None, 'total': 0, 'completed': 0}
+
+    incomplete_weeks = [
+        week for week in sorted(weekly_progress)
+        if weekly_progress[week]['completed'] < weekly_progress[week]['total']
+    ]
+    current_week = incomplete_weeks[0] if incomplete_weeks else max(weekly_progress)
+    progress = weekly_progress[current_week]
+    return {
+        'week': current_week,
+        'total': progress['total'],
+        'completed': progress['completed'],
+    }
 
 
 def _official_crla_material_for_student(student, assessment_type):
@@ -10421,6 +10507,15 @@ def assessment(request):
     for section in joined_sections:
         _expire_assessment_week_if_needed(section)
     requested_section_id = request.GET.get('section_id')
+    aral_week_requested = 'week' in request.GET
+    requested_aral_week = None
+    if aral_week_requested:
+        try:
+            requested_aral_week = int(request.GET.get('week'))
+        except (TypeError, ValueError):
+            requested_aral_week = None
+        if requested_aral_week is not None and not 1 <= requested_aral_week <= 99:
+            requested_aral_week = None
     assessment_week_section = None
     if requested_section_id:
         try:
@@ -10440,10 +10535,22 @@ def assessment(request):
         selected_section = next((section for section in joined_sections if section.id in current_section_ids), None)
     if selected_section is None and len(joined_sections) == 1:
         selected_section = joined_sections[0]
+    reading_access_state = workflow.get('eligibility') or _reader_assessment_state(user)
+    aral_week_mode = bool(
+        aral_week_requested
+        and selected_section
+        and _student_has_completed_official_crla(user)
+        and reading_access_state.get('aral_eligible')
+        and not reading_access_state.get('reading_at_grade_level_complete')
+    )
+    aral_week_launch = bool(aral_week_mode and requested_aral_week is not None)
     returning_to_reading_assessment = (
         str(request.GET.get('return_to') or '').strip().lower() == 'reading_assessment'
     )
-    reading_access_state = workflow.get('eligibility') or _reader_assessment_state(user)
+    if aral_week_mode:
+        # An explicit ARAL week request must not be intercepted by the
+        # section-wide CRLA assessment-week branches below.
+        assessment_week_section = None
     section_week_status = _section_assessment_week_status(selected_section) if selected_section else 'none'
     section_assessment_completed = _student_completed_section_assessment(user, selected_section)
     approved_assessment_request = _student_has_approved_assessment_request(user, selected_section)
@@ -10463,7 +10570,7 @@ def assessment(request):
         # It must not be masked by the section-wide Assessment Week view, which
         # may remain enabled after its calendar window has ended.
         assessment_week_section = None
-    if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status == 'after':
+    if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status == 'after' and not aral_week_mode:
         if (
             not section_assessment_completed
             and not _student_has_approved_assessment_request(user, selected_section)
@@ -10489,7 +10596,7 @@ def assessment(request):
                 'workflow_message': 'Keep up the great work. You can continue practicing whenever you like.',
             })
             return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
-    if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status in {'before', 'during'} and not selected_section.assessment_week_enabled and not section_assessment_completed:
+    if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status in {'before', 'during'} and not selected_section.assessment_week_enabled and not section_assessment_completed and not aral_week_mode:
         context = _dashboard_context(request, 'student')
         context.update({
             'stage': 'assessment_week_locked',
@@ -10539,7 +10646,9 @@ def assessment(request):
     eligible = bool(state.get('aral_eligible'))
     forced_workflow = str(request.GET.get('workflow') or request.GET.get('view') or '').strip().lower()
     # Assessment Week takes precedence over URL-supplied normal workflow state.
-    if assessment_week_section:
+    if aral_week_mode:
+        forced_workflow = 'original'
+    elif assessment_week_section:
         forced_workflow = ''
     active_phase = workflow.get('active_phase') or _official_crla_assessment_phase(user)
     official_availability = _official_assessment_availability_for_student(user, request)
@@ -10587,7 +10696,10 @@ def assessment(request):
 
     stage = 'complete'
     routing_reason = 'default_complete'
-    if section_week_status == 'after' and section_assessment_completed:
+    if aral_week_mode:
+        stage = 'original'
+        routing_reason = 'explicit_aral_week_launch'
+    elif section_week_status == 'after' and section_assessment_completed:
         stage = 'original'
         routing_reason = 'completed_assessment_week_teacher_materials'
     elif assessment_week_section:
@@ -10676,9 +10788,25 @@ def assessment(request):
 
     workflow['stage'] = stage
 
-    current_week = _student_current_week(request, user)
+    current_week = requested_aral_week if aral_week_mode else _student_current_week(request, user)
     materials = _assessment_materials_for_student(user)
-    if assessment_week_section:
+    if aral_week_mode:
+        if selected_section:
+            materials = materials.filter(
+                Q(section=selected_section) | Q(assigned_sections=selected_section)
+            ).filter(
+                student_access=True,
+                type__in=('assessment', 'both'),
+            ).exclude(
+                Q(assessment_kind='crla')
+                | Q(is_official_reading=True)
+                | Q(is_system_owned=True)
+                | Q(system_assessment_key__in=list(OFFICIAL_CRLA_CONTENT.keys()))
+                | Q(system_assessment_phase__in=('pretest', 'posttest'))
+            ).distinct()
+        if not aral_week_launch:
+            materials = materials.none()
+    elif assessment_week_section:
         # Use only assessments attached to this enabled section. This prevents
         # an assessment-week launch from leaking another section's materials.
         materials = materials.filter(
@@ -10688,6 +10816,8 @@ def assessment(request):
     material_map = {}
     for material in materials:
         if not _material_available_for_week(material, current_week):
+            continue
+        if aral_week_mode and requested_aral_week not in _material_week_values(material):
             continue
         key = str(material.assessment_set or material.item_type).strip().lower()
         if key and key not in material_map:
@@ -10827,6 +10957,9 @@ def assessment(request):
         'student_assessment_materials': student_assessment_materials,
         'assessment_week_enabled': bool(assessment_week_section),
         'assessment_week_section': assessment_week_section,
+        'aral_week_mode': aral_week_mode,
+        'aral_week_launch': aral_week_launch,
+        'requested_aral_week': requested_aral_week,
         'joined_sections_count': len(joined_sections),
         'student_section_ids': [section.id for section in joined_sections],
         'active_school_calendar': official_calendar,
@@ -20034,6 +20167,12 @@ def get_student_joined_classes(request):
         
         if student_user.role != 'student':
             return JsonResponse({'success': False, 'error': 'Not a student account'}, status=403)
+
+        # This is intentionally derived from finalized persisted CRLA result
+        # rows, rather than User.reading_level or client-side state.
+        official_crla_completed = _student_has_completed_official_crla(student_user)
+        reader_state = _reader_assessment_state(student_user)
+        aral_eligible = bool(reader_state.get('aral_eligible'))
         
         # Get all active sections where this student is enrolled
         section_scan_started_at = time.perf_counter()
@@ -20043,6 +20182,10 @@ def get_student_joined_classes(request):
         for section in sections:
             # Check if student is actively enrolled in this section
             if section.has_student(student_user, active_only=True):
+                aral_progress = _student_current_aral_progress(
+                    student_user,
+                    section,
+                ) if official_crla_completed and aral_eligible else {'total': 0, 'completed': 0}
                 joined_classes.append({
                     'id': section.id,
                     'section_id': section.id,
@@ -20055,6 +20198,11 @@ def get_student_joined_classes(request):
                     'teacher_name': f"{section.teacher.first_name} {section.teacher.last_name}" if section.teacher else '',
                 'student_count': section.get_student_count(),
                     'assessment_week_enabled': bool(section.assessment_week_enabled),
+                    'official_crla_completed': official_crla_completed,
+                    'aral_eligible': aral_eligible,
+                    'current_aral_week': aral_progress.get('week'),
+                    'aral_week_total': aral_progress['total'],
+                    'aral_week_completed': aral_progress['completed'],
                 'created_at': section.created_at.isoformat(),
                 })
         
@@ -20177,6 +20325,13 @@ def get_class_materials(request):
         assessment_week_enabled = bool(
             request_user.role == 'student' and _expire_assessment_week_if_needed(section)
         )
+        # A completed official CRLA takes priority over the section-wide
+        # Assessment Week switch.  Continue using this endpoint's existing
+        # material query/serialization path for the teacher's materials.
+        official_crla_completed = (
+            request_user.role == 'student'
+            and _student_has_completed_official_crla(request_user)
+        )
         if request_user.role == 'student' and _section_assessment_week_status(section) == 'after':
             if not _student_completed_section_assessment(request_user, section) and not _student_has_approved_assessment_request(request_user, section):
                 return JsonResponse({
@@ -20190,7 +20345,7 @@ def get_class_materials(request):
                 }, status=403)
         # Enforce Assessment Week at the data boundary too: a direct materials
         # API request cannot expose normal prompts or practice to this section.
-        if assessment_week_enabled:
+        if assessment_week_enabled and not official_crla_completed:
             materials_qs = materials_qs.filter(
                 Q(type__in=['assessment', 'both']) | Q(assessment__isnull=False)
             )
@@ -20214,7 +20369,7 @@ def get_class_materials(request):
             Q(section__isnull=True, teacher=section.teacher) |
             Q(section__isnull=True, teacher__role='admin')
         ).order_by('-created_at')
-        if assessment_week_enabled:
+        if assessment_week_enabled and not official_crla_completed:
             practices_qs = practices_qs.none()
         teacher_user = request_user if request_user.role == 'teacher' else None
         # Requesting user (could be student or teacher) used to compute attempt counts
@@ -20418,6 +20573,7 @@ def get_class_materials(request):
                     'assigned_sections': [s.class_code for s in m.assigned_sections.all()] if hasattr(m, 'assigned_sections') else [],
                     'assigned_week': m.assigned_week,
                     'assigned_week_display': format_assigned_week_display(m.assigned_week),
+                    'assigned_weeks': _material_week_values(m),
                     'language': language_value,
                     'content_json': content_json,
                     'template_title': content_json.get('template_title') or '',
@@ -20545,6 +20701,7 @@ def get_class_materials(request):
             'success': True,
             'section_id': section.id,
             'assessment_week_enabled': assessment_week_enabled,
+            'official_crla_completed': official_crla_completed,
             'materials': materials,
             'official_assessments': official_assessments,
             'all_materials': all_materials_flat,
@@ -21798,6 +21955,11 @@ def _assessment_week_allows_material(student, material):
     """Apply Assessment Week to official assessments, not expired teacher work."""
     if not student or not material:
         return False
+    # Once a finalized official CRLA result exists, Assessment Week must not
+    # hide the teacher's ordinary learning materials.  Keep official CRLA
+    # itself excluded so completion never becomes a retake authorization.
+    if _student_has_completed_official_crla(student) and not _is_official_crla_material(material):
+        return True
     # Official CRLA materials are shared rather than section-attached.  A
     # teacher-approved overdue request is the explicit, section-scoped
     # authorization for this student to launch one after Assessment Week.
@@ -21840,6 +22002,8 @@ def _assessment_week_allows_material(student, material):
 def _material_assessment_week_section(student, material):
     """Return an enabled Assessment Week section that still restricts this student."""
     if not student or not material:
+        return None
+    if _student_has_completed_official_crla(student) and not _is_official_crla_material(material):
         return None
     candidate_ids = set()
     if material.section_id:

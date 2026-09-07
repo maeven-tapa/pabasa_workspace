@@ -847,7 +847,11 @@
         const materialTypes = ["word", "sentence", "paragraph", "vowel"];
         const sectionIdsData = document.getElementById("student-section-ids-data");
         const serverJoinedSectionIds = sectionIdsData ? JSON.parse(sectionIdsData.textContent) : [];
-        const requestedSectionId = (new URLSearchParams(window.location.search).get("section_id") || "").trim();
+        const queryParams = new URLSearchParams(window.location.search);
+        const requestedSectionId = (queryParams.get("section_id") || "").trim();
+        const requestedWeek = (queryParams.get("week") || "").trim();
+        const requestedWeekNumber = /^\d+$/.test(requestedWeek) ? Number(requestedWeek) : null;
+        const aralWeekMode = {{ aral_week_mode|yesno:"true,false" }};
         const selectedSectionId = requestedSectionId;
 
         const escapeHtml = (value) => {
@@ -999,7 +1003,9 @@
                 
                 const readings = readingsMap[String(sectionId)] || {};
                 const materials = {};
-                const officialAssessments = Array.isArray(readings.official_assessments) ? readings.official_assessments : [];
+                const officialAssessments = aralWeekMode
+                    ? []
+                    : (Array.isArray(readings.official_assessments) ? readings.official_assessments : []);
                 const officialAssessmentKeys = new Set(
                     officialAssessments
                         .map((item) => String(item?.system_assessment_key || '').trim().toLowerCase())
@@ -1025,6 +1031,14 @@
                                 return new Date(material.schedule).getTime() <= window.pabasaServerNow();
                             }
                             return false;
+                        })
+                        .filter((material) => {
+                            if (!aralWeekMode) return true;
+                            const weeks = Array.isArray(material.assigned_weeks) && material.assigned_weeks.length
+                                ? material.assigned_weeks
+                                : (material.assigned_week == null ? [] : [material.assigned_week]);
+                            return requestedWeekNumber !== null
+                                && weeks.some((week) => Number(week) === requestedWeekNumber);
                         });
                 });
                 return { classData, materials, officialAssessments };
@@ -1593,6 +1607,15 @@
                     modal.querySelector('.week-activities-close')?.focus();
                 });
             });
+            // Dashboard ARAL cards use the existing assessment hub/folder UI.
+            // A selected week opens only its corresponding established folder.
+            if (requestedWeek) {
+                const requestedLabel = `Week ${requestedWeek}`;
+                const requestedFolder = Array.from(grid.querySelectorAll('[data-week-modal-target]')).find((folder) =>
+                    folder.querySelector('.week-folder-name')?.textContent.trim() === requestedLabel
+                );
+                requestedFolder?.click();
+            }
             document.querySelectorAll('.week-activities-modal').forEach((modal) => {
                 const close = () => { modal.hidden = true; document.body.style.overflow = ''; };
                 modal.querySelector('.week-activities-close')?.addEventListener('click', close);
