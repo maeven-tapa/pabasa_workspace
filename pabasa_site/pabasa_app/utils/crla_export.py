@@ -87,21 +87,8 @@ def _attempt_sort_key(attempt):
 
 
 def _latest_attempts(assessment):
-    attempts = (
-        Assessment.objects.filter(
-            source_assessment=assessment,
-            student__isnull=False,
-            attempt_status="completed",
-        )
-        .select_related("student", "teacher", "section", "section__teacher", "material")
-        .order_by("student_id", "attempt_number", "created_at", "id")
-    )
-    latest = {}
-    for attempt in attempts:
-        current = latest.get(attempt.student_id)
-        if current is None or _attempt_sort_key(attempt) >= _attempt_sort_key(current):
-            latest[attempt.student_id] = attempt
-    return latest
+    # Share the dashboard's authoritative final-result selection exactly.
+    return latest_completed_official_crla_results(source_assessment=assessment)
 
 
 def _valid_section_teacher(section):
@@ -410,7 +397,7 @@ def _student_values(student, attempt, state, assessment):
         0,
         6,
     )
-    profile = _reading_profile(part_1_total, percent, correct_answers, state.get("classification"))
+    profile = _reading_profile(part_1_total, story_number, percent, correct_answers)
 
     completed_at = None
     if attempt:

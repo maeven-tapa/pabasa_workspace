@@ -6,8 +6,8 @@ from django.utils import timezone
 from openpyxl import load_workbook
 import uuid
 
-from .models import Assessment, Material, School, Section, StoryReadingProgress, User
-from .scoring import crla_sentence_score
+from .models import Assessment, Enrollment, Material, School, Section, StoryReadingProgress, User
+from .scoring import build_assessment_score_payload, crla_reading_profile, crla_sentence_score
 from .utils.crla_export import _part_1_reading_level, _row_formulas, _story_number, export_crla_excel
 
 
@@ -231,7 +231,7 @@ class CrlaExportResultTests(TestCase):
             teacher=admin, enrollment=enrollment, source_assessment=root, student=student,
             title="CRLA result", code="CRLA-META-NO-TEACHER-RESULT",
             assessment_type="paragraph", status="published", attempt_status="completed",
-            completed_at=timezone.now(),
+            completed_at=timezone.now(), crla_classification="Low Emerging Reader",
         )
 
         sheet = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)["G2 MT Reading Scoresheet"]
@@ -260,7 +260,7 @@ class CrlaExportResultTests(TestCase):
             teacher=admin, enrollment=enrollment, source_assessment=root, student=student,
             title="CRLA result", code="CRLA-META-NO-SCHOOL-RESULT",
             assessment_type="paragraph", status="published", attempt_status="completed",
-            completed_at=timezone.now(),
+            completed_at=timezone.now(), crla_classification="Low Emerging Reader",
         )
 
         sheet = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)["G2 MT Reading Scoresheet"]
@@ -297,7 +297,7 @@ class CrlaExportResultTests(TestCase):
                 teacher=admin, enrollment=enrollment, source_assessment=root, student=student,
                 title="CRLA result", code=f"CRLA-META-MIXED-RESULT-{index}",
                 assessment_type="paragraph", status="published", attempt_status="completed",
-                completed_at=timezone.now(),
+                completed_at=timezone.now(), crla_classification="Low Emerging Reader",
             )
 
         sheet = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)["G2 MT Reading Scoresheet"]
@@ -331,6 +331,7 @@ class CrlaExportResultTests(TestCase):
             student=student, title="early result", code="CRLA-EARLY-RESULT",
             assessment_type="word", status="published", attempt_status="completed",
             completed_at=timezone.now(), duration_seconds=20, word_count=6, wpm=18, accuracy=60,
+            crla_classification="Low Emerging Reader",
             crla_score_data={"task1_score": 6, "task2_type": "Task 2L / Rhymes", "task2_score": 3},
         )
 
@@ -441,11 +442,16 @@ class CrlaExportResultTests(TestCase):
 
         workbook = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)
         sheet = workbook["G2 MT Reading Scoresheet"]
-        for column in ("K", "L", "M", "N", "O", "R"):
+        for column in ("K", "L", "N", "O"):
             self.assertIsNone(sheet[f"{column}11"].value)
+        # M is a template-owned formula cell; with no Part 2 evidence its
+        # calculated value remains blank rather than the formula being removed.
+        self.assertTrue(str(sheet["M11"].value).startswith("="))
+        self.assertIsNone(sheet["R11"].value)
         self.assertTrue(str(sheet["P11"].value).startswith("="))
         self.assertTrue(str(sheet["Q11"].value).startswith("="))
         calculated = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=True)["G2 MT Reading Scoresheet"]
+        self.assertIsNone(calculated["M11"].value)
         self.assertIsNone(calculated["Q11"].value)
 
     def test_story_metrics_export_for_each_official_crla_phase(self):
@@ -489,7 +495,7 @@ class CrlaExportResultTests(TestCase):
                     teacher=teacher, section=section, material=material, source_assessment=root,
                     student=student, title=f"{period} result", code=f"CRLA-PHASE-RESULT-{index}",
                     assessment_type="paragraph", status="published", attempt_status="completed",
-                    completed_at=timezone.now(), crla_score_data={
+                    completed_at=timezone.now(), crla_classification="Transitioning Reader", crla_score_data={
                         "task1_score": 8, "task2_type": "Task 2H / Sentences", "task2_score": 7,
                         # Generic fields disagree on purpose; only the
                         # material-scoped Story Reading values may export.

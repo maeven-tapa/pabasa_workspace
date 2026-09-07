@@ -2698,9 +2698,13 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
             student_end_state['task2_sentences_score'] = sentence_score
             student_end_state['part1_total_score'] = part1_total
             if workflow_stage == 'early_completed_sentences':
-                student_end_state['classification'] = 'High Emerging Reader'
-                state['reader_classification'] = 'High Emerging Reader'
-                state['aral_eligible'] = bool(_aral_eligible_classification('High Emerging Reader'))
+                early_profile = (
+                    crla_reading_profile(part1_total, None, None, None)
+                    if assessment_kind == 'crla' else 'High Emerging Reader'
+                )
+                student_end_state['classification'] = early_profile
+                state['reader_classification'] = early_profile
+                state['aral_eligible'] = bool(_aral_eligible_classification(early_profile))
             elif workflow_stage == 'transition_to_story':
                 student_end_state['classification'] = 'High Emerging Reader'
         elif assessment_type == 'paragraph':
@@ -2722,9 +2726,17 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
                 'correct_answers', 'comprehension_correct', 'correct_items', 'items_correct'
             ) if score_payload.get(field) is not None), None)
             student_end_state['routing_score'] = story_read_percent
-            derived_classification = _crla_grade2_part2_profile(
-                story_read_percent,
-                correct_answers,
+            derived_classification = (
+                crla_reading_profile(
+                    score_payload.get('part1_total_score') or student_end_state.get('part1_total_score'),
+                    score_payload.get('story_number') or student_end_state.get('story_number'),
+                    story_read_percent,
+                    correct_answers,
+                )
+                if assessment_kind == 'crla' else _crla_grade2_part2_profile(
+                    story_read_percent,
+                    correct_answers,
+                )
             )
             student_end_state['classification'] = derived_classification
 
@@ -13221,6 +13233,7 @@ def persist_student_end_assessment_state(request):
         if stage == 'completed':
             _sync_assessment_workflow_state(student, score_payload={
                 'assessment_type': 'paragraph',
+                'part1_total_score': saved.get('part1_total_score'),
                 'story_number': saved.get('story_number'),
                 'selected_story': saved.get('selected_story'),
                 'story_total_words': saved.get('story_total_words') or saved.get('total_story_words'),

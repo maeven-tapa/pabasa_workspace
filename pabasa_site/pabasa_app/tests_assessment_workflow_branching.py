@@ -752,12 +752,15 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
         with patch("pabasa_app.views._get_user_state", return_value=state), \
              patch("pabasa_app.views._set_user_state", side_effect=lambda _student, value: state.update(value)), \
              patch("pabasa_app.views._active_school_calendar", return_value=None), \
-             patch("pabasa_app.views.timezone.now", return_value=SimpleNamespace(isoformat=lambda: "2026-08-24T00:00:00")):
+             patch("pabasa_app.views.timezone.now", return_value=SimpleNamespace(isoformat=lambda: "2026-08-24T00:00:00")), \
+             patch("pabasa_app.views.system_now", return_value=SimpleNamespace(isoformat=lambda: "2026-08-24T00:00:00")):
             _sync_assessment_workflow_state(student, {
                 "assessment_type": "paragraph",
+                "part1_total_score": 14,
+                "story_number": 1,
                 "story_read_percent": 70,
                 "correct_answers": 4,
-                "crla_classification": "Readers at Grade Level",
+                "crla_classification": "Reading At Grade Level",
             }, assessment=assessment)
 
         self.assertEqual(state["reader_classification"], "Transitioning Reader")
