@@ -415,7 +415,7 @@
 
   function speak() {
     if (speaking) return;
-    if (!('speechSynthesis' in window)) {
+    if (!window.PabasaTemplateTts) {
       phase = 'clap';
       return render();
     }
@@ -429,10 +429,6 @@
     }
     const wordElement = document.querySelector('.clap-count-word');
     wordElement?.classList.add('is-listening');
-    speechSynthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(item().word);
-    utterance.lang = data.language === 'Filipino' ? 'fil-PH' : 'en-US';
     const done = () => {
       speaking = false;
       if (phase === 'listen') {
@@ -441,9 +437,9 @@
       }
     };
 
-    utterance.onend = done;
-    utterance.onerror = done;
-    speechSynthesis.speak(utterance);
+    window.PabasaTemplateTts.speak({
+      materialId: data.id, text: item().word, profile: 'word', onEnd: done, onError: done,
+    });
   }
 
   function setup() {

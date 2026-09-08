@@ -11455,7 +11455,7 @@ def story_call_page(request):
     # The teacher 5W editor publishes its rows under content.items. Keep this
     # response contract small and predictable for the Story Call frontend.
     questions = content.get('items') if isinstance(content.get('items'), list) else []
-    question_language = str(content.get('language') or (questions_material.language if questions_material else '') or 'English').strip()
+    question_language = str((questions_material.language if questions_material else '') or content.get('language') or 'English').strip()
     print('STORY CALL ITEMS:', questions)
     story_call_questions_json = [
             {
@@ -11622,7 +11622,7 @@ def _custom_material_reading_context(request):
         # an internal generated identifier for teacher-created materials.
         'code': material.code or '',
         'item_type': material.item_type or request.GET.get('item_type') or 'word',
-        'language': content_json.get('language') or material.language or request.GET.get('language') or '',
+        'language': material.language or content_json.get('language') or request.GET.get('language') or '',
         'content': content,
         'content_json': content_json,
         'activity_variant': activity_variant,
@@ -11967,13 +11967,13 @@ def aral_template_activity_page(request, activity_slug):
         'material_id': f'material-{material.id}',
         'activity_slug': activity_slug,
         'title': material.title,
-        'language': content.get('language') or material.language or 'English',
+        'language': material.language or content.get('language') or 'English',
         'instructions': content.get('instructions'), 'reading_set': content.get('reading_set'),
         'assigned_week': material.assigned_week,
         'assigned_week_display': format_assigned_week_display(material.assigned_week),
         'completion': completion,
         'completion_url': reverse('aral_template_activity_complete', kwargs={'activity_slug': activity_slug}),
-        'tts_url': reverse('reading_read_aloud_api'),
+        'tts_url': reverse('template_activity_read_aloud_api'),
     }
     if page['activity_key'] == 'word_meaning_match':
         payload['items'] = content.get('items', []) if isinstance(content.get('items'), list) else []
@@ -12104,7 +12104,7 @@ def aral_template_activity_complete(request, activity_slug):
         duration = _bounded_activity_duration(request.POST.get('duration_seconds'), maximum=60)
         if duration < 1:
             return JsonResponse({'success': False, 'error': 'Reading time is required.'}, status=400)
-        language = content.get('language') or material.language or 'English'
+        language = material.language or content.get('language') or 'English'
         language_code = language_code_for(language, 'paragraph')
         api_key = getattr(settings, 'GOOGLE_STT_API_KEY', '').strip()
         project_id = getattr(settings, 'GOOGLE_CLOUD_PROJECT_ID', '').strip()
@@ -12344,7 +12344,7 @@ def _story_reading_sentences(material):
     """Return the sentence list displayed and scored by Story Reading."""
     content_json = material.content_json if isinstance(material.content_json, dict) else {}
     story_config = content_json.get('storyReading') if isinstance(content_json.get('storyReading'), dict) else {}
-    language = str(content_json.get('language') or material.language or 'English').strip()
+    language = str(material.language or content_json.get('language') or 'English').strip()
     story_key = _story_reading_key(content_json, language)
     if not story_key and language.lower() == 'filipino' and material.id == 30:
         story_key = 'filipino-set-1'
@@ -12402,12 +12402,15 @@ def clap_count_syllables_page(request):
         }
     context = _dashboard_context(request)
     context['clap_count_material_json'] = json.dumps({
-        'id': material.id, 'title': material.title, 'language': content['language'],
+        'id': material.id, 'title': material.title,
+        'language': material.language or content['language'],
         'items': items, 'randomize_order': bool(content.get('randomize_order')),
         'allow_retry': bool(content.get('allow_retry', True)),
     }, default=str, separators=(',', ':'))
     context['clap_count_completion_json'] = json.dumps(completion_payload or {}, default=str, separators=(',', ':'))
-    return render(request, 'pabasa_app/clap_count_syllables_page.html', context)
+    return _render_template_activity_with_tts(
+        request, 'pabasa_app/clap_count_syllables_page.html', context, material, 'word',
+    )
 
 
 @login_required(role='student')
@@ -12444,6 +12447,7 @@ def sound_detective_page(request):
     saved_correct = int(getattr(completed_result, 'correct_items', 0) or 0) if completed_result else int(saved_progress.get('correct_items') or 0)
     payload.update({
         'id': material.id, 'title': material.title,
+        'language': material.language or payload.get('language') or 'English',
         'progress': {
             'current_index': total_items if activity_completed else current_index,
             'completed_items': completed_items,
@@ -12466,7 +12470,9 @@ def sound_detective_page(request):
     # Keep the historical template-render contract while retaining the
     # deliberately isolated full-screen activity shell.
     render_to_string('pabasa_app/base_dashboard.html', context, request=request)
-    return render(request, 'pabasa_app/sound_detective_page.html', context)
+    return _render_template_activity_with_tts(
+        request, 'pabasa_app/sound_detective_page.html', context, material, 'passage',
+    )
 
 
 @login_required(role='student')
@@ -12552,7 +12558,7 @@ def letter_sound_matching_page(request):
     
     content = dict(material.content_json or {})
     reading_set_id = content.get('reading_set_id', 'filipino_set_1')
-    language = content.get('language', 'Filipino')
+    language = material.language or content.get('language', 'Filipino')
     items = content.get('items', [])
     
     student_user = User.objects.filter(id=request.session.get('user_id'), role='student').first()
@@ -12655,12 +12661,14 @@ def letter_sound_correspondence_page(request):
     # This view reflects the student's live completion state.  Do not let the
     # browser reuse a prior activity document after an assessment finishes.
     response = render(request, 'pabasa_app/letter_sound_correspondence_page.html', context)
+    tts_client = f'{settings.STATIC_URL.rstrip("/")}/pabasa_app/js/template_google_tts.js'
+    tts_compatibility = f'{settings.STATIC_URL.rstrip("/")}/pabasa_app/js/template_browser_tts_bridge.js'
     tts_bridge = f'{settings.STATIC_URL.rstrip("/")}/pabasa_app/js/letter_sound_correspondence_google_tts.js'
     response.content = response.content.replace(
-        b'</head>', f'<script src="{tts_bridge}"></script></head>'.encode(), 1,
+        b'</head>', f'<script src="{tts_client}"></script><script src="{tts_compatibility}"></script><script src="{tts_bridge}"></script></head>'.encode(), 1,
     )
     response.content = response.content.replace(
-        b'<body>', f'<body data-letter-correspondence-language="{escape(material_language)}">'.encode(), 1,
+        b'<body>', f'<body data-letter-correspondence-language="{escape(material_language)}" data-template-material-id="{material.id}">'.encode(), 1,
     )
     response['Cache-Control'] = 'no-store, max-age=0'
     return response
@@ -12711,12 +12719,14 @@ def word_decoding_page(request):
     # This template's compact legacy script calls the Web Speech API directly.
     # Load the Word Decoding-only bridge before it so its prompts use our Google
     # TTS voice, rather than a browser-dependent system voice.
+    tts_client = f'{settings.STATIC_URL.rstrip("/")}/pabasa_app/js/template_google_tts.js'
+    tts_compatibility = f'{settings.STATIC_URL.rstrip("/")}/pabasa_app/js/template_browser_tts_bridge.js'
     tts_bridge = f'{settings.STATIC_URL.rstrip("/")}/pabasa_app/js/word_decoding_google_tts.js'
     response.content = response.content.replace(
-        b'</head>', f'<script src="{tts_bridge}"></script></head>'.encode(), 1,
+        b'</head>', f'<script src="{tts_client}"></script><script src="{tts_compatibility}"></script><script src="{tts_bridge}"></script></head>'.encode(), 1,
     )
     response.content = response.content.replace(
-        b'<body>', f'<body data-word-decoding-language="{escape(material_language)}">'.encode(), 1,
+        b'<body>', f'<body data-word-decoding-language="{escape(material_language)}" data-template-material-id="{material.id}">'.encode(), 1,
     )
     response['Cache-Control'] = 'no-store, max-age=0'
     return response
@@ -12935,7 +12945,7 @@ def picture_word_matching_page(request):
     context['picture_word_material_json'] = json.dumps({
         'id': material.id,
         'title': material.title or 'Picture-Word Matching',
-        'language': content_json.get('language') or getattr(material, 'language', '') or 'English',
+        'language': getattr(material, 'language', '') or content_json.get('language') or 'English',
         'items': content_json.get('items') if isinstance(content_json.get('items'), list) else [],
     }, default=str, separators=(',', ':'))
     context['picture_word_completion_json'] = json.dumps(completion_payload or {}, default=str, separators=(',', ':'))
@@ -12953,7 +12963,7 @@ def syllable_blending_page(request):
         return redirect('assessment')
     content = dict(material.content_json or {})
     activity_id = str(content.get('activity_id') or '').strip().lower()
-    language = 'English' if str(content.get('language') or '').lower().startswith('eng') else 'Filipino'
+    language = 'English' if str(material.language or content.get('language') or '').lower().startswith('eng') else 'Filipino'
     activity_format = normalize_format(content.get('activity_format'))
     activity_id_match = re.fullmatch(r'(filipino|english)_(syllable_combination|big_box)_(0[1-5])', activity_id)
     has_complete_content = isinstance(content.get('items'), list) and len(content['items']) == 5
@@ -13016,7 +13026,9 @@ def syllable_blending_page(request):
     }, default=str, separators=(',', ':'))
     context['syllable_blending_progress_json'] = json.dumps(progress_payload, default=str, separators=(',', ':'))
     context['syllable_blending_completion_json'] = json.dumps(completion_payload or {}, default=str, separators=(',', ':'))
-    return render(request, 'pabasa_app/syllable_blending_page.html', context)
+    return _render_template_activity_with_tts(
+        request, 'pabasa_app/syllable_blending_page.html', context, material, 'word',
+    )
 
 @xframe_options_sameorigin
 def reading_sentence_page(request):
@@ -13289,7 +13301,7 @@ def story_reading_page(request):
         'assigned_week_display': format_assigned_week_display(material.assigned_week),
         'title': str(content_json.get('storyTitle') or story_config.get('storyTitle') or material.title or 'Story Reading').strip(),
         'text': str(content_json.get('storyText') or story_config.get('storyText') or material.content_text or material.prompt_text or '').strip(),
-        'language': content_json.get('language') or material.language or 'English',
+        'language': material.language or content_json.get('language') or 'English',
         'images': content_json.get('images') if isinstance(content_json.get('images'), list) else [],
         'first_name': str(getattr(student, 'first_name', '') or '').strip().split(' ')[0],
         'section_id': request.GET.get('section_id') or '',
@@ -13732,10 +13744,7 @@ def word_decoding_transcribe_api(request):
 
     audio = request.FILES.get('audio')
     target_word = (request.POST.get('target_word') or '').strip()
-    try:
-        material_id = int(request.POST.get('material_id') or 0)
-    except (TypeError, ValueError):
-        material_id = 0
+    _, material_id = _parse_prefixed_id(request.POST.get('material_id') or request.POST.get('id'))
     material = Material.objects.filter(pk=material_id).first() if material_id else None
     if not audio or not target_word:
         return JsonResponse({'success': False, 'error': 'Audio and target word are required.'}, status=400)
@@ -13966,6 +13975,114 @@ def reading_read_aloud_api(request):
         })
     except Exception as exc:
         logger.exception('Read aloud synthesis failed')
+        return JsonResponse({'success': False, 'error': str(exc)}, status=502)
+
+
+TEMPLATE_ACTIVITY_TITLES = frozenset({
+    'Letter & Sound Matching', 'Sound Detective', 'Match the Letter to Its Sound',
+    'Clap & Count Syllables', 'Syllable Blending', 'Blend the Syllables',
+    'Picture-Word Matching', 'Decode the Word', 'Word Meaning Match',
+    'Phrase Reading Practice', 'Sentence Reading Practice', 'Fluency Reading',
+    'Story Reading', "5W's Story Questions", 'Retell the Story', 'Story Response',
+})
+
+
+def _is_template_activity_material(material):
+    """Return whether a material belongs to the teacher template activity set.
+
+    This is deliberately narrower than the legacy read-aloud endpoint: it keeps
+    template narration isolated from practice and assessment modules and makes
+    the saved Material.language authoritative for every template request.
+    """
+    content = getattr(material, 'content_json', None)
+    if not isinstance(content, dict):
+        return False
+    title = str(content.get('template_title') or content.get('template_type') or '').strip()
+    activity_identity = str(content.get('activity_slug') or content.get('activity_type') or '').strip().lower()
+    template_activity_ids = {
+        'letter_sound_matching', 'letter_sound_correspondence', 'letter-sound-correspondence',
+        'sound_detective', 'clap_count_syllables', 'syllable_blending', 'picture_word_matching',
+        'word_decoding', 'word-decoding', 'word_meaning_match', 'phrase_reading',
+        'sentence_reading', 'sentence_reading_practice', 'fluency_reading', 'story_reading',
+        'five_w_story_questions', 'retell_story', 'story_response',
+    }
+    return (
+        content.get('template_source') == 'template'
+        or title in TEMPLATE_ACTIVITY_TITLES
+        or activity_identity in template_activity_ids
+    )
+
+
+def _render_template_activity_with_tts(request, template_name, context, material, profile='instruction'):
+    """Render one template page with the Google-only Web Speech compatibility bridge."""
+    response = render(request, template_name, context)
+    static_root = settings.STATIC_URL.rstrip('/')
+    setup = json.dumps({'materialId': material.id, 'profile': profile}, separators=(',', ':'))
+    scripts = (
+        f'<script>window.__PABASA_TEMPLATE_TTS__={setup};</script>'
+        f'<script src="{static_root}/pabasa_app/js/template_google_tts.js"></script>'
+        f'<script src="{static_root}/pabasa_app/js/template_browser_tts_bridge.js"></script>'
+    )
+    response.content = response.content.replace(b'</head>', f'{scripts}</head>'.encode(), 1)
+    return response
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+def template_activity_read_aloud_api(request):
+    """Synthesize natural narration for one of the 15 teacher template activities.
+
+    The browser may choose *what* text to read and an approved teaching profile,
+    but never the language or voice locale.  Those are derived from the saved
+    material selected by the teacher.
+    """
+    if not _check_auth(request):
+        return JsonResponse({'success': False, 'error': 'Authentication required.'}, status=401)
+
+    _, material_id = _parse_prefixed_id(request.POST.get('material_id') or request.POST.get('id'))
+    material = Material.objects.filter(pk=material_id).first() if material_id else None
+    if not material or not _is_template_activity_material(material):
+        return JsonResponse({'success': False, 'error': 'Template activity not found.'}, status=404)
+    access_response = _enforce_student_access_for_request(request, material=material, json_response=True)
+    if access_response:
+        return access_response
+
+    target_text = ' '.join(str(request.POST.get('target_text') or '').split())
+    if not target_text:
+        return JsonResponse({'success': False, 'error': 'Reading text is required.'}, status=400)
+    if len(target_text) > 5000:
+        return JsonResponse({'success': False, 'error': 'Reading text is too long.'}, status=400)
+
+    profile = str(request.POST.get('profile') or 'instruction').strip().lower()
+    # These profiles use only natural full-text narration.  Letter and syllable
+    # phonics remain curated local recordings so their articulation is exact.
+    profile_options = {
+        'instruction': {'speaking_rate': 0.92, 'prosody_rate': '92%'},
+        'word': {'speaking_rate': 0.88, 'prosody_rate': '88%'},
+        'sentence': {'speaking_rate': 0.96, 'prosody_rate': '96%'},
+        'passage': {'speaking_rate': 0.94, 'prosody_rate': '94%'},
+        'question': {'speaking_rate': 0.94, 'prosody_rate': '94%'},
+        'feedback': {'speaking_rate': 0.98, 'prosody_rate': '98%'},
+    }
+    options = profile_options.get(profile, profile_options['instruction'])
+    language_code = language_code_for(material.language or '', 'template')
+    try:
+        audio_content = synthesize_read_aloud_audio(
+            target_text,
+            getattr(settings, 'GOOGLE_STT_API_KEY', '').strip(),
+            language_code,
+            credentials_file=getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', None),
+            **options,
+        )
+        return JsonResponse({
+            'success': True,
+            'audio_content': audio_content,
+            'mime_type': 'audio/mpeg',
+            'language_code': language_code,
+            'profile': profile if profile in profile_options else 'instruction',
+        })
+    except Exception as exc:
+        logger.exception('Template activity TTS synthesis failed')
         return JsonResponse({'success': False, 'error': str(exc)}, status=502)
 
 
@@ -25340,7 +25457,7 @@ def story_response_page(request):
         'source_story_id': source_story.id,
         'source_story_title': str(source_content.get('storyTitle') or source_story.title or '').strip(),
         'source_story_text': str(source_content.get('storyText') or source_story.content_text or '').strip(),
-        'language': str(content_json.get('story_language') or source_content.get('language') or 'English').strip(),
+        'language': str(material.language or content_json.get('story_language') or source_content.get('language') or 'English').strip(),
         'response_prompt': str(content_json.get('response_prompt') or '').strip(),
         'prompt_category': str(content_json.get('prompt_category') or '').strip(),
         'prompt_source': str(content_json.get('prompt_source') or 'suggested').strip(),
@@ -25354,9 +25471,10 @@ def story_response_page(request):
         'return_url': reverse('assessment'),
     }
     
-    return render(request, 'pabasa_app/story_response_page.html', {
-        'story_response_data': json.dumps(activity_payload),
-    })
+    return _render_template_activity_with_tts(
+        request, 'pabasa_app/story_response_page.html',
+        {'story_response_data': json.dumps(activity_payload)}, material, 'question',
+    )
 
 
 @csrf_protect
