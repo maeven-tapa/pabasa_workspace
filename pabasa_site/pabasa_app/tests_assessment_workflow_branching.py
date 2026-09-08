@@ -345,6 +345,13 @@ class AssessmentWorkflowBranchingTests(TestCase):
         self.assertIn("scorePayload?.crla_classification", resolver)
         self.assertLess(resolver.index("scorePayload?.crla_classification"), resolver.index("scorePayload?.classification"))
 
+    def test_completion_card_does_not_calculate_a_separate_crla_classification(self):
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        self.assertNotIn("function getStoryClassificationFromResult", source)
+        completion = source.split("async function showStoryCompletionScreen", 1)[1].split("function hideStoryCompletionScreen", 1)[0]
+        self.assertIn("persistedState?.student_end_assessment_state?.classification", completion)
+        self.assertIn("latestScores.crla_classification = canonicalClassification", completion)
+
     def test_story_segment_completion_advances_before_final_completion(self):
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
         handler = source.split("function handleSpeechResult", 1)[1].split("function renderSyllableDisplay", 1)[0]

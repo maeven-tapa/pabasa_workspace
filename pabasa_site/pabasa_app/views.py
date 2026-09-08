@@ -95,6 +95,7 @@ from .scoring import (
     calculate_fluency_score,
     clamp_score,
     crla_classification,
+    crla_part2_profile,
     crla_reading_profile,
     crla_task1_next_task,
     crla_sentence_score,
@@ -2808,7 +2809,7 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
                 if score_payload.get(field) is not None:
                     student_end_state[field] = score_payload.get(field)
             story_read_percent = next((score_payload.get(field) for field in (
-                'story_read_percent', 'story_percent', 'read_percent'
+                'passage_accuracy_percent', 'story_read_percent', 'story_percent', 'read_percent'
             ) if score_payload.get(field) is not None), None)
             correct_answers = next((score_payload.get(field) for field in (
                 'correct_answers', 'comprehension_correct', 'correct_items', 'items_correct'
@@ -13701,6 +13702,10 @@ def persist_student_end_assessment_state(request):
         'story_segment_index', 'crla_question_index', 'crla_answers', 'crla_results',
     }
     saved = {key: payload.get(key) for key in allowed_fields if key in payload}
+    # Retain the browser measurement as audit/display evidence.  The canonical
+    # CRLA percentage below is always recalculated from raw word evidence.
+    if saved.get('story_read_percent') is not None:
+        saved['submitted_story_read_percent'] = saved.get('story_read_percent')
     saved['stage'] = stage
     saved['updated_at'] = system_now().isoformat()
     state = _get_user_state(student)
@@ -13719,13 +13724,23 @@ def persist_student_end_assessment_state(request):
         state['crla_result_states'] = result_states
     next_url = ''
     terminal_stage = stage in {'early_completed_words', 'early_completed_sentences', 'completed'}
-    # Column U (Reading Profile) is the official final CRLA classification.
-    # Never trust a browser-provided label when the server has the score inputs
-    # required by that workbook formula.
+    part2_profile = crla_part2_profile(
+        saved.get('story_total_words') or saved.get('total_story_words'),
+        saved.get('words_read') if saved.get('words_read') is not None else saved.get('total_words_read'),
+        saved.get('miscues'),
+        saved.get('duration_seconds'),
+        saved.get('correct_answers') if saved.get('correct_answers') is not None else saved.get('comprehension_correct'),
+    )
+    canonical_passage_accuracy = part2_profile.get('passage_accuracy_percent')
+    if canonical_passage_accuracy is not None:
+        saved['passage_accuracy_percent'] = canonical_passage_accuracy
+
+    # The official Reading Profile always consumes the server-derived passage
+    # percentage, never the browser's progress/display percentage.
     final_classification = crla_reading_profile(
         saved.get('part1_total_score'),
         saved.get('story_number'),
-        saved.get('story_read_percent') if saved.get('story_read_percent') is not None else saved.get('passage_accuracy_percent'),
+        canonical_passage_accuracy,
         saved.get('correct_answers') if saved.get('correct_answers') is not None else saved.get('comprehension_correct'),
     )
     if final_classification:
@@ -13738,7 +13753,7 @@ def persist_student_end_assessment_state(request):
     _, material_id = _parse_prefixed_id(saved.get('material_id'))
     material = Material.objects.filter(pk=material_id, is_official_reading=True).first() if material_id else None
     has_part2_scores = (
-        any(saved.get(field) is not None for field in ('story_read_percent', 'passage_accuracy_percent'))
+        canonical_passage_accuracy is not None
         and any(saved.get(field) is not None for field in ('correct_answers', 'comprehension_correct'))
     )
     if (
@@ -13758,7 +13773,7 @@ def persist_student_end_assessment_state(request):
                 'words_read': saved.get('words_read') or saved.get('total_words_read'),
                 'miscues': saved.get('miscues'),
                 'duration_seconds': saved.get('duration_seconds'),
-                'story_read_percent': saved.get('story_read_percent') if saved.get('story_read_percent') is not None else saved.get('passage_accuracy_percent'),
+                'passage_accuracy_percent': canonical_passage_accuracy,
                 'correct_answers': saved.get('correct_answers'),
                 'comprehension_correct': saved.get('comprehension_correct'),
                 'crla_classification': final_classification,

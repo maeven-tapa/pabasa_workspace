@@ -158,12 +158,12 @@ def crla_part1_classification(part1_total_score: Any) -> str:
 def crla_reading_profile(part1_total_score: Any, story_number: Any,
                          correct_words_percentage: Any,
                          comprehension_correct: Any) -> Optional[str]:
-    """Return the final CRLA Reading Profile specified by Excel column U.
+    """Return the final CRLA Reading Profile from the official evidence.
 
-    This is intentionally a direct transcription of the official workbook's
-    Column-U formula.  ``part1_total_score`` is Column I, its Full Refresher
-    branch is Column J, ``story_number`` is Column K, percentage is Column Q
-    expressed from 0 through 100, and comprehension is Column R.
+    ``part1_total_score`` establishes whether Part 2 was reached.  Once Part
+    2 evidence is available, the established CRLA interpretation gives the
+    comprehension band priority when passage and comprehension bands differ.
+    ``story_number`` remains required evidence for a completed Part 2.
 
     A blank return has the same meaning as an unclassified workbook cell: the
     required final-assessment evidence has not been recorded.  In particular,
@@ -182,21 +182,17 @@ def crla_reading_profile(part1_total_score: Any, story_number: Any,
     if story is None or story <= 0 or percentage is None or answers is None:
         return None
 
-    # =IF(OR(Q<=25%,AND(Q>25%,Q<=50%,R=0)), "High Emerging Reader", ...)
-    if percentage <= 25 or (percentage > 25 and percentage <= 50 and answers == 0):
+    # Preserve percentage validation as part of the official Part 2 evidence,
+    # while resolving cross-band results by comprehension performance.
+    if percentage < 0 or percentage > 100:
+        return None
+    if answers <= 0:
         return "High Emerging Reader"
-    # =IF(OR(AND(Q>25%,Q<51%,R>=1),AND(Q>50%,Q<76%,R<=2)), ...)
-    if ((percentage > 25 and percentage < 51 and answers >= 1)
-            or (percentage > 50 and percentage < 76 and answers <= 2)):
+    if answers <= 2:
         return "Developing Reader"
-    # =IF(OR(AND(Q>=51%,Q<76%,R>=3),AND(Q>75%,R<=4)), ...)
-    if ((percentage >= 51 and percentage < 76 and answers >= 3)
-            or (percentage > 75 and answers <= 4)):
+    if answers <= 4:
         return "Transitioning Reader"
-    # =IF(AND(Q>75%,R>=5), "Reading At Grade Level", "")
-    if percentage > 75 and answers >= 5:
-        return "Reading At Grade Level"
-    return None
+    return "Reading At Grade Level"
 
 
 def crla_part2_profile(total_story_words: Any, words_read: Any, miscues: Any,
@@ -253,6 +249,9 @@ def normalize_crla_score_data(data: Dict[str, Any]) -> Dict[str, Any]:
         "comprehension_total": ("comprehension_total", "total_questions"),
         "comprehension_correct": ("comprehension_correct", "correct_answers"),
         "passage_accuracy_percent": ("passage_accuracy_percent", "story_read_percent"),
+        # Keep the browser's display/progress percentage distinct from the
+        # server-derived percentage used for official classification.
+        "submitted_story_read_percent": ("submitted_story_read_percent", "story_read_percent", "passage_accuracy_percent"),
         "crla_classification": ("crla_classification", "classification"),
     }
     normalized = {}
@@ -558,6 +557,9 @@ def build_assessment_score_payload(data: Dict[str, Any]) -> Dict[str, Any]:
         if comprehension is None:
             comprehension = data.get("correct_answers", payload.get("correct_answers"))
         part2_profile = crla_part2_profile(total_story_words, words_read, miscues, duration_seconds, comprehension)
+        # Official classification always uses this server-derived value.  The
+        # submitted/browser percentage remains separately auditable.
+        crla_score_data["passage_accuracy_percent"] = part2_profile["passage_accuracy_percent"]
         classification = crla_reading_profile(
             part1_total,
             crla_score_data.get("story_number"),

@@ -19,6 +19,7 @@ from .utils.crla_export import (
     convert_crla_workbook_to_pdf,
     export_crla_excel,
 )
+from .utils.crla_results import latest_completed_official_crla_results
 
 
 def test_section_create(**kwargs):
@@ -66,19 +67,16 @@ class CrlaExportResultTests(TestCase):
         self.assertEqual(pdf.name, "complete.pdf")
         self.assertTrue(pdf.getvalue().startswith(b"%PDF"))
 
-    def test_reading_profile_matches_each_column_u_branch_and_boundary(self):
+    def test_reading_profile_uses_comprehension_priority_for_cross_band_results(self):
         cases = (
-            # Column J Full Refresher overrides all Part 2 inputs.
+            # A Part 1-only completion is Low Emerging.
             (10, None, None, None, "Low Emerging Reader"),
-            # High Emerging: Q <= 25, or Q 26-50 with no correct answer.
-            (11, 1, 25, 5, "High Emerging Reader"),
-            (11, 1, 50, 0, "High Emerging Reader"),
-            # Developing: Q 26-50 with at least one answer, or Q 51-75 with <=2.
+            # Part 2 classification is determined by comprehension when bands differ.
+            (11, 1, 76, 0, "High Emerging Reader"),
+            (11, 1, 24, 5, "Reading At Grade Level"),
+            (11, 2, 49, 4, "Transitioning Reader"),
             (11, 1, 26, 1, "Developing Reader"),
-            (11, 1, 75, 2, "Developing Reader"),
-            # Transitioning: Q 51-75 with >=3, or Q >75 with <=4.
             (11, 1, 51, 3, "Transitioning Reader"),
-            (11, 1, 76, 4, "Transitioning Reader"),
             (11, 1, 76, 5, "Reading At Grade Level"),
         )
         for part1, story, percentage, answers, expected in cases:
@@ -89,6 +87,37 @@ class CrlaExportResultTests(TestCase):
         self.assertIsNone(crla_reading_profile(11, None, 80, 5))
         self.assertIsNone(crla_reading_profile(11, 1, None, 5))
         self.assertIsNone(crla_reading_profile(11, 1, 80, None))
+
+    def test_canonical_profile_is_persisted_and_selected_for_teacher_views(self):
+        teacher = self.make_user("CRLA-CANON-T", "teacher", "Mia", "Lopez")
+        student = self.make_user("CRLA-CANON-S", "student", "Asd", "Basco")
+        section = test_section_create(
+            class_code="G2-CANON", class_name="Grade 2 Canonical", teacher=teacher,
+            subject="Filipino", students=[{"student_id": student.id, "is_active": True}],
+        )
+        root = Assessment.objects.create(
+            teacher=teacher, section=section, title="Official CRLA", code="CRLA-CANON-ROOT",
+            assessment_type="paragraph", status="published", is_system_owned=True,
+            system_assessment_key="bosy_crla_pretest",
+        )
+        material = Material.objects.create(
+            assessment=root, section=section, teacher=teacher, code="CRLA-CANON-MAT",
+            item_type="paragraph", type="assessment", assessment_kind="crla", is_official_reading=True,
+        )
+        payload = build_assessment_score_payload({
+            "assessment_type": "paragraph",
+            "crla_score_data": {
+                "task1_score": 7, "task2_type": "Task 2H / Sentences", "sentences_read": 4,
+                "story_number": 2, "story_total_words": 95, "words_read": 47,
+                "miscues": 48, "duration_seconds": 590, "comprehension_correct": 4,
+            },
+        })
+        root.record_attempt(student, material=material, status="completed", **payload)
+
+        persisted = Assessment.objects.get(source_assessment=root, student=student)
+        self.assertEqual(persisted.crla_classification, "Transitioning Reader")
+        self.assertEqual(persisted.crla_score_data["crla_classification"], "Transitioning Reader")
+        self.assertEqual(latest_completed_official_crla_results([student.id])[student.id].pk, persisted.pk)
 
     def test_completion_payload_persists_column_u_profile_not_client_label(self):
         payload = build_assessment_score_payload({
@@ -108,6 +137,19 @@ class CrlaExportResultTests(TestCase):
         })
         self.assertEqual(payload["crla_classification"], "Reading At Grade Level")
         self.assertEqual(payload["crla_score_data"]["crla_classification"], "Reading At Grade Level")
+
+    def test_server_derived_passage_percentage_overrides_browser_percentage_for_classification(self):
+        payload = build_assessment_score_payload({
+            "assessment_type": "paragraph",
+            "crla_score_data": {
+                "task1_score": 7, "task2_type": "Task 2H / Sentences", "sentences_read": 4,
+                "story_number": 2, "story_total_words": 100, "words_read": 49,
+                "story_read_percent": 90, "comprehension_correct": 4,
+            },
+        })
+        self.assertEqual(payload["crla_classification"], "Transitioning Reader")
+        self.assertEqual(payload["crla_score_data"]["passage_accuracy_percent"], 49)
+        self.assertEqual(payload["crla_score_data"]["submitted_story_read_percent"], 90)
 
     def test_sentence_score_uses_official_four_sentence_table(self):
         self.assertEqual(

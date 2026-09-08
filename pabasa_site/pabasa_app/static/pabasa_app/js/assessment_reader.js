@@ -724,21 +724,6 @@
             return "completed";
         }
 
-        function getStoryClassificationFromResult(storyReadPercent, correctAnswers) {
-            const percent = Number(storyReadPercent);
-            const correct = Number(correctAnswers);
-                if (!Number.isFinite(percent) || !Number.isFinite(correct)) return "";
-            const readingBand = percent <= 25 ? 0 : percent <= 50 ? 1 : percent <= 75 ? 2 : 3;
-            const comprehensionBand = correct <= 0 ? 0 : correct <= 2 ? 1 : correct <= 4 ? 2 : 3;
-            // Final classification follows the comprehension-priority rule when reading and comprehension differ.
-            return [
-                "High Emerging Reader",
-                "Developing Reader",
-                "Transitioning Reader",
-                "Reading At Grade Level",
-            ][comprehensionBand];
-        }
-
         function getStoryChoicesFromAssessment() {
             const passages = Array.isArray(officialAssessmentData?.passages) ? officialAssessmentData.passages : [];
             return passages
@@ -1118,7 +1103,6 @@
             );
             const totalStoryWords = storyMetrics.totalStoryWords;
             const storyReadPercent = storyMetrics.accuracy;
-            const classification = getStoryClassificationFromResult(storyReadPercent, correctAnswers);
             latestScores = {
                 ...readingScores,
                 correct_answers: correctAnswers,
@@ -1146,7 +1130,7 @@
             if (storyQuestionNextBtn) storyQuestionNextBtn.disabled = true;
             if (storyQuestionFinishBtn) storyQuestionFinishBtn.disabled = false;
             const classificationValue = document.getElementById("storyResultsClassificationTitle");
-            if (classificationValue) classificationValue.textContent = classification || "Completed";
+            if (classificationValue) classificationValue.textContent = "Saving assessment result...";
             const resultMessages = {
                 "High Emerging Reader": "Great work finishing your CRLA reading assessment. Keep practicing—you’re making progress with every page you read.",
                 "Developing Reader": "Great work finishing your CRLA reading assessment. Keep reading and practicing to build your skills even further.",
@@ -1156,8 +1140,7 @@
             };
             const resultsMessage = document.getElementById("storyResultsMessage");
             if (resultsMessage) {
-                resultsMessage.textContent = resultMessages[classification]
-                    || "Great work finishing your CRLA reading assessment. Keep reading and practicing to build your skills even further.";
+                resultsMessage.textContent = "Saving your official CRLA classification...";
             }
             const persistedState = await updateStudentEndState({
                 stage: "completed",
@@ -1175,8 +1158,19 @@
                 comprehension_total: currentStoryQuestions.length,
                 story_total_words: totalStoryWords,
                 words_read: storyMetrics.wordsRead,
-                classification,
             });
+            const canonicalClassification = persistedState?.student_end_assessment_state?.classification
+                || persistedState?.reader_classification
+                || "";
+            if (canonicalClassification) {
+                latestScores.crla_classification = canonicalClassification;
+                latestScores.classification = canonicalClassification;
+                if (classificationValue) classificationValue.textContent = canonicalClassification;
+                if (resultsMessage) {
+                    resultsMessage.textContent = resultMessages[canonicalClassification]
+                        || "Great work finishing your CRLA reading assessment. Keep reading and practicing to build your skills even further.";
+                }
+            }
             try {
                 await submitStoryResponse();
             } catch (error) {
@@ -1408,7 +1402,6 @@
             const correctAnswers = currentStoryResults.filter(Boolean).length;
             const persisted = readStudentEndState();
             const storyReadPercent = Number(persisted.story_read_percent ?? persisted.passage_accuracy_percent ?? 0);
-            const classification = getStoryClassificationFromResult(storyReadPercent, correctAnswers);
             const comprehensionState = await updateStudentEndState({
                 stage: "story_comprehension", selected_story: currentSelectedStory?.title || "",
                 selected_story_content: currentSelectedStory?.content || "",
@@ -1481,10 +1474,6 @@
                 stage: "completed",
                 learner_experience_rating: selectedRating,
                 learner_experience: selectedRating,
-                classification: persisted.classification || getStoryClassificationFromResult(
-                    Number(persisted.story_read_percent ?? persisted.passage_accuracy_percent ?? 0),
-                    Number(persisted.comprehension_correct ?? persisted.correct_answers ?? 0),
-                ),
             }, { deferLocalStorage: true });
             if (!saved) {
                 if (learnerExperienceContinue) learnerExperienceContinue.disabled = false;
@@ -4915,9 +4904,8 @@
                     latestScores.items_correct ??
                     0
                 );
-                branchState.classification = getStoryClassificationFromResult(storyRead, correctAnswers);
-                latestScores.crla_classification = branchState.classification;
-                latestScores.classification = branchState.classification;
+                // The server calculates and persists the official CRLA
+                // classification from these evidence fields.
                 branchState.stage = "completed";
                 branchState.next_stage = "completed";
                 branchState.task1_score = preservedTask1IsValid ? preservedTask1Score : null;
