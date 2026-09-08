@@ -111,6 +111,7 @@ from .utils.crla_results import (
     latest_completed_official_crla_results,
     official_crla_result_queryset,
 )
+from .reading_progress_reports import build_student_reading_progress_report
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 
@@ -3256,8 +3257,127 @@ def _build_certificate_pdf(student_name='', issued_on=None, school_name='PABASA'
     return buffer.getvalue()
 
 
+def _build_structured_reading_progress_pdf(report, message='', course=None, teacher=None, recipient_email=''):
+    """Render a collector payload without re-querying reporting data."""
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+        from reportlab.lib.units import inch
+        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+    except ImportError as exc:
+        raise RuntimeError(f"PDF export is unavailable: {exc}")
+
+    buffer = BytesIO()
+    page_size = A4
+    margin = 0.65 * inch
+    width = page_size[0] - (2 * margin)
+    styles = getSampleStyleSheet()
+    title = ParagraphStyle('StructuredReportTitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=18, leading=22, textColor=colors.HexColor('#8B3E2F'), spaceAfter=10)
+    heading = ParagraphStyle('StructuredReportHeading', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11.5, leading=14, textColor=colors.HexColor('#8B3E2F'), spaceBefore=10, spaceAfter=5)
+    body = ParagraphStyle('StructuredReportBody', parent=styles['BodyText'], fontName='Helvetica', fontSize=9, leading=12, textColor=colors.HexColor('#111827'))
+
+    def text(value, fallback='Not yet available'):
+        value = fallback if value in (None, '') else value
+        return escape(str(value)).replace('\n', '<br/>')
+
+    def date_value(value):
+        if not value:
+            return 'Not yet available'
+        try:
+            parsed = _parse_attempt_timestamp(value)
+            return timezone.localtime(parsed, timezone.get_default_timezone()).strftime('%B %d, %Y') if parsed else str(value)
+        except Exception:
+            return str(value)
+
+    def metrics(rows):
+        table = Table([[Paragraph(text(label), body), Paragraph(text(value), body)] for label, value in rows], colWidths=[2.05 * inch, width - 2.05 * inch])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#fcfcfc')), ('GRID', (0, 0), (-1, -1), .25, colors.HexColor('#e5e7eb')),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'), ('LEFTPADDING', (0, 0), (-1, -1), 6), ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 5), ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ]))
+        return table
+
+    elements = [Paragraph('STUDENT READING PROGRESS REPORT', title)]
+    elements.append(Paragraph('STUDENT INFORMATION', heading))
+    elements.append(metrics([
+        ('Student', report.get('student_name')), ('Student ID', report.get('student_id')), ('Grade / Section', ' / '.join(filter(None, [str(report.get('grade_level') or ''), str(report.get('section') or '')]))),
+        ('Teacher', report.get('teacher_name') or (f'{teacher.first_name} {teacher.last_name}'.strip() if teacher else '')),
+        ('Reporting Period', report.get('school_year') or report.get('course_name')),
+    ]))
+
+    crla = report.get('crla') or {}
+    elements.append(Paragraph('CRLA INITIAL ASSESSMENT', heading))
+    if crla.get('available'):
+        crla_rows = [('Assessment Period', crla.get('assessment_period') or crla.get('assessment_phase')), ('Reading Profile / Classification', crla.get('reading_profile')), ('Assessment Date', date_value(crla.get('completed_at'))), ('Score', crla.get('total_score')), ('Accuracy', f"{crla.get('accuracy')}%" if crla.get('accuracy') is not None else ''), ('Words Per Minute', crla.get('wpm')), ('Task / Part 2', ', '.join(f'{key.replace("_", " ").title()}: {value}' for key, value in (crla.get('part2_results') or {}).items()) or '')]
+        elements.append(metrics(crla_rows))
+        if crla.get('finalized_without_submission'):
+            elements.append(Spacer(1, 4))
+            elements.append(Paragraph('No student submission was recorded. The class was finalized with a zero-score result.', body))
+    else:
+        elements.append(Paragraph(text(crla.get('message')), body))
+
+    activities = report.get('aral_activities') or []
+    elements.append(Paragraph('ARAL INTERVENTION', heading))
+    if activities:
+        rows = [[Paragraph('<b>Activity</b>', body), Paragraph('<b>Week</b>', body), Paragraph('<b>Completion Date</b>', body), Paragraph('<b>Recorded Performance</b>', body)]]
+        for activity in activities:
+            facts = []
+            if activity.get('score') is not None: facts.append(f"Score: {activity['score']}")
+            if activity.get('accuracy') is not None: facts.append(f"Accuracy: {activity['accuracy']}%")
+            if activity.get('wpm') is not None: facts.append(f"WPM: {activity['wpm']}")
+            if activity.get('correct_items') is not None and activity.get('total_items') is not None: facts.append(f"Items: {activity['correct_items']}/{activity['total_items']}")
+            if activity.get('automated_speech_analysis'): facts.append('Automated speech-analysis data')
+            rows.append([Paragraph(text(activity.get('activity_name')), body), Paragraph(text(', '.join(str(v) for v in activity.get('assigned_weeks', []))), body), Paragraph(text(date_value(activity.get('completed_at'))), body), Paragraph(text('; '.join(facts)), body)])
+        table = Table(rows, colWidths=[1.45 * inch, .55 * inch, 1.2 * inch, width - 3.2 * inch], repeatRows=1)
+        table.setStyle(TableStyle([('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f3f4f6')), ('GRID', (0, 0), (-1, -1), .25, colors.HexColor('#e5e7eb')), ('VALIGN', (0, 0), (-1, -1), 'TOP'), ('LEFTPADDING', (0, 0), (-1, -1), 4), ('RIGHTPADDING', (0, 0), (-1, -1), 4), ('TOPPADDING', (0, 0), (-1, -1), 4), ('BOTTOMPADDING', (0, 0), (-1, -1), 4)]))
+        elements.append(table)
+    else:
+        elements.append(Paragraph('No completed ARAL activities are available for this reporting period.', body))
+
+    elements.append(Paragraph('READING SKILLS PRACTICED', heading))
+    competency_rows = []
+    for competency in report.get('competencies') or []:
+        names = ', '.join(item.get('activity_name', '') for item in competency.get('activities', [])) or 'No completed activities recorded'
+        competency_rows.append((competency.get('name'), names))
+    elements.append(metrics(competency_rows))
+
+    elements.append(Paragraph('READING PROGRESS', heading))
+    recent = report.get('recent_progress') or []
+    if recent:
+        for item in recent:
+            progress_facts = []
+            if item.get('accuracy') is not None:
+                progress_facts.append(f"accuracy {item['accuracy']}%")
+            if item.get('wpm') is not None:
+                progress_facts.append(f"{item['wpm']} WPM")
+            if item.get('miscues') is not None:
+                progress_facts.append(f"miscues {item['miscues']}")
+            if item.get('automated_speech_analysis'):
+                progress_facts.append('automated speech-analysis information')
+            progress_line = f"{item.get('activity_name')} - completed {date_value(item.get('completed_at'))}"
+            if progress_facts:
+                progress_line += '; ' + '; '.join(progress_facts)
+            elements.append(Paragraph(text(progress_line), body))
+    else:
+        elements.append(Paragraph('No recent persisted reading results are available.', body))
+
+    elements.append(Paragraph("TEACHER'S NOTE", heading))
+    elements.append(Paragraph(text(message, 'No teacher note was added.'), body))
+    elements.append(Paragraph('NEXT STEPS', heading))
+    for recommendation in report.get('recommendations') or []:
+        elements.append(Paragraph('• ' + text(recommendation), body))
+
+    doc = SimpleDocTemplate(buffer, pagesize=page_size, leftMargin=margin, rightMargin=margin, topMargin=margin, bottomMargin=margin)
+    doc.build(elements)
+    return buffer.getvalue()
+
+
 def _build_reading_report_pdf(report, message='', course=None, teacher=None, recipient_email=''):
     """Create a polished PDF attachment for course update / report emails."""
+    if report.get('crla') is not None and report.get('competencies') is not None:
+        return _build_structured_reading_progress_pdf(report, message, course, teacher, recipient_email)
     try:
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4
@@ -3508,9 +3628,13 @@ def _send_course_update_to_student(
 
     student_name = f"{student.first_name} {student.last_name}".strip() or student.custom_id or 'Student'
     personalized_message = (message_template or '').replace('{name}', student_name)
-    report = _latest_student_reading_report(student, sections=course_sections, course=course)
-    report_text = _format_reading_report_text(report)
     normalized_update_type = str(update_type or 'general').strip().lower()
+    report = (
+        build_student_reading_progress_report(student, sections=course_sections, course=course)
+        if normalized_update_type in {'general', 'followup'}
+        else _latest_student_reading_report(student, sections=course_sections, course=course)
+    )
+    report_text = _format_reading_report_text(report)
     sender = getattr(settings, 'DEFAULT_FROM_EMAIL', 'pabasa.tupc@gmail.com')
 
     attachment_name = None
@@ -3645,7 +3769,7 @@ def _send_course_update_to_student(
         'student_id': student.id,
         'email': student.email,
         'name': student_name,
-        'report_summary': report.get('summary'),
+        'report_summary': report.get('summary') or report.get('crla', {}).get('message'),
         'report_included': report_attachment_included,
     }
 
@@ -18107,9 +18231,6 @@ def send_course_update(request):
             return JsonResponse({'success': False, 'error': 'Course is required'}, status=400)
         if not isinstance(student_ids, list) or not student_ids:
             return JsonResponse({'success': False, 'error': 'Select at least one recipient'}, status=400)
-        if not message_template:
-            return JsonResponse({'success': False, 'error': 'Teacher comments are required'}, status=400)
-
         teacher_user = User.objects.filter(id=request.session.get('user_id'), role='teacher').first()
         if not teacher_user:
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
@@ -18348,6 +18469,45 @@ def send_course_update(request):
     except Exception as e:
         logger.exception('Failed to send course update')
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+@login_required(role='teacher')
+def preview_course_reading_report(request):
+    """Return the same in-memory PDF used by regular/follow-up course updates."""
+    course_id = str(request.GET.get('course_id') or '').strip()
+    student_id = request.GET.get('student_id')
+    teacher_user = User.objects.filter(id=request.session.get('user_id'), role='teacher').first()
+    if not teacher_user:
+        return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
+    course = None
+    sections = []
+    if course_id.startswith('section-'):
+        section_id = course_id.removeprefix('section-')
+        if not section_id.isdigit():
+            return JsonResponse({'success': False, 'error': 'Invalid class'}, status=400)
+        section = Section.objects.filter(id=int(section_id), teacher=teacher_user, is_active=True).first()
+        if not section:
+            return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
+        sections = [section]
+    elif course_id.isdigit():
+        course = Course.objects.filter(id=int(course_id), teacher=teacher_user, is_active=True).prefetch_related('sections').first()
+        if course:
+            sections = list(course.sections.filter(is_active=True))
+    else:
+        return JsonResponse({'success': False, 'error': 'Invalid course'}, status=400)
+    student = User.objects.filter(id=student_id, role='student').first()
+    if (not course and not sections) or not student:
+        return JsonResponse({'success': False, 'error': 'Course or student not found'}, status=404)
+    if sections and not any(section.has_student(student, active_only=True) for section in sections):
+        return HttpResponseForbidden('Student is not enrolled in this course.')
+    note = str(request.GET.get('message') or '').strip()
+    report = build_student_reading_progress_report(student, sections=sections, course=course)
+    pdf_bytes = _build_reading_report_pdf(report, message=note, course=course, teacher=teacher_user, recipient_email=student.email)
+    filename = f"{(student.custom_id or student.id)}_reading_progress_report.pdf"
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="{filename}"'
+    return response
 
 
 @csrf_protect

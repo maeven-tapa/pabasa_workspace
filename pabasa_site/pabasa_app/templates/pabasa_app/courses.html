@@ -6974,6 +6974,11 @@
                                                                     </select>
                                                                 </div>
 
+                                                                <div class="mb-3" id="courseAutomatedReadingReportInfo">
+                                                                    <div class="form-text"><i class="bi bi-file-earmark-pdf me-1"></i><strong>Automated Reading Progress Report</strong><br>This report is generated from the student's CRLA and ARAL records.</div>
+                                                                    <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="coursePreviewReadingReport"><i class="bi bi-eye me-1"></i> Preview PDF</button>
+                                                                </div>
+
                                                                 <div class="mb-3" id="courseParentAssessmentScheduleContainer" style="display:none;">
                                                                     <label class="form-label small fw-bold" for="courseParentAssessmentScheduledAt">Assessment Date & Time</label>
                                                                     <input class="form-control" id="courseParentAssessmentScheduledAt" type="datetime-local" style="border-radius:10px;">
@@ -6988,11 +6993,11 @@
 
                                                                 <div class="mb-3">
                                                                     <label class="form-label course-report-message-label" for="courseParentUpdateMessage">
-                                                                        <span class="small fw-bold">Teacher Comments</span>
+                                                                        <span class="small fw-bold">Teacher Note — Optional</span>
                                                                     </label>
                                                                     <div class="form-text course-report-template-tip">Tip: Use {name} for student name.</div>
                                                                     <textarea class="form-control" id="courseParentUpdateMessage" rows="4" style="border-radius:10px;" placeholder="Add personalized notes..."></textarea>
-                                                                    <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i> PDF attachments are used for support updates only.</div>
+                                                                    <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i> Regular and support updates include the automated PDF.</div>
                                                                 </div>
 
                                                                 <div class="d-flex justify-content-end">
@@ -12502,6 +12507,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 const materialInput = document.getElementById('courseParentAssessmentReadingMaterial');
                 const form = document.getElementById('courseParentUpdateTabForm');
                 const sendButton = document.getElementById('courseBtnSendParentUpdate');
+                const previewButton = document.getElementById('coursePreviewReadingReport');
                 if (!templateSelect || !messageArea || !form) return;
 
                 const templates = {
@@ -12528,12 +12534,18 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 toggleScheduleFields();
                 messageArea.value = templates.general;
 
+                if (previewButton) previewButton.onclick = () => {
+                    const checked = Array.from(document.querySelectorAll('#courseUnifiedStudentReportList .student-checkbox:checked')).map(cb => cb.value);
+                    if (checked.length !== 1) return showToast('Select exactly one student to preview a report.', 'error');
+                    const params = new URLSearchParams({ course_id: courseId, student_id: checked[0], message: (messageArea.value || '').trim() });
+                    window.open(`/dashboard/teacher/course/reading-report-preview/?${params.toString()}`, '_blank', 'noopener');
+                };
+
                 form.onsubmit = async (e) => {
                     e.preventDefault();
                     const checked = Array.from(document.querySelectorAll('#courseUnifiedStudentReportList .student-checkbox:checked')).map(cb => cb.value);
                     if (checked.length === 0) return showToast('Please select at least one recipient.', 'error');
                     const message = (messageArea.value || '').trim();
-                    if (!message) return showToast('Please enter teacher comments before sending.', 'error');
                     const scheduledAt = (document.getElementById('courseParentAssessmentScheduledAt')?.value || '').trim();
                     const readingMaterial = (document.getElementById('courseParentAssessmentReadingMaterial')?.value || '').trim();
 
