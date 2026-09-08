@@ -9,7 +9,6 @@ from django.utils import timezone
 from openpyxl import Workbook, load_workbook
 
 from .models import Assessment, ClassCrlaFinalization, Material, School, SchoolCalendar, Section, User
-from .scoring import crla_reading_profile
 
 
 class ClassCrlaFinalizationTests(TestCase):
@@ -50,7 +49,7 @@ class ClassCrlaFinalizationTests(TestCase):
             'material_id': (material or self.material).id,
         }), content_type='application/json')
 
-    def test_finalize_preserves_completed_result_and_creates_authoritative_zero(self):
+    def test_finalize_preserves_completed_result_and_leaves_missing_student_without_result(self):
         self.material.record_assessment_result(
             self.completed_student, status='completed', completed_at=timezone.now(), total_score=28,
             crla_classification='Reading At Grade Level', classification='Reading At Grade Level',
@@ -59,12 +58,9 @@ class ClassCrlaFinalizationTests(TestCase):
         self._login(self.teacher)
         response = self._finalize()
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()['missing_students_processed'], 1)
         original.refresh_from_db()
         self.assertEqual(original.total_score, 28)
-        zero = Assessment.objects.get(student=self.missing_student, material=self.material)
-        self.assertEqual(zero.total_score, 0)
-        self.assertEqual(zero.crla_classification, crla_reading_profile(0, None, None, None))
+        self.assertFalse(Assessment.objects.filter(student=self.missing_student, material=self.material).exists())
         self.assertTrue(ClassCrlaFinalization.objects.filter(section=self.section, material=self.material).exists())
 
     def test_finalize_no_completed_students_is_idempotent(self):
@@ -73,7 +69,7 @@ class ClassCrlaFinalizationTests(TestCase):
         again = self._finalize()
         self.assertEqual(again.status_code, 200)
         self.assertTrue(again.json()['already_finalized'])
-        self.assertEqual(Assessment.objects.filter(material=self.material, student__isnull=False).count(), 2)
+        self.assertEqual(Assessment.objects.filter(material=self.material, student__isnull=False).count(), 0)
 
     def test_finalize_all_completed_students_creates_no_zero_results(self):
         for student, score, classification in (
@@ -87,7 +83,6 @@ class ClassCrlaFinalizationTests(TestCase):
         self._login(self.teacher)
         response = self._finalize()
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()['missing_students_processed'], 0)
         self.assertEqual(Assessment.objects.filter(material=self.material, student__isnull=False).count(), 2)
 
     def test_wrong_teacher_and_wrong_class_are_rejected(self):

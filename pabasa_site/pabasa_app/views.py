@@ -19661,47 +19661,10 @@ def finalize_class_crla_assessment(request):
                     'assessment_id': parent_assessment.id,
                 })
 
-            enrollments = list(Enrollment.objects.select_for_update().filter(
-                section=section, school_calendar=section.school_calendar,
-                status='active', is_active=True, student__role='student', student__is_archived=False,
-            ).select_related('student'))
-            students = [enrollment.student for enrollment in enrollments]
-            completed_ids = set(official_crla_result_queryset().filter(
-                material=material, student_id__in=[student.id for student in students],
-            ).values_list('student_id', flat=True))
-            zero_classification = crla_reading_profile(0, None, None, None)
-            if not zero_classification:
-                raise ValueError('The authoritative CRLA zero-score classification is unavailable.')
-
-            missing_count = 0
-            for student in students:
-                if student.id in completed_ids:
-                    continue
-                # Reuse the normal persisted-result architecture; no separate
-                # finalization-only result or classification system is used.
-                material.record_assessment_result(student,
-                    status='completed', completed_at=system_now(), total_score=0,
-                    correct_items=0, items_completed=0, word_count=0,
-                    crla_classification=zero_classification, classification=zero_classification,
-                    crla_score_data={
-                        'task1_score': 0, 'task1_total_words': 10,
-                        'task2_type': 'Task 2L / Rhymes', 'task2_score': 0,
-                        'part1_total_score': 0, 'crla_classification': zero_classification,
-                    },
-                    remarks='Finalized without a submitted CRLA assessment.',
-                )
-                _sync_assessment_workflow_state(student, score_payload={
-                    'assessment_type': 'paragraph', 'total_score': 0, 'final_score': 0,
-                    'part1_total_score': 0, 'correct_items': 0,
-                    'crla_classification': zero_classification, 'classification': zero_classification,
-                }, material=material)
-                missing_count += 1
-
             return JsonResponse({
                 'success': True, 'already_finalized': False,
                 'message': 'CRLA assessment finalized for the whole class.',
                 'assessment_id': parent_assessment.id,
-                'missing_students_processed': missing_count,
                 'finalized_at': finalization.finalized_at.isoformat(),
             })
     except Exception:
