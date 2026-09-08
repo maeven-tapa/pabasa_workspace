@@ -508,6 +508,53 @@ class CrlaExportResultTests(TestCase):
         self.assertIsNone(calculated["M11"].value)
         self.assertIsNone(calculated["Q11"].value)
 
+    def test_export_uses_completed_part2_attempt_when_resumable_state_is_partial(self):
+        """A completed result must not lose Part 2 to a stale transition state."""
+        teacher = self.make_user("CRLA-T-PART2", "teacher", "Pia", "Santos")
+        student = self.make_user("CRLA-S-PART2", "student", "Nico", "Cruz")
+        section = test_section_create(
+            class_code="G2-PART2", class_name="Grade 2 Part 2", teacher=teacher,
+            subject="Filipino", students=[{"student_id": student.id, "is_active": True}],
+        )
+        root = Assessment.objects.create(
+            teacher=teacher, section=section, title="CRLA Part 2 fallback", code="CRLA-PART2-FALLBACK",
+            assessment_type="paragraph", status="published",
+        )
+        material = Material.objects.create(
+            assessment=root, section=section, teacher=teacher, code="CRLA-PART2-MAT",
+            item_type="paragraph", type="assessment", assessment_kind="crla",
+        )
+        # This reproduces the pre-fix race: the browser result request has
+        # completed, while the resumable state still says Part 2 is pending.
+        student.preference = {"reading_assessment_state": {"crla_result_states": {
+            str(material.id): {"material_id": str(material.id), "stage": "transition_to_story"},
+        }}}
+        student.save(update_fields=["preference", "updated_at"])
+        Assessment.objects.create(
+            teacher=teacher, section=section, material=material, source_assessment=root,
+            student=student, title="completed Part 2", code="CRLA-PART2-RESULT",
+            assessment_type="paragraph", status="published", attempt_status="completed",
+            completed_at=timezone.now(), crla_classification="Transitioning Reader", crla_score_data={
+                "task1_score": 8, "task2_type": "Task 2H / Sentences", "task2_score": 7,
+                "story_number": 2, "story_total_words": 100, "words_read": 0,
+                "miscues": 0, "duration_seconds": 0, "wpm": 0,
+                "passage_accuracy_percent": 0, "comprehension_correct": 0,
+                "crla_classification": "Transitioning Reader",
+            },
+        )
+
+        sheet = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)["G2 MT Reading Scoresheet"]
+        self.assertEqual(sheet["K11"].value, 2)
+        self.assertEqual(sheet["L11"].value, 0)
+        self.assertEqual(sheet["M11"].value, 0)
+        self.assertEqual((sheet["N11"].value, sheet["O11"].value), (0, 0))
+        self.assertEqual(sheet["R11"].value, 0)
+        # S is the learner-experience rating.  Observation Level is column T.
+        # This completed fixture deliberately has no learner-experience rating.
+        self.assertIsNone(sheet["S11"].value)
+        self.assertEqual(sheet["T11"].value, "Level 3")
+        self.assertEqual(sheet["U11"].value, "Transitioning Reader")
+
     def test_story_metrics_export_for_each_official_crla_phase(self):
         phases = (
             ("bosy", "pretest", "bosy_crla_pretest"),

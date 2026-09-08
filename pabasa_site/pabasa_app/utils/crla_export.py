@@ -238,7 +238,9 @@ def _story_reading_evidence(state):
     words_read = _bounded_integer(
         _first_value(state.get("words_read"), state.get("total_words_read")), 0, 100000
     )
-    duration = _bounded_integer(state.get("duration_seconds"), 1, 24 * 60 * 60)
+    # Zero is a valid recorded edge value.  Evidence is established by the
+    # completed story state and its fields, not by treating 0 as absent.
+    duration = _bounded_integer(state.get("duration_seconds"), 0, 24 * 60 * 60)
     return bool(selected_story and total_words is not None and words_read is not None and duration is not None)
 
 
@@ -315,6 +317,27 @@ def _story_number(score_data, state):
     return None
 
 
+def _completed_part2_score_data(score_data, state=None):
+    """Whether an immutable completed-result payload contains Part 2 evidence.
+
+    The browser's resumable workflow state is useful while a student is in the
+    assessment, but it is not the result record.  A completed Part 2 attempt
+    persists these values in ``Assessment.crla_score_data``.  Use that record
+    as a fallback if a navigation/state-save race leaves the workflow object
+    partial.  Requiring both final Part 2 dimensions keeps Part 1-only rows
+    intentionally blank.
+    """
+    if not isinstance(score_data, dict) or _story_number(score_data, state or {}) is None:
+        return False
+    has_reading = _first_value(
+        score_data.get("passage_accuracy_percent"), score_data.get("story_read_percent"),
+    ) is not None
+    has_comprehension = _first_value(
+        score_data.get("comprehension_correct"), score_data.get("correct_answers"),
+    ) is not None
+    return has_reading and has_comprehension
+
+
 def _row_formulas(row):
     return {
         "I": f'=IF(AND(F{row}="",G{row}="",H{row}=""),"",SUM(F{row}:H{row}))',
@@ -358,8 +381,13 @@ def _student_values(student, attempt, state, assessment):
     score_data = _crla_score_data(attempt)
     story_state = _attempt_end_state(student, attempt)
     has_story_reading = _story_reading_evidence(story_state)
-    duration = _bounded_integer(story_state.get("duration_seconds"), 1, 24 * 60 * 60) if has_story_reading else None
-    story_number = _story_number({}, story_state) if has_story_reading else None
+    has_completed_part2 = _completed_part2_score_data(score_data, story_state)
+    # Prefer the immutable final attempt for a completed Part 2.  State is
+    # retained as a compatibility fallback for older completed attempts.
+    part2_source = {**story_state, **score_data} if has_completed_part2 else story_state
+    has_part2 = has_completed_part2 or has_story_reading
+    duration = _bounded_integer(part2_source.get("duration_seconds"), 0, 24 * 60 * 60) if has_part2 else None
+    story_number = _story_number(part2_source, story_state) if has_part2 else None
     minutes, seconds = divmod(duration, 60) if duration is not None else (None, None)
 
     task_1_score = _bounded_integer(score_data.get("task1_score"), 0, 10)
@@ -391,18 +419,26 @@ def _student_values(student, attempt, state, assessment):
         part_1_total = task_1_score + (rhyme_score or 0) + (sentence_score or 0)
 
     story_words_read = _bounded_integer(
-        _first_value(story_state.get("words_read"), story_state.get("total_words_read")), 0, 100000,
-    ) if has_story_reading else None
-    miscues = _bounded_integer(story_state.get("miscues"), 0, 100000) if has_story_reading else None
+        _first_value(part2_source.get("words_read"), part2_source.get("total_words_read")), 0, 100000,
+    ) if has_part2 else None
+    miscues = _bounded_integer(part2_source.get("miscues"), 0, 100000) if has_part2 else None
     percent = _number(_first_value(
-        story_state.get("passage_accuracy_percent"), story_state.get("story_read_percent"),
-    )) if has_story_reading else None
+        part2_source.get("passage_accuracy_percent"), part2_source.get("story_read_percent"),
+    )) if has_part2 else None
     correct_answers = _bounded_integer(
-        score_data.get("comprehension_correct"),
+        _first_value(
+            part2_source.get("comprehension_correct"), part2_source.get("correct_answers"),
+            story_state.get("comprehension_correct"), story_state.get("correct_answers"),
+        ),
         0,
         6,
     )
-    profile = _reading_profile(part_1_total, story_number, percent, correct_answers)
+    # Column U's persisted final classification is authoritative for a
+    # completed Part 2; do not replace it with a stale Part 1 label or a new
+    # export-only calculation.  The formula remains the compatibility fallback.
+    profile = str(score_data.get("crla_classification") or "").strip() if has_completed_part2 else ""
+    if not profile:
+        profile = _reading_profile(part_1_total, story_number, percent, correct_answers)
 
     completed_at = None
     if attempt:
@@ -417,7 +453,7 @@ def _student_values(student, attempt, state, assessment):
     raw_sex = str(student.sex or "").strip().lower()
     sex = {"m": "Male", "male": "Male", "f": "Female", "female": "Female"}.get(raw_sex, "")
 
-    words_per_minute = _number(story_state.get("wpm")) if has_story_reading else None
+    words_per_minute = _number(part2_source.get("wpm")) if has_part2 else None
 
     return {
         # LRN is an official learner identifier. Never substitute an internal

@@ -13529,13 +13529,24 @@ def persist_student_end_assessment_state(request):
     )
     if final_classification:
         saved['classification'] = final_classification
+    else:
+        # A browser label is not CRLA evidence.  Keep the persisted result
+        # explicitly unclassified until the official final inputs establish
+        # Column U's Reading Profile.
+        saved['classification'] = None
     _, material_id = _parse_prefixed_id(saved.get('material_id'))
     material = Material.objects.filter(pk=material_id, is_official_reading=True).first() if material_id else None
     has_part2_scores = (
         any(saved.get(field) is not None for field in ('story_read_percent', 'passage_accuracy_percent'))
         and any(saved.get(field) is not None for field in ('correct_answers', 'comprehension_correct'))
     )
-    if (stage == 'completed' and has_part2_scores) or (stage != 'completed' and material and final_classification):
+    if (
+        stage == 'completed'
+        and has_part2_scores
+        and material
+        and _is_official_crla_material(material)
+        and final_classification
+    ) or (stage != 'completed' and material and final_classification):
         if stage == 'completed':
             _sync_assessment_workflow_state(student, score_payload={
                 'assessment_type': 'paragraph',

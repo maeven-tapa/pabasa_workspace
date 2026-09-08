@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.template.loader import render_to_string
-from django.test import RequestFactory, SimpleTestCase
+from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
 from pabasa_app.views import (
@@ -24,7 +24,7 @@ from pabasa_app.scoring import (
 )
 
 
-class AssessmentWorkflowBranchingTests(SimpleTestCase):
+class AssessmentWorkflowBranchingTests(TestCase):
     def test_part1_classification_matches_official_boundaries(self):
         expected = {
             10: "Full Refresher",
@@ -149,7 +149,10 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
             "correct_words": 49,
         })
         self.assertIsNone(payload["crla_score_data"]["task1_score"])
-        self.assertEqual(payload["crla_classification"], "High Emerging Reader")
+        # Story metrics cannot manufacture the Part 1 result or a final
+        # Reading Profile.  The authoritative profile remains blank until
+        # the required Part 1 total and selected story are present.
+        self.assertIsNone(payload["crla_classification"])
 
     def test_crla_task1_always_reports_official_ten_items(self):
         payload = build_assessment_score_payload({
@@ -211,6 +214,7 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
                 "task2_type": "Task 2H / Sentences",
                 "task2_score": 4,
                 "part1_total_score": 11,
+                "story_number": 1,
                 "story_total_words": 80,
                 "words_read": 60,
                 "miscues": 3,
@@ -253,6 +257,10 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
             "fluency_score": 35,
             "total_score": 56,
             "crla_score_data": {
+                "task1_score": 7,
+                "task2_type": "Task 2H / Sentences",
+                "task2_score": 4,
+                "story_number": 1,
                 "story_total_words": 80,
                 "words_read": 50,
                 "miscues": 3,
@@ -289,7 +297,7 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
         # teacher rule: cross-band final classification follows comprehension band
         self.assertEqual(_crla_grade2_part2_profile(70, 4), "Transitioning Reader")
 
-    def test_completed_part2_persistence_uses_server_classification_without_material(self):
+    def test_completed_part2_persistence_rejects_incomplete_client_classification_without_material(self):
         student = SimpleNamespace(id=1, pk=1, reading_level="")
         factory = RequestFactory()
         endpoint = persist_student_end_assessment_state.__wrapped__.__wrapped__
@@ -325,8 +333,11 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
                     response = endpoint(request)
 
                 self.assertEqual(response.status_code, 200)
-                self.assertEqual(state["reader_classification"], "High Emerging Reader")
-                self.assertEqual(state["student_end_assessment_state"]["classification"], "High Emerging Reader")
+                # The request has neither an authoritative Part 1 total nor a
+                # selected story.  A browser-provided classification must not
+                # fill the final CRLA Reading Profile.
+                self.assertEqual(state.get("reader_classification", ""), "")
+                self.assertIsNone(state["student_end_assessment_state"]["classification"])
 
     def test_overlay_prefers_authoritative_crla_classification(self):
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
@@ -553,7 +564,9 @@ class AssessmentWorkflowBranchingTests(SimpleTestCase):
         self.assertEqual(end_state.get("stage"), "transition_to_rhymes")
         self.assertEqual(end_state.get("next_stage"), "rhymes")
         self.assertEqual(end_state.get("routing_score"), 6)
-        self.assertEqual(end_state.get("classification"), "Low Emerging Reader")
+        # Six Task 1 words route to Task 2L; this is a transition, not a
+        # terminal Part 1 result, so it has no final classification yet.
+        self.assertEqual(end_state.get("classification"), "")
 
     def test_low_branch_persists_workbook_fields(self):
         end_state = self._run_sync({
