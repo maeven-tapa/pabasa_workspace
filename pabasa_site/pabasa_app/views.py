@@ -13752,6 +13752,10 @@ def persist_student_end_assessment_state(request):
         saved['classification'] = None
     _, material_id = _parse_prefixed_id(saved.get('material_id'))
     material = Material.objects.filter(pk=material_id, is_official_reading=True).first() if material_id else None
+    is_official_crla_completion = bool(
+        material
+        and _assessment_kind_value(material) == 'crla'
+    )
     has_part2_scores = (
         canonical_passage_accuracy is not None
         and any(saved.get(field) is not None for field in ('correct_answers', 'comprehension_correct'))
@@ -13759,8 +13763,7 @@ def persist_student_end_assessment_state(request):
     if (
         stage == 'completed'
         and has_part2_scores
-        and material
-        and _is_official_crla_material(material)
+        and is_official_crla_completion
         and final_classification
     ) or (stage != 'completed' and material and final_classification):
         if stage == 'completed':
@@ -13792,7 +13795,10 @@ def persist_student_end_assessment_state(request):
             state['aral_status'] = 'active' if state['aral_eligible'] else 'ineligible'
             state['current_phase'] = 'materials' if state['aral_eligible'] else 'complete'
         eligible = bool(_aral_eligible_classification(final_classification))
-        if eligible:
+        # Official CRLA assessments, whether seeded or admin-created, end in
+        # the reader's CRLA completion card. Keep the ARAL route available for
+        # other assessment workflows, but do not replace this result view.
+        if eligible and not is_official_crla_completion:
             next_url = f"{reverse('assessment')}?workflow=original"
     _set_user_state(student, state)
     return JsonResponse({

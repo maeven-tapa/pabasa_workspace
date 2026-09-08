@@ -339,6 +339,50 @@ class AssessmentWorkflowBranchingTests(TestCase):
                 self.assertEqual(state.get("reader_classification", ""), "")
                 self.assertIsNone(state["student_end_assessment_state"]["classification"])
 
+    def test_custom_official_crla_completion_uses_reader_completion_path(self):
+        student = SimpleNamespace(id=1, pk=1, reading_level="", preference={})
+        material = SimpleNamespace(
+            id=1,
+            is_official_reading=True,
+            is_system_owned=False,
+            assessment_kind="crla",
+            assessment_set="crla",
+        )
+        state = {}
+        request = RequestFactory().post(
+            "/api/assessment/end-state/",
+            data=json.dumps({
+                "stage": "completed",
+                "material_id": "material-1",
+                "part1_total_score": 14,
+                "story_number": 1,
+                "story_total_words": 100,
+                "words_read": 70,
+                "miscues": 0,
+                "duration_seconds": 100,
+                "correct_answers": 4,
+            }),
+            content_type="application/json",
+        )
+        request.session = {"user_id": 1}
+        endpoint = persist_student_end_assessment_state.__wrapped__.__wrapped__
+
+        with patch("pabasa_app.views._check_auth", return_value=True), \
+             patch("pabasa_app.views.User.objects.filter") as user_filter, \
+             patch("pabasa_app.views.Material.objects.filter") as material_filter, \
+             patch("pabasa_app.views._get_user_state", return_value=state), \
+             patch("pabasa_app.views._set_user_state", side_effect=lambda _student, value: state.update(value)), \
+             patch("pabasa_app.views._sync_assessment_workflow_state") as sync_workflow, \
+             patch("pabasa_app.views._aral_eligible_classification", return_value=True):
+            user_filter.return_value.first.return_value = student
+            material_filter.return_value.first.return_value = material
+            response = endpoint(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(json.loads(response.content)["next_url"])
+        sync_workflow.assert_called_once()
+        self.assertIs(sync_workflow.call_args.kwargs["material"], material)
+
     def test_overlay_prefers_authoritative_crla_classification(self):
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
         resolver = source.split("function resolveClassificationLabel", 1)[1].split("function isAralEligibleClassification", 1)[0]
