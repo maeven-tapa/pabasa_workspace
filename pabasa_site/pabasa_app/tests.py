@@ -6329,6 +6329,74 @@ class LiveAssessmentStartTests(TestCase):
             _, error = _validate_live_batch_assignments(selected_ids, assignments, allowed_ids)
             self.assertIn(expected_error, error)
 
+    def test_manual_live_batches_preserve_total_through_start_and_transition(self):
+        from .views import _ensure_live_session_batches, _live_session_batch_payload, _load_next_live_batch
+
+        batch_two_student = User.objects.create(
+            custom_id=f"BATCH-TWO-{uuid.uuid4().hex[:8].upper()}", role='student',
+            first_name='Batch', last_name='Two', email=f'batch-two-{uuid.uuid4().hex}@example.com',
+            password_hash=make_password('student-password'), grade_level='Grade 2',
+            middle_initial='', suffix='', sex='female', birth_month=6, birth_day=2, birth_year=2012,
+        )
+        self.material.is_official_reading = True
+        self.material.assessment_kind = 'crla'
+        self.material.save(update_fields=['is_official_reading', 'assessment_kind', 'updated_at'])
+        assignments = {str(self.student.id): 1, str(batch_two_student.id): 2}
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=self.material,
+            student_ids=[self.student.id, batch_two_student.id], student_count=2,
+            batch_assignments=assignments, total_batches=2, status='started', start_at=timezone.now(),
+            countdown_seconds=0,
+            student_states={
+                str(self.student.id): {'status': 'completed'},
+                str(batch_two_student.id): {'status': 'waiting'},
+            },
+        )
+
+        # This is also called by the start action after manual settings have
+        # been saved; it must not collapse the valid Batch 2 assignment.
+        self.assertEqual(_ensure_live_session_batches(session), assignments)
+        self.assertEqual(session.total_batches, 2)
+        payload = _live_session_batch_payload(session)
+        self.assertTrue(payload['batch_complete'])
+        self.assertFalse(payload['assessment_complete'])
+
+        waiting_state = _live_session_batch_payload(session)
+        self.assertEqual(waiting_state['batch_assignments'][str(batch_two_student.id)], 2)
+        self.assertEqual(waiting_state['current_batch'], 1)
+        self.assertNotIn(batch_two_student.id, waiting_state['current_batch_student_ids'])
+
+        session.save(update_fields=['batch_assignments', 'batch_size', 'total_batches', 'current_batch'])
+        loaded, error = _load_next_live_batch(session.id, 2)
+        self.assertIsNone(error)
+        self.assertEqual(loaded.current_batch, 2)
+        self.assertEqual(loaded.status, 'batch_loaded')
+        self.assertEqual(_live_session_batch_payload(loaded)['current_batch_student_ids'], [batch_two_student.id])
+
+        started = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'start'}), content_type='application/json',
+        )
+        self.assertEqual(started.status_code, 200)
+        session.refresh_from_db()
+        self.assertEqual(session.current_batch, 2)
+        self.assertEqual(session.status, 'started')
+
+    def test_invalid_live_batch_assignments_fall_back_to_automatic_batches(self):
+        from .views import _ensure_live_session_batches
+
+        roster = [self.student.id, 9001]
+        session = LiveAssessmentSession(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=self.material,
+            student_ids=roster, student_count=len(roster),
+            batch_assignments={str(self.student.id): 1, 'not-a-student': 2},
+        )
+
+        assignments = _ensure_live_session_batches(session)
+        self.assertEqual(set(assignments), {str(student_id) for student_id in roster})
+        self.assertEqual(set(assignments.values()), {1})
+        self.assertEqual(session.total_batches, 1)
+
     def test_live_session_next_batch_is_sequential_and_idempotently_guarded(self):
         from .views import _ensure_live_session_batches
 

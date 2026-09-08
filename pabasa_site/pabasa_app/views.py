@@ -14426,8 +14426,10 @@ def _live_student_update_is_allowed(session, student_id):
 
 def _ensure_live_session_batches(session, student_ids=None):
     roster = [int(student_id) for student_id in (student_ids if student_ids is not None else session.student_ids or [])]
-    assignments = session.batch_assignments or {}
-    if not isinstance(assignments, dict) or set(assignments) != {str(student_id) for student_id in roster}:
+    assignments, assignment_error = _validate_live_batch_assignments(
+        roster, session.batch_assignments or {}, roster,
+    )
+    if assignment_error:
         # Automatic batches should be predictable for teachers and students,
         # regardless of the order in which the roster was selected.
         roster_positions = {student_id: index for index, student_id in enumerate(roster)}
@@ -14448,7 +14450,10 @@ def _ensure_live_session_batches(session, student_ids=None):
         }
     session.batch_assignments = assignments
     session.batch_size = LIVE_ASSESSMENT_BATCH_SIZE
-    session.total_batches = math.ceil(len(roster) / LIVE_ASSESSMENT_BATCH_SIZE) if roster else 0
+    # A valid assignment map is authoritative, including a teacher's manual
+    # batches. Deriving this from roster size would collapse a manual two-batch
+    # session with fewer than LIVE_ASSESSMENT_BATCH_SIZE students into one.
+    session.total_batches = max(assignments.values(), default=0)
     session.current_batch = min(max(int(session.current_batch or 1), 1), session.total_batches or 1)
     return assignments
 
