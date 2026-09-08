@@ -2,11 +2,7 @@
   'use strict';
 
   const speech = window.speechSynthesis;
-  if (!speech || !window.SpeechSynthesisUtterance) return;
-
-  const browserSpeak = speech.speak.bind(speech);
-  const browserCancel = speech.cancel.bind(speech);
-  let activeAudio = null;
+  if (!speech || !window.SpeechSynthesisUtterance || !window.PabasaTemplateTts) return;
 
   const filipinoStatusMessages = {
     'Correct! Next letter…': 'Tama! Susunod na letra…',
@@ -28,6 +24,15 @@
   const isFilipinoMaterial = () => String(document.body?.dataset.wordDecodingLanguage || '')
     .toLowerCase()
     .startsWith('fil');
+
+  const naturalInstruction = (text) => {
+    if (text === 'Listen to each bubble. Choose the sound for.') {
+      return isFilipinoMaterial()
+        ? 'Makinig sa bawat bula. Piliin ang tamang tunog.'
+        : 'Listen to each bubble. Choose the matching sound.';
+    }
+    return text;
+  };
 
   const updateCurrentLetter = () => {
     const letters = document.querySelectorAll('#word > span:not(.plus)');
@@ -60,49 +65,19 @@
     translateStatus();
   };
 
-  const csrfToken = () => document.cookie
-    .split('; ')
-    .find((value) => value.startsWith('csrftoken='))
-    ?.split('=')
-    .slice(1)
-    .join('=') || '';
-
   speech.cancel = () => {
-    activeAudio?.pause();
-    activeAudio = null;
-    browserCancel();
+    window.PabasaTemplateTts.stop();
   };
 
   speech.speak = async (utterance) => {
     const text = String(utterance?.text || '').trim();
     if (!text) return;
 
-    speech.cancel();
-    const formData = new FormData();
-    formData.append('target_text', text);
-    formData.append('language', utterance.lang || 'English');
-    formData.append('mode', 'word');
-
-    try {
-      const response = await fetch('/api/reading/read-aloud/', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {
-          'X-CSRFToken': csrfToken(),
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        body: formData,
-      });
-      const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || 'Google TTS failed.');
-
-      activeAudio = new Audio(`data:${data.mime_type || 'audio/mpeg'};base64,${data.audio_content}`);
-      activeAudio.addEventListener('ended', () => { activeAudio = null; }, { once: true });
-      await activeAudio.play();
-    } catch (error) {
-      console.warn('Google Word Decoding TTS unavailable; using the browser voice.', error);
-      browserSpeak(utterance);
-    }
+    await window.PabasaTemplateTts.speak({
+      materialId: document.body?.dataset.templateMaterialId,
+      text: naturalInstruction(text),
+      profile: 'instruction',
+    });
   };
 
   document.addEventListener('DOMContentLoaded', installWordDecodingEnhancements, { once: true });

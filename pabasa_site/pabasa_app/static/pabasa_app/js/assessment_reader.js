@@ -109,6 +109,8 @@
         const isMyMaterials = window.__PABASA_MY_MATERIALS__ === true;
         const officialAssessmentId = urlParams.get("official_assessment_id") || "";
         const customMaterialData = window.__PABASA_CUSTOM_MATERIAL__ || null;
+        const isTemplateActivity = customMaterialData?.content_json?.template_source === "template"
+            || Boolean(customMaterialData?.template_title || customMaterialData?.template_type);
         const isFiveWStoryQuestions = window.__PABASA_STORY_CALL__ === true;
         let officialAssessmentData = officialAssessmentId
             ? (window.__PABASA_OFFICIAL_ASSESSMENT__ || null)
@@ -5944,9 +5946,13 @@
             formData.append("mode", mode);
             formData.append("language", currentMaterialLanguage || "");
             formData.append("tts_profile", "crla");
+            if (isTemplateActivity) {
+                formData.append("material_id", String(materialId));
+                formData.append("profile", mode === "paragraph" ? "passage" : mode === "sentence" ? "sentence" : "word");
+            }
 
             try {
-                const response = await fetch("/api/reading/read-aloud/", {
+                const response = await fetch(isTemplateActivity ? "/api/template-activities/read-aloud/" : "/api/reading/read-aloud/", {
                     method: "POST",
                     headers: { "X-CSRFToken": getCsrfToken() },
                     credentials: "same-origin",

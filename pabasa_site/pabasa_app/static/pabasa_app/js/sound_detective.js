@@ -17,9 +17,9 @@
   const copyFor=language=>String(language||'').toLowerCase().startsWith('fil')?{
     question:'Saan mo naririnig ang',correct:'MAGALING!',incorrect:'HINDI PA!',again:'Pakinggan muli at hanapin kung saan nagtatago ang',positions:{beginning:'simula',middle:'gitna',end:'hulihan'},next:'SUNOD',finish:'TAPUSIN',complete:'Mahusay na imbestigasyon!',found:'Natagpuan mo ang lahat ng tunog.',back:'Bumalik sa mga gawain',tap:'I-tap ang tunog upang marinig'
   }:{question:'Where do you hear',correct:'GREAT JOB!',incorrect:'NOT QUITE!',again:'Listen again and find where the sound is hiding.',positions:{beginning:'beginning',middle:'middle',end:'end'},next:'NEXT',finish:'FINISH',complete:'Great detective work!',found:'You found all the hidden sounds.',back:'Back to activities',tap:'Tap the sound to hear it'};
-  function speech(text,language,onStart,onEnd){
-    if(!('speechSynthesis' in global)){onEnd?.();return}
-    global.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(text);utterance.lang=String(language||'').toLowerCase().startsWith('fil')?'fil-PH':'en-US';utterance.rate=.82;utterance.onstart=()=>onStart?.();utterance.onend=()=>onEnd?.();utterance.onerror=()=>onEnd?.();global.speechSynthesis.speak(utterance);
+  function speech(text,language,onStart,onEnd,materialId){
+    if(!global.PabasaTemplateTts){onEnd?.();return}
+    global.PabasaTemplateTts.speak({materialId,text,profile:'instruction',onStart,onEnd,onError:onEnd});
   }
   function highlightedWord(word,sound,position){
     const safeWord=escapeHtml(String(word||'').toUpperCase()),needle=String(sound||'').replaceAll('/','').toUpperCase();if(!needle)return safeWord;
@@ -33,14 +33,13 @@
   function mount(root,configuration){
       if(!root)return null;const data=normalizeConfiguration(configuration),ui=copyFor(data.language),items=Array.isArray(data.items)?data.items.filter(item=>item&&item.word&&item.image_url&&item.position):[],saved=data.progress&&typeof data.progress==='object'?data.progress:{},completion=data.completion&&typeof data.completion==='object'?data.completion:{};let completedItems=Math.max(0,Math.min(Number(saved.completed_items)||0,items.length)),isComplete=(completion.completed===true||saved.activity_completed===true)&&items.length>0&&completedItems>=items.length,index=isComplete?items.length:Math.max(0,Math.min(Number(saved.current_index)||0,Math.max(0,items.length-1))),correct=Math.max(0,Math.min(Number(completion.completed===true?completion.correct_items:(saved.correct_items??completedItems))||0,items.length)),locked=false,revealTimer=null,introPhase=isComplete?'complete':'newspaper',introSpeechGeneration=0;
     root.classList.add('sound-detective-stage');root.classList.toggle('is-preview',data.preview===true);root.classList.toggle('is-intro',introPhase==='newspaper');
-    function play(button,text){speech(text,data.language,()=>button?.classList.add('is-playing'),()=>button?.classList.remove('is-playing'))}
-    function cancelIntroSpeech(){introSpeechGeneration+=1;if('speechSynthesis'in global)global.speechSynthesis.cancel()}
+    function play(button,text){speech(text,data.language,()=>button?.classList.add('is-playing'),()=>button?.classList.remove('is-playing'),data.id)}
+    function cancelIntroSpeech(){introSpeechGeneration+=1;global.PabasaTemplateTts?.stop()}
     function narrateIntroFrom(node,onEnd){
       const text=String(node?.textContent||'').trim(),generation=introSpeechGeneration;
-      if(!node?.isConnected||!text||!('speechSynthesis'in global)||typeof global.SpeechSynthesisUtterance!=='function'){onEnd?.();return}
-      const utterance=new global.SpeechSynthesisUtterance(text);utterance.lang=String(data.language||'').toLowerCase().startsWith('fil')?'fil-PH':'en-US';utterance.rate=.82;
+      if(!node?.isConnected||!text||!global.PabasaTemplateTts){onEnd?.();return}
       let settled=false;const finish=()=>{if(settled)return;settled=true;if(generation===introSpeechGeneration&&introPhase==='newspaper'&&root.isConnected)onEnd?.()};
-      utterance.onend=finish;utterance.onerror=finish;global.speechSynthesis.speak(utterance);
+      global.PabasaTemplateTts.speak({materialId:data.id,text,profile:'passage',onEnd:finish,onError:finish});
     }
     function playPhonics(button,url){if(!url)return;const audio=new Audio(url);button?.classList.add('is-playing');const finish=()=>button?.classList.remove('is-playing');audio.onended=finish;audio.onerror=finish;audio.play().catch(finish)}
     function csrfToken(){return document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||''}

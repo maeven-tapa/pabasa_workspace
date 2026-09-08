@@ -551,7 +551,10 @@ def synthesize_read_aloud_audio(text, api_key="", language_code="en-US", speakin
     # default delivery is intentionally used for the Correspondence male voice.
     uses_chirp3_male = is_male and not is_filipino
     payload = {
-        "input": {"text": clean_text} if is_filipino or uses_chirp3_male else {"ssml": teaching_ssml},
+        # WaveNet Filipino supports SSML.  Applying the same sentence-level
+        # pacing as English avoids the unnaturally fast, high-pitched delivery
+        # previously forced on every Filipino template narration.
+        "input": {"text": clean_text} if uses_chirp3_male else {"ssml": teaching_ssml},
         "voice": {
             "languageCode": tts_language,
             "name": voice_name,
@@ -561,9 +564,9 @@ def synthesize_read_aloud_audio(text, api_key="", language_code="en-US", speakin
     }
     if not uses_chirp3_male:
         payload["audioConfig"].update({
-            "speakingRate": 1.05 if is_filipino else speaking_rate,
-            "pitch": 3.2 if is_filipino else 0,
-            "volumeGainDb": 1.5 if is_filipino else 0,
+            "speakingRate": speaking_rate,
+            "pitch": 0,
+            "volumeGainDb": 0,
         })
     headers = None
     tts_url = "https://texttospeech.googleapis.com/v1/text:synthesize"
@@ -599,9 +602,9 @@ def synthesize_maya_read_aloud_audio(text, api_key="", language_code="en-US", cr
         },
         "audioConfig": {
             "audioEncoding": "MP3",
-            "speakingRate": 1.08,
-            "pitch": 5.0,
-            "volumeGainDb": 1.5,
+            "speakingRate": 0.96,
+            "pitch": 0,
+            "volumeGainDb": 0,
         },
     }
     headers = None
