@@ -10151,6 +10151,65 @@ class AssessmentCompletionNotificationTests(TestCase):
         self.assertEqual(profile["wpm"], "72")
         self.assertEqual(profile["crla_classification"], "Transitioning Readers")
 
+    def test_official_crla_completion_syncs_student_and_teacher_roster(self):
+        material = Material.objects.create(
+            title="Official CRLA Sync Check",
+            code="CRLA-SYNC-MAT",
+            teacher=self.teacher,
+            section=self.section,
+            item_type="word",
+            type="assessment",
+            assessment_kind="crla",
+            is_official_reading=True,
+            status="published",
+            is_active=True,
+        )
+        self._login_student()
+        completion_payload = {
+            "material_id": f"material-{material.id}",
+            "activity_type": "assessment",
+            "assessment_type": "word",
+            "correct_words": 4,
+            "crla_score_data": {
+                "task1_score": 4,
+                "task2_type": "Task 2L / Rhymes",
+                "task2_score": 2,
+            },
+            "scores": {
+                "correct_words": 4,
+                "duration_seconds": 30,
+            },
+        }
+
+        # Calendar-window availability is covered separately. This test
+        # exercises the persistence contract once an official attempt is
+        # authorized for completion.
+        with patch("pabasa_app.views._student_can_complete_assessment", return_value=True):
+            response = self.client.post(
+                reverse("record_assessment_completion"),
+                data=json.dumps(completion_payload),
+                content_type="application/json",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        result = material.assessment_results.get(
+            student=self.student, attempt_status="completed",
+        )
+        self.assertEqual(result.crla_classification, "Low Emerging Reader")
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.reading_level, "Low Emerging Reader")
+        self.assertEqual(
+            self.student.preference["reading_assessment_state"]["reader_classification"],
+            "Low Emerging Reader",
+        )
+
+        self._login_teacher()
+        roster = self.client.get(reverse("get_teacher_students_api")).json()
+        student = next(item for item in roster["students"] if item["id"] == self.student.id)
+        self.assertEqual(student["level"], "Low Emerging Reader")
+        self.assertTrue(student["aral_eligible"])
+
     def test_crla_completion_keeps_aral_eligible_students_on_completion_state(self):
         self._login_student()
         response = self.client.post(

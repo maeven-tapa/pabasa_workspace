@@ -1,4 +1,7 @@
+import json
+
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from .models import Assessment, Material, User
@@ -57,3 +60,47 @@ class OfficialCrlaResultSelectionTests(TestCase):
 
         selected = latest_completed_official_crla_results(student_ids=[self.student.id])
         self.assertEqual(selected[self.student.id].id, latest.id)
+
+    def test_legacy_plural_profile_is_selected_and_normalized(self):
+        legacy = self._result(
+            "CRLA-SEL-LEGACY",
+            classification="Low Emerging Readers",
+        )
+        legacy.crla_classification = ""
+        legacy.classification = "Low Emerging Readers"
+        legacy.save(update_fields=["crla_classification", "classification", "updated_at"])
+
+        selected = latest_completed_official_crla_results(student_ids=[self.student.id])
+
+        self.assertEqual(selected[self.student.id].id, legacy.id)
+        self.assertEqual(
+            selected[self.student.id].crla_classification,
+            "Low Emerging Reader",
+        )
+
+    def test_terminal_student_state_creates_the_authoritative_result(self):
+        session = self.client.session
+        session["user_id"] = self.student.id
+        session["user_role"] = "student"
+        session.save()
+
+        response = self.client.post(
+            reverse("persist_student_end_assessment_state"),
+            data=json.dumps({
+                "material_id": f"material-{self.material.id}",
+                "stage": "early_completed_words",
+                "task1_score": 4,
+                "task2_rhymes_score": 2,
+                "part1_total_score": 6,
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        result = self.material.assessment_results.get(
+            student=self.student,
+            attempt_status="completed",
+        )
+        self.assertEqual(result.crla_classification, "Low Emerging Reader")
+        selected = latest_completed_official_crla_results(student_ids=[self.student.id])
+        self.assertEqual(selected[self.student.id].id, result.id)

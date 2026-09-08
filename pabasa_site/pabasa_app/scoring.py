@@ -12,6 +12,28 @@ CRLA_CLASSIFICATIONS = [
     (0, "Low Emerging Reader"),
 ]
 
+
+def canonical_crla_classification(value: Any) -> str:
+    """Return the one stored spelling for an official CRLA Reading Profile.
+
+    Older workflow and teacher-action code used plural display labels while
+    official CRLA scoring uses singular labels.  Persisting both forms makes a
+    completed result invisible to the authoritative teacher roster, which
+    intentionally selects only known CRLA profiles.
+    """
+    normalized = re.sub(r"[\s_-]+", " ", str(value or "").strip().casefold())
+    if "low" in normalized and "emerging" in normalized:
+        return "Low Emerging Reader"
+    if "high" in normalized and "emerging" in normalized:
+        return "High Emerging Reader"
+    if "develop" in normalized:
+        return "Developing Reader"
+    if "transition" in normalized:
+        return "Transitioning Reader"
+    if "grade" in normalized and ("read" in normalized or "level" in normalized):
+        return "Reading At Grade Level"
+    return ""
+
 CRLA_TASK1_ITEM_COUNT = 10
 # Task 2H scores completed sentences, independent of word-level miscues.
 CRLA_SENTENCE_SCORE_BY_COUNT = {0: 0, 1: 2, 2: 5, 3: 7, 4: 10}
@@ -575,6 +597,8 @@ def build_assessment_score_payload(data: Dict[str, Any]) -> Dict[str, Any]:
     else:
         classification = payload.get("crla_classification") or payload.get("classification") or crla_classification(final_score)
     performance_interpretation_value = payload.get("performance_interpretation") or performance_interpretation(final_score)
+    if is_crla_attempt:
+        classification = canonical_crla_classification(classification)
     crla_score_data["crla_classification"] = classification if is_crla_attempt else crla_score_data.get("crla_classification")
     adapted_level_payload = adapted_reading_level_from_attempts([
         {"overall_raw_score": overall_raw_score, "assessment_type": assessment_type}
