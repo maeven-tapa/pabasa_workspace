@@ -5718,7 +5718,11 @@
         }
 
         async function startLiveCountdown() {
-            if (isReviewMode || liveCountdownStarted) return;
+            // The live reader is also reused for each official CRLA branch.
+            // Only the explicit fresh launch is the formal assessment entry;
+            // branch URLs retain the live session parameters but must not
+            // create a second release countdown.
+            if (!isFreshOfficialCrlaLaunch || isReviewMode || liveCountdownStarted) return;
             const isLiveAssessment = isCurrentLiveAssessment();
             if (!isLiveAssessment) return;
             if (!items.length) {

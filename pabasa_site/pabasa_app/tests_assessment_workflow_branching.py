@@ -368,6 +368,19 @@ class AssessmentWorkflowBranchingTests(TestCase):
         )
         self.assertIn('next_stage: "",', source)
 
+    def test_live_crla_countdown_only_initializes_for_fresh_entry(self):
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        countdown = source.split("async function startLiveCountdown()", 1)[1].split("const resetPhraseListening", 1)[0]
+
+        self.assertIn("if (!isFreshOfficialCrlaLaunch || isReviewMode || liveCountdownStarted) return;", countdown)
+        self.assertIn("showLiveCountdown();", countdown)
+        self.assertIn("liveCountdownTimer = window.setInterval", countdown)
+
+        # The branch URL builder starts from the current URL and only adds a
+        # stage; it must not re-add the one-shot fresh-launch marker.
+        stage_builder = source.split("function buildCrlaStageUrl", 1)[1].split("function getStoryChoicesFromAssessment", 1)[0]
+        self.assertNotIn('searchParams.set("crla_fresh"', stage_builder)
+
     def test_official_crla_reader_restores_explicit_index_not_locked_result_position(self):
         """Fresh Word/Rhyme/Sentence starts cannot skip Item 1 from stale locks."""
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
