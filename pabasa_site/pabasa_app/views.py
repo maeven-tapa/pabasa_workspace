@@ -105,7 +105,7 @@ from .scoring import (
     performance_interpretation,
 )
 from .management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
-from .utils.crla_export import convert_crla_workbook_to_pdf, export_crla_excel
+from .utils.crla_export import export_crla_excel
 from .utils.crla_results import (
     VALID_CRLA_CLASSIFICATIONS,
     latest_completed_official_crla_results,
@@ -19688,7 +19688,7 @@ def finalize_class_crla_assessment(request):
 
 @require_http_methods(["GET"])
 def export_crla_assessment(request, assessment_id):
-    """Download the official Grade 2 Filipino CRLA scoresheet as a PDF."""
+    """Download the populated official Grade 2 Filipino CRLA scoresheet."""
     if not _check_auth(request):
         return redirect("auth")
 
@@ -19720,18 +19720,17 @@ def export_crla_assessment(request, assessment_id):
         return HttpResponseForbidden("You do not have access to this assessment.")
 
     try:
-        workbook = export_crla_excel(root_assessment.id, section_id=finalization.section_id)
-        scoresheet = convert_crla_workbook_to_pdf(workbook)
-    except (FileNotFoundError, ValueError, RuntimeError) as exc:
-        logger.warning("Unable to export CRLA PDF scoresheet for assessment %s: %s", assessment_id, exc)
-        return HttpResponse(str(exc), status=503 if isinstance(exc, RuntimeError) else 400)
+        scoresheet = export_crla_excel(root_assessment.id, section_id=finalization.section_id)
+    except (FileNotFoundError, ValueError) as exc:
+        logger.warning("Unable to export CRLA workbook for assessment %s: %s", assessment_id, exc)
+        return HttpResponse(str(exc), status=400)
     except Exception:
-        logger.exception("CRLA PDF export failed for assessment %s", assessment_id)
-        return HttpResponse("Unable to generate the CRLA PDF scoresheet.", status=500)
+        logger.exception("CRLA workbook export failed for assessment %s", assessment_id)
+        return HttpResponse("Unable to generate the CRLA Excel scoresheet.", status=500)
 
     response = HttpResponse(
         scoresheet.getvalue(),
-        content_type="application/pdf",
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
     response["Content-Disposition"] = f'attachment; filename="{scoresheet.name}"'
     response["Content-Length"] = str(len(response.content))
