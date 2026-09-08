@@ -1001,6 +1001,42 @@
         max-width: 100%;
     }
 
+    .profile-assessment-phase-stat {
+        gap: 0.45rem;
+        min-height: 220px;
+        padding: 1.5rem;
+    }
+
+    .profile-assessment-phase-stat .profile-stat-label {
+        color: var(--dash-text);
+        font-size: 0.82rem;
+        letter-spacing: 0.1em;
+    }
+
+    .profile-assessment-phase-stat .profile-stat-value {
+        font-size: clamp(2rem, 4vw, 3.1rem);
+        margin-bottom: 0;
+    }
+
+    .profile-assessment-phase-subtext {
+        color: var(--dash-muted);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1rem;
+        font-weight: 800;
+        line-height: 1.25;
+        position: relative;
+        z-index: 1;
+    }
+
+    .profile-assessment-phase-badge {
+        font-size: 0.75rem;
+        font-weight: 800;
+        margin-top: 0.35rem;
+        padding: 0.42rem 0.75rem;
+        position: relative;
+        z-index: 1;
+    }
+
     .btn-group-small {
         display: flex;
         gap: 0.6rem;
@@ -1880,9 +1916,13 @@
                     Class Overview
                 </h3>
                 <div class="profile-stat-grid">
-                    <div class="profile-stat-box">
-                        <div class="profile-stat-value" id="profileActiveClassesCount">0</div>
-                        <div class="profile-stat-label">Active Classes</div>
+                    <div class="profile-stat-box profile-assessment-phase-stat">
+                        <div class="profile-stat-label">CURRENT TERM</div>
+                        <div class="profile-stat-value">{{ teacher_current_term_label }}</div>
+                        <div class="profile-assessment-phase-subtext">{{ teacher_assessment_phase_label }}</div>
+                        <span class="badge rounded-pill {% if teacher_assessment_phase_active %}text-bg-success{% else %}text-bg-secondary{% endif %} profile-assessment-phase-badge">
+                            {{ teacher_assessment_phase_badge }}
+                        </span>
                     </div>
                     <div class="profile-stat-box">
                         <div class="profile-stat-value" id="profileTotalStudentsCount">0</div>

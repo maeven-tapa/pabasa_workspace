@@ -6893,6 +6893,12 @@ class ProfileUpdateTests(TestCase):
         response = self.client.get(reverse("profile"))
 
         self.assertContains(response, 'name="save_account_details" value="true"', html=False)
+        self.assertContains(response, 'CURRENT TERM')
+        self.assertContains(response, 'Class Overview')
+        self.assertContains(response, 'Total Students')
+        self.assertContains(response, 'Materials Posted')
+        self.assertContains(response, 'Reports Generated')
+        self.assertNotContains(response, 'Active Classes')
 
     def test_profile_post_updates_user_record(self):
         response = self.client.post(
@@ -6918,6 +6924,68 @@ class ProfileUpdateTests(TestCase):
         self.assertEqual(self.user.suffix, "Jr.")
         self.assertEqual(self.user.email, "new@example.com")
         self.assertIn({"profile_info": {"bio": "Updated bio"}}, self.user.tags)
+
+    def test_teacher_profile_uses_calendar_assessment_phase(self):
+        from .views import _teacher_assessment_phase_context
+
+        calendar = SchoolCalendar.objects.create(
+            school_year="2026-2027", current_term=1, is_active=True,
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar, term=1, event_type="school_opening",
+            title="Term 1 opening", start_date=date(2026, 1, 1), end_date=date(2026, 1, 1),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar, term=1, event_type="pre_assessment",
+            title="Pre-Assessment", start_date=date(2026, 2, 1), end_date=date(2026, 2, 7),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar, term=1, event_type="school_closing",
+            title="Term 1 closing", start_date=date(2026, 6, 30), end_date=date(2026, 6, 30),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar, term=2, event_type="school_opening",
+            title="Term 2 opening", start_date=date(2026, 7, 1), end_date=date(2026, 7, 1),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar, term=2, event_type="midline_assessment",
+            title="Midline Assessment", start_date=date(2026, 7, 2), end_date=date(2026, 7, 8),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar, term=2, event_type="school_closing",
+            title="Term 2 closing", start_date=date(2026, 12, 31), end_date=date(2026, 12, 31),
+        )
+
+        phase = _teacher_assessment_phase_context(self.user, on_date=date(2026, 2, 3))
+
+        self.assertEqual(phase['current_term_label'], 'Term 1')
+        self.assertEqual(phase['assessment_phase_label'], 'Pre-Assessment')
+        self.assertEqual(phase['assessment_phase_badge'], 'Active Phase')
+
+        phase = _teacher_assessment_phase_context(self.user, on_date=date(2026, 7, 3))
+        self.assertEqual(phase['current_term_label'], 'Term 2')
+        self.assertEqual(phase['assessment_phase_label'], 'Midline Assessment')
+
+    def test_teacher_profile_uses_calendar_convention_outside_assessment_window(self):
+        from .views import _teacher_assessment_phase_context
+
+        calendar = SchoolCalendar.objects.create(
+            school_year="2026-2027", current_term=1, is_active=True,
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar, term=1, event_type="school_opening",
+            title="Term 1 opening", start_date=date(2026, 1, 1), end_date=date(2026, 1, 1),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar, term=1, event_type="school_closing",
+            title="Term 1 closing", start_date=date(2026, 6, 30), end_date=date(2026, 6, 30),
+        )
+
+        phase = _teacher_assessment_phase_context(self.user, on_date=date(2026, 3, 3))
+
+        self.assertEqual(phase['current_term_label'], 'Term 1')
+        self.assertEqual(phase['assessment_phase_label'], 'No Active Assessment Window')
+        self.assertEqual(phase['assessment_phase_badge'], 'No Active Phase')
 
 
 class MaterialCreationTests(TestCase):

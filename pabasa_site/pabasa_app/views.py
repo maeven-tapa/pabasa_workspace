@@ -7893,6 +7893,48 @@ def _calendar_is_in_postassessment_window(school_calendar, term, on_date=None):
     return block.start_date <= check_date <= block.end_date
 
 
+def _teacher_assessment_phase_context(teacher, on_date=None):
+    """Resolve the teacher profile's current term and assessment window.
+
+    CalendarEvent remains the authoritative source for assessment dates. The
+    ``SchoolCalendar.current_term`` value is used only as the existing calendar
+    fallback when term opening/closing blocks do not resolve today's term.
+    """
+    calendar = _school_calendar_for_user(teacher)
+    if not calendar and teacher:
+        assigned_section = _teacher_current_sections(teacher).select_related('school_calendar').first()
+        calendar = assigned_section.school_calendar if assigned_section else None
+    check_date = on_date or system_today()
+    current_term = _calendar_current_term(calendar, on_date=check_date) if calendar else None
+    current_term = current_term or getattr(calendar, 'current_term', None)
+
+    phase_windows = {
+        1: ("pretest", "Pre-Assessment", _calendar_is_in_preassessment_window),
+        2: ("midtest", "Midline Assessment", _calendar_is_in_midlineassessment_window),
+        3: ("posttest", "Post-Assessment", _calendar_is_in_postassessment_window),
+    }
+    active_term = None
+    active_phase_label = None
+    terms_to_check = list(dict.fromkeys([current_term, 1, 2, 3, 4]))
+    for term in terms_to_check:
+        if not term:
+            continue
+        phase_window = phase_windows.get(term)
+        if calendar and phase_window and phase_window[2](calendar, term, on_date=check_date):
+            active_term = term
+            active_phase_label = phase_window[1]
+        if active_phase_label:
+            break
+
+    display_term = active_term or current_term
+    return {
+        'current_term_label': f'Term {display_term}' if display_term else 'No Active Term',
+        'assessment_phase_label': active_phase_label or 'No Active Assessment Window',
+        'assessment_phase_badge': 'Active Phase' if active_phase_label else 'No Active Phase',
+        'assessment_phase_active': bool(active_phase_label),
+    }
+
+
 def _section_is_in_assessment_week(section, on_date=None):
     """Use the section's configured calendar assessment event as the toggle gate."""
     if not section:
@@ -17730,9 +17772,11 @@ def profile(request):
     selected_avatar = STUDENT_AVATAR_BY_SLUG[selected_avatar_slug]
     teacher_active_classes = 0
     teacher_assigned_section = None
+    teacher_assessment_phase = {}
     if user.role == 'teacher':
         teacher_assigned_section = _teacher_current_sections(user).select_related('school').first()
         teacher_active_classes = _teacher_current_sections(user).count()
+        teacher_assessment_phase = _teacher_assessment_phase_context(user)
     
     # Get user bio from tags (profile information)
     bio = ''
@@ -17925,6 +17969,10 @@ def profile(request):
         'contact_number': user.contact_no or '',
         'notification_settings': _notification_settings_for_user(user),
         'teacher_active_classes': teacher_active_classes,
+        'teacher_current_term_label': teacher_assessment_phase.get('current_term_label', 'No Active Term'),
+        'teacher_assessment_phase_label': teacher_assessment_phase.get('assessment_phase_label', 'No Active Assessment Window'),
+        'teacher_assessment_phase_badge': teacher_assessment_phase.get('assessment_phase_badge', 'No Active Phase'),
+        'teacher_assessment_phase_active': teacher_assessment_phase.get('assessment_phase_active', False),
         'student_theme_slug': (
             user.equipped_theme
             if user.role == 'student' and user.equipped_theme in STUDENT_THEME_CATALOG
