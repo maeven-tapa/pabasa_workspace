@@ -50,6 +50,34 @@ class OfficialReadingPayloadTests(SimpleTestCase):
         self.assertEqual(len(sections["sentences"]), 4)
         self.assertEqual([item["content"] for item in sections["passages"]], ["Story one.", "Story two."])
 
+    def test_custom_structured_passages_keep_their_titles_when_items_are_also_saved(self):
+        material = SimpleNamespace(
+            content_json={
+                "words": [f"Word {index}" for index in range(10)],
+                "sentences": [f"Sentence {index}" for index in range(4)],
+                "passages": [
+                    {"title": "Story 1", "content": "First custom story."},
+                    {"title": "Story 2", "content": "Second custom story."},
+                ],
+                "items": [
+                    *[f"Word {index}" for index in range(10)],
+                    *[f"Sentence {index}" for index in range(4)],
+                    "First custom story.",
+                    "Second custom story.",
+                ],
+            },
+        )
+
+        sections = _official_reading_item_sections(material)
+
+        self.assertEqual(
+            sections["passages"],
+            [
+                {"title": "Story 1", "content": "First custom story."},
+                {"title": "Story 2", "content": "Second custom story."},
+            ],
+        )
+
     def test_official_crla_story_qas_are_seeded_in_pairs_by_story(self):
         from pabasa_app.management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
 

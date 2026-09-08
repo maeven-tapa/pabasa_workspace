@@ -8910,7 +8910,28 @@ def _official_reading_item_sections(material):
     items = []
 
     raw_items = content_json.get('items') if isinstance(content_json, dict) else None
-    if isinstance(raw_items, list):
+    # Custom official assessments persist the structured sections as well as a
+    # flattened `items` compatibility list.  Prefer those structured values:
+    # rebuilding passages from the flat list loses their titles and makes
+    # distinct stories indistinguishable in the student story selector.
+    has_structured_sections = isinstance(content_json, dict) and any(
+        isinstance(content_json.get(key), list) and content_json.get(key)
+        for key in ('words', 'sentences', 'passages')
+    )
+    if has_structured_sections:
+        words = [str(item).strip() for item in (content_json.get('words') or []) if str(item).strip()]
+        sentences = [str(item).strip() for item in (content_json.get('sentences') or []) if str(item).strip()]
+        for passage in content_json.get('passages') or []:
+            if not isinstance(passage, dict):
+                continue
+            title = str(passage.get('title') or '').strip()
+            content = str(passage.get('content') or passage.get('text') or '').strip()
+            if title or content:
+                passages.append({'title': title, 'content': content})
+        items = [str(item).strip() for item in (raw_items or []) if str(item).strip() and not isinstance(item, dict)]
+        if not items:
+            items = [*words, *sentences, *[passage['content'] for passage in passages if passage['content']]]
+    elif isinstance(raw_items, list):
         for item in raw_items:
             if isinstance(item, dict):
                 item_type = str(item.get('type') or '').strip().lower()
@@ -9732,10 +9753,12 @@ def _save_official_reading_assessment(request, material=None):
         field_errors['words'] = 'Add at least 10 word items.'
     if len(rhyme_pairs) != 10:
         field_errors['rhyme_pairs'] = 'Add exactly 10 rhyming pairs.'
-    if len(sentences) < 4:
-        field_errors['sentences'] = 'Add at least 4 sentence items.'
+    if len(sentences) != 4:
+        field_errors['sentences'] = 'Add exactly 4 sentence items.'
     if not passages:
         field_errors['passages'] = 'Add at least one paragraph item.'
+    elif len(passages) > 2:
+        field_errors['passages'] = 'Add no more than 2 stories.'
 
     if field_errors:
         return None, {'field_errors': field_errors, 'non_field_error': 'Please fix the highlighted fields.'}
