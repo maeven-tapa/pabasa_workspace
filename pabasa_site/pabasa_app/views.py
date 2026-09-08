@@ -10503,7 +10503,7 @@ def _admin_practice_context(request, page_title):
     })
     return context
 
-def _admin_practice_template_context(request, material=None, page_title='Practice'):
+def _admin_practice_template_context(request, material=None, page_title='Practice', form=None):
     selected_language = _practice_selected_language(request)
     initial = {}
     if material:
@@ -10519,7 +10519,8 @@ def _admin_practice_template_context(request, material=None, page_title='Practic
     else:
         initial['language'] = selected_language
 
-    form = AdminPracticeMaterialForm(initial=initial, material=material)
+    if form is None:
+        form = AdminPracticeMaterialForm(initial=initial, material=material)
     occupied_levels_map = {}
     for mode, _mode_label in AdminPracticeMaterialForm.MODE_CHOICES:
         occupied_levels_map[mode] = {}
@@ -10580,10 +10581,16 @@ def admin_practice_create(request):
     if request.method == 'POST':
         form = AdminPracticeMaterialForm(request.POST, material=None)
         if form.is_valid():
-            material = _save_admin_practice_material(form, None, request)
-            return redirect('admin_practice_detail', practice_id=material.id)
-        context = _admin_context(request, 'Add Practice Content', [])
-        context.update({'form': form, 'practice': None})
+            try:
+                with transaction.atomic():
+                    material = _save_admin_practice_material(form, None, request)
+            except IntegrityError:
+                form.add_error(None, 'A Practice Content already exists for the selected Mode, Difficulty, Language, and Level.')
+            else:
+                return redirect('admin_practice_detail', practice_id=material.id)
+        context = _admin_practice_template_context(
+            request, None, 'Add Practice Content', form=form,
+        )
         return render(request, 'pabasa_app/admin_practice_create.html', context, status=400)
 
     return render(request, 'pabasa_app/admin_practice_create.html',
@@ -10609,10 +10616,16 @@ def admin_practice_edit(request, practice_id):
     if request.method == 'POST':
         form = AdminPracticeMaterialForm(request.POST, material=material)
         if form.is_valid():
-            updated_material = _save_admin_practice_material(form, material, request)
-            return redirect('admin_practice_detail', practice_id=updated_material.id)
-        context = _admin_context(request, 'Edit Practice Content', [])
-        context.update({'form': form, 'practice': material, 'practice_status': _admin_practice_status(material)})
+            try:
+                with transaction.atomic():
+                    updated_material = _save_admin_practice_material(form, material, request)
+            except IntegrityError:
+                form.add_error(None, 'A Practice Content already exists for the selected Mode, Difficulty, Language, and Level.')
+            else:
+                return redirect('admin_practice_detail', practice_id=updated_material.id)
+        context = _admin_practice_template_context(
+            request, material, 'Edit Practice Content', form=form,
+        )
         return render(request, 'pabasa_app/admin_practice_edit.html', context, status=400)
 
     return render(request, 'pabasa_app/admin_practice_edit.html',

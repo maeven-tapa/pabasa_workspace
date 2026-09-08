@@ -5,6 +5,7 @@ from django.contrib.auth.hashers import check_password, make_password
 from openpyxl import load_workbook
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
+from django.db import IntegrityError, transaction
 from django.db.models import F
 from datetime import date, datetime, timedelta
 from io import BytesIO
@@ -9243,6 +9244,9 @@ class AdminPracticeMaterialFormTests(TestCase):
             type='practice',
             status='published',
             difficulty_level='easy',
+            language='English',
+            is_system_owned=True,
+            source_type='shared',
             is_active=True,
         )
 
@@ -9251,6 +9255,7 @@ class AdminPracticeMaterialFormTests(TestCase):
             'difficulty_level': 'easy',
             'level': 'level_1',
             'status': 'draft',
+            'language': 'English',
             'content_text': 'sun',
         })
 
@@ -9296,6 +9301,9 @@ class AdminPracticeMaterialFormTests(TestCase):
             type='practice',
             status='published',
             difficulty_level='easy',
+            language='English',
+            is_system_owned=True,
+            source_type='shared',
             is_active=True,
         )
 
@@ -9303,6 +9311,172 @@ class AdminPracticeMaterialFormTests(TestCase):
         occupied_levels = form.get_occupied_levels('free', 'easy')
 
         self.assertEqual(occupied_levels, ['level_1'])
+
+    def test_incomplete_record_does_not_occupy_a_level(self):
+        Material.objects.create(
+            title='Incomplete Practice',
+            item_type='word',
+            content_text='',
+            content_json={'mode': 'free', 'difficulty': 'easy', 'level': 'level_1'},
+            type='practice',
+            status='draft',
+            difficulty_level='easy',
+            language='Filipino',
+            is_system_owned=True,
+            source_type='shared',
+        )
+
+        occupied_levels = AdminPracticeMaterialForm().get_occupied_levels(
+            'free', 'easy', 'Filipino',
+        )
+
+        self.assertEqual(occupied_levels, [])
+
+    def test_non_admin_practice_record_does_not_occupy_a_level(self):
+        Material.objects.create(
+            title='Legacy Practice',
+            item_type='word',
+            content_text='araw',
+            content_json={'mode': 'free', 'difficulty': 'easy', 'level': 'level_1'},
+            type='practice',
+            status='published',
+            difficulty_level='easy',
+            language='Filipino',
+            is_system_owned=False,
+            source_type='personal',
+        )
+
+        occupied_levels = AdminPracticeMaterialForm().get_occupied_levels(
+            'free', 'easy', 'Filipino',
+        )
+
+        self.assertEqual(occupied_levels, [])
+
+    def test_saved_slots_are_independent_by_language_and_difficulty(self):
+        Material.objects.create(
+            title='Filipino Easy Level 1',
+            item_type='word',
+            content_text='araw',
+            content_json={'mode': 'free', 'difficulty': 'easy', 'level': 'level_1'},
+            type='practice',
+            status='published',
+            difficulty_level='easy',
+            language='Filipino',
+            is_system_owned=True,
+            source_type='shared',
+        )
+        form = AdminPracticeMaterialForm()
+
+        self.assertEqual(form.get_occupied_levels('free', 'easy', 'Filipino'), ['level_1'])
+        self.assertEqual(form.get_occupied_levels('free', 'medium', 'Filipino'), [])
+        self.assertEqual(form.get_occupied_levels('free', 'easy', 'English'), [])
+
+
+class AdminPracticeCreateWorkflowTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create(
+            custom_id='ADM-PRACTICE-CREATE',
+            role='admin',
+            first_name='Practice',
+            last_name='Admin',
+            sex='female',
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email='practice-create-admin@example.com',
+            password_hash=make_password('password'),
+        )
+        session = self.client.session
+        session['user_id'] = self.admin.id
+        session['user_role'] = self.admin.role
+        session['first_name'] = self.admin.first_name
+        session['last_name'] = self.admin.last_name
+        session['email'] = self.admin.email
+        session['custom_id'] = self.admin.custom_id
+        session.save()
+        self.url = reverse('admin_practice_create')
+        self.valid_data = {
+            'mode': 'free',
+            'difficulty_level': 'easy',
+            'level': 'level_1',
+            'status': 'draft',
+            'language': 'Filipino',
+            'content_text': 'araw',
+        }
+
+    def test_opening_or_abandoning_form_does_not_create_or_reserve_level(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Material.objects.filter(type='practice').exists())
+        self.assertEqual(
+            response.context['occupied_levels_map']['free']['easy']['Filipino'],
+            [],
+        )
+
+        refreshed_response = self.client.get(self.url)
+        self.assertEqual(
+            refreshed_response.context['occupied_levels_map']['free']['easy']['Filipino'],
+            [],
+        )
+
+    def test_invalid_submission_does_not_create_or_reserve_level(self):
+        invalid_data = {**self.valid_data, 'content_text': ''}
+
+        response = self.client.post(self.url, invalid_data)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Material.objects.filter(type='practice').exists())
+        self.assertEqual(
+            response.context['occupied_levels_map']['free']['easy']['Filipino'],
+            [],
+        )
+
+    def test_successful_save_creates_record_and_occupies_exact_slot(self):
+        response = self.client.post(self.url, self.valid_data)
+
+        self.assertEqual(response.status_code, 302)
+        material = Material.objects.get(type='practice')
+        self.assertEqual(material.content_text, 'araw')
+        self.assertTrue(material.is_system_owned)
+        self.assertEqual(material.source_type, 'shared')
+
+        add_response = self.client.get(self.url)
+        occupied = add_response.context['occupied_levels_map']
+        self.assertEqual(occupied['free']['easy']['Filipino'], ['level_1'])
+        self.assertEqual(occupied['free']['medium']['Filipino'], [])
+        self.assertEqual(occupied['free']['easy']['English'], [])
+
+    def test_database_constraint_rejects_duplicate_saved_slot(self):
+        first_response = self.client.post(self.url, self.valid_data)
+        self.assertEqual(first_response.status_code, 302)
+
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Material.objects.create(
+                title='Duplicate Slot',
+                item_type='word',
+                content_text='buwan',
+                content_json={
+                    'mode': 'free',
+                    'difficulty': 'easy',
+                    'level': 'level_1',
+                    'items': ['buwan'],
+                },
+                type='practice',
+                status='draft',
+                difficulty_level='easy',
+                language='Filipino',
+                is_system_owned=True,
+                source_type='shared',
+            )
+
+    @patch('pabasa_app.views._save_admin_practice_material', side_effect=IntegrityError)
+    def test_save_race_returns_form_error_instead_of_server_error(self, _save_mock):
+        response = self.client.post(self.url, self.valid_data)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, 'already exists', status_code=400)
+        self.assertFalse(Material.objects.filter(type='practice').exists())
 
 
 class AdminPracticeTemplateTests(TestCase):

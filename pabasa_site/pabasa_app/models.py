@@ -1405,6 +1405,25 @@ class Material(models.Model):
     class Meta:
         db_table = "materials"
         ordering = ["section", "created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                models.F("language"),
+                models.F("content_json__mode"),
+                models.F("content_json__difficulty"),
+                models.F("content_json__level"),
+                condition=(
+                    models.Q(
+                        type="practice",
+                        section__isnull=True,
+                        teacher__isnull=True,
+                        is_system_owned=True,
+                        source_type="shared",
+                    )
+                    & ~models.Q(content_text="")
+                ),
+                name="uniq_valid_admin_practice_slot",
+            ),
+        ]
 
     @staticmethod
     def normalize_language_value(value):
