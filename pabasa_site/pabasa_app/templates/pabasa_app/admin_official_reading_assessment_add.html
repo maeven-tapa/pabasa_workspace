@@ -21,7 +21,6 @@
   .item-input-row textarea{min-height:52px;resize:vertical}
   .story-qa-grid{display:grid;gap:1rem}
   .story-qa-card{border:1px solid rgba(16,70,110,.12);border-radius:18px;padding:1rem;background:#f8fbff}
-  .story-qa-card.completed{background:#f3fff7;border-color:rgba(22,101,52,.18)}
   .locked-hint{font-size:.88rem;color:#64748b}
 </style>
 
@@ -302,10 +301,6 @@
       }))),
     });
   }
-  function normalizeItemCase(value) {
-    const text = String(value || '').trim();
-    return text ? `${text.charAt(0).toUpperCase()}${text.slice(1).toLowerCase()}` : '';
-  }
   function renderList(container, items, emptyText, factory) {
     if (!items.length) {
       container.innerHTML = `<div class="text-center w-100 text-secondary py-3">${emptyText}</div>`;
@@ -325,15 +320,6 @@
     if (!state.stories.length) {
       state.stories.push({ title: '', content: '', qas: Array.from({ length: 6 }, () => ({ question: '', answer: '' })) });
     }
-  }
-  function storyIsComplete(story) {
-    return Boolean(
-      String(story?.title || '').trim()
-      && String(story?.content || '').trim()
-      && Array.isArray(story?.qas)
-      && story.qas.length === 6
-      && story.qas.every((qa) => String(qa?.question || '').trim() && String(qa?.answer || '').trim())
-    );
   }
   function makeQaCard(storyIndex, qaIndex, qa) {
     const n = qaIndex + 1;
@@ -363,7 +349,7 @@
     if (renderStories) {
       storyList.innerHTML = state.stories.map((story, storyIndex) => {
         const qasHtml = story.qas.map((qa, qaIndex) => makeQaCard(storyIndex, qaIndex, qa)).join('');
-        return `<div class="story-qa-card${storyIsComplete(story) ? ' completed' : ''}" data-story-card="${storyIndex}">
+        return `<div class="story-qa-card" data-story-card="${storyIndex}">
           <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
             <div>
               <div class="fw-bold fs-5">Story Reading ${storyIndex + 1} <span class="text-danger">*</span></div>
@@ -395,7 +381,12 @@
     const wordsReady = state.words.length >= 10;
     const rhymingReady = state.rhyme_pairs.length === 10;
     const sentencesReady = state.sentences.length >= 4;
-    const storiesReady = sentencesReady && state.stories.length > 0 && state.stories.every(storyIsComplete);
+    const storiesReady = sentencesReady && state.stories.length > 0 && state.stories.every((story) => {
+      const storyTitleReady = String(story.title || '').trim().length > 0;
+      const storyContentReady = String(story.content || '').trim().length > 0;
+      const qasReady = Array.isArray(story.qas) && story.qas.length === 6 && story.qas.every((qa) => String(qa.question || '').trim().length > 0 && String(qa.answer || '').trim().length > 0);
+      return storyTitleReady && storyContentReady && qasReady;
+    });
     const materialsComplete = wordsReady && rhymingReady && sentencesReady && storiesReady;
 
     assessmentTypeInput.disabled = !typeEnabled;
@@ -418,14 +409,14 @@
     stepMaterials.className = `step-card ${typeReady ? (materialsComplete ? 'completed' : 'current') : 'locked'}`;
     wordStep.className = `step-card p-3 ${typeReady ? (wordsReady ? 'completed' : 'current') : 'locked'}`;
     sentenceStep.className = `step-card p-3 mt-3 ${rhymingReady ? (sentencesReady ? 'completed' : 'current') : 'locked'}`;
-    rhymingStep.className = `step-card p-3 mt-3 ${wordsReady ? (rhymingReady ? 'completed' : 'current') : 'locked'}`;
+    rhymingStep.className = `step-card p-3 mt-3 ${wordsReady ? 'current' : 'locked'}`;
     paragraphStep.className = `step-card p-3 mt-3 ${sentencesReady ? (storiesReady ? 'completed' : 'current') : 'locked'}`;
 
     typeState.className = `step-state ${titleReady ? (typeReady ? 'state-completed' : 'state-current') : 'state-locked'}`;
     materialsState.className = `step-state ${typeReady ? (materialsComplete ? 'state-completed' : 'state-current') : 'state-locked'}`;
     wordState.className = `step-state ${typeReady ? (wordsReady ? 'state-completed' : 'state-current') : 'state-locked'}`;
     sentenceState.className = `step-state ${rhymingReady ? (sentencesReady ? 'state-completed' : 'state-current') : 'state-locked'}`;
-    rhymingState.className = `step-state ${wordsReady ? (rhymingReady ? 'state-completed' : 'state-current') : 'state-locked'}`;
+    rhymingState.className = `step-state ${wordsReady ? 'state-current' : 'state-locked'}`;
     paragraphState.className = `step-state ${sentencesReady ? (storiesReady ? 'state-completed' : 'state-current') : 'state-locked'}`;
 
     stepTitle.querySelector('.step-state').className = `step-state ${titleReady ? 'state-completed' : 'state-current'}`;
@@ -434,7 +425,7 @@
     materialsState.textContent = typeReady ? (materialsComplete ? 'Completed' : 'Current') : 'Locked';
     wordState.textContent = typeReady ? (wordsReady ? 'Completed' : 'Current') : 'Locked';
     sentenceState.textContent = rhymingReady ? (sentencesReady ? 'Completed' : 'Current') : 'Locked';
-    rhymingState.textContent = wordsReady ? (rhymingReady ? 'Completed' : 'Current') : 'Locked';
+    rhymingState.textContent = wordsReady ? 'Current' : 'Locked';
     paragraphState.textContent = sentencesReady ? (storiesReady ? 'Completed' : 'Current') : 'Locked';
 
     wordProgress.textContent = wordCount >= 10 ? `10 / 10 words ✓` : `${wordCount} / 10 words`;
@@ -445,12 +436,12 @@
     paragraphProgress.textContent = sentencesReady ? 'Stories are now available' : 'Available after 4 sentences';
     materialsHint.textContent = !titleReady ? 'Choose the assessment type to unlock the reading materials editor.' : (materialsComplete ? 'All required reading materials have been completed.' : 'Complete the Word, Sentence, Story Reading, and Question and Answer requirements.');
   }
-  function addWord() { const value = normalizeItemCase(wordInput.value); if (!value) return; if (state.words.length >= 10) { wordInput.value = ''; render(); return; } state.words.push(value); wordInput.value = ''; render(); }
+  function addWord() { const value = String(wordInput.value || '').trim(); if (!value) return; if (state.words.length >= 10) { wordInput.value = ''; render(); return; } state.words.push(value); wordInput.value = ''; render(); }
   function addSentence() { const value = String(sentenceInput.value || '').trim(); if (!value) return; state.sentences.push(value); sentenceInput.value = ''; render(); }
   function addRhyming() {
     if (state.rhyme_pairs.length >= 10) return;
-    const wordA = normalizeItemCase(rhymingWordAInput.value);
-    const wordB = normalizeItemCase(rhymingWordBInput.value);
+    const wordA = String(rhymingWordAInput.value || '').trim();
+    const wordB = String(rhymingWordBInput.value || '').trim();
     if (!wordA || !wordB) {
       rhymingError.textContent = 'Enter both words to add a rhyming pair.';
       if (!wordA) rhymingWordAInput.focus();
@@ -483,7 +474,7 @@
   assessmentTypeInput.addEventListener('change', () => { if (!assessmentTypeInput.disabled && titleInput.value.trim()) { typeCommitted = true; } render(); });
   wordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addWord(); } });
   sentenceInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addSentence(); } });
-  function updateStoryFromField(e) {
+  form.addEventListener('input', (e) => {
     const target = e.target;
     if (!(target instanceof HTMLTextAreaElement)) return;
     const titleKey = target.getAttribute('data-story-title');
@@ -496,9 +487,7 @@
     else if (answerKey !== null) { const [storyIndex, qaIndex] = answerKey.split('-').map(Number); const story = state.stories[storyIndex]; if (story?.qas?.[qaIndex]) story.qas[qaIndex].answer = target.value; }
     else return;
     render(false);
-  }
-  form.addEventListener('input', updateStoryFromField);
-  form.addEventListener('change', updateStoryFromField);
+  });
   form.addEventListener('click', (e) => { const btn = e.target.closest('[data-remove-story]'); if (!btn || state.stories.length <= 1) return; state.stories.splice(Number(btn.getAttribute('data-remove-story')), 1); render(); });
   form.addEventListener('submit', (e) => { render(); if (saveBtn.disabled) e.preventDefault(); });
   if (titleInput.value.trim() && assessmentTypeInput.value.trim() && !assessmentTypeInput.disabled) { typeCommitted = Boolean(assessmentTypeInput.dataset.prefilledCommitted === 'true'); }
@@ -506,3 +495,4 @@
 })();
 </script>
 {% endblock %}
+

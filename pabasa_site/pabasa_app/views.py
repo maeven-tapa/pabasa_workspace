@@ -9512,17 +9512,9 @@ def _save_official_reading_assessment(request, material=None):
             return []
         return [str(item).strip() for item in values if str(item).strip()]
 
-    def _normalize_item_case(value):
-        """Store word-level assessment items as a single capitalized word."""
-        text = str(value or '').strip()
-        return f"{text[:1].upper()}{text[1:].lower()}" if text else ''
-
-    words = [_normalize_item_case(item) for item in _clean_list(content_items.get('words'))]
+    words = _clean_list(content_items.get('words'))
     rhyme_pairs = [
-        {
-            'word_a': _normalize_item_case(pair.get('word_a')),
-            'word_b': _normalize_item_case(pair.get('word_b')),
-        }
+        {'word_a': str(pair.get('word_a') or '').strip(), 'word_b': str(pair.get('word_b') or '').strip()}
         for pair in content_items.get('rhyme_pairs', [])
         if isinstance(pair, dict) and str(pair.get('word_a') or '').strip() and str(pair.get('word_b') or '').strip()
     ] if isinstance(content_items.get('rhyme_pairs'), list) else []
