@@ -2549,7 +2549,7 @@
         }
 
         function getCrlaSentenceScore(sentencesRead) {
-            return [0, 3, 5, 7, 10][Math.max(0, Math.min(4, Number(sentencesRead) || 0))];
+            return [0, 2, 5, 7, 10][Math.max(0, Math.min(4, Number(sentencesRead) || 0))];
         }
 
         function calculateScores() {
@@ -2564,7 +2564,21 @@
                 const itemWordCount = readableWordCount(item);
                 return total + (itemWordCount > 0 && Number(correctWordCounts[index] || 0) >= itemWordCount ? 1 : 0);
             }, 0);
-            const sentenceWordScore = isOfficialAssessmentLaunch && mode === "sentence" ? correctItems : null;
+            // Task 2H awards credit for a sentence that the learner completed.
+            // A word-level miscue remains a red visual result, but cannot turn
+            // that completed sentence into a skipped one.
+            const completedSentenceCount = isOfficialAssessmentLaunch && mode === "sentence"
+                ? itemScores.reduce((total, score, index) => {
+                    const wordResults = Array.isArray(score?.word_results) ? score.word_results : [];
+                    // The resolved-results fallback keeps previously saved
+                    // attempts valid after this completion marker was added.
+                    const resolved = wordResults.length > 0 && wordResults.every((result) =>
+                        ["correct", "miscue"].includes(String(result?.result || "").toLowerCase())
+                    );
+                    return total + (itemLocked[index] && score && !score.skipped && !score.timed_out
+                        && (score.completed === true || resolved) ? 1 : 0);
+                }, 0)
+                : null;
             const needsManualReview = !speechRecognitionUsed;
 
             return {
@@ -2578,14 +2592,14 @@
                 speech_recognition_used: speechRecognitionUsed,
                 needs_manual_review: needsManualReview,
                 correct_words: matchedWords,
-                ...(sentenceWordScore !== null ? { correct_sentences: sentenceWordScore, sentence_count: sentenceWordScore } : {}),
+                ...(completedSentenceCount !== null ? { correct_sentences: completedSentenceCount, sentence_count: completedSentenceCount } : {}),
                 correct_items: correctItems,
                 items_completed: items.length,
                 incorrect_words: Math.max(0, targetWordCount - matchedWords),
                 skipped_words: 0,
                 raw_metrics: {
                     correct_words: matchedWords,
-                    ...(sentenceWordScore !== null ? { correct_sentences: sentenceWordScore, sentence_count: sentenceWordScore } : {}),
+                    ...(completedSentenceCount !== null ? { correct_sentences: completedSentenceCount, sentence_count: completedSentenceCount } : {}),
                     correct_items: correctItems,
                     items_completed: items.length,
                     incorrect_words: Math.max(0, targetWordCount - matchedWords),
@@ -3948,6 +3962,7 @@
                         correct_words: correctWordCounts[currentIndex],
                         word_results: results,
                         miscues: results.filter((result) => String(result?.result || "").toLowerCase() === "miscue").length,
+                        completed: true,
                         transcript: spokenTranscript,
                         timestamp: new Date().toISOString(),
                     };

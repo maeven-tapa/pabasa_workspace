@@ -4788,6 +4788,9 @@ class SentenceReadingWordResultTests(TestCase):
             "magpapalit ako ng damit mamaya",
             language_code="fil-PH",
         )
+        # A miscue resolves the word and completes the sentence; only its
+        # word-level result changes (and drives the red UI state).
+        self.assertTrue(result["complete"])
         self.assertEqual((result["correct_word_count"], result["miscues"]), (4, 1))
         self.assertEqual(
             [item["result"] for item in result["word_results"]],

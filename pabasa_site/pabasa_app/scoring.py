@@ -13,7 +13,8 @@ CRLA_CLASSIFICATIONS = [
 ]
 
 CRLA_TASK1_ITEM_COUNT = 10
-CRLA_SENTENCE_SCORE_BY_COUNT = {0: 0, 1: 3, 2: 5, 3: 7, 4: 10}
+# Task 2H scores completed sentences, independent of word-level miscues.
+CRLA_SENTENCE_SCORE_BY_COUNT = {0: 0, 1: 2, 2: 5, 3: 7, 4: 10}
 
 PHIL_IRI_CLASSIFICATION_MAP = {
     "Low Emerging Readers": "Frustration",
@@ -516,7 +517,7 @@ def build_assessment_score_payload(data: Dict[str, Any]) -> Dict[str, Any]:
 
     # CRLA Part 1 uses the Task 1 score plus the applicable Task 2 score. The
     # sentence branch maps its raw completed-sentence count to the official
-    # 0/3/5/7/10 Task 2H score before persistence.
+    # 0/2/5/7/10 Task 2H score before persistence.
     if assessment_type == "word":
         task_score = max(0, correct_words)
     else:

@@ -112,8 +112,45 @@ class CrlaExportResultTests(TestCase):
     def test_sentence_score_uses_official_four_sentence_table(self):
         self.assertEqual(
             [crla_sentence_score(count) for count in range(5)],
-            [0, 3, 5, 7, 10],
+            [0, 2, 5, 7, 10],
         )
+
+    def test_sentence_completion_score_is_independent_of_miscue_count(self):
+        cases = (
+            (4, 0, 10), (4, 3, 10),
+            (3, 0, 7), (3, 5, 7),
+            (2, 2, 5), (1, 4, 2), (0, 0, 0),
+        )
+        for completed_sentences, miscues, expected_score in cases:
+            with self.subTest(completed_sentences=completed_sentences, miscues=miscues):
+                payload = build_assessment_score_payload({
+                    "assessment_type": "sentence",
+                    "crla_score_data": {
+                        "task1_score": 8,
+                        "task2_type": "Task 2H / Sentences",
+                        "sentences_read": completed_sentences,
+                        "miscues": miscues,
+                    },
+                })
+                self.assertEqual(payload["crla_score_data"]["task2_score"], expected_score)
+
+    def test_sentence_miscues_do_not_change_completed_sentence_score_or_payload(self):
+        payload = build_assessment_score_payload({
+            "assessment_type": "sentence",
+            # These remain word-level evidence only; four completed sentences
+            # still earn the Task 2H maximum.
+            "incorrect_words": 3,
+            "crla_score_data": {
+                "task1_score": 8,
+                "task2_type": "Task 2H / Sentences",
+                "sentences_read": 4,
+                "miscues": 3,
+            },
+        })
+        self.assertEqual(payload["crla_score_data"]["sentences_read"], 4)
+        self.assertEqual(payload["crla_score_data"]["task2_score"], 10)
+        self.assertEqual(payload["crla_score_data"]["part1_total_score"], 18)
+        self.assertEqual(payload["final_score"], 18)
 
     def test_part_1_reading_level_uses_column_i_boundaries(self):
         expected = {
@@ -184,6 +221,43 @@ class CrlaExportResultTests(TestCase):
             password_hash=make_password("password"),
             **extra,
         )
+
+    def test_export_uses_persisted_completed_sentence_count_not_miscues(self):
+        teacher = self.make_user("CRLA-MISCUE-T", "teacher", "Mia", "Lopez")
+        student = self.make_user("CRLA-MISCUE-S", "student", "Toni", "Cruz")
+        section = test_section_create(
+            class_code="G2-MISCUE", class_name="Grade 2 Miscue", teacher=teacher,
+            subject="Filipino", students=[{"student_id": student.id, "is_active": True}],
+        )
+        enrollment = Enrollment.objects.create(student=student, section=section)
+        root = Assessment.objects.create(
+            teacher=teacher, section=section, title="CRLA sentence export", code="CRLA-MISCUE-ROOT",
+            assessment_type="sentence", status="published",
+        )
+        material = Material.objects.create(
+            assessment=root, section=section, teacher=teacher, code="CRLA-MISCUE-MAT",
+            item_type="sentence", type="assessment", assessment_kind="crla",
+        )
+        payload = build_assessment_score_payload({
+            "assessment_type": "sentence",
+            "crla_score_data": {
+                "task1_score": 8,
+                "task2_type": "Task 2H / Sentences",
+                "sentences_read": 4,
+                "miscues": 3,
+            },
+        })
+        Assessment.objects.create(
+            teacher=teacher, enrollment=enrollment, material=material, source_assessment=root,
+            student=student, title="CRLA sentence result", code="CRLA-MISCUE-RESULT",
+            assessment_type="sentence", status="published", attempt_status="completed",
+            completed_at=timezone.now(), crla_classification="High Emerging Reader",
+            crla_score_data=payload["crla_score_data"],
+        )
+
+        sheet = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)["G2 MT Reading Scoresheet"]
+        self.assertEqual(sheet["F11"].value, 8)
+        self.assertEqual(sheet["H11"].value, 10)
 
     def test_export_uses_assigned_teacher_and_persisted_story_two_results(self):
         admin = self.make_user("CRLA-ADMIN", "admin", "PABASA", "Admin")
