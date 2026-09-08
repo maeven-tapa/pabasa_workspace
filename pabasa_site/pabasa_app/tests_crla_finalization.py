@@ -1,4 +1,6 @@
 import json
+from io import BytesIO
+from unittest.mock import patch
 
 from django.contrib.auth.hashers import make_password
 from django.test import TestCase
@@ -108,3 +110,22 @@ class ClassCrlaFinalizationTests(TestCase):
             'source': 'student-directory', 'section_id': self.section.id, 'material_id': self.material.id,
         })
         self.assertIn(response.status_code, {302, 403})
+
+    def test_export_succeeds_after_finalization(self):
+        self._login(self.teacher)
+        finalization = self._finalize().json()
+        workbook = BytesIO(b'workbook')
+        workbook.name = 'crla.xlsx'
+        scoresheet = BytesIO(b'%PDF-1.4\nCRLA scoresheet\n')
+        scoresheet.name = 'crla.pdf'
+
+        with patch('pabasa_app.views.export_crla_excel', return_value=workbook), patch(
+            'pabasa_app.views.convert_crla_workbook_to_pdf', return_value=scoresheet,
+        ):
+            response = self.client.get(reverse('export_crla_assessment', args=[finalization['assessment_id']]), {
+                'source': 'student-directory', 'section_id': self.section.id, 'material_id': self.material.id,
+            })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertEqual(response.content, scoresheet.getvalue())

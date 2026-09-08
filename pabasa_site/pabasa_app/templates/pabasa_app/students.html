@@ -2260,6 +2260,18 @@ function bindStudentDirectoryFilters() {
             renderStudentDirectory();
         });
     }
+    if (exportBtn && !exportBtn.dataset.crlaExportBound) {
+        exportBtn.dataset.crlaExportBound = 'true';
+        exportBtn.addEventListener('click', event => {
+            if (currentCrlaFinalization?.finalized) return;
+
+            event.preventDefault();
+            window.showToast?.(
+                'CRLA Result is not available yet. Please finalize the CRLA assessment for this class first.',
+                'error'
+            );
+        });
+    }
     if (levelFilterWrap && levelFilterTrigger && levelFilterMenu && levelFilterValue && !levelFilterWrap.dataset.autoFilterBound) {
         levelFilterWrap.dataset.autoFilterBound = 'true';
 
