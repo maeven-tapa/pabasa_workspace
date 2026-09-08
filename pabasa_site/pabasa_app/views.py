@@ -2178,14 +2178,6 @@ def _crla_attempt_phase_and_term(attempt, completed_on=None):
 CRLA_DASHBOARD_CLASSIFICATIONS = VALID_CRLA_CLASSIFICATIONS
 
 
-def _authoritative_student_crla_classification(student):
-    """Return the latest finalized official CRLA classification for a student."""
-    if not student or not getattr(student, 'pk', None):
-        return ''
-    result = latest_completed_official_crla_results(student_ids=[student.pk]).get(student.pk)
-    return str(getattr(result, 'crla_classification', '') or '').strip() if result else ''
-
-
 def _latest_completed_official_crla_results(student_ids, crla_term=None, crla_phase=None):
     """Latest finalized official CRLA row per student, used by every dashboard."""
     if not student_ids:
@@ -5153,7 +5145,8 @@ def _dashboard_context(request, nav_role=None, extra=None):
         avatar_slug = user.animal_avatar if user.animal_avatar in STUDENT_AVATAR_BY_SLUG else 'owl'
         context['sidebar_selected_avatar'] = STUDENT_AVATAR_BY_SLUG[avatar_slug]
         context['student_reading_level'] = (
-            _authoritative_student_crla_classification(user)
+            _reader_assessment_state(user).get('reader_classification')
+            or getattr(user, 'reading_level', '')
             or 'Pending'
         )
     perf_mark('teacher_courses_start')
@@ -18134,7 +18127,7 @@ def profile(request):
             if teacher_assigned_section and teacher_assigned_section.grade_level and teacher_assigned_section.section
             else (teacher_assigned_section.class_name if teacher_assigned_section else '')
         ),
-        'reading_level': _authoritative_student_crla_classification(user) if user.role == 'student' else (user.reading_level or ''),
+        'reading_level': user.reading_level or '',
         'contact_number': user.contact_no or '',
         'notification_settings': _notification_settings_for_user(user),
         'teacher_active_classes': teacher_active_classes,
@@ -18154,9 +18147,24 @@ def profile(request):
             request,
             _get_practice_language_preference(user) or 'English',
         )
-        official_classification = _authoritative_student_crla_classification(user)
-        if official_classification:
-            pabasa_reading_level = official_classification
+        has_assessment_records = Assessment.objects.filter(student=user, is_active=True).exists()
+        latest_completed_assessment = (
+            Assessment.objects.filter(student=user, attempt_status='completed', is_active=True)
+            .select_related('source_assessment')
+            .order_by('-completed_at', '-updated_at', '-created_at')
+            .first()
+        )
+        if latest_completed_assessment:
+            latest_level_source = (
+                latest_completed_assessment.crla_classification
+                or latest_completed_assessment.classification
+            )
+            if latest_level_source:
+                pabasa_reading_level = derive_classification_equivalents(latest_level_source).get('pabasa_level', pabasa_reading_level)
+            elif latest_completed_assessment.total_score is not None:
+                pabasa_reading_level = derive_classification_equivalents(_crla_classification(latest_completed_assessment.total_score)).get('pabasa_level', pabasa_reading_level)
+        if not has_assessment_records:
+            pabasa_reading_level = 'Pending'
         practice_materials = [
             _serialize_student_practice_material(material, user)
             for material in _student_practice_queryset(request)
@@ -18722,9 +18730,6 @@ def class_management_view(request):
     ).order_by('class_name', 'id'))
 
     roster_students, _, _ = _teacher_student_roster_payload(teacher_user, section=section)
-    official_crla_results = latest_completed_official_crla_results(
-        student_ids=[student.get('id') for student in roster_students if student.get('id')]
-    )
     students_table = []
     live_crla_material = None
     live_crla_student_ids = [student.get('id') for student in roster_students if student.get('id')]
@@ -18740,16 +18745,12 @@ def class_management_view(request):
     ).select_related('student')}
     for student in roster_students:
         enrollment = section_enrollments.get(student.get('id'))
-        official_result = official_crla_results.get(student.get('id'))
         students_table.append({
             'id': student.get('id'),
             'name': student.get('name', ''),
             'pabasa_id': student.get('custom_id', ''),
             'email': student.get('email', ''),
-            'reading_level': (
-                official_result.crla_classification
-                if official_result else 'Pending'
-            ),
+            'reading_level': student.get('reading_level') or 'Pending',
             'joined_at': student.get('joined_at_display') or '',
             'enrollment': enrollment,
             'outcome_label': enrollment.get_outcome_display() if enrollment else 'Not Finalized',

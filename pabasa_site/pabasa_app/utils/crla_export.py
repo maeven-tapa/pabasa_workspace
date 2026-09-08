@@ -436,9 +436,7 @@ def _student_values(student, attempt, state, assessment):
     # Column U's persisted final classification is authoritative for a
     # completed Part 2; do not replace it with a stale Part 1 label or a new
     # export-only calculation.  The formula remains the compatibility fallback.
-    profile = str(
-        getattr(attempt, "crla_classification", "") or score_data.get("crla_classification") or ""
-    ).strip() if has_completed_part2 else ""
+    profile = str(score_data.get("crla_classification") or "").strip() if has_completed_part2 else ""
     if not profile:
         profile = _reading_profile(part_1_total, story_number, percent, correct_answers)
 
