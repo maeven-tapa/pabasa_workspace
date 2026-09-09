@@ -1144,6 +1144,7 @@
             }
             const persistedState = await updateStudentEndState({
                 stage: "completed",
+                story_number: currentSelectedStory?.key,
                 selected_story: currentSelectedStory?.title || "",
                 story_read_percent: storyReadPercent,
                 correct_words_percentage: storyReadPercent,
@@ -1644,6 +1645,7 @@
             resetStoryMiscueTracking();
             updateStudentEndState({
                 stage: "story_ready",
+                story_number: choice.key,
                 selected_story: choice.title,
                 selected_story_content: choice.content || "",
                 story_segment_index: 0,

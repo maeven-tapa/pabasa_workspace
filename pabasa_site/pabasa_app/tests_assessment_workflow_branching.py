@@ -20,6 +20,7 @@ from pabasa_app.scoring import (
     build_assessment_score_payload,
     crla_part1_classification,
     crla_part1_total,
+    crla_reading_profile,
     crla_task1_next_task,
 )
 
@@ -296,6 +297,18 @@ class AssessmentWorkflowBranchingTests(TestCase):
         self.assertEqual(_crla_grade2_part2_profile(53.68, 6), "Reading At Grade Level")
         # teacher rule: cross-band final classification follows comprehension band
         self.assertEqual(_crla_grade2_part2_profile(70, 4), "Transitioning Reader")
+
+    def test_part2_completion_handoff_preserves_story_number_for_classification(self):
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        story_selection = source.split("function selectStoryChoice", 1)[1].split("function updateFooterForStoryState", 1)[0]
+        completion = source.split("async function showStoryCompletionScreen", 1)[1].split("function hideStoryCompletionScreen", 1)[0]
+
+        self.assertIn("story_number: choice.key", story_selection)
+        self.assertIn("story_number: currentSelectedStory?.key", completion)
+        self.assertEqual(
+            crla_reading_profile(17, 1, 53.68, 6),
+            "Reading At Grade Level",
+        )
 
     def test_completed_part2_persistence_rejects_incomplete_client_classification_without_material(self):
         student = SimpleNamespace(id=1, pk=1, reading_level="")
