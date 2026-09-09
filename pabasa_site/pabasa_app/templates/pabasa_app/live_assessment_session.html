@@ -787,7 +787,7 @@
                                         <div class="d-flex align-items-center gap-2">
                                             <div class="avatar student-avatar rounded-circle bg-secondary text-white text-center">{{ student.first_name|slice:":1" }}{{ student.last_name|slice:":1" }}</div>
                                             <div class="small">
-                                                <div class="fw-semibold">{{ student.full_name }}</div>
+                                                <div class="fw-semibold">{{ student.crla_display_name|default:student.full_name }}</div>
                                                 <div class="text-muted small">{{ student.custom_id }}</div>
                                             </div>
                                         </div>
@@ -866,10 +866,10 @@
                             <div class="border rounded p-2" style="max-height:220px; overflow:auto; background:var(--dash-bg);">
                                 <div id="participantList" class="participant-list">
                                     {% for student in available_students %}
-                                        <label class="d-flex align-items-center gap-2 mb-1 participant-row" data-search-text="{{ student.full_name|default:'' }} {{ student.grade|default:'' }} {{ student.section|default:'' }}" data-custom-id="{{ student.custom_id|default:'' }}">
+                                        <label class="d-flex align-items-center gap-2 mb-1 participant-row" data-search-text="{{ student.crla_display_name|default:student.full_name|default:'' }} {{ student.grade|default:'' }} {{ student.section|default:'' }}" data-custom-id="{{ student.custom_id|default:'' }}">
                                             <input type="checkbox" class="participant-checkbox" data-student-id="{{ student.id }}" data-custom-id="{{ student.custom_id|default:'' }}">
                                             <div class="flex-grow-1">
-                                                <div class="small fw-semibold">{{ student.full_name }}</div>
+                                                <div class="small fw-semibold">{{ student.crla_display_name|default:student.full_name }}</div>
                                                 <div class="small text-muted">Grade {{ student.grade|default:"—" }}</div>
                                             </div>
                                         </label>
@@ -1503,11 +1503,11 @@
         if (avail && avail.length) {
             participantData = avail.map((s) => ({
                 id: String(s.id),
-                name: s.full_name || '',
+                name: s.crla_display_name || s.full_name || '',
                 grade: s.grade || '',
                 section: s.section || '',
                 custom_id: s.custom_id || '',
-                searchText: `${s.full_name || ''} Grade ${s.grade || ''} ${s.section || ''}`.toLowerCase(),
+                searchText: `${s.crla_display_name || s.full_name || ''} Grade ${s.grade || ''} ${s.section || ''}`.toLowerCase(),
                 checked: selectedStudentIds.has(String(s.id)),
             }));
             renderParticipantList();
@@ -1709,7 +1709,7 @@
             if (profile) {
                 return {
                     id: profile.id,
-                    full_name: profile.full_name || 'Student',
+                    full_name: profile.crla_display_name || profile.full_name || 'Student',
                     custom_id: profile.custom_id || '',
                     grade: profile.grade || 'N/A',
                 };
@@ -1973,6 +1973,7 @@
             return {
                 id,
                 name,
+                crla_display_name: name,
                 grade,
                 custom_id: customId,
                 searchText: `${name} ${grade}`.toLowerCase(),
@@ -2013,7 +2014,7 @@
             label.innerHTML = `
                 <input type="checkbox" class="participant-checkbox" data-student-id="${participant.id}" data-custom-id="${participant.custom_id || ''}" ${checked ? 'checked' : ''}>
                 <div class="flex-grow-1">
-                    <div class="small fw-semibold">${participant.name}</div>
+                    <div class="small fw-semibold">${participant.crla_display_name || participant.name}</div>
                     <div class="small text-muted">${participant.grade}</div>
                 </div>
             `;

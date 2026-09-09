@@ -6512,7 +6512,7 @@ class LiveAssessmentStartTests(TestCase):
 
         zebra = User.objects.create(
             custom_id=f"STD-{uuid.uuid4().hex[:8].upper()}", role="student",
-            first_name="Zebra", last_name="Zulu", middle_initial="", suffix="", sex="female",
+            first_name="Aardvark", last_name="Zulu", middle_initial="", suffix="", sex="female",
             birth_month=1, birth_day=1, birth_year=2012,
             email=f"zebra-{uuid.uuid4().hex[:8]}@example.com", password_hash=make_password("password"),
         )
@@ -6520,7 +6520,7 @@ class LiveAssessmentStartTests(TestCase):
         for index in range(9):
             alpha_students.append(User.objects.create(
                 custom_id=f"STD-{uuid.uuid4().hex[:8].upper()}", role="student",
-                first_name=f"Alpha {index}", last_name="Able", middle_initial="", suffix="", sex="female",
+                first_name=f"Zed {index}", last_name="Able", middle_initial="", suffix="", sex="female",
                 birth_month=1, birth_day=1, birth_year=2012,
                 email=f"alpha-{index}-{uuid.uuid4().hex[:8]}@example.com", password_hash=make_password("password"),
             ))

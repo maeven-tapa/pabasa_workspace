@@ -14832,8 +14832,9 @@ def _ensure_live_session_batches(session, student_ids=None):
         def automatic_batch_sort_key(student_id):
             student = students_by_id.get(student_id)
             if student:
-                name = _display_user_name(student)
-                return (0, unicodedata.normalize('NFKD', name).casefold(), student_id)
+                last_name = unicodedata.normalize('NFKD', student.last_name or '').casefold()
+                first_name = unicodedata.normalize('NFKD', student.first_name or '').casefold()
+                return (0, last_name, first_name, student_id)
             # Retain the supplied order for legacy/unresolvable roster IDs.
             return (1, '', roster_positions[student_id])
 
@@ -14850,6 +14851,21 @@ def _ensure_live_session_batches(session, student_ids=None):
     session.total_batches = max(assignments.values(), default=0)
     session.current_batch = min(max(int(session.current_batch or 1), 1), session.total_batches or 1)
     return assignments
+
+
+def _format_live_crla_student_name(student):
+    """Return the canonical surname-first name used throughout live CRLA."""
+    getter = student.get if hasattr(student, 'get') else lambda key: getattr(student, key, None)
+    last_name = str(getter('last_name') or '').strip()
+    first_name = str(getter('first_name') or '').strip()
+    suffix = str(getter('suffix') or '').strip()
+    middle_initial = str(getter('middle_initial') or '').strip()
+    middle = f'{middle_initial[:1].upper()}.' if middle_initial else ''
+    name = ', '.join(part for part in (last_name, first_name) if part)
+    tail = ' '.join(part for part in (suffix, middle) if part)
+    if tail:
+        name = f'{name} {tail}'.strip()
+    return name.upper() or str(getter('custom_id') or 'Student')
 
 
 def _validate_live_batch_assignments(selected_student_ids, raw_assignments, allowed_student_ids):
@@ -16901,6 +16917,15 @@ def start_live_assessment(request):
             seen_student_ids.add(str(student_id))
             available_student_ids.append(student_id)
 
+    # Only students without a finalized result for this exact official CRLA
+    # material remain selectable.  In-progress and older-period results do not
+    # satisfy _official_crla_completed_result_for_material().
+    roster_users = User.objects.filter(id__in=available_student_ids, role='student', is_archived=False)
+    available_student_ids = [
+        student.id for student in roster_users
+        if not _official_crla_completed_result_for_material(student, material)
+    ]
+
     if not available_student_ids:
         return JsonResponse({'success': False, 'error': 'No active students found for this course'}, status=400)
 
@@ -16927,11 +16952,12 @@ def start_live_assessment(request):
     # Provide available roster to the teacher so they can select participants.
     available_profiles = list(
         User.objects.filter(id__in=available_student_ids)
-        .order_by('first_name', 'last_name')
-        .values('id', 'first_name', 'last_name', 'custom_id', 'grade_level', 'section')
+        .order_by('last_name', 'first_name', 'middle_initial', 'suffix', 'id')
+        .values('id', 'first_name', 'last_name', 'middle_initial', 'suffix', 'custom_id', 'grade_level', 'section')
     )
     for student in available_profiles:
-        student['full_name'] = ' '.join(filter(None, [student.get('first_name') or '', student.get('last_name') or ''])).strip() or student.get('custom_id') or 'Student'
+        student['crla_display_name'] = _format_live_crla_student_name(student)
+        student['full_name'] = student['crla_display_name']
         student['grade'] = student.get('grade_level') or 'N/A'
         student['section'] = student.get('section') or 'N/A'
 
@@ -17002,11 +17028,12 @@ def live_assessment_session_page(request, session_id):
     # Profiles for currently selected participants (for monitoring)
     student_profiles = list(
         User.objects.filter(id__in=session.student_ids)
-        .order_by('first_name', 'last_name')
-        .values('id', 'first_name', 'last_name', 'custom_id', 'grade_level', 'section')
+        .order_by('last_name', 'first_name', 'middle_initial', 'suffix', 'id')
+        .values('id', 'first_name', 'last_name', 'middle_initial', 'suffix', 'custom_id', 'grade_level', 'section')
     )
     for student in student_profiles:
-        student['full_name'] = ' '.join(filter(None, [student.get('first_name') or '', student.get('last_name') or ''])).strip() or student.get('custom_id') or 'Student'
+        student['crla_display_name'] = _format_live_crla_student_name(student)
+        student['full_name'] = student['crla_display_name']
         student['grade'] = student.get('grade_level') or 'N/A'
         student['section'] = student.get('section') or 'N/A'
 
@@ -17026,11 +17053,12 @@ def live_assessment_session_page(request, session_id):
 
     available_profiles = list(
         User.objects.filter(id__in=available_ids)
-        .order_by('first_name', 'last_name')
-        .values('id', 'first_name', 'last_name', 'custom_id', 'grade_level', 'section')
+        .order_by('last_name', 'first_name', 'middle_initial', 'suffix', 'id')
+        .values('id', 'first_name', 'last_name', 'middle_initial', 'suffix', 'custom_id', 'grade_level', 'section')
     )
     for student in available_profiles:
-        student['full_name'] = ' '.join(filter(None, [student.get('first_name') or '', student.get('last_name') or ''])).strip() or student.get('custom_id') or 'Student'
+        student['crla_display_name'] = _format_live_crla_student_name(student)
+        student['full_name'] = student['crla_display_name']
         student['grade'] = student.get('grade_level') or 'N/A'
         student['section'] = student.get('section') or 'N/A'
 
@@ -17152,11 +17180,12 @@ def live_assessment_session_state(request, session_id):
                     avail_ids.append(sid)
         available_profiles = list(
             User.objects.filter(id__in=avail_ids)
-            .order_by('first_name', 'last_name')
-            .values('id', 'first_name', 'last_name', 'custom_id', 'grade_level', 'section')
+            .order_by('last_name', 'first_name', 'middle_initial', 'suffix', 'id')
+            .values('id', 'first_name', 'last_name', 'middle_initial', 'suffix', 'custom_id', 'grade_level', 'section')
         )
         for student in available_profiles:
-            student['full_name'] = ' '.join(filter(None, [student.get('first_name') or '', student.get('last_name') or ''])).strip() or student.get('custom_id') or 'Student'
+            student['crla_display_name'] = _format_live_crla_student_name(student)
+            student['full_name'] = student['crla_display_name']
             student['grade'] = student.get('grade_level') or 'N/A'
             student['section'] = student.get('section') or 'N/A'
     except Exception:
@@ -17756,11 +17785,22 @@ def students(request):
     live_crla_material = None
     assessment_week_students = []
     if section:
-        roster_students, _, _ = _teacher_student_roster_payload(teacher, section=section)
+        student_ids = _current_section_enrollments(section).values_list('student_id', flat=True)
+        roster_students = User.objects.filter(
+            id__in=student_ids, role='student', is_archived=False,
+        ).order_by('last_name', 'first_name', 'id')
+        roster_by_id = {student.id: student for student in roster_students}
         assessment_week_students = [
-            {'id': student['id'], 'name': student['name']}
+            {
+                'id': student.id,
+                'name': _format_live_crla_student_name(student),
+                'crla_display_name': _format_live_crla_student_name(student),
+                'first_name': student.first_name,
+                'last_name': student.last_name,
+                'suffix': student.suffix,
+                'middle_initial': student.middle_initial,
+            }
             for student in roster_students
-            if student.get('id')
         ]
         first_student = User.objects.filter(
             id__in=[student['id'] for student in assessment_week_students],
@@ -17768,10 +17808,15 @@ def students(request):
         ).first()
         if first_student:
             live_availability = _official_assessment_availability_for_student(first_student, request)
-            if live_availability.get('available'):
-                live_crla_material = _official_crla_material_for_student(
-                    first_student, live_availability.get('assessment_type'),
-                )
+            assessment_type = live_availability.get('assessment_type') or _official_crla_assessment_phase(first_student, request=request)
+            live_crla_material = _official_crla_material_for_student(first_student, assessment_type)
+            if live_crla_material:
+                assessment_week_students = [
+                    student for student in assessment_week_students
+                    if not _official_crla_completed_result_for_material(
+                        roster_by_id[student['id']], live_crla_material,
+                    )
+                ]
 
     return render(request, 'pabasa_app/students.html', _dashboard_context(request, 'teacher', {
         'assessment_week_section': section,

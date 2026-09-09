@@ -18,8 +18,15 @@
     <div class="card-footer assessment-week-live-action d-flex justify-content-between align-items-center gap-3 flex-wrap">
         <span class="assessment-week-live-copy">Start the official CRLA for up to 10 students together.</span>
         <button type="button" class="btn btn-primary btn-sm" id="openLiveCrlaBtn"><i class="bi bi-broadcast-pin me-1"></i> Start Live CRLA</button>
-    </div>
-    {% endif %}
+</div>
+<div class="modal fade" id="liveCrlaDeleteBatchModal" tabindex="-1" aria-labelledby="liveCrlaDeleteBatchTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title" id="liveCrlaDeleteBatchTitle">Delete Batch?</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+    <div class="modal-body" id="liveCrlaDeleteBatchCopy"></div>
+    <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-danger" id="confirmLiveCrlaDeleteBatch">Delete Batch</button></div>
+  </div></div>
+</div>
+{% endif %}
 </section>
 
 <form id="assessmentWeekForm" class="d-none">{% csrf_token %}</form>
@@ -37,6 +44,9 @@
 
 {% if live_crla_material %}
 <style>
+    #liveCrlaDeleteBatchModal { z-index: 4200 !important; }
+    #liveCrlaDeleteBatchModal .modal-dialog { z-index: 4210 !important; }
+    .modal-backdrop.live-crla-delete-backdrop { z-index: 4150 !important; }
     /* The icon is decorative; reserve a clear text lane inside the input. */
     #liveCrlaSelectModal .live-crla-search { display:flex !important; align-items:center; }
     #liveCrlaSelectModal .live-crla-search .bi { left:12px !important; pointer-events:none; }
@@ -44,6 +54,9 @@
     #liveCrlaSelectModal .live-crla-roster .form-check { gap:.65rem; }
     #liveCrlaSelectModal .live-crla-roster .form-check-input { flex:0 0 auto; margin:0; }
 #liveCrlaSelectModal .live-crla-wizard-dialog{max-width:min(960px,calc(100vw - 2rem))}#liveCrlaSelectModal .live-crla-wizard{height:min(700px,calc(100vh - 2rem));overflow:hidden;border:0;border-radius:20px;box-shadow:0 20px 50px rgba(15,45,69,.2)}#liveCrlaSelectModal .modal-header{flex:0 0 auto;padding:1rem 1.25rem;border-color:#e8edf0}#liveCrlaSelectModal .modal-title{color:#193247;font-size:1.08rem;font-weight:900}.live-crla-stepper{display:flex;gap:1.25rem;margin-top:.85rem;color:#788792;font-size:.76rem;font-weight:800}.live-crla-stepper span{display:flex;align-items:center;gap:.4rem}.live-crla-stepper b{display:grid;place-items:center;width:1.35rem;height:1.35rem;border-radius:50%;background:#e9eef1;color:#647580}.live-crla-stepper .is-active{color:#10466e}.live-crla-stepper .is-active b{background:#10466e;color:#fff}.live-crla-wizard-body{display:flex;flex:1 1 auto;min-height:0;padding:0!important;overflow:hidden;background:#f8fafb}.live-crla-step{display:none;flex:1 1 auto;min-width:0;padding:1.15rem 1.25rem;overflow:hidden}.live-crla-step.is-active{display:flex;flex-direction:column}.live-crla-step-intro{margin:0 0 .85rem;color:#687780;font-size:.86rem}.live-crla-toolbar{display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem}.live-crla-search{position:relative;flex:1 1 auto}.live-crla-search .bi{position:absolute;top:50%;left:.75rem;color:#7b8a94;transform:translateY(-50%)}.live-crla-search input{padding-left:2.15rem}.live-crla-roster-actions{display:flex;gap:.4rem;white-space:nowrap}.live-crla-roster-actions .btn{padding:.3rem .55rem;font-size:.78rem;font-weight:700}.live-crla-roster{display:grid;flex:1 1 auto;min-height:0;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:.45rem;padding:.35rem;overflow-y:auto;border:1px solid #e1e8ec;border-radius:14px;background:#fff}.live-crla-roster .form-check{display:flex;align-items:center;min-height:2.75rem;margin:0;padding:.55rem .7rem .55rem 2.15rem;border:1px solid transparent;border-radius:10px;cursor:pointer}.live-crla-roster .form-check:hover{border-color:#cfe0e9;background:#f4f9fb}.live-crla-roster .form-check:has(input:checked){border-color:rgba(16,70,110,.24);background:#eef7fb}.live-crla-roster .form-check-label{color:#294152;font-size:.86rem;font-weight:700;cursor:pointer}.live-crla-selection-summary{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:.8rem;color:#5f707b;font-size:.84rem}.live-crla-selection-summary .badge{padding:.42rem .65rem;color:#10466e;background:#e8f4f9;font-size:.78rem}.live-crla-methods{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;margin-bottom:.9rem}.live-crla-method{position:relative;display:block;padding:.9rem 1rem .9rem 2.8rem;border:1px solid #dce6eb;border-radius:13px;background:#fff;cursor:pointer}.live-crla-method:hover{border-color:#9fc5d7}.live-crla-method:has(input:checked){border-color:#1f6f8b;box-shadow:0 0 0 3px rgba(31,111,139,.1)}.live-crla-method input{position:absolute;left:1rem;top:1rem}.live-crla-method strong{display:block;color:#193247;font-size:.9rem}.live-crla-method small{display:block;margin-top:.15rem;color:#6c7d89;line-height:1.35}.live-crla-assignment-area{flex:1 1 auto;min-height:0;overflow:auto}.live-crla-preview{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.7rem}.live-crla-batch-card{min-height:8rem;padding:.8rem;border:1px solid #dbe6eb;border-radius:13px;background:#fff}.live-crla-batch-card.is-target{border-color:#1f6f8b;box-shadow:0 0 0 3px rgba(31,111,139,.1)}.live-crla-batch-card__head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;color:#193247;font-size:.83rem;font-weight:900}.live-crla-capacity{padding:.2rem .45rem;border-radius:999px;color:#596b76;background:#edf3f5;font-size:.7rem;font-weight:800}.live-crla-student-chip{display:block;width:100%;margin-top:.35rem;padding:.3rem .45rem;overflow:hidden;border:1px solid #e4ecef;border-radius:8px;color:#425866;background:#f8fafb;font-size:.76rem;font-weight:700;text-align:left;text-overflow:ellipsis;white-space:nowrap}.live-crla-student-chip:hover,.live-crla-student-chip:focus-visible{border-color:#8db9cb;background:#eef7fb;outline:0}.live-crla-manual-help{margin:0 0 .65rem;color:#687780;font-size:.8rem}.live-crla-manual-grid{display:grid;grid-template-columns:minmax(190px,.8fr) minmax(0,2fr);gap:.75rem}.live-crla-unassigned{min-height:10rem;padding:.8rem;border:1px dashed #b8cbd5;border-radius:13px;background:#fff}.live-crla-unassigned h6{margin:0;color:#193247;font-size:.82rem;font-weight:900}.live-crla-unassigned .live-crla-student-chip{cursor:pointer}.live-crla-manual-batches{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.65rem;align-content:start}.live-crla-manual-batches .live-crla-batch-card{cursor:pointer}.live-crla-manual-batches .live-crla-batch-card:focus-visible{outline:3px solid rgba(31,111,139,.25);outline-offset:2px}#liveCrlaSelectModal .modal-footer{flex:0 0 auto;min-height:4.4rem;padding:.85rem 1.25rem;border-color:#e8edf0;background:#fff}.live-crla-footer-actions{display:flex;align-items:center;gap:.5rem}.live-crla-footer-actions .btn{min-width:5.8rem;font-weight:800}.live-crla-footer-actions .btn-primary{min-width:9.6rem}@media(max-width:767.98px){#liveCrlaSelectModal .live-crla-wizard-dialog{max-width:calc(100vw - 1rem)}.live-crla-step{padding:1rem}.live-crla-roster,.live-crla-methods,.live-crla-manual-grid{grid-template-columns:1fr}.live-crla-toolbar{align-items:stretch;flex-direction:column}.live-crla-roster-actions{justify-content:flex-end}.live-crla-stepper{gap:.75rem}.live-crla-footer-actions .btn,#liveCrlaSelectModal .modal-footer .btn-primary{min-width:auto}}body.dark-theme #liveCrlaSelectModal .live-crla-wizard,body.dark-theme #liveCrlaSelectModal .modal-footer{background:#1e293b!important}body.dark-theme .live-crla-wizard-body{background:#172033}body.dark-theme .live-crla-roster,body.dark-theme .live-crla-method,body.dark-theme .live-crla-batch-card,body.dark-theme .live-crla-unassigned{background:#253247;border-color:#3c4d63}body.dark-theme #liveCrlaSelectModal .modal-title,body.dark-theme .live-crla-method strong,body.dark-theme .live-crla-batch-card__head,body.dark-theme .live-crla-unassigned h6{color:#e5eef5}body.dark-theme .live-crla-student-chip{color:#dbe7ee;background:#1e293b;border-color:#3c4d63}
+    .live-crla-unassigned { display:flex; flex:0 0 14rem; flex-direction:column; height:14rem; min-height:14rem; max-height:14rem; overflow:hidden; }
+    .live-crla-unassigned > h6 { flex:0 0 auto; }
+    .live-crla-unassigned-list { flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:hidden; }
 </style>
 <div class="modal fade" id="liveCrlaSelectModal" tabindex="-1" aria-labelledby="liveCrlaSelectTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered live-crla-wizard-dialog"><div class="modal-content live-crla-wizard"><div class="modal-header"><div><h5 class="modal-title" id="liveCrlaSelectTitle">Start Live CRLA Assessment</h5><div class="live-crla-stepper" aria-label="Assessment setup progress"><span class="is-active" data-live-step-indicator="1"><b>1</b> Select students</span><span data-live-step-indicator="2"><b>2</b> Assign batches</span></div></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body live-crla-wizard-body"><section class="live-crla-step is-active" data-live-step="1"><p class="live-crla-step-intro">Choose the students who will take this assessment together.</p><div class="live-crla-toolbar"><div class="live-crla-search"><i class="bi bi-search" aria-hidden="true"></i><input class="form-control form-control-sm" id="liveCrlaStudentSearch" type="search" placeholder="Search students" aria-label="Search students"></div><div class="live-crla-roster-actions"><button type="button" class="btn btn-link btn-sm" id="liveCrlaSelectAll">Select all</button><button type="button" class="btn btn-link btn-sm" id="liveCrlaClearAll">Clear all</button></div></div><div id="liveCrlaStudentList" class="live-crla-roster" aria-label="Eligible students">{% for student in assessment_week_students %}<label class="form-check"><input class="form-check-input live-crla-student" type="checkbox" value="{{ student.id }}"><span class="form-check-label">{{ student.name }}</span></label>{% endfor %}</div><div class="live-crla-selection-summary"><span><strong id="liveCrlaSelectedCount">0</strong> student<span id="liveCrlaSelectionPlural">s</span> selected</span><span class="badge rounded-pill" id="liveCrlaReadyBadge">Select students to continue</span></div></section><section class="live-crla-step" data-live-step="2" aria-labelledby="liveCrlaBatchTitle"><div class="d-flex align-items-start justify-content-between gap-3 mb-3"><div><h6 class="mb-1 fw-bold" id="liveCrlaBatchTitle">Batch assignment</h6><p class="live-crla-step-intro mb-0"><span id="liveCrlaBatchSelectedCount">0</span> selected students</p></div><span class="badge text-bg-light border" id="liveCrlaBatchCount">0 batches</span></div><div class="live-crla-methods"><label class="live-crla-method"><input class="form-check-input" type="radio" name="liveCrlaBatchMode" value="automatic" checked><strong>Automatic</strong><small>Alphabetically sort students, then fill batches of up to 10.</small></label><label class="live-crla-method"><input class="form-check-input" type="radio" name="liveCrlaBatchMode" value="manual"><strong>Manual</strong><small>Fine-tune the groups using simple student buckets.</small></label></div><div class="live-crla-assignment-area"><div id="liveCrlaAutomaticPreview" class="live-crla-preview"></div><div id="liveCrlaManualAssignment" class="d-none"></div></div><div id="liveCrlaError" class="alert alert-danger mt-3 mb-0 d-none" role="alert"></div></section></div><div class="modal-footer justify-content-between"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><div class="live-crla-footer-actions"><button type="button" class="btn btn-outline-secondary d-none" id="liveCrlaBackBtn"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i> Back</button><button type="button" class="btn btn-primary" id="liveCrlaNextBtn" disabled>Next <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></button><button type="button" class="btn btn-primary d-none" id="confirmLiveCrlaBtn" disabled>Start Live Assessment</button></div></div></div></div></div>
 {% endif %}
@@ -96,6 +109,19 @@ document.addEventListener('DOMContentLoaded', function () {
     const automaticPreview = document.getElementById('liveCrlaAutomaticPreview');
     const manualAssignment = document.getElementById('liveCrlaManualAssignment');
     const errorLabel = document.getElementById('liveCrlaError');
+    const deleteBatchModal = document.getElementById('liveCrlaDeleteBatchModal');
+    const deleteBatchCopy = document.getElementById('liveCrlaDeleteBatchCopy');
+    const confirmDeleteBatchButton = document.getElementById('confirmLiveCrlaDeleteBatch');
+    let pendingDeleteBatchIndex = null;
+
+    deleteBatchModal?.addEventListener('shown.bs.modal', () => {
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        const backdrop = backdrops[backdrops.length - 1];
+        backdrop?.classList.add('live-crla-delete-backdrop');
+    });
+    deleteBatchModal?.addEventListener('hidden.bs.modal', () => {
+        document.querySelectorAll('.modal-backdrop.live-crla-delete-backdrop').forEach((backdrop) => backdrop.classList.remove('live-crla-delete-backdrop'));
+    });
     const checks = Array.from(document.querySelectorAll('.live-crla-student'));
     let manualBatches = [[]];
     let manualTarget = 0;
@@ -116,6 +142,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function selectedStudents() {
         return checks.filter((check) => check.checked).map((check) => ({
             id: Number(check.value),
+            crla_display_name: check.closest('label')?.querySelector('.form-check-label')?.textContent?.trim() || `Student ${check.value}`,
             name: check.closest('label')?.querySelector('.form-check-label')?.textContent?.trim() || `Student ${check.value}`,
         }));
     }
@@ -125,15 +152,9 @@ document.addEventListener('DOMContentLoaded', function () {
         const selectedIds = new Set(selected.map((student) => student.id));
         manualBatches = manualBatches.map((batch) => batch.filter((studentId) => selectedIds.has(studentId)));
         if (!manualBatches.length) manualBatches = [[]];
-        if (!manualInitialized) {
-            selected.forEach((student) => {
-                if (manualBatches.some((batch) => batch.includes(student.id))) return;
-                let target = manualBatches.find((batch) => batch.length < 10);
-                if (!target) { target = []; manualBatches.push(target); }
-                target.push(student.id);
-            });
-            manualInitialized = true;
-        }
+        // Manual mode starts with every selected student unassigned. Students
+        // enter a batch only after the teacher explicitly moves them.
+        manualInitialized = true;
     }
 
     function renderBatchAssignment() {
@@ -143,9 +164,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (confirmButton) confirmButton.disabled = selected.length === 0;
         if (!selected.length) return;
 
-        const automaticStudents = [...selected].sort((left, right) =>
-            left.name.localeCompare(right.name, undefined, {sensitivity: 'base'}) || left.id - right.id
-        );
+        const automaticStudents = selected;
         const automaticBatches = [];
         for (let index = 0; index < automaticStudents.length; index += 10) automaticBatches.push(automaticStudents.slice(index, index + 10));
         if (automaticPreview) {
@@ -156,7 +175,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (mode === 'manual') {
             reconcileManualBatches();
             if (manualAssignment) {
-                const studentMap = new Map(selected.map((student) => [student.id, student.name]));
+                const studentMap = new Map(selected.map((student) => [student.id, student.crla_display_name]));
                 manualAssignment.innerHTML = manualBatches.map((batch, batchIndex) => `<div class="border rounded p-2 mb-2"><div class="d-flex justify-content-between"><strong>Batch ${batchIndex + 1}</strong><span>${batch.length} / 10</span></div>${batch.map((studentId) => `<label class="d-flex align-items-center gap-2 small mt-1"><span class="flex-grow-1">${escapeLiveText(studentMap.get(studentId) || `Student ${studentId}`)}</span><select class="form-select form-select-sm live-crla-batch-choice" data-student-id="${studentId}" style="max-width: 8rem;">${manualBatches.map((_, optionIndex) => `<option value="${optionIndex}" ${optionIndex === batchIndex ? 'selected' : ''}>Batch ${optionIndex + 1}</option>`).join('')}</select></label>`).join('')}</div>`).join('');
                 manualAssignment.querySelectorAll('.live-crla-batch-choice').forEach((select) => select.addEventListener('change', () => {
                     const studentId = Number(select.dataset.studentId);
@@ -178,7 +197,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function automaticStudentsForWizard() {
-        return [...selectedStudents()].sort((left, right) => left.name.localeCompare(right.name, undefined, {sensitivity: 'base'}) || left.id - right.id);
+        return selectedStudents();
     }
 
     function setWizardStep(step) {
@@ -198,20 +217,33 @@ document.addEventListener('DOMContentLoaded', function () {
         for (let index = 0; index < automaticStudents.length; index += 10) automaticBatches.push(automaticStudents.slice(index, index + 10));
         if (batchSelectedCount) batchSelectedCount.textContent = String(selected.length);
         if (automaticPreview) {
-            automaticPreview.innerHTML = automaticBatches.map((batch, index) => `<article class="live-crla-batch-card"><div class="live-crla-batch-card__head"><span>Batch ${index + 1}</span><span class="live-crla-capacity">${batch.length} / 10</span></div>${batch.map((student) => `<span class="live-crla-student-chip">${escapeLiveText(student.name)}</span>`).join('')}</article>`).join('');
+            automaticPreview.innerHTML = automaticBatches.map((batch, index) => `<article class="live-crla-batch-card"><div class="live-crla-batch-card__head"><span>Batch ${index + 1}</span><span class="live-crla-capacity">${batch.length} / 10</span></div>${batch.map((student) => `<span class="live-crla-student-chip">${escapeLiveText(student.crla_display_name)}</span>`).join('')}</article>`).join('');
             automaticPreview.classList.toggle('d-none', mode !== 'automatic');
         }
         if (mode === 'manual') {
             reconcileManualBatches();
-            const names = new Map(selected.map((student) => [student.id, student.name]));
+            const names = new Map(selected.map((student) => [student.id, student.crla_display_name]));
             const assigned = new Set(manualBatches.flat());
             const unassigned = automaticStudents.filter((student) => !assigned.has(student.id));
             manualTarget = Math.min(Math.max(manualTarget, 0), Math.max(manualBatches.length - 1, 0));
-            manualAssignment.innerHTML = `<p class="live-crla-manual-help">Choose a batch card as the destination, then click a student to move them. You can also drag students between buckets.</p><div class="live-crla-manual-grid"><section class="live-crla-unassigned" data-live-drop="-1"><h6>Unassigned students <span class="live-crla-capacity">${unassigned.length}</span></h6>${unassigned.length ? unassigned.map((student) => `<button type="button" draggable="true" class="live-crla-student-chip" data-live-student="${student.id}">${escapeLiveText(student.name)}</button>`).join('') : '<p class="live-crla-empty">Every selected student is assigned.</p>'}</section><section><div class="d-flex justify-content-between align-items-center mb-2"><span class="small text-muted fw-semibold">Batch cards</span><button type="button" class="btn btn-outline-primary btn-sm" id="liveCrlaAddBatchBtn"><i class="bi bi-plus-lg me-1"></i>Add batch</button></div><div class="live-crla-manual-batches">${manualBatches.map((batch, index) => `<article class="live-crla-batch-card ${index === manualTarget ? 'is-target' : ''}" data-live-drop="${index}" data-live-target="${index}" tabindex="0" role="button" aria-label="Use Batch ${index + 1} as the destination"><div class="live-crla-batch-card__head"><span>Batch ${index + 1}</span><span class="live-crla-capacity">${batch.length} / 10</span></div>${batch.length ? batch.map((studentId) => `<button type="button" draggable="true" class="live-crla-student-chip" data-live-student="${studentId}">${escapeLiveText(names.get(studentId) || `Student ${studentId}`)}</button>`).join('') : '<p class="live-crla-empty">Select this batch, then add students.</p>'}</article>`).join('')}</div></section></div>`;
+            manualAssignment.innerHTML = `<p class="live-crla-manual-help">Choose a batch card as the destination, then click a student to move them. You can also drag students between buckets.</p><div class="live-crla-manual-grid"><section class="live-crla-unassigned" data-live-drop="-1"><h6>Unassigned students <span class="live-crla-capacity">${unassigned.length}</span></h6>${unassigned.length ? unassigned.map((student) => `<button type="button" draggable="true" class="live-crla-student-chip" data-live-student="${student.id}">${escapeLiveText(student.name)}</button>`).join('') : '<p class="live-crla-empty">Every selected student is assigned.</p>'}</section><section><div class="d-flex justify-content-between align-items-center mb-2"><span class="small text-muted fw-semibold">Batch cards</span><button type="button" class="btn btn-outline-primary btn-sm" id="liveCrlaAddBatchBtn"><i class="bi bi-plus-lg me-1"></i>Add batch</button></div><div class="live-crla-manual-batches">${manualBatches.map((batch, index) => `<article class="live-crla-batch-card ${index === manualTarget ? 'is-target' : ''}" data-live-drop="${index}" data-live-target="${index}" tabindex="0" role="button" aria-label="Use Batch ${index + 1} as the destination"><div class="live-crla-batch-card__head"><span>Batch ${index + 1}</span><span class="live-crla-capacity">${batch.length} / 10</span>${manualBatches.length > 1 ? `<button type="button" class="btn btn-link btn-sm text-danger p-0 live-crla-delete-batch" data-live-delete-batch="${index}" title="Delete batch" aria-label="Delete Batch ${index + 1}"><i class="bi bi-trash3" aria-hidden="true"></i></button>` : ''}</div>${batch.length ? batch.map((studentId) => `<button type="button" draggable="true" class="live-crla-student-chip" data-live-student="${studentId}">${escapeLiveText(names.get(studentId) || `Student ${studentId}`)}</button>`).join('') : '<p class="live-crla-empty">Select this batch, then add students.</p>'}</article>`).join('')}</div></section></div>`;
+            const unassignedCard = manualAssignment.querySelector('.live-crla-unassigned');
+            if (unassignedCard && !unassignedCard.querySelector('.live-crla-unassigned-list')) {
+                const list = document.createElement('div');
+                list.className = 'live-crla-unassigned-list';
+                Array.from(unassignedCard.children).filter((child) => child.tagName !== 'H6').forEach((child) => list.appendChild(child));
+                unassignedCard.appendChild(list);
+            }
             manualAssignment.querySelectorAll('[data-live-target]').forEach((card) => { card.addEventListener('click', () => { manualTarget = Number(card.dataset.liveTarget); renderWizardBatchAssignment(); }); card.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); card.click(); } }); });
             manualAssignment.querySelectorAll('[data-live-student]').forEach((chip) => { chip.addEventListener('click', (event) => { event.stopPropagation(); const studentId = Number(chip.dataset.liveStudent); const source = manualBatches.findIndex((batch) => batch.includes(studentId)); manualBatches = manualBatches.map((batch) => batch.filter((id) => id !== studentId)); if (source !== manualTarget && manualBatches[manualTarget].length < 10) manualBatches[manualTarget].push(studentId); renderWizardBatchAssignment(); }); chip.addEventListener('dragstart', (event) => event.dataTransfer.setData('text/plain', chip.dataset.liveStudent)); });
             manualAssignment.querySelectorAll('[data-live-drop]').forEach((bucket) => { bucket.addEventListener('dragover', (event) => event.preventDefault()); bucket.addEventListener('drop', (event) => { event.preventDefault(); const studentId = Number(event.dataTransfer.getData('text/plain')); manualBatches = manualBatches.map((batch) => batch.filter((id) => id !== studentId)); const target = Number(bucket.dataset.liveDrop); if (target >= 0 && manualBatches[target].length < 10) manualBatches[target].push(studentId); renderWizardBatchAssignment(); }); });
             document.getElementById('liveCrlaAddBatchBtn')?.addEventListener('click', () => { manualBatches.push([]); manualTarget = manualBatches.length - 1; renderWizardBatchAssignment(); });
+            manualAssignment.querySelectorAll('[data-live-delete-batch]').forEach((button) => button.addEventListener('click', (event) => {
+                event.stopPropagation();
+                pendingDeleteBatchIndex = Number(button.dataset.liveDeleteBatch);
+                if (deleteBatchCopy) deleteBatchCopy.textContent = `Are you sure you want to delete Batch ${pendingDeleteBatchIndex + 1}? Students currently assigned to this batch will be returned to Unassigned Students.`;
+                if (deleteBatchModal && window.bootstrap) bootstrap.Modal.getOrCreateInstance(deleteBatchModal).show();
+            }));
         }
         manualAssignment?.classList.toggle('d-none', mode !== 'manual');
         const manualValid = manualBatches.length && manualBatches.every((batch) => batch.length > 0 && batch.length <= 10) && manualBatches.flat().length === selected.length;
@@ -241,7 +273,13 @@ document.addEventListener('DOMContentLoaded', function () {
     selectAllButton?.addEventListener('click', () => { checks.forEach((check) => { if (!check.closest('label').hidden) check.checked = true; }); updateSelection(); });
     clearAllButton?.addEventListener('click', () => { checks.forEach((check) => { check.checked = false; }); updateSelection(); });
     checks.forEach((check) => check.addEventListener('change', updateSelection));
-    document.querySelectorAll('input[name="liveCrlaBatchMode"]').forEach((radio) => radio.addEventListener('change', renderWizardBatchAssignment));
+    document.querySelectorAll('input[name="liveCrlaBatchMode"]').forEach((radio) => radio.addEventListener('change', () => {
+        if (radio.value === 'manual' && radio.checked) {
+            manualBatches = [[]];
+            manualInitialized = false;
+        }
+        renderWizardBatchAssignment();
+    }));
 
     if (confirmButton) {
         confirmButton.addEventListener('click', async () => {
@@ -300,6 +338,14 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+    confirmDeleteBatchButton?.addEventListener('click', () => {
+        if (pendingDeleteBatchIndex === null || manualBatches.length <= 1) return;
+        manualBatches.splice(pendingDeleteBatchIndex, 1);
+        pendingDeleteBatchIndex = null;
+        manualTarget = Math.min(manualTarget, manualBatches.length - 1);
+        bootstrap.Modal.getOrCreateInstance(deleteBatchModal).hide();
+        renderWizardBatchAssignment();
+    });
 
     updateSelection();
 });
