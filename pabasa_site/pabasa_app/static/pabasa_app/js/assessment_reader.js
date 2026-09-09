@@ -1567,6 +1567,19 @@
                 duration_seconds: persistedState.duration_seconds,
                 wpm: persistedState.wpm,
             } : {});
+            if (isCurrentLiveAssessment()) {
+                const elapsedSeconds = Math.max(0, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
+                const totalQuestions = Math.max(1, currentStoryQuestions.length);
+                publishLiveSessionState({
+                    status: "reading",
+                    items_completed: Math.min(currentStoryQuestionIndex, totalQuestions),
+                    items_total: totalQuestions,
+                    progress: Math.min(1, currentStoryQuestionIndex / totalQuestions),
+                    elapsed_seconds: Math.round(elapsedSeconds),
+                    current_item: currentStoryQuestions[currentStoryQuestionIndex]?.question || "",
+                    connection_status: "connected",
+                });
+            }
         }
 
         function renderStorySelection() {
@@ -3996,7 +4009,7 @@
                 const elapsedSeconds = Math.max(0, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
                 const completedItems = Math.max(0, currentIndex + (data.complete ? 1 : 0));
                 publishLiveSessionState({
-                    status: data.complete ? 'completed' : 'reading',
+                    status: isOfficialAssessmentLaunch ? 'reading' : (data.complete ? 'completed' : 'reading'),
                     items_completed: completedItems,
                     items_total: Math.max(1, items.length),
                     progress: items.length ? Math.min(1, completedItems / items.length) : 0,
@@ -4814,6 +4827,12 @@
                 next_stage: "",
             };
             const persistedLearnerExperienceRating = Number.parseInt(previousEndState.learner_experience_rating ?? previousEndState.learner_experience, 10);
+            const hasLearnerExperienceRating = Number.isInteger(persistedLearnerExperienceRating)
+                && persistedLearnerExperienceRating >= 1 && persistedLearnerExperienceRating <= 5;
+            // A rating only authorizes final completion after its deferred save
+            // succeeded. Until then, every CRLA branch remains live as reading.
+            const hasSubmittedLearnerExperienceRating = previousEndState.stage === "completed"
+                && hasLearnerExperienceRating;
             if (Number.isInteger(persistedLearnerExperienceRating) && persistedLearnerExperienceRating >= 1 && persistedLearnerExperienceRating <= 5) {
                 branchState.learner_experience_rating = persistedLearnerExperienceRating;
                 branchState.learner_experience = persistedLearnerExperienceRating;
@@ -4908,8 +4927,8 @@
                 );
                 // The server calculates and persists the official CRLA
                 // classification from these evidence fields.
-                branchState.stage = "completed";
-                branchState.next_stage = "completed";
+                branchState.stage = hasSubmittedLearnerExperienceRating ? "completed" : "learner_experience";
+                branchState.next_stage = hasSubmittedLearnerExperienceRating ? "completed" : "learner_experience";
                 branchState.task1_score = preservedTask1IsValid ? preservedTask1Score : null;
                 branchState.task1_correct_words = preservedTask1IsValid ? preservedTask1Score : null;
                 branchState.task2_type = previousEndState.task2_type
@@ -4931,18 +4950,16 @@
                 branchState.comprehension_total = latestScores.total_questions ?? currentStoryQuestions.length;
                 branchState.total_questions = latestScores.total_questions ?? currentStoryQuestions.length;
             }
-            if (previousEndState.stage === "learner_experience"
-                && Number.isInteger(persistedLearnerExperienceRating)
-                && persistedLearnerExperienceRating >= 1 && persistedLearnerExperienceRating <= 5) {
+            if (hasSubmittedLearnerExperienceRating) {
                 Object.assign(branchState, previousEndState, {
                     stage: "completed",
                     next_stage: "completed",
                 });
             }
             const isPart1LearnerExperienceTerminal = ["early_completed_words", "early_completed_sentences"].includes(branchState.stage);
-            const hasLearnerExperienceRating = Number.isInteger(persistedLearnerExperienceRating)
-                && persistedLearnerExperienceRating >= 1 && persistedLearnerExperienceRating <= 5;
-            if (isPart1LearnerExperienceTerminal && !hasLearnerExperienceRating) {
+            const shouldPromptForLearnerExperience = !hasSubmittedLearnerExperienceRating
+                && (isPart1LearnerExperienceTerminal || currentAssessmentBranch === "story");
+            if (shouldPromptForLearnerExperience) {
                 const learnerExperienceState = {
                     ...branchState,
                     stage: "learner_experience",
@@ -4952,7 +4969,7 @@
                 renderLearnerExperienceState();
                 return;
             }
-            if (isPart1LearnerExperienceTerminal && hasLearnerExperienceRating) {
+            if (isPart1LearnerExperienceTerminal && hasSubmittedLearnerExperienceRating) {
                 branchState.stage = "completed";
                 branchState.next_stage = "completed";
             }
@@ -5203,12 +5220,16 @@
                 if (isCurrentLiveAssessment()) {
                     const completionElapsedSeconds = Math.max(0, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
                     const finalScore = completionSnapshot?.final_score ?? completionSnapshot?.total_score ?? latestScores?.final_score ?? latestScores?.total_score ?? null;
+                    const liveStatus = isOfficialAssessmentLaunch
+                        ? (branchState.stage === "completed" && hasSubmittedLearnerExperienceRating ? "completed" : "reading")
+                        : "completed";
                     traceEndSession('showCompletion.publishCompletedBeforeRecord', {
                         finalScore,
+                        liveStatus,
                         payload,
                     });
                     publishLiveSessionState({
-                        status: 'completed',
+                        status: liveStatus,
                         items_completed: Math.max(1, items.length),
                         items_total: Math.max(1, items.length),
                         progress: 1,
@@ -5291,8 +5312,11 @@
                         }
                         if (isCurrentLiveAssessment()) {
                             const completedScore = backendScores?.final_score ?? backendScores?.total_score ?? null;
+                            const liveStatus = isOfficialAssessmentLaunch
+                                ? (branchState.stage === "completed" && hasSubmittedLearnerExperienceRating ? "completed" : "reading")
+                                : "completed";
                             const liveScoreUpdate = {
-                                status: 'completed',
+                                status: liveStatus,
                                 items_completed: Math.max(1, items.length),
                                 items_total: Math.max(1, items.length),
                                 progress: 1,
@@ -5455,16 +5479,19 @@
             if (!liveSessionId || !isCurrentLiveAssessment()) return null;
             if (!Object.keys(updateValues).length) return null;
             try {
-                const liveStage = currentStoryState === "story_reading" || currentStoryState === "story_comprehension" || currentStoryState === "story_complete"
-                    ? "story"
-                    : currentAssessmentBranch;
+                const liveStage = currentStoryState === "story_comprehension"
+                    ? "comprehension"
+                    : currentStoryState === "story_reading" || currentStoryState === "story_complete"
+                        ? "story"
+                        : currentAssessmentBranch;
                 const liveStageLabels = {
                     words: "Words",
                     rhymes: "Rhymes",
-                    sentences: "Sentences",
-                    sentences_low: "Sentences",
-                    sentences_high: "Sentences",
+                    sentences: "Sentence",
+                    sentences_low: "Sentence",
+                    sentences_high: "Sentence",
                     story: "Story",
+                    comprehension: "Comprehension",
                 };
                 traceEndSession('publishLiveSessionState.enter', { updateValues });
                 const completionSnapshot = calculateScores();

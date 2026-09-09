@@ -6099,6 +6099,77 @@ class LiveAssessmentStartTests(TestCase):
         self.assertEqual(student_state['final_score'], 88)
         self.assertEqual(student_state['connection_status'], 'connected')
 
+    def test_crla_intermediate_branch_updates_remain_reading_for_next_branch(self):
+        self.material.assessment_kind = 'crla'
+        self.material.is_official_reading = True
+        self.material.save(update_fields=['assessment_kind', 'is_official_reading'])
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='started',
+            countdown_seconds=0,
+            start_at=timezone.now() - timedelta(seconds=10),
+            student_states={str(self.student.id): {'status': 'waiting', 'progress': 0}},
+        )
+
+        student_client = Client()
+        student_session = student_client.session
+        student_session['user_id'] = self.student.id
+        student_session['user_role'] = 'student'
+        student_session['first_name'] = self.student.first_name
+        student_session['last_name'] = self.student.last_name
+        student_session['email'] = self.student.email
+        student_session['custom_id'] = self.student.custom_id
+        student_session.save()
+        User.objects.filter(pk=self.student.id).update(active_session_key=student_session.session_key)
+        update_url = reverse('live_assessment_student_state_update', kwargs={'session_id': session.id})
+
+        for stage, label, completed, total in (
+            ('words', 'Words', 3, 10),
+            ('rhymes', 'Rhymes', 2, 5),
+            ('sentences', 'Sentence', 4, 10),
+            ('story', 'Story', 1, 1),
+            ('comprehension', 'Comprehension', 3, 5),
+        ):
+            response = student_client.post(
+                update_url,
+                json.dumps({
+                    'status': 'reading',
+                    'crla_stage': stage,
+                    'crla_stage_label': label,
+                    'items_completed': completed,
+                    'items_total': total,
+                    'progress': completed / total,
+                    'connection_status': 'connected',
+                }),
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.json()['success'])
+            session.refresh_from_db()
+            student_state = session.student_states[str(self.student.id)]
+            self.assertEqual(student_state['status'], 'reading')
+            self.assertEqual(student_state['crla_stage'], stage)
+            self.assertEqual(student_state['crla_stage_label'], label)
+            self.assertEqual(student_state['items_completed'], completed)
+            self.assertEqual(student_state['items_total'], total)
+
+    def test_crla_intermediate_completion_publishes_reading_until_rating_is_completed(self):
+        source = (Path(__file__).parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js').read_text(encoding='utf-8')
+        item_completion = source.split('if (isCurrentLiveAssessment()) {', 1)[1].split('const hasRecognizedSpeech', 1)[0]
+        completion = source.split('const hasSubmittedLearnerExperienceRating', 1)[1]
+
+        self.assertIn("status: isOfficialAssessmentLaunch ? 'reading'", item_completion)
+        self.assertIn('previousEndState.stage === "completed"', source)
+        self.assertIn('branchState.stage === "completed" && hasSubmittedLearnerExperienceRating ? "completed" : "reading"', completion)
+        self.assertIn('branchState.stage = hasSubmittedLearnerExperienceRating ? "completed" : "learner_experience"', source)
+        self.assertIn('currentStoryState === "story_comprehension"', source)
+        self.assertIn('comprehension: "Comprehension"', source)
+
     def test_record_assessment_completion_updates_live_session_score(self):
         session = LiveAssessmentSession.objects.create(
             id=uuid.uuid4().hex,
