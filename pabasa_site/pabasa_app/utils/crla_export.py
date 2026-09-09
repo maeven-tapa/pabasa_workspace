@@ -433,7 +433,7 @@ def _student_values(student, attempt, state, assessment):
                 if score_data.get("sentences_read") is not None
                 else min(task_2_score or 0, 4)
             )
-            rhyme_score = None
+            rhyme_score = 10
 
     part_1_total = _bounded_integer(
         _first_value(score_data.get("part1_total_score"), state.get("part1_total_score")), 0, 30

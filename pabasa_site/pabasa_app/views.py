@@ -2836,7 +2836,8 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
             correct_words = _safe_int(student_end_state.get('correct_words')) or 0
             correct_sentences = _safe_int(student_end_state.get('correct_sentences')) or 0
             sentence_score = crla_sentence_score(correct_sentences)
-            part1_total = correct_words + sentence_score
+            automatic_rhymes_score = 10 if 7 <= correct_words <= 10 else 0
+            part1_total = correct_words + automatic_rhymes_score + sentence_score
             student_end_state['sentence_items_administered'] = _safe_int(score_payload.get('items_completed')) or 0
             student_end_state['cumulative_correct'] = correct_words + correct_sentences
             student_end_state['routing_score'] = part1_total
@@ -2845,7 +2846,10 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
                 student_end_state.get('correct_words'),
                 part1_total,
             )
-            student_end_state['task2_rhymes_score'] = None
+            if automatic_rhymes_score:
+                student_end_state['task2_rhymes_score'] = automatic_rhymes_score
+            else:
+                student_end_state['task2_rhymes_score'] = None
             student_end_state['sentences_read'] = correct_sentences
             student_end_state['task2_sentences_score'] = sentence_score
             student_end_state['part1_total_score'] = part1_total

@@ -4931,7 +4931,7 @@
                 branchState.classification = "";
                 branchState.branch = "rhymes";
                 branchState.task1_score = branchScore;
-                branchState.task2_rhymes_score = null;
+                branchState.task2_rhymes_score = 10;
                 branchState.task2_sentences_score = null;
                 branchState.part1_total_score = null;
                 branchState.part1_reading_level = "";
