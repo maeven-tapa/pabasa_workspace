@@ -586,9 +586,27 @@
                         });
                     }
                     const accepted = response.ok && result.success !== false;
-                    if (accepted && deferLocalStorage) {
+                    if (accepted) {
+                        // The server derives the official CRLA Reading Profile
+                        // from the persisted Part 1/Part 2 evidence.  Keep the
+                        // local recovery state in sync with that canonical
+                        // result so a later completion render cannot replace a
+                        // valid classification with its generic fallback.
+                        const canonicalState = result?.student_end_assessment_state;
+                        const hasCanonicalState = canonicalState
+                            && typeof canonicalState === "object"
+                            && !Array.isArray(canonicalState);
+                        const readerClassification = String(result?.reader_classification || "").trim();
+                        const synchronizedState = {
+                            ...savedState,
+                            ...(hasCanonicalState ? canonicalState : {}),
+                            ...(readerClassification ? { reader_classification: readerClassification } : {}),
+                        };
+                        if (!hasCanonicalState && readerClassification) {
+                            synchronizedState.classification = readerClassification;
+                        }
                         try {
-                            localStorage.setItem(getStudentEndStateKey(), JSON.stringify(savedState));
+                            localStorage.setItem(getStudentEndStateKey(), JSON.stringify(synchronizedState));
                         } catch (error) {}
                     }
                     return accepted ? result : null;
@@ -5023,7 +5041,10 @@
                 renderMyMaterialsCompletion(latestScores);
             } else {
                 renderScoreSummary(latestScores);
-                renderPersistedEndState(branchState);
+                // writeStudentEndState synchronizes the server's canonical
+                // classification into localStorage. Render that state rather
+                // than the provisional branchState built before the response.
+                renderPersistedEndState(readStudentEndState());
             }
             if (!isMyMaterials && (branchState.stage === "transition_to_rhymes" || branchState.stage === "transition_to_sentence" || branchState.stage === "transition_to_story")) {
                 traceEndSession('showCompletion.awaitContinue', { nextStageUrl, next_stage: branchState.next_stage });

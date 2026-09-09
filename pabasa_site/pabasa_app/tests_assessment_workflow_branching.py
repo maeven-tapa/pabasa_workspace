@@ -153,7 +153,7 @@ class AssessmentWorkflowBranchingTests(TestCase):
         # Story metrics cannot manufacture the Part 1 result or a final
         # Reading Profile.  The authoritative profile remains blank until
         # the required Part 1 total and selected story are present.
-        self.assertIsNone(payload["crla_classification"])
+        self.assertFalse(payload["crla_classification"])
 
     def test_crla_task1_always_reports_official_ten_items(self):
         payload = build_assessment_score_payload({
@@ -309,6 +309,21 @@ class AssessmentWorkflowBranchingTests(TestCase):
             crla_reading_profile(17, 1, 53.68, 6),
             "Reading At Grade Level",
         )
+
+    def test_part2_canonical_classification_syncs_to_local_state_before_completion_render(self):
+        """A server-derived Part 2 profile must survive the completion render."""
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        writer = source.split("function writeStudentEndState", 1)[1].split("function updateStudentEndState", 1)[0]
+        completion = source.split("function showCompletion", 1)[1].split("function renderMyMaterialsCompletion", 1)[0]
+
+        # This is a valid Part 2 evidence set.  The server's Reading Profile
+        # is the value that must be retained in the browser recovery state.
+        self.assertEqual(crla_reading_profile(17, 1, 53.68, 6), "Reading At Grade Level")
+        self.assertIn("const canonicalState = result?.student_end_assessment_state;", writer)
+        self.assertIn("...(hasCanonicalState ? canonicalState : {}),", writer)
+        self.assertIn("reader_classification: readerClassification", writer)
+        self.assertIn("JSON.stringify(synchronizedState)", writer)
+        self.assertIn("renderPersistedEndState(readStudentEndState());", completion)
 
     def test_completed_part2_persistence_rejects_incomplete_client_classification_without_material(self):
         student = SimpleNamespace(id=1, pk=1, reading_level="")
@@ -490,7 +505,8 @@ class AssessmentWorkflowBranchingTests(TestCase):
 
         writer = source.split("function writeStudentEndState", 1)[1].split("// CRLA Official Assessment", 1)[0]
         self.assertIn("deferLocalStorage", writer)
-        self.assertIn("if (accepted && deferLocalStorage)", writer)
+        self.assertIn("const canonicalState = result?.student_end_assessment_state;", writer)
+        self.assertIn("JSON.stringify(synchronizedState)", writer)
         self.assertIn("return accepted ? result : null;", writer)
 
         endpoint = (Path(__file__).parent / "views.py").read_text(encoding="utf-8")
