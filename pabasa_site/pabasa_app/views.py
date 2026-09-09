@@ -96,6 +96,7 @@ from .scoring import (
     clamp_score,
     crla_classification,
     crla_part2_profile,
+    _crla_part2_band,
     crla_reading_profile,
     crla_task1_next_task,
     crla_sentence_score,
@@ -1866,15 +1867,15 @@ def _crla_grade2_part2_profile(correct_words_read, correct_answers):
 
     if percent is None or answers is None:
         return 'NOT AVAILABLE'
-    reading_band = 0 if percent <= 25 else 1 if percent <= 50 else 2 if percent <= 75 else 3
-    comprehension_band = 0 if answers <= 0 else 1 if answers <= 2 else 2 if answers <= 4 else 3
-    # Final classification is based on comprehension band per teacher-confirmed rule
+    final_band = _crla_part2_band(percent, answers)
+    if final_band is None:
+        return 'NOT AVAILABLE'
     return (
         "High Emerging Reader",
         "Developing Reader",
         "Transitioning Reader",
         "Reading At Grade Level",
-    )[comprehension_band]
+    )[final_band]
 
 
 def _osps_multiplier(assessment_type):

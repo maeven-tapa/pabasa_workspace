@@ -182,17 +182,13 @@ def _crla_part2_band(passage_accuracy_percent: Any, comprehension_correct: Any) 
     answers = _coerce_int(comprehension_correct)
     if percentage is None or answers is None or percentage < 0 or percentage > 100:
         return None
-    reading_band = 0 if percentage <= 25 else 1 if percentage <= 50 else 2 if percentage <= 75 else 3
-    comprehension_band = 0 if answers <= 0 else 1 if answers <= 2 else 2 if answers <= 4 else 3
-    # A high-accuracy passage cannot be classified as High Emerging solely
-    # because comprehension is zero.  Preserve the official profile floor for
-    # this cross-band case; comprehension still governs the normal aligned
-    # bands below it.
-    if reading_band == 3 and comprehension_band == 0:
-        return 2
-    if reading_band == 2 and comprehension_band == 0:
-        return 1
-    return min(reading_band, comprehension_band)
+    if percentage <= 25:
+        return 0
+    if percentage <= 50:
+        return 0 if answers <= 0 else 1
+    if percentage <= 75:
+        return 1 if answers <= 2 else 2
+    return 2 if answers <= 4 else 3
 
 
 def crla_reading_profile(part1_total_score: Any, story_number: Any,
@@ -250,7 +246,7 @@ def crla_part2_profile(total_story_words: Any, words_read: Any, miscues: Any,
     classification = "NOT AVAILABLE"
     if reading_band is not None and comprehension_band is not None:
         # Final classification requires both official Part 2 dimensions.
-        final_band = min(reading_band, comprehension_band)
+        final_band = _crla_part2_band(passage_accuracy_percent, answers)
         classification = (
             "High Emerging Reader",
             "Developing Reader",
