@@ -6336,7 +6336,7 @@ def admin_users(request):
             and _student_returning_eligibility(user, active_calendar)
         ) if active_calendar else False
 
-    context = _admin_context(request, 'Users', ['Name', 'Identifier', 'Email', 'Category', 'Created At', 'Actions'])
+    context = _admin_context(request, 'Users', ['Name', 'PABASA-ID', 'Email', 'Category', 'Created At', 'Actions'])
     context.update({
         'users': users,
         'search_query': search_query,

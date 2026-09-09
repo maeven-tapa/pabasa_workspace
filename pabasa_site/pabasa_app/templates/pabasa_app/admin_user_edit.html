@@ -23,7 +23,7 @@
     </div>
     {% endif %}
 
-    <form method="post" onsubmit="return confirm('Save these student changes?');">
+    <form method="post" id="adminUserEditForm">
         {% csrf_token %}
         {% if managed_role == 'student' %}
         <div class="row g-3">
@@ -33,7 +33,7 @@
             </div>
             <div class="col-12 col-md-6">
                 <label class="form-label fw-bold" for="sectionDisplay">Section</label>
-                <input class="form-control bg-light" id="sectionDisplay" type="text" value="Grade 2 - {{ current_section|default:'Not assigned' }}" readonly aria-readonly="true">
+                <input class="form-control bg-light" id="sectionDisplay" type="text" value="Grade 2 - {{ current_section.section|default:'Not assigned' }}" readonly aria-readonly="true">
                 <div class="form-text">Section placement can only be changed from the School tab.</div>
             </div>
             <div class="col-12 col-md-3">
@@ -50,7 +50,15 @@
             </div>
             <div class="col-12 col-md-3">
                 <label class="form-label fw-bold" for="suffix">Suffix</label>
-                <input class="form-control" id="suffix" type="text" name="suffix" value="{{ managed_user.suffix }}">
+                <select class="form-select" id="suffix" name="suffix">
+                    <option value="" {% if not managed_user.suffix %}selected{% endif %}>None</option>
+                    <option value="Jr." {% if managed_user.suffix == 'Jr.' %}selected{% endif %}>Jr.</option>
+                    <option value="Sr." {% if managed_user.suffix == 'Sr.' %}selected{% endif %}>Sr.</option>
+                    <option value="II" {% if managed_user.suffix == 'II' %}selected{% endif %}>II</option>
+                    <option value="III" {% if managed_user.suffix == 'III' %}selected{% endif %}>III</option>
+                    <option value="IV" {% if managed_user.suffix == 'IV' %}selected{% endif %}>IV</option>
+                    <option value="V" {% if managed_user.suffix == 'V' %}selected{% endif %}>V</option>
+                </select>
             </div>
             <div class="col-12 col-md-6">
                 <label class="form-label fw-bold" for="email">Email</label>
@@ -63,22 +71,90 @@
         </div>
         {% else %}
         <div class="row g-3">
-            <div class="col-12 col-md-6"><label class="form-label fw-bold" for="firstName">First name</label><input class="form-control" id="firstName" type="text" name="first_name" value="{{ managed_user.first_name }}" required></div>
-            <div class="col-12 col-md-3"><label class="form-label fw-bold" for="middleInitial">Middle initial</label><input class="form-control" id="middleInitial" type="text" name="middle_initial" maxlength="1" value="{{ managed_user.middle_initial }}"></div>
-            <div class="col-12 col-md-6"><label class="form-label fw-bold" for="lastName">Last name</label><input class="form-control" id="lastName" type="text" name="last_name" value="{{ managed_user.last_name }}" required></div>
-            <div class="col-12 col-md-3"><label class="form-label fw-bold" for="suffix">Suffix</label><input class="form-control" id="suffix" type="text" name="suffix" value="{{ managed_user.suffix }}"></div>
-            <div class="col-12 col-md-6"><label class="form-label fw-bold" for="username">Username</label><input class="form-control" id="username" type="text" name="custom_id" value="{{ managed_user.custom_id }}" required></div>
+            <div class="col-12 col-md-6"><label class="form-label fw-bold" for="username">Username</label><input class="form-control bg-light" id="username" type="text" name="custom_id" value="{{ managed_user.custom_id }}" readonly aria-readonly="true"></div>
             <div class="col-12 col-md-6"><label class="form-label fw-bold" for="email">Email</label><input class="form-control" id="email" type="email" name="email" value="{{ managed_user.email }}" required></div>
+        </div>
+        <div class="row g-3 mt-0">
+            <div class="col-12 col-sm-6 col-lg-3"><label class="form-label fw-bold" for="firstName">First name</label><input class="form-control" id="firstName" type="text" name="first_name" value="{{ managed_user.first_name }}" required></div>
+            <div class="col-12 col-sm-6 col-lg-3"><label class="form-label fw-bold" for="middleInitial">Middle name</label><input class="form-control" id="middleInitial" type="text" name="middle_initial" maxlength="1" value="{{ managed_user.middle_initial }}"></div>
+            <div class="col-12 col-sm-6 col-lg-3"><label class="form-label fw-bold" for="lastName">Last name</label><input class="form-control" id="lastName" type="text" name="last_name" value="{{ managed_user.last_name }}" required></div>
+            <div class="col-12 col-sm-6 col-lg-3"><label class="form-label fw-bold" for="suffix">Suffix</label><select class="form-select" id="suffix" name="suffix"><option value="" {% if not managed_user.suffix %}selected{% endif %}>None</option><option value="Jr." {% if managed_user.suffix == 'Jr.' %}selected{% endif %}>Jr.</option><option value="Sr." {% if managed_user.suffix == 'Sr.' %}selected{% endif %}>Sr.</option><option value="II" {% if managed_user.suffix == 'II' %}selected{% endif %}>II</option><option value="III" {% if managed_user.suffix == 'III' %}selected{% endif %}>III</option><option value="IV" {% if managed_user.suffix == 'IV' %}selected{% endif %}>IV</option><option value="V" {% if managed_user.suffix == 'V' %}selected{% endif %}>V</option></select></div>
         </div>
         {% endif %}
 
         <div class="d-flex flex-wrap justify-content-end gap-2 mt-4">
             <a class="btn btn-outline-secondary" href="{% if managed_role == 'student' %}{% url 'admin_student_detail' managed_user.id %}{% else %}{% url 'admin_teacher_detail' managed_user.id %}{% endif %}">Cancel</a>
-            <button class="btn btn-primary" type="submit">
+            <button class="btn btn-primary" type="{% if managed_role == 'teacher' or managed_role == 'student' %}button{% else %}submit{% endif %}"{% if managed_role == 'teacher' %} id="openTeacherSaveConfirmBtn"{% elif managed_role == 'student' %} id="openStudentSaveConfirmBtn"{% endif %}>
                 <i class="bi bi-check2 me-1"></i>Save changes
             </button>
         </div>
     </form>
+    {% if managed_role == 'teacher' %}
+    <div class="modal fade" id="teacherSaveConfirmModal" tabindex="-1" aria-labelledby="teacherSaveConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <div class="modal-header border-0 px-4 pt-4 pb-2">
+                    <h2 class="modal-title h5 mb-0" id="teacherSaveConfirmModalLabel">Save Changes?</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body px-4 py-3">
+                    <p class="mb-0">Are you sure you want to save these teacher changes?</p>
+                </div>
+                <div class="modal-footer border-0 px-4 pt-2 pb-4 gap-2">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="adminUserEditForm" class="btn btn-primary" id="confirmTeacherSaveBtn">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+    (function () {
+        const form = document.getElementById('adminUserEditForm');
+        const modalElement = document.getElementById('teacherSaveConfirmModal');
+        const confirmButton = document.getElementById('confirmTeacherSaveBtn');
+        if (!form || !modalElement || !confirmButton) return;
+
+        const openButton = document.getElementById('openTeacherSaveConfirmBtn');
+        if (!openButton) return;
+
+        openButton.addEventListener('click', function () {
+            if (!window.bootstrap) return;
+            bootstrap.Modal.getOrCreateInstance(modalElement).show();
+        });
+    })();
+    </script>
+    {% endif %}
+    {% if managed_role == 'student' %}
+    <div class="modal fade" id="studentSaveConfirmModal" tabindex="-1" aria-labelledby="studentSaveConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <div class="modal-header border-0 px-4 pt-4 pb-2">
+                    <h2 class="modal-title h5 mb-0" id="studentSaveConfirmModalLabel">Save Changes?</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body px-4 py-3">
+                    <p class="mb-0">Are you sure you want to save these student changes?</p>
+                </div>
+                <div class="modal-footer border-0 px-4 pt-2 pb-4 gap-2">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="adminUserEditForm" class="btn btn-primary">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+    (function () {
+        const openButton = document.getElementById('openStudentSaveConfirmBtn');
+        const modalElement = document.getElementById('studentSaveConfirmModal');
+        if (!openButton || !modalElement) return;
+        openButton.addEventListener('click', function () {
+            if (window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(modalElement).show();
+            }
+        });
+    })();
+    </script>
+    {% endif %}
     {% if warning_message and pending_destination_section_id %}
     <form method="post" class="mt-3">
         {% csrf_token %}
