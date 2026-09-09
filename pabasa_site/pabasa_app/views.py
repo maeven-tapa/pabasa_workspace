@@ -16202,8 +16202,8 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             'early_completed_words', 'early_completed_sentences', 'completed',
         }
         final_reader_classification = str(
-            persisted_workflow_state.get('reader_classification')
-            or persisted_end_state.get('classification')
+            persisted_end_state.get('classification')
+            or persisted_workflow_state.get('reader_classification')
             or score_payload.get('crla_classification')
             or score_payload.get('classification')
             or ''

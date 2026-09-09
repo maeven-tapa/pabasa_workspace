@@ -177,14 +177,24 @@ def crla_part1_classification(part1_total_score: Any) -> str:
     return "NOT AVAILABLE"
 
 
+def _crla_part2_band(passage_accuracy_percent: Any, comprehension_correct: Any) -> Optional[int]:
+    percentage = _coerce_float(passage_accuracy_percent)
+    answers = _coerce_int(comprehension_correct)
+    if percentage is None or answers is None or percentage < 0 or percentage > 100:
+        return None
+    reading_band = 0 if percentage <= 25 else 1 if percentage <= 50 else 2 if percentage <= 75 else 3
+    comprehension_band = 0 if answers <= 0 else 1 if answers <= 2 else 2 if answers <= 4 else 3
+    return min(reading_band, comprehension_band)
+
+
 def crla_reading_profile(part1_total_score: Any, story_number: Any,
                          correct_words_percentage: Any,
                          comprehension_correct: Any) -> Optional[str]:
     """Return the final CRLA Reading Profile from the official evidence.
 
     ``part1_total_score`` establishes whether Part 2 was reached.  Once Part
-    2 evidence is available, the established CRLA interpretation gives the
-    comprehension band priority when passage and comprehension bands differ.
+    2 evidence is available, the final profile uses both passage accuracy and
+    comprehension performance; the lower applicable band is authoritative.
     ``story_number`` remains required evidence for a completed Part 2.
 
     A blank return has the same meaning as an unclassified workbook cell: the
@@ -199,22 +209,17 @@ def crla_reading_profile(part1_total_score: Any, story_number: Any,
         return "Low Emerging Reader"
 
     story = _coerce_int(story_number)
-    percentage = _coerce_float(correct_words_percentage)
-    answers = _coerce_int(comprehension_correct)
-    if story is None or story <= 0 or percentage is None or answers is None:
+    if story is None or story <= 0:
         return None
-
-    # Preserve percentage validation as part of the official Part 2 evidence,
-    # while resolving cross-band results by comprehension performance.
-    if percentage < 0 or percentage > 100:
+    final_band = _crla_part2_band(correct_words_percentage, comprehension_correct)
+    if final_band is None:
         return None
-    if answers <= 0:
-        return "High Emerging Reader"
-    if answers <= 2:
-        return "Developing Reader"
-    if answers <= 4:
-        return "Transitioning Reader"
-    return "Reading At Grade Level"
+    return (
+        "High Emerging Reader",
+        "Developing Reader",
+        "Transitioning Reader",
+        "Reading At Grade Level",
+    )[final_band]
 
 
 def crla_part2_profile(total_story_words: Any, words_read: Any, miscues: Any,
@@ -236,14 +241,16 @@ def crla_part2_profile(total_story_words: Any, words_read: Any, miscues: Any,
     comprehension_band = None if answers is None else (0 if answers <= 0 else 1 if answers <= 2 else 2 if answers <= 4 else 3)
     classification = "NOT AVAILABLE"
     if reading_band is not None and comprehension_band is not None:
-        # Final classification follows the teacher-confirmed comprehension-priority rule.
+        # Final classification requires both official Part 2 dimensions.
+        final_band = min(reading_band, comprehension_band)
         classification = (
             "High Emerging Reader",
             "Developing Reader",
             "Transitioning Reader",
             "Reading At Grade Level",
-        )[comprehension_band]
-    final_band = comprehension_band if reading_band is not None and comprehension_band is not None else None
+        )[final_band]
+    else:
+        final_band = None
     return {
         "total_story_words": total_words, "words_read": read, "miscues": error_count,
         "duration_seconds": duration, "wpm": wpm, "correct_word_percent": passage_accuracy_percent,
