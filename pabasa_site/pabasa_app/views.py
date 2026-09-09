@@ -9370,6 +9370,10 @@ def _official_reading_launch_data(material):
         return {}
     payload = _official_reading_material_payload(material)
     content_json = getattr(material, 'content_json', None) or {}
+    official_crla_payload = None
+    if getattr(material, 'assessment_kind', '') == 'crla':
+        from .management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
+        official_crla_payload = OFFICIAL_CRLA_CONTENT.get(getattr(material, 'system_assessment_key', ''))
     story_qas = content_json.get('story_qas') if isinstance(content_json, dict) and isinstance(content_json.get('story_qas'), list) else []
     assessment_type = _official_reading_assessment_type(material)
     official_title = str(getattr(material, 'title', '') or '').strip() or payload['title']
@@ -9383,7 +9387,7 @@ def _official_reading_launch_data(material):
         'assessment_kind': _assessment_kind_value(material),
         'item_type': payload['item_type'] or 'word',
         'words': payload['words'],
-        'rhyme_pairs': content_json.get('rhyme_pairs', []),
+        'rhyme_pairs': (official_crla_payload or {}).get('rhyme_pairs', content_json.get('rhyme_pairs', [])),
         'sentences': payload['sentences'],
         'passages': payload['passages'],
         'stories': [{'title': str(passage.get('title') or '').strip(), 'content': str(passage.get('content') or '').strip()} for passage in payload['passages'] if isinstance(passage, dict)],
