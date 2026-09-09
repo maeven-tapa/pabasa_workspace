@@ -8,7 +8,7 @@
                 <i class="bi bi-arrow-left me-1"></i>Back
             </a>
             <h2 class="h4 fw-bold mb-1">{{ managed_user_name|default:"Unnamed user" }}</h2>
-            <p class="text-secondary mb-0">{{ managed_user.custom_id }}</p>
+            <p class="text-secondary mb-0">PABASA ID - {{ managed_user.custom_id }}</p>
         </div>
         <a class="btn btn-outline-primary" href="{% if managed_role == 'student' %}{% url 'admin_student_edit' managed_user.id %}{% else %}{% url 'admin_teacher_edit' managed_user.id %}{% endif %}">
             <i class="bi bi-pencil me-1"></i>Edit
@@ -19,10 +19,6 @@
         <dl class="row mb-0">
             <dt class="col-sm-3 text-secondary">Name</dt>
             <dd class="col-sm-9">{{ managed_user_name|default:"-" }}</dd>
-            <dt class="col-sm-3 text-secondary">ID</dt>
-            <dd class="col-sm-9">{{ managed_user.id }}</dd>
-            <dt class="col-sm-3 text-secondary">Username</dt>
-            <dd class="col-sm-9">{{ managed_user.custom_id }}</dd>
             <dt class="col-sm-3 text-secondary">Email</dt>
             <dd class="col-sm-9">{{ managed_user.email|default:"-" }}</dd>
             <dt class="col-sm-3 text-secondary">Role</dt>
@@ -52,11 +48,6 @@
         <div class="border-top py-3">
             <div><strong>{{ enrollment.school_calendar.school_year|default:'School year not set' }}</strong> · {{ enrollment.grade_level|default:'Grade 2' }} · {% if enrollment.section %}{{ enrollment.section.section }}{% else %}Unassigned{% endif %}</div>
             <small class="text-secondary">Teacher: {% if enrollment.assigned_teacher %}{{ enrollment.assigned_teacher.first_name }} {{ enrollment.assigned_teacher.last_name }}{% else %}Unassigned{% endif %} · {{ enrollment.get_status_display }} · {{ enrollment.get_outcome_display }}</small>
-            {% if enrollment.status == 'active' or enrollment.status == 'awaiting_assignment' %}{% if enrollment.school_calendar.is_active %}
-            <form method="post" action="{% url 'admin_student_move_enrollment' managed_user.id %}" class="mt-2 d-flex gap-2" onsubmit="return confirm('Move this student to the selected section? The previous enrollment history will be preserved.');">
-                {% csrf_token %}<select class="form-select form-select-sm" name="section_id" required><option value="">Choose Grade 2 section</option>{% for section in student_assignment_sections %}<option value="{{ section.id }}" {% if enrollment.section_id == section.id %}selected{% endif %}>{{ section.section }}{% if section.teacher %} — {{ section.teacher.first_name }} {{ section.teacher.last_name }}{% endif %}</option>{% endfor %}</select><button class="btn btn-sm btn-outline-primary" type="submit"><i class="bi bi-arrow-left-right me-1"></i>Move</button>
-            </form>
-            {% endif %}{% endif %}
         </div>
         {% empty %}<p class="text-secondary mb-0">No enrollments recorded.</p>{% endfor %}
         {% if can_prepare_returning_student %}<form method="post" action="{% url 'admin_student_returning_enrollment' managed_user.id %}" id="prepareReturningStudentForm" class="mt-2">{% csrf_token %}<button class="btn btn-sm btn-outline-success" type="button" data-bs-toggle="modal" data-bs-target="#prepareReturningStudentModal"><i class="bi bi-person-plus me-1"></i>{% if managed_user.account_status == 'dropped' %}Reactivate as Returnee{% else %}Prepare Returning Student{% endif %}</button></form>{% endif %}

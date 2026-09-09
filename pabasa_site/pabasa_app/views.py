@@ -18,7 +18,7 @@ from django.contrib import messages
 from django.core.mail import send_mail
 from django.conf import settings
 from django.urls import reverse
-from django.db import IntegrityError, transaction, OperationalError, connection
+from django.db import DatabaseError, IntegrityError, transaction, OperationalError, connection
 from django.db.models import Count, F, Prefetch, Q
 from django.utils.text import slugify
 from functools import wraps
@@ -6336,7 +6336,7 @@ def admin_users(request):
             and _student_returning_eligibility(user, active_calendar)
         ) if active_calendar else False
 
-    context = _admin_context(request, 'Users', ['Name', 'Identifier', 'Email', 'Category', 'Created At', 'Actions'])
+    context = _admin_context(request, 'Users', ['Name', 'PABASA-ID', 'Email', 'Category', 'Created At', 'Actions'])
     context.update({
         'users': users,
         'search_query': search_query,
@@ -10147,6 +10147,24 @@ def _admin_practice_queryset():
         difficulty_level__in=_practice_difficulty_values(),
     )
 
+def _admin_practice_selected_language(request, language=None):
+    # Persist only the table filter; content is always read from Material.
+    user = User.objects.filter(pk=request.session.get('user_id')).first()
+    preferences = dict(_get_user_preference_dict(user))
+    selected = _practice_language_value(
+        language or request.GET.get('language')
+        or request.session.get(PRACTICE_LANGUAGE_SESSION_KEY)
+        or preferences.get('admin_practice_language')
+        or 'English'
+    )
+    if user and preferences.get('admin_practice_language') != selected:
+        preferences['admin_practice_language'] = selected
+        user.preference = preferences
+        user.save(update_fields=['preference', 'updated_at'])
+    request.session[PRACTICE_LANGUAGE_SESSION_KEY] = selected
+    return selected
+
+
 def _get_admin_practice_material(practice_id):
     return _admin_practice_queryset().filter(id=practice_id).first()
 
@@ -10437,7 +10455,7 @@ def _practice_row_summary(material):
     item_count = len(items)
     item_label = item_type if item_type in {'word', 'sentence', 'paragraph'} else 'word'
     summary_text = f"{item_count} {item_label}{'s' if item_count != 1 else ''}"
-    status_label = 'Archived' if not material.is_active else (material.get_status_display() or material.status)
+    status_label = 'Draft' if material.status == 'draft' else ('Archived' if not material.is_active else (material.get_status_display() or material.status))
     status_badge_class = 'text-bg-secondary' if not material.is_active else ('text-bg-success' if material.status == 'published' else 'text-bg-warning')
     return {
         'material': material,
@@ -10493,7 +10511,7 @@ def _admin_practice_context(request, page_title):
     difficulty_filter = request.GET.get('difficulty', 'all').strip().lower()
     level_filter = request.GET.get('level', 'all').strip().lower()
     sort_value = request.GET.get('sort', '-created_at').strip()
-    language_filter = _practice_selected_language(request)
+    language_filter = _admin_practice_selected_language(request)
 
     practice_items = _admin_practice_queryset()
     practice_items = practice_items.filter(language=language_filter)
@@ -10506,7 +10524,9 @@ def _admin_practice_context(request, page_title):
     elif status_filter == 'archived':
         practice_items = practice_items.filter(is_active=False)
     elif status_filter in {value for value, _label in AdminPracticeMaterialForm.STATUS_CHOICES}:
-        practice_items = practice_items.filter(status=status_filter, is_active=True)
+        practice_items = practice_items.filter(status=status_filter)
+        if status_filter != 'draft':
+            practice_items = practice_items.filter(is_active=True)
 
     if difficulty_filter in _practice_difficulty_values():
         practice_items = practice_items.filter(difficulty_level=difficulty_filter)
@@ -10569,7 +10589,7 @@ def _admin_practice_context(request, page_title):
     return context
 
 def _admin_practice_template_context(request, material=None, page_title='Practice', form=None):
-    selected_language = _practice_selected_language(request)
+    selected_language = _admin_practice_selected_language(request)
     initial = {}
     if material:
         content_json = getattr(material, 'content_json', None) or {}
@@ -10649,10 +10669,24 @@ def admin_practice_create(request):
             try:
                 with transaction.atomic():
                     material = _save_admin_practice_material(form, None, request)
+                    _admin_practice_selected_language(request, material.language)
             except IntegrityError:
                 form.add_error(None, 'A Practice Content already exists for the selected Mode, Difficulty, Language, and Level.')
+            except DatabaseError:
+                form.add_error(None, 'Practice Content could not be saved. Please try again.')
             else:
-                return redirect('admin_practice_detail', practice_id=material.id)
+                labels = [dict(choices)[form.cleaned_data[field]] for field, choices in (
+                    ('mode', form.MODE_CHOICES),
+                    ('difficulty_level', form.DIFFICULTY_CHOICES),
+                    ('level', form.LEVEL_CHOICES),
+                )]
+                messages.success(request, f"{' - '.join(labels)} has been saved successfully.", extra_tags='practice_saved')
+                destination = f"{reverse('admin_practice_assessment')}?language={material.language}"
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'saved': True, 'redirect_url': destination})
+                return redirect(destination)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'saved': False, 'errors': form.errors.get_json_data()}, status=400)
         context = _admin_practice_template_context(
             request, None, 'Add Practice Content', form=form,
         )
@@ -10716,6 +10750,8 @@ def admin_practice_archive(request, practice_id):
 @admin_required
 @require_http_methods(["POST"])
 def admin_practice_delete(request, practice_id):
+    if request.POST.get('confirm_delete') != 'yes':
+        return redirect('admin_practice_assessment')
     material = _get_admin_practice_material(practice_id)
     if not material:
         return redirect('admin_practice_assessment')

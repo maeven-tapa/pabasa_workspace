@@ -502,7 +502,12 @@ class CrlaExportResultTests(TestCase):
             assessment_type="word", status="published", attempt_status="completed",
             completed_at=timezone.now(), duration_seconds=20, word_count=6, wpm=18, accuracy=60,
             crla_classification="Low Emerging Reader",
-            crla_score_data={"task1_score": 6, "task2_type": "Task 2L / Rhymes", "task2_score": 3},
+            crla_score_data={
+                "task1_score": 6,
+                "task2_type": "Task 2L / Rhymes",
+                "task2_rhymes_score": 3,
+                "part1_total_score": 9,
+            },
         )
 
         sheet = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)["G2 MT Reading Scoresheet"]
@@ -510,6 +515,7 @@ class CrlaExportResultTests(TestCase):
         self.assertIsNone(sheet["H11"].value)
         self.assertTrue(str(sheet["I11"].value).startswith("="))
         self.assertTrue(str(sheet["J11"].value).startswith("="))
+        self.assertEqual(sheet["G11"].value, 3)
         for column in ("K", "L", "M", "N", "O", "R", "T"):
             self.assertIsNone(sheet[f"{column}11"].value)
         self.assertEqual(sheet["S11"].value, 3)

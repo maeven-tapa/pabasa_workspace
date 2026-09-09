@@ -4,24 +4,9 @@ from django.db import migrations, models
 
 
 def remove_incomplete_admin_practice_materials(apps, schema_editor):
-    Material = apps.get_model('pabasa_app', 'Material')
-    candidates = Material.objects.filter(
-        type='practice',
-        section__isnull=True,
-        teacher__isnull=True,
-        is_system_owned=True,
-        source_type='shared',
-        content_json__mode__in=['free', 'color', 'hunt'],
-        content_json__difficulty__in=['easy', 'medium', 'hard'],
-        content_json__level__in=['level_1', 'level_2', 'level_3', 'level_4', 'level_5'],
-    )
-    incomplete_ids = [
-        material.pk
-        for material in candidates.only('pk', 'content_text')
-        if not (material.content_text or '').strip()
-    ]
-    if incomplete_ids:
-        Material.objects.filter(pk__in=incomplete_ids).delete()
+    # Keep the historical callable without deleting records during migration.
+    # Empty content is already excluded from the constraint and occupied slots.
+    pass
 
 
 class Migration(migrations.Migration):
