@@ -15869,7 +15869,27 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 # and CRLA class finalization cannot cross a result submission.
                 with transaction.atomic():
                     locked_material = Material.objects.select_for_update().get(pk=material.pk)
-                    if _is_official_crla_material(locked_material) and _student_crla_finalized_for_material(student_user, locked_material):
+                    workflow_state = _get_user_state(student_user)
+                    persisted_transition = workflow_state.get('student_end_assessment_state')
+                    persisted_transition = persisted_transition if isinstance(persisted_transition, dict) else {}
+                    _, persisted_material_id = _parse_prefixed_id(persisted_transition.get('material_id'))
+                    requested_stage = str(
+                        (request.GET.get('crla_stage') if request is not None else None)
+                        or data.get('crla_stage')
+                        or ''
+                    ).strip().lower()
+                    valid_sentence_transition = (
+                        requested_stage == 'sentences'
+                        and persisted_transition.get('stage') == 'transition_to_sentence'
+                        and persisted_transition.get('next_stage') == 'sentences'
+                        and persisted_material_id == locked_material.id
+                        and not _official_crla_completed_result_for_material(student_user, locked_material)
+                    )
+                    if (
+                        _is_official_crla_material(locked_material)
+                        and _student_crla_finalized_for_material(student_user, locked_material)
+                        and not valid_sentence_transition
+                    ):
                         return JsonResponse({
                             'success': False,
                             'error': 'This CRLA assessment has been finalized for your class.',
