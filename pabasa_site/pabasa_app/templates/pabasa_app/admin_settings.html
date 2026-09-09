@@ -69,52 +69,7 @@
     </section>
 
     <section class="admin-settings-grid" aria-label="Admin account settings">
-        <article class="admin-settings-card">
-            <div class="admin-settings-card-header">
-                <span class="admin-settings-card-icon" aria-hidden="true">
-                    <i class="bi bi-bell"></i>
-                </span>
-                <div>
-                    <h3>Push Notifications</h3>
-                    <p>Choose which updates should reach this admin account.</p>
-                </div>
-            </div>
-
-            <form method="post">
-                {% csrf_token %}
-                <input type="hidden" name="settings_action" value="save_notifications">
-
-                <div class="admin-setting-row">
-                    <label for="pushEnabled">Enable Notifications</label>
-                    <input class="form-check-input" type="checkbox" id="pushEnabled" name="push_enabled" {% if notification_settings.push_enabled %}checked{% endif %}>
-                </div>
-                <div class="admin-setting-row">
-                    <label for="emailNotifications">Email Notifications</label>
-                    <input class="form-check-input" type="checkbox" id="emailNotifications" name="email_notifications" {% if notification_settings.email_notifications %}checked{% endif %}>
-                </div>
-                <div class="admin-setting-row">
-                    <label for="weeklyDigestEnabled">Weekly Digest</label>
-                    <input class="form-check-input" type="checkbox" id="weeklyDigestEnabled" name="weekly_digest_enabled" {% if notification_settings.weekly_digest_enabled %}checked{% endif %}>
-                </div>
-                <div class="admin-setting-row">
-                    <label for="newMaterials">New materials and assignments</label>
-                    <input class="form-check-input" type="checkbox" id="newMaterials" name="new_materials" {% if notification_settings.new_materials %}checked{% endif %}>
-                </div>
-                <div class="admin-setting-row">
-                    <label for="progressUpdates">Progress updates</label>
-                    <input class="form-check-input" type="checkbox" id="progressUpdates" name="progress_updates" {% if notification_settings.progress_updates %}checked{% endif %}>
-                </div>
-
-                <div class="admin-settings-actions">
-                    <button class="btn btn-primary" type="submit">
-                        <i class="bi bi-save" aria-hidden="true"></i>
-                        <span>Save Preferences</span>
-                    </button>
-                </div>
-            </form>
-        </article>
-
-        <article class="admin-settings-card">
+        <article class="admin-settings-card admin-settings-card--password">
             <div class="admin-settings-card-header">
                 <span class="admin-settings-card-icon" aria-hidden="true">
                     <i class="bi bi-shield-lock"></i>
@@ -125,7 +80,7 @@
                 </div>
             </div>
 
-            <form method="post" class="d-grid gap-3">
+            <form method="post" class="d-grid gap-3" id="changePasswordForm">
                 {% csrf_token %}
                 <input type="hidden" name="settings_action" value="change_password">
                 <div>
@@ -151,7 +106,7 @@
                 </div>
 
                 <div class="admin-settings-actions">
-                    <button class="btn btn-primary" type="submit">
+                    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#changePasswordConfirmModal">
                         <i class="bi bi-key" aria-hidden="true"></i>
                         <span>Update Password</span>
                     </button>
@@ -159,6 +114,23 @@
             </form>
         </article>
     </section>
+</div>
+<div class="modal fade" id="changePasswordConfirmModal" tabindex="-1" aria-labelledby="changePasswordConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-0 px-4 pt-4 pb-2">
+                <h2 class="modal-title h5 mb-0" id="changePasswordConfirmModalLabel">Change Password?</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <p class="mb-0">Are you sure you want to change your password?</p>
+            </div>
+            <div class="modal-footer border-0 px-4 pt-2 pb-4 gap-2">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmChangePasswordButton">Change Password</button>
+            </div>
+        </div>
+    </div>
 </div>
 <script>
 (() => {
@@ -221,6 +193,12 @@
     };
     debugTimeEnabled?.addEventListener('change', syncDebugTimeInput);
     syncDebugTimeInput();
+
+    const changePasswordForm = document.getElementById('changePasswordForm');
+    const confirmChangePasswordButton = document.getElementById('confirmChangePasswordButton');
+    confirmChangePasswordButton?.addEventListener('click', () => {
+        changePasswordForm?.requestSubmit();
+    });
 
     document.querySelectorAll('[data-password-toggle]').forEach((button) => {
         const input = document.getElementById(button.dataset.passwordToggle);

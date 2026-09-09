@@ -9,7 +9,13 @@
     .activity-log-controls { align-items:flex-end; display:flex; flex-direction:column; gap:.65rem; }
     .activity-log-filter { align-items:center; display:flex; gap:.5rem; }
     .activity-log-filter label { color:#52677f; font-size:.82rem; font-weight:700; white-space:nowrap; }
-    .activity-log-filter .form-select { border-color:#cfdcea; font-size:.85rem; min-width:190px; }
+    .activity-log-filter .form-select { border-color:#cfdcea; font-size:.85rem; flex:0 0 200px; min-width:200px; width:200px; white-space:nowrap; }
+    .activity-log-filter .form-select option { white-space:nowrap; }
+    .activity-log-filter .custom-device-dropdown,
+    .activity-log-filter .custom-device-trigger,
+    .activity-log-filter .custom-device-menu { flex:0 0 200px; min-width:200px; width:200px; }
+    .activity-log-filter .custom-device-trigger,
+    .activity-log-filter .custom-device-option { white-space:nowrap; }
     .activity-log-card { background:#fff; border:1px solid #e1e8f0; border-radius:18px; box-shadow:0 8px 24px rgba(24,49,83,.06); overflow:hidden; }
     .activity-log-table { margin:0; min-width:650px; }
     .activity-log-table th { background:#f6f9fc; border-bottom:1px solid #e1e8f0; color:#536a84; font-size:.74rem; letter-spacing:.05em; padding:1rem; text-transform:uppercase; }
@@ -18,7 +24,7 @@
     .activity-log-message { color:#65768c; display:block; font-size:.9rem; margin-top:.2rem; }
     .activity-log-time { color:#52677f; font-size:.86rem; white-space:nowrap; }
     .activity-log-empty { color:#697d93; padding:3.5rem 1rem !important; text-align:center; }
-    @media (max-width: 767px) { .activity-log-header { align-items:stretch; flex-direction:column; } .activity-log-controls { align-items:stretch; } .activity-log-filter .form-select { min-width:0; } .activity-log-server-time { white-space:normal; } }
+    @media (max-width: 767px) { .activity-log-header { align-items:stretch; flex-direction:column; } .activity-log-controls { align-items:stretch; } .activity-log-filter .form-select, .activity-log-filter .custom-device-dropdown, .activity-log-filter .custom-device-trigger, .activity-log-filter .custom-device-menu { flex-basis:200px; min-width:200px; width:200px; } .activity-log-server-time { white-space:normal; } }
 </style>
 
 <section class="activity-log-header" aria-labelledby="activityLogHeading">
