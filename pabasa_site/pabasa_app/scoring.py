@@ -190,6 +190,8 @@ def _crla_part2_band(passage_accuracy_percent: Any, comprehension_correct: Any) 
     # bands below it.
     if reading_band == 3 and comprehension_band == 0:
         return 2
+    if reading_band == 2 and comprehension_band == 0:
+        return 1
     return min(reading_band, comprehension_band)
 
 
