@@ -256,7 +256,9 @@ class ClassMaterialsApiTests(TestCase):
         )
         self._login_student(student)
 
-        with patch("pabasa_app.views._official_crla_assessment_phase", return_value="pretest"):
+        with patch("pabasa_app.views._official_crla_assessment_phase", return_value="pretest"), patch(
+            "pabasa_app.views._official_crla_material_for_student", return_value=pretest
+        ):
             response = self.client.get(reverse("get_class_materials"), {"class_code": section.class_code})
 
         self.assertEqual(response.status_code, 200)
@@ -3413,6 +3415,127 @@ class AssessmentPageFlowTests(TestCase):
             availability = _official_assessment_availability_for_student(student)
         self.assertTrue(availability["available"])
         self.assertEqual(availability["assessment_type"], "posttest")
+
+    def test_finalized_official_crla_is_persisted_locked_and_grade_level_card_survives_navigation(self):
+        """A completed result row, not session state, controls the active CRLA."""
+        teacher = User.objects.create(
+            custom_id="TCHR-CRLA-PERSIST", role="teacher", first_name="Tara", last_name="Teacher",
+            sex="female", birth_month=1, birth_day=2, birth_year=1990,
+            email="persist-teacher@example.com", password_hash=make_password("teacher-password"),
+        )
+        student = User.objects.create(
+            custom_id="STU-CRLA-PERSIST", role="student", first_name="Gina", last_name="Reader",
+            sex="female", birth_month=1, birth_day=2, birth_year=2012,
+            email="persist-student@example.com", password_hash=make_password("student-password"),
+            # Deliberately omit workflow state: this simulates a new browser
+            # session and proves the database result is the source of truth.
+            preference={},
+        )
+        section = test_section_create(
+            teacher=teacher, class_name="Reading Class", class_code="READ-CRLA-PERSIST",
+            subject="Reading", is_active=True,
+        )
+        section.add_student(student)
+        pretest = Material.objects.create(
+            title="Official BoSY CRLA", item_type="word", content_text="read",
+            content_json={"items": ["read"]}, assessment_kind="crla", assessment_set="crla",
+            type="assessment", status="published", student_access=True, section=section,
+            teacher=teacher, is_active=True, is_official_reading=True, is_system_owned=True,
+            system_assessment_phase="pretest",
+        )
+        Assessment.objects.create(
+            title="Official BoSY CRLA result", code="CRLA-PERSIST-RESULT", teacher=teacher,
+            material=pretest, student=student, assessment_type="paragraph",
+            attempt_status="completed", completed_at=timezone.now(),
+            crla_classification="Readers at Grade Level", classification="Readers at Grade Level",
+        )
+
+        with patch("pabasa_app.views._official_crla_assessment_phase", return_value="pretest"), patch(
+            "pabasa_app.views._official_crla_material_for_student", return_value=pretest
+        ):
+            availability = _official_assessment_availability_for_student(student)
+            self.assertFalse(availability["available"])
+            self.assertTrue(availability["completed"])
+
+            self._login_student(student)
+            student.active_session_key = self.client.session.session_key
+            student.save(update_fields=["active_session_key", "updated_at"])
+            self.assertEqual(self.client.session.get("user_id"), student.id)
+            first_visit = self.client.get(reverse("assessment"))
+            self.assertEqual(first_visit.status_code, 200, getattr(first_visit, "url", ""))
+            self.assertEqual(first_visit.context["stage"], "grade_level_complete")
+            self.assertEqual(first_visit.context["eligibility"]["reader_classification"], "Readers at Grade Level")
+            self.assertContains(first_visit, "Back to Dashboard")
+            self.assertContains(first_visit, "Go to Practice")
+
+            # Visiting a different TBA/page and then refreshing must not
+            # reopen the official assessment.
+            self.client.get(reverse("dashboard"))
+            returning_visit = self.client.get(reverse("assessment"))
+            self.assertEqual(returning_visit.status_code, 200)
+            self.assertEqual(returning_visit.context["stage"], "grade_level_complete")
+            self.assertFalse(returning_visit.context["official_assessment_available"])
+
+        # A fresh client/session still resolves the same persisted result.
+        fresh_client = Client()
+        session = fresh_client.session
+        session["user_id"] = student.id
+        session["user_role"] = "student"
+        session.save()
+        student.active_session_key = fresh_client.session.session_key
+        student.save(update_fields=["active_session_key", "updated_at"])
+        with patch("pabasa_app.views._official_crla_assessment_phase", return_value="pretest"), patch(
+            "pabasa_app.views._official_crla_material_for_student", return_value=pretest
+        ):
+            refreshed = fresh_client.get(reverse("assessment"))
+        self.assertEqual(refreshed.status_code, 200)
+        self.assertEqual(refreshed.context["stage"], "grade_level_complete")
+
+        # The next official phase uses another material, so the old result
+        # does not create a lifetime lock.
+        Material.objects.create(
+            title="Official Midline CRLA", item_type="word", content_text="read",
+            content_json={"items": ["read"]}, assessment_kind="crla", assessment_set="crla",
+            type="assessment", status="published", student_access=True, section=section,
+            teacher=teacher, is_active=True, is_official_reading=True, is_system_owned=True,
+            system_assessment_phase="midtest",
+        )
+        with patch("pabasa_app.views._official_crla_assessment_phase", return_value="midtest"):
+            next_availability = _official_assessment_availability_for_student(student)
+        self.assertTrue(next_availability["available"])
+
+    def test_non_grade_level_finalized_crla_is_also_locked_from_persisted_result(self):
+        """All final classifications close the current official material."""
+        teacher = User.objects.create(
+            custom_id="TCHR-CRLA-NON-GRADE", role="teacher", first_name="Tara", last_name="Teacher",
+            sex="female", birth_month=1, birth_day=2, birth_year=1990,
+            email="non-grade-teacher@example.com", password_hash=make_password("teacher-password"),
+        )
+        student = User.objects.create(
+            custom_id="STU-CRLA-NON-GRADE", role="student", first_name="Nina", last_name="Reader",
+            sex="female", birth_month=1, birth_day=2, birth_year=2012,
+            email="non-grade-student@example.com", password_hash=make_password("student-password"),
+        )
+        section = test_section_create(
+            teacher=teacher, class_name="Reading Class", class_code="READ-CRLA-NON-GRADE",
+            subject="Reading", is_active=True,
+        )
+        section.add_student(student)
+        material = Material.objects.create(
+            title="Official BoSY CRLA", item_type="word", content_text="read",
+            content_json={"items": ["read"]}, assessment_kind="crla", assessment_set="crla",
+            type="assessment", status="published", student_access=True, section=section,
+            teacher=teacher, is_active=True, is_official_reading=True, is_system_owned=True,
+            system_assessment_phase="pretest",
+        )
+        Assessment.objects.create(
+            title="Official BoSY CRLA result", code="CRLA-NON-GRADE-RESULT", teacher=teacher,
+            material=material, student=student, assessment_type="paragraph",
+            attempt_status="completed", completed_at=timezone.now(),
+            crla_classification="Developing Readers", classification="Developing Readers",
+        )
+        with patch("pabasa_app.views._official_crla_assessment_phase", return_value="pretest"):
+            self.assertFalse(_official_assessment_availability_for_student(student)["available"])
 
     def test_completed_bosy_crla_routes_eligible_students_to_aral_flow(self):
         teacher = User.objects.create(

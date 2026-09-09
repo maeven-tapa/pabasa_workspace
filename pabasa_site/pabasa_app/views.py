@@ -648,19 +648,39 @@ def _finalized_grade_level_crla_result_exists(student):
 def _reader_assessment_state(student):
     state = _get_user_state(student)
     current_enrollment = _student_current_enrollment(student) if isinstance(student, User) else None
+    active_phase = _official_crla_assessment_phase(student)
+    active_material = _official_crla_material_for_student(student, active_phase)
+    active_result = (
+        _official_crla_completed_result_for_material(student, active_material)
+        if active_material else None
+    )
     current_classification = ''
     if current_enrollment:
         current_classification = Assessment.objects.filter(
             student=student, enrollment=current_enrollment,
             attempt_status='completed', completed_at__isnull=False,
         ).exclude(crla_classification='').order_by('-completed_at', '-id').values_list('crla_classification', flat=True).first() or ''
-    classification = current_classification or (state.get('reader_classification') if not current_enrollment else '') or (getattr(student, 'reading_level', '') if not current_enrollment else '') or ''
+    classification = (
+        current_classification
+        or getattr(active_result, 'crla_classification', '')
+        or getattr(active_result, 'classification', '')
+        or (state.get('reader_classification') if not current_enrollment else '')
+        or (getattr(student, 'reading_level', '') if not current_enrollment else '')
+        or ''
+    )
     # Always re-evaluate eligibility from the current classification when we have one,
     # so stale stored flags do not trap eligible students in the completed branch.
     eligible = _aral_eligible_classification(classification) if classification else state.get('aral_eligible')
     if eligible is None:
         eligible = False
-    grade_level_complete = _finalized_grade_level_crla_result_exists(student)
+    # A grade-level result closes the official CRLA it belongs to, not every
+    # future CRLA.  When a new official phase is active, only a finalized
+    # result for that phase's material may select the completion card.
+    if active_material:
+        grade_level_complete = _is_finalized_grade_level_crla_result(active_result)
+    else:
+        # Between official windows, retain the most recent completed outcome.
+        grade_level_complete = _finalized_grade_level_crla_result_exists(student)
     return {
         'reader_classification': classification,
         'aral_eligible': False if grade_level_complete else bool(eligible),
@@ -9076,12 +9096,6 @@ def _official_assessment_availability_for_student(student, request=None):
         return {'available': False, 'assessment_type': 'intervention', 'school_year': None, 'current_term': None, 'active_window': None}
 
     assessment_type = _official_crla_assessment_phase(student, request=request)
-    state = _reader_assessment_state(student)
-    if assessment_type == 'pretest' and bool(state.get('crla_pretest_completed')) and bool(state.get('aral_eligible')):
-        # Once BoSY is completed and the learner is eligible, the current
-        # materials branch should stay on intervention materials only. The
-        # official BoSY card must no longer be exposed as a current assessment.
-        assessment_type = 'intervention'
     if assessment_type not in {'pretest', 'midtest', 'posttest'}:
         return {'available': False, 'assessment_type': assessment_type, 'school_year': None, 'current_term': None, 'active_window': None}
 
@@ -9094,6 +9108,22 @@ def _official_assessment_availability_for_student(student, request=None):
     if not matching_materials.exists():
         return {'available': False, 'assessment_type': assessment_type, 'school_year': None, 'current_term': None, 'active_window': None}
 
+    # The database attempt is authoritative.  Do not use ARAL eligibility or
+    # browser/session state here: Grade-Level learners are intentionally not
+    # ARAL eligible, which previously made their completed pretest reappear.
+    # Checking the exact active material also naturally unlocks a later phase
+    # (or a replacement material for a new term) without a lifetime lock.
+    for material in matching_materials:
+        if _official_crla_completed_result_for_material(student, material):
+            return {
+                'available': False,
+                'assessment_type': assessment_type,
+                'school_year': None,
+                'current_term': None,
+                'active_window': None,
+                'completed': True,
+            }
+
     return {
         'available': True,
         'assessment_type': assessment_type,
@@ -9101,6 +9131,41 @@ def _official_assessment_availability_for_student(student, request=None):
         'current_term': None,
         'active_window': None,
     }
+
+
+def _official_crla_completed_result_for_material(student, material):
+    """Return the finalized persisted result for this official material.
+
+    Completion is deliberately tied to the material that represents the
+    active CRLA phase.  A finalized result must have a classification; an
+    in-progress or unclassified row is not a completed official assessment.
+    When the student's calendar has a school year, retain the existing
+    academic-year boundary so a reused material can be taken next year.
+    """
+    if not student or not material or not _is_official_crla_material(material):
+        return None
+
+    results = Assessment.objects.filter(
+        student=student,
+        material=material,
+        attempt_status='completed',
+        completed_at__isnull=False,
+    ).order_by('-completed_at', '-updated_at', '-id')
+    calendar = _school_calendar_for_user(student) or _active_school_calendar()
+    school_year = str(getattr(calendar, 'school_year', '') or '')
+    if len(school_year) >= 9:
+        try:
+            results = results.filter(
+                completed_at__date__gte=date(int(school_year[:4]), 6, 1),
+                completed_at__date__lte=date(int(school_year[5:]), 5, 31),
+            )
+        except (TypeError, ValueError):
+            pass
+
+    for result in results:
+        if str(getattr(result, 'crla_classification', '') or getattr(result, 'classification', '') or '').strip():
+            return result
+    return None
 
 
 def _official_crla_completion_exists(student, assessment_type, school_year_value):
@@ -22833,6 +22898,11 @@ def _enforce_student_access_for_request(request, material=None, json_response=Fa
             return _student_access_block_response(
                 json_response=json_response,
                 message='This CRLA assessment has been finalized for your class.',
+            )
+        if _official_crla_completed_result_for_material(persisted_user, material):
+            return _student_access_block_response(
+                json_response=json_response,
+                message='You have already completed this CRLA assessment.',
             )
         return None
 
