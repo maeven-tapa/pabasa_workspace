@@ -390,17 +390,38 @@ def _student_values(student, attempt, state, assessment):
     story_number = _story_number(part2_source, story_state) if has_part2 else None
     minutes, seconds = divmod(duration, 60) if duration is not None else (None, None)
 
-    task_1_score = _bounded_integer(score_data.get("task1_score"), 0, 10)
-    task_2_score = _bounded_integer(score_data.get("task2_score"), 0, 10)
-    task_2_type = str(score_data.get("task2_type") or "").lower()
+    task_1_score = _bounded_integer(
+        _first_value(score_data.get("task1_score"), state.get("task1_score")), 0, 10
+    )
+    task_2_type = str(
+        _first_value(score_data.get("task2_type"), state.get("task2_type")) or ""
+    ).lower()
+    task_2_score = _bounded_integer(
+        _first_value(
+            score_data.get("task2_score"),
+            score_data.get("task2_rhymes_score"),
+            score_data.get("task2_sentences_score"),
+            state.get("task2_score"),
+            state.get("task2_rhymes_score"),
+            state.get("task2_sentences_score"),
+        ),
+        0,
+        10,
+    )
     rhyme_score = task_2_score if "l" in task_2_type else None
     sentence_score = task_2_score if "h" in task_2_type else None
 
     if "h" in task_2_type:
-        sentence_count = score_data.get("sentences_read")
-        if sentence_count is None:
+        persisted_sentence_score = _first_value(
+            score_data.get("task2_sentences_score"), state.get("task2_sentences_score")
+        )
+        sentence_count = _first_value(score_data.get("sentences_read"), state.get("sentences_read"))
+        if persisted_sentence_score is not None:
+            sentence_score = _bounded_integer(persisted_sentence_score, 0, 10)
+        elif sentence_count is None:
             sentence_count = min(task_2_score or 0, 4)
-        sentence_score = crla_sentence_score(sentence_count)
+        else:
+            sentence_score = crla_sentence_score(sentence_count)
 
     if task_1_score is not None:
         if 0 <= task_1_score <= 6:
@@ -414,8 +435,10 @@ def _student_values(student, attempt, state, assessment):
             )
             rhyme_score = None
 
-    part_1_total = None
-    if task_1_score is not None and (rhyme_score is not None or sentence_score is not None):
+    part_1_total = _bounded_integer(
+        _first_value(score_data.get("part1_total_score"), state.get("part1_total_score")), 0, 30
+    )
+    if part_1_total is None and task_1_score is not None and (rhyme_score is not None or sentence_score is not None):
         part_1_total = task_1_score + (rhyme_score or 0) + (sentence_score or 0)
 
     story_words_read = _bounded_integer(
@@ -433,10 +456,18 @@ def _student_values(student, attempt, state, assessment):
         0,
         6,
     )
-    # Column U's persisted final classification is authoritative for a
-    # completed Part 2; do not replace it with a stale Part 1 label or a new
-    # export-only calculation.  The formula remains the compatibility fallback.
-    profile = str(score_data.get("crla_classification") or "").strip() if has_completed_part2 else ""
+    # Column U's persisted final classification is authoritative; the formula
+    # remains the compatibility fallback for older result rows.
+    profile = str(
+        _first_value(
+            score_data.get("crla_classification"),
+            score_data.get("classification"),
+            getattr(attempt, "crla_classification", None),
+            getattr(attempt, "classification", None),
+            state.get("crla_classification"),
+            state.get("classification"),
+        ) or ""
+    ).strip()
     if not profile:
         profile = _reading_profile(part_1_total, story_number, percent, correct_answers)
 
