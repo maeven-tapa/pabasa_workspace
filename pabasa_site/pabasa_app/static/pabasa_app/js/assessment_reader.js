@@ -2407,14 +2407,17 @@
                 }
                 const persistedQuestionIndex = Number.parseInt(persistedEndState.crla_question_index, 10);
                 const hasPersistedQuestionIndex = Number.isInteger(persistedQuestionIndex);
-                currentIndex = hasPersistedQuestionIndex
+                const isNewSentenceStageTransition = requestedStage === "sentences" && persistedStage !== "sentences";
+                currentIndex = !isNewSentenceStageTransition && hasPersistedQuestionIndex
                     ? Math.min(Math.max(persistedQuestionIndex, 0), items.length - 1)
                     : 0;
                 // Locked-result cache records scored items only. It must never
                 // decide where a reader starts. A fresh section, or a legacy
                 // active state without an explicit position, starts at Item 1
                 // and immediately becomes resumable at index 0.
-                const shouldPersistInitialIndex = isFreshOfficialCrlaLaunch || !hasPersistedQuestionIndex;
+                const shouldPersistInitialIndex = isFreshOfficialCrlaLaunch
+                    || isNewSentenceStageTransition
+                    || !hasPersistedQuestionIndex;
                 if (shouldPersistInitialIndex) {
                     persistOfficialCrlaReaderProgress();
                 }
