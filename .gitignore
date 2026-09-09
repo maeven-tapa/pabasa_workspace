@@ -11,6 +11,8 @@ env/
 ENV/
 
 # Django
+# Runtime data must not be replaced by source-code checkouts or pulls.
+pabasa_site/db.sqlite3
 *.log
 local_settings.py
 media/

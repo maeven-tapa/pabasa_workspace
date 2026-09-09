@@ -19,6 +19,7 @@
     {% endif %}
 
     <form method="post" id="practice-mode-form">
+        <div id="practice-save-error" class="alert alert-danger d-none" role="alert" tabindex="-1"></div>
         {% csrf_token %}
         {{ form.content_text }}
         <div class="border rounded-3 p-3 bg-white mb-3">
@@ -168,14 +169,14 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header border-0">
-                <h5 class="modal-title" id="practiceUnsavedChangesModalLabel">Are you sure you want to go back?</h5>
+                <h5 class="modal-title" id="practiceUnsavedChangesModalLabel">Leave this page?</h5>
             </div>
             <div class="modal-body">
-                <p class="mb-0">Your changes cannot be saved.</p>
+                <p class="mb-0">You have unsaved changes. If you leave this page, the information you entered will be lost.</p>
             </div>
             <div class="modal-footer border-0 justify-content-end">
-                <button type="button" class="btn btn-outline-secondary" id="stayOnPracticeFormBtn">Stay / Continue Editing</button>
-                <button type="button" class="btn btn-primary" id="discardPracticeChangesBtn">Yes, Go Back</button>
+                <button type="button" class="btn btn-outline-secondary" id="stayOnPracticeFormBtn">No, Stay</button>
+                <button type="button" class="btn btn-primary" id="discardPracticeChangesBtn">Yes, Leave</button>
             </div>
         </div>
     </div>
@@ -350,9 +351,8 @@
                 return;
             }
             const isOccupied = occupiedLevels.includes(option.value);
-            const isCurrentValue = option.value === currentValue;
-            option.disabled = isOccupied && !isCurrentValue;
-            option.title = isOccupied && !isCurrentValue
+            option.disabled = isOccupied;
+            option.title = isOccupied
                 ? 'This configuration already exists. Edit or archive the existing content to make changes.'
                 : '';
             option.textContent = isOccupied ? `${option.dataset.label} (Already Created)` : option.dataset.label;
@@ -368,10 +368,7 @@
             return option.value && !option.disabled;
         });
         if (!availableOptions.length) {
-            const currentOptionExists = Array.from(level.options).some(function (option) {
-                return option.value === currentValue;
-            });
-            level.value = currentOptionExists ? currentValue : '';
+            level.value = '';
             levelHelp.textContent = 'All levels for this Mode, Difficulty, and Language have already been created. Edit or archive an existing configuration to make changes.';
             level.disabled = true;
             level.classList.add('opacity-50');
@@ -460,34 +457,16 @@
     }
 
     function getFormState() {
-        const state = {};
-        Array.from(form.elements).forEach(function (element) {
-            if (!element.name || element.disabled || element.type === 'button' || element.type === 'submit' || element.type === 'reset') {
-                return;
-            }
-            if (element.name === modeSelect.name) {
-                return;
-            }
-            if ((element.type === 'checkbox' || element.type === 'radio') && !element.checked) {
-                return;
-            }
-            if (element.name in state) {
-                if (Array.isArray(state[element.name])) {
-                    state[element.name].push(element.value);
-                } else {
-                    state[element.name] = [state[element.name], element.value];
-                }
-            } else {
-                state[element.name] = element.value;
-            }
-        });
-        return state;
+        return exitFormState();
     }
 
-    const initialFormState = JSON.stringify(getFormState());
+    let initialFormState;
+    let saved = false;
+    let saving = false;
+    const submittedForm = {{ form.is_bound|yesno:"true,false" }};
 
     function hasUnsavedChanges() {
-        return JSON.stringify(getFormState()) !== initialFormState;
+        return !saved && (submittedForm || JSON.stringify(getFormState()) !== initialFormState);
     }
 
     function applyModeChange(value) {
@@ -577,6 +556,7 @@
                     itemsTextarea.value = nextItems.join('\n');
                 }
                 renderItemsList();
+                updateFormAvailability();
             });
             itemsList.appendChild(chip);
         });
@@ -657,8 +637,37 @@
         updateSummary();
     });
 
-    form.addEventListener('submit', function () {
+    form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        if (saving) return;
         syncHiddenField();
+        const errorBox = document.getElementById('practice-save-error');
+        errorBox.classList.add('d-none');
+        const data = new FormData(form);
+        saving = true;
+        submitButton.disabled = true;
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST', body: data,
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+            });
+            const result = await response.json();
+            if (!response.ok || result.saved !== true) {
+                const errors = Object.values(result.errors || {}).flat().map(error => error.message);
+                throw new Error(errors.join(' ') || 'Practice Content could not be saved. Please try again.');
+            }
+            saved = true;
+            initialFormState = JSON.stringify(getFormState());
+            window.location.replace(result.redirect_url);
+        } catch (error) {
+            errorBox.textContent = error instanceof SyntaxError || error instanceof TypeError
+                ? 'Unable to confirm the save. Please check your connection and try again.' : error.message;
+            errorBox.classList.remove('d-none');
+            errorBox.focus();
+        } finally {
+            saving = false;
+            updateFormAvailability();
+        }
     });
 
     updateModeSelection(modeSelect.value);
@@ -678,12 +687,14 @@
         });
     }
 
-    const initialExitFormState = JSON.stringify(exitFormState());
+    initialFormState = JSON.stringify(getFormState());
     const unsavedChangesModalEl = document.getElementById('practiceUnsavedChangesModal');
     let unsavedChangesModal = null;
     const stayOnPracticeFormBtn = document.getElementById('stayOnPracticeFormBtn');
     const discardPracticeChangesBtn = document.getElementById('discardPracticeChangesBtn');
-    let pendingExitUrl = null;
+    let pendingLeave = null;
+    let allowLeave = false;
+    let restoringHistory = false;
 
     function getUnsavedChangesModal() {
         if (!unsavedChangesModal && window.bootstrap && unsavedChangesModalEl) {
@@ -695,30 +706,60 @@
         return unsavedChangesModal;
     }
 
-    document.addEventListener('click', function (event) {
-        const exitLink = event.target.closest('.js-practice-exit');
-        if (!exitLink || JSON.stringify(exitFormState()) === initialExitFormState) {
-            return;
-        }
+    function confirmLeave(destination) {
+        if (saving) return;
         const modal = getUnsavedChangesModal();
-        if (!modal) {
-            return;
-        }
-        event.preventDefault();
-        pendingExitUrl = exitLink.href;
+        if (!modal) return;
+        pendingLeave = destination;
         modal.show();
-    });
+    }
 
     stayOnPracticeFormBtn.addEventListener('click', function () {
-        pendingExitUrl = null;
+        pendingLeave = null;
         const modal = getUnsavedChangesModal();
         if (modal) {
             modal.hide();
         }
     });
     discardPracticeChangesBtn.addEventListener('click', function () {
-        if (pendingExitUrl) {
-            window.location.assign(pendingExitUrl);
+        allowLeave = true;
+        getUnsavedChangesModal().hide();
+        if (pendingLeave) pendingLeave();
+    });
+    document.addEventListener('click', function (event) {
+        const link = event.target.closest('a[href]');
+        if (!link || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey
+            || link.target === '_blank' || link.hasAttribute('download') || link.getAttribute('href').startsWith('#')) return;
+        if (saving || hasUnsavedChanges()) {
+            event.preventDefault();
+            confirmLeave(() => window.location.assign(link.href));
+        }
+    });
+    // Keep a same-page history entry so browser Back can be confirmed in our modal.
+    if (!history.state || !history.state.practiceFormGuard) {
+        history.pushState({practiceFormGuard: true}, '', window.location.href);
+    }
+    window.addEventListener('pageshow', function (event) {
+        if (event.persisted && saved) window.location.reload();
+    });
+    window.addEventListener('popstate', function () {
+        if (allowLeave) return;
+        if (restoringHistory) {
+            restoringHistory = false;
+            if (hasUnsavedChanges()) confirmLeave(() => history.go(-2));
+            return;
+        }
+        if (saving || hasUnsavedChanges()) {
+            restoringHistory = true;
+            history.forward();
+        } else {
+            history.back();
+        }
+    });
+    window.addEventListener('beforeunload', function (event) {
+        if (!allowLeave && hasUnsavedChanges()) {
+            event.preventDefault();
+            event.returnValue = '';
         }
     });
 })();

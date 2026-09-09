@@ -11,13 +11,13 @@ SEED_PATH = Path(__file__).resolve().parents[1] / "filipino_grade_2_practice.jso
 
 
 class Command(BaseCommand):
-    help = "Add or refresh only the Filipino Grade 2 practice curriculum."
+    help = "Add missing Filipino Grade 2 practice content, preserving existing records."
 
     @transaction.atomic
     def handle(self, *args, **options):
         records = json.loads(SEED_PATH.read_text(encoding="utf-8"))
         created_count = 0
-        updated_count = 0
+        preserved_count = 0
 
         for record in records:
             content_json = record["content_json"]
@@ -36,20 +36,21 @@ class Command(BaseCommand):
                 "content_json": content_json,
                 "difficulty_level": record["difficulty_level"],
                 "source_type": "shared",
+                "is_system_owned": True,
                 "status": "published",
                 "student_access": True,
                 "is_active": True,
             }
-            _material, created = Material.objects.update_or_create(
+            _material, created = Material.objects.get_or_create(
                 **lookup,
                 defaults=defaults,
             )
             created_count += int(created)
-            updated_count += int(not created)
+            preserved_count += int(not created)
 
         self.stdout.write(
             self.style.SUCCESS(
                 f"Filipino practice seed complete: {created_count} created, "
-                f"{updated_count} updated. English practice content was not queried or changed."
+                f"{preserved_count} preserved. English practice content was not queried or changed."
             )
         )

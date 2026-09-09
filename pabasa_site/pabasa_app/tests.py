@@ -9323,6 +9323,8 @@ class AdminPracticeAssessmentListTests(TestCase):
     def test_admin_practice_assessment_uses_mode_for_item_label(self):
         Material.objects.create(
             title="Free Hard Words",
+            is_system_owned=True,
+            source_type='shared',
             item_type='word',
             prompt_text='',
             content_text='sun\nmoon',
@@ -9335,6 +9337,8 @@ class AdminPracticeAssessmentListTests(TestCase):
         )
         Material.objects.create(
             title="Color Easy Sentences",
+            is_system_owned=True,
+            source_type='shared',
             item_type='sentence',
             prompt_text='',
             content_text='One sentence.\nTwo sentence.',
@@ -9347,6 +9351,8 @@ class AdminPracticeAssessmentListTests(TestCase):
         )
         Material.objects.create(
             title="Hunt Medium Paragraphs",
+            is_system_owned=True,
+            source_type='shared',
             item_type='paragraph',
             prompt_text='',
             content_text='First paragraph.\n\nSecond paragraph.',
@@ -9370,9 +9376,12 @@ class AdminPracticeAssessmentListTests(TestCase):
         response = self.client.get(reverse('admin_practice_assessment'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, '2 words')
-        self.assertContains(response, '2 sentences')
-        self.assertContains(response, '2 paragraphs')
+        for label in ('words', 'sentences', 'paragraphs'):
+            self.assertContains(
+                response,
+                f'<td><span class="fw-semibold">2</span> <span class="small text-secondary">{label}</span></td>',
+                html=True,
+            )
 
 
 class AdminPracticeMaterialFormTests(TestCase):
@@ -9671,6 +9680,57 @@ class AdminPracticeCreateWorkflowTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertContains(response, 'already exists', status_code=400)
         self.assertFalse(Material.objects.filter(type='practice').exists())
+
+    def test_ajax_save_returns_confirmed_record_in_selected_language_table(self):
+        data = {**self.valid_data, 'language': 'English', 'status': 'published', 'content_text': 'hi'}
+        response = self.client.post(self.url, data, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['saved'])
+        material = Material.objects.get(type='practice')
+        self.assertEqual(material.content_json['items'], ['hi'])
+        listing = self.client.get(response.json()['redirect_url'])
+        self.assertContains(listing, 'Practice Content Saved Successfully')
+        self.assertContains(listing, 'Free Mode - Easy - Level 1 has been saved successfully.')
+        row = list(listing.context['practice_items'])[0]
+        self.assertEqual(row['material'].pk, material.pk)
+        self.assertEqual(row['item_count'], 1)
+        self.assertEqual(row['status_label'], 'Published')
+        self.assertEqual(row['language_label'], 'English')
+        other_language = self.client.get(reverse('admin_practice_assessment'), {'language': 'Filipino'})
+        self.assertEqual(len(other_language.context['practice_items']), 0)
+
+    def test_ajax_invalid_content_has_no_success_or_reserved_slot(self):
+        for content in ['', '!!!']:
+            response = self.client.post(self.url, {**self.valid_data, 'content_text': content}, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+            self.assertEqual(response.status_code, 400)
+            self.assertFalse(response.json()['saved'])
+            self.assertIn('content_text', response.json()['errors'])
+        self.assertFalse(Material.objects.filter(type='practice').exists())
+        listing = self.client.get(reverse('admin_practice_assessment'))
+        self.assertNotContains(listing, 'Practice Content Saved Successfully')
+
+    def test_database_failure_rolls_back_record_and_returns_error(self):
+        from django.db import OperationalError
+        from .views import _save_admin_practice_material
+
+        def fail_after_insert(*args):
+            _save_admin_practice_material(*args)
+            raise OperationalError('Simulated database failure')
+
+        with patch('pabasa_app.views._save_admin_practice_material', side_effect=fail_after_insert):
+            response = self.client.post(self.url, self.valid_data, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.json()['saved'])
+        self.assertFalse(Material.objects.filter(type='practice').exists())
+        self.assertNotContains(self.client.get(reverse('admin_practice_assessment')), 'Practice Content Saved Successfully')
+
+    def test_saved_draft_is_visible_as_draft(self):
+        response = self.client.post(self.url, self.valid_data, follow=True)
+        self.assertEqual(response.status_code, 200)
+        row = list(response.context['practice_items'])[0]
+        self.assertEqual(row['status_label'], 'Draft')
+        filtered = self.client.get(reverse('admin_practice_assessment'), {'language': 'Filipino', 'status': 'draft'})
+        self.assertEqual(len(filtered.context['practice_items']), 1)
 
 
 class AdminPracticeTemplateTests(TestCase):

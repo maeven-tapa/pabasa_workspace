@@ -1,6 +1,15 @@
 {% extends "pabasa_app/admin_base.html" %}
 
 {% block content %}
+{% for message in messages %}
+{% if 'practice_saved' in message.tags %}
+<div class="alert alert-success alert-dismissible fade show" role="status">
+    <strong>Practice Content Saved Successfully</strong>
+    <div>{{ message }}</div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+{% endfor %}
 <style>
     .practice-delete-modal .modal-content {
         border: 1px solid rgba(16, 70, 110, 0.14);
@@ -345,7 +354,7 @@
                                             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
                                             <form method="post" action="{% url 'admin_practice_delete' item.id %}" class="d-inline">
                                                 {% csrf_token %}
-                                                <button class="btn btn-danger" type="submit">Delete</button>
+                                                <button class="btn btn-danger" type="submit" name="confirm_delete" value="yes">Confirm Delete</button>
                                             </form>
                                         </div>
                                     </div>
