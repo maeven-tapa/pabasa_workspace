@@ -11795,10 +11795,8 @@ def teacher_aral_action(request):
 
 @xframe_options_sameorigin
 def reading_word_page(request):
-    access_response = _enforce_student_access_for_request(request)
-    if access_response:
-        return access_response
     live_session_id = str(request.GET.get('live_session_id') or '').strip()
+    live_session = None
     if live_session_id:
         live_session = LiveAssessmentSession.objects.filter(id=live_session_id).first()
         current_user_id = request.session.get('user_id')
@@ -11812,6 +11810,18 @@ def reading_word_page(request):
             or not _is_live_crla_material(live_session.material)
         ):
             return HttpResponseForbidden('You are not authorized to join this live CRLA assessment.')
+    authorized_live_student = bool(
+        request.GET.get('live') == '1'
+        and request.session.get('user_role') == 'student'
+        and live_session_id
+        and live_session is not None
+    )
+    access_response = _enforce_student_access_for_request(
+        request,
+        allow_finalized_live_student=authorized_live_student,
+    )
+    if access_response:
+        return access_response
     canonical_response = _canonicalize_custom_material_reading_url(request)
     if canonical_response:
         return canonical_response
@@ -23271,7 +23281,12 @@ def _material_assessment_week_section(student, material):
     return None
 
 
-def _enforce_student_access_for_request(request, material=None, json_response=False):
+def _enforce_student_access_for_request(
+    request,
+    material=None,
+    json_response=False,
+    allow_finalized_live_student=False,
+):
     if request.session.get('user_role') != 'student':
         return None
 
@@ -23309,7 +23324,7 @@ def _enforce_student_access_for_request(request, material=None, json_response=Fa
         and str(getattr(material, 'status', '') or '').strip().lower() == 'published'
         and official_phase == active_student_phase
     ):
-        if _student_crla_finalized_for_material(persisted_user, material):
+        if _student_crla_finalized_for_material(persisted_user, material) and not allow_finalized_live_student:
             return _student_access_block_response(
                 json_response=json_response,
                 message='This CRLA assessment has been finalized for your class.',
