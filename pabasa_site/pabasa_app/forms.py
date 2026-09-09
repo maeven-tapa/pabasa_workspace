@@ -86,10 +86,14 @@ class AdminPracticeMaterialForm(forms.Form):
 
         queryset = Material.objects.filter(
             type="practice",
+            section__isnull=True,
+            teacher__isnull=True,
+            is_system_owned=True,
+            source_type="shared",
             content_json__mode=selected_mode,
             content_json__difficulty=selected_difficulty,
             language=selected_language,
-        )
+        ).exclude(content_text="")
         material_obj = material or self.material
         if material_obj:
             queryset = queryset.exclude(pk=material_obj.pk)
@@ -146,11 +150,15 @@ class AdminPracticeMaterialForm(forms.Form):
         if mode and difficulty and level:
             duplicate_query = Material.objects.filter(
                 type="practice",
+                section__isnull=True,
+                teacher__isnull=True,
+                is_system_owned=True,
+                source_type="shared",
                 content_json__mode=mode,
                 content_json__difficulty=difficulty,
                 content_json__level=level,
                 language=Material.normalize_language_value(cleaned_data.get("language")),
-            )
+            ).exclude(content_text="")
             if self.material:
                 duplicate_query = duplicate_query.exclude(pk=self.material.pk)
             if duplicate_query.exists():

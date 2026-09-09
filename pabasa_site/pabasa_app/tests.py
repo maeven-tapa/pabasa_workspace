@@ -5,6 +5,7 @@ from django.contrib.auth.hashers import check_password, make_password
 from openpyxl import load_workbook
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
+from django.db import IntegrityError, transaction
 from django.db.models import F
 from datetime import date, datetime, timedelta
 from io import BytesIO
@@ -6221,6 +6222,77 @@ class LiveAssessmentStartTests(TestCase):
         self.assertEqual(student_state['final_score'], 88)
         self.assertEqual(student_state['connection_status'], 'connected')
 
+    def test_crla_intermediate_branch_updates_remain_reading_for_next_branch(self):
+        self.material.assessment_kind = 'crla'
+        self.material.is_official_reading = True
+        self.material.save(update_fields=['assessment_kind', 'is_official_reading'])
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='started',
+            countdown_seconds=0,
+            start_at=timezone.now() - timedelta(seconds=10),
+            student_states={str(self.student.id): {'status': 'waiting', 'progress': 0}},
+        )
+
+        student_client = Client()
+        student_session = student_client.session
+        student_session['user_id'] = self.student.id
+        student_session['user_role'] = 'student'
+        student_session['first_name'] = self.student.first_name
+        student_session['last_name'] = self.student.last_name
+        student_session['email'] = self.student.email
+        student_session['custom_id'] = self.student.custom_id
+        student_session.save()
+        User.objects.filter(pk=self.student.id).update(active_session_key=student_session.session_key)
+        update_url = reverse('live_assessment_student_state_update', kwargs={'session_id': session.id})
+
+        for stage, label, completed, total in (
+            ('words', 'Words', 3, 10),
+            ('rhymes', 'Rhymes', 2, 5),
+            ('sentences', 'Sentence', 4, 10),
+            ('story', 'Story', 1, 1),
+            ('comprehension', 'Comprehension', 3, 5),
+        ):
+            response = student_client.post(
+                update_url,
+                json.dumps({
+                    'status': 'reading',
+                    'crla_stage': stage,
+                    'crla_stage_label': label,
+                    'items_completed': completed,
+                    'items_total': total,
+                    'progress': completed / total,
+                    'connection_status': 'connected',
+                }),
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.json()['success'])
+            session.refresh_from_db()
+            student_state = session.student_states[str(self.student.id)]
+            self.assertEqual(student_state['status'], 'reading')
+            self.assertEqual(student_state['crla_stage'], stage)
+            self.assertEqual(student_state['crla_stage_label'], label)
+            self.assertEqual(student_state['items_completed'], completed)
+            self.assertEqual(student_state['items_total'], total)
+
+    def test_crla_intermediate_completion_publishes_reading_until_rating_is_completed(self):
+        source = (Path(__file__).parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js').read_text(encoding='utf-8')
+        item_completion = source.split('if (isCurrentLiveAssessment()) {', 1)[1].split('const hasRecognizedSpeech', 1)[0]
+        completion = source.split('const hasSubmittedLearnerExperienceRating', 1)[1]
+
+        self.assertIn("status: isOfficialAssessmentLaunch ? 'reading'", item_completion)
+        self.assertIn('previousEndState.stage === "completed"', source)
+        self.assertIn('branchState.stage === "completed" && hasSubmittedLearnerExperienceRating ? "completed" : "reading"', completion)
+        self.assertIn('branchState.stage = hasSubmittedLearnerExperienceRating ? "completed" : "learner_experience"', source)
+        self.assertIn('currentStoryState === "story_comprehension"', source)
+        self.assertIn('comprehension: "Comprehension"', source)
+
     def test_record_assessment_completion_updates_live_session_score(self):
         session = LiveAssessmentSession.objects.create(
             id=uuid.uuid4().hex,
@@ -9366,6 +9438,9 @@ class AdminPracticeMaterialFormTests(TestCase):
             type='practice',
             status='published',
             difficulty_level='easy',
+            language='English',
+            is_system_owned=True,
+            source_type='shared',
             is_active=True,
         )
 
@@ -9374,6 +9449,7 @@ class AdminPracticeMaterialFormTests(TestCase):
             'difficulty_level': 'easy',
             'level': 'level_1',
             'status': 'draft',
+            'language': 'English',
             'content_text': 'sun',
         })
 
@@ -9419,6 +9495,9 @@ class AdminPracticeMaterialFormTests(TestCase):
             type='practice',
             status='published',
             difficulty_level='easy',
+            language='English',
+            is_system_owned=True,
+            source_type='shared',
             is_active=True,
         )
 
@@ -9426,6 +9505,172 @@ class AdminPracticeMaterialFormTests(TestCase):
         occupied_levels = form.get_occupied_levels('free', 'easy')
 
         self.assertEqual(occupied_levels, ['level_1'])
+
+    def test_incomplete_record_does_not_occupy_a_level(self):
+        Material.objects.create(
+            title='Incomplete Practice',
+            item_type='word',
+            content_text='',
+            content_json={'mode': 'free', 'difficulty': 'easy', 'level': 'level_1'},
+            type='practice',
+            status='draft',
+            difficulty_level='easy',
+            language='Filipino',
+            is_system_owned=True,
+            source_type='shared',
+        )
+
+        occupied_levels = AdminPracticeMaterialForm().get_occupied_levels(
+            'free', 'easy', 'Filipino',
+        )
+
+        self.assertEqual(occupied_levels, [])
+
+    def test_non_admin_practice_record_does_not_occupy_a_level(self):
+        Material.objects.create(
+            title='Legacy Practice',
+            item_type='word',
+            content_text='araw',
+            content_json={'mode': 'free', 'difficulty': 'easy', 'level': 'level_1'},
+            type='practice',
+            status='published',
+            difficulty_level='easy',
+            language='Filipino',
+            is_system_owned=False,
+            source_type='personal',
+        )
+
+        occupied_levels = AdminPracticeMaterialForm().get_occupied_levels(
+            'free', 'easy', 'Filipino',
+        )
+
+        self.assertEqual(occupied_levels, [])
+
+    def test_saved_slots_are_independent_by_language_and_difficulty(self):
+        Material.objects.create(
+            title='Filipino Easy Level 1',
+            item_type='word',
+            content_text='araw',
+            content_json={'mode': 'free', 'difficulty': 'easy', 'level': 'level_1'},
+            type='practice',
+            status='published',
+            difficulty_level='easy',
+            language='Filipino',
+            is_system_owned=True,
+            source_type='shared',
+        )
+        form = AdminPracticeMaterialForm()
+
+        self.assertEqual(form.get_occupied_levels('free', 'easy', 'Filipino'), ['level_1'])
+        self.assertEqual(form.get_occupied_levels('free', 'medium', 'Filipino'), [])
+        self.assertEqual(form.get_occupied_levels('free', 'easy', 'English'), [])
+
+
+class AdminPracticeCreateWorkflowTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create(
+            custom_id='ADM-PRACTICE-CREATE',
+            role='admin',
+            first_name='Practice',
+            last_name='Admin',
+            sex='female',
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email='practice-create-admin@example.com',
+            password_hash=make_password('password'),
+        )
+        session = self.client.session
+        session['user_id'] = self.admin.id
+        session['user_role'] = self.admin.role
+        session['first_name'] = self.admin.first_name
+        session['last_name'] = self.admin.last_name
+        session['email'] = self.admin.email
+        session['custom_id'] = self.admin.custom_id
+        session.save()
+        self.url = reverse('admin_practice_create')
+        self.valid_data = {
+            'mode': 'free',
+            'difficulty_level': 'easy',
+            'level': 'level_1',
+            'status': 'draft',
+            'language': 'Filipino',
+            'content_text': 'araw',
+        }
+
+    def test_opening_or_abandoning_form_does_not_create_or_reserve_level(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Material.objects.filter(type='practice').exists())
+        self.assertEqual(
+            response.context['occupied_levels_map']['free']['easy']['Filipino'],
+            [],
+        )
+
+        refreshed_response = self.client.get(self.url)
+        self.assertEqual(
+            refreshed_response.context['occupied_levels_map']['free']['easy']['Filipino'],
+            [],
+        )
+
+    def test_invalid_submission_does_not_create_or_reserve_level(self):
+        invalid_data = {**self.valid_data, 'content_text': ''}
+
+        response = self.client.post(self.url, invalid_data)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Material.objects.filter(type='practice').exists())
+        self.assertEqual(
+            response.context['occupied_levels_map']['free']['easy']['Filipino'],
+            [],
+        )
+
+    def test_successful_save_creates_record_and_occupies_exact_slot(self):
+        response = self.client.post(self.url, self.valid_data)
+
+        self.assertEqual(response.status_code, 302)
+        material = Material.objects.get(type='practice')
+        self.assertEqual(material.content_text, 'araw')
+        self.assertTrue(material.is_system_owned)
+        self.assertEqual(material.source_type, 'shared')
+
+        add_response = self.client.get(self.url)
+        occupied = add_response.context['occupied_levels_map']
+        self.assertEqual(occupied['free']['easy']['Filipino'], ['level_1'])
+        self.assertEqual(occupied['free']['medium']['Filipino'], [])
+        self.assertEqual(occupied['free']['easy']['English'], [])
+
+    def test_database_constraint_rejects_duplicate_saved_slot(self):
+        first_response = self.client.post(self.url, self.valid_data)
+        self.assertEqual(first_response.status_code, 302)
+
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Material.objects.create(
+                title='Duplicate Slot',
+                item_type='word',
+                content_text='buwan',
+                content_json={
+                    'mode': 'free',
+                    'difficulty': 'easy',
+                    'level': 'level_1',
+                    'items': ['buwan'],
+                },
+                type='practice',
+                status='draft',
+                difficulty_level='easy',
+                language='Filipino',
+                is_system_owned=True,
+                source_type='shared',
+            )
+
+    @patch('pabasa_app.views._save_admin_practice_material', side_effect=IntegrityError)
+    def test_save_race_returns_form_error_instead_of_server_error(self, _save_mock):
+        response = self.client.post(self.url, self.valid_data)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, 'already exists', status_code=400)
+        self.assertFalse(Material.objects.filter(type='practice').exists())
 
 
 class AdminPracticeTemplateTests(TestCase):
@@ -10273,6 +10518,65 @@ class AssessmentCompletionNotificationTests(TestCase):
         self.assertEqual(profile["accuracy"], "88")
         self.assertEqual(profile["wpm"], "72")
         self.assertEqual(profile["crla_classification"], "Transitioning Readers")
+
+    def test_official_crla_completion_syncs_student_and_teacher_roster(self):
+        material = Material.objects.create(
+            title="Official CRLA Sync Check",
+            code="CRLA-SYNC-MAT",
+            teacher=self.teacher,
+            section=self.section,
+            item_type="word",
+            type="assessment",
+            assessment_kind="crla",
+            is_official_reading=True,
+            status="published",
+            is_active=True,
+        )
+        self._login_student()
+        completion_payload = {
+            "material_id": f"material-{material.id}",
+            "activity_type": "assessment",
+            "assessment_type": "word",
+            "correct_words": 4,
+            "crla_score_data": {
+                "task1_score": 4,
+                "task2_type": "Task 2L / Rhymes",
+                "task2_score": 2,
+            },
+            "scores": {
+                "correct_words": 4,
+                "duration_seconds": 30,
+            },
+        }
+
+        # Calendar-window availability is covered separately. This test
+        # exercises the persistence contract once an official attempt is
+        # authorized for completion.
+        with patch("pabasa_app.views._student_can_complete_assessment", return_value=True):
+            response = self.client.post(
+                reverse("record_assessment_completion"),
+                data=json.dumps(completion_payload),
+                content_type="application/json",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        result = material.assessment_results.get(
+            student=self.student, attempt_status="completed",
+        )
+        self.assertEqual(result.crla_classification, "Low Emerging Reader")
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.reading_level, "Low Emerging Reader")
+        self.assertEqual(
+            self.student.preference["reading_assessment_state"]["reader_classification"],
+            "Low Emerging Reader",
+        )
+
+        self._login_teacher()
+        roster = self.client.get(reverse("get_teacher_students_api")).json()
+        student = next(item for item in roster["students"] if item["id"] == self.student.id)
+        self.assertEqual(student["level"], "Low Emerging Reader")
+        self.assertTrue(student["aral_eligible"])
 
     def test_crla_completion_keeps_aral_eligible_students_on_completion_state(self):
         self._login_student()

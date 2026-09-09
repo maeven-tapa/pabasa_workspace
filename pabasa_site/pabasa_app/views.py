@@ -99,6 +99,7 @@ from .scoring import (
     crla_reading_profile,
     crla_task1_next_task,
     crla_sentence_score,
+    canonical_crla_classification,
     derive_classification_equivalents,
     normalize_adapted_level_score,
     normalize_assessment_type,
@@ -2636,6 +2637,48 @@ def _update_student_reading_profile(student_user, score_payload):
         student_user.save(update_fields=['reading_level', 'updated_at'])
     except Exception:
         student_user.save()
+
+
+def _sync_completed_official_crla_result(student_user, result_row, score_payload, assessment=None, material=None):
+    """Commit one finalized CRLA result to every server-side reader.
+
+    The teacher roster only accepts a persisted official result.  Keeping this
+    synchronization here prevents a Student-only workflow state from becoming
+    the apparent source of truth when the browser submits its completion
+    request late or retries it.
+    """
+    if not student_user or not result_row:
+        return ''
+    canonical_classification = canonical_crla_classification(
+        result_row.crla_classification
+        or result_row.classification
+        or score_payload.get('crla_classification')
+        or score_payload.get('classification')
+    )
+    if not canonical_classification:
+        return ''
+
+    with transaction.atomic():
+        changed_fields = []
+        if result_row.crla_classification != canonical_classification:
+            result_row.crla_classification = canonical_classification
+            changed_fields.append('crla_classification')
+        if result_row.classification != canonical_classification:
+            result_row.classification = canonical_classification
+            changed_fields.append('classification')
+        if changed_fields:
+            changed_fields.append('updated_at')
+            result_row.save(update_fields=changed_fields)
+        score_payload['crla_classification'] = canonical_classification
+        score_payload['classification'] = canonical_classification
+        _update_student_reading_profile(student_user, score_payload)
+        _sync_assessment_workflow_state(
+            student_user,
+            score_payload=score_payload,
+            assessment=result_row.source_assessment or assessment,
+            material=material,
+        )
+    return canonical_classification
 
 
 def _sync_assessment_workflow_state(student_user, score_payload=None, assessment=None, material=None):
@@ -10525,7 +10568,7 @@ def _admin_practice_context(request, page_title):
     })
     return context
 
-def _admin_practice_template_context(request, material=None, page_title='Practice'):
+def _admin_practice_template_context(request, material=None, page_title='Practice', form=None):
     selected_language = _practice_selected_language(request)
     initial = {}
     if material:
@@ -10541,7 +10584,8 @@ def _admin_practice_template_context(request, material=None, page_title='Practic
     else:
         initial['language'] = selected_language
 
-    form = AdminPracticeMaterialForm(initial=initial, material=material)
+    if form is None:
+        form = AdminPracticeMaterialForm(initial=initial, material=material)
     occupied_levels_map = {}
     for mode, _mode_label in AdminPracticeMaterialForm.MODE_CHOICES:
         occupied_levels_map[mode] = {}
@@ -10602,10 +10646,16 @@ def admin_practice_create(request):
     if request.method == 'POST':
         form = AdminPracticeMaterialForm(request.POST, material=None)
         if form.is_valid():
-            material = _save_admin_practice_material(form, None, request)
-            return redirect('admin_practice_detail', practice_id=material.id)
-        context = _admin_context(request, 'Add Practice Content', [])
-        context.update({'form': form, 'practice': None})
+            try:
+                with transaction.atomic():
+                    material = _save_admin_practice_material(form, None, request)
+            except IntegrityError:
+                form.add_error(None, 'A Practice Content already exists for the selected Mode, Difficulty, Language, and Level.')
+            else:
+                return redirect('admin_practice_detail', practice_id=material.id)
+        context = _admin_practice_template_context(
+            request, None, 'Add Practice Content', form=form,
+        )
         return render(request, 'pabasa_app/admin_practice_create.html', context, status=400)
 
     return render(request, 'pabasa_app/admin_practice_create.html',
@@ -10631,10 +10681,16 @@ def admin_practice_edit(request, practice_id):
     if request.method == 'POST':
         form = AdminPracticeMaterialForm(request.POST, material=material)
         if form.is_valid():
-            updated_material = _save_admin_practice_material(form, material, request)
-            return redirect('admin_practice_detail', practice_id=updated_material.id)
-        context = _admin_context(request, 'Edit Practice Content', [])
-        context.update({'form': form, 'practice': material, 'practice_status': _admin_practice_status(material)})
+            try:
+                with transaction.atomic():
+                    updated_material = _save_admin_practice_material(form, material, request)
+            except IntegrityError:
+                form.add_error(None, 'A Practice Content already exists for the selected Mode, Difficulty, Language, and Level.')
+            else:
+                return redirect('admin_practice_detail', practice_id=updated_material.id)
+        context = _admin_practice_template_context(
+            request, material, 'Edit Practice Content', form=form,
+        )
         return render(request, 'pabasa_app/admin_practice_edit.html', context, status=400)
 
     return render(request, 'pabasa_app/admin_practice_edit.html',
@@ -13828,34 +13884,67 @@ def persist_student_end_assessment_state(request):
         and _is_official_crla_material(material)
         and final_classification
     ) or (stage != 'completed' and material and final_classification):
-        if stage == 'completed':
-            _sync_assessment_workflow_state(student, score_payload={
-                'assessment_type': 'paragraph',
-                'part1_total_score': saved.get('part1_total_score'),
-                'story_number': saved.get('story_number'),
-                'selected_story': saved.get('selected_story'),
-                'story_total_words': saved.get('story_total_words') or saved.get('total_story_words'),
-                'words_read': saved.get('words_read') or saved.get('total_words_read'),
-                'miscues': saved.get('miscues'),
-                'duration_seconds': saved.get('duration_seconds'),
-                'passage_accuracy_percent': canonical_passage_accuracy,
-                'correct_answers': saved.get('correct_answers'),
-                'comprehension_correct': saved.get('comprehension_correct'),
-                'crla_classification': final_classification,
-                'classification': final_classification,
-            }, material=material)
-            state = _get_user_state(student)
-            final_classification = str(state.get('reader_classification') or final_classification).strip()
-        else:
-            state['reader_classification'] = final_classification
-            state['aral_eligible'] = bool(_aral_eligible_classification(final_classification))
-            # Completing an eligible CRLA assessment opens a pending
-            # classification workflow.  Preserve that state through the final
-            # save below; navigating to practice must not mark it complete.
-            if state['aral_eligible']:
-                state['classification_workflow_status'] = 'pending'
-            state['aral_status'] = 'active' if state['aral_eligible'] else 'ineligible'
-            state['current_phase'] = 'materials' if state['aral_eligible'] else 'complete'
+        completion_payload = {
+            'assessment_type': 'paragraph' if stage == 'completed' else material.item_type,
+            'accuracy': canonical_passage_accuracy or 0,
+            'wpm': saved.get('wpm') or 0,
+            'fluency_score': 0,
+            'pronunciation_score': 0,
+            'time_score': 0,
+            'total_score': saved.get('part1_total_score') or saved.get('score') or 0,
+            'part1_total_score': saved.get('part1_total_score'),
+            'correct_words': saved.get('correct_words'),
+            'task1_score': saved.get('task1_score'),
+            'task2_rhymes_score': saved.get('task2_rhymes_score'),
+            'task2_sentences_score': saved.get('task2_sentences_score'),
+            'correct_sentences': saved.get('correct_sentences'),
+            'correct_items': saved.get('correct_answers') or saved.get('comprehension_correct') or 0,
+            'items_completed': saved.get('total_questions') or saved.get('comprehension_total') or 0,
+            'duration_seconds': saved.get('duration_seconds') or 0,
+            'story_number': saved.get('story_number'),
+            'selected_story': saved.get('selected_story'),
+            'story_total_words': saved.get('story_total_words') or saved.get('total_story_words'),
+            'words_read': saved.get('words_read') or saved.get('total_words_read'),
+            'miscues': saved.get('miscues'),
+            'passage_accuracy_percent': canonical_passage_accuracy,
+            'correct_answers': saved.get('correct_answers'),
+            'comprehension_correct': saved.get('comprehension_correct'),
+            'crla_classification': final_classification,
+            'classification': final_classification,
+            'crla_score_data': dict(saved),
+        }
+        # This is the authoritative completion boundary.  Saving the final
+        # student state must create/update the official result before the
+        # response tells the reader that a classification is available.
+        with transaction.atomic():
+            # Make the just-derived end state visible to the synchronizer in
+            # this transaction; it needs the Part 1 evidence for early exits.
+            _set_user_state(student, state)
+            locked_material = Material.objects.select_for_update().get(pk=material.pk)
+            result_row = locked_material.assessment_results.filter(
+                student=student, attempt_status='completed',
+            ).order_by('-completed_at', '-created_at', '-id').first()
+            if result_row is None:
+                locked_material.record_assessment_result(
+                    student,
+                    status='completed',
+                    completed_at=system_now(),
+                    **completion_payload,
+                )
+                result_row = locked_material.assessment_results.filter(
+                    student=student, attempt_status='completed',
+                ).order_by('-completed_at', '-created_at', '-id').first()
+            final_classification = (
+                _sync_completed_official_crla_result(
+                    student,
+                    result_row,
+                    completion_payload,
+                    assessment=getattr(locked_material, 'assessment', None),
+                    material=locked_material,
+                )
+                or final_classification
+            )
+        state = _get_user_state(student)
         eligible = bool(_aral_eligible_classification(final_classification))
         if eligible:
             next_url = f"{reverse('assessment')}?workflow=original"
@@ -15506,6 +15595,14 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         }
     else:
         score_payload = _practice_score_payload(data) if is_practice else _assessment_score_payload(data)
+    if is_crla_assessment:
+        canonical_classification = canonical_crla_classification(
+            score_payload.get('crla_classification') or score_payload.get('classification')
+        )
+        score_payload['crla_classification'] = canonical_classification
+        score_payload['classification'] = canonical_classification
+        if isinstance(score_payload.get('crla_score_data'), dict):
+            score_payload['crla_score_data']['crla_classification'] = canonical_classification
     if (is_phrase_reading or is_picture_word_matching or is_syllable_blending or is_clap_count_syllables or is_letter_sound_matching or is_letter_sound_correspondence or is_word_decoding) and already_completed and not is_retake:
         existing_result = material.assessment_results.filter(
             student=student_user,
@@ -15630,6 +15727,14 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 student=student_user,
                 attempt_status='completed',
             ).order_by('-completed_at', '-created_at').select_related('source_assessment').first()
+        if is_crla_assessment and completed_result_row is not None:
+            _sync_completed_official_crla_result(
+                student_user,
+                completed_result_row,
+                score_payload,
+                assessment=assessment,
+                material=material,
+            )
         if not is_practice and not is_picture_word_matching and not is_syllable_blending and not is_clap_count_syllables and not is_letter_sound_matching and not is_letter_sound_correspondence and not is_word_decoding and not is_crla_assessment:
             _log_completion_timing('student_profile_save_start')
             _update_student_reading_profile(student_user, score_payload)
