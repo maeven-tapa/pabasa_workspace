@@ -1,3 +1,4 @@
+{% load static %}
 {% if assessment_week_toggle_available and assessment_week_section %}
 <section class="card assessment-week-card{% if assessment_week_section.assessment_week_enabled %} assessment-week-card--enabled{% endif %}" aria-labelledby="assessmentWeekHeading">
     <div class="card-header assessment-week-header">
@@ -43,6 +44,22 @@
 </div>
 
 {% if live_crla_material %}
+<script src="{% static 'pabasa_app/js/crla_recovery.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Recovery is checked when the teacher deliberately starts Live CRLA,
+    // before the selection wizard can create a replacement session.
+    window.PabasaLiveCrlaRecoveryContext = {
+        teacherId: '{{ account_id|default:"" }}',
+        sectionId: '{{ assessment_week_section.id }}',
+        schoolCalendarId: '{{ assessment_week_section.school_calendar_id|default:"" }}',
+        term: '{{ assessment_week_section.school_calendar.current_term|default:"" }}',
+        assessmentWeek: '{{ live_crla_material.assessment_type|default:"crla"|escapejs }}',
+        assessmentPhase: '{{ live_crla_material.assessment_type|default:"crla"|escapejs }}',
+        materialId: '{{ live_crla_material.id }}'
+    };
+});
+</script>
 <style>
     #liveCrlaDeleteBatchModal { z-index: 4200 !important; }
     #liveCrlaDeleteBatchModal .modal-dialog { z-index: 4210 !important; }
@@ -284,7 +301,12 @@ document.addEventListener('DOMContentLoaded', function () {
         renderWizardBatchAssignment();
     }
 
-    if (openButton) openButton.addEventListener('click', () => { setWizardStep(1); showModal(selectModal); });
+    if (openButton) openButton.addEventListener('click', async () => {
+        const recoveryOffered = await window.PabasaCrlaRecovery?.offerRecovery(window.PabasaLiveCrlaRecoveryContext);
+        if (recoveryOffered) return;
+        setWizardStep(1);
+        showModal(selectModal);
+    });
     nextButton?.addEventListener('click', () => { if (selectedStudents().length) setWizardStep(2); });
     backButton?.addEventListener('click', () => setWizardStep(1));
     selectModal?.addEventListener('shown.bs.modal', () => searchInput?.focus());

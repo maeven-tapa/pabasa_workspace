@@ -836,6 +836,7 @@
                 <div class="small text-muted mb-2">Last sync: <span id="lastUpdated">—</span></div>
                 <div class="small text-muted mb-2">Selected participants: <span id="selectedCount">{{ live_session.student_count }}</span></div>
                 <div class="small text-muted mb-3">Countdown: <span id="currentCountdown">{{ live_session.countdown_seconds }}s</span></div>
+                <div class="small text-muted mb-3"><i class="bi bi-shield-check me-1" aria-hidden="true"></i><span id="crlaRecoveryStatus">Recovery protection ready</span></div>
                 <hr>
                 <h6 class="mb-2">Activity Timeline</h6>
                 <div id="activityTimeline" style="max-height:320px; overflow:auto;"> 
@@ -999,6 +1000,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="{% static 'pabasa_app/js/crla_recovery.js' %}"></script>
 <script>
 (() => {
         // Reusable modal for live-assessment dialogs (confirm/alert/actions)
@@ -1120,6 +1122,9 @@
                 { label: 'Confirm', value: true, className: 'btn btn-primary' }
             ]});
         }
+        // Shared by the recovery component so destructive recovery actions
+        // use this page's accessible PABASA modal rather than confirm().
+        window.PabasaLiveConfirm = showConfirm;
 
         function showAlert(title, message) {
             return showModal({ title, body: message, buttons: [{ label: 'OK', value: true, className: 'btn btn-primary' }], closable: true });
@@ -1154,8 +1159,33 @@
             });
         }
     const sessionId = '{{ live_session.id }}';
+    const crlaRecoveryContext = {
+        teacherId: '{{ live_session.teacher_id }}',
+        sectionId: '{{ live_session.section_id }}',
+        schoolCalendarId: '{{ live_session.section.school_calendar_id|default:"" }}',
+        term: '{{ live_session.section.school_calendar.current_term|default:"" }}',
+        assessmentWeek: '{{ live_session.material.assessment_type|default:"crla"|escapejs }}',
+        assessmentPhase: '{{ live_session.material.assessment_type|default:"crla"|escapejs }}',
+        materialId: '{{ live_session.material_id }}', sessionId,
+        controlUrl: window.location.pathname,
+    };
+    // The matching teacher/session is checked again against Django before a
+    // local draft is offered; IndexedDB is never treated as an official result.
+    window.PabasaCrlaRecovery?.offerRecovery(crlaRecoveryContext);
     const stateUrl = `/api/live-assessment/session/${sessionId}/`;
     const actionUrl = `/api/live-assessment/session/${sessionId}/action/`;
+    // Closing/reloading the teacher monitor pauses the live transport before
+    // it goes away, so student elapsed clocks freeze at their saved values.
+    window.addEventListener('pagehide', () => {
+        if (window.__pabasaLiveCrlaFinalizing) return;
+        const state = lastSessionState;
+        if (!state || !['countdown', 'started'].includes(String(state.status || '').toLowerCase())) return;
+        fetch(actionUrl, {
+            method: 'POST', credentials: 'same-origin', keepalive: true,
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken(), 'Accept': 'application/json'},
+            body: JSON.stringify({action: 'interrupt'}),
+        }).catch(() => {});
+    });
     const pollInterval = 2500;
     const timerTickPaddingMs = 50;
     let pollTimer = null;
@@ -1456,6 +1486,11 @@
         if (session.status === 'ended' || session.status === 'cancelled') {
             stopPolling();
             setEndSessionLoading(false);
+        } else if (window.PabasaCrlaRecovery?.isActive(session.status)) {
+            window.PabasaCrlaRecovery.scheduleSave(crlaRecoveryContext, session, (message, failed) => {
+                setText('#crlaRecoveryStatus', message);
+                document.getElementById('crlaRecoveryStatus')?.classList.toggle('text-danger', failed);
+            });
         }
         setText('#headerStatus', session.status?.charAt(0).toUpperCase() + session.status?.slice(1));
         setText('#controlStatus', session.status?.charAt(0).toUpperCase() + session.status?.slice(1));
@@ -1653,11 +1688,16 @@
     document.getElementById('endBtn').addEventListener('click', async () => {
         const ok = await showConfirm('End session', 'End session for all students?');
         if (ok) {
+            window.__pabasaLiveCrlaFinalizing = true;
             setEndSessionLoading(true);
             try {
                 const result = await sendAction('end');
                 if (!result) {
                     setEndSessionLoading(false);
+                } else {
+                    // End Session is authoritative: only its successful
+                    // backend response may clear the local recovery draft.
+                    await window.PabasaCrlaRecovery?.deleteDraft(crlaRecoveryContext).catch(() => {});
                 }
             } catch (error) {
                 setEndSessionLoading(false);
@@ -1674,11 +1714,20 @@
             return;
         }
 
-        const confirmed = await showConfirm('Exit Live Session', 'The assessment session is still running. Are you sure you want to exit? This will end the session for all students.');
+        const confirmed = await showModal({
+            title: 'Leave Live CRLA Session?',
+            body: 'Are you sure you want to go back? The current progress for this batch has not been officially saved. Leaving without ending the session will discard the unsaved assessment progress.',
+            buttons: [
+                { label: 'Stay in Session', value: false, className: 'btn btn-outline-secondary' },
+                { label: 'Leave Without Saving', value: true, className: 'btn btn-danger' },
+            ],
+        });
         if (!confirmed) return;
 
-        const result = await sendAction('end');
+        window.__pabasaLiveCrlaFinalizing = true;
+        const result = await sendAction('abandon');
         if (result) {
+            await window.PabasaCrlaRecovery?.deleteDraft(crlaRecoveryContext).catch(() => {});
             window.location.href = '{% url "dashboard_teacher" %}';
         }
     });

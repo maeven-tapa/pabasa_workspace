@@ -302,6 +302,38 @@
         let liveSessionEnded = false;
         let liveSessionHeartbeatTimer = null;
         let liveSessionLastHeartbeatAt = 0;
+        // Live CRLA elapsed time is per student and counts only active reading
+        // intervals.  It must never be reconstructed from the original
+        // session start timestamp because a teacher outage is not assessment
+        // time.
+        let liveActiveElapsedSeconds = 0;
+        let liveActiveIntervalStartedAt = null;
+
+        function getAssessmentElapsedSeconds(now = Date.now()) {
+            if (!isCurrentLiveAssessment()) {
+                return Math.max(0, (now - (startTime || now)) / 1000);
+            }
+            if (!liveActiveIntervalStartedAt || liveSessionPaused || liveSessionEnded) {
+                return Math.max(0, liveActiveElapsedSeconds);
+            }
+            return Math.max(0, liveActiveElapsedSeconds + ((now - liveActiveIntervalStartedAt) / 1000));
+        }
+
+        function pauseLiveElapsedTimer(now = Date.now()) {
+            if (liveActiveIntervalStartedAt && !liveSessionEnded) {
+                liveActiveElapsedSeconds = getAssessmentElapsedSeconds(now);
+            }
+            liveActiveIntervalStartedAt = null;
+        }
+
+        function resumeLiveElapsedTimer(savedState) {
+            const savedElapsed = Number(savedState?.elapsed_seconds);
+            if (Number.isFinite(savedElapsed) && savedElapsed >= 0) {
+                // The server's temporary state is the recovery baseline.
+                liveActiveElapsedSeconds = savedElapsed;
+            }
+            if (startTime && !liveSessionEnded) liveActiveIntervalStartedAt = Date.now();
+        }
 
         function traceEndSession(event, details = {}) {
             try {
@@ -1092,7 +1124,7 @@
             formData.append("audio", blob, `story-response.${audioExtensionForBlob(blob)}`);
             formData.append("material_id", String(materialId));
             formData.append("response_text", currentStoryAnswers.filter(Boolean).join(" "));
-            formData.append("duration_seconds", String(Math.max(0, Math.round((Date.now() - (startTime || Date.now())) / 1000))));
+            formData.append("duration_seconds", String(Math.round(getAssessmentElapsedSeconds())));
             const response = await fetch("/api/story-response/submit/", {
                 method: "POST", credentials: "same-origin",
                 headers: { "X-CSRFToken": getCsrfToken() }, body: formData,
@@ -1378,7 +1410,7 @@
                     .slice(0, totalQuestions)
                     .filter((result) => result === true || result === false)
                     .length;
-                const elapsedSeconds = Math.max(0, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
+                const elapsedSeconds = getAssessmentElapsedSeconds();
                 await publishLiveSessionState({
                     status: "reading",
                     items_completed: completedQuestions,
@@ -2589,7 +2621,7 @@
             const targetText = items.join(" ");
             const targetWords = normalizeWords(targetText);
             const spokenWords = normalizeWords(spokenTranscript);
-            const durationSeconds = Math.max(1, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
+            const durationSeconds = Math.max(1, getAssessmentElapsedSeconds());
             const matchedWords = correctWordsRead();
             const speechRecognitionUsed = spokenWords.length > 0;
             const targetWordCount = targetWords.length;
@@ -4035,7 +4067,7 @@
             }
 
             if (isCurrentLiveAssessment()) {
-                const elapsedSeconds = Math.max(0, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
+                const elapsedSeconds = getAssessmentElapsedSeconds();
                 const completedItems = Math.max(0, currentIndex + (data.complete ? 1 : 0));
                 publishLiveSessionState({
                     status: isOfficialAssessmentLaunch ? 'reading' : (data.complete ? 'completed' : 'reading'),
@@ -4761,7 +4793,7 @@
             updateUI();
             animateCurrentItem();
             if (isCurrentLiveAssessment()) {
-                const elapsedSeconds = Math.max(0, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
+                const elapsedSeconds = getAssessmentElapsedSeconds();
                 publishLiveSessionState({
                     status: 'reading',
                     items_completed: Math.max(0, currentIndex),
@@ -5164,7 +5196,7 @@
             });
             if (materialId && token) {
                 setCompletionActionButtonsProcessing(true);
-                const elapsedSeconds = Math.max(1, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
+                const elapsedSeconds = Math.max(1, getAssessmentElapsedSeconds());
                 const completionSnapshot = calculateScores();
                 latestScores = normalizeCompletionScores(latestScores || completionSnapshot, completionSnapshot);
                 const completionMetrics = normalizeCompletionScores(completionSnapshot || {}, {});
@@ -5250,7 +5282,7 @@
                 });
 
                 if (isCurrentLiveAssessment()) {
-                    const completionElapsedSeconds = Math.max(0, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
+                    const completionElapsedSeconds = getAssessmentElapsedSeconds();
                     const finalScore = completionSnapshot?.final_score ?? completionSnapshot?.total_score ?? latestScores?.final_score ?? latestScores?.total_score ?? null;
                     const liveStatus = isOfficialAssessmentLaunch
                         ? (branchState.stage === "completed" && hasSubmittedLearnerExperienceRating ? "completed" : "reading")
@@ -5425,12 +5457,15 @@
                 startTime = Date.now();
             }
             if (isCurrentLiveAssessment()) {
+                if (!liveSessionPaused && !liveSessionEnded && !liveActiveIntervalStartedAt) {
+                    liveActiveIntervalStartedAt = Date.now();
+                }
                 publishLiveSessionState({
                     status: 'reading',
                     items_completed: 0,
                     items_total: Math.max(1, items.length),
                     progress: 0,
-                    elapsed_seconds: 0,
+                    elapsed_seconds: Math.round(getAssessmentElapsedSeconds()),
                     current_item: items[currentIndex] || '',
                     connection_status: 'connected',
                 });
@@ -5530,7 +5565,7 @@
                 const completionMetrics = normalizeCompletionScores(completionSnapshot || {}, {});
                 const elapsedSeconds = Number.isFinite(Number(updateValues.elapsed_seconds))
                     ? Number(updateValues.elapsed_seconds)
-                    : Math.max(0, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
+                    : getAssessmentElapsedSeconds();
                 const completionPayload = {
                     assessment_type: mode,
                     material_id: materialId,
@@ -5641,7 +5676,7 @@
                 const now = Date.now();
                 if (now - liveSessionLastHeartbeatAt < 1000) return;
                 liveSessionLastHeartbeatAt = now;
-                const elapsedSeconds = Math.max(0, Math.round(((now - (startTime || now)) / 1000) * 100) / 100);
+                const elapsedSeconds = getAssessmentElapsedSeconds(now);
                 publishLiveSessionState({
                     status: 'reading',
                     elapsed_seconds: Math.round(elapsedSeconds),
@@ -5734,6 +5769,7 @@
             });
             if (state.status === 'paused') {
                 if (!liveSessionPaused) {
+                    pauseLiveElapsedTimer();
                     liveSessionPaused = true;
                     liveSessionEnded = false;
                     showLiveSessionPaused();
@@ -5743,6 +5779,8 @@
             if (liveSessionPaused && state.status === 'started') {
                 liveSessionPaused = false;
                 liveSessionEnded = false;
+                const currentStudentId = String(window.PABASA_USER_ID || localStorage.getItem('pabasaUserId') || '');
+                resumeLiveElapsedTimer((state.student_states || {})[currentStudentId]);
                 hideLiveSessionPaused();
                 if (isRecording && !recognitionActive && !isMuted) {
                     startSpeechRecognition();

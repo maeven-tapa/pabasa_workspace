@@ -5192,6 +5192,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
     context = {
         'nav_role': nav_role or request.session.get('user_role', 'student'),
         'user_id': request.session.get('custom_id'),
+        'account_id': user.id if user else None,
         'first_name': first_name,
         'last_name': last_name,
         'user_full_name': full_name,
@@ -17206,6 +17207,66 @@ def live_assessment_waiting_room_page(request, session_id):
 
 @csrf_protect
 @require_http_methods(['GET'])
+def live_assessment_recovery_validation(request, session_id):
+    """Read-only validation for a local CRLA recovery draft.
+
+    Do not call _maybe_auto_end_live_session here: discovering a browser draft
+    must not turn a brownout/expired-login into an official completion.
+    """
+    if not _check_auth(request):
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+    user_id = request.session.get('user_id')
+    if request.session.get('user_role') not in ['teacher', 'admin']:
+        return JsonResponse({'success': False, 'conclusively_invalid': True}, status=403)
+    session = LiveAssessmentSession.objects.filter(id=session_id).select_related('teacher', 'section__school_calendar', 'material').first()
+    if not session:
+        # A deleted old transport record is not proof that the local draft is
+        # invalid. Keep it for a later safe recovery path or explicit discard.
+        return JsonResponse({'success': False, 'conclusively_invalid': False, 'session_missing': True}, status=404)
+    if user_id != session.teacher_id:
+        # Never let a different browser user inspect or erase the originating
+        # teacher's local recovery record.
+        return JsonResponse({'success': False, 'conclusively_invalid': False}, status=403)
+    section = session.section
+    context_matches = (
+        str(request.GET.get('section_id') or '') == str(session.section_id or '')
+        and str(request.GET.get('school_calendar_id') or '') == str(getattr(section, 'school_calendar_id', '') or '')
+        and str(request.GET.get('term') or '') == str(getattr(getattr(section, 'school_calendar', None), 'current_term', '') or '')
+        and str(request.GET.get('material_id') or '') == str(session.material_id or '')
+        and str(request.GET.get('assessment_week') or '').strip().lower() == str(session.material.assessment_type or '').strip().lower()
+        and str(request.GET.get('assessment_phase') or '').strip().lower() == str(session.material.assessment_type or '').strip().lower()
+    )
+    if not context_matches or not _is_live_crla_material(session.material):
+        return JsonResponse({'success': True, 'conclusively_invalid': True})
+
+    if any(
+        'Teacher left the live session without saving progress.' in str(entry.get('message') or '')
+        for entry in (session.activity_log or []) if isinstance(entry, dict)
+    ):
+        return JsonResponse({'success': True, 'conclusively_invalid': True})
+
+    draft_updated_at = parse_datetime(str(request.GET.get('draft_updated_at') or ''))
+    conflicts = []
+    for student_id in session.student_ids or []:
+        student = User.objects.filter(id=student_id, role='student', is_archived=False).first()
+        if not student:
+            return JsonResponse({'success': True, 'conclusively_invalid': True})
+        official = _official_crla_completed_result_for_material(student, session.material)
+        if official and (draft_updated_at is None or official.completed_at and official.completed_at >= draft_updated_at):
+            conflicts.append(str(student_id))
+    if conflicts:
+        return JsonResponse({'success': True, 'conclusively_invalid': True, 'official_conflict_student_ids': conflicts})
+
+    return JsonResponse({
+        'success': True,
+        'conclusively_invalid': False,
+        'requires_reactivation': session.status in ['ended', 'cancelled'],
+        'session_status': session.status,
+    })
+
+
+@csrf_protect
+@require_http_methods(['GET'])
 def live_assessment_session_state(request, session_id):
     session = LiveAssessmentSession.objects.filter(id=session_id).select_related('material', 'course').first()
     if not session:
@@ -17454,8 +17515,6 @@ def live_assessment_session_action(request, session_id):
         user_id=user_id,
         user_role=user_role,
     )
-    _maybe_auto_end_live_session(session)
-
     if user_role not in ['teacher', 'admin'] or user_id != session.teacher_id:
         return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
     if not _is_live_crla_material(session.material):
@@ -17467,6 +17526,10 @@ def live_assessment_session_action(request, session_id):
         data = {}
 
     action = (data.get('action') or '').strip().lower()
+    # Recovery and explicit discard are deliberately exempt from the stale
+    # auto-end path. Neither action may finalize an interrupted batch.
+    if action not in {'recover', 'abandon', 'interrupt'}:
+        _maybe_auto_end_live_session(session)
     _trace_live_end_flow(
         'action_endpoint_payload',
         session,
@@ -17632,8 +17695,13 @@ def live_assessment_session_action(request, session_id):
         session, mutation_error = _mutate_live_session_state(session.id, apply_skip)
         if not session:
             return JsonResponse({'success': False, 'error': mutation_error or 'Unable to skip student'}, status=409)
-    elif action == 'pause':
+    elif action in ['pause', 'interrupt']:
         if session.status != 'started':
+            # Recovery detection may race with a previous unload/pause. It is
+            # intentionally idempotent so the recovery modal itself never
+            # becomes active assessment time.
+            if action == 'interrupt' and session.status == 'paused':
+                return JsonResponse({'success': True, 'session': {'id': session.id, 'status': session.status, **_live_session_batch_payload(session)}})
             return JsonResponse({'success': False, 'error': 'Only an active session can be paused'}, status=400)
         _trace_live_end_flow('action_pause_before_status_change', session, user_id=user_id)
         def apply_pause(current):
@@ -17647,7 +17715,7 @@ def live_assessment_session_action(request, session_id):
                     student_state['status'] = 'paused'
                 states[student_key] = student_state
             current.student_states = states
-            _append_live_session_activity(current, 'Teacher paused the live session.')
+            _append_live_session_activity(current, 'Live CRLA session was paused for recovery.' if action == 'interrupt' else 'Teacher paused the live session.')
             return {'status', 'activity_log'}
         session, mutation_error = _mutate_live_session_state(session.id, apply_pause)
         if not session:
@@ -17682,6 +17750,59 @@ def live_assessment_session_action(request, session_id):
             _trace_live_end_flow('action_end_finalize_failed', session, user_id=user_id, user_role=user_role)
             return JsonResponse({'success': False, 'error': 'Unable to finalize all live assessment participants'}, status=500)
         _trace_live_end_flow('action_end_after_finalize', session, user_id=user_id, user_role=user_role)
+    elif action == 'abandon':
+        # This is deliberately separate from End Session.  It closes the live
+        # transport without running _complete_assessment_for_student(), so an
+        # intentional local-discard cannot create official CRLA results.
+        if session.status not in ['countdown', 'started', 'paused', 'batch_loaded']:
+            return JsonResponse({'success': False, 'error': 'Only an active session can be left without saving.'}, status=400)
+        def apply_abandon(current):
+            if current.status not in ['countdown', 'started', 'paused', 'batch_loaded']:
+                return None
+            states = current.student_states or {}
+            for student_key, state in states.items():
+                if not isinstance(state, dict):
+                    state = {}
+                # Keep no session progress on the server after an explicit
+                # discard.  This does not delete any pre-existing official
+                # Assessment record (those remain authoritative).
+                state.update({'status': 'missed', 'connection_status': 'disconnected', 'progress': 0,
+                              'final_score': None, 'items_completed': 0, 'current_item': ''})
+                states[student_key] = state
+            current.student_states = states
+            current.status = 'ended'
+            current.ends_at = system_now()
+            _append_live_session_activity(current, 'Teacher left the live session without saving progress.')
+            return {'status', 'ends_at', 'activity_log'}
+        session, mutation_error = _mutate_live_session_state(session.id, apply_abandon)
+        if not session:
+            return JsonResponse({'success': False, 'error': mutation_error or 'Unable to leave the live session.'}, status=409)
+    elif action == 'recover':
+        # Recovery only reopens the existing transport state. It never accepts
+        # browser scores and therefore cannot turn an IndexedDB draft into an
+        # Assessment/result record.
+        if session.status not in ['countdown', 'started', 'paused', 'batch_loaded', 'ended', 'cancelled']:
+            return JsonResponse({'success': False, 'error': 'This session cannot be recovered.'}, status=400)
+        for student_id in session.student_ids or []:
+            student = User.objects.filter(id=student_id, role='student', is_archived=False).first()
+            if not student or _official_crla_completed_result_for_material(student, session.material):
+                return JsonResponse({'success': False, 'error': 'This recovery draft conflicts with an official CRLA result.'}, status=409)
+        def apply_recover(current):
+            if current.status not in ['countdown', 'started', 'paused', 'batch_loaded', 'ended', 'cancelled']:
+                return None
+            # A recovery is deliberately a paused transport.  This preserves
+            # the existing batch and all persisted student_states while
+            # ensuring the outage is never counted as active assessment time.
+            current.status = 'paused'
+            current.ends_at = None
+            # start_at remains the original audit/start metadata. Per-student
+            # elapsed_seconds is the recovery baseline; it is never derived
+            # from this wall-clock timestamp during recovery.
+            _append_live_session_activity(current, 'Teacher reopened the unfinished Live CRLA session from local recovery.')
+            return {'status', 'ends_at', 'activity_log'}
+        session, mutation_error = _mutate_live_session_state(session.id, apply_recover)
+        if not session:
+            return JsonResponse({'success': False, 'error': mutation_error or 'Unable to reopen the unfinished session.'}, status=409)
     elif action == 'save_settings':
         if session.status != 'waiting':
             return JsonResponse({'success': False, 'error': 'Settings can only be updated before the session starts'}, status=400)
