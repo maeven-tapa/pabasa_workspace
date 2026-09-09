@@ -1,6 +1,29 @@
 {% extends "pabasa_app/admin_base.html" %}
 
 {% block content %}
+<style>
+    /* Keep the dashboard within the available content width; vertical scrolling remains normal. */
+    .admin-content:has(.admin-dashboard-shell) {
+        max-width: 100%;
+        overflow-x: clip;
+        overflow-y: visible;
+        height: auto;
+        max-height: none;
+    }
+
+    .admin-main:has(.admin-dashboard-shell) {
+        overflow-y: visible;
+        height: auto;
+        max-height: none;
+    }
+
+    .admin-dashboard-shell {
+        width: 100%;
+        max-width: 1180px;
+        margin: 0 auto;
+        min-width: 0;
+    }
+</style>
 <div class="admin-dashboard-shell">
     <section class="admin-dashboard-hero">
         <div>
