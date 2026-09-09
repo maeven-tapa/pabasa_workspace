@@ -653,12 +653,18 @@
             return Promise.resolve(null);
         }
 
+        let studentEndStateWriteQueue = Promise.resolve();
+
         function updateStudentEndState(patch, options = {}) {
-            const current = readStudentEndState();
-            return writeStudentEndState({
-                ...current,
-                ...(patch || {}),
-            }, options);
+            const operation = studentEndStateWriteQueue.then(() => {
+                const current = readStudentEndState();
+                return writeStudentEndState({
+                    ...current,
+                    ...(patch || {}),
+                }, options);
+            });
+            studentEndStateWriteQueue = operation.catch(() => null);
+            return operation;
         }
 
         // CRLA Official Assessment: Persist item score immediately when locked
@@ -1141,11 +1147,13 @@
             const answered = currentStoryAnswers.filter(answer => String(answer || "").trim()).length;
             const correctAnswers = currentStoryResults.filter(result => result === true).length;
             const accuracy = answered ? Math.round((correctAnswers / answered) * 100) : 0;
-            const persistedStoryState = readStudentEndState();
-            const persistedDurationSeconds = Number(persistedStoryState?.duration_seconds);
-            const finalizedDurationSeconds = Number.isFinite(persistedDurationSeconds) && persistedDurationSeconds > 0
-                ? persistedDurationSeconds
-                : readingScores.duration_seconds;
+            const currentDuration = Number(readingScores.duration_seconds);
+            // A completion is tied to the timer that just ended.  The generic
+            // persisted state has no attempt identity, so it is never allowed
+            // to replace this story's measured duration.
+            const finalizedDurationSeconds = Number.isFinite(currentDuration) && currentDuration > 0
+                ? currentDuration
+                : null;
             const storyMetrics = calculateFinalizedStoryMetrics(
                 readableWordCount(currentSelectedStory?.content || ""),
                 storyMiscueCount,
@@ -1723,6 +1731,11 @@
                 selected_story: choice.title,
                 selected_story_content: choice.content || "",
                 story_segment_index: 0,
+                duration_seconds: null,
+                wpm: null,
+                words_read: null,
+                total_words_read: null,
+                miscues: null,
             });
             currentStorySegmentIndex = 0;
             renderStoryReadyState(choice);
@@ -2621,7 +2634,10 @@
             const targetText = items.join(" ");
             const targetWords = normalizeWords(targetText);
             const spokenWords = normalizeWords(spokenTranscript);
-            const durationSeconds = Math.max(1, getAssessmentElapsedSeconds());
+            const elapsedSeconds = Number(getAssessmentElapsedSeconds());
+            const durationSeconds = Number.isFinite(elapsedSeconds) && elapsedSeconds > 0
+                ? elapsedSeconds
+                : null;
             const matchedWords = correctWordsRead();
             const speechRecognitionUsed = spokenWords.length > 0;
             const targetWordCount = targetWords.length;
@@ -2649,7 +2665,7 @@
             return {
                 accuracy: targetWordCount && speechRecognitionUsed ? Math.round((matchedWords / targetWordCount) * 10000) / 100 : 0,
                 pronunciation_score: targetWordCount && speechRecognitionUsed ? Math.round((matchedWords / Math.max(spokenWords.length, targetWordCount)) * 10000) / 100 : 0,
-                wpm: Math.round((matchedWords / Math.max(durationSeconds / 60, 1 / 60)) * 100) / 100,
+                wpm: durationSeconds ? Math.round((matchedWords / (durationSeconds / 60)) * 100) / 100 : 0,
                 duration_seconds: durationSeconds,
                 word_count: matchedWords,
                 target_word_count: targetWordCount,
@@ -2684,11 +2700,16 @@
             const totalWords = Math.max(0, Number(totalStoryWords) || 0);
             const miscues = Math.max(0, Number(storyMiscues) || 0);
             const wordsRead = Math.max(0, totalWords - miscues);
-            const durationSeconds = Math.max(1, Number(elapsedDurationSeconds) || 0);
+            const durationValue = Number(elapsedDurationSeconds);
+            const durationSeconds = Number.isFinite(durationValue) && durationValue > 0
+                ? durationValue
+                : null;
             const accuracy = totalWords
                 ? Math.min(100, Math.round((wordsRead / totalWords) * 100))
                 : 0;
-            const wpm = Math.round((wordsRead / Math.max(durationSeconds / 60, 1 / 60)) * 100) / 100;
+            const wpm = durationSeconds
+                ? Math.round((wordsRead / (durationSeconds / 60)) * 100) / 100
+                : 0;
 
             return {
                 totalStoryWords: totalWords,
@@ -5196,7 +5217,10 @@
             });
             if (materialId && token) {
                 setCompletionActionButtonsProcessing(true);
-                const elapsedSeconds = Math.max(1, getAssessmentElapsedSeconds());
+                const elapsedValue = Number(getAssessmentElapsedSeconds());
+                const elapsedSeconds = Number.isFinite(elapsedValue) && elapsedValue > 0
+                    ? elapsedValue
+                    : null;
                 const completionSnapshot = calculateScores();
                 latestScores = normalizeCompletionScores(latestScores || completionSnapshot, completionSnapshot);
                 const completionMetrics = normalizeCompletionScores(completionSnapshot || {}, {});
@@ -5211,7 +5235,7 @@
                     correct_words: completionMetrics.correct_words ?? completionMetrics.word_count ?? 0,
                     incorrect_words: completionMetrics.incorrect_words ?? 0,
                     skipped_words: completionMetrics.skipped_words ?? 0,
-                    duration_seconds: completionMetrics.duration_seconds || elapsedSeconds,
+                    duration_seconds: completionMetrics.duration_seconds ?? elapsedSeconds,
                     target_word_count: completionMetrics.target_word_count ?? 0,
                     pronunciation_score: completionMetrics.pronunciation_score ?? 0,
                     fluency_score: completionMetrics.fluency_score ?? null,
@@ -5228,7 +5252,7 @@
                         correct_words: completionMetrics.correct_words ?? completionMetrics.word_count ?? 0,
                         incorrect_words: completionMetrics.incorrect_words ?? 0,
                         skipped_words: completionMetrics.skipped_words ?? 0,
-                        duration_seconds: completionMetrics.duration_seconds || elapsedSeconds,
+                        duration_seconds: completionMetrics.duration_seconds ?? elapsedSeconds,
                         target_word_count: completionMetrics.target_word_count ?? 0,
                         pronunciation_score: completionMetrics.pronunciation_score ?? 0,
                         fluency_score: completionMetrics.fluency_score ?? null,
@@ -5245,7 +5269,7 @@
                         correct_words: completionMetrics.correct_words ?? completionMetrics.word_count ?? 0,
                         incorrect_words: completionMetrics.incorrect_words ?? 0,
                         skipped_words: completionMetrics.skipped_words ?? 0,
-                        duration_seconds: completionMetrics.duration_seconds || elapsedSeconds,
+                        duration_seconds: completionMetrics.duration_seconds ?? elapsedSeconds,
                         target_word_count: completionMetrics.target_word_count ?? 0,
                         pronunciation_metrics: {
                             score: completionMetrics.pronunciation_score ?? 0,
