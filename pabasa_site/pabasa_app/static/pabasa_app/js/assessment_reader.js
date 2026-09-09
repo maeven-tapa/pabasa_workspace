@@ -1356,8 +1356,8 @@
             updateFooterForStoryState("story_comprehension");
         }
 
-        function persistCRLAComprehensionState(extra = {}) {
-            return updateStudentEndState({
+        async function persistCRLAComprehensionState(extra = {}) {
+            const persisted = await updateStudentEndState({
                 stage: "story_comprehension",
                 selected_story: currentSelectedStory?.title || "",
                 selected_story_content: currentSelectedStory?.content || "",
@@ -1366,6 +1366,30 @@
                 crla_results: currentStoryResults.slice(),
                 ...extra,
             });
+            // The live monitor must reflect the persisted response state, not
+            // the question cursor.  A cursor is advanced only after an answer
+            // and is reset when a learner navigates back, while crla_results
+            // records every completed comprehension question (including an
+            // incorrect or skipped response) on the server.
+            const persistedResults = persisted?.student_end_assessment_state?.crla_results;
+            if (isCurrentLiveAssessment() && Array.isArray(persistedResults)) {
+                const totalQuestions = Math.max(1, currentStoryQuestions.length);
+                const completedQuestions = persistedResults
+                    .slice(0, totalQuestions)
+                    .filter((result) => result === true || result === false)
+                    .length;
+                const elapsedSeconds = Math.max(0, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
+                await publishLiveSessionState({
+                    status: "reading",
+                    items_completed: completedQuestions,
+                    items_total: totalQuestions,
+                    progress: completedQuestions / totalQuestions,
+                    elapsed_seconds: Math.round(elapsedSeconds),
+                    current_item: currentStoryQuestions[currentStoryQuestionIndex]?.question || "",
+                    connection_status: "connected",
+                });
+            }
+            return persisted;
         }
 
         function renderCRLAQuestion() {
@@ -1585,19 +1609,6 @@
                 duration_seconds: persistedState.duration_seconds,
                 wpm: persistedState.wpm,
             } : {});
-            if (isCurrentLiveAssessment()) {
-                const elapsedSeconds = Math.max(0, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
-                const totalQuestions = Math.max(1, currentStoryQuestions.length);
-                publishLiveSessionState({
-                    status: "reading",
-                    items_completed: Math.min(currentStoryQuestionIndex, totalQuestions),
-                    items_total: totalQuestions,
-                    progress: Math.min(1, currentStoryQuestionIndex / totalQuestions),
-                    elapsed_seconds: Math.round(elapsedSeconds),
-                    current_item: currentStoryQuestions[currentStoryQuestionIndex]?.question || "",
-                    connection_status: "connected",
-                });
-            }
         }
 
         function renderStorySelection() {

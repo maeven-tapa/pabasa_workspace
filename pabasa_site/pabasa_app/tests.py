@@ -6281,6 +6281,55 @@ class LiveAssessmentStartTests(TestCase):
             self.assertEqual(student_state['items_completed'], completed)
             self.assertEqual(student_state['items_total'], total)
 
+    def test_comprehension_monitor_progress_tracks_each_persisted_completed_question(self):
+        """Teacher polling sees the persisted 0/6 through 6/6 question state."""
+        self.material.assessment_kind = 'crla'
+        self.material.is_official_reading = True
+        self.material.save(update_fields=['assessment_kind', 'is_official_reading'])
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='started',
+            countdown_seconds=0,
+            start_at=timezone.now() - timedelta(seconds=10),
+            student_states={str(self.student.id): {'status': 'waiting', 'progress': 0}},
+        )
+
+        student_client = Client()
+        student_session = student_client.session
+        student_session['user_id'] = self.student.id
+        student_session['user_role'] = 'student'
+        student_session.save()
+        update_url = reverse('live_assessment_student_state_update', kwargs={'session_id': session.id})
+        state_url = reverse('live_assessment_session_state', kwargs={'session_id': session.id})
+
+        for completed in range(7):
+            response = student_client.post(
+                update_url,
+                json.dumps({
+                    'status': 'reading',
+                    'crla_stage': 'comprehension',
+                    'crla_stage_label': 'Comprehension',
+                    'items_completed': completed,
+                    'items_total': 6,
+                    'progress': completed / 6,
+                    'connection_status': 'connected',
+                }),
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+
+            polled = self.client.get(state_url)
+            self.assertEqual(polled.status_code, 200)
+            monitor_state = polled.json()['session']['student_states'][str(self.student.id)]
+            self.assertEqual(monitor_state['crla_stage'], 'comprehension')
+            self.assertEqual(monitor_state['items_completed'], completed)
+            self.assertEqual(monitor_state['items_total'], 6)
+
     def test_crla_intermediate_completion_publishes_reading_until_rating_is_completed(self):
         source = (Path(__file__).parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js').read_text(encoding='utf-8')
         item_completion = source.split('if (isCurrentLiveAssessment()) {', 1)[1].split('const hasRecognizedSpeech', 1)[0]
