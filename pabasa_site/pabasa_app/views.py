@@ -8167,6 +8167,102 @@ def _section_assessment_week_status(section, on_date=None):
     return 'none'
 
 
+def _section_assessment_week_has_recorded_crla_result(section, on_date=None):
+    """Return whether this section's active CRLA window has recorded result data.
+
+    ``Assessment`` is the persisted CRLA attempt/result record.  This is
+    deliberately broader than ``official_crla_result_queryset()``, whose
+    completed-classification rules are appropriate for reporting but would
+    miss a saved, not-yet-finalized CRLA score.
+    """
+    if not section or not section.school_calendar_id:
+        return False
+
+    check_date = on_date or timezone.localdate()
+    active_event = CalendarEvent.objects.filter(
+        school_calendar_id=section.school_calendar_id,
+        event_type__in={'pre_assessment', 'midline_assessment', 'post_assessment'},
+        start_date__lte=check_date,
+        end_date__gte=check_date,
+    ).filter(
+        Q(scope=CalendarEvent.SCOPE_GLOBAL, school__isnull=True)
+        | Q(scope=CalendarEvent.SCOPE_SCHOOL, school_id=section.school_id)
+    ).order_by('-start_date', '-id').first()
+    if not active_event:
+        return False
+
+    expected_phase = {
+        'pre_assessment': 'pretest',
+        'midline_assessment': 'midtest',
+        'post_assessment': 'posttest',
+    }[active_event.event_type]
+    # Enrollment is the normal authoritative section/school-year context. The
+    # remaining paths retain support for correctly scoped legacy result rows.
+    enrolled_section_context = Q(
+        enrollment__section_id=section.id,
+        enrollment__school_calendar_id=section.school_calendar_id,
+    )
+    legacy_section_context = Q(enrollment__isnull=True) & (
+        Q(section_id=section.id)
+        | Q(material__section_id=section.id)
+        | Q(material__assigned_sections__id=section.id)
+    )
+    official_crla_identity = (
+        Q(system_assessment_key__in=list(OFFICIAL_CRLA_CONTENT.keys()))
+        | Q(source_assessment__system_assessment_key__in=list(OFFICIAL_CRLA_CONTENT.keys()))
+        | Q(material__assessment_kind='crla')
+        | Q(source_assessment__materials__assessment_kind='crla')
+    )
+    results = Assessment.objects.filter(
+        student__isnull=False,
+    ).filter(
+        official_crla_identity,
+        enrolled_section_context | legacy_section_context,
+    ).select_related('enrollment', 'material', 'source_assessment').distinct()
+    school_year_match = re.fullmatch(
+        r'(\d{4})\s*-\s*(\d{4})', str(section.school_calendar.school_year or '')
+    )
+    if school_year_match:
+        start_year, end_year = (int(value) for value in school_year_match.groups())
+    for result in results:
+        # New rows persist the completion term; never let another term lock the
+        # active assessment event. Empty terms are legacy rows and remain
+        # safely narrowed by the section context above.
+        if result.official_term and result.official_term != active_event.term:
+            continue
+        is_official, result_phase, _result_term = _crla_attempt_phase_and_term(
+            result,
+            completed_on=timezone.localtime(result.completed_at).date() if result.completed_at else None,
+        )
+        if not is_official or result_phase != expected_phase:
+            continue
+        # Legacy rows lack an enrollment, which is the authoritative
+        # school-year link. Retain them only when their saved result timestamp
+        # falls in this calendar's school year.
+        if school_year_match and not result.enrollment_id:
+            recorded_at = result.completed_at or result.started_at or result.created_at
+            if not recorded_at:
+                continue
+            recorded_on = timezone.localtime(recorded_at).date()
+            if not date(start_year, 6, 1) <= recorded_on <= date(end_year, 5, 31):
+                continue
+        has_recorded_data = any(value is not None for value in (
+            result.accuracy,
+            result.wpm,
+            result.fluency_score,
+            result.pronunciation_score,
+            result.time_score,
+            result.total_score,
+            result.correct_items,
+            result.passed,
+        )) or bool(
+            str(result.crla_classification or result.classification or '').strip()
+        ) or bool(result.crla_score_data)
+        if has_recorded_data:
+            return True
+    return False
+
+
 def _expire_assessment_week_if_needed(section):
     """Turn off a section's Assessment Week switch after its calendar closes.
 
@@ -17823,6 +17919,9 @@ def students(request):
         'assessment_week_toggle_available': bool(
             section and _section_assessment_week_status(section) == 'during'
         ),
+        'assessment_week_results_recorded': bool(
+            section and _section_assessment_week_has_recorded_crla_result(section)
+        ),
         'assessment_week_students': assessment_week_students,
         'live_crla_material': live_crla_material,
     }))
@@ -20895,6 +20994,15 @@ def update_section_assessment_week(request):
             'success': False,
             'error': 'Assessment Week is not active for this section today.',
         }, status=403)
+
+    if not enabled and _section_assessment_week_has_recorded_crla_result(section):
+        # This endpoint guard prevents direct requests from bypassing the UI.
+        return JsonResponse({
+            'success': False,
+            'code': 'assessment_week_results_recorded',
+            'assessment_week_enabled': bool(section.assessment_week_enabled),
+            'error': 'This Assessment Week can no longer be turned off because one or more student CRLA results have already been recorded.',
+        }, status=409)
 
     section.assessment_week_enabled = enabled
     section.save(update_fields=['assessment_week_enabled', 'updated_at'])

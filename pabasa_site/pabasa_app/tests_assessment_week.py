@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Assessment, AssessmentRequest, CalendarEvent, Material, School, SchoolCalendar, Section, User
+from .models import Assessment, AssessmentRequest, CalendarEvent, LiveAssessmentSession, Material, School, SchoolCalendar, Section, User
 
 
 class AssessmentWeekTests(TestCase):
@@ -519,3 +519,125 @@ class AssessmentWeekTests(TestCase):
         response = self.client.get(reverse('get_class_materials'), {'section_id': self.section_a.id})
         returned_ids = {item['id'] for item in response.json()['all_materials']}
         self.assertIn(f'material-{self.normal_a.id}', returned_ids)
+
+    def _current_week_crla_material(self, suffix):
+        root = Assessment.objects.create(
+            teacher=self.teacher_a, section=self.section_a, title='Current CRLA',
+            code=f'AWS-CRLA-ROOT-{suffix}', assessment_type='paragraph',
+            system_assessment_key='bosy_crla_pretest', system_assessment_phase='pretest',
+            official_term=1,
+        )
+        material = Material.objects.create(
+            teacher=self.teacher_a, section=self.section_a, assessment=root,
+            title='Current CRLA', code=f'AWS-CRLA-MATERIAL-{suffix}', item_type='paragraph',
+            type='assessment', status='published', assessment_kind='crla',
+            is_official_reading=True, is_system_owned=True,
+            system_assessment_phase='pretest',
+        )
+        return root, material
+
+    def _record_current_week_crla_result(self, student, suffix):
+        root, material = self._current_week_crla_material(suffix)
+        return Assessment.objects.create(
+            teacher=self.teacher_a, student=student, enrollment=student.enrollments.get(section=self.section_a),
+            section=self.section_a, material=material, source_assessment=root,
+            title='Completed CRLA', code=f'AWS-CRLA-RESULT-{suffix}', assessment_type='paragraph',
+            system_assessment_key='bosy_crla_pretest', system_assessment_phase='pretest', official_term=1,
+            attempt_status='completed', completed_at=timezone.now(),
+            crla_classification='Transitioning Readers',
+        )
+
+    def test_direct_off_request_is_rejected_after_one_current_week_crla_result(self):
+        self.section_a.assessment_week_enabled = True
+        self.section_a.save(update_fields=['assessment_week_enabled'])
+        self._record_current_week_crla_result(self.student_a, 'ONE')
+
+        self._login(self.teacher_a)
+        response = self._toggle(self.section_a.id, False)
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()['code'], 'assessment_week_results_recorded')
+        self.assertTrue(response.json()['assessment_week_enabled'])
+        self.section_a.refresh_from_db()
+        self.assertTrue(self.section_a.assessment_week_enabled)
+
+    def test_direct_off_request_is_rejected_after_multiple_current_week_crla_results(self):
+        self.section_a.assessment_week_enabled = True
+        self.section_a.save(update_fields=['assessment_week_enabled'])
+        self._record_current_week_crla_result(self.student_a, 'FIRST')
+        self._record_current_week_crla_result(self.student_b, 'SECOND')
+
+        self._login(self.teacher_a)
+        response = self._toggle(self.section_a.id, False)
+
+        self.assertEqual(response.status_code, 409)
+        self.section_a.refresh_from_db()
+        self.assertTrue(self.section_a.assessment_week_enabled)
+
+    def test_recorded_unfinalized_crla_score_blocks_turning_off(self):
+        self.section_a.assessment_week_enabled = True
+        self.section_a.save(update_fields=['assessment_week_enabled'])
+        root, material = self._current_week_crla_material('UNFINALIZED')
+        Assessment.objects.create(
+            teacher=self.teacher_a, student=self.student_a, section=self.section_a,
+            enrollment=self.student_a.enrollments.get(section=self.section_a), material=material,
+            source_assessment=root, title='Saved CRLA score', code='AWS-CRLA-UNFINALIZED-RESULT',
+            assessment_type='paragraph', system_assessment_key='bosy_crla_pretest',
+            system_assessment_phase='pretest', official_term=1, attempt_status='started',
+            total_score=0, crla_score_data={'task1_score': 0},
+        )
+
+        self._login(self.teacher_a)
+        response = self._toggle(self.section_a.id, False)
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()['code'], 'assessment_week_results_recorded')
+        self.section_a.refresh_from_db()
+        self.assertTrue(self.section_a.assessment_week_enabled)
+
+    def test_selected_or_batched_student_without_crla_result_can_turn_off(self):
+        self.section_a.assessment_week_enabled = True
+        self.section_a.save(update_fields=['assessment_week_enabled'])
+        _root, material = self._current_week_crla_material('BATCH-ONLY')
+        LiveAssessmentSession.objects.create(
+            id='assessment-week-batch-only', teacher=self.teacher_a, section=self.section_a,
+            material=material, student_ids=[self.student_a.id], student_count=1,
+            batch_assignments={'1': [self.student_a.id]}, status='batch_loaded',
+        )
+
+        self._login(self.teacher_a)
+        response = self._toggle(self.section_a.id, False)
+
+        self.assertEqual(response.status_code, 200)
+        self.section_a.refresh_from_db()
+        self.assertFalse(self.section_a.assessment_week_enabled)
+
+    def test_result_from_another_assessment_week_does_not_block_turning_off(self):
+        self.section_a.assessment_week_enabled = True
+        self.section_a.save(update_fields=['assessment_week_enabled'])
+        root = Assessment.objects.create(
+            teacher=self.teacher_a, section=self.section_a, title='Post CRLA',
+            code='AWS-POST-ROOT', assessment_type='paragraph',
+            system_assessment_key='eosy_crla_posttest', system_assessment_phase='posttest', official_term=3,
+        )
+        material = Material.objects.create(
+            teacher=self.teacher_a, section=self.section_a, assessment=root,
+            title='Post CRLA', code='AWS-POST-MATERIAL', item_type='paragraph', type='assessment',
+            status='published', assessment_kind='crla', is_official_reading=True,
+            is_system_owned=True, system_assessment_phase='posttest',
+        )
+        Assessment.objects.create(
+            teacher=self.teacher_a, student=self.student_a, section=self.section_a,
+            enrollment=self.student_a.enrollments.get(section=self.section_a), material=material,
+            source_assessment=root, title='Completed Post CRLA', code='AWS-POST-RESULT',
+            assessment_type='paragraph', system_assessment_key='eosy_crla_posttest',
+            system_assessment_phase='posttest', official_term=3, attempt_status='completed',
+            completed_at=timezone.now(), crla_classification='Transitioning Readers',
+        )
+
+        self._login(self.teacher_a)
+        response = self._toggle(self.section_a.id, False)
+
+        self.assertEqual(response.status_code, 200)
+        self.section_a.refresh_from_db()
+        self.assertFalse(self.section_a.assessment_week_enabled)

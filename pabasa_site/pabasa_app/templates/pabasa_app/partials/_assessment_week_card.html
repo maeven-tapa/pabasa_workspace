@@ -10,7 +10,7 @@
             <p class="card-subtitle">When enabled, students in this section can access only assessments. Other sections are not affected.</p>
         </div>
         <div class="form-check form-switch mb-0">
-            <input class="form-check-input" type="checkbox" role="switch" id="assessmentWeekToggle" {% if assessment_week_section.assessment_week_enabled %}checked{% endif %} aria-describedby="assessmentWeekStatus">
+            <input class="form-check-input" type="checkbox" role="switch" id="assessmentWeekToggle" {% if assessment_week_section.assessment_week_enabled %}checked{% endif %} data-results-recorded="{{ assessment_week_results_recorded|yesno:'true,false' }}" aria-describedby="assessmentWeekStatus">
             <label class="form-check-label fw-semibold" for="assessmentWeekToggle" id="assessmentWeekStatus">{% if assessment_week_section.assessment_week_enabled %}ON{% else %}OFF{% endif %}</label>
         </div>
     </div>
@@ -76,18 +76,40 @@ document.addEventListener('DOMContentLoaded', function () {
     let previousState = toggle.checked;
     let requestedState = previousState;
     let lastFocused = null;
+    const hasRecordedResults = toggle.dataset.resultsRecorded === 'true';
+    let modalMode = 'confirm';
+    let isUpdating = false;
     function closeModal(restore = true) { if (restore) toggle.checked = previousState; modal.classList.remove('is-visible'); modal.setAttribute('aria-hidden', 'true'); lastFocused?.focus(); }
-    function openModal() { requestedState = toggle.checked; title.textContent = requestedState ? 'Enable Assessment Week?' : 'Disable Assessment View?'; copy.textContent = requestedState ? 'Students in this section will only be able to access assessments while Assessment Week is enabled. Other sections will not be affected.' : 'Students in this section will return to the normal learning and prompt flow.'; error.hidden = true; lastFocused = document.activeElement; modal.classList.add('is-visible'); modal.setAttribute('aria-hidden', 'false'); submit.focus(); }
+    function openModal() { modalMode = 'confirm'; requestedState = toggle.checked; title.textContent = requestedState ? 'Enable Assessment Week?' : 'Disable Assessment Week?'; copy.textContent = requestedState ? 'Students in this section will only be able to access assessments while Assessment Week is enabled. Other sections will not be affected.' : 'Students in this section will return to the normal learning and prompt flow.'; error.hidden = true; cancel.hidden = false; submit.textContent = 'Confirm'; lastFocused = document.activeElement; modal.classList.add('is-visible'); modal.setAttribute('aria-hidden', 'false'); submit.focus(); }
+    function showFailureModal(message, resultsRecorded = false) {
+        toggle.checked = previousState;
+        modalMode = 'error';
+        title.textContent = resultsRecorded ? 'Cannot Turn Off Assessment Week' : 'Assessment Week Could Not Be Updated';
+        copy.textContent = resultsRecorded ? 'This Assessment Week can no longer be turned off because one or more student CRLA results have already been recorded. Assessment data must remain active to preserve the recorded student results.' : (message || 'The Assessment Week status was not changed. Please try again.');
+        error.hidden = true;
+        cancel.hidden = true;
+        submit.textContent = 'OK';
+        modal.classList.add('is-visible');
+        modal.setAttribute('aria-hidden', 'false');
+        submit.focus();
+    }
     async function applyChange() {
+        if (isUpdating) return;
+        isUpdating = true;
         submit.disabled = true; cancel.disabled = true; toggle.disabled = true;
         try {
             const response = await fetch('{% url "update_section_assessment_week" %}', { method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest'}, body: JSON.stringify({section_id: {{ assessment_week_section.id }}, assessment_week_enabled: requestedState}) });
-            const payload = await response.json();
-            if (!response.ok || !payload.success) throw new Error(payload.error || 'Assessment Week could not be updated.');
+            let payload;
+            try { payload = await response.json(); } catch (_) { payload = {}; }
+            if (!response.ok || !payload.success) {
+                const requestError = new Error(payload.error || 'Assessment Week could not be updated.');
+                requestError.resultsRecorded = payload.code === 'assessment_week_results_recorded';
+                throw requestError;
+            }
             toggle.checked = Boolean(payload.assessment_week_enabled); status.textContent = toggle.checked ? 'ON' : 'OFF'; previousState = toggle.checked; window.location.reload();
-        } catch (requestError) { toggle.checked = previousState; error.textContent = requestError.message || 'Assessment Week could not be updated.'; error.hidden = false; } finally { toggle.disabled = false; submit.disabled = false; cancel.disabled = false; }
+        } catch (requestError) { showFailureModal(requestError.message, requestError.resultsRecorded); } finally { isUpdating = false; toggle.disabled = false; submit.disabled = false; cancel.disabled = false; }
     }
-    toggle.addEventListener('change', openModal); cancel.addEventListener('click', () => closeModal(true)); submit.addEventListener('click', applyChange); modal.addEventListener('click', event => { if (event.target === modal && !submit.disabled) closeModal(true); }); document.addEventListener('keydown', event => { if (event.key === 'Escape' && modal.classList.contains('is-visible') && !submit.disabled) closeModal(true); });
+    toggle.addEventListener('change', () => { if (isUpdating) return; if (!toggle.checked && previousState && hasRecordedResults) { showFailureModal('', true); return; } openModal(); }); cancel.addEventListener('click', () => closeModal(true)); submit.addEventListener('click', () => { if (modalMode === 'error') closeModal(true); else applyChange(); }); modal.addEventListener('click', event => { if (event.target === modal && !submit.disabled) closeModal(true); }); document.addEventListener('keydown', event => { if (event.key === 'Escape' && modal.classList.contains('is-visible') && !submit.disabled) closeModal(true); });
 });
 </script>
 {% if live_crla_material %}
