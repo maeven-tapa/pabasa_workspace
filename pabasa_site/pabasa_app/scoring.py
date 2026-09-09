@@ -184,6 +184,12 @@ def _crla_part2_band(passage_accuracy_percent: Any, comprehension_correct: Any) 
         return None
     reading_band = 0 if percentage <= 25 else 1 if percentage <= 50 else 2 if percentage <= 75 else 3
     comprehension_band = 0 if answers <= 0 else 1 if answers <= 2 else 2 if answers <= 4 else 3
+    # A high-accuracy passage cannot be classified as High Emerging solely
+    # because comprehension is zero.  Preserve the official profile floor for
+    # this cross-band case; comprehension still governs the normal aligned
+    # bands below it.
+    if reading_band == 3 and comprehension_band == 0:
+        return 2
     return min(reading_band, comprehension_band)
 
 
