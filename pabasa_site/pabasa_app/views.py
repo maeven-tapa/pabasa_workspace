@@ -23332,7 +23332,23 @@ def _enforce_student_access_for_request(
         and str(getattr(material, 'status', '') or '').strip().lower() == 'published'
         and official_phase == active_student_phase
     ):
-        if _student_crla_finalized_for_material(persisted_user, material) and not allow_finalized_live_student:
+        workflow_state = _get_user_state(persisted_user)
+        persisted_transition = workflow_state.get('student_end_assessment_state')
+        persisted_transition = persisted_transition if isinstance(persisted_transition, dict) else {}
+        _, persisted_material_id = _parse_prefixed_id(persisted_transition.get('material_id'))
+        requested_stage = str(request.GET.get('crla_stage') or '').strip().lower()
+        valid_sentence_transition = (
+            requested_stage == 'sentences'
+            and persisted_transition.get('stage') == 'transition_to_sentence'
+            and persisted_transition.get('next_stage') == 'sentences'
+            and persisted_material_id == material.id
+            and not _official_crla_completed_result_for_material(persisted_user, material)
+        )
+        if (
+            _student_crla_finalized_for_material(persisted_user, material)
+            and not allow_finalized_live_student
+            and not valid_sentence_transition
+        ):
             return _student_access_block_response(
                 json_response=json_response,
                 message='This CRLA assessment has been finalized for your class.',

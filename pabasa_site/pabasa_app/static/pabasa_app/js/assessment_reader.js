@@ -2153,7 +2153,7 @@
             shell.classList.add("is-complete");
             const title = document.getElementById("completionTitle");
             const message = document.getElementById("completionMessage");
-            const classificationText = endState.classification || "Assessment completed";
+            const classificationText = endState.classification || endState.reader_classification || "Assessment completed";
             // Section transitions are not CRLA completion.  In particular, do
             // not leak a routing/Part 1 level on the Word Reading screen.
             const isFinalCompletion = ["completed", "early_completed_words", "early_completed_sentences"].includes(stage);
