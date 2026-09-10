@@ -393,8 +393,8 @@
     .privacy-step-document {
         padding: 0.25rem 0 1rem;
         color: #334155;
-        font-size: 0.95rem;
-        line-height: 1.7;
+        font-size: 0.9rem;
+        line-height: 1.52;
     }
 
     .privacy-step-document h2,
@@ -410,9 +410,9 @@
     }
 
     .privacy-step-document h3 {
-        font-size: 0.96rem;
-        margin-top: 1rem;
-        padding-top: 0.8rem;
+        font-size: 1rem;
+        margin-top: 0.75rem;
+        padding-top: 0.55rem;
         border-top: 1px solid rgba(15, 47, 69, 0.14);
     }
 
@@ -422,18 +422,121 @@
         margin-bottom: 0.65rem;
     }
 
-    .privacy-notice-scroll {
-        height: min(20rem, 52vh);
-        overflow-y: auto;
-        margin: 0.9rem 0;
-        padding: 0.9rem 1rem;
-        border: 1px solid rgba(16, 70, 110, 0.2);
-        border-radius: 0.85rem;
-        background: rgba(255, 255, 255, 0.62);
-        scrollbar-gutter: stable;
+    .privacy-section-indicators {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.1rem;
+        margin: 1.1rem 0 0.75rem;
+        border-bottom: 1px solid rgba(16, 70, 110, 0.14);
+        overflow: visible;
     }
 
-    .privacy-step-document .privacy-notice-scroll .privacy-link-row {
+    .privacy-section-indicator {
+        border: 0;
+        border-bottom: 2px solid transparent;
+        border-radius: 0;
+        padding: 0.5rem 0.7rem 0.65rem;
+        background: transparent;
+        color: #10466e;
+        font-size: 0.8rem;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .privacy-section-indicator.is-active,
+    .privacy-section-indicator.is-complete {
+        border-bottom-color: #54c2f0;
+        background: transparent;
+    }
+
+    .privacy-section-content {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .privacy-section {
+        position: static;
+        display: block;
+        height: auto;
+        overflow: visible;
+        padding: 0.35rem 0;
+    }
+
+    .privacy-navigation {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        min-height: 3.25rem;
+        padding-top: 0.65rem;
+    }
+
+    .privacy-document-shell {
+        display: flex;
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    .privacy-page-arrow {
+        display: grid;
+        place-items: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        border: 0;
+        background: transparent;
+        color: #10466e;
+        font-size: 2rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .privacy-page-arrow:disabled {
+        color: rgba(16, 70, 110, 0.25);
+        cursor: default;
+    }
+
+    .privacy-page-arrow:focus-visible,
+    .privacy-section-indicator:focus-visible {
+        outline: 2px solid rgba(84, 194, 240, 0.75);
+        outline-offset: 2px;
+    }
+
+    .privacy-consent-group {
+        min-height: 0;
+        visibility: hidden;
+        opacity: 0;
+        transition: opacity 0.15s ease;
+    }
+
+    .privacy-consent-group.is-visible {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    .privacy-login-link {
+        display: none;
+        flex: 1;
+        text-align: center;
+        color: #526c7a;
+        font-size: 0.9rem;
+    }
+
+    .form-actions.is-privacy-step .privacy-login-link {
+        display: block;
+    }
+
+    .privacy-navigation .privacy-page-status {
+        color: #10466e;
+        font-size: 0.85rem;
+        font-weight: 700;
+    }
+
+    .privacy-step-document .privacy-section .privacy-link-row {
         margin-bottom: 0;
     }
 
@@ -444,10 +547,10 @@
         gap: 0.55rem 0.8rem;
         margin-top: 0.75rem;
         margin-bottom: 1.35rem;
-        padding: 0.75rem 0.9rem;
-        border: 1px solid rgba(16, 70, 110, 0.12);
-        border-radius: 0.85rem;
-        background: rgba(84, 194, 240, 0.05);
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
         color: #10466e;
     }
 
@@ -485,7 +588,7 @@
         align-items: flex-start;
         gap: 0.7rem;
         color: #12394f;
-        font-size: 0.92rem;
+        font-size: 0.9rem;
     }
 
     .privacy-step-document .privacy-consent-option input[type="checkbox"] {
@@ -501,6 +604,211 @@
 
     .privacy-step-document .privacy-step-actions {
         margin-top: 1rem;
+    }
+
+    /* Privacy 4/4 visual refinement; scoped to the privacy UI only. */
+    .privacy-step-document {
+        color: #294556;
+        font-size: 0.92rem;
+        line-height: 1.55;
+    }
+
+    .privacy-step-document h2 {
+        margin-bottom: 0.4rem;
+        color: #0f2f45;
+        font-size: 1.2rem;
+        letter-spacing: -0.01em;
+    }
+
+    .privacy-step-document > p.text-muted {
+        margin-bottom: 0.9rem;
+        color: #617582 !important;
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    .privacy-section-indicators {
+        align-items: flex-end;
+        gap: 0.15rem;
+        margin-top: 0.75rem;
+        margin-bottom: 0.85rem;
+    }
+
+    .privacy-section-indicator {
+        min-height: 2.3rem;
+        padding: 0.45rem 0.65rem 0.55rem;
+        color: #607684;
+        font-size: 0.8rem;
+        font-weight: 700;
+        line-height: 1.2;
+        transition: color 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+    }
+
+    .privacy-section-indicator:hover {
+        color: #10466e;
+        background: rgba(84, 194, 240, 0.07);
+    }
+
+    .privacy-section-indicator.is-active {
+        color: #10466e;
+        border-bottom-color: #2fa9dd;
+        background: rgba(84, 194, 240, 0.08);
+    }
+
+    .privacy-section-indicator.is-complete {
+        color: #39718d;
+        border-bottom-color: rgba(84, 194, 240, 0.5);
+    }
+
+    .privacy-section-content {
+        font-size: 0.92rem;
+        line-height: 1.55;
+    }
+
+    .privacy-section h3 {
+        margin: 0 0 0.7rem;
+        padding-top: 0;
+        border-top: 0;
+        color: #12394f;
+        font-size: 1rem;
+        line-height: 1.35;
+    }
+
+    .privacy-section p {
+        margin: 0 0 0.75rem;
+    }
+
+    .privacy-section ul {
+        margin: 0;
+        padding-left: 1.15rem;
+    }
+
+    .privacy-section li + li {
+        margin-top: 0.35rem;
+    }
+
+    .privacy-section li::marker {
+        color: #54a9ca;
+    }
+
+    .privacy-page-arrow {
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 50%;
+        color: #39718d;
+        font-size: 1.65rem;
+        transition: color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
+    }
+
+    .privacy-page-arrow:hover:not(:disabled) {
+        color: #10466e;
+        background: rgba(84, 194, 240, 0.1);
+        transform: scale(1.04);
+    }
+
+    .privacy-page-arrow:disabled {
+        color: rgba(16, 70, 110, 0.22);
+        background: transparent;
+    }
+
+    .privacy-navigation {
+        min-height: 2.4rem;
+        padding-top: 0.35rem;
+    }
+
+    .privacy-navigation .privacy-page-status {
+        color: #617582;
+        font-size: 0.8rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+    }
+
+    .privacy-step-document .privacy-link-row {
+        gap: 0.45rem 0.7rem;
+        margin-top: 0.35rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .privacy-step-document .privacy-link-row a {
+        color: #0f6d9b;
+        font-weight: 700;
+    }
+
+    .privacy-step-document .privacy-consent-group {
+        gap: 0.55rem;
+        margin-top: 0.55rem;
+        padding-top: 0.8rem;
+        border-top-color: rgba(15, 47, 69, 0.13);
+    }
+
+    .privacy-step-document .privacy-consent-option {
+        gap: 0.65rem;
+        color: #294556;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        cursor: pointer;
+    }
+
+    .privacy-step-document .privacy-consent-option input[type="checkbox"] {
+        accent-color: #1688b7;
+        width: 17px;
+        height: 17px;
+        margin-top: 0.22rem;
+    }
+
+    .privacy-login-link {
+        font-size: 0.88rem;
+    }
+
+    .privacy-login-link a {
+        color: #0f6d9b;
+        font-weight: 700;
+    }
+
+    /* Single scrollable privacy document. */
+    .privacy-section-indicators {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        flex-wrap: wrap;
+        margin-bottom: 0;
+        padding-bottom: 0.2rem;
+        background: transparent;
+    }
+
+    .privacy-document-shell {
+        display: block;
+    }
+
+    .privacy-page-arrow,
+    .privacy-navigation {
+        display: none;
+    }
+
+    .privacy-section-content {
+        padding: 0.85rem 0.2rem 0.85rem 0;
+        scrollbar-gutter: stable;
+        scroll-behavior: smooth;
+    }
+
+    .privacy-section { scroll-margin-top: 0.75rem; }
+
+    .privacy-section h3 {
+        margin-top: 1.1rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid rgba(15, 47, 69, 0.14);
+        font-size: 1.08rem;
+    }
+
+    .privacy-section:first-child h3 {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: 0;
+    }
+
+    .privacy-consent-group {
+        visibility: visible;
+        opacity: 1;
     }
 
     /* ── UPDATED: scope mobile overrides to student-signup-form ── */
@@ -588,6 +896,169 @@
             grid-template-columns: 1fr;
         }
     }
+
+    /* Privacy step: allocate the card's remaining height to the document only. */
+    .account-card:has(.signup-step[data-signup-step="3"].is-active) {
+        height: min(760px, calc(100svh - 4.5rem));
+        max-height: calc(100svh - 4.5rem);
+    }
+
+    .account-card:has(.signup-step[data-signup-step="3"].is-active) .card-body,
+    .student-signup-form:has(.signup-step[data-signup-step="3"].is-active) {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .student-signup-form:has(.signup-step[data-signup-step="3"].is-active) {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        flex-wrap: nowrap;
+        row-gap: 0;
+        margin-top: 0;
+    }
+
+    .student-signup-form:has(.signup-step[data-signup-step="3"].is-active) > .col-12:first-of-type {
+        margin-top: 0;
+    }
+
+    .signup-step[data-signup-step="3"].is-active {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        min-height: 0;
+        margin-top: 0;
+    }
+
+    .signup-step[data-signup-step="3"].is-active > .col-12 {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .privacy-step-document {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 0;
+        width: 100%;
+        max-width: 100%;
+        padding: 0 0 0.35rem;
+        color: #294556;
+        font-size: 0.9375rem;
+        line-height: 1.6;
+    }
+
+    .privacy-step-document h2 {
+        margin-bottom: 0.25rem;
+    }
+
+    .privacy-step-document > p.text-muted {
+        margin-bottom: 0.45rem;
+    }
+
+    .privacy-section-indicators {
+        flex: 0 0 auto;
+        min-width: 0;
+        margin: 0 0 0.55rem;
+        padding: 0 0 0.2rem;
+        border-bottom: 1px solid rgba(16, 70, 110, 0.2);
+        background: transparent;
+    }
+
+    .privacy-section-indicator {
+        flex: 0 0 auto;
+        background: transparent;
+    }
+
+    .privacy-section-indicator:hover {
+        background: rgba(84, 194, 240, 0.07);
+    }
+
+    .privacy-document-shell {
+        display: flex;
+        flex: 1 1 auto;
+        min-width: 0;
+        min-height: 0;
+    }
+
+    .privacy-section-content {
+        display: block;
+        flex: 1 1 auto;
+        min-width: 0;
+        min-height: 0;
+        height: auto;
+        overflow-x: hidden;
+        overflow-y: auto;
+        padding: 0.15rem 0.35rem 0.55rem 0;
+        scrollbar-color: rgba(47, 169, 221, 0.68) transparent;
+        scrollbar-width: thin;
+    }
+
+    .privacy-section-content::-webkit-scrollbar {
+        width: 0.35rem;
+    }
+
+    .privacy-section-content::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .privacy-section-content::-webkit-scrollbar-thumb {
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 999px;
+        background: rgba(47, 169, 221, 0.68);
+    }
+
+    .privacy-section-content::-webkit-scrollbar-thumb:hover {
+        background: rgba(22, 136, 183, 0.86);
+    }
+
+    .privacy-section {
+        position: static;
+        display: block;
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .privacy-section h3 {
+        font-size: 1.1rem;
+        line-height: 1.35;
+    }
+
+    .privacy-page-arrow,
+    .privacy-navigation {
+        display: none;
+    }
+
+    .privacy-consent-group {
+        flex: 0 0 auto;
+        visibility: visible;
+        opacity: 1;
+    }
+
+    @media (max-width: 575.98px) {
+        .privacy-section-indicators {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: none;
+        }
+
+        .privacy-section-indicators::-webkit-scrollbar {
+            display: none;
+        }
+    }
+
+    @media (min-width: 576px) {
+        .account-card:has(.signup-step[data-signup-step="3"].is-active) {
+            height: min(760px, calc(100svh - 6rem));
+            max-height: calc(100svh - 6rem);
+        }
+    }
 </style>
 {% endblock %}
 
@@ -601,8 +1072,8 @@
                     <span class="modern-chip mb-0">Student Account</span>
                     <span class="signup-step-pill" data-step-status>Personal 1/3</span>
                 </div>
-                <h1 class="h4">Create a Student Account</h1>
-                <p class="small">Already have an account? <a href="{% url 'auth' %}">Login</a></p>
+                <h1 class="h4" data-signup-title>Create a Student Account</h1>
+                <p class="small" data-signup-login>Already have an account? <a href="{% url 'auth' %}">Login</a></p>
                 <!-- CHANGED: added student-signup-form class to match teacher form spacing -->
                 <form id="studentSignupForm" method="post" class="row g-3 student-signup-form">
                     {% csrf_token %}
@@ -733,7 +1204,17 @@
                                 <h2>Privacy Notice</h2>
                                 <p class="text-muted">Please review the privacy notice below before creating your account.</p>
 
-                                <div class="privacy-notice-scroll" tabindex="0" role="region" aria-label="Privacy notice details">
+                                <div class="privacy-section-indicators" role="tablist" aria-label="Privacy notice sections">
+                                    <button type="button" class="privacy-section-indicator is-active" data-privacy-indicator="0" role="tab" aria-selected="true">1 Data We Collect</button>
+                                    <button type="button" class="privacy-section-indicator" data-privacy-indicator="1" role="tab" aria-selected="false">2 How We Use It</button>
+                                    <button type="button" class="privacy-section-indicator" data-privacy-indicator="2" role="tab" aria-selected="false">3 Data Sharing</button>
+                                    <button type="button" class="privacy-section-indicator" data-privacy-indicator="3" role="tab" aria-selected="false">4 Your Rights</button>
+                                    <button type="button" class="privacy-section-indicator" data-privacy-indicator="4" role="tab" aria-selected="false">5 Related Documents</button>
+                                </div>
+
+                                <div class="privacy-document-shell">
+                                    <div class="privacy-section-content" role="region" aria-live="polite" aria-label="Privacy notice details">
+                                    <section class="privacy-section is-active" data-privacy-section="0" role="tabpanel">
                                     <h3>1. Data We Collect</h3>
                                     <ul>
                                     <li><strong>Full Name</strong> — Displayed on your profile and used in reading assessment reports and account identification.</li>
@@ -743,15 +1224,18 @@
                                     <li><strong>School Information</strong> — Includes your school name and other relevant institutional details to associate your account with your educational institution and manage access within the platform.</li>
                                     <li><strong>Reading Assessment Records</strong> — Includes reading assessment results, progress, and generated reports to monitor learning performance and provide educational insights.</li>
                                     </ul>
-
+                                    </section>
+                                    <section class="privacy-section" data-privacy-section="1" role="tabpanel">
                                     <h3>2. How We Use It</h3>
                                     <p>We use this information to create and secure your account, personalize your learning experience, and contact you about your account when needed. We do not sell your personal data to third parties.</p>
-
+                                    </section>
+                                    <section class="privacy-section" data-privacy-section="2" role="tabpanel">
                                     <h3>3. Data Sharing</h3>
                                     <p>We do not use your information for advertising, and we share it only when necessary.</p>
                                     <p><strong>We do not:</strong> sell personal information · rent user information · share information for advertising</p>
                                     <p><strong>We only share when necessary with:</strong> authorized school personnel · school administrators · technical service providers · government authorities when legally required</p>
-
+                                    </section>
+                                    <section class="privacy-section" data-privacy-section="3" role="tabpanel">
                                     <h3>4. Your Rights</h3>
                                     <p>You have rights under the Data Privacy Act of 2012, including the right to:</p>
                                     <ul>
@@ -761,16 +1245,19 @@
                                     <li>Request deletion of your data, subject to legal retention requirements</li>
                                     <li>File a complaint with the National Privacy Commission</li>
                                     </ul>
-
+                                    </section>
+                                    <section class="privacy-section" data-privacy-section="4" role="tabpanel">
                                     <h3>5. Related Documents</h3>
                                     <div class="privacy-link-row">
                                     <a href="{% url 'privacy' %}">Privacy Policy</a>
                                     <span>·</span>
                                     <a href="{% url 'terms' %}">Terms and Conditions</a>
                                     </div>
+                                    </section>
+                                    </div>
                                 </div>
 
-                                <div class="privacy-consent-group">
+                                <div class="privacy-consent-group" data-privacy-consent-area>
                                     <label class="privacy-consent-option">
                                         <input type="checkbox" name="privacy_consent" required>
                                         <span>I agree to the Privacy Policy and Terms of Service, and consent to PABASA collecting and processing my personal data as described above.</span>
@@ -784,6 +1271,7 @@
                         <div class="secondary-actions-row">
                             <a class="btn back-button" id="backStepBtn" href="{% url 'signup' %}">Back</a>
                         </div>
+                        <span class="privacy-login-link">Already have an account? <a href="{% url 'auth' %}">Login</a></span>
                         <div class="d-flex gap-2 flex-wrap justify-content-end step-actions-group">
                             <button class="btn btn-primary" id="nextStepBtn" type="button">Next</button>
                             <button class="btn btn-primary d-none" id="submitBtn" type="submit" disabled>Create Account</button>
@@ -855,6 +1343,8 @@
         const formActions = form.querySelector(".form-actions");
         const steps = Array.from(form.querySelectorAll("[data-signup-step]")).sort((a, b) => Number(a.dataset.signupStep) - Number(b.dataset.signupStep));
         const stepStatus = document.querySelector("[data-step-status]");
+        const signupTitle = document.querySelector("[data-signup-title]");
+        const signupLogin = document.querySelector("[data-signup-login]");
         const stepLabels = ["Personal", "School", "Password", "Privacy"];
         let currentStep = 0;
         const errorMessage = form.querySelector("#errorMessage");
@@ -863,6 +1353,11 @@
         const passwordMatchError = form.querySelector("[data-password-match-error]");
         const passwordToggles = form.querySelectorAll("[data-password-toggle]");
         const privacyConsentCheckbox = form.querySelector('input[name="privacy_consent"]');
+        const privacySections = Array.from(form.querySelectorAll('[data-privacy-section]'));
+        const privacySectionContent = form.querySelector('.privacy-section-content');
+        const privacyIndicators = Array.from(form.querySelectorAll('[data-privacy-indicator]'));
+        const privacyConsentArea = form.querySelector('[data-privacy-consent-area]');
+        let currentPrivacySection = 0;
         const sectionSelect = form.querySelector('#studentSection');
         const fixedStudentGradeLevel = 'Grade 2';
         const birthMonthInput = form.querySelector('#studentBirthMonth');
@@ -950,8 +1445,30 @@
             number: form.querySelector("[data-rule='number']"),
         };
 
+        const setPrivacySection = (sectionIndex) => {
+            currentPrivacySection = Math.max(0, Math.min(sectionIndex, privacySections.length - 1));
+            privacyIndicators.forEach((indicator, index) => {
+                indicator.classList.toggle('is-active', index === currentPrivacySection);
+                indicator.classList.toggle('is-complete', index < currentPrivacySection);
+                indicator.setAttribute('aria-selected', String(index === currentPrivacySection));
+            });
+            const targetSection = privacySections[currentPrivacySection];
+            if (privacySectionContent && targetSection) {
+                const targetTop = targetSection.getBoundingClientRect().top
+                    - privacySectionContent.getBoundingClientRect().top
+                    + privacySectionContent.scrollTop;
+                privacySectionContent.scrollTo({ top: targetTop, behavior: 'smooth' });
+            }
+            updateValidation();
+        };
+
         const setStep = (stepIndex) => {
             currentStep = Math.max(0, Math.min(stepIndex, steps.length - 1));
+            if (currentStep !== steps.length - 1) setPrivacySection(0);
+            const isPrivacyStep = currentStep === steps.length - 1;
+            signupTitle.classList.toggle('d-none', isPrivacyStep);
+            signupLogin.classList.toggle('d-none', isPrivacyStep);
+            formActions.classList.toggle('is-privacy-step', isPrivacyStep);
             steps.forEach((step, index) => {
                 step.classList.toggle("is-active", index === currentStep);
             });
@@ -963,6 +1480,7 @@
             updateValidation();
         };
 
+        privacyIndicators.forEach((indicator) => indicator.addEventListener('click', () => setPrivacySection(Number(indicator.dataset.privacyIndicator))));
         const validateCurrentStep = () => {
             const fields = Array.from(steps[currentStep].querySelectorAll("input, select, textarea"));
             const invalid = fields.find((field) => !field.checkValidity());
