@@ -8887,7 +8887,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 </form>
             </div>
             <div class="modal-footer px-4 pt-0 pb-4 border-0">
-                <button type="button" class="btn btn-link text-secondary text-decoration-none fw-bold small me-auto" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-link text-secondary text-decoration-none fw-bold small me-auto" id="cancelMaterialSetupBtn">Cancel</button>
                 <button type="button" class="btn btn-primary px-4 py-2 shadow-sm fw-bold" id="submitMaterial" style="border-radius: 12px; min-height: 48px;">
                     <i class="bi bi-cloud-arrow-up-fill me-2"></i>Save Material
                 </button>
@@ -14029,6 +14029,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 state.mainContent.classList.remove('d-none');
                 state.sidebar?.classList.remove('d-none');
             }
+            if (state.courseCloseButton) {
+                state.courseCloseButton.setAttribute('data-bs-dismiss', 'modal');
+            }
             dispatchModalEvent(modalEl, 'hidden.bs.modal');
             return true;
         }
@@ -14039,6 +14042,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const host = document.getElementById('courseInlineDialogHost');
             const mainContent = document.getElementById('courseMainContent');
             const sidebar = document.getElementById('courseSidebar');
+            const courseCloseButton = courseModal?.querySelector('.course-modal-close-btn[data-bs-dismiss="modal"]');
             const staysAsDialog = modalEl?.id === 'deleteConfirmModal';
             if (!modalEl || modalEl === courseModal || staysAsDialog || !courseModal?.classList.contains('show') || !host || !mainContent) return false;
 
@@ -14058,7 +14062,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const nodes = Array.from(content.childNodes);
 
             dispatchModalEvent(modalEl, 'show.bs.modal');
-            inlineState.set(modalEl, { content, nodes, host, mainContent, sidebar, parentModal, suspended: false });
+            // The visible Course header belongs to the parent Bootstrap modal.
+            // Disable its Bootstrap dismiss trigger while its inline child owns
+            // the close action; it is restored when the final inline child closes.
+            courseCloseButton?.removeAttribute('data-bs-dismiss');
+            inlineState.set(modalEl, { content, nodes, host, mainContent, sidebar, parentModal, suspended: false, courseCloseButton });
             activeInlineModal = modalEl;
             modalEl.classList.add('course-inline-active');
             mainContent.classList.add('d-none');
@@ -14085,9 +14093,27 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         modalPrototype._courseInlinePatched = true;
 
         document.getElementById('courseInlineDialogHost')?.addEventListener('click', function (event) {
+            const personalMaterialCancel = event.target.closest('#cancelMaterialSetupBtn');
+            if (personalMaterialCancel && activeInlineModal?.id === 'addMaterialModal') {
+                event.preventDefault();
+                event.stopPropagation();
+                window.dispatchEvent(new Event('pabasa:cancel-personal-material-setup'));
+                return;
+            }
             const dismissButton = event.target.closest('[data-bs-dismiss="modal"]');
             if (!dismissButton) return;
             if (!activeInlineModal) return;
+            event.preventDefault();
+            event.stopPropagation();
+            closeInlineModal(bootstrap.Modal.getInstance(activeInlineModal));
+        });
+
+        // While an inline course dialog is open, the Course modal header remains
+        // visible. Its close control must close the active inline dialog (back to
+        // the current Course tab), rather than dismissing the parent Course modal.
+        document.getElementById('courseDetailModal')?.addEventListener('click', function (event) {
+            const closeButton = event.target.closest('.course-modal-close-btn');
+            if (!closeButton || !activeInlineModal) return;
             event.preventDefault();
             event.stopPropagation();
             closeInlineModal(bootstrap.Modal.getInstance(activeInlineModal));
@@ -14157,6 +14183,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const requiredConfirmation = String(options.requireConfirmation || '');
         confirmBtn.textContent = options.confirmText || 'Delete Forever';
         confirmBtn.className = options.confirmClass || 'btn btn-danger px-4';
+        const cancelBtn = modalEl?.querySelector('[data-bs-dismiss="modal"]');
+        if (cancelBtn) cancelBtn.textContent = options.cancelText || 'Cancel';
         if (accentEl) {
             accentEl.className = `system-modal-accent ${defaultAccent}`;
         }
@@ -14281,6 +14309,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const scheduleFieldDiv = document.getElementById('scheduleField');
         const scheduleDateTimeInput = document.getElementById('scheduleDateTime');
         const submitMaterialBtn = document.getElementById('submitMaterial');
+        const cancelMaterialSetupBtn = document.getElementById('cancelMaterialSetupBtn');
         const uploadMaterialBtn = document.getElementById('uploadMaterial');
         const materialFileInput = document.getElementById('materialFileInput');
         const materialUploadStatus = document.getElementById('materialUploadStatus');
@@ -14951,6 +14980,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         };
         let activeTemplateActivity = null;
         let activeTemplateItemEditIndex = null;
+        let templateActivityInitialSnapshot = null;
+        let personalMaterialInitialSnapshot = null;
         let createdTemplateActivities = [];
         function setNodeVisibility(node, visible) {
             if (!node) return;
@@ -17825,6 +17856,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             renderTemplateDynamicFields(templateTitle);
             renderTemplateWeeks();
             renderTemplatePreview();
+            templateActivityInitialSnapshot = getTemplateActivityDraftSnapshot();
             window.requestAnimationFrame(() => {
                 templateBuilderPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 templateActivityTitle?.focus({ preventScroll: true });
@@ -17833,12 +17865,128 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function hideTemplateBuilder() {
             activeTemplateActivity = null;
+            templateActivityInitialSnapshot = null;
             setTemplateBuilderActive(false);
             setAddMaterialMode('template');
             if (templateActivityGrid) {
                 setNodeVisibility(templateActivityGrid, true);
             }
             if (templateValidationError) templateValidationError.classList.add('d-none');
+        }
+
+        function normalizeTemplateDraftValue(value, seen = new WeakSet()) {
+            if (value === null || typeof value !== 'object') return value;
+            if (seen.has(value)) return '[circular]';
+            seen.add(value);
+            if (Array.isArray(value)) return value.map(item => normalizeTemplateDraftValue(item, seen));
+            return Object.keys(value).sort().reduce((normalized, key) => {
+                if (typeof value[key] !== 'function' && value[key] !== undefined) {
+                    normalized[key] = normalizeTemplateDraftValue(value[key], seen);
+                }
+                return normalized;
+            }, {});
+        }
+
+        // A template can use both dynamic fields and JavaScript-managed settings.
+        // Capture both so Cancel does not overlook a configuration change that is
+        // not represented by one specific input element.
+        function getTemplateActivityDraftSnapshot() {
+            const formValues = Array.from(templateActivityForm?.querySelectorAll('input, select, textarea') || []).map(field => ({
+                name: field.name || '',
+                id: field.id || '',
+                type: field.type || '',
+                value: field.type === 'file'
+                    ? Array.from(field.files || []).map(file => `${file.name}:${file.size}:${file.lastModified}`)
+                    : field.value,
+                checked: ['checkbox', 'radio'].includes(field.type) ? field.checked : undefined
+            }));
+            return JSON.stringify({
+                formValues,
+                activity: normalizeTemplateDraftValue(activeTemplateActivity)
+            });
+        }
+
+        function hasTemplateActivityDraftChanges() {
+            return Boolean(activeTemplateActivity)
+                && templateActivityInitialSnapshot !== null
+                && getTemplateActivityDraftSnapshot() !== templateActivityInitialSnapshot;
+        }
+
+        function cancelTemplateActivitySetup() {
+            if (!hasTemplateActivityDraftChanges()) {
+                hideTemplateBuilder();
+                return;
+            }
+            showDeleteConfirmModal(
+                '<p class="mb-0">You have unsaved activity settings. If you continue, all changes made in this Create Activity setup will be discarded.</p>',
+                function () { hideTemplateBuilder(); },
+                {
+                    title: 'Discard Activity Setup?',
+                    confirmText: 'Discard Changes',
+                    confirmClass: 'btn btn-danger px-4',
+                    cancelText: 'Continue Editing',
+                    accentClass: 'warning',
+                    iconClassName: 'warning',
+                    icon: 'bi-arrow-counterclockwise'
+                }
+            );
+        }
+
+        function getPersonalMaterialDraftSnapshot() {
+            const personalFields = personalMaterialSections.flatMap(section =>
+                Array.from(section?.querySelectorAll('input, select, textarea') || [])
+            );
+            const formValues = personalFields.map(field => ({
+                name: field.name || '',
+                id: field.id || '',
+                type: field.type || '',
+                value: field.type === 'file'
+                    ? Array.from(field.files || []).map(file => `${file.name}:${file.size}:${file.lastModified}`)
+                    : field.value,
+                checked: ['checkbox', 'radio'].includes(field.type) ? field.checked : undefined
+            }));
+            return JSON.stringify({ formValues, items: [...currentItemsList] });
+        }
+
+        function beginPersonalMaterialWorkspace() {
+            setAddMaterialMode('personal');
+            if (cancelMaterialSetupBtn) {
+                cancelMaterialSetupBtn.disabled = false;
+                cancelMaterialSetupBtn.removeAttribute('aria-disabled');
+            }
+            personalMaterialInitialSnapshot = getPersonalMaterialDraftSnapshot();
+        }
+
+        function returnToParentCourseMaterials() {
+            // Preserve the course attachment target; only the unsaved material
+            // draft is reset before returning to the parent Course modal.
+            resetAddMaterialModalState({ clearEditing: true, clearAttachTarget: false });
+            bootstrap.Modal.getOrCreateInstance(addMaterialModal)?.hide();
+        }
+
+        function hasPersonalMaterialDraftChanges() {
+            return personalMaterialInitialSnapshot !== null
+                && getPersonalMaterialDraftSnapshot() !== personalMaterialInitialSnapshot;
+        }
+
+        function cancelPersonalMaterialSetup() {
+            if (!hasPersonalMaterialDraftChanges()) {
+                returnToParentCourseMaterials();
+                return;
+            }
+            showDeleteConfirmModal(
+                '<p class="mb-0">You have unsaved changes in this material setup. If you continue, all changes made in the Content and Settings sections will be discarded.</p>',
+                returnToParentCourseMaterials,
+                {
+                    title: 'Discard Material Changes?',
+                    confirmText: 'Discard Changes',
+                    confirmClass: 'btn btn-danger px-4',
+                    cancelText: 'Continue Editing',
+                    accentClass: 'warning',
+                    iconClassName: 'warning',
+                    icon: 'bi-arrow-counterclockwise'
+                }
+            );
         }
 
         function updateTemplateChipStates() {
@@ -19032,6 +19180,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             window.__templateEditStateRestored = false;
             activeTemplateActivity = null;
             activeTemplateItemEditIndex = null;
+            templateActivityInitialSnapshot = null;
+            personalMaterialInitialSnapshot = null;
             setTemplateBuilderActive(false);
 
             const addHeader = document.querySelector('#addMaterialModal .modal-header h4');
@@ -19057,9 +19207,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 if (window.__templateEditStateRestored && window.__addMaterialDefaultMode === 'template') {
                     return;
                 }
-                setAddMaterialMode(window.__addMaterialDefaultMode || 'template');
-                window.__addMaterialDefaultMode = window.__addMaterialDefaultMode || 'template';
+                const initialMode = window.__addMaterialDefaultMode || 'template';
+                setAddMaterialMode(initialMode);
+                window.__addMaterialDefaultMode = initialMode;
                 syncMaterialLanguageSelection();
+                if (initialMode === 'personal') {
+                    personalMaterialInitialSnapshot = getPersonalMaterialDraftSnapshot();
+                }
             });
         }
 
@@ -19105,6 +19259,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
             if (addMaterialFooter) {
                 addMaterialFooter.classList.toggle('d-none', showTemplate);
+            }
+            if (showPersonal && cancelMaterialSetupBtn) {
+                cancelMaterialSetupBtn.disabled = false;
+                cancelMaterialSetupBtn.removeAttribute('aria-disabled');
             }
 
             personalMaterialSections.forEach(section => {
@@ -19447,7 +19605,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function attachOtherMaterialHandlers() {
             materialModeTemplateBtn?.addEventListener('click', () => setAddMaterialMode('template'));
-            materialModePersonalBtn?.addEventListener('click', () => setAddMaterialMode('personal'));
+            materialModePersonalBtn?.addEventListener('click', beginPersonalMaterialWorkspace);
             materialModeOtherBtn?.addEventListener('click', () => setAddMaterialMode('other'));
             templateActivityGrid?.addEventListener('click', function(event) {
                 const btn = event.target.closest('.template-create-btn');
@@ -19455,10 +19613,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 showTemplateBuilder(btn.dataset.templateTitle || 'Picture-Word Matching');
             });
             templateBackBtn?.addEventListener('click', hideTemplateBuilder);
-            templateCancelBtn?.addEventListener('click', function () {
-                hideTemplateBuilder();
-                bootstrap.Modal.getInstance(addMaterialModal)?.hide();
-            });
+            templateCancelBtn?.addEventListener('click', cancelTemplateActivitySetup);
             templateSaveBtn?.addEventListener('click', function () { saveTemplateActivity(); });
             templateWeeksGrid?.addEventListener('change', function () {
                 updateTemplateChipStates();
@@ -19579,6 +19734,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
 
         attachOtherMaterialHandlers();
+        window.addEventListener('pabasa:cancel-personal-material-setup', cancelPersonalMaterialSetup);
+        document.addEventListener('click', function(event) {
+            if (event.target.closest('#cancelMaterialSetupBtn')) {
+                event.preventDefault();
+                cancelPersonalMaterialSetup();
+            }
+        });
 
         function excerptUploadedItems(text) {
             const cleaned = String(text || '')
@@ -19833,6 +19995,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     renderTemplateDynamicFields(activeTemplateActivity.templateTitle, activeTemplateActivity.content);
                     renderTemplateWeeks(activeTemplateActivity.weeks);
                     renderTemplatePreview();
+                    templateActivityInitialSnapshot = getTemplateActivityDraftSnapshot();
                     window._pendingSharedMaterialOrigin = false;
                     window._pendingSharedMaterialSourceId = null;
                     window.courseAttachTarget = null;
