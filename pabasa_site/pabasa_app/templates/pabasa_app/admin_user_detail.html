@@ -50,6 +50,23 @@
             <small class="text-secondary">Teacher: {% if enrollment.assigned_teacher %}{{ enrollment.assigned_teacher.first_name }} {{ enrollment.assigned_teacher.last_name }}{% else %}Unassigned{% endif %} · {{ enrollment.get_status_display }} · {{ enrollment.get_outcome_display }}</small>
         </div>
         {% empty %}<p class="text-secondary mb-0">No enrollments recorded.</p>{% endfor %}
+        <div class="border-top mt-3 pt-3">
+            <h4 class="h6 mb-3"><i class="bi bi-clock-history me-1"></i>Activity Log / History</h4>
+            {% for activity in student_enrollment_activity_page %}
+            <div class="border-top py-3">
+                <div><strong>{{ activity.title }}</strong></div>
+                {% if activity.message %}<div class="text-secondary small">{{ activity.message }}</div>{% endif %}
+                <small class="text-secondary">{{ activity.created_at|date:"M d, Y · g:i A" }} · Performed by: {% if activity.actor %}{{ activity.actor.first_name }} {{ activity.actor.last_name }} ({{ activity.actor.get_role_display }}){% else %}Not recorded{% endif %}</small>
+            </div>
+            {% empty %}<p class="text-secondary mb-0">No enrollment activity recorded yet.</p>{% endfor %}
+            {% if student_enrollment_activity_page.paginator.num_pages > 1 %}
+            <nav aria-label="Enrollment activity pages"><ul class="pagination pagination-sm mb-0 justify-content-end">
+                {% if student_enrollment_activity_page.has_previous %}<li class="page-item"><a class="page-link" href="?activity_page={{ student_enrollment_activity_page.previous_page_number }}">&lsaquo;</a></li>{% endif %}
+                <li class="page-item active"><span class="page-link">{{ student_enrollment_activity_page.number }}</span></li>
+                {% if student_enrollment_activity_page.has_next %}<li class="page-item"><a class="page-link" href="?activity_page={{ student_enrollment_activity_page.next_page_number }}">&rsaquo;</a></li>{% endif %}
+            </ul></nav>
+            {% endif %}
+        </div>
         {% if can_prepare_returning_student %}<form method="post" action="{% url 'admin_student_returning_enrollment' managed_user.id %}" id="prepareReturningStudentForm" class="mt-2">{% csrf_token %}<button class="btn btn-sm btn-outline-success" type="button" data-bs-toggle="modal" data-bs-target="#prepareReturningStudentModal"><i class="bi bi-person-plus me-1"></i>{% if managed_user.account_status == 'dropped' %}Reactivate as Returnee{% else %}Prepare Returning Student{% endif %}</button></form>{% endif %}
     </div>
     {% if managed_user.account_status == 'pending_archive' %}<div class="border rounded-3 p-3 bg-white mt-3"><h3 class="h5"><i class="bi bi-hourglass-split me-1"></i>Pending Archive Review</h3><form method="post" action="{% url 'admin_student_archive_action' managed_user.id %}" class="d-flex flex-wrap gap-2" onsubmit="return confirm('Approve archiving this promoted student account? All records will be preserved.');">{% csrf_token %}<input type="hidden" name="action" value="approve_archive"><button class="btn btn-outline-danger" type="submit"><i class="bi bi-archive me-1"></i>Approve Archive</button></form><form method="post" action="{% url 'admin_student_archive_action' managed_user.id %}" class="mt-2" onsubmit="return confirm('Correct this outcome to Retained and restore the account to Active?');">{% csrf_token %}<input type="hidden" name="action" value="revert_retained"><button class="btn btn-outline-success" type="submit"><i class="bi bi-arrow-counterclockwise me-1"></i>Revert to Retained</button></form></div>{% endif %}

@@ -58,7 +58,7 @@ from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_
 from django.db import transaction
 import re
 import traceback
-from .models import User, School, Section, Enrollment, Assessment, AssessmentRequest, Material, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride, ClassCrlaFinalization
+from .models import User, School, Section, Enrollment, AccountStatusHistory, Assessment, AssessmentRequest, Material, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride, ClassCrlaFinalization
 from .system_clock import invalidate_override_cache, now as system_now, real_now, today as system_today
 from .section_configuration import ensure_salawag_grade_two_sections
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
@@ -6485,12 +6485,62 @@ def _admin_user_template_context(request, user, page_title):
 def _get_managed_user(user_id, role):
     return User.objects.filter(id=user_id, role=role).first()
 
+
+def _student_enrollment_activity(user):
+    """Return only existing, student-specific enrollment/account audit records."""
+    activities = []
+    for enrollment in Enrollment.objects.filter(student=user).select_related(
+        'section', 'school_calendar', 'finalized_by'
+    ):
+        section_label = enrollment.section.section if enrollment.section else 'Unassigned'
+        year = enrollment.school_calendar.school_year if enrollment.school_calendar else 'School year not set'
+        activities.append({
+            'title': 'Student enrolled',
+            'message': f'{year} · {enrollment.grade_level or "Grade 2"} · {section_label}',
+            'created_at': enrollment.joined_at,
+            'actor': None,
+        })
+        if enrollment.finalized_at:
+            activities.append({
+                'title': f'Enrollment finalized: {enrollment.get_outcome_display()}',
+                'message': f'{year} · {enrollment.grade_level or "Grade 2"} · {section_label}',
+                'created_at': enrollment.finalized_at,
+                'actor': enrollment.finalized_by,
+            })
+
+    for history in AccountStatusHistory.objects.filter(student=user).select_related('changed_by'):
+        activities.append({
+            'title': f'Enrollment/account status changed to {history.get_status_display()}',
+            'message': history.reason or '',
+            'created_at': history.created_at,
+            'actor': history.changed_by,
+        })
+
+    for entry in ActivityLog.objects.select_related('actor').order_by('-created_at', '-id'):
+        metadata = entry.metadata if isinstance(entry.metadata, dict) else {}
+        student_ids = metadata.get('student_ids') or []
+        if str(metadata.get('student_id', '')) == str(user.id) or str(metadata.get('custom_id', '')) == str(user.custom_id) or str(user.id) in {str(value) for value in student_ids}:
+            activities.append({
+                'title': entry.title,
+                'message': entry.message,
+                'created_at': entry.created_at,
+                'actor': entry.actor,
+            })
+
+    return sorted(activities, key=lambda item: item['created_at'] or real_now(), reverse=True)
+
 @admin_required
 def admin_student_detail(request, user_id):
     user = _get_managed_user(user_id, 'student')
     if not user:
         return redirect('admin_students')
-    return render(request, 'pabasa_app/admin_user_detail.html', _admin_user_template_context(request, user, 'Student Details'))
+    context = _admin_user_template_context(request, user, 'Student Details')
+    activity_paginator = Paginator(_student_enrollment_activity(user), 10)
+    activity_page = activity_paginator.get_page(request.GET.get('activity_page'))
+    context.update({
+        'student_enrollment_activity_page': activity_page,
+    })
+    return render(request, 'pabasa_app/admin_user_detail.html', context)
 
 
 @admin_required
@@ -6524,6 +6574,20 @@ def admin_student_move_enrollment(request, user_id):
             previous_section.sync_legacy_student_fields()
         destination.sync_legacy_student_fields()
         user.sync_legacy_student_fields(current)
+        _log_activity(
+            'enrollment',
+            'Student section changed',
+            f'Transferred from {previous_section.class_name if previous_section else "Unassigned"} to {destination.class_name}.',
+            actor=_current_admin_user(request),
+            metadata={
+                'student_id': user.id,
+                'custom_id': user.custom_id,
+                'from_section_id': previous_section.id if previous_section else None,
+                'from_section': previous_section.class_name if previous_section else 'Unassigned',
+                'to_section_id': destination.id,
+                'to_section': destination.class_name,
+            },
+        )
     messages.success(request, 'Student enrollment moved successfully. Historical enrollments were preserved.')
     return redirect('admin_student_detail', user_id=user.id)
 
@@ -11907,6 +11971,20 @@ def teacher_aral_action(request):
         })
 
     _set_user_state(student, state)
+    if action == 'exit':
+        _log_activity(
+            'enrollment',
+            'Exited ARAL Program — Reading at Grade Level',
+            'Student was promoted to Reading at Grade Level through the Exit ARAL Program action.',
+            actor=teacher,
+            metadata={
+                'student_id': student.id,
+                'custom_id': student.custom_id,
+                'action': 'exit_aral_program',
+                'reading_level': official_result.crla_classification or official_result.classification,
+                'assessment_id': official_result.id,
+            },
+        )
     return JsonResponse({
         'success': True,
         'student_id': student.id,
@@ -21750,6 +21828,13 @@ def teacher_drop_student(request):
             enrollment.is_active = False
             enrollment.save(update_fields=['status', 'is_active', 'updated_at'])
             student.set_account_status('dropped', changed_by=teacher, reason=f'Dropped from {section.class_name} by teacher')
+            _log_activity(
+                'enrollment',
+                'Student dropped from section',
+                f'Removed from {section.class_name}.',
+                actor=teacher,
+                metadata={'student_id': student.id, 'custom_id': student.custom_id, 'section_id': section.id, 'section': section.class_name, 'action': 'drop_student'},
+            )
 
         return JsonResponse({'success': True, 'student_name': f'{student.first_name} {student.last_name}'.strip()})
     except Exception as error:
@@ -21787,6 +21872,13 @@ def teacher_remove_student(request):
 
         if section:
             if section.deactivate_student(student):
+                _log_activity(
+                    'enrollment',
+                    'Student removed from section',
+                    f'Removed from {section.class_name}.',
+                    actor=teacher_user,
+                    metadata={'student_id': student.id, 'custom_id': student.custom_id, 'section_id': section.id, 'section': section.class_name, 'action': 'remove_student'},
+                )
                 _create_notification(
                     student,
                     'Removed from class',

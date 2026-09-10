@@ -1982,6 +1982,7 @@ class ActivityLog(models.Model):
     EVENT_TYPE_CHOICES = [
         ("notification", "Notification"),
         ("system_time_debug", "System Time Debug"),
+        ("enrollment", "Enrollment"),
     ]
 
     actor = models.ForeignKey(
