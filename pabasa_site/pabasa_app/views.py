@@ -2692,12 +2692,25 @@ def _sync_completed_official_crla_result(student_user, result_row, score_payload
     """
     if not student_user or not result_row:
         return ''
-    canonical_classification = canonical_crla_classification(
-        result_row.crla_classification
-        or result_row.classification
-        or score_payload.get('crla_classification')
-        or score_payload.get('classification')
+    # A completed official CRLA result is authoritative only by its evidence.
+    # Never promote a stale Part 1/client/result-row label over finalized data.
+    score_data = getattr(result_row, 'crla_score_data', None)
+    score_data = score_data if isinstance(score_data, dict) else {}
+    evidence = {**score_data, **(score_payload if isinstance(score_payload, dict) else {})}
+    raw_answers = next((evidence.get(key) for key in ('comprehension_correct', 'correct_answers', 'correct_items', 'items_correct') if evidence.get(key) is not None), None)
+    part2 = crla_part2_profile(
+        evidence.get('story_total_words') or evidence.get('total_story_words'),
+        evidence.get('words_read') if evidence.get('words_read') is not None else evidence.get('total_words_read'),
+        evidence.get('miscues'), evidence.get('duration_seconds'), raw_answers,
     )
+    canonical_classification = crla_reading_profile(
+        evidence.get('part1_total_score'), evidence.get('story_number'),
+        part2.get('passage_accuracy_percent'), raw_answers,
+    )
+    if canonical_classification is None:
+        canonical_classification = canonical_crla_classification(
+            score_payload.get('crla_classification') or score_payload.get('classification')
+        )
     if not canonical_classification:
         return ''
 
@@ -14062,8 +14075,11 @@ def story_reading_complete(request):
         reading_score = correct_sentences
         duration_seconds = payload.get('duration_seconds')
         duration_seconds = max(0, int(duration_seconds)) if duration_seconds is not None else None
-        accuracy = float(payload.get('accuracy') if payload.get('accuracy') is not None else (correct_words / total_words * 100 if total_words else 0.0))
-        wpm = float(payload.get('wpm') if payload.get('wpm') is not None else 0.0)
+        # Derive final Story metrics from word evidence; client values can be
+        # stale after a segment skip.
+        accuracy = (correct_words / total_words * 100) if total_words else 0.0
+        duration_for_wpm = max(0, int(duration_seconds or 0)) if duration_seconds is not None else 0
+        wpm = (correct_words / (duration_for_wpm / 60.0)) if correct_words and duration_for_wpm else 0.0
         current_scene = max(1, int(payload.get('current_scene') or 1))
         current_time_seconds = max(0.0, float(payload.get('current_time_seconds') or 0))
         word_alignment = payload.get('word_results') or payload.get('word_alignment') or []

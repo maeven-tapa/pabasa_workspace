@@ -129,6 +129,17 @@ class StoryReadingClassificationTests(SimpleTestCase):
         )
         self.assertNotIn("wordsRead - (miscues || 0)", source)
 
+    def test_story_browser_clamps_full_skip_metrics_to_story_length(self):
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        self.assertIn("Math.min(totalWords, Math.max(0, Number(storyMiscues) || 0))", source)
+
+    def test_story_completion_derives_accuracy_and_wpm_from_word_evidence(self):
+        source = Path(__file__).parent / "views.py"
+        text = source.read_text(encoding="utf-8")
+        completion = text.split("def story_reading_complete", 1)[1].split("def reading_vowel_page", 1)[0]
+        self.assertIn("accuracy = (correct_words / total_words * 100) if total_words else 0.0", completion)
+        self.assertIn("wpm = (correct_words / (duration_for_wpm / 60.0)) if correct_words and duration_for_wpm else 0.0", completion)
+
     def test_part2_profile_does_not_double_subtract_miscues(self):
         cases = (
             (80, 20, 80.0),

@@ -2800,7 +2800,9 @@
 
         function calculateFinalizedStoryMetrics(totalStoryWords, storyMiscues, elapsedDurationSeconds) {
             const totalWords = Math.max(0, Number(totalStoryWords) || 0);
-            const miscues = Math.max(0, Number(storyMiscues) || 0);
+            // Skipped/read-error words are miscues, but stale recovery data
+            // must never exceed this story's word count.
+            const miscues = Math.min(totalWords, Math.max(0, Number(storyMiscues) || 0));
             const wordsRead = Math.max(0, totalWords - miscues);
             const durationValue = Number(elapsedDurationSeconds);
             const durationSeconds = Number.isFinite(durationValue) && durationValue > 0

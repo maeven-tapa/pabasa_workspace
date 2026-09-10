@@ -460,9 +460,18 @@ def _student_values(student, attempt, state, assessment):
         _first_value(part2_source.get("words_read"), part2_source.get("total_words_read")), 0, 100000,
     ) if has_part2 else None
     miscues = _bounded_integer(part2_source.get("miscues"), 0, 100000) if has_part2 else None
-    percent = _number(_first_value(
-        part2_source.get("passage_accuracy_percent"), part2_source.get("story_read_percent"),
-    )) if has_part2 else None
+    raw_total_words = _bounded_integer(
+        _first_value(part2_source.get("story_total_words"), part2_source.get("total_story_words")), 0, 100000
+    ) if has_part2 else None
+    raw_words_read = _bounded_integer(
+        _first_value(part2_source.get("words_read"), part2_source.get("total_words_read")), 0, 100000
+    ) if has_part2 else None
+    if raw_total_words is not None and raw_words_read is not None and raw_total_words:
+        percent = round(min(raw_words_read, raw_total_words) / raw_total_words * 100, 2)
+    else:
+        percent = _number(_first_value(
+            part2_source.get("passage_accuracy_percent"), part2_source.get("story_read_percent"),
+        )) if has_part2 else None
     correct_answers = _bounded_integer(
         _first_value(
             part2_source.get("comprehension_correct"), part2_source.get("correct_answers"),

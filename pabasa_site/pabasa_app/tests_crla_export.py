@@ -174,6 +174,18 @@ class CrlaExportResultTests(TestCase):
                     crla_reading_profile(19, 2, accuracy, answers), expected,
                 )
 
+    def test_grade_2_all_final_profiles_and_live_mismatch_case(self):
+        cases = (
+            (10, None, None, None, "Low Emerging Reader"),
+            (19, 1, 73, 2, "Developing Reader"),
+            (19, 1, 51, 4, "Transitioning Reader"),
+            (19, 1, 76, 4, "Transitioning Reader"),
+            (19, 2, 89, 5, "Reading At Grade Level"),
+        )
+        for part1, story, accuracy, answers, expected in cases:
+            with self.subTest(part1=part1, story=story, accuracy=accuracy, answers=answers):
+                self.assertEqual(crla_reading_profile(part1, story, accuracy, answers), expected)
+
     def test_canonical_profile_is_persisted_and_selected_for_teacher_views(self):
         teacher = self.make_user("CRLA-CANON-T", "teacher", "Mia", "Lopez")
         student = self.make_user("CRLA-CANON-S", "student", "Asd", "Basco")
