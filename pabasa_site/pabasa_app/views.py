@@ -9445,6 +9445,31 @@ def _official_crla_completed_result_for_material(student, material):
     return None
 
 
+def _crla_finalization_resolution(section, material):
+    """Return authoritative Completed/Dropped/Not Taken counts for one CRLA."""
+    counts = {'completed': 0, 'dropped': 0, 'unresolved': 0, 'total': 0}
+    if not section or not material or not section.school_calendar_id:
+        return counts
+    enrollments = Enrollment.objects.filter(
+        section=section,
+        school_calendar_id=section.school_calendar_id,
+        school_calendar__is_active=True,
+        status__in=('active', 'dropped'),
+        student__role='student',
+        student__is_archived=False,
+    ).select_related('student')
+    for enrollment in enrollments:
+        counts['total'] += 1
+        if enrollment.status == 'dropped':
+            counts['dropped'] += 1
+        elif _official_crla_completed_result_for_material(enrollment.student, material):
+            counts['completed'] += 1
+        else:
+            counts['unresolved'] += 1
+    counts['finalize_ready'] = counts['unresolved'] == 0
+    return counts
+
+
 def _official_crla_completion_exists(student, assessment_type, school_year_value):
     assessment_type = str(assessment_type or '').strip().lower()
     if assessment_type not in {'pretest', 'midtest', 'posttest'}:
@@ -20718,6 +20743,13 @@ def finalize_class_crla_assessment(request):
                 return JsonResponse({'success': False, 'error': 'You are not authorized for this class or section.'}, status=403)
             if not material or not _is_official_crla_material(material):
                 return JsonResponse({'success': False, 'error': 'The selected assessment is not an active official CRLA assessment.'}, status=400)
+            resolution = _crla_finalization_resolution(section, material)
+            if not resolution['finalize_ready']:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'CRLA assessment cannot be finalized while one or more enrolled students are Not Taken.',
+                    'resolution': resolution,
+                }, status=409)
             parent_assessment = _ensure_crla_material_parent_assessment(material, teacher)
 
             finalization, created = ClassCrlaFinalization.objects.get_or_create(
@@ -24983,6 +25015,9 @@ def get_teacher_students_api(request):
                 official_term=crla_term, system_assessment_phase=crla_phase,
             ).order_by('-updated_at', '-id').first()
         finalization = _section_crla_finalization(selected_section, crla_material) if selected_section and crla_material else None
+        resolution = _crla_finalization_resolution(selected_section, crla_material) if selected_section and crla_material else {
+            'completed': 0, 'dropped': 0, 'unresolved': 0, 'total': 0, 'finalize_ready': False,
+        }
         return JsonResponse({
             'success': True,
             'students': results,
@@ -24995,6 +25030,10 @@ def get_teacher_students_api(request):
                 'assessment_id': crla_material.assessment_id if crla_material else None,
                 'finalized': bool(finalization),
                 'finalized_at': finalization.finalized_at.isoformat() if finalization else None,
+                'completed_count': resolution['completed'],
+                'dropped_count': resolution['dropped'],
+                'unresolved_count': resolution['unresolved'],
+                'finalize_ready': resolution['finalize_ready'],
             },
         })
 
