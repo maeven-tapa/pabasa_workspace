@@ -29,6 +29,23 @@
         @media(max-width:760px){.matching-board{grid-template-columns:1fr}.pictures-column{border-right:0;border-bottom:1px solid #1b1a1718}.pictures-column::after{bottom:-16px;left:calc(50% - 16px);right:auto;top:auto;transform:rotate(90deg)}.picture.matched:not(.selected)::after{display:none}.picture{min-height:145px}.picture img{height:86px}.words{grid-template-columns:repeat(2,minmax(0,1fr))}.word{height:58px}.footer{align-items:stretch;flex-direction:column}.message{margin:0}.submit-wrap,.submit{width:100%}}
         @media(max-width:560px){.top{grid-template-columns:1fr;padding:16px}.match-demo{width:min(240px,78%)}.demo-picture{width:62px;height:58px}.demo-word{padding:11px 9px}.hero-copy{grid-row:1}.match-demo{grid-row:2}.progress-wrap{grid-column:1;grid-row:3;grid-template-columns:1fr}.progress-heading{display:flex}.top p{font-size:.86rem}.results{padding:10px}.result-modal{max-height:calc(100vh - 20px);border-radius:25px;padding:21px 15px}.result-modal::before,.celebration-particles{border-radius:24px}.result-picture-tile,.result-word-tile{width:54px;height:49px}.score-stage{min-width:190px}.back{width:100%}}
         @media(prefers-reduced-motion:reduce){.results,.result-modal,.result-check,.score,.result-chip,.particle,.demo-picture,.demo-word,.demo-path::before,.pictures-column::after,.progress-node{animation:none!important}.back,.activity-back,.word,.picture,.picture img,.submit{transition:none!important}}
+        html, body { height: 100%; overflow: hidden; }
+        .activity { height: 100dvh; max-height: 100dvh; margin: 0 auto; padding-bottom: 12px; display: flex; flex-direction: column; overflow: hidden; }
+        .top { flex: 0 0 auto; }
+        .panel { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+        .matching-board { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+        .footer { flex: 0 0 auto; }
+        .matching-board { display: flex; align-items: center; justify-content: center; gap: clamp(18px, 4vw, 44px); overflow: hidden; }
+        .pictures-column, .words-column { flex: 1 1 0; min-width: 0; border: 0; background: transparent; }
+        .pictures-column { max-width: 420px; }
+        .words-column { max-width: 560px; }
+        .pictures-column::after { display: none; }
+        .pictures { display: flex; align-items: center; justify-content: center; }
+        .picture { width: min(100%, 380px); min-height: 220px; aspect-ratio: 4 / 3; }
+        .picture img { width: 100%; height: min(220px, 30vh); }
+        .words { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+        .word { min-height: 58px; padding: 12px 24px; border-radius: 999px; }
+        @media(max-width:760px) { .matching-board { flex-direction: column; gap: 10px; overflow: hidden; } .pictures-column, .words-column { width: 100%; max-width: 560px; padding: 10px 18px; } .section-title { margin-bottom: 8px; } .picture { min-height: 155px; } .picture img { height: min(155px, 24vh); } .words { gap: 9px; } .word { min-height: 52px; padding: 10px 16px; } }
     </style>
 </head>
 <body>
@@ -52,9 +69,9 @@
     <section id="results" class="results hidden" role="dialog" aria-modal="true" aria-labelledby="resultTitle" aria-describedby="resultMessage" tabindex="-1" aria-live="polite">
         <div class="result-modal">
             <div class="celebration-particles" aria-hidden="true"><span class="particle" style="--particle-color:#0e91b5"></span><span class="particle" style="--particle-color:#8b5cf6"></span><span class="particle" style="--particle-color:#df7a1c"></span><span class="particle" style="--particle-color:#2f855a"></span><span class="particle" style="--particle-color:#d34e72"></span><span class="particle" style="--particle-color:#5977c9"></span></div>
-            <div class="celebration-motif" aria-hidden="true"><div class="result-picture-tile"><i class="bi bi-image"></i></div><div class="result-connection"><span class="result-check">✓</span></div><div class="result-word-tile">WORD</div></div>
+            <div class="celebration-motif" aria-hidden="true"><div class="result-picture-tile"><i class="bi bi-image"></i></div><div class="result-connection"><span class="result-check">✓</span></div><div class="result-word-tile" id="resultWordTile">WORD</div></div>
             <h2 id="resultTitle">Match Complete!</h2><p id="resultMessage" class="result-message">You finished the matching game!</p>
-            <div class="score-stage"><div id="score" class="score"></div><div class="score-caption">Correct matches</div></div>
+            <div class="score-stage"><div id="score" class="score"></div><div class="score-caption" id="scoreCaption">Correct matches</div></div>
             <div id="accuracy" class="accuracy-badge"></div><div id="resultList" class="result-list"></div>
             <a id="resultsAction" class="back" href="{% url 'assessment' %}">Back to Assessments</a>
         </div>
@@ -69,6 +86,49 @@
     const completionRaw = JSON.parse(document.getElementById('picture-word-completion').textContent || '"{}"');
     const completion = typeof completionRaw === 'string' ? JSON.parse(completionRaw || '{}') : completionRaw;
     const language = String(material.language || 'English').toLowerCase();
+    const isFilipino = language.startsWith('fil');
+    const copy = isFilipino ? {
+        introTitle: 'Pagtutugma ng Larawan at Salita', introLead: 'Tingnan ang larawan. Hanapin ang katugmang salita.',
+        introPicture: 'Saging', introWord: 'SAGING', introAria: 'Saging', introStart: 'Magsimula Na!',
+        kicker: 'Tingnan → Hanapin → Itugma', title: 'Pagtutugma ng Larawan at Salita', subtitle: 'Itugma ang bawat larawan sa tamang salita.',
+        progress: 'landas ng pagtutugma', matched: 'naItugma', pictures: 'Mga Larawan', wordBank: 'Bangko ng mga Salita', submit: 'Ipasa',
+        selectPicture: 'Pumili ng larawan', picture: 'Larawan', selectFirst: 'Pumili muna ng larawan.', remaining: count => `May ${count} larawan ka pang dapat itugma.`,
+        noItems: 'Walang kumpletong pares ng larawan at salita sa aktibidad na ito.',
+        resultPicture: 'LARAWAN', resultWord: 'SALITA', resultPerfect: 'Perpektong Pagtutugma!', resultGreat: 'Mahusay na Pagtutugma!', resultTry: 'Subukan Muli!',
+        resultComplete: 'Natapos mo ang laro ng pagtutugma.', resultPerfectMessage: 'Nahanap ng bawat larawan ang salita nito!', resultGreatMessage: 'Nakagawa ka ng magagandang pagtutugma!', resultTryMessage: 'Natapos mo ang laro. Magpatuloy sa pagsasanay!',
+        resultCorrect: 'Tamang Pagtutugma', resultAccuracy: 'Katumpakan', resultBack: 'Bumalik sa mga Pagtatasa', resultAlready: 'Kumpleto na ang aktibidad na ito.'
+    } : {
+        introTitle: 'Picture-Word Matching', introLead: 'Look at the picture. Find its matching word.',
+        introPicture: 'Banana', introWord: 'BANANA', introAria: 'Banana', introStart: 'Let’s Start!',
+        kicker: 'See it → Find it → Match it', title: 'Picture-Word Matching', subtitle: 'Match each picture with the correct word.',
+        progress: 'Match trail', matched: 'matched', pictures: 'Pictures', wordBank: 'Word Bank', submit: 'Submit',
+        selectPicture: 'Select picture', picture: 'Picture', selectFirst: 'Select a picture first.', remaining: count => `You still have ${count} picture${count === 1 ? '' : 's'} to match.`,
+        noItems: 'This activity has no complete picture-word items.',
+        resultPicture: 'PICTURE', resultWord: 'WORD', resultPerfect: 'Perfect Match!', resultGreat: 'Great Match!', resultTry: 'Nice Try!',
+        resultComplete: 'You finished the matching game!', resultPerfectMessage: 'Every picture found its word!', resultGreatMessage: 'You made some wonderful matches!', resultTryMessage: 'You finished the game—keep practicing!',
+        resultCorrect: 'Correct matches', resultAccuracy: 'Accuracy', resultBack: 'Back to Assessments', resultAlready: 'This activity is already complete.'
+    };
+    const intro = document.getElementById('pictureWordIntro');
+    if (intro) {
+        intro.querySelector('h1').textContent = copy.introTitle;
+        intro.querySelector('p').textContent = copy.introLead;
+        intro.querySelector('.pw-mini img').alt = copy.introAria;
+        intro.querySelector('.pw-mini img').src = isFilipino ? '{% static "pabasa_app/images/picture_word/custom/Banana-Saging.png" %}' : '{% static "pabasa_app/images/picture_word/custom/Banana-Saging.png" %}';
+        intro.querySelector('.pw-choice.correct').textContent = copy.introWord;
+        intro.querySelector('.pw-choice:not(.correct)').textContent = isFilipino ? 'MANSANAS' : 'APPLE';
+        intro.querySelectorAll('.pw-choice:not(.correct)')[1].textContent = isFilipino ? 'MANGGA' : 'MANGO';
+        intro.querySelector('button').textContent = copy.introStart;
+    }
+    document.querySelector('.game-kicker').textContent = copy.kicker;
+    document.querySelector('.hero-copy h1').textContent = copy.title;
+    document.querySelector('.hero-copy p').textContent = copy.subtitle;
+    document.querySelector('.progress-caption').textContent = copy.progress;
+    document.querySelectorAll('.section-title')[0].lastChild.textContent = ` ${copy.pictures}`;
+    document.querySelectorAll('.section-title')[1].lastChild.textContent = ` ${copy.wordBank}`;
+    document.getElementById('submit').textContent = copy.submit;
+    document.getElementById('resultWordTile').textContent = copy.resultWord;
+    document.getElementById('scoreCaption').textContent = copy.resultCorrect;
+    document.getElementById('resultsAction').textContent = copy.resultBack;
     const wordFor = item => String(language.startsWith('fil') ? (item.filipinoWord || item.filipino_word || item.word) : (item.englishWord || item.english_word || item.word)).trim();
     const imageFor = item => {
         const savedUrl = item.imagePreview || item.image_preview || item.image_path || item.imagePath;
@@ -91,18 +151,23 @@
     const colorForId = id => pairColors[Math.max(0,items.findIndex(item=>item._id===id))%pairColors.length];
     function render(){
         const matched = answers.size, total = items.length;
-        el('progressLabel').textContent = `${matched} / ${total} matched`;
+        el('progressLabel').textContent = `${matched} / ${total} ${copy.matched}`;
         el('progressFill').style.width = `${total ? matched / total * 100 : 0}%`;
         const newlyCompletedIndex = matched > lastMatchedCount ? matched - 1 : -1;
         el('progressNodes').innerHTML = items.map((item,index) => `<span class="progress-node ${index < matched ? 'is-complete' : index === matched ? 'is-current' : ''} ${index === newlyCompletedIndex ? 'just-completed' : ''}" style="--node-color:${pairColors[index % pairColors.length]}"></span>`).join('');
         lastMatchedCount = matched;
-        el('pictures').innerHTML = items.map((item,index) => {
+        const activeItem = items.find(item => !answers.has(item._id)) || items[items.length - 1];
+        const activeItems = activeItem ? [activeItem] : [];
+        const wordChoices = activeItem
+            ? [activeItem._answer, ...shuffledWords.filter(word => word !== activeItem._answer).slice(0, 4)]
+            : [];
+        el('pictures').innerHTML = activeItems.map((item,index) => {
             const chosen = answers.get(item._id), color = colorForId(item._id);
             const state = submitted ? (chosen ? (chosen === item._answer ? 'correct' : 'incorrect') : '') : (selectedId === item._id ? 'selected' : chosen ? 'matched' : '');
             const pair = chosen ? `<span class="pair-dot" aria-hidden="true"></span><span class="pair">${escapeHtml(chosen)}${submitted ? (chosen === item._answer ? ' ✓' : ' ✗') : ''}</span>` : '';
-            return `<button type="button" class="picture ${state}" style="--pair-color:${color}" data-picture="${item._id}" aria-label="Select picture ${index + 1}" ${submitted ? 'disabled' : ''}><img src="${escapeHtml(imageFor(item))}" alt="Picture ${index + 1}">${pair}</button>`;
+            return `<button type="button" class="picture ${state}" style="--pair-color:${color}" data-picture="${item._id}" aria-label="${copy.selectPicture} ${index + 1}" ${submitted ? 'disabled' : ''}><img src="${escapeHtml(imageFor(item))}" alt="${copy.picture} ${index + 1}">${pair}</button>`;
         }).join('');
-        el('words').innerHTML = shuffledWords.map(word => {
+        el('words').innerHTML = wordChoices.map(word => {
             const paired = [...answers.entries()].find(([,value]) => value === word);
             const pairedId = paired?.[0] || '', active = selectedId && answers.get(selectedId) === word;
             const color = pairedId ? colorForId(pairedId) : 'var(--blue)';
@@ -113,10 +178,11 @@
             selectedId = btn.dataset.picture; el('message').className = 'message'; el('message').textContent = ''; render();
         });
         document.querySelectorAll('[data-word]').forEach(btn => btn.onclick = () => {
-            if (!selectedId) { el('message').className = 'message error'; el('message').textContent = 'Select a picture first.'; return; }
+            if (!selectedId) { el('message').className = 'message error'; el('message').textContent = copy.selectFirst; return; }
             const word = btn.dataset.word;
             for (const [id,value] of answers) if (value === word && id !== selectedId) answers.delete(id);
-            answers.set(selectedId,word); selectedId = null; el('message').className = 'message'; el('message').textContent = ''; render();
+            answers.set(selectedId,word); selectedId = null; el('message').className = 'message'; el('message').textContent = '';
+            if (answers.size === items.length) submit(); else render();
         });
     }
     function presentPersistedResults(saved){
@@ -127,27 +193,27 @@
         render();
         const results=el('results'),perfect=score===100,good=score>=70;
         results.classList.remove('hidden','is-perfect','is-great','is-encouraging');results.classList.add(perfect?'is-perfect':good?'is-great':'is-encouraging');
-        el('resultTitle').textContent=perfect?'Perfect Match!':good?'Great Match!':'Nice Try!';
-        el('resultMessage').textContent='This activity is already complete.';
-        el('score').textContent=`${correct} / ${total}`;el('accuracy').textContent=`${Math.round(score)}% Accuracy`;
+        el('resultTitle').textContent=perfect?copy.resultPerfect:good?copy.resultGreat:copy.resultTry;
+        el('resultMessage').textContent=copy.resultAlready;
+        el('score').textContent=`${correct} / ${total}`;el('accuracy').textContent=`${Math.round(score)}% ${copy.resultAccuracy}`;
         el('resultList').innerHTML=details.map(detail=>{const ok=Boolean(detail.is_correct),chosen=String(detail.selected_word||''),expected=String(detail.correct_word||'');return `<span class="result-chip ${ok?'correct':'incorrect'}">${ok?'&#10003; '+escapeHtml(expected):'&#10007; '+escapeHtml(chosen)+' &rarr; '+escapeHtml(expected)}</span>`}).join('');
         document.body.classList.add('results-open');document.querySelector('.top')?.setAttribute('inert','');el('activityPanel').setAttribute('inert','');
         requestAnimationFrame(()=>el('resultsAction').focus());
     }
     async function submit(){
-        const remaining=items.length-answers.size;if(remaining>0){el('message').className='message error';el('message').textContent=`You still have ${remaining} picture${remaining===1?'':'s'} to match.`;return}
+        const remaining=items.length-answers.size;if(remaining>0){el('message').className='message error';el('message').textContent=copy.remaining(remaining);return}
         submitted=true;const correct=items.filter(item=>answers.get(item._id)===item._answer).length;const score=items.length?Math.round(correct/items.length*100):0;render();
         const results=el('results'),perfect=score===100,good=score>=70;
         results.classList.remove('hidden','is-perfect','is-great','is-encouraging');results.classList.add(perfect?'is-perfect':good?'is-great':'is-encouraging');
-        el('resultTitle').textContent=perfect?'Perfect Match!':good?'Great Match!':'Nice Try!';
-        el('resultMessage').textContent=perfect?'Every picture found its word!':good?'You made some wonderful matches!':'You finished the game—keep practicing!';
-        el('score').textContent=`${correct} / ${items.length}`;el('accuracy').textContent=`${score}% Accuracy`;
+        el('resultTitle').textContent=perfect?copy.resultPerfect:good?copy.resultGreat:copy.resultTry;
+        el('resultMessage').textContent=perfect?copy.resultPerfectMessage:good?copy.resultGreatMessage:copy.resultTryMessage;
+        el('score').textContent=`${correct} / ${items.length}`;el('accuracy').textContent=`${score}% ${copy.resultAccuracy}`;
         document.body.classList.add('results-open');document.querySelector('.top')?.setAttribute('inert','');el('activityPanel').setAttribute('inert','');
         requestAnimationFrame(()=>el('resultsAction').focus());
         el('resultList').innerHTML=items.map(item=>{const chosen=answers.get(item._id),ok=chosen===item._answer;return `<span class="result-chip ${ok?'correct':'incorrect'}">${ok?'✓ '+escapeHtml(item._answer):'✗ '+escapeHtml(chosen)+' → '+escapeHtml(item._answer)}</span>`}).join('');
         try{const response=await fetch('{% url "record_assessment_completion" %}',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':document.cookie.match(/csrftoken=([^;]+)/)?.[1]||''},body:JSON.stringify({material_id:material.id,activity_type:'picture_word_matching',assessment_type:'picture_word_matching',items_completed:items.length,scores:{activity_type:'picture_word_matching',total_items:items.length,correct_items:correct,incorrect_items:items.length-correct,items_completed:items.length,score,accuracy:score,duration_seconds:Math.round((Date.now()-startedAt)/1000),matches:items.map((item,index)=>({picture_index:index,selected_word:answers.get(item._id)||''}))}})});if(!response.ok)throw new Error('save failed')}catch(error){el('accuracy').insertAdjacentHTML('afterend','<p class="message error">Your score is shown, but it could not be saved. Please tell your teacher.</p>')}
     }
-    el('submit').onclick=submit;if(!items.length){el('message').className='message error';el('message').textContent='This activity has no complete picture-word items.'}render();
+    el('submit').onclick=submit;if(!items.length){el('message').className='message error';el('message').textContent=copy.noItems}render();
     if(completion?.completed){submitted=true;presentPersistedResults(completion);}
 })();
 </script>

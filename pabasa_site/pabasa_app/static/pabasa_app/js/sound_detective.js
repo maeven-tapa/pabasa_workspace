@@ -17,6 +17,32 @@
   const copyFor=language=>String(language||'').toLowerCase().startsWith('fil')?{
     question:'Saan mo naririnig ang',correct:'MAGALING!',incorrect:'HINDI PA!',again:'Pakinggan muli at hanapin kung saan nagtatago ang',positions:{beginning:'simula',middle:'gitna',end:'hulihan'},next:'SUNOD',finish:'TAPUSIN',complete:'Mahusay na imbestigasyon!',found:'Natagpuan mo ang lahat ng tunog.',back:'Bumalik sa mga gawain',tap:'I-tap ang tunog upang marinig'
   }:{question:'Where do you hear',correct:'GREAT JOB!',incorrect:'NOT QUITE!',again:'Listen again and find where the sound is hiding.',positions:{beginning:'beginning',middle:'middle',end:'end'},next:'NEXT',finish:'FINISH',complete:'Great detective work!',found:'You found all the hidden sounds.',back:'Back to activities',tap:'Tap the sound to hear it'};
+  const newspaperCopyFor=language=>String(language||'').toLowerCase().startsWith('fil')?{
+    label:'Opisyal na ulat ng kaso',caseTag:'KASO BLG. 001',title:'Imbestigador ng Tunog',
+    narration:[
+      'Sa loob ng maraming taon, nagtatago ang mga mahiwagang tunog sa loob ng mga salita. May nagtatago sa simula. May nagtatago sa gitna. At may nagtatago sa hulihan.',
+      'Kailangan namin ng isang sapat na matalino upang mahanap ang mga ito...',
+      studentName=>`${studentName}, maaari ka bang maging imbestigador na hinahanap namin?`
+    ],
+    ready:'OO! HANDA NA AKO!',later:'HINDI, BAKA SA SUSUNOD',ariaLabel:'Pahayagan ng ulat ng kaso'
+  }:{
+    label:'Official case report',caseTag:'CASE FILE #001',title:'Sound Detective',
+    narration:[
+      'For many years, mysterious sounds have been hiding inside words. Some hide at the beginning. Some hide in the middle. And some hide at the end.',
+      'We need someone clever enough to find them...',
+      studentName=>`${studentName}, could you be the detective we're looking for?`
+    ],
+    ready:"YES! I'M READY!",later:'NO, MAYBE LATER',ariaLabel:'Case file newspaper'
+  };
+  const completionCopyFor=language=>String(language||'').toLowerCase().startsWith('fil')?{
+    stamp:'KASO SARADO: OPISYAL NA NALUTAS',collected:'MGA NAKALAP NA EBIDENSYA',identified:'MGA TUNOG NA NAKILALA',
+    solved:'Mahusay na imbestigasyon, Detective! Natunton at naitala ang lahat ng nakatagong tunog. Opisyal nang nalutas ang kaso.',
+    partial:'Magandang pagsisikap sa imbestigasyon! Karamihan sa mga pahiwatig ay natuklasan, ngunit may ilang bakas ng tunog na hindi nahanap. Suriin ang mga ebidensya at subukan muli.'
+  }:{
+    stamp:'CASE CLOSED: OFFICIALLY SOLVED',collected:'EVIDENCE COLLECTED',identified:'SOUNDS IDENTIFIED',
+    solved:'Outstanding deduction, Detective! Every hidden sound was tracked down and logged into the record. The case is officially solved.',
+    partial:'Good investigative effort! Most clues were uncovered, but a few sound trails ran cold. Review the evidence file and try again.'
+  };
   function speech(text,language,onStart,onEnd,materialId){
     if(!global.PabasaTemplateTts){onEnd?.();return}
     global.PabasaTemplateTts.speak({materialId,text,profile:'instruction',onStart,onEnd,onError:onEnd});
@@ -33,6 +59,7 @@
   function mount(root,configuration){
       if(!root)return null;const data=normalizeConfiguration(configuration),ui=copyFor(data.language),items=Array.isArray(data.items)?data.items.filter(item=>item&&item.word&&item.image_url&&item.position):[],saved=data.progress&&typeof data.progress==='object'?data.progress:{},completion=data.completion&&typeof data.completion==='object'?data.completion:{};let completedItems=Math.max(0,Math.min(Number(saved.completed_items)||0,items.length)),isComplete=(completion.completed===true||saved.activity_completed===true)&&items.length>0&&completedItems>=items.length,index=isComplete?items.length:Math.max(0,Math.min(Number(saved.current_index)||0,Math.max(0,items.length-1))),correct=Math.max(0,Math.min(Number(completion.completed===true?completion.correct_items:(saved.correct_items??completedItems))||0,items.length)),locked=false,revealTimer=null,introPhase=isComplete?'complete':'newspaper',introSpeechGeneration=0;
     root.classList.add('sound-detective-stage');root.classList.toggle('is-preview',data.preview===true);root.classList.toggle('is-intro',introPhase==='newspaper');
+    if(!root.__revealStateObserver){root.__revealStateObserver=new MutationObserver(()=>{if(root.querySelector('.sd-game:not(.sd-intro)'))root.classList.remove('sd-card-reveal');const completion=root.querySelector('.sd-completion-card');if(completion){const copy=completionCopyFor(data.language),score=Number(completion.querySelector('.sd-evidence-tally strong')?.textContent.split('/')[0])||0,total=Number(completion.querySelector('.sd-evidence-tally strong')?.textContent.split('/')[1])||0;completion.querySelector('.sd-case-closed-stamp').textContent=copy.stamp;completion.querySelectorAll('.sd-evidence-tally span')[0].textContent=copy.collected;completion.querySelectorAll('.sd-evidence-tally span')[1].textContent=copy.identified;completion.querySelector('.sd-completion-message').textContent=score===total?copy.solved:copy.partial}});root.__revealStateObserver.observe(root,{childList:true})}
     function play(button,text){speech(text,data.language,()=>button?.classList.add('is-playing'),()=>button?.classList.remove('is-playing'),data.id)}
     function cancelIntroSpeech(){introSpeechGeneration+=1;global.PabasaTemplateTts?.stop()}
     function narrateIntroFrom(node,onEnd){
@@ -46,15 +73,13 @@
     function saveProgress(){if(!data.progress_url)return Promise.resolve();return fetch(data.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken()},body:JSON.stringify({current_index:index,completed_items:completedItems,correct_items:correct,activity_completed:isComplete})}).catch(()=>{})}
     function renderIntro(){
       cancelIntroSpeech();
-      const introBack=data.back_url?`<a class="sd-next sd-back sd-intro-exit" href="${escapeHtml(data.back_url)}" data-intro-exit>NO, MAYBE LATER</a>`:'';
+      if(!root.__revealStateObserver){root.__revealStateObserver=new MutationObserver(()=>{if(root.querySelector('.sd-game:not(.sd-intro)'))root.classList.remove('sd-card-reveal');const completion=root.querySelector('.sd-completion-card');if(completion){const copy=completionCopyFor(data.language),score=Number(completion.querySelector('.sd-evidence-tally strong')?.textContent.split('/')[0])||0,total=Number(completion.querySelector('.sd-evidence-tally strong')?.textContent.split('/')[1])||0;completion.querySelector('.sd-case-closed-stamp').textContent=copy.stamp;completion.querySelectorAll('.sd-evidence-tally span')[0].textContent=copy.collected;completion.querySelectorAll('.sd-evidence-tally span')[1].textContent=copy.identified;completion.querySelector('.sd-completion-message').textContent=score===total?copy.solved:copy.partial}});root.__revealStateObserver.observe(root,{childList:true})}
+      const newspaper=newspaperCopyFor(data.language);
+      const introBack=data.back_url?`<a class="sd-next sd-back sd-intro-exit" href="${escapeHtml(data.back_url)}" data-intro-exit>${newspaper.later}</a>`:'';
       const studentName=String(data.student_name||'Detective').trim()||'Detective';
-      const narration=[
-        'For many years, mysterious sounds have been hiding inside words. Some hide at the beginning. Some hide in the middle. And some hide at the end.',
-        'We need someone clever enough to find them...',
-        `${studentName}, could you be the detective we're looking for?`
-      ];
+      const narration=newspaper.narration.map(line=>typeof line==='function'?line(studentName):line);
       root.classList.toggle('is-intro',true);
-      root.innerHTML=`<section class="sd-game sd-intro" aria-live="polite"><article class="sd-newspaper" aria-label="Case file newspaper"><header class="sd-newspaper-header"><div class="sd-headline-label">Official case report</div><span class="sd-case-tag">CASE FILE #001</span></header><div class="sd-intro"><h2 class="sd-intro-title">Sound Detective</h2><div class="sd-intro-copy sd-intro-narration" data-intro-narration aria-live="polite"></div><div class="sd-intro-actions"><button class="sd-next sd-intro-button" type="button" data-intro-continue>YES! I'M READY!</button>${introBack}</div></div></article></section>`;
+      root.innerHTML=`<section class="sd-game sd-intro" aria-live="polite"><article class="sd-newspaper" aria-label="${escapeHtml(newspaper.ariaLabel)}"><header class="sd-newspaper-header"><div class="sd-headline-label">${newspaper.label}</div><span class="sd-case-tag">${newspaper.caseTag}</span></header><div class="sd-intro"><h2 class="sd-intro-title">${newspaper.title}</h2><div class="sd-intro-copy sd-intro-narration" data-intro-narration aria-live="polite"></div><div class="sd-intro-actions"><button class="sd-next sd-intro-button" type="button" data-intro-continue>${newspaper.ready}</button>${introBack}</div></div></article></section>`;
       const narrationNode=root.querySelector('[data-intro-narration]'),actionsNode=root.querySelector('.sd-intro-actions');
       if(actionsNode)actionsNode.style.display='none';
       let narrationIndex=0;
@@ -94,7 +119,7 @@
       const returnAnimation=lens.animate([{opacity:1,transform:`translate(-50%,-50%) translate(${dx}px,${dy}px) scale(1.35) rotate(${ratio<.5?-13:ratio>.5?10:-2}deg)`},{opacity:.35,transform:'translate(-50%,-50%) translate(0,0) scale(.72) rotate(0deg)'}],{duration:520,easing:'cubic-bezier(.22,.61,.36,1)',fill:'forwards'});
       await returnAnimation.finished.catch(()=>{});returnAnimation.cancel();
       targetZone.append(lens);lens.className='sd-magnifier';lens.style.removeProperty('transform');lens.style.removeProperty('opacity');evidence.classList.remove('is-detective-mode');evidence.style.removeProperty('--sd-scan-x');
-      if(isCorrect){revealClueWord(root,items[index]);if(!revealTimer)revealTimer=global.setTimeout(()=>{revealTimer=null;if(!root.querySelector('.sd-clue-word'))return;root.classList.remove('sd-card-reveal');root.querySelector('[data-next] button')?.click()},2000)}
+      if(isCorrect){revealClueWord(root,items[index]);if(!revealTimer)revealTimer=global.setTimeout(()=>{revealTimer=null;if(!root.querySelector('.sd-clue-word'))return;root.querySelector('[data-next] button')?.click()},2000)}
     }
     async function answer(button,item){
       if(locked||root.classList.contains('is-scanning'))return;const feedback=root.querySelector('[data-feedback]'),guide=root.querySelector('.sd-guide-bubble'),choices=[...root.querySelectorAll('[data-choice]')],target=root.querySelector('.sd-sound-orb'),correctChoice=normalizePosition(button.dataset.choice)===normalizePosition(item.position);
