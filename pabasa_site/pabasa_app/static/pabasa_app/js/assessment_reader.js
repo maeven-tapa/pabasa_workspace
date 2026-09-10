@@ -273,6 +273,7 @@
         let selectedLearnerExperienceRating = null;
         let learnerExperienceSubmitting = false;
         let storyMiscueCount = 0;
+        let storyHasReadingEvidence = false;
         let storyMiscueResponseKeys = new Set();
         let pendingStorySelfCorrection = null;
         let storyAnswerRecorder = null;
@@ -2800,6 +2801,20 @@
 
         function calculateFinalizedStoryMetrics(totalStoryWords, storyMiscues, elapsedDurationSeconds) {
             const totalWords = Math.max(0, Number(totalStoryWords) || 0);
+            if (!storyHasReadingEvidence) {
+                const durationValue = Number(elapsedDurationSeconds);
+                const durationSeconds = Number.isFinite(durationValue) && durationValue > 0
+                    ? durationValue
+                    : null;
+                return {
+                    totalStoryWords: totalWords,
+                    miscues: totalWords,
+                    wordsRead: 0,
+                    durationSeconds,
+                    accuracy: 0,
+                    wpm: 0,
+                };
+            }
             // Skipped/read-error words are miscues, but stale recovery data
             // must never exceed this story's word count.
             const miscues = Math.min(totalWords, Math.max(0, Number(storyMiscues) || 0));
@@ -3508,6 +3523,7 @@
 
         function resetStoryMiscueTracking(initialCount = 0) {
             storyMiscueCount = Math.max(0, Number(initialCount) || 0);
+            storyHasReadingEvidence = false;
             storyMiscueResponseKeys = new Set();
             pendingStorySelfCorrection = null;
         }
@@ -4075,6 +4091,12 @@
                 return;
             }
 
+            if (currentStoryState === "story_reading" && (
+                String(data?.raw_transcript || data?.transcript || "").trim()
+                || (Array.isArray(data?.word_alignment?.recognized_words) && data.word_alignment.recognized_words.length)
+            )) {
+                storyHasReadingEvidence = true;
+            }
             const storyMiscueEvent = recordStoryAlignmentMiscues(data, context);
             if (storyMiscueEvent.selfCorrection) {
                 const correctedIndex = Number(storyMiscueEvent.selfCorrection.expectedIndex);
