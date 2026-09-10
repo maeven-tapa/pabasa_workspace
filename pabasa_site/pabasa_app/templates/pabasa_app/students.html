@@ -1533,7 +1533,7 @@ document.addEventListener('DOMContentLoaded', function () {
         <div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h3 class="modal-title h6" id="teacherAralActionTitle">ARAL Program</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p id="teacherAralActionCopy"></p><div id="teacherAralLevelWrap"><label class="form-label" for="teacherAralLevel">Reading Level</label><select class="form-select" id="teacherAralLevel"><option value="">Choose reading level</option><option>Low Emerging Readers</option><option>High Emerging Readers</option><option>Developing Readers</option><option>Transitioning Readers</option></select></div><div class="text-danger small mt-2" id="teacherAralActionError" hidden></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="teacherAralActionConfirm">Confirm</button></div></div></div>
     </div>
     <div class="modal fade" id="finalizeCrlaModal" tabindex="-1" aria-labelledby="finalizeCrlaTitle" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h3 class="modal-title h6" id="finalizeCrlaTitle">Finalize CRLA Assessment?</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p>This will close the CRLA assessment for the whole class/section.</p><p>Students who have not completed the assessment will receive a score of 0 and be processed using the existing ARAL eligibility rules.</p><p class="mb-0"><strong>Students will no longer be able to continue or submit this CRLA assessment for this class.</strong></p><div class="text-danger small mt-2" id="finalizeCrlaError" hidden></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-danger" id="confirmFinalizeCrlaBtn">Finalize Assessment</button></div></div></div>
+        <div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h3 class="modal-title h6" id="finalizeCrlaTitle">Finalize CRLA Assessment?</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p>This will close the CRLA assessment for the whole class/section.</p><p>Finalization is available only after every enrolled student has completed the assessment or has been officially dropped.</p><p class="mb-0"><strong>Students will no longer be able to continue or submit this CRLA assessment for this class.</strong></p><div class="text-danger small mt-2" id="finalizeCrlaError" hidden></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-danger" id="confirmFinalizeCrlaBtn">Finalize Assessment</button></div></div></div>
     </div>
     <div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -2023,9 +2023,10 @@ function updateCrlaFinalizationUi(state) {
     const status = document.getElementById('crlaFinalizationStatus');
     const finalized = Boolean(state?.finalized);
     const ready = Boolean(state?.material_id && state?.section_id);
+    const finalizeReady = Boolean(state?.finalize_ready);
     if (status) status.textContent = finalized ? 'CRLA Assessment: Finalized' : 'CRLA Assessment: Open';
     if (button) {
-        button.disabled = finalized || !ready;
+        button.disabled = finalized || !ready || !finalizeReady;
         button.hidden = finalized;
     }
     setStudentExportState(latestStudentDirectoryStudents);
