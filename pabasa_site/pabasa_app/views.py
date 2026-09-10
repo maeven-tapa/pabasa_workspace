@@ -14066,7 +14066,11 @@ def story_reading_complete(request):
 
     try:
         total_words = max(0, int(payload.get('total_words') or 0))
-        words_read = max(0, min(total_words, int(payload.get('words_read') or total_words)))
+        raw_words_read = payload.get('words_read')
+        words_read = max(
+            0,
+            min(total_words, int(raw_words_read) if raw_words_read is not None else total_words),
+        )
         correct_words = max(0, int(payload.get('correct_words') or (words_read if total_words == 0 else 0)))
         miscues = max(0, int(payload.get('miscues') or max(0, total_words - correct_words)))
         progress_percent = max(0.0, min(100.0, float(payload.get('progress_percent') or 0)))
