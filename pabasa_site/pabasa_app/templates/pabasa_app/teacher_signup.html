@@ -1029,6 +1029,81 @@
             max-height: calc(100svh - 6rem);
         }
     }
+
+    /* Keep every privacy section inside one stable document viewport. */
+    .account-card:has(.signup-step[data-signup-step="3"].is-active) .card-body,
+    .teacher-signup-form:has(.signup-step[data-signup-step="3"].is-active),
+    .signup-step[data-signup-step="3"].is-active,
+    .signup-step[data-signup-step="3"].is-active > .col-12,
+    .privacy-step-document {
+        min-height: 0;
+    }
+
+    .account-card:has(.signup-step[data-signup-step="3"].is-active) {
+        flex: 0 0 auto;
+        height: min(760px, calc(100svh - 4.5rem));
+        max-height: min(760px, calc(100svh - 4.5rem));
+    }
+
+    @media (min-width: 576px) {
+        .account-card:has(.signup-step[data-signup-step="3"].is-active) {
+            height: min(760px, calc(100svh - 6rem));
+            max-height: min(760px, calc(100svh - 6rem));
+        }
+    }
+
+    .privacy-document-shell {
+        display: flex;
+        flex: 1 1 0;
+        min-width: 0;
+        min-height: 0;
+        width: 100%;
+    }
+
+    .privacy-section-content {
+        display: block;
+        flex: 1 1 0;
+        min-width: 0;
+        min-height: 0;
+        height: auto;
+        overflow-x: hidden;
+        overflow-y: auto;
+        scrollbar-gutter: stable;
+    }
+
+    .privacy-section {
+        padding: 0.15rem 0;
+    }
+
+    .privacy-section h3 {
+        margin: 0 0 0.7rem;
+        padding-top: 0;
+        border-top: 0;
+        font-size: 1.1rem;
+        line-height: 1.35;
+    }
+
+    .privacy-document-shell {
+        flex: 1 1 0;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .privacy-section-content {
+        flex: 1 1 0;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .privacy-section {
+        display: block;
+        flex: none;
+        flex-shrink: 0;
+        position: static;
+        width: 100%;
+        height: auto;
+    }
 </style>
 {% endblock %}
 
