@@ -263,6 +263,14 @@ def normalize_crla_score_data(data: Dict[str, Any]) -> Dict[str, Any]:
         "task1_correct_words": ("task1_correct_words", "task1_score"),
         "task1_score": ("task1_score", "task1_correct_words"),
         "task2_type": ("task2_type",), "task2_score": ("task2_score",),
+        # Keep the recorded Live CRLA path and terminal rating with the
+        # immutable official result.  They are evidence/reporting fields,
+        # not inputs that alter CRLA scoring.
+        "branch": ("branch",), "stage": ("stage",), "next_stage": ("next_stage",),
+        "task2_rhymes_score": ("task2_rhymes_score",),
+        "task2_sentences_score": ("task2_sentences_score",),
+        "learner_experience_rating": ("learner_experience_rating", "learner_experience"),
+        "learner_experience": ("learner_experience", "learner_experience_rating"),
         "sentences_read": ("sentences_read", "correct_sentences", "sentence_count"),
         "part1_total_score": ("part1_total_score",), "story_number": ("story_number",),
         "story_total_words": ("story_total_words", "total_story_words"),

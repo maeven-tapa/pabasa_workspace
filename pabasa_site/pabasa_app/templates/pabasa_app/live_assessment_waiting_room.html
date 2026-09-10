@@ -311,14 +311,30 @@
       return;
     }
 
+    // End Session is the authoritative commit. It must take precedence over
+    // both batch assignment and this student's temporary-completed state so
+    // every open waiting room exits to the newly finalized Assessment view.
+    if (state.status === 'ended' || state.status === 'cancelled') {
+      stopPolling();
+      window.location.replace('{% url "assessment" %}');
+      return;
+    }
+
     const assignedBatch = state.batch_assignments?.[String({{ request.session.user_id|default:'0' }})];
     if (assignedBatch && state.current_batch && Number(assignedBatch) > Number(state.current_batch)) {
       setText('waitingMessage', `Please wait. Your assessment will begin in Batch ${assignedBatch}.`);
       return;
     }
 
+    if (['completed', 'submitted'].includes(String(state.viewer_student_state?.status || '').toLowerCase())) {
+      setText('waitingMessage', 'Assessment Complete');
+      document.querySelector('.waiting-room-description').textContent = 'You have finished your Live CRLA assessment. Please wait for your teacher to end the session.';
+      return;
+    }
+
     if (state.status === 'paused') {
-      setText('waitingMessage', 'Session has been paused by the teacher. Please wait...');
+      setText('waitingMessage', 'Live CRLA Session Paused');
+      document.querySelector('.waiting-room-description').textContent = 'Your Live CRLA assessment has been paused. Please wait for your teacher to resume the session.';
       return;
     }
 
@@ -330,11 +346,6 @@
       }
     }
 
-    if (state.status === 'ended' || state.status === 'cancelled') {
-      stopPolling();
-      window.location.replace('{% url "dashboard" %}');
-      return;
-    }
   }
 
   async function poll() {

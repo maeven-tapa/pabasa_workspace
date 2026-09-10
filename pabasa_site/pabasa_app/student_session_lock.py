@@ -7,7 +7,10 @@ from django.utils import timezone
 from .models import User
 
 
-STUDENT_SESSION_IDLE_TIMEOUT = timedelta(minutes=30)
+# The Live CRLA reader polls every few seconds and the dashboard heartbeat
+# runs every 30 seconds. Two minutes tolerates a missed request while promptly
+# releasing a browser/device that disappeared without logging out.
+STUDENT_SESSION_IDLE_TIMEOUT = timedelta(minutes=2)
 
 
 def claim_student_session(user_id, session_key):
@@ -21,8 +24,10 @@ def claim_student_session(user_id, session_key):
             session_key=active_key, expire_date__gt=now
         ).exists())
         stale = bool(
-            active_key and user.last_activity and
-            user.last_activity <= now - STUDENT_SESSION_IDLE_TIMEOUT
+            active_key and (
+                not user.last_activity or
+                user.last_activity <= now - STUDENT_SESSION_IDLE_TIMEOUT
+            )
         )
         if active_key and active_key != session_key and session_exists and not stale:
             return False

@@ -528,11 +528,24 @@
     <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="confirmAssessmentRequest">Request Assessment</button></div>
   </div></div>
 </div>
+{{ stage|json_script:"workflow-stage-data" }}
+{{ assessment_week_enabled|json_script:"workflow-assessment-week-enabled-data" }}
+{{ assessment_request_pending|json_script:"workflow-assessment-request-pending-data" }}
+{% if assessment_week_section %}
+{{ assessment_week_section.id|json_script:"workflow-section-id-data" }}
+{% elif assessment_request_section_id %}
+{{ assessment_request_section_id|json_script:"workflow-section-id-data" }}
+{% else %}
+<script id="workflow-section-id-data" type="application/json">null</script>
+{% endif %}
+<a id="workflow-dashboard-url" href="{% url 'dashboard' %}" hidden></a>
+<a id="workflow-access-status-url" href="{% url 'student_assessment_access_status' %}" hidden></a>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const form = document.getElementById('assessmentRequestForm');
         if (!form) return;
         const button = document.getElementById('requestAssessmentButton');
+        const dashboardUrl = document.getElementById('workflow-dashboard-url')?.href || '/dashboard/';
         const confirmModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('assessmentRequestConfirmModal'));
         form.addEventListener('submit', function (event) { event.preventDefault(); confirmModal.show(); });
         document.getElementById('confirmAssessmentRequest').addEventListener('click', async function () {
@@ -550,7 +563,7 @@
                 pendingTitle.classList.add('assessment-request-pending-title');
                 pendingTitle.innerHTML = 'Request to Take Assessment<br>is Pending';
                 document.querySelector('.workflow-copy .workflow-message').textContent = 'Your request to take the assessment has been sent to your teacher.';
-                document.getElementById('assessmentRequestActions').innerHTML = '<a class="workflow-button secondary" href="{% url 'dashboard' %}"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>';
+                document.getElementById('assessmentRequestActions').innerHTML = `<a class="workflow-button secondary" href="${dashboardUrl}"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>`;
                 window.setTimeout(() => toast.remove(), 5000);
             } catch (error) {
                 button.disabled = false;
@@ -575,11 +588,22 @@
     })();
 
     (function () {
-        const stage = '{{ stage|escapejs }}';
-            const sectionId = '{% if assessment_week_section %}{{ assessment_week_section.id }}{% elif assessment_request_section_id %}{{ assessment_request_section_id }}{% endif %}';
-            const waitingForAssessmentWeek = stage === 'assessment_week_locked';
-            const waitingAssessmentWeekEnabled = {{ assessment_week_enabled|yesno:"true,false" }};
-        const waitingForApproval = stage === 'assessment_not_taken' && {{ assessment_request_pending|yesno:"true,false" }};
+        const readWorkflowData = (id, fallback) => {
+            const node = document.getElementById(id);
+            if (!node) return fallback;
+            try {
+                return JSON.parse(node.textContent);
+            } catch (error) {
+                return fallback;
+            }
+        };
+        const stage = readWorkflowData('workflow-stage-data', '');
+        const sectionId = String(readWorkflowData('workflow-section-id-data', '') || '');
+        const waitingForAssessmentWeek = stage === 'assessment_week_locked';
+        const waitingAssessmentWeekEnabled = Boolean(readWorkflowData('workflow-assessment-week-enabled-data', false));
+        const waitingForApproval = stage === 'assessment_not_taken'
+            && Boolean(readWorkflowData('workflow-assessment-request-pending-data', false));
+        const accessStatusUrl = document.getElementById('workflow-access-status-url')?.href;
         if ((!waitingForAssessmentWeek && !waitingForApproval) || !sectionId) return;
 
         let checking = false;
@@ -587,7 +611,7 @@
             if (checking || document.visibilityState !== 'visible') return;
             checking = true;
             try {
-                const url = new URL('{% url "student_assessment_access_status" %}', window.location.origin);
+                const url = new URL(accessStatusUrl, window.location.origin);
                 url.searchParams.set('section_id', sectionId);
                 const response = await fetch(url, {
                     credentials: 'same-origin',

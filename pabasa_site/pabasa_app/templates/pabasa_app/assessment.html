@@ -803,6 +803,7 @@
 
 
 {{ student_section_ids|json_script:"student-section-ids-data" }}
+{{ aral_week_mode|json_script:"aral-week-mode-data" }}
 <script>
     // --- Assessment click tracking and recent class order logic ---
 
@@ -847,11 +848,12 @@
         const materialTypes = ["word", "sentence", "paragraph", "vowel"];
         const sectionIdsData = document.getElementById("student-section-ids-data");
         const serverJoinedSectionIds = sectionIdsData ? JSON.parse(sectionIdsData.textContent) : [];
+        const aralWeekModeData = document.getElementById("aral-week-mode-data");
+        const aralWeekMode = aralWeekModeData ? JSON.parse(aralWeekModeData.textContent) : false;
         const queryParams = new URLSearchParams(window.location.search);
         const requestedSectionId = (queryParams.get("section_id") || "").trim();
         const requestedWeek = (queryParams.get("week") || "").trim();
         const requestedWeekNumber = /^\d+$/.test(requestedWeek) ? Number(requestedWeek) : null;
-        const aralWeekMode = {{ aral_week_mode|yesno:"true,false" }};
         const selectedSectionId = requestedSectionId;
 
         const escapeHtml = (value) => {

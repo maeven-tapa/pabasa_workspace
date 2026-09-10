@@ -70,6 +70,11 @@ document.addEventListener('DOMContentLoaded', function () {
     #liveCrlaSelectModal .live-crla-search input { padding-left:36px !important; }
     #liveCrlaSelectModal .live-crla-roster .form-check { gap:.65rem; }
     #liveCrlaSelectModal .live-crla-roster .form-check-input { flex:0 0 auto; margin:0; }
+    #liveCrlaSelectModal .live-crla-roster-actions { gap:0; }
+    #liveCrlaSelectModal .live-crla-roster-actions .btn-group { box-shadow:0 1px 2px rgba(15,45,69,.08); }
+    #liveCrlaSelectModal .live-crla-roster-actions .btn { min-width:4.8rem; }
+    /* Keep the wizard stable: only the eligible-student grid scrolls. */
+    #liveCrlaSelectModal #liveCrlaStudentList { height:clamp(14rem,42vh,24rem); min-height:0; overflow-y:auto; overflow-x:hidden; }
 #liveCrlaSelectModal .live-crla-wizard-dialog{max-width:min(960px,calc(100vw - 2rem))}#liveCrlaSelectModal .live-crla-wizard{height:min(700px,calc(100vh - 2rem));overflow:hidden;border:0;border-radius:20px;box-shadow:0 20px 50px rgba(15,45,69,.2)}#liveCrlaSelectModal .modal-header{flex:0 0 auto;padding:1rem 1.25rem;border-color:#e8edf0}#liveCrlaSelectModal .modal-title{color:#193247;font-size:1.08rem;font-weight:900}.live-crla-stepper{display:flex;gap:1.25rem;margin-top:.85rem;color:#788792;font-size:.76rem;font-weight:800}.live-crla-stepper span{display:flex;align-items:center;gap:.4rem}.live-crla-stepper b{display:grid;place-items:center;width:1.35rem;height:1.35rem;border-radius:50%;background:#e9eef1;color:#647580}.live-crla-stepper .is-active{color:#10466e}.live-crla-stepper .is-active b{background:#10466e;color:#fff}.live-crla-wizard-body{display:flex;flex:1 1 auto;min-height:0;padding:0!important;overflow:hidden;background:#f8fafb}.live-crla-step{display:none;flex:1 1 auto;min-width:0;padding:1.15rem 1.25rem;overflow:hidden}.live-crla-step.is-active{display:flex;flex-direction:column}.live-crla-step-intro{margin:0 0 .85rem;color:#687780;font-size:.86rem}.live-crla-toolbar{display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem}.live-crla-search{position:relative;flex:1 1 auto}.live-crla-search .bi{position:absolute;top:50%;left:.75rem;color:#7b8a94;transform:translateY(-50%)}.live-crla-search input{padding-left:2.15rem}.live-crla-roster-actions{display:flex;gap:.4rem;white-space:nowrap}.live-crla-roster-actions .btn{padding:.3rem .55rem;font-size:.78rem;font-weight:700}.live-crla-roster{display:grid;flex:1 1 auto;min-height:0;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:.45rem;padding:.35rem;overflow-y:auto;border:1px solid #e1e8ec;border-radius:14px;background:#fff}.live-crla-roster .form-check{display:flex;align-items:center;min-height:2.75rem;margin:0;padding:.55rem .7rem .55rem 2.15rem;border:1px solid transparent;border-radius:10px;cursor:pointer}.live-crla-roster .form-check:hover{border-color:#cfe0e9;background:#f4f9fb}.live-crla-roster .form-check:has(input:checked){border-color:rgba(16,70,110,.24);background:#eef7fb}.live-crla-roster .form-check-label{color:#294152;font-size:.86rem;font-weight:700;cursor:pointer}.live-crla-selection-summary{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:.8rem;color:#5f707b;font-size:.84rem}.live-crla-selection-summary .badge{padding:.42rem .65rem;color:#10466e;background:#e8f4f9;font-size:.78rem}.live-crla-methods{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;margin-bottom:.9rem}.live-crla-method{position:relative;display:block;padding:.9rem 1rem .9rem 2.8rem;border:1px solid #dce6eb;border-radius:13px;background:#fff;cursor:pointer}.live-crla-method:hover{border-color:#9fc5d7}.live-crla-method:has(input:checked){border-color:#1f6f8b;box-shadow:0 0 0 3px rgba(31,111,139,.1)}.live-crla-method input{position:absolute;left:1rem;top:1rem}.live-crla-method strong{display:block;color:#193247;font-size:.9rem}.live-crla-method small{display:block;margin-top:.15rem;color:#6c7d89;line-height:1.35}.live-crla-assignment-area{flex:1 1 auto;min-height:0;overflow:auto}.live-crla-preview{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.7rem}.live-crla-batch-card{min-height:8rem;padding:.8rem;border:1px solid #dbe6eb;border-radius:13px;background:#fff}.live-crla-batch-card.is-target{border-color:#1f6f8b;box-shadow:0 0 0 3px rgba(31,111,139,.1)}.live-crla-batch-card__head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;color:#193247;font-size:.83rem;font-weight:900}.live-crla-capacity{padding:.2rem .45rem;border-radius:999px;color:#596b76;background:#edf3f5;font-size:.7rem;font-weight:800}.live-crla-student-chip{display:block;width:100%;margin-top:.35rem;padding:.3rem .45rem;overflow:hidden;border:1px solid #e4ecef;border-radius:8px;color:#425866;background:#f8fafb;font-size:.76rem;font-weight:700;text-align:left;text-overflow:ellipsis;white-space:nowrap}.live-crla-student-chip:hover,.live-crla-student-chip:focus-visible{border-color:#8db9cb;background:#eef7fb;outline:0}.live-crla-manual-help{margin:0 0 .65rem;color:#687780;font-size:.8rem}.live-crla-manual-grid{display:grid;grid-template-columns:minmax(190px,.8fr) minmax(0,2fr);gap:.75rem}.live-crla-unassigned{min-height:10rem;padding:.8rem;border:1px dashed #b8cbd5;border-radius:13px;background:#fff}.live-crla-unassigned h6{margin:0;color:#193247;font-size:.82rem;font-weight:900}.live-crla-unassigned .live-crla-student-chip{cursor:pointer}.live-crla-manual-batches{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.65rem;align-content:start}.live-crla-manual-batches .live-crla-batch-card{cursor:pointer}.live-crla-manual-batches .live-crla-batch-card:focus-visible{outline:3px solid rgba(31,111,139,.25);outline-offset:2px}#liveCrlaSelectModal .modal-footer{flex:0 0 auto;min-height:4.4rem;padding:.85rem 1.25rem;border-color:#e8edf0;background:#fff}.live-crla-footer-actions{display:flex;align-items:center;gap:.5rem}.live-crla-footer-actions .btn{min-width:5.8rem;font-weight:800}.live-crla-footer-actions .btn-primary{min-width:9.6rem}@media(max-width:767.98px){#liveCrlaSelectModal .live-crla-wizard-dialog{max-width:calc(100vw - 1rem)}.live-crla-step{padding:1rem}.live-crla-roster,.live-crla-methods,.live-crla-manual-grid{grid-template-columns:1fr}.live-crla-toolbar{align-items:stretch;flex-direction:column}.live-crla-roster-actions{justify-content:flex-end}.live-crla-stepper{gap:.75rem}.live-crla-footer-actions .btn,#liveCrlaSelectModal .modal-footer .btn-primary{min-width:auto}}body.dark-theme #liveCrlaSelectModal .live-crla-wizard,body.dark-theme #liveCrlaSelectModal .modal-footer{background:#1e293b!important}body.dark-theme .live-crla-wizard-body{background:#172033}body.dark-theme .live-crla-roster,body.dark-theme .live-crla-method,body.dark-theme .live-crla-batch-card,body.dark-theme .live-crla-unassigned{background:#253247;border-color:#3c4d63}body.dark-theme #liveCrlaSelectModal .modal-title,body.dark-theme .live-crla-method strong,body.dark-theme .live-crla-batch-card__head,body.dark-theme .live-crla-unassigned h6{color:#e5eef5}body.dark-theme .live-crla-student-chip{color:#dbe7ee;background:#1e293b;border-color:#3c4d63}
     .live-crla-unassigned { display:flex; flex:0 0 14rem; flex-direction:column; height:14rem; min-height:14rem; max-height:14rem; overflow:hidden; }
     .live-crla-unassigned > h6 { flex:0 0 auto; }
@@ -162,6 +167,14 @@ document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('.modal-backdrop.live-crla-delete-backdrop').forEach((backdrop) => backdrop.classList.remove('live-crla-delete-backdrop'));
     });
     const checks = Array.from(document.querySelectorAll('.live-crla-student'));
+    const selectionControls = selectAllButton?.parentElement;
+    selectionControls?.classList.add('btn-group', 'btn-group-sm');
+    selectionControls?.setAttribute('role', 'group');
+    selectionControls?.setAttribute('aria-label', 'Student selection controls');
+    selectAllButton?.classList.remove('btn-link', 'btn-sm');
+    selectAllButton?.classList.add('btn', 'btn-outline-primary');
+    clearAllButton?.classList.remove('btn-link', 'btn-sm');
+    clearAllButton?.classList.add('btn', 'btn-outline-secondary');
     let manualBatches = [[]];
     let manualTarget = 0;
     let manualInitialized = false;
@@ -298,7 +311,21 @@ document.addEventListener('DOMContentLoaded', function () {
         if (plural) plural.textContent = selected.length === 1 ? '' : 's';
         if (readyBadge) readyBadge.textContent = selected.length ? `${selected.length} ready for batch assignment` : 'Select students to continue';
         if (nextButton) nextButton.disabled = selected.length === 0;
+        updateSelectionControls(selected.length);
         renderWizardBatchAssignment();
+    }
+
+    function updateSelectionControls(selectedCount = checks.filter((check) => check.checked).length) {
+        const allSelected = checks.length > 0 && selectedCount === checks.length;
+        const noneSelected = selectedCount === 0;
+        selectAllButton?.classList.toggle('btn-primary', allSelected);
+        selectAllButton?.classList.toggle('btn-outline-primary', !allSelected);
+        selectAllButton?.classList.toggle('active', allSelected);
+        selectAllButton?.setAttribute('aria-pressed', String(allSelected));
+        clearAllButton?.classList.toggle('btn-secondary', noneSelected);
+        clearAllButton?.classList.toggle('btn-outline-secondary', !noneSelected);
+        clearAllButton?.classList.toggle('active', noneSelected);
+        clearAllButton?.setAttribute('aria-pressed', String(noneSelected));
     }
 
     if (openButton) openButton.addEventListener('click', async () => {
@@ -313,10 +340,12 @@ document.addEventListener('DOMContentLoaded', function () {
     searchInput?.addEventListener('input', () => {
         const query = searchInput.value.trim().toLocaleLowerCase();
         checks.forEach((check) => { check.closest('label').hidden = query && !check.closest('label').textContent.toLocaleLowerCase().includes(query); });
+        updateSelectionControls();
     });
     selectAllButton?.addEventListener('click', () => { checks.forEach((check) => { if (!check.closest('label').hidden) check.checked = true; }); updateSelection(); });
     clearAllButton?.addEventListener('click', () => { checks.forEach((check) => { check.checked = false; }); updateSelection(); });
     checks.forEach((check) => check.addEventListener('change', updateSelection));
+    updateSelectionControls();
     document.querySelectorAll('input[name="liveCrlaBatchMode"]').forEach((radio) => radio.addEventListener('change', () => {
         if (radio.value === 'manual' && radio.checked) {
             manualBatches = [[]];

@@ -6342,7 +6342,10 @@ class LiveAssessmentStartTests(TestCase):
         self.assertIn('currentStoryState === "story_comprehension"', source)
         self.assertIn('comprehension: "Comprehension"', source)
 
-    def test_record_assessment_completion_updates_live_session_score(self):
+    def test_record_assessment_completion_cannot_finalize_an_active_live_crla_session(self):
+        self.material.is_official_reading = True
+        self.material.assessment_kind = 'crla'
+        self.material.save(update_fields=['is_official_reading', 'assessment_kind', 'updated_at'])
         session = LiveAssessmentSession.objects.create(
             id=uuid.uuid4().hex,
             teacher=self.teacher,
@@ -6387,10 +6390,65 @@ class LiveAssessmentStartTests(TestCase):
             content_type='application/json',
         )
 
+        self.assertEqual(response.status_code, 409)
+        self.assertFalse(response.json()['success'])
+        session.refresh_from_db()
+        self.assertEqual(session.student_states[str(self.student.id)]['status'], 'reading')
+        self.assertFalse(Assessment.objects.filter(
+            student=self.student, material=self.material, attempt_status='completed',
+        ).exists())
+
+    def test_end_session_finalizes_temporary_live_crla_state_once_with_rating(self):
+        self.material.is_official_reading = True
+        self.material.assessment_kind = 'crla'
+        self.material.save(update_fields=['is_official_reading', 'assessment_kind', 'updated_at'])
+        recovery_state = {
+            'stage': 'completed', 'branch': 'rhymes', 'temporary_completed': True,
+            'task1_score': 6, 'task2_type': 'Task 2L / Rhymes', 'task2_score': 4,
+            'task2_rhymes_score': 4, 'part1_total_score': 10,
+            'learner_experience_rating': 4, 'learner_experience': 4,
+        }
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=self.material,
+            student_ids=[self.student.id], student_count=1, status='started',
+            countdown_seconds=0, start_at=timezone.now() - timedelta(seconds=10),
+            student_states={str(self.student.id): {
+                'status': 'completed', 'progress': 1, 'items_completed': 10,
+                'items_total': 10, 'elapsed_seconds': 42,
+                'recovery_state': recovery_state,
+                'completion_payload': {
+                    'assessment_type': 'word', 'material_id': f'material-{self.material.id}',
+                    'scores': {'correct_words': 6, 'duration_seconds': 42},
+                },
+            }},
+        )
+
+        # Waiting for End Session must not create a result visible to reports.
+        self.assertFalse(Assessment.objects.filter(
+            student=self.student, material=self.material, attempt_status='completed',
+        ).exists())
+
+        response = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'end'}), content_type='application/json',
+        )
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()['success'])
-        session.refresh_from_db()
-        self.assertEqual(session.student_states[str(self.student.id)]['final_score'], 89)
+
+        result = Assessment.objects.get(
+            student=self.student, material=self.material, attempt_status='completed',
+        )
+        self.assertEqual(result.crla_classification, 'Low Emerging Reader')
+        self.assertEqual(result.crla_score_data['task1_score'], 6)
+        self.assertEqual(result.crla_score_data['task2_rhymes_score'], 4)
+        self.assertEqual(result.crla_score_data['learner_experience_rating'], 4)
+
+        # The exporter reads the immutable official result payload, including
+        # the rating; it does not need LiveAssessmentSession.student_states.
+        from .utils.crla_export import _student_values
+        exported = _student_values(self.student, result, {}, result.source_assessment)
+        self.assertEqual(exported['learner_experience_rating'], 4)
+        self.assertEqual(exported['reading_profile'], 'Low Emerging Reader')
 
     def test_teacher_can_pause_and_resume_live_assessment_session(self):
         session = LiveAssessmentSession.objects.create(
@@ -6433,6 +6491,67 @@ class LiveAssessmentStartTests(TestCase):
         self.assertEqual(session.status, 'started')
         self.assertEqual(session.student_states[str(self.student.id)]["status"], 'reading')
         self.assertNotIn('previous_status', session.student_states[str(self.student.id)])
+
+    def test_recovery_preserves_exact_student_state_and_releases_only_after_teacher_resume(self):
+        """The server snapshot, including a pending transition, is recovered verbatim."""
+        self.material.is_official_reading = True
+        self.material.assessment_kind = 'crla'
+        self.material.save(update_fields=['is_official_reading', 'assessment_kind', 'updated_at'])
+        recovery_state = {
+            'branch': 'words', 'stage': 'transition_to_rhymes', 'current_index': 6,
+            'completed_items': 7, 'correct_words': 7,
+            'live_item_scores': {'6': {'correct_words': 1, 'locked': True}},
+        }
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='started',
+            countdown_seconds=0,
+            start_at=timezone.now() - timedelta(seconds=10),
+            batch_assignments={str(self.student.id): 1},
+            current_batch=1,
+            student_states={str(self.student.id): {
+                'status': 'reading', 'progress': .7, 'items_completed': 7,
+                'items_total': 10, 'elapsed_seconds': 176,
+                'recovery_state': recovery_state,
+            }},
+        )
+        action_url = reverse('live_assessment_session_action', kwargs={'session_id': session.id})
+        state_url = reverse('live_assessment_session_state', kwargs={'session_id': session.id})
+
+        interrupted = self.client.post(action_url, json.dumps({'action': 'interrupt'}), content_type='application/json')
+        self.assertEqual(interrupted.status_code, 200)
+        session.refresh_from_db()
+        self.assertEqual(session.status, 'paused')
+        paused_state = session.student_states[str(self.student.id)]
+        self.assertEqual(paused_state['status'], 'paused')
+        self.assertEqual(paused_state['recovery_state'], recovery_state)
+        self.assertEqual(paused_state['elapsed_seconds'], 176)
+
+        student_client = Client()
+        student_session = student_client.session
+        student_session.update({'user_id': self.student.id, 'user_role': 'student'})
+        student_session.save()
+        paused_payload = student_client.get(state_url).json()['session']
+        self.assertEqual(paused_payload['status'], 'paused')
+        self.assertEqual(paused_payload['reader_url'], '')
+
+        recovered = self.client.post(action_url, json.dumps({'action': 'recover'}), content_type='application/json')
+        self.assertEqual(recovered.status_code, 200)
+        session.refresh_from_db()
+        restored = session.student_states[str(self.student.id)]
+        self.assertEqual(session.status, 'started')
+        self.assertEqual(restored['status'], 'reading')
+        self.assertEqual(restored['recovery_state'], recovery_state)
+        self.assertEqual(restored['elapsed_seconds'], 176)
+
+        resumed_payload = student_client.get(state_url).json()['session']
+        self.assertIn('live_recovery=1', resumed_payload['reader_url'])
+        self.assertNotIn('crla_fresh=1', resumed_payload['reader_url'])
 
     def test_save_settings_persists_selection_and_notifies_students_for_waiting_room(self):
         session = LiveAssessmentSession.objects.create(
@@ -6688,6 +6807,122 @@ class LiveAssessmentStartTests(TestCase):
         self.assertEqual(duplicate.status_code, 409)
         session.refresh_from_db()
         self.assertEqual(session.current_batch, 2)
+
+    def test_teacher_can_cancel_only_unstarted_remaining_batches_and_keep_the_queue_running(self):
+        batch_two_student = User.objects.create(
+            custom_id=f"CANCEL-TWO-{uuid.uuid4().hex[:8].upper()}", role='student',
+            first_name='Batch', last_name='Two', email=f'cancel-two-{uuid.uuid4().hex}@example.com',
+            password_hash=make_password('student-password'), grade_level='Grade 2',
+            middle_initial='', suffix='', sex='female', birth_month=6, birth_day=2, birth_year=2012,
+        )
+        batch_three_student = User.objects.create(
+            custom_id=f"CANCEL-THREE-{uuid.uuid4().hex[:8].upper()}", role='student',
+            first_name='Batch', last_name='Three', email=f'cancel-three-{uuid.uuid4().hex}@example.com',
+            password_hash=make_password('student-password'), grade_level='Grade 2',
+            middle_initial='', suffix='', sex='female', birth_month=6, birth_day=2, birth_year=2012,
+        )
+        self.material.is_official_reading = True
+        self.material.assessment_kind = 'crla'
+        self.material.save(update_fields=['is_official_reading', 'assessment_kind', 'updated_at'])
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=self.material,
+            student_ids=[self.student.id, batch_two_student.id, batch_three_student.id], student_count=3,
+            status='started', countdown_seconds=0, start_at=timezone.now(), current_batch=1, total_batches=3,
+            batch_assignments={str(self.student.id): 1, str(batch_two_student.id): 2, str(batch_three_student.id): 3},
+            student_states={
+                str(self.student.id): {'status': 'completed', 'progress': 1},
+                str(batch_two_student.id): {'status': 'waiting', 'progress': 0, 'items_completed': 0, 'elapsed_seconds': 0},
+                str(batch_three_student.id): {'status': 'waiting', 'progress': 0, 'items_completed': 0, 'elapsed_seconds': 0},
+            },
+        )
+        action_url = reverse('live_assessment_session_action', kwargs={'session_id': session.id})
+        cancelled = self.client.post(action_url, json.dumps({
+            'action': 'cancel_unstarted_batches', 'batch_numbers': [2],
+        }), content_type='application/json')
+
+        self.assertEqual(cancelled.status_code, 200)
+        body = cancelled.json()['session']
+        self.assertEqual(body['status'], 'started')
+        self.assertEqual(body['unstarted_batches'], [{'number': 2, 'student_ids': [batch_three_student.id], 'student_count': 1}])
+        session.refresh_from_db()
+        self.assertNotIn(batch_two_student.id, session.student_ids)
+        self.assertNotIn(str(batch_two_student.id), session.student_states)
+        self.assertEqual(session.batch_assignments[str(batch_three_student.id)], 2)
+        self.assertFalse(Assessment.objects.filter(student=batch_two_student, material=self.material).exists())
+
+        loaded = self.client.post(action_url, json.dumps({
+            'action': 'load_next_batch', 'target_batch': 2,
+        }), content_type='application/json')
+        self.assertEqual(loaded.status_code, 200)
+        session.refresh_from_db()
+        self.assertEqual(session.status, 'batch_loaded')
+        self.assertEqual(session.current_batch, 2)
+        self.assertEqual(session.student_ids, [self.student.id, batch_three_student.id])
+
+    def test_cancelling_a_remaining_batch_with_progress_is_rejected(self):
+        future_student = User.objects.create(
+            custom_id=f"CANCEL-PROGRESS-{uuid.uuid4().hex[:8].upper()}", role='student',
+            first_name='Future', last_name='Progress', email=f'cancel-progress-{uuid.uuid4().hex}@example.com',
+            password_hash=make_password('student-password'), grade_level='Grade 2',
+            middle_initial='', suffix='', sex='female', birth_month=6, birth_day=2, birth_year=2012,
+        )
+        self.material.is_official_reading = True
+        self.material.assessment_kind = 'crla'
+        self.material.save(update_fields=['is_official_reading', 'assessment_kind', 'updated_at'])
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=self.material,
+            student_ids=[self.student.id, future_student.id], student_count=2,
+            status='started', current_batch=1, total_batches=2,
+            batch_assignments={str(self.student.id): 1, str(future_student.id): 2},
+            student_states={
+                str(self.student.id): {'status': 'completed', 'progress': 1},
+                str(future_student.id): {'status': 'waiting', 'progress': .1, 'items_completed': 1},
+            },
+        )
+        response = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'cancel_unstarted_batches', 'batch_numbers': [2]}), content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 409)
+        session.refresh_from_db()
+        self.assertEqual(session.student_ids, [self.student.id, future_student.id])
+
+    def test_cancelling_all_unstarted_batches_uses_end_session_for_completed_students_only(self):
+        future_student = User.objects.create(
+            custom_id=f"CANCEL-ALL-{uuid.uuid4().hex[:8].upper()}", role='student',
+            first_name='Future', last_name='Cancelled', email=f'cancel-all-{uuid.uuid4().hex}@example.com',
+            password_hash=make_password('student-password'), grade_level='Grade 2',
+            middle_initial='', suffix='', sex='female', birth_month=6, birth_day=2, birth_year=2012,
+        )
+        self.material.is_official_reading = True
+        self.material.assessment_kind = 'crla'
+        self.material.save(update_fields=['is_official_reading', 'assessment_kind', 'updated_at'])
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=self.material,
+            student_ids=[self.student.id, future_student.id], student_count=2,
+            status='started', start_at=timezone.now(), current_batch=1, total_batches=2,
+            batch_assignments={str(self.student.id): 1, str(future_student.id): 2},
+            student_states={
+                str(self.student.id): {
+                    'status': 'completed', 'progress': 1, 'items_completed': 10, 'items_total': 10,
+                    'recovery_state': {'temporary_completed': True, 'stage': 'completed', 'branch': 'words'},
+                },
+                str(future_student.id): {'status': 'waiting', 'progress': 0},
+            },
+        )
+        response = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'cancel_unstarted_batches', 'batch_numbers': [2]}), content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['session']['status'], 'ended')
+        session.refresh_from_db()
+        self.assertEqual(session.status, 'ended')
+        self.assertNotIn(future_student.id, session.student_ids)
+        self.assertFalse(Assessment.objects.filter(student=future_student, material=self.material).exists())
+        self.assertTrue(Assessment.objects.filter(student=self.student, material=self.material, attempt_status='completed').exists())
 
     def test_live_state_cas_retries_a_forced_version_conflict_without_losing_state(self):
         """A deterministic conflict proves retries reapply the mutation fresh."""
@@ -10321,6 +10556,29 @@ class PrincipalSettingsViewTests(TestCase):
 
 
 class LiveAssessmentWaitingRoomTemplateTests(TestCase):
+    def test_live_session_configuration_roster_is_read_only_and_session_scoped(self):
+        template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "live_assessment_session.html"
+        content = template_path.read_text(encoding="utf-8")
+
+        configuration = content.split('<h5 class="mb-1">Session Configuration</h5>', 1)[1].split('<label class="form-label mb-2">Session Timing</label>', 1)[0]
+        self.assertIn('{% for student in student_profiles %}', configuration)
+        self.assertIn('checked disabled', configuration)
+        self.assertNotIn('studentSearch', configuration)
+        self.assertNotIn('selectAllBtn', configuration)
+        self.assertNotIn('resetSelectionBtn', configuration)
+        self.assertIn('const participantIds = new Set((session.student_ids || []).map(String));', content)
+        self.assertIn('.filter((s) => participantIds.has(String(s.id)))', content)
+
+    def test_live_crla_selection_controls_reflect_actual_roster_selection(self):
+        template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "partials" / "_assessment_week_card.html"
+        content = template_path.read_text(encoding="utf-8")
+
+        self.assertIn("selectionControls?.classList.add('btn-group', 'btn-group-sm')", content)
+        self.assertIn("const allSelected = checks.length > 0 && selectedCount === checks.length;", content)
+        self.assertIn("const noneSelected = selectedCount === 0;", content)
+        self.assertIn("updateSelectionControls(selected.length);", content)
+        self.assertIn("updateSelectionControls();", content)
+
     def test_waiting_room_template_does_not_render_a_separate_countdown(self):
         template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "live_assessment_waiting_room.html"
         content = template_path.read_text(encoding="utf-8")
@@ -10340,6 +10598,16 @@ class LiveAssessmentWaitingRoomTemplateTests(TestCase):
 
         self.assertIn("['waiting', 'countdown'].includes(sessionStatus)", content)
         self.assertIn("window.location.assign(session.join_url)", content)
+
+    def test_waiting_room_exits_an_ended_session_before_batch_waiting_logic(self):
+        """A later-batch student must not remain in the waiting room after End Session."""
+        template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "live_assessment_waiting_room.html"
+        content = template_path.read_text(encoding="utf-8")
+
+        ended_check = content.index("if (state.status === 'ended' || state.status === 'cancelled')")
+        batch_waiting_check = content.index("const assignedBatch = state.batch_assignments")
+        self.assertLess(ended_check, batch_waiting_check)
+        self.assertIn("Live CRLA Session Paused", content)
 
 
 class AssessmentCompletionNotificationTests(TestCase):

@@ -5071,6 +5071,26 @@ def logout_user(request):
     request.session.flush()
     return redirect('home')
 
+
+@require_http_methods(['POST'])
+def student_session_heartbeat(request):
+    """Refresh only the authenticated student's login lease.
+
+    This deliberately has no interaction with LiveAssessmentSession or its
+    recovery_state; an expired device login can be replaced without losing
+    temporary CRLA progress.
+    """
+    if not _check_auth(request) or request.session.get('user_role') != 'student':
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+    user_id = request.session.get('user_id')
+    session_key = request.session.session_key
+    updated = User.objects.filter(
+        id=user_id, role='student', active_session_key=session_key,
+    ).update(last_activity=system_now())
+    if not updated:
+        return JsonResponse({'success': False, 'error': 'This student session is no longer valid.'}, status=401)
+    return JsonResponse({'success': True})
+
 def _check_auth(request):
     """Check if user is authenticated"""
     return 'user_id' in request.session
@@ -11812,13 +11832,26 @@ def reading_word_page(request):
             or not _is_live_crla_material(live_session.material)
         ):
             return HttpResponseForbidden('You are not authorized to join this live CRLA assessment.')
+        # Recovery discovery/login is not permission to read. A paused live
+        # session is gated by the waiting room until the teacher resumes it.
+        if live_session.status == 'paused':
+            return redirect(_build_live_assessment_waiting_url(live_session.id))
+        student_state = (live_session.student_states or {}).get(str(current_user_id), {}) or {}
+        student_user = User.objects.filter(id=current_user_id).first()
+        if student_user and _official_crla_completed_result_for_material(student_user, live_session.material):
+            return redirect('dashboard')
     canonical_response = _canonicalize_custom_material_reading_url(request)
     if canonical_response:
         return canonical_response
     context = _dashboard_context(request)
     context.update(_custom_material_reading_context(request))
+    live_recovery_state = (
+        student_state.get('recovery_state', {})
+        if live_session_id and request.GET.get('live_recovery') == '1' and isinstance(student_state, dict)
+        else {}
+    )
     context['student_end_assessment_state_json'] = json.dumps(
-        (_get_user_state(User.objects.filter(id=request.session.get('user_id')).first()).get('student_end_assessment_state') or {}),
+        (live_recovery_state or _get_user_state(User.objects.filter(id=request.session.get('user_id')).first()).get('student_end_assessment_state') or {}),
         default=str, separators=(',', ':'),
     )
     official_assessment_id = request.GET.get('official_assessment_id') or ''
@@ -13963,9 +13996,45 @@ def persist_student_end_assessment_state(request):
     saved['stage'] = stage
     saved['updated_at'] = system_now().isoformat()
     state = _get_user_state(student)
-    state['student_end_assessment_state'] = saved
     _, saved_material_id = _parse_prefixed_id(saved.get('material_id'))
     saved_material = Material.objects.filter(pk=saved_material_id).first() if saved_material_id else None
+    # Compatibility guard for an older reader tab: its generic state-save
+    # endpoint must still keep Live CRLA state temporary.  New readers post
+    # directly to the Live Session state endpoint, but this prevents a stale
+    # client from crossing the official-result boundary before End Session.
+    active_live_session = next((candidate for candidate in LiveAssessmentSession.objects.filter(
+        material=saved_material,
+        status__in=LIVE_ASSESSMENT_ACTIVE_STATUSES,
+    ).only('id', 'student_ids', 'batch_assignments') if saved_material and str(student.id) in {
+        str(student_id) for student_id in (candidate.student_ids or [])
+    }), None)
+    if active_live_session:
+        def apply_live_end_state(current):
+            if (
+                current.status not in LIVE_ASSESSMENT_ACTIVE_STATUSES
+                or str(student.id) not in {str(student_id) for student_id in (current.student_ids or [])}
+                or str((current.batch_assignments or {}).get(str(student.id), 0)) != str(current.current_batch)
+            ):
+                return None
+            _update_live_student_state(current, student.id, {'recovery_state': saved})
+            return set()
+
+        persisted_live_session, mutation_error = _mutate_live_session_state(
+            active_live_session.id, apply_live_end_state,
+        )
+        if persisted_live_session is None:
+            return JsonResponse({
+                'success': False,
+                'error': mutation_error or 'Unable to save temporary Live CRLA state.',
+            }, status=409)
+        return JsonResponse({
+            'success': True,
+            'temporary_live_state': True,
+            'student_end_assessment_state': saved,
+            'reader_classification': None,
+            'next_url': None,
+        })
+    state['student_end_assessment_state'] = saved
     if _is_official_crla_material(saved_material) and _student_crla_finalized_for_material(student, saved_material):
         return JsonResponse({
             'success': False,
@@ -14821,7 +14890,7 @@ def _practice_difficulty_is_accessible(mode, difficulty, student_user=None):
     return False
 
 
-def _build_live_assessment_action_url(material, session_id, start_at, countdown_seconds=10):
+def _build_live_assessment_action_url(material, session_id, start_at, countdown_seconds=10, recovery=False):
     if not material:
         return ''
 
@@ -14829,12 +14898,15 @@ def _build_live_assessment_action_url(material, session_id, start_at, countdown_
     # official payload and fresh-attempt marker used by the normal workflow.
     params = {
         'official_assessment_id': str(material.id),
-        'crla_fresh': '1',
         'live': '1',
         'live_session_id': session_id,
         'start_at': start_at,
         'countdown': str(countdown_seconds),
     }
+    if not recovery:
+        params['crla_fresh'] = '1'
+    else:
+        params['live_recovery'] = '1'
     query = '&'.join(f'{key}={quote(str(value), safe="")}' for key, value in params.items())
     return f'{reverse("reading_word_page")}?{query}'
 
@@ -15023,6 +15095,34 @@ def _live_batch_progress(session, batch_number=None):
     return completed, len(student_ids)
 
 
+def _live_unstarted_batches(session):
+    """Return only future batches whose students have no live CRLA progress."""
+    assignments = session.batch_assignments or {}
+    states = session.student_states or {}
+    current_batch = int(session.current_batch or 1)
+    batches = []
+    for batch_number in sorted({int(value) for value in assignments.values() if str(value).isdigit()}):
+        if batch_number <= current_batch:
+            continue
+        student_ids = _live_batch_student_ids(session, batch_number)
+        if not student_ids:
+            continue
+        is_unstarted = all(
+            str((states.get(str(student_id), {}) or {}).get('status') or 'waiting').lower() == 'waiting'
+            and not (states.get(str(student_id), {}) or {}).get('progress')
+            and not (states.get(str(student_id), {}) or {}).get('items_completed')
+            and not (states.get(str(student_id), {}) or {}).get('elapsed_seconds')
+            and not (states.get(str(student_id), {}) or {}).get('current_item')
+            and not (states.get(str(student_id), {}) or {}).get('recovery_state')
+            and (states.get(str(student_id), {}) or {}).get('final_score') is None
+            and not (states.get(str(student_id), {}) or {}).get('completion_payload')
+            for student_id in student_ids
+        )
+        if is_unstarted:
+            batches.append({'number': batch_number, 'student_ids': student_ids, 'student_count': len(student_ids)})
+    return batches
+
+
 def _live_session_batch_payload(session):
     assignments = _ensure_live_session_batches(session)
     current_batch = int(session.current_batch or 1)
@@ -15043,6 +15143,7 @@ def _live_session_batch_payload(session):
         'batch_complete': bool(current_total and current_completed >= current_total),
         'batch_loaded': session.status == 'batch_loaded',
         'assessment_complete': bool(session.total_batches and current_batch >= session.total_batches and current_completed >= current_total),
+        'unstarted_batches': _live_unstarted_batches(session),
     }
 
 
@@ -15197,6 +15298,18 @@ def _build_live_session_completion_payload(session, student_user, student_state=
     if isinstance(completion_payload, dict):
         payload.update(completion_payload)
 
+    # The recovery state is the authoritative temporary CRLA workflow record.
+    # Carry its final branch, task evidence, classification inputs, and learner
+    # rating into the one official row created at End Session.  Do not depend
+    # on the student's general workflow preference: that state deliberately is
+    # not written during a Live CRLA session.
+    recovery_state = student_state.get('recovery_state')
+    if isinstance(recovery_state, dict):
+        existing_crla_data = payload.get('crla_score_data')
+        crla_score_data = dict(existing_crla_data) if isinstance(existing_crla_data, dict) else {}
+        crla_score_data.update(recovery_state)
+        payload['crla_score_data'] = crla_score_data
+
     scores = payload.get('scores') if isinstance(payload.get('scores'), dict) else {}
     if 'scores' not in payload:
         payload['scores'] = {}
@@ -15226,7 +15339,7 @@ def _build_live_session_completion_payload(session, student_user, student_state=
     return payload
 
 
-def _complete_assessment_for_student(student_user, data=None, request=None, live_session=None, is_retake=False, attempt_number=0, activity_type='assessment', assist_context=None):
+def _complete_assessment_for_student(student_user, data=None, request=None, live_session=None, is_retake=False, attempt_number=0, activity_type='assessment', assist_context=None, raise_on_error=False):
     timing_started_at = time.perf_counter()
     timing_last_mark = timing_started_at
 
@@ -15911,6 +16024,8 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 student_id=getattr(student_user, 'id', None),
                 error=str(e),
             )
+        if raise_on_error:
+            raise
 
     if is_syllable_blending and completed_result_row is not None and material:
         state = _get_user_state(student_user)
@@ -16245,6 +16360,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
     return JsonResponse(response_payload)
 
 
+@transaction.atomic
 def _end_live_assessment_session(session, activity_message=None, ended_at=None):
     if not session:
         return session
@@ -16265,7 +16381,11 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
         for student_key, student_state in list(states.items()):
             if not isinstance(student_state, dict):
                 continue
-            if str(student_state.get('status', '')).lower() == 'completed':
+            is_temporary_live_completion = bool(
+                isinstance(student_state.get('recovery_state'), dict)
+                and student_state['recovery_state'].get('temporary_completed')
+            )
+            if str(student_state.get('status', '')).lower() == 'completed' and not is_temporary_live_completion:
                 student_state['connection_status'] = student_state.get('connection_status', 'disconnected')
                 states[student_key] = student_state
                 continue
@@ -16301,7 +16421,10 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
                     payload['scores']['current_item'] = student_state.get('current_item')
                 if student_state.get('completion_payload') is not None:
                     payload['completion_payload'] = student_state.get('completion_payload')
-                _complete_assessment_for_student(student_user, data=payload, live_session=session)
+                _complete_assessment_for_student(
+                    student_user, data=payload, live_session=session,
+                    raise_on_error=True,
+                )
                 student_state['status'] = 'completed'
                 student_state['connection_status'] = student_state.get('connection_status', 'disconnected')
                 student_state['final_score'] = student_state.get('final_score') or payload.get('scores', {}).get('final_score')
@@ -16847,7 +16970,9 @@ def live_assessment_active_invitation(request):
     student_state = (session.student_states or {}).get(str(student_user.id), {}) if isinstance(session.student_states, dict) else {}
     student_status = str(student_state.get('status') or '').strip().lower()
     student_connection_status = str(student_state.get('connection_status') or '').strip().lower()
-    student_completed = student_state.get('final_score') is not None or student_status in {'completed', 'submitted'}
+    # A temporary 100% live state is still recoverable until End Session
+    # creates the official result.
+    student_completed = bool(_official_crla_completed_result_for_material(student_user, session.material))
     student_has_participated = student_status in {'reading', 'started', 'paused', 'completed', 'submitted'} or student_connection_status in {'connected', 'disconnected'}
 
     login_at_raw = request.session.get('login_at') or request.session.get('created_at')
@@ -16880,6 +17005,18 @@ def live_assessment_active_invitation(request):
         and not student_completed
         and not student_has_participated
     )
+
+    # A recovered participant must be returned to the original live session
+    # even when they have already started reading; their server-side temporary
+    # state determines the exact reader position.
+    if student_has_participated and not student_completed:
+        return JsonResponse({'success': True, 'session': {
+            'id': session.id, 'status': session.status,
+            'join_url': _build_live_assessment_waiting_url(session.id),
+            'material_title': session.material.title if session.material else '',
+            'course_title': session.course.title if session.course else '',
+            'show_modal': False, 'redirect_to_waiting_room': True,
+        }})
 
     if not should_show_modal and not should_redirect_to_waiting_room:
         return JsonResponse({'success': True, 'session': None})
@@ -17315,12 +17452,13 @@ def live_assessment_session_state(request, session_id):
         user_role != 'student'
         or str(session.batch_assignments.get(str(user_id), 0)) == str(session.current_batch)
     )
-    if user_role == 'student' and session.start_at and student_batch_is_active and not student_completed:
+    if user_role == 'student' and session.status == 'started' and session.start_at and student_batch_is_active and not student_completed:
         reader_url = _build_live_assessment_action_url(
             session.material,
             session.id,
             session.start_at.isoformat(),
             session.countdown_seconds,
+            recovery=bool(student_state.get('recovery_state')),
         )
 
     # Provide available roster for teachers so the UI can render the selection list
@@ -17367,6 +17505,7 @@ def live_assessment_session_state(request, session_id):
             'reader_url': reader_url,
             'official_crla': True,
             'student_states': session.student_states or {},
+            'viewer_student_state': student_state if user_role == 'student' else {},
             'activity_log': session.activity_log or [],
             'available_students': available_profiles,
             **_live_session_batch_payload(session),
@@ -17455,6 +17594,11 @@ def live_assessment_student_state_update(request, session_id):
                 state_values['final_score'] = None
         if 'connection_status' in data:
             state_values['connection_status'] = str(data.get('connection_status') or '').strip() or 'connected'
+        if isinstance(data.get('recovery_state'), dict):
+            # This is temporary workflow data (branch/item/answers), never an
+            # official assessment result. It is server-authoritative on a
+            # student-device reconnect.
+            state_values['recovery_state'] = data.get('recovery_state')
         if 'completion_payload' in data:
             completion_payload = data.get('completion_payload')
             if isinstance(completion_payload, dict):
@@ -17790,11 +17934,18 @@ def live_assessment_session_action(request, session_id):
         def apply_recover(current):
             if current.status not in ['countdown', 'started', 'paused', 'batch_loaded', 'ended', 'cancelled']:
                 return None
-            # A recovery is deliberately a paused transport.  This preserves
-            # the existing batch and all persisted student_states while
-            # ensuring the outage is never counted as active assessment time.
-            current.status = 'paused'
+            # The explicit Recovery modal action is the teacher's resume
+            # authorization. Restore the original transport and release only
+            # its existing batch; elapsed_seconds remains each student's
+            # saved baseline.
+            current.status = 'started'
             current.ends_at = None
+            states = current.student_states or {}
+            for student_key, student_state in states.items():
+                if isinstance(student_state, dict) and student_state.get('status') == 'paused':
+                    student_state['status'] = student_state.pop('previous_status', 'reading')
+                    states[student_key] = student_state
+            current.student_states = states
             # start_at remains the original audit/start metadata. Per-student
             # elapsed_seconds is the recovery baseline; it is never derived
             # from this wall-clock timestamp during recovery.
@@ -17803,6 +17954,81 @@ def live_assessment_session_action(request, session_id):
         session, mutation_error = _mutate_live_session_state(session.id, apply_recover)
         if not session:
             return JsonResponse({'success': False, 'error': mutation_error or 'Unable to reopen the unfinished session.'}, status=409)
+    elif action == 'cancel_unstarted_batches':
+        raw_batch_numbers = data.get('batch_numbers') if isinstance(data.get('batch_numbers'), list) else []
+        try:
+            requested_batches = {int(value) for value in raw_batch_numbers}
+        except (TypeError, ValueError):
+            return JsonResponse({'success': False, 'error': 'Choose one or more remaining batches to cancel.'}, status=400)
+        if not requested_batches:
+            return JsonResponse({'success': False, 'error': 'Choose one or more remaining batches to cancel.'}, status=400)
+
+        cancelled_student_ids = []
+
+        def apply_cancel_unstarted_batches(current):
+            nonlocal cancelled_student_ids
+            if current.status not in ['started', 'paused']:
+                return None
+            _ensure_live_session_batches(current)
+            completed, total = _live_batch_progress(current)
+            if not total or completed < total:
+                return None
+            eligible_batches = {entry['number']: entry for entry in _live_unstarted_batches(current)}
+            if not requested_batches.issubset(eligible_batches):
+                return None
+
+            cancelled_student_ids = [
+                student_id
+                for batch_number in requested_batches
+                for student_id in eligible_batches[batch_number]['student_ids']
+            ]
+            cancelled_set = set(cancelled_student_ids)
+            current.student_ids = [student_id for student_id in (current.student_ids or []) if int(student_id) not in cancelled_set]
+            current.student_count = len(current.student_ids)
+            current.student_states = {
+                student_key: state for student_key, state in (current.student_states or {}).items()
+                if str(student_key) not in {str(student_id) for student_id in cancelled_set}
+            }
+
+            # The normal batch engine intentionally uses a contiguous queue.
+            # Compact only the remaining batch labels; student order and every
+            # completed/current-batch assignment remain unchanged.
+            old_assignments = current.batch_assignments or {}
+            retained_numbers = sorted({
+                int(old_assignments.get(str(student_id), 0) or 0)
+                for student_id in current.student_ids
+            })
+            number_map = {old_number: index + 1 for index, old_number in enumerate(retained_numbers)}
+            current.batch_assignments = {
+                str(student_id): number_map[int(old_assignments.get(str(student_id), 0) or 0)]
+                for student_id in current.student_ids
+            }
+            current.current_batch = number_map.get(int(current.current_batch or 1), 1)
+            current.total_batches = len(retained_numbers)
+            current.batch_size = LIVE_ASSESSMENT_BATCH_SIZE
+            _append_live_session_activity(
+                current,
+                f'Teacher cancelled unstarted batch(es): {", ".join(str(number) for number in sorted(requested_batches))}. '
+                f'{len(cancelled_student_ids)} student(s) returned to the future Live CRLA roster.',
+            )
+            return {'student_ids', 'student_count', 'student_states', 'batch_assignments', 'batch_size', 'current_batch', 'total_batches', 'activity_log'}
+
+        session, mutation_error = _mutate_live_session_state(session.id, apply_cancel_unstarted_batches)
+        if not session:
+            return JsonResponse({
+                'success': False,
+                'error': mutation_error or 'Only unstarted future batches may be cancelled after the current batch is complete.',
+            }, status=409)
+
+        # When every future batch was removed, use the one authoritative End
+        # Session finalizer for the completed participants. Cancelled students
+        # are already absent from the session and cannot receive a result.
+        if session.current_batch >= session.total_batches:
+            try:
+                session = _end_live_assessment_session(session, 'Teacher ended the session after cancelling all remaining unstarted batches.')
+            except Exception:
+                logger.exception('Failed to finalize Live CRLA after batch cancellation %s', session.id)
+                return JsonResponse({'success': False, 'error': 'Batches were cancelled, but the completed batch could not be finalized. Please retry End Session.'}, status=500)
     elif action == 'save_settings':
         if session.status != 'waiting':
             return JsonResponse({'success': False, 'error': 'Settings can only be updated before the session starts'}, status=400)
@@ -24195,6 +24421,21 @@ def record_assessment_completion(request):
             access_response = _enforce_student_access_for_request(request, material=material, json_response=True)
             if access_response:
                 return access_response
+            # A browser must not be able to turn temporary Live CRLA work
+            # into an official result through the normal completion endpoint.
+            # Only _end_live_assessment_session() is authorized to do that.
+            if material and _is_live_crla_material(material):
+                active_live_session = next((candidate for candidate in LiveAssessmentSession.objects.filter(
+                    material=material,
+                    status__in=LIVE_ASSESSMENT_ACTIVE_STATUSES,
+                ).only('id', 'student_ids') if str(student_user.id) in {
+                    str(student_id) for student_id in (candidate.student_ids or [])
+                }), None)
+                if active_live_session:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Live CRLA results are finalized only when the teacher ends the session.',
+                    }, status=409)
 
         logger.warning(
             "PABASA_COMPLETION_TRACE %s",

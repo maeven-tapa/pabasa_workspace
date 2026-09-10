@@ -269,6 +269,7 @@
         let currentStoryAnswers = [];
         let currentStoryResults = [];
         let selectedLearnerExperienceRating = null;
+        let learnerExperienceSubmitting = false;
         let storyMiscueCount = 0;
         let storyMiscueResponseKeys = new Set();
         let pendingStorySelfCorrection = null;
@@ -572,6 +573,8 @@
 
         function readStudentEndState() {
             try {
+                const liveRecovery = window.__PABASA_STUDENT_END_STATE__ || {};
+                if (urlParams.get('live_recovery') === '1' && Object.keys(liveRecovery).length) return liveRecovery;
                 if (sessionStorage.getItem(studentEndStateResetKey) === "1") {
                     sessionStorage.removeItem(studentEndStateResetKey);
                     return {};
@@ -601,6 +604,20 @@
                 try {
                     localStorage.setItem(getStudentEndStateKey(), JSON.stringify(savedState));
                 } catch (error) {}
+            }
+            // Live CRLA has a different persistence boundary: this workflow
+            // state is recoverable session data until the teacher ends the
+            // session.  It must never visit the normal end-state endpoint,
+            // which is allowed to create an official CRLA result.
+            if (savedState.stage && isCurrentLiveAssessment()) {
+                return publishLiveSessionState({
+                    status: 'reading',
+                    recovery_state: savedState,
+                }).then(session => session ? {
+                    success: true,
+                    temporary_live_state: true,
+                    student_end_assessment_state: savedState,
+                } : null);
             }
             if (savedState.stage) {
                 return fetch('/api/assessment/end-state/', {
@@ -695,8 +712,10 @@
             if (!isOfficialAssessmentLaunch || !isCrla) return;
             try {
                 const savedResults = JSON.parse(localStorage.getItem(officialCrlaItemResultsStorageKey) || '{}');
+                const recovered = readStudentEndState();
                 items.forEach((_, itemIndex) => {
-                    const savedScore = savedResults[getOfficialCrlaItemResultKey(currentAssessmentBranch, itemIndex)];
+                    const savedScore = savedResults[getOfficialCrlaItemResultKey(currentAssessmentBranch, itemIndex)]
+                        || recovered?.live_item_scores?.[itemIndex];
                     if (!savedScore || typeof savedScore !== 'object') return;
                     itemLocked[itemIndex] = true;
                     itemScores[itemIndex] = savedScore;
@@ -741,7 +760,7 @@
         // A dashboard Start Assessment launch is an explicit fresh attempt.
         // Consume this marker before loadItems() so stale browser state cannot
         // override the reset server state, while transition URLs remain resumable.
-        if (urlParams.get("crla_fresh") === "1") {
+        if (urlParams.get("crla_fresh") === "1" && urlParams.get('live_recovery') !== '1') {
             clearStudentEndState();
             if (isOfficialAssessmentLaunch && isCrla) {
                 clearOfficialCrlaItemResults();
@@ -1540,7 +1559,8 @@
 
         async function saveLearnerExperienceRating(rating) {
             const selectedRating = Number.parseInt(rating, 10);
-            if (!Number.isInteger(selectedRating) || selectedRating < 1 || selectedRating > 5) return;
+            if (learnerExperienceSubmitting || !Number.isInteger(selectedRating) || selectedRating < 1 || selectedRating > 5) return;
+            learnerExperienceSubmitting = true;
             if (learnerExperienceContinue) learnerExperienceContinue.disabled = true;
             if (learnerExperienceFeedback) learnerExperienceFeedback.textContent = "Saving your rating...";
             const persisted = readStudentEndState();
@@ -1551,8 +1571,36 @@
                 learner_experience: selectedRating,
             }, { deferLocalStorage: true });
             if (!saved) {
+                learnerExperienceSubmitting = false;
                 if (learnerExperienceContinue) learnerExperienceContinue.disabled = false;
                 if (learnerExperienceFeedback) learnerExperienceFeedback.textContent = "We could not save your rating. Please try again.";
+                return;
+            }
+            if (isCurrentLiveAssessment()) {
+                // The learner is finished only within this temporary live
+                // session. Do not call showCompletion(): its normal path
+                // records an official Assessment, which belongs exclusively
+                // to teacher End Session for Live CRLA.
+                const temporaryCompletionState = {
+                    ...persisted,
+                    stage: 'completed', branch: currentAssessmentBranch,
+                    next_stage: 'completed', learner_experience_rating: selectedRating,
+                    learner_experience: selectedRating, temporary_completed: true,
+                };
+                const liveSaved = await publishLiveSessionState({
+                    status: 'completed', items_completed: Math.max(1, items.length),
+                    items_total: Math.max(1, items.length), progress: 1,
+                    elapsed_seconds: Math.round(getAssessmentElapsedSeconds()),
+                    current_item: '', connection_status: 'connected',
+                    recovery_state: temporaryCompletionState,
+                });
+                if (!liveSaved) {
+                    learnerExperienceSubmitting = false;
+                    if (learnerExperienceContinue) learnerExperienceContinue.disabled = false;
+                    if (learnerExperienceFeedback) learnerExperienceFeedback.textContent = 'We could not save your live session completion. Please try again.';
+                    return;
+                }
+                window.location.replace(`/dashboard/live-assessment/${encodeURIComponent(liveSessionId)}/waiting/`);
                 return;
             }
             learnerExperiencePage?.classList.add("d-none");
@@ -2141,6 +2189,34 @@
             const title = document.getElementById("completionTitle");
             const message = document.getElementById("completionMessage");
             const classificationText = endState.classification || "Assessment completed";
+            const transitionCopy = {
+                transition_to_rhymes: {
+                    title: "Words Assessment Completed",
+                    message: "",
+                    disclaimer: "You’ve finished the Word Reading section. Next, you’ll continue with Rhymes.",
+                    nextStage: "rhymes",
+                    cta: "Continue to Rhymes →",
+                },
+                transition_to_sentence: {
+                    title: "Words Assessment Completed",
+                    message: "You completed Word Reading. You’re ready for Sentence Reading.",
+                    disclaimer: "You’ve finished the Word Reading section. Next, you’ll continue with Sentence Reading.",
+                    nextStage: "sentences",
+                    cta: "Continue to Sentence Reading →",
+                },
+                transition_to_story: {
+                    title: endState.branch === "rhymes" ? "Rhymes Assessment Completed" : "Sentences Assessment Completed",
+                    message: endState.branch === "rhymes"
+                        ? "You completed Rhymes. You’re ready for Story Reading."
+                        : "You completed Sentence Reading. You’re ready for Story Reading.",
+                    disclaimer: endState.branch === "rhymes"
+                        ? "You’ve finished Rhymes. Next, you’ll continue with Story Reading."
+                        : "You’ve finished Sentence Reading. Next, you’ll continue with Story Reading.",
+                    nextStage: "story_selection",
+                    cta: "Continue to Story Reading →",
+                },
+            };
+            const transition = transitionCopy[stage] || null;
             // Section transitions are not CRLA completion.  In particular, do
             // not leak a routing/Part 1 level on the Word Reading screen.
             const isFinalCompletion = ["completed", "early_completed_words", "early_completed_sentences"].includes(stage);
@@ -2152,31 +2228,15 @@
                 // placeholder in the Word Reading completion UI.
                 completionClassificationPanel?.remove();
             }
-            if (title) title.textContent = stage === "transition_to_rhymes"
-                ? "Part 1: Word Reading complete"
-                : "Assessment complete";
-            if (message) message.textContent = stage === "transition_to_rhymes"
-                ? ""
-                : stage === "transition_to_sentence"
-                    ? "You completed Word Reading. You’re ready for Sentence Reading."
-                    : stage === "transition_to_story"
-                        ? (endState.branch === "rhymes"
-                        ? "You completed Rhymes. You’re ready for Story Reading."
-                        : "You completed Sentence Reading. You’re ready for Story Reading.")
-                    : "You completed the reading assessment.";
+            if (title) title.textContent = transition?.title || "Assessment complete";
+            if (message) message.textContent = transition?.message || "You completed the reading assessment.";
             const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
-            if (disclaimer && stage === "transition_to_rhymes") {
-                disclaimer.textContent = "You’ve finished the Word Reading section. Next, you’ll continue with Rhymes.";
-            }
+            if (disclaimer && transition) disclaimer.textContent = transition.disclaimer;
             if (finishBtn) {
-                finishBtn.dataset.transitionUrl = stage === "transition_to_sentence"
-                    ? buildCrlaStageUrl("sentences", endState)
-                    : stage === "transition_to_rhymes"
-                        ? buildCrlaStageUrl("rhymes", endState)
-                    : stage === "transition_to_story"
-                        ? buildCrlaStageUrl("story_selection", endState)
-                        : "";
-                finishBtn.textContent = stage === "transition_to_rhymes" ? "Continue to Rhymes →" : stage === "transition_to_sentence" ? "Continue to Sentence Reading →" : stage === "transition_to_story" ? "Continue to Story Reading →" : "Back to Assessment";
+                finishBtn.dataset.transitionUrl = transition
+                    ? buildCrlaStageUrl(transition.nextStage, endState)
+                    : "";
+                finishBtn.textContent = transition?.cta || "Back to Assessment";
             }
             reviewBtn?.classList.toggle("d-none", !["early_completed_words", "early_completed_sentences", "completed"].includes(stage));
             setCompletionLoadingState(false);
@@ -2249,9 +2309,18 @@
                     return;
                 }
                 const requestedStage = requestedCrlaStage === "story_selection" ? "story" : requestedCrlaStage;
+                const isLiveRecoveryLaunch = urlParams.get('live_recovery') === '1';
+                const recoveredBranch = normalizeStudentEndStatus(persistedEndState.branch);
                 let activeStage = "words";
                 const isActiveReaderStage = ["words", "rhymes", "sentences"].includes(persistedStage);
-                if (stageMap[requestedStage]) {
+                // Recovery is a direct restore. The stored branch/index must
+                // win over URL targets, next_stage, and every normal branch
+                // selection fallback.
+                if (isLiveRecoveryLaunch && stageMap[recoveredBranch]) {
+                    activeStage = recoveredBranch;
+                } else if (isLiveRecoveryLaunch && stageMap[persistedStage]) {
+                    activeStage = persistedStage;
+                } else if (stageMap[requestedStage]) {
                     activeStage = requestedStage;
                 } else if (isActiveReaderStage) {
                     // A saved active section always wins over a leftover
@@ -4855,7 +4924,7 @@
             sentenceItemTimer = window.setTimeout(advanceSentenceAfterTimeout, sentenceItemLimitMs);
         }
 
-        function showCompletion(isFullCompletion) {
+        async function showCompletion(isFullCompletion) {
             traceOfficialCrlaCompletion('showCompletion.entry', { isFullCompletion });
             traceEndSession('showCompletion.enter', {
                 isFullCompletion,
@@ -5303,6 +5372,10 @@
                         connection_status: 'connected',
                         completion_payload: payload,
                     });
+                    // A Live CRLA completion is still temporary.  The
+                    // teacher's End Session is the only caller that records
+                    // the official Assessment row.
+                    return { success: true, temporary_live_completion: true };
                 }
 
                 traceEndSession('showCompletion.recordAssessmentCompletion.request', { payload });
@@ -5563,6 +5636,29 @@
                 traceEndSession('publishLiveSessionState.enter', { updateValues });
                 const completionSnapshot = calculateScores();
                 const completionMetrics = normalizeCompletionScores(completionSnapshot || {}, {});
+                const persistedRecoveryState = readStudentEndState();
+                const persistedRecoveryStage = normalizeStudentEndStatus(persistedRecoveryState.stage);
+                const isPendingBranchTransition = ["transition_to_rhymes", "transition_to_sentence", "transition_to_story"].includes(persistedRecoveryStage);
+                const recoveryStage = isPendingBranchTransition
+                    ? persistedRecoveryStage
+                    : ["story_selection", "story_ready", "story_reading", "story_comprehension", "learner_experience"].includes(currentStoryState)
+                    ? currentStoryState
+                    : currentAssessmentBranch;
+                const recoveryState = {
+                    ...persistedRecoveryState,
+                    // A branch handoff is its own resumable state. Keep its
+                    // already-decided destination intact rather than reducing
+                    // it to the section that just finished.
+                    branch: isPendingBranchTransition
+                        ? persistedRecoveryState.branch
+                        : currentAssessmentBranch,
+                    stage: recoveryStage,
+                    crla_question_index: currentIndex,
+                    live_item_scores: itemScores,
+                    live_item_locked: itemLocked,
+                    live_correct_word_counts: correctWordCounts,
+                    ...(updateValues.recovery_state || {}),
+                };
                 const elapsedSeconds = Number.isFinite(Number(updateValues.elapsed_seconds))
                     ? Number(updateValues.elapsed_seconds)
                     : getAssessmentElapsedSeconds();
@@ -5636,6 +5732,9 @@
                     },
                     body: JSON.stringify({
                         ...updateValues,
+                        // Store the existing workflow/branch state alongside
+                        // this student's temporary live state for Phase 2.
+                        recovery_state: recoveryState,
                         ...(isOfficialAssessmentLaunch ? {
                             crla_stage: liveStage,
                             crla_stage_label: liveStageLabels[liveStage] || "",
@@ -5715,7 +5814,7 @@
                 clearLiveCountdown();
                 hideLiveCountdown();
             }
-            setSpeechStatus('Session paused by your teacher.', 'Please wait until the teacher resumes the assessment.', false);
+            setSpeechStatus('Live CRLA Session Paused', 'Your Live CRLA assessment has been paused. Please wait for your teacher to resume the session.', false);
         }
 
         function hideLiveSessionPaused() {
@@ -5776,11 +5875,24 @@
                 }
                 return;
             }
+            if (state.status === 'started' && !liveSessionPaused && !liveActiveIntervalStartedAt) {
+                const currentStudentId = String(window.PABASA_USER_ID || localStorage.getItem('pabasaUserId') || '');
+                const savedElapsed = Number((state.student_states || {})[currentStudentId]?.elapsed_seconds);
+                if (Number.isFinite(savedElapsed) && savedElapsed >= 0) liveActiveElapsedSeconds = savedElapsed;
+            }
             if (liveSessionPaused && state.status === 'started') {
                 liveSessionPaused = false;
                 liveSessionEnded = false;
                 const currentStudentId = String(window.PABASA_USER_ID || localStorage.getItem('pabasaUserId') || '');
-                resumeLiveElapsedTimer((state.student_states || {})[currentStudentId]);
+                const restoredStudentState = (state.student_states || {})[currentStudentId] || {};
+                resumeLiveElapsedTimer(restoredStudentState);
+                if (restoredStudentState.recovery_state && state.reader_url) {
+                    // Reload from the server-authoritative temporary workflow
+                    // snapshot. This is a direct restore, not a replay of
+                    // completed items or a new branch calculation.
+                    window.location.replace(state.reader_url);
+                    return;
+                }
                 hideLiveSessionPaused();
                 if (isRecording && !recognitionActive && !isMuted) {
                     startSpeechRecognition();
@@ -6632,16 +6744,17 @@
             }
             window.location.assign(restartUrl.toString());
         });
-        finishBtn?.addEventListener("click", () => {
+        finishBtn?.addEventListener("click", async () => {
             const transitionUrl = finishBtn.dataset.transitionUrl || "";
             if (transitionUrl) {
+                finishBtn.disabled = true;
                 const state = readStudentEndState();
                 if (state.stage === "transition_to_rhymes") {
-                    writeStudentEndState({ ...state, stage: "transition_to_rhymes", next_stage: state.next_stage || "rhymes" });
+                    await writeStudentEndState({ ...state, stage: "transition_to_rhymes", next_stage: state.next_stage || "rhymes" });
                 } else if (state.stage === "transition_to_sentence") {
-                    writeStudentEndState({ ...state, stage: "transition_to_sentence", next_stage: state.next_stage || "sentences" });
+                    await writeStudentEndState({ ...state, stage: "transition_to_sentence", next_stage: state.next_stage || "sentences" });
                 } else if (state.stage === "transition_to_story") {
-                    updateStudentEndState({ stage: "story_selection", next_stage: "story_selection" });
+                    await updateStudentEndState({ stage: "story_selection", next_stage: "story_selection" });
                 }
                 window.location.assign(transitionUrl);
                 return;

@@ -478,8 +478,14 @@ def _student_values(student, attempt, state, assessment):
             completed_at = timezone.localtime(completed_at).date() if timezone.is_aware(completed_at) else completed_at.date()
 
     learner_rating = _bounded_integer(
-        _first_value(state.get("learner_experience_rating"), state.get("learner_experience")), 1, 5
-    ) if _first_value(state.get("learner_experience_rating"), state.get("learner_experience")) is not None else None
+        _first_value(
+            score_data.get("learner_experience_rating"), score_data.get("learner_experience"),
+            state.get("learner_experience_rating"), state.get("learner_experience"),
+        ), 1, 5
+    ) if _first_value(
+        score_data.get("learner_experience_rating"), score_data.get("learner_experience"),
+        state.get("learner_experience_rating"), state.get("learner_experience"),
+    ) is not None else None
 
     raw_sex = str(student.sex or "").strip().lower()
     sex = {"m": "Male", "male": "Male", "f": "Female", "female": "Female"}.get(raw_sex, "")

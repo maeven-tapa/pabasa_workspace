@@ -16,6 +16,7 @@ urlpatterns = [
     path('api/login/', views.login_user, name='login_user'),
     path('account/principal/change-temporary-password/', views.principal_change_temporary_password, name='principal_change_temporary_password'),
     path('logout/', views.logout_user, name='logout'),
+    path('api/student-session/heartbeat/', views.student_session_heartbeat, name='student_session_heartbeat'),
     path('api/forgot-password/request/', views.request_password_reset, name='request_password_reset'),
     path('api/forgot-password/verify-otp/', views.verify_forgot_password_otp, name='verify_forgot_password_otp'),
     path('api/forgot-password/reset/', views.reset_password, name='reset_password'),

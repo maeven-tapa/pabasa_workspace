@@ -473,14 +473,6 @@
             max-width: 100%;
         }
         .teacher-control .control-panel-card { top: 16px; }
-        .teacher-control .participant-toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-        .teacher-control .participant-toolbar #studentSearch {
-            flex: 1 1 14rem;
-            min-width: 0;
-        }
-        .teacher-control .participant-toolbar .btn {
-            flex: 0 1 auto;
-        }
         .teacher-control .session-actions {
             display: grid;
             gap: 0.5rem;
@@ -686,14 +678,6 @@
                 text-align: center;
             }
             .teacher-control .table-monitor tbody tr.text-muted td[colspan]::before { content: none; }
-            .teacher-control .participant-toolbar > .btn {
-                flex: 1 1 calc(50% - 0.25rem);
-                min-height: 42px;
-            }
-            .teacher-control .participant-toolbar #studentSearch {
-                flex-basis: 100%;
-                min-height: 44px;
-            }
             .teacher-control .configuration-card .row > [class*="col-"] {
                 min-width: 0;
                 width: 100%;
@@ -764,7 +748,10 @@
                         </div>
                         <div id="batchTransition" class="d-none text-end">
                             <div id="batchTransitionText" class="small mb-2"></div>
-                            <button id="startNextBatchBtn" type="button" class="btn btn-primary btn-sm">Load Next Batch</button>
+                            <div class="d-flex justify-content-end gap-2 flex-wrap">
+                                <button id="manageRemainingBatchesBtn" type="button" class="btn btn-outline-secondary btn-sm d-none">Manage Remaining Batches</button>
+                                <button id="startNextBatchBtn" type="button" class="btn btn-primary btn-sm">Load Next Batch</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -806,7 +793,7 @@
                             {% else %}
                                 <tr class="text-muted"><td colspan="5" class="small text-center py-4">
                                     <strong>No participants selected yet.</strong><br>
-                                    Select students from Session Configuration below or click <strong>Select All</strong> to add participants.
+                                    This Live CRLA session has no assigned participants.
                                 </td></tr>
                             {% endif %}
                         </tbody>
@@ -852,30 +839,25 @@
                 <div class="d-flex align-items-center justify-content-between mb-3">
                     <div>
                         <h5 class="mb-1">Session Configuration</h5>
-                        <div class="small text-muted">Prepare the live assessment before starting.</div>
+                        <div class="small text-muted">Selected Live CRLA participants are locked for this session.</div>
                     </div>
                 </div>
                 <div class="row gy-3">
                     <div class="col-lg-5">
                         <div class="mb-3">
                             <label class="form-label mb-2">Participants</label>
-                            <div class="participant-toolbar d-flex gap-2 mb-2">
-                                <input type="text" id="studentSearch" class="form-control form-control-sm" placeholder="Search students...">
-                                <button id="selectAllBtn" class="btn btn-outline-primary btn-sm">Select All</button>
-                                <button id="resetSelectionBtn" class="btn btn-outline-secondary btn-sm">Clear</button>
-                            </div>
                             <div class="border rounded p-2" style="max-height:220px; overflow:auto; background:var(--dash-bg);">
                                 <div id="participantList" class="participant-list">
-                                    {% for student in available_students %}
-                                        <label class="d-flex align-items-center gap-2 mb-1 participant-row" data-search-text="{{ student.crla_display_name|default:student.full_name|default:'' }} {{ student.grade|default:'' }} {{ student.section|default:'' }}" data-custom-id="{{ student.custom_id|default:'' }}">
-                                            <input type="checkbox" class="participant-checkbox" data-student-id="{{ student.id }}" data-custom-id="{{ student.custom_id|default:'' }}">
+                                    {% for student in student_profiles %}
+                                        <label class="d-flex align-items-center gap-2 mb-1 participant-row" data-custom-id="{{ student.custom_id|default:'' }}">
+                                            <input type="checkbox" class="participant-checkbox" data-student-id="{{ student.id }}" data-custom-id="{{ student.custom_id|default:'' }}" checked disabled aria-label="{{ student.crla_display_name|default:student.full_name }} is a selected participant">
                                             <div class="flex-grow-1">
                                                 <div class="small fw-semibold">{{ student.crla_display_name|default:student.full_name }}</div>
                                                 <div class="small text-muted">Grade {{ student.grade|default:"—" }}</div>
                                             </div>
                                         </label>
                                     {% empty %}
-                                        <div class="small text-muted">No students available for this material.</div>
+                                        <div class="small text-muted">No participants are assigned to this live session.</div>
                                     {% endfor %}
                                 </div>
                                 <div id="participantEmptyState" class="small text-muted mt-2 d-none">No students found.</div>
@@ -1532,36 +1514,31 @@
             setSummaryLiveFields(session);
         }
 
-        // Rebuild participant checkboxes if available_students provided,
-        // preserving custom IDs and checkbox state.
+        // Session Configuration is a read-only view of the server's selected
+        // participants. Never rebuild it from the full class roster.
         const avail = session.available_students || [];
-        if (avail && avail.length) {
-            participantData = avail.map((s) => ({
+        const participantIds = new Set((session.student_ids || []).map(String));
+        selectedStudentIds.clear();
+        participantIds.forEach((id) => selectedStudentIds.add(id));
+        const profileSource = avail.length ? avail : participantData;
+        participantData = profileSource
+            .filter((s) => participantIds.has(String(s.id)))
+            .map((s) => ({
                 id: String(s.id),
                 name: s.crla_display_name || s.full_name || '',
                 grade: s.grade || '',
                 section: s.section || '',
                 custom_id: s.custom_id || '',
                 searchText: `${s.crla_display_name || s.full_name || ''} Grade ${s.grade || ''} ${s.section || ''}`.toLowerCase(),
-                checked: selectedStudentIds.has(String(s.id)),
+                checked: true,
             }));
-            renderParticipantList();
-        }
+        renderParticipantList();
 
         // student rows: ensure selected students are displayed in the monitoring table
-        const serverIds = (session.student_states && Object.keys(session.student_states).length)
-            ? Object.keys(session.student_states).map(String)
-            : ((session.student_ids || []).map(String));
+        const serverIds = Array.from(participantIds);
         try {
-            const selectedSet = new Set([...serverIds, ...Array.from(selectedStudentIds)]);
-            if (selectedSet.size > 0) {
-                selectedSet.forEach((id) => selectedStudentIds.add(String(id)));
-                participantData = participantData.map((participant) => ({
-                    ...participant,
-                    checked: selectedStudentIds.has(String(participant.id)),
-                }));
-                renderParticipantList();
-            }
+            participantData = participantData.map((participant) => ({ ...participant, checked: true }));
+            renderParticipantList();
         } catch (e) {}
 
         const batchIds = Array.isArray(session.current_batch_student_ids) ? session.current_batch_student_ids.map(String) : null;
@@ -1577,7 +1554,11 @@
             setText('#overallProgressText', `Overall: ${session.overall_completed} / ${session.student_count} students assessed`);
             const transition = document.getElementById('batchTransition');
             const nextButton = document.getElementById('startNextBatchBtn');
+            const manageButton = document.getElementById('manageRemainingBatchesBtn');
             const isFinal = session.assessment_complete;
+            const unstartedBatches = Array.isArray(session.unstarted_batches) ? session.unstarted_batches : [];
+            manageButton?.classList.toggle('d-none', !(session.batch_complete && !isFinal && unstartedBatches.length));
+            if (manageButton) manageButton.dataset.batches = JSON.stringify(unstartedBatches);
             if (session.batch_loaded) {
                 transition?.classList.remove('d-none');
                 setText('#batchTransitionText', `Batch ${session.current_batch} loaded — ${session.current_batch_total} students waiting for your start.`);
@@ -1598,6 +1579,7 @@
                 }
             } else {
                 transition?.classList.add('d-none');
+                manageButton?.classList.add('d-none');
             }
             if (isFinal) {
                 setText('#batchTransitionText', session.overall_completed < session.student_count
@@ -1605,6 +1587,7 @@
                     : 'CRLA Live Assessment Complete. All batches completed.');
                 transition?.classList.remove('d-none');
                 if (nextButton) nextButton.classList.add('d-none');
+                manageButton?.classList.add('d-none');
             }
         }
 
@@ -1685,6 +1668,59 @@
         const action = button.dataset.action || 'load_next_batch';
         await sendAction(action, action === 'load_next_batch' ? { target_batch: Number(button.dataset.targetBatch) } : {});
     });
+    document.getElementById('manageRemainingBatchesBtn')?.addEventListener('click', async (event) => {
+        let batches = [];
+        try { batches = JSON.parse(event.currentTarget.dataset.batches || '[]'); } catch (_) { batches = []; }
+        if (!Array.isArray(batches) || !batches.length) return;
+
+        const body = document.createElement('div');
+        const message = document.createElement('p');
+        message.className = 'mb-3';
+        message.textContent = 'Select the batches that will not continue in this Live CRLA session. Students in cancelled batches will not receive a CRLA result and will become available again for a future Live CRLA assessment.';
+        body.appendChild(message);
+        const list = document.createElement('div');
+        list.className = 'd-grid gap-2';
+        batches.forEach((batch) => {
+            const label = document.createElement('label');
+            label.className = 'form-check border rounded p-2 ps-5 mb-0';
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.className = 'form-check-input';
+            input.value = String(batch.number);
+            label.appendChild(input);
+            label.append(`Batch ${batch.number} — ${batch.student_count} student${Number(batch.student_count) === 1 ? '' : 's'}`);
+            list.appendChild(label);
+        });
+        body.appendChild(list);
+        const resultPromise = showModal({
+            title: 'Manage Remaining Batches', body,
+            buttons: [
+                { label: 'Keep Assessing', value: false, className: 'btn btn-outline-secondary' },
+                { label: 'Cancel Selected Batches', value: 'cancel', className: 'btn btn-danger' },
+            ],
+        });
+        const cancelButton = liveModalFooter?.querySelector('.btn-danger');
+        const updateCancelButton = () => {
+            if (cancelButton) cancelButton.disabled = !list.querySelector('input:checked');
+        };
+        list.querySelectorAll('input').forEach((input) => input.addEventListener('change', updateCancelButton));
+        updateCancelButton();
+        if (await resultPromise !== 'cancel') return;
+        const selectedBatches = Array.from(list.querySelectorAll('input:checked')).map((input) => Number(input.value));
+        const confirmed = await showModal({
+            title: 'Cancel Selected Batches?',
+            body: 'Students in the selected batches will not receive CRLA results from this session and will become available for assessment again later.',
+            buttons: [
+                { label: 'Go Back', value: false, className: 'btn btn-outline-secondary' },
+                { label: 'Cancel Batches', value: true, className: 'btn btn-danger' },
+            ],
+        });
+        if (!confirmed) return;
+        const updatedSession = await sendAction('cancel_unstarted_batches', { batch_numbers: selectedBatches });
+        if (updatedSession?.status === 'ended') {
+            await window.PabasaCrlaRecovery?.deleteDraft(crlaRecoveryContext).catch(() => {});
+        }
+    });
     document.getElementById('endBtn').addEventListener('click', async () => {
         const ok = await showConfirm('End session', 'End session for all students?');
         if (ok) {
@@ -1732,7 +1768,6 @@
         }
     });
 
-    let participantSearchQuery = '';
     let participantData = [];
     const selectedStudentIds = new Set(JSON.parse('{{ live_session.student_ids|escapejs }}'));
     let selectionHydratedFromServer = false;
@@ -1740,7 +1775,6 @@
 
     const participantList = document.getElementById('participantList');
     const participantEmptyState = document.getElementById('participantEmptyState');
-    const studentSearchInput = document.getElementById('studentSearch');
 
     function hydrateSelectedStudentIdsFromDom() {
         participantData = getParticipantData();
@@ -1849,7 +1883,7 @@
         if (!tbody) return;
         const ids = Array.from(selectedIds || []);
         if (ids.length === 0) {
-            tbody.innerHTML = '<tr class="text-muted"><td colspan="5" class="small text-center py-4"><strong>No participants selected yet.</strong><br>Select students from the Session Configuration panel or click <strong>Select All</strong> to add participants.</td></tr>';
+            tbody.innerHTML = '<tr class="text-muted"><td colspan="5" class="small text-center py-4"><strong>No participants selected yet.</strong><br>This Live CRLA session has no assigned participants.</td></tr>';
             return;
         }
 
@@ -2034,34 +2068,21 @@
     function renderParticipantList() {
         if (!participantList || !participantEmptyState) return;
 
-        const query = participantSearchQuery.trim().toLowerCase();
-        const filteredParticipants = participantData.filter((participant) => {
-            if (!query) return true;
-            return (participant.searchText || '').includes(query);
-        });
-
         participantList.innerHTML = '';
 
         if (participantData.length === 0) {
-            participantEmptyState.textContent = 'No students available for this material.';
-            participantEmptyState.classList.remove('d-none');
-            return;
-        }
-
-        if (filteredParticipants.length === 0) {
-            participantEmptyState.textContent = 'No students found.';
+            participantEmptyState.textContent = 'No participants are assigned to this live session.';
             participantEmptyState.classList.remove('d-none');
             return;
         }
 
         participantEmptyState.classList.add('d-none');
-        filteredParticipants.forEach((participant) => {
-            const checked = selectedStudentIds.has(participant.id);
+        participantData.forEach((participant) => {
             const label = document.createElement('label');
             label.className = 'd-flex align-items-center gap-2 mb-1 participant-row';
             label.setAttribute('data-custom-id', participant.custom_id || '');
             label.innerHTML = `
-                <input type="checkbox" class="participant-checkbox" data-student-id="${participant.id}" data-custom-id="${participant.custom_id || ''}" ${checked ? 'checked' : ''}>
+                <input type="checkbox" class="participant-checkbox" data-student-id="${participant.id}" data-custom-id="${participant.custom_id || ''}" checked disabled aria-label="${participant.crla_display_name || participant.name} is a selected participant">
                 <div class="flex-grow-1">
                     <div class="small fw-semibold">${participant.crla_display_name || participant.name}</div>
                     <div class="small text-muted">${participant.grade}</div>
@@ -2075,45 +2096,6 @@
         participantData = getParticipantData();
         renderParticipantList();
     }
-
-    document.getElementById('selectAllBtn').addEventListener('click', () => {
-        const query = participantSearchQuery.trim().toLowerCase();
-        participantData.forEach((participant) => {
-            if (!query || (participant.searchText || '').includes(query)) {
-                selectedStudentIds.add(participant.id);
-            }
-        });
-        renderParticipantList();
-        updateSummaryFromDom();
-        updateMonitorForSelection();
-    });
-    document.getElementById('resetSelectionBtn').addEventListener('click', () => {
-        selectedStudentIds.clear();
-        renderParticipantList();
-        updateSummaryFromDom();
-        updateMonitorForSelection();
-    });
-
-    if (studentSearchInput) {
-        studentSearchInput.addEventListener('input', (event) => {
-            participantSearchQuery = (event.target.value || '').trim().toLowerCase();
-            renderParticipantList();
-        });
-    }
-
-    participantList?.addEventListener('change', (event) => {
-        const checkbox = event.target.closest('.participant-checkbox');
-        if (!checkbox) return;
-        const studentId = checkbox.dataset.studentId;
-        if (!studentId) return;
-        if (checkbox.checked) {
-            selectedStudentIds.add(studentId);
-        } else {
-            selectedStudentIds.delete(studentId);
-        }
-        updateSummaryFromDom();
-        updateMonitorForSelection();
-    });
 
     hydrateSelectedStudentIdsFromDom();
     renderParticipantList();

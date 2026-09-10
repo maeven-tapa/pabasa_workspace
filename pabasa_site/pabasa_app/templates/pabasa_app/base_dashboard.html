@@ -4151,6 +4151,20 @@
             startActiveLiveAssessmentInviteWatch();
             checkForActiveLiveAssessmentInvitation();
         });
+        // Keep the single-device student lease alive only while this browser
+        // can still communicate. A closed/crashed/offline browser naturally
+        // becomes replaceable after the server-side stale timeout.
+        async function heartbeatStudentSession() {
+            if (window.PABASA_USER_ROLE !== 'student') return;
+            try {
+                await fetch("{% url 'student_session_heartbeat' %}", {
+                    method: 'POST', credentials: 'same-origin',
+                    headers: { 'X-CSRFToken': getNotificationCsrfToken(), 'Accept': 'application/json' },
+                });
+            } catch (_) {}
+        }
+        document.addEventListener('DOMContentLoaded', heartbeatStudentSession);
+        window.setInterval(heartbeatStudentSession, 30000);
         window.addEventListener('pabasa:notifications-updated', () => {
             updateInAppNotifications();
             startLiveAssessmentWatch();

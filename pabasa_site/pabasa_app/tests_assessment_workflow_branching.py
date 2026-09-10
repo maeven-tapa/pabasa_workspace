@@ -456,7 +456,7 @@ class AssessmentWorkflowBranchingTests(TestCase):
         clear_helper = source.split("function clearOfficialCrlaItemResults", 1)[1].split("function readStudentEndState", 1)[0]
         persistence = source.split("function persistLockedItemResult", 1)[1].split("function restoreOfficialCrlaItemResults", 1)[0]
         restore = source.split("function restoreOfficialCrlaItemResults", 1)[1].split("function persistOfficialCrlaReaderProgress", 1)[0]
-        fresh_launch = source.split('if (urlParams.get("crla_fresh") === "1") {', 1)[1].split("function normalizeStudentEndStatus", 1)[0]
+        fresh_launch = source.split('if (urlParams.get("crla_fresh") === "1"', 1)[1].split("function normalizeStudentEndStatus", 1)[0]
 
         self.assertIn("getStudentEndStateKey()", key_helper)
         self.assertIn("currentAssessmentBranch", persistence)
@@ -465,6 +465,32 @@ class AssessmentWorkflowBranchingTests(TestCase):
         self.assertNotIn("`${officialAssessmentId}_${currentAssessmentBranch}_${itemIndex}`", restore)
         self.assertIn("const keyPrefix = `${getStudentEndStateKey()}:`;", clear_helper)
         self.assertIn("clearOfficialCrlaItemResults();", fresh_launch)
+
+    def test_live_crla_branch_transitions_keep_existing_continue_cards_and_are_recoverable(self):
+        """Every live CRLA handoff remains a transition, never a completion."""
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        completion = source.split("async function showCompletion", 1)[1].split("function buildCompletionSummary", 1)[0]
+        live_state = source.split("async function publishLiveSessionState", 1)[1].split("function startLiveSessionHeartbeat", 1)[0]
+        finish_handler = source.split('finishBtn?.addEventListener("click", async () => {', 1)[1].split("if (isReviewMode)", 1)[0]
+
+        for transition_stage in ("transition_to_rhymes", "transition_to_sentence", "transition_to_story"):
+            self.assertIn(f'branchState.stage === "{transition_stage}"', completion)
+            self.assertIn(f'"{transition_stage}"', live_state)
+            self.assertIn(f'state.stage === "{transition_stage}"', finish_handler)
+        self.assertIn("renderPersistedEndState(readStudentEndState());", completion)
+        self.assertIn("showCompletion.awaitContinue", completion)
+        self.assertNotIn("window.location.replace(nextStageUrl);", completion)
+        transition_renderer = source.split("function renderPersistedEndState", 1)[1].split("function loadItems", 1)[0]
+        self.assertIn('"Words Assessment Completed"', transition_renderer)
+        self.assertIn('"Rhymes Assessment Completed"', transition_renderer)
+        self.assertIn('"Sentences Assessment Completed"', transition_renderer)
+        self.assertIn('"Continue to Rhymes', transition_renderer)
+        self.assertIn('"Continue to Sentence Reading', transition_renderer)
+        self.assertIn('"Continue to Story Reading', transition_renderer)
+        self.assertIn("await writeStudentEndState", finish_handler)
+        self.assertIn("await updateStudentEndState", finish_handler)
+        self.assertIn("const isPendingBranchTransition", live_state)
+        self.assertIn("stage: recoveryStage", live_state)
 
     def test_official_crla_comprehension_count_survives_final_completion(self):
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
