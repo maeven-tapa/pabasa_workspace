@@ -88,6 +88,28 @@ class CrlaExportResultTests(TestCase):
         self.assertIsNone(crla_reading_profile(11, 1, None, 5))
         self.assertIsNone(crla_reading_profile(11, 1, 80, None))
 
+    def test_grade_2_part_2_final_profile_89_percent_and_five_answers(self):
+        """A valid Story 2 result must not inherit the Part 1 level."""
+        self.assertEqual(
+            crla_reading_profile(19, 2, 89, 5),
+            "Reading At Grade Level",
+        )
+
+    def test_grade_2_part_2_final_profile_boundaries(self):
+        cases = (
+            (75, 5, "Transitioning Reader"),
+            (76, 5, "Reading At Grade Level"),
+            (100, 5, "Reading At Grade Level"),
+            (89, 4, "Transitioning Reader"),
+            (89, 5, "Reading At Grade Level"),
+            (89, 6, "Reading At Grade Level"),
+        )
+        for accuracy, answers, expected in cases:
+            with self.subTest(accuracy=accuracy, answers=answers):
+                self.assertEqual(
+                    crla_reading_profile(19, 2, accuracy, answers), expected,
+                )
+
     def test_canonical_profile_is_persisted_and_selected_for_teacher_views(self):
         teacher = self.make_user("CRLA-CANON-T", "teacher", "Mia", "Lopez")
         student = self.make_user("CRLA-CANON-S", "student", "Asd", "Basco")

@@ -14180,11 +14180,20 @@ def persist_student_end_assessment_state(request):
     )
     if final_classification:
         saved['classification'] = final_classification
+        saved['crla_classification'] = final_classification
     else:
         # A browser label is not CRLA evidence.  Keep the persisted result
         # explicitly unclassified until the official final inputs establish
         # Column U's Reading Profile.
         saved['classification'] = None
+        saved['crla_classification'] = None
+    if stage == 'completed' and final_classification:
+        # A completed Part 2 state is terminal. Do not preserve the prior
+        # Part 1 -> Story transition destination or branch label from a stale
+        # browser recovery merge.
+        saved['stage'] = 'completed'
+        saved['branch'] = 'story'
+        saved['next_stage'] = 'completed'
     _, material_id = _parse_prefixed_id(saved.get('material_id'))
     material = Material.objects.filter(pk=material_id, is_official_reading=True).first() if material_id else None
     has_part2_scores = (

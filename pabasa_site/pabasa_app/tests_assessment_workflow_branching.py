@@ -326,6 +326,17 @@ class AssessmentWorkflowBranchingTests(TestCase):
         self.assertIn("JSON.stringify(synchronizedState)", writer)
         self.assertIn("renderPersistedEndState(readStudentEndState());", completion)
 
+    def test_final_story_completion_cannot_restore_part1_transition_state(self):
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        completion = source.split("async function showCompletion", 1)[1].split("function renderMyMaterialsCompletion", 1)[0]
+        self.assertIn('branch: "story",', completion)
+        self.assertIn('branchState.classification = "";', completion)
+        self.assertIn('branchState.crla_classification = "";', completion)
+        self.assertEqual(
+            crla_reading_profile(19, 2, 89, 5),
+            "Reading At Grade Level",
+        )
+
     def test_crla_completion_transitions_use_serialized_recovery_writer(self):
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
         completion = source.split("async function showCompletion", 1)[1].split("function renderMyMaterialsCompletion", 1)[0]

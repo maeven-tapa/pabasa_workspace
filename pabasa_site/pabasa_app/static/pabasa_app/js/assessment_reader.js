@@ -5138,8 +5138,17 @@
             if (hasSubmittedLearnerExperienceRating) {
                 Object.assign(branchState, previousEndState, {
                     stage: "completed",
+                    branch: "story",
                     next_stage: "completed",
                 });
+                // The prior state may be the Part 1 -> Story transition
+                // snapshot. Never carry its label or destination into the
+                // finalized Part 2 state; the server will replace the label
+                // from the completed Story evidence below.
+                if (currentAssessmentBranch === "story") {
+                    branchState.classification = "";
+                    branchState.crla_classification = "";
+                }
             }
             const isPart1LearnerExperienceTerminal = branchState.stage === "early_completed_words";
             const shouldPromptForLearnerExperience = !hasSubmittedLearnerExperienceRating
