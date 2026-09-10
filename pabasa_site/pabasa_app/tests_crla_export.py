@@ -15,6 +15,7 @@ from .scoring import build_assessment_score_payload, crla_reading_profile, crla_
 from .utils.crla_export import (
     _part_1_reading_level,
     _row_formulas,
+    _student_values,
     _story_number,
     convert_crla_workbook_to_pdf,
     export_crla_excel,
@@ -31,6 +32,69 @@ def test_section_create(**kwargs):
 
 
 class CrlaExportResultTests(TestCase):
+    def test_scoped_zero_scores_are_export_values_not_blank(self):
+        student = SimpleNamespace(
+            lrn="", first_name="Zero", middle_initial="", last_name="Scores", suffix="",
+            sex="", preference={},
+        )
+        attempt = SimpleNamespace(
+            crla_score_data={
+                "task1_score": 0,
+                "task2_type": "Task 2L / Rhymes",
+                "task2_rhymes_score": 0,
+                "task2_sentences_score": 0,
+                "part1_total_score": 0,
+                "story_number": 2,
+                "story_total_words": 95,
+                "words_read": 0,
+                "miscues": 95,
+                "passage_accuracy_percent": 0,
+                "comprehension_correct": 0,
+                "duration_seconds": 1,
+            },
+            material_id=1,
+            completed_at=None,
+            started_at=None,
+            created_at=None,
+            crla_classification="Low Emerging Reader",
+            classification="Low Emerging Reader",
+        )
+        values = _student_values(student, attempt, {}, None)
+        self.assertEqual(values["task_1_score"], 0)
+        self.assertEqual(values["task_2l_score"], 0)
+        self.assertEqual(values["comprehension_score"], 0)
+
+        sentence_attempt = SimpleNamespace(
+            crla_score_data={
+                "task1_score": 7,
+                "task2_type": "Task 2H / Sentences",
+                "task2_sentences_score": 0,
+                "part1_total_score": 17,
+            },
+            material_id=1, completed_at=None, started_at=None, created_at=None,
+            crla_classification="Low Emerging Reader", classification="Low Emerging Reader",
+        )
+        sentence_values = _student_values(student, sentence_attempt, {}, None)
+        self.assertEqual(sentence_values["task_2h_score"], 0)
+
+    def test_automatic_rhymes_ten_is_not_collapsed_to_zero(self):
+        student = SimpleNamespace(
+            lrn="", first_name="Automatic", middle_initial="", last_name="Rhymes", suffix="",
+            sex="", preference={},
+        )
+        attempt = SimpleNamespace(
+            crla_score_data={
+                "task1_score": 7,
+                "task2_type": "Task 2H / Sentences",
+                "task2_sentences_score": 0,
+                "part1_total_score": 17,
+            }, material_id=1, completed_at=None, started_at=None, created_at=None,
+            crla_classification="Low Emerging Reader", classification="Low Emerging Reader",
+        )
+        values = _student_values(student, attempt, {}, None)
+        self.assertEqual(values["task_2l_score"], 10)
+        self.assertEqual(values["task_2h_score"], 0)
+
     def test_pdf_conversion_renders_every_template_sheet_in_order(self):
         source = BytesIO((Path(settings.BASE_DIR) / "templates" / "CRLA3_Grade2TagalogScoresheet_v3.xlsx").read_bytes())
         source.name = "complete.xlsx"

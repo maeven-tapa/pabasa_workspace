@@ -83,6 +83,8 @@
         const liveCountdownOverlay = document.getElementById("liveCountdownOverlay");
         const liveCountdownNumber = document.getElementById("liveCountdownNumber");
         const liveCountdownSubtext = document.getElementById("liveCountdownSubtext");
+        const sentenceItemCountdown = document.getElementById("sentenceItemCountdown");
+        const sentenceItemCountdownNumber = document.getElementById("sentenceItemCountdownNumber");
         const btnToggleMic = document.getElementById("btnToggleMic");
         const btnTestMic = document.getElementById("btnTestMic") || document.getElementById("testMic");
         const micTestOverlay = document.getElementById("micTestOverlay");
@@ -294,6 +296,8 @@
         let itemScores = [];
         let autoAdvanceTimer = null;
         let sentenceItemTimer = null;
+        let sentenceCountdownTimer = null;
+        let sentenceCountdownItemIndex = null;
         const sentenceItemLimitMs = 25000;
         let liveServerTimeOffsetMs = 0;
         const liveSessionId = urlParams.get("live_session_id");
@@ -4842,10 +4846,14 @@
             
             updateAssessmentNavigationButtons();
             updateSpeechProcessingControls();
+            startOfficialSentenceItemCountdown();
             if (nextBtn) {
                 const isLastPage = currentPageIndex >= getCurrentPageCount() - 1;
                 const onLastItem = currentIndex === items.length - 1;
-                if (isReviewMode && onLastItem && isLastPage) {
+                if (isOfficialAssessmentLaunch && isCrla && !isReviewMode) {
+                    nextBtn.textContent = "Skip";
+                    nextBtn.setAttribute("aria-label", "Skip item");
+                } else if (isReviewMode && onLastItem && isLastPage) {
                     nextBtn.textContent = "Done";
                 } else if (isLastPage && getCurrentPageCount() > 1) {
                     nextBtn.textContent = onLastItem ? "Finish Passage" : "Next";
@@ -4895,6 +4903,46 @@
             window.setTimeout(() => readingWord.classList.remove("is-changing"), 380);
         }
 
+        function isOfficialSentenceBranch() {
+            return isOfficialAssessmentLaunch && isCrla
+                && mode === "sentence"
+                && ["sentences", "sentences_low", "sentences_high"].includes(String(currentAssessmentBranch || "").toLowerCase())
+                && !isReviewMode;
+        }
+
+        function clearOfficialSentenceItemCountdown() {
+            if (sentenceCountdownTimer) {
+                window.clearInterval(sentenceCountdownTimer);
+                sentenceCountdownTimer = null;
+            }
+            if (sentenceItemCountdown) {
+                sentenceItemCountdown.style.display = "none";
+                sentenceItemCountdown.setAttribute("aria-hidden", "true");
+            }
+            disableReaderInteractions(false);
+        }
+
+        function startOfficialSentenceItemCountdown() {
+            if (!isOfficialSentenceBranch() || !items.length || itemLocked[currentIndex]) return;
+            if (sentenceCountdownItemIndex === currentIndex || sentenceCountdownTimer) return;
+            sentenceCountdownItemIndex = currentIndex;
+            let remaining = 3;
+            disableReaderInteractions(true);
+            if (sentenceItemCountdownNumber) sentenceItemCountdownNumber.textContent = String(remaining);
+            if (sentenceItemCountdown) {
+                sentenceItemCountdown.style.display = "flex";
+                sentenceItemCountdown.setAttribute("aria-hidden", "false");
+            }
+            sentenceCountdownTimer = window.setInterval(() => {
+                remaining -= 1;
+                if (remaining <= 0) {
+                    clearOfficialSentenceItemCountdown();
+                    return;
+                }
+                if (sentenceItemCountdownNumber) sentenceItemCountdownNumber.textContent = String(remaining);
+            }, 1000);
+        }
+
         function transitionToItem(nextIndex, statusMessage = "", detail = "") {
             if (nextIndex < 0 || nextIndex >= items.length || nextIndex === currentIndex) return;
             // CRLA Official Assessment: Clear auto-advance timer when transitioning
@@ -4903,6 +4951,7 @@
                 autoAdvanceTimer = null;
             }
             clearSentenceItemTimer();
+            if (sentenceCountdownTimer) clearOfficialSentenceItemCountdown();
             currentIndex = nextIndex;
             currentPageIndex = 0;
             currentSyllableIndex = 0;
@@ -6072,6 +6121,7 @@
 
         const startReading = () => {
             if (isReviewMode) return;
+            if (isOfficialSentenceBranch() && sentenceCountdownTimer) return;
             if (resetPhraseListening()) return;
             if (isSpeechResponsePending()) return;
             if (mode === 'phrase') {

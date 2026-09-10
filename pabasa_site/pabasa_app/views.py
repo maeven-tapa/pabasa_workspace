@@ -2223,6 +2223,19 @@ def _latest_completed_official_crla_results(student_ids, crla_term=None, crla_ph
     return latest
 
 
+def _aral_exit_matches_scope(state, crla_term=None, crla_phase=None):
+    """Return true only when an explicit exit belongs to this CRLA window."""
+    if not isinstance(state, dict) or not state.get('aral_exit_override'):
+        return False
+    scope = state.get('aral_exit_scope')
+    if not isinstance(scope, dict):
+        return False
+    return (
+        (crla_term is None or scope.get('term') == crla_term)
+        and (crla_phase is None or scope.get('phase') == crla_phase)
+    )
+
+
 def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, crla_phase=None):
     sections = [section] if section else list(_teacher_current_sections(teacher_user))
     level_counts = {label: 0 for label in CRLA_DASHBOARD_CLASSIFICATIONS}
@@ -2520,6 +2533,15 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
         reading_level = official_result.crla_classification if official_result else 'Pending'
         has_completed_assessment = official_result is not None
         reading_state = _get_user_state(user)
+        aral_exited = _aral_exit_matches_scope(
+            reading_state, crla_term=crla_term, crla_phase=crla_phase
+        )
+        # An explicit, term-scoped ARAL exit establishes the teacher-facing
+        # post-exit display level. This affects dashboard metrics/cards only;
+        # the persisted official CRLA result and Excel export remain intact.
+        if aral_exited:
+            reading_level = 'Reading At Grade Level'
+            has_completed_assessment = True
         manual_aral_status = str(reading_state.get('aral_manual_status') or '').strip().lower()
         assessment_aral_eligible = bool(
             official_result and _aral_eligible_classification(reading_level)
@@ -2562,12 +2584,15 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
             'name': f"{user.first_name} {user.last_name}".strip() or sdata.get('name', ''),
             'email': user.email or sdata.get('email', ''),
             'custom_id': user.custom_id or sdata.get('custom_id', ''),
-            'crla_classification': reading_level if official_result else '',
+            'crla_classification': reading_level if (official_result or aral_exited) else '',
             'aral_eligible': aral_eligible,
             # Eligibility always comes from a finalized official CRLA result.
             # A teacher's explicit, authorized placement/exit decision is then
             # applied as the durable ARAL enrollment override.
             'aral_status': aral_status,
+            # This marker is written only by the explicit teacher Exit action;
+            # ordinary CRLA ineligibility must not look like an ARAL exit.
+            'aral_exited': aral_exited,
             'aral_assessment_completed': has_completed_assessment,
             'lrn': user.lrn or '',
             'grade_level': getattr(user, 'grade_level', '') or profile.get('grade_level') or profile.get('grade') or '',
@@ -11852,6 +11877,7 @@ def teacher_aral_action(request):
             'aral_eligible': True,
             'aral_status': 'active',
             'aral_manual_status': 'active',
+            'aral_exit_override': False,
             'current_phase': 'materials',
             'classification_workflow_status': 'completed',
         })
@@ -11865,10 +11891,18 @@ def teacher_aral_action(request):
                 'code': 'student_not_active_in_aral',
                 'error': 'This student is not currently active in the ARAL Program.',
             }, status=409)
+        exit_is_official, exit_phase, exit_term = _crla_attempt_phase_and_term(
+            official_result, completed_on=timezone.localtime(official_result.completed_at).date()
+        )
         state.update({
             'aral_eligible': False,
             'aral_status': 'ineligible',
             'aral_manual_status': 'ineligible',
+            'aral_exit_override': True,
+            'aral_exit_scope': {
+                'term': exit_term,
+                'phase': exit_phase,
+            } if exit_is_official else {},
             'current_phase': 'complete',
         })
 
@@ -11878,7 +11912,11 @@ def teacher_aral_action(request):
         'student_id': student.id,
         'aral_status': state.get('aral_status'),
         'aral_eligible': bool(state.get('aral_eligible')),
-        'reading_level': state.get('reader_classification') or '',
+        # Keep the persisted official CRLA classification visible after an
+        # explicit exit; exiting ARAL must not turn the card into Pending.
+        'reading_level': (
+            official_result.crla_classification or official_result.classification
+        ) if action == 'exit' else state.get('reader_classification') or '',
     })
 
 @xframe_options_sameorigin
@@ -17673,7 +17711,7 @@ def live_assessment_session_state(request, session_id):
         user_role != 'student'
         or str(session.batch_assignments.get(str(user_id), 0)) == str(session.current_batch)
     )
-    if user_role == 'student' and session.status == 'started' and session.start_at and student_batch_is_active and not student_completed:
+    if user_role == 'student' and session.status in {'countdown', 'started'} and session.start_at and student_batch_is_active and not student_completed:
         reader_url = _build_live_assessment_action_url(
             session.material,
             session.id,
@@ -18344,7 +18382,7 @@ def live_assessment_session_action(request, session_id):
         return JsonResponse({'success': False, 'error': 'Invalid action'}, status=400)
 
     reader_url = ''
-    if session.status == 'started' and session.start_at:
+    if session.status in {'countdown', 'started'} and session.start_at:
         reader_url = _build_live_assessment_action_url(
             session.material,
             session.id,

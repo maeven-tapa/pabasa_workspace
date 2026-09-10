@@ -2152,7 +2152,8 @@ function renderStudentDirectory(sourceStudents) {
         const name = student.name || `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unnamed Student';
         const accuracy = formatStudentMetric(student.accuracy, '%');
         const wpm = formatStudentMetric(student.wpm);
-        const levelText = resolveStudentReadingLevel(student);
+        const hasExitedAral = student.aral_exited === true;
+        const levelText = hasExitedAral ? 'Reading At Grade Level' : resolveStudentReadingLevel(student);
         student.level = levelText;
         const levelIndications = {
             'Low Emerging Readers': 'Needs immediate word-level support',
@@ -2162,17 +2163,22 @@ function renderStudentDirectory(sourceStudents) {
             'Readers at Grade Level': 'Ready for enrichment passages',
             'Pending': 'Awaiting assessment'
         };
-        const levelIndication = levelIndications[levelText] || levelIndications.Pending;
+        // The API has already restricted the classification to the current
+        // applicable finalized official CRLA result. Any canonical level is
+        // therefore completed; only the explicit Pending level is awaiting.
+        const levelIndication = levelText === 'Pending'
+            ? levelIndications.Pending
+            : 'Assessment completed';
         const levelClass = getReadingLevelChipClass(levelText);
         const aralLevels = new Set(['Low Emerging Reader', 'High Emerging Reader', 'Developing Reader', 'Transitioning Reader']);
-        const aralIndicatorHtml = aralLevels.has(levelText) && student.aral_status === 'active'
+        const aralIndicatorHtml = aralLevels.has(levelText) && student.aral_status === 'active' && !hasExitedAral
             ? '<span class="student-aral-indicator">ARAL Program</span>'
-            : '';
+            : hasExitedAral ? '<span class="student-aral-indicator">Exited from ARAL Program</span>' : '';
         const levelBadgeHtml = `<div class="d-flex flex-column align-items-end gap-1"><span class="badge rounded-pill level-chip ${levelClass}">${escapeStudentDirectoryHtml(levelText)}</span>${aralIndicatorHtml}<span class="small text-secondary" style="max-width: 240px; text-align: right;">${escapeStudentDirectoryHtml(levelIndication)}</span></div>`;
-        const pendingAralAction = levelText === 'Pending';
+        const pendingAralAction = levelText === 'Pending' || hasExitedAral;
         const moveToAral = levelText === 'Readers at Grade Level';
         const aralActionLabel = moveToAral ? 'Move to ARAL Program' : 'Exit ARAL Program';
-        const aralActionHtml = `<button type="button" class="student-aral-action" data-student-id="${student.id || ''}" data-student-name="${escapeStudentDirectoryHtml(name)}" data-aral-action="${moveToAral ? 'move' : 'exit'}" ${pendingAralAction || (!moveToAral && student.aral_status !== 'active') ? 'disabled' : ''}>${aralActionLabel}</button>`;
+        const aralActionHtml = hasExitedAral ? '' : `<button type="button" class="student-aral-action" data-student-id="${student.id || ''}" data-student-name="${escapeStudentDirectoryHtml(name)}" data-aral-action="${moveToAral ? 'move' : 'exit'}" ${pendingAralAction || (!moveToAral && student.aral_status !== 'active') ? 'disabled' : ''}>${aralActionLabel}</button>`;
         return `
             <article class="student-card-row">
                 <div class="student-avatar" aria-hidden="true">${escapeStudentDirectoryHtml(getStudentInitials(name))}</div>
@@ -2364,6 +2370,12 @@ function bindTeacherAralActions() {
             if (updatedStudent) {
                 updatedStudent.aral_status = payload.aral_status;
                 updatedStudent.aral_eligible = payload.aral_eligible;
+                if (action === 'exit') {
+                    updatedStudent.aral_exited = true;
+                    updatedStudent.reading_level = payload.reading_level;
+                    updatedStudent.crla_classification = payload.reading_level;
+                    updatedStudent.level = payload.reading_level;
+                }
                 if (action === 'move') updatedStudent.reading_level = payload.reading_level;
             }
             bootstrap.Modal.getOrCreateInstance(modalEl).hide();

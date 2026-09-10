@@ -6170,6 +6170,31 @@ class LiveAssessmentStartTests(TestCase):
         self.assertEqual(data["session"]["status"], 'started')
         self.assertIn('reader_url', data["session"])
 
+    def test_live_assessment_session_state_api_redirects_student_during_countdown(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='countdown',
+            countdown_seconds=5,
+            start_at=timezone.now() + timedelta(seconds=5),
+        )
+        student_client = Client()
+        student_session = student_client.session
+        student_session['user_id'] = self.student.id
+        student_session['user_role'] = 'student'
+        student_session.save()
+
+        response = student_client.get(reverse("live_assessment_session_state", kwargs={"session_id": session.id}))
+        self.assertEqual(response.status_code, 200)
+        reader_url = response.json()["session"]["reader_url"]
+        self.assertIn('live_session_id=', reader_url)
+        self.assertIn('crla_fresh=1', reader_url)
+        self.assertIn('countdown=5', reader_url)
+
     def test_student_can_publish_live_assessment_state_updates(self):
         session = LiveAssessmentSession.objects.create(
             id=uuid.uuid4().hex,

@@ -56,6 +56,20 @@ def _bounded_integer(value, minimum, maximum):
     return max(minimum, min(maximum, int(round(number))))
 
 
+def _scoped_score(score_data, state, *keys):
+    """Read a scoped CRLA score without treating zero as missing.
+
+    A completed official attempt is the evidence that the section was
+    administered.  Once a score field is present in either persisted source,
+    numeric zero is a real score (typically an all-skipped section), not a
+    request to leave the workbook cell blank.  ``None``/empty remains the
+    not-administered signal.
+    """
+    return _first_value(
+        *(source.get(key) for source in (score_data, state) for key in keys)
+    )
+
+
 def _full_name(user):
     if not user:
         return ""
@@ -391,19 +405,20 @@ def _student_values(student, attempt, state, assessment):
     minutes, seconds = divmod(duration, 60) if duration is not None else (None, None)
 
     task_1_score = _bounded_integer(
-        _first_value(score_data.get("task1_score"), state.get("task1_score")), 0, 10
+        _scoped_score(score_data, state, "task1_score", "task1_correct_words"), 0, 10
     )
     task_2_type = str(
         _first_value(score_data.get("task2_type"), state.get("task2_type")) or ""
     ).lower()
     task_2_score = _bounded_integer(
         _first_value(
-            score_data.get("task2_score"),
-            score_data.get("task2_rhymes_score"),
-            score_data.get("task2_sentences_score"),
-            state.get("task2_score"),
-            state.get("task2_rhymes_score"),
-            state.get("task2_sentences_score"),
+            _scoped_score(
+                score_data,
+                state,
+                "task2_score",
+                "task2_rhymes_score",
+                "task2_sentences_score",
+            ),
         ),
         0,
         10,
@@ -412,8 +427,8 @@ def _student_values(student, attempt, state, assessment):
     sentence_score = task_2_score if "h" in task_2_type else None
 
     if "h" in task_2_type:
-        persisted_sentence_score = _first_value(
-            score_data.get("task2_sentences_score"), state.get("task2_sentences_score")
+        persisted_sentence_score = _scoped_score(
+            score_data, state, "task2_sentences_score"
         )
         sentence_count = _first_value(score_data.get("sentences_read"), state.get("sentences_read"))
         if persisted_sentence_score is not None:
