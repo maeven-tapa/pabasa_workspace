@@ -1165,15 +1165,15 @@
     <section class="fishing-intro" id="fishingIntro" aria-labelledby="fishingIntroTitle">
         <div class="fishing-intro-card">
             <div class="fishing-intro-icon" aria-hidden="true"><i class="bi bi-volume-up-fill"></i></div>
-            <h2 id="fishingIntroTitle">Phonics Fishing</h2>
-            <p class="fishing-intro-lead">Listen for the sound, then catch its letter!</p>
+            <h2 id="fishingIntroTitle" data-language-text="introTitle">Phonics Fishing</h2>
+            <p class="fishing-intro-lead" data-language-text="introLead">Listen for the sound, then catch its letter!</p>
             <ol class="fishing-intro-steps">
-                <li><span class="fishing-intro-step-icon" aria-hidden="true"><i class="bi bi-volume-up-fill"></i></span><span>Tap the speaker to hear the sound.</span></li>
-                <li><span class="fishing-intro-step-icon" aria-hidden="true">A</span><span>Look at the letters on the fish.</span></li>
-                <li><span class="fishing-intro-step-icon" aria-hidden="true"><i class="bi bi-hand-index-thumb-fill"></i></span><span>Tap the fish with the matching letter.</span></li>
-                <li><span class="fishing-intro-step-icon" aria-hidden="true">✓</span><span>A matching fish is caught, then a new sound begins.</span></li>
+                <li><span class="fishing-intro-step-icon" aria-hidden="true"><i class="bi bi-volume-up-fill"></i></span><span data-language-text="introStep1">Tap the speaker to hear the sound.</span></li>
+                <li><span class="fishing-intro-step-icon" aria-hidden="true">A</span><span data-language-text="introStep2">Look at the letters on the fish.</span></li>
+                <li><span class="fishing-intro-step-icon" aria-hidden="true"><i class="bi bi-hand-index-thumb-fill"></i></span><span data-language-text="introStep3">Tap the fish with the matching letter.</span></li>
+                <li><span class="fishing-intro-step-icon" aria-hidden="true">✓</span><span data-language-text="introStep4">A matching fish is caught, then a new sound begins.</span></li>
             </ol>
-            <button class="fishing-intro-start" id="startFishingButton" type="button">Start Fishing!</button>
+            <button class="fishing-intro-start" id="startFishingButton" type="button" data-language-text="startButton">Start Fishing!</button>
         </div>
     </section>
 
@@ -1242,12 +1242,12 @@
 
     <section id="results" class="results hidden" role="dialog" aria-modal="true" aria-labelledby="resultTitle" tabindex="-1" aria-live="polite">
         <div class="result-modal">
-            <h2 id="resultTitle" class="result-title">🎣 Great Catch!</h2>
-            <p id="resultMessage" class="result-message">You caught them all!</p>
+            <h2 id="resultTitle" class="result-title" data-language-text="resultTitle">🎣 Great Catch!</h2>
+            <p id="resultMessage" class="result-message" data-language-text="resultMessage">You caught them all!</p>
             <div class="score-badge" id="scoreDisplay">0 / 0</div>
-            <p class="result-kicker">YOUR CATCH</p>
+            <p class="result-kicker" data-language-text="resultKicker">YOUR CATCH</p>
             <div id="resultList" class="result-list"></div>
-            <button class="result-action" id="finishButton" type="button">Back to Assessments</button>
+            <button class="result-action" id="finishButton" type="button" data-language-text="finishButton">Back to Assessments</button>
         </div>
     </section>
 </main>
@@ -1265,6 +1265,45 @@
     const language = String(material.language || 'Filipino').toLowerCase();
     const items = Array.isArray(material.items) ? material.items : [];
     const totalItems = items.length;
+
+    const languageText = {
+        english: {
+            introTitle: 'Phonics Fishing',
+            introLead: 'Listen for the sound, then catch its letter!',
+            introStep1: 'Tap the speaker to hear the sound.',
+            introStep2: 'Look at the letters on the fish.',
+            introStep3: 'Tap the fish with the matching letter.',
+            introStep4: 'A matching fish is caught, then a new sound begins.',
+            startButton: 'Start Fishing!',
+            resultTitle: '🎣 Great Catch!',
+            resultMessage: 'You caught them all!',
+            resultKicker: 'YOUR CATCH',
+            finishButton: 'Back to Assessments'
+        },
+        filipino: {
+            introTitle: 'Pangingisda ng Ponika',
+            introLead: 'Pakinggan ang tunog, pagkatapos ay hulihin ang letra nito!',
+            introStep1: 'Pindutin ang speaker upang marinig ang tunog.',
+            introStep2: 'Tingnan ang mga letra sa mga isda.',
+            introStep3: 'Pindutin ang isdang may katugmang letra.',
+            introStep4: 'Mahuhuli ang katugmang isda, pagkatapos ay magsisimula ang bagong tunog.',
+            startButton: 'Simulan ang Pangingisda!',
+            resultTitle: '🎣 Mahusay na Huli!',
+            resultMessage: 'Nahuli mo silang lahat!',
+            resultKicker: 'IYONG MGA HULI',
+            finishButton: 'Bumalik sa mga Pagtatasa'
+        }
+    };
+
+    function applyLanguageText() {
+        const selectedText = language.startsWith('en') ? languageText.english : languageText.filipino;
+        document.querySelectorAll('[data-language-text]').forEach((node) => {
+            const key = node.dataset.languageText;
+            if (selectedText[key]) node.textContent = selectedText[key];
+        });
+    }
+
+    applyLanguageText();
 
     console.log('[LetterSoundMatching] Initialized:', {
         language,

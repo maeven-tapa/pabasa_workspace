@@ -6,6 +6,58 @@
   const fill = document.querySelector('#progressFill');
   const navStepper = document.querySelector('.clap-count-title');
   const items = [...(data.items || [])];
+  const introCopy = String(data.language || '').toLowerCase().startsWith('fil') ? {
+    title: 'Palakpak at Magbilang!',
+    lead: 'Pakinggan ang salita, palakpakan ang mga pantig nito, pagkatapos ay bilangin ang mga ito.',
+    exampleLabel: 'Pakinggan ang salita',
+    exampleWord: 'SAGING',
+    exampleParts: ['SA', 'GING'],
+    exampleCount: '2 palakpak',
+    exampleAria: 'Pakinggan ang saging, palakpakan ang dalawang pantig nito, pagkatapos ay bilangin ang dalawang palakpak',
+    key: 'ISANG PALAKPAK = ISANG PANTIG',
+    start: 'Magsimula Na!'
+  } : {
+    title: 'Clap & Count!',
+    lead: 'Hear the word, clap its syllables, then count them.',
+    exampleLabel: 'Hear the word',
+    exampleWord: 'BANANA',
+    exampleParts: ['BA', 'NA', 'NA'],
+    exampleCount: '3 claps',
+    exampleAria: 'Listen to banana, clap its three syllables, then count three claps',
+    key: 'ONE CLAP = ONE SYLLABLE',
+    start: 'Let’s Start!'
+  };
+  const uiCopy = String(data.language || '').toLowerCase().startsWith('fil') ? {
+    progress: 'Salita', steps: ['Pakinggan', 'Palakpak', 'Bilangin'],
+    listenInstruction: 'Pakinggan ang salita, pagkatapos ay palakpakan ang mga pantig nito.',
+    hearWord: '🔊 Pakinggan ang salita', listening: '🔊 Nakikinig…',
+    buildArea: 'Lugar ng Pagbuo', tapClap: 'I-TAP PARA PUMALAKPAK',
+    clap: 'palakpak', claps: 'palakpak', clear: 'Ulitin', count: 'Bilangin ang aking mga palakpak →',
+    countInstruction: 'Ilang pantig ang iyong pinalakpakan?', countAria: 'Ilang pantig ang iyong narinig?',
+    clapAgain: 'Pumalakpak muli', check: 'Suriin ang aking sagot ✓',
+    retryTitle: 'Pumalakpak muli', retryButton: '👏 Subukang pumalakpak muli',
+    successBanner: '✨ MAGALING! ✨', successTitle: 'Napakahusay ng pagpalakpak!',
+    syllable: 'pantig', syllables: 'pantig', youDidIt: '🐧 Nagawa mo!', finish: 'Tapos na', nextWord: 'Susunod na salita →',
+    saving: 'Sine-save ang resulta…', complete: 'Kumpleto ✓', greatJob: 'Mahusay! 🎉',
+    completedActivity: 'Natapos mo ang Palakpak at Magbilang ng mga Pantig.', activityComplete: 'Aktibidad tapos na',
+    correct: 'tama', back: 'Bumalik sa mga Pagtatasa', saveAgain: 'I-save muli', tryAgain: 'Subukan muli',
+    clapAria: count => `Pumalakpak nang isang beses. ${count} ${count === 1 ? 'palakpak' : 'palakpak'} na ngayon`
+  } : {
+    progress: 'Word', steps: ['Listen', 'Clap', 'Count'],
+    listenInstruction: 'Hear the word, then clap its spoken chunks.',
+    hearWord: '🔊 Hear the word', listening: '🔊 Listening…',
+    buildArea: 'Build Area', tapClap: 'TAP TO CLAP',
+    clap: 'clap', claps: 'claps', clear: 'Start over', count: 'Count my claps →',
+    countInstruction: 'How many syllables did you clap?', countAria: 'How many syllables did you hear?',
+    clapAgain: 'Clap again', check: 'Check my answer ✓',
+    retryTitle: 'Let’s clap again', retryButton: '👏 Try clapping again',
+    successBanner: '✨ GREAT JOB! ✨', successTitle: 'Amazing clapping!',
+    syllable: 'syllable', syllables: 'syllables', youDidIt: '🐧 You crushed it!', finish: 'Finish', nextWord: 'Next word →',
+    saving: 'Saving result…', complete: 'Complete ✓', greatJob: 'Great job! 🎉',
+    completedActivity: 'You completed Clap & Count Syllables.', activityComplete: 'Activity complete',
+    correct: 'correct', back: 'Back to Assessments', saveAgain: 'Save again', tryAgain: 'Please try again',
+    clapAria: count => `Clap once. ${count} ${count === 1 ? 'clap' : 'claps'} so far`
+  };
 
   if (data.randomize_order && !completed.completed) {
     for (let i = items.length - 1; i > 0; i--) {
@@ -38,6 +90,16 @@
   const card = x => `<article class="clap-count-card game-card-container">${x}${mascot()}</article>`;
 
   const phaseStyles = `
+    .clap-count-success {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .clap-count-success #retry {
+      margin-top: 16px;
+    }
     .clap-count-clap-scene {
       position: relative;
       display: grid;
@@ -333,9 +395,9 @@
   }
 
   function steps() {
-    const s = [['listen', '👂', 'Listen'], ['clap', '👏', 'Clap'], ['answer', '🔢', 'Count']];
+    const s = [['listen', '👂', uiCopy.steps[0]], ['clap', '👏', uiCopy.steps[1]], ['answer', '🔢', uiCopy.steps[2]]];
     const p = { listen: 0, clap: 1, answer: 2 }[phase] ?? 2;
-    return `<span class="clap-count-stepper stepper-container" aria-label="Learning steps">${s.map(([n, i, l], x) => `<span class="clap-count-step ${x < p ? 'is-complete' : x === p ? 'is-active' : ''}"><span class="clap-count-step-icon stepper-node-icon">${x < p ? '✓' : i}</span><span class="stepper-node-label">${l}</span></span>${x < 2 ? `<span class="clap-count-step-line ${x < p ? 'is-complete' : ''}"></span>` : ''}`).join('')}</span>`;
+    return `<span class="clap-count-stepper stepper-container" aria-label="${uiCopy.steps.join(' ')}">${s.map(([n, i, l], x) => `<span class="clap-count-step ${x < p ? 'is-complete' : x === p ? 'is-active' : ''}"><span class="clap-count-step-icon stepper-node-icon">${x < p ? '✓' : i}</span><span class="stepper-node-label">${l}</span></span>${x < 2 ? `<span class="clap-count-step-line ${x < p ? 'is-complete' : ''}"></span>` : ''}`).join('')}</span>`;
   }
 
   function panel(instruction, showWord = true, wordClass = '') {
@@ -348,11 +410,11 @@
     const tiles = builtSyllables.length
       ? builtSyllables.map((part, tileIndex) => `<span class="clap-count-built-syllable ${isBuildReceiving && tileIndex === builtSyllables.length - 1 ? 'is-new' : ''}">${esc(part)}</span>`).join('')
       : '<span class="clap-count-build-empty" aria-hidden="true"></span>';
-    return `<div class="clap-count-build-area ${builtSyllables.length === parts().length ? 'is-complete' : ''} ${isBuildReceiving ? 'is-receiving' : ''}" aria-live="polite"><div class="clap-count-build-label">Build Area</div><div class="clap-count-build-tiles">${tiles}</div></div>`;
+    return `<div class="clap-count-build-area ${builtSyllables.length === parts().length ? 'is-complete' : ''} ${isBuildReceiving ? 'is-receiving' : ''}" aria-live="polite"><div class="clap-count-build-label">${uiCopy.buildArea}</div><div class="clap-count-build-tiles">${tiles}</div></div>`;
   }
 
   function update() {
-    progress.textContent = `Word ${Math.min(index + 1, items.length)} of ${items.length}`;
+    progress.textContent = `${uiCopy.progress} ${Math.min(index + 1, items.length)} / ${items.length}`;
     fill.style.width = `${items.length ? ((index + 1) / items.length) * 100 : 100}%`;
     navStepper.classList.add('top-nav-bar');
     navStepper.innerHTML = steps();
@@ -360,6 +422,16 @@
 
   function renderIntro() {
     stage.innerHTML = `<section class="clap-count-intro" aria-labelledby="clapCountIntroTitle"><div class="clap-count-intro-card"><div class="clap-count-intro-icon" aria-hidden="true">🔊</div><h2 id="clapCountIntroTitle">Clap &amp; Count!</h2><p class="clap-count-intro-lead">Hear the word, clap its syllables, then count them.</p><div class="clap-count-intro-example" aria-label="Listen to banana, clap its three syllables, then count three claps"><span class="clap-count-intro-preview-label">Hear the word</span><div class="clap-count-intro-word">BANANA</div><div class="clap-count-intro-clap-preview"><div class="clap-count-intro-claps"><span>BA</span><span>NA</span><span>NA</span></div><span class="clap-count-intro-clap-count" aria-hidden="true">👏<small>3 claps</small></span></div></div><p class="clap-count-intro-key">ONE CLAP = ONE SYLLABLE</p><button class="clap-count-intro-start" id="startClapCountButton" type="button">Let’s Start!</button></div></section>`;
+    const intro = stage.querySelector('.clap-count-intro');
+    intro.querySelector('#clapCountIntroTitle').textContent = introCopy.title;
+    intro.querySelector('.clap-count-intro-lead').textContent = introCopy.lead;
+    intro.querySelector('.clap-count-intro-example').setAttribute('aria-label', introCopy.exampleAria);
+    intro.querySelector('.clap-count-intro-preview-label').textContent = introCopy.exampleLabel;
+    intro.querySelector('.clap-count-intro-word').textContent = introCopy.exampleWord;
+    intro.querySelector('.clap-count-intro-claps').innerHTML = introCopy.exampleParts.map(part => `<span>${esc(part)}</span>`).join('');
+    intro.querySelector('.clap-count-intro-clap-count small').textContent = introCopy.exampleCount;
+    intro.querySelector('.clap-count-intro-key').textContent = introCopy.key;
+    intro.querySelector('#startClapCountButton').textContent = introCopy.start;
     document.querySelector('#startClapCountButton')?.addEventListener('click', () => {
       render();
     }, { once: true });
@@ -373,14 +445,14 @@
     let body = '';
 
     if (phase === 'listen') {
-      body += `${panel('Hear the word, then clap its spoken chunks.', true, 'clap-count-word-listen-phase')}<button class="clap-count-button clap-count-listen" id="listen" type="button">🔊 Hear the word</button>`;
+      body += `${panel(uiCopy.listenInstruction, true, 'clap-count-word-listen-phase')}<button class="clap-count-button clap-count-listen" id="listen" type="button">${uiCopy.hearWord}</button>`;
     } else if (phase === 'clap') {
       const characters = word().replace(/\s/g, '').length;
       const lengthClass = characters > 14 ? 'is-very-long' : characters > 9 ? 'is-long' : characters > 6 ? 'is-medium' : 'is-short';
-      body += `<div class="clap-count-clap-scene"><div class="clap-count-word-display ${lengthClass}"><h2 class="clap-count-word clap-count-word-phase">${esc(word())}</h2></div>${buildArea()}</div><button class="clap-count-clap-button" id="clap" type="button" aria-label="Clap once. ${claps} claps so far"><span class="clap-count-ripple"></span><span id="clapAnimation"></span><span class="clap-count-clap-label">TAP TO CLAP</span></button><p class="clap-count-claps" id="clapCount">${claps} ${claps === 1 ? 'clap' : 'claps'}</p><div class="clap-count-actions"><button class="clap-count-secondary" id="clear" ${(claps || builtSyllables.length) ? '' : 'disabled'}>Start over</button><button class="clap-count-button" id="count" ${builtSyllables.length === parts().length && !isCatchingSyllable ? '' : 'disabled'}>Count my claps →</button></div>`;
+      body += `<div class="clap-count-clap-scene"><div class="clap-count-word-display ${lengthClass}"><h2 class="clap-count-word clap-count-word-phase">${esc(word())}</h2></div>${buildArea()}</div><button class="clap-count-clap-button" id="clap" type="button" aria-label="${uiCopy.clapAria(claps)}"><span class="clap-count-ripple"></span><span id="clapAnimation"></span><span class="clap-count-clap-label">${uiCopy.tapClap}</span></button><p class="clap-count-claps" id="clapCount">${claps} ${claps === 1 ? uiCopy.clap : uiCopy.claps}</p><div class="clap-count-actions"><button class="clap-count-secondary" id="clear" ${(claps || builtSyllables.length) ? '' : 'disabled'}>${uiCopy.clear}</button><button class="clap-count-button" id="count" ${builtSyllables.length === parts().length && !isCatchingSyllable ? '' : 'disabled'}>${uiCopy.count}</button></div>`;
     } else {
       const buttons = [1, 2, 3, 4, 5].map(n => `<button class="clap-count-answer ${choice === n ? 'is-selected' : ''}" data-answer="${n}" aria-pressed="${choice === n}">${n}</button>`).join('');
-      body += `${panel('How many syllables did you clap?')}<div class="clap-count-answer-grid" aria-label="How many syllables did you hear?">${buttons}</div><div class="clap-count-actions"><button class="clap-count-secondary" id="again">Clap again</button><button class="clap-count-button" id="check" ${choice === null ? 'disabled' : ''}>Check my answer ✓</button></div>`;
+      body += `${panel(uiCopy.countInstruction)}<div class="clap-count-answer-grid" aria-label="${uiCopy.countAria}">${buttons}</div><div class="clap-count-actions"><button class="clap-count-secondary" id="again">${uiCopy.clapAgain}</button><button class="clap-count-button" id="check" ${choice === null ? 'disabled' : ''}>${uiCopy.check}</button></div>`;
     }
 
     stage.innerHTML = card(`<div class="clap-count-content">${body}</div>`);
@@ -425,7 +497,7 @@
     if (button) {
       button.disabled = true;
       button.classList.add('is-playing');
-      button.textContent = '🔊 Listening…';
+      button.textContent = uiCopy.listening;
     }
     const wordElement = document.querySelector('.clap-count-word');
     wordElement?.classList.add('is-listening');
@@ -497,7 +569,7 @@
         claps = revealedSyllableCount;
 
         const countElement = document.querySelector('#clapCount');
-        if (countElement) countElement.textContent = `${claps} ${claps === 1 ? 'clap' : 'claps'}`;
+        if (countElement) countElement.textContent = `${claps} ${claps === 1 ? uiCopy.clap : uiCopy.claps}`;
 
         const clearButton = document.querySelector('#clear');
         const countButton = document.querySelector('#count');
@@ -527,7 +599,7 @@
 
   function retry() {
     update();
-    stage.innerHTML = card(`<div class="clap-count-content"><section class="clap-count-success"><h2>Let’s clap again</h2><p><strong>${esc(word())}</strong></p>${buildArea()}<button class="clap-count-button" id="retry">👏 Try clapping again</button></section></div>`);
+    stage.innerHTML = card(`<div class="clap-count-content"><section class="clap-count-success"><h2>${uiCopy.retryTitle}</h2><p><strong>${esc(word())}</strong></p>${buildArea()}<button class="clap-count-button" id="retry">${uiCopy.retryButton}</button></section></div>`);
     document.querySelector('#retry').onclick = () => {
       phase = 'clap';
       choice = null;
@@ -538,7 +610,7 @@
 
   function success() {
     update();
-    stage.innerHTML = card(`<div class="clap-count-content"><section class="clap-count-success"><div class="clap-count-success-banner">✨ GREAT JOB! ✨</div><h2 class="clap-count-success-title">Amazing clapping!</h2><p class="clap-count-success-word">${esc(word())}</p><div class="clap-count-result-syllables" aria-label="Syllable breakdown">${parts().map(part => `<span class="clap-count-result-chip">${esc(part)}</span>`).join('')}</div><p class="clap-count-syllable-total">👏 ${item().syllable_count} ${+item().syllable_count === 1 ? 'syllable' : 'syllables'} 👏</p><p class="clap-count-mascot-cheer">🐧 You crushed it!</p><button class="clap-count-button clap-count-success-next" id="next">${index === items.length - 1 ? 'Finish' : 'Next word →'}</button></section></div>`);
+    stage.innerHTML = card(`<div class="clap-count-content"><section class="clap-count-success"><div class="clap-count-success-banner">${uiCopy.successBanner}</div><h2 class="clap-count-success-title">${uiCopy.successTitle}</h2><p class="clap-count-success-word">${esc(word())}</p><div class="clap-count-result-syllables" aria-label="${uiCopy.countInstruction}">${parts().map(part => `<span class="clap-count-result-chip">${esc(part)}</span>`).join('')}</div><p class="clap-count-syllable-total">👏 ${item().syllable_count} ${+item().syllable_count === 1 ? uiCopy.syllable : uiCopy.syllables} 👏</p><p class="clap-count-mascot-cheer">${uiCopy.youDidIt}</p><button class="clap-count-button clap-count-success-next" id="next">${index === items.length - 1 ? uiCopy.finish : uiCopy.nextWord}</button></section></div>`);
     document.querySelector('#next').onclick = () => {
       index += 1;
       phase = 'listen';
@@ -552,7 +624,7 @@
   async function finish() {
     progress.textContent = 'Complete ✓';
     fill.style.width = '100%';
-    stage.innerHTML = card(`<div class="clap-count-content"><section class="clap-count-success"><div class="clap-count-phase">Saving result…</div><h2>Great job! 🎉</h2><p>You completed Clap &amp; Count Syllables.</p></section></div>`);
+    stage.innerHTML = card(`<div class="clap-count-content"><section class="clap-count-success"><div class="clap-count-phase">${uiCopy.saving}</div><h2>${uiCopy.greatJob}</h2><p>${uiCopy.completedActivity}</p></section></div>`);
 
     try {
       const response = await fetch('/record-assessment-completion/', {
@@ -574,17 +646,17 @@
       const result = await response.json();
       if (!response.ok || !result.success) throw Error(result.error || 'Unable to save result.');
 
-      stage.innerHTML = card(`<div class="clap-count-content"><section class="clap-count-success"><div class="clap-count-phase">Activity complete</div><h2>Great job! 🎉</h2><p>${+result.correct_items || 0} of ${+result.items_completed || 0} correct · ${+result.accuracy || 0}%</p><a class="clap-count-button" href="/dashboard/assessment/">Back to Assessments →</a></section></div>`);
+      stage.innerHTML = card(`<div class="clap-count-content"><section class="clap-count-success"><div class="clap-count-phase">${uiCopy.activityComplete}</div><h2>${uiCopy.greatJob}</h2><p>${+result.correct_items || 0} / ${+result.items_completed || 0} ${uiCopy.correct} · ${+result.accuracy || 0}%</p><a class="clap-count-button" href="/dashboard/assessment/">${uiCopy.back} →</a></section></div>`);
     } catch (error) {
-      stage.innerHTML = card(`<div class="clap-count-content"><section class="clap-count-success"><h2>Please try again</h2><p>${esc(error.message)}</p><button class="clap-count-button" id="save">Save again</button></section></div>`);
+      stage.innerHTML = card(`<div class="clap-count-content"><section class="clap-count-success"><h2>${uiCopy.tryAgain}</h2><p>${esc(error.message)}</p><button class="clap-count-button" id="save">${uiCopy.saveAgain}</button></section></div>`);
       document.querySelector('#save').onclick = finish;
     }
   }
 
   if (completed.completed) {
-    progress.textContent = 'Completed ✓';
+    progress.textContent = `${uiCopy.complete}`;
     fill.style.width = '100%';
-    stage.innerHTML = card(`<div class="clap-count-content"><section class="clap-count-success"><div class="clap-count-phase">Completed ✓</div><h2>Activity finished!</h2><p>${+completed.correct_items || 0} of ${+completed.total_items || 0} correct · ${+completed.accuracy || 0}%</p><a class="clap-count-button" href="/dashboard/assessment/">Back to Assessments →</a></section></div>`);
+    stage.innerHTML = card(`<div class="clap-count-content"><section class="clap-count-success"><div class="clap-count-phase">${uiCopy.complete}</div><h2>${uiCopy.greatJob}</h2><p>${+completed.correct_items || 0} / ${+completed.total_items || 0} ${uiCopy.correct} · ${+completed.accuracy || 0}%</p><a class="clap-count-button" href="/dashboard/assessment/">${uiCopy.back} →</a></section></div>`);
   } else if (items.length) {
     renderIntro();
   }
