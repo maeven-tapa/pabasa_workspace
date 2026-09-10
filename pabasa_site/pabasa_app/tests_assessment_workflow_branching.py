@@ -9,6 +9,7 @@ from django.urls import reverse
 
 from pabasa_app.views import (
     _aral_eligible_classification,
+    _canonical_live_recovery_state,
     _crla_grade2_part1_level,
     _crla_grade2_part2_profile,
     _is_finalized_grade_level_crla_result,
@@ -324,6 +325,15 @@ class AssessmentWorkflowBranchingTests(TestCase):
         self.assertIn("reader_classification: readerClassification", writer)
         self.assertIn("JSON.stringify(synchronizedState)", writer)
         self.assertIn("renderPersistedEndState(readStudentEndState());", completion)
+
+    def test_crla_completion_transitions_use_serialized_recovery_writer(self):
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        completion = source.split("async function showCompletion", 1)[1].split("function renderMyMaterialsCompletion", 1)[0]
+        self.assertIn("await updateStudentEndState(learnerExperienceState);", completion)
+        self.assertNotIn("writeStudentEndState(learnerExperienceState)", completion)
+        finish_handler = source.split("finishBtn?.addEventListener", 1)[1].split("if (isReviewMode)", 1)[0]
+        self.assertIn("await updateStudentEndState({ ...state, stage: \"transition_to_rhymes\"", finish_handler)
+        self.assertIn("await updateStudentEndState({ ...state, stage: \"transition_to_sentence\"", finish_handler)
 
     def test_completed_part2_persistence_rejects_incomplete_client_classification_without_material(self):
         student = SimpleNamespace(id=1, pk=1, reading_level="")
@@ -692,6 +702,108 @@ class AssessmentWorkflowBranchingTests(TestCase):
         })
         self.assertEqual(end_state.get("next_stage"), "sentences")
         self.assertEqual(end_state.get("stage"), "transition_to_sentence")
+
+    def test_word_branch_boundaries_route_to_the_official_task(self):
+        for score, expected_stage, expected_next in (
+            (0, "transition_to_rhymes", "rhymes"),
+            (6, "transition_to_rhymes", "rhymes"),
+            (7, "transition_to_sentence", "sentences"),
+            (10, "transition_to_sentence", "sentences"),
+        ):
+            with self.subTest(score=score):
+                end_state = self._run_sync({
+                    "assessment_type": "word",
+                    "correct_words": score,
+                })
+                self.assertEqual(end_state.get("stage"), expected_stage)
+                self.assertEqual(end_state.get("branch"), expected_next)
+                self.assertEqual(end_state.get("next_stage"), expected_next)
+                self.assertEqual(end_state.get("task1_score"), score)
+                expected_automatic_rhymes = 10 if score >= 7 else None
+                self.assertEqual(end_state.get("task2_rhymes_score"), expected_automatic_rhymes)
+                self.assertEqual(
+                    end_state.get("task2_type"),
+                    "Task 2H / Sentences" if score >= 7 else "Task 2L / Rhymes",
+                )
+                self.assertIsNone(end_state.get("task2_sentences_score"))
+
+    def test_rhymes_boundaries_choose_part1_terminal_or_story(self):
+        for task1_score, rhymes_score, expected_stage, expected_next, expected_total in (
+            (0, 0, "early_completed_words", "completed", 0),
+            (6, 4, "early_completed_words", "completed", 10),
+            (6, 5, "transition_to_story", "story_selection", 11),
+        ):
+            with self.subTest(task1_score=task1_score, rhymes_score=rhymes_score):
+                end_state = self._run_sync({
+                    "assessment_type": "word",
+                    "correct_words": task1_score,
+                    "task2_rhymes_score": rhymes_score,
+                })
+                self.assertEqual(end_state.get("stage"), expected_stage)
+                self.assertEqual(end_state.get("next_stage"), expected_next)
+                self.assertEqual(end_state.get("part1_total_score"), expected_total)
+                self.assertEqual(end_state.get("task2_rhymes_score"), rhymes_score)
+                self.assertIsNone(end_state.get("task2_sentences_score"))
+
+    def test_sentence_branch_boundaries_include_automatic_rhymes_score(self):
+        for task1_score, sentences_read, expected_stage, expected_next, expected_total, expected_sentence_score in (
+            (7, 0, "transition_to_story", "story_selection", 17, 0),
+            (10, 4, "transition_to_story", "story_selection", 30, 10),
+        ):
+            with self.subTest(task1_score=task1_score, sentences_read=sentences_read):
+                end_state = self._run_sync({
+                    "assessment_type": "sentence",
+                    "correct_words": task1_score,
+                    "correct_sentences": sentences_read,
+                    "items_completed": 4,
+                }, {"correct_words": task1_score, "stage": "sentences"})
+                self.assertEqual(end_state.get("stage"), expected_stage)
+                self.assertEqual(end_state.get("next_stage"), expected_next)
+                self.assertEqual(end_state.get("part1_total_score"), expected_total)
+                self.assertEqual(end_state.get("task2_sentences_score"), expected_sentence_score)
+                self.assertEqual(end_state.get("task2_rhymes_score"), 10)
+                self.assertEqual(end_state.get("task2_type"), "Task 2H / Sentences")
+
+    def test_live_recovery_canonicalizes_completed_words_to_sentence_stage(self):
+        state = _canonical_live_recovery_state({
+            "stage": "words",
+            "branch": "words",
+            "task1_score": 8,
+            "correct_words": 8,
+            "next_stage": "",
+            "locked_items_count": 10,
+        })
+        self.assertEqual(state["stage"], "sentences")
+        self.assertEqual(state["branch"], "sentences")
+        self.assertEqual(state["next_stage"], "sentences")
+        self.assertEqual(state["task1_score"], 8)
+        self.assertEqual(state["correct_words"], 8)
+
+    def test_live_recovery_does_not_promote_partially_completed_words(self):
+        state = _canonical_live_recovery_state({
+            "stage": "words",
+            "branch": "words",
+            "task1_score": 8,
+            "correct_words": 8,
+            "next_stage": "",
+            "locked_items_count": 9,
+        })
+        self.assertEqual(state["stage"], "words")
+        self.assertEqual(state["branch"], "words")
+        self.assertEqual(state["next_stage"], "")
+
+    def test_live_recovery_replaces_stale_wrong_words_destination(self):
+        state = _canonical_live_recovery_state({
+            "stage": "words",
+            "branch": "rhymes",
+            "task1_score": 8,
+            "correct_words": 8,
+            "next_stage": "rhymes",
+            "locked_items_count": 10,
+        })
+        self.assertEqual(state["stage"], "sentences")
+        self.assertEqual(state["branch"], "sentences")
+        self.assertEqual(state["next_stage"], "sentences")
 
     def test_high_branch_persists_workbook_fields(self):
         end_state = self._run_sync({

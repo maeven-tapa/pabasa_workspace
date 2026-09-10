@@ -1806,7 +1806,8 @@ def _crla_grade2_next_stage(assessment_type, score_payload=None):
         )
         correct_words = _to_int(score_payload.get('correct_words')) or 0
         sentence_score = crla_sentence_score(correct_sentences)
-        cumulative_score = correct_words + sentence_score
+        automatic_rhymes_score = 10 if 7 <= correct_words <= 10 else 0
+        cumulative_score = correct_words + automatic_rhymes_score + sentence_score
         return 'early_completed_sentences' if cumulative_score <= 10 else 'transition_to_story'
     if assessment_type == 'paragraph':
         story_read_percent = _to_float(
@@ -2796,7 +2797,8 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
                 student_end_state['branch'] = 'rhymes' if task1_score <= 6 else 'sentences'
                 student_end_state['correct_words'] = task1_score
                 student_end_state['task1_score'] = task1_score
-                student_end_state['task2_rhymes_score'] = None
+                student_end_state['task2_type'] = 'Task 2L / Rhymes' if task1_score <= 6 else 'Task 2H / Sentences'
+                student_end_state['task2_rhymes_score'] = 10 if task1_score >= 7 else None
                 student_end_state['task2_sentences_score'] = None
                 student_end_state['part1_total_score'] = None
                 student_end_state['part1_reading_level'] = ''
@@ -2834,6 +2836,7 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
             student_end_state['score'] = part1_total
             student_end_state['task2_sentences_score'] = None
             student_end_state['task1_score'] = task1_score
+            student_end_state['task2_type'] = 'Task 2L / Rhymes'
             student_end_state['task2_rhymes_score'] = rhymes_score
             student_end_state['part1_total_score'] = part1_total
             student_end_state['part1_reading_level'] = _crla_grade2_part1_level(
@@ -2848,6 +2851,7 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
             student_end_state['stage'] = workflow_stage or 'sentences'
             student_end_state['next_stage'] = 'story_selection' if workflow_stage == 'transition_to_story' else 'completed'
             student_end_state['branch'] = 'sentences'
+            student_end_state['task2_type'] = 'Task 2H / Sentences'
             correct_words = _safe_int(student_end_state.get('correct_words')) or 0
             correct_sentences = _safe_int(student_end_state.get('correct_sentences')) or 0
             sentence_score = crla_sentence_score(correct_sentences)
@@ -2861,10 +2865,9 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
                 student_end_state.get('correct_words'),
                 part1_total,
             )
-            if automatic_rhymes_score:
-                student_end_state['task2_rhymes_score'] = automatic_rhymes_score
-            else:
-                student_end_state['task2_rhymes_score'] = None
+            # Words scores 7-10 skip the Rhymes activity but receive its
+            # official automatic 10-point score in the Part 1 total.
+            student_end_state['task2_rhymes_score'] = automatic_rhymes_score or None
             student_end_state['sentences_read'] = correct_sentences
             student_end_state['task2_sentences_score'] = sentence_score
             student_end_state['part1_total_score'] = part1_total
@@ -11889,6 +11892,7 @@ def teacher_aral_action(request):
 def reading_word_page(request):
     live_session_id = str(request.GET.get('live_session_id') or '').strip()
     live_session = None
+    student_state = {}
     if live_session_id:
         live_session = LiveAssessmentSession.objects.filter(id=live_session_id).first()
         current_user_id = request.session.get('user_id')
@@ -11902,6 +11906,18 @@ def reading_word_page(request):
             or not _is_live_crla_material(live_session.material)
         ):
             return HttpResponseForbidden('You are not authorized to join this live CRLA assessment.')
+        student_state = (live_session.student_states or {}).get(str(current_user_id), {})
+        if request.GET.get('live_recovery') == '1':
+            recovery_state = _canonical_live_recovery_state(student_state.get('recovery_state'))
+            if recovery_state.get('stage') in {'rhymes', 'sentences'}:
+                return redirect(_build_live_assessment_action_url(
+                    live_session.material,
+                    live_session.id,
+                    live_session.start_at.isoformat() if live_session.start_at else '',
+                    live_session.countdown_seconds,
+                    recovery=True,
+                    stage=recovery_state.get('stage'),
+                ))
     canonical_response = _canonicalize_custom_material_reading_url(request)
     if canonical_response:
         return canonical_response
@@ -13576,13 +13592,30 @@ def reading_sentence_page(request):
     access_response = _enforce_student_access_for_request(request)
     if access_response:
         return access_response
+    live_session_id = str(request.GET.get('live_session_id') or '').strip()
+    live_session = None
+    live_student_state = {}
+    if live_session_id:
+        live_session = LiveAssessmentSession.objects.filter(id=live_session_id).first()
+        current_user_id = request.session.get('user_id')
+        _, requested_material_id = _parse_prefixed_id(request.GET.get('official_assessment_id'))
+        if (
+            request.session.get('user_role') != 'student'
+            or not live_session
+            or live_session.status not in LIVE_ASSESSMENT_ACTIVE_STATUSES
+            or str(current_user_id) not in {str(value) for value in (live_session.student_ids or [])}
+            or str(requested_material_id or '') != str(live_session.material_id)
+            or not _is_live_crla_material(live_session.material)
+        ):
+            return HttpResponseForbidden('You are not authorized to join this live CRLA assessment.')
+        live_student_state = (live_session.student_states or {}).get(str(current_user_id), {})
     canonical_response = _canonicalize_custom_material_reading_url(request)
     if canonical_response:
         return canonical_response
     context = _dashboard_context(request)
     context.update(_custom_material_reading_context(request))
     context['student_end_assessment_state_json'] = json.dumps(
-        (_get_user_state(User.objects.filter(id=request.session.get('user_id')).first()).get('student_end_assessment_state') or {}),
+        (_canonical_live_recovery_state(live_student_state.get('recovery_state')) if request.GET.get('live_recovery') == '1' and live_student_state else _get_user_state(User.objects.filter(id=request.session.get('user_id')).first()).get('student_end_assessment_state') or {}),
         default=str, separators=(',', ':'),
     )
     official_assessment_id = request.GET.get('official_assessment_id') or ''
@@ -14041,14 +14074,14 @@ def persist_student_end_assessment_state(request):
         'correct_words', 'correct_sentences', 'sentence_items_administered',
         'cumulative_correct', 'classification', 'selected_story',
         'selected_story_content', 'story_read_percent', 'correct_answers',
-        'task1_score', 'task2_rhymes_score', 'task2_sentences_score',
+        'task1_score', 'task2_type', 'task2_rhymes_score', 'task2_sentences_score',
         'part1_total_score', 'part1_reading_level',
         'learner_experience', 'learner_experience_rating',
         'total_words_read', 'story_total_words', 'total_story_words', 'words_read',
         'miscues', 'duration_seconds', 'wpm', 'correct_words_percentage',
         'comprehension_total', 'total_questions', 'comprehension_correct', 'correct_answers',
         'passage_accuracy_percent', 'story_number', 'selected_story_content',
-        'story_segment_index', 'crla_question_index', 'crla_answers', 'crla_results',
+        'story_segment_index', 'crla_question_index', 'locked_items_count', 'crla_answers', 'crla_results',
     }
     saved = {key: payload.get(key) for key in allowed_fields if key in payload}
     # Retain the browser measurement as audit/display evidence.  The canonical
@@ -14057,6 +14090,30 @@ def persist_student_end_assessment_state(request):
         saved['submitted_story_read_percent'] = saved.get('story_read_percent')
     saved['stage'] = stage
     saved['updated_at'] = system_now().isoformat()
+    # A stale Words progress request must not erase a finalized branch handoff.
+    # Once Task 1 has a bounded score, derive its destination from that score
+    # before storing recovery state.
+    if stage == 'words':
+        try:
+            task1_score = int(float(
+                saved.get('task1_score')
+                if saved.get('task1_score') is not None
+                else saved.get('correct_words')
+            ))
+        except (TypeError, ValueError):
+            task1_score = None
+        try:
+            locked_items_count = int(saved.get('locked_items_count') or 0)
+        except (TypeError, ValueError):
+            locked_items_count = 0
+        if task1_score is not None and 0 <= task1_score <= 10 and (
+            locked_items_count >= 10 or not str(saved.get('next_stage') or '').strip()
+        ):
+            saved['stage'] = 'transition_to_rhymes' if task1_score <= 6 else 'transition_to_sentence'
+            saved['branch'] = 'rhymes' if task1_score <= 6 else 'sentences'
+            saved['next_stage'] = 'rhymes' if task1_score <= 6 else 'sentences'
+            saved['correct_words'] = task1_score
+            saved['task1_score'] = task1_score
     state = _get_user_state(student)
     _, saved_material_id = _parse_prefixed_id(saved.get('material_id'))
     saved_material = Material.objects.filter(pk=saved_material_id).first() if saved_material_id else None
@@ -14952,12 +15009,57 @@ def _practice_difficulty_is_accessible(mode, difficulty, student_user=None):
     return False
 
 
-def _build_live_assessment_action_url(material, session_id, start_at, countdown_seconds=10, recovery=False):
+def _canonical_live_recovery_state(recovery_state):
+    if not isinstance(recovery_state, dict):
+        return {}
+    normalized = dict(recovery_state)
+    stage = str(normalized.get('stage') or '').strip().lower()
+    if stage != 'words':
+        return normalized
+    try:
+        task1_score = int(float(
+            normalized.get('task1_score')
+            if normalized.get('task1_score') is not None
+            else normalized.get('correct_words')
+        ))
+    except (TypeError, ValueError):
+        return normalized
+    try:
+        locked_items_count = int(normalized.get('locked_items_count') or 0)
+    except (TypeError, ValueError):
+        locked_items_count = 0
+    if not (0 <= task1_score <= 10 and locked_items_count >= 10):
+        return normalized
+    next_stage = 'rhymes' if task1_score <= 6 else 'sentences'
+    normalized.update({
+        'stage': next_stage,
+        'branch': next_stage,
+        'next_stage': next_stage,
+        'correct_words': task1_score,
+        'task1_score': task1_score,
+    })
+    return normalized
+
+
+def _live_recovery_reader_stage(recovery_state):
+    normalized = _canonical_live_recovery_state(recovery_state)
+    stage = str(normalized.get('stage') or '').strip().lower()
+    if stage in {'transition_to_rhymes', 'transition_to_sentence'}:
+        stage = str(normalized.get('next_stage') or '').strip().lower()
+    return stage if stage in {'words', 'rhymes', 'sentences'} else ''
+
+
+def _build_live_assessment_action_url(material, session_id, start_at, countdown_seconds=10, recovery=False, stage=None):
     if not material:
         return ''
 
     # Live CRLA only adds a release gate. The reader must resolve the same
     # official payload and fresh-attempt marker used by the normal workflow.
+    stage = str(stage or '').strip().lower()
+    reader_route = {
+        'rhymes': 'reading_word_page',
+        'sentences': 'reading_sentence_page',
+    }.get(stage, 'reading_word_page')
     params = {
         'official_assessment_id': str(material.id),
         'live': '1',
@@ -14969,8 +15071,10 @@ def _build_live_assessment_action_url(material, session_id, start_at, countdown_
         params['crla_fresh'] = '1'
     else:
         params['live_recovery'] = '1'
+        if stage in {'rhymes', 'sentences'}:
+            params['crla_stage'] = stage
     query = '&'.join(f'{key}={quote(str(value), safe="")}' for key, value in params.items())
-    return f'{reverse("reading_word_page")}?{query}'
+    return f'{reverse(reader_route)}?{query}'
 
 
 def _build_live_assessment_control_url(session_id):
@@ -17529,7 +17633,40 @@ def live_assessment_session_state(request, session_id):
 
     reader_url = ''
     student_state = (session.student_states or {}).get(str(user_id), {}) if isinstance(session.student_states, dict) else {}
-    student_completed = str(student_state.get('status') or '').lower() in {'completed', 'skipped'}
+    if user_role == 'student' and isinstance(student_state.get('recovery_state'), dict):
+        recovery_state = _canonical_live_recovery_state(student_state.get('recovery_state'))
+        if recovery_state != student_state.get('recovery_state'):
+            def apply_recovery_state(current):
+                current_student_state = (current.student_states or {}).get(str(user_id), {})
+                current_recovery_state = current_student_state.get('recovery_state')
+                canonical_state = _canonical_live_recovery_state(current_recovery_state)
+                if canonical_state == current_recovery_state:
+                    return None
+                updated_student_state = {
+                    **current_student_state,
+                    'recovery_state': canonical_state,
+                }
+                current.student_states = {
+                    **(current.student_states or {}),
+                    str(user_id): updated_student_state,
+                }
+                return {'student_states'}
+
+            canonical_session, _ = _mutate_live_session_state(session.id, apply_recovery_state)
+            if canonical_session is not None:
+                session = canonical_session
+                student_state = (session.student_states or {}).get(str(user_id), {})
+            else:
+                student_state = {
+                    **student_state,
+                    'recovery_state': recovery_state,
+                }
+    recovery_stage = _live_recovery_reader_stage(student_state.get('recovery_state'))
+    has_pending_recovery = recovery_stage in {'rhymes', 'sentences'}
+    student_completed = (
+        str(student_state.get('status') or '').lower() in {'completed', 'skipped'}
+        and not has_pending_recovery
+    )
     student_batch_is_active = (
         user_role != 'student'
         or str(session.batch_assignments.get(str(user_id), 0)) == str(session.current_batch)
@@ -17541,6 +17678,7 @@ def live_assessment_session_state(request, session_id):
             session.start_at.isoformat(),
             session.countdown_seconds,
             recovery=bool(student_state.get('recovery_state')),
+            stage=recovery_stage,
         )
 
     # Provide available roster for teachers so the UI can render the selection list

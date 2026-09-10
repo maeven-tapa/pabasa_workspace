@@ -327,6 +327,11 @@
     }
 
     if (['completed', 'submitted'].includes(String(state.viewer_student_state?.status || '').toLowerCase())) {
+      if (state.reader_url) {
+        stopPolling();
+        redirectToReader(state.reader_url);
+        return;
+      }
       setText('waitingMessage', 'Assessment Complete');
       document.querySelector('.waiting-room-description').textContent = 'You have finished your Live CRLA assessment. Please wait for your teacher to end the session.';
       return;

@@ -673,10 +673,24 @@
         let studentEndStateWriteQueue = Promise.resolve();
 
         function updateStudentEndState(patch, options = {}) {
+            const current = readStudentEndState();
+            const nextState = {
+                ...current,
+                ...(patch || {}),
+            };
+            if (nextState.stage && options.optimisticLocalStorage !== false) {
+                try {
+                    localStorage.setItem(getStudentEndStateKey(), JSON.stringify({
+                        version: studentEndStateVersion,
+                        ...nextState,
+                        material_id: String(officialAssessmentId || materialId || "").trim(),
+                        updated_at: new Date().toISOString(),
+                    }));
+                } catch (error) {}
+            }
             const operation = studentEndStateWriteQueue.then(() => {
-                const current = readStudentEndState();
                 return writeStudentEndState({
-                    ...current,
+                    ...readStudentEndState(),
                     ...(patch || {}),
                 }, options);
             });
@@ -4965,15 +4979,17 @@
                 branchState.learner_experience = persistedLearnerExperienceRating;
             }
             if (currentAssessmentBranch === "words") {
-                branchState.stage = branchScore <= 6 ? "transition_to_rhymes" : "transition_to_sentence";
-                branchState.next_stage = branchScore <= 6 ? "rhymes" : "sentences";
+                const proceedsToRhymes = branchScore <= 6;
+                branchState.stage = proceedsToRhymes ? "transition_to_rhymes" : "transition_to_sentence";
+                branchState.next_stage = proceedsToRhymes ? "rhymes" : "sentences";
                 branchState.correct_words = branchScore;
                 // Word Reading only determines which CRLA section comes next.
                 // Classification is derived after the complete assessment.
                 branchState.classification = "";
-                branchState.branch = "rhymes";
+                branchState.branch = proceedsToRhymes ? "rhymes" : "sentences";
                 branchState.task1_score = branchScore;
-                branchState.task2_rhymes_score = 10;
+                branchState.task2_type = proceedsToRhymes ? "Task 2L / Rhymes" : "Task 2H / Sentences";
+                branchState.task2_rhymes_score = proceedsToRhymes ? null : 10;
                 branchState.task2_sentences_score = null;
                 branchState.part1_total_score = null;
                 branchState.part1_reading_level = "";
@@ -4987,6 +5003,7 @@
                 branchState.cumulative_correct = part1Total;
                 branchState.branch = "rhymes";
                 branchState.task1_score = correctWords;
+                branchState.task2_type = "Task 2L / Rhymes";
                 branchState.task2_rhymes_score = branchScore;
                 branchState.task2_sentences_score = null;
                 branchState.part1_total_score = part1Total;
@@ -5003,7 +5020,8 @@
             } else if (currentAssessmentBranch === "sentences_low" || currentAssessmentBranch === "sentences_high" || currentAssessmentBranch === "sentences") {
                 const correctWords = Number(previousEndState.correct_words ?? 0);
                 const sentenceScore = getCrlaSentenceScore(branchScore);
-                const cumulativeCorrect = correctWords + sentenceScore;
+                const automaticRhymesScore = correctWords >= 7 && correctWords <= 10 ? 10 : 0;
+                const cumulativeCorrect = correctWords + automaticRhymesScore + sentenceScore;
                 const part1Total = cumulativeCorrect;
                 branchState.stage = part1Total <= 10 ? "early_completed_sentences" : "transition_to_story";
                 branchState.next_stage = part1Total <= 10 ? "completed" : "story_selection";
@@ -5017,7 +5035,8 @@
                 branchState.classification = part1Total <= 10 ? "High Emerging Reader" : "";
                 branchState.branch = "sentences";
                 branchState.task1_score = correctWords;
-                branchState.task2_rhymes_score = null;
+                branchState.task2_type = "Task 2H / Sentences";
+                branchState.task2_rhymes_score = automaticRhymesScore || null;
                 branchState.task2_sentences_score = sentenceScore;
                 branchState.part1_total_score = part1Total;
                 branchState.part1_reading_level = part1Total <= 10
@@ -5092,7 +5111,7 @@
                     stage: "learner_experience",
                     next_stage: "completed",
                 };
-                if (!isMyMaterials) writeStudentEndState(learnerExperienceState);
+                if (!isMyMaterials) await updateStudentEndState(learnerExperienceState);
                 renderLearnerExperienceState();
                 return;
             }
@@ -5101,7 +5120,7 @@
                 branchState.next_stage = "completed";
             }
             if (!isMyMaterials && branchState.stage) {
-                writeStudentEndState(branchState);
+                updateStudentEndState(branchState);
             }
             const nextStageUrlMap = {
                 rhymes: buildCrlaStageUrl("rhymes", branchState),
@@ -6750,9 +6769,9 @@
                 finishBtn.disabled = true;
                 const state = readStudentEndState();
                 if (state.stage === "transition_to_rhymes") {
-                    await writeStudentEndState({ ...state, stage: "transition_to_rhymes", next_stage: state.next_stage || "rhymes" });
+                    await updateStudentEndState({ ...state, stage: "transition_to_rhymes", next_stage: state.next_stage || "rhymes" });
                 } else if (state.stage === "transition_to_sentence") {
-                    await writeStudentEndState({ ...state, stage: "transition_to_sentence", next_stage: state.next_stage || "sentences" });
+                    await updateStudentEndState({ ...state, stage: "transition_to_sentence", next_stage: state.next_stage || "sentences" });
                 } else if (state.stage === "transition_to_story") {
                     await updateStudentEndState({ stage: "story_selection", next_stage: "story_selection" });
                 }
