@@ -1808,7 +1808,9 @@ def _crla_grade2_next_stage(assessment_type, score_payload=None):
         sentence_score = crla_sentence_score(correct_sentences)
         automatic_rhymes_score = 10 if 7 <= correct_words <= 10 else 0
         cumulative_score = correct_words + automatic_rhymes_score + sentence_score
-        return 'early_completed_sentences' if cumulative_score <= 10 else 'transition_to_story'
+        # Words 7-10 already include the automatic Rhymes score of 10, so
+        # Sentence Reading can never terminate Part 1.
+        return 'transition_to_story'
     if assessment_type == 'paragraph':
         story_read_percent = _to_float(
             score_payload.get('story_read_percent')
@@ -2848,8 +2850,8 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
                 state['reader_classification'] = 'Low Emerging Reader'
                 state['aral_eligible'] = bool(_aral_eligible_classification('Low Emerging Reader'))
         elif assessment_type == 'sentence':
-            student_end_state['stage'] = workflow_stage or 'sentences'
-            student_end_state['next_stage'] = 'story_selection' if workflow_stage == 'transition_to_story' else 'completed'
+            student_end_state['stage'] = 'transition_to_story'
+            student_end_state['next_stage'] = 'story_selection'
             student_end_state['branch'] = 'sentences'
             student_end_state['task2_type'] = 'Task 2H / Sentences'
             correct_words = _safe_int(student_end_state.get('correct_words')) or 0
@@ -2871,16 +2873,7 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
             student_end_state['sentences_read'] = correct_sentences
             student_end_state['task2_sentences_score'] = sentence_score
             student_end_state['part1_total_score'] = part1_total
-            if workflow_stage == 'early_completed_sentences':
-                early_profile = (
-                    crla_reading_profile(part1_total, None, None, None)
-                    if assessment_kind == 'crla' else 'High Emerging Reader'
-                )
-                student_end_state['classification'] = early_profile
-                state['reader_classification'] = early_profile
-                state['aral_eligible'] = bool(_aral_eligible_classification(early_profile))
-            elif workflow_stage == 'transition_to_story':
-                student_end_state['classification'] = 'High Emerging Reader'
+            student_end_state['classification'] = 'High Emerging Reader'
         elif assessment_type == 'paragraph':
             student_end_state['stage'] = 'completed'
             student_end_state['next_stage'] = 'completed'
@@ -2915,7 +2908,7 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
             student_end_state['classification'] = derived_classification
 
         terminal_stage = student_end_state.get('stage') in {
-            'early_completed_words', 'early_completed_sentences', 'completed',
+            'early_completed_words', 'completed',
         }
         final_classification = str(student_end_state.get('classification') or '').strip()
         if terminal_stage and final_classification:
@@ -14052,7 +14045,7 @@ def persist_student_end_assessment_state(request):
         # are deliberately distinct from the transition/completion stages.
         'words', 'rhymes', 'sentences',
         'transition_to_rhymes', 'transition_to_sentence', 'transition_to_story', 'story_selection',
-        'story_ready', 'early_completed_words', 'early_completed_sentences',
+        'story_ready', 'early_completed_words',
         'story_reading', 'story_comprehension', 'learner_experience', 'completed',
         'completed_high_emerging', 'completed_developing', 'completed_transitioning', 'completed_grade_level',
     }
@@ -14165,7 +14158,7 @@ def persist_student_end_assessment_state(request):
         result_states[str(saved_material_id)] = saved
         state['crla_result_states'] = result_states
     next_url = ''
-    terminal_stage = stage in {'early_completed_words', 'early_completed_sentences', 'completed'}
+    terminal_stage = stage in {'early_completed_words', 'completed'}
     part2_profile = crla_part2_profile(
         saved.get('story_total_words') or saved.get('total_story_words'),
         saved.get('words_read') if saved.get('words_read') is not None else saved.get('total_words_read'),
@@ -16486,7 +16479,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         if not isinstance(persisted_end_state, dict):
             persisted_end_state = {}
         terminal_crla_stage = persisted_end_state.get('stage') in {
-            'early_completed_words', 'early_completed_sentences', 'completed',
+            'early_completed_words', 'completed',
         }
         final_reader_classification = str(
             persisted_end_state.get('classification')

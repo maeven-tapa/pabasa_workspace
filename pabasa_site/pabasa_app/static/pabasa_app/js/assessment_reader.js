@@ -2210,15 +2210,54 @@
         }
 
         function renderPersistedEndState(endState) {
-            const stage = normalizeStudentEndStatus(endState.stage);
-            if (!["transition_to_rhymes", "transition_to_sentence", "transition_to_story", "early_completed_words", "early_completed_sentences", "completed"].includes(stage)) return false;
+            const persistedStage = normalizeStudentEndStatus(endState.stage);
+            const stage = persistedStage === "early_completed_sentences"
+                ? "transition_to_story"
+                : persistedStage;
+            if (!["transition_to_rhymes", "transition_to_sentence", "transition_to_story", "early_completed_words", "completed"].includes(stage)) return false;
+            if (persistedStage === "early_completed_sentences") {
+                endState = {
+                    ...endState,
+                    stage: "transition_to_story",
+                    next_stage: "story_selection",
+                    branch: "sentences",
+                };
+            }
             shell.classList.add("is-complete");
             const title = document.getElementById("completionTitle");
             const message = document.getElementById("completionMessage");
             const classificationText = endState.classification || "Assessment completed";
+            const transitionCopy = {
+                transition_to_rhymes: {
+                    title: "Words Assessment Completed",
+                    message: "",
+                    disclaimer: "You've finished the Word Reading section. Next, you'll continue with Rhymes.",
+                    nextStage: "rhymes",
+                    cta: "Continue to Rhymes ->",
+                },
+                transition_to_sentence: {
+                    title: "Words Assessment Completed",
+                    message: "You completed Word Reading. You're ready for Sentence Reading.",
+                    disclaimer: "You've finished the Word Reading section. Next, you'll continue with Sentence Reading.",
+                    nextStage: "sentences",
+                    cta: "Continue to Sentence Reading ->",
+                },
+                transition_to_story: {
+                    title: endState.branch === "rhymes" ? "Rhymes Assessment Completed" : "Sentences Assessment Completed",
+                    message: endState.branch === "rhymes"
+                        ? "You completed Rhymes. You're ready for Story Reading."
+                        : "You completed Sentence Reading. You're ready for Story Reading.",
+                    disclaimer: endState.branch === "rhymes"
+                        ? "You've finished Rhymes. Next, you'll continue with Story Reading."
+                        : "You've finished Sentence Reading. Next, you'll continue with Story Reading.",
+                    nextStage: "story_selection",
+                    cta: "Continue to Story Reading ->",
+                },
+            };
+            const transition = transitionCopy[stage] || null;
             // Section transitions are not CRLA completion.  In particular, do
             // not leak a routing/Part 1 level on the Word Reading screen.
-            const isFinalCompletion = ["completed", "early_completed_words", "early_completed_sentences"].includes(stage);
+            const isFinalCompletion = ["completed", "early_completed_words"].includes(stage);
             if (isFinalCompletion) {
                 if (completionClassificationValue) completionClassificationValue.textContent = classificationText;
             } else {
@@ -2237,7 +2276,7 @@
                     : "";
                 finishBtn.textContent = transition?.cta || "Back to Assessment";
             }
-            reviewBtn?.classList.toggle("d-none", !["early_completed_words", "early_completed_sentences", "completed"].includes(stage));
+            reviewBtn?.classList.toggle("d-none", !["early_completed_words", "completed"].includes(stage));
             setCompletionLoadingState(false);
             return true;
         }
@@ -5023,8 +5062,8 @@
                 const automaticRhymesScore = correctWords >= 7 && correctWords <= 10 ? 10 : 0;
                 const cumulativeCorrect = correctWords + automaticRhymesScore + sentenceScore;
                 const part1Total = cumulativeCorrect;
-                branchState.stage = part1Total <= 10 ? "early_completed_sentences" : "transition_to_story";
-                branchState.next_stage = part1Total <= 10 ? "completed" : "story_selection";
+                branchState.stage = "transition_to_story";
+                branchState.next_stage = "story_selection";
                 branchState.correct_words = correctWords;
                 branchState.correct_sentences = branchScore;
                 branchState.sentences_read = branchScore;
@@ -5032,7 +5071,7 @@
                 branchState.cumulative_correct = cumulativeCorrect;
                 branchState.routing_score = part1Total;
                 branchState.score = part1Total;
-                branchState.classification = part1Total <= 10 ? "High Emerging Reader" : "";
+                branchState.classification = "High Emerging Reader";
                 branchState.branch = "sentences";
                 branchState.task1_score = correctWords;
                 branchState.task2_type = "Task 2H / Sentences";
@@ -5102,7 +5141,7 @@
                     next_stage: "completed",
                 });
             }
-            const isPart1LearnerExperienceTerminal = ["early_completed_words", "early_completed_sentences"].includes(branchState.stage);
+            const isPart1LearnerExperienceTerminal = branchState.stage === "early_completed_words";
             const shouldPromptForLearnerExperience = !hasSubmittedLearnerExperienceRating
                 && (isPart1LearnerExperienceTerminal || currentAssessmentBranch === "story");
             if (shouldPromptForLearnerExperience) {

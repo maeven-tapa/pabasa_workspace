@@ -577,7 +577,8 @@ class AssessmentWorkflowBranchingTests(TestCase):
     def test_part1_terminal_states_share_learner_experience_gate(self):
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
         completion = source.split("function showCompletion(isFullCompletion)", 1)[1].split("function startAssessmentTimer", 1)[0]
-        self.assertIn('"early_completed_words", "early_completed_sentences"', completion)
+        self.assertIn('branchState.stage === "early_completed_words"', completion)
+        self.assertNotIn('early_completed_sentences', completion)
         self.assertIn('stage: "learner_experience"', completion)
         self.assertIn("renderLearnerExperienceState();", completion)
         self.assertLess(completion.index("renderLearnerExperienceState();"), completion.index("completionSubmitted = true;"))
@@ -856,12 +857,14 @@ class AssessmentWorkflowBranchingTests(TestCase):
         self.assertEqual(end_state.get("next_stage"), "story_selection")
         self.assertEqual(end_state.get("routing_score"), 17)
 
-    def test_ten_words_plus_zero_sentences_stops_at_ten(self):
+    def test_ten_words_plus_zero_sentences_still_transitions_to_story(self):
         end_state = self._run_sync({
             "assessment_type": "sentence", "correct_sentences": 0, "items_completed": 4,
         }, {"correct_words": 10, "stage": "sentences_high"})
-        self.assertEqual(end_state.get("stage"), "early_completed_sentences")
-        self.assertEqual(end_state.get("cumulative_correct"), 10)
+        self.assertEqual(end_state.get("stage"), "transition_to_story")
+        self.assertEqual(end_state.get("next_stage"), "story_selection")
+        self.assertEqual(end_state.get("part1_total_score"), 20)
+        self.assertEqual(end_state.get("task2_rhymes_score"), 10)
 
     def test_ten_words_plus_one_sentence_transitions_at_eleven(self):
         end_state = self._run_sync({
