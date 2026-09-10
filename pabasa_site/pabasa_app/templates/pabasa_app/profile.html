@@ -1145,12 +1145,14 @@
     .player-name { color:#173f2c; font-family:"Nunito",sans-serif; font-size:clamp(1.45rem,3vw,2rem); font-weight:900; line-height:1.05; margin:.15rem 0; }
     .player-class { color:#55705d; font-weight:700; }
     .player-reading-level { align-items:center; background:rgba(255,255,255,.68); border:1px solid rgba(54,105,65,.16); border-radius:999px; color:#37644a; display:inline-flex; font-size:.75rem; font-weight:800; gap:.4rem; margin-top:.45rem; padding:.35rem .65rem; }
-    .player-dashboard-grid { align-items:start; display:grid; gap:.75rem 1rem; grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); }
-    .player-card { align-self:start; background:rgba(255,255,248,.92); border:1px solid rgba(54,105,65,.16); border-radius:22px; box-shadow:0 10px 24px rgba(38,81,48,.08); height:auto !important; min-height:0 !important; padding:.9rem !important; }
+    .player-dashboard-grid { align-items:stretch; display:grid; gap:.75rem 1rem; grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .player-card { align-self:stretch; background:rgba(255,255,248,.92); border:1px solid rgba(54,105,65,.16); border-radius:22px; box-shadow:0 10px 24px rgba(38,81,48,.08); height:100% !important; min-height:0 !important; padding:.9rem !important; }
     .player-card-title { align-items:center; color:#204b34; display:flex; font-family:"Nunito",sans-serif; font-size:1.05rem; font-weight:900; gap:.5rem; margin:0 0 .65rem; }
-    .player-student-info { grid-column:1; grid-row:1 / span 2; }
-    .player-info-grid { display:grid; gap:.45rem; grid-template-columns:repeat(2,minmax(0,1fr)); }
-    .player-info-chip { align-items:center; background:#f2f6e9; border:1px solid #dbe6cd; border-radius:14px; display:flex; gap:.55rem; min-height:52px; padding:.48rem .6rem; }
+    .player-student-info { display:flex; flex-direction:column; grid-column:1; grid-row:1; }
+    .player-student-info #openStudentEditBtn { margin-top:auto !important; }
+    .player-student-info #openStudentEditBtn { padding-bottom:.3rem; padding-top:.3rem; }
+    .player-info-grid { display:grid; gap:.35rem; grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .player-info-chip { align-items:center; background:#f2f6e9; border:1px solid #dbe6cd; border-radius:14px; display:flex; gap:.55rem; min-height:0; padding:.38rem .6rem; }
     .player-info-chip i { color:#43805a; font-size:1rem; }
     .player-info-chip small,.player-info-chip strong { display:block; }
     .player-info-chip small { color:#789080; font-size:.67rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
@@ -1163,13 +1165,15 @@
     .player-progress-stat span { color:#6e806f; font-size:.68rem; font-weight:800; }
     .player-progress-track { background:#dfe9d7; border-radius:999px; height:10px; margin-top:.75rem; overflow:hidden; }
     .player-progress-fill { background:linear-gradient(90deg,#58a867,#e4bd47); border-radius:inherit; height:100%; min-width:4px; }
+    .player-reading-progress { display:flex; flex-direction:column; }
+    .player-reading-progress .player-progress-details { align-content:space-evenly; flex:1; }
     .player-progress-details { display:grid; gap:.45rem; grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:.65rem; }
-    .player-progress-detail { background:rgba(79,132,84,.08); border:1px solid rgba(79,132,84,.13); border-radius:12px; padding:.5rem .6rem; }
+    .player-progress-detail { background:rgba(79,132,84,.08); border:1px solid rgba(79,132,84,.13); border-radius:12px; min-height:3.6rem; padding:.5rem .6rem; }
     .player-progress-detail small,.player-progress-detail strong { display:block; }
     .player-progress-detail small { color:#789080; font-size:.65rem; font-weight:800; text-transform:uppercase; }
     .player-progress-detail strong { color:#285239; font-size:.8rem; }
-    .player-achievements { grid-column:2; grid-row:2; }
-    .player-badge-grid { display:grid; gap:.5rem; grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .player-achievements { grid-column:1 / -1; grid-row:2; }
+    .player-badge-grid { display:grid; gap:.5rem; grid-template-columns:repeat(4,minmax(0,1fr)); }
     .collectible-badge { align-items:center; background:#f5f7ed; border:1px solid #dce7d1; border-radius:16px; display:flex; gap:.55rem; padding:.6rem; }
     .collectible-badge.locked { filter:grayscale(1); opacity:.48; }
     .collectible-medallion { align-items:center; background:linear-gradient(145deg,#f5dc7f,#dcae3c); border:3px solid #fff4c8; border-radius:50%; box-shadow:0 4px 0 #bb8c2d; color:#315d3f; display:flex; flex:0 0 auto; height:48px; justify-content:center; width:48px; }
@@ -1199,7 +1203,7 @@
     .player-setting-action { align-items:center; background:#f0f5e7; border:1px solid #d9e4ce; border-radius:15px; color:#285239; display:flex; font-weight:800; gap:.7rem; padding:.8rem .9rem; text-align:left; text-decoration:none; width:100%; }
     .player-setting-action:hover { background:#e5efd9; color:#19462d; }
     @media(max-width:900px){.player-dashboard-grid{grid-template-columns:1fr}.player-student-info,.player-achievements{grid-column:1;grid-row:auto}.player-badge-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media(max-width:560px){.player-hero{grid-template-columns:1fr;text-align:center}.player-emblem{margin:auto}.player-info-grid,.player-progress-grid,.player-badge-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:560px){.player-hero{grid-template-columns:1fr;text-align:center}.player-emblem{margin:auto}.player-progress-grid,.player-badge-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
     body:has(.player-profile) .profile-layout { margin-top:0; }
     body:has(.player-profile) .profile-main { align-items:start; gap:1rem; grid-template-columns:minmax(0,1fr) minmax(0,1.25fr); }
     body:has(.player-profile) .profile-summary { border-radius:22px; padding:1rem; }
@@ -1646,7 +1650,7 @@
     <div class="player-profile" data-pabasa-reading-level="{{ pabasa_reading_level|default:'Not set' }}">
         <header class="player-hero">
             <div class="player-emblem student-avatar-badge" aria-label="{{ selected_avatar.name }} avatar"><span>{{ selected_avatar.emoji }}</span></div>
-            <div><div class="player-greeting">Hello, Reader</div><h2 class="player-name">{{ full_name }}</h2><div class="player-class">{{ grade_level|default:"Grade not set" }} &bull; {{ section_name|default:"Section not set" }}</div><div class="player-reading-level"><i class="bi bi-book-half"></i> {{ pabasa_reading_level|default:"Not set" }}</div></div>
+            <div><div class="player-greeting">Hello, Reader</div><h2 class="player-name">{{ full_name }}</h2><div class="player-class">{{ grade_level|default:"Grade not set" }} &bull; {{ section_name|default:"Section not set" }}</div></div>
         </header>
         <div class="player-dashboard-grid">
             <section class="player-card player-student-info"><h3 class="player-card-title"><i class="bi bi-person-lines-fill"></i> Student Info</h3><div class="player-info-grid">
@@ -1654,21 +1658,17 @@
                 <div class="player-info-chip"><i class="bi bi-person-badge"></i><div><small>PABASA ID</small><strong>{{ pabasa_id }}</strong></div></div>
                 <div class="player-info-chip"><i class="bi bi-person-vcard"></i><div><small>Gender</small><strong>{{ gender|default:"Not set" }}</strong></div></div>
                 <div class="player-info-chip"><i class="bi bi-calendar-heart"></i><div><small>Birthday</small><strong>{{ birthday_display|default:"Not set" }}</strong></div></div>
-                <div class="player-info-chip"><i class="bi bi-at"></i><div><small>Username</small><strong>{{ username|default:"Not set" }}</strong></div></div>
-                <div class="player-info-chip"><i class="bi bi-mortarboard"></i><div><small>Grade</small><strong>{{ grade_level|default:"Not set" }}</strong></div></div>
-                <div class="player-info-chip"><i class="bi bi-people"></i><div><small>Section</small><strong>{{ section_name|default:"Not set" }}</strong></div></div>
                 <div class="player-info-chip"><i class="bi bi-building"></i><div><small>School</small><strong>{{ school_name|default:"Not set" }}</strong></div></div>
-                <div class="player-info-chip"><i class="bi bi-book"></i><div><small>PABASA Reading Level</small><strong>{{ pabasa_reading_level|default:"Not set" }}</strong></div></div>
                 <div class="player-info-chip"><i class="bi bi-card-heading"></i><div><small>LRN</small><strong>{{ lrn|default:"Not set" }}</strong></div></div>
                 <div class="player-info-chip"><i class="bi bi-telephone"></i><div><small>Contact Number</small><strong>{{ contact_number|default:"Not set" }}</strong></div></div>
                 <div class="player-info-chip"><i class="bi bi-check-circle"></i><div><small>Student Status</small><strong>{{ account_status_label|default:"Active" }} Student</strong></div></div>
             </div><button class="btn btn-outline-primary w-100 mt-3" id="openStudentEditBtn" type="button"><i class="bi bi-pencil-square me-1"></i> Edit Profile</button></section>
-            <section class="player-card"><h3 class="player-card-title"><i class="bi bi-graph-up-arrow"></i> Reading Progress</h3><div class="player-progress-grid">
+            <section class="player-card player-reading-progress"><h3 class="player-card-title"><i class="bi bi-graph-up-arrow"></i> Reading Progress</h3><div class="player-progress-grid">
                 <div class="player-progress-stat"><i class="bi bi-star-fill"></i><strong>{{ achievement_total_stars }}</strong><span>Total Stars</span></div>
                 <div class="player-progress-stat"><i class="bi bi-award"></i><strong id="profileProgressAchievementCount">0</strong><span>Achievements</span></div>
                 <div class="player-progress-stat"><i class="bi bi-journal-check"></i><strong>{{ achievement_completed_sets }}</strong><span>Sets Completed</span></div>
                 <div class="player-progress-stat"><i class="bi bi-signpost-split"></i><strong>{{ achievement_completed_levels }}</strong><span>Levels Cleared</span></div>
-            </div><div class="player-progress-track" role="progressbar" aria-label="Practice progress" aria-valuenow="{{ achievement_progress_percent }}" aria-valuemin="0" aria-valuemax="100"><div class="player-progress-fill" style="width:{{ achievement_progress_percent }}%"></div></div><div class="player-progress-details"><div class="player-progress-detail"><small>Current Level</small><strong>{{ reading_level|default:"Not set" }}</strong></div><div class="player-progress-detail"><small>Practice Completion</small><strong>{{ achievement_progress_percent }}%</strong></div><div class="player-progress-detail"><small>Next Goal</small><strong>{% if not achievement_star_collector %}Collect 25 stars{% elif not achievement_word_master %}Clear five levels{% elif not achievement_practice_streak %}Complete ten sets{% else %}Keep reading{% endif %}</strong></div><div class="player-progress-detail"><small>Reading Trail</small><strong>{{ achievement_completed_sets }} sets finished</strong></div></div><p class="small text-muted mt-2 mb-0">Every page you read builds your reading journey.</p></section>
+            </div><div class="player-progress-track" role="progressbar" aria-label="Practice progress" aria-valuenow="{{ achievement_progress_percent }}" aria-valuemin="0" aria-valuemax="100"><div class="player-progress-fill" style="width:{{ achievement_progress_percent }}%"></div></div><div class="player-progress-details"><div class="player-progress-detail"><small>Current Level</small><strong>{{ reading_level|default:"Not set" }}</strong></div><div class="player-progress-detail"><small>Practice Completion</small><strong>{{ achievement_progress_percent }}%</strong></div><div class="player-progress-detail"><small>Next Goal</small><strong>{% if not achievement_star_collector %}Collect 25 stars{% elif not achievement_word_master %}Clear five levels{% elif not achievement_practice_streak %}Complete ten sets{% else %}Keep reading{% endif %}</strong></div><div class="player-progress-detail"><small>Reading Trail</small><strong>{{ achievement_completed_sets }} sets finished</strong></div></div></section>
             <section class="player-card player-achievements"><h3 class="player-card-title"><i class="bi bi-patch-check"></i> My Reading Achievements</h3><div class="player-badge-grid">
                 <div class="collectible-badge{% if not achievement_first_challenge %} locked{% endif %}" data-earned="{{ achievement_first_challenge|yesno:'true,false' }}"><div class="collectible-medallion"><i class="bi bi-trophy"></i></div><div><strong>First Adventure</strong><span>{% if achievement_first_challenge %}Collected{% else %}Complete one practice set{% endif %}</span></div></div>
                 <div class="collectible-badge{% if not achievement_star_collector %} locked{% endif %}" data-earned="{{ achievement_star_collector|yesno:'true,false' }}"><div class="collectible-medallion"><i class="bi bi-star-fill"></i></div><div><strong>Star Collector</strong><span>{% if achievement_star_collector %}Collected{% else %}Collect 25 stars{% endif %}</span></div></div>
