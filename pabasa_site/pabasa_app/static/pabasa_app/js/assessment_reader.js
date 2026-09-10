@@ -670,12 +670,18 @@
             return Promise.resolve(null);
         }
 
+        let studentEndStateWriteQueue = Promise.resolve();
+
         function updateStudentEndState(patch, options = {}) {
-            const current = readStudentEndState();
-            return writeStudentEndState({
-                ...current,
-                ...(patch || {}),
-            }, options);
+            const operation = studentEndStateWriteQueue.then(() => {
+                const current = readStudentEndState();
+                return writeStudentEndState({
+                    ...current,
+                    ...(patch || {}),
+                }, options);
+            });
+            studentEndStateWriteQueue = operation.catch(() => null);
+            return operation;
         }
 
         // CRLA Official Assessment: Persist item score immediately when locked
@@ -1160,11 +1166,13 @@
             const answered = currentStoryAnswers.filter(answer => String(answer || "").trim()).length;
             const correctAnswers = currentStoryResults.filter(result => result === true).length;
             const accuracy = answered ? Math.round((correctAnswers / answered) * 100) : 0;
-            const persistedStoryState = readStudentEndState();
-            const persistedDurationSeconds = Number(persistedStoryState?.duration_seconds);
-            const finalizedDurationSeconds = Number.isFinite(persistedDurationSeconds) && persistedDurationSeconds > 0
-                ? persistedDurationSeconds
-                : readingScores.duration_seconds;
+            const currentDuration = Number(readingScores.duration_seconds);
+            // A completion is tied to the timer that just ended.  The generic
+            // persisted state has no attempt identity, so it is never allowed
+            // to replace this story's measured duration.
+            const finalizedDurationSeconds = Number.isFinite(currentDuration) && currentDuration > 0
+                ? currentDuration
+                : null;
             const storyMetrics = calculateFinalizedStoryMetrics(
                 readableWordCount(currentSelectedStory?.content || ""),
                 storyMiscueCount,
@@ -1771,6 +1779,11 @@
                 selected_story: choice.title,
                 selected_story_content: choice.content || "",
                 story_segment_index: 0,
+                duration_seconds: null,
+                wpm: null,
+                words_read: null,
+                total_words_read: null,
+                miscues: null,
             });
             currentStorySegmentIndex = 0;
             renderStoryReadyState(choice);
@@ -2189,34 +2202,6 @@
             const title = document.getElementById("completionTitle");
             const message = document.getElementById("completionMessage");
             const classificationText = endState.classification || "Assessment completed";
-            const transitionCopy = {
-                transition_to_rhymes: {
-                    title: "Words Assessment Completed",
-                    message: "",
-                    disclaimer: "You’ve finished the Word Reading section. Next, you’ll continue with Rhymes.",
-                    nextStage: "rhymes",
-                    cta: "Continue to Rhymes →",
-                },
-                transition_to_sentence: {
-                    title: "Words Assessment Completed",
-                    message: "You completed Word Reading. You’re ready for Sentence Reading.",
-                    disclaimer: "You’ve finished the Word Reading section. Next, you’ll continue with Sentence Reading.",
-                    nextStage: "sentences",
-                    cta: "Continue to Sentence Reading →",
-                },
-                transition_to_story: {
-                    title: endState.branch === "rhymes" ? "Rhymes Assessment Completed" : "Sentences Assessment Completed",
-                    message: endState.branch === "rhymes"
-                        ? "You completed Rhymes. You’re ready for Story Reading."
-                        : "You completed Sentence Reading. You’re ready for Story Reading.",
-                    disclaimer: endState.branch === "rhymes"
-                        ? "You’ve finished Rhymes. Next, you’ll continue with Story Reading."
-                        : "You’ve finished Sentence Reading. Next, you’ll continue with Story Reading.",
-                    nextStage: "story_selection",
-                    cta: "Continue to Story Reading →",
-                },
-            };
-            const transition = transitionCopy[stage] || null;
             // Section transitions are not CRLA completion.  In particular, do
             // not leak a routing/Part 1 level on the Word Reading screen.
             const isFinalCompletion = ["completed", "early_completed_words", "early_completed_sentences"].includes(stage);
@@ -2463,14 +2448,18 @@
                 }
                 const persistedQuestionIndex = Number.parseInt(persistedEndState.crla_question_index, 10);
                 const hasPersistedQuestionIndex = Number.isInteger(persistedQuestionIndex);
-                currentIndex = hasPersistedQuestionIndex
+                const isNewReaderStageTransition = ["rhymes", "sentences"].includes(requestedStage)
+                    && persistedStage !== requestedStage;
+                currentIndex = !isNewReaderStageTransition && hasPersistedQuestionIndex
                     ? Math.min(Math.max(persistedQuestionIndex, 0), items.length - 1)
                     : 0;
                 // Locked-result cache records scored items only. It must never
                 // decide where a reader starts. A fresh section, or a legacy
                 // active state without an explicit position, starts at Item 1
                 // and immediately becomes resumable at index 0.
-                const shouldPersistInitialIndex = isFreshOfficialCrlaLaunch || !hasPersistedQuestionIndex;
+                const shouldPersistInitialIndex = isFreshOfficialCrlaLaunch
+                    || isNewReaderStageTransition
+                    || !hasPersistedQuestionIndex;
                 if (shouldPersistInitialIndex) {
                     persistOfficialCrlaReaderProgress();
                 }
@@ -2690,7 +2679,10 @@
             const targetText = items.join(" ");
             const targetWords = normalizeWords(targetText);
             const spokenWords = normalizeWords(spokenTranscript);
-            const durationSeconds = Math.max(1, getAssessmentElapsedSeconds());
+            const elapsedSeconds = Number(getAssessmentElapsedSeconds());
+            const durationSeconds = Number.isFinite(elapsedSeconds) && elapsedSeconds > 0
+                ? elapsedSeconds
+                : null;
             const matchedWords = correctWordsRead();
             const speechRecognitionUsed = spokenWords.length > 0;
             const targetWordCount = targetWords.length;
@@ -2718,7 +2710,7 @@
             return {
                 accuracy: targetWordCount && speechRecognitionUsed ? Math.round((matchedWords / targetWordCount) * 10000) / 100 : 0,
                 pronunciation_score: targetWordCount && speechRecognitionUsed ? Math.round((matchedWords / Math.max(spokenWords.length, targetWordCount)) * 10000) / 100 : 0,
-                wpm: Math.round((matchedWords / Math.max(durationSeconds / 60, 1 / 60)) * 100) / 100,
+                wpm: durationSeconds ? Math.round((matchedWords / (durationSeconds / 60)) * 100) / 100 : 0,
                 duration_seconds: durationSeconds,
                 word_count: matchedWords,
                 target_word_count: targetWordCount,
@@ -2753,11 +2745,16 @@
             const totalWords = Math.max(0, Number(totalStoryWords) || 0);
             const miscues = Math.max(0, Number(storyMiscues) || 0);
             const wordsRead = Math.max(0, totalWords - miscues);
-            const durationSeconds = Math.max(1, Number(elapsedDurationSeconds) || 0);
+            const durationValue = Number(elapsedDurationSeconds);
+            const durationSeconds = Number.isFinite(durationValue) && durationValue > 0
+                ? durationValue
+                : null;
             const accuracy = totalWords
                 ? Math.min(100, Math.round((wordsRead / totalWords) * 100))
                 : 0;
-            const wpm = Math.round((wordsRead / Math.max(durationSeconds / 60, 1 / 60)) * 100) / 100;
+            const wpm = durationSeconds
+                ? Math.round((wordsRead / (durationSeconds / 60)) * 100) / 100
+                : 0;
 
             return {
                 totalStoryWords: totalWords,
@@ -4976,7 +4973,7 @@
                 branchState.classification = "";
                 branchState.branch = "rhymes";
                 branchState.task1_score = branchScore;
-                branchState.task2_rhymes_score = null;
+                branchState.task2_rhymes_score = 10;
                 branchState.task2_sentences_score = null;
                 branchState.part1_total_score = null;
                 branchState.part1_reading_level = "";
@@ -5265,7 +5262,10 @@
             });
             if (materialId && token) {
                 setCompletionActionButtonsProcessing(true);
-                const elapsedSeconds = Math.max(1, getAssessmentElapsedSeconds());
+                const elapsedValue = Number(getAssessmentElapsedSeconds());
+                const elapsedSeconds = Number.isFinite(elapsedValue) && elapsedValue > 0
+                    ? elapsedValue
+                    : null;
                 const completionSnapshot = calculateScores();
                 latestScores = normalizeCompletionScores(latestScores || completionSnapshot, completionSnapshot);
                 const completionMetrics = normalizeCompletionScores(completionSnapshot || {}, {});
@@ -5280,7 +5280,7 @@
                     correct_words: completionMetrics.correct_words ?? completionMetrics.word_count ?? 0,
                     incorrect_words: completionMetrics.incorrect_words ?? 0,
                     skipped_words: completionMetrics.skipped_words ?? 0,
-                    duration_seconds: completionMetrics.duration_seconds || elapsedSeconds,
+                    duration_seconds: completionMetrics.duration_seconds ?? elapsedSeconds,
                     target_word_count: completionMetrics.target_word_count ?? 0,
                     pronunciation_score: completionMetrics.pronunciation_score ?? 0,
                     fluency_score: completionMetrics.fluency_score ?? null,
@@ -5297,7 +5297,7 @@
                         correct_words: completionMetrics.correct_words ?? completionMetrics.word_count ?? 0,
                         incorrect_words: completionMetrics.incorrect_words ?? 0,
                         skipped_words: completionMetrics.skipped_words ?? 0,
-                        duration_seconds: completionMetrics.duration_seconds || elapsedSeconds,
+                        duration_seconds: completionMetrics.duration_seconds ?? elapsedSeconds,
                         target_word_count: completionMetrics.target_word_count ?? 0,
                         pronunciation_score: completionMetrics.pronunciation_score ?? 0,
                         fluency_score: completionMetrics.fluency_score ?? null,
@@ -5314,7 +5314,7 @@
                         correct_words: completionMetrics.correct_words ?? completionMetrics.word_count ?? 0,
                         incorrect_words: completionMetrics.incorrect_words ?? 0,
                         skipped_words: completionMetrics.skipped_words ?? 0,
-                        duration_seconds: completionMetrics.duration_seconds || elapsedSeconds,
+                        duration_seconds: completionMetrics.duration_seconds ?? elapsedSeconds,
                         target_word_count: completionMetrics.target_word_count ?? 0,
                         pronunciation_metrics: {
                             score: completionMetrics.pronunciation_score ?? 0,

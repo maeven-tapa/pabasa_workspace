@@ -96,6 +96,7 @@ from .scoring import (
     clamp_score,
     crla_classification,
     crla_part2_profile,
+    _crla_part2_band,
     crla_reading_profile,
     crla_task1_next_task,
     crla_sentence_score,
@@ -1866,15 +1867,15 @@ def _crla_grade2_part2_profile(correct_words_read, correct_answers):
 
     if percent is None or answers is None:
         return 'NOT AVAILABLE'
-    reading_band = 0 if percent <= 25 else 1 if percent <= 50 else 2 if percent <= 75 else 3
-    comprehension_band = 0 if answers <= 0 else 1 if answers <= 2 else 2 if answers <= 4 else 3
-    # Final classification is based on comprehension band per teacher-confirmed rule
+    final_band = _crla_part2_band(percent, answers)
+    if final_band is None:
+        return 'NOT AVAILABLE'
     return (
         "High Emerging Reader",
         "Developing Reader",
         "Transitioning Reader",
         "Reading At Grade Level",
-    )[comprehension_band]
+    )[final_band]
 
 
 def _osps_multiplier(assessment_type):
@@ -2836,7 +2837,8 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
             correct_words = _safe_int(student_end_state.get('correct_words')) or 0
             correct_sentences = _safe_int(student_end_state.get('correct_sentences')) or 0
             sentence_score = crla_sentence_score(correct_sentences)
-            part1_total = correct_words + sentence_score
+            automatic_rhymes_score = 10 if 7 <= correct_words <= 10 else 0
+            part1_total = correct_words + automatic_rhymes_score + sentence_score
             student_end_state['sentence_items_administered'] = _safe_int(score_payload.get('items_completed')) or 0
             student_end_state['cumulative_correct'] = correct_words + correct_sentences
             student_end_state['routing_score'] = part1_total
@@ -2845,7 +2847,10 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
                 student_end_state.get('correct_words'),
                 part1_total,
             )
-            student_end_state['task2_rhymes_score'] = None
+            if automatic_rhymes_score:
+                student_end_state['task2_rhymes_score'] = automatic_rhymes_score
+            else:
+                student_end_state['task2_rhymes_score'] = None
             student_end_state['sentences_read'] = correct_sentences
             student_end_state['task2_sentences_score'] = sentence_score
             student_end_state['part1_total_score'] = part1_total
@@ -9386,6 +9391,10 @@ def _official_reading_launch_data(material):
         return {}
     payload = _official_reading_material_payload(material)
     content_json = getattr(material, 'content_json', None) or {}
+    official_crla_payload = None
+    if getattr(material, 'assessment_kind', '') == 'crla':
+        from .management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
+        official_crla_payload = OFFICIAL_CRLA_CONTENT.get(getattr(material, 'system_assessment_key', ''))
     story_qas = content_json.get('story_qas') if isinstance(content_json, dict) and isinstance(content_json.get('story_qas'), list) else []
     assessment_type = _official_reading_assessment_type(material)
     official_title = str(getattr(material, 'title', '') or '').strip() or payload['title']
@@ -9399,7 +9408,7 @@ def _official_reading_launch_data(material):
         'assessment_kind': _assessment_kind_value(material),
         'item_type': payload['item_type'] or 'word',
         'words': payload['words'],
-        'rhyme_pairs': content_json.get('rhyme_pairs', []),
+        'rhyme_pairs': (official_crla_payload or {}).get('rhyme_pairs', content_json.get('rhyme_pairs', [])),
         'sentences': payload['sentences'],
         'passages': payload['passages'],
         'stories': [{'title': str(passage.get('title') or '').strip(), 'content': str(passage.get('content') or '').strip()} for passage in payload['passages'] if isinstance(passage, dict)],
@@ -11815,10 +11824,8 @@ def teacher_aral_action(request):
 
 @xframe_options_sameorigin
 def reading_word_page(request):
-    access_response = _enforce_student_access_for_request(request)
-    if access_response:
-        return access_response
     live_session_id = str(request.GET.get('live_session_id') or '').strip()
+    live_session = None
     if live_session_id:
         live_session = LiveAssessmentSession.objects.filter(id=live_session_id).first()
         current_user_id = request.session.get('user_id')
@@ -11832,14 +11839,6 @@ def reading_word_page(request):
             or not _is_live_crla_material(live_session.material)
         ):
             return HttpResponseForbidden('You are not authorized to join this live CRLA assessment.')
-        # Recovery discovery/login is not permission to read. A paused live
-        # session is gated by the waiting room until the teacher resumes it.
-        if live_session.status == 'paused':
-            return redirect(_build_live_assessment_waiting_url(live_session.id))
-        student_state = (live_session.student_states or {}).get(str(current_user_id), {}) or {}
-        student_user = User.objects.filter(id=current_user_id).first()
-        if student_user and _official_crla_completed_result_for_material(student_user, live_session.material):
-            return redirect('dashboard')
     canonical_response = _canonicalize_custom_material_reading_url(request)
     if canonical_response:
         return canonical_response
@@ -15964,7 +15963,27 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 # and CRLA class finalization cannot cross a result submission.
                 with transaction.atomic():
                     locked_material = Material.objects.select_for_update().get(pk=material.pk)
-                    if _is_official_crla_material(locked_material) and _student_crla_finalized_for_material(student_user, locked_material):
+                    workflow_state = _get_user_state(student_user)
+                    persisted_transition = workflow_state.get('student_end_assessment_state')
+                    persisted_transition = persisted_transition if isinstance(persisted_transition, dict) else {}
+                    _, persisted_material_id = _parse_prefixed_id(persisted_transition.get('material_id'))
+                    requested_stage = str(
+                        (request.GET.get('crla_stage') if request is not None else None)
+                        or data.get('crla_stage')
+                        or ''
+                    ).strip().lower()
+                    valid_sentence_transition = (
+                        requested_stage == 'sentences'
+                        and persisted_transition.get('stage') == 'transition_to_sentence'
+                        and persisted_transition.get('next_stage') == 'sentences'
+                        and persisted_material_id == locked_material.id
+                        and not _official_crla_completed_result_for_material(student_user, locked_material)
+                    )
+                    if (
+                        _is_official_crla_material(locked_material)
+                        and _student_crla_finalized_for_material(student_user, locked_material)
+                        and not valid_sentence_transition
+                    ):
                         return JsonResponse({
                             'success': False,
                             'error': 'This CRLA assessment has been finalized for your class.',
@@ -16303,8 +16322,8 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             'early_completed_words', 'early_completed_sentences', 'completed',
         }
         final_reader_classification = str(
-            persisted_workflow_state.get('reader_classification')
-            or persisted_end_state.get('classification')
+            persisted_end_state.get('classification')
+            or persisted_workflow_state.get('reader_classification')
             or score_payload.get('crla_classification')
             or score_payload.get('classification')
             or ''
@@ -23497,7 +23516,12 @@ def _material_assessment_week_section(student, material):
     return None
 
 
-def _enforce_student_access_for_request(request, material=None, json_response=False):
+def _enforce_student_access_for_request(
+    request,
+    material=None,
+    json_response=False,
+    allow_finalized_live_student=False,
+):
     if request.session.get('user_role') != 'student':
         return None
 
@@ -23535,7 +23559,23 @@ def _enforce_student_access_for_request(request, material=None, json_response=Fa
         and str(getattr(material, 'status', '') or '').strip().lower() == 'published'
         and official_phase == active_student_phase
     ):
-        if _student_crla_finalized_for_material(persisted_user, material):
+        workflow_state = _get_user_state(persisted_user)
+        persisted_transition = workflow_state.get('student_end_assessment_state')
+        persisted_transition = persisted_transition if isinstance(persisted_transition, dict) else {}
+        _, persisted_material_id = _parse_prefixed_id(persisted_transition.get('material_id'))
+        requested_stage = str(request.GET.get('crla_stage') or '').strip().lower()
+        valid_sentence_transition = (
+            requested_stage == 'sentences'
+            and persisted_transition.get('stage') == 'transition_to_sentence'
+            and persisted_transition.get('next_stage') == 'sentences'
+            and persisted_material_id == material.id
+            and not _official_crla_completed_result_for_material(persisted_user, material)
+        )
+        if (
+            _student_crla_finalized_for_material(persisted_user, material)
+            and not allow_finalized_live_student
+            and not valid_sentence_transition
+        ):
             return _student_access_block_response(
                 json_response=json_response,
                 message='This CRLA assessment has been finalized for your class.',

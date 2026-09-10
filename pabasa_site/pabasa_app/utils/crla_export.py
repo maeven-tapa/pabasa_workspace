@@ -433,7 +433,7 @@ def _student_values(student, attempt, state, assessment):
                 if score_data.get("sentences_read") is not None
                 else min(task_2_score or 0, 4)
             )
-            rhyme_score = None
+            rhyme_score = 10
 
     part_1_total = _bounded_integer(
         _first_value(score_data.get("part1_total_score"), state.get("part1_total_score")), 0, 30
@@ -456,20 +456,31 @@ def _student_values(student, attempt, state, assessment):
         0,
         6,
     )
-    # Column U's persisted final classification is authoritative; the formula
-    # remains the compatibility fallback for older result rows.
-    profile = str(
-        _first_value(
-            score_data.get("crla_classification"),
-            score_data.get("classification"),
-            getattr(attempt, "crla_classification", None),
-            getattr(attempt, "classification", None),
-            state.get("crla_classification"),
-            state.get("classification"),
-        ) or ""
-    ).strip()
-    if not profile:
-        profile = _reading_profile(part_1_total, story_number, percent, correct_answers)
+    authoritative_profile = None
+    if (
+        part_1_total is not None
+        and story_number is not None
+        and percent is not None
+        and correct_answers is not None
+    ):
+        authoritative_profile = _reading_profile(
+            part_1_total, story_number, percent, correct_answers,
+        )
+    if authoritative_profile is not None:
+        profile = authoritative_profile
+    else:
+        profile = str(
+            _first_value(
+                score_data.get("crla_classification"),
+                score_data.get("classification"),
+                getattr(attempt, "crla_classification", None),
+                getattr(attempt, "classification", None),
+                state.get("crla_classification"),
+                state.get("classification"),
+            ) or ""
+        ).strip()
+        if not profile:
+            profile = _reading_profile(part_1_total, story_number, percent, correct_answers)
 
     completed_at = None
     if attempt:

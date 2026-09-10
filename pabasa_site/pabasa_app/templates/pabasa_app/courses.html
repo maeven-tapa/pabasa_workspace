@@ -4630,6 +4630,26 @@
         margin: -0.2rem 0 0.45rem;
     }
 
+    #reportsPane,
+    #reportsPane #courseReportSection,
+    #reportsPane .course-report-composer-card,
+    #reportsPane .course-report-composer-body {
+        height: auto;
+        max-height: none;
+        overflow: visible;
+    }
+
+    #reportsPane #courseUnifiedStudentReportList {
+        max-height: min(52vh, 520px);
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    #courseDetailModal .course-modal-body:has(#reportsPane.show.active),
+    #courseDetailModal #courseMainContent:has(#reportsPane.show.active) {
+        overflow: visible !important;
+    }
+
     @media (max-width: 768px) {
         #reportsPane #courseReportSection {
             margin-bottom: 0 !important;
@@ -6412,7 +6432,7 @@
     .single-class-meta .course-status-pill:hover .course-status-dot { opacity: 1; transform: none; }
     .single-class-meta .course-status-pill:hover .course-status-label { max-width: 100%; opacity: 1; transform: none; }
     .single-class-subtitle { color: var(--dash-ink-soft); margin: 0.65rem 0 0; }
-    .single-class-metrics { background: rgba(31,111,139,0.045); border-radius: var(--radius-lg); display: grid; grid-template-columns: repeat(3, minmax(110px, 1fr)); margin: clamp(1.4rem, 3vw, 2rem) clamp(1.4rem, 4vw, 3rem) 0; padding: 0.35rem; }
+    .single-class-metrics { background: rgba(31,111,139,0.045); border-radius: var(--radius-lg); display: grid; grid-template-columns: repeat(2, minmax(110px, 1fr)); margin: clamp(1.4rem, 3vw, 2rem) clamp(1.4rem, 4vw, 3rem) 0; padding: 0.35rem; }
     .single-class-metric {
         border-right: 1px solid rgba(31,111,139,0.11);
         min-width: 0;
@@ -6422,7 +6442,7 @@
     }
     .single-class-metric:hover { background: rgba(255,255,255,0.58); }
     .single-class-metric-icon { align-items: center; background: var(--dash-primary-soft); border-radius: 10px; color: var(--dash-primary); display: inline-flex; float: right; height: 30px; justify-content: center; width: 30px; }
-    .single-class-metric:nth-child(3) { border-right: 0; }
+    .single-class-metric:nth-child(2) { border-right: 0; }
     .single-class-metric strong { color: var(--dash-ink); display: block; font-size: 1.65rem; font-weight: 900; letter-spacing: -0.03em; line-height: 1; }
     .single-class-metric span { color: var(--dash-ink); display: block; font-size: 0.78rem; font-weight: 900; margin-top: 0.4rem; }
     .single-class-metric small { color: var(--dash-muted); display: block; font-size: 0.72rem; margin-top: 0.15rem; }
@@ -6514,7 +6534,6 @@
                         <p class="single-class-subtitle">{% if course.description and course.description != "English" and course.description != "Filipino" %}{{ course.description }} · {% endif %}Learning Materials</p>
                     </div>
                     <div class="single-class-metrics" aria-label="Class statistics">
-                        <div class="single-class-metric"><i class="bi bi-journals single-class-metric-icon" aria-hidden="true"></i><strong>{{ course.metrics.sections|default:0|stringformat:"02d" }}</strong><span>Sections</span><small>{{ course.metrics.sections|default:0 }} active section{{ course.metrics.sections|default:0|pluralize }}<br><b class="single-class-metric-emphasis">Class space ready</b></small></div>
                         <div class="single-class-metric"><i class="bi bi-people single-class-metric-icon" aria-hidden="true"></i><strong>{{ course.metrics.students|default:0|stringformat:"02d" }}</strong><span>Learners</span><small>{{ course.metrics.students|default:0 }} enrolled<br><b class="single-class-metric-emphasis">{% if course.metrics.students|default:0 %}Ready to learn{% else %}Awaiting learners{% endif %}</b></small></div>
                         <div class="single-class-metric"><i class="bi bi-book single-class-metric-icon" aria-hidden="true"></i><strong>{{ course.metrics.materials|default:0|stringformat:"02d" }}</strong><span>Materials</span><small>{{ course.metrics.materials|default:0 }} available<br><b class="single-class-metric-emphasis">{% if course.metrics.materials|default:0 %}Learning resources ready{% else %}Awaiting materials{% endif %}</b></small></div>
                         <div class="single-class-metric single-class-mobile-progress"><strong>{{ course.metrics.average_progress|default:0|floatformat:0 }}%</strong><span>Progress</span><small>{% if course.metrics.average_progress|default:0 %}Underway{% else %}Getting started{% endif %}</small></div>
@@ -6867,16 +6886,13 @@
                                                     <button class="assessment-filter-btn" type="button" data-filter="not-started">Not Started</button>
                                                 </div>
                                                 <div class="assessment-sort-group">
-                                                    <select id="courseAssessmentSortField" class="form-select" aria-label="Sort assessments by">
-                                                        <option value="name">Sort Assessments By: Name</option>
-                                                        <option value="date">Date Created/Published</option>
-                                                        <option value="type">Assessment Type</option>
-                                                        <option value="result_count">Number of Learner Results</option>
-                                                        <option value="completion_rate">Completion Rate</option>
-                                                    </select>
-                                                    <select id="courseAssessmentSortOrder" class="form-select" aria-label="Sort order">
-                                                        <option value="asc">A-Z</option>
-                                                        <option value="desc">Z-A</option>
+                                                    <select id="courseAssessmentSortSelect" class="form-select" aria-label="Sort results">
+                                                        <option value="name-asc">Assessment Name (A–Z)</option>
+                                                        <option value="name-desc">Assessment Name (Z–A)</option>
+                                                        <option value="date-desc">Date (Newest)</option>
+                                                        <option value="date-asc">Date (Oldest)</option>
+                                                        <option value="score-desc">Score (Highest)</option>
+                                                        <option value="score-asc">Score (Lowest)</option>
                                                     </select>
                                                 </div>
                                             </div>
@@ -6916,9 +6932,14 @@
                                                     <button class="filter-btn" type="button" data-filter="not-started">Not Started</button>
                                                 </div>
                                                 <select id="studentsSortSelect" class="students-sort-select" aria-label="Sort students">
-                                                    <option value="name">Sort by Name</option>
-                                                    <option value="accuracy">Sort by Accuracy</option>
-                                                    <option value="wpm">Sort by WPM</option>
+                                                    <option value="name-asc">Student Name (A–Z)</option>
+                                                    <option value="name-desc">Student Name (Z–A)</option>
+                                                    <option value="activities-desc">Activities Completed (Highest)</option>
+                                                    <option value="activities-asc">Activities Completed (Lowest)</option>
+                                                    <option value="progress-desc">Reading Progress (Highest)</option>
+                                                    <option value="progress-asc">Reading Progress (Lowest)</option>
+                                                    <option value="activity-date-desc">Last Activity (Newest)</option>
+                                                    <option value="activity-date-asc">Last Activity (Oldest)</option>
                                                 </select>
                                             </div>
 
@@ -9101,6 +9122,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     </div>
 </div>
 
+<style>
+    #studentProgressModal .student-progress-toolbar { align-items: center; display: flex; flex-wrap: nowrap; gap: 1rem; justify-content: space-between; }
+    #studentProgressModal .student-progress-search-wrap { flex: 0 0 390px; position: relative; }
+    #studentProgressModal #studentProgressSearch { width: 100%; }
+    @media (max-width: 767.98px) { #studentProgressModal .student-progress-toolbar { align-items: stretch; flex-direction: column; flex-wrap: wrap; } #studentProgressModal .student-progress-search-wrap { flex-basis: auto; max-width: none; } }
+</style>
 <!-- Modal for Student Reading Progress -->
 <div class="modal fade" id="studentProgressModal" tabindex="-1" aria-labelledby="studentProgressModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
@@ -9108,30 +9135,24 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             <div class="modal-header course-modal-header">
                 <div>
                     <h5 class="modal-title" id="studentProgressModalLabel">Reading Progress</h5>
-                    <small class="text-muted" id="studentProgressSubtext">Course reading task attempts</small>
+                    <small class="text-muted" id="studentProgressSubtext">Reading activity progress</small>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+                <div class="student-progress-toolbar mb-3">
+                    <div class="student-progress-search-wrap"><input type="search" class="form-control" id="studentProgressSearch" placeholder="Search reading activities..." aria-label="Search reading activities"></div>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead>
-                            <tr>
-                                <th>Reading Task (Title)</th>
-                                <th>Status</th>
-                                <th>WPM</th>
-                                <th>Fluency</th>
-                                <th>Accuracy</th>
-                                <th>Pronunciation</th>
-                                <th>Time</th>
-                                <th>Total Score</th>
-                                <th>Reading Level</th>
-                                <th class="text-end">Attempts</th>
+                            <tr id="studentProgressTableHead">
+                                <th>Reading Activity (Title)</th><th>Status</th><th>Date Completed</th><th>Time Spent</th><th>Progress</th>
                             </tr>
                         </thead>
                         <tbody id="studentProgressTableBody">
                             <tr>
-                                <td colspan="10" class="text-center text-muted py-4">Select a student to view progress.</td>
+                                <td colspan="5" class="text-center text-muted py-4">Select a student to view progress.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -9794,27 +9815,17 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 return stats.resultCount;
             case 'completion_rate':
                 return stats.completionRate;
+            case 'score': {
+                const scores = courseAssessmentsTableData
+                    .filter(result => String(result.assessment_id || '') === String(assessment.id))
+                    .map(result => Number(result.score))
+                    .filter(score => Number.isFinite(score));
+                return scores.length ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
+            }
             case 'name':
             default:
                 return String(assessment.title || '').toLowerCase();
         }
-    }
-
-    function updateCourseAssessmentSortOrderLabels() {
-        const sortField = document.getElementById('courseAssessmentSortField');
-        const sortOrder = document.getElementById('courseAssessmentSortOrder');
-        if (!sortField || !sortOrder) return;
-        const labels = {
-            name: { asc: 'A-Z', desc: 'Z-A' },
-            date: { asc: 'Oldest first', desc: 'Newest first' },
-            type: { asc: 'Type A-Z', desc: 'Type Z-A' },
-            result_count: { asc: 'Lowest first', desc: 'Highest first' },
-            completion_rate: { asc: 'Lowest first', desc: 'Highest first' },
-        };
-        const selectedLabels = labels[sortField.value] || labels.name;
-        Array.from(sortOrder.options).forEach(option => {
-            option.textContent = selectedLabels[option.value] || option.textContent;
-        });
     }
 
     function refreshCourseAssessmentTable() {
@@ -9822,16 +9833,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const empty = document.getElementById('courseAssessmentEmpty');
         const summary = document.getElementById('courseAssessmentSummary');
         const searchInput = document.getElementById('courseAssessmentSearch');
-        const sortField = document.getElementById('courseAssessmentSortField');
-        const sortOrder = document.getElementById('courseAssessmentSortOrder');
+        const sortSelect = document.getElementById('courseAssessmentSortSelect');
         const filterGroup = document.getElementById('courseAssessmentFilterGroup');
-        if (!body || !empty || !summary || !searchInput || !sortField || !sortOrder) {
+        if (!body || !empty || !summary || !searchInput || !sortSelect) {
             return;
         }
 
         const searchTerm = String(searchInput.value || '').trim().toLowerCase();
-        const sortBy = sortField.value || 'name';
-        const order = sortOrder.value === 'asc' ? 1 : -1;
+        const [sortBy, sortDirection] = (sortSelect.value || 'name-asc').split('-');
+        const order = sortDirection === 'asc' ? 1 : -1;
         const activeFilter = filterGroup ? (filterGroup.querySelector('.assessment-filter-btn.active')?.dataset.filter || 'all') : 'all';
 
         if (!Array.isArray(courseAssessmentsTableData) || courseAssessmentsTableData.length === 0) {
@@ -10087,16 +10097,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     function initializeCourseAssessmentTableHandlers() {
         if (courseAssessmentTableInitialized) return;
         const searchInput = document.getElementById('courseAssessmentSearch');
-        const sortField = document.getElementById('courseAssessmentSortField');
-        const sortOrder = document.getElementById('courseAssessmentSortOrder');
+        const sortSelect = document.getElementById('courseAssessmentSortSelect');
         const filterGroup = document.getElementById('courseAssessmentFilterGroup');
-        if (!searchInput || !sortField || !sortOrder) return;
+        if (!searchInput || !sortSelect) return;
         searchInput.addEventListener('input', refreshCourseAssessmentTable);
-        sortField.addEventListener('change', () => {
-            updateCourseAssessmentSortOrderLabels();
-            refreshCourseAssessmentTable();
-        });
-        sortOrder.addEventListener('change', refreshCourseAssessmentTable);
+        sortSelect.addEventListener('change', refreshCourseAssessmentTable);
         if (filterGroup) {
             filterGroup.addEventListener('click', (event) => {
                 const button = event.target.closest('.assessment-filter-btn');
@@ -10111,13 +10116,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
     function resetCourseAssessmentFilters() {
         const searchInput = document.getElementById('courseAssessmentSearch');
-        const sortField = document.getElementById('courseAssessmentSortField');
-        const sortOrder = document.getElementById('courseAssessmentSortOrder');
+        const sortSelect = document.getElementById('courseAssessmentSortSelect');
         const filterGroup = document.getElementById('courseAssessmentFilterGroup');
         if (searchInput) searchInput.value = '';
-        if (sortField) sortField.value = 'name';
-        if (sortOrder) sortOrder.value = 'asc';
-        updateCourseAssessmentSortOrderLabels();
+        if (sortSelect) sortSelect.value = 'name-asc';
         if (filterGroup) {
             filterGroup.querySelectorAll('.assessment-filter-btn').forEach(button => {
                 button.classList.toggle('active', (button.dataset.filter || 'all') === 'all');
@@ -10432,7 +10434,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             <p class="single-class-subtitle">${escapeHtml(subtitle)}</p>
                         </div>
                         <div class="single-class-metrics" aria-label="Class statistics">
-                            <div class="single-class-metric"><i class="bi bi-journals single-class-metric-icon" aria-hidden="true"></i><strong>${String(sectionsCount).padStart(2, '0')}</strong><span>Sections</span><small>${sectionsCount} active section${sectionsCount === 1 ? '' : 's'}<br><b class="single-class-metric-emphasis">Class space ready</b></small></div>
                             <div class="single-class-metric"><i class="bi bi-people single-class-metric-icon" aria-hidden="true"></i><strong>${String(studentsCount).padStart(2, '0')}</strong><span>Learners</span><small>${studentsCount} enrolled<br><b class="single-class-metric-emphasis">${studentsCount > 0 ? 'Ready to learn' : 'Awaiting learners'}</b></small></div>
                             <div class="single-class-metric"><i class="bi bi-book single-class-metric-icon" aria-hidden="true"></i><strong>${String(materialsCount).padStart(2, '0')}</strong><span>Materials</span><small>${materialsCount} available<br><b class="single-class-metric-emphasis">${materialsCount > 0 ? 'Learning resources ready' : 'Awaiting materials'}</b></small></div>
                             <div class="single-class-metric single-class-mobile-progress"><strong>${averageProgressLabel}</strong><span>Progress</span><small>${averageProgress > 0 ? 'Underway' : 'Getting started'}</small></div>
@@ -12220,7 +12221,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         let currentCourseStudents = [];
         let currentStudentFilter = 'all';
         let currentStudentSearch = '';
-        let currentStudentSort = 'name';
+        let currentStudentSort = 'name-asc';
+        let currentCourseActivityTotal = 0;
 
         function getStudentInitials(student) {
             const name = String(student?.name || `${student?.first_name || ''} ${student?.last_name || ''}`.trim() || 'Student').trim();
@@ -12309,6 +12311,19 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
         }
 
+        function getReadingActivityProgress(student) {
+            const assigned = Number(student?.assigned_activities ?? student?.total_assigned_activities ?? currentCourseActivityTotal) || 0;
+            const completed = Math.max(0, Math.min(assigned, Number(student?.completed_activities ?? student?.activities_completed ?? student?.completed_reading_activities ?? 0) || 0));
+            const percentage = assigned > 0 ? Math.round((completed / assigned) * 100) : 0;
+            const lastActivityValue = student?.last_activity_at || student?.last_reading_activity_at || student?.latest_activity_at;
+            return {
+                assigned,
+                completed,
+                percentage,
+                lastActivity: lastActivityValue ? formatStudentJoinedDate(lastActivityValue) : '—'
+            };
+        }
+
         function renderCourseStudents() {
             const grid = document.getElementById('courseStudentsGrid');
             const countPill = document.getElementById('studentsCountPill');
@@ -12329,13 +12344,29 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             });
 
             const sorted = filtered.slice().sort((a, b) => {
-                if (currentStudentSort === 'accuracy') {
-                    return (Number(b?.accuracy) || 0) - (Number(a?.accuracy) || 0);
+                const nameCompare = String(a?.name || '').localeCompare(String(b?.name || ''), undefined, { sensitivity: 'base' });
+                const aProgress = getReadingActivityProgress(a);
+                const bProgress = getReadingActivityProgress(b);
+                const aActivityDate = Date.parse(a?.last_activity_at || a?.last_reading_activity_at || a?.latest_activity_at || '') || null;
+                const bActivityDate = Date.parse(b?.last_activity_at || b?.last_reading_activity_at || b?.latest_activity_at || '') || null;
+
+                if (currentStudentSort === 'name-desc') return -nameCompare;
+                if (currentStudentSort === 'activities-desc' || currentStudentSort === 'activities-asc') {
+                    const difference = bProgress.completed - aProgress.completed;
+                    return currentStudentSort === 'activities-desc' ? (difference || nameCompare) : (-difference || nameCompare);
                 }
-                if (currentStudentSort === 'wpm') {
-                    return (Number(b?.wpm) || 0) - (Number(a?.wpm) || 0);
+                if (currentStudentSort === 'progress-desc' || currentStudentSort === 'progress-asc') {
+                    const difference = bProgress.percentage - aProgress.percentage;
+                    return currentStudentSort === 'progress-desc' ? (difference || nameCompare) : (-difference || nameCompare);
                 }
-                return String(a?.name || '').localeCompare(String(b?.name || ''), undefined, { sensitivity: 'base' });
+                if (currentStudentSort === 'activity-date-desc' || currentStudentSort === 'activity-date-asc') {
+                    if (aActivityDate === null && bActivityDate !== null) return 1;
+                    if (aActivityDate !== null && bActivityDate === null) return -1;
+                    if (aActivityDate !== null && bActivityDate !== null && aActivityDate !== bActivityDate) {
+                        return currentStudentSort === 'activity-date-desc' ? bActivityDate - aActivityDate : aActivityDate - bActivityDate;
+                    }
+                }
+                return nameCompare;
             });
 
             if (countPill) {
@@ -12367,22 +12398,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
             grid.innerHTML = sorted.map(student => {
                 const studentName = String(student?.name || `${student?.first_name || ''} ${student?.last_name || ''}`.trim() || 'Unnamed Student').trim();
-                const matchSectionId = (Array.isArray(student?.section_ids) ? student.section_ids.find(id => student._courseSectionIds?.includes(String(id))) : null) || (Array.isArray(student?.section_ids) && student.section_ids[0]) || '';
-                const sectionLabel = [
-                    ...(Array.isArray(student?.classes) ? student.classes : []),
-                    student?.class_name || student?.class || student?.section || ''
-                ].filter(Boolean).join(', ') || 'Section pending';
                 const email = student?.email || 'No email available';
-                const joined = formatStudentJoinedDate(student?.created_at || student?.joined_at || student?.date_joined || student?.createdAt);
                 const status = getStudentStatus(student);
                 const statusClass = status.toLowerCase().replace(/\s+/g, '-');
-                const accuracy = getMetricBadge(student?.accuracy, '—');
-                const wpm = getWpmBadge(student?.wpm);
-                const accuracyValue = Number(student?.accuracy);
-                const wpmValue = Number(student?.wpm);
-                const accuracyWidth = Number.isNaN(accuracyValue) ? 0 : Math.max(0, Math.min(100, accuracyValue));
-                const wpmWidth = Number.isNaN(wpmValue) ? 0 : Math.max(0, Math.min(100, wpmValue));
-                const removeHandler = `window.removeStudentFromCourse(${JSON.stringify(String(student?.id || student?.custom_id || ''))}, ${JSON.stringify(String(matchSectionId || ''))}, ${JSON.stringify(studentName)}, ${JSON.stringify(String(document.getElementById('courseDetailModal')?.dataset?.courseId || ''))})`;
+                const activityProgress = getReadingActivityProgress(student);
                 return `
                     <article class="student-card-modern">
                         <div class="student-card-head">
@@ -12393,33 +12412,36 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                     <span class="student-status-pill status-${escapeHtml(statusClass)}">${escapeHtml(status)}</span>
                                 </div>
                                 <p class="student-detail-line"><i class="bi bi-envelope"></i><span>${escapeHtml(email)}</span></p>
-                                <p class="student-detail-line"><i class="bi bi-book"></i><span>Section: ${escapeHtml(sectionLabel)}</span></p>
-                                <p class="student-detail-line"><i class="bi bi-calendar3"></i><span>Joined: ${escapeHtml(joined)}</span></p>
                             </div>
                         </div>
                         <div class="student-metrics">
                             <div class="student-metric-card">
                                 <div class="student-metric-row">
-                                    <span class="student-metric-label">Accuracy</span>
-                                    <span class="student-metric-badge ${escapeHtml(accuracy.className)}">${escapeHtml(accuracy.label)}</span>
+                                    <span class="student-metric-label">Activities Completed</span>
+                                    <span class="student-metric-badge">${activityProgress.completed}/${activityProgress.assigned}</span>
                                 </div>
                                 <div class="student-progress">
-                                    <div class="student-progress-bar ${accuracyValue >= 70 ? (accuracyValue >= 85 ? '' : 'progress-warning') : 'progress-danger'}" style="width:${accuracyWidth}%"></div>
+                                    <div class="student-progress-bar" style="width:${activityProgress.assigned ? Math.round((activityProgress.completed / activityProgress.assigned) * 100) : 0}%"></div>
                                 </div>
                             </div>
                             <div class="student-metric-card">
                                 <div class="student-metric-row">
-                                    <span class="student-metric-label">WPM</span>
-                                    <span class="student-metric-badge ${escapeHtml(wpm.className)}">${escapeHtml(wpm.label)}</span>
+                                    <span class="student-metric-label">Reading Progress</span>
+                                    <span class="student-metric-badge">${activityProgress.percentage}%</span>
                                 </div>
                                 <div class="student-progress">
-                                    <div class="student-progress-bar ${wpmValue >= 50 ? (wpmValue >= 80 ? '' : 'progress-warning') : 'progress-danger'}" style="width:${wpmWidth}%"></div>
+                                    <div class="student-progress-bar" style="width:${activityProgress.percentage}%"></div>
+                                </div>
+                            </div>
+                            <div class="student-metric-card">
+                                <div class="student-metric-row">
+                                    <span class="student-metric-label">Last Activity</span>
+                                    <span class="student-metric-badge">${escapeHtml(activityProgress.lastActivity)}</span>
                                 </div>
                             </div>
                         </div>
                         <div class="student-actions">
                             <button type="button" class="student-icon-btn view-student-progress" data-student-id="${escapeHtml(String(student?.id || student?.custom_id || ''))}" data-student-name="${escapeHtml(studentName)}" title="View progress"><i class="bi bi-graph-up"></i></button>
-                            <button type="button" class="student-icon-btn danger" title="Remove from section" onclick="${removeHandler}"><i class="bi bi-trash"></i></button>
                         </div>
                     </article>
                 `;
@@ -12448,7 +12470,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             });
             sortSelect.dataset.bound = 'true';
             sortSelect.addEventListener('change', () => {
-                currentStudentSort = sortSelect.value || 'name';
+                currentStudentSort = sortSelect.value || 'name-asc';
                 renderCourseStudents();
             });
         }
@@ -12460,6 +12482,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                 const sectionIds = (course.sections || []).map(s => String(s.id)).filter(Boolean);
                 const sectionNames = (course.sections || []).map(s => s.name).filter(Boolean);
+                currentCourseActivityTotal = activeRecords(Array.isArray(course.materials) ? course.materials : []).length;
                 const directStudentIds = new Set((Array.isArray(course?.metadata?.student_ids) ? course.metadata.student_ids : []).map(id => String(id)));
                 const grid = document.getElementById('courseStudentsGrid');
                 if (!grid) return;
@@ -12489,7 +12512,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 currentCourseStudents = courseStudents;
                 currentStudentSearch = '';
                 currentStudentFilter = 'all';
-                currentStudentSort = 'name';
+                currentStudentSort = 'name-asc';
                 renderCourseStudents();
             } catch (e) {
                 console.warn('loadCourseStudents failed', e);
@@ -12993,17 +13016,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 });
             });
 
-            activeRecords(course?.assessments || []).forEach(assessment => {
-                const assessmentId = assessment.raw_id || assessment.id;
-                if (!assessmentId) return;
-                const key = `assessment-${assessmentId}`;
-                if (seen.has(key)) return;
-                seen.add(key);
-                tasks.push({
-                    title: assessment.title || 'Untitled assessment',
-                    assessmentId,
-                });
-            });
             return tasks;
         }
 
@@ -13018,20 +13030,20 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (!modalEl || !tbody) return;
 
             if (titleEl) titleEl.textContent = `${studentName || 'Student'} Progress`;
-            if (subtextEl) subtextEl.textContent = `${course.title || 'Course'} assessment results`;
-            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Loading progress...</td></tr>`;
+            if (subtextEl) subtextEl.textContent = `${course.title || 'Course'} reading activities`;
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Loading progress...</td></tr>`;
 
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.show();
 
             const tasks = courseProgressTasks(course);
             if (tasks.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-4">No assessment results available yet.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">No reading activities assigned yet.</td></tr>`;
                 return;
             }
 
             const assessmentDetails = await fetchAssessmentProgressDetails(tasks.map(task => task.assessmentId));
-            const rows = tasks.flatMap(task => {
+            const activityRows = tasks.flatMap(task => {
                 const detail = task.assessmentId ? assessmentDetails[String(rawRecordId(task.assessmentId))] : null;
                 // support both new Assessment rows (array of attempt dicts) and legacy Material-based attempts
                 let allAttempts = [];
@@ -13052,33 +13064,41 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         const bTime = Date.parse(b.completed_at || b.started_at || b.updated_at || '') || 0;
                         return aTime - bTime;
                     });
-                return filteredAttempts.map((attempt, index) => {
-                    const status = normalizeProgressStatus([attempt]);
-                    const assessmentType = detail?.assessment_type || detail?.assessmentType || detail?.mode || attempt?.assessment_type || attempt?.assessmentType || attempt?.mode || null;
-                    const readingLevel = resolveCourseAttemptReadingLevel(attempt, assessmentType);
+                return [{ task, attempt: filteredAttempts[filteredAttempts.length - 1] || null }];
+            });
+            const hasScore = activityRows.some(({ attempt }) => attempt && latestAttemptValue(attempt, 'score', 'final_score', 'total_score') !== undefined && latestAttemptValue(attempt, 'score', 'final_score', 'total_score') !== null && latestAttemptValue(attempt, 'score', 'final_score', 'total_score') !== '');
+            const head = document.getElementById('studentProgressTableHead');
+            if (head) head.innerHTML = `<th>Reading Activity (Title)</th><th>Status</th><th>Date Completed</th><th>Time Spent</th><th>Progress</th>${hasScore ? '<th>Score</th>' : ''}`;
+            const searchInput = document.getElementById('studentProgressSearch');
+            const renderRows = () => {
+                const query = String(searchInput?.value || '').trim().toLowerCase();
+                const visibleRows = activityRows.filter(({ task }) => String(task.title || '').toLowerCase().includes(query));
+                const rows = visibleRows.map(({ task, attempt }) => {
+                    const status = normalizeProgressStatus(attempt ? [attempt] : []);
+                    const completedAt = attempt?.completed_at || attempt?.completedAt || '';
+                    const timeSpent = attempt ? latestAttemptValue(attempt, 'time_spent', 'duration_seconds', 'duration') : null;
+                    const progressValue = attempt ? latestAttemptValue(attempt, 'progress_percent', 'completion_percentage', 'progress') : null;
+                    const progress = progressValue !== undefined && progressValue !== null && progressValue !== '' ? `${Math.round(Number(progressValue))}%` : (status.label === 'Completed' ? '100%' : '0%');
+                    const score = attempt ? latestAttemptValue(attempt, 'score', 'final_score', 'total_score') : null;
+                    const scoreCell = hasScore ? `<td>${formatAttemptMetric(score, '%')}</td>` : '';
                     return `
                         <tr>
-                            <td><strong>${escapeHtml(task.title)}</strong>${filteredAttempts.length > 1 ? `<div class="small text-muted">Attempt ${index + 1}</div>` : ''}</td>
+                            <td><strong>${escapeHtml(task.title)}</strong></td>
                             <td><span class="badge ${status.className}">${status.label}</span></td>
-                            <td>${formatAttemptMetric(latestAttemptValue(attempt, 'wpm', 'words_per_minute', 'reading_wpm'))}</td>
-                            <td>${formatAttemptMetric(latestAttemptValue(attempt, 'fluency_score', 'fluency'), '%')}</td>
-                            <td>${formatAttemptMetric(latestAttemptValue(attempt, 'accuracy', 'accuracy_score', 'reading_accuracy'), '%')}</td>
-                            <td>${formatAttemptMetric(latestAttemptValue(attempt, 'pronunciation_score', 'pronunciation'), '%')}</td>
-                            <td>${formatAttemptMetric(latestAttemptValue(attempt, 'time_score', 'time'), '%')}</td>
-                            <td>${formatAttemptMetric(latestAttemptValue(attempt, 'final_score', 'total_score', 'score'), '%')}</td>
-                            <td>${escapeHtml(readingLevel)}</td>
-                            <td class="text-end fw-semibold">${index + 1}</td>
+                            <td>${completedAt ? escapeHtml(formatDateTime(completedAt)) : '—'}</td>
+                            <td>${timeSpent !== undefined && timeSpent !== null && timeSpent !== '' ? escapeHtml(formatCourseReportDuration(timeSpent)) : '—'}</td>
+                            <td>${escapeHtml(progress)}</td>
+                            ${scoreCell}
                         </tr>
                     `;
                 });
-            });
-
-            if (rows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-4">No assessment attempts recorded yet.</td></tr>`;
-                return;
+                tbody.innerHTML = rows.length ? rows.join('') : `<tr><td colspan="${hasScore ? 6 : 5}" class="text-center text-muted py-4">No reading activities match your search.</td></tr>`;
+            };
+            if (searchInput && !searchInput.dataset.bound) {
+                searchInput.dataset.bound = 'true';
+                searchInput.addEventListener('input', renderRows);
             }
-
-            tbody.innerHTML = rows.join('');
+            renderRows();
         }
 
         if (e.target.closest('.view-student-progress')) {
