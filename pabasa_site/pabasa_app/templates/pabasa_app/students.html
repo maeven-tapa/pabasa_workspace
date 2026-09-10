@@ -2165,7 +2165,9 @@ function renderStudentDirectory(sourceStudents) {
         const levelIndication = levelIndications[levelText] || levelIndications.Pending;
         const levelClass = getReadingLevelChipClass(levelText);
         const aralLevels = new Set(['Low Emerging Reader', 'High Emerging Reader', 'Developing Reader', 'Transitioning Reader']);
-        const aralIndicatorHtml = aralLevels.has(levelText) ? '<span class="student-aral-indicator">ARAL Program</span>' : '';
+        const aralIndicatorHtml = aralLevels.has(levelText) && student.aral_status === 'active'
+            ? '<span class="student-aral-indicator">ARAL Program</span>'
+            : '';
         const levelBadgeHtml = `<div class="d-flex flex-column align-items-end gap-1"><span class="badge rounded-pill level-chip ${levelClass}">${escapeStudentDirectoryHtml(levelText)}</span>${aralIndicatorHtml}<span class="small text-secondary" style="max-width: 240px; text-align: right;">${escapeStudentDirectoryHtml(levelIndication)}</span></div>`;
         const pendingAralAction = levelText === 'Pending';
         const moveToAral = levelText === 'Readers at Grade Level';
@@ -2347,7 +2349,15 @@ function bindTeacherAralActions() {
         if (action === 'move' && !level.value) { error.textContent = 'Choose a reading level.'; error.hidden = false; return; }
         confirmBtn.disabled = true;
         try {
-            const response = await fetch('{% url "teacher_aral_action" %}', { method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name="csrfmiddlewaretoken"]')?.value || ''}, body: JSON.stringify({student_id: pending.dataset.studentId, action, reading_level: level.value}) });
+            const response = await fetch('{% url "teacher_aral_action" %}', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken() || document.querySelector('[name="csrfmiddlewaretoken"]')?.value || ''
+                },
+                body: JSON.stringify({ student_id: pending.dataset.studentId, action, reading_level: level.value })
+            });
             const payload = await response.json();
             if (!response.ok || !payload.success) throw new Error(payload.error || 'ARAL update failed.');
             const updatedStudent = latestStudentDirectoryStudents.find(student => String(student.id || student.student_id || '') === String(pending.dataset.studentId));

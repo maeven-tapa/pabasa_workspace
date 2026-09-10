@@ -687,6 +687,9 @@ def _reader_assessment_state(student):
         'reader_classification': classification,
         'aral_eligible': False if grade_level_complete else bool(eligible),
         'aral_status': 'ineligible' if grade_level_complete else str(state.get('aral_status') or ('active' if state.get('current_phase') == 'materials' and eligible else 'pending')).strip().lower(),
+        # This is a teacher enrollment decision, separate from the immutable
+        # finalized CRLA classification used to calculate eligibility.
+        'aral_exit_override': str(state.get('aral_manual_status') or '').strip().lower() == 'ineligible',
         'reading_at_grade_level_complete': grade_level_complete,
         'classification_workflow_status': state.get('classification_workflow_status') or '',
         'pre_test_completed': bool(state.get('crla_pretest_completed')),
@@ -2513,6 +2516,17 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
         # fallback is permitted for dashboard classifications.
         reading_level = official_result.crla_classification if official_result else 'Pending'
         has_completed_assessment = official_result is not None
+        reading_state = _get_user_state(user)
+        manual_aral_status = str(reading_state.get('aral_manual_status') or '').strip().lower()
+        assessment_aral_eligible = bool(
+            official_result and _aral_eligible_classification(reading_level)
+        )
+        if manual_aral_status in {'active', 'ineligible'}:
+            aral_status = manual_aral_status
+            aral_eligible = manual_aral_status == 'active'
+        else:
+            aral_status = 'active' if assessment_aral_eligible else 'ineligible'
+            aral_eligible = assessment_aral_eligible
         disclaimer = ADAPTED_READING_LEVEL_DISCLAIMER
 
         # Improvement is a separate CRLA-result trend.  It never mixes
@@ -2546,11 +2560,11 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
             'email': user.email or sdata.get('email', ''),
             'custom_id': user.custom_id or sdata.get('custom_id', ''),
             'crla_classification': reading_level if official_result else '',
-            'aral_eligible': bool(official_result and _aral_eligible_classification(reading_level)),
-            # Preserve the established dashboard ARAL contract.  Its active
-            # state is now derived exclusively from the finalized official
-            # CRLA Reading Profile above, never from workflow/profile flags.
-            'aral_status': 'active' if official_result and _aral_eligible_classification(reading_level) else 'ineligible',
+            'aral_eligible': aral_eligible,
+            # Eligibility always comes from a finalized official CRLA result.
+            # A teacher's explicit, authorized placement/exit decision is then
+            # applied as the durable ARAL enrollment override.
+            'aral_status': aral_status,
             'aral_assessment_completed': has_completed_assessment,
             'lrn': user.lrn or '',
             'grade_level': getattr(user, 'grade_level', '') or profile.get('grade_level') or profile.get('grade') or '',
@@ -11168,6 +11182,23 @@ def assessment(request):
     if selected_section is None and len(joined_sections) == 1:
         selected_section = joined_sections[0]
     reading_access_state = workflow.get('eligibility') or _reader_assessment_state(user)
+    if (
+        user
+        and getattr(user, 'role', '') == 'student'
+        and reading_access_state.get('aral_exit_override')
+    ):
+        # Reuse the established congratulatory state after a teacher exits a
+        # learner from ARAL. The finalized CRLA result remains untouched; the
+        # override changes only the learner's current ARAL participation.
+        context = _dashboard_context(request, 'student')
+        context.update({
+            'stage': 'grade_level_complete',
+            'workflow_title': 'Congratulations!',
+            'workflow_subtitle': 'You’re reading at grade level!',
+            'workflow_message': 'Keep up the great work. You can continue practicing whenever you like.',
+            'eligibility': reading_access_state,
+        })
+        return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
     aral_week_mode = bool(
         aral_week_requested
         and selected_section
@@ -11790,28 +11821,60 @@ def teacher_aral_action(request):
     if not enrolled:
         return JsonResponse({'success': False, 'error': 'This student is not currently enrolled in your section.'}, status=403)
 
+    if action not in {'move', 'exit'}:
+        return JsonResponse({
+            'success': False,
+            'code': 'unsupported_aral_action',
+            'error': 'Unsupported ARAL action.',
+        }, status=400)
+
+    # The Student Directory is built from finalized official CRLA results.
+    # Do not use the legacy preference flag here: it may be absent for a
+    # legitimately finalized result, and it can be set by non-authoritative
+    # workflow state.
+    official_result = latest_completed_official_crla_results(
+        student_ids=[student.pk]
+    ).get(student.pk)
+    if not official_result:
+        return JsonResponse({
+            'success': False,
+            'code': 'official_assessment_required',
+            'error': 'The student must complete the official reading assessment first.',
+        }, status=422)
+
     state = _get_user_state(student)
-    if not state.get('crla_pretest_completed'):
-        return JsonResponse({'success': False, 'error': 'The student must complete the reading assessment first.'}, status=400)
 
     if action == 'move':
         if reading_level not in allowed_levels:
-            return JsonResponse({'success': False, 'error': 'Choose a valid ARAL reading level.'}, status=400)
+            return JsonResponse({
+                'success': False,
+                'code': 'invalid_reading_level',
+                'error': 'Choose a valid ARAL reading level.',
+            }, status=400)
         state.update({
             'reader_classification': reading_level,
             'aral_eligible': True,
             'aral_status': 'active',
+            'aral_manual_status': 'active',
             'current_phase': 'materials',
             'classification_workflow_status': 'completed',
         })
     elif action == 'exit':
+        officially_aral_eligible = _aral_eligible_classification(
+            official_result.crla_classification or official_result.classification
+        )
+        if state.get('aral_manual_status') == 'ineligible' or not officially_aral_eligible:
+            return JsonResponse({
+                'success': False,
+                'code': 'student_not_active_in_aral',
+                'error': 'This student is not currently active in the ARAL Program.',
+            }, status=409)
         state.update({
             'aral_eligible': False,
             'aral_status': 'ineligible',
+            'aral_manual_status': 'ineligible',
             'current_phase': 'complete',
         })
-    else:
-        return JsonResponse({'success': False, 'error': 'Unsupported ARAL action.'}, status=400)
 
     _set_user_state(student, state)
     return JsonResponse({
