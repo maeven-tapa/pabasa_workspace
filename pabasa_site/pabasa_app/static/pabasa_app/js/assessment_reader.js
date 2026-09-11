@@ -4370,7 +4370,7 @@
                             logStorySegmentInitialization("automatic_completion");
                             animateCurrentItem();
                         } else {
-                            stopReading();
+                            stopReading({ allowCompletedStorySegment: true });
                         }
                     }, 700);
                     return;
@@ -4481,7 +4481,7 @@
                             logStorySegmentInitialization("automatic_completion");
                             animateCurrentItem();
                         } else {
-                            stopReading();
+                            stopReading({ allowCompletedStorySegment: true });
                         }
                     }, 700);
                 }
@@ -6280,8 +6280,13 @@
             console.log("PABASA: Assessment recording and timer started.");
         };
 
-        const stopReading = async ({ allowIdleStoryCompletion = false } = {}) => {
-            if (isReviewMode || isSpeechResponsePending()) return;
+        const stopReading = async ({ allowIdleStoryCompletion = false, allowCompletedStorySegment = false } = {}) => {
+            const isCompletedOfficialCrlaStorySegment = allowCompletedStorySegment
+                && isOfficialAssessmentLaunch
+                && isCrla
+                && currentStoryState === "story_reading";
+            const genuineProcessingPending = Boolean(isSendingChunk || pendingAudioChunk);
+            if (isReviewMode || (isSpeechResponsePending() && (!isCompletedOfficialCrlaStorySegment || genuineProcessingPending))) return;
             if (!isRecording && !(
                 allowIdleStoryCompletion
                 && isCrla
