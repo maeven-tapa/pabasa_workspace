@@ -4113,6 +4113,18 @@ def _normalize_registration_value(value):
     return str(value or '').strip()
 
 
+def _normalize_signup_first_name(value):
+    """Normalize spacing while retaining a valid multi-word given name."""
+    return re.sub(r'\s+', ' ', str(value or '').strip())
+
+
+def _signup_first_name_error(value):
+    normalized = _normalize_signup_first_name(value)
+    if not re.fullmatch(r'[A-Za-z]+(?: [A-Za-z]+)*', normalized):
+        return 'First name may contain letters and spaces only.'
+    return ''
+
+
 def _signup_birth_date_error(data, role):
     """Validate the birth date rules before a signup can be persisted."""
     try:
@@ -4562,6 +4574,11 @@ def register_teacher(request):
             if not data.get(field):
                 return JsonResponse({'success': False, 'error': f'{field} is required'}, status=400)
 
+        first_name = _normalize_signup_first_name(data.get('first_name'))
+        first_name_error = _signup_first_name_error(first_name)
+        if first_name_error:
+            return JsonResponse({'success': False, 'error': first_name_error}, status=400)
+
         birth_date_error = _signup_birth_date_error(data, 'teacher')
         if birth_date_error:
             return JsonResponse({'success': False, 'error': birth_date_error}, status=400)
@@ -4586,11 +4603,12 @@ def register_teacher(request):
         
         # Create pending signup and send OTP
         signup_data = data.copy()
+        signup_data['first_name'] = first_name
         signup_data['email'] = email
         signup_data['grade_level'] = canonical_section.grade_level
         otp = _store_pending_teacher_signup(request, signup_data)
         try:
-            send_teacher_signup_otp_email(request, email, otp, data.get('first_name'))
+            send_teacher_signup_otp_email(request, email, otp, first_name)
         except Exception:
             logger.exception("Teacher signup OTP email delivery failed for recipient=%s", email)
             return JsonResponse({'success': False, 'error': 'We could not send the verification email. Please try again.'}, status=503)
@@ -4628,6 +4646,11 @@ def register_student(request):
             if not data.get(field):
                 return JsonResponse({'success': False, 'error': f'{field} is required'}, status=400)
 
+        first_name = _normalize_signup_first_name(data.get('first_name'))
+        first_name_error = _signup_first_name_error(first_name)
+        if first_name_error:
+            return JsonResponse({'success': False, 'error': first_name_error}, status=400)
+
         birth_date_error = _signup_birth_date_error(data, 'student')
         if birth_date_error:
             return JsonResponse({'success': False, 'error': birth_date_error}, status=400)
@@ -4660,12 +4683,13 @@ def register_student(request):
         # Store the canonical recipient so verification and confirmation use
         # exactly the address to which the OTP was delivered.
         signup_data = data.copy()
+        signup_data['first_name'] = first_name
         signup_data['email'] = raw_email
         signup_data['grade_level'] = NEW_USER_GRADE_LEVEL
         otp = _store_pending_student_signup(request, signup_data)
         logger.debug("STUDENT REGISTRATION PENDING CREATED session_keys=%s", sorted(list(request.session.keys())))
         try:
-            send_student_signup_otp_email(request, raw_email, otp, data.get('first_name'))
+            send_student_signup_otp_email(request, raw_email, otp, first_name)
         except Exception:
             logger.exception("Student signup OTP email delivery failed for recipient=%s", raw_email)
             return JsonResponse({'success': False, 'error': 'We could not send the verification email. Please try again.'}, status=503)

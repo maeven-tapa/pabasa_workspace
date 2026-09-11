@@ -1159,7 +1159,7 @@
                     <div class="col-md-4">
                         <label class="form-label">First name</label>
                         <input class="form-control" type="text" name="first_name" placeholder="Enter First name"
-                               pattern="[A-Za-z]+" title="Use letters only." data-letters-only required>
+                               pattern="[A-Za-z]+(?:[ \t]+[A-Za-z]+)*" title="Use letters and spaces only." data-letters-only required>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Middle Initial</label>
@@ -1443,7 +1443,7 @@
 
         letterOnlyInputs.forEach((input) => {
             input.addEventListener('input', () => {
-                input.value = input.value.replace(/[^A-Za-z]/g, '');
+                input.value = input.value.replace(/[^A-Za-z\s]/g, '').replace(/\s+/g, ' ');
             });
         });
 

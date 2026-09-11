@@ -54,7 +54,7 @@ def test_section_create(**kwargs):
     return Section.objects.create(school=school, **kwargs)
 from .management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
 from .views import _active_school_calendar, _apply_progression_unlock_override, _aral_eligible_classification, _create_notification, _notify_admins, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _primary_school, _save_admin_practice_material, _selected_school_calendar, _sync_assessment_workflow_state, _official_crla_assessment_labels, _official_assessment_availability_for_student
-from .views import _validate_principal_form_data
+from .views import _validate_principal_form_data, _normalize_signup_first_name, _signup_first_name_error
 from .weekly_digest import send_weekly_digest
 from .scoring import build_assessment_score_payload
 
@@ -85,6 +85,17 @@ class PrincipalFormValidationTests(TestCase):
         self.assertTrue(any('Last name is required' in error for error in errors))
         self.assertTrue(any('valid email' in error for error in errors))
         self.assertTrue(any('Contact number' in error for error in errors))
+
+
+class SignupFirstNameValidationTests(TestCase):
+    def test_multi_word_first_names_are_accepted_and_spacing_is_normalized(self):
+        for value in ('Amiel', 'Amiel John', 'Dona Flor Saachi', 'Dona   Flor\tSaachi'):
+            self.assertEqual(_signup_first_name_error(value), '')
+        self.assertEqual(_normalize_signup_first_name('Dona   Flor\tSaachi'), 'Dona Flor Saachi')
+
+    def test_first_name_still_rejects_numbers_and_special_characters(self):
+        for value in ('Amiel2', 'Dona-Flor', "Dona O'Neil", 'Amiel!'):
+            self.assertNotEqual(_signup_first_name_error(value), '')
 
 
 class WordDecodingLanguageTests(TestCase):
