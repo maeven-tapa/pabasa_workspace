@@ -37,13 +37,19 @@
 .story-response-state>.playback .time-display{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:6px;white-space:nowrap;margin:0;}
 .story-response-state>.playback .again{margin-top:6px;}
 .story-response-state[data-phase="rec"]{gap:clamp(8px,1vw,12px);}
+.story-response-state.is-submitted{width:100%;height:100%;min-height:100%;display:flex;align-items:center;justify-content:center;color:#1e3550;font-size:clamp(1rem,2vw,1.35rem);font-weight:900;text-align:center;text-shadow:none;}
 .story-response-state[data-phase="rec"]>#stack{order:3;margin-top:0;}
 @media(max-width:960px){.stage{grid-template-columns:minmax(300px,1.12fr) minmax(320px,.88fr);gap:clamp(10px,2vw,24px)}.tv{width:min(600px,54vw);transform:translateX(-16px)}.talk{width:min(450px,44vw)}.prompt{font-size:clamp(.95rem,1.8vw,1.2rem)}}
 @media(max-width:760px){html,body{overflow:auto}.set{min-height:100dvh;height:auto}.show{min-height:calc(100dvh - 28px)}.stage{grid-template-columns:1fr;gap:clamp(8px,2vh,16px);padding:12px 0 18px}.tv{width:min(540px,94vw);max-height:none;justify-self:start;transform:none;order:0}.talk{width:min(500px,94vw);padding:21% 11% 33%;transform:none;order:1}.response-interaction{margin-top:clamp(10px,2vh,18px)}.prompt{font-size:clamp(1rem,4vw,1.3rem)}.back{padding:8px 0 2px}}
 @media(max-height:620px) and (min-width:761px){.tv{width:min(560px,46vw)}.talk{width:min(370px,38vw)}.prompt{font-size:clamp(.88rem,1.45vw,1.05rem)}#stack:not([hidden]){margin-top:7px}.turn{margin-top:6px}}
 </style>
 <script>document.addEventListener('DOMContentLoaded',()=>{const x=document.createElement('section');x.className='sr-intro';x.innerHTML=`<style>.sr-intro{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:18px;background:#102a5fe8;color:#fff;font-family:R}.sr-intro>div{width:min(600px,100%);padding:25px;border-radius:24px;background:#102850;box-shadow:0 22px 48px #0008;text-align:center}.sr-mini{display:grid;grid-template-columns:120px 1fr;gap:14px;align-items:center;text-align:left}.sr-mini img{width:120px;background:#1b547b;border-radius:16px}.sr-q{padding:14px;border-radius:18px;background:#fff4ca;color:#1e3550;font-family:Arial;font-weight:700}.sr-intro button{margin-top:17px;border:0;border-radius:12px;background:#e94f52;color:#fff;padding:12px 24px;font:inherit;cursor:pointer}</style><div><h1>Story Response</h1><p>Remember the story, then share your answer.</p><div class="sr-mini"><img src="{% static 'pabasa_app/images/story_response/female_idle.png' %}" alt="Story host"><div class="sr-q">What was your favorite part?<br><br>🎙 Answer with your voice.</div></div><button>Let’s Start!</button></div>`;x.querySelector('button').onclick=()=>x.remove();document.body.append(x)})</script><form class="d-none">{% csrf_token %}</form>
+<style>
+  .sr-intro { pointer-events: auto !important; }
+  .sr-intro > div, .sr-intro button { position: relative; z-index: 10001; pointer-events: auto !important; }
+</style>
 <script>
+document.addEventListener('click',event=>{if(event.target.closest('.sr-intro button')){event.preventDefault();event.stopPropagation();document.querySelector('.sr-intro')?.remove();}},true);
 document.querySelector('.hostlabel').textContent='STORY EXPLORER';
 document.querySelector('.turn')?.remove();
 state=x=>{$('avatar').src=A[a.student_avatar_set==='male'?'male':'female'][x]};
@@ -88,7 +94,8 @@ finishButton.addEventListener('click',async()=>{
 		const response=await fetch('{% url "story_response_submit" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':decodeURIComponent(csrfToken)},body:form});
 		const result=await response.json().catch(()=>({}));
 		if(!response.ok||!result.success)throw new Error(result.error||'Your response could not be submitted. Please try again.');
-		responseState.textContent='Recording Saved';
+		responseState.classList.add('is-submitted');
+		responseState.textContent=String(a.language||'').toLowerCase().startsWith('fil')?'Na-save ang Recording!':'Recording Saved';
 		window.setTimeout(()=>window.location.assign(a.return_url||'{% url "assessment" %}'),1500);
 	}catch(error){
 		const feedback=document.createElement('div');
@@ -100,4 +107,15 @@ finishButton.addEventListener('click',async()=>{
 const storyResponseTtsBlob=base64=>{const binary=atob(base64||'');const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return new Blob([bytes],{type:'audio/mpeg'});};
 let storyResponseTtsAudio=null,storyResponseTtsUrl='';
 $('hear').onclick=async()=>{state('listening');$('hear').disabled=true;try{const form=new FormData();form.append('target_text',a.response_prompt||'');form.append('language',a.language||'');const response=await fetch('{% url "story_response_read_aloud_api" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||''},body:form});const result=await response.json();if(!response.ok||!result.success)throw new Error(result.error||'Audio unavailable.');if(storyResponseTtsAudio)storyResponseTtsAudio.pause();if(storyResponseTtsUrl)URL.revokeObjectURL(storyResponseTtsUrl);storyResponseTtsUrl=URL.createObjectURL(storyResponseTtsBlob(result.audio_content));storyResponseTtsAudio=new Audio(storyResponseTtsUrl);storyResponseTtsAudio.onended=()=>state('idle');await storyResponseTtsAudio.play();}catch(error){state('idle');alert(error.message);}finally{$('hear').disabled=false;}};
+window.__PABASA_STORY_RESPONSE__={{story_response_data|safe}};
+window.addEventListener('DOMContentLoaded',()=>{
+  const data=window.__PABASA_STORY_RESPONSE__||{};
+  const fil=String(data.language||'').toLowerCase().startsWith('fil');
+  const copy=fil?{intro:'Tugon sa Kuwento',introText:'Alalahanin ang kuwento, pagkatapos ay ibahagi ang iyong sagot.',start:'Magsimula Tayo!',asks:'MGA TANONG NG HOST:',turn:'IKAW NAMAN!',record:'🎙 Sumagot Ngayon',stop:'⏹ Itigil ang Pagre-record',hear:'🔊 Pakinggan ang Tanong',thinking:'Nakikinig ang host...',again:'↻ Mag-record Muli',back:'← Bumalik sa mga Aktibidad',onair:'● NAKIKINIG',host:'HOST NG KUWENTO'}:{intro:'Story Response',introText:'Remember the story, then share your answer.',start:'Let’s Start!',asks:'HOST ASKS:',turn:'YOUR TURN!',record:'🎙 Answer Now',stop:'⏹ Stop Recording',hear:'🔊 Hear Question',thinking:'The host is listening...',again:'↻ Record Again',back:'← Back to Activities',onair:'● ON AIR',host:'STORY HOST'};
+  const set=(selector,value)=>document.querySelector(selector)?.replaceChildren(value);
+  set('.segment',copy.intro);set('.asks',copy.asks);set('#state',copy.turn);set('#back',copy.back);set('.onair',copy.onair);set('.hostlabel',copy.host);set('#processing',copy.thinking);set('#again',copy.again);set('#hear',copy.hear);set('#record',copy.record);
+  const intro=document.querySelector('.sr-intro');
+  if(intro){intro.style.pointerEvents='auto';const button=intro.querySelector('button');if(button){button.style.position='relative';button.style.zIndex='10001';button.style.pointerEvents='auto';button.addEventListener('click',()=>intro.remove(),{once:true});}}
+  if(intro){const h=intro.querySelector('h1'),p=intro.querySelector('p'),b=intro.querySelector('button'),q=intro.querySelector('.sr-q');if(h)h.textContent=copy.intro;if(p)p.textContent=copy.introText;if(b)b.textContent=copy.start;if(q)q.innerHTML=fil?'Ano ang paborito mong bahagi?<br><br>🎙 Sagutin gamit ang iyong boses.':'What was your favorite part?<br><br>🎙 Answer with your voice.';}
+});
 </script>

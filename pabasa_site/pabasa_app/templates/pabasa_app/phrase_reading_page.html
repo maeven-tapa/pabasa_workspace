@@ -13,7 +13,11 @@
     <link rel="stylesheet" href="{% static 'pabasa_app/css/phrase_reading.css' %}?v={% now 'U' %}">
 </head>
 <body>
+{% comment %}Legacy duplicate envelope intro removed; Phrase Reading uses the animated intro below.{% endcomment %}
+{% if False %}
 <style>.phrase-intro{position:fixed;inset:0;z-index:3000;display:grid;place-items:center;padding:18px;background:linear-gradient(#cbeefe,#f8ddef);font-family:"Segoe UI",sans-serif}.phrase-intro-letter{position:relative;width:min(540px,100%);padding:clamp(90px,14vw,130px) clamp(22px,5vw,42px) 26px;border-radius:10px;background:#fffaf2;color:#584a66;box-shadow:0 24px 45px #7f628744;transform:translateY(20px);animation:letter-rise .9s .45s ease-out both;text-align:center}.phrase-intro-letter:before{content:'';position:absolute;inset:-70px 0 auto;height:130px;background:linear-gradient(135deg,#f6b9c9 50%,#ef9fb8 50%);clip-path:polygon(0 0,100% 0,50% 100%);transform-origin:top;animation:flap-open .8s ease-in forwards}.phrase-intro h1{margin:0;color:#8066ab;font-size:clamp(1.55rem,4vw,2.2rem)}.phrase-intro p{margin:8px auto 14px;font-weight:700;line-height:1.45}.phrase-example{padding:12px;border:1px dashed #c79cbd;border-radius:12px;background:#fff4ca;color:#453153;font-size:clamp(1.1rem,3vw,1.35rem);font-weight:900}.phrase-intro button{margin-top:18px;min-height:48px;border:0;border-radius:13px;background:#8066ab;color:#fff;padding:10px 25px;font:inherit;font-weight:900;box-shadow:0 5px 0 #5d477d;cursor:pointer}@keyframes flap-open{to{transform:rotateX(160deg)}}@keyframes letter-rise{to{transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.phrase-intro-letter,.phrase-intro-letter:before{animation:none}.phrase-intro-letter{transform:none}}</style><section class="phrase-intro" id="phraseIntro" aria-labelledby="phraseIntroTitle"><article class="phrase-intro-letter"><h1 id="phraseIntroTitle">A Reading Message</h1><p>Read the phrase aloud. Take your time and read clearly.</p><div class="phrase-example">the happy puppy</div><button id="startPhrase" type="button">Let’s Start!</button></article></section><script>document.getElementById('startPhrase').onclick=()=>document.getElementById('phraseIntro').remove()</script>
+{% comment %}End legacy duplicate intro.{% endcomment %}
+{% endif %}
     <style>
         @font-face { font-family:"Phrase Intro Patrick Hand"; src:url("{% static 'pabasa_app/font/patrick-hand.regular.ttf' %}") format("truetype"); font-display:swap; }
         .phrase-reading-intro { position:fixed; inset:0; z-index:3001; display:grid; place-items:center; padding:48px; overflow:hidden; background:linear-gradient(#cbeefe,#f8ddef); font-family:"Segoe UI",sans-serif; }
@@ -37,7 +41,25 @@
     <section class="phrase-reading-intro" id="phraseReadingIntro" aria-labelledby="phraseIntroTitle">
         <div class="phrase-reading-intro-card" id="phraseReadingIntroCard">
             <div class="phrase-reading-intro-lottie" id="phraseReadingIntroLottie" aria-hidden="true"></div>
-            <article class="phrase-reading-intro-paper" id="phraseReadingIntroPaper" aria-hidden="true"></article>
+            <article class="phrase-reading-intro-paper" id="phraseReadingIntroPaper" aria-hidden="true">
+                <h1 id="phraseIntroTitle">A Message for You!</h1>
+                <p>
+                    {% if phrase_reading_language|lower == 'filipino' %}
+                        <strong>Ang Misyon Mo sa Pagbasa</strong>
+                        Basahin nang mabuti ang bawat parirala.<br>
+                        Basahin nang malakas ang bawat parirala.<br>
+                        Gawin ang iyong makakaya at magpatuloy!
+                    {% else %}
+                        <strong>Your Reading Mission</strong>
+                        Look at each phrase carefully.<br>
+                        Read each phrase aloud.<br>
+                        Do your best and keep going!
+                    {% endif %}
+                </p>
+                <button id="startPhrase" type="button">
+                    {% if phrase_reading_language|lower == 'filipino' %}Magsimula Na Tayo!{% else %}Let’s Read!{% endif %}
+                </button>
+            </article>
         </div>
     </section>
     <script src="{% static 'pabasa_app/js/lottie.min.js' %}"></script>
@@ -60,9 +82,9 @@
             const title = paper.querySelector('#phraseIntroTitle');
             const instructions = paper.querySelector('p');
             const example = paper.querySelector('.phrase-example');
-            if (title) title.textContent = 'A Message for You!';
+            if (title) title.textContent = {% if phrase_reading_language|lower == 'filipino' %}'Mensahe Para sa Iyo!'{% else %}'A Message for You!'{% endif %};
             if (instructions) {
-                instructions.innerHTML = '<strong>Your Reading Mission</strong>Look at each phrase carefully.<br>Read each phrase aloud.<br>Do your best and keep going!';
+                instructions.innerHTML = {% if phrase_reading_language|lower == 'filipino' %}'<strong>Ang Misyon Mo sa Pagbasa</strong>Basahin nang mabuti ang bawat parirala.<br>Basahin nang malakas ang bawat parirala.<br>Gawin ang iyong makakaya at magpatuloy!'{% else %}'<strong>Your Reading Mission</strong>Look at each phrase carefully.<br>Read each phrase aloud.<br>Do your best and keep going!'{% endif %};
             }
             example?.remove();
 
@@ -89,7 +111,7 @@
 
             const startButton = paper.querySelector('#startPhrase');
             if (startButton) {
-                startButton.textContent = 'Let’s Read!';
+                startButton.textContent = {% if phrase_reading_language|lower == 'filipino' %}'Magbasa Tayo!'{% else %}'Let’s Read!'{% endif %};
                 startButton.onclick = null;
                 startButton.addEventListener('click', () => intro.remove(), { once:true });
             }
@@ -124,6 +146,25 @@
         window.PABASA_USER_NAME = "{{ user_full_name|escapejs }}";
         window.PABASA_USER_ID = "{{ request.session.user_id|default:'' }}";
         window.PABASA_USER_ROLE = "{{ nav_role }}";
+        window.__PHRASE_READING_I18N__ = {% if phrase_reading_language|lower == 'filipino' %}{
+            message: 'Mensahe', back: 'Bumalik sa Assessment', eyebrow: 'Pagbasa ng Parirala', title: 'Mga Lihim na Mensahe', progress: 'Mga Nabasa',
+            boardTitle: 'May mahiwagang sulat ka!', boardCopy: 'Pumili ng sobre at tuklasin ang mensahe sa loob.', close: 'Bumalik sa mga sobre',
+            loading: 'Nilo-load ang mga mensahe...', helper: 'Basahin nang malakas ang mensahe.', start: 'Simulan ang Pagbasa', aloud: 'Basahin nang Malakas', finishReading: 'Tapusin ang Pagbasa',
+            ready: 'Handa na', transcript: 'Wala pang nakilalang salita. Magpatuloy sa malinaw na pagbasa.', waiting: 'Naghihintay sa pagsasalita...',
+            allCollected: 'Nakolekta na ang lahat ng sulat', complete: 'Tapos na ang mga lihim na mensahe!', completeMessage: 'Mahusay na pagbasa—nabuksan mo ang lahat ng mahiwagang mensahe.',
+            readAgain: 'Magbasa Muli', returnActivities: 'Bumalik sa mga Aktibidad', saveAgain: 'I-save Muli',
+            saveError: 'Hindi na-save ang resulta. Subukan muli bago bumalik.', issue: 'May problema. Pakisubukang muli.',
+            phrasesCompleted: 'parirala ang natapos', score: 'Puntos'
+        }{% else %}{
+            message: 'Message', back: 'Back to Assessment', eyebrow: 'Phrase Reading', title: 'Secret Messages', progress: 'Messages Read',
+            boardTitle: 'You have magical mail!', boardCopy: 'Choose an envelope and discover the message inside.', close: 'Return to envelopes',
+            loading: 'Loading messages...', helper: 'Read the message aloud.', start: 'Start Reading', aloud: 'Read Aloud', finishReading: 'Finish Reading',
+            ready: 'Ready', transcript: 'No words recognized yet. Keep reading clearly.', waiting: 'Waiting for speech...',
+            allCollected: 'All mail collected', complete: 'Secret messages complete!', completeMessage: 'Wonderful reading—you opened every magical message.',
+            readAgain: 'Read Again', returnActivities: 'Return to Activities', saveAgain: 'Save Again',
+            saveError: 'Your result could not be saved. Please try again before returning.', issue: 'There was an issue. Please try again.',
+            phrasesCompleted: 'phrases completed', score: 'Score'
+        }{% endif %};
     </script>
 
     <main class="phrase-reading-app reader-shell reader-phrase" id="phraseReadingApp">

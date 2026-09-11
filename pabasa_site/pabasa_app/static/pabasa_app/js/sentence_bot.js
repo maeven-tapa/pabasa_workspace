@@ -7,6 +7,7 @@
     const persistedCompletion = window.__PABASA_SENTENCE_BOT_COMPLETION__ || {};
     const completionUrl = window.__PABASA_SENTENCE_BOT_COMPLETE_URL__ || "/api/sentence-bot/complete/";
     const backUrl = window.__PABASA_SENTENCE_BOT_BACK_URL__ || "/dashboard/assessment/";
+    const I18N = window.__PABASA_SENTENCE_BOT_I18N__ || {};
     const language = /filipino|tagalog|fil\b/i.test(String(material.language || material.content_json?.language || "")) ? "FILIPINO" : "ENGLISH";
     const sourceItems = Array.isArray(material.items) ? material.items : [];
     const totalFromData = sourceItems.length || String(material.content || "").split(/\r?\n/).filter(line => line.trim()).length || 1;
@@ -76,6 +77,14 @@
     const stopButton = document.getElementById("btnStopReading");
     const doneButton = document.getElementById("reviewBtn");
     const backButton = document.getElementById("finishBtn");
+    const completionKicker = document.querySelector(".completion-kicker");
+    const completionTitle = document.getElementById("completionTitle");
+    const completionMessage = document.getElementById("completionMessage");
+    if (completionKicker) completionKicker.textContent = I18N.completeKicker;
+    if (completionTitle) completionTitle.textContent = I18N.complete;
+    if (completionMessage) completionMessage.textContent = I18N.completeNone;
+    if (doneButton) doneButton.textContent = I18N.done;
+    if (backButton) backButton.textContent = I18N.backMaterials;
     const lab = document.createElement("section");
     lab.className = "sentence-bot-lab";
     lab.innerHTML = `
@@ -83,26 +92,26 @@
         <img class="sentence-bot-particles" src="${assetRoot}particle1.png" alt="">
         <header class="sentence-bot-header">
             <a class="sentence-bot-back" href="${backUrl}" aria-label="Back">←</a>
-            <div><p class="sentence-bot-kicker">PABASA LANGUAGE LAB</p><h1>SENTENCE BOT</h1></div>
-            <div class="sentence-bot-training-meta"><span class="sentence-bot-language">${language}</span><strong id="sentenceBotTraining">TRAINING 01 / ${pad(state.total)}</strong></div>
+            <div><p class="sentence-bot-kicker">${I18N.lab}</p><h1>${I18N.bot}</h1></div>
+            <div class="sentence-bot-training-meta"><span class="sentence-bot-language">${I18N.language}</span><strong id="sentenceBotTraining">${I18N.training} 01 / ${pad(state.total)}</strong></div>
         </header>
         <div class="sentence-bot-workspace">
             <aside class="sentence-bot-character-panel">
-                <div class="sentence-bot-system-status"><span class="sentence-bot-status-light" aria-hidden="true"></span><b>PIPPO SYSTEM</b><em id="sentenceBotStatus">READY</em></div>
+                <div class="sentence-bot-system-status"><span class="sentence-bot-status-light" aria-hidden="true"></span><b>${I18N.system}</b><em id="sentenceBotStatus">${I18N.ready}</em></div>
                 <div class="sentence-bot-orbit" aria-hidden="true"><i></i><i></i><i></i></div>
                 <div class="sentence-bot-core-ring" aria-hidden="true"><span></span></div>
                 <img id="sentenceBotRobot" class="sentence-bot-robot" src="${assetRoot}robot_idle.png" alt="Friendly Sentence Bot is ready">
-                <div class="sentence-bot-message" id="sentenceBotMessage" role="status" aria-live="polite"><span class="sentence-bot-message-dot" aria-hidden="true"></span><span>READY TO LEARN</span></div>
+                <div class="sentence-bot-message" id="sentenceBotMessage" role="status" aria-live="polite"><span class="sentence-bot-message-dot" aria-hidden="true"></span><span>${I18N.readyLearn}</span></div>
             </aside>
             <div class="sentence-bot-lesson-panel">
-                <div class="sentence-bot-prompt-label"><span></span> KNOWLEDGE INPUT <span></span></div>
+                <div class="sentence-bot-prompt-label"><span></span> ${I18N.input} <span></span></div>
                 <div class="sentence-bot-sentence-slot"></div>
-                <p class="sentence-bot-voice-guide" id="sentenceBotVoiceGuide"><i class="bi bi-volume-up" aria-hidden="true"></i><span>Read the sentence aloud</span></p>
+                <p class="sentence-bot-voice-guide" id="sentenceBotVoiceGuide"><i class="bi bi-volume-up" aria-hidden="true"></i><span>${I18N.guide}</span></p>
                 <div class="sentence-bot-action-slot"></div>
-                <div class="sentence-bot-result-feedback" id="sentenceBotResultFeedback" aria-live="polite"><span aria-hidden="true"></span><b>SENTENCE READY</b></div>
+                <div class="sentence-bot-result-feedback" id="sentenceBotResultFeedback" aria-live="polite"><span aria-hidden="true"></span><b>${I18N.resultReady}</b></div>
             </div>
             <aside class="sentence-bot-memory" aria-label="Robot memory progress">
-                <div class="sentence-bot-memory-title"><span>ROBOT MEMORY</span><strong id="sentenceBotLearned">0 / ${state.total} LEARNED</strong></div>
+                <div class="sentence-bot-memory-title"><span>${I18N.memory}</span><strong id="sentenceBotLearned">0 / ${state.total} ${I18N.learned}</strong></div>
                 <div class="sentence-bot-chip-bank" id="sentenceBotChipBank"></div>
             </aside>
         </div>`;
@@ -126,8 +135,8 @@
     function updateAdvanceButton() {
         if (!advanceButton) return;
         const isFinalSentence = state.index >= state.total - 1;
-        advanceButton.textContent = isFinalSentence ? "Finish" : "Skip";
-        advanceButton.setAttribute("aria-label", isFinalSentence ? "Finish sentence reading" : "Skip this sentence");
+        advanceButton.textContent = isFinalSentence ? I18N.finish : I18N.skip;
+        advanceButton.setAttribute("aria-label", isFinalSentence ? I18N.finish : I18N.skip);
     }
     function pad(value) { return String(Math.max(0, Number(value) || 0)).padStart(2, "0"); }
     function renderChips() {
@@ -145,8 +154,8 @@
             chipCopy.innerHTML = `<b>CHIP ${pad(index + 1)}</b><small>${index < state.learned ? "LEARNED ✓" : index === state.index ? "READY" : "EMPTY"}</small>`;
             item.append(image, chipCopy); return item;
         }));
-        if (learned) learned.textContent = `${state.learned} / ${state.total} LEARNED`;
-        if (training) training.textContent = `TRAINING ${pad(Math.min(state.index + 1, state.total))} / ${pad(state.total)}`;
+        if (learned) learned.textContent = `${state.learned} / ${state.total} ${I18N.learned}`;
+        if (training) training.textContent = `${I18N.training} ${pad(Math.min(state.index + 1, state.total))} / ${pad(state.total)}`;
         updateAdvanceButton();
     }
     function setMode(mode, copy) {
@@ -154,13 +163,13 @@
         const robotMode = mode === "processing" ? "listening" : mode;
         if (robot) { robot.src = `${assetRoot}robot_${robotMode}.png`; robot.alt = `Friendly Sentence Bot is ${mode === "idle" ? "ready" : mode}`; }
         if (message) message.innerHTML = `<span class="sentence-bot-message-dot" aria-hidden="true"></span><span>${copy}</span>`;
-        if (systemStatus) systemStatus.textContent = mode === "listening" ? "LISTENING" : mode === "processing" ? "CHECKING" : mode === "success" ? "LEARNED" : mode === "retry" ? "TRY AGAIN" : "READY";
-        if (voiceGuide) voiceGuide.querySelector("span").textContent = mode === "retry" ? "Read the same sentence again" : mode === "processing" ? "Pippo is checking your reading" : mode === "listening" ? "Speak clearly — Pippo is listening" : mode === "success" ? "Great reading!" : "Read the sentence aloud";
-        if (resultFeedback) resultFeedback.querySelector("b").textContent = mode === "retry" ? "SAME SENTENCE · TRY AGAIN" : mode === "processing" ? "CHECKING YOUR READING" : mode === "listening" ? "VOICE SIGNAL ACTIVE" : mode === "success" ? "SENTENCE LEARNED ✓" : "SENTENCE READY";
-        if (startButton) startButton.innerHTML = mode === "listening" ? '<i class="bi bi-soundwave"></i> PIPPO IS LISTENING' : mode === "processing" ? '<i class="bi bi-cpu"></i> CHECKING...' : '<i class="bi bi-mic-fill"></i> TEACH PIPPO';
+        if (systemStatus) systemStatus.textContent = mode === "listening" ? I18N.listening : mode === "processing" ? I18N.checking : mode === "success" ? I18N.learnedStatus : mode === "retry" ? I18N.retry : I18N.ready;
+        if (voiceGuide) voiceGuide.querySelector("span").textContent = mode === "retry" ? I18N.guideRetry : mode === "processing" ? I18N.guideChecking : mode === "listening" ? I18N.guideListening : mode === "success" ? I18N.guideSuccess : I18N.readySentence;
+        if (resultFeedback) resultFeedback.querySelector("b").textContent = mode === "retry" ? I18N.sameRetry : mode === "processing" ? I18N.checkingReading : mode === "listening" ? I18N.active : mode === "success" ? I18N.sentenceLearned : I18N.resultReady;
+        if (startButton) startButton.innerHTML = mode === "listening" ? `<i class="bi bi-soundwave"></i> ${I18N.listening}` : mode === "processing" ? `<i class="bi bi-cpu"></i> ${I18N.checking}...` : `<i class="bi bi-mic-fill"></i> ${I18N.teach}`;
     }
-    function settleToIdle() { if (!root.classList.contains("is-complete")) setMode("idle", "READY TO LEARN"); }
-    startButton?.setAttribute("aria-label", "Read aloud to teach the robot");
+    function settleToIdle() { if (!root.classList.contains("is-complete")) setMode("idle", I18N.readyLearn); }
+    startButton?.setAttribute("aria-label", I18N.teach);
     stopButton?.addEventListener("click", settleToIdle);
     doneButton?.addEventListener("click", event => {
         event.preventDefault();
@@ -189,7 +198,7 @@
         renderChips();
         if (itemChanged && !root.classList.contains("is-complete")) {
             setMode(root.classList.contains("is-recording") ? "listening" : "idle",
-                root.classList.contains("is-recording") ? "I'M LISTENING..." : "I'M READY TO LEARN!");
+                root.classList.contains("is-recording") ? I18N.guideListening : I18N.readyLearn);
         }
     }
 
@@ -198,24 +207,24 @@
         const statusText = String(speechStatus?.textContent || "");
         if (/great job.*finished this item/i.test(statusText)) {
             state.learned = Math.max(state.learned, Math.min(state.total, state.index + 1));
-            setMode("success", "I LEARNED IT! ✨");
+            setMode("success", I18N.sentenceLearned);
             renderChips();
         } else if (/not quite|try again/i.test(statusText)) {
-            setMode("retry", "I DIDN'T CATCH THAT — LET'S TRY AGAIN!");
+            setMode("retry", I18N.sameRetry);
         } else if (/microphone access|unavailable|error|trouble/i.test(statusText)) {
-            setMode("retry", "LET'S CHECK THE MICROPHONE.");
+            setMode("retry", I18N.sameRetry);
         } else if (startButton?.dataset.speechProcessingState) {
-            setMode("processing", "CHECKING YOUR READING...");
+            setMode("processing", I18N.checkingReading);
         } else if (root.classList.contains("is-recording")) {
-            setMode("listening", "I'M LISTENING...");
+            setMode("listening", I18N.guideListening);
         }
     }
 
     function completionMessageFor(correct, total) {
-        if (correct >= total && total > 0) return "Woohoo! Pippo knows all the sentences now!";
-        if (correct === 0) return "Keep practicing! Pippo is still learning these sentences.";
-        if (correct / Math.max(1, total) >= 0.85) return `Great job! Pippo learned ${correct} out of ${total} sentences!`;
-        return `Nice work! Pippo learned ${correct} out of ${total} sentences!`;
+        if (correct >= total && total > 0) return I18N.completeAll;
+        if (correct === 0) return I18N.completeNone;
+        if (correct / Math.max(1, total) >= 0.85) return I18N.completeHigh.replace('{correct}', correct).replace('{total}', total);
+        return I18N.completeSome.replace('{correct}', correct).replace('{total}', total);
     }
 
     function renderCompletionFromEngine() {
@@ -226,7 +235,7 @@
             : Math.min(state.total, Math.max(0, state.learned));
         state.index = state.total - 1;
         renderChips();
-        setMode("success", "ROBOT TRAINING COMPLETE!");
+        setMode("success", I18N.complete);
         const kicker = document.querySelector(".completion-kicker");
         const title = document.getElementById("completionTitle");
         const completionMessage = document.getElementById("completionMessage");
@@ -236,16 +245,16 @@
             sentenceResult = document.createElement("div");
             sentenceResult.id = "sentenceBotCompletionResult";
             sentenceResult.className = "sentence-bot-completion-result";
-            sentenceResult.innerHTML = '<span>CORRECT SENTENCES READ</span><strong></strong>';
+            sentenceResult.innerHTML = `<span>${I18N.correct}</span><strong></strong>`;
             completionActions.before(sentenceResult);
         }
-        if (kicker) kicker.textContent = "ROBOT TRAINING";
-        if (title) title.textContent = "COMPLETE! 🤖";
+        if (kicker) kicker.textContent = I18N.completeKicker;
+        if (title) title.textContent = I18N.complete;
         if (completionMessage) completionMessage.textContent = completionMessageFor(state.learned, state.total);
         const sentenceResultValue = sentenceResult?.querySelector("strong");
         if (sentenceResultValue) sentenceResultValue.textContent = `${state.learned} / ${state.total}`;
-        if (doneButton) doneButton.textContent = "Done";
-        if (backButton) backButton.textContent = "Back to Materials";
+        if (doneButton) doneButton.textContent = I18N.done;
+        if (backButton) backButton.textContent = I18N.backMaterials;
     }
 
     new MutationObserver(() => {

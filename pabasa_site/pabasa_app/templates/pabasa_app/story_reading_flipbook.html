@@ -57,14 +57,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (kicker) {
         kicker.className = 'live-intro-kicker';
-        kicker.textContent = 'Story Reading';
+        kicker.textContent = {% if story_reading_data.language|lower == 'filipino' %}'Pagbasa ng Kuwento'{% else %}'Story Reading'{% endif %};
     }
     if (preview) {
         preview.className = 'live-intro-content';
-        preview.innerHTML = '<div class="live-on-air"><i aria-hidden="true"></i>LIVE · ON AIR</div><div class="live-intro-story"><span>📖 TODAY\'S STORY</span><strong></strong></div><p class="live-intro-instructions">Read the whole story aloud and follow it as each part unfolds.</p>';
+        preview.innerHTML = '<div class="live-on-air"><i aria-hidden="true"></i>{% if story_reading_data.language|lower == "filipino" %}LIVE · NAKIKINIG{% else %}LIVE · ON AIR{% endif %}</div><div class="live-intro-story"><span>📖 {% if story_reading_data.language|lower == "filipino" %}KUWENTO NGAYON{% else %}TODAY\'S STORY{% endif %}</span><strong></strong></div><p class="live-intro-instructions">{% if story_reading_data.language|lower == "filipino" %}Basahin nang malakas ang buong kuwento at sundan ang bawat eksena.{% else %}Read the whole story aloud and follow it as each part unfolds.{% endif %}</p>';
         preview.querySelector('.live-intro-story strong').textContent = storyTitle;
     }
-    if (startButton) startButton.textContent = 'Go Live!';
+    if (startButton) startButton.textContent = {% if story_reading_data.language|lower == 'filipino' %}'Magsimula!'{% else %}'Go Live!'{% endif %};
 });
 </script>
 <link rel="stylesheet" href="{% static 'pabasa_app/vendor/bootstrap-icons/bootstrap-icons.css' %}">

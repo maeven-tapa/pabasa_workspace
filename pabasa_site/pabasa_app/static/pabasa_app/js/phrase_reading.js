@@ -7,6 +7,7 @@
   
   const PHRASE_TOTAL = 10;
   const PHRASES_PER_ROW = 5;
+  const I18N = window.__PHRASE_READING_I18N__ || {};
 
   class PhraseReadingManager {
     constructor() {
@@ -40,6 +41,7 @@
       this.readingWord = document.getElementById('readingWord');
       this.counter = document.getElementById('counter');
       this.readingHelperText = document.getElementById('readingHelperText');
+      this._applyLanguage();
 
       // Control buttons for speech
       this.btnReadAloud = document.getElementById('btnReadAloud');
@@ -53,6 +55,17 @@
 
       // Initialize
       this._init();
+    }
+
+    _applyLanguage() {
+      const setText = (selector, value) => { const element = document.querySelector(selector); if (element && value) element.textContent = value; };
+      setText('.phrase-back-link span', I18N.back); setText('.phrase-eyebrow', I18N.eyebrow); setText('.phrase-heading-group h1', I18N.title);
+      setText('.phrase-progress > span', I18N.progress); setText('#phraseBoardTitle', I18N.boardTitle); setText('.phrase-board-copy p', I18N.boardCopy);
+      setText('#phraseMessageClose', I18N.close); setText('#readingWord', I18N.loading); setText('#readingHelperText', I18N.helper);
+      setText('.phrase-mic-label', I18N.start); setText('#btnReadAloud', I18N.aloud); setText('#btnStopReading', I18N.finishReading);
+      setText('#speechStatus', I18N.ready); setText('#speechTranscript', I18N.transcript); setText('#rawMicInput', I18N.waiting);
+      setText('.completion-kicker', I18N.allCollected); setText('#completionTitle', I18N.complete); setText('#completionMessage', I18N.completeMessage);
+      setText('#reviewBtn', I18N.readAgain); setText('#finishBtn', I18N.returnActivities);
     }
 
     _init() {
@@ -274,11 +287,11 @@
       this._showMessageView();
       
       // Update counter and phrase text
-      this.counter.textContent = `Message ${index + 1} / ${PHRASE_TOTAL}`;
+      this.counter.textContent = `${I18N.message || 'Message'} ${index + 1} / ${PHRASE_TOTAL}`;
       this.readingWord.textContent = this.currentPhrase.text;
       
       // Reset the helper text for the new phrase
-      this.readingHelperText.textContent = 'Read the message aloud.';
+      this.readingHelperText.textContent = I18N.helper;
       
       // Show the speech control buttons
       this.btnReadAloud?.classList.remove('d-none');
@@ -377,7 +390,7 @@
 
       // Only completed phrase items should affect progress. Opening or previewing
       // a message should never update the student's reading count.
-      const message = `${completed} of ${PHRASE_TOTAL} messages read`;
+      const message = `${completed} / ${PHRASE_TOTAL} ${I18N.progress || 'messages read'}`;
       const liveRegion = this.messageView?.querySelector('[role="status"]');
       if (liveRegion) {
         liveRegion.textContent = message;
@@ -411,7 +424,7 @@
         if (this.reviewBtn) this.reviewBtn.hidden = true;
         if (this.finishBtn) {
           this.finishBtn.disabled = false;
-          this.finishBtn.textContent = 'Return to Activities';
+          this.finishBtn.textContent = I18N.returnActivities;
           this.finishBtn.onclick = null;
         }
         window.dispatchEvent(new CustomEvent('pabasa:assessment-completed', { detail }));
@@ -420,10 +433,10 @@
         this.activityMarkedComplete = false;
         console.error('Phrase Reading completion could not be saved:', error);
         const completionMessage = this.completionPage?.querySelector('#completionMessage');
-        if (completionMessage) completionMessage.textContent = 'Your result could not be saved. Please try again before returning.';
+        if (completionMessage) completionMessage.textContent = I18N.saveError;
         if (this.finishBtn) {
           this.finishBtn.disabled = false;
-          this.finishBtn.textContent = 'Save Again';
+          this.finishBtn.textContent = I18N.saveAgain;
           this.finishBtn.onclick = () => this._notifyActivityCompletion();
         }
       }
@@ -502,10 +515,10 @@
       const completionMessage = this.completionPage.querySelector('#completionMessage');
       
       if (completionTitle) {
-        completionTitle.textContent = 'Secret messages complete!';
+        completionTitle.textContent = I18N.complete;
       }
       if (completionMessage) {
-        completionMessage.textContent = 'Wonderful reading—you opened every magical message.';
+        completionMessage.textContent = I18N.completeMessage;
       }
       
       this._renderCompletionResult(this.savedCompletion);
@@ -523,7 +536,7 @@
       const total = Number(result.total_items ?? PHRASE_TOTAL);
       const correct = Number(result.correct_items ?? total);
       const score = Number(result.total_score ?? result.accuracy ?? 100);
-      resultElement.textContent = `${correct} of ${total} phrases completed - Score: ${score}%`;
+      resultElement.textContent = `${correct} / ${total} ${I18N.phrasesCompleted} - ${I18N.score}: ${score}%`;
     }
 
     _showSavedCompletionState() {
@@ -576,7 +589,7 @@
       document.addEventListener('phraseReadingError', (event) => {
         const { error } = event.detail;
         console.error('Phrase reading error:', error);
-        this.readingHelperText.textContent = 'There was an issue. Please try again.';
+        this.readingHelperText.textContent = I18N.issue;
       });
     }
 

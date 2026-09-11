@@ -13792,6 +13792,7 @@ def sentence_bot_page(request):
     material = Material.objects.filter(pk=material_id).first() if material_id else None
     if not _is_sentence_reading_template_material(material):
         return redirect('assessment')
+    content_json = material.content_json if isinstance(material.content_json, dict) else {}
     student_user = User.objects.filter(id=request.session.get('user_id'), role='student').first()
     completed_result = None
     if student_user:
@@ -13816,6 +13817,7 @@ def sentence_bot_page(request):
         }
     context = _dashboard_context(request)
     context.update(_custom_material_reading_context(request))
+    context['sentence_bot_language'] = material.language or content_json.get('language') or request.GET.get('language') or 'English'
     context['student_end_assessment_state_json'] = json.dumps(
         (_get_user_state(User.objects.filter(id=request.session.get('user_id')).first()).get('student_end_assessment_state') or {}),
         default=str, separators=(',', ':'),
@@ -13898,6 +13900,11 @@ def phrase_reading_page(request):
     context.update(_custom_material_reading_context(request))
     _, material_id = _parse_prefixed_id(request.GET.get('id') or request.GET.get('material_id'))
     material = Material.objects.filter(pk=material_id).first() if material_id else None
+    content_json = material.content_json if material and isinstance(material.content_json, dict) else {}
+    context['phrase_reading_language'] = (
+        material.language if material and material.language
+        else content_json.get('language') or request.GET.get('language') or 'English'
+    )
     completion_payload = {}
     student_user = User.objects.filter(id=request.session.get('user_id'), role='student').first()
     if material and _is_phrase_reading_material(material) and student_user:

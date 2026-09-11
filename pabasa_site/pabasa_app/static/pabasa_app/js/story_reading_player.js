@@ -2,6 +2,16 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
 (() => {
     'use strict';
     const data = JSON.parse(document.getElementById('story-reading-data')?.textContent || '{}');
+    const FILIPINO = /filipino|tagalog|fil\b/i.test(String(data.language || ''));
+    const L = FILIPINO ? {
+        activity:'Pagbasa ng Kuwento', back:'Bumalik sa mga Aktibidad', listen:'Makinig sa Kuwento', listening:'Nakikinig...', loading:'Naglo-load...', stop:'Itigil ang Pakikinig', readWithMe:'Magbasa Kasama Ko', reading:'Nagbabasa...', next:'Susunod', finish:'Tapos na', page:'Pahina', of:'ng', retry:'Ulitin', pause:'I-pause', play:'I-play', complete:'Tapos na ang Aktibidad', score:'Iyong Iskor', great:'Mahusay!', keep:'Ipagpatuloy ang pagsasanay! 🎉', saved:'Na-save ang iyong progreso sa pagbasa.', saving:'Sine-save ang iyong progreso sa pagbasa…', saveError:'Hindi na-save ang progreso. Subukang muli bago magpatuloy.', proceed:"Magpatuloy sa mga Tanong na 5W", backAssessment:'Bumalik sa Pahina ng Reading Assessment', close:'Isara ang iskor'
+    } : {
+        activity:'Story Reading', back:'Back to Activities', listen:'Listen to Story', listening:'Listening...', loading:'Loading...', stop:'Stop Listening', readWithMe:'Read With Me', reading:'Reading...', next:'Next', finish:'Finish', page:'Page', of:'of', retry:'Retry', pause:'Pause', play:'Play', complete:'Activity Complete', score:'Your Score', great:'Great job!', keep:'Keep it up! You\'re doing amazing! 🎉', saved:'Your reading progress has been saved.', saving:'Saving your reading progress…', saveError:'We could not save your reading progress. Please try again before continuing.', proceed:"Proceed to 5W's Questions", backAssessment:'Back on Reading Assessment Page', close:'Close score'
+    };
+    document.querySelector('.back-link span')?.replaceChildren(L.back);
+    const metaSpans = document.querySelectorAll('.video-meta p > span');
+    if (metaSpans.length > 1) metaSpans[1].textContent = L.activity;
+    document.querySelector('.read-with-me')?.replaceChildren('▣ ', L.readWithMe, ' ›');
     const app = document.getElementById('storyPlayerApp');
     const image = document.getElementById('sceneImage');
     const subtitle = document.getElementById('storySubtitle');
@@ -181,19 +191,19 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
         progress.value = String(state.time); fill.style.width = `${totalDuration ? state.time / totalDuration * 100 : 0}%`;
         currentTime.textContent = formatTime(state.time); durationLabel.textContent = formatTime(totalDuration);
         if (playbackButton) { playbackButton.textContent = state.playing ? '❚❚' : '▶'; playbackButton.setAttribute('aria-label', state.playing ? 'Pause' : 'Play'); }
-        progressText.innerHTML = `<strong>Story ${state.scene} of ${scenes.length}</strong> · ${state.scene === scenes.length ? 'Almost at school!' : 'Lito is getting ready!'}`;
+        progressText.innerHTML = `<strong>${L.activity} ${state.scene} ${L.of} ${scenes.length}</strong> · ${state.scene === scenes.length ? (FILIPINO ? 'Malapit na sa paaralan!' : 'Almost at school!') : (FILIPINO ? 'Naghahanda si Lito!' : 'Lito is getting ready!')}`;
         document.querySelectorAll('.scene-marker').forEach((marker, index) => marker.classList.toggle('active', index === state.scene - 1));
         const atFinalEndpoint = !state.completed && totalDuration > 0 && state.time >= totalDuration;
         playButton.innerHTML = state.completed
-            ? '<i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>Completed</span>'
+            ? `<i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>${L.complete}</span>`
             : atFinalEndpoint
-                ? '<i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>End Activity</span><span aria-hidden="true">&rsaquo;</span>'
-                : `<i class="bi bi-book-half" aria-hidden="true"></i><span>${state.oral ? 'Reading...' : 'Read With Me'}</span><span aria-hidden="true">&rsaquo;</span>`;
+                ? `<i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>${L.finish}</span><span aria-hidden="true">&rsaquo;</span>`
+                : `<i class="bi bi-book-half" aria-hidden="true"></i><span>${state.oral ? L.reading : L.readWithMe}</span><span aria-hidden="true">&rsaquo;</span>`;
         playButton.setAttribute('aria-label', state.completed ? 'Completed' : (atFinalEndpoint ? 'End Activity' : (state.oral ? 'Reading' : 'Read With Me')));
         playButton.setAttribute('aria-pressed', String(state.oral));
         playButton.classList.toggle('is-complete-action', atFinalEndpoint);
         playButton.disabled = state.completed;
-        listenButton.textContent = ttsAudio ? '🔊 Listening...' : '🔊 Listen to Story';
+        listenButton.textContent = ttsAudio ? `🔊 ${L.listening}` : `🔊 ${L.listen}`;
         listenButton.setAttribute('aria-label', ttsAudio ? 'Listening' : 'Listen to Story');
         listenButton.setAttribute('aria-pressed', String(Boolean(ttsAudio)));
         previousButton.disabled = state.completed;
@@ -207,7 +217,7 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
     function moveScene(direction) { seek(Math.min(totalDuration - .01, Math.max(0, (state.scene - 1 + direction) * sceneDuration))); }
     function restartStory() { if (state.completed) return; stopOral(true); stopTts(); cancelAnimationFrame(frame); state.playing = false; state.time = 0; state.scene = 1; state.completed = false; state.readingCursor = 0; state.correctSentences = 0; state.readingScore = 0; app.classList.remove('is-complete'); setStatus(''); render(); persist(); }
     function setStatus(message, listening = false) { status.textContent = message; status.classList.toggle('is-listening', listening); const copy = String(message || '').toLowerCase(); if (copy.includes('scene ready')) addLiveComment('progress'); else if (copy.includes('still listening') || copy.includes('try again') || copy.includes('keep reading')) addLiveComment('encouragement'); else if (listening) addLiveComment('listening'); }
-    function stopTts() { ttsController?.abort(); ttsController = null; if (ttsAudio) ttsAudio.pause(); if (ttsUrl) URL.revokeObjectURL(ttsUrl); ttsAudio = null; ttsUrl = ''; listenButton.textContent = '🔊 Listen to Story'; listenButton.setAttribute('aria-pressed', 'false'); }
+    function stopTts() { ttsController?.abort(); ttsController = null; if (ttsAudio) ttsAudio.pause(); if (ttsUrl) URL.revokeObjectURL(ttsUrl); ttsAudio = null; ttsUrl = ''; listenButton.textContent = `🔊 ${L.listen}`; listenButton.setAttribute('aria-pressed', 'false'); }
     async function listen() { if (ttsAudio) { stopTts(); return; } if (state.oral) return; const controller = new AbortController(); ttsController = controller; listenButton.textContent = 'Loading…'; const form = new FormData(); form.append('target_text', scenes[state.scene - 1] || ''); form.append('mode', 'paragraph'); form.append('language', data.language || ''); try { const response = await fetch('/api/reading/read-aloud/', {method:'POST', credentials:'same-origin', headers:{'X-CSRFToken':csrf()}, body:form, signal:controller.signal}); const result = await response.json(); if (!response.ok || !result.success) throw new Error(); ttsUrl = URL.createObjectURL(base64ToBlob(result.audio_content, result.mime_type || 'audio/mpeg')); ttsAudio = new Audio(ttsUrl); ttsAudio.muted = state.muted; ttsAudio.onended = stopTts; listenButton.textContent = '🔊 Listening...'; listenButton.setAttribute('aria-pressed', 'true'); await ttsAudio.play(); } catch (error) { if (error.name !== 'AbortError') setStatus('Audio is unavailable right now.'); stopTts(); } }
     function base64ToBlob(value, type) { const binary = atob(value || ''); const bytes = new Uint8Array(binary.length); for (let index=0; index<binary.length; index += 1) bytes[index] = binary.charCodeAt(index); return new Blob([bytes], {type}); }
     function mimeType() { return ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'].find(type => MediaRecorder.isTypeSupported?.(type)) || ''; }
@@ -232,7 +242,7 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
         render();
         const controller = new AbortController();
         ttsController = controller;
-        listenButton.textContent = 'Loading…';
+        listenButton.textContent = L.loading;
         const form = new FormData();
         form.append('target_text', scenes[state.scene - 1] || '');
         form.append('mode', 'paragraph');
@@ -281,7 +291,7 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
             modal = document.createElement('div');
             modal.id = 'storyScoreModal'; modal.className = 'story-score-modal'; modal.hidden = true;
             modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true'); modal.setAttribute('aria-labelledby', 'storyScoreTitle');
-            modal.innerHTML = `<section class="story-score-card"><button class="story-score-close" type="button" aria-label="Close score">&times;</button><div class="story-score-icon" aria-hidden="true">★</div><p class="story-score-great">Great job!</p><h2 id="storyScoreTitle">Activity Complete!</h2><p class="story-score-label">Your Score</p><p class="story-score-value">${state.correctSentences} / ${totalSentences}</p><p class="story-score-message">Keep it up! You\'re doing amazing! 🎉</p><button class="story-score-done" type="button" disabled>Proceed to 5W\'s Questions <span aria-hidden="true">→</span></button><button class="story-score-back" type="button">Back on Reading Assessment Page</button></section>`;
+            modal.innerHTML = `<section class="story-score-card"><button class="story-score-close" type="button" aria-label="${L.close}">&times;</button><div class="story-score-icon" aria-hidden="true">★</div><p class="story-score-great">${L.great}</p><h2 id="storyScoreTitle">${L.complete}</h2><p class="story-score-label">${L.score}</p><p class="story-score-value">${state.correctSentences} / ${totalSentences}</p><p class="story-score-message">${L.keep}</p><button class="story-score-done" type="button" disabled>${L.proceed} <span aria-hidden="true">→</span></button><button class="story-score-back" type="button">${L.backAssessment}</button></section>`;
             document.body.appendChild(modal);
             const close = () => { modal.hidden = true; document.body.style.overflow = ''; };
             const returnToAssessment = () => { close(); window.location.assign(data.return_url || '/dashboard/assessment/'); };
