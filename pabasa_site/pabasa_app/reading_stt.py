@@ -704,6 +704,14 @@ def _story_alignment_tokens(text):
     return [token for token in re.split(r"\s+", normalized) if token]
 
 
+def _story_canonical_token(expected_text, normalized_token):
+    """Recover the source token's spelling for CRLA Story display output."""
+    for token in re.findall(r"[A-Za-z0-9][A-Za-z0-9'’-]*", str(expected_text or "")):
+        if _normalize_story_word_text(token) == normalized_token:
+            return token.replace("–", "-").replace("—", "-")
+    return normalized_token
+
+
 def _story_words_are_equivalent(expected_word, recognized_word):
     if expected_word is None or recognized_word is None:
         return False
@@ -712,6 +720,20 @@ def _story_words_are_equivalent(expected_word, recognized_word):
     if not expected or not recognized:
         return False
     return expected == recognized
+
+
+def _crla_story_words_are_equivalent(expected_word, recognized_word):
+    """Match only an official CRLA Story word with its spoken hyphen omitted."""
+    if _story_words_are_equivalent(expected_word, recognized_word):
+        return True
+    expected = _normalize_story_word_text(expected_word)
+    recognized = _normalize_story_word_text(recognized_word)
+    return bool(
+        expected
+        and recognized
+        and expected.count("-") == 1
+        and recognized == expected.replace("-", "")
+    )
 
 
 def _story_two_token_candidate(expected_word, first_token, second_token):
@@ -786,7 +808,7 @@ def story_word_states_from_results(expected_text, recognized_text=None, total_wo
     return resolved
 
 
-def align_story_transcript(expected_text, recognized_text, language_code="en-US", start_word_index=None):
+def align_story_transcript(expected_text, recognized_text, language_code="en-US", start_word_index=None, crla_story_reading=False):
     """Align a story transcript against the expected text at the word level.
 
     This is intentionally conservative: it tolerates punctuation/case/spacing
@@ -824,7 +846,8 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
         for j in range(1, cols):
             expected_word = expected_words[i - 1]
             recognized_word = recognized_words[j - 1]
-            substitution_cost = 0 if _story_words_are_equivalent(expected_word, recognized_word) else 1
+            words_equivalent = (_crla_story_words_are_equivalent if crla_story_reading else _story_words_are_equivalent)
+            substitution_cost = 0 if words_equivalent(expected_word, recognized_word) else 1
             candidates = [
                 dp[i - 1][j] + 1,
                 dp[i][j - 1] + 1,
@@ -869,12 +892,16 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
         if i > 0 and j > 0:
             expected_word = expected_words[i - 1]
             recognized_word = recognized_words[j - 1]
-            substitution_cost = 0 if _story_words_are_equivalent(expected_word, recognized_word) else 1
+            words_equivalent = (_crla_story_words_are_equivalent if crla_story_reading else _story_words_are_equivalent)
+            substitution_cost = 0 if words_equivalent(expected_word, recognized_word) else 1
             if dp[i][j] == dp[i - 1][j - 1] + substitution_cost:
-                if _story_words_are_equivalent(expected_word, recognized_word):
+                if words_equivalent(expected_word, recognized_word):
                     word_results.append({
                         "expected": expected_word,
-                        "recognized": recognized_word,
+                        "recognized": (
+                            _story_canonical_token(expected_text, expected_word)
+                            if crla_story_reading else recognized_word
+                        ),
                         "result": "correct",
                         "type": "correct",
                         "expected_index": i - 1,
@@ -908,11 +935,11 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
             if i > 0:
                 expected_word = expected_words[i - 1]
                 has_future_match = any(
-                    _story_words_are_equivalent(expected_word, later_word)
+                    (_crla_story_words_are_equivalent if crla_story_reading else _story_words_are_equivalent)(expected_word, later_word)
                     for later_word in recognized_words[: j - 1]
                 )
                 if (
-                    not _story_words_are_equivalent(expected_word, recognized_word)
+                    not (_crla_story_words_are_equivalent if crla_story_reading else _story_words_are_equivalent)(expected_word, recognized_word)
                     and has_future_match
                 ):
                     insertion_count += 1

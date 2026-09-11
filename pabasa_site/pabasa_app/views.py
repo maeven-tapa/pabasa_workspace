@@ -14756,6 +14756,7 @@ def reading_transcribe_api(request):
                 analysis_transcript,
                 language_code,
                 start_word_index=story_start_word_index,
+                crla_story_reading=request.POST.get('crla_story_reading') == '1',
             )
             analysis['word_results'] = alignment_result.get('word_results', [])
             analysis['word_alignment'] = {

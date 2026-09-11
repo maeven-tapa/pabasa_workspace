@@ -3852,6 +3852,9 @@
             formData.append("mode", mode);
             formData.append("language", currentMaterialLanguage || "");
             if (currentAssessmentBranch === "rhymes") formData.append("crla_rhymes", "1");
+            if (isOfficialAssessmentLaunch && isCrla && mode === "paragraph" && currentStoryState === "story_reading") {
+                formData.append("crla_story_reading", "1");
+            }
             if (isOfficialAssessmentLaunch && mode === "sentence") {
                 formData.append("crla_sentence_word_scoring", "1");
                 formData.append("sentence_word_results", JSON.stringify(sentenceWordResults[currentIndex] || []));

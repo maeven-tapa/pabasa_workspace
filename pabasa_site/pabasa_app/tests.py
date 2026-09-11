@@ -3997,6 +3997,28 @@ class ReadingMatcherTests(TestCase):
         self.assertEqual(result["word_results"][3]["result"], "miscue")
         self.assertEqual(result["word_results"][3]["type"], "substitution")
 
+    def test_crla_story_alignment_restores_expected_hyphen_without_changing_raw_input(self):
+        raw_asr = "Kapanapanabik"
+        result = align_story_transcript(
+            "Kapana-panabik", raw_asr, language_code="fil-PH", crla_story_reading=True,
+        )
+        self.assertEqual(result["miscues"], 0)
+        self.assertEqual(result["word_results"][0]["result"], "correct")
+        self.assertEqual(result["word_results"][0]["recognized"], "Kapana-panabik")
+        self.assertEqual(raw_asr, "Kapanapanabik")
+
+    def test_crla_story_hyphen_exception_does_not_make_typos_correct(self):
+        for recognized in ("Kapanapanik", "Kapana-panabikx"):
+            result = align_story_transcript(
+                "Kapana-panabik", recognized, language_code="fil-PH", crla_story_reading=True,
+            )
+            self.assertEqual(result["miscues"], 1)
+            self.assertEqual(result["word_results"][0]["result"], "miscue")
+
+    def test_crla_story_hyphen_exception_is_opt_in(self):
+        result = align_story_transcript("Kapana-panabik", "Kapanapanabik", language_code="fil-PH")
+        self.assertEqual(result["miscues"], 1)
+
     def test_story_alignment_groups_two_token_tatay_miscue_without_resolving_may(self):
         target = "Iba't ibang tao ang sumasakay sa jeepney ni Tatay. May mga estudyante."
         result = align_story_transcript(
