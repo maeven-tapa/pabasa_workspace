@@ -256,6 +256,7 @@
         let stoppingSpeechRecognition = false;
         let isSendingChunk = false;
         let pendingAudioChunk = null;
+        let storyReadingHasAttempted = false;
         let itemResultVersion = 0;
         let isAdvancingItem = false;
         let currentSyllableIndex = 0;
@@ -3387,6 +3388,7 @@
             speechAudioChunks = [];
             hasHeardSinceLastChunk = false;
             shell?.classList.remove("is-recording", "is-hearing");
+            updateAssessmentNavigationButtons();
             updateSpeechProcessingControls();
             setSpeechStatus("Speech check stopped.", spokenTranscript || "No speech transcript was captured.");
         }
@@ -3487,6 +3489,21 @@
 
         function updateAssessmentNavigationButtons() {
             const speechResponsePending = isSpeechResponsePending();
+            // Story Skip must not inherit `hasHeardSinceLastChunk` as a
+            // permanent pending flag. That flag only says a chunk contained
+            // speech; the request itself is authoritative for processing.
+            const isOfficialCrlaStoryReading = isOfficialAssessmentLaunch
+                && isCrla
+                && currentStoryState === "story_reading";
+            const isStorySkipBusy = isOfficialCrlaStoryReading
+                && isRecording
+                && !isMuted
+                && (
+                    isSendingChunk
+                    || Boolean(pendingAudioChunk)
+                    || shell?.classList.contains("is-hearing")
+                    || (!storyReadingHasAttempted && recognitionActive)
+                );
             const hasPreviousPage = currentPageIndex > 0;
             const hasPreviousItem = currentIndex > 0;
             const isLastPage = currentPageIndex >= getCurrentPageCount() - 1;
@@ -3501,7 +3518,9 @@
                     : (!isRecording || !(hasPreviousPage || hasPreviousItem)));
             }
             if (nextBtn) {
-                nextBtn.disabled = speechResponsePending || (isReviewMode
+                nextBtn.disabled = (isOfficialCrlaStoryReading
+                    ? isStorySkipBusy
+                    : speechResponsePending) || (isReviewMode
                     ? (onLastItem && isLastPage)
                     : (isSentenceBot ? false : (!isCrlaReading && (!isRecording || (onLastItem && isLastPage)))));
             }
@@ -3733,6 +3752,7 @@
         }
 
         function resetStorySegmentState(previousSegmentIndex, nextSegmentIndex, reason) {
+            storyReadingHasAttempted = false;
             commitPendingStorySelfCorrection();
             const before = {
                 currentSyllableIndex,
@@ -3873,6 +3893,7 @@
                 return;
             }
             isSendingChunk = true;
+            if (currentStoryState === "story_reading") storyReadingHasAttempted = true;
             updateAssessmentNavigationButtons();
             updateSpeechProcessingControls();
             const formData = new FormData();
@@ -5014,6 +5035,7 @@
             clearSentenceItemTimer();
             if (sentenceCountdownTimer) clearOfficialSentenceItemCountdown();
             currentIndex = nextIndex;
+            if (currentStoryState === "story_reading") storyReadingHasAttempted = false;
             renderOfficialCrlaStatus();
             currentPageIndex = 0;
             currentSyllableIndex = 0;
