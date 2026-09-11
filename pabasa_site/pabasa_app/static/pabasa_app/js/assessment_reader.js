@@ -3181,6 +3181,36 @@
                 syncStoryAnswerText();
             }
             syncPhraseMicrophoneButton();
+            renderOfficialCrlaStatus();
+        }
+
+        // The helper is deliberately derived from the existing CRLA lifecycle.
+        // It must never become a second scoring or timer-based state machine.
+        function renderOfficialCrlaStatus() {
+            const helper = document.querySelector(".official-crla-status");
+            if (!helper || !isOfficialAssessmentLaunch || !isCrla) return;
+            const text = document.getElementById("readingHelperText");
+            const dots = helper.querySelector(".helper-dot");
+            const processing = Boolean(isSendingChunk || pendingAudioChunk);
+            const activelyListening = Boolean(
+                isRecording && !isMuted && recognitionActive
+                && (shell?.classList.contains("is-hearing") || hasHeardSinceLastChunk || speechFrameCount > 0)
+            );
+            const wrong = Boolean(readingWord?.querySelector(".is-wrong"));
+            const correct = Boolean(readingWord?.querySelector(".is-read"));
+            const retry = wrong && !processing && !itemLocked[currentIndex];
+            let status = "";
+            let animated = false;
+            if (processing) { status = "Wait..."; animated = true; }
+            else if (activelyListening) { status = "Listening"; animated = true; }
+            else if (retry) status = "Try to read again";
+            else if (correct) status = "Great job!";
+            else if (wrong) status = "Good try!";
+            helper.hidden = !status;
+            helper.classList.toggle("is-status-active", animated);
+            helper.classList.toggle("is-status-processing", processing);
+            if (text) text.textContent = status;
+            if (dots) dots.setAttribute("aria-hidden", "true");
         }
 
         function syncPhraseMicrophoneButton() {
@@ -3416,6 +3446,7 @@
                         }
                     }
                     shell?.classList.toggle("is-hearing", now - lastHeardAt < 240);
+                    renderOfficialCrlaStatus();
                     audioMeterFrame = window.requestAnimationFrame(tick);
                 };
                 tick();
@@ -4600,6 +4631,7 @@
                 wordIndex += 1;
             });
             readingWord.hidden = false;
+            renderOfficialCrlaStatus();
         }
 
         function renderRhymesWordGuide(displayText, activeWordIndex = 0) {
@@ -4622,6 +4654,7 @@
                 wordIndex += 1;
             });
             readingWord.hidden = false;
+            renderOfficialCrlaStatus();
         }
 
         // CRLA Official Assessment: Render syllables with a specific word highlighted as wrong/error
@@ -4693,6 +4726,7 @@
             word.className = "syllable is-wrong";
             word.textContent = String(getCurrentDisplayText() || items[currentIndex] || "").trim();
             readingWord.replaceChildren(word);
+            renderOfficialCrlaStatus();
         }
 
         function renderSyllableDisplayWithError(data, activeWordIndex = -1, previousCorrectWords = 0) {
@@ -4980,6 +5014,7 @@
             clearSentenceItemTimer();
             if (sentenceCountdownTimer) clearOfficialSentenceItemCountdown();
             currentIndex = nextIndex;
+            renderOfficialCrlaStatus();
             currentPageIndex = 0;
             currentSyllableIndex = 0;
             paragraphWordResults = {};

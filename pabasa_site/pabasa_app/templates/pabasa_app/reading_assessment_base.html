@@ -376,6 +376,17 @@
             flex: 0 0 auto;
         }
 
+        .official-crla-status[hidden] { display: none !important; }
+        .reader-shell.is-story-reading .official-crla-status:not([hidden]),
+        .reader-shell.is-story-ready-state .official-crla-status:not([hidden]) {
+            display: flex;
+        }
+        .official-crla-status.is-status-active .helper-dot,
+        .official-crla-status.is-status-processing .helper-dot {
+            animation: pabasaHelperListening 0.85s ease-in-out infinite;
+        }
+        .official-crla-status.is-status-processing { color: var(--accent); }
+
         /* Official assessments have no persistent reading button, so the helper
            confirms when the microphone is actively hearing the learner. */
         .reader-shell.is-hearing .read-helper {
@@ -3400,7 +3411,7 @@
 
         <section class="reader-stage">
             <article class="reader-card {% block content_class %}{% endblock %}" data-level="{% block watermark %}read{% endblock %}">
-                <div class="read-helper">
+                <div class="read-helper{% if crla_official_assessment_id %} official-crla-status{% endif %}"{% if crla_official_assessment_id %} hidden{% endif %}>
                     <span class="helper-dot" aria-hidden="true"></span>
                     <span id="readingHelperText" aria-live="polite">{% block helper_text %}{% endblock %}</span>
                 </div>
