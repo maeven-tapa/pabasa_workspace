@@ -1,10 +1,12 @@
 <div align="center">
-  <img src="pabasa_site/pabasa_app/static/pabasa_app/images/pabasalogo.png" alt="PABASA logo" width="220">
+  <img src="pabasa_site/pabasa_app/static/pabasa_app/images/pabasalogo.png" alt="PABASA logo" width="110">
   <h1>P.A.B.A.S.A</h1>
   <p><strong>Platform for Automated Basic Reading and Speech Assessment</strong></p>
   <p>Helping teachers guide every child toward confident reading.</p>
   <p>Reading assessment · Guided practice · Classroom management · Learner progress</p>
   <p>
+    <img alt="TUP Cavite" src="https://img.shields.io/badge/TUP-Cavite-red">
+    <img alt="BET-COET" src="https://img.shields.io/badge/BET--COET-green">
     <img alt="Python 3.13" src="https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white">
     <img alt="Django 6.0.3" src="https://img.shields.io/badge/Django-6.0.3-092E20?logo=django&logoColor=white">
     <img alt="Bootstrap" src="https://img.shields.io/badge/UI-Bootstrap-7952B3?logo=bootstrap&logoColor=white">
@@ -155,7 +157,6 @@ Review the Django settings before hosting: production mode is currently selected
 | --- | --- |
 | Institution | Technological University of the Philippines – Cavite |
 | Program | BET-COET |
-| Course code | BET3 |
 | Course title | Technical Research |
 | Partner school | Salawag Elementary School |
 
