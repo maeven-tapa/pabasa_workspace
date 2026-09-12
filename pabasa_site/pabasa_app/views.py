@@ -8156,7 +8156,7 @@ def _section_is_in_assessment_week(section, on_date=None):
     school_calendar = section.school_calendar or _active_school_calendar(on_date)
     if not school_calendar:
         return False
-    check_date = on_date or timezone.localdate()
+    check_date = on_date or system_today()
     return CalendarEvent.objects.filter(
         school_calendar=school_calendar,
         event_type__in={'pre_assessment', 'midline_assessment', 'post_assessment'},
@@ -8175,7 +8175,7 @@ def _section_assessment_week_status(section, on_date=None):
     calendar = section.school_calendar or _active_school_calendar(on_date)
     if not calendar:
         return 'none'
-    check_date = on_date or timezone.localdate()
+    check_date = on_date or system_today()
     events = CalendarEvent.objects.filter(
         school_calendar=calendar,
         event_type__in={'pre_assessment', 'midline_assessment', 'post_assessment'},
@@ -8204,7 +8204,7 @@ def _section_assessment_week_has_recorded_crla_result(section, on_date=None):
     if not section or not section.school_calendar_id:
         return False
 
-    check_date = on_date or timezone.localdate()
+    check_date = on_date or system_today()
     active_event = CalendarEvent.objects.filter(
         school_calendar_id=section.school_calendar_id,
         event_type__in={'pre_assessment', 'midline_assessment', 'post_assessment'},
