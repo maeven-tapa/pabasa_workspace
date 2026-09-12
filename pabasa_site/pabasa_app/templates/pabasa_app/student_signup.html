@@ -237,6 +237,19 @@
         grid-column: span 6;
     }
 
+    /* Reserve the match-message row in both password columns so the inputs
+       stay aligned when the confirmation error becomes visible. */
+    .signup-step[data-signup-step="2"] > .col-md-6 {
+        align-self: start;
+        grid-template-rows: auto auto minmax(1.35rem, auto);
+    }
+
+    .signup-step[data-signup-step="2"] > .col-md-6:first-child::after {
+        content: "";
+        min-height: 1.35rem;
+        visibility: hidden;
+    }
+
     .signup-step > .col-md-4 {
         grid-column: span 4;
     }
@@ -1402,6 +1415,11 @@
 <script>
     (() => {
         const form = document.getElementById("studentSignupForm");
+        const lrnInput = form.elements.lrn;
+        lrnInput?.addEventListener("input", () => {
+            const digitsOnly = lrnInput.value.replace(/\D/g, "").slice(0, 12);
+            if (lrnInput.value !== digitsOnly) lrnInput.value = digitsOnly;
+        });
         const otpStage = document.getElementById("studentOtpStage");
         const otpLoading = document.getElementById("studentOtpLoading");
         const otpForm = document.getElementById("otpForm");
