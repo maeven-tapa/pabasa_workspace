@@ -173,6 +173,18 @@
             stroke-linecap: round;
             transition: stroke-dashoffset .2s linear, stroke .25s ease;
         }
+
+        .story-reading-timer-dialog {
+            display: grid;
+            justify-items: center;
+            align-content: center;
+            text-align: center;
+        }
+        .story-reading-timer {
+            inset: 3px;
+            width: auto;
+            height: auto;
+        }
         .reader-shell.is-story-reading .word-stage,
         .reader-shell.is-story-reading .recording-controls,
         .reader-shell.is-story-reading .reader-footer {
@@ -1941,6 +1953,73 @@
             margin-top: 0 !important;
         }
 
+        /* All CRLA reading states share one centered content axis. */
+        .reader-shell.is-story-ready-state .word-stage,
+        .reader-shell.is-story-reading .word-stage {
+            width: min(820px, 100%);
+            justify-items: center;
+        }
+
+        .reader-shell.is-story-ready-state .official-crla-status,
+        .reader-shell.is-story-reading .official-crla-status {
+            display: flex !important;
+            justify-content: center;
+            width: 100%;
+            min-height: 2.25rem;
+        }
+
+        .reader-shell.is-story-ready-state .story-ready-instruction,
+        .reader-shell.is-story-reading .story-reading-progress,
+        .reader-shell.is-story-reading .reading-title,
+        .reader-shell.is-story-reading .reading-word {
+            margin-inline: auto;
+        }
+
+        /* Keep the comprehension badge, cards, and action group on the same
+           centered axis without changing their content or behavior. */
+        .reader-shell:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-shell {
+            width: min(820px, 100%);
+            margin-inline: auto;
+            justify-items: center;
+        }
+
+        #crlaQuestionPanel .story-question-titlebar {
+            display: grid;
+            justify-items: center;
+            gap: 0.55rem;
+            text-align: center;
+        }
+
+        #crlaQuestionPanel .story-question-titlebar h2,
+        #crlaQuestionPanel .story-question-counter,
+        #crlaQuestionPanel .story-question-card,
+        #crlaQuestionPanel .story-answer-card {
+            width: 100%;
+            margin-inline: auto;
+        }
+
+        #crlaQuestionPanel .story-question-counter {
+            width: fit-content;
+        }
+
+        #crlaQuestionPanel .story-question-nav {
+            width: min(760px, 100%);
+            margin-inline: auto;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .reader-shell:has(#crlaQuestionPanel:not(.d-none)) .reader-card {
+            min-height: var(--crla-reading-card-min-height, min(760px, max(520px, calc(100vh - 140px))));
+            grid-template-rows: auto minmax(0, 1fr) auto;
+        }
+
+        @media (max-width: 600px) {
+            #crlaQuestionPanel .story-question-nav {
+                grid-template-columns: 1fr;
+                width: 100%;
+            }
+        }
+
         @media (max-width: 560px) {
             .reader-shell.is-story-reading .reader-card {
                 padding-inline: clamp(0.85rem, 4vw, 1.25rem);
@@ -3549,8 +3628,8 @@
         <section class="reader-stage">
             <article class="reader-card {% block content_class %}{% endblock %}" data-level="{% block watermark %}read{% endblock %}">
                 <svg class="story-reading-timer" id="storyReadingTimer" viewBox="0 0 1000 500" preserveAspectRatio="none" role="progressbar" aria-label="Reading Time: 2 minutes and 59 seconds" aria-valuemin="0" aria-valuemax="179" aria-valuenow="179" aria-hidden="true">
-                    <rect class="story-reading-timer-track" x="3" y="3" width="994" height="494" rx="30" pathLength="1000"></rect>
-                    <rect class="story-reading-timer-progress" id="storyReadingTimerProgress" x="3" y="3" width="994" height="494" rx="30" pathLength="1000" stroke-dasharray="1000" stroke-dashoffset="0"></rect>
+                    <path class="story-reading-timer-track" d="M500 3H970A27 27 0 0 1 997 30V470A27 27 0 0 1 970 497H30A27 27 0 0 1 3 470V30A27 27 0 0 1 30 3H500" pathLength="1000"></path>
+                    <path class="story-reading-timer-progress" id="storyReadingTimerProgress" d="M500 3H970A27 27 0 0 1 997 30V470A27 27 0 0 1 970 497H30A27 27 0 0 1 3 470V30A27 27 0 0 1 30 3H500" pathLength="1000" stroke-dasharray="1000" stroke-dashoffset="0"></path>
                 </svg>
                 <div class="read-helper{% if crla_official_assessment_id %} official-crla-status{% endif %}"{% if crla_official_assessment_id %} hidden{% endif %}>
                     <span class="helper-dot" aria-hidden="true"></span>

@@ -3292,14 +3292,14 @@
             const wrong = Boolean(readingWord?.querySelector(".is-wrong"));
             const correct = Boolean(readingWord?.querySelector(".is-read"));
             const retry = wrong && !processing && !itemLocked[currentIndex];
-            let status = "";
+            let status = "Read the Word";
             let animated = false;
-            if (processing) { status = "Wait..."; animated = true; }
-            else if (activelyListening) { status = "Listening"; animated = true; }
+            if (processing) { status = "Listening..."; animated = true; }
+            else if (activelyListening) { status = "Listening..."; animated = true; }
+            else if (correct) status = "Great Job!";
             else if (retry) status = "Try to read again";
-            else if (correct) status = "Great job!";
             else if (wrong) status = "Good try!";
-            helper.hidden = !status;
+            helper.hidden = false;
             helper.classList.toggle("is-status-active", animated);
             helper.classList.toggle("is-status-processing", processing);
             if (text) text.textContent = status;
@@ -5021,6 +5021,10 @@
             updateAssessmentNavigationButtons();
             updateSpeechProcessingControls();
             startOfficialSentenceItemCountdown();
+            // The new word must be in the DOM before status is derived. This
+            // prevents a previous green word from carrying "Great Job!" into
+            // the next turn.
+            renderOfficialCrlaStatus();
             if (nextBtn) {
                 const isLastPage = currentPageIndex >= getCurrentPageCount() - 1;
                 const onLastItem = currentIndex === items.length - 1;
@@ -5128,7 +5132,6 @@
             if (sentenceCountdownTimer) clearOfficialSentenceItemCountdown();
             currentIndex = nextIndex;
             if (currentStoryState === "story_reading") storyReadingHasAttempted = false;
-            renderOfficialCrlaStatus();
             currentPageIndex = 0;
             currentSyllableIndex = 0;
             paragraphWordResults = {};
