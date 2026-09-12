@@ -2718,6 +2718,41 @@
             min-height: calc(100vh - 300px);
         }
 
+        /* Keep the official CRLA reading footprint anchored to the existing
+           story-reading layout.  Story reading is the tallest shared reading
+           state, so its minimum is used by words, rhymes, sentences, and
+           story segments alike.  The question and story-selection layouts
+           retain their existing, intentionally different sizing rules. */
+        .reader-card:has(.official-crla-status) {
+            --crla-reading-card-min-height: min(760px, max(500px, calc(100vh - 300px)));
+            min-height: var(--crla-reading-card-min-height);
+            grid-template-rows: auto minmax(0, 1fr) auto;
+        }
+
+        .reader-shell.is-story-ready-state .reader-card:has(.official-crla-status),
+        .reader-shell.is-story-reading .reader-card:has(.official-crla-status) {
+            min-height: var(--crla-reading-card-min-height);
+            grid-template-rows: auto minmax(0, 1fr) auto;
+        }
+
+        /* renderOfficialCrlaStatus() may hide an empty message; keep the
+           helper row in the layout and make only its contents invisible. */
+        .reader-card:has(.official-crla-status) .official-crla-status[hidden] {
+            display: flex !important;
+            visibility: hidden;
+        }
+
+        @media (max-width: 768px) {
+            .reader-card:has(.official-crla-status) {
+                --crla-reading-card-min-height: min(760px, max(520px, calc(100vh - 140px)));
+            }
+        }
+
+        .reader-shell.is-story-selection .reader-card:has(.official-crla-status),
+        .reader-shell:has(#crlaQuestionPanel.is-complete) .reader-card:has(.official-crla-status) {
+            min-height: 0;
+        }
+
         .nav-prev,
         .nav-next {
             justify-self: stretch;
