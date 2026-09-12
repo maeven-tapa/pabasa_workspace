@@ -150,6 +150,64 @@
             gap: 0.55rem;
         }
 
+        .story-reading-timer {
+            display: none;
+            margin: 8px 0 12px;
+        }
+        .reader-shell.is-story-reading .story-reading-timer { display: block; }
+        .story-reading-timer-label {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        .story-reading-timer-track {
+            height: 8px;
+            overflow: hidden;
+            border-radius: 999px;
+            background: rgba(22, 120, 111, .14);
+        }
+        .story-reading-timer-progress {
+            width: 100%;
+            height: 100%;
+            border-radius: inherit;
+            background: #16786f;
+            transition: width .2s linear;
+        }
+
+        .story-reading-timer-overlay,
+        .story-reading-countdown-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: grid;
+            place-items: center;
+            padding: 20px;
+            background: rgba(16, 42, 53, .62);
+        }
+        .story-reading-timer-overlay.d-none,
+        .story-reading-countdown-overlay.d-none { display: none; }
+        .story-reading-timer-dialog {
+            width: min(440px, 100%);
+            padding: 28px;
+            border-radius: 20px;
+            background: #fffefb;
+            color: #102a35;
+            text-align: center;
+        }
+        .story-reading-countdown-number {
+            margin: 10px 0;
+            color: #16786f;
+            font-size: 4.5rem;
+            font-weight: 900;
+            line-height: 1;
+        }
+
         .progress-head {
             display: flex;
             align-items: center;
@@ -3418,6 +3476,12 @@
                 <section class="word-stage" aria-live="polite" aria-atomic="true">
                     <h2 class="reading-title" id="readingTitle" hidden></h2>
                     <p class="story-ready-instruction d-none" id="storyReadyInstruction">Your story is ready. Tap Start Reading when you are ready.</p>
+                    <div class="story-reading-timer" id="storyReadingTimer" aria-hidden="true">
+                        <span class="story-reading-timer-label" id="storyReadingTimerLabel">Story reading time remaining</span>
+                        <div class="story-reading-timer-track" role="progressbar" aria-label="Story reading time remaining" aria-valuemin="0" aria-valuemax="179" aria-valuenow="179">
+                            <div class="story-reading-timer-progress" id="storyReadingTimerProgress"></div>
+                        </div>
+                    </div>
                     <p class="story-reading-progress d-none" id="storyReadingProgress"></p>
                     <h1 class="reading-word" id="readingWord">{% block initial_text %}{% endblock %}</h1>
                 </section>
@@ -3527,6 +3591,25 @@
                 <p>Get ready to read.</p>
                 <div class="live-countdown-number" id="liveCountdownNumber">10</div>
                 <p id="liveCountdownSubtext">Get ready to read.</p>
+            </div>
+        </div>
+        <div class="story-reading-timer-overlay d-none" id="storyReadingInstructionOverlay" role="dialog" aria-modal="true" aria-labelledby="storyReadingInstructionTitle">
+            <div class="story-reading-timer-dialog">
+                <h2 id="storyReadingInstructionTitle">Ready to Read!</h2>
+                <p>You have 2 minutes and 59 seconds to read the story.<br>Read as much as you can. Do your best!</p>
+                <button class="btn btn-primary rounded-pill" id="storyReadingInstructionButton" type="button">Okay, let's start!</button>
+            </div>
+        </div>
+        <div class="story-reading-countdown-overlay d-none" id="storyReadingCountdownOverlay" role="dialog" aria-modal="true" aria-live="assertive" aria-label="Get ready to read">
+            <div class="story-reading-timer-dialog">
+                <div class="story-reading-countdown-number" id="storyReadingCountdownNumber">3</div>
+            </div>
+        </div>
+        <div class="story-reading-timer-overlay d-none" id="storyReadingTimeUpOverlay" role="dialog" aria-modal="true" aria-labelledby="storyReadingTimeUpTitle">
+            <div class="story-reading-timer-dialog">
+                <h2 id="storyReadingTimeUpTitle">Time's Up!</h2>
+                <p>Your reading time is over.<br>Now, let's answer some questions.</p>
+                <button class="btn btn-primary rounded-pill" id="storyReadingTimeUpButton" type="button">Okay</button>
             </div>
         </div>
 

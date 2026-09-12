@@ -46,6 +46,14 @@
         const storySelectionTitle = document.getElementById("storySelectionTitle");
         const storySelectionSubtitle = document.getElementById("storySelectionSubtitle");
         const storyReadyInstruction = document.getElementById("storyReadyInstruction");
+        const storyReadingTimer = document.getElementById("storyReadingTimer");
+        const storyReadingTimerProgress = document.getElementById("storyReadingTimerProgress");
+        const storyReadingInstructionOverlay = document.getElementById("storyReadingInstructionOverlay");
+        const storyReadingInstructionButton = document.getElementById("storyReadingInstructionButton");
+        const storyReadingCountdownOverlay = document.getElementById("storyReadingCountdownOverlay");
+        const storyReadingCountdownNumber = document.getElementById("storyReadingCountdownNumber");
+        const storyReadingTimeUpOverlay = document.getElementById("storyReadingTimeUpOverlay");
+        const storyReadingTimeUpButton = document.getElementById("storyReadingTimeUpButton");
         const storyReadingProgress = document.getElementById("storyReadingProgress");
         const storyQuestionPanel = document.getElementById("storyQuestionPanel");
         const storyQuestionTitle = document.getElementById("storyQuestionTitle");
@@ -301,6 +309,13 @@
         let sentenceCountdownTimer = null;
         let sentenceCountdownItemIndex = null;
         const sentenceItemLimitMs = 25000;
+        let storyReadingTimerId = null;
+        let storyReadingTimerExpiryId = null;
+        let storyReadingCountdownId = null;
+        let storyReadingTimerStartedAt = null;
+        let storyReadingTimerExpired = false;
+        let storyReadingCountdownActive = false;
+        const storyReadingDurationMs = 179000;
         let liveServerTimeOffsetMs = 0;
         const liveSessionId = urlParams.get("live_session_id");
         const liveSessionStateUrl = liveSessionId ? `/api/live-assessment/session/${liveSessionId}/` : null;
@@ -1331,7 +1346,74 @@
             renderCurrentStoryQuestion();
         }
 
+        function clearStoryReadingTimer() {
+            if (storyReadingTimerId) window.clearInterval(storyReadingTimerId);
+            if (storyReadingTimerExpiryId) window.clearTimeout(storyReadingTimerExpiryId);
+            if (storyReadingCountdownId) window.clearTimeout(storyReadingCountdownId);
+            storyReadingTimerId = null;
+            storyReadingTimerExpiryId = null;
+            storyReadingCountdownId = null;
+            storyReadingTimerStartedAt = null;
+            storyReadingCountdownActive = false;
+        }
+
+        function resetStoryReadingTimerUi() {
+            clearStoryReadingTimer();
+            storyReadingTimerExpired = false;
+            if (storyReadingTimerProgress) storyReadingTimerProgress.style.width = "100%";
+            storyReadingTimer?.setAttribute("aria-hidden", "true");
+            storyReadingCountdownOverlay?.classList.add("d-none");
+            storyReadingInstructionOverlay?.classList.add("d-none");
+            storyReadingTimeUpOverlay?.classList.add("d-none");
+        }
+
+        function startStoryReadingTimer(startedAt = Date.now()) {
+            clearStoryReadingTimer();
+            storyReadingTimerExpired = false;
+            storyReadingTimerStartedAt = startedAt;
+            storyReadingTimer?.setAttribute("aria-hidden", "false");
+            const update = () => {
+                const elapsed = Math.min(storyReadingDurationMs, Date.now() - storyReadingTimerStartedAt);
+                const remaining = Math.max(0, storyReadingDurationMs - elapsed);
+                if (storyReadingTimerProgress) storyReadingTimerProgress.style.width = `${(remaining / storyReadingDurationMs) * 100}%`;
+            };
+            update();
+            storyReadingTimerId = window.setInterval(update, 200);
+            storyReadingTimerExpiryId = window.setTimeout(() => {
+                clearStoryReadingTimer();
+                if (storyReadingTimerProgress) storyReadingTimerProgress.style.width = "0%";
+                storyReadingTimerExpired = true;
+                stopReading({ allowCompletedStorySegment: true }).then(() => {
+                    storyReadingTimeUpOverlay?.classList.remove("d-none");
+                });
+            }, Math.max(0, storyReadingDurationMs - (Date.now() - storyReadingTimerStartedAt)));
+        }
+
+        function startStoryReadingCountdown() {
+            if (storyReadingCountdownActive) return;
+            storyReadingCountdownActive = true;
+            storyReadingInstructionOverlay?.classList.add("d-none");
+            storyReadingCountdownOverlay?.classList.remove("d-none");
+            let value = 3;
+            if (storyReadingCountdownNumber) storyReadingCountdownNumber.textContent = String(value);
+            storyReadingCountdownId = window.setInterval(() => {
+                value -= 1;
+                if (value > 0) {
+                    if (storyReadingCountdownNumber) storyReadingCountdownNumber.textContent = String(value);
+                    return;
+                }
+                if (storyReadingCountdownNumber) storyReadingCountdownNumber.textContent = "Start!";
+                window.clearInterval(storyReadingCountdownId);
+                storyReadingCountdownId = window.setTimeout(() => {
+                    storyReadingCountdownOverlay?.classList.add("d-none");
+                    storyReadingCountdownActive = false;
+                    startReading({ fromStoryReadingCountdown: true });
+                }, 500);
+            }, 1000);
+        }
+
         function renderStorySelectionState() {
+            resetStoryReadingTimerUi();
             currentStoryState = "story_selection";
             currentAssessmentUiMode = "story";
             hideStoryPanels();
@@ -1351,6 +1433,7 @@
         }
 
         function renderStoryReadyState(story) {
+            resetStoryReadingTimerUi();
             currentStoryState = "story_ready";
             currentAssessmentUiMode = "story";
             if (recognitionActive) stopSpeechRecognition();
@@ -1385,6 +1468,7 @@
         function renderStoryReadingState(story) {
             currentStoryState = "story_reading";
             currentAssessmentUiMode = "story";
+            shell?.classList.add("is-story-reading");
             hideStoryPanels();
             if (readingWord) {
                 readingWord.hidden = false;
@@ -1799,6 +1883,7 @@
                 selected_story: choice.title,
                 selected_story_content: choice.content || "",
                 story_segment_index: 0,
+                story_reading_started_at: null,
                 duration_seconds: null,
                 wpm: null,
                 words_read: null,
@@ -2444,6 +2529,8 @@
                             );
                             updateUI();
                             renderStoryReadingState(restoredStory);
+                            const restoredStart = Date.parse(persistedEndState.story_reading_started_at || "");
+                            startStoryReadingTimer(Number.isFinite(restoredStart) ? restoredStart : Date.now());
                             animateCurrentItem();
                             return;
                         }
@@ -6203,9 +6290,13 @@
             return true;
         };
 
-        const startReading = () => {
+        const startReading = ({ fromStoryReadingCountdown = false } = {}) => {
             if (isReviewMode) return;
             if (isOfficialSentenceBranch() && sentenceCountdownTimer) return;
+            if (isCrla && currentStoryState === "story_ready" && currentSelectedStory && !fromStoryReadingCountdown) {
+                storyReadingInstructionOverlay?.classList.remove("d-none");
+                return;
+            }
             if (resetPhraseListening()) return;
             if (isSpeechResponsePending()) return;
             if (mode === 'phrase') {
@@ -6276,11 +6367,18 @@
                 });
                 renderStoryReadingState(currentSelectedStory);
                 logStorySegmentInitialization("reading_started");
+                startStoryReadingTimer();
+                updateStudentEndState({
+                    stage: "story_reading",
+                    selected_story: currentSelectedStory.title,
+                    story_reading_started_at: new Date(storyReadingTimerStartedAt).toISOString(),
+                });
             }
             console.log("PABASA: Assessment recording and timer started.");
         };
 
         const stopReading = async ({ allowIdleStoryCompletion = false, allowCompletedStorySegment = false } = {}) => {
+            clearStoryReadingTimer();
             const isCompletedOfficialCrlaStorySegment = allowCompletedStorySegment
                 && isOfficialAssessmentLaunch
                 && isCrla
@@ -6346,6 +6444,8 @@
 
         btnStartReading?.addEventListener("click", startReading);
         btnStopReading?.addEventListener("click", stopReading);
+        storyReadingInstructionButton?.addEventListener("click", startStoryReadingCountdown);
+        storyReadingTimeUpButton?.addEventListener("click", () => storyReadingTimeUpOverlay?.classList.add("d-none"));
 
         if (!isReviewMode && items.length && currentAssessmentUiMode !== "story") {
             startAssessmentTimer();
@@ -6719,6 +6819,7 @@
         }
 
         function goBackToAssessments() {
+            clearStoryReadingTimer();
             if (isAssistMode && window.parent && window.parent !== window) {
                 window.parent.postMessage({
                     type: "pabasa-assist-returning",
