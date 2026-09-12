@@ -151,31 +151,33 @@
         }
 
         .story-reading-timer {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
             display: none;
-            margin: 8px 0 12px;
-        }
-        .reader-shell.is-story-reading .story-reading-timer { display: block; }
-        .story-reading-timer-label {
-            display: block;
-            margin-bottom: 5px;
-            color: #587178;
-            font-size: .76rem;
-            font-weight: 900;
-            letter-spacing: .04em;
-            text-transform: uppercase;
-        }
-        .story-reading-timer-track {
-            height: 8px;
-            overflow: hidden;
-            border-radius: 999px;
-            background: rgba(22, 120, 111, .14);
-        }
-        .story-reading-timer-progress {
             width: 100%;
             height: 100%;
-            border-radius: inherit;
-            background: #16786f;
-            transition: width .2s linear;
+            pointer-events: none;
+        }
+        .reader-shell.is-story-reading .story-reading-timer { display: block; }
+        .story-reading-timer-track,
+        .story-reading-timer-progress {
+            fill: none;
+            stroke-linejoin: round;
+            vector-effect: non-scaling-stroke;
+        }
+        .story-reading-timer-track { stroke: rgba(22, 120, 111, .14); stroke-width: 5; }
+        .story-reading-timer-progress {
+            stroke: #16786f;
+            stroke-width: 5;
+            stroke-linecap: round;
+            transition: stroke-dashoffset .2s linear, stroke .25s ease;
+        }
+        .reader-shell.is-story-reading .word-stage,
+        .reader-shell.is-story-reading .recording-controls,
+        .reader-shell.is-story-reading .reader-footer {
+            position: relative;
+            z-index: 1;
         }
 
         .story-reading-timer-overlay,
@@ -192,11 +194,55 @@
         .story-reading-countdown-overlay.d-none { display: none; }
         .story-reading-timer-dialog {
             width: min(440px, 100%);
-            padding: 28px;
-            border-radius: 20px;
+            padding: 34px 32px 30px;
+            border: 1px solid rgba(31, 111, 139, .14);
+            border-radius: 26px;
             background: #fffefb;
             color: #102a35;
             text-align: center;
+            box-shadow: 0 24px 60px rgba(16, 42, 53, .24);
+        }
+        .story-reading-timer-dialog .story-reading-modal-icon {
+            display: grid;
+            place-items: center;
+            width: 58px;
+            height: 58px;
+            margin: 0 auto 16px;
+            border-radius: 18px;
+            background: #e8f5f1;
+            color: #16786f;
+            font-size: 1.65rem;
+        }
+        .story-reading-timer-dialog h2 {
+            margin: 0 0 12px;
+            color: #126c65;
+            font-size: clamp(1.65rem, 4vw, 2rem);
+            font-weight: 900;
+        }
+        .story-reading-timer-dialog p {
+            margin: 0 auto 24px;
+            max-width: 31rem;
+            color: #587178;
+            font-size: 1rem;
+            font-weight: 700;
+            line-height: 1.55;
+        }
+        .story-reading-timer-dialog button {
+            min-height: 46px;
+            padding: 11px 22px;
+            border: 0;
+            border-radius: 999px;
+            background: #16786f;
+            color: #fff;
+            font: 900 1rem "Nunito", "Segoe UI", sans-serif;
+            box-shadow: 0 5px 0 #12615b;
+            transition: transform .15s ease, background-color .15s ease, box-shadow .15s ease;
+        }
+        .story-reading-timer-dialog button:hover { background: #126c65; transform: translateY(-1px); }
+        .story-reading-timer-dialog button:active { transform: translateY(2px); box-shadow: 0 2px 0 #12615b; }
+        .story-reading-timer-dialog button:focus-visible { outline: 3px solid #f8b33b; outline-offset: 3px; }
+        @media (max-width: 480px) {
+            .story-reading-timer-dialog { padding: 28px 22px 24px; }
         }
         .story-reading-countdown-number {
             margin: 10px 0;
@@ -3467,6 +3513,10 @@
 
         <section class="reader-stage">
             <article class="reader-card {% block content_class %}{% endblock %}" data-level="{% block watermark %}read{% endblock %}">
+                <svg class="story-reading-timer" id="storyReadingTimer" viewBox="0 0 1000 500" preserveAspectRatio="none" role="progressbar" aria-label="Reading Time: 2 minutes and 59 seconds" aria-valuemin="0" aria-valuemax="179" aria-valuenow="179" aria-hidden="true">
+                    <rect class="story-reading-timer-track" x="3" y="3" width="994" height="494" rx="30" pathLength="1000"></rect>
+                    <rect class="story-reading-timer-progress" id="storyReadingTimerProgress" x="3" y="3" width="994" height="494" rx="30" pathLength="1000" stroke-dasharray="1000" stroke-dashoffset="0"></rect>
+                </svg>
                 <div class="read-helper{% if crla_official_assessment_id %} official-crla-status{% endif %}"{% if crla_official_assessment_id %} hidden{% endif %}>
                     <span class="helper-dot" aria-hidden="true"></span>
                     <span id="readingHelperText" aria-live="polite">{% block helper_text %}{% endblock %}</span>
@@ -3474,12 +3524,6 @@
                 <section class="word-stage" aria-live="polite" aria-atomic="true">
                     <h2 class="reading-title" id="readingTitle" hidden></h2>
                     <p class="story-ready-instruction d-none" id="storyReadyInstruction">Your story is ready. Tap Start Reading when you are ready.</p>
-                    <div class="story-reading-timer" id="storyReadingTimer" aria-hidden="true">
-                        <span class="story-reading-timer-label" id="storyReadingTimerLabel">Reading Time</span>
-                        <div class="story-reading-timer-track" role="progressbar" aria-label="Story reading time remaining" aria-valuemin="0" aria-valuemax="179" aria-valuenow="179">
-                            <div class="story-reading-timer-progress" id="storyReadingTimerProgress"></div>
-                        </div>
-                    </div>
                     <p class="story-reading-progress d-none" id="storyReadingProgress"></p>
                     <h1 class="reading-word" id="readingWord">{% block initial_text %}{% endblock %}</h1>
                 </section>
@@ -3593,6 +3637,7 @@
         </div>
         <div class="story-reading-timer-overlay d-none" id="storyReadingInstructionOverlay" role="dialog" aria-modal="true" aria-labelledby="storyReadingInstructionTitle">
             <div class="story-reading-timer-dialog">
+                <div class="story-reading-modal-icon" aria-hidden="true"><i class="bi bi-book-half"></i></div>
                 <h2 id="storyReadingInstructionTitle">Ready to Read!</h2>
                 <p>You have 2 minutes and 59 seconds to read the story.<br>Read as much as you can. Do your best!</p>
                 <button class="btn btn-primary rounded-pill" id="storyReadingInstructionButton" type="button">Okay, let's start!</button>
@@ -3605,6 +3650,7 @@
         </div>
         <div class="story-reading-timer-overlay d-none" id="storyReadingTimeUpOverlay" role="dialog" aria-modal="true" aria-labelledby="storyReadingTimeUpTitle">
             <div class="story-reading-timer-dialog">
+                <div class="story-reading-modal-icon" aria-hidden="true"><i class="bi bi-hourglass-split"></i></div>
                 <h2 id="storyReadingTimeUpTitle">Time's Up!</h2>
                 <p>Your reading time is over.<br>Now, let's answer some questions.</p>
                 <button class="btn btn-primary rounded-pill" id="storyReadingTimeUpButton" type="button">Okay</button>

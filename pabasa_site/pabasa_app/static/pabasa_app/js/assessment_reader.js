@@ -1360,7 +1360,8 @@
         function resetStoryReadingTimerUi() {
             clearStoryReadingTimer();
             storyReadingTimerExpired = false;
-            if (storyReadingTimerProgress) storyReadingTimerProgress.style.width = "100%";
+            if (storyReadingTimerProgress) storyReadingTimerProgress.style.strokeDashoffset = "0";
+            storyReadingTimer?.setAttribute("aria-valuenow", "179");
             storyReadingTimer?.setAttribute("aria-hidden", "true");
             storyReadingCountdownOverlay?.classList.add("d-none");
             storyReadingInstructionOverlay?.classList.add("d-none");
@@ -1375,13 +1376,17 @@
             const update = () => {
                 const elapsed = Math.min(storyReadingDurationMs, Date.now() - storyReadingTimerStartedAt);
                 const remaining = Math.max(0, storyReadingDurationMs - elapsed);
-                if (storyReadingTimerProgress) storyReadingTimerProgress.style.width = `${(remaining / storyReadingDurationMs) * 100}%`;
+                if (storyReadingTimerProgress) {
+                    storyReadingTimerProgress.style.strokeDashoffset = String(1000 - ((remaining / storyReadingDurationMs) * 1000));
+                    storyReadingTimer?.setAttribute("aria-valuenow", String(Math.ceil(remaining / 1000)));
+                }
             };
             update();
             storyReadingTimerId = window.setInterval(update, 200);
             storyReadingTimerExpiryId = window.setTimeout(() => {
                 clearStoryReadingTimer();
-                if (storyReadingTimerProgress) storyReadingTimerProgress.style.width = "0%";
+                if (storyReadingTimerProgress) storyReadingTimerProgress.style.strokeDashoffset = "1000";
+                storyReadingTimer?.setAttribute("aria-valuenow", "0");
                 storyReadingTimerExpired = true;
                 stopReading({ allowCompletedStorySegment: true }).then(() => {
                     storyReadingTimeUpOverlay?.classList.remove("d-none");
