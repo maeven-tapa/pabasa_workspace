@@ -1,4 +1,9 @@
 <div class="sidebar-profile-card sidebar-profile-summary mt-3">
+    {% if nav_role == 'student' %}
+    <a class="sidebar-profile-theme-link" href="{% url 'theme_shop' %}" data-nav-tooltip title="Theme Shop" aria-label="Theme Shop">
+        <i class="bi bi-palette" aria-hidden="true"></i>
+    </a>
+    {% endif %}
     <div class="sidebar-profile-avatar{% if nav_role == 'student' %} sidebar-student-avatar{% endif %}" aria-hidden="true">
         {% if nav_role == 'student' %}
             <span>{{ sidebar_selected_avatar.emoji|default:'🦉' }}</span>

@@ -164,6 +164,16 @@
         z-index: 1301;
     }
 
+    /* Keep Bootstrap's document-level backdrop behind the onboarding modal. */
+    .practice-board.student-animated-page {
+        isolation: auto;
+    }
+
+    .practice-board.student-animated-page > .practice-onboarding-modal.show {
+        position: fixed !important;
+        z-index: 4100 !important;
+    }
+
     @media (max-width: 767.98px) {
         .practice-language-select-wrap {
             grid-template-columns: 1fr;

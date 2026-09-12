@@ -5,20 +5,6 @@
             {% include "pabasa_app/partials/_pabasa_logo.html" with logo_class="pabasa-logo-svg" letters_class="pabasa-logo-letters" letter_yellow_class="lc-yellow" letter_blue_class="lc-blue" %}
         </a>
 
-        {% if nav_role == 'teacher' or nav_role == 'student' %}
-        <a class="sidebar-collapsed-profile" href="{% url 'profile' %}?role={{ nav_role|default:'student' }}" data-nav-tooltip title="View Profile" aria-label="View Profile">
-            {% if nav_role == 'student' %}
-                <span>{{ sidebar_selected_avatar.emoji|default:'🦉' }}</span>
-            {% else %}
-                {{ initials|default:'P' }}
-            {% endif %}
-        </a>
-        {% endif %}
-
-        {% if nav_role == 'teacher' or nav_role == 'student' %}
-            {% include "pabasa_app/partials/_sidebar_profile_card.html" %}
-        {% endif %}
-
     </div>
 
     <div class="sidebar-upper-navigation">
@@ -43,12 +29,28 @@
         </button>
     </div>
     {% else %}
-    <div class="d-grid gap-1 sidebar-account-section">
-        <div class="sidebar-section-label">Account</div>
-        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'theme_shop' %}" data-nav-tooltip title="Theme Shop"><i class="bi bi-palette"></i><span class="sidebar-text">Theme Shop</span></a>
-    </div>
     {% endif %}
     </div>
+
+    {% if nav_role == 'teacher' or nav_role == 'student' %}
+    <div class="sidebar-lower-profile">
+        {% include "pabasa_app/partials/_sidebar_profile_card.html" %}
+    </div>
+    <div class="sidebar-collapsed-profile-row">
+        {% if nav_role == 'student' %}
+        <a class="sidebar-collapsed-theme-link" href="{% url 'theme_shop' %}" data-nav-tooltip title="Theme Shop" aria-label="Theme Shop">
+            <i class="bi bi-palette" aria-hidden="true"></i>
+        </a>
+        {% endif %}
+        <a class="sidebar-collapsed-profile" href="{% url 'profile' %}?role={{ nav_role|default:'student' }}" data-nav-tooltip title="View Profile" aria-label="View Profile">
+            {% if nav_role == 'student' %}
+                <span>{{ sidebar_selected_avatar.emoji|default:'🦉' }}</span>
+            {% else %}
+                {{ initials|default:'P' }}
+            {% endif %}
+        </a>
+    </div>
+    {% endif %}
 
     <div class="sidebar-collapse-row d-none d-lg-flex">
         <button class="btn btn-sm btn-light sidebar-collapse-btn" type="button" data-sidebar-collapse-btn aria-label="Collapse sidebar" title="Collapse sidebar">
