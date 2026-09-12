@@ -33,4 +33,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 
 # Apply schema updates before serving the application. `exec` lets Gunicorn
 # receive container stop/restart signals directly.
-CMD ["sh", "-c", "python pabasa_site/manage.py migrate --noinput && exec gunicorn pabasa_site.wsgi:application --chdir pabasa_site --worker-tmp-dir /dev/shm --bind 0.0.0.0:${PORT:-8080}"]
+CMD ["sh", "-c", "python pabasa_site/manage.py check_migration_readiness && python pabasa_site/manage.py migrate --noinput && exec gunicorn pabasa_site.wsgi:application --chdir pabasa_site --worker-tmp-dir /dev/shm --bind 0.0.0.0:${PORT:-8080}"]

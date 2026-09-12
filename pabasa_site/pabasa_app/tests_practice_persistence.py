@@ -150,6 +150,6 @@ assert list(Material.objects.filter(pk__in=[r['id'] for r in expected]).order_by
             call_command('seed_filipino_practice', stdout=StringIO())
             call_command('seed_filipino_practice', stdout=StringIO())
         migration = importlib.import_module(
-            'pabasa_app.migrations.0113_prevent_unsaved_practice_level_reservations')
-        migration.remove_incomplete_admin_practice_materials(apps, None)
+            'pabasa_app.migrations.0001_current_schema')
+        migration.m0113_remove_incomplete_admin_practice_materials(apps, None)
         self.assert_listing(records)
