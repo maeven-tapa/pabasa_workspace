@@ -1232,13 +1232,7 @@ def _parse_prefixed_id(val):
     except (ValueError, TypeError):
         return None, None
 
-def _section_students(section, active_only=False):
-    """Delegate to Section model method"""
-    return section.get_enrolled_students(active_only=active_only)
 
-def _student_entry_matches(entry, user):
-    """Helper to check if entry matches user (DEPRECATED - use section.has_student instead)"""
-    return str(entry.get('student_id')) == str(user.id) or entry.get('custom_id') == user.custom_id
 
 def _section_has_student(section, user, active_only=True):
     """Delegate to Section model method"""
@@ -1278,68 +1272,23 @@ def _current_section_enrollments(section, statuses=('active',)):
         student__is_archived=False,
     )
 
-def _student_section_entry(user, joined_at=None, is_active=True):
-    """DEPRECATED - this method is now on Section model"""
-    return {
-        'student_id': user.id,
-        'custom_id': user.custom_id,
-        'first_name': user.first_name,
-        'last_name': user.last_name,
-        'email': user.email,
-        'joined_at': joined_at or system_now().isoformat(),
-        'is_active': is_active,
-    }
 
-def _save_section_students(section, students):
-    """DEPRECATED - use section._save_enrollment() instead"""
-    section.students = students
-    section._save_enrollment()
 
-def _add_student_to_section(section, user):
-    """Delegate to Section model method"""
-    return section.add_student(user)
 
 def _deactivate_student_in_section(section, user):
     """Delegate to Section model method"""
     return section.deactivate_student(user)
 
-def _deactivate_all_section_students(section):
-    """Delegate to Section model method"""
-    return section.deactivate_all_students()
 
 # ===== Assessment Attempt Helper Functions (DEPRECATED - use Assessment model methods) =====
 
-def _get_assessment_attempts(assessment, student=None):
-    """Delegate to Assessment model method"""
-    return assessment.get_attempts(student)
 
-def _get_student_attempt_count(assessment, student):
-    """Delegate to Assessment model method"""
-    return assessment.get_student_attempt_count(student)
 
-def _has_student_attempted(assessment, student):
-    """Delegate to Assessment model method"""
-    return assessment.has_student_attempted(student)
 
-def _record_attempt(assessment, student, **attempt_data):
-    """Delegate to Assessment model method"""
-    return assessment.record_attempt(student, **attempt_data)
 
-def _update_attempt(assessment, student, **update_data):
-    """Delegate to Assessment model method"""
-    return assessment.update_attempt(student, **update_data)
 
-def _get_student_latest_attempt(assessment, student):
-    """Delegate to Assessment model method"""
-    return assessment.get_student_latest_attempt(student)
 
-def _deactivate_student_attempts(assessment, student):
-    """Delegate to Assessment model method"""
-    return assessment.deactivate_student_attempts(student)
 
-def _clear_all_assessment_attempts(assessment):
-    """Delegate to Assessment model method"""
-    return assessment.clear_all_attempts()
 
 from django.db import transaction
 from django.utils import timezone
@@ -3960,28 +3909,8 @@ def normalize_class_code(code):
     return (code or '').strip().upper()
 
 
-def is_valid_class_code_format(code):
-    return bool(CLASS_CODE_PATTERN.match(normalize_class_code(code)))
 
 
-def generate_unique_class_code():
-    """
-    Generates a unique 4-letter and 3-digit class code (e.g., ABCD-123).
-    Automatically checks the database to ensure no duplicates exist.
-    """
-    letters = "ABCDEFGHJKLMNPQRSTUVWXYZ"
-    digits = "0123456789"
-    
-    while True:
-        # Follow the existing format: 4 uppercase letters followed by 3 digits
-        prefix = "".join(random.choices(letters, k=4))
-        suffix = "".join(random.choices(digits, k=3))
-        code = f"{prefix}-{suffix}"
-        
-        # Uniqueness Check: Ensure this code does not already exist in the database
-        # This prevents duplicate classrooms even across different teachers
-        if not Section.objects.filter(class_code=code).exists():
-            return code
         # If exists, the loop continues to generate a fresh candidate
 
 
@@ -6182,19 +6111,6 @@ def _generate_principal_custom_id(school_name):
         candidate = f'{prefix}{next_number:03d}'
     return candidate
 
-def _save_principal_logo(logo_file, custom_id):
-    allowed_extensions = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
-    file_ext = (logo_file.name.rsplit('.', 1)[-1] if '.' in logo_file.name else '').lower()
-    if file_ext not in allowed_extensions:
-        raise ValueError('School logo must be an image file.')
-
-    PRINCIPAL_LOGOS_DIR.mkdir(parents=True, exist_ok=True)
-    filename = f'{slugify(custom_id) or uuid.uuid4().hex}.{file_ext}'
-    destination = PRINCIPAL_LOGOS_DIR / filename
-    with open(destination, 'wb+') as target:
-        for chunk in logo_file.chunks():
-            target.write(chunk)
-    return f'{PRINCIPAL_LOGOS_STATIC_PREFIX}/{filename}'
 
 def _principal_temporary_password(last_name):
     surname = unicodedata.normalize('NFKD', str(last_name or '').strip())
@@ -6354,46 +6270,6 @@ def _admin_user_full_name(user):
         user.suffix,
     ] if part).strip()
 
-def _admin_users_context(request, role, page_title):
-    search_query = request.GET.get('q', '').strip()
-    status_filter = request.GET.get('status', 'all').strip().lower()
-
-    users = User.objects.filter(role=role)
-    if search_query:
-        users = users.filter(
-            Q(first_name__icontains=search_query) |
-            Q(last_name__icontains=search_query) |
-            Q(custom_id__icontains=search_query) |
-            Q(email__icontains=search_query)
-        )
-    if status_filter == 'active':
-        users = users.filter(is_archived=False, account_status='active')
-    elif status_filter == 'pending_archive':
-        users = users.filter(is_archived=False, account_status='pending_archive')
-    elif status_filter == 'archived':
-        users = users.filter(is_archived=True)
-
-    context = _admin_context(request, page_title, [
-        'Name',
-        'ID',
-        'Username',
-        'Email',
-        'Status',
-        'Actions',
-    ])
-    context.update({
-        'managed_role': role,
-        'users': users.order_by('last_name', 'first_name'),
-        'search_query': search_query,
-        'status_filter': status_filter,
-        'status_options': [
-            ('all', 'All Statuses'),
-            ('active', 'Active'),
-            ('pending_archive', 'Pending Archive'),
-            ('archived', 'Archived'),
-        ],
-    })
-    return context
 
 
 @admin_required
@@ -7125,18 +7001,6 @@ def admin_classes(request):
     return render(request, 'pabasa_app/admin_classes.html', _admin_sections_context(request, 'Classes'))
 
 
-def _school_card_context(school):
-    """Build display data from the authoritative relational assignment."""
-    principal = _active_principal_for_school(school)
-    return {
-        'id': school.id,
-        'name': school.name,
-        'code': school.code or 'Not assigned',
-        'principal_name': _admin_user_full_name(principal) if principal else 'Not assigned',
-        'principal': principal,
-        'status_label': school.get_status_display(),
-        'is_active': school.is_active,
-    }
 
 
 @admin_required
@@ -10245,13 +10109,6 @@ def _toggle_official_material_state(material, activate):
     return True
 
 
-def _official_assessment_create_context(request):
-    context = _official_assessment_edit_context(request, None)
-    context['material'] = None
-    context['selected_assessment_type'] = 'pre_assessment'
-    context['official_form_error'] = ''
-    context['official_field_errors'] = {}
-    return context
 
 
 @admin_required
@@ -15587,17 +15444,6 @@ def _live_assessment_sections(session):
     return []
 
 
-def _live_end_trace_state_counts(session):
-    counts = {}
-    states = getattr(session, 'student_states', None) or {}
-    if isinstance(states, dict):
-        for state in states.values():
-            if not isinstance(state, dict):
-                status = 'invalid'
-            else:
-                status = str(state.get('status') or 'missing')
-            counts[status] = counts.get(status, 0) + 1
-    return counts
 
 
 def _trace_live_end_flow(event, session=None, **details):
@@ -19441,179 +19287,6 @@ def send_course_update(request):
             'report_included': any(item.get('report_included', False) for item in sent),
         })
 
-        course_sections = list(course.sections.filter(is_active=True))
-        students = User.objects.filter(id__in=selected_student_ids, role='student')
-        students_by_id = {student.id: student for student in students}
-        ordered_students = [students_by_id[sid] for sid in selected_student_ids if sid in students_by_id]
-
-        sender = getattr(settings, 'DEFAULT_FROM_EMAIL', 'pabasa.tupc@gmail.com')
-        sent = []
-        skipped = []
-
-        for student in ordered_students:
-            if not any(section.has_student(student, active_only=True) for section in course_sections):
-                skipped.append({'student_id': student.id, 'reason': 'not_enrolled'})
-                continue
-            if not student.email:
-                skipped.append({'student_id': student.id, 'reason': 'missing_email'})
-                continue
-
-            student_name = f"{student.first_name} {student.last_name}".strip() or student.custom_id or 'Student'
-            personalized_message = message_template.replace('{name}', student_name)
-            report = _latest_student_reading_report(student, sections=course_sections, course=course)
-            scheduled_at_input = str(data.get('scheduled_at') or data.get('scheduledAt') or data.get('scheduled_at_input') or '').strip()
-            reading_material_input = str(data.get('reading_material') or '').strip()
-            report_text = _format_reading_report_text(report)
-            normalized_update_type = update_type.lower()
-
-            attachment_name = None
-            attachment_bytes = None
-            attachment_mime = 'application/pdf'
-            report_attachment_included = False
-
-            if normalized_update_type == 'followup':
-                subject = "Student Reading Progress Report – PABASA"
-                report_attachment_included = True
-                attachment_name = f"{student_name.replace(' ', '_')}_reading_report.pdf"
-                email_body = (
-                    "Dear Parent/Guardian,\n\n"
-                    "We hope you are doing well.\n\n"
-                    "Attached is the latest Reading Progress Report for your child from the PABASA Reading Assessment System. "
-                    "The report contains an overview of your child's recent reading performance, including assessment results, progress, and other relevant information.\n\n"
-                    "We encourage you to review the attached report and continue supporting your child's reading development at home.\n\n"
-                    "If you have any questions or would like to discuss your child's progress, please feel free to contact the school.\n\n"
-                    "Thank you for your continued support and partnership in your child's learning.\n\n"
-                    "Sincerely,\n\n"
-                    "PABASA Team"
-                )
-                include_attachment = True
-            elif normalized_update_type == 'commendation':
-                subject = "Performance Commendation – PABASA"
-                certificate_date = timezone.localtime(system_now(), timezone.get_default_timezone()).strftime('%B %d, %Y')
-                certificate_pdf = _build_certificate_pdf(
-                    student_name=student_name,
-                    issued_on=certificate_date,
-                    school_name='PABASA',
-                    teacher_name=f"{teacher_user.first_name} {teacher_user.last_name}".strip() or 'Teacher',
-                )
-                email_body = (
-                    f"Dear {student_name},\n\n"
-                    "Congratulations on your continued effort and success in reading! "
-                    "We are very proud of the progress you have made and the dedication you have shown.\n\n"
-                    f"{personalized_message}\n\n"
-                    "A certificate is attached for your recognition. "
-                    "This Certificate of Achievement celebrates your outstanding reading performance and dedication to learning. "
-                    "Please keep it as a reminder of your outstanding reading achievement.\n\n"
-                    "Sincerely,\n\n"
-                    "PABASA Team"
-                )
-                include_attachment = True
-                attachment_name = f"{student_name.replace(' ', '_')}_certificate_of_achievement.pdf"
-                attachment_bytes = certificate_pdf
-                attachment_mime = 'application/pdf'
-            elif normalized_update_type == 'assessment':
-                subject = "Scheduled Assessment Notice – PABASA"
-                assessment_title = str(data.get('assessment_title') or 'Reading Assessment').strip() or 'Reading Assessment'
-                scheduled_at = str(scheduled_at_input or 'TBD').strip() or 'TBD'
-                reading_material = reading_material_input or str(data.get('reading_material') or 'Not specified').strip() or 'Not specified'
-
-                try:
-                    from datetime import datetime
-                    parsed_dt = datetime.fromisoformat(scheduled_at.replace('Z', '+00:00'))
-                    if parsed_dt.tzinfo is None:
-                        parsed_dt = parsed_dt.replace(tzinfo=timezone.get_current_timezone())
-                    scheduled_at_display = timezone.localtime(parsed_dt, timezone.get_default_timezone()).strftime('%B %d, %Y at %I:%M %p')
-                except Exception:
-                    scheduled_at_display = scheduled_at
-
-                email_body = (
-                    f"Dear {student_name},\n\n"
-                    f"This is a reminder that your scheduled reading assessment, {assessment_title}, is coming up.\n\n"
-                    f"Scheduled Date and Time: {scheduled_at_display}\n"
-                    f"Reading Material: {reading_material}\n\n"
-                    f"{personalized_message}\n\n"
-                    "Please prepare ahead of time and be ready to do your best.\n\n"
-                    "Sincerely,\n\n"
-                    "PABASA Team"
-                )
-                include_attachment = False
-            else:
-                subject = "Student Reading Progress Report – PABASA"
-                email_body = (
-                    "Dear Parent/Guardian,\n\n"
-                    "We hope you are doing well.\n\n"
-                    "Attached is the latest Reading Progress Report for your child from the PABASA Reading Assessment System. "
-                    "The report contains an overview of your child's recent reading performance, including assessment results, progress, and other relevant information.\n\n"
-                    "We encourage you to review the attached report and continue supporting your child's reading development at home.\n\n"
-                    "If you have any questions or would like to discuss your child's progress, please feel free to contact the school.\n\n"
-                    "Thank you for your continued support and partnership in your child's learning.\n\n"
-                    "Sincerely,\n\n"
-                    "PABASA Team"
-                )
-                include_attachment = True
-            note_text = (
-                f"Course: {course.title} ({course.code})\n"
-                f"Update Type: {update_type}\n"
-                f"Recipient Email: {student.email}\n\n"
-                f"Teacher Comments:\n"
-                f"{personalized_message}\n\n"
-                f"{report_text}"
-            )
-
-            email_message = EmailMultiAlternatives(
-                subject,
-                email_body,
-                sender,
-                [student.email],
-            )
-            email_message.attach_alternative(
-                _pabasa_email_shell(subject, 'PABASA course update', _email_paragraphs(email_body)),
-                'text/html',
-            )
-            if include_attachment:
-                try:
-                    if normalized_update_type == 'commendation':
-                        email_message.attach(attachment_name, attachment_bytes, attachment_mime)
-                    else:
-                        pdf_bytes = _build_reading_report_pdf(
-                            report,
-                            message=personalized_message,
-                            course=course,
-                            teacher=teacher_user,
-                            recipient_email=student.email,
-                        )
-                        email_message.attach(attachment_name, pdf_bytes, 'application/pdf')
-                except Exception:
-                    logger.exception('Failed to build PDF attachment for course update')
-            email_message.send(fail_silently=False)
-            Note.objects.create(
-                teacher=teacher_user,
-                student=student,
-                note_text=note_text,
-                note_type=f"course_update:{update_type}"[:50],
-            )
-            sent.append({
-                'student_id': student.id,
-                'email': student.email,
-                'name': student_name,
-                'report_summary': report.get('summary'),
-                'report_included': report_attachment_included,
-            })
-
-        if not sent:
-            return JsonResponse({
-                'success': False,
-                'error': 'No selected recipients could be emailed',
-                'skipped': skipped,
-            }, status=400)
-
-        return JsonResponse({
-            'success': True,
-            'sent_count': len(sent),
-            'sent': sent,
-            'skipped': skipped,
-            'report_included': any(item.get('report_included', False) for item in sent),
-        })
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'error': 'Invalid JSON payload'}, status=400)
     except Exception as e:
@@ -22732,17 +22405,6 @@ def _build_image_upload_debug_info(upload, source='upload'):
     }
 
 
-def _looks_like_ocr_text(text):
-    if not text:
-        return False
-    cleaned = re.sub(r'\s+', ' ', str(text).strip())
-    if not cleaned:
-        return False
-    if len(cleaned) < 3:
-        return False
-    letters = sum(1 for ch in cleaned if ch.isalpha())
-    digits = sum(1 for ch in cleaned if ch.isdigit())
-    return (letters >= 2) or (digits >= 2 and letters >= 1)
 
 
 def _coerce_image_ocr_result(result):

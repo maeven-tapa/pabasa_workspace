@@ -10295,26 +10295,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         return false;
     }
 
-    function loadTeacherCoursesFromCache() {
-        try {
-            // If server provided initial courses, prefer those to avoid flicker
-            if (Array.isArray(teacherCourses) && teacherCourses.length > 0) {
-                return true;
-            }
-            const key = teacherCoursesKey();
-            const stored = key ? localStorage.getItem(key) : null;
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                teacherCourses = Array.isArray(parsed) ? parsed : [];
-                return teacherCourses.length > 0;
-            }
-        } catch (e) {
-            console.warn('Could not load courses from cache:', e);
-        }
-        teacherCourses = teacherCourses || [];
-        return false;
-    }
-
     function loadSharedTeacherCoursesFromCache() {
         try {
             const key = sharedTeacherCoursesKey();
@@ -13941,44 +13921,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     // Track pinned announcement globally
     let pinnedAnnouncementId = null;
 
-    function updatePinnedSpotlight() {
-        const spotlight = document.getElementById('pinnedSpotlight');
-        const pinnedContent = spotlight.querySelector('.pinned-spotlight-content');
-        
-        if (!pinnedContent) return;
-        
-        const pinnedCards = spotlight.querySelectorAll('.announcement-card.pinned');
-        
-        if (pinnedCards.length === 0) {
-            spotlight.classList.remove('has-items');
-            pinnedContent.innerHTML = '';
-        } else {
-            spotlight.classList.add('has-items');
-        }
-    }
-
-    function movePinnedCardToSpotlight(card) {
-        const spotlight = document.getElementById('pinnedSpotlight');
-        let pinnedContent = spotlight.querySelector('.pinned-spotlight-content');
-        
-        // Create the header if it doesn't exist
-        let header = spotlight.querySelector('.pinned-spotlight-header');
-        if (!header) {
-            header = document.createElement('div');
-            header.className = 'pinned-spotlight-header';
-            header.innerHTML = '<i class="bi bi-pin-fill"></i> <span>Pinned Announcement</span>';
-            spotlight.appendChild(header);
-            
-            pinnedContent = document.createElement('div');
-            pinnedContent.className = 'pinned-spotlight-content';
-            spotlight.appendChild(pinnedContent);
-        }
-        
-        pinnedContent.innerHTML = '';
-        pinnedContent.appendChild(card);
-        spotlight.classList.add('has-items');
-    }
-
     // Helper functions for modals
     function ensureModalOnBody(modalEl) {
         if (modalEl && modalEl.parentElement !== document.body) {
@@ -14262,22 +14204,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
     function getAnnouncementStorageKey() {
         return currentSectionId ? `pabasa_announcements_${currentSectionId}` : null;
-    }
-
-    function updateStoredAnnouncement(announcementId, updater) {
-        const storageKey = getAnnouncementStorageKey();
-        if (!storageKey || !announcementId) return;
-
-        try {
-            const announcements = JSON.parse(localStorage.getItem(storageKey) || '[]');
-            const updated = announcements.map(ann => {
-                if (ann.id.toString() !== announcementId.toString()) return ann;
-                return updater({ ...ann });
-            });
-            localStorage.setItem(storageKey, JSON.stringify(updated));
-        } catch (e) {
-            console.warn('Could not save announcement update:', e);
-        }
     }
 
     function getAvatarStyle(photoUrl) {
@@ -19727,10 +19653,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     renderOtherMaterialPanel(addMaterialModeToggle?.classList.contains('active-template') ? 'template' : 'other');
                 }
             });
-        }
-
-        function openOtherMaterialModal() {
-            /* removed: other materials now render inline */
         }
 
         attachOtherMaterialHandlers();

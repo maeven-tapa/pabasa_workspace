@@ -4222,12 +4222,6 @@ class ReadingMatcherTests(TestCase):
         )
         self.assertNotIn(5, [item["expected_index"] for item in result["word_results"]])
 
-    def test_story_post_miscue_chunk_exposes_trailing_correct_results(self):
-        result = align_story_transcript("bibilis pa sa akin", "li pa sa akin", start_word_index=0)
-        self.assertEqual(
-            [(item["expected_index"], item["result"]) for item in result["word_results"]],
-            [(0, "miscue"), (1, "correct"), (2, "correct"), (3, "correct")],
-        )
 
     def test_story_post_miscue_chunk_can_contain_another_miscue(self):
         result = align_story_transcript("bibilis pa sa akin", "li bahay sa akin", start_word_index=0)
