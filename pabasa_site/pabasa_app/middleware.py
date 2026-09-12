@@ -5,6 +5,7 @@ from django.utils import timezone
 
 from .models import User
 from .student_session_lock import release_student_session, student_session_is_active
+from .system_clock import now as system_now
 
 
 class PrincipalPasswordChangeMiddleware:
@@ -46,5 +47,5 @@ class StudentSessionLockMiddleware:
                 if request.META.get("HTTP_X_REQUESTED_WITH") == "XMLHttpRequest" or accept.startswith("application/json"):
                     return JsonResponse({"success": False, "error": "This student session is no longer valid. Please log in again."}, status=401)
                 return redirect("auth")
-            User.objects.filter(pk=user.pk, active_session_key=key).update(last_activity=timezone.now())
+            User.objects.filter(pk=user.pk, active_session_key=key).update(last_activity=system_now())
         return self.get_response(request)

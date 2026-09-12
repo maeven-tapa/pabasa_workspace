@@ -5,6 +5,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from .models import User
+from .system_clock import now as system_now
 
 
 # The Live CRLA reader polls every few seconds and the dashboard heartbeat
@@ -15,7 +16,7 @@ STUDENT_SESSION_IDLE_TIMEOUT = timedelta(minutes=2)
 
 def claim_student_session(user_id, session_key):
     """Atomically claim a student session, returning False if another is active."""
-    now = timezone.now()
+    now = system_now()
     with transaction.atomic():
         user = User.objects.select_for_update().get(pk=user_id, role='student')
         active_key = user.active_session_key
@@ -39,7 +40,7 @@ def claim_student_session(user_id, session_key):
 
 
 def student_session_is_active(user, session_key, now=None):
-    now = now or timezone.now()
+    now = now or system_now()
     return bool(
         user and session_key and user.active_session_key == session_key and
         (not user.last_activity or user.last_activity > now - STUDENT_SESSION_IDLE_TIMEOUT)
