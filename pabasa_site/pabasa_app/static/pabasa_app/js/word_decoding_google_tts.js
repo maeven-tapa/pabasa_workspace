@@ -13,7 +13,7 @@
     'Your recording could not be captured.': 'Hindi na-record ang iyong boses. Pakisubukan muli.',
     'No speech was captured. Please try again.': 'Walang boses na na-record. Pakisubukan muli.',
     'Listening with Google Speech… Read the whole word.': 'Nakikinig ang Google Speech… Basahin ang buong salita.',
-    'Checking your word with Google Speech…': 'Sinusuri ng Google Speech ang iyong salita…',
+    'Checking your word with Google Speech…': 'Sinusuri ang iyong salita.',
     'Great reading! Next word…': 'Magaling magbasa! Susunod na salita…',
     'Try reading the whole word again.': 'Subukang basahin muli ang buong salita.',
     'Google Speech could not check your word.': 'Hindi masuri ng Google Speech ang iyong salita.',
@@ -51,16 +51,83 @@
   };
 
   const translateStatus = () => {
-    if (!isFilipinoMaterial()) return;
     const status = document.getElementById('status');
     if (!status) return;
-    const translated = filipinoStatusMessages[status.textContent.trim()];
+    const currentStatus = status.textContent.trim();
+    if (currentStatus === 'Checking your word with Google Speech…') {
+      status.textContent = isFilipinoMaterial()
+        ? 'Sinusuri ang iyong salita.'
+        : 'Checking your word…';
+      return;
+    }
+    if (!isFilipinoMaterial()) return;
+    const translated = filipinoStatusMessages[currentStatus];
     if (translated) status.textContent = translated;
+  };
+
+  const readingFeedbackCopy = () => isFilipinoMaterial()
+    ? { heard: 'Narinig ng system:', listen: 'Pakinggan ang Salita' }
+    : { heard: 'The system heard:', listen: 'Hear the Word' };
+
+  const getReadingFeedback = () => document.getElementById('word-decoding-reading-feedback');
+
+  const clearReadingFeedback = () => {
+    const feedback = getReadingFeedback();
+    if (feedback) feedback.hidden = true;
+  };
+
+  const playWholeWord = async () => {
+    const wholeWord = [...document.querySelectorAll('#word .letter')]
+      .map((letter) => letter.textContent.trim())
+      .join('');
+    if (!wholeWord) return;
+    await window.PabasaTemplateTts.speak({
+      materialId: document.body?.dataset.templateMaterialId,
+      text: wholeWord,
+      profile: 'instruction',
+    });
+  };
+
+  const showReadingFeedback = (transcript) => {
+    const capturedWord = String(transcript || '').trim();
+    if (!capturedWord) return;
+    const feedback = getReadingFeedback();
+    if (!feedback) return;
+    const copy = readingFeedbackCopy();
+    feedback.querySelector('[data-reading-heard-label]').textContent = copy.heard;
+    feedback.querySelector('[data-reading-transcript]').textContent = `“${capturedWord}”`;
+    feedback.querySelector('[data-read-whole-word]').innerHTML = `<i class="bi bi-volume-up-fill" aria-hidden="true"></i> ${copy.listen}`;
+    feedback.hidden = false;
+  };
+
+  const installReadingFeedback = () => {
+    const status = document.getElementById('status');
+    if (!status || getReadingFeedback()) return;
+    const feedback = document.createElement('section');
+    feedback.id = 'word-decoding-reading-feedback';
+    feedback.className = 'word-decoding-reading-feedback';
+    feedback.hidden = true;
+    feedback.innerHTML = '<p class="reading-feedback-label" data-reading-heard-label></p><p class="reading-feedback-transcript" data-reading-transcript></p><button class="word-read reading-feedback-listen" type="button" data-read-whole-word></button>';
+    feedback.querySelector('[data-read-whole-word]').addEventListener('click', playWholeWord);
+    status.insertAdjacentElement('afterend', feedback);
+
+    const nativeFetch = window.fetch.bind(window);
+    window.fetch = async (...args) => {
+      const response = await nativeFetch(...args);
+      const request = args[0];
+      const url = typeof request === 'string' ? request : request?.url;
+      if (String(url || '').includes('/word-decoding/transcribe/')) {
+        response.clone().json().then((payload) => {
+          if (payload?.success) showReadingFeedback(payload.transcript);
+        }).catch(() => {});
+      }
+      return response;
+    };
   };
 
   const installWordDecodingEnhancements = () => {
     const style = document.createElement('style');
-    style.textContent = '.word > span.current-letter{color:#f36e83;text-shadow:0 3px #fff,0 0 0.18em #f36e83;transform:scale(1.16);transition:color .18s ease,transform .18s ease}';
+    style.textContent = '.word > span.current-letter{color:#f36e83;text-shadow:0 3px #fff,0 0 0.18em #f36e83;transform:scale(1.16);transition:color .18s ease,transform .18s ease}.word-decoding-reading-feedback{margin:14px auto 0;max-width:31rem;color:#12395a;text-align:center}.word-decoding-reading-feedback[hidden]{display:none}.reading-feedback-label{margin:0 0 3px;font-size:.9rem;font-weight:900;letter-spacing:.04em}.reading-feedback-transcript{margin:0 0 10px;font-size:1.05rem;font-weight:1000}.word-read.reading-feedback-listen{display:inline-block;padding:10px 16px;font-size:.9rem}';
     document.head.appendChild(style);
 
     const board = document.querySelector('.board');
@@ -68,7 +135,9 @@
     new MutationObserver(() => {
       updateCurrentLetter();
       translateStatus();
+      if (!document.getElementById('wordRead')?.classList.contains('show')) clearReadingFeedback();
     }).observe(board, { childList: true, subtree: true, characterData: true });
+    installReadingFeedback();
     updateCurrentLetter();
     translateStatus();
   };
