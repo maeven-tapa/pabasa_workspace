@@ -37,9 +37,17 @@
   const updateCurrentLetter = () => {
     const letters = document.querySelectorAll('#word > span:not(.plus)');
     const checks = document.querySelectorAll('#checks .check');
-    const currentIndex = [...checks].findIndex((check) => !check.classList.contains('correct')
-      && !check.classList.contains('wrong'));
-    letters.forEach((letter, index) => letter.classList.toggle('current-letter', index === currentIndex));
+    // A wrong check is still the active letter until the student gets the
+    // second attempt right or the round advances after two wrong attempts.
+    const currentIndex = [...checks].findIndex((check) => !check.classList.contains('correct'));
+    letters.forEach((letter) => {
+      letter.classList.remove('current-letter', 'active');
+      letter.style.color = '';
+    });
+    if (letters[currentIndex]) {
+      letters[currentIndex].classList.add('current-letter');
+      letters[currentIndex].style.color = '#f36e83';
+    }
   };
 
   const translateStatus = () => {
