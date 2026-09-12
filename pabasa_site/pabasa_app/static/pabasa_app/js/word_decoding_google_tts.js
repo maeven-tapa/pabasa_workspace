@@ -66,8 +66,8 @@
   };
 
   const readingFeedbackCopy = () => isFilipinoMaterial()
-    ? { heard: 'Narinig ng system:', listen: 'Pakinggan ang Salita' }
-    : { heard: 'The system heard:', listen: 'Hear the Word' };
+    ? { heard: 'Narinig:', listen: 'Pakinggan ang Salita' }
+    : { heard: 'Heard:', listen: 'Hear the Word' };
 
   const getReadingFeedback = () => document.getElementById('word-decoding-reading-feedback');
 
@@ -127,7 +127,7 @@
 
   const installWordDecodingEnhancements = () => {
     const style = document.createElement('style');
-    style.textContent = '.word > span.current-letter{color:#f36e83;text-shadow:0 3px #fff,0 0 0.18em #f36e83;transform:scale(1.16);transition:color .18s ease,transform .18s ease}.word-decoding-reading-feedback{margin:14px auto 0;max-width:31rem;color:#12395a;text-align:center}.word-decoding-reading-feedback[hidden]{display:none}.reading-feedback-label{margin:0 0 3px;font-size:.9rem;font-weight:900;letter-spacing:.04em}.reading-feedback-transcript{margin:0 0 10px;font-size:1.05rem;font-weight:1000}.word-read.reading-feedback-listen{display:inline-block;padding:10px 16px;font-size:.9rem}';
+    style.textContent = '.word > span.current-letter{color:#f36e83;text-shadow:0 3px #fff,0 0 0.18em #f36e83;transform:scale(1.16);transition:color .18s ease,transform .18s ease}.word-read.show+.status{margin-top:22px}.word-decoding-reading-feedback{margin:14px auto 0;max-width:31rem;color:#12395a;text-align:center}.word-decoding-reading-feedback[hidden]{display:none}.reading-feedback-label{margin:0 0 3px;font-size:.9rem;font-weight:900;letter-spacing:.04em}.reading-feedback-transcript{margin:0 0 10px;font-size:1.05rem;font-weight:1000}.word-read.reading-feedback-listen{display:inline-block;padding:10px 16px;font-size:.9rem}';
     document.head.appendChild(style);
 
     const board = document.querySelector('.board');

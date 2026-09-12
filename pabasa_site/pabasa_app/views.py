@@ -13306,7 +13306,7 @@ def word_decoding_page(request):
     tts_client = f'{settings.STATIC_URL.rstrip("/")}/pabasa_app/js/template_google_tts.js'
     tts_compatibility = f'{settings.STATIC_URL.rstrip("/")}/pabasa_app/js/template_browser_tts_bridge.js'
     # Bust cached copies so the active-letter state fix is loaded immediately.
-    tts_bridge = f'{settings.STATIC_URL.rstrip("/")}/pabasa_app/js/word_decoding_google_tts.js?v=word-decoding-reading-feedback-1'
+    tts_bridge = f'{settings.STATIC_URL.rstrip("/")}/pabasa_app/js/word_decoding_google_tts.js?v=word-decoding-reading-feedback-2'
     response.content = response.content.replace(
         b'</head>', f'<script src="{tts_client}"></script><script src="{tts_compatibility}"></script><script src="{tts_bridge}"></script></head>'.encode(), 1,
     )
