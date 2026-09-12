@@ -1150,6 +1150,54 @@
             padding: 0 var(--dash-ui-pad-x);
         }
 
+        .student-animated-page {
+            isolation: isolate;
+            position: relative;
+        }
+
+        .student-tab-background-shapes {
+            height: 100vh;
+            inset: 0 auto auto 50%;
+            overflow: hidden;
+            pointer-events: none;
+            position: fixed;
+            transform: translateX(-50%);
+            width: 100vw;
+            z-index: 0;
+        }
+
+        .student-tab-background-shapes span {
+            animation: studentTabShapeDrop var(--shape-duration) linear var(--shape-delay) infinite both;
+            background: var(--shape-color);
+            border-radius: 50%;
+            height: var(--shape-size);
+            left: var(--shape-left);
+            opacity: 0.192;
+            position: absolute;
+            top: -3rem;
+            transform: rotate(0deg);
+            width: var(--shape-size);
+        }
+
+        .student-tab-background-shapes .shape-square { border-radius: 10px; }
+        .student-tab-background-shapes .shape-diamond { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+        .student-tab-background-shapes .shape-star { clip-path: polygon(50% 0%, 61% 37%, 100% 37%, 69% 59%, 80% 100%, 50% 75%, 20% 100%, 31% 59%, 0% 37%, 39% 37%); }
+
+        @keyframes studentTabShapeDrop {
+            0% { opacity: 0; transform: translate3d(0, -2rem, 0) rotate(0deg); }
+            12%, 88% { opacity: 0.192; }
+            100% { opacity: 0; transform: translate3d(1.5rem, calc(100vh + 4rem), 0) rotate(240deg); }
+        }
+
+        .student-animated-page > :not(.student-tab-background-shapes) {
+            position: relative;
+            z-index: 1;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .student-tab-background-shapes span { animation-play-state: paused; }
+        }
+
         .dashboard-page-wrap .dashboard-topbar {
             width: 100%;
         }

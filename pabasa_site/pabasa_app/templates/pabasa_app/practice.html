@@ -160,6 +160,10 @@
         min-height: 42px;
     }
 
+    .practice-board .challenge-panel:has(.custom-device-dropdown.is-open) {
+        z-index: 1301;
+    }
+
     @media (max-width: 767.98px) {
         .practice-language-select-wrap {
             grid-template-columns: 1fr;
@@ -837,6 +841,9 @@
             grid-template-columns: 1fr;
         }
     }
+    body:not(.dark-theme) .practice-board .challenge-panel {
+        background: linear-gradient(115deg, rgba(255, 255, 255, 0.96), rgba(220, 243, 251, 0.96));
+    }
 </style>
 {% endblock %}
 
@@ -845,7 +852,8 @@
 {% endblock %}
 
 {% block content %}
-<section class="practice-board">
+<section class="practice-board student-animated-page">
+    {% include "pabasa_app/partials/_student_falling_shapes.html" %}
     {% if not has_practice_language_preference %}
     <div class="modal fade practice-onboarding-modal" id="practiceLanguageOnboardingModal" tabindex="-1" aria-labelledby="practiceLanguageOnboardingLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">

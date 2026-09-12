@@ -775,6 +775,9 @@
     body.dark-theme .assessment-result-disclaimer {
         color: #cbd5e1;
     }
+    body:not(.dark-theme) .assessment-dock .assessment-stage {
+        background: linear-gradient(115deg, rgba(255, 255, 255, 0.96), rgba(220, 243, 251, 0.96));
+    }
 </style>
 {% endblock %}
 
@@ -783,7 +786,8 @@
 {% endblock %}
 
 {% block content %}
-<section class="assessment-dock">
+<section class="assessment-dock student-animated-page">
+    {% include "pabasa_app/partials/_student_falling_shapes.html" %}
     <div class="assessment-stage">
         <div>
             <span class="dash-pill mb-3">Main reading check</span>

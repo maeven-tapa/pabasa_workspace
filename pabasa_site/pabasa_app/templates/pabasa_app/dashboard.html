@@ -139,6 +139,77 @@
         width: 140px;
     }
 
+    .dashboard-background-shapes {
+        height: 100vh;
+        inset: 0 auto auto 50%;
+        overflow: hidden;
+        pointer-events: none;
+        position: fixed;
+        transform: translateX(-50%);
+        width: 100vw;
+        z-index: 0;
+    }
+
+    .dashboard-background-shapes span {
+        animation: dashboardShapeDrop 18s linear infinite;
+        animation-duration: 12s !important;
+        animation-fill-mode: both;
+        animation-iteration-count: infinite;
+        border-radius: 50%;
+        height: 24px;
+        left: var(--shape-left);
+        opacity: 0.288;
+        position: absolute;
+        scale: 1.36;
+        top: -3rem;
+        transform: rotate(0deg);
+        width: 24px;
+    }
+
+    .dashboard-background-shapes span:nth-child(1) { --shape-left: 78%; background: #38bdf8; height: 22px; width: 22px; animation-delay: 0s; animation-duration: 16s; }
+    .dashboard-background-shapes span:nth-child(2) { --shape-left: 12%; background: #fbbf24; border-radius: 5px; height: 34px; width: 34px; animation-delay: 2s; animation-duration: 21s; }
+    .dashboard-background-shapes span:nth-child(3) { --shape-left: 91%; background: #f472b6; clip-path: polygon(50% 0%, 61% 37%, 100% 37%, 69% 59%, 80% 100%, 50% 75%, 20% 100%, 31% 59%, 0% 37%, 39% 37%); height: 38px; width: 38px; animation-delay: 4s; animation-duration: 19s; }
+    .dashboard-background-shapes span:nth-child(4) { --shape-left: 35%; background: #a78bfa; border-radius: 5px; height: 26px; width: 26px; animation-delay: 6s; animation-duration: 23s; }
+    .dashboard-background-shapes span:nth-child(5) { --shape-left: 64%; background: #34d399; height: 42px; width: 42px; animation-delay: 8s; animation-duration: 20s; }
+    .dashboard-background-shapes span:nth-child(6) { --shape-left: 5%; background: #fb7185; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); height: 30px; width: 30px; animation-delay: 10s; animation-duration: 17s; }
+    .dashboard-background-shapes span:nth-child(7) { --shape-left: 47%; background: #60a5fa; height: 28px; width: 28px; animation-delay: 12s; animation-duration: 22s; }
+    .dashboard-background-shapes span:nth-child(8) { --shape-left: 83%; background: #f59e0b; border-radius: 7px; height: 36px; width: 36px; animation-delay: 14s; animation-duration: 18s; }
+    .dashboard-background-shapes span:nth-child(9) { --shape-left: 22%; background: #c084fc; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); height: 20px; width: 20px; animation-delay: 16s; animation-duration: 24s; }
+    .dashboard-background-shapes span:nth-child(10) { --shape-left: 97%; background: #2dd4bf; border-radius: 5px; height: 32px; width: 32px; animation-delay: 18s; animation-duration: 20s; }
+    .dashboard-background-shapes span:nth-child(11) { --shape-left: 58%; background: #fb7185; height: 24px; width: 24px; animation-delay: 20s; animation-duration: 16s; }
+    .dashboard-background-shapes span:nth-child(12) { --shape-left: 16%; background: #facc15; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); height: 26px; width: 26px; animation-delay: 22s; animation-duration: 21s; }
+    .dashboard-background-shapes span:nth-child(13) { --shape-left: 72%; background: #f472b6; height: 32px; width: 32px; animation-delay: 24s; animation-duration: 19s; }
+    .dashboard-background-shapes span:nth-child(14) { --shape-left: 3%; background: #60a5fa; border-radius: 8px; height: 40px; width: 40px; animation-delay: 26s; animation-duration: 22s; }
+    .dashboard-background-shapes span:nth-child(15) { --shape-left: 88%; background: #fbbf24; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); height: 28px; width: 28px; animation-delay: 28s; animation-duration: 17s; }
+    .dashboard-background-shapes span:nth-child(16) { --shape-left: 41%; background: #34d399; height: 36px; width: 36px; animation-delay: 30s; animation-duration: 24s; }
+    .dashboard-background-shapes span:nth-child(17) { --shape-left: 68%; background: #c084fc; border-radius: 8px; height: 46px; width: 46px; animation-delay: 32s; animation-duration: 20s; }
+    .dashboard-background-shapes span:nth-child(18) { --shape-left: 27%; background: #fb7185; clip-path: polygon(50% 0%, 61% 37%, 100% 37%, 69% 59%, 80% 100%, 50% 75%, 20% 100%, 31% 59%, 0% 37%, 39% 37%); height: 34px; width: 34px; animation-delay: 34s; animation-duration: 18s; }
+    .dashboard-background-shapes span:nth-child(19) { --shape-left: 94%; background: #2dd4bf; height: 30px; width: 30px; animation-delay: 36s; animation-duration: 21s; }
+    .dashboard-background-shapes span:nth-child(20) { --shape-left: 52%; background: #facc15; border-radius: 8px; height: 42px; width: 42px; animation-delay: 38s; animation-duration: 23s; }
+    .dashboard-background-shapes span:nth-child(21) { --shape-left: 9%; background: #a78bfa; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); height: 26px; width: 26px; animation-delay: 40s; animation-duration: 16s; }
+    .dashboard-background-shapes span:nth-child(22) { --shape-left: 76%; background: #38bdf8; height: 38px; width: 38px; animation-delay: 42s; animation-duration: 19s; }
+    .dashboard-background-shapes span:nth-child(23) { --shape-left: 31%; background: #f59e0b; border-radius: 7px; height: 30px; width: 30px; animation-delay: 44s; animation-duration: 22s; }
+    .dashboard-background-shapes span:nth-child(24) { --shape-left: 60%; background: #ef4444; clip-path: polygon(50% 0%, 61% 37%, 100% 37%, 69% 59%, 80% 100%, 50% 75%, 20% 100%, 31% 59%, 0% 37%, 39% 37%); height: 40px; width: 40px; animation-delay: 46s; animation-duration: 20s; }
+    .dashboard-background-shapes span:nth-child(25) { --shape-left: 86%; background: #38bdf8; height: 48px; width: 48px; animation-delay: 48s; animation-duration: 18s; }
+    .dashboard-background-shapes span:nth-child(26) { --shape-left: 20%; background: #fbbf24; border-radius: 10px; height: 54px; width: 54px; animation-delay: 50s; animation-duration: 23s; }
+    .dashboard-background-shapes span:nth-child(27) { --shape-left: 73%; background: #f472b6; clip-path: polygon(50% 0%, 61% 37%, 100% 37%, 69% 59%, 80% 100%, 50% 75%, 20% 100%, 31% 59%, 0% 37%, 39% 37%); height: 46px; width: 46px; animation-delay: 52s; animation-duration: 20s; }
+    .dashboard-background-shapes span:nth-child(28) { --shape-left: 7%; background: #a78bfa; border-radius: 10px; height: 40px; width: 40px; animation-delay: 54s; animation-duration: 25s; }
+    .dashboard-background-shapes span:nth-child(29) { --shape-left: 55%; background: #34d399; height: 58px; width: 58px; animation-delay: 56s; animation-duration: 21s; }
+    .dashboard-background-shapes span:nth-child(30) { --shape-left: 92%; background: #fb7185; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); height: 44px; width: 44px; animation-delay: 58s; animation-duration: 19s; }
+    .dashboard-background-shapes span:nth-child(31) { --shape-left: 33%; background: #60a5fa; height: 50px; width: 50px; animation-delay: 60s; animation-duration: 22s; }
+    .dashboard-background-shapes span:nth-child(32) { --shape-left: 97%; background: #f59e0b; border-radius: 11px; height: 46px; width: 46px; animation-delay: 62s; animation-duration: 24s; }
+    .dashboard-background-shapes span:nth-child(33) { --shape-left: 49%; background: #c084fc; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); height: 38px; width: 38px; animation-delay: 64s; animation-duration: 17s; }
+    .dashboard-background-shapes span:nth-child(34) { --shape-left: 14%; background: #2dd4bf; height: 52px; width: 52px; animation-delay: 66s; animation-duration: 20s; }
+    .dashboard-background-shapes span:nth-child(35) { --shape-left: 82%; background: #facc15; border-radius: 10px; height: 44px; width: 44px; animation-delay: 68s; animation-duration: 23s; }
+    .dashboard-background-shapes span:nth-child(36) { --shape-left: 40%; background: #ef4444; clip-path: polygon(50% 0%, 61% 37%, 100% 37%, 69% 59%, 80% 100%, 50% 75%, 20% 100%, 31% 59%, 0% 37%, 39% 37%); height: 56px; width: 56px; animation-delay: 70s; animation-duration: 21s; }
+
+    @keyframes dashboardShapeDrop {
+        0% { opacity: 0; transform: translate3d(0, -2rem, 0) rotate(0deg); }
+        12% { opacity: 0.288; }
+        88% { opacity: 0.288; }
+        100% { opacity: 0; transform: translate3d(1.5rem, calc(100vh + 4rem), 0) rotate(240deg); }
+    }
+
     @keyframes dashboardFloat {
         0%, 100% { transform: translateY(0) scale(1); }
         50% { transform: translateY(-10px) scale(1.03); }
@@ -148,7 +219,7 @@
         align-items: center;
         border: 1px solid rgba(21, 94, 117, 0.14);
         border-radius: 24px;
-        background: linear-gradient(115deg, rgba(255, 255, 255, 0.96), rgba(239, 248, 251, 0.9));
+        background: linear-gradient(115deg, rgba(255, 255, 255, 0.96), rgba(220, 243, 251, 0.96));
         backdrop-filter: blur(10px) saturate(140%);
         -webkit-backdrop-filter: blur(10px) saturate(140%);
         box-shadow: 0 18px 42px rgba(21, 94, 117, 0.1);
@@ -172,6 +243,19 @@
         min-width: 0;
         position: relative;
         z-index: 1;
+    }
+
+    .student-studio-bird {
+        bottom: clamp(-1rem, -1.5vw, -0.5rem);
+        display: block;
+        height: clamp(88px, 10vw, 122px);
+        max-width: 42%;
+        object-fit: contain;
+        pointer-events: none;
+        position: absolute;
+        right: clamp(0.35rem, 1vw, 0.85rem);
+        width: auto;
+        z-index: 2;
     }
 
     .greeting-row {
@@ -282,7 +366,8 @@
         justify-self: start;
         min-height: 38px;
         padding: 0.55rem 0.8rem;
-        white-space: nowrap;
+        white-space: normal;
+        text-wrap: balance;
     }
 
     .learning-context-action:hover,
@@ -444,6 +529,8 @@
         gap: 1.25rem;
         margin-top: 1.25rem;
         align-items: stretch;
+        position: relative;
+        z-index: 1;
     }
 
     .dashboard-card-column {
@@ -1011,6 +1098,11 @@
         opacity: 0.8;
     }
 
+    .class-card.is-ready.has-current-lesson::before {
+        border-top-left-radius: inherit;
+        border-top-right-radius: inherit;
+    }
+
     .class-card:hover::before {
         height: 8px;
         opacity: 1;
@@ -1129,9 +1221,60 @@
         font-size: 0.86rem;
         font-weight: 900;
         letter-spacing: 0;
+        align-items: center;
+        display: inline-flex;
+        justify-content: center;
         padding: 0.78rem 1rem;
+        position: relative;
+        overflow: hidden;
         width: 100%;
         box-shadow: 0 12px 20px rgba(31, 182, 255, 0.22);
+    }
+
+    .continue-learning-btn::before,
+    .continue-learning-btn::after {
+        color: currentColor;
+        display: inline-block;
+        font-size: 1.6em;
+        font-weight: 900;
+        line-height: 1;
+        opacity: 0;
+        overflow: hidden;
+        pointer-events: none;
+        transition: width 0.25s ease, opacity 0.25s ease, transform 0.25s ease;
+        width: 0;
+    }
+
+    .continue-learning-btn::before {
+        content: "»";
+        margin-right: 0;
+        transform: translateX(-1.5rem);
+    }
+
+    .continue-learning-btn::after {
+        content: "«";
+        margin-left: 0;
+        transform: translateX(1.5rem);
+    }
+
+    .continue-learning-btn:hover::before,
+    .continue-learning-btn:hover::after,
+    .continue-learning-btn:focus-visible::before,
+    .continue-learning-btn:focus-visible::after {
+        opacity: 1;
+        width: 1em;
+    }
+
+    .continue-learning-btn:hover::before,
+    .continue-learning-btn:focus-visible::before {
+        margin-right: 0.4rem;
+        transform: translateX(0);
+    }
+
+    .continue-learning-btn:hover::after,
+    .continue-learning-btn:focus-visible::after {
+        margin-left: 0.4rem;
+        transform: translateX(0);
     }
 
     .continue-learning-btn:hover,
@@ -1149,6 +1292,28 @@
         gap: 0.35rem;
         margin-top: 0.25rem;
         padding: 0.9rem;
+    }
+
+    .class-card.is-ready.has-current-lesson .aral-week-card {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .class-card.is-ready.has-current-lesson .aral-week-card .class-card-actions {
+        margin-top: auto;
+    }
+
+    .class-card.is-ready.has-current-lesson h3,
+    .class-card.is-ready.has-current-lesson .class-card-meta,
+    .class-card.is-ready.has-current-lesson .reading-level-badge,
+    .class-card.is-ready.has-current-lesson .aral-week-card h4,
+    .class-card.is-ready.has-current-lesson .aral-week-label,
+    .class-card.is-ready.has-current-lesson .aral-week-status,
+    .class-card.is-ready.has-current-lesson .aral-week-progress,
+    .class-card.is-ready.has-current-lesson .continue-learning-btn {
+        font-size: 0.9rem;
     }
 
     .aral-week-card h4 {
@@ -1457,6 +1622,22 @@
         display: grid;
         align-content: start;
         gap: 1rem;
+    }
+
+    .my-achievements {
+        background: linear-gradient(135deg, #fff1f5 0%, #efcddd 100%);
+    }
+
+    .my-reading-journey {
+        background: linear-gradient(135deg, #f7f0ff 0%, #d9c7ee 100%);
+    }
+
+    .student-calendar-card {
+        background: linear-gradient(135deg, #fffdf0 0%, #f5e7b7 100%);
+    }
+
+    .my-classes-section {
+        background: linear-gradient(135deg, #eef9fd 0%, #c9e7f3 100%);
     }
 
     body.dark-theme .my-reading-journey,
@@ -1787,6 +1968,68 @@
         color: #94A3B8 !important;
     }
 
+    /* Compact achievement tokens inspired by the reference badge row. */
+    .achievements-grid {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 0.55rem;
+    }
+
+    .achievement-badge {
+        align-content: center;
+        border: 0;
+        border-radius: 14px;
+        gap: 0;
+        min-height: 76px;
+        padding: 0.45rem 0.25rem;
+    }
+
+    .achievement-badge.unlocked:nth-child(1) { background: linear-gradient(145deg, #ffd9a8, #e99a50); }
+    .achievement-badge.unlocked:nth-child(2) { background: linear-gradient(145deg, #f6b0c4, #d66d8d); }
+    .achievement-badge.unlocked:nth-child(3) { background: linear-gradient(145deg, #a7d9f4, #4b9ccc); }
+    .achievement-badge.unlocked:nth-child(4) { background: linear-gradient(145deg, #a9dfc0, #51a87a); }
+    .achievement-badge.unlocked:nth-child(5) { background: linear-gradient(145deg, #c8b4eb, #8565bd); }
+    .achievement-badge.unlocked:nth-child(6) { background: linear-gradient(145deg, #ffd79d, #d98b47); }
+
+    .achievement-badge.locked {
+        background: #e2e8f0;
+        border: 2px solid #cbd5e1;
+        opacity: 1;
+    }
+
+    .achievement-icon {
+        align-items: center;
+        background: rgba(255, 255, 255, 0.28);
+        border: 2px solid rgba(255, 255, 255, 0.55);
+        border-radius: 11px;
+        color: #fff;
+        display: inline-flex;
+        font-size: 1.55rem;
+        height: 44px;
+        justify-content: center;
+        line-height: 1;
+        width: 44px;
+    }
+
+    .achievement-badge.locked .achievement-icon {
+        background: rgba(148, 163, 184, 0.2);
+        border-color: rgba(100, 116, 139, 0.28);
+        color: #64748b;
+        filter: grayscale(100%);
+        opacity: 0.8;
+    }
+
+    .achievement-name {
+        font-size: 0.68rem;
+        font-weight: 800;
+        line-height: 1.1;
+        min-height: 1.5em;
+        overflow: visible;
+        position: static;
+        width: auto;
+        white-space: normal;
+        text-wrap: balance;
+    }
+
     .achievement-lock {
         position: absolute;
         bottom: 0.35rem;
@@ -2109,6 +2352,12 @@
             grid-template-columns: repeat(3, minmax(0, 1fr));
         }
     }
+
+    /* Keep the student calendar card's themed background above responsive defaults. */
+    .student-dashboard .student-calendar-card {
+        background: linear-gradient(135deg, #fffdf0 0%, #f5e7b7 100%);
+    }
+
 </style>
 {% endblock %}
 
@@ -2118,11 +2367,21 @@
 
 {% block content %}
 <section class="student-dashboard" data-student-dashboard>
+    <div class="dashboard-background-shapes" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
     <div class="student-studio" aria-labelledby="student-dashboard-greeting">
         <div class="student-studio-copy">
             <h2 id="student-dashboard-greeting" data-dashboard-greeting>Good morning, Student</h2>
             <p class="welcome-message">Ready to read and learn?</p>
         </div>
+
+        <img class="student-studio-bird" src="{% static 'pabasa_app/images/student-studio-bird.png' %}" alt="" aria-hidden="true">
 
         <aside class="learning-context is-warning" data-learning-context aria-live="polite">
             <span class="learning-context-icon" aria-hidden="true"><i class="bi bi-info-circle" data-learning-context-icon></i></span>
@@ -3082,7 +3341,7 @@
                         <div class="aral-week-progress">${classData.aralWeekCompleted} of ${classData.aralWeekTotal} completed</div>
                         <div class="class-card-actions">
                             <button class="continue-learning-btn" type="button" data-open-aral-week data-section-id="${escapeHtml(classData.section_id || classData.id || '')}" data-aral-week="${escapeHtml(classData.currentAralWeek)}">
-                                <i class="bi bi-folder2-open me-1"></i>${classData.aralWeekTotal > 0 && classData.aralWeekCompleted >= classData.aralWeekTotal ? 'Review This Week' : classData.aralWeekCompleted > 0 ? "Continue This Week's Activities" : "Start This Week's Activities"} <span aria-hidden="true">&rarr;</span>
+                                <span>${classData.aralWeekTotal > 0 && classData.aralWeekCompleted >= classData.aralWeekTotal ? 'Review This Week' : classData.aralWeekCompleted > 0 ? "Continue This Week's Activities" : "Start This Week's Activities"}</span>
                             </button>
                         </div>
                     </div>
@@ -3100,7 +3359,7 @@
                     ` : ''}
                     ${!classData.officialCrlaCompleted ? `<div class="class-card-actions">
                         <button class="continue-learning-btn" type="button" data-continue-learning data-section-id="${escapeHtml(classData.section_id || classData.id || '')}" data-class-code="${escapeHtml(classData.code)}">
-                            <i class="bi ${classData.assessmentWeekEnabled ? 'bi-clipboard2-check' : 'bi-play-circle'} me-1"></i>${classData.assessmentWeekEnabled ? 'Open Assessment' : 'Continue Learning'}
+                            <span>${classData.assessmentWeekEnabled ? 'Open Assessment' : 'Continue Learning'}</span>
                         </button>
                     </div>` : ''}
                 </article>
