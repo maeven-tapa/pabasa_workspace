@@ -1,99 +1,181 @@
-![TUP](https://img.shields.io/badge/TUP-Cavite-red?style=for-the-badge)
-![BET-COET](https://img.shields.io/badge/BET--COET-green?style=for-the-badge)
-![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
-![Bootstrap](https://img.shields.io/badge/Bootstrap-563D7C?style=for-the-badge&logo=bootstrap&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
-![Python](https://img.shields.io/badge/Python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
-![Django](https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=white)
+<div align="center">
+  <img src="pabasa_site/pabasa_app/static/pabasa_app/images/pabasalogo.png" alt="PABASA logo" width="220">
+  <h1>P.A.B.A.S.A</h1>
+  <p><strong>Platform for Automated Basic Reading and Speech Assessment</strong></p>
+  <p>Helping teachers guide every child toward confident reading.</p>
+  <p>Reading assessment · Guided practice · Classroom management · Learner progress</p>
+  <p>
+    <img alt="Python 3.13" src="https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white">
+    <img alt="Django 6.0.3" src="https://img.shields.io/badge/Django-6.0.3-092E20?logo=django&logoColor=white">
+    <img alt="Bootstrap" src="https://img.shields.io/badge/UI-Bootstrap-7952B3?logo=bootstrap&logoColor=white">
+    <img alt="SQLite" src="https://img.shields.io/badge/Database-SQLite-003B57?logo=sqlite&logoColor=white">
+    <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/License-MIT-blue"></a>
+  </p>
+  <p><a href="#overview">Overview</a> · <a href="#features">Features</a> · <a href="#quick-start">Quick start</a> · <a href="#configuration">Configuration</a> · <a href="#research-and-team">Research & team</a></p>
+</div>
 
-# 📖 P.A.B.A.S.A
-Platform for Automated Basic Reading and Speech Assessment
+![PABASA website homepage showing the reading learning space and Get Started and Login buttons](pabasa_site/pabasa_app/static/pabasa_app/images/screenshot.png)
 
-## 📝 Research Title
-Development of Guide Reading Evaluation System for Grade 2 Students in Salawag Elementary School
+<p align="center"><em>Every child deserves the opportunity to become a confident reader.</em></p>
 
-## 📚 About
-P.A.B.A.S.A is a web-based reading evaluation system designed to assist teachers in assessing and monitoring the reading literacy of Grade 2 students.
-The system utilizes speech recognition technology to evaluate:  
-- 📊 Pronunciation Accuracy  
-- ⏱️ Reading Speed  
-- 🔍 Reading Clarity
+## Overview
 
-It provides automated feedback and performance reports, enabling data-driven decisions for remedial instruction.
+PABASA is a web-based reading evaluation system developed for **Grade 2 students at Salawag Elementary School**, as a research project at **Technological University of the Philippines – Cavite**.
 
-## 👥 Team Members
-- 👨‍💻 Leonardo Basco III
-- 👩‍💻 Lady Caroline Dorongon
-- 👨‍💻 Amiel John Padasay
-- 👩‍💻 Dona Palacios
-- 👩‍💻 Reyna Marie Santos
-- 👨‍💻 Maeven Tapa
+Teachers can organize classes, prepare learning materials, assess reading, and review learner progress in one place. Students take part in reading activities and guided practice, with speech recognition supporting automated assessment and feedback.
 
-## 🎯 Course Details
-- Course Code: BET3
-- Course Title: Technical Research
-- Institution: TUP Cavite
+## Features
 
-## 🧰 Technology Stack
+| Area | What you can do |
+| --- | --- |
+| Reading assessment | Record reading audio in the browser and use speech recognition to support evaluation. |
+| Guided practice | Work through reading materials and activities such as syllable blending, sound detection, and story responses. |
+| Classroom management | Manage classes, enrollment, courses, and assigned learning materials. |
+| Learning materials | Prepare activities from uploaded documents and images, with PDF text extraction and OCR support. |
+| Progress tracking | Review reading attempts, learner classifications, and progress reports. |
+| CRLA reporting | Export Grade 2 Tagalog scoresheets and render workbook reports to PDF. |
+| Teacher review | Review learner responses and use results to guide follow-up instruction. |
 
-P.A.B.A.S.A uses a server-rendered Django architecture enhanced with responsive
-frontend components, browser media features, and cloud speech processing.
+## Technology stack
 
-### Backend
-- **Python 3.13** and **Django 6.0.3** handle routing, authentication, forms,
-  application logic, and database access through the Django ORM.
-- **Gunicorn** runs the Django WSGI application in production.
-- **WhiteNoise** serves collected CSS, JavaScript, images, and other static assets.
+PABASA uses server-rendered Django pages with JavaScript for interactive activities and browser audio recording.
 
-### Frontend
-- **Django templates**, **HTML5**, **CSS3**, and **vanilla JavaScript** build the
-  server-rendered and interactive user interface.
-- **Bootstrap 5.3.3** and **Bootstrap Icons** provide responsive layouts and reusable
-  interface components.
-- **Chart.js** displays dashboard analytics, while **PDF.js** provides in-browser PDF
-  previews.
-- The browser **MediaRecorder** and **Web Audio APIs** capture learners' reading audio.
+| Layer | Technologies |
+| --- | --- |
+| Backend | Python 3.13, Django 6.0.3, Django ORM |
+| Frontend | Django templates, HTML, CSS, JavaScript, Bootstrap, Bootstrap Icons |
+| Charts and previews | Chart.js, PDF.js |
+| Audio capture | MediaRecorder, Web Audio APIs |
+| Database | SQLite |
+| Speech recognition | Google Cloud Speech-to-Text |
+| Documents and OCR | Tesseract, pytesseract, Pillow, pypdf, openpyxl, ReportLab, LibreOffice Calc |
+| Deployment | Docker, Gunicorn, WhiteNoise |
 
-### Database
-- **SQLite 3** stores users, classes, learning materials, assessments, attempts, and
-  progress data through Django models and migrations.
+## Quick start
 
-### Speech and Document Processing
-- **Google Cloud Speech-to-Text** transcribes reading activities for automated
-  assessment, while Google Cloud text-to-speech services support read-aloud audio.
-- **Tesseract OCR**, **pytesseract**, and **Pillow** extract and prepare text from
-  uploaded images. **LibreOffice Calc** renders complete CRLA workbook exports to
-  PDF, retaining the workbook's sheets, formulas, and print layout.
-- **pypdf** extracts text from PDF learning materials, and **ReportLab** generates PDF
-  reports.
+Use **Python 3.13** to match the repository's Docker runtime, with `pip` and Git installed. Speech recognition, email delivery, OCR, and workbook rendering need the additional configuration below.
 
-### Deployment
-- **Docker** packages the application with Python and its native system dependencies.
-- **Gunicorn** serves the application, Django migrations run during container startup,
-  and **WhiteNoise** handles production static files.
-- The repository's `Dockerfile`, `Procfile`, and `Aptfile` support DigitalOcean and
-  compatible Linux deployment environments.
+### 1. Clone the repository
 
-### Email Configuration
+```sh
+git clone https://github.com/maeven-tapa/pabasa_workspace.git
+cd pabasa_workspace
+python -m venv .venv
+```
 
-Local development uses Django's in-memory email backend unless SMTP is explicitly
-enabled. Copy `.env.example` to `.env` and configure the Gmail SMTP variables when
-real delivery is required. The local `.env` file is ignored by Git.
+Activate the virtual environment:
 
-Gmail delivery uses `smtp.gmail.com` on port `587` with STARTTLS
-(`EMAIL_USE_TLS=true`, `EMAIL_USE_SSL=false`). Use a Gmail App Password in
-`EMAIL_HOST_PASSWORD`; do not use or commit the account's normal password.
-`DEFAULT_FROM_EMAIL` should normally match `EMAIL_HOST_USER`.
+```powershell
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
+```
 
-Production defaults to Django's SMTP backend when `DJANGO_ENV=production` and
-refuses to start if the required SMTP identity or password is missing. The network
-or hosting provider must also permit outbound TCP connections to port 587.
+```sh
+# macOS / Linux
+source .venv/bin/activate
+```
 
-## 📬 Contact
-For any inquiries about this repository, please contact any of the team members listed above.
+### 2. Install and initialize
 
-## ⭐ Acknowledgment
-> “Once you learn to read, you will be forever free.”  
-> — Frederick Douglass
+```sh
+python -m pip install -r requirements.txt
+python pabasa_site/manage.py migrate
+python pabasa_site/manage.py createsuperuser
+python pabasa_site/manage.py runserver
+```
 
-This project is a product of our dedication and shared vision to help young learners grow through reading. We extend our sincere gratitude to the Technological University of the Philippines – Cavite Campus, our mentors, and the teachers and students of Salawag Elementary School for their guidance and inspiration. To our families and team members, thank you for your unwavering support and strength. May this system contribute, even in the smallest way, to a future where every child learns to read with confidence and purpose.
+### 3. Open PABASA
+
+Open the [local homepage](http://127.0.0.1:8000/) to explore the website. The superuser account created above can access [Django administration](http://127.0.0.1:8000/admin/). Registration and other email-dependent flows require working SMTP configuration.
+
+## Configuration
+
+Django loads a `.env` file from the repository root. Create one for the credentials your local setup needs; keep credentials out of version control.
+
+### Speech recognition
+
+Configure the Google Cloud project, location, and model in `pabasa_site/pabasa_site/settings.py` for your deployment. The speech client supports a service-account file at `pabasa_site/google-stt-service-account.json`, or service-account JSON through `GOOGLE_STT_SERVICE_ACCOUNT_JSON` or `GOOGLE_STT_SERVICE_ACCOUNT_JSON_B64`.
+
+Browser recording requires microphone permission and a secure context, such as HTTPS or localhost.
+
+### Email
+
+The current settings use Gmail SMTP on port **587** with STARTTLS. Set `EMAIL_HOST_PASSWORD` to the configured sender's Gmail App Password. To use your own sender, update `EMAIL_HOST_USER` and `DEFAULT_FROM_EMAIL` in the Django settings as well.
+
+```dotenv
+EMAIL_HOST_PASSWORD=your-gmail-app-password
+```
+
+### OCR and workbook exports
+
+Install **Tesseract OCR** with English and Filipino language data for image text extraction. Install **LibreOffice Calc** for complete CRLA workbook-to-PDF rendering. The Dockerfile includes these native dependencies.
+
+## Project structure
+
+```text
+pabasa_workspace/
+├── pabasa_site/
+│   ├── manage.py
+│   ├── pabasa_site/        # Django settings, root URLs, and server entry points
+│   ├── pabasa_app/         # Models, views, assessment logic, migrations, and tests
+│   │   ├── static/         # CSS, JavaScript, branding, and website screenshot
+│   │   └── templates/      # Application pages and components
+│   └── templates/         # CRLA workbook template
+├── tools/                 # Migration verification utilities
+├── Dockerfile             # Python runtime and native document dependencies
+├── Procfile               # Hosted application startup
+├── Aptfile                # System packages for compatible build environments
+├── requirements.txt
+└── LICENSE
+```
+
+## Development
+
+Run these commands from the repository root with your virtual environment active:
+
+```sh
+python pabasa_site/manage.py check
+python pabasa_site/manage.py test pabasa_app
+python pabasa_site/manage.py makemigrations --check --dry-run
+```
+
+The repository includes tests for assessment workflows, authorization, enrollment, guided activities, learner progress, and CRLA exports. Microphone recording and configured external services also need verification in the intended environment.
+
+## Deployment
+
+The Docker image installs application dependencies, collects static assets, checks migration readiness, applies migrations, and starts Gunicorn on port `8080` by default. WhiteNoise serves static assets.
+
+Review the Django settings before hosting: production mode is currently selected by the Cloud Run `K_SERVICE` environment variable and requires `DJANGO_SECRET_KEY`. Configure the intended hosts, credentials, HTTPS, and persistent storage for the database and uploaded files for your environment.
+
+## Research and team
+
+**Research title:** Development of Guide Reading Evaluation System for Grade 2 Students in Salawag Elementary School
+
+| Academic detail | Description |
+| --- | --- |
+| Institution | Technological University of the Philippines – Cavite |
+| Program | BET-COET |
+| Course code | BET3 |
+| Course title | Technical Research |
+| Partner school | Salawag Elementary School |
+
+Developed by:
+
+- Leonardo Basco III
+- Lady Caroline Dorongon
+- Amiel John Padasay
+- Dona Palacios
+- Reyna Marie Santos
+- Maeven Tapa
+
+## Contributing
+
+Bug reports and focused improvements are welcome. Include steps to reproduce an issue and screenshots where useful. For code changes, describe the expected behavior and run the relevant checks before submitting a pull request.
+
+## Acknowledgments
+
+Thank you to TUP Cavite, our mentors, and the teachers and students of Salawag Elementary School for their guidance and support. We also thank our families and everyone who contributed to the project and its goal of helping children read with confidence.
+
+## License
+
+Licensed under the [MIT License](LICENSE).
