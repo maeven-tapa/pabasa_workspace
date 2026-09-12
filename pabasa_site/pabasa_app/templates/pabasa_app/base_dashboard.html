@@ -3088,6 +3088,157 @@
         body.dark-theme.dashboard-body[data-student-theme="forest"] .custom-device-menu::-webkit-scrollbar {width:10px}
         body.dark-theme.dashboard-body[data-student-theme="forest"] .custom-device-menu::-webkit-scrollbar-track {background:#102e25;border-radius:999px}
         body.dark-theme.dashboard-body[data-student-theme="forest"] .custom-device-menu::-webkit-scrollbar-thumb {background:#708b55;border:2px solid #102e25;border-radius:999px}
+
+        /* Sidebar collapse control: a stand-alone edge button in both states. */
+        .dashboard-sidebar {
+            overflow: visible !important;
+        }
+
+        .dashboard-sidebar .sidebar-footer {
+            margin-top: 0.75rem;
+            padding-top: 0.85rem;
+        }
+
+        .dashboard-sidebar .sidebar-lower-profile {
+            margin-top: auto;
+            padding-top: 1rem;
+            width: 100%;
+        }
+
+        .dashboard-sidebar .sidebar-lower-profile .sidebar-profile-card {
+            margin-top: 0 !important;
+        }
+
+        .dashboard-sidebar .sidebar-lower-profile .sidebar-profile-summary {
+            border-radius: 16px;
+            position: relative;
+        }
+
+        .sidebar-profile-theme-link,
+        .sidebar-collapsed-theme-link {
+            align-items: center;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            color: #ffe15c;
+            display: inline-flex;
+            height: 30px;
+            justify-content: center;
+            text-decoration: none;
+            width: 30px;
+        }
+
+        .sidebar-profile-theme-link {
+            left: 0.75rem;
+            position: absolute;
+            top: 0.75rem;
+        }
+
+        .sidebar-profile-theme-link:hover,
+        .sidebar-profile-theme-link:focus-visible,
+        .sidebar-collapsed-theme-link:hover,
+        .sidebar-collapsed-theme-link:focus-visible {
+            background: rgba(255, 255, 255, 0.2);
+            color: #ffe15c;
+        }
+
+        .sidebar-collapsed-theme-link {
+            display: none;
+        }
+
+        .sidebar-collapsed-profile-row {
+            display: none;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-footer {
+            align-items: center !important;
+            bottom: 0;
+            box-sizing: border-box;
+            display: flex !important;
+            flex-direction: column !important;
+            height: 92px;
+            justify-content: flex-end;
+            left: 0;
+            padding: 0.75rem 0 calc(0.75rem + env(safe-area-inset-bottom)) !important;
+            position: absolute;
+            right: 0;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-lower-profile {
+            display: none;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-collapsed-profile-row {
+            align-items: center;
+            bottom: 104px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            left: 0;
+            min-height: 61px;
+            padding-top: 0.75rem;
+            position: absolute;
+            right: 0;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-collapsed-profile {
+            margin: 0;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-footer .btn-outline-danger {
+            margin-bottom: 0.5rem;
+        }
+
+        .dashboard-sidebar .sidebar-collapse-row {
+            left: calc(var(--sidebar-width) - 19px);
+            margin: 0;
+            max-width: 38px !important;
+            min-height: 38px;
+            overflow: visible !important;
+            padding: 0;
+            position: fixed;
+            top: 50dvh;
+            transform: translateY(-50%);
+            width: 38px !important;
+            z-index: 1035;
+        }
+
+        body.dashboard-body .dashboard-sidebar .sidebar-collapse-btn,
+        body.dashboard-body[data-student-theme] .dashboard-sidebar .sidebar-collapse-btn {
+            align-items: center;
+            background: #ffe15c !important;
+            border: 0 !important;
+            border-radius: 50% !important;
+            box-shadow: 0 6px 16px rgba(126, 91, 21, 0.2) !important;
+            color: #ed6947 !important;
+            display: inline-flex;
+            flex: 0 0 38px !important;
+            gap: 0;
+            height: 38px !important;
+            justify-content: center;
+            max-height: 38px !important;
+            max-width: 38px !important;
+            min-height: 38px !important;
+            min-width: 38px !important;
+            overflow: visible !important;
+            padding: 0;
+            width: 38px !important;
+            aspect-ratio: 1 / 1;
+        }
+
+        .dashboard-sidebar .sidebar-collapse-btn .sidebar-collapse-label {
+            display: none;
+        }
+
+        .dashboard-sidebar .sidebar-collapse-btn i {
+            font-size: 0.9rem;
+        }
+
+        body.dashboard-body .dashboard-sidebar .sidebar-collapse-btn:hover,
+        body.dashboard-body .dashboard-sidebar .sidebar-collapse-btn:focus-visible {
+            background: #ffeb83 !important;
+            box-shadow: 0 8px 20px rgba(126, 91, 21, 0.28) !important;
+            color: #df543c !important;
+        }
     </style>
 </head>
 <body class="dashboard-body dashboard-preloading{% if nav_role == 'teacher' %} teacher-dashboard-body{% endif %}" data-student-theme="{% if nav_role == 'student' %}{{ student_theme_slug|default:'sky' }}{% endif %}">
