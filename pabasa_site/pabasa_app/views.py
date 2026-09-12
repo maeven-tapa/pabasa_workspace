@@ -8482,6 +8482,7 @@ def _calendar_context(request):
     )
     return {
         'page_title': 'School Calendar',
+        'calendar_today': system_today().isoformat(),
         'admin_username': request.session.get('custom_id', ''),
         'first_name': request.session.get('first_name', ''),
         'last_name': request.session.get('last_name', ''),

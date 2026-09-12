@@ -474,7 +474,7 @@
             holiday: 'rgba(249, 115, 22, 0.28)',
         };
         const assessmentEventTypes = new Set(['pre_assessment', 'midline_assessment', 'post_assessment', 'examination']);
-        const todayValue = formatDateValue(new Date());
+        const todayValue = "{{ calendar_today|escapejs }}";
 
         function isSuspensionEvent(event) {
             const eventType = event?.event_type || event?.extendedProps?.event_type;
@@ -818,6 +818,7 @@
                 suspensionCalendar = new FullCalendar.Calendar(suspensionPickerEl, {
                     initialView: 'dayGridMonth',
                     initialDate: todayValue,
+                    now: todayValue,
                     height: 'auto',
                     headerToolbar: { left: 'prev,next', center: 'title', right: '' },
                     validRange: { start: todayValue },
@@ -1195,6 +1196,8 @@
 
         calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
+            initialDate: todayValue,
+            now: todayValue,
             height: 'auto',
             headerToolbar: false,
             dayMaxEvents: true,
