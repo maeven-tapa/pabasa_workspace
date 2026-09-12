@@ -69,6 +69,17 @@
     ? { heard: 'Narinig:', listen: 'Pakinggan ang Salita' }
     : { heard: 'Heard:', listen: 'Hear the Word' };
 
+  const localizeCompletionCard = () => {
+    const card = document.querySelector('#complete .complete-card');
+    if (!card || !isFilipinoMaterial()) return;
+    const title = card.querySelector('h1');
+    const message = card.querySelector('p');
+    const finish = card.querySelector('#finish');
+    if (title) title.textContent = 'Tapos na ang Pag-decode!';
+    if (message) message.textContent = 'Natapos mo ang set ng salita.';
+    if (finish) finish.textContent = 'Bumalik sa mga Pagtatasa';
+  };
+
   const getReadingFeedback = () => document.getElementById('word-decoding-reading-feedback');
 
   const clearReadingFeedback = () => {
@@ -140,6 +151,7 @@
     installReadingFeedback();
     updateCurrentLetter();
     translateStatus();
+    localizeCompletionCard();
   };
 
   speech.cancel = () => {
