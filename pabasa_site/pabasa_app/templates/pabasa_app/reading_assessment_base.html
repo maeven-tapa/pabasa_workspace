@@ -156,15 +156,13 @@
         }
         .reader-shell.is-story-reading .story-reading-timer { display: block; }
         .story-reading-timer-label {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border: 0;
+            display: block;
+            margin-bottom: 5px;
+            color: #587178;
+            font-size: .76rem;
+            font-weight: 900;
+            letter-spacing: .04em;
+            text-transform: uppercase;
         }
         .story-reading-timer-track {
             height: 8px;
@@ -3477,7 +3475,7 @@
                     <h2 class="reading-title" id="readingTitle" hidden></h2>
                     <p class="story-ready-instruction d-none" id="storyReadyInstruction">Your story is ready. Tap Start Reading when you are ready.</p>
                     <div class="story-reading-timer" id="storyReadingTimer" aria-hidden="true">
-                        <span class="story-reading-timer-label" id="storyReadingTimerLabel">Story reading time remaining</span>
+                        <span class="story-reading-timer-label" id="storyReadingTimerLabel">Reading Time</span>
                         <div class="story-reading-timer-track" role="progressbar" aria-label="Story reading time remaining" aria-valuemin="0" aria-valuemax="179" aria-valuenow="179">
                             <div class="story-reading-timer-progress" id="storyReadingTimerProgress"></div>
                         </div>
