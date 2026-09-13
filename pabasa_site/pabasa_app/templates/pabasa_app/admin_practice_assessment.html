@@ -98,6 +98,17 @@
     }
 </style>
 <div class="admin-panel">
+    <form method="post" class="alert {% if practice_debug_unlock_all %}alert-warning{% else %}alert-secondary{% endif %} d-flex flex-wrap align-items-center justify-content-between gap-3">
+        {% csrf_token %}
+        <input type="hidden" name="language" value="{{ language_filter }}">
+        <div>
+            <strong>Debug: Unlock all practice — {% if practice_debug_unlock_all %}ON{% else %}OFF{% endif %}</strong>
+            <div class="small">Unlock every published practice level for all students in both languages, without star or completion requirements. Turn off to restore normal progression.</div>
+        </div>
+        <button type="submit" class="btn {% if practice_debug_unlock_all %}btn-warning{% else %}btn-outline-primary{% endif %}" name="unlock_all" value="{% if practice_debug_unlock_all %}off{% else %}on{% endif %}" aria-pressed="{% if practice_debug_unlock_all %}true{% else %}false{% endif %}">
+            <i class="bi bi-bug me-1" aria-hidden="true"></i>{% if practice_debug_unlock_all %}Turn Debug Off{% else %}Turn Debug On{% endif %}
+        </button>
+    </form>
     <div class="practice-content-header d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
         <div>
             <h2 class="h4 fw-bold mb-1">Practice Content</h2>

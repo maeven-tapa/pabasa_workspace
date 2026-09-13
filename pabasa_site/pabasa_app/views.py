@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
-from django.http import JsonResponse, HttpResponseForbidden, HttpResponse, HttpResponseNotAllowed, FileResponse
+from django.http import JsonResponse, HttpResponseForbidden, HttpResponse, HttpResponseNotAllowed, HttpResponseBadRequest, FileResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from django.views.decorators.clickjacking import xframe_options_sameorigin
@@ -60,6 +60,7 @@ import re
 import traceback
 from .models import User, School, Section, Enrollment, AccountStatusHistory, Assessment, AssessmentRequest, Material, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride, ClassCrlaFinalization
 from .system_clock import invalidate_override_cache, now as system_now, real_now, today as system_today
+from .models import PracticeDebugSettings
 from .section_configuration import ensure_salawag_grade_two_sections
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
 from .student_session_lock import claim_student_session, release_student_session
@@ -7602,8 +7603,19 @@ def admin_course_archive(request, material_id):
     return redirect('admin_courses')
 
 @admin_required
+@csrf_protect
+@require_http_methods(["GET", "POST"])
 def admin_practice_assessment(request):
-    return render(request, 'pabasa_app/admin_practice_assessment.html', _admin_practice_context(request, 'Practice'))
+    if request.method == 'POST':
+        if request.POST.get('unlock_all') not in {'on', 'off'}:
+            return HttpResponseBadRequest('Choose on or off for practice debug access.')
+        PracticeDebugSettings.objects.update_or_create(
+            pk=1, defaults={'unlock_all': request.POST['unlock_all'] == 'on'},
+        )
+        return redirect(f"{reverse('admin_practice_assessment')}?{urlencode({'language': _practice_language_value(request.POST.get('language'))})}")
+    context = _admin_practice_context(request, 'Practice')
+    context['practice_debug_unlock_all'] = _practice_debug_unlock_all()
+    return render(request, 'pabasa_app/admin_practice_assessment.html', context)
 
 
 def _calendar_event_payload(event):
@@ -10423,11 +10435,16 @@ def _apply_progression_unlock_override(progression, unlock_target):
     return progression
 
 
+def _practice_debug_unlock_all():
+    return PracticeDebugSettings.objects.filter(pk=1, unlock_all=True).exists()
+
+
 def _practice_game_progression(mode, student_user=None, language=None):
     normalized_mode = (mode or '').strip().lower()
     if normalized_mode not in {'free', 'color', 'hunt'}:
         normalized_mode = 'free'
     selected_language = _practice_language_value(language or 'English')
+    debug_unlock_all = _practice_debug_unlock_all()
 
     level_keys = _practice_progression_level_keys()
     difficulty_keys = _practice_progression_difficulty_keys()
@@ -10483,6 +10500,9 @@ def _practice_game_progression(mode, student_user=None, language=None):
                 for slot in previous_levels
             )
 
+        if debug_unlock_all:
+            difficulty_unlocked = True
+
         for level_key in level_keys:
             material = materials_by_slot.get((difficulty, level_key))
             completion = _material_level_completion(material, student_user)
@@ -10505,6 +10525,9 @@ def _practice_game_progression(mode, student_user=None, language=None):
                     unlocked = True
             else:
                 unlocked = material_exists and difficulty_unlocked and previous_completed
+
+            if debug_unlock_all:
+                unlocked = material_exists
 
             if not material_exists:
                 state = 'content_unavailable'
