@@ -2384,6 +2384,299 @@
         background: linear-gradient(135deg, #fffdf0 0%, #f5e7b7 100%);
     }
 
+    /* My Class follows the dashboard's existing gradient surface, with the
+       class facts and current activity arranged as paired panels. */
+    .my-classes-section {
+        gap: 1rem;
+        padding: 1.2rem;
+    }
+
+    .my-classes-header {
+        align-items: center;
+        border-bottom: 0;
+        display: flex;
+        gap: 0;
+        padding: 0 0 0.3rem;
+    }
+
+    .my-classes-title-copy {
+        display: grid;
+        gap: 0.15rem;
+        min-width: 0;
+    }
+
+    .my-classes-title-copy strong {
+        color: #080f3e;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.08rem;
+        font-weight: 900;
+        line-height: 1.2;
+    }
+
+    .my-classes-title-copy small {
+        color: #65728d;
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-size: 0.82rem;
+        line-height: 1.35;
+    }
+
+    .my-classes-section .class-list {
+        gap: 1rem;
+    }
+
+    .my-classes-section .class-list > .class-card {
+        background: transparent;
+        border: 0;
+        box-shadow: none;
+        cursor: default;
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: minmax(12.5rem, 0.9fr) minmax(16rem, 1.6fr);
+        overflow: visible;
+        padding: 0;
+    }
+
+    .my-classes-section .class-list > .class-card::before { display: none; }
+    .my-classes-section .class-list > .class-card:hover { border-color: transparent; box-shadow: none; transform: none; }
+
+    .class-card-summary {
+        display: grid;
+        gap: 0.85rem;
+        min-width: 0;
+        grid-template-rows: minmax(0, 1fr) auto;
+    }
+
+    .class-card-class-info,
+    .class-card-reading-info {
+        border: 1px solid rgba(63, 157, 207, 0.1);
+        border-radius: 18px;
+    }
+
+    .class-card-class-info {
+        background: linear-gradient(160deg, rgba(231, 247, 255, 0.96), rgba(248, 252, 255, 0.94));
+        display: grid;
+        gap: 0.8rem;
+        min-height: 11.5rem;
+        padding: 1.2rem;
+    }
+
+    .class-card-eyebrow {
+        color: #5f778c;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.7rem;
+        font-weight: 900;
+        letter-spacing: 0.09em;
+        line-height: 1;
+        text-transform: uppercase;
+    }
+
+    .class-card-summary h3 {
+        color: #080f3e;
+        font-size: clamp(1.08rem, 1.6vw, 1.42rem);
+        line-height: 1.15;
+        margin: 0;
+    }
+
+    .class-card-teacher {
+        align-items: center;
+        align-self: end;
+        display: flex;
+        gap: 0.7rem;
+    }
+
+    .class-card-teacher-icon,
+    .class-card-reading-icon {
+        align-items: center;
+        background: rgba(43, 163, 249, 0.12);
+        border-radius: 50%;
+        color: #1689ef;
+        display: inline-flex;
+        flex: 0 0 3.25rem;
+        font-size: 1.35rem;
+        height: 3.25rem;
+        justify-content: center;
+        width: 3.25rem;
+    }
+
+    .class-card-teacher > span:last-child,
+    .class-card-reading-info > span:last-child {
+        display: grid;
+        gap: 0.18rem;
+        min-width: 0;
+    }
+
+    .class-card-teacher small,
+    .class-card-reading-info small {
+        color: #5f778c;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.7rem;
+        font-weight: 900;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+    }
+
+    .class-card-teacher strong {
+        color: #080f3e;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1rem;
+        font-weight: 900;
+        overflow-wrap: anywhere;
+    }
+
+    .class-card-reading-info {
+        align-items: center;
+        background: linear-gradient(145deg, rgba(225, 250, 246, 0.96), rgba(239, 252, 250, 0.94));
+        display: flex;
+        gap: 0.75rem;
+        min-height: 7rem;
+        padding: 1rem 1.15rem;
+    }
+
+    .class-card-summary .reading-level-badge {
+        background: rgba(92, 228, 209, 0.25);
+        border: 0;
+        color: #087d75;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.92rem;
+        font-weight: 900;
+        margin: 0.15rem 0 0;
+        padding: 0.45rem 0.75rem;
+    }
+
+    .class-card-activity {
+        align-content: start;
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid rgba(63, 157, 207, 0.1);
+        border-radius: 18px;
+        display: grid;
+        gap: 0.75rem;
+        min-width: 0;
+        padding: 1.25rem;
+    }
+
+    .class-card-activity-head {
+        align-items: flex-start;
+        display: flex;
+        gap: 0.75rem;
+        min-width: 0;
+    }
+
+    .class-card-activity-icon {
+        align-items: center;
+        background: linear-gradient(145deg, #e9f7ff, #dcedfb);
+        border-radius: 16px;
+        color: #147ee5;
+        display: inline-flex;
+        flex: 0 0 3.25rem;
+        font-size: 1.45rem;
+        height: 3.25rem;
+        justify-content: center;
+        width: 3.25rem;
+    }
+
+    .class-card-activity-copy {
+        display: grid;
+        flex: 1 1 auto;
+        gap: 0.1rem;
+        min-width: 0;
+    }
+
+    .class-card-activity-copy small {
+        color: #64748b;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.7rem;
+        font-weight: 900;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+    }
+
+    .class-card-activity-copy strong { color: #080f3e; font-family: "Nunito", "Segoe UI", sans-serif; font-size: clamp(1rem, 1.6vw, 1.32rem); font-weight: 900; line-height: 1.15; }
+    .class-card-activity-copy > span { color: #65728d; font-family: "Quattrocento Sans", "Segoe UI", sans-serif; font-size: 0.92rem; font-weight: 700; }
+
+    .class-card-activity-state {
+        align-items: center;
+        background: #f4f6f8;
+        border-radius: 999px;
+        color: #64748b;
+        display: inline-flex;
+        flex: 0 0 auto;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.78rem;
+        font-weight: 900;
+        gap: 0.35rem;
+        padding: 0.5rem 0.75rem;
+        white-space: nowrap;
+    }
+
+    .class-card-activity-state i { font-size: 0.95rem; }
+    .class-card-progress-copy { color: #65728d; font-family: "Quattrocento Sans", "Segoe UI", sans-serif; font-size: 0.88rem; font-weight: 700; }
+
+    .my-classes-section .class-card-activity .aral-week-card {
+        align-items: center;
+        background: #eef7ff;
+        border-color: rgba(63, 157, 207, 0.1);
+        border-radius: 15px;
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: auto minmax(0, 1fr);
+        margin: 0;
+        padding: 0.9rem;
+    }
+
+    .aral-week-icon {
+        align-items: center;
+        background: rgba(43, 163, 249, 0.12);
+        border-radius: 14px;
+        color: #176bba;
+        display: inline-flex;
+        font-size: 1.35rem;
+        height: 3rem;
+        justify-content: center;
+        width: 3rem;
+    }
+
+    .aral-week-copy { display: grid; gap: 0.15rem; min-width: 0; }
+    .aral-week-copy strong { color: #080f3e; font-family: "Nunito", "Segoe UI", sans-serif; font-size: 1rem; font-weight: 900; }
+    .aral-week-copy span { color: #65728d; font-family: "Quattrocento Sans", "Segoe UI", sans-serif; font-size: 0.83rem; line-height: 1.3; }
+    .my-classes-section .aral-week-card .class-card-actions { grid-column: 1 / -1; margin-top: 0; padding-top: 0.2rem; }
+
+    .class-card-activity .class-card-actions {
+        margin-top: 0.2rem;
+        padding-top: 0.65rem;
+    }
+
+    .class-card-activity > .class-card-actions {
+        align-self: end;
+        margin-top: auto;
+        padding-top: 0;
+    }
+
+    .class-card-activity .continue-learning-btn {
+        border-radius: 14px;
+        min-height: 2.85rem;
+    }
+
+    body.dark-theme .my-classes-title-copy strong,
+    body.dark-theme .class-card-summary h3,
+    body.dark-theme .class-card-teacher strong,
+    body.dark-theme .class-card-activity-copy strong,
+    body.dark-theme .aral-week-copy strong { color: #f8fafc; }
+    body.dark-theme .my-classes-title-copy small { color: #b9c8d7; }
+    body.dark-theme .class-card-class-info,
+    body.dark-theme .class-card-reading-info,
+    body.dark-theme .class-card-activity { background: rgba(15, 51, 74, 0.62); }
+    body.dark-theme .class-card-activity .aral-week-card { background: rgba(15, 51, 74, 0.46); }
+
+    @media (max-width: 767.98px) {
+        .my-classes-section .class-list > .class-card {
+            gap: 0;
+            grid-template-columns: 1fr;
+        }
+
+        .class-card-activity { padding: 1rem; }
+        .class-card-activity-state { font-size: 0.7rem; padding: 0.42rem 0.6rem; }
+    }
+
 </style>
 {% endblock %}
 
@@ -2455,7 +2748,7 @@
             <!-- My Class -->
             <div class="my-classes-section">
                 <div class="my-classes-header">
-                    <span>My Class</span>
+                    <span class="my-classes-title-copy"><strong>My Class</strong></span>
                 </div>
                 <div class="class-list" data-class-list aria-live="polite"></div>
             </div>
@@ -3349,45 +3642,60 @@
                             'bi-book'
                         }"></i>
                     </div>
-                    <h3>${escapeHtml(classData.name || "Reading Class")}</h3>
-                    <div class="class-card-meta">
-                        <span><i class="bi bi-person-badge me-2 text-primary"></i> Teacher: <strong>${escapeHtml(classData.teacher || classData.teacher_name || classData.teacherName || "Your teacher")}</strong></span>
-                        <span class="reading-level-badge" data-reading-level><i class="bi bi-bar-chart-fill"></i> Reading Level: ${escapeHtml(window.PABASA_STUDENT_READING_LEVEL || 'Pending')}</span>
+                    <div class="class-card-summary">
+                        <div class="class-card-class-info">
+                            <span class="class-card-eyebrow">Class</span>
+                            <h3>${escapeHtml(classData.name || "Reading Class")}</h3>
+                            <div class="class-card-teacher">
+                                <span class="class-card-teacher-icon" aria-hidden="true"><i class="bi bi-person-fill"></i></span>
+                                <span><small>Teacher</small><strong>${escapeHtml(classData.teacher || classData.teacher_name || classData.teacherName || "Your teacher")}</strong></span>
+                            </div>
+                        </div>
+                        <div class="class-card-reading-info">
+                            <span class="class-card-reading-icon" aria-hidden="true"><i class="bi bi-bar-chart-fill"></i></span>
+                            <span><small>Reading Level</small><span class="reading-level-badge" data-reading-level>${escapeHtml(window.PABASA_STUDENT_READING_LEVEL || 'Pending')}</span></span>
+                        </div>
                     </div>
-                    ${classData.assessmentWeekEnabled ? `
-                    <div class="alert alert-warning py-2 px-3 mb-2 small" role="status">
-                        <i class="bi bi-clipboard2-check me-1"></i><strong>Assessment Week</strong> is ON. Your teacher will make the assessment available when ready.
-                    </div>
-                    ` : ''}
-                    ${classData.officialCrlaCompleted && classData.aralEligible && classData.currentAralWeek ? `
-                    <div class="aral-week-card" data-aral-week-card>
-                        <h4><i class="bi bi-book-half me-1"></i>ARAL Reading Practice</h4>
-                        <div class="aral-week-label">Week ${escapeHtml(classData.currentAralWeek)}</div>
-                        <div class="aral-week-status">${classData.aralWeekTotal === 0 ? 'No activity available yet.' : classData.aralWeekCompleted >= classData.aralWeekTotal ? 'Week completed!' : classData.aralWeekCompleted > 0 ? 'Keep going!' : 'Your activities are ready!'}</div>
-                        <div class="aral-week-progress">${classData.aralWeekCompleted} of ${classData.aralWeekTotal} completed</div>
-                        <div class="class-card-actions">
-                            <button class="continue-learning-btn" type="button" data-open-aral-week data-section-id="${escapeHtml(classData.section_id || classData.id || '')}" data-aral-week="${escapeHtml(classData.currentAralWeek)}">
-                                <span>${classData.aralWeekTotal > 0 && classData.aralWeekCompleted >= classData.aralWeekTotal ? 'Review This Week' : classData.aralWeekCompleted > 0 ? "Continue This Week's Activities" : "Start This Week's Activities"}</span>
+                    <div class="class-card-activity">
+                        ${classData.assessmentWeekEnabled ? `
+                        <div class="alert alert-warning py-2 px-3 mb-2 small" role="status">
+                            <i class="bi bi-clipboard2-check me-1"></i><strong>Assessment Week</strong> is ON. Your teacher will make the assessment available when ready.
+                        </div>
+                        ` : ''}
+                        ${classData.officialCrlaCompleted && classData.aralEligible && classData.currentAralWeek ? `
+                        <div class="class-card-activity-head">
+                            <span class="class-card-activity-icon" aria-hidden="true"><i class="bi bi-book-fill"></i></span>
+                            <span class="class-card-activity-copy"><small>Current Activity</small><strong>ARAL Reading Practice</strong><span>Week ${escapeHtml(classData.currentAralWeek)}</span></span>
+                            <span class="class-card-activity-state"><i class="bi bi-circle"></i>${classData.aralWeekTotal > 0 && classData.aralWeekCompleted >= classData.aralWeekTotal ? 'Completed' : classData.aralWeekCompleted > 0 ? 'In Progress' : 'Not Started'}</span>
+                        </div>
+                        <div class="class-card-progress-copy">${classData.aralWeekCompleted} of ${classData.aralWeekTotal} completed</div>
+                        <div class="aral-week-card" data-aral-week-card>
+                            <span class="aral-week-icon" aria-hidden="true"><i class="bi bi-file-earmark-text"></i></span>
+                            <span class="aral-week-copy"><strong>Week ${escapeHtml(classData.currentAralWeek)}</strong><span>${classData.aralWeekTotal === 0 ? 'No activity available yet.' : classData.aralWeekCompleted >= classData.aralWeekTotal ? 'Week completed!' : classData.aralWeekCompleted > 0 ? 'Keep going!' : 'Your activities are ready!'}</span></span>
+                            <div class="class-card-actions">
+                                <button class="continue-learning-btn" type="button" data-open-aral-week data-section-id="${escapeHtml(classData.section_id || classData.id || '')}" data-aral-week="${escapeHtml(classData.currentAralWeek)}">
+                                    <span>${classData.aralWeekTotal > 0 && classData.aralWeekCompleted >= classData.aralWeekTotal ? 'Review This Week' : classData.aralWeekCompleted > 0 ? "Continue This Week's Activities" : "Start This Week's Activities"}</span>
+                                </button>
+                            </div>
+                        </div>
+                        ` : ''}
+                        ${classData.removedByTeacher ? `
+                            <div class="mt-3 alert alert-warning d-flex justify-content-between align-items-center" role="alert">
+                                <div>
+                                    <strong>Class removed by teacher</strong>
+                                    <div class="small">This class was removed by its teacher. You can remove it from your dashboard.</div>
+                                </div>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-danger remove-deleted-class-btn" data-code="${escapeHtml(classData.code)}">Remove</button>
+                                </div>
+                            </div>
+                        ` : ''}
+                        ${!classData.officialCrlaCompleted ? `<div class="class-card-actions">
+                            <button class="continue-learning-btn" type="button" data-continue-learning data-section-id="${escapeHtml(classData.section_id || classData.id || '')}" data-class-code="${escapeHtml(classData.code)}">
+                                <span>${classData.assessmentWeekEnabled ? 'Open Assessment' : 'Continue Learning'}</span>
                             </button>
-                        </div>
+                        </div>` : ''}
                     </div>
-                    ` : ''}
-                    ${classData.removedByTeacher ? `
-                        <div class="mt-3 alert alert-warning d-flex justify-content-between align-items-center" role="alert">
-                            <div>
-                                <strong>Class removed by teacher</strong>
-                                <div class="small">This class was removed by its teacher. You can remove it from your dashboard.</div>
-                            </div>
-                            <div>
-                                <button class="btn btn-sm btn-outline-danger remove-deleted-class-btn" data-code="${escapeHtml(classData.code)}">Remove</button>
-                            </div>
-                        </div>
-                    ` : ''}
-                    ${!classData.officialCrlaCompleted ? `<div class="class-card-actions">
-                        <button class="continue-learning-btn" type="button" data-continue-learning data-section-id="${escapeHtml(classData.section_id || classData.id || '')}" data-class-code="${escapeHtml(classData.code)}">
-                            <span>${classData.assessmentWeekEnabled ? 'Open Assessment' : 'Continue Learning'}</span>
-                        </button>
-                    </div>` : ''}
                 </article>
             `).join("");
 
@@ -3657,20 +3965,10 @@
                 return;
             }
 
-            const card = event.target.closest("[data-class-card]");
-            if (!card) {
+            // Class details are informational. Navigation is intentionally
+            // limited to the explicit action buttons above.
+            if (event.target.closest("[data-class-card]")) {
                 return;
-            }
-
-            // Completed-CRLA cards use a dedicated ARAL week launcher;
-            // clicking their remaining card surface must not reopen CRLA.
-            if (card.dataset.completedCrla === 'true') {
-                return;
-            }
-
-            const sectionId = card.dataset.sectionId;
-            if (sectionId) {
-                window.location.href = `{% url 'assessment' %}?section_id=${encodeURIComponent(sectionId)}`;
             }
         });
 
