@@ -1,0 +1,33 @@
+.signup-dropdown-menu {
+    position: fixed;
+    z-index: 1080;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 1px solid rgba(16, 70, 110, 0.18);
+    border-radius: 0.4rem;
+    background: #fff;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+}
+
+.signup-dropdown-option {
+    box-sizing: border-box;
+    height: 2rem;
+    line-height: 2rem;
+    padding: 0 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+
+.signup-dropdown-option.is-active {
+    background: #e2f3fb;
+}
+
+.signup-dropdown-option[aria-disabled="true"] {
+    color: #7a8087;
+    cursor: not-allowed;
+}
