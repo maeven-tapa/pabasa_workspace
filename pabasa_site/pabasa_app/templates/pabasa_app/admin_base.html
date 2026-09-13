@@ -28,6 +28,11 @@
             --admin-shadow: 0 18px 40px rgba(16, 70, 110, 0.12);
             /* Keep the admin navigation shell in lockstep with teacher/student. */
             --admin-sidebar-width: 320px;
+            --admin-display-scale: 1;
+            --admin-normalized-viewport-width: 100%;
+            --admin-normalized-viewport-height: 100dvh;
+            --admin-normalized-viewport-center-y: 50dvh;
+            --admin-normalized-content-offset: 4rem;
         }
 
         * {
@@ -44,6 +49,26 @@
             font-size: 1rem;
             letter-spacing: 0;
             line-height: 1.5;
+            overflow-x: clip;
+        }
+
+        /* Normalize the desktop dashboard shell on Windows displays that use
+           a non-100% display scale, without changing responsive breakpoints. */
+        @media (min-width: 992px) {
+            .admin-app-shell {
+                min-height: var(--admin-normalized-viewport-height);
+                width: var(--admin-normalized-viewport-width);
+                zoom: var(--admin-display-scale);
+            }
+
+            .admin-app-shell .admin-sidebar,
+            .admin-app-shell .admin-main {
+                min-height: var(--admin-normalized-viewport-height);
+            }
+
+            .admin-app-shell .admin-sidebar {
+                height: var(--admin-normalized-viewport-height);
+            }
         }
 
         h1, h2, h3, h4, h5, h6,
@@ -2959,27 +2984,528 @@
         @media (max-width: 991.98px) {
             .admin-page-loader { left: 0; }
         }
+
+        /* Match the teacher/student mobile navigation: a full-width branded
+           bar is shown only while the desktop sidebar is replaced by the drawer. */
+        .mobile-admin-topbar {
+            align-items: center;
+            background: linear-gradient(145deg, #13507a 0%, var(--admin-primary-deep) 70%, #0b3552 100%);
+            box-shadow: 0 6px 18px rgba(6, 23, 38, 0.18);
+            display: none;
+            height: 62px;
+            justify-content: center;
+            margin: 0;
+            position: relative;
+            width: 100%;
+            z-index: 1020;
+        }
+
+        .mobile-admin-menu-btn {
+            align-items: center;
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: #fff;
+            display: inline-flex;
+            font-size: 1.35rem;
+            height: 38px;
+            justify-content: center;
+            left: 0.9rem;
+            padding: 0;
+            position: absolute;
+            top: 12px;
+            width: 42px;
+        }
+
+        .mobile-admin-menu-btn:hover,
+        .mobile-admin-menu-btn:focus-visible {
+            background: rgba(255, 255, 255, 0.24);
+            color: #fff;
+        }
+
+        .mobile-admin-logo {
+            align-items: center;
+            display: inline-flex;
+            height: 50px;
+            text-decoration: none;
+        }
+
+        /* Keep this lockup identical to the student/teacher mobile bar. */
+        .mobile-pabasa-logo-svg {
+            flex: 0 0 auto;
+            height: 44px;
+            width: auto;
+        }
+
+        .mobile-pabasa-logo-letters {
+            align-items: center;
+            display: flex;
+            margin-left: -0.68rem;
+            margin-top: 0.1rem;
+        }
+
+        .mobile-pabasa-logo-letters span {
+            display: inline-block;
+            filter: drop-shadow(0 2px 0 rgba(16, 70, 110, 0.18));
+            font-family: 'Coiny', cursive;
+            font-size: 1.45rem;
+            -webkit-text-stroke: 3px #10466E;
+            letter-spacing: -1px;
+            line-height: 1;
+            paint-order: stroke fill;
+        }
+
+        .mobile-pabasa-logo-letters .lc-yellow { color: #FFD639; }
+        .mobile-pabasa-logo-letters .lc-blue { color: #54C2F0; }
+
+        .mobile-admin-logo .pabasa-logo-svg {
+            height: 44px;
+            width: auto;
+        }
+
+        .mobile-admin-logo .pabasa-logo-letters {
+            margin-left: -0.68rem;
+            margin-top: 0.1rem;
+        }
+
+        .mobile-admin-logo .pabasa-logo-letters span {
+            filter: drop-shadow(0 2px 0 rgba(16, 70, 110, 0.18));
+            font-size: 1.45rem;
+        }
+
+        .admin-sidebar-lower-profile {
+            flex: 0 0 auto;
+            margin-top: auto;
+        }
+
+        .admin-profile-card {
+            position: relative;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+        }
+
+        .admin-sidebar .sidebar-logo-link {
+            min-height: 58px;
+            padding: 0.45rem 0.2rem;
+        }
+
+        .admin-sidebar .sidebar-logo-link .pabasa-logo-svg {
+            height: 48px;
+        }
+
+        .admin-sidebar .sidebar-logo-link .pabasa-logo-letters span {
+            font-size: 1.75rem;
+        }
+
+        /* Homepage PABASA lockup, shared by the admin sidebar and mobile bar. */
+        .admin-homepage-logo {
+            align-items: center;
+            background: transparent;
+            display: inline-flex;
+            flex: 0 0 auto;
+            gap: 0;
+            justify-content: center;
+            padding: 0.2rem clamp(1rem, 2vw, 1.65rem) 0.2rem clamp(1.1rem, 2.3vw, 1.8rem);
+            text-decoration: none;
+        }
+
+        .admin-homepage-logo .pabasa-logo-svg {
+            filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.14));
+            flex: 0 0 auto;
+            height: 34px !important;
+            width: auto !important;
+        }
+
+        .admin-homepage-logo .pabasa-logo-letters {
+            align-items: center;
+            display: flex;
+            margin-left: -0.68rem;
+            margin-top: 0.1rem;
+        }
+
+        .admin-homepage-logo .pabasa-logo-letters span {
+            display: inline-block;
+            filter: drop-shadow(0 2px 0 rgba(16, 70, 110, 0.18));
+            font-family: 'Coiny', cursive;
+            font-size: 1.45rem !important;
+            -webkit-text-stroke: 3px #10466E;
+            letter-spacing: -1px;
+            line-height: 1;
+            paint-order: stroke fill;
+        }
+
+        .admin-notification-slot {
+            position: absolute;
+            right: 0.7rem;
+            top: 0.7rem;
+        }
+
+        .admin-notification-slot .notif-nav-btn {
+            color: #fff !important;
+            align-items: center;
+            display: inline-flex;
+            height: 32px;
+            justify-content: center;
+            min-height: 32px;
+            min-width: 32px;
+            width: 32px;
+        }
+
+        .admin-notification-slot .notif-nav-btn i {
+            color: #fff !important;
+            line-height: 1;
+        }
+
+        .admin-notification-slot .notif-nav-btn:hover,
+        .admin-notification-slot .notif-nav-btn:focus-visible {
+            color: var(--admin-accent) !important;
+        }
+
+        @media (min-width: 992px) {
+            .admin-app-shell .admin-sidebar > .d-flex {
+                height: var(--admin-normalized-viewport-height);
+                min-height: var(--admin-normalized-viewport-height);
+            }
+
+            /* The edge-mounted collapse control intentionally extends beyond
+               the sidebar, matching the student and teacher navigation. */
+            .admin-app-shell .admin-sidebar {
+                overflow: visible;
+            }
+
+            .admin-app-shell .admin-sidebar-collapse-row {
+                left: calc(var(--admin-sidebar-width) - 19px);
+                margin: 0;
+                max-width: 38px;
+                min-height: 38px;
+                overflow: visible;
+                padding: 0;
+                position: fixed;
+                top: var(--admin-normalized-viewport-center-y);
+                transform: translateY(-50%);
+                width: 38px;
+                z-index: 1035;
+            }
+
+            .admin-app-shell .admin-sidebar .admin-sidebar-collapse-row .sidebar-collapse-btn,
+            body.admin-sidebar-collapsed .admin-app-shell .admin-sidebar .admin-sidebar-collapse-row .sidebar-collapse-btn {
+                background: #ffe15c;
+                border: 0;
+                border-radius: 50%;
+                box-shadow: 0 6px 16px rgba(126, 91, 21, 0.2);
+                color: #ed6947;
+                flex: 0 0 38px;
+                gap: 0;
+                height: 38px;
+                max-height: 38px;
+                max-width: 38px;
+                min-height: 38px;
+                min-width: 38px;
+                padding: 0;
+                width: 38px;
+            }
+
+            .admin-app-shell .admin-sidebar .admin-collapse-label {
+                display: none !important;
+            }
+
+            body.admin-sidebar-collapsed .admin-app-shell .admin-sidebar .admin-sidebar-collapse-row {
+                left: calc(var(--admin-sidebar-width) - 19px);
+                width: 38px;
+            }
+
+            .admin-app-shell .admin-sidebar .admin-sidebar-collapse-row .sidebar-collapse-btn:hover,
+            .admin-app-shell .admin-sidebar .admin-sidebar-collapse-row .sidebar-collapse-btn:focus-visible {
+                background: #ffeb83;
+                box-shadow: 0 8px 20px rgba(126, 91, 21, 0.28);
+                color: #df543c;
+                transform: none;
+            }
+
+            .admin-content {
+                align-content: safe center;
+                display: grid;
+                min-height: calc(var(--admin-normalized-viewport-height) - var(--admin-normalized-content-offset));
+            }
+
+            .admin-content > * {
+                min-width: 0;
+            }
+
+            .admin-main {
+                overflow-x: clip;
+            }
+        }
+
+        @media (max-width: 991.98px) {
+            .mobile-admin-topbar { display: flex; }
+
+            .admin-main .mobile-admin-topbar {
+                margin-left: calc(50% - 50vw);
+                max-width: 100vw;
+                width: 100vw;
+            }
+
+            .admin-sidebar-lower-profile {
+                margin-top: auto;
+            }
+        }
+
+        .admin-sidebar-footer {
+            border-top: 1px solid rgba(255, 255, 255, 0.18);
+            margin-top: 0.65rem;
+            padding-top: 1rem;
+        }
+
+        /* The compact sidebar keeps only its avatar/profile shortcut; the
+           notification control is available again when the sidebar expands. */
+        body.admin-sidebar-collapsed .admin-app-shell > .admin-sidebar .admin-notification-slot {
+            display: none;
+        }
+
+        /* Match the compact active-state tile used by the student and teacher
+           sidebars without affecting the expanded mobile drawer. */
+        body.admin-sidebar-collapsed .admin-app-shell > .admin-sidebar .admin-nav-link.active {
+            align-items: center;
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.22);
+            border-radius: 6px;
+            height: 48px;
+            justify-content: center;
+            margin-left: auto;
+            margin-right: auto;
+            min-height: 48px;
+            padding: 0;
+            width: 48px;
+        }
+
+        body.admin-sidebar-collapsed .admin-app-shell > .admin-sidebar .admin-nav-link.active::before {
+            bottom: 4px;
+            height: 3px;
+            left: 50%;
+            top: auto;
+            transform: translateX(-50%);
+            width: 22px;
+        }
+
+        body.admin-sidebar-collapsed .admin-app-shell > .admin-sidebar .admin-nav-link.active i {
+            border-radius: 8px;
+            height: 24px;
+            width: 24px;
+        }
+
+        /* In compact mode the profile is represented solely by its circular
+           avatar, matching the student and teacher collapsed sidebar. */
+        body.admin-sidebar-collapsed .admin-app-shell > .admin-sidebar .admin-profile-card {
+            background: transparent;
+            border: 0;
+            border-radius: 50%;
+            box-shadow: none;
+            height: 52px;
+            margin: 0.45rem auto 0.7rem;
+            min-height: 52px;
+            padding: 0;
+            width: 52px;
+        }
+
+        body.admin-sidebar-collapsed .admin-app-shell > .admin-sidebar .admin-profile-card .admin-profile-avatar {
+            flex-basis: 52px;
+            height: 52px;
+            width: 52px;
+        }
+
+        @media (max-width: 991.98px) {
+            .admin-main {
+                padding-top: 0;
+            }
+
+            /* The admin drawer follows the same integrated logo/close row and
+               bottom-anchored account area as the student/teacher sidebar. */
+            #adminSidebarCanvas {
+                --bs-offcanvas-width: clamp(300px, 86vw, 320px);
+                background: linear-gradient(145deg, #13507a 0%, #10466e 70%, #0b3552 100%) !important;
+                border: 0;
+                color: #fff;
+                overflow: hidden;
+            }
+
+            #adminSidebarCanvas .offcanvas-body {
+                display: flex;
+                flex-direction: column;
+                height: 100dvh;
+                min-height: 0;
+                overflow: hidden;
+                padding: 0 !important;
+            }
+
+            #adminSidebarCanvas .admin-sidebar {
+                background: linear-gradient(145deg, #13507a 0%, #10466e 70%, #0b3552 100%) !important;
+                height: 100%;
+                min-height: 0;
+                overflow: hidden;
+                padding: 0 !important;
+            }
+
+            #adminSidebarCanvas .admin-sidebar::before {
+                background: radial-gradient(circle at top right, rgba(255, 214, 57, 0.16), transparent 28%);
+            }
+
+            #adminSidebarCanvas .admin-sidebar > .d-flex {
+                height: 100%;
+                min-height: 0;
+                padding: 1rem !important;
+            }
+
+            #adminSidebarCanvas .admin-sidebar-top,
+            #adminSidebarCanvas .admin-logo-row {
+                position: relative;
+                width: 100%;
+            }
+
+            #adminSidebarCanvas .admin-logo-row {
+                align-items: center;
+                display: flex;
+                justify-content: center;
+            }
+
+            #adminSidebarCanvas .sidebar-logo-link {
+                min-height: 54px;
+                padding: 0.35rem 0.2rem;
+            }
+
+            #adminSidebarCanvas .sidebar-logo-link .pabasa-logo-svg {
+                height: 2.4rem;
+                width: auto;
+            }
+
+            #adminSidebarCanvas .admin-mobile-logo-bird,
+            .mobile-admin-logo .admin-mobile-logo-bird {
+                filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.14));
+                height: 2.4rem;
+                object-fit: contain;
+                width: 2.4rem;
+            }
+
+            #adminSidebarCanvas .sidebar-logo-link .pabasa-logo-letters span {
+                font-size: 1.75rem;
+                letter-spacing: -1px;
+                -webkit-text-stroke: 3px #10466E;
+            }
+
+            .mobile-admin-logo .pabasa-logo-letters {
+                margin-left: -0.68rem;
+                margin-top: 0.1rem;
+            }
+
+            .mobile-admin-logo .pabasa-logo-letters span {
+                font-size: 1.45rem;
+                letter-spacing: -1px;
+                -webkit-text-stroke: 3px #10466E;
+            }
+
+            #adminSidebarCanvas .admin-mobile-sidebar-close-btn {
+                align-items: center;
+                background: transparent;
+                border: 0;
+                color: #fff;
+                display: inline-flex;
+                font-size: 1.15rem;
+                height: 38px;
+                justify-content: center;
+                padding: 0;
+                position: absolute;
+                right: 0;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 38px;
+            }
+
+            #adminSidebarCanvas .admin-mobile-sidebar-close-btn:hover,
+            #adminSidebarCanvas .admin-mobile-sidebar-close-btn:focus-visible {
+                background: rgba(255, 255, 255, 0.12);
+                border-radius: 50%;
+                color: #fff;
+            }
+
+            #adminSidebarCanvas .admin-sidebar-scroll {
+                flex: 1 1 auto;
+                margin-bottom: 0.75rem;
+                min-height: 0;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                padding-bottom: 0.25rem;
+                scrollbar-width: none;
+            }
+
+            #adminSidebarCanvas .admin-sidebar-scroll::-webkit-scrollbar {
+                height: 0;
+                width: 0;
+            }
+
+            #adminSidebarCanvas .admin-sidebar-lower-profile {
+                flex: 0 0 auto;
+                margin-top: auto;
+                padding-bottom: 0.75rem;
+            }
+
+            #adminSidebarCanvas .admin-sidebar-footer {
+                background: linear-gradient(180deg, rgba(16, 70, 110, 0), rgba(16, 70, 110, 0.26) 34%, rgba(16, 70, 110, 0.36));
+                flex: 0 0 auto;
+                margin-top: 0;
+                padding: 0.85rem 0 calc(0.85rem + env(safe-area-inset-bottom)) !important;
+            }
+
+            #adminSidebarCanvas .admin-sidebar-footer .btn-outline-danger {
+                background: rgba(255, 255, 255, 0.12);
+                border: 1px solid rgba(255, 255, 255, 0.16);
+                border-radius: 16px;
+                color: #fff;
+                font-family: "Nunito", sans-serif;
+                font-weight: 800;
+                min-height: 46px;
+                text-transform: none;
+            }
+        }
     </style>
 </head>
 <body class="admin-preloading">
+    <script>
+        (() => {
+            const applyAdminDisplayScale = () => {
+                const isWindows = /Windows/i.test(navigator.userAgent || '');
+                const ratio = Number(window.devicePixelRatio) || 1;
+                const scale = isWindows && ratio > 1 ? 1 / ratio : 1;
+                const boundedScale = Math.min(1, Math.max(0.25, scale));
+                const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+
+                document.documentElement.style.setProperty('--admin-display-scale', String(boundedScale));
+                document.documentElement.style.setProperty('--admin-normalized-viewport-width', `${window.innerWidth / boundedScale}px`);
+                document.documentElement.style.setProperty('--admin-normalized-viewport-height', `${window.innerHeight / boundedScale}px`);
+                document.documentElement.style.setProperty('--admin-normalized-viewport-center-y', `${window.innerHeight / boundedScale / 2}px`);
+                document.documentElement.style.setProperty('--admin-normalized-content-offset', `${(rootFontSize * 4) / boundedScale}px`);
+            };
+
+            applyAdminDisplayScale();
+            window.addEventListener('resize', applyAdminDisplayScale);
+        })();
+    </script>
     <div class="admin-page-loader" id="adminPageLoader" aria-hidden="false" role="status" aria-label="Loading page">
         <div class="admin-page-loader__spinner"></div>
     </div>
+    <div class="admin-app-shell">
     <aside class="admin-sidebar">
         <div class="d-flex flex-column h-100">
             <div class="admin-sidebar-top">
                     <div class="admin-logo-row">
-                        <a class="sidebar-logo-link" href="{% url 'dashboard_admin' %}" aria-label="Go to admin dashboard">
+                        <a class="sidebar-logo-link admin-homepage-logo" href="{% url 'dashboard_admin' %}" aria-label="Go to admin dashboard">
                             {% include "pabasa_app/partials/_pabasa_logo.html" with logo_class="pabasa-logo-svg" letters_class="pabasa-logo-letters" letter_yellow_class="lc-yellow" letter_blue_class="lc-blue" pnb_id="pnb-admin" pnbk_id="pnbk-admin" %}
                         </a>
 
                 </div>
 
-                <div class="admin-profile-card mt-3">
-                    <div class="admin-profile-avatar" aria-hidden="true">{{ first_name|default:"A"|slice:":1"|upper }}{{ last_name|default:"D"|slice:":1"|upper }}</div>
-                    <div class="admin-profile-name">{{ first_name|default:"PABASA" }} {{ last_name|default:"Admin" }}</div>
-                    <div class="admin-profile-role">Admin</div>
-                </div>
             </div>
 
             <div class="admin-sidebar-scroll">
@@ -2995,6 +3521,15 @@
                     <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_activity_log' %}active{% endif %}" href="{% url 'admin_activity_log' %}" data-admin-tooltip title="Activity Log"><i class="bi bi-clipboard-data"></i><span class="admin-nav-text">Activity Log</span></a>
                     <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_settings' %}active{% endif %}" href="{% url 'admin_settings' %}" data-admin-tooltip title="Settings"><i class="bi bi-gear"></i><span class="admin-nav-text">Settings</span></a>
                 </nav>
+            </div>
+
+            <div class="admin-sidebar-lower-profile">
+                <div class="admin-profile-card">
+                    <div class="admin-notification-slot" data-admin-notification-slot="desktop"></div>
+                    <div class="admin-profile-avatar" aria-hidden="true">{{ first_name|default:"A"|slice:":1"|upper }}{{ last_name|default:"D"|slice:":1"|upper }}</div>
+                    <div class="admin-profile-name">{{ first_name|default:"PABASA" }} {{ last_name|default:"Admin" }}</div>
+                    <div class="admin-profile-role">Admin</div>
+                </div>
             </div>
 
             <div class="admin-sidebar-collapse-row d-none d-lg-flex">
@@ -3014,26 +3549,20 @@
     </aside>
 
     <!-- Mobile/Tablet offcanvas sidebar (same content as desktop sidebar, shown on small screens) -->
-    <div class="offcanvas offcanvas-start d-lg-none" tabindex="-1" id="adminSidebarCanvas" aria-labelledby="adminSidebarCanvasLabel">
-        <div class="offcanvas-header">
-            <h5 class="offcanvas-title" id="adminSidebarCanvasLabel">Menu</h5>
-            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-        </div>
+    <div class="offcanvas offcanvas-start d-lg-none" tabindex="-1" id="adminSidebarCanvas" aria-label="Admin navigation">
         <div class="offcanvas-body p-0">
             <aside class="admin-sidebar p-3" aria-hidden="false" style="position:static; width:100%; box-shadow:none;">
                 <div class="d-flex flex-column h-100">
                     <div class="admin-sidebar-top">
                         <div class="admin-logo-row">
-                            <a class="sidebar-logo-link" href="{% url 'dashboard_admin' %}" aria-label="Go to admin dashboard">
+                            <a class="sidebar-logo-link admin-homepage-logo" href="{% url 'dashboard_admin' %}" aria-label="Go to admin dashboard">
                                 {% include "pabasa_app/partials/_pabasa_logo.html" with logo_class="pabasa-logo-svg" letters_class="pabasa-logo-letters" letter_yellow_class="lc-yellow" letter_blue_class="lc-blue" pnb_id="pnb-admin-mobile" pnbk_id="pnbk-admin-mobile" %}
                             </a>
+                            <button class="admin-mobile-sidebar-close-btn" type="button" data-bs-dismiss="offcanvas" aria-label="Close sidebar">
+                                <i class="bi bi-x-lg" aria-hidden="true"></i>
+                            </button>
                         </div>
 
-                        <div class="admin-profile-card mt-3">
-                            <div class="admin-profile-avatar" aria-hidden="true">{{ first_name|default:"A"|slice:":1"|upper }}{{ last_name|default:"D"|slice:":1"|upper }}</div>
-                            <div class="admin-profile-name">{{ first_name|default:"PABASA" }} {{ last_name|default:"Admin" }}</div>
-                            <div class="admin-profile-role">Admin</div>
-                        </div>
                     </div>
 
                     <div class="admin-sidebar-scroll">
@@ -3051,6 +3580,15 @@
                         </nav>
                     </div>
 
+                    <div class="admin-sidebar-lower-profile">
+                        <div class="admin-profile-card">
+                            <div class="admin-notification-slot" data-admin-notification-slot="mobile"></div>
+                            <div class="admin-profile-avatar" aria-hidden="true">{{ first_name|default:"A"|slice:":1"|upper }}{{ last_name|default:"D"|slice:":1"|upper }}</div>
+                            <div class="admin-profile-name">{{ first_name|default:"PABASA" }} {{ last_name|default:"Admin" }}</div>
+                            <div class="admin-profile-role">Admin</div>
+                        </div>
+                    </div>
+
                     <div class="admin-sidebar-footer p-3">
                         <button class="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center gap-2" type="button" data-bs-toggle="modal" data-bs-target="#adminLogoutModal" data-admin-tooltip title="Logout" aria-label="Logout" style="border-radius: 14px; font-weight: 700; min-height: 46px;">
                             <i class="bi bi-box-arrow-right"></i>
@@ -3063,7 +3601,15 @@
     </div>
 
     <main class="admin-main">
-        <header class="admin-topbar">
+        <div class="mobile-admin-topbar d-lg-none">
+            <button class="mobile-admin-menu-btn" type="button" data-bs-toggle="offcanvas" data-bs-target="#adminSidebarCanvas" aria-controls="adminSidebarCanvas" aria-label="Open menu">
+                <i class="bi bi-list"></i>
+            </button>
+            <a class="mobile-admin-logo admin-homepage-logo" href="{% url 'dashboard_admin' %}" aria-label="Go to admin dashboard">
+                {% include "pabasa_app/partials/_pabasa_logo.html" with logo_class="pabasa-logo-svg" letters_class="pabasa-logo-letters" letter_yellow_class="lc-yellow" letter_blue_class="lc-blue" pnb_id="adminMobilePnb" pnbk_id="adminMobilePnbk" %}
+            </a>
+        </div>
+        <header class="admin-topbar d-none">
             <div class="admin-topbar-start">
                 <button class="btn btn-link text-dark p-0 admin-sidebar-toggle d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#adminSidebarCanvas" aria-controls="adminSidebarCanvas" aria-label="Open menu">
                     <i class="bi bi-list fs-4"></i>
@@ -3078,7 +3624,7 @@
                     <span class="small text-secondary d-block">Logged in as</span>
                     <strong>{{ admin_username }}</strong>
                 </div>
-                {% include "pabasa_app/partials/_notification_nav_button.html" with notification_pane_target="adminNotificationPane" %}
+                <div id="adminNotificationControl">{% include "pabasa_app/partials/_notification_nav_button.html" with notification_pane_target="adminNotificationPane" %}</div>
             </div>
         </header>
 
@@ -3088,6 +3634,7 @@
             {% block content %}{% endblock %}
         </section>
     </main>
+    </div>
 
     <div class="modal fade admin-logout-modal" id="adminLogoutModal" tabindex="-1" aria-labelledby="adminLogoutModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -3110,6 +3657,23 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script src="{% static 'pabasa_app/js/notifications_shared.js' %}"></script>
     <script>
+        (() => {
+            const control = document.getElementById('adminNotificationControl');
+            const desktopSlot = document.querySelector('[data-admin-notification-slot="desktop"]');
+            const mobileSlot = document.querySelector('[data-admin-notification-slot="mobile"]');
+            const mobileMedia = window.matchMedia('(max-width: 991.98px)');
+
+            const placeNotificationControl = () => {
+                const destination = mobileMedia.matches ? mobileSlot : desktopSlot;
+                if (control && destination && control.parentElement !== destination) {
+                    destination.appendChild(control);
+                }
+            };
+
+            placeNotificationControl();
+            mobileMedia.addEventListener?.('change', placeNotificationControl);
+        })();
+
         (() => {
             const loader = document.getElementById('adminPageLoader');
             if (!loader) return;

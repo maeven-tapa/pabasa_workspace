@@ -165,7 +165,7 @@
         display: grid;
         gap: 1.15rem;
         justify-items: stretch;
-        min-height: calc(100dvh - 4rem);
+        min-height: calc(var(--dashboard-normalized-viewport-height) - var(--dashboard-normalized-content-offset));
         width: 100%;
     }
     .teacher-dashboard > * { justify-self: center; max-width: 100%; width: 100%; }

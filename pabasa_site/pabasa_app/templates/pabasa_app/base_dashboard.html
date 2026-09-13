@@ -50,6 +50,31 @@
             --dash-card-pad: 1.25rem;
             --dash-section-gap: 1rem;
             --dash-control-min: 44px;
+            --dashboard-display-scale: 1;
+            --dashboard-normalized-viewport-width: 100%;
+            --dashboard-normalized-viewport-height: 100dvh;
+            --dashboard-normalized-viewport-center-y: 50dvh;
+            --dashboard-normalized-content-offset: 4rem;
+        }
+
+        /* Windows display scaling reduces the effective CSS viewport. The
+           dashboard shell is inversely scaled by the small script below so a
+           125% display shows the same desktop composition as 100%. */
+        @media (min-width: 992px) {
+            .dashboard-app-shell {
+                min-height: var(--dashboard-normalized-viewport-height);
+                width: var(--dashboard-normalized-viewport-width);
+                zoom: var(--dashboard-display-scale);
+            }
+
+            .dashboard-app-shell .dashboard-sidebar,
+            .dashboard-app-shell .dashboard-main {
+                min-height: var(--dashboard-normalized-viewport-height);
+            }
+
+            .dashboard-app-shell .dashboard-sidebar {
+                height: var(--dashboard-normalized-viewport-height);
+            }
         }
 
         body.dashboard-body {
@@ -3532,9 +3557,58 @@
                 overflow: hidden;
             }
         }
+
+        /* Use the same normalized height as the dashboard shell. This keeps
+           the expanded profile/footer pair and collapsed profile/logout pair
+           locked to the lower edge after a Windows display-scale change. */
+        @media (min-width: 992px) {
+            .dashboard-app-shell .dashboard-sidebar .sidebar-inner {
+                height: var(--dashboard-normalized-viewport-height);
+                min-height: var(--dashboard-normalized-viewport-height);
+            }
+
+            .dashboard-app-shell .dashboard-sidebar .sidebar-lower-profile {
+                margin-top: auto;
+            }
+
+            .dashboard-app-shell .dashboard-sidebar .sidebar-footer {
+                flex-shrink: 0;
+            }
+
+            .dashboard-app-shell .dashboard-sidebar .sidebar-collapse-row {
+                top: var(--dashboard-normalized-viewport-center-y);
+            }
+
+            body.sidebar-collapsed .dashboard-app-shell .dashboard-sidebar .sidebar-collapsed-profile-row,
+            body.sidebar-collapsed .dashboard-app-shell .dashboard-sidebar .sidebar-footer {
+                bottom: 0;
+            }
+
+            body.sidebar-collapsed .dashboard-app-shell .dashboard-sidebar .sidebar-collapsed-profile-row {
+                bottom: 104px;
+            }
+        }
     </style>
 </head>
 <body class="dashboard-body dashboard-preloading{% if nav_role == 'teacher' %} teacher-dashboard-body{% endif %}" data-student-theme="{% if nav_role == 'student' %}{{ student_theme_slug|default:'sky' }}{% endif %}">
+    <script>
+        (() => {
+            const applyDashboardDisplayScale = () => {
+                const isWindows = /Windows/i.test(navigator.userAgent || '');
+                const ratio = Number(window.devicePixelRatio) || 1;
+                const scale = isWindows && ratio > 1 ? 1 / ratio : 1;
+                const boundedScale = Math.min(1, Math.max(0.25, scale));
+                const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+                document.documentElement.style.setProperty('--dashboard-display-scale', String(boundedScale));
+                document.documentElement.style.setProperty('--dashboard-normalized-viewport-width', `${window.innerWidth / boundedScale}px`);
+                document.documentElement.style.setProperty('--dashboard-normalized-viewport-height', `${window.innerHeight / boundedScale}px`);
+                document.documentElement.style.setProperty('--dashboard-normalized-viewport-center-y', `${window.innerHeight / boundedScale / 2}px`);
+                document.documentElement.style.setProperty('--dashboard-normalized-content-offset', `${(rootFontSize * 4) / boundedScale}px`);
+            };
+            applyDashboardDisplayScale();
+            window.addEventListener('resize', applyDashboardDisplayScale);
+        })();
+    </script>
     {% if nav_role == 'student' %}
         {% include "pabasa_app/partials/_forest_world.html" %}
     {% endif %}
@@ -3570,7 +3644,7 @@
             });
         })();
     </script>
-    <div class="d-flex">
+    <div class="d-flex dashboard-app-shell">
         <aside class="dashboard-sidebar d-none d-lg-block">
             {% include "pabasa_app/partials/_sidebar.html" with notification_badge_id="desktopNotifBadge" %}
         </aside>

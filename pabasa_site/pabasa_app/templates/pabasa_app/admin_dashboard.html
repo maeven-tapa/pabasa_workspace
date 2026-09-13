@@ -2,8 +2,12 @@
 
 {% block content %}
 <style>
-    /* Keep the dashboard within the available content width; vertical scrolling remains normal. */
+    /* Keep the dashboard centered in the available workspace while preserving
+       its normal document flow when the content is taller than the viewport. */
     .admin-content:has(.admin-dashboard-shell) {
+        align-content: safe center;
+        display: grid;
+        min-height: calc(var(--admin-normalized-viewport-height) - var(--admin-normalized-content-offset));
         max-width: 100%;
         overflow-x: clip;
         overflow-y: visible;
@@ -22,6 +26,42 @@
         max-width: 1180px;
         margin: 0 auto;
         min-width: 0;
+    }
+
+    @media (max-width: 991.98px) {
+        .admin-content:has(.admin-dashboard-shell) {
+            align-content: start;
+            display: block;
+            min-height: auto;
+        }
+    }
+
+    @media (min-width: 992px) {
+        /* Keep the compact desktop dashboard fully contained in its workspace. */
+        body:has(.admin-dashboard-shell) {
+            overflow-y: hidden;
+        }
+
+        .admin-main:has(.admin-dashboard-shell) {
+            height: var(--admin-normalized-viewport-height);
+            overflow-x: clip;
+            overflow-y: hidden;
+        }
+
+        /* Activity-card previews stay within the fixed dashboard workspace
+           and scroll internally when their table is longer than the space. */
+        .admin-stat-preview {
+            max-height: 24rem;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            scrollbar-width: thin;
+        }
+
+        .admin-stat-preview .table-responsive {
+            max-height: 18rem;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
     }
 </style>
 <div class="admin-dashboard-shell">

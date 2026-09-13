@@ -90,7 +90,7 @@
         justify-items: stretch;
         /* The page wrapper and content area contribute two rem of spacing;
            account for both so the visible dashboard has equal top/bottom air. */
-        min-height: calc(100dvh - 4rem);
+        min-height: calc(var(--dashboard-normalized-viewport-height) - var(--dashboard-normalized-content-offset));
         position: relative;
         width: 100%;
     }
