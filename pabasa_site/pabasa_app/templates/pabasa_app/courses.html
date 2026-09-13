@@ -6516,6 +6516,24 @@
     }
 </style>
 
+<style>
+    /* Center a short course hub as one unit; let longer course lists flow
+       naturally from the top rather than forcing vertical overflow. */
+    .courses-home {
+        align-content: safe center;
+        display: grid;
+        justify-items: stretch;
+        min-height: calc(100dvh - 4rem);
+        width: 100%;
+    }
+
+    .courses-home > * { justify-self: center; max-width: 100%; width: 100%; }
+
+    @media (max-width: 991.98px) {
+        .courses-home { align-content: start; min-height: auto; }
+    }
+</style>
+
 <!-- Courses backed by the teacher's canonical Section assignments -->
 <section class="courses-home mb-4">
     <div class="classes-grid{% if teacher_courses|length == 1 %} is-single-class{% endif %}" id="coursesGrid">

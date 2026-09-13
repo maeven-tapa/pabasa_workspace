@@ -41,8 +41,18 @@
     }
 
     .page-shell {
+        align-content: safe center;
         display: grid;
         gap: 1rem;
+        justify-items: stretch;
+        min-height: calc(100dvh - 4rem);
+        width: 100%;
+    }
+
+    .page-shell > * { justify-self: center; max-width: 100%; width: 100%; }
+
+    @media (max-width: 991.98px) {
+        .page-shell { align-content: start; min-height: auto; }
     }
 
     .class-switcher-wrap {

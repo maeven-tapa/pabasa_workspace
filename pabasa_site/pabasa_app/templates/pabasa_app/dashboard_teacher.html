@@ -160,8 +160,17 @@
         color: var(--dash-primary-deep);
     }
 
-    .teacher-dashboard { display: grid; gap: 1.15rem; }
+    .teacher-dashboard {
+        align-content: safe center;
+        display: grid;
+        gap: 1.15rem;
+        justify-items: stretch;
+        min-height: calc(100dvh - 4rem);
+        width: 100%;
+    }
+    .teacher-dashboard > * { justify-self: center; max-width: 100%; width: 100%; }
     @media (min-width: 992px) { .teacher-dashboard { padding-bottom:25px; } }
+    @media (max-width: 991.98px) { .teacher-dashboard { align-content: start; min-height: auto; } }
 
     /* Desktop uses shared grid rows, so the class workspace and upcoming card
        always begin and end together as their content changes. */

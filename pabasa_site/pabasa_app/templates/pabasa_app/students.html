@@ -4,8 +4,28 @@
 {% block extra_head %}
 <style>
     .students-page {
+        align-content: safe center;
+        box-sizing: border-box;
         display: grid;
         gap: 1rem;
+        justify-content: center;
+        justify-items: stretch;
+        min-height: calc(100dvh - 4rem);
+        padding-bottom: 1.5rem;
+        width: 100%;
+    }
+
+    .students-page > * {
+        justify-self: center;
+        max-width: 100%;
+        width: 100%;
+    }
+
+    @media (max-width: 991.98px) {
+        .students-page {
+            align-content: start;
+            min-height: auto;
+        }
     }
 
     .student-assessment-request-card { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-top:1rem; margin-bottom:1.15rem; padding:1rem 1.15rem; border:1px solid rgba(31,111,139,.18); border-radius:20px; background:linear-gradient(135deg,rgba(232,247,252,.96),rgba(255,255,255,.94)); box-shadow:0 16px 34px rgba(15,78,100,.10); }
@@ -337,7 +357,7 @@
         align-content: start;
         align-items: start;
         gap: 0.75rem;
-        min-height: 72rem;
+        min-height: 0;
         overflow: visible;
         padding-left: 8px;
         padding-right: 8px;
