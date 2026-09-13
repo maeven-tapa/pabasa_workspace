@@ -18692,6 +18692,7 @@ def practice(request):
         for mode in ['free', 'color', 'hunt']
     }
     context['authoritative_total_stars_earned'] = _student_theme_lifetime_stars(student_user)
+    context['practice_debug_unlock_all'] = _practice_debug_unlock_all()
     context['selected_practice_language'] = selected_language
     context['has_practice_language_preference'] = has_language_preference
     context['language_options'] = PRACTICE_LANGUAGE_CHOICES

@@ -926,6 +926,7 @@
 <script>
     (() => {
         const hasPracticeLanguagePreference = {{ has_practice_language_preference|yesno:"true,false" }};
+        const practiceDebugUnlockAll = {{ practice_debug_unlock_all|yesno:"true,false" }};
         const practiceMaterials = JSON.parse(document.getElementById("practiceMaterialsData")?.textContent || "[]");
         const authoritativeTotalStars = Number("{{ authoritative_total_stars_earned|default:0 }}") || 0;
         const gameModes = [
@@ -1062,7 +1063,7 @@
                 const nextLabel = progressionSummary.next_label;
                 const href = `/dashboard/practice/progression/${mode.key}/?language={{ selected_practice_language|urlencode }}`;
                 const unlockAt = Number(mode.unlockAt || 0) || 0;
-                const isModeOpen = aggregateStars >= unlockAt;
+                const isModeOpen = practiceDebugUnlockAll || aggregateStars >= unlockAt;
                 const stateText = getModeStateLabel(progressionSummary, isModeOpen);
                 const cardClass = isModeOpen ? "game-card is-active" : "game-card is-locked";
                 const lockMarkup = `
