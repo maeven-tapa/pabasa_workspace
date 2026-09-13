@@ -84,9 +84,30 @@
     }
 
     .student-dashboard {
+        align-content: center;
         display: grid;
         gap: 1.25rem;
+        justify-items: stretch;
+        /* The page wrapper and content area contribute two rem of spacing;
+           account for both so the visible dashboard has equal top/bottom air. */
+        min-height: calc(100dvh - 4rem);
         position: relative;
+        width: 100%;
+    }
+
+    .student-dashboard > * {
+        justify-self: center;
+        max-width: 100%;
+        width: 100%;
+    }
+
+    /* Match the greeting-to-grid divider to the dashboard grid's own gutter. */
+    .student-dashboard {
+        row-gap: 1rem;
+    }
+
+    .student-dashboard .dashboard-main-layout {
+        margin-top: 0;
     }
 
     /* Keep html as the only vertical scrolling container. Using `hidden` for
@@ -2220,6 +2241,11 @@
 
     /* Responsive adjustments */
     @media (max-width: 991.98px) {
+        .student-dashboard {
+            align-content: start;
+            min-height: auto;
+        }
+
         .dashboard-main-layout {
             grid-template-columns: 1fr;
             grid-template-areas:

@@ -5,11 +5,30 @@
 <style>
     @media (max-width: 991.98px) {
         .dashboard-main { margin-left: 0 !important; }
+
+        .practice-board {
+            align-content: start;
+            min-height: auto;
+        }
     }
 
     .practice-board {
+        /* Center short boards, but safely flow from the top as hub content
+           is added and the board becomes taller than the viewport. */
+        align-content: safe center;
         display: grid;
         gap: 1.15rem;
+        grid-auto-rows: auto;
+        height: auto;
+        justify-items: stretch;
+        min-height: calc(100dvh - 4rem);
+        width: 100%;
+    }
+
+    .practice-board > :not(.practice-onboarding-modal) {
+        justify-self: center;
+        max-width: 100%;
+        width: 100%;
     }
 
     .practice-hero {

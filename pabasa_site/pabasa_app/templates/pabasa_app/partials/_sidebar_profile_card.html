@@ -4,6 +4,7 @@
         <i class="bi bi-palette" aria-hidden="true"></i>
     </a>
     {% endif %}
+    {% include "pabasa_app/partials/_notification_nav_button.html" with notification_pane_target="notificationPane" notification_badge_id=notification_badge_id %}
     <div class="sidebar-profile-avatar{% if nav_role == 'student' %} sidebar-student-avatar{% endif %}" aria-hidden="true">
         {% if nav_role == 'student' %}
             <span>{{ sidebar_selected_avatar.emoji|default:'🦉' }}</span>

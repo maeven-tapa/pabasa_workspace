@@ -2,9 +2,18 @@
 <div class="sidebar-inner d-flex flex-column p-3 p-xl-4{% if nav_role == 'student' %} student-sidebar{% elif nav_role == 'teacher' %} teacher-sidebar{% endif %}">
     <div class="sidebar-top-section flex-shrink-0 mb-4">
         <a class="sidebar-logo-link" href="{% if nav_role == 'teacher' %}{% url 'dashboard_teacher' %}{% else %}{% url 'dashboard' %}{% endif %}" aria-label="Go to dashboard">
-            {% include "pabasa_app/partials/_pabasa_logo.html" with logo_class="pabasa-logo-svg" letters_class="pabasa-logo-letters" letter_yellow_class="lc-yellow" letter_blue_class="lc-blue" %}
+            <img class="sidebar-logo-img sidebar-home-bird-mark" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="">
+            <span class="pabasa-logo-letters" aria-hidden="true">
+                <span class="lc-yellow">A</span>
+                <span class="lc-blue">B</span>
+                <span class="lc-yellow">A</span>
+                <span class="lc-blue">S</span>
+                <span class="lc-yellow">A</span>
+            </span>
         </a>
-
+        <button class="mobile-sidebar-close-btn d-lg-none" type="button" data-bs-dismiss="offcanvas" aria-label="Close sidebar">
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
     </div>
 
     <div class="sidebar-upper-navigation">

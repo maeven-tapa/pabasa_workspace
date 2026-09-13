@@ -233,7 +233,7 @@
             });
             if (response.ok) {
                 markLocalNotificationsRead();
-                document.querySelectorAll("#notifBadge, [data-notification-header-badge]").forEach(function (badge) {
+                document.querySelectorAll("[data-notification-badge], [data-notification-header-badge]").forEach(function (badge) {
                     badge.classList.add("is-hidden");
                 });
                 window.dispatchEvent(new Event("pabasa:notifications-updated"));
