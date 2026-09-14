@@ -185,8 +185,11 @@
                edge.  The former 3px inset allowed the top segment to be
                clipped by the reader card as it reached the start position. */
             inset: 7px;
-            width: auto;
-            height: auto;
+            /* SVGs have an intrinsic 2:1 aspect ratio.  Explicit dimensions
+               make the timer follow the full reader-card height as well as
+               its width, including the controls/footer row. */
+            width: calc(100% - 14px);
+            height: calc(100% - 14px);
             overflow: visible;
         }
         .reader-shell.is-story-reading .word-stage,
@@ -2847,6 +2850,26 @@
         .reader-shell.is-story-selection .reader-card:has(.official-crla-status),
         .reader-shell:has(#crlaQuestionPanel.is-complete) .reader-card:has(.official-crla-status) {
             min-height: 0;
+        }
+
+        /* In the Story Ready state, treat the title, instruction, and start
+           control as one centered group instead of reserving the lower card
+           row for the control. */
+        .reader-shell.is-story-ready-state .reader-card:has(.official-crla-status) {
+            align-content: center;
+            grid-template-rows: auto auto;
+        }
+
+        .reader-shell.is-story-ready-state .official-crla-status[hidden] {
+            display: none !important;
+        }
+
+        .reader-shell.is-story-ready-state .word-stage {
+            padding-block: 0;
+        }
+
+        .reader-shell.is-story-ready-state .reader-footer {
+            padding-bottom: 0 !important;
         }
 
         .nav-prev,
