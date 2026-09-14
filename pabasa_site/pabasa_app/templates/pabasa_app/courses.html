@@ -8677,6 +8677,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             .prescribed-activity-option__thumb-cell { align-items:center; border:1px solid rgba(113,130,138,.55); display:flex; flex-direction:column; min-width:0; overflow:hidden; }
                             .prescribed-activity-option__thumb-cell b { color:#111; font-size:.46rem; line-height:1; }
                             .prescribed-activity-option__thumb-cell img { height:70%; max-width:90%; object-fit:contain; width:90%; }
+                            .prescribed-rhyme-thumb { display:grid; gap:.2rem; grid-template-columns:1fr; padding:.35rem .55rem; }
+                            .prescribed-rhyme-thumb__pair { align-items:center; background:#fff; border:1px solid rgba(113,130,138,.45); display:flex; gap:.25rem; justify-content:center; min-height:0; }
+                            .prescribed-rhyme-thumb__pair img { height:100%; max-height:2rem; max-width:24%; object-fit:contain; width:24%; }
+                            .prescribed-rhyme-thumb__pair span { color:#b21d28; font-size:.48rem; font-weight:800; white-space:nowrap; }
                             .prescribed-activity-option__body { align-items:center; display:flex; flex:0 0 auto; gap:.55rem; min-height:3.6rem; padding:.6rem .75rem; }
                             .prescribed-activity-option__number { align-items:center; background:#e8f5f8; border-radius:50%; color:#176078; display:inline-flex; flex:0 0 2rem; font-weight:800; height:2rem; justify-content:center; }
                             .prescribed-activity-option__overlay { align-items:center; background:rgba(18,70,91,.78); color:#fff; display:flex; inset:0; justify-content:center; opacity:0; position:absolute; transition:opacity .18s ease; }
@@ -8693,16 +8697,26 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             .alphabet-workbook__letter { color:#111; font-size:clamp(1rem,2vw,1.5rem); font-weight:800; line-height:1; }
                             .alphabet-workbook__word { color:#b21d28; font-size:clamp(.55rem,1vw,.8rem); line-height:1.1; margin-top:.18rem; }
                             .alphabet-workbook__image { align-self:center; height:58%; margin-top:auto; max-height:4.4rem; max-width:78%; object-fit:contain; }
+                            .rhyme-workbook__pairs { display:grid; gap:1rem; grid-template-columns:1fr; }
+                            .rhyme-workbook__pair { align-items:center; background:#f8fbfd; border:1px solid #dce8ed; border-radius:1rem; display:grid; gap:.6rem; grid-template-columns:1fr auto 1fr; padding:1rem; text-align:center; }
+                            .rhyme-workbook__pair div { align-items:center; display:flex; flex-direction:column; gap:.35rem; }
+                            .rhyme-workbook__pair img { height:7rem; max-width:100%; object-fit:contain; }
+                            .rhyme-workbook__pair strong { color:#244354; }
+                            .rhyme-workbook__responses { display:flex; flex-wrap:wrap; gap:1rem; justify-content:center; margin-top:1.25rem; }
+                            .rhyme-workbook__responses > div { align-items:center; background:#fff8e8; border:1px solid #f1d58b; border-radius:1rem; display:flex; flex-direction:column; min-width:12rem; padding:.8rem 1.25rem; }
+                            .rhyme-workbook__hand { font-size:2rem; }
+                            .rhyme-workbook__responses small { color:#687780; }
                             @media (max-width:640px) { .alphabet-workbook { padding:.65rem; } .alphabet-workbook__cell { padding:.2rem; } .alphabet-workbook__word { overflow-wrap:anywhere; } }
                         </style>
                         <div class="prescribed-activity-picker" aria-label="Prescribed activities">
                             <div class="small text-muted text-uppercase fw-semibold mb-2">ARAL Workbook activities</div>
                             <div class="prescribed-activity-picker__list" id="prescribedActivityPicker">
-                                <button type="button" class="prescribed-activity-option is-selected" data-prescribed-activity="gawain-1" aria-controls="prescribedActivityPreview" aria-pressed="true"><span class="prescribed-activity-option__thumb" data-prescribed-thumbnail="gawain-1" aria-hidden="true"></span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">1</span><span><strong>Gawain 1</strong><br><span class="small text-muted">Alfabetong Pilipino</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span></button>
+                                <button type="button" class="prescribed-activity-option is-selected" data-prescribed-activity="gawain-1" data-preview-target="prescribedActivityPreview" aria-controls="prescribedActivityPreview" aria-pressed="true"><span class="prescribed-activity-option__thumb" data-prescribed-thumbnail="gawain-1" aria-hidden="true"></span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">1</span><span><strong>Lesson 1 · Gawain 1</strong><br><span class="small text-muted">Alfabetong Pilipino</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span></button>
+                                <button type="button" class="prescribed-activity-option" data-prescribed-activity="lesson-2-gawain-1" data-preview-target="rhymeActivityPreview" aria-controls="rhymeActivityPreview" aria-pressed="false"><span class="prescribed-activity-option__thumb prescribed-rhyme-thumb" aria-hidden="true"><span class="prescribed-rhyme-thumb__pair"><img src="{% static 'pabasa_app/images/salitang_magkatugma/aso.png' %}" alt=""><span>aso — laso</span><img src="{% static 'pabasa_app/images/salitang_magkatugma/laso.png' %}" alt=""></span><span class="prescribed-rhyme-thumb__pair"><img src="{% static 'pabasa_app/images/salitang_magkatugma/bundok.png' %}" alt=""><span>bundok — sandok</span><img src="{% static 'pabasa_app/images/salitang_magkatugma/sandok.png' %}" alt=""></span><span class="prescribed-rhyme-thumb__pair"><img src="{% static 'pabasa_app/images/salitang_magkatugma/tatay.png' %}" alt=""><span>tatay — nanay</span><img src="{% static 'pabasa_app/images/salitang_magkatugma/nanay.png' %}" alt=""></span><span class="prescribed-rhyme-thumb__pair"><img src="{% static 'pabasa_app/images/salitang_magkatugma/bola.png' %}" alt=""><span>bola — lola</span><img src="{% static 'pabasa_app/images/salitang_magkatugma/lola.png' %}" alt=""></span><span class="prescribed-rhyme-thumb__pair"><img src="{% static 'pabasa_app/images/salitang_magkatugma/pusa.png' %}" alt=""><span>pusa — tasa</span><img src="{% static 'pabasa_app/images/salitang_magkatugma/tasa.png' %}" alt=""></span></span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">1</span><span><strong>Lesson 2 · Gawain 1</strong><br><span class="small text-muted">Salitang Magkatugma</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span></button>
                             </div>
                         </div>
                         <div class="prescribed-activity-preview" id="prescribedActivityPreview" data-prescribed-preview="gawain-1">
-                            <div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview"><i class="bi bi-x-lg"></i></button><div class="small text-uppercase text-muted fw-semibold">Gawain 1</div><h5>Alfabetong Pilipino</h5><p class="mb-0 text-muted">Kilalanin ang mga titik at salita sa alpabetong Pilipino.</p></div>
+                            <div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview"><i class="bi bi-x-lg"></i></button><div class="small text-uppercase text-muted fw-semibold">Lesson 1 · Gawain 1</div><h5>Alfabetong Pilipino</h5><p class="mb-0 text-muted">Kilalanin ang mga titik at salita sa alpabetong Pilipino.</p></div>
                             <div class="alphabet-workbook">
                                 <div class="alphabet-workbook__grid" aria-label="Alfabetong Pilipino">
                                     <div class="alphabet-workbook__cell" data-song-group="1"><span class="alphabet-workbook__letter">Aa</span><span class="alphabet-workbook__word">apa</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/apa.png' %}" alt="apa"></div>
@@ -8738,6 +8752,19 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         </div>
                     </div>
 
+                        <div class="prescribed-activity-preview" id="rhymeActivityPreview" data-prescribed-preview="lesson-2-gawain-1">
+                            <div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview"><i class="bi bi-x-lg"></i></button><div class="small text-uppercase text-muted fw-semibold">Lesson 2 · Gawain 1</div><h5>Salitang Magkatugma</h5><p class="mb-0 text-muted">I-click ang kanang kamay kung magkatugma ang huling tunog ng mga salita. I-click ang kaliwang kamay kung hindi.</p></div>
+                            <div class="alphabet-workbook rhyme-workbook">
+                                <div class="rhyme-workbook__pairs">
+                                    <div class="rhyme-workbook__pair"><div><img src="{% static 'pabasa_app/images/salitang_magkatugma/aso.png' %}" alt="aso"><strong>aso</strong></div><span>—</span><div><img src="{% static 'pabasa_app/images/salitang_magkatugma/laso.png' %}" alt="laso"><strong>laso</strong></div></div>
+                                    <div class="rhyme-workbook__pair"><div><img src="{% static 'pabasa_app/images/salitang_magkatugma/bundok.png' %}" alt="bundok"><strong>bundok</strong></div><span>—</span><div><img src="{% static 'pabasa_app/images/salitang_magkatugma/sandok.png' %}" alt="sandok"><strong>sandok</strong></div></div>
+                                    <div class="rhyme-workbook__pair"><div><img src="{% static 'pabasa_app/images/salitang_magkatugma/tatay.png' %}" alt="tatay"><strong>tatay</strong></div><span>—</span><div><img src="{% static 'pabasa_app/images/salitang_magkatugma/nanay.png' %}" alt="nanay"><strong>nanay</strong></div></div>
+                                    <div class="rhyme-workbook__pair"><div><img src="{% static 'pabasa_app/images/salitang_magkatugma/bola.png' %}" alt="bola"><strong>bola</strong></div><span>—</span><div><img src="{% static 'pabasa_app/images/salitang_magkatugma/lola.png' %}" alt="lola"><strong>lola</strong></div></div>
+                                    <div class="rhyme-workbook__pair"><div><img src="{% static 'pabasa_app/images/salitang_magkatugma/pusa.png' %}" alt="pusa"><strong>pusa</strong></div><span>—</span><div><img src="{% static 'pabasa_app/images/salitang_magkatugma/tasa.png' %}" alt="tasa"><strong>tasa</strong></div></div>
+                                </div>
+                                <div class="rhyme-workbook__responses"><div><span class="rhyme-workbook__hand">👉</span><strong>Kanang kamay</strong><small>Magkatugma</small></div><div><span class="rhyme-workbook__hand">👈</span><strong>Kaliwang kamay</strong><small>Hindi magkatugma</small></div></div>
+                            </div>
+                        </div>
                     <script>
                         document.querySelectorAll('#prescribedActivityPicker [data-prescribed-activity]').forEach((button) => {
                             button.addEventListener('click', () => {
@@ -8746,7 +8773,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                     option.classList.toggle('is-selected', selected);
                                     option.setAttribute('aria-pressed', String(selected));
                                 });
-                                const preview = document.getElementById('prescribedActivityPreview');
+                                const preview = document.getElementById(button.dataset.previewTarget || 'prescribedActivityPreview');
                                 if (preview) {
                                     preview.dataset.prescribedPreview = button.dataset.prescribedActivity;
                                     preview.classList.add('is-maximized');
@@ -8766,8 +8793,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 thumbnail.append(cell);
                             });
                         });
-                        document.querySelector('#prescribedActivityPreview .prescribed-preview-close')?.addEventListener('click', () => {
-                            document.getElementById('prescribedActivityPreview')?.classList.remove('is-maximized');
+                        document.querySelectorAll('.prescribed-preview-close').forEach((closeButton) => {
+                            closeButton.addEventListener('click', () => closeButton.closest('.prescribed-activity-preview')?.classList.remove('is-maximized'));
                         });
                     </script>
 
