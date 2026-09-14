@@ -702,9 +702,9 @@
     }
 
     .teacher-reading-grid {
-        display: grid;
-        gap: 0.5rem;
-        grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 0.35rem;
         width: 100%;
     }
 
@@ -713,9 +713,9 @@
         background: rgba(31, 111, 139, 0.035);
         border: 1px solid rgba(31, 111, 139, 0.08);
         border-radius: 12px;
-        display: grid;
+        display: flex;
         gap: 0.25rem;
-        grid-template-columns: auto minmax(0, 1fr) auto;
+        flex: 1 1 auto;
         min-width: 0;
         padding: 0.55rem 0.6rem;
     }
@@ -725,6 +725,7 @@
         border-radius: 999px;
         height: 0.55rem;
         width: 0.55rem;
+        flex: 0 0 auto;
     }
 
     .teacher-reading-label {
@@ -732,6 +733,15 @@
         font-size: 0.68rem;
         font-weight: 700;
         line-height: 1.15;
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .teacher-reading-label-group {
+        align-items: center;
+        display: flex;
+        flex: 1 1 auto;
+        gap: 0.35rem;
         min-width: 0;
     }
 
@@ -740,6 +750,8 @@
         font-family: "Nunito", "Segoe UI", sans-serif;
         font-size: 1rem;
         font-weight: 900;
+        flex: 0 0 auto;
+        white-space: nowrap;
     }
 
     .teacher-reading-item.level-low { --level-color: #dc2626; }
@@ -797,7 +809,8 @@
     @media (max-width: 720px) {
         .teacher-glance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .teacher-glance-heading { align-items: flex-start; flex-direction: column; }
-        .teacher-reading-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .teacher-reading-grid { flex-wrap: wrap; }
+        .teacher-reading-item { flex: 1 1 calc(50% - 0.35rem); }
         .class-title-row { align-items: flex-start; flex-direction: column; }
         .teacher-attention-row { align-items: start; grid-template-columns: 1fr; }
         .teacher-attention-action { justify-self: start; }
@@ -1229,9 +1242,9 @@
         grid-template-columns:repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr));
     }
     @container teacher-glance (min-width:40rem) {
-        .teacher-dashboard .teacher-reading-grid { grid-template-columns:repeat(5, minmax(0, 1fr)); }
+        .teacher-dashboard .teacher-reading-grid { flex-wrap: nowrap; }
         .teacher-dashboard .teacher-reading-item { gap:.2rem; padding:.55rem .45rem; }
-        .teacher-dashboard .teacher-reading-label { font-size:.75rem; white-space:nowrap; }
+        .teacher-dashboard .teacher-reading-label { font-size:.75rem; white-space:normal; }
         .teacher-dashboard .teacher-reading-count { font-size:.95rem; }
     }
     @container class-workspace (max-width:25rem) {
@@ -1699,11 +1712,11 @@
                         <span>Selected class</span>
                     </div>
                     <div class="teacher-reading-grid" role="list">
-                        <div class="teacher-reading-item level-low" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">Low Emerging Reader</span><strong class="teacher-reading-count" id="dashLowEmergingCount">0</strong></div>
-                        <div class="teacher-reading-item level-high" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">High Emerging Reader</span><strong class="teacher-reading-count" id="dashHighEmergingCount">0</strong></div>
-                        <div class="teacher-reading-item level-developing" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">Developing Reader</span><strong class="teacher-reading-count" id="dashDevelopingCount">0</strong></div>
-                        <div class="teacher-reading-item level-transitioning" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">Transitioning Reader</span><strong class="teacher-reading-count" id="dashTransitioningCount">0</strong></div>
-                        <div class="teacher-reading-item level-grade" role="listitem"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">Reading At Grade Level</span><strong class="teacher-reading-count" id="dashGradeLevelCount">0</strong></div>
+                        <div class="teacher-reading-item level-low" role="listitem"><span class="teacher-reading-label-group"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">Low Emerging Reader</span></span><strong class="teacher-reading-count" id="dashLowEmergingCount">0</strong></div>
+                        <div class="teacher-reading-item level-high" role="listitem"><span class="teacher-reading-label-group"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">High Emerging Reader</span></span><strong class="teacher-reading-count" id="dashHighEmergingCount">0</strong></div>
+                        <div class="teacher-reading-item level-developing" role="listitem"><span class="teacher-reading-label-group"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">Developing Reader</span></span><strong class="teacher-reading-count" id="dashDevelopingCount">0</strong></div>
+                        <div class="teacher-reading-item level-transitioning" role="listitem"><span class="teacher-reading-label-group"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">Transitioning Reader</span></span><strong class="teacher-reading-count" id="dashTransitioningCount">0</strong></div>
+                        <div class="teacher-reading-item level-grade" role="listitem"><span class="teacher-reading-label-group"><span class="teacher-reading-dot" aria-hidden="true"></span><span class="teacher-reading-label">Reading At Grade Level</span></span><strong class="teacher-reading-count" id="dashGradeLevelCount">0</strong></div>
                     </div>
                 </div>
             </section>
