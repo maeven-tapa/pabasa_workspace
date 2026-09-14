@@ -8367,7 +8367,12 @@ def _student_has_active_live_assessment(student, section):
 
 
 def _student_has_terminal_unfinished_live_crla(student, material):
-    """Return whether an ended Live CRLA attempt should suppress a fresh launch."""
+    """Return whether a teacher-ended Live CRLA session suppresses a launch.
+
+    End Session is authoritative for every rostered student, including a
+    student who had not started yet.  The old progress-based check allowed
+    those students to fall back to the legacy assessment-start flow.
+    """
     if not student or not material or not _is_live_crla_material(material):
         return False
     if _official_crla_completed_result_for_material(student, material):
@@ -8379,24 +8384,10 @@ def _student_has_terminal_unfinished_live_crla(student, material):
     for session in sessions:
         if str(student.id) not in {str(student_id) for student_id in (session.student_ids or [])}:
             continue
-        state = (session.student_states or {}).get(str(student.id), {})
-        if not isinstance(state, dict):
-            continue
-        # Session membership alone is insufficient. End Session preserves an
-        # attempted snapshot and marks it missed; cancelled setup sessions do
-        # not satisfy this predicate.
-        attempted = (
-            str(state.get('status') or '').lower() == 'missed'
-            and (
-                (state.get('elapsed_seconds') or 0) > 0
-                or (state.get('items_completed') or 0) > 0
-                or state.get('progress') not in (None, '', 0, False)
-                or bool(state.get('current_item'))
-                or bool(state.get('recovery_state'))
-            )
-        )
-        if attempted:
-            return True
+        # Only ended sessions reach this query.  Membership is sufficient:
+        # End Session deliberately transitions every rostered student into
+        # the post-session/waiting flow, even when progress is still zero.
+        return True
     return False
 
 
@@ -11434,6 +11425,7 @@ def assessment(request):
     official_availability = _official_assessment_availability_for_student(user, request)
     official_crla_material = _official_crla_material_for_student(user, official_availability.get('assessment_type'))
     has_active_crla_window = bool(official_availability.get('available'))
+    has_completed_official_crla = _student_has_completed_official_crla(user)
     has_terminal_unfinished_live_crla = bool(
         has_active_crla_window
         and official_crla_material
@@ -11455,7 +11447,7 @@ def assessment(request):
         and selected_section.assessment_week_enabled
         and section_week_status in {'before', 'during'}
         and not section_assessment_completed
-        and not _student_has_completed_official_crla(user)
+        and not has_completed_official_crla
         and not aral_week_mode
         and not has_active_teacher_live_crla
         and not has_terminal_unfinished_live_crla
@@ -11514,12 +11506,18 @@ def assessment(request):
     elif state.get('reading_at_grade_level_complete'):
         stage = 'grade_level_complete'
         routing_reason = 'finalized_reading_at_grade_level'
-    elif state.get('aral_status') == 'active':
+    elif has_completed_official_crla and eligible:
+        # A completed official CRLA with a valid classified reading stage is
+        # already on the Reading Assessment destination.  Ended-session
+        # suppression applies only to students who still need the CRLA.
         stage = 'original'
-        routing_reason = 'active_aral_intervention'
+        routing_reason = 'completed_official_crla_classification'
     elif has_terminal_unfinished_live_crla:
         stage = 'unavailable'
         routing_reason = 'terminal_unfinished_live_crla_attempt'
+    elif state.get('aral_status') == 'active':
+        stage = 'original'
+        routing_reason = 'active_aral_intervention'
     elif has_active_teacher_live_crla:
         stage = 'unavailable'
         routing_reason = 'active_teacher_live_crla_session'
