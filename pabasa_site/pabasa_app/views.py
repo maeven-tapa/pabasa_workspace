@@ -18919,10 +18919,28 @@ def profile(request):
     teacher_active_classes = 0
     teacher_assigned_section = None
     teacher_assessment_phase = {}
+    joined_classes = []
     if user.role == 'teacher':
         teacher_assigned_section = _teacher_current_sections(user).select_related('school').first()
         teacher_active_classes = _teacher_current_sections(user).count()
         teacher_assessment_phase = _teacher_assessment_phase_context(user)
+        if teacher_assigned_section:
+            joined_classes.append({
+                'id': teacher_assigned_section.id,
+                'section_id': teacher_assigned_section.id,
+                'code': teacher_assigned_section.class_code,
+                'name': teacher_assigned_section.class_name,
+            })
+    elif user.role == 'student':
+        joined_classes = [
+            {
+                'id': section.id,
+                'section_id': section.id,
+                'code': section.class_code,
+                'name': section.class_name,
+            }
+            for section in _student_current_sections(user).order_by('class_name')
+        ]
     
     # Get user bio from tags (profile information)
     bio = ''
@@ -19091,6 +19109,7 @@ def profile(request):
         'selected_avatar': selected_avatar,
         'username': username,
         'full_name': full_name,
+        'user_full_name': full_name,
         'first_name': user.first_name,
         'middle_initial': user.middle_initial,
         'last_name': user.last_name,
@@ -19111,6 +19130,7 @@ def profile(request):
             if teacher_assigned_section and teacher_assigned_section.grade_level and teacher_assigned_section.section
             else (teacher_assigned_section.class_name if teacher_assigned_section else '')
         ),
+        'joined_classes': joined_classes,
         'reading_level': user.reading_level or '',
         'contact_number': user.contact_no or '',
         'notification_settings': _notification_settings_for_user(user),
