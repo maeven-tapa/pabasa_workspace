@@ -1809,6 +1809,7 @@
                     // End Session is authoritative: only its successful
                     // backend response may clear the local recovery draft.
                     await window.PabasaCrlaRecovery?.deleteDraft(crlaRecoveryContext).catch(() => {});
+                    window.location.href = '{% url "dashboard_teacher" %}';
                 }
             } catch (error) {
                 setEndSessionLoading(false);

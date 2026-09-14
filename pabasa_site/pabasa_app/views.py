@@ -8375,9 +8375,10 @@ def _student_has_terminal_unfinished_live_crla(student, material):
 
     sessions = LiveAssessmentSession.objects.filter(
         status='ended', material=material,
-        student_ids__contains=[student.id],
     ).order_by('-updated_at', '-created_at')
     for session in sessions:
+        if str(student.id) not in {str(student_id) for student_id in (session.student_ids or [])}:
+            continue
         state = (session.student_states or {}).get(str(student.id), {})
         if not isinstance(state, dict):
             continue
@@ -11373,7 +11374,7 @@ def assessment(request):
                 'workflow_message': 'Keep up the great work. You can continue practicing whenever you like.',
             })
             return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
-    if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status in {'before', 'during'} and (not selected_section.assessment_week_enabled or not assessment_week_live or not student_live_assessment) and not section_assessment_completed and not aral_week_mode:
+    if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status in {'before', 'during'} and (not selected_section.assessment_week_enabled or not assessment_week_live or not student_live_assessment) and not section_assessment_completed and not _student_has_completed_official_crla(user) and not aral_week_mode:
         context = _dashboard_context(request, 'student')
         context.update({
             'stage': 'assessment_week_locked',
@@ -11438,6 +11439,27 @@ def assessment(request):
         and official_crla_material
         and _student_has_terminal_unfinished_live_crla(user, official_crla_material)
     )
+    active_teacher_live_crla_sessions = LiveAssessmentSession.objects.filter(
+        section=selected_section,
+        material=official_crla_material,
+        status__in=LIVE_ASSESSMENT_ACTIVE_STATUSES,
+    ) if user and selected_section and official_crla_material else []
+    has_active_teacher_live_crla = any(
+        str(user.id) in {str(student_id) for student_id in (session.student_ids or [])}
+        for session in active_teacher_live_crla_sessions
+    )
+    assessment_week_waiting = bool(
+        user
+        and getattr(user, 'role', '') == 'student'
+        and selected_section
+        and selected_section.assessment_week_enabled
+        and section_week_status in {'before', 'during'}
+        and not section_assessment_completed
+        and not _student_has_completed_official_crla(user)
+        and not aral_week_mode
+        and not has_active_teacher_live_crla
+        and not has_terminal_unfinished_live_crla
+    )
     if approved_assessment_request and student_live_assessment and not section_assessment_completed:
         approved_phase = _official_crla_assessment_phase(user, request=request)
         if approved_phase not in {'pretest', 'midtest', 'posttest'}:
@@ -11486,9 +11508,9 @@ def assessment(request):
     elif section_week_status == 'after' and section_assessment_completed:
         stage = 'original'
         routing_reason = 'completed_assessment_week_teacher_materials'
-    elif assessment_week_section:
-        stage = 'assessment'
-        routing_reason = 'section_assessment_week'
+    elif assessment_week_waiting:
+        stage = 'assessment_week_locked'
+        routing_reason = 'assessment_week_waiting_for_teacher'
     elif state.get('reading_at_grade_level_complete'):
         stage = 'grade_level_complete'
         routing_reason = 'finalized_reading_at_grade_level'
@@ -11498,6 +11520,9 @@ def assessment(request):
     elif has_terminal_unfinished_live_crla:
         stage = 'unavailable'
         routing_reason = 'terminal_unfinished_live_crla_attempt'
+    elif has_active_teacher_live_crla:
+        stage = 'unavailable'
+        routing_reason = 'active_teacher_live_crla_session'
     elif forced_workflow == 'original':
         stage = 'original'
         routing_reason = 'forced_original_workflow'
@@ -16850,9 +16875,13 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
                 student_user
                 and _official_crla_completed_result_for_material(student_user, session.material)
             )
+            has_genuine_temporary_completion = (
+                is_temporary_live_completion
+                and status_value == 'completed'
+            )
 
             if has_active_attempt and student_user and (
-                is_temporary_live_completion or has_authoritative_completion
+                has_genuine_temporary_completion or has_authoritative_completion
             ):
                 payload = _build_live_session_completion_payload(session, student_user, student_state)
                 payload.setdefault('scores', {})
