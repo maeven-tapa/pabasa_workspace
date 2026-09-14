@@ -508,64 +508,66 @@
         grid-column: 1 / -1;
     }
 
-    /* Keep the assessment hub inside the available viewport. The dashboard
-       owns the height; folders share the reserved class-card area instead of
-       increasing the document height as weeks are added. */
-    body:has(.assessment-dock) {
-        height: 100dvh;
-        min-height: 0;
-        overflow: hidden;
-    }
+    /* The desktop assessment hub deliberately shares one available viewport.
+       On mobile/tablet the stage stacks above the class cards, so it must be
+       allowed to grow into the document and scroll naturally. */
+    @media (min-width: 992px) {
+        body:has(.assessment-dock) {
+            height: 100dvh;
+            min-height: 0;
+            overflow: hidden;
+        }
 
-    body:has(.assessment-dock) > main {
-        min-height: 0;
-        overflow: hidden;
-        padding-bottom: 1rem !important;
-        padding-top: 1rem !important;
-    }
+        body:has(.assessment-dock) > main {
+            min-height: 0;
+            overflow: hidden;
+            padding-bottom: 1rem !important;
+            padding-top: 1rem !important;
+        }
 
-    body:has(.assessment-dock) > main > .container {
-        height: 100%;
-        min-height: 0;
-    }
+        body:has(.assessment-dock) > main > .container {
+            height: 100%;
+            min-height: 0;
+        }
 
-    .assessment-dock {
-        height: calc(100% - 0.75rem);
-        min-height: 0;
-        grid-template-rows: auto minmax(0, 1fr);
-    }
+        .assessment-dock {
+            height: calc(100% - 0.75rem);
+            min-height: 0;
+            grid-template-rows: auto minmax(0, 1fr);
+        }
 
-    .subject-grid {
-        height: auto;
-        min-height: 0;
-    }
+        .subject-grid {
+            height: auto;
+            min-height: 0;
+        }
 
-    .subject-card {
-        height: 100%;
-        min-height: 0;
-    }
+        .subject-card {
+            height: 100%;
+            min-height: 0;
+        }
 
-    .assessment-grid-stack,
-    .assessment-grid {
-        min-height: 0;
-    }
+        .assessment-grid-stack,
+        .assessment-grid {
+            min-height: 0;
+        }
 
-    .assessment-grid-stack {
-        grid-template-rows: minmax(0, 1fr);
-    }
+        .assessment-grid-stack {
+            grid-template-rows: minmax(0, 1fr);
+        }
 
-    .assessment-grid {
-        grid-auto-rows: minmax(0, 1fr);
-        height: 100%;
-    }
+        .assessment-grid {
+            grid-auto-rows: minmax(0, 1fr);
+            height: 100%;
+        }
 
-    .assessment-week-column {
-        min-height: 0;
-    }
+        .assessment-week-column {
+            min-height: 0;
+        }
 
-    .assessment-week-folder {
-        height: 100%;
-        min-height: 0;
+        .assessment-week-folder {
+            height: 100%;
+            min-height: 0;
+        }
     }
 
     @media (min-width: 992px) {
@@ -594,6 +596,41 @@
     }
 
     @media (max-width: 991.98px) {
+        body:has(.assessment-dock) {
+            height: auto;
+            min-height: 100dvh;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        body:has(.assessment-dock) .dashboard-main,
+        body:has(.assessment-dock) .dashboard-page-wrap,
+        body:has(.assessment-dock) .dashboard-content-wrap {
+            min-height: 0;
+            overflow: visible;
+        }
+
+        .assessment-dock {
+            height: auto;
+            min-height: 0;
+            grid-template-rows: auto auto;
+            padding-bottom: 1rem;
+        }
+
+        .subject-grid,
+        .subject-card,
+        .assessment-grid-stack,
+        .assessment-grid,
+        .assessment-week-column,
+        .assessment-week-folder {
+            height: auto;
+            min-height: 0;
+        }
+
+        .subject-card {
+            min-height: 420px;
+        }
+
         .assessment-stage,
         .assessment-prep {
             grid-template-columns: 1fr;
