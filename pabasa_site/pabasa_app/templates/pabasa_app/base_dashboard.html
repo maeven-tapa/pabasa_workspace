@@ -3563,6 +3563,19 @@
            the expanded profile/footer pair and collapsed profile/logout pair
            locked to the lower edge after a Windows display-scale change. */
         @media (min-width: 992px) {
+            /* Bootstrap creates the notification backdrop outside the scaled
+               dashboard shell.  Keep the fade full-height throughout its
+               opening, open, and closing states. */
+            body:has(.notif-pane.showing, .notif-pane.show, .notif-pane.hiding) .offcanvas-backdrop {
+                bottom: auto;
+                height: var(--dashboard-normalized-viewport-height) !important;
+                inset: 0 auto auto 0;
+                min-height: 100dvh;
+                min-width: 100vw;
+                right: auto;
+                width: var(--dashboard-normalized-viewport-width) !important;
+            }
+
             .dashboard-app-shell .dashboard-sidebar .sidebar-inner {
                 height: var(--dashboard-normalized-viewport-height);
                 min-height: var(--dashboard-normalized-viewport-height);

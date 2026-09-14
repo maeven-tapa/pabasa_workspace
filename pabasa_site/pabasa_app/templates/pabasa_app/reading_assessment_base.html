@@ -181,9 +181,13 @@
             text-align: center;
         }
         .story-reading-timer {
-            inset: 3px;
+            /* Leave room for the rounded moving progress endpoint on every
+               edge.  The former 3px inset allowed the top segment to be
+               clipped by the reader card as it reached the start position. */
+            inset: 7px;
             width: auto;
             height: auto;
+            overflow: visible;
         }
         .reader-shell.is-story-reading .word-stage,
         .reader-shell.is-story-reading .recording-controls,
@@ -1870,7 +1874,11 @@
             font-weight: 800;
         }
 
-        .reader-shell.is-story-ready-state .reader-card,
+        .reader-shell.is-story-ready-state .reader-card {
+            grid-template-rows: minmax(0, 1fr) auto;
+            min-height: 0;
+        }
+
         .reader-shell.is-story-reading .reader-card {
             grid-template-rows: auto auto;
             min-height: 0;
@@ -1901,11 +1909,20 @@
 
         .reader-shell.is-story-ready-state .word-stage,
         .reader-shell.is-story-reading .word-stage {
-            align-content: start;
             gap: 0.55rem;
             margin-inline: auto;
             max-width: 820px;
             padding: clamp(1.25rem, 3vw, 2.25rem) clamp(0.5rem, 2vw, 1.25rem);
+        }
+
+        /* Center the story title and ready instruction in the available
+           reader-card area, while the Start Reading control stays below it. */
+        .reader-shell.is-story-ready-state .word-stage {
+            align-content: center;
+        }
+
+        .reader-shell.is-story-reading .word-stage {
+            align-content: start;
         }
 
         .reader-shell.is-story-ready-state .reading-title,
