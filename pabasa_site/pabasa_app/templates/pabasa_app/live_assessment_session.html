@@ -813,6 +813,7 @@
                 <div id="saveNotice" class="alert alert-info py-2 px-3 small mb-3 d-none"></div>
                 <div class="session-actions d-grid gap-2 mb-3">
                     <button id="startBtn" class="btn btn-success btn-lg">▶ Start Session</button>
+                    <button id="cancelBtn" class="btn btn-outline-danger btn-lg">Cancel</button>
                     <div class="session-secondary-actions d-flex gap-2">
                         <button id="pauseBtn" class="btn btn-outline-warning btn-lg flex-fill">⏸ Pause</button>
                         <button id="resumeBtn" class="btn btn-outline-primary btn-lg flex-fill">▶ Resume</button>
@@ -1442,11 +1443,13 @@
         const pauseBtn = document.getElementById('pauseBtn');
         const resumeBtn = document.getElementById('resumeBtn');
         const endBtn = document.getElementById('endBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
         const statusKey = (status || '').toLowerCase();
-        if (startBtn) startBtn.disabled = statusKey !== 'waiting';
-        if (pauseBtn) pauseBtn.disabled = statusKey !== 'started';
-        if (resumeBtn) resumeBtn.disabled = statusKey !== 'paused';
-        if (endBtn) endBtn.disabled = statusKey === 'ended' || statusKey === 'cancelled';
+        if (startBtn) startBtn.classList.toggle('d-none', statusKey !== 'waiting');
+        if (cancelBtn) cancelBtn.classList.toggle('d-none', statusKey !== 'waiting');
+        if (pauseBtn) pauseBtn.classList.toggle('d-none', statusKey !== 'started');
+        if (resumeBtn) resumeBtn.classList.toggle('d-none', statusKey !== 'paused');
+        if (endBtn) endBtn.classList.toggle('d-none', !['started', 'paused'].includes(statusKey));
     }
 
     function setEndSessionLoading(isLoading) {
@@ -1662,6 +1665,15 @@
 
     document.getElementById('pauseBtn').addEventListener('click', () => sendAction('pause'));
     document.getElementById('resumeBtn').addEventListener('click', () => sendAction('resume'));
+    document.getElementById('cancelBtn').addEventListener('click', async () => {
+        const confirmed = await showConfirm('Cancel session', 'Cancel this waiting session and return all selected students to Getting Ready?');
+        if (!confirmed) return;
+        const result = await sendAction('cancel');
+        if (result?.status === 'cancelled') {
+            await window.PabasaCrlaRecovery?.deleteDraft(crlaRecoveryContext).catch(() => {});
+            window.location.href = '{% url "dashboard_teacher" %}';
+        }
+    });
     document.getElementById('startNextBatchBtn')?.addEventListener('click', async (event) => {
         const button = event.currentTarget;
         button.disabled = true;

@@ -17678,7 +17678,10 @@ def live_assessment_session_state(request, session_id):
     user_id = request.session.get('user_id')
     user_role = request.session.get('user_role')
     if user_role == 'student':
-        if user_id not in session.student_ids:
+        # A cancelled waiting session clears its temporary roster before the
+        # student poll can observe the terminal state. Let that poll through
+        # so the waiting room can redirect to Getting Ready.
+        if session.status != 'cancelled' and user_id not in session.student_ids:
             return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
     elif user_role in ['teacher', 'admin']:
         if user_id != session.teacher_id:
@@ -18180,6 +18183,30 @@ def live_assessment_session_action(request, session_id):
             _trace_live_end_flow('action_end_finalize_failed', session, user_id=user_id, user_role=user_role)
             return JsonResponse({'success': False, 'error': 'Unable to finalize all live assessment participants'}, status=500)
         _trace_live_end_flow('action_end_after_finalize', session, user_id=user_id, user_role=user_role)
+    elif action == 'cancel':
+        if session.status != 'waiting':
+            return JsonResponse({'success': False, 'error': 'Only a waiting session can be cancelled'}, status=400)
+
+        def apply_cancel(current):
+            if current.status != 'waiting':
+                return None
+            # Cancellation is a setup discard: do not retain the temporary
+            # roster, batches, student state, or any resumable timing data.
+            current.status = 'cancelled'
+            current.student_ids = []
+            current.student_count = 0
+            current.student_states = {}
+            current.batch_assignments = {}
+            current.current_batch = 1
+            current.total_batches = 0
+            current.start_at = None
+            current.ends_at = None
+            _append_live_session_activity(current, 'Teacher cancelled the waiting live assessment session.')
+            return {'status', 'student_ids', 'student_count', 'student_states', 'batch_assignments', 'current_batch', 'total_batches', 'start_at', 'ends_at', 'activity_log'}
+
+        session, mutation_error = _mutate_live_session_state(session.id, apply_cancel)
+        if not session:
+            return JsonResponse({'success': False, 'error': mutation_error or 'Unable to cancel session'}, status=409)
     elif action == 'abandon':
         # This is deliberately separate from End Session.  It closes the live
         # transport without running _complete_assessment_for_student(), so an
@@ -18211,14 +18238,14 @@ def live_assessment_session_action(request, session_id):
         # Recovery only reopens the existing transport state. It never accepts
         # browser scores and therefore cannot turn an IndexedDB draft into an
         # Assessment/result record.
-        if session.status not in ['countdown', 'started', 'paused', 'batch_loaded', 'ended', 'cancelled']:
+        if session.status not in ['countdown', 'started', 'paused', 'batch_loaded', 'ended']:
             return JsonResponse({'success': False, 'error': 'This session cannot be recovered.'}, status=400)
         for student_id in session.student_ids or []:
             student = User.objects.filter(id=student_id, role='student', is_archived=False).first()
             if not student or _official_crla_completed_result_for_material(student, session.material):
                 return JsonResponse({'success': False, 'error': 'This recovery draft conflicts with an official CRLA result.'}, status=409)
         def apply_recover(current):
-            if current.status not in ['countdown', 'started', 'paused', 'batch_loaded', 'ended', 'cancelled']:
+            if current.status not in ['countdown', 'started', 'paused', 'batch_loaded', 'ended']:
                 return None
             # The explicit Recovery modal action is the teacher's resume
             # authorization. Restore the original transport and release only
