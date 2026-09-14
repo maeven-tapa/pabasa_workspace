@@ -184,7 +184,7 @@
         });
     }
 
-    async function offerRecovery(context) {
+    async function offerRecovery(context, existingSession = null) {
         recoveryCompleteDebug('offer_recovery_start', {
             contextKey: contextKey(context), sessionKey: sessionKey(context),
             session_id: clean(context.sessionId), current_url: window.location.href,
@@ -209,6 +209,24 @@
             recoveryDebug('offerRecovery_early_return', { reason: 'resume_marker', session_id: clean(context.sessionId) });
             sessionStorage.removeItem(resumeMarker);
             return false;
+        }
+        if (existingSession?.url) {
+            const serverDraft = {
+                sessionId: clean(existingSession.id),
+                sessionKey: `server:${clean(existingSession.id)}`,
+                sessionState: {status: clean(existingSession.status)},
+                controlUrl: existingSession.url,
+            };
+            recoveryCompleteDebug('server_session_modal_eligible', {
+                session_id: serverDraft.sessionId,
+                session_status: existingSession.status,
+                modal_will_display: true,
+            });
+            recoveryModal(serverDraft,
+                async () => { window.location.assign(serverDraft.controlUrl); },
+                async () => {}
+            );
+            return true;
         }
         let drafts;
         try { drafts = await draftsFor(context); } catch (error) { recoveryDebug('offerRecovery_early_return', { reason: 'indexeddb_lookup_failed', message: String(error?.message || error) }); console.warn('PABASA CRLA recovery unavailable', error); return false; }

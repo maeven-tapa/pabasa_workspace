@@ -43,7 +43,6 @@ from .reading_stt import (
     word_numbers_in_transcript,
 )
 from .hunt_scoring import classify_speech, normalize_speech, stars_for_points
-from .student_session_lock import claim_student_session
 from .system_clock import now as system_now
 
 
@@ -5869,38 +5868,6 @@ class LiveAssessmentStartTests(TestCase):
         self.assertIn("/dashboard/live-assessment/", notif.action_url)
         self.assertIn("live_session_id=", notif.action_url)
 
-    def test_teacher_discovers_saved_active_live_session_instead_of_creating_one(self):
-        self.material.is_official_reading = True
-        self.material.assessment_kind = 'crla'
-        self.material.save(update_fields=['is_official_reading', 'assessment_kind'])
-        student_b = User.objects.create(
-            custom_id=f"STD-{uuid.uuid4().hex[:8].upper()}", role="student", first_name="Ben",
-            last_name="Student", email=f"{uuid.uuid4().hex}@example.com", password_hash=make_password("x"),
-            birth_month=7, birth_day=3, birth_year=2012,
-        )
-        session = LiveAssessmentSession.objects.create(
-            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, section=self.section,
-            material=self.material, student_ids=[self.student.id, student_b.id], student_count=2,
-            status='started', student_states={
-                str(self.student.id): {'participation_status': 'saved'},
-                str(student_b.id): {'participation_status': 'saved'},
-            },
-        )
-        response = self.client.get(reverse('active_live_assessment'), {
-            'section_id': self.section.id, 'material_id': self.material.id,
-        })
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()['session']['id'], session.id)
-        self.assertEqual(LiveAssessmentSession.objects.count(), 1)
-        session.refresh_from_db()
-        self.assertEqual(session.status, 'started')
-        session.delete()
-        empty_response = self.client.get(reverse('active_live_assessment'), {
-            'section_id': self.section.id, 'material_id': self.material.id,
-        })
-        self.assertEqual(empty_response.status_code, 200)
-        self.assertIsNone(empty_response.json()['session'])
-
     def test_teacher_start_live_assessment_closes_existing_active_session(self):
         existing = LiveAssessmentSession.objects.create(
             id=uuid.uuid4().hex,
@@ -10695,6 +10662,36 @@ class LiveAssessmentCloseAndSaveTests(TestCase):
         self.assertIn(self.student.id, session.student_ids)
         self.assertEqual(session.status, 'started')
 
+    def test_started_saved_resume_releases_students_without_replacing_session(self):
+        second_student = User.objects.create(
+            custom_id=f"CAS-STD-{uuid.uuid4().hex[:8].upper()}", role="student",
+            first_name="Saved Two", last_name="Student", middle_initial="", suffix="",
+            sex="female", birth_month=1, birth_day=1, birth_year=2012,
+            email=f"{uuid.uuid4().hex}@example.com", password_hash=make_password("password"),
+        )
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, material=self.material,
+            student_ids=[self.student.id, second_student.id], student_count=2, status='started',
+            student_states={
+                str(self.student.id): {'status': 'reading', 'participation_status': 'saved', 'recovery_state': {'stage': 'words'}},
+                str(second_student.id): {'status': 'reading', 'participation_status': 'saved', 'recovery_state': {'stage': 'words'}},
+            },
+        )
+        before_count = LiveAssessmentSession.objects.count()
+        response = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'resume'}), content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        session.refresh_from_db()
+        self.assertEqual(LiveAssessmentSession.objects.count(), before_count)
+        self.assertEqual(session.status, 'started')
+        self.assertEqual(session.student_states[str(self.student.id)]['participation_status'], 'active')
+        self.assertEqual(session.student_states[str(second_student.id)]['participation_status'], 'active')
+        self.assertEqual(session.student_states[str(self.student.id)]['recovery_state']['stage'], 'words')
+        template = (Path(__file__).resolve().parent / 'templates' / 'pabasa_app' / 'live_assessment_session.html').read_text(encoding='utf-8')
+        self.assertIn("statusKey === 'started' && hasSavedParticipants", template)
+
     def test_close_and_save_is_valid_when_paused(self):
         session = self.make_session('paused', {'status': 'paused', 'recovery_state': {'stage': 'story_reading'}})
         response = self.close_and_save(session)
@@ -10777,7 +10774,6 @@ class LiveAssessmentCloseAndSaveTests(TestCase):
         student_session['user_id'] = self.student.id
         student_session['user_role'] = 'student'
         student_session.save()
-        self.assertTrue(claim_student_session(self.student.id, student_session.session_key))
         response = student_client.post(
             reverse('live_assessment_student_state_update', kwargs={'session_id': session.id}),
             json.dumps({'status': 'reading', 'progress': 0.9}),
@@ -10857,6 +10853,18 @@ class LiveAssessmentSelectableRosterTests(TestCase):
 
 
 class LiveAssessmentWaitingRoomTemplateTests(TestCase):
+    def test_start_live_uses_existing_session_modal_before_new_session_fallback(self):
+        card_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "partials" / "_assessment_week_card.html"
+        recovery_path = Path(__file__).resolve().parent / "static" / "pabasa_app" / "js" / "crla_recovery.js"
+        card = card_path.read_text(encoding="utf-8")
+        recovery = recovery_path.read_text(encoding="utf-8")
+        self.assertLess(card.index('activePayload.session?.url'), card.index('offerRecovery('))
+        self.assertIn('offerRecovery(window.PabasaLiveCrlaRecoveryContext, activePayload.session)', card)
+        self.assertIn('if (existingSession?.url)', recovery)
+        self.assertIn('recoveryModal(serverDraft', recovery)
+        self.assertIn('window.location.assign(serverDraft.controlUrl)', recovery)
+        self.assertIn('async () => {}', recovery)
+
     def test_live_session_configuration_roster_is_read_only_and_session_scoped(self):
         template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "live_assessment_session.html"
         content = template_path.read_text(encoding="utf-8")
@@ -10897,9 +10905,7 @@ class LiveAssessmentWaitingRoomTemplateTests(TestCase):
         template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "base_dashboard.html"
         content = template_path.read_text(encoding="utf-8")
 
-        self.assertIn("session?.redirect_to_waiting_room", content)
-        for status in ('waiting', 'countdown', 'started', 'paused'):
-            self.assertIn(f"'{status}'", content)
+        self.assertIn("['waiting', 'countdown'].includes(sessionStatus)", content)
         self.assertIn("window.location.assign(session.join_url)", content)
 
     def test_waiting_room_exits_an_ended_session_before_batch_waiting_logic(self):

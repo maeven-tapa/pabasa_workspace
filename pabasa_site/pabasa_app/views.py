@@ -18637,8 +18637,6 @@ def live_assessment_session_action(request, session_id):
             raw_student_ids = [data.get('student_id')]
         if raw_student_ids is None:
             target_student_ids = _live_batch_student_ids(session)
-            if not session.batch_assignments:
-                target_student_ids = [int(student_id) for student_id in (session.student_ids or [])]
         else:
             target_student_ids = []
             for raw_student_id in raw_student_ids:
@@ -18729,15 +18727,27 @@ def live_assessment_session_action(request, session_id):
             return JsonResponse({'success': False, 'error': mutation_error or 'Unable to pause session'}, status=409)
         _trace_live_end_flow('action_pause_after_save', session, user_id=user_id)
     elif action == 'resume':
-        if session.status != 'paused':
-            return JsonResponse({'success': False, 'error': 'Only a paused session can be resumed'}, status=400)
+        has_saved_participants = any(
+            isinstance(student_state, dict) and student_state.get('participation_status') == 'saved'
+            for student_state in (session.student_states or {}).values()
+        )
+        if session.status != 'paused' and not (session.status == 'started' and has_saved_participants):
+            return JsonResponse({'success': False, 'error': 'Only a paused session or a started session with saved participants can be resumed'}, status=400)
         _trace_live_end_flow('action_resume_before_status_change', session, user_id=user_id)
         def apply_resume(current):
-            if current.status != 'paused':
+            current_has_saved_participants = any(
+                isinstance(student_state, dict) and student_state.get('participation_status') == 'saved'
+                for student_state in (current.student_states or {}).values()
+            )
+            if current.status != 'paused' and not (current.status == 'started' and current_has_saved_participants):
                 return None
-            current.status = 'started'
+            was_started_with_saved_participants = current.status == 'started'
+            if current.status == 'paused':
+                current.status = 'started'
             states = current.student_states or {}
             for student_key, student_state in states.items():
+                if was_started_with_saved_participants and student_state.get('participation_status') == 'saved':
+                    student_state['participation_status'] = 'active'
                 if student_state.get('status') == 'paused':
                     student_state['status'] = student_state.pop('previous_status', 'reading')
                 states[student_key] = student_state

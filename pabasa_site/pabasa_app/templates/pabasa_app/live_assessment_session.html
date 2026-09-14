@@ -1472,7 +1472,7 @@
         time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
-    function updateButtonStates(status, allSelectedStudentsCompleted = false) {
+    function updateButtonStates(status, session = null, allSelectedStudentsCompleted = false) {
         const startBtn = document.getElementById('startBtn');
         const pauseBtn = document.getElementById('pauseBtn');
         const resumeBtn = document.getElementById('resumeBtn');
@@ -1481,13 +1481,14 @@
         const cancelBtn = document.getElementById('cancelBtn');
         const statusKey = (status || '').toLowerCase();
         const controlsLocked = Boolean(allSelectedStudentsCompleted);
+        const hasSavedParticipants = Object.values(session?.student_states || {}).some((studentState) => studentState?.participation_status === 'saved');
         if (startBtn) startBtn.classList.toggle('d-none', statusKey !== 'waiting');
         if (cancelBtn) cancelBtn.classList.toggle('d-none', statusKey !== 'waiting');
         if (pauseBtn) {
-            pauseBtn.classList.toggle('d-none', controlsLocked || statusKey !== 'started');
+            pauseBtn.classList.toggle('d-none', controlsLocked || statusKey !== 'started' || hasSavedParticipants);
             pauseBtn.disabled = controlsLocked;
         }
-        if (resumeBtn) resumeBtn.classList.toggle('d-none', statusKey !== 'paused');
+        if (resumeBtn) resumeBtn.classList.toggle('d-none', statusKey !== 'paused' && !(statusKey === 'started' && hasSavedParticipants));
         if (endBtn) {
             endBtn.classList.toggle('d-none', controlsLocked || !['started', 'paused'].includes(statusKey));
             endBtn.disabled = controlsLocked;
@@ -1528,7 +1529,7 @@
         setText('#lastUpdated', new Date().toLocaleTimeString());
         setMonitorHeaderStatus(session);
         const allSelectedStudentsCompleted = session.all_selected_students_completed === true;
-        updateButtonStates(session.status, allSelectedStudentsCompleted);
+        updateButtonStates(session.status, session, allSelectedStudentsCompleted);
         document.getElementById('allSelectedStudentsCompletedBanner')?.classList.toggle('d-none', !allSelectedStudentsCompleted);
         const states = session.student_states || {};
         const counts = {connected:0, ready:0, reading:0, completed:0, offline:0};
