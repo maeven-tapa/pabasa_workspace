@@ -755,6 +755,10 @@
                         </div>
                     </div>
                 </div>
+                <div id="allSelectedStudentsCompletedBanner" class="alert alert-success py-2 px-3 mb-3 d-none" role="status">
+                    <strong>CRLA Live Assessment Complete</strong>
+                    <div class="small">All selected students have completed the reading assessment.</div>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-borderless table-monitor student-monitor-table mb-0 align-middle">
                         <thead>
@@ -819,6 +823,7 @@
                         <button id="resumeBtn" class="btn btn-outline-primary btn-lg flex-fill">▶ Resume</button>
                     </div>
                     <button id="endBtn" class="btn btn-outline-danger btn-lg">⏹ End Session</button>
+                    <button id="closeAndSaveBtn" class="btn btn-outline-primary btn-lg d-none">Close &amp; Save</button>
                 </div>
                 <div class="small text-muted mb-2">Status: <span id="controlStatus">{{ live_session.status|title }}</span></div>
                 <div class="small text-muted mb-2">Last sync: <span id="lastUpdated">—</span></div>
@@ -1099,12 +1104,41 @@
             });
         }
 
-        function showConfirm(title, message) {
-            return showModal({ title, body: message, buttons: [
-                { label: 'Cancel', value: false, className: 'btn btn-outline-secondary' },
-                { label: 'Confirm', value: true, className: 'btn btn-primary' }
-            ]});
-        }
+    function showConfirm(title, message) {
+        return showModal({ title, body: message, buttons: [
+            { label: 'Cancel', value: false, className: 'btn btn-outline-secondary' },
+            { label: 'Confirm', value: true, className: 'btn btn-primary' }
+        ]});
+    }
+
+    function showTeacherSaveTransition() {
+        const body = document.createElement('div');
+        body.style.textAlign = 'center';
+        body.innerHTML = `
+            <p style="font-size:1rem;margin-bottom:.35rem">Your students' reading progress is saved.</p>
+            <p style="margin-bottom:1rem">Returning to ARAL Program...</p>
+            <div data-save-countdown aria-live="assertive" aria-atomic="true" style="font-size:3.5rem;line-height:1;font-weight:800;color:#8fc5ff">3</div>
+        `;
+        const countdown = body.querySelector('[data-save-countdown]');
+        const transition = showModal({
+            title: 'Reading session saved',
+            body,
+            buttons: [],
+            closable: false,
+        });
+        let value = 3;
+        const timer = window.setInterval(() => {
+            if (value <= 1) {
+                window.clearInterval(timer);
+                hideModal();
+                window.location.href = '{% url "dashboard_teacher" %}';
+                return;
+            }
+            value -= 1;
+            if (countdown) countdown.textContent = String(value);
+        }, 1000);
+        return transition;
+    }
         // Shared by the recovery component so destructive recovery actions
         // use this page's accessible PABASA modal rather than confirm().
         window.PabasaLiveConfirm = showConfirm;
@@ -1438,18 +1472,30 @@
         time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
-    function updateButtonStates(status) {
+    function updateButtonStates(status, allSelectedStudentsCompleted = false) {
         const startBtn = document.getElementById('startBtn');
         const pauseBtn = document.getElementById('pauseBtn');
         const resumeBtn = document.getElementById('resumeBtn');
         const endBtn = document.getElementById('endBtn');
+        const closeAndSaveBtn = document.getElementById('closeAndSaveBtn');
         const cancelBtn = document.getElementById('cancelBtn');
         const statusKey = (status || '').toLowerCase();
+        const controlsLocked = Boolean(allSelectedStudentsCompleted);
         if (startBtn) startBtn.classList.toggle('d-none', statusKey !== 'waiting');
         if (cancelBtn) cancelBtn.classList.toggle('d-none', statusKey !== 'waiting');
-        if (pauseBtn) pauseBtn.classList.toggle('d-none', statusKey !== 'started');
+        if (pauseBtn) {
+            pauseBtn.classList.toggle('d-none', controlsLocked || statusKey !== 'started');
+            pauseBtn.disabled = controlsLocked;
+        }
         if (resumeBtn) resumeBtn.classList.toggle('d-none', statusKey !== 'paused');
-        if (endBtn) endBtn.classList.toggle('d-none', !['started', 'paused'].includes(statusKey));
+        if (endBtn) {
+            endBtn.classList.toggle('d-none', controlsLocked || !['started', 'paused'].includes(statusKey));
+            endBtn.disabled = controlsLocked;
+        }
+        if (closeAndSaveBtn) {
+            closeAndSaveBtn.classList.toggle('d-none', controlsLocked || !['started', 'paused'].includes(statusKey));
+            closeAndSaveBtn.disabled = controlsLocked;
+        }
     }
 
     function setEndSessionLoading(isLoading) {
@@ -1481,7 +1527,9 @@
         setText('#controlStatus', session.status?.charAt(0).toUpperCase() + session.status?.slice(1));
         setText('#lastUpdated', new Date().toLocaleTimeString());
         setMonitorHeaderStatus(session);
-        updateButtonStates(session.status);
+        const allSelectedStudentsCompleted = session.all_selected_students_completed === true;
+        updateButtonStates(session.status, allSelectedStudentsCompleted);
+        document.getElementById('allSelectedStudentsCompletedBanner')?.classList.toggle('d-none', !allSelectedStudentsCompleted);
         const states = session.student_states || {};
         const counts = {connected:0, ready:0, reading:0, completed:0, offline:0};
         for (const [sid, st] of Object.entries(states)) {
@@ -1665,6 +1713,20 @@
 
     document.getElementById('pauseBtn').addEventListener('click', () => sendAction('pause'));
     document.getElementById('resumeBtn').addEventListener('click', () => sendAction('resume'));
+    document.getElementById('closeAndSaveBtn').addEventListener('click', async () => {
+        const confirmed = await showConfirm(
+            'Close & Save',
+            'The student\'s current Live CRLA progress will be saved, the student will leave the active reader, and the assessment can be resumed later.'
+        );
+        if (!confirmed) return;
+        const result = await sendAction('close_and_save');
+        if (result) {
+            window.__pabasaLiveCrlaFinalizing = true;
+            stopPolling();
+            await window.PabasaCrlaRecovery?.scheduleSave?.(crlaRecoveryContext, result);
+            showTeacherSaveTransition();
+        }
+    });
     document.getElementById('cancelBtn').addEventListener('click', async () => {
         const confirmed = await showConfirm('Cancel session', 'Cancel this waiting session and return all selected students to Getting Ready?');
         if (!confirmed) return;

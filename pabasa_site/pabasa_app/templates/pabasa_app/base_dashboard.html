@@ -4170,7 +4170,15 @@
         }
 
         function startActiveLiveAssessmentInviteWatch() {
-            if (liveAssessmentInviteWatchTimer) return;
+            console.debug('LIVE_CRLA_INVITE_DEBUG startActiveLiveAssessmentInviteWatch', {
+                currentUrl: window.location.href,
+                userRole: window.PABASA_USER_ROLE,
+                watcherAlreadyStarted: Boolean(liveAssessmentInviteWatchTimer),
+            });
+            if (liveAssessmentInviteWatchTimer) {
+                console.debug('LIVE_CRLA_INVITE_DEBUG early return: watcher_already_started');
+                return;
+            }
             checkForActiveLiveAssessmentInvitation();
             liveAssessmentInviteWatchTimer = window.setInterval(() => {
                 if (!liveAssessmentInviteBusy) {
@@ -4261,47 +4269,109 @@
         }
 
         async function checkForActiveLiveAssessmentInvitation() {
-            if (window.PABASA_USER_ROLE !== 'student') return false;
-            if (window.location.pathname.includes('/dashboard/live-assessment/')) return false;
-            const pabasaCurrentUserId = window.localStorage.getItem('pabasaCurrentUserId') || '';
-            if (!pabasaCurrentUserId) return false;
-            if (liveAssessmentInviteBusy) return false;
+            const isStudent = window.PABASA_USER_ROLE === 'student';
+            const localStorageCurrentUserId = window.localStorage.getItem('pabasaCurrentUserId');
+            const localStorageUserId = window.localStorage.getItem('pabasaUserId');
+            console.debug('LIVE_CRLA_INVITE_DEBUG check', {
+                currentUrl: window.location.href,
+                userRole: window.PABASA_USER_ROLE,
+                isStudent,
+                localStorageCurrentUserId,
+                localStorageUserId,
+                liveAssessmentInviteBusy,
+            });
+            console.warn('LIVE_CRLA_INVITE_DEBUG check_visible', {
+                currentUrl: window.location.href,
+                userRole: window.PABASA_USER_ROLE,
+                pabasaUserId: window.PABASA_USER_ID || null,
+                isStudent,
+                liveAssessmentInviteBusy,
+            });
+            if (!isStudent) {
+                console.debug('LIVE_CRLA_INVITE_DEBUG early return: not_student');
+                return false;
+            }
+            if (window.location.pathname.includes('/dashboard/live-assessment/')) {
+                console.debug('LIVE_CRLA_INVITE_DEBUG early return: already_on_live_assessment');
+                return false;
+            }
+            if (liveAssessmentInviteBusy) {
+                console.debug('LIVE_CRLA_INVITE_DEBUG early return: request_busy');
+                return false;
+            }
             liveAssessmentInviteBusy = true;
             try {
-                const response = await fetch("{% url 'live_assessment_active_invitation' %}", {
+                const requestUrl = "{% url 'live_assessment_active_invitation' %}";
+                console.debug('LIVE_CRLA_INVITE_DEBUG request', { requestUrl });
+                console.warn('LIVE_CRLA_INVITE_DEBUG request_visible', { requestUrl, userId: window.PABASA_USER_ID || null });
+                const response = await fetch(requestUrl, {
                     cache: 'no-store',
                     credentials: 'same-origin',
                     headers: { Accept: 'application/json' }
                 });
                 const data = await response.json();
+                console.warn('LIVE_CRLA_INVITE_DEBUG response_visible', { requestUrl, httpStatus: response.status, response: data });
+                const session = data?.session || null;
+                console.debug('LIVE_CRLA_INVITE_DEBUG response', {
+                    requestUrl,
+                    httpStatus: response.status,
+                    response: data,
+                    session,
+                    sessionId: session?.id || null,
+                    sessionStatus: session?.status || null,
+                    joinUrl: session?.join_url || null,
+                    showModal: session?.show_modal ?? null,
+                    redirectToWaitingRoom: session?.redirect_to_waiting_room ?? null,
+                });
                 if (!data.success || !data.session) {
                     liveAssessmentInviteObservedNoSession = true;
+                    console.debug('LIVE_CRLA_INVITE_DEBUG early return: no_session', {
+                        httpStatus: response.status,
+                        success: data?.success,
+                    });
                     return false;
                 }
-                const session = data.session;
                 const dismissedKey = `pabasa_dismissed_live_invitation_${session.id}`;
-                if (window.sessionStorage.getItem(dismissedKey) === '1') return false;
+                if (window.sessionStorage.getItem(dismissedKey) === '1') {
+                    console.debug('LIVE_CRLA_INVITE_DEBUG early return: invitation_dismissed', { sessionId: session.id });
+                    return false;
+                }
 
                 const sessionStatus = String(session?.status || '').toLowerCase();
                 if (session?.show_modal) {
+                    console.debug('LIVE_CRLA_INVITE_DEBUG showing_invitation_modal', { sessionId: session.id });
                     return showActiveLiveAssessmentInvitation(session);
                 }
 
                 if (session?.redirect_to_waiting_room || ['waiting', 'countdown', 'started', 'paused'].includes(sessionStatus)) {
                     if (session.join_url) {
+                        console.debug('LIVE_CRLA_INVITE_DEBUG redirecting', { joinUrl: session.join_url });
+                        console.warn('LIVE_CRLA_INVITE_DEBUG redirecting_visible', { joinUrl: session.join_url, sessionId: session.id });
                         window.location.assign(session.join_url);
                         return true;
                     }
+                    console.debug('LIVE_CRLA_INVITE_DEBUG early return: no_join_url', { sessionId: session.id, sessionStatus });
                 }
 
                 if (liveAssessmentInviteObservedNoSession && session.join_url && !session?.show_modal) {
+                    console.debug('LIVE_CRLA_INVITE_DEBUG redirecting', { joinUrl: session.join_url });
                     window.location.assign(session.join_url);
                     return true;
                 }
 
+                console.debug('LIVE_CRLA_INVITE_DEBUG early return: no_redirect_condition', {
+                    sessionId: session.id,
+                    sessionStatus,
+                    hasJoinUrl: Boolean(session.join_url),
+                    observedNoSession: liveAssessmentInviteObservedNoSession,
+                });
                 return false;
             } catch (error) {
+                console.debug('LIVE_CRLA_INVITE_DEBUG early return: request_error', {
+                    message: String(error?.message || error),
+                });
                 console.warn('Live assessment invitation lookup failed', error);
+                console.warn('LIVE_CRLA_INVITE_DEBUG request_error_visible', { message: String(error?.message || error) });
                 return false;
             } finally {
                 liveAssessmentInviteBusy = false;
@@ -4357,6 +4427,15 @@
 
         async function showMissedAssessmentNotification(notifications) {
             const noticeItems = Array.isArray(notifications) ? notifications : [notifications].filter(Boolean);
+            console.warn('LIVE_CRLA_MISSED_DEBUG show_modal_attempt', {
+                notificationCount: noticeItems.length,
+                notifications: noticeItems.map(notification => ({
+                    id: notification?.id,
+                    title: notification?.title,
+                    category: notification?.notification_type || notification?.type,
+                    is_read: notification?.is_read,
+                })),
+            });
             if (!noticeItems.length) return false;
             const key = `pabasa_seen_missed_assessment_${noticeItems.map(n => n.id).join('_')}`;
             if (window.sessionStorage.getItem(key)) return true;
@@ -4492,6 +4571,11 @@
         }
 
         async function checkForLiveAssessmentNotification() {
+            console.warn('LIVE_CRLA_MISSED_DEBUG notification_check_start', {
+                role: window.PABASA_USER_ROLE,
+                busy: liveAssessmentWatchBusy,
+                currentUrl: window.location.href,
+            });
             if (window.PABASA_USER_ROLE !== 'student' || liveAssessmentWatchBusy) return false;
             const pabasaCurrentUserId = window.localStorage.getItem('pabasaCurrentUserId') || '';
             if (!pabasaCurrentUserId) return false;
@@ -4506,12 +4590,28 @@
                     credentials: "same-origin"
                 });
                 const data = await response.json();
+                console.warn('LIVE_CRLA_MISSED_DEBUG notification_fetch_response', {
+                    status: response.status,
+                    success: data?.success,
+                    notificationCount: Array.isArray(data?.notifications) ? data.notifications.length : 0,
+                    notifications: Array.isArray(data?.notifications) ? data.notifications.map(notification => ({
+                        id: notification?.id,
+                        title: notification?.title,
+                        category: notification?.notification_type || notification?.type,
+                        is_read: notification?.is_read,
+                    })) : [],
+                });
                 if (!data.success) throw new Error(data.error || "Unable to load notifications.");
                 const notifications = Array.isArray(data.notifications) ? data.notifications : [];
                 const missedNotifications = notifications.filter(n => {
                     const title = String(n.title || '').toLowerCase();
                     const message = String(n.message || '').toLowerCase();
                     return title.includes('missed a reading activity') || title.includes('missed some reading activities') || message.includes('you missed this reading activity') || message.includes('you missed these reading activities');
+                });
+                console.warn('LIVE_CRLA_MISSED_DEBUG missed_filter_result', {
+                    total: notifications.length,
+                    missedCount: missedNotifications.length,
+                    missedIds: missedNotifications.map(notification => notification?.id),
                 });
                 if (missedNotifications.length) {
                     return handleMissedAssessmentNotification(missedNotifications);
@@ -4706,6 +4806,7 @@
         });
 
         document.addEventListener('DOMContentLoaded', () => {
+            window.debugLiveCRLAInvitation = checkForActiveLiveAssessmentInvitation;
             updateInAppNotifications();
             startLiveAssessmentWatch();
             startActiveLiveAssessmentInviteWatch();

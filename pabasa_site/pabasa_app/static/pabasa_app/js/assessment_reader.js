@@ -116,6 +116,18 @@
         }
 
         const urlParams = new URLSearchParams(window.location.search);
+        function traceLiveCrlaRedirect(event, details = {}) {
+            console.warn('LIVE_CRLA_REDIRECT_DEBUG', event, {
+                timestamp: new Date().toISOString(),
+                url: window.location.href,
+                live_session_id: urlParams.get('live_session_id'),
+                live: urlParams.get('live'),
+                live_recovery: urlParams.get('live_recovery'),
+                crla_fresh: urlParams.get('crla_fresh'),
+                crla_stage: urlParams.get('crla_stage'),
+                ...details,
+            });
+        }
         const isMyMaterials = window.__PABASA_MY_MATERIALS__ === true;
         const officialAssessmentId = urlParams.get("official_assessment_id") || "";
         const customMaterialData = window.__PABASA_CUSTOM_MATERIAL__ || null;
@@ -322,6 +334,9 @@
         let liveSessionPollTimer = null;
         let liveSessionPaused = false;
         let liveSessionEnded = false;
+        let liveSessionRedirectingToWaitingRoom = false;
+        let liveSessionEndRedirectTimer = null;
+        let liveSessionEndRedirecting = false;
         let liveSessionHeartbeatTimer = null;
         let liveSessionLastHeartbeatAt = 0;
         // Live CRLA elapsed time is per student and counts only active reading
@@ -611,6 +626,21 @@
             } catch (error) {
                 return {};
             }
+        }
+
+        function traceLiveCrlaState(event, details = {}) {
+            if (urlParams.get('live_recovery') !== '1' && !isCurrentLiveAssessment()) return;
+            console.info('LIVE_CRLA_STATE_TRACE', event, {
+                timestamp: new Date().toISOString(),
+                student_id: window.PABASA_USER_ID || localStorage.getItem('pabasaUserId') || '',
+                url_crla_stage: urlParams.get('crla_stage') || '',
+                url_live_recovery: urlParams.get('live_recovery') || '',
+                currentAssessmentBranch,
+                currentStoryState,
+                currentIndex,
+                current_item: items[currentIndex] || '',
+                ...details,
+            });
         }
 
         function writeStudentEndState(nextState, options = {}) {
@@ -1291,6 +1321,7 @@
             }
             await showCompletion(true);
             if (!isAssistMode && persistedState?.next_url) {
+                traceLiveCrlaRedirect('persisted_next_url_redirect', { destination: persistedState.next_url, reason: 'persisted_state_next_url' });
                 window.location.assign(persistedState.next_url);
             }
         }
@@ -1717,7 +1748,9 @@
                     if (learnerExperienceFeedback) learnerExperienceFeedback.textContent = 'We could not save your live session completion. Please try again.';
                     return;
                 }
-                window.location.replace(`/dashboard/live-assessment/${encodeURIComponent(liveSessionId)}/waiting/`);
+                const destination = `/dashboard/live-assessment/${encodeURIComponent(liveSessionId)}/waiting/`;
+                traceLiveCrlaRedirect('student_completion_to_waiting_room', { destination, reason: 'live_completion_rating_saved' });
+                window.location.replace(destination);
                 return;
             }
             learnerExperiencePage?.classList.add("d-none");
@@ -2319,7 +2352,21 @@
             const stage = persistedStage === "early_completed_sentences"
                 ? "transition_to_story"
                 : persistedStage;
-            if (!["transition_to_rhymes", "transition_to_sentence", "transition_to_story", "early_completed_words", "completed"].includes(stage)) return false;
+            const isFinalCompletion = ["completed", "early_completed_words"].includes(stage);
+            traceLiveCrlaState('renderPersistedEndState.before_decision', {
+                stage,
+                branch: endState.branch || '',
+                next_stage: endState.next_stage || '',
+                isFinalCompletion,
+                locked_items_count: endState.locked_items_count,
+                task1_score: endState.task1_score,
+                crla_question_index: endState.crla_question_index,
+                persisted_end_state: endState,
+            });
+            if (!["transition_to_rhymes", "transition_to_sentence", "transition_to_story", "early_completed_words", "completed"].includes(stage)) {
+                traceLiveCrlaState('renderPersistedEndState.returned_false', { stage });
+                return false;
+            }
             if (persistedStage === "early_completed_sentences") {
                 endState = {
                     ...endState,
@@ -2362,7 +2409,16 @@
             const transition = transitionCopy[stage] || null;
             // Section transitions are not CRLA completion.  In particular, do
             // not leak a routing/Part 1 level on the Word Reading screen.
-            const isFinalCompletion = ["completed", "early_completed_words"].includes(stage);
+            if (isFinalCompletion) {
+                traceLiveCrlaState(stage === 'early_completed_words' ? 'EARLY_COMPLETED_WORDS_DETECTED' : 'COMPLETED_STAGE_DETECTED', {
+                    stage,
+                    branch: endState.branch || '',
+                    next_stage: endState.next_stage || '',
+                    completion_classification: endState.classification || '—',
+                    local_storage_state: readStudentEndState(),
+                    reason: 'renderPersistedEndState_final_stage',
+                });
+            }
             if (isFinalCompletion) {
                 if (completionClassificationValue) completionClassificationValue.textContent = classificationText;
             } else {
@@ -2383,6 +2439,7 @@
             }
             reviewBtn?.classList.toggle("d-none", !["early_completed_words", "completed"].includes(stage));
             setCompletionLoadingState(false);
+            traceLiveCrlaState('renderPersistedEndState.returned_true', { stage });
             return true;
         }
 
@@ -2391,6 +2448,19 @@
             const persistedEndState = readStudentEndState();
             const persistedStage = normalizeStudentEndStatus(persistedEndState.stage);
             const persistedNextStage = normalizeStudentEndStatus(persistedEndState.next_stage);
+            if (urlParams.get('live_recovery') === '1') {
+                traceLiveCrlaState('live_recovery_launch', {
+                    recoveredBranch: normalizeStudentEndStatus(persistedEndState.branch),
+                    persistedStage,
+                    persistedBranch: normalizeStudentEndStatus(persistedEndState.branch),
+                    nextStage: persistedNextStage,
+                    locked_items_count: persistedEndState.locked_items_count,
+                    task1_score: persistedEndState.task1_score,
+                    crla_question_index: persistedEndState.crla_question_index,
+                    recovery_state: window.__PABASA_STUDENT_END_STATE__ || {},
+                    local_storage_state: (() => { try { return JSON.parse(localStorage.getItem(getStudentEndStateKey()) || '{}'); } catch (error) { return {}; } })(),
+                });
+            }
             if (isOfficialAssessmentLaunch && isCrla) {
                 console.info('CRLA refresh initialization', {
                     requestedCrlaStage,
@@ -2399,6 +2469,37 @@
                     crlaQuestionIndex: persistedEndState.crla_question_index,
                     currentIndex,
                     isRecording,
+                });
+            }
+            if (urlParams.get('live_recovery') === '1') {
+                console.warn('LIVE_CRLA_RESUME_DEBUG reader_recovery_initial_state', {
+                    url: window.location.href,
+                    live_recovery: true,
+                    currentAssessmentBranch,
+                    currentStoryState,
+                    currentIndex,
+                    persistedStage,
+                    persistedBranch: persistedEndState.branch,
+                    nextStage: persistedNextStage,
+                    current_item: persistedEndState.current_item,
+                    progress: persistedEndState.progress,
+                    items_completed: persistedEndState.items_completed,
+                    crla_stage: persistedEndState.crla_stage,
+                    recovery_state: window.__PABASA_STUDENT_END_STATE__ || {},
+                    persistedEndState,
+                });
+                console.warn('LIVE_CRLA_SAVE_DEBUG', 'reader_recovery_initial_state', {
+                    student_id: window.PABASA_USER_ID || localStorage.getItem('pabasaUserId') || '',
+                    session_id: urlParams.get('live_session_id'),
+                    current_index: currentIndex,
+                    current_item: persistedEndState.current_item,
+                    progress: persistedEndState.progress,
+                    items_completed: persistedEndState.items_completed,
+                    items_total: persistedEndState.items_total,
+                    crla_stage: persistedEndState.crla_stage || persistedStage,
+                    branch: persistedEndState.branch,
+                    next_stage: persistedNextStage,
+                    recovery_state: persistedEndState,
                 });
             }
             if (isOfficialAssessmentLaunch && officialAssessmentData) {
@@ -2454,6 +2555,12 @@
                 const requestedStage = requestedCrlaStage === "story_selection" ? "story" : requestedCrlaStage;
                 const isLiveRecoveryLaunch = urlParams.get('live_recovery') === '1';
                 const recoveredBranch = normalizeStudentEndStatus(persistedEndState.branch);
+                traceLiveCrlaState('recovery_state_before_active_stage', {
+                    persistedStage,
+                    recoveredBranch,
+                    persistedBranch: normalizeStudentEndStatus(persistedEndState.branch),
+                    nextStage: persistedNextStage,
+                });
                 let activeStage = "words";
                 const isActiveReaderStage = ["words", "rhymes", "sentences"].includes(persistedStage);
                 // Recovery is a direct restore. The stored branch/index must
@@ -2480,6 +2587,42 @@
                     activeStage = persistedStage;
                 }
                 currentAssessmentBranch = activeStage;
+                if (isLiveRecoveryLaunch) {
+                    console.warn('LIVE_CRLA_RESUME_DEBUG reader_recovery_active_stage', {
+                        activeStage,
+                        currentAssessmentBranch,
+                        currentIndex,
+                        persistedStage,
+                        persistedBranch: persistedEndState.branch,
+                        nextStage: persistedNextStage,
+                        current_item: persistedEndState.current_item,
+                        progress: persistedEndState.progress,
+                        items_completed: persistedEndState.items_completed,
+                        crla_stage: persistedEndState.crla_stage,
+                    });
+                    console.warn('LIVE_CRLA_SAVE_DEBUG', 'reader_recovery_active_stage', {
+                        student_id: window.PABASA_USER_ID || localStorage.getItem('pabasaUserId') || '',
+                        session_id: urlParams.get('live_session_id'),
+                        activeStage,
+                        currentAssessmentBranch,
+                        currentIndex,
+                        current_item: items[currentIndex] || '',
+                        recovery_current_item: persistedEndState.current_item,
+                        progress: persistedEndState.progress,
+                        items_completed: persistedEndState.items_completed,
+                        items_total: persistedEndState.items_total,
+                        crla_stage: persistedEndState.crla_stage || persistedStage,
+                        branch: persistedEndState.branch,
+                        next_stage: persistedNextStage,
+                    });
+                }
+                traceLiveCrlaState('recovery_state_after_active_stage', {
+                    activeStage,
+                    activeBranch: currentAssessmentBranch,
+                    persistedStage,
+                    persistedBranch: normalizeStudentEndStatus(persistedEndState.branch),
+                    nextStage: persistedNextStage,
+                });
                 shell.classList.toggle("is-crla-rhymes", activeStage === "rhymes");
 
                 if (stageMap[activeStage]) {
@@ -4406,6 +4549,22 @@
             }
 
             if (data.complete) {
+                const isFinalWord = isOfficialAssessmentLaunch
+                    && isCrla
+                    && currentAssessmentBranch === 'words'
+                    && currentIndex >= items.length - 1;
+                if (isFinalWord) {
+                    const beforeFinalWordState = readStudentEndState();
+                    traceLiveCrlaState('final_word.before_state_write', {
+                        word_number: currentIndex + 1,
+                        total_words: items.length,
+                        correct_words: Number(correctWordCounts[currentIndex] || 0),
+                        task1_score: beforeFinalWordState.task1_score,
+                        persisted_stage_before: beforeFinalWordState.stage,
+                        persisted_branch_before: beforeFinalWordState.branch,
+                        persisted_next_stage_before: beforeFinalWordState.next_stage,
+                    });
+                }
                 if (mode === 'phrase') {
                     isRecording = false;
                     stopSpeechRecognition();
@@ -4441,6 +4600,17 @@
                         currentIndex,
                         currentIndex < items.length - 1 ? currentIndex + 1 : null
                     );
+                    if (isFinalWord) {
+                        const afterFinalWordState = readStudentEndState();
+                        traceLiveCrlaState('final_word.after_state_write', {
+                            word_number: currentIndex + 1,
+                            total_words: items.length,
+                            correct_words: Number(correctWordCounts[currentIndex] || 0),
+                            persisted_stage_after: afterFinalWordState.stage,
+                            persisted_branch_after: afterFinalWordState.branch,
+                            persisted_next_stage_after: afterFinalWordState.next_stage,
+                        });
+                    }
                 }
                 
                 isAdvancingItem = true;
@@ -5246,6 +5416,13 @@
                 classification: "",
                 next_stage: "",
             };
+            traceLiveCrlaState('showCompletion.before_branch_decision', {
+                isFullCompletion,
+                branchScore,
+                correct_words: latestScores.correct_words,
+                proceedsToRhymes: currentAssessmentBranch === 'words' ? branchScore <= 6 : null,
+                persisted_end_state: previousEndState,
+            });
             const persistedLearnerExperienceRating = Number.parseInt(previousEndState.learner_experience_rating ?? previousEndState.learner_experience, 10);
             const hasLearnerExperienceRating = Number.isInteger(persistedLearnerExperienceRating)
                 && persistedLearnerExperienceRating >= 1 && persistedLearnerExperienceRating <= 5;
@@ -5390,6 +5567,15 @@
                     branchState.crla_classification = "";
                 }
             }
+            traceLiveCrlaState('showCompletion.after_branch_decision', {
+                branchScore,
+                correct_words: latestScores.correct_words,
+                proceedsToRhymes: currentAssessmentBranch === 'words' ? branchState.next_stage === 'rhymes' : null,
+                resulting_stage: branchState.stage,
+                resulting_branch: branchState.branch,
+                resulting_next_stage: branchState.next_stage,
+                resulting_persisted_end_state: branchState,
+            });
             const isPart1LearnerExperienceTerminal = branchState.stage === "early_completed_words";
             const shouldPromptForLearnerExperience = !hasSubmittedLearnerExperienceRating
                 && (isPart1LearnerExperienceTerminal || currentAssessmentBranch === "story");
@@ -5407,8 +5593,23 @@
                 branchState.stage = "completed";
                 branchState.next_stage = "completed";
             }
+            let persistedBranchState = null;
             if (!isMyMaterials && branchState.stage) {
-                updateStudentEndState(branchState);
+                traceLiveCrlaState('showCompletion.persist_branch_state_start', {
+                    currentAssessmentBranch,
+                    branchState,
+                    live_recovery: urlParams.get('live_recovery'),
+                    server_state: window.__PABASA_STUDENT_END_STATE__ || {},
+                    local_state: (() => { try { return JSON.parse(localStorage.getItem(getStudentEndStateKey()) || '{}'); } catch (error) { return {}; } })(),
+                });
+                persistedBranchState = await updateStudentEndState(branchState);
+                traceLiveCrlaState('showCompletion.persist_branch_state_immediate', {
+                    branchState,
+                    persistedBranchState,
+                    read_state: readStudentEndState(),
+                    server_state: window.__PABASA_STUDENT_END_STATE__ || {},
+                    local_state: (() => { try { return JSON.parse(localStorage.getItem(getStudentEndStateKey()) || '{}'); } catch (error) { return {}; } })(),
+                });
             }
             const nextStageUrlMap = {
                 rhymes: buildCrlaStageUrl("rhymes", branchState),
@@ -5460,7 +5661,17 @@
                 // writeStudentEndState synchronizes the server's canonical
                 // classification into localStorage. Render that state rather
                 // than the provisional branchState built before the response.
-                renderPersistedEndState(readStudentEndState());
+                const renderedEndState = persistedBranchState?.student_end_assessment_state
+                    || persistedBranchState?.studentEndAssessmentState
+                    || branchState;
+                traceLiveCrlaState('showCompletion.render_persisted_state', {
+                    currentAssessmentBranch,
+                    branchState,
+                    renderedEndState,
+                    server_state: window.__PABASA_STUDENT_END_STATE__ || {},
+                    local_state: (() => { try { return JSON.parse(localStorage.getItem(getStudentEndStateKey()) || '{}'); } catch (error) { return {}; } })(),
+                });
+                renderPersistedEndState(renderedEndState);
             }
             if (!isMyMaterials && (branchState.stage === "transition_to_rhymes" || branchState.stage === "transition_to_sentence" || branchState.stage === "transition_to_story")) {
                 traceEndSession('showCompletion.awaitContinue', { nextStageUrl, next_stage: branchState.next_stage });
@@ -5668,6 +5879,15 @@
                         liveStatus,
                         payload,
                     });
+                    console.warn('LIVE_CRLA_COMPLETION_PATH_DEBUG', 'final_completion_detected', {
+                        student_id: window.PABASA_USER_ID || '',
+                        live_session_id: liveSessionId,
+                        current_stage: currentAssessmentBranch,
+                        current_story_state: currentStoryState,
+                        live_status: liveStatus,
+                        branch_state: branchState,
+                        official_assessment_id: officialAssessmentId,
+                    });
                     publishLiveSessionState({
                         status: liveStatus,
                         items_completed: Math.max(1, items.length),
@@ -5809,6 +6029,7 @@
                         }
                     }));
                     if (!isAssistMode && d.next_url) {
+                        traceLiveCrlaRedirect('completion_next_url_redirect', { destination: d.next_url, reason: 'server_completion_next_url' });
                         window.location.assign(d.next_url);
                     }
                     return d;
@@ -5897,8 +6118,12 @@
         }
 
         async function fetchLiveSessionState() {
-            if (!liveSessionStateUrl) return null;
+            if (!liveSessionStateUrl) {
+                console.debug('LIVE_CRLA_CLOSE_SAVE_DEBUG polling skipped', { liveSessionId, liveSessionStateUrl });
+                return null;
+            }
             try {
+                console.debug('LIVE_CRLA_CLOSE_SAVE_DEBUG polling request', { liveSessionId, liveSessionStateUrl });
                 traceEndSession('fetchLiveSessionState.request');
                 const response = await fetch(liveSessionStateUrl, {
                     cache: 'no-store',
@@ -5913,6 +6138,12 @@
                     error: payload.error,
                     responseStatus: payload.session?.status,
                     responseStudentStates: payload.session?.student_states || {},
+                });
+                console.debug('LIVE_CRLA_CLOSE_SAVE_DEBUG raw polling response', {
+                    liveSessionId,
+                    ok: response.ok,
+                    status: response.status,
+                    payload,
                 });
                 return payload.success ? payload.session : null;
             } catch (error) {
@@ -6029,6 +6260,42 @@
                     updateValues,
                     completionPayload,
                 });
+                console.info('LIVE_CRLA_STATE_TRACE', 'publishLiveSessionState.request', {
+                    timestamp: new Date().toISOString(),
+                    student_id: window.PABASA_USER_ID || localStorage.getItem('pabasaUserId') || '',
+                    participation_status: updateValues.participation_status,
+                    status: updateValues.status,
+                    crla_stage: updateValues.crla_stage || recoveryState.stage,
+                    branch: recoveryState.branch,
+                    next_stage: recoveryState.next_stage,
+                    current_item: updateValues.current_item,
+                    progress: updateValues.progress,
+                    recovery_state: {
+                        stage: recoveryState.stage,
+                        branch: recoveryState.branch,
+                        next_stage: recoveryState.next_stage,
+                        locked_items_count: recoveryState.locked_items_count,
+                        task1_score: recoveryState.task1_score,
+                        crla_question_index: recoveryState.crla_question_index,
+                    },
+                });
+                console.warn('LIVE_CRLA_SAVE_DEBUG', 'student_state_request', {
+                    student_id: window.PABASA_USER_ID || localStorage.getItem('pabasaUserId') || '',
+                    session_id: liveSessionId,
+                    url: `/api/live-assessment/session/${liveSessionId}/student-update/`,
+                    status: updateValues.status,
+                    current_stage: currentAssessmentBranch,
+                    crla_stage: updateValues.crla_stage || recoveryState.stage,
+                    current_item: updateValues.current_item,
+                    current_index: currentIndex,
+                    progress: updateValues.progress,
+                    items_completed: updateValues.items_completed,
+                    items_total: updateValues.items_total,
+                    branch: recoveryState.branch,
+                    next_stage: recoveryState.next_stage,
+                    recovery_state: recoveryState,
+                    persisted_student_end_state: readStudentEndState(),
+                });
                 const response = await fetch(`/api/live-assessment/session/${liveSessionId}/student-update/`, {
                     method: 'POST',
                     credentials: 'same-origin',
@@ -6052,6 +6319,12 @@
                 traceEndSession('publishLiveSessionState.responseStatus', { ok: response.ok, status: response.status });
                 if (!response.ok) return null;
                 const payload = await response.json();
+                console.warn('LIVE_CRLA_SAVE_DEBUG', 'student_state_response', {
+                    student_id: window.PABASA_USER_ID || localStorage.getItem('pabasaUserId') || '',
+                    session_id: liveSessionId,
+                    status: response.status,
+                    saved_state: payload?.session?.student_states?.[String(window.PABASA_USER_ID || localStorage.getItem('pabasaUserId') || '')] || null,
+                });
                 traceEndSession('publishLiveSessionState.responseBody', {
                     success: payload.success,
                     error: payload.error,
@@ -6135,20 +6408,55 @@
             setSpeechStatus('Live session resumed. Continue reading when ready.', '', !isMuted && isRecording);
         }
 
-        function showLiveSessionEnded() {
+        function showLiveSessionEnded(transition = {}) {
             traceEndSession('showLiveSessionEnded.enter');
+            if (liveSessionEndRedirecting) return;
+            liveSessionEndRedirecting = true;
+            // End Session terminates the live reader; it is not a pause or a
+            // CRLA completion. Return to the existing student assessment
+            // workflow so Assessment Week/availability routing is reused.
+            stopLiveSessionHeartbeat();
+            stopLiveSessionPolling();
+            if (liveSessionEndRedirectTimer) {
+                window.clearInterval(liveSessionEndRedirectTimer);
+                liveSessionEndRedirectTimer = null;
+            }
+            if (!pauseOverlay || !pauseMenu) {
+                traceLiveCrlaRedirect('end_session_redirect', { destination: '/dashboard/assessment/', reason: 'missing_pause_overlay' });
+                window.location.replace('/dashboard/assessment/');
+                return;
+            }
+
             liveSessionPaused = true;
-            if (pauseOverlay) pauseOverlay.classList.remove('d-none');
-            if (pauseMenu) pauseMenu.classList.remove('d-none');
-            // Show exit button on session end so students can leave if needed
-            if (resumeBtn) resumeBtn.style.display = 'none';
-            if (retryBtn) retryBtn.style.display = 'none';
-            if (quitBtn) quitBtn.style.display = '';
-            const title = pauseMenu?.querySelector('.pause-title');
-            const subtitle = pauseMenu?.querySelector('.pause-subtitle');
-            if (title) title.textContent = 'Session ended';
-            if (subtitle) subtitle.textContent = 'Your teacher has ended the live assessment.';
-            if (pauseBtn) pauseBtn.classList.add('d-none');
+            pauseOverlay.classList.remove('d-none');
+            pauseMenu.classList.remove('d-none');
+            pauseMenu.style.width = 'min(92vw, 30rem)';
+            pauseMenu.style.maxWidth = 'min(92vw, 30rem)';
+            pauseMenu.style.padding = '2rem 1.5rem 1.75rem';
+            pauseMenu.style.borderRadius = '1.5rem';
+            pauseMenu.style.textAlign = 'center';
+            pauseMenu.setAttribute('role', 'dialog');
+            pauseMenu.setAttribute('aria-modal', 'true');
+            pauseMenu.setAttribute('aria-labelledby', 'liveSessionEndedTitle');
+            const isSavedTransition = transition.kind === 'saved';
+            const destination = isSavedTransition
+                ? `/dashboard/live-assessment/${encodeURIComponent(liveSessionId)}/waiting/`
+                : '/dashboard/assessment/';
+            pauseMenu.innerHTML = `
+                <div aria-hidden="true" style="display:flex;align-items:center;justify-content:center;width:4.25rem;height:4.25rem;margin:0 auto 1rem;border-radius:1.25rem;background:linear-gradient(145deg,#dff3ff,#eef8ff);color:#2875b8;font-size:2.15rem;box-shadow:0 10px 22px rgba(40,117,184,.16);">
+                    <i class="bi bi-book-half"></i>
+                </div>
+                <h2 class="pause-title" id="liveSessionEndedTitle" style="margin-bottom:.65rem;font-size:clamp(1.35rem,4vw,1.8rem);">${isSavedTransition ? 'Your teacher saved the session' : "Your teacher ended today's session"}</h2>
+                <p class="pause-subtitle" style="margin-bottom:.35rem;font-size:1.05rem;">${isSavedTransition ? 'Your reading work is safe.' : "That's okay! Your reading work is safe."}</p>
+                <p class="pause-subtitle" style="margin-bottom:1.35rem;font-size:.98rem;">${isSavedTransition ? "We're taking you to the Waiting Room." : "We're taking you back to your Reading Assessment."}</p>
+                <div style="padding:1rem .75rem 1.15rem;border-radius:1.25rem;background:linear-gradient(145deg,rgba(235,247,255,.95),rgba(248,252,255,.98));border:1px solid rgba(92,161,214,.24);">
+                    <p class="pause-subtitle mb-2" style="font-size:.9rem;font-weight:700;letter-spacing:.03em;">${isSavedTransition ? 'Going to the Waiting Room' : 'Going back in'}</p>
+                    <div id="liveSessionEndCountdown" aria-live="assertive" aria-atomic="true"
+                        style="font-size:clamp(4.5rem,18vw,7rem);line-height:.9;font-weight:900;color:#2875b8;text-shadow:0 4px 0 rgba(40,117,184,.1);">
+                        3
+                    </div>
+                </div>
+            `;
             disableReaderInteractions(true);
             stopSpeechRecognition();
             stopReadAloud();
@@ -6156,7 +6464,29 @@
                 clearLiveCountdown();
                 hideLiveCountdown();
             }
-            setSpeechStatus('Live session ended.', 'Your teacher has ended the assessment.', false);
+            setSpeechStatus('Going back to Reading Assessment.', '', false);
+
+            let countdown = 3;
+            const countdownElement = document.getElementById('liveSessionEndCountdown');
+            liveSessionEndRedirectTimer = window.setInterval(() => {
+                if (countdown <= 1) {
+                    window.clearInterval(liveSessionEndRedirectTimer);
+                    liveSessionEndRedirectTimer = null;
+                    traceLiveCrlaRedirect('end_session_redirect', { destination, reason: isSavedTransition ? 'saved_transition_countdown_complete' : 'ended_transition_countdown_complete' });
+                    window.location.replace(destination);
+                    return;
+                }
+                countdown -= 1;
+                if (countdownElement) {
+                    countdownElement.style.opacity = '0.35';
+                    countdownElement.style.transform = 'scale(.92)';
+                    countdownElement.textContent = String(countdown);
+                    window.requestAnimationFrame(() => {
+                        countdownElement.style.opacity = '1';
+                        countdownElement.style.transform = 'scale(1)';
+                    });
+                }
+            }, 1000);
         }
 
         function hasActiveReadingAttempt() {
@@ -6168,11 +6498,57 @@
         }
 
         async function handleLiveSessionState(state) {
-            if (!state || !state.status) return;
+            if (!state || !state.status) {
+                console.debug('LIVE_CRLA_CLOSE_SAVE_DEBUG redirect condition', {
+                    liveSessionId,
+                    evaluated: false,
+                    reason: 'missing session state or status',
+                    state,
+                });
+                return;
+            }
             traceEndSession('handleLiveSessionState.enter', {
                 responseStatus: state.status,
                 responseStudentStates: state.student_states || {},
             });
+            const currentStudentId = String(window.PABASA_USER_ID || localStorage.getItem('pabasaUserId') || '');
+            const viewerStudentState = (state.student_states || {})[currentStudentId]
+                || state.viewer_student_state
+                || {};
+            const participationStatus = String(viewerStudentState.participation_status || '').toLowerCase();
+            const studentStatus = String(viewerStudentState.status || '').toLowerCase();
+            const shouldRedirectToWaitingRoom = (
+                !liveSessionRedirectingToWaitingRoom
+                && ['started', 'paused'].includes(String(state.status).toLowerCase())
+                && participationStatus === 'saved'
+                && !['completed', 'skipped'].includes(studentStatus)
+            );
+            console.debug('LIVE_CRLA_CLOSE_SAVE_DEBUG state decision', {
+                liveSessionId,
+                currentStudentId,
+                sessionStatus: state.status,
+                studentIds: state.student_ids,
+                viewerStudentState: state.viewer_student_state,
+                extractedStudentState: viewerStudentState,
+                participationStatus,
+                studentStatus,
+                shouldRedirectToWaitingRoom,
+            });
+            if (
+                shouldRedirectToWaitingRoom
+            ) {
+                console.debug('LIVE_CRLA_CLOSE_SAVE_DEBUG redirect attempt', {
+                    liveSessionId,
+                    waitingRoomUrl: `/dashboard/live-assessment/${encodeURIComponent(liveSessionId)}/waiting/`,
+                });
+                liveSessionRedirectingToWaitingRoom = true;
+                stopLiveSessionHeartbeat();
+                stopLiveSessionPolling();
+                liveSessionRedirectingToWaitingRoom = false;
+                liveSessionEndRedirecting = false;
+                showLiveSessionEnded({ kind: 'saved' });
+                return;
+            }
             if (state.status === 'paused') {
                 if (!liveSessionPaused) {
                     pauseLiveElapsedTimer();
@@ -6183,20 +6559,19 @@
                 return;
             }
             if (state.status === 'started' && !liveSessionPaused && !liveActiveIntervalStartedAt) {
-                const currentStudentId = String(window.PABASA_USER_ID || localStorage.getItem('pabasaUserId') || '');
                 const savedElapsed = Number((state.student_states || {})[currentStudentId]?.elapsed_seconds);
                 if (Number.isFinite(savedElapsed) && savedElapsed >= 0) liveActiveElapsedSeconds = savedElapsed;
             }
             if (liveSessionPaused && state.status === 'started') {
                 liveSessionPaused = false;
                 liveSessionEnded = false;
-                const currentStudentId = String(window.PABASA_USER_ID || localStorage.getItem('pabasaUserId') || '');
                 const restoredStudentState = (state.student_states || {})[currentStudentId] || {};
                 resumeLiveElapsedTimer(restoredStudentState);
                 if (restoredStudentState.recovery_state && state.reader_url) {
                     // Reload from the server-authoritative temporary workflow
                     // snapshot. This is a direct restore, not a replay of
                     // completed items or a new branch calculation.
+                    traceLiveCrlaRedirect('resume_reader_redirect', { destination: state.reader_url, reason: 'started_session_with_recovery_state' });
                     window.location.replace(state.reader_url);
                     return;
                 }
@@ -6211,7 +6586,9 @@
                     traceEndSession('handleLiveSessionState.endedFirstSeen', {
                         hasActiveReadingAttempt: hasActiveReadingAttempt(),
                     });
-                    if (hasActiveReadingAttempt()) {
+                    // Ending the live session is not CRLA completion. Only a
+                    // terminal completed student state may show completion UI.
+                    if (studentStatus === 'completed') {
                         showCompletion(true);
                     } else {
                         showLiveSessionEnded();
@@ -6862,6 +7239,7 @@
                 return;
             }
             const assessmentUrl = new URL('/dashboard/assessment/', window.location.origin);
+            traceLiveCrlaRedirect('return_to_assessment_redirect', { destination: assessmentUrl.toString(), reason: 'reader_exit_or_completion' });
             window.location.assign(assessmentUrl.toString());
         }
 
@@ -7108,6 +7486,7 @@
                 } else if (state.stage === "transition_to_story") {
                     await updateStudentEndState({ stage: "story_selection", next_stage: "story_selection" });
                 }
+                traceLiveCrlaRedirect('stage_transition_redirect', { destination: transitionUrl, reason: state.stage || 'finish_transition' });
                 window.location.assign(transitionUrl);
                 return;
             }

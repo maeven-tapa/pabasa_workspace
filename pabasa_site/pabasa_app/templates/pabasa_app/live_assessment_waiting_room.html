@@ -262,6 +262,8 @@
   const stateUrl = `/api/live-assessment/session/${sessionId}/`;
   const pollInterval = 1200;
   let pollTimer = null;
+  let continueTransitionStarted = false;
+  let continueTransitionTimer = null;
 
   function stopPolling() {
     if (pollTimer) {
@@ -280,6 +282,26 @@
         return null;
       }
       const j = await r.json();
+      console.warn('LIVE_CRLA_RESUME_DEBUG waiting_room_state', {
+        sessionId,
+        httpStatus: r.status,
+        status: j?.session?.status,
+        participation_status: j?.session?.viewer_student_state?.participation_status,
+        student_state: j?.session?.viewer_student_state,
+        reader_url: j?.session?.reader_url || null,
+      });
+      console.warn('LIVE_CRLA_SAVE_DEBUG', 'waiting_room_state', {
+        sessionId,
+        status: j?.session?.status,
+        participation_status: j?.session?.viewer_student_state?.participation_status,
+        current_item: j?.session?.viewer_student_state?.current_item,
+        progress: j?.session?.viewer_student_state?.progress,
+        items_completed: j?.session?.viewer_student_state?.items_completed,
+        items_total: j?.session?.viewer_student_state?.items_total,
+        crla_stage: j?.session?.viewer_student_state?.crla_stage,
+        recovery_state: j?.session?.viewer_student_state?.recovery_state,
+        reader_url: j?.session?.reader_url || null,
+      });
       return j.success ? j.session : { error: 'session-inactive' };
     } catch (e) {
       console.warn('waiting room fetch', e);
@@ -295,8 +317,48 @@
     return true;
   }
 
+  function showContinueTransition(url) {
+    if (continueTransitionStarted || !url) return;
+    continueTransitionStarted = true;
+    stopPolling();
+    const root = document.createElement('div');
+    root.setAttribute('role', 'dialog');
+    root.setAttribute('aria-modal', 'true');
+    root.setAttribute('aria-labelledby', 'continueReadingTitle');
+    root.style.cssText = 'position:fixed;inset:0;z-index:25000;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(15,23,42,.28)';
+    root.innerHTML = `<div style="width:min(100%,30rem);padding:2rem 1.5rem 1.6rem;border:1px solid #dbe8f5;border-radius:1.5rem;background:#fff;color:#17324d;text-align:center;box-shadow:0 24px 70px rgba(28,73,110,.2)">
+      <div aria-hidden="true" style="display:flex;align-items:center;justify-content:center;width:4.25rem;height:4.25rem;margin:0 auto 1rem;border-radius:1.25rem;background:linear-gradient(145deg,#dff3ff,#eef8ff);color:#2875b8;font-size:2.15rem"><i class="bi bi-book-half"></i></div>
+      <h2 id="continueReadingTitle" style="margin:0 0 .65rem;font-size:clamp(1.35rem,4vw,1.8rem);font-weight:800">Your reading is ready!</h2>
+      <p style="margin:0 0 .4rem;color:#526b82;font-size:1.02rem;line-height:1.5">Your teacher is ready to continue your reading session.</p>
+      <p style="margin:0 0 1.35rem;color:#526b82;font-size:1.02rem;line-height:1.5">Your saved work is safe.</p>
+      <div style="padding:1rem .75rem 1.1rem;border:1px solid rgba(92,161,214,.24);border-radius:1.25rem;background:linear-gradient(145deg,rgba(235,247,255,.95),rgba(248,252,255,.98))">
+        <p style="margin:0 0 .5rem;color:#526b82;font-size:.9rem;font-weight:700;letter-spacing:.03em">Starting in</p>
+        <div data-continue-countdown aria-live="assertive" aria-atomic="true" style="font-size:clamp(4.5rem,18vw,7rem);line-height:.9;font-weight:900;color:#2875b8">3</div>
+      </div>
+    </div>`;
+    document.body.appendChild(root);
+    const number = root.querySelector('[data-continue-countdown]');
+    let value = 3;
+    continueTransitionTimer = window.setInterval(() => {
+      if (value <= 1) {
+        window.clearInterval(continueTransitionTimer);
+        continueTransitionTimer = null;
+        window.location.replace(url);
+        return;
+      }
+      value -= 1;
+      if (number) number.textContent = String(value);
+    }, 1000);
+  }
+
   async function handleState(state) {
     if (!state) return;
+    console.warn('LIVE_CRLA_RESUME_DEBUG waiting_room_handle', {
+      sessionId,
+      status: state.status,
+      viewer_student_state: state.viewer_student_state,
+      reader_url: state.reader_url || null,
+    });
     if (state.error === 'session-inactive') {
       stopPolling();
       window.location.replace('{% url "dashboard" %}');
@@ -344,9 +406,18 @@
     }
 
     if (state.status === 'countdown' || state.status === 'started') {
+      const participationStatus = String(state.viewer_student_state?.participation_status || '').toLowerCase();
+      if (participationStatus === 'saved') {
+        setText('waitingMessage', 'Your reading work is saved. Please wait for your teacher to continue.');
+        return;
+      }
       if (state.reader_url) {
         stopPolling();
-        redirectToReader(state.reader_url);
+        if (state.viewer_student_state?.recovery_state) {
+          showContinueTransition(state.reader_url);
+        } else {
+          redirectToReader(state.reader_url);
+        }
         return;
       }
     }

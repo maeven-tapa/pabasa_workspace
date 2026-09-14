@@ -8366,6 +8366,39 @@ def _student_has_active_live_assessment(student, section):
     )
 
 
+def _student_has_terminal_unfinished_live_crla(student, material):
+    """Return whether an ended Live CRLA attempt should suppress a fresh launch."""
+    if not student or not material or not _is_live_crla_material(material):
+        return False
+    if _official_crla_completed_result_for_material(student, material):
+        return False
+
+    sessions = LiveAssessmentSession.objects.filter(
+        status='ended', material=material,
+        student_ids__contains=[student.id],
+    ).order_by('-updated_at', '-created_at')
+    for session in sessions:
+        state = (session.student_states or {}).get(str(student.id), {})
+        if not isinstance(state, dict):
+            continue
+        # Session membership alone is insufficient. End Session preserves an
+        # attempted snapshot and marks it missed; cancelled setup sessions do
+        # not satisfy this predicate.
+        attempted = (
+            str(state.get('status') or '').lower() == 'missed'
+            and (
+                (state.get('elapsed_seconds') or 0) > 0
+                or (state.get('items_completed') or 0) > 0
+                or state.get('progress') not in (None, '', 0, False)
+                or bool(state.get('current_item'))
+                or bool(state.get('recovery_state'))
+            )
+        )
+        if attempted:
+            return True
+    return False
+
+
 def _format_calendar_date(value):
     if not value:
         return ''
@@ -9320,7 +9353,34 @@ def _official_crla_completed_result_for_material(student, material):
     When the student's calendar has a school year, retain the existing
     academic-year boundary so a reused material can be taken next year.
     """
+    diagnostic_candidates = Assessment.objects.filter(
+        student=student,
+        material=material,
+    ).order_by('-completed_at', '-updated_at', '-id') if student and material else []
+    for candidate in diagnostic_candidates:
+        candidate_classification = str(getattr(candidate, 'crla_classification', '') or getattr(candidate, 'classification', '') or '').strip()
+        rejection_reasons = []
+        if getattr(candidate, 'attempt_status', None) != 'completed':
+            rejection_reasons.append('attempt_status')
+        if getattr(candidate, 'completed_at', None) is None:
+            rejection_reasons.append('completed_at')
+        if not candidate_classification:
+            rejection_reasons.append('classification')
+        logger.warning(
+            'LIVE_CRLA_OFFICIAL_COMPLETE_DEBUG all_candidate student_id=%s material_id=%s assessment_id=%s attempt_status=%s completed_at=%s classification=%s rejection_reasons=%s',
+            getattr(student, 'id', None), getattr(material, 'id', None), candidate.id,
+            getattr(candidate, 'attempt_status', None), getattr(candidate, 'completed_at', None),
+            candidate_classification, ','.join(rejection_reasons) or 'none',
+        )
+    logger.warning(
+        'LIVE_CRLA_OFFICIAL_COMPLETE_DEBUG check_args student_id=%s material_id=%s material_repr=%s',
+        getattr(student, 'id', None), getattr(material, 'id', None), repr(material),
+    )
     if not student or not material or not _is_official_crla_material(material):
+        logger.warning(
+            'LIVE_CRLA_OFFICIAL_COMPLETE_DEBUG final student_id=%s material_id=%s result_id=None reason=missing_or_non_official_material',
+            getattr(student, 'id', None), getattr(material, 'id', None),
+        )
         return None
 
     results = Assessment.objects.filter(
@@ -9340,9 +9400,29 @@ def _official_crla_completed_result_for_material(student, material):
         except (TypeError, ValueError):
             pass
 
-    for result in results:
-        if str(getattr(result, 'crla_classification', '') or getattr(result, 'classification', '') or '').strip():
+    candidates = list(results)
+    logger.warning(
+        'LIVE_CRLA_OFFICIAL_COMPLETE_DEBUG candidates student_id=%s material_id=%s count=%s school_year=%s',
+        getattr(student, 'id', None), getattr(material, 'id', None), len(candidates), school_year,
+    )
+    for result in candidates:
+        classification = str(getattr(result, 'crla_classification', '') or getattr(result, 'classification', '') or '').strip()
+        logger.warning(
+            'LIVE_CRLA_OFFICIAL_COMPLETE_DEBUG candidate student_id=%s material_id=%s assessment_id=%s attempt_status=%s completed_at=%s classification=%s accepted=%s rejection_reason=%s',
+            getattr(student, 'id', None), getattr(material, 'id', None), result.id,
+            getattr(result, 'attempt_status', None), getattr(result, 'completed_at', None),
+            classification, bool(classification), '' if classification else 'missing_classification',
+        )
+        if classification:
+            logger.warning(
+                'LIVE_CRLA_OFFICIAL_COMPLETE_DEBUG final student_id=%s material_id=%s result_id=%s completed_at=%s',
+                getattr(student, 'id', None), getattr(material, 'id', None), result.id, result.completed_at,
+            )
             return result
+    logger.warning(
+        'LIVE_CRLA_OFFICIAL_COMPLETE_DEBUG final student_id=%s material_id=%s result_id=None reason=no_completed_classified_result',
+        getattr(student, 'id', None), getattr(material, 'id', None),
+    )
     return None
 
 
@@ -11353,6 +11433,11 @@ def assessment(request):
     official_availability = _official_assessment_availability_for_student(user, request)
     official_crla_material = _official_crla_material_for_student(user, official_availability.get('assessment_type'))
     has_active_crla_window = bool(official_availability.get('available'))
+    has_terminal_unfinished_live_crla = bool(
+        has_active_crla_window
+        and official_crla_material
+        and _student_has_terminal_unfinished_live_crla(user, official_crla_material)
+    )
     if approved_assessment_request and student_live_assessment and not section_assessment_completed:
         approved_phase = _official_crla_assessment_phase(user, request=request)
         if approved_phase not in {'pretest', 'midtest', 'posttest'}:
@@ -11410,6 +11495,9 @@ def assessment(request):
     elif state.get('aral_status') == 'active':
         stage = 'original'
         routing_reason = 'active_aral_intervention'
+    elif has_terminal_unfinished_live_crla:
+        stage = 'unavailable'
+        routing_reason = 'terminal_unfinished_live_crla_attempt'
     elif forced_workflow == 'original':
         stage = 'original'
         routing_reason = 'forced_original_workflow'
@@ -11943,6 +12031,12 @@ def teacher_aral_action(request):
 @xframe_options_sameorigin
 def reading_word_page(request):
     live_session_id = str(request.GET.get('live_session_id') or '').strip()
+    logger.warning(
+        'LIVE_CRLA_REDIRECT_SERVER_DEBUG reader_enter path=%s student_id=%s role=%s session_id=%s live=%s live_recovery=%s crla_fresh=%s crla_stage=%s',
+        request.get_full_path(), request.session.get('user_id'), request.session.get('user_role'),
+        live_session_id, request.GET.get('live'), request.GET.get('live_recovery'),
+        request.GET.get('crla_fresh'), request.GET.get('crla_stage'),
+    )
     live_session = None
     student_state = {}
     if live_session_id:
@@ -11957,21 +12051,40 @@ def reading_word_page(request):
             or str(requested_material_id or '') != str(live_session.material_id)
             or not _is_live_crla_material(live_session.material)
         ):
+            logger.warning(
+                'LIVE_CRLA_REDIRECT_SERVER_DEBUG reader_forbidden path=%s student_id=%s session_id=%s session_status=%s state=%s reason=live_authorization',
+                request.get_full_path(), request.session.get('user_id'), live_session_id,
+                getattr(live_session, 'status', None),
+                (live_session.student_states or {}).get(str(request.session.get('user_id')), {}) if live_session else {},
+            )
             return HttpResponseForbidden('You are not authorized to join this live CRLA assessment.')
         student_state = (live_session.student_states or {}).get(str(current_user_id), {})
         if request.GET.get('live_recovery') == '1':
             recovery_state = _canonical_live_recovery_state(student_state.get('recovery_state'))
-            if recovery_state.get('stage') in {'rhymes', 'sentences'}:
-                return redirect(_build_live_assessment_action_url(
+            requested_recovery_stage = str(request.GET.get('crla_stage') or '').strip().lower()
+            recovered_stage = str(recovery_state.get('stage') or '').strip().lower()
+            if recovered_stage in {'rhymes', 'sentences'} and requested_recovery_stage != recovered_stage:
+                destination = _build_live_assessment_action_url(
                     live_session.material,
                     live_session.id,
                     live_session.start_at.isoformat() if live_session.start_at else '',
                     live_session.countdown_seconds,
                     recovery=True,
-                    stage=recovery_state.get('stage'),
-                ))
+                    stage=recovered_stage,
+                )
+                logger.warning(
+                    'LIVE_CRLA_REDIRECT_SERVER_DEBUG recovery_stage_redirect student_id=%s session_id=%s session_status=%s state_stage=%s recovery_stage=%s destination=%s',
+                    request.session.get('user_id'), live_session_id, live_session.status,
+                    student_state.get('crla_stage'), recovery_state.get('stage'), destination,
+                )
+                return redirect(destination)
     canonical_response = _canonicalize_custom_material_reading_url(request)
     if canonical_response:
+        logger.warning(
+            'LIVE_CRLA_REDIRECT_SERVER_DEBUG canonical_redirect student_id=%s session_id=%s destination=%s',
+            request.session.get('user_id'), live_session_id,
+            getattr(canonical_response, 'url', None),
+        )
         return canonical_response
     context = _dashboard_context(request)
     context.update(_custom_material_reading_context(request))
@@ -11979,6 +12092,20 @@ def reading_word_page(request):
         student_state.get('recovery_state', {})
         if live_session_id and request.GET.get('live_recovery') == '1' and isinstance(student_state, dict)
         else {}
+    )
+    logger.warning(
+        'LIVE_CRLA_RESUME_SERVER_DEBUG reader_launch student_id=%s session_id=%s live_recovery=%s current_item=%s progress=%s items_completed=%s items_total=%s crla_stage=%s recovery_stage=%s recovery_branch=%s recovery_next_stage=%s',
+        request.session.get('user_id'),
+        live_session_id,
+        request.GET.get('live_recovery'),
+        student_state.get('current_item'),
+        student_state.get('progress'),
+        student_state.get('items_completed'),
+        student_state.get('items_total'),
+        student_state.get('crla_stage'),
+        live_recovery_state.get('stage') if isinstance(live_recovery_state, dict) else '',
+        live_recovery_state.get('branch') if isinstance(live_recovery_state, dict) else '',
+        live_recovery_state.get('next_stage') if isinstance(live_recovery_state, dict) else '',
     )
     context['student_end_assessment_state_json'] = json.dumps(
         (live_recovery_state or _get_user_state(User.objects.filter(id=request.session.get('user_id')).first()).get('student_end_assessment_state') or {}),
@@ -13640,6 +13767,12 @@ def syllable_blending_page(request):
 
 @xframe_options_sameorigin
 def reading_sentence_page(request):
+    logger.warning(
+        'LIVE_CRLA_REDIRECT_SERVER_DEBUG sentence_reader_enter path=%s student_id=%s role=%s session_id=%s live=%s live_recovery=%s crla_fresh=%s crla_stage=%s',
+        request.get_full_path(), request.session.get('user_id'), request.session.get('user_role'),
+        request.GET.get('live_session_id'), request.GET.get('live'), request.GET.get('live_recovery'),
+        request.GET.get('crla_fresh'), request.GET.get('crla_stage'),
+    )
     if not _check_auth(request):
         return redirect('auth')
     access_response = _enforce_student_access_for_request(request)
@@ -13660,6 +13793,12 @@ def reading_sentence_page(request):
             or str(requested_material_id or '') != str(live_session.material_id)
             or not _is_live_crla_material(live_session.material)
         ):
+            logger.warning(
+                'LIVE_CRLA_REDIRECT_SERVER_DEBUG sentence_reader_forbidden path=%s student_id=%s session_id=%s session_status=%s state=%s reason=live_authorization',
+                request.get_full_path(), request.session.get('user_id'), live_session_id,
+                getattr(live_session, 'status', None),
+                (live_session.student_states or {}).get(str(request.session.get('user_id')), {}) if live_session else {},
+            )
             return HttpResponseForbidden('You are not authorized to join this live CRLA assessment.')
         live_student_state = (live_session.student_states or {}).get(str(current_user_id), {})
     canonical_response = _canonicalize_custom_material_reading_url(request)
@@ -15227,6 +15366,10 @@ def _live_student_update_is_allowed(session, student_id):
     if str((session.batch_assignments or {}).get(str(student_id), 0)) != str(session.current_batch):
         return False
     state = ((session.student_states or {}).get(str(student_id), {}) or {})
+    # Close & Save is a teacher-authoritative checkpoint.  A reader heartbeat
+    # that was already in flight must not reactivate or overwrite it.
+    if str(state.get('participation_status') or '').lower() == 'saved':
+        return False
     return str(state.get('status') or '').lower() not in {'skipped', 'completed', 'missed'}
 
 
@@ -15370,6 +15513,18 @@ def _live_session_batch_payload(session):
     assignments = _ensure_live_session_batches(session)
     current_batch = int(session.current_batch or 1)
     current_completed, current_total = _live_batch_progress(session, current_batch)
+    selected_student_ids = [int(student_id) for student_id in (session.student_ids or [])]
+    selected_students = User.objects.filter(id__in=selected_student_ids)
+    students_by_id = {student.id: student for student in selected_students}
+    all_selected_students_completed = bool(selected_student_ids) and all(
+        _official_crla_completed_result_for_material(students_by_id[student_id], session.material)
+        for student_id in selected_student_ids
+        if student_id in students_by_id
+    ) and len(students_by_id) == len(selected_student_ids)
+    logger.warning(
+        'LIVE_CRLA_BATCH_COMPLETE_SERVER_DEBUG session_id=%s status=%s selected_student_ids=%s official_all_complete=%s',
+        session.id, session.status, selected_student_ids, all_selected_students_completed,
+    )
     overall_completed = sum(
         1 for student_id in (session.student_ids or [])
         if str(((session.student_states or {}).get(str(student_id), {}) or {}).get('status', '')).lower() in {'completed', 'skipped'}
@@ -15386,6 +15541,7 @@ def _live_session_batch_payload(session):
         'batch_complete': bool(current_total and current_completed >= current_total),
         'batch_loaded': session.status == 'batch_loaded',
         'assessment_complete': bool(session.total_batches and current_batch >= session.total_batches and current_completed >= current_total),
+        'all_selected_students_completed': all_selected_students_completed,
         'unstarted_batches': _live_unstarted_batches(session),
     }
 
@@ -15593,6 +15749,15 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
 
     _log_completion_timing('entry')
     data = dict(data or {})
+    logger.warning(
+        'LIVE_CRLA_COMPLETION_PATH_DEBUG complete_helper_enter student_id=%s live_session_id=%s material_id=%s assessment_id=%s status=%s stage=%s branch=%s next_stage=%s',
+        getattr(student_user, 'id', None),
+        data.get('live_session_id') or getattr(live_session, 'id', None),
+        data.get('material_id'), data.get('assessment_id'), data.get('status'),
+        (data.get('recovery_state') or {}).get('stage') if isinstance(data.get('recovery_state'), dict) else None,
+        (data.get('recovery_state') or {}).get('branch') if isinstance(data.get('recovery_state'), dict) else None,
+        (data.get('recovery_state') or {}).get('next_stage') if isinstance(data.get('recovery_state'), dict) else None,
+    )
     if live_session and not data.get('live_session_id'):
         data['live_session_id'] = live_session.id
     if live_session or data.get('live_session_id'):
@@ -16267,6 +16432,13 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 total_score=score_payload.get('total_score'),
             )
             _log_completion_timing('live_session_sync_end')
+        logger.warning(
+            'LIVE_CRLA_COMPLETION_PATH_DEBUG complete_helper_persisted student_id=%s material_id=%s assessment_id=%s result_id=%s attempt_status=%s completed_at=%s classification=%s',
+            getattr(student_user, 'id', None), getattr(material, 'id', None),
+            getattr(assessment, 'id', None), getattr(completed_result_row, 'id', None),
+            getattr(completed_result_row, 'attempt_status', None), getattr(completed_result_row, 'completed_at', None),
+            getattr(completed_result_row, 'crla_classification', None) or getattr(completed_result_row, 'classification', None),
+        )
     except Exception as e:
         logger.exception('Failed to persist assessment/practice attempt: %s', e)
         if live_session or data.get('live_session_id'):
@@ -16655,8 +16827,33 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
                 or (student_state.get('items_completed') or 0) > 0
                 or (student_state.get('progress') not in (None, '', 0, False))
             )
+            logger.warning(
+                'LIVE_CRLA_MISSED_SERVER_DEBUG end_student_state_before session_id=%s student_id=%s status=%s participation_status=%s connection_status=%s progress=%s current_item=%s items_completed=%s items_total=%s crla_stage=%s has_active_attempt=%s',
+                session.id,
+                student_id,
+                status_value,
+                student_state.get('participation_status'),
+                student_state.get('connection_status'),
+                student_state.get('progress'),
+                student_state.get('current_item'),
+                student_state.get('items_completed'),
+                student_state.get('items_total'),
+                student_state.get('crla_stage'),
+                has_active_attempt,
+            )
 
-            if has_active_attempt and student_user:
+            # End Session terminates the live transport; it is not evidence
+            # that an in-progress CRLA attempt completed. Only preserve the
+            # existing completion path for a temporary completion snapshot or
+            # a student who already has an authoritative official result.
+            has_authoritative_completion = bool(
+                student_user
+                and _official_crla_completed_result_for_material(student_user, session.material)
+            )
+
+            if has_active_attempt and student_user and (
+                is_temporary_live_completion or has_authoritative_completion
+            ):
                 payload = _build_live_session_completion_payload(session, student_user, student_state)
                 payload.setdefault('scores', {})
                 payload['scores'].setdefault('duration_seconds', student_state.get('elapsed_seconds') or 0)
@@ -16673,6 +16870,13 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
                     payload['scores']['current_item'] = student_state.get('current_item')
                 if student_state.get('completion_payload') is not None:
                     payload['completion_payload'] = student_state.get('completion_payload')
+                logger.warning(
+                    'LIVE_CRLA_COMPLETION_PATH_DEBUG end_session_complete_call session_id=%s student_id=%s has_authoritative_completion=%s temporary_live_completion=%s state_status=%s stage=%s branch=%s next_stage=%s',
+                    session.id, student_id, has_authoritative_completion, is_temporary_live_completion,
+                    student_state.get('status'), student_state.get('crla_stage'),
+                    (student_state.get('recovery_state') or {}).get('branch') if isinstance(student_state.get('recovery_state'), dict) else None,
+                    (student_state.get('recovery_state') or {}).get('next_stage') if isinstance(student_state.get('recovery_state'), dict) else None,
+                )
                 _complete_assessment_for_student(
                     student_user, data=payload, live_session=session,
                     raise_on_error=True,
@@ -16689,13 +16893,25 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
                 student_state['status'] = 'missed'
                 student_state['connection_status'] = 'disconnected'
                 student_state['final_score'] = None
-                student_state['progress'] = 0
-                student_state['accuracy'] = None
-                student_state['reading_time'] = None
-                student_state['items_completed'] = 0
-                student_state['items_total'] = student_state.get('items_total') or 0
+                # Preserve the unfinished CRLA snapshot. Do not fabricate
+                # completion progress/items or erase the recovery position.
+                student_state['progress'] = student_state.get('progress', 0)
+                student_state['accuracy'] = student_state.get('accuracy')
+                student_state['reading_time'] = student_state.get('reading_time')
+                student_state['items_completed'] = student_state.get('items_completed', 0)
+                student_state['items_total'] = student_state.get('items_total', 0)
 
-                if student_user:
+                # An actively attempted CRLA that is terminated by End
+                # Session is an interrupted live attempt, not a student
+                # missed-activity notification. Keep the internal terminal
+                # state above, but reserve this notification for students who
+                # never began the assessment.
+                if student_user and not has_active_attempt:
+                    logger.warning(
+                        'LIVE_CRLA_MISSED_SERVER_DEBUG notification_attempt session_id=%s student_id=%s reason=not_has_active_attempt',
+                        session.id,
+                        student_user.id,
+                    )
                     existing_title = '😔 Oops! You Missed a Reading Activity'
                     existing_message = (
                         f"You missed this reading activity:\n\n📖 {session.material.title or 'Reading Activity'}\n\n"
@@ -16713,7 +16929,27 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
                         )
                     except Exception:
                         logger.exception('Failed to create missed-assessment notification for student %s', student_user.id)
+                else:
+                    logger.warning(
+                        'LIVE_CRLA_MISSED_SERVER_DEBUG notification_skipped session_id=%s student_id=%s reason=%s has_active_attempt=%s student_found=%s',
+                        session.id,
+                        student_id,
+                        'active_attempt' if has_active_attempt else 'student_not_found',
+                        has_active_attempt,
+                        bool(student_user),
+                    )
             states[student_key] = student_state
+            logger.warning(
+                'LIVE_CRLA_MISSED_SERVER_DEBUG end_student_state_after session_id=%s student_id=%s status=%s connection_status=%s progress=%s current_item=%s items_completed=%s items_total=%s',
+                session.id,
+                student_id,
+                student_state.get('status'),
+                student_state.get('connection_status'),
+                student_state.get('progress'),
+                student_state.get('current_item'),
+                student_state.get('items_completed'),
+                student_state.get('items_total'),
+            )
 
         session.student_states = states
 
@@ -17175,15 +17411,28 @@ def start_assist_assessment(request):
 @csrf_protect
 @require_http_methods(["GET"])
 def live_assessment_active_invitation(request):
+    invite_debug_started_at = time.perf_counter()
+    logger.warning(
+        'LIVE_CRLA_INVITE_SERVER_DEBUG endpoint_enter user_id=%s role=%s',
+        request.session.get('user_id'),
+        request.session.get('user_role'),
+    )
     if not _check_auth(request):
         return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
     if request.session.get('user_role') != 'student':
         return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
 
+    student_lookup_started_at = time.perf_counter()
     student_user = User.objects.filter(id=request.session.get('user_id'), role='student', is_archived=False).first()
+    logger.warning(
+        'LIVE_CRLA_INVITE_SERVER_DEBUG student_lookup_complete elapsed_ms=%s',
+        round((time.perf_counter() - student_lookup_started_at) * 1000, 2),
+    )
     if not student_user:
         return JsonResponse({'success': False, 'error': 'Student not found'}, status=404)
 
+    candidate_query_started_at = time.perf_counter()
+    logger.warning('LIVE_CRLA_INVITE_SERVER_DEBUG candidate_sessions_query_begin')
     candidate_sessions = LiveAssessmentSession.objects.filter(
         status__in=LIVE_ASSESSMENT_ACTIVE_STATUSES,
         material__is_active=True,
@@ -17191,8 +17440,21 @@ def live_assessment_active_invitation(request):
         material__assessment_kind='crla',
     ).select_related('material', 'course', 'teacher').order_by('-created_at')
 
+    candidate_sessions = list(candidate_sessions)
+    logger.warning(
+        'LIVE_CRLA_INVITE_SERVER_DEBUG candidate_sessions_query_evaluated count=%s elapsed_ms=%s',
+        len(candidate_sessions),
+        round((time.perf_counter() - candidate_query_started_at) * 1000, 2),
+    )
+
     session = None
     for candidate in candidate_sessions:
+        logger.warning(
+            'LIVE_CRLA_INVITE_SERVER_DEBUG session_check session_id=%s status=%s student_ids=%s',
+            candidate.id,
+            candidate.status,
+            candidate.student_ids or [],
+        )
         student_ids = []
         for value in candidate.student_ids or []:
             try:
@@ -17200,13 +17462,34 @@ def live_assessment_active_invitation(request):
             except (TypeError, ValueError):
                 continue
         if student_user.id in student_ids:
+            logger.warning(
+                'LIVE_CRLA_INVITE_SERVER_DEBUG session_match student_id=%s session_id=%s',
+                student_user.id,
+                candidate.id,
+            )
             session = candidate
             break
 
     if not session:
+        logger.warning(
+            'LIVE_CRLA_INVITE_SERVER_DEBUG returning_session_null reason=no_matching_session elapsed_ms=%s',
+            round((time.perf_counter() - invite_debug_started_at) * 1000, 2),
+        )
         return JsonResponse({'success': True, 'session': None})
 
+    auto_end_started_at = time.perf_counter()
+    logger.warning(
+        'LIVE_CRLA_INVITE_SERVER_DEBUG maybe_auto_end_start session_id=%s status=%s',
+        session.id,
+        session.status,
+    )
     _maybe_auto_end_live_session(session)
+    logger.warning(
+        'LIVE_CRLA_INVITE_SERVER_DEBUG maybe_auto_end_end session_id=%s elapsed_ms=%s status=%s',
+        session.id,
+        round((time.perf_counter() - auto_end_started_at) * 1000, 2),
+        session.status,
+    )
     session.refresh_from_db()
 
     student_ids = []
@@ -17217,14 +17500,40 @@ def live_assessment_active_invitation(request):
             continue
 
     if session.status in ['ended', 'cancelled'] or student_user.id not in student_ids:
+        logger.warning(
+            'LIVE_CRLA_INVITE_SERVER_DEBUG returning_session_null reason=ended_cancelled_or_membership_changed session_id=%s status=%s elapsed_ms=%s',
+            session.id,
+            session.status,
+            round((time.perf_counter() - invite_debug_started_at) * 1000, 2),
+        )
         return JsonResponse({'success': True, 'session': None})
 
     student_state = (session.student_states or {}).get(str(student_user.id), {}) if isinstance(session.student_states, dict) else {}
     student_status = str(student_state.get('status') or '').strip().lower()
     student_connection_status = str(student_state.get('connection_status') or '').strip().lower()
+    logger.warning(
+        'LIVE_CRLA_INVITE_SERVER_DEBUG student_state session_id=%s student_id=%s status=%s participation_status=%s connection_status=%s state_present=%s',
+        session.id,
+        student_user.id,
+        student_status,
+        str(student_state.get('participation_status') or '').strip().lower(),
+        student_connection_status,
+        bool(student_state),
+    )
     # A temporary 100% live state is still recoverable until End Session
     # creates the official result.
+    completion_check_started_at = time.perf_counter()
+    logger.warning(
+        'LIVE_CRLA_INVITE_SERVER_DEBUG official_completion_check_start session_id=%s',
+        session.id,
+    )
     student_completed = bool(_official_crla_completed_result_for_material(student_user, session.material))
+    logger.warning(
+        'LIVE_CRLA_INVITE_SERVER_DEBUG official_completion_check_end session_id=%s elapsed_ms=%s completed=%s',
+        session.id,
+        round((time.perf_counter() - completion_check_started_at) * 1000, 2),
+        student_completed,
+    )
     student_has_participated = student_status in {'reading', 'started', 'paused', 'completed', 'submitted'} or student_connection_status in {'connected', 'disconnected'}
 
     login_at_raw = request.session.get('login_at') or request.session.get('created_at')
@@ -17262,6 +17571,11 @@ def live_assessment_active_invitation(request):
     # even when they have already started reading; their server-side temporary
     # state determines the exact reader position.
     if student_has_participated and not student_completed:
+        logger.warning(
+            'LIVE_CRLA_INVITE_SERVER_DEBUG returning_success session_id=%s reason=participated elapsed_ms=%s',
+            session.id,
+            round((time.perf_counter() - invite_debug_started_at) * 1000, 2),
+        )
         return JsonResponse({'success': True, 'session': {
             'id': session.id, 'status': session.status,
             'join_url': _build_live_assessment_waiting_url(session.id),
@@ -17271,8 +17585,18 @@ def live_assessment_active_invitation(request):
         }})
 
     if not should_show_modal and not should_redirect_to_waiting_room:
+        logger.warning(
+            'LIVE_CRLA_INVITE_SERVER_DEBUG returning_session_null reason=no_redirect_or_modal session_id=%s elapsed_ms=%s',
+            session.id,
+            round((time.perf_counter() - invite_debug_started_at) * 1000, 2),
+        )
         return JsonResponse({'success': True, 'session': None})
 
+    logger.warning(
+        'LIVE_CRLA_INVITE_SERVER_DEBUG returning_success session_id=%s reason=invitation elapsed_ms=%s',
+        session.id,
+        round((time.perf_counter() - invite_debug_started_at) * 1000, 2),
+    )
     return JsonResponse({
         'success': True,
         'session': {
@@ -17407,10 +17731,13 @@ def start_live_assessment(request):
     # material remain selectable.  In-progress and older-period results do not
     # satisfy _official_crla_completed_result_for_material().
     roster_users = User.objects.filter(id__in=available_student_ids, role='student', is_archived=False)
-    available_student_ids = [
-        student.id for student in roster_users
-        if not _official_crla_completed_result_for_material(student, material)
-    ]
+    available_student_ids = []
+    for student in roster_users:
+        student_availability = _official_assessment_availability_for_student(student, request)
+        student_phase = student_availability.get('assessment_type') or _official_crla_assessment_phase(student, request=request)
+        student_material = _official_crla_material_for_student(student, student_phase) or material
+        if not _official_crla_completed_result_for_material(student, student_material):
+            available_student_ids.append(student.id)
 
     if not available_student_ids:
         return JsonResponse({'success': False, 'error': 'No active students found for this course'}, status=400)
@@ -17603,18 +17930,34 @@ def live_assessment_recovery_validation(request, session_id):
     must not turn a brownout/expired-login into an official completion.
     """
     if not _check_auth(request):
+        logger.warning('LIVE_CRLA_RECOVERY_SERVER_DEBUG validation_return session_id=%s status=401 reason=authentication_required', session_id)
         return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
     user_id = request.session.get('user_id')
+    logger.warning(
+        'LIVE_CRLA_RECOVERY_SERVER_DEBUG validation_enter teacher_id=%s session_id=%s role=%s',
+        user_id,
+        session_id,
+        request.session.get('user_role'),
+    )
     if request.session.get('user_role') not in ['teacher', 'admin']:
+        logger.warning('LIVE_CRLA_RECOVERY_SERVER_DEBUG validation_return session_id=%s status=403 reason=invalid_role conclusively_invalid=true', session_id)
         return JsonResponse({'success': False, 'conclusively_invalid': True}, status=403)
     session = LiveAssessmentSession.objects.filter(id=session_id).select_related('teacher', 'section__school_calendar', 'material').first()
     if not session:
         # A deleted old transport record is not proof that the local draft is
         # invalid. Keep it for a later safe recovery path or explicit discard.
+        logger.warning('LIVE_CRLA_RECOVERY_SERVER_DEBUG validation_return session_id=%s status=404 session_exists=false session_missing=true conclusively_invalid=false reason=session_missing', session_id)
         return JsonResponse({'success': False, 'conclusively_invalid': False, 'session_missing': True}, status=404)
+    logger.warning(
+        'LIVE_CRLA_RECOVERY_SERVER_DEBUG session_exists session_id=%s status=%s teacher_id=%s',
+        session.id,
+        session.status,
+        session.teacher_id,
+    )
     if user_id != session.teacher_id:
         # Never let a different browser user inspect or erase the originating
         # teacher's local recovery record.
+        logger.warning('LIVE_CRLA_RECOVERY_SERVER_DEBUG validation_return session_id=%s status=403 session_exists=true session_missing=false conclusively_invalid=false reason=teacher_mismatch', session_id)
         return JsonResponse({'success': False, 'conclusively_invalid': False}, status=403)
     section = session.section
     context_matches = (
@@ -17622,16 +17965,18 @@ def live_assessment_recovery_validation(request, session_id):
         and str(request.GET.get('school_calendar_id') or '') == str(getattr(section, 'school_calendar_id', '') or '')
         and str(request.GET.get('term') or '') == str(getattr(getattr(section, 'school_calendar', None), 'current_term', '') or '')
         and str(request.GET.get('material_id') or '') == str(session.material_id or '')
-        and str(request.GET.get('assessment_week') or '').strip().lower() == str(session.material.assessment_type or '').strip().lower()
-        and str(request.GET.get('assessment_phase') or '').strip().lower() == str(session.material.assessment_type or '').strip().lower()
+        and str(request.GET.get('assessment_week') or '').strip().lower() == str(_official_reading_assessment_type(session.material) or '').strip().lower()
+        and str(request.GET.get('assessment_phase') or '').strip().lower() == str(_official_reading_assessment_type(session.material) or '').strip().lower()
     )
     if not context_matches or not _is_live_crla_material(session.material):
+        logger.warning('LIVE_CRLA_RECOVERY_SERVER_DEBUG validation_return session_id=%s status=200 session_exists=true session_missing=false conclusively_invalid=true reason=context_or_material_mismatch', session_id)
         return JsonResponse({'success': True, 'conclusively_invalid': True})
 
     if any(
         'Teacher left the live session without saving progress.' in str(entry.get('message') or '')
         for entry in (session.activity_log or []) if isinstance(entry, dict)
     ):
+        logger.warning('LIVE_CRLA_RECOVERY_SERVER_DEBUG validation_return session_id=%s status=200 session_exists=true session_missing=false conclusively_invalid=true reason=abandoned_session', session_id)
         return JsonResponse({'success': True, 'conclusively_invalid': True})
 
     draft_updated_at = parse_datetime(str(request.GET.get('draft_updated_at') or ''))
@@ -17639,13 +17984,41 @@ def live_assessment_recovery_validation(request, session_id):
     for student_id in session.student_ids or []:
         student = User.objects.filter(id=student_id, role='student', is_archived=False).first()
         if not student:
+            logger.warning('LIVE_CRLA_RECOVERY_SERVER_DEBUG validation_return session_id=%s status=200 session_exists=true session_missing=false conclusively_invalid=true reason=student_missing', session_id)
             return JsonResponse({'success': True, 'conclusively_invalid': True})
         official = _official_crla_completed_result_for_material(student, session.material)
+        state = (session.student_states or {}).get(str(student_id), {}) or {}
+        logger.warning(
+            'LIVE_CRLA_RECOVERY_COMPLETE_SERVER_DEBUG student_check session_id=%s student_id=%s session_status=%s state_status=%s participation_status=%s official_completed=%s official_result_id=%s official_completed_at=%s',
+            session.id, student_id, session.status, state.get('status'), state.get('participation_status'),
+            bool(official), getattr(official, 'id', None), getattr(official, 'completed_at', None),
+        )
         if official and (draft_updated_at is None or official.completed_at and official.completed_at >= draft_updated_at):
             conflicts.append(str(student_id))
     if conflicts:
+        logger.warning(
+            'LIVE_CRLA_RECOVERY_COMPLETE_SERVER_DEBUG validation_decision session_id=%s all_selected_students_completed=%s conflicts=%s reason=official_conflict',
+            session.id, all(
+                bool(_official_crla_completed_result_for_material(student, session.material))
+                for student in User.objects.filter(id__in=session.student_ids, role='student', is_archived=False)
+            ), conflicts,
+        )
+        logger.warning('LIVE_CRLA_RECOVERY_SERVER_DEBUG validation_return session_id=%s status=200 session_exists=true session_missing=false conclusively_invalid=true reason=official_conflict', session_id)
         return JsonResponse({'success': True, 'conclusively_invalid': True, 'official_conflict_student_ids': conflicts})
 
+    logger.warning(
+        'LIVE_CRLA_RECOVERY_SERVER_DEBUG validation_return session_id=%s status=200 session_exists=true session_missing=false conclusively_invalid=false reason=valid session_status=%s requires_reactivation=%s',
+        session_id,
+        session.status,
+        session.status in ['ended', 'cancelled'],
+    )
+    logger.warning(
+        'LIVE_CRLA_RECOVERY_COMPLETE_SERVER_DEBUG validation_decision session_id=%s all_selected_students_completed=%s reason=valid_recovery',
+        session.id, bool(session.student_ids) and all(
+            bool(_official_crla_completed_result_for_material(student, session.material))
+            for student in User.objects.filter(id__in=session.student_ids, role='student', is_archived=False)
+        ),
+    )
     return JsonResponse({
         'success': True,
         'conclusively_invalid': False,
@@ -17659,9 +18032,46 @@ def live_assessment_recovery_validation(request, session_id):
 def live_assessment_session_state(request, session_id):
     session = LiveAssessmentSession.objects.filter(id=session_id).select_related('material', 'course').first()
     if not session:
+        logger.warning('LIVE_CRLA_RECOVERY_SERVER_DEBUG state_request_missing session_id=%s status=404 response=session_not_found', session_id)
         return JsonResponse({'success': False, 'error': 'Session not found'}, status=404)
     if not _is_live_crla_material(session.material):
         return JsonResponse({'success': False, 'error': 'Only official CRLA assessments can use Live Assessment.'}, status=400)
+
+    def _state_trace(label, state):
+        state = state if isinstance(state, dict) else {}
+        recovery = state.get('recovery_state') if isinstance(state.get('recovery_state'), dict) else {}
+        logger.warning(
+            'LIVE_CRLA_STATE_TRACE_SERVER %s student_id=%s session_id=%s participation_status=%s status=%s current_item=%s progress=%s crla_stage=%s recovery_stage=%s recovery_branch=%s recovery_next_stage=%s locked_items_count=%s task1_score=%s',
+            label,
+            user_id,
+            session.id,
+            state.get('participation_status'),
+            state.get('status'),
+            state.get('current_item'),
+            state.get('progress'),
+            state.get('crla_stage'),
+            recovery.get('stage'),
+            recovery.get('branch'),
+            recovery.get('next_stage'),
+            recovery.get('locked_items_count'),
+            recovery.get('task1_score'),
+        )
+        logger.warning(
+            'LIVE_CRLA_SAVE_SERVER_DEBUG %s student_id=%s session_id=%s participation_status=%s status=%s current_item=%s progress=%s items_completed=%s items_total=%s crla_stage=%s recovery_stage=%s recovery_branch=%s recovery_next_stage=%s',
+            label,
+            user_id,
+            session.id,
+            state.get('participation_status'),
+            state.get('status'),
+            state.get('current_item'),
+            state.get('progress'),
+            state.get('items_completed'),
+            state.get('items_total'),
+            state.get('crla_stage'),
+            recovery.get('stage'),
+            recovery.get('branch'),
+            recovery.get('next_stage'),
+        )
 
     _trace_live_end_flow(
         'state_endpoint_enter',
@@ -17702,6 +18112,7 @@ def live_assessment_session_state(request, session_id):
 
     reader_url = ''
     student_state = (session.student_states or {}).get(str(user_id), {}) if isinstance(session.student_states, dict) else {}
+    student_participation_status = str(student_state.get('participation_status') or '').strip().lower()
     if user_role == 'student' and isinstance(student_state.get('recovery_state'), dict):
         recovery_state = _canonical_live_recovery_state(student_state.get('recovery_state'))
         if recovery_state != student_state.get('recovery_state'):
@@ -17740,7 +18151,14 @@ def live_assessment_session_state(request, session_id):
         user_role != 'student'
         or str(session.batch_assignments.get(str(user_id), 0)) == str(session.current_batch)
     )
-    if user_role == 'student' and session.status in {'countdown', 'started'} and session.start_at and student_batch_is_active and not student_completed:
+    if (
+        user_role == 'student'
+        and session.status in {'countdown', 'started'}
+        and session.start_at
+        and student_batch_is_active
+        and not student_completed
+        and student_participation_status != 'saved'
+    ):
         reader_url = _build_live_assessment_action_url(
             session.material,
             session.id,
@@ -17749,6 +18167,23 @@ def live_assessment_session_state(request, session_id):
             recovery=bool(student_state.get('recovery_state')),
             stage=recovery_stage,
         )
+
+    logger.warning(
+        'LIVE_CRLA_RESUME_SERVER_DEBUG waiting_room_payload session_id=%s student_id=%s participation_status=%s status=%s current_item=%s progress=%s items_completed=%s items_total=%s crla_stage=%s recovery_stage=%s recovery_branch=%s recovery_next_stage=%s reader_url=%s',
+        session.id,
+        user_id,
+        student_state.get('participation_status'),
+        student_state.get('status'),
+        student_state.get('current_item'),
+        student_state.get('progress'),
+        student_state.get('items_completed'),
+        student_state.get('items_total'),
+        student_state.get('crla_stage'),
+        recovery_stage,
+        (student_state.get('recovery_state') or {}).get('branch') if isinstance(student_state.get('recovery_state'), dict) else '',
+        (student_state.get('recovery_state') or {}).get('next_stage') if isinstance(student_state.get('recovery_state'), dict) else '',
+        reader_url,
+    )
 
     # Provide available roster for teachers so the UI can render the selection list
     available_profiles = []
@@ -17921,7 +18356,6 @@ def live_assessment_student_state_update(request, session_id):
         user_id=user_id,
         saved_state=(session.student_states or {}).get(str(user_id), {}),
     )
-
     return JsonResponse({'success': True, 'session': {
         'id': session.id,
         'status': session.status,
@@ -17939,6 +18373,7 @@ def live_assessment_session_action(request, session_id):
     user_role = request.session.get('user_role')
     session = LiveAssessmentSession.objects.filter(id=session_id).select_related('material', 'course').first()
     if not session:
+        logger.warning('LIVE_CRLA_RECOVERY_SERVER_DEBUG action_request_missing session_id=%s status=404 response=session_not_found', session_id)
         return JsonResponse({'success': False, 'error': 'Session not found'}, status=404)
 
     _trace_live_end_flow(
@@ -17952,6 +18387,40 @@ def live_assessment_session_action(request, session_id):
         return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
     if not _is_live_crla_material(session.material):
         return JsonResponse({'success': False, 'error': 'Live Assessment is available only for the official CRLA assessment.'}, status=400)
+
+    def _action_state_trace(label, student_id, state, all_before=None):
+        state = state if isinstance(state, dict) else {}
+        recovery = state.get('recovery_state') if isinstance(state.get('recovery_state'), dict) else {}
+        logger.warning(
+            'LIVE_CRLA_STATE_TRACE_SERVER %s student_id=%s session_id=%s affected_student_ids=%s participation_status=%s status=%s recovery_stage=%s recovery_branch=%s recovery_next_stage=%s current_item=%s other_student_state_changed=%s',
+            label,
+            student_id,
+            session.id,
+            list(session.student_ids or []),
+            state.get('participation_status'),
+            state.get('status'),
+            recovery.get('stage'),
+            recovery.get('branch'),
+            recovery.get('next_stage'),
+            state.get('current_item'),
+            all_before is not None and all_before != (session.student_states or {}),
+        )
+        logger.warning(
+            'LIVE_CRLA_SAVE_SERVER_DEBUG %s student_id=%s session_id=%s participation_status=%s status=%s current_item=%s progress=%s items_completed=%s items_total=%s crla_stage=%s recovery_stage=%s recovery_branch=%s recovery_next_stage=%s',
+            label,
+            student_id,
+            session.id,
+            state.get('participation_status'),
+            state.get('status'),
+            state.get('current_item'),
+            state.get('progress'),
+            state.get('items_completed'),
+            state.get('items_total'),
+            state.get('crla_stage'),
+            recovery.get('stage'),
+            recovery.get('branch'),
+            recovery.get('next_stage'),
+        )
 
     try:
         data = json.loads(request.body or '{}')
@@ -18128,6 +18597,80 @@ def live_assessment_session_action(request, session_id):
         session, mutation_error = _mutate_live_session_state(session.id, apply_skip)
         if not session:
             return JsonResponse({'success': False, 'error': mutation_error or 'Unable to skip student'}, status=409)
+    elif action == 'close_and_save':
+        if session.status not in ['started', 'paused']:
+            return JsonResponse({'success': False, 'error': 'Only an active or paused session can be closed and saved'}, status=400)
+
+        raw_student_ids = data.get('student_ids') if isinstance(data.get('student_ids'), list) else None
+        if raw_student_ids is None and data.get('student_id') is not None:
+            raw_student_ids = [data.get('student_id')]
+        if raw_student_ids is None:
+            target_student_ids = _live_batch_student_ids(session)
+            if not session.batch_assignments:
+                target_student_ids = [int(student_id) for student_id in (session.student_ids or [])]
+        else:
+            target_student_ids = []
+            for raw_student_id in raw_student_ids:
+                try:
+                    student_id = int(raw_student_id)
+                except (TypeError, ValueError):
+                    continue
+                if student_id in (session.student_ids or []) and student_id not in target_student_ids:
+                    target_student_ids.append(student_id)
+
+        if not target_student_ids:
+            return JsonResponse({'success': False, 'error': 'No active students were provided to close and save'}, status=400)
+
+        def apply_close_and_save(current):
+            if current.status not in ['started', 'paused']:
+                return None
+            states = current.student_states or {}
+            changed = False
+            saved_student_ids = []
+            for student_id in target_student_ids:
+                student_key = str(student_id)
+                if student_id not in (current.student_ids or []):
+                    continue
+                current_state = states.get(student_key, {})
+                if not isinstance(current_state, dict):
+                    current_state = {}
+                before_states = json.loads(json.dumps(states, default=str))
+                _action_state_trace('close_and_save_before', student_id, current_state, before_states)
+
+                # An official result or existing terminal Live state remains
+                # authoritative; Close & Save must never reopen completion.
+                student = User.objects.filter(id=student_id, role='student', is_archived=False).first()
+                is_completed = (
+                    str(current_state.get('status') or '').lower() in {'completed', 'skipped'}
+                    or bool(student and _official_crla_completed_result_for_material(student, current.material))
+                )
+                if is_completed:
+                    continue
+
+                # recovery_state is intentionally preserved in place.  The
+                # participation marker is separate from CRLA stage/branch data.
+                if current_state.get('participation_status') != 'saved':
+                    current_state['participation_status'] = 'saved'
+                    changed = True
+                if current_state.get('connection_status') != 'disconnected':
+                    current_state['connection_status'] = 'disconnected'
+                    changed = True
+                states[student_key] = current_state
+                saved_student_ids.append(student_id)
+                _action_state_trace('close_and_save_after', student_id, current_state, before_states)
+
+            if not saved_student_ids:
+                return None
+            current.student_states = states
+            _append_live_session_activity(
+                current,
+                f'Teacher closed and saved Live CRLA progress for {len(saved_student_ids)} student(s).',
+            )
+            return {'activity_log'}
+
+        session, mutation_error = _mutate_live_session_state(session.id, apply_close_and_save)
+        if not session:
+            return JsonResponse({'success': False, 'error': mutation_error or 'Unable to close and save live progress'}, status=409)
     elif action in ['pause', 'interrupt']:
         if session.status != 'started':
             # Recovery detection may race with a previous unload/pause. It is
@@ -18255,9 +18798,15 @@ def live_assessment_session_action(request, session_id):
             current.ends_at = None
             states = current.student_states or {}
             for student_key, student_state in states.items():
-                if isinstance(student_state, dict) and student_state.get('status') == 'paused':
-                    student_state['status'] = student_state.pop('previous_status', 'reading')
+                if isinstance(student_state, dict):
+                    before_state = dict(student_state)
+                    _action_state_trace('recover_before', student_key, before_state, states)
+                    if student_state.get('participation_status') == 'saved':
+                        student_state['participation_status'] = 'active'
+                    if student_state.get('status') == 'paused':
+                        student_state['status'] = student_state.pop('previous_status', 'reading')
                     states[student_key] = student_state
+                    _action_state_trace('recover_after', student_key, student_state, {student_key: before_state})
             current.student_states = states
             # start_at remains the original audit/start metadata. Per-student
             # elapsed_seconds is the recovery baseline; it is never derived
@@ -18541,7 +19090,8 @@ def students(request):
     live_crla_material = None
     assessment_week_students = []
     if section:
-        student_ids = _current_section_enrollments(section).values_list('student_id', flat=True)
+        enrollments = _current_section_enrollments(section)
+        student_ids = enrollments.values_list('student_id', flat=True)
         roster_students = User.objects.filter(
             id__in=student_ids, role='student', is_archived=False,
         ).order_by('last_name', 'first_name', 'id')
@@ -18563,16 +19113,22 @@ def students(request):
             role='student', is_archived=False,
         ).first()
         if first_student:
+            # Keep the first student's material for the existing page-level
+            # context, but resolve completion independently for each student.
             live_availability = _official_assessment_availability_for_student(first_student, request)
             assessment_type = live_availability.get('assessment_type') or _official_crla_assessment_phase(first_student, request=request)
             live_crla_material = _official_crla_material_for_student(first_student, assessment_type)
-            if live_crla_material:
-                assessment_week_students = [
-                    student for student in assessment_week_students
-                    if not _official_crla_completed_result_for_material(
-                        roster_by_id[student['id']], live_crla_material,
-                    )
-                ]
+            eligible_students = []
+            for student_payload in assessment_week_students:
+                student = roster_by_id[student_payload['id']]
+                student_availability = _official_assessment_availability_for_student(student, request)
+                student_phase = student_availability.get('assessment_type') or _official_crla_assessment_phase(student, request=request)
+                student_material = _official_crla_material_for_student(student, student_phase) or live_crla_material
+                completed_result = _official_crla_completed_result_for_material(student, student_material) if student_material else None
+                if completed_result:
+                    continue
+                eligible_students.append(student_payload)
+            assessment_week_students = eligible_students
 
     return render(request, 'pabasa_app/students.html', _dashboard_context(request, 'teacher', {
         'assessment_week_section': section,

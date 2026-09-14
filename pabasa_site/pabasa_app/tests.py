@@ -43,6 +43,7 @@ from .reading_stt import (
     word_numbers_in_transcript,
 )
 from .hunt_scoring import classify_speech, normalize_speech, stars_for_points
+from .student_session_lock import claim_student_session
 from .system_clock import now as system_now
 
 
@@ -55,6 +56,7 @@ def test_section_create(**kwargs):
 from .management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
 from .views import _active_school_calendar, _apply_progression_unlock_override, _aral_eligible_classification, _create_notification, _notify_admins, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _primary_school, _save_admin_practice_material, _selected_school_calendar, _sync_assessment_workflow_state, _official_crla_assessment_labels, _official_assessment_availability_for_student
 from .views import _validate_principal_form_data, _normalize_signup_first_name, _signup_first_name_error
+from . import views
 from .weekly_digest import send_weekly_digest
 from .scoring import build_assessment_score_payload
 
@@ -10607,6 +10609,221 @@ class PrincipalSettingsViewTests(TestCase):
         self.assertEqual(self.user.preference["principal_profile_info"]["position"], "Principal II")
 
 
+class LiveAssessmentCloseAndSaveTests(TestCase):
+    def setUp(self):
+        self.teacher = User.objects.create(
+            custom_id=f"CAS-TCH-{uuid.uuid4().hex[:8].upper()}", role="teacher",
+            first_name="Close", last_name="Teacher", middle_initial="", suffix="",
+            sex="female", birth_month=1, birth_day=1, birth_year=1988,
+            email="close-save-teacher@example.com", password_hash=make_password("password"),
+            teacher_role="Teacher",
+        )
+        self.student = User.objects.create(
+            custom_id=f"CAS-STD-{uuid.uuid4().hex[:8].upper()}", role="student",
+            first_name="Saved", last_name="Student", middle_initial="", suffix="",
+            sex="female", birth_month=1, birth_day=1, birth_year=2012,
+            email="close-save-student@example.com", password_hash=make_password("password"),
+        )
+        self.material = Material.objects.create(
+            title="Close and Save CRLA", code=f"CAS-MAT-{uuid.uuid4().hex[:8].upper()}",
+            item_type="word", type="assessment", status="published", teacher=self.teacher,
+            is_active=True, is_official_reading=True, assessment_kind="crla",
+        )
+        session = self.client.session
+        session['user_id'] = self.teacher.id
+        session['user_role'] = 'teacher'
+        session.save()
+
+    def make_session(self, status='started', student_state=None):
+        return LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, material=self.material,
+            student_ids=[self.student.id], student_count=1, status=status,
+            countdown_seconds=0, start_at=timezone.now(),
+            student_states={str(self.student.id): student_state or {
+                'status': 'reading', 'progress': 0.5, 'current_item': 'word-3',
+                'recovery_state': {'stage': 'words', 'crla_question_index': 3},
+            }},
+        )
+
+    def close_and_save(self, session):
+        return self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'close_and_save'}), content_type='application/json',
+        )
+
+    def test_close_and_save_preserves_recovery_and_session_membership(self):
+        session = self.make_session()
+        response = self.close_and_save(session)
+        self.assertEqual(response.status_code, 200)
+        session.refresh_from_db()
+        state = session.student_states[str(self.student.id)]
+        self.assertEqual(state['participation_status'], 'saved')
+        self.assertEqual(state['connection_status'], 'disconnected')
+        self.assertEqual(state['recovery_state']['crla_question_index'], 3)
+        self.assertIn(self.student.id, session.student_ids)
+        self.assertEqual(session.status, 'started')
+
+    def test_close_and_save_is_valid_when_paused(self):
+        session = self.make_session('paused', {'status': 'paused', 'recovery_state': {'stage': 'story_reading'}})
+        response = self.close_and_save(session)
+        self.assertEqual(response.status_code, 200)
+        session.refresh_from_db()
+        self.assertEqual(session.student_states[str(self.student.id)]['participation_status'], 'saved')
+
+    def test_close_and_save_rejects_invalid_session_states(self):
+        for status in ('waiting', 'countdown', 'ended', 'cancelled'):
+            with self.subTest(status=status):
+                session = self.make_session(status)
+                response = self.close_and_save(session)
+                self.assertEqual(response.status_code, 400)
+
+    def test_close_and_save_does_not_overwrite_completed_student(self):
+        session = self.make_session('started', {'status': 'completed', 'participation_status': 'completed'})
+        response = self.close_and_save(session)
+        self.assertEqual(response.status_code, 200)
+        session.refresh_from_db()
+        state = session.student_states[str(self.student.id)]
+        self.assertEqual(state['status'], 'completed')
+        self.assertNotEqual(state.get('participation_status'), 'saved')
+
+    def test_end_session_does_not_complete_unfinished_crla_attempt(self):
+        session = self.make_session()
+        response = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'end'}), content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        session.refresh_from_db()
+        state = session.student_states[str(self.student.id)]
+        self.assertEqual(session.status, 'ended')
+        self.assertEqual(state['status'], 'missed')
+        self.assertEqual(state['current_item'], 'word-3')
+        self.assertEqual(state['progress'], 0.5)
+        self.assertEqual(state['recovery_state']['crla_question_index'], 3)
+        self.assertFalse(Assessment.objects.filter(
+            student=self.student, material=self.material,
+            attempt_status='completed',
+        ).exists())
+        self.assertFalse(Notification.objects.filter(
+            recipient=self.student,
+            title='😔 Oops! You Missed a Reading Activity',
+        ).exists())
+
+    def test_ended_unfinished_live_crla_suppresses_fresh_launch(self):
+        session = self.make_session()
+        session.status = 'ended'
+        session.student_states[str(self.student.id)]['status'] = 'missed'
+        session.save(update_fields=['status', 'student_states'])
+        self.assertTrue(views._student_has_terminal_unfinished_live_crla(self.student, self.material))
+
+    def test_cancelled_before_start_does_not_suppress_fresh_launch(self):
+        session = self.make_session(
+            status='cancelled',
+            student_state={'status': 'waiting', 'progress': 0, 'current_item': ''},
+        )
+        self.assertFalse(views._student_has_terminal_unfinished_live_crla(self.student, self.material))
+
+    def test_end_session_notifies_student_who_never_started(self):
+        session = self.make_session(
+            student_state={'status': 'waiting', 'progress': 0, 'current_item': ''},
+        )
+        response = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'end'}), content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Notification.objects.filter(
+            recipient=self.student,
+            title='😔 Oops! You Missed a Reading Activity',
+        ).exists())
+
+    def test_stale_student_update_cannot_reactivate_saved_state(self):
+        session = self.make_session()
+        self.assertEqual(self.close_and_save(session).status_code, 200)
+        student_client = self.client_class()
+        student_session = student_client.session
+        student_session['user_id'] = self.student.id
+        student_session['user_role'] = 'student'
+        student_session.save()
+        self.assertTrue(claim_student_session(self.student.id, student_session.session_key))
+        response = student_client.post(
+            reverse('live_assessment_student_state_update', kwargs={'session_id': session.id}),
+            json.dumps({'status': 'reading', 'progress': 0.9}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        session.refresh_from_db()
+        state = session.student_states[str(self.student.id)]
+        self.assertEqual(state['participation_status'], 'saved')
+        self.assertEqual(state['progress'], 0.5)
+
+
+class LiveAssessmentSelectableRosterTests(TestCase):
+    def setUp(self):
+        self.teacher = User.objects.create(
+            custom_id=f"ROSTER-TCH-{uuid.uuid4().hex[:8].upper()}", role="teacher",
+            first_name="Roster", last_name="Teacher", email="roster-teacher@example.com",
+            password_hash=make_password("password"), teacher_role="Teacher",
+        )
+        self.student_a = User.objects.create(
+            custom_id=f"ROSTER-A-{uuid.uuid4().hex[:8].upper()}", role="student",
+            first_name="Student", last_name="Alpha", email="roster-a@example.com",
+            password_hash=make_password("password"),
+        )
+        self.student_b = User.objects.create(
+            custom_id=f"ROSTER-B-{uuid.uuid4().hex[:8].upper()}", role="student",
+            first_name="Student", last_name="Beta", email="roster-b@example.com",
+            password_hash=make_password("password"),
+        )
+        self.material_a = Material.objects.create(
+            title="CRLA A", code=f"ROSTER-MA-{uuid.uuid4().hex[:8].upper()}",
+            item_type="word", type="assessment", status="published", teacher=self.teacher,
+            is_active=True, is_official_reading=True, assessment_kind="crla",
+        )
+        self.material_b = Material.objects.create(
+            title="CRLA B", code=f"ROSTER-MB-{uuid.uuid4().hex[:8].upper()}",
+            item_type="word", type="assessment", status="published", teacher=self.teacher,
+            is_active=True, is_official_reading=True, assessment_kind="crla",
+        )
+        self.section = SimpleNamespace(id=1, is_active=True)
+        session = self.client.session
+        session['user_id'] = self.teacher.id
+        session['user_role'] = 'teacher'
+        session.save()
+
+    def _rendered_student_ids(self):
+        captured = {}
+        def fake_render(request, template, context):
+            captured.update(context)
+            return SimpleNamespace(status_code=200)
+        enrollments = SimpleNamespace(values_list=lambda *args, **kwargs: [self.student_a.id, self.student_b.id])
+        with patch.object(views, '_teacher_current_sections', return_value=SimpleNamespace(order_by=lambda *args: [self.section])), \
+             patch.object(views, '_current_section_enrollments', return_value=enrollments), \
+             patch.object(views, '_official_assessment_availability_for_student', return_value={}), \
+             patch.object(views, '_official_crla_assessment_phase', side_effect=lambda student, request=None: 'phase-a' if student.id == self.student_a.id else 'phase-b'), \
+             patch.object(views, '_official_crla_material_for_student', side_effect=lambda student, phase: self.material_a if student.id == self.student_a.id else self.material_b), \
+             patch.object(views, '_official_crla_completed_result_for_material', side_effect=lambda student, material: material.id == self.material_b.id), \
+             patch.object(views, '_section_assessment_week_status', return_value='during'), \
+             patch.object(views, '_section_assessment_week_has_recorded_crla_result', return_value=False), \
+             patch.object(views, '_dashboard_context', return_value={}), \
+             patch.object(views, 'render', side_effect=fake_render):
+            request = RequestFactory().get('/dashboard/students/')
+            request.session = self.client.session
+            views.students(request)
+        return {entry['id'] for entry in captured['assessment_week_students']}
+
+    def test_each_student_is_checked_against_own_material_and_cancelled_session_is_ignored(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, material=self.material_a,
+            status='cancelled', student_ids=[], student_count=0, student_states={},
+        )
+        self.assertEqual(session.status, 'cancelled')
+        self.assertEqual(self._rendered_student_ids(), {self.student_a.id})
+
+    def test_completed_student_for_own_material_is_excluded(self):
+        self.assertEqual(self._rendered_student_ids(), {self.student_a.id})
+
+
 class LiveAssessmentWaitingRoomTemplateTests(TestCase):
     def test_live_session_configuration_roster_is_read_only_and_session_scoped(self):
         template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "live_assessment_session.html"
@@ -10648,7 +10865,9 @@ class LiveAssessmentWaitingRoomTemplateTests(TestCase):
         template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "base_dashboard.html"
         content = template_path.read_text(encoding="utf-8")
 
-        self.assertIn("['waiting', 'countdown'].includes(sessionStatus)", content)
+        self.assertIn("session?.redirect_to_waiting_room", content)
+        for status in ('waiting', 'countdown', 'started', 'paused'):
+            self.assertIn(f"'{status}'", content)
         self.assertIn("window.location.assign(session.join_url)", content)
 
     def test_waiting_room_exits_an_ended_session_before_batch_waiting_logic(self):
