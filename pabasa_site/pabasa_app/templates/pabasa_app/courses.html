@@ -17914,6 +17914,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             personalWorkspaceActive = true;
             setNodeVisibility(templateLandingPanel, false);
             setNodeVisibility(personalWorkspaceBack, true);
+            addMaterialFooter?.classList.remove('d-none');
             personalMaterialSections.forEach(section => section?.classList.remove('d-none'));
             if (cancelMaterialSetupBtn) {
                 cancelMaterialSetupBtn.disabled = false;
@@ -19235,7 +19236,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 setNodeVisibility(templateBuilderPanel, false);
             }
             if (addMaterialFooter) {
-                addMaterialFooter.classList.toggle('d-none', !showSupplementary);
+                addMaterialFooter.classList.toggle('d-none', !showSupplementary || !personalWorkspaceActive);
             }
             if (showSupplementary && cancelMaterialSetupBtn) {
                 cancelMaterialSetupBtn.disabled = false;
