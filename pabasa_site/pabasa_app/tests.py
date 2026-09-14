@@ -10692,6 +10692,30 @@ class LiveAssessmentCloseAndSaveTests(TestCase):
         template = (Path(__file__).resolve().parent / 'templates' / 'pabasa_app' / 'live_assessment_session.html').read_text(encoding='utf-8')
         self.assertIn("statusKey === 'started' && hasSavedParticipants", template)
 
+    def test_discard_saved_session_abandons_transport_without_completion(self):
+        session = self.make_session(student_state={
+            'status': 'reading', 'participation_status': 'saved', 'progress': .5,
+            'recovery_state': {'stage': 'words'},
+        })
+        response = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'abandon'}), content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        session.refresh_from_db()
+        state = session.student_states[str(self.student.id)]
+        self.assertEqual(session.status, 'ended')
+        self.assertEqual(state['status'], 'missed')
+        self.assertFalse(Assessment.objects.filter(student=self.student, material=self.material, attempt_status='completed').exists())
+        self.assertEqual(state['recovery_state']['stage'], 'words')
+        self.assertEqual(
+            self.client.post(
+                reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+                json.dumps({'action': 'resume'}), content_type='application/json',
+            ).status_code,
+            400,
+        )
+
     def test_close_and_save_is_valid_when_paused(self):
         session = self.make_session('paused', {'status': 'paused', 'recovery_state': {'stage': 'story_reading'}})
         response = self.close_and_save(session)
@@ -10863,7 +10887,15 @@ class LiveAssessmentWaitingRoomTemplateTests(TestCase):
         self.assertIn('if (existingSession?.url)', recovery)
         self.assertIn('recoveryModal(serverDraft', recovery)
         self.assertIn('window.location.assign(serverDraft.controlUrl)', recovery)
-        self.assertIn('async () => {}', recovery)
+        self.assertIn("sessionStorage.setItem(discardMarker(serverDraft.sessionId), '1')", recovery)
+
+    def test_discarded_recovery_is_suppressed_once_before_normal_fallback(self):
+        recovery_path = Path(__file__).resolve().parent / "static" / "pabasa_app" / "js" / "crla_recovery.js"
+        recovery = recovery_path.read_text(encoding="utf-8")
+        self.assertIn("pabasa-crla-recovery-discarded:", recovery)
+        self.assertIn("sessionStorage.setItem(discardMarker(serverDraft.sessionId), '1')", recovery)
+        self.assertIn("reason: 'discard_marker'", recovery)
+        self.assertIn("sessionStorage.removeItem(discardMarker(existingSessionId || context.sessionId))", recovery)
 
     def test_live_session_configuration_roster_is_read_only_and_session_scoped(self):
         template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "live_assessment_session.html"

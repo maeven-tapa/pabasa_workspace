@@ -51,6 +51,7 @@
             .map(clean).join(':');
     }
     function sessionKey(context) { return `${contextKey(context)}:${clean(context.sessionId)}`; }
+    function discardMarker(sessionId) { return `pabasa-crla-recovery-discarded:${clean(sessionId)}`; }
     function isActive(status) { return ['countdown', 'started', 'paused', 'batch_loaded'].includes(String(status || '').toLowerCase()); }
 
     function putDraft(context, session, recoveryRevision) {
@@ -210,6 +211,12 @@
             sessionStorage.removeItem(resumeMarker);
             return false;
         }
+        const existingSessionId = clean(existingSession?.id);
+        if (sessionStorage.getItem(discardMarker(existingSessionId || context.sessionId))) {
+            recoveryDebug('offerRecovery_early_return', { reason: 'discard_marker', session_id: existingSessionId || clean(context.sessionId) });
+            sessionStorage.removeItem(discardMarker(existingSessionId || context.sessionId));
+            return false;
+        }
         if (existingSession?.url) {
             const serverDraft = {
                 sessionId: clean(existingSession.id),
@@ -224,7 +231,17 @@
             });
             recoveryModal(serverDraft,
                 async () => { window.location.assign(serverDraft.controlUrl); },
-                async () => {}
+                async () => {
+                    const token = document.cookie.split('; ').find(value => value.startsWith('csrftoken='))?.split('=')[1] || '';
+                    const response = await fetch(`/api/live-assessment/session/${encodeURIComponent(serverDraft.sessionId)}/action/`, {
+                        method: 'POST', credentials: 'same-origin',
+                        headers: {'Content-Type': 'application/json', 'X-CSRFToken': token, 'Accept': 'application/json'},
+                        body: JSON.stringify({action: 'abandon'}),
+                    });
+                    const payload = await response.json().catch(() => ({}));
+                    recoveryDebug('server_discard_response', { session_id: serverDraft.sessionId, status: response.status, payload });
+                    if (response.ok && payload.success) sessionStorage.setItem(discardMarker(serverDraft.sessionId), '1');
+                }
             );
             return true;
         }
@@ -357,6 +374,7 @@
                 recoveryDebug('discard_response', { session_id: draft.sessionId, status: response.status, payload });
                 if (response.ok && payload.success) {
                     await deleteDraft({ ...context, sessionId: draft.sessionId });
+                    sessionStorage.setItem(discardMarker(draft.sessionId), '1');
                     const remaining = await draftsFor(context).catch(error => ({ error: String(error?.message || error) }));
                     recoveryDebug('discard_remaining_drafts', { contextKey: contextKey(context), remaining });
                 }
