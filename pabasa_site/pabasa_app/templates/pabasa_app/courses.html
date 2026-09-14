@@ -8667,8 +8667,109 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     </div>
 
                     <div id="prescribedMaterialPanel" class="col-12 d-none">
-                        <div class="text-center text-muted py-5">No prescribed materials are available yet.</div>
+                        <style>
+                            .prescribed-activity-picker { background:transparent; border:0; padding:0; }
+                            .prescribed-activity-picker > .small { color:#16465d !important; font-size:1.1rem; letter-spacing:.02em; }
+                            .prescribed-activity-picker__list { display:grid; gap:.85rem; grid-template-columns:repeat(auto-fill,minmax(160px,210px)); }
+                            .prescribed-activity-option { aspect-ratio: .86 / 1; background:#fff; border:1px solid #dce8ed; border-radius:.9rem; color:#244354; cursor:pointer; display:flex; flex-direction:column; overflow:hidden; padding:0; position:relative; text-align:left; width:100%; }
+                            .prescribed-activity-option.is-selected { border-color:#2a7891; box-shadow:0 0 0 3px rgba(42,120,145,.1); }
+                            .prescribed-activity-option__thumb { background:#f2fafc; display:grid; flex:1 1 auto; grid-template-columns:repeat(7,minmax(0,1fr)); min-height:0; overflow:hidden; padding:.35rem; }
+                            .prescribed-activity-option__thumb-cell { align-items:center; border:1px solid rgba(113,130,138,.55); display:flex; flex-direction:column; min-width:0; overflow:hidden; }
+                            .prescribed-activity-option__thumb-cell b { color:#111; font-size:.46rem; line-height:1; }
+                            .prescribed-activity-option__thumb-cell img { height:70%; max-width:90%; object-fit:contain; width:90%; }
+                            .prescribed-activity-option__body { align-items:center; display:flex; flex:0 0 auto; gap:.55rem; min-height:3.6rem; padding:.6rem .75rem; }
+                            .prescribed-activity-option__number { align-items:center; background:#e8f5f8; border-radius:50%; color:#176078; display:inline-flex; flex:0 0 2rem; font-weight:800; height:2rem; justify-content:center; }
+                            .prescribed-activity-option__overlay { align-items:center; background:rgba(18,70,91,.78); color:#fff; display:flex; inset:0; justify-content:center; opacity:0; position:absolute; transition:opacity .18s ease; }
+                            .prescribed-activity-option:hover .prescribed-activity-option__overlay, .prescribed-activity-option:focus-visible .prescribed-activity-option__overlay { opacity:1; }
+                            .prescribed-activity-preview { background:#fff; border:1px solid #dce8ed; border-radius:1.25rem; display:none; margin-top:1rem; overflow:hidden; }
+                            .prescribed-activity-preview.is-maximized { border:0; border-radius:0; display:block; inset:1rem; margin:0; overflow:auto; position:fixed; z-index:1060; }
+                            .prescribed-preview-close { align-items:center; background:#fff; border:1px solid #dce8ed; border-radius:50%; color:#244354; display:none; height:2.2rem; justify-content:center; position:absolute; right:1rem; top:1rem; width:2.2rem; z-index:2; }
+                            .prescribed-activity-preview.is-maximized .prescribed-preview-close { display:inline-flex; }
+                            .prescribed-activity-preview__header { background:linear-gradient(135deg,#eaf8fb,#fff); padding:1.1rem 1.25rem; }
+                            .prescribed-activity-preview__header h5 { color:#16465d; margin:0; }
+                            .alphabet-workbook { padding:1.25rem; }
+                            .alphabet-workbook__grid { border:1px solid #71828a; display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); margin:0 auto; max-width:980px; }
+                            .alphabet-workbook__cell { aspect-ratio:1/.86; border:1px solid #71828a; display:flex; flex-direction:column; min-width:0; padding:.4rem; }
+                            .alphabet-workbook__letter { color:#111; font-size:clamp(1rem,2vw,1.5rem); font-weight:800; line-height:1; }
+                            .alphabet-workbook__word { color:#b21d28; font-size:clamp(.55rem,1vw,.8rem); line-height:1.1; margin-top:.18rem; }
+                            .alphabet-workbook__image { align-self:center; height:58%; margin-top:auto; max-height:4.4rem; max-width:78%; object-fit:contain; }
+                            @media (max-width:640px) { .alphabet-workbook { padding:.65rem; } .alphabet-workbook__cell { padding:.2rem; } .alphabet-workbook__word { overflow-wrap:anywhere; } }
+                        </style>
+                        <div class="prescribed-activity-picker" aria-label="Prescribed activities">
+                            <div class="small text-muted text-uppercase fw-semibold mb-2">ARAL Workbook activities</div>
+                            <div class="prescribed-activity-picker__list" id="prescribedActivityPicker">
+                                <button type="button" class="prescribed-activity-option is-selected" data-prescribed-activity="gawain-1" aria-controls="prescribedActivityPreview" aria-pressed="true"><span class="prescribed-activity-option__thumb" data-prescribed-thumbnail="gawain-1" aria-hidden="true"></span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">1</span><span><strong>Gawain 1</strong><br><span class="small text-muted">Alfabetong Pilipino</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span></button>
+                            </div>
+                        </div>
+                        <div class="prescribed-activity-preview" id="prescribedActivityPreview" data-prescribed-preview="gawain-1">
+                            <div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview"><i class="bi bi-x-lg"></i></button><div class="small text-uppercase text-muted fw-semibold">Gawain 1</div><h5>Alfabetong Pilipino</h5><p class="mb-0 text-muted">Kilalanin ang mga titik at salita sa alpabetong Pilipino.</p></div>
+                            <div class="alphabet-workbook">
+                                <div class="alphabet-workbook__grid" aria-label="Alfabetong Pilipino">
+                                    <div class="alphabet-workbook__cell" data-song-group="1"><span class="alphabet-workbook__letter">Aa</span><span class="alphabet-workbook__word">apa</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/apa.png' %}" alt="apa"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="1"><span class="alphabet-workbook__letter">Bb</span><span class="alphabet-workbook__word">bahay</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/bahay.png' %}" alt="bahay"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="1"><span class="alphabet-workbook__letter">Cc</span><span class="alphabet-workbook__word">computer</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/picture_word/custom/Computer-Kompyuter.png' %}" alt="computer"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="1"><span class="alphabet-workbook__letter">Dd</span><span class="alphabet-workbook__word">dentista</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/dentista.png' %}" alt="dentista"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="1"><span class="alphabet-workbook__letter">Ee</span><span class="alphabet-workbook__word">elepante</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/elepante.png' %}" alt="elepante"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="1"><span class="alphabet-workbook__letter">Ff</span><span class="alphabet-workbook__word">futbol</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/futball.png' %}" alt="futbol"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="1"><span class="alphabet-workbook__letter">Gg</span><span class="alphabet-workbook__word">gitara</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/gitara.png' %}" alt="gitara"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="2"><span class="alphabet-workbook__letter">Hh</span><span class="alphabet-workbook__word">helikopter</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/helikopter.png' %}" alt="helikopter"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="2"><span class="alphabet-workbook__letter">Ii</span><span class="alphabet-workbook__word">itlog</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/itlog.png' %}" alt="itlog"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="2"><span class="alphabet-workbook__letter">Jj</span><span class="alphabet-workbook__word">jeepney</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/jeepney.png' %}" alt="jeepney"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="2"><span class="alphabet-workbook__letter">Kk</span><span class="alphabet-workbook__word">keso</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/cheese.png' %}" alt="keso"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="2"><span class="alphabet-workbook__letter">Ll</span><span class="alphabet-workbook__word">liyon</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/liyon.png' %}" alt="liyon"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="2"><span class="alphabet-workbook__letter">Mm</span><span class="alphabet-workbook__word">mais</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/mais.png' %}" alt="mais"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="2"><span class="alphabet-workbook__letter">Nn</span><span class="alphabet-workbook__word">narra</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/narra.png' %}" alt="narra"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="3"><span class="alphabet-workbook__letter">Ññ</span><span class="alphabet-workbook__word">Malacañang</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/malacanang.jpg' %}" alt="Malacañang"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="3"><span class="alphabet-workbook__letter">Ng</span><span class="alphabet-workbook__word">ngipin</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/ngipin.png' %}" alt="ngipin"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="3"><span class="alphabet-workbook__letter">Oo</span><span class="alphabet-workbook__word">orasan</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/orasan.png' %}" alt="orasan"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="3"><span class="alphabet-workbook__letter">Pp</span><span class="alphabet-workbook__word">piso</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/piso.jpg' %}" alt="piso"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="3"><span class="alphabet-workbook__letter">Qq</span><span class="alphabet-workbook__word">Quezon</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/quezon.png' %}" alt="Quezon"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="3"><span class="alphabet-workbook__letter">Rr</span><span class="alphabet-workbook__word">radyo</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/radyo.png' %}" alt="radyo"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="3"><span class="alphabet-workbook__letter">Ss</span><span class="alphabet-workbook__word">saging</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/saging.png' %}" alt="saging"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="4"><span class="alphabet-workbook__letter">Tt</span><span class="alphabet-workbook__word">tarsier</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/tarsier.png' %}" alt="tarsier"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="4"><span class="alphabet-workbook__letter">Uu</span><span class="alphabet-workbook__word">ulan</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/ulan.png' %}" alt="ulan"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="4"><span class="alphabet-workbook__letter">Vv</span><span class="alphabet-workbook__word">vinta</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/vinta.png' %}" alt="vinta"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="4"><span class="alphabet-workbook__letter">Ww</span><span class="alphabet-workbook__word">walo</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/walo.png' %}" alt="walo"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="4"><span class="alphabet-workbook__letter">Xx</span><span class="alphabet-workbook__word">x-ray</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/x-ray.png' %}" alt="x-ray"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="4"><span class="alphabet-workbook__letter">Yy</span><span class="alphabet-workbook__word">yoyo</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/yoyo.png' %}" alt="yoyo"></div>
+                                    <div class="alphabet-workbook__cell" data-song-group="4"><span class="alphabet-workbook__letter">Zz</span><span class="alphabet-workbook__word">zebra</span><img class="alphabet-workbook__image" src="{% static 'pabasa_app/images/alpabetong_pilipino/zebra.png' %}" alt="zebra"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+
+                    <script>
+                        document.querySelectorAll('#prescribedActivityPicker [data-prescribed-activity]').forEach((button) => {
+                            button.addEventListener('click', () => {
+                                document.querySelectorAll('#prescribedActivityPicker [data-prescribed-activity]').forEach((option) => {
+                                    const selected = option === button;
+                                    option.classList.toggle('is-selected', selected);
+                                    option.setAttribute('aria-pressed', String(selected));
+                                });
+                                const preview = document.getElementById('prescribedActivityPreview');
+                                if (preview) {
+                                    preview.dataset.prescribedPreview = button.dataset.prescribedActivity;
+                                    preview.classList.add('is-maximized');
+                                }
+                            });
+                        });
+                        document.querySelectorAll('[data-prescribed-thumbnail]').forEach((thumbnail) => {
+                            const sourceCells = document.querySelectorAll('#prescribedActivityPreview .alphabet-workbook__cell');
+                            sourceCells.forEach((sourceCell) => {
+                                const cell = document.createElement('span');
+                                cell.className = 'prescribed-activity-option__thumb-cell';
+                                const letter = document.createElement('b');
+                                letter.textContent = sourceCell.querySelector('.alphabet-workbook__letter')?.textContent || '';
+                                const image = sourceCell.querySelector('img')?.cloneNode(true);
+                                cell.append(letter);
+                                if (image) cell.append(image);
+                                thumbnail.append(cell);
+                            });
+                        });
+                        document.querySelector('#prescribedActivityPreview .prescribed-preview-close')?.addEventListener('click', () => {
+                            document.getElementById('prescribedActivityPreview')?.classList.remove('is-maximized');
+                        });
+                    </script>
 
                     <div class="col-12">
                         <div id="otherMaterialPanel" class="d-none rounded-4 shadow-sm p-3 bg-white border mb-4 other-material-panel" style="border-color: rgba(31,111,139,0.12);">
