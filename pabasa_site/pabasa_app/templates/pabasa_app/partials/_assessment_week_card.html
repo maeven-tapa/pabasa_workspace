@@ -145,11 +145,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const countLabel = document.getElementById('liveCrlaSelectedCount');
     const batchSelectedCount = document.getElementById('liveCrlaBatchSelectedCount');
     const batchCount = document.getElementById('liveCrlaBatchCount');
-    const readyBadge = document.getElementById('liveCrlaReadyBadge');
     const plural = document.getElementById('liveCrlaSelectionPlural');
     const searchInput = document.getElementById('liveCrlaStudentSearch');
     const selectAllButton = document.getElementById('liveCrlaSelectAll');
     const clearAllButton = document.getElementById('liveCrlaClearAll');
+    document.getElementById('liveCrlaReadyBadge')?.remove();
     const automaticPreview = document.getElementById('liveCrlaAutomaticPreview');
     const manualAssignment = document.getElementById('liveCrlaManualAssignment');
     const errorLabel = document.getElementById('liveCrlaError');
@@ -309,7 +309,6 @@ document.addEventListener('DOMContentLoaded', function () {
         manualInitialized = false;
         if (countLabel) countLabel.textContent = String(selected.length);
         if (plural) plural.textContent = selected.length === 1 ? '' : 's';
-        if (readyBadge) readyBadge.textContent = selected.length ? `${selected.length} ready for batch assignment` : 'Select students to continue';
         if (nextButton) nextButton.disabled = selected.length === 0;
         updateSelectionControls(selected.length);
         renderWizardBatchAssignment();

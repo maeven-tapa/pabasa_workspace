@@ -1131,7 +1131,7 @@
             if (value <= 1) {
                 window.clearInterval(timer);
                 hideModal();
-                window.location.href = '{% url "dashboard_teacher" %}';
+                window.location.href = '{% url "students" %}';
                 return;
             }
             value -= 1;
@@ -1734,7 +1734,7 @@
         const result = await sendAction('cancel');
         if (result?.status === 'cancelled') {
             await window.PabasaCrlaRecovery?.deleteDraft(crlaRecoveryContext).catch(() => {});
-            window.location.href = '{% url "dashboard_teacher" %}';
+            window.location.href = '{% url "students" %}';
         }
     });
     document.getElementById('startNextBatchBtn')?.addEventListener('click', async (event) => {
@@ -1809,7 +1809,7 @@
                     // End Session is authoritative: only its successful
                     // backend response may clear the local recovery draft.
                     await window.PabasaCrlaRecovery?.deleteDraft(crlaRecoveryContext).catch(() => {});
-                    window.location.href = '{% url "dashboard_teacher" %}';
+                    window.location.href = '{% url "students" %}';
                 }
             } catch (error) {
                 setEndSessionLoading(false);
@@ -1822,7 +1822,7 @@
         if (status === 'ended' || status === 'cancelled') {
             stopPolling();
             setEndSessionLoading(false);
-            window.location.href = '{% url "dashboard_teacher" %}';
+            window.location.href = '{% url "students" %}';
             return;
         }
 
@@ -1840,7 +1840,7 @@
         const result = await sendAction('abandon');
         if (result) {
             await window.PabasaCrlaRecovery?.deleteDraft(crlaRecoveryContext).catch(() => {});
-            window.location.href = '{% url "dashboard_teacher" %}';
+            window.location.href = '{% url "students" %}';
         }
     });
 
