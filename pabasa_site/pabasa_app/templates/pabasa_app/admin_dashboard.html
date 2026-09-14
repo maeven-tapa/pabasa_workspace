@@ -37,7 +37,8 @@
     }
 
     @media (min-width: 992px) {
-        /* Keep the compact desktop dashboard fully contained in its workspace. */
+        /* Keep the dashboard inside its desktop workspace while allowing it
+           to scroll only when its content is taller than the viewport. */
         body:has(.admin-dashboard-shell) {
             overflow-y: hidden;
         }
@@ -45,7 +46,8 @@
         .admin-main:has(.admin-dashboard-shell) {
             height: var(--admin-normalized-viewport-height);
             overflow-x: clip;
-            overflow-y: hidden;
+            overflow-y: auto;
+            overscroll-behavior-y: contain;
         }
 
         /* Activity-card previews stay within the fixed dashboard workspace

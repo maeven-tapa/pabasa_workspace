@@ -148,12 +148,18 @@
         }
 
         .admin-sidebar-scroll {
+            box-sizing: border-box;
             flex: 1 1 auto;
+            max-width: 100%;
             min-height: 0;
             margin: 0.7rem -0.35rem 0;
+            overflow-x: hidden;
+            /* A scrollbar is rendered only when navigation content exceeds
+               the available sidebar height; no empty gutter when it fits. */
             overflow-y: auto;
             overscroll-behavior: contain;
             padding: 0 0.35rem 0.5rem;
+            scrollbar-gutter: auto;
             scrollbar-width: thin;
             scrollbar-color: rgba(255, 255, 255, 0.36) transparent;
         }
@@ -3248,7 +3254,13 @@
             }
 
             .admin-main {
+                /* Keep the desktop dashboard within the normalized viewport.
+                   Overflowing pages scroll here; pages that fit stay free of
+                   a vertical scrollbar. */
+                height: var(--admin-normalized-viewport-height);
                 overflow-x: clip;
+                overflow-y: auto;
+                overscroll-behavior-y: contain;
             }
         }
 
@@ -3489,8 +3501,9 @@
             const applyAdminDisplayScale = () => {
                 const isWindows = /Windows/i.test(navigator.userAgent || '');
                 const ratio = Number(window.devicePixelRatio) || 1;
-                const scale = isWindows && ratio > 1 ? 1 / ratio : 1;
-                const boundedScale = Math.min(1, Math.max(0.25, scale));
+                const referenceScale = 1.25;
+                const scale = isWindows ? referenceScale / ratio : 1;
+                const boundedScale = Math.min(referenceScale, Math.max(0.25, scale));
                 const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
 
                 document.documentElement.style.setProperty('--admin-display-scale', String(boundedScale));
