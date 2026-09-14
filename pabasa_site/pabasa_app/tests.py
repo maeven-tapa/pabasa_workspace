@@ -5869,6 +5869,38 @@ class LiveAssessmentStartTests(TestCase):
         self.assertIn("/dashboard/live-assessment/", notif.action_url)
         self.assertIn("live_session_id=", notif.action_url)
 
+    def test_teacher_discovers_saved_active_live_session_instead_of_creating_one(self):
+        self.material.is_official_reading = True
+        self.material.assessment_kind = 'crla'
+        self.material.save(update_fields=['is_official_reading', 'assessment_kind'])
+        student_b = User.objects.create(
+            custom_id=f"STD-{uuid.uuid4().hex[:8].upper()}", role="student", first_name="Ben",
+            last_name="Student", email=f"{uuid.uuid4().hex}@example.com", password_hash=make_password("x"),
+            birth_month=7, birth_day=3, birth_year=2012,
+        )
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, section=self.section,
+            material=self.material, student_ids=[self.student.id, student_b.id], student_count=2,
+            status='started', student_states={
+                str(self.student.id): {'participation_status': 'saved'},
+                str(student_b.id): {'participation_status': 'saved'},
+            },
+        )
+        response = self.client.get(reverse('active_live_assessment'), {
+            'section_id': self.section.id, 'material_id': self.material.id,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['session']['id'], session.id)
+        self.assertEqual(LiveAssessmentSession.objects.count(), 1)
+        session.refresh_from_db()
+        self.assertEqual(session.status, 'started')
+        session.delete()
+        empty_response = self.client.get(reverse('active_live_assessment'), {
+            'section_id': self.section.id, 'material_id': self.material.id,
+        })
+        self.assertEqual(empty_response.status_code, 200)
+        self.assertIsNone(empty_response.json()['session'])
+
     def test_teacher_start_live_assessment_closes_existing_active_session(self):
         existing = LiveAssessmentSession.objects.create(
             id=uuid.uuid4().hex,

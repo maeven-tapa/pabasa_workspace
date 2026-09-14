@@ -329,6 +329,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (openButton) openButton.addEventListener('click', async () => {
+        const activeResponse = await fetch('{% url "active_live_assessment" %}?section_id={{ assessment_week_section.id }}&material_id={{ live_crla_material.id }}', {credentials: 'same-origin', cache: 'no-store'}).catch(() => null);
+        const activePayload = activeResponse?.ok ? await activeResponse.json().catch(() => ({})) : {};
+        if (activePayload.session?.url) {
+            window.location.assign(activePayload.session.url);
+            return;
+        }
         const recoveryOffered = await window.PabasaCrlaRecovery?.offerRecovery(window.PabasaLiveCrlaRecoveryContext);
         if (recoveryOffered) return;
         setWizardStep(1);

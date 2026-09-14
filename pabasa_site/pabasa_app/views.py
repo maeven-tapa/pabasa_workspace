@@ -17788,6 +17788,37 @@ def start_live_assessment(request):
     })
 
 
+@require_http_methods(['GET'])
+def active_live_assessment(request):
+    if not _check_auth(request):
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+    if request.session.get('user_role') not in ['teacher', 'admin']:
+        return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
+    try:
+        section_id = int(request.GET.get('section_id'))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': True, 'session': None})
+    material_id = request.GET.get('material_id')
+    teacher = User.objects.filter(id=request.session.get('user_id')).first()
+    query = LiveAssessmentSession.objects.filter(
+        section_id=section_id,
+        status__in=LIVE_ASSESSMENT_ACTIVE_STATUSES,
+    ).select_related('material').order_by('-created_at')
+    if material_id:
+        query = query.filter(material_id=material_id)
+    if request.session.get('user_role') != 'admin':
+        query = query.filter(teacher=teacher)
+    session = next((candidate for candidate in query if _is_live_crla_material(candidate.material)), None)
+    if not session:
+        return JsonResponse({'success': True, 'session': None})
+    return JsonResponse({'success': True, 'session': {
+        'id': session.id,
+        'status': session.status,
+        'url': _build_live_assessment_control_url(session.id),
+        'student_count': session.student_count,
+    }})
+
+
 @never_cache
 @login_required()
 @ensure_csrf_cookie
