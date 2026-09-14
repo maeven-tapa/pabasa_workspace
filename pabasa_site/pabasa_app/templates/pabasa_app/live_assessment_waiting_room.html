@@ -16,7 +16,12 @@
   .waiting-room-page {
     width: 100%;
     max-width: 100%;
-    min-height: 100dvh;
+    min-height: calc(
+      var(--dashboard-normalized-viewport-height) -
+      var(--dashboard-normalized-content-offset)
+    );
+    display: grid;
+    place-items: center;
     padding: clamp(16px, 3.5vw, 32px);
   }
   .waiting-room-shell {

@@ -4,7 +4,13 @@
 {% block extra_head %}
 <style>
     .workflow-shell {
-        min-height: calc(100vh - 140px);
+        /* Center the assessment-state card in the usable dashboard viewport,
+           accounting for the dashboard's own content padding and display
+           scale normalization. */
+        min-height: calc(
+            var(--dashboard-normalized-viewport-height) -
+            var(--dashboard-normalized-content-offset)
+        );
         display: grid;
         place-items: center;
         padding: 1rem;

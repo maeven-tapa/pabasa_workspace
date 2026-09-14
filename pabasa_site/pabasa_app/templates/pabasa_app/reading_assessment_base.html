@@ -2856,11 +2856,16 @@
            control as one centered group instead of reserving the lower card
            row for the control. */
         .reader-shell.is-story-ready-state .reader-card:has(.official-crla-status) {
-            align-content: center;
-            grid-template-rows: auto auto;
+            align-items: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
-        .reader-shell.is-story-ready-state .official-crla-status[hidden] {
+        /* The live-reading status is not applicable until Start Reading has
+           been selected; keeping it out of flow avoids shifting the ready
+           group off the card's vertical center. */
+        .reader-shell.is-story-ready-state .official-crla-status {
             display: none !important;
         }
 
