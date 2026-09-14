@@ -8654,7 +8654,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         <div class="d-flex justify-content-center py-3">
                             <div class="text-center w-100">
                                 <div class="fw-semibold">Reading Material Source</div>
-                                        <div class="small text-muted">Choose a source for your reading material.</div>
+                                        <div class="small text-muted" id="materialSourceSubtitle">Choose a source for your reading material.</div>
                                 <div class="d-flex justify-content-center mt-2">
                                     <div class="material-source-toggle active-prescribed" id="addMaterialModeToggle" role="group" aria-label="Material source toggle">
                                         <button type="button" class="material-source-option active" id="materialModePrescribed" data-mode="prescribed">Prescribed</button>
@@ -14277,6 +14277,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const materialModeSupplementaryBtn = document.getElementById('materialModeSupplementary');
         const materialModeOtherBtn = document.getElementById('materialModeOther');
         const addMaterialModeToggle = document.getElementById('addMaterialModeToggle');
+        const materialSourceSubtitle = document.getElementById('materialSourceSubtitle');
         const editMaterialAssessmentKindInput = document.getElementById('editMaterialAssessmentKind');
         const otherMaterialPanel = document.getElementById('otherMaterialPanel');
         const prescribedMaterialPanel = document.getElementById('prescribedMaterialPanel');
@@ -19208,6 +19209,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const showPrescribed = mode === 'prescribed';
             const showSupplementary = mode === 'supplementary';
             const showOther = mode === 'other';
+
+            if (materialSourceSubtitle) {
+                materialSourceSubtitle.textContent = showPrescribed
+                    ? 'Give students access to the digitized ARAL Workbook activities.'
+                    : showSupplementary
+                        ? 'Support student learning through additional reading activities and materials.'
+                        : 'Browse and use supplementary materials created by other teachers.';
+            }
 
             materialModePrescribedBtn?.classList.toggle('active', showPrescribed);
             materialModeSupplementaryBtn?.classList.toggle('active', showSupplementary);
