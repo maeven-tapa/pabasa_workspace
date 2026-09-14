@@ -14148,7 +14148,7 @@ def persist_student_end_assessment_state(request):
         'miscues', 'duration_seconds', 'wpm', 'correct_words_percentage',
         'comprehension_total', 'total_questions', 'comprehension_correct', 'correct_answers',
         'passage_accuracy_percent', 'story_number', 'selected_story_content',
-        'story_segment_index', 'crla_question_index', 'locked_items_count', 'crla_answers', 'crla_results',
+        'story_segment_index', 'story_skipped_segments', 'crla_question_index', 'locked_items_count', 'crla_answers', 'crla_results',
     }
     saved = {key: payload.get(key) for key in allowed_fields if key in payload}
     # Retain the browser measurement as audit/display evidence.  The canonical

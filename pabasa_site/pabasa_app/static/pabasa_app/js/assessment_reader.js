@@ -2230,10 +2230,19 @@
                     : null;
                 itemLocked[currentIndex] = true;
                 itemScores[currentIndex] = {
+                    ...(isStoryReading && itemScores[currentIndex] ? itemScores[currentIndex] : {}),
                     correct_words: Number(correctWordCounts[currentIndex] || 0),
                     word_results: sentenceWordResults[currentIndex] || [],
                     skipped: true,
-                    ...(isStoryReading ? { story_segment_index: currentPageIndex } : {}),
+                    ...(isStoryReading ? {
+                        story_segment_index: currentPageIndex,
+                        skipped_story_segments: Array.from(new Set([
+                            ...(Array.isArray(itemScores[currentIndex]?.skipped_story_segments)
+                                ? itemScores[currentIndex].skipped_story_segments
+                                : []),
+                            currentPageIndex,
+                        ])),
+                    } : {}),
                     timestamp: new Date().toISOString(),
                 };
                 await persistLockedItemResult(currentIndex, nextActiveItemIndex);
@@ -2503,6 +2512,9 @@
                 // CRLA Official Assessment: Initialize item locking
                 itemLocked = new Array(items.length).fill(false);
                 itemScores = new Array(items.length).fill(null);
+                if (activeStage === "story" && Array.isArray(persistedEndState.story_skipped_segments)) {
+                    itemScores[0] = { skipped_story_segments: persistedEndState.story_skipped_segments.slice() };
+                }
                 restoreOfficialCrlaItemResults();
                 currentStoryChoices = getStoryChoicesFromAssessment();
                 const persistedStoryTitle = String(persistedEndState.selected_story || "").trim().toLowerCase();
@@ -6431,6 +6443,9 @@
                     words_read: storyMetrics.wordsRead,
                     total_words_read: storyMetrics.wordsRead,
                     miscues: storyMetrics.miscues,
+                    story_skipped_segments: Array.isArray(itemScores[0]?.skipped_story_segments)
+                        ? itemScores[0].skipped_story_segments
+                        : [],
                     duration_seconds: storyMetrics.durationSeconds,
                     wpm: storyMetrics.wpm,
                     comprehension_total: currentStoryQuestions.length,
@@ -6956,6 +6971,28 @@
         nextBtn?.addEventListener("click", async () => {
             if (currentStoryState === "story_reading" && currentSelectedStory) {
                 if (currentPageIndex < getCurrentPageCount() - 1) {
+                    const skippedSegmentWords = readableWordCount(getCurrentDisplayText());
+                    const currentStoryItemScore = itemScores[currentIndex] || {};
+                    const skippedStorySegments = Array.isArray(currentStoryItemScore.skipped_story_segments)
+                        ? currentStoryItemScore.skipped_story_segments.slice()
+                        : [];
+                    if (!skippedStorySegments.includes(currentPageIndex)) {
+                        skippedStorySegments.push(currentPageIndex);
+                    }
+                    itemScores[currentIndex] = {
+                        ...currentStoryItemScore,
+                        skipped_story_segments: skippedStorySegments,
+                    };
+                    storyMiscueCount += skippedSegmentWords;
+                    await updateStudentEndState({
+                        stage: "story_reading",
+                        selected_story: currentSelectedStory.title,
+                        story_segment_index: currentPageIndex,
+                        story_total_words: readableWordCount(currentSelectedStory.content || ""),
+                        total_story_words: readableWordCount(currentSelectedStory.content || ""),
+                        miscues: storyMiscueCount,
+                        story_skipped_segments: skippedStorySegments,
+                    });
                     const previousSegmentIndex = currentPageIndex;
                     currentPageIndex += 1;
                     currentStorySegmentIndex = currentPageIndex;
