@@ -63,6 +63,33 @@
             overscroll-behavior: contain;
         }
     }
+
+    /* Match Joined Students' left-edge anchoring for the fourth grid item. */
+    .admin-stat-card--activity.admin-stat-card--materials .admin-stat-preview {
+        left: 0;
+        right: auto;
+    }
+
+    .admin-stat-card--activity.admin-stat-card--classes .admin-stat-preview {
+        left: auto;
+        overflow: visible;
+        right: 0;
+    }
+
+    .admin-stat-card--activity.admin-stat-card--classes .table-responsive {
+        max-width: 100%;
+        overflow-x: auto;
+    }
+
+    .admin-stat-card--activity.admin-stat-card--classes .table {
+        min-width: 100%;
+        width: 100%;
+    }
+
+    .admin-stat-card--activity.admin-stat-card--classes .table td:last-child {
+        white-space: nowrap;
+    }
+
 </style>
 <div class="admin-dashboard-shell">
     <section class="admin-dashboard-hero">
@@ -148,7 +175,7 @@
                 </div>
             </div>
         </article>
-        <article class="admin-stat-card admin-stat-card--activity">
+        <article class="admin-stat-card admin-stat-card--activity admin-stat-card--classes">
             <button type="button" class="admin-stat-card-trigger" aria-expanded="false" aria-controls="recentClassesPreview">
                 <span class="admin-stat-icon" aria-hidden="true"><i class="bi bi-door-open"></i></span>
                 <span class="admin-stat-card-copy">
@@ -181,7 +208,7 @@
                 </div>
             </div>
         </article>
-        <article class="admin-stat-card admin-stat-card--activity">
+        <article class="admin-stat-card admin-stat-card--activity admin-stat-card--materials">
             <button type="button" class="admin-stat-card-trigger" aria-expanded="false" aria-controls="recentMaterialsPreview">
                 <span class="admin-stat-icon" aria-hidden="true"><i class="bi bi-journal-text"></i></span>
                 <span class="admin-stat-card-copy">
