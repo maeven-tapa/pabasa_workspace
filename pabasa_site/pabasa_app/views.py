@@ -13172,6 +13172,13 @@ def clap_count_syllables_page(request):
 
 @login_required(role='student')
 @xframe_options_sameorigin
+def salitang_magkatugma_page(request):
+    """Student-facing Lesson 2 rhyme activity (client-side activity data for now)."""
+    return render(request, 'pabasa_app/salitang_magkatugma_page.html', _dashboard_context(request))
+
+
+@login_required(role='student')
+@xframe_options_sameorigin
 def sound_detective_page(request):
     access_response = _enforce_student_access_for_request(request)
     if access_response:
