@@ -11856,7 +11856,7 @@ def assessment(request):
     if stage == 'original':
         progress_rows = StudentActivityProgress.objects.filter(
             student_id=getattr(user, 'id', None),
-            activity_key__in=['lesson-1-gawain-1', 'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2', 'lesson-4-gawain-1'],
+            activity_key__in=['lesson-1-gawain-1', 'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2', 'lesson-4-gawain-1', 'lesson-4-gawain-2'],
         )
         context['aral_standalone_progress'] = {
             row.activity_key: {
