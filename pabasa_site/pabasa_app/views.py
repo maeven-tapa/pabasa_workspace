@@ -13283,6 +13283,12 @@ def session_4_gawain_3_page(request):
 
 
 @login_required(role='student')
+@xframe_options_sameorigin
+def session_4_gawain_4_page(request):
+    return render(request, 'pabasa_app/session_4_gawain_4_page.html', _dashboard_context(request))
+
+
+@login_required(role='student')
 @csrf_protect
 @require_http_methods(['POST'])
 def lesson_3_activity_progress(request):
