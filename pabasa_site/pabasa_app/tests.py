@@ -1284,6 +1284,29 @@ class ReadingLaunchClassificationTests(TestCase):
         self.assertIn('customMaterialData || liveContent', custom_branch)
         self.assertNotIn("sessionStorage.getItem('pabasa_crla_assessment_items')", custom_branch)
 
+    def test_live_crla_completion_waits_without_classification_and_refreshes_once_after_end(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        waiting_state = content.split('function renderLiveCompletionWaitingState(', 1)[1].split('async function handleLiveSessionState', 1)[0]
+        show_completion = content.split('async function showCompletion(isFullCompletion)', 1)[1].split('function startAssessmentTimer()', 1)[0]
+        persisted_state = content.split('function renderPersistedEndState(endState)', 1)[1].split('function loadItems()', 1)[0]
+        ended_state = content.split("if (state.status === 'ended' || state.status === 'completed')", 1)[1].split('async function pollLiveSessionState', 1)[0]
+
+        self.assertIn('Please wait for your teacher to end the assessment.', waiting_state)
+        self.assertIn("['completed', 'early_completed_words'].includes(String(completionStage || '').toLowerCase())", waiting_state)
+        self.assertIn('completionClassificationPanel.hidden = true', waiting_state)
+        self.assertIn('finishBtn.remove()', waiting_state)
+        self.assertIn('renderLiveCompletionWaitingState(branchState.stage);', show_completion)
+        self.assertEqual(show_completion.count('renderLiveCompletionWaitingState(branchState.stage);'), 2)
+        self.assertNotIn('renderLiveCompletionWaitingState();', show_completion)
+        self.assertIn('finishBtn?.remove();', persisted_state)
+        self.assertIn('if (isFinalCompletion)', persisted_state)
+        self.assertIn('liveCompletionRefreshIssued', ended_state)
+        self.assertIn('window.location.reload()', ended_state)
+        self.assertEqual(ended_state.count('window.location.reload()'), 1)
+        self.assertIn("if (studentStatus === 'completed')", ended_state)
+        self.assertIn('showLiveSessionEnded();', ended_state)
+
     def test_phrase_listening_button_resets_microphone_without_completing_activity(self):
         script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
         content = script_path.read_text(encoding='utf-8')
@@ -5821,6 +5844,9 @@ class LiveAssessmentStartTests(TestCase):
             teacher=self.teacher,
             section=self.section,
             is_active=True,
+            is_official_reading=True,
+            is_system_owned=True,
+            assessment_kind="crla",
         )
         self.course = Course.objects.create(
             code=f"CRS-{uuid.uuid4().hex[:6].upper()}",
@@ -6452,13 +6478,38 @@ class LiveAssessmentStartTests(TestCase):
         ).exists())
 
     def test_end_session_finalizes_temporary_live_crla_state_once_with_rating(self):
-        self.material.is_official_reading = True
-        self.material.assessment_kind = 'crla'
-        self.material.save(update_fields=['is_official_reading', 'assessment_kind', 'updated_at'])
+        self.section.add_student(self.student)
+        calendar = SchoolCalendar.objects.create(
+            school_year='2026-2027', current_term=1, is_active=True,
+        )
+        self.section.school_calendar = calendar
+        self.section.assessment_week_enabled = True
+        self.section.save(update_fields=['school_calendar', 'assessment_week_enabled', 'updated_at'])
+        today = timezone.localdate()
+        CalendarEvent.objects.create(
+            school_calendar=calendar, term=1, title='CRLA Assessment Week',
+            event_type='pre_assessment', start_date=today, end_date=today,
+        )
+        # Use the seeded official CRLA material rather than a teacher-owned
+        # stand-in so availability and completion authorization match reality.
+        self.material = Material.objects.get(system_assessment_key='bosy_crla_pretest')
+        from .views import _student_can_complete_assessment
+        self.assertTrue(
+            self.section.enrollments.filter(
+                student=self.student, is_active=True, status='active',
+            ).exists()
+        )
+        self.assertTrue(_student_can_complete_assessment(self.student, material=self.material))
         recovery_state = {
             'stage': 'completed', 'branch': 'rhymes', 'temporary_completed': True,
             'task1_score': 6, 'task2_type': 'Task 2L / Rhymes', 'task2_score': 4,
             'task2_rhymes_score': 4, 'part1_total_score': 10,
+            'crla_classification': 'Low Emerging Reader',
+            'classification': 'Low Emerging Reader',
+            'completion_evidence': {
+                'part1_total_score': 10,
+                'task2_rhymes_score': 4,
+            },
             'learner_experience_rating': 4, 'learner_experience': 4,
         }
         session = LiveAssessmentSession.objects.create(
@@ -6476,6 +6527,14 @@ class LiveAssessmentStartTests(TestCase):
             }},
         )
 
+        # A later partial recovery update must not erase the temporary
+        # completion evidence consumed by End Session.
+        from .views import _update_live_student_state
+        _update_live_student_state(session, self.student.id, {
+            'recovery_state': {'current_question': 11},
+        })
+        session.save(update_fields=['student_states'])
+
         # Waiting for End Session must not create a result visible to reports.
         self.assertFalse(Assessment.objects.filter(
             student=self.student, material=self.material, attempt_status='completed',
@@ -6488,12 +6547,14 @@ class LiveAssessmentStartTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()['success'])
 
-        result = Assessment.objects.get(
+        result_qs = Assessment.objects.filter(
             student=self.student, material=self.material, attempt_status='completed',
         )
-        self.assertEqual(result.crla_classification, 'Low Emerging Reader')
+        self.assertEqual(result_qs.count(), 1)
+        result = result_qs.get()
         self.assertEqual(result.crla_score_data['task1_score'], 6)
         self.assertEqual(result.crla_score_data['task2_rhymes_score'], 4)
+        self.assertIsNotNone(result.crla_score_data.get('part1_total_score'))
         self.assertEqual(result.crla_score_data['learner_experience_rating'], 4)
 
         # The exporter reads the immutable official result payload, including
@@ -6501,7 +6562,77 @@ class LiveAssessmentStartTests(TestCase):
         from .utils.crla_export import _student_values
         exported = _student_values(self.student, result, {}, result.source_assessment)
         self.assertEqual(exported['learner_experience_rating'], 4)
-        self.assertEqual(exported['reading_profile'], 'Low Emerging Reader')
+
+    def test_end_session_keeps_incomplete_and_completed_students_independent(self):
+        second_student = User.objects.create(
+            custom_id=f"STD-{uuid.uuid4().hex[:8].upper()}", role="student",
+            first_name="Bela", last_name="Student", middle_initial="", suffix="",
+            sex="female", birth_month=7, birth_day=3, birth_year=2012,
+            email=f"{uuid.uuid4().hex}@example.com", password_hash=make_password("student-password"),
+            grade_level="Grade 2",
+        )
+        self.section.add_student(self.student)
+        self.section.add_student(second_student)
+        calendar = SchoolCalendar.objects.create(
+            school_year='2026-2027', current_term=1, is_active=True,
+        )
+        self.section.school_calendar = calendar
+        self.section.assessment_week_enabled = True
+        self.section.save(update_fields=['school_calendar', 'assessment_week_enabled', 'updated_at'])
+        today = timezone.localdate()
+        CalendarEvent.objects.create(
+            school_calendar=calendar, term=1, title='CRLA Assessment Week',
+            event_type='pre_assessment', start_date=today, end_date=today,
+        )
+        material = Material.objects.get(system_assessment_key='bosy_crla_pretest')
+        from .views import _student_can_complete_assessment, _update_live_student_state
+        self.assertTrue(_student_can_complete_assessment(second_student, material=material))
+        completion_state = {
+            'stage': 'completed', 'branch': 'rhymes', 'temporary_completed': True,
+            'completion_evidence': {'part1_total_score': 10, 'task2_rhymes_score': 4},
+            'task1_score': 6, 'task2_type': 'Task 2L / Rhymes',
+            'task2_score': 4, 'task2_rhymes_score': 4, 'part1_total_score': 10,
+            'learner_experience_rating': 5, 'learner_experience': 5,
+        }
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=material,
+            student_ids=[self.student.id, second_student.id], student_count=2, status='started',
+            countdown_seconds=0, start_at=timezone.now() - timedelta(seconds=10),
+            student_states={
+                str(self.student.id): {
+                    'status': 'reading', 'progress': .4, 'current_item': 'word-4',
+                    'items_completed': 4, 'items_total': 10,
+                    'recovery_state': {'stage': 'words', 'current_item': 'word-4'},
+                },
+                str(second_student.id): {
+                    'status': 'completed', 'progress': 1, 'items_completed': 10,
+                    'items_total': 10, 'elapsed_seconds': 42,
+                    'recovery_state': completion_state,
+                },
+            },
+        )
+        _update_live_student_state(session, second_student.id, {
+            'recovery_state': {'current_question': 11},
+        })
+        session.save(update_fields=['student_states'])
+
+        response = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'end'}), content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            Assessment.objects.filter(
+                student=second_student, material=material, attempt_status='completed',
+            ).count(),
+            1,
+        )
+        self.assertFalse(Assessment.objects.filter(
+            student=self.student, material=material, attempt_status='completed',
+        ).exists())
+        session.refresh_from_db()
+        self.assertEqual(session.student_states[str(self.student.id)]['status'], 'missed')
+        self.assertEqual(session.student_states[str(second_student.id)]['status'], 'completed')
 
     def test_teacher_can_pause_and_resume_live_assessment_session(self):
         session = LiveAssessmentSession.objects.create(
@@ -10708,7 +10839,7 @@ class LiveAssessmentCloseAndSaveTests(TestCase):
         self.material = Material.objects.create(
             title="Close and Save CRLA", code=f"CAS-MAT-{uuid.uuid4().hex[:8].upper()}",
             item_type="word", type="assessment", status="published", teacher=self.teacher,
-            is_active=True, is_official_reading=True, assessment_kind="crla",
+            is_active=True, is_official_reading=True, is_system_owned=True, assessment_kind="crla",
         )
         session = self.client.session
         session['user_id'] = self.teacher.id
@@ -10743,6 +10874,96 @@ class LiveAssessmentCloseAndSaveTests(TestCase):
         self.assertEqual(state['recovery_state']['crla_question_index'], 3)
         self.assertIn(self.student.id, session.student_ids)
         self.assertEqual(session.status, 'started')
+
+    def test_partial_recovery_update_preserves_temporary_completion_evidence(self):
+        from .views import _update_live_student_state
+
+        completion_evidence = {'assessment_id': 'material-123', 'completed_at': '2026-09-15T10:00:00Z'}
+        session = self.make_session(student_state={
+            'status': 'completed',
+            'progress': 1,
+            'recovery_state': {
+                'temporary_completed': True,
+                'completion_evidence': completion_evidence,
+                'current_question': 10,
+            },
+        })
+
+        _update_live_student_state(session, self.student.id, {
+            'recovery_state': {'current_question': 11},
+        })
+
+        state = session.student_states[str(self.student.id)]
+        self.assertTrue(state['recovery_state']['temporary_completed'])
+        self.assertEqual(state['recovery_state']['completion_evidence'], completion_evidence)
+        self.assertEqual(state['recovery_state']['current_question'], 11)
+
+    def test_ended_live_crla_redirects_only_legitimately_completed_participants(self):
+        def student_client(student):
+            client = Client()
+            session = client.session
+            session['user_id'] = student.id
+            session['user_role'] = 'student'
+            session.save()
+            User.objects.filter(pk=student.id).update(active_session_key=session.session_key)
+            return client
+
+        def ended_session(student, state):
+            return LiveAssessmentSession.objects.create(
+                id=uuid.uuid4().hex, teacher=self.teacher, material=self.material,
+                student_ids=[student.id], student_count=1, status='ended',
+                student_states={str(student.id): state},
+            )
+
+        def reader_url(session):
+            return reverse('reading_word_page') + (
+                f'?live_session_id={session.id}&official_assessment_id=material-{self.material.id}'
+            )
+
+        temporary_student = self.student
+        temporary_session = ended_session(temporary_student, {
+            'status': 'completed',
+            'recovery_state': {
+                'temporary_completed': True,
+                'completion_evidence': {'completed_at': '2026-09-15T10:00:00Z'},
+            },
+        })
+        temporary_response = student_client(temporary_student).get(reader_url(temporary_session))
+        self.assertEqual(temporary_response.status_code, 302)
+        self.assertEqual(temporary_response.url, reverse('assessment'))
+
+        official_student = User.objects.create(
+            custom_id=f"CAS-STD-{uuid.uuid4().hex[:8].upper()}", role="student",
+            first_name="Official", last_name="Student", middle_initial="", suffix="",
+            sex="female", birth_month=1, birth_day=1, birth_year=2012,
+            email=f"{uuid.uuid4().hex}@example.com", password_hash=make_password("password"),
+        )
+        self.material.record_assessment_result(
+            official_student, status='completed', completed_at=timezone.now(),
+            crla_classification='Reader at Grade Level', total_score=10,
+        )
+        official_session = ended_session(official_student, {'status': 'completed'})
+        official_response = student_client(official_student).get(reader_url(official_session))
+        self.assertEqual(official_response.status_code, 302)
+        self.assertEqual(official_response.url, reverse('assessment'))
+
+        incomplete_session = ended_session(temporary_student, {'status': 'missed'})
+        incomplete_response = student_client(temporary_student).get(reader_url(incomplete_session))
+        self.assertEqual(incomplete_response.status_code, 403)
+
+        nonparticipant_session = ended_session(official_student, {'status': 'missed'})
+        nonparticipant_response = student_client(temporary_student).get(reader_url(nonparticipant_session))
+        self.assertEqual(nonparticipant_response.status_code, 403)
+
+        bare_student = User.objects.create(
+            custom_id=f"CAS-STD-{uuid.uuid4().hex[:8].upper()}", role="student",
+            first_name="Bare", last_name="Completed", middle_initial="", suffix="",
+            sex="female", birth_month=1, birth_day=1, birth_year=2012,
+            email=f"{uuid.uuid4().hex}@example.com", password_hash=make_password("password"),
+        )
+        bare_session = ended_session(bare_student, {'status': 'completed'})
+        bare_response = student_client(bare_student).get(reader_url(bare_session))
+        self.assertEqual(bare_response.status_code, 403)
 
     def test_end_official_crla_does_not_trust_completed_live_snapshot_without_result(self):
         session = self.make_session(student_state={

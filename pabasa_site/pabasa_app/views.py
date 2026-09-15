@@ -12084,6 +12084,11 @@ def reading_word_page(request):
         live_session = LiveAssessmentSession.objects.filter(id=live_session_id).first()
         current_user_id = request.session.get('user_id')
         _, requested_material_id = _parse_prefixed_id(request.GET.get('official_assessment_id'))
+        ended_completion_redirect = _redirect_completed_ended_live_crla(
+            request, live_session, requested_material_id,
+        )
+        if ended_completion_redirect:
+            return ended_completion_redirect
         if (
             request.session.get('user_role') != 'student'
             or not live_session
@@ -13925,6 +13930,11 @@ def reading_sentence_page(request):
         live_session = LiveAssessmentSession.objects.filter(id=live_session_id).first()
         current_user_id = request.session.get('user_id')
         _, requested_material_id = _parse_prefixed_id(request.GET.get('official_assessment_id'))
+        ended_completion_redirect = _redirect_completed_ended_live_crla(
+            request, live_session, requested_material_id,
+        )
+        if ended_completion_redirect:
+            return ended_completion_redirect
         if (
             request.session.get('user_role') != 'student'
             or not live_session
@@ -15752,6 +15762,32 @@ def _is_live_crla_material(material):
     )
 
 
+def _redirect_completed_ended_live_crla(request, live_session, requested_material_id):
+    """Hand a legitimately completed participant back to the normal workflow."""
+    if not live_session or live_session.status != 'ended' or request.session.get('user_role') != 'student':
+        return None
+    user_id = request.session.get('user_id')
+    if str(user_id) not in {str(value) for value in (live_session.student_ids or [])}:
+        return None
+    if str(requested_material_id or '') != str(live_session.material_id) or not _is_live_crla_material(live_session.material):
+        return None
+    state = (live_session.student_states or {}).get(str(user_id), {})
+    recovery_state = state.get('recovery_state') if isinstance(state, dict) else None
+    temporary_completed = bool(
+        isinstance(recovery_state, dict)
+        and recovery_state.get('temporary_completed')
+        and isinstance(recovery_state.get('completion_evidence'), dict)
+        and recovery_state.get('completion_evidence')
+    )
+    student = User.objects.filter(id=user_id, role='student', is_archived=False).first()
+    authoritative_completed = bool(
+        student and _official_crla_completed_result_for_material(student, live_session.material)
+    )
+    if temporary_completed or authoritative_completed:
+        return redirect('assessment')
+    return None
+
+
 def _live_assessment_section_is_available(section):
     return bool(
         section
@@ -17162,9 +17198,44 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
         for student_key, latest_state in latest_states.items():
             latest_state = latest_state if isinstance(latest_state, dict) else {}
             planned_state = planned_states.get(student_key, {})
-            if str(latest_state.get('status') or '').lower() == 'completed':
+            latest_recovery_state = latest_state.get('recovery_state')
+            latest_has_temporary_completion = bool(
+                isinstance(latest_recovery_state, dict)
+                and latest_recovery_state.get('temporary_completed')
+            )
+            latest_student = None
+            if student_key.isdigit():
+                latest_student = User.objects.filter(
+                    id=int(student_key), role='student', is_archived=False,
+                ).first()
+            latest_has_authoritative_completion = bool(
+                latest_student
+                and _official_crla_completed_result_for_material(latest_student, current.material)
+            )
+            latest_completed_is_valid = (
+                str(latest_state.get('status') or '').lower() == 'completed'
+                and (
+                    not _is_live_crla_material(current.material)
+                    or latest_has_temporary_completion
+                    or latest_has_authoritative_completion
+                )
+            )
+            if latest_completed_is_valid:
                 merged_states[student_key] = latest_state
-            elif str(planned_state.get('status') or '').lower() == 'completed':
+            elif (
+                str(planned_state.get('status') or '').lower() == 'completed'
+                and (
+                    not _is_live_crla_material(current.material)
+                    or bool(
+                        isinstance(planned_state.get('recovery_state'), dict)
+                        and planned_state['recovery_state'].get('temporary_completed')
+                    )
+                    or bool(
+                        latest_student
+                        and _official_crla_completed_result_for_material(latest_student, current.material)
+                    )
+                )
+            ):
                 merged_states[student_key] = planned_state
             else:
                 merged = dict(latest_state)
@@ -17335,7 +17406,18 @@ def _update_live_student_state(session, student_id, state_values):
         before_state=before_record,
         incoming_state=state_values or {},
     )
-    student_record.update(state_values or {})
+    # Most live-state updates are intentionally shallow, but recovery_state
+    # is a partial nested snapshot. Preserve terminal completion evidence when
+    # a later heartbeat/recovery update only changes one recovery field.
+    incoming_state = dict(state_values or {})
+    incoming_recovery_state = incoming_state.get('recovery_state')
+    existing_recovery_state = student_record.get('recovery_state')
+    if isinstance(existing_recovery_state, dict) and isinstance(incoming_recovery_state, dict):
+        incoming_state['recovery_state'] = {
+            **existing_recovery_state,
+            **incoming_recovery_state,
+        }
+    student_record.update(incoming_state)
     student_record['updated_at'] = system_now().isoformat()
     states[student_key] = student_record
     session.student_states = states

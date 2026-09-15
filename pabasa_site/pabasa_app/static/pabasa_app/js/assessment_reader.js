@@ -334,6 +334,7 @@
         let liveSessionPollTimer = null;
         let liveSessionPaused = false;
         let liveSessionEnded = false;
+        let liveCompletionRefreshIssued = false;
         let liveSessionRedirectingToWaitingRoom = false;
         let liveSessionEndRedirectTimer = null;
         let liveSessionEndRedirecting = false;
@@ -2426,6 +2427,7 @@
             }
             if (isFinalCompletion) {
                 if (completionClassificationValue) completionClassificationValue.textContent = classificationText;
+                finishBtn?.remove();
             } else {
                 // A section transition is not a result screen. Remove the
                 // classification panel entirely instead of leaving an empty
@@ -5677,6 +5679,7 @@
                     local_state: (() => { try { return JSON.parse(localStorage.getItem(getStudentEndStateKey()) || '{}'); } catch (error) { return {}; } })(),
                 });
                 renderPersistedEndState(renderedEndState);
+                renderLiveCompletionWaitingState(branchState.stage);
             }
             if (!isMyMaterials && (branchState.stage === "transition_to_rhymes" || branchState.stage === "transition_to_sentence" || branchState.stage === "transition_to_story")) {
                 traceEndSession('showCompletion.awaitContinue', { nextStageUrl, next_stage: branchState.next_stage });
@@ -5974,6 +5977,7 @@
                         } else {
                             renderScoreSummary(latestScores);
                             renderPersistedEndState(readStudentEndState());
+                            renderLiveCompletionWaitingState(branchState.stage);
                         }
                         const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
                         if (!isMyMaterials && disclaimer) {
@@ -6502,6 +6506,17 @@
             );
         }
 
+        function renderLiveCompletionWaitingState(completionStage) {
+            if (!isCurrentLiveAssessment() || liveSessionEnded) return;
+            if (!['completed', 'early_completed_words'].includes(String(completionStage || '').toLowerCase())) return;
+            const message = document.getElementById("completionMessage");
+            const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
+            if (message) message.textContent = "You completed the reading assessment.";
+            if (disclaimer) disclaimer.textContent = "Please wait for your teacher to end the assessment. You will then be redirected to your Reading Assessment.";
+            if (completionClassificationPanel) completionClassificationPanel.hidden = true;
+            if (finishBtn) finishBtn.remove();
+        }
+
         async function handleLiveSessionState(state) {
             if (!state || !state.status) {
                 console.debug('LIVE_CRLA_CLOSE_SAVE_DEBUG redirect condition', {
@@ -6594,7 +6609,11 @@
                     // Ending the live session is not CRLA completion. Only a
                     // terminal completed student state may show completion UI.
                     if (studentStatus === 'completed') {
-                        showCompletion(true);
+                        if (!liveCompletionRefreshIssued) {
+                            liveCompletionRefreshIssued = true;
+                            stopLiveSessionPolling();
+                            window.location.reload();
+                        }
                     } else {
                         showLiveSessionEnded();
                     }
