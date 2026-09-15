@@ -13264,6 +13264,13 @@ def lesson_4_gawain_1_page(request):
 
 @login_required(role='student')
 @xframe_options_sameorigin
+def session_4_gawain_1_page(request):
+    context = _dashboard_context(request)
+    return render(request, 'pabasa_app/session_4_gawain_1_page.html', context)
+
+
+@login_required(role='student')
+@xframe_options_sameorigin
 def lesson_4_gawain_2_page(request):
     items = [
         {'word': word, 'image': f'{word}.png', 'starts_m': word in {'mata', 'medyas'}}

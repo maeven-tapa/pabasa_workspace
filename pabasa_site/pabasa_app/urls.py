@@ -137,6 +137,7 @@ urlpatterns = [
     path('api/reading/transcribe/', views.reading_transcribe_api, name='reading_transcribe_api'),
     path('dashboard/assessment/lesson-3/gawain-2/', views.lesson_3_gawain_2_page, name='lesson_3_gawain_2_page'),
     path('dashboard/assessment/lesson-4/gawain-1/', views.lesson_4_gawain_1_page, name='lesson_4_gawain_1_page'),
+    path('dashboard/assessment/session-4/gawain-1/', views.session_4_gawain_1_page, name='session_4_gawain_1_page'),
     path('dashboard/assessment/lesson-4/gawain-2/', views.lesson_4_gawain_2_page, name='lesson_4_gawain_2_page'),
     path('dashboard/assessment/lesson-3/activity-progress/', views.lesson_3_activity_progress, name='lesson_3_activity_progress'),
     path('dashboard/assessment/lesson-4/activity-progress/', views.lesson_3_activity_progress, name='lesson_4_activity_progress'),
