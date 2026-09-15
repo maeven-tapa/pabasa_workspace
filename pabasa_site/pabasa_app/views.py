@@ -13272,25 +13272,8 @@ def session_4_gawain_1_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def lesson_4_gawain_2_page(request):
-    items = [
-        {'word': word, 'image': f'{word}.png', 'starts_m': word in {'mata', 'medyas'}}
-        for word in ('saging', 'mata', 'suklay', 'sili', 'medyas', 'sapatos')
-    ]
-    progress = StudentActivityProgress.objects.filter(
-        student_id=request.session.get('user_id'), activity_key='lesson-4-gawain-2'
-    ).first()
     context = _dashboard_context(request)
-    context['lesson_4_gawain_2_data'] = {
-        'items': items,
-        'progress': {
-            'current_index': progress.current_index if progress else 0,
-            'completed_items': progress.completed_items if progress else 0,
-            'correct_items': progress.correct_items if progress else 0,
-            'activity_completed': progress.activity_completed if progress else False,
-            'answers': (progress.state or {}).get('answers', []) if progress else [],
-        },
-    }
-    return render(request, 'pabasa_app/lesson_4_gawain_2_page.html', context)
+    return render(request, 'pabasa_app/session_4_gawain_2_page.html', context)
 
 
 @login_required(role='student')

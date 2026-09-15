@@ -890,12 +890,17 @@ document.addEventListener('DOMContentLoaded',()=>{const g=document.getElementByI
 <script>document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){const c=document.querySelector('#sessionGrid .pabasa-session-card:nth-child(6)');if(!c)return;c.className='pabasa-session-card unlocked';c.innerHTML=`<div class="session-visual"><span class="pabasa-session-badge">⭐</span><img src="{% static 'pabasa_app/images/letrang_m_s/saging.png' %}" alt="Larawan ng saging"></div><div class="session-content"><h4>Lesson 4</h4><p>Gawain 2</p><div>Letrang Mm at Ss</div></div><div class="session-bottom"><div>6 larawan</div><button type="button">SIMULAN</button></div>`;c.onclick=function(){location.href='{% url "lesson_4_gawain_2_page" %}'}} ,125)});</script>
 <style>
     .session-4-card { min-height: 270px; }
-    .session-4-progress { background: #dcebea; border-radius: 99px; height: 7px; margin: .25rem auto .8rem; overflow: hidden; width: 88%; }
+    .session-4-progress { background: #dcebea; border-radius: 99px; height: 7px; margin: .65rem auto .45rem; overflow: hidden; width: 88%; }
     .session-4-progress span { background: #e6a33a; border-radius: inherit; display: block; height: 100%; width: 0; }
     .session-4-activity { background: rgba(255,255,255,.72); border: 1px solid rgba(157,210,208,.8); border-radius: 12px; cursor: pointer; display: block; padding: .7rem; text-align: left; transition: box-shadow .2s ease, transform .2s ease; width: 100%; }
     .session-4-activity:hover, .session-4-activity:focus-visible { box-shadow: 0 6px 14px rgba(31,111,139,.16); outline: none; transform: translateY(-1px); }
     .session-4-activity strong { color: #16465d; display: block; font-size: .84rem; }
     .session-4-activity span { color: #435f69; display: block; font-size: .86rem; line-height: 1.25; margin-top: .15rem; }
+    .session-4-start { background: #1f6f8b; border: 0; border-radius: 13px; box-shadow: 0 4px 0 #16566d; color: #fff; cursor: pointer; font-size: 1.05rem; font-weight: 900; min-height: 52px; padding: .7rem 1rem; transition: background .2s ease, transform .15s ease, box-shadow .15s ease; width: 100%; }
+    .session-4-start:hover { background: #277e9b; }
+    .session-4-start:active { box-shadow: 0 1px 0 #16566d; transform: translateY(3px); }
+    .session-4-summary { align-items: center; color: #647883; display: flex; font-size: .82rem; font-weight: 700; justify-content: space-between; }
+    .session-4-summary span:last-child { align-items: center; display: inline-flex; gap: .25rem; }
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -904,7 +909,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const card = document.createElement('article');
     card.className = 'pabasa-session-card unlocked session-4-card';
     card.dataset.session = '4';
-    card.innerHTML = `<div class="session-visual"><span class="pabasa-session-badge">⭐</span></div><div class="session-content"><h4>Session 4</h4><p>Lessons 10, 11, at 12</p><button class="session-4-activity" type="button" onclick="location.href='{% url 'session_4_gawain_1_page' %}'"><strong>Gawain 1: Tunog ng mga Letra</strong><span>Handa ka na! Sabihin ang tunog ng bawat letra.</span></button></div><div class="session-bottom"><div class="session-4-progress" aria-label="Session 4 progress"><span></span></div></div>`;
+    card.innerHTML = `<div class="session-visual"><span class="pabasa-session-badge">⭐</span></div><div class="session-content"><h4>Session 4</h4><p>Lessons 10, 11, at 12</p><div class="session-4-activity" role="button" tabindex="0" onclick="location.href='{% url 'session_4_gawain_1_page' %}'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"><strong>Gawain 1: Tunog ng mga Letra</strong><span>Handa ka na! Sabihin ang tunog ng bawat letra.</span></div></div><div class="session-bottom"><button class="session-4-start" type="button" onclick="location.href='{% url 'session_4_gawain_1_page' %}'">SIMULAN</button><div class="session-4-progress" aria-label="Session 4 progress"><span></span></div><div class="session-4-summary"><span>0% natapos</span><span aria-label="1 na gawain">▣ 1 na gawain</span></div></div>`;
     grid.insertBefore(card, grid.children[6] || null);
 });
 </script>
