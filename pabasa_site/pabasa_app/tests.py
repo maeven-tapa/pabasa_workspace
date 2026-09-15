@@ -6606,6 +6606,88 @@ class LiveAssessmentStartTests(TestCase):
         self.assertIn('live_recovery=1', resumed_payload['reader_url'])
         self.assertNotIn('crla_fresh=1', resumed_payload['reader_url'])
 
+    def test_recovery_reader_url_explicitly_preserves_words_stage(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            status='started',
+            start_at=timezone.now() - timedelta(seconds=30),
+            student_states={str(self.student.id): {
+                'status': 'reading',
+                'participation_status': 'active',
+                'recovery_state': {'stage': 'words', 'branch': 'words', 'current_item': 'bahay'},
+            }},
+        )
+        student_client = Client()
+        student_session = student_client.session
+        student_session.update({'user_id': self.student.id, 'user_role': 'student'})
+        student_session.save()
+
+        payload = student_client.get(
+            reverse('live_assessment_session_state', kwargs={'session_id': session.id})
+        ).json()['session']
+
+        self.assertIn('live_recovery=1', payload['reader_url'])
+        self.assertIn('crla_stage=words', payload['reader_url'])
+
+    def test_recovery_words_stage_uses_word_reader_route(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            status='started',
+            start_at=timezone.now() - timedelta(seconds=30),
+            student_states={str(self.student.id): {
+                'status': 'reading',
+                'participation_status': 'active',
+                'recovery_state': {'stage': 'words', 'branch': 'words'},
+            }},
+        )
+        student_client = Client()
+        student_session = student_client.session
+        student_session.update({'user_id': self.student.id, 'user_role': 'student'})
+        student_session.save()
+        payload = student_client.get(
+            reverse('live_assessment_session_state', kwargs={'session_id': session.id})
+        ).json()['session']
+        self.assertIn('/reading_ui/word/', payload['reader_url'])
+        self.assertNotIn('/reading_ui/para/', payload['reader_url'])
+
+    def test_words_branch_overrides_stale_story_recovery_stage_for_resume(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            status='started',
+            start_at=timezone.now() - timedelta(seconds=30),
+            student_states={str(self.student.id): {
+                'status': 'reading',
+                'participation_status': 'active',
+                'crla_stage': 'words',
+                'recovery_state': {'stage': 'story', 'branch': 'words'},
+            }},
+        )
+        student_client = Client()
+        student_session = student_client.session
+        student_session.update({'user_id': self.student.id, 'user_role': 'student'})
+        student_session.save()
+
+        reader_url = student_client.get(
+            reverse('live_assessment_session_state', kwargs={'session_id': session.id})
+        ).json()['session']['reader_url']
+
+        self.assertIn('/reading_ui/word/', reader_url)
+        self.assertIn('live_recovery=1', reader_url)
+        self.assertIn('crla_stage=words', reader_url)
+        self.assertNotIn('/reading_ui/para/', reader_url)
+
     def test_save_settings_persists_selection_and_notifies_students_for_waiting_room(self):
         session = LiveAssessmentSession.objects.create(
             id=uuid.uuid4().hex,

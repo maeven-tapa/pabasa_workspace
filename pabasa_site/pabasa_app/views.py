@@ -15330,6 +15330,7 @@ def _build_live_assessment_action_url(material, session_id, start_at, countdown_
     # official payload and fresh-attempt marker used by the normal workflow.
     stage = str(stage or '').strip().lower()
     reader_route = {
+        'words': 'reading_word_page',
         'rhymes': 'reading_word_page',
         'sentences': 'reading_sentence_page',
         'story': 'reading_para_page',
@@ -15349,7 +15350,7 @@ def _build_live_assessment_action_url(material, session_id, start_at, countdown_
         params['crla_fresh'] = '1'
     else:
         params['live_recovery'] = '1'
-        if stage in {'rhymes', 'sentences'}:
+        if stage in {'words', 'rhymes', 'sentences'}:
             params['crla_stage'] = stage
     query = '&'.join(f'{key}={quote(str(value), safe="")}' for key, value in params.items())
     return f'{reverse(reader_route)}?{query}'
@@ -18291,7 +18292,20 @@ def live_assessment_session_state(request, session_id):
                     'recovery_state': recovery_state,
                 }
     recovery_stage = _live_recovery_reader_stage(student_state.get('recovery_state'))
-    has_pending_recovery = recovery_stage in {'rhymes', 'sentences', 'story'}
+    # A saved reader snapshot can retain a terminal/next-stage value in
+    # recovery_state.stage while its active branch still identifies the item
+    # the learner was reading. Preserve that active reader stage for Resume;
+    # otherwise the URL builder can incorrectly select the Story/paragraph
+    # route for a Words recovery.
+    recovery_payload = student_state.get('recovery_state')
+    active_reader_stages = {'words', 'rhymes', 'sentences'}
+    if isinstance(recovery_payload, dict):
+        persisted_branch = str(
+            recovery_payload.get('branch') or student_state.get('crla_stage') or ''
+        ).strip().lower()
+        if persisted_branch in active_reader_stages:
+            recovery_stage = persisted_branch
+    has_pending_recovery = recovery_stage in {'words', 'rhymes', 'sentences', 'story'}
     student_completed = (
         str(student_state.get('status') or '').lower() in {'completed', 'skipped'}
         and not has_pending_recovery
