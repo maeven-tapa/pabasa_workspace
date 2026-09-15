@@ -815,6 +815,7 @@
     body:not(.dark-theme) .assessment-dock .assessment-stage {
         background: linear-gradient(115deg, rgba(255, 255, 255, 0.96), rgba(220, 243, 251, 0.96));
     }
+    .assessment-title-row{align-items:center;display:flex;gap:.7rem}.assessment-tts{align-items:center;background:#e8f5f8;border:2px solid rgba(31,111,139,.18);border-radius:14px;color:#176078;cursor:pointer;display:inline-flex;font-size:1.25rem;height:48px;justify-content:center;min-width:48px}.pabasa-preview-subject{background:#fff;border-radius:22px;border-top:6px solid #2fa9d8;margin-top:1rem;padding:1.25rem}.pabasa-track-tabs{background:#f1f6f7;border-radius:999px;display:inline-flex;gap:.3rem;margin:1rem 0;padding:.35rem}.pabasa-track-tabs button{background:transparent;border:0;border-radius:999px;color:#536b75;cursor:pointer;font-weight:900;min-height:48px;padding:.6rem 1rem}.pabasa-track-tabs button.active{background:#1f6f8b;color:#fff}.pabasa-track-tabs button:nth-child(2).active{background:#e6a33a}.pabasa-task-badge{background:#ef5c45;border-radius:50%;color:#fff;display:inline-flex;font-size:.7rem;height:23px;justify-content:center;line-height:23px;margin-left:.3rem;width:23px}.pabasa-session-grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(205px,1fr))}.pabasa-session-card{background:#f0f3f4;border:1px solid #d9e0e3;border-radius:18px;min-height:210px;padding:1rem}.pabasa-session-card.unlocked{background:linear-gradient(145deg,#e6f7fb,#e8f7ed);border-color:#9dd2d0}.pabasa-session-card.completed{background:#e8f7ed;border-color:#a9d8b8}.pabasa-session-card h4{color:#16465d;font-weight:900;margin:1rem 0 .4rem}.pabasa-session-card p{color:#647883;font-size:.86rem;min-height:48px}.pabasa-session-card button,.pabasa-primary-action{border:0;border-radius:13px;cursor:pointer;font-weight:900;min-height:48px;padding:.65rem 1rem}.pabasa-session-card button{background:#1f6f8b;color:#fff;width:100%}.pabasa-session-card.locked button{background:#c4cdd0;color:#68777c;cursor:not-allowed}.pabasa-session-badge{font-size:1.5rem}.pabasa-track-hidden{display:none}.pabasa-remediation-card{background:#fff8df;border:1px solid #f0d58b;border-radius:20px;max-width:480px;padding:1.25rem}.pabasa-teacher{font-weight:900}.pabasa-skill-tag{background:#fff;border-radius:999px;color:#986716;display:inline-block;font-size:.76rem;font-weight:900;margin-top:1rem;padding:.45rem .7rem}.pabasa-remediation-card h4{color:#76551b;font-weight:900}.pabasa-locked-dialog{border:0;border-radius:22px;max-width:390px;padding:0}.pabasa-locked-dialog>div{padding:1.5rem;text-align:center}.pabasa-locked-dialog::backdrop{background:rgba(20,43,54,.55)}.pabasa-robot{font-size:3.5rem}.pabasa-primary-action{background:#1f6f8b;color:#fff}.pabasa-floating-robot{background:#6f8ff5;border:4px solid #193a91;border-radius:50%;bottom:1rem;cursor:pointer;font-size:2rem;height:72px;position:fixed;right:1rem;width:72px;z-index:20}
 </style>
 {% endblock %}
 
@@ -828,21 +829,50 @@
     <div class="assessment-stage">
         <div>
             <span class="dash-pill mb-3">Main reading check</span>
-            <h2>Choose the reading route your teacher assigned.</h2>
-            <p>Each route opens a focused assessment screen. Start only when your room is quiet and your microphone is ready.</p>
+            <div class="assessment-title-row"><h2>Pumili ng iyong aralin ngayong araw!</h2></div>
+            <p>Piliin ang aralin na itinalaga sa iyo ng iyong guro.</p>
         </div>
         <aside class="status-ticket">
             <span class="ticket-label">Class status</span>
             <strong id="classStatusTitle">Waiting for class</strong>
-            <div id="classStatusText" class="small mb-0" style="color: var(--dash-muted);">Join a class from the dashboard to receive assigned tests.</div>
+            <div id="classStatusText" class="small mb-0" style="color: var(--dash-muted);">0/15 SESSIONS COMPLETED</div>
         </aside>
     </div>
+
+    <section class="subject-card pabasa-preview-subject" aria-label="Grade 2 BALAGTAS reading tracks">
+        <div class="pabasa-track-tabs" role="tablist" aria-label="Reading tracks">
+            <button id="coreTrackTab" class="active" type="button" role="tab" aria-selected="true" aria-controls="coreTrackPanel" onclick="switchTrack('core')">Aking Aralin</button>
+            <button id="supplementaryTrackTab" type="button" role="tab" aria-selected="false" aria-controls="supplementaryTrackPanel" onclick="switchTrack('supplementary')">Dagdag Pagsasanay <span class="pabasa-task-badge">1</span></button>
+        </div>
+        <div id="coreTrackPanel" role="tabpanel" aria-labelledby="coreTrackTab"><div id="sessionGrid" class="pabasa-session-grid"></div></div>
+        <div id="supplementaryTrackPanel" class="pabasa-track-hidden" role="tabpanel" aria-labelledby="supplementaryTrackTab" hidden><p class="pabasa-track-intro">Mga gawaing ginawa mula sa Template section.</p><div id="templateFolderGrid" class="pabasa-template-folder-grid"></div></div>
+    </section>
 
     <div class="subject-grid" id="subjectGrid"></div>
 
 </section>
 
+<dialog id="lockedSessionDialog" class="pabasa-locked-dialog"><div><div class="pabasa-robot" aria-hidden="true">🤖</div><h3>Sandali lang!</h3><p id="lockedSessionMessage"></p><button type="button" class="pabasa-primary-action" onclick="document.getElementById('lockedSessionDialog').close()">Opo, Naintindihan Ko!</button></div></dialog><button type="button" class="pabasa-floating-robot" aria-label="Makinig sa mensahe ng robot" onclick="playTTS('Kumusta! Piliin ang iyong aralin ngayong araw.')">🤖</button>
 
+
+<style>#subjectGrid{display:block}.pabasa-preview-subject{display:block}.pabasa-track-intro{color:#647883;font-weight:700}.pabasa-template-folder-grid{display:none}</style>
+<style>
+    .pabasa-preview-subject { background: transparent; border: 0; border-radius: 0; padding: 0; }
+    .assessment-dock { align-content: start; max-height: calc(100dvh - 88px); overflow-y: auto; padding-bottom: 2rem; scrollbar-gutter: stable; }
+    .pabasa-track-tabs { display: flex; justify-content: center; margin-inline: auto; width: fit-content; }
+    .pabasa-track-tabs button { font-size: 1.08rem; min-height: 58px; padding: .8rem 1.5rem; }
+    .pabasa-task-badge { font-size: .8rem; height: 27px; line-height: 27px; width: 27px; }
+    .pabasa-preview-subject { min-height: 0; overflow: visible; }
+    .pabasa-preview-subject::before { display: none; }
+    @media (max-width: 767.98px) { .assessment-dock { max-height: calc(100dvh - 72px); } }
+</style>
+<script>
+function playTTS(text){if(!('speechSynthesis'in window))return;window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='fil-PH';u.rate=.85;window.speechSynthesis.speak(u)}
+function switchTrack(trackName){const core=trackName==='core';document.getElementById('coreTrackPanel').hidden=!core;document.getElementById('supplementaryTrackPanel').hidden=core;document.getElementById('coreTrackPanel').classList.toggle('pabasa-track-hidden',!core);document.getElementById('supplementaryTrackPanel').classList.toggle('pabasa-track-hidden',core);document.getElementById('coreTrackTab').classList.toggle('active',core);document.getElementById('supplementaryTrackTab').classList.toggle('active',!core);document.getElementById('coreTrackTab').setAttribute('aria-selected',core);document.getElementById('supplementaryTrackTab').setAttribute('aria-selected',!core)}
+function showLockedDialog(n){const d=document.getElementById('lockedSessionDialog'),m=document.getElementById('lockedSessionMessage');m.textContent=`Tapusin muna ang Session ${n-1} para mabuksan ang Session ${n}!`;d.showModal();playTTS(m.textContent)}
+document.addEventListener('DOMContentLoaded',()=>{const g=document.getElementById('sessionGrid');for(let n=1;n<=15;n++){const locked=n>1,c=document.createElement('article');c.className=`pabasa-session-card ${locked?'locked':'unlocked'}`;c.innerHTML=`<span class="pabasa-session-badge">${locked?'🔒':'⭐'}</span><h4>Session ${n}</h4><p>${n===1?'Introduksyon, Alpabetong Pilipino, Salitang magkatugma':'Ipagpatuloy ang iyong pagsasanay sa pagbasa.'}</p><button type="button" ${locked?'aria-label="Session '+n+' ay naka-lock"':''}>${locked?'NAKAHARANG':'SIMULAN'}</button>`;if(locked)c.addEventListener('click',()=>showLockedDialog(n));g.appendChild(c)}});
+</script>
+<script>document.addEventListener('DOMContentLoaded',function(){const panel=document.getElementById('supplementaryTrackPanel'),grid=document.getElementById('subjectGrid');if(panel&&grid)panel.appendChild(grid)});</script>
 {{ student_section_ids|json_script:"student-section-ids-data" }}
 {{ aral_week_mode|json_script:"aral-week-mode-data" }}
 <script>
@@ -1620,15 +1650,7 @@
                 })();
 
                 return `
-                <div class="subject-card" data-class-code="${escapeHtml(classData.code)}">
-                    <div class="subject-info">
-                        <div>
-                            <h3>${escapeHtml(classData.name)}</h3>
-                            <p class="small text-secondary mb-0">${escapeHtml(classData.subject || "Reading")}</p>
-                        </div>
-                        <span class="subject-code">${escapeHtml(classData.code)}</span>
-                    </div>
-                    
+                <div class="pabasa-dynamic-content" data-class-code="${escapeHtml(classData.code)}">
                     ${officialAssessmentsHtml}
                     ${contentHtml || (!officialAssessments.length ? `
                         <div class="assessment-empty-state" role="status">
