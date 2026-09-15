@@ -17,10 +17,18 @@
   </main>
   <script src="{% static 'pabasa_app/js/lesson3_rhyme_activity.js' %}"></script>
   <script>
+    const savedLesson3Progress = {{ lesson_3_progress|safe }};
+    if (savedLesson3Progress) localStorage.setItem('pabasa:lesson-3-gawain-2:progress', String(savedLesson3Progress.activity_completed?6:savedLesson3Progress.current_index));
+    const lesson3ProgressUrl = "{{ lesson_3_progress_url }}";const originalSetItem=localStorage.setItem.bind(localStorage);localStorage.setItem=(key,value)=>{originalSetItem(key,value);if(key.includes('lesson-3-gawain-')){fetch(lesson3ProgressUrl,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':document.cookie.match(/csrftoken=([^;]+)/)?.[1]||''},body:JSON.stringify({activity_key:key.includes('gawain-1')?'lesson-3-gawain-1':'lesson-3-gawain-2',current_index:Number(value),completed_items:Number(value),correct_items:Number(value),total_items:6,activity_completed:false})}).catch(error=>console.error('Lesson 3 progress save failed',error))};
+    new MutationObserver(() => { const card = document.querySelector('.complete'); if (!card || card.querySelector('.complete-done')) return; const button = document.createElement('button'); button.className = 'complete-done'; button.type = 'button'; button.textContent = 'Done'; card.append(button); button.onclick = async () => { button.disabled = true; button.textContent = 'Saving...'; try { const response = await fetch(lesson3ProgressUrl, {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':document.cookie.match(/csrftoken=([^;]+)/)?.[1]||''}, body:JSON.stringify({activity_key:'lesson-3-gawain-2', current_index:6, completed_items:6, correct_items:6, total_items:6, activity_completed:true})}); const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.error || 'save failed'); location.href = "{% url 'assessment' %}"; } catch (error) { console.error('Lesson 3 Gawain 2 completion save failed', error); button.disabled = false; button.textContent = 'Done'; let errorText = card.querySelector('.complete-error'); if (!errorText) { errorText = document.createElement('p'); errorText.className = 'complete-error'; card.append(errorText); } errorText.textContent = 'Hindi na-save ang progress. Subukan muli.'; } }; }).observe(document.getElementById('game'), {childList:true, subtree:true});
+  </script>
+  <script>
     mountLesson3RhymeActivity({
       pairs: {{ lesson_3_gawain_2_pairs_json|safe }},
       imageBase: "{% static 'pabasa_app/images/salitang_magkatugma/lesson_3_gawain_2/' %}",
       storageKey: 'pabasa:lesson-3-gawain-2:progress',
+      progressUrl: "{{ lesson_3_progress_url }}",
+      initialProgress: {{ lesson_3_progress|default:'null'|safe }},
       transcribeUrl: "{% url 'reading_transcribe_api' %}",
       exitUrl: "{% url 'assessment' %}"
     });

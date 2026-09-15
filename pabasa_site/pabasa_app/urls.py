@@ -135,6 +135,7 @@ urlpatterns = [
     path('api/dashboard/assessment/activity/word-decoding/transcribe/', views.word_decoding_transcribe_api, name='word_decoding_transcribe_api'),
     path('api/reading/transcribe/', views.reading_transcribe_api, name='reading_transcribe_api'),
     path('dashboard/assessment/lesson-3/gawain-2/', views.lesson_3_gawain_2_page, name='lesson_3_gawain_2_page'),
+    path('dashboard/assessment/lesson-3/activity-progress/', views.lesson_3_activity_progress, name='lesson_3_activity_progress'),
     path('api/reading/read-aloud/', views.reading_read_aloud_api, name='reading_read_aloud_api'),
     path('api/template-activities/read-aloud/', views.template_activity_read_aloud_api, name='template_activity_read_aloud_api'),
     path('api/story-response/read-aloud/', views.story_response_read_aloud_api, name='story_response_read_aloud_api'),

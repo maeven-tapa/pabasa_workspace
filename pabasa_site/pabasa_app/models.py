@@ -2007,6 +2007,25 @@ class ActivityLog(models.Model):
         return f"{self.get_event_type_display()}: {self.title}"
 
 
+class StudentActivityProgress(models.Model):
+    """Resumable state for standalone student activities without a Material."""
+
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="activity_progress")
+    activity_key = models.CharField(max_length=100)
+    current_index = models.PositiveIntegerField(default=0)
+    completed_items = models.PositiveIntegerField(default=0)
+    correct_items = models.PositiveIntegerField(default=0)
+    total_items = models.PositiveIntegerField(default=0)
+    activity_completed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "student_activity_progress"
+        constraints = [models.UniqueConstraint(fields=("student", "activity_key"), name="unique_student_activity_progress")]
+
+
+
 class LiveAssessmentSession(models.Model):
     STATUS_CHOICES = [
         ('waiting', 'Waiting'),

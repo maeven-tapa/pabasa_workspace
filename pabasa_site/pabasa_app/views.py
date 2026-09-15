@@ -58,7 +58,7 @@ from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_
 from django.db import transaction
 import re
 import traceback
-from .models import User, School, Section, Enrollment, AccountStatusHistory, Assessment, AssessmentRequest, Material, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride, ClassCrlaFinalization
+from .models import User, School, Section, Enrollment, AccountStatusHistory, Assessment, AssessmentRequest, Material, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride, ClassCrlaFinalization, StudentActivityProgress
 from .system_clock import invalidate_override_cache, now as system_now, real_now, today as system_today
 from .models import PracticeDebugSettings
 from .section_configuration import ensure_salawag_grade_two_sections
@@ -13186,7 +13186,11 @@ def salitang_magkatugma_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def lesson_3_gawain_1_page(request):
-    return render(request, 'pabasa_app/lesson_3_gawain_1_page.html', _dashboard_context(request))
+    context = _dashboard_context(request)
+    progress = StudentActivityProgress.objects.filter(student_id=request.session.get('user_id'), activity_key='lesson-3-gawain-1').first()
+    context['lesson_3_progress'] = json.dumps({'current_index': progress.current_index, 'completed_items': progress.completed_items, 'correct_items': progress.correct_items, 'total_items': progress.total_items, 'activity_completed': progress.activity_completed} if progress else None)
+    context['lesson_3_progress_url'] = reverse('lesson_3_activity_progress')
+    return render(request, 'pabasa_app/lesson_3_gawain_1_page.html', context)
 
 
 @login_required(role='student')
@@ -13199,7 +13203,38 @@ def lesson_3_gawain_2_page(request):
     ]
     context = _dashboard_context(request)
     context['lesson_3_gawain_2_pairs_json'] = json.dumps(pairs, separators=(',', ':'))
+    progress = StudentActivityProgress.objects.filter(student_id=request.session.get('user_id'), activity_key='lesson-3-gawain-2').first()
+    context['lesson_3_progress'] = json.dumps({'current_index': progress.current_index, 'completed_items': progress.completed_items, 'correct_items': progress.correct_items, 'total_items': progress.total_items, 'activity_completed': progress.activity_completed} if progress else None)
+    context['lesson_3_progress_url'] = reverse('lesson_3_activity_progress')
     return render(request, 'pabasa_app/lesson_3_gawain_2_page.html', context)
+
+
+@login_required(role='student')
+@csrf_protect
+@require_http_methods(['POST'])
+def lesson_3_activity_progress(request):
+    try:
+        data = json.loads(request.body or '{}')
+        key = str(data.get('activity_key') or '')
+        total = int(data.get('total_items') or 0)
+        index = int(data.get('current_index') or 0)
+        completed = int(data.get('completed_items') or 0)
+        correct = int(data.get('correct_items') or completed)
+        done = bool(data.get('activity_completed'))
+        if key not in {'lesson-3-gawain-1', 'lesson-3-gawain-2'} or total <= 0:
+            raise ValueError('Invalid Lesson 3 activity.')
+        if not (0 <= completed <= total and 0 <= correct <= total and 0 <= index <= total):
+            raise ValueError('Invalid activity progress.')
+        if done and (completed < total or index < total):
+            raise ValueError('Activity cannot be completed before all items are complete.')
+        progress, _ = StudentActivityProgress.objects.update_or_create(
+            student_id=request.session.get('user_id'), activity_key=key,
+            defaults={'current_index': index, 'completed_items': completed, 'correct_items': correct,
+                      'total_items': total, 'activity_completed': done},
+        )
+        return JsonResponse({'success': True, 'progress': {'current_index': progress.current_index, 'completed_items': progress.completed_items, 'correct_items': progress.correct_items, 'total_items': progress.total_items, 'activity_completed': progress.activity_completed}})
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=400)
 
 
 @login_required(role='student')
