@@ -35,3 +35,5 @@
   </script>
 </body>
 </html>
+<script>document.addEventListener('click',function(e){const b=e.target.closest('.answer');if(!b)return;setTimeout(function(){const s=document.getElementById('status');if(s&&s.textContent.trim()==='')s.textContent='Subukan muli.'},0)},true);</script>
+<script>document.addEventListener('click',function(e){const b=e.target.closest('.answer');if(!b)return;const before=document.querySelector('.progress')?.textContent;setTimeout(function(){if(before===document.querySelector('.progress')?.textContent){const s=document.getElementById('status');if(s){s.textContent='Subukan muli.';s.classList.add('warning')}}},80)},true);</script>

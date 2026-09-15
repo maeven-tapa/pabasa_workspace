@@ -13263,6 +13263,30 @@ def lesson_4_gawain_1_page(request):
 
 
 @login_required(role='student')
+@xframe_options_sameorigin
+def lesson_4_gawain_2_page(request):
+    items = [
+        {'word': word, 'image': f'{word}.png', 'starts_m': word == 'mata'}
+        for word in ('saging', 'mata', 'suklay', 'sili', 'medyas', 'sapatos')
+    ]
+    progress = StudentActivityProgress.objects.filter(
+        student_id=request.session.get('user_id'), activity_key='lesson-4-gawain-2'
+    ).first()
+    context = _dashboard_context(request)
+    context['lesson_4_gawain_2_data'] = {
+        'items': items,
+        'progress': {
+            'current_index': progress.current_index if progress else 0,
+            'completed_items': progress.completed_items if progress else 0,
+            'correct_items': progress.correct_items if progress else 0,
+            'activity_completed': progress.activity_completed if progress else False,
+            'answers': (progress.state or {}).get('answers', []) if progress else [],
+        },
+    }
+    return render(request, 'pabasa_app/lesson_4_gawain_2_page.html', context)
+
+
+@login_required(role='student')
 @csrf_protect
 @require_http_methods(['POST'])
 def lesson_3_activity_progress(request):
@@ -13274,9 +13298,9 @@ def lesson_3_activity_progress(request):
         completed = int(data.get('completed_items') or 0)
         correct = int(data.get('correct_items') or completed)
         done = bool(data.get('activity_completed'))
-        state = data.get('state') if key in {'lesson-1-gawain-1', 'lesson-4-gawain-1'} else {}
+        state = data.get('state') if key in {'lesson-1-gawain-1', 'lesson-4-gawain-1', 'lesson-4-gawain-2'} else {}
         if not isinstance(state, dict): state = {}
-        if key not in {'lesson-1-gawain-1', 'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2', 'lesson-4-gawain-1'} or total <= 0:
+        if key not in {'lesson-1-gawain-1', 'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2', 'lesson-4-gawain-1', 'lesson-4-gawain-2'} or total <= 0:
             raise ValueError('Invalid Lesson 3 activity.')
         if not (0 <= completed <= total and 0 <= correct <= total and 0 <= index <= total):
             raise ValueError('Invalid activity progress.')
