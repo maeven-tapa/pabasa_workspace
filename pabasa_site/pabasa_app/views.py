@@ -13180,7 +13180,11 @@ def clap_count_syllables_page(request):
 @xframe_options_sameorigin
 def salitang_magkatugma_page(request):
     """Student-facing Lesson 2 rhyme activity (client-side activity data for now)."""
-    return render(request, 'pabasa_app/salitang_magkatugma_page.html', _dashboard_context(request))
+    context = _dashboard_context(request)
+    progress = StudentActivityProgress.objects.filter(student_id=request.session.get('user_id'), activity_key='lesson-2-gawain-1').first()
+    context['lesson_2_progress'] = json.dumps({'current_index': progress.current_index, 'completed_items': progress.completed_items, 'correct_items': progress.correct_items, 'total_items': progress.total_items, 'activity_completed': progress.activity_completed} if progress else None)
+    context['lesson_2_progress_url'] = reverse('lesson_3_activity_progress')
+    return render(request, 'pabasa_app/salitang_magkatugma_page.html', context)
 
 
 @login_required(role='student')
@@ -13221,7 +13225,7 @@ def lesson_3_activity_progress(request):
         completed = int(data.get('completed_items') or 0)
         correct = int(data.get('correct_items') or completed)
         done = bool(data.get('activity_completed'))
-        if key not in {'lesson-3-gawain-1', 'lesson-3-gawain-2'} or total <= 0:
+        if key not in {'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2'} or total <= 0:
             raise ValueError('Invalid Lesson 3 activity.')
         if not (0 <= completed <= total and 0 <= correct <= total and 0 <= index <= total):
             raise ValueError('Invalid activity progress.')
