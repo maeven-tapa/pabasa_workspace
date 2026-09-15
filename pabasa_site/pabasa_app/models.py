@@ -2017,6 +2017,7 @@ class StudentActivityProgress(models.Model):
     correct_items = models.PositiveIntegerField(default=0)
     total_items = models.PositiveIntegerField(default=0)
     activity_completed = models.BooleanField(default=False)
+    state = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

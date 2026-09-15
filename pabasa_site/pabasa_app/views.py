@@ -11854,6 +11854,18 @@ def assessment(request):
             raise
 
     if stage == 'original':
+        progress_rows = StudentActivityProgress.objects.filter(
+            student_id=getattr(user, 'id', None),
+            activity_key__in=['lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2', 'lesson-4-gawain-1'],
+        )
+        context['aral_standalone_progress'] = {
+            row.activity_key: {
+                'current_index': row.current_index,
+                'completed_items': row.completed_items,
+                'total_items': row.total_items,
+                'activity_completed': row.activity_completed,
+            } for row in progress_rows
+        }
         try:
             logger.warning(
                 "DEBUG: RENDER ASSESSMENT TEMPLATE %s",
@@ -13212,6 +13224,17 @@ def lesson_3_gawain_2_page(request):
     context['lesson_3_progress_url'] = reverse('lesson_3_activity_progress')
     return render(request, 'pabasa_app/lesson_3_gawain_2_page.html', context)
 
+@login_required(role='student')
+@xframe_options_sameorigin
+def lesson_4_gawain_1_page(request):
+    progress = StudentActivityProgress.objects.filter(student_id=request.session.get('user_id'), activity_key='lesson-4-gawain-1').first()
+    state = progress.state if progress and isinstance(progress.state, dict) else {}
+    items = [{'word':'manok','image':'manok.png','starts_m':True},{'word':'manika','image':'manika.png','starts_m':True},{'word':'susi','image':'susi.png','starts_m':False},{'word':'mangga','image':'mangga.png','starts_m':True},{'word':'mais','image':'mais.png','starts_m':True},{'word':'mani','image':'mani.png','starts_m':True}]
+    context = _dashboard_context(request)
+    context['lesson_4_data'] = {'items': items, 'progress': {'current_index': progress.current_index if progress else 0, 'completed_items': progress.completed_items if progress else 0, 'correct_items': progress.correct_items if progress else 0, 'activity_completed': progress.activity_completed if progress else False, 'circled': state.get('circled', []), 'responses': state.get('responses', [])}}
+    context['lesson_4_progress_url'] = reverse('lesson_4_activity_progress')
+    return render(request, 'pabasa_app/lesson_4_gawain_1_page.html', context)
+
 
 @login_required(role='student')
 @csrf_protect
@@ -13225,7 +13248,9 @@ def lesson_3_activity_progress(request):
         completed = int(data.get('completed_items') or 0)
         correct = int(data.get('correct_items') or completed)
         done = bool(data.get('activity_completed'))
-        if key not in {'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2'} or total <= 0:
+        state = data.get('state') if key == 'lesson-4-gawain-1' else {}
+        if not isinstance(state, dict): state = {}
+        if key not in {'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2', 'lesson-4-gawain-1'} or total <= 0:
             raise ValueError('Invalid Lesson 3 activity.')
         if not (0 <= completed <= total and 0 <= correct <= total and 0 <= index <= total):
             raise ValueError('Invalid activity progress.')
@@ -13234,7 +13259,7 @@ def lesson_3_activity_progress(request):
         progress, _ = StudentActivityProgress.objects.update_or_create(
             student_id=request.session.get('user_id'), activity_key=key,
             defaults={'current_index': index, 'completed_items': completed, 'correct_items': correct,
-                      'total_items': total, 'activity_completed': done},
+                      'total_items': total, 'activity_completed': done, 'state': state},
         )
         return JsonResponse({'success': True, 'progress': {'current_index': progress.current_index, 'completed_items': progress.completed_items, 'correct_items': progress.correct_items, 'total_items': progress.total_items, 'activity_completed': progress.activity_completed}})
     except (TypeError, ValueError, json.JSONDecodeError) as exc:
