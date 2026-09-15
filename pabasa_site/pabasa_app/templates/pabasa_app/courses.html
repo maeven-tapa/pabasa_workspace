@@ -8775,6 +8775,20 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             .lesson-msa-item__word { color:#244354; font-size:clamp(1rem,2.3vw,1.45rem); font-weight:900; letter-spacing:.02em; white-space:nowrap; }
                             .lesson-msa-item__blank { color:#e39b32; }
                             @media (max-width:640px) { .lesson-msa-workbook { grid-template-columns:1fr; padding:.65rem; } .lesson-msa-choices { margin-bottom:.65rem; } }
+                            .lesson-i-thumb { --ring-radius:34cqw; aspect-ratio:1; background:conic-gradient(#eaf8fb 0 45deg,#fff4d9 45deg 90deg,#e9f7ed 90deg 135deg,#fdecef 135deg 180deg,#f2edfc 180deg 225deg,#fff0e2 225deg 270deg,#eaf8fb 270deg 315deg,#fff4d9 315deg 360deg); border-radius:50%; container-type:size; display:block; margin:.35rem auto; overflow:hidden; position:relative; width:calc(100% - .7rem); }
+                            .lesson-i-thumb::before { border:2px solid #e39b32; border-radius:50%; content:""; height:25%; left:50%; position:absolute; top:50%; transform:translate(-50%,-50%); width:25%; z-index:1; }
+                            .lesson-i-thumb img { height:18%; object-fit:contain; position:absolute; transform:translate(-50%,-50%); width:18%; }
+                            .lesson-i-workbook { padding:clamp(.7rem,2vw,1.25rem); }
+                            .lesson-i-circle { --ring-radius:34cqw; aspect-ratio:1; background:conic-gradient(#eaf8fb 0 45deg,#fff4d9 45deg 90deg,#e9f7ed 90deg 135deg,#fdecef 135deg 180deg,#f2edfc 180deg 225deg,#fff0e2 225deg 270deg,#eaf8fb 270deg 315deg,#fff4d9 315deg 360deg); border:3px solid #2a7891; border-radius:50%; container-type:size; margin:0 auto; max-width:min(760px, calc(100vw - 3rem)); overflow:hidden; position:relative; width:100%; }
+                            .lesson-i-center { align-items:center; background:#fff; border:4px solid #176078; border-radius:50%; color:#176078; display:flex; font-size:clamp(1.4rem,4vw,3rem); font-weight:900; height:18%; justify-content:center; left:50%; position:absolute; top:50%; transform:translate(-50%,-50%); width:18%; z-index:2; }
+                            .lesson-i-picture { align-items:center; background:rgba(255,255,255,.2); border:0; border-radius:50%; display:flex; height:18%; justify-content:center; padding:.2rem; position:absolute; transform:translate(-50%,-50%); width:18%; z-index:3; }
+                            .lesson-i-picture img { height:84%; max-width:90%; object-fit:contain; width:84%; }
+                            .lesson-i-picture.is-selected { outline:5px solid #e39b32; outline-offset:3px; }
+                            #lesson7Gawain1Preview.is-maximized { display:flex !important; flex-direction:column; inset:.75rem; overflow:hidden; }
+                            #lesson7Gawain1Preview.is-maximized .prescribed-activity-preview__header { flex:0 0 auto; }
+                            #lesson7Gawain1Preview.is-maximized .lesson-i-workbook { align-items:center; display:flex; flex:1 1 auto; justify-content:center; min-height:0; overflow:hidden; padding:.5rem; }
+                            #lesson7Gawain1Preview.is-maximized .lesson-i-circle { height:min(100%, calc(100vw - 2rem)); max-height:100%; max-width:100%; width:auto; }
+                            @media (max-width:640px) { .lesson-i-circle { max-width:calc(100vw - 2rem); } .lesson-i-center { border-width:2px; } }
                             @media (max-width:640px) { .alphabet-workbook { padding:.65rem; } .alphabet-workbook__cell { padding:.2rem; } .alphabet-workbook__word { overflow-wrap:anywhere; } }
                         </style>
                         <div class="prescribed-activity-picker" aria-label="Prescribed activities">
@@ -8786,8 +8800,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <button type="button" class="prescribed-activity-option" data-prescribed-activity="lesson-3-gawain-2" data-preview-target="lesson3Gawain2Preview" aria-controls="lesson3Gawain2Preview" aria-pressed="false"><span class="prescribed-activity-option__thumb lesson3-gawain2-thumb" aria-hidden="true"><span class="lesson3-gawain2-thumb__pair"><img src="{% static 'pabasa_app/images/salitang_magkatugma/lesson_3_gawain_2/lola.png' %}" alt=""><span>✓</span><img src="{% static 'pabasa_app/images/salitang_magkatugma/lesson_3_gawain_2/bola.png' %}" alt=""></span><span class="lesson3-gawain2-thumb__pair"><img src="{% static 'pabasa_app/images/salitang_magkatugma/lesson_3_gawain_2/walis.png' %}" alt=""><span>?</span><img src="{% static 'pabasa_app/images/salitang_magkatugma/lesson_3_gawain_2/tama.png' %}" alt=""></span><span class="lesson3-gawain2-thumb__pair"><img src="{% static 'pabasa_app/images/salitang_magkatugma/lesson_3_gawain_2/dahon.png' %}" alt=""><span>✓</span><img src="{% static 'pabasa_app/images/salitang_magkatugma/lesson_3_gawain_2/kahon.png' %}" alt=""></span><span class="lesson3-gawain2-thumb__pair"><img src="{% static 'pabasa_app/images/salitang_magkatugma/lesson_3_gawain_2/sigaw.png' %}" alt=""><span>✓</span><img src="{% static 'pabasa_app/images/salitang_magkatugma/lesson_3_gawain_2/lugaw.png' %}" alt=""></span><span class="lesson3-gawain2-thumb__pair"><img src="{% static 'pabasa_app/images/salitang_magkatugma/lesson_3_gawain_2/pulis.png' %}" alt=""><span>✓</span><img src="{% static 'pabasa_app/images/salitang_magkatugma/lesson_3_gawain_2/walis.png' %}" alt=""></span><span class="lesson3-gawain2-thumb__pair"><img src="{% static 'pabasa_app/images/salitang_magkatugma/lesson_3_gawain_2/lola.png' %}" alt=""><span>?</span><img src="{% static 'pabasa_app/images/salitang_magkatugma/lesson_3_gawain_2/lolo.png' %}" alt=""></span></span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">2</span><span><strong>Lesson 3 · Gawain 2</strong><br><span class="small text-muted">Salitang Magkatugma</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span></button>
                                 <button type="button" class="prescribed-activity-option" data-prescribed-activity="lesson-4-gawain-1" data-preview-target="lesson4MmPreview" aria-controls="lesson4MmPreview" aria-pressed="false"><span class="prescribed-activity-option__thumb lesson4-mm-thumb" aria-hidden="true"><img src="{% static 'pabasa_app/images/simula/manok.png' %}" alt=""><img src="{% static 'pabasa_app/images/simula/manika.png' %}" alt=""><img src="{% static 'pabasa_app/images/simula/susi.png' %}" alt=""><img src="{% static 'pabasa_app/images/simula/mangga.png' %}" alt=""><img src="{% static 'pabasa_app/images/simula/mais.png' %}" alt=""><img src="{% static 'pabasa_app/images/simula/mani.png' %}" alt=""></span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">1</span><span><strong>Lesson 4 · Gawain 1</strong><br><span class="small text-muted">Letrang Mm</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span></button>
                                 <button type="button" class="prescribed-activity-option" data-prescribed-activity="lesson-4-gawain-2" data-preview-target="lesson4MsPreview" aria-controls="lesson4MsPreview" aria-pressed="false"><span class="prescribed-activity-option__thumb lesson4-ms-thumb" aria-hidden="true"><img src="{% static 'pabasa_app/images/letrang_m_s/saging.png' %}" alt=""><span class="lesson4-ms-thumb__title">Letrang Mm at Ss</span><span class="lesson4-ms-thumb__choices"><span>M</span><span>S</span></span></span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">2</span><span><strong>Lesson 4 · Gawain 2</strong><br><span class="small text-muted">Letrang Mm at Ss</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span></button>
-                                <button type="button" class="prescribed-activity-option" data-prescribed-activity="letrang-aa" data-preview-target="letrangAaPreview" aria-controls="letrangAaPreview" aria-pressed="false"><span class="prescribed-activity-option__thumb lesson-aa-thumb" aria-hidden="true"><img src="{% static 'pabasa_app/images/letrang_a/aso.png' %}" alt=""><span class="lesson-aa-thumb__letter">A a</span><span class="lesson-aa-thumb__box"></span></span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">3</span><span><strong>Gawain</strong><br><span class="small text-muted">Letrang Aa</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span></button>
-                                <button type="button" class="prescribed-activity-option" data-prescribed-activity="letrang-msa" data-preview-target="letrangMsaPreview" aria-controls="letrangMsaPreview" aria-pressed="false"><span class="prescribed-activity-option__thumb lesson-msa-thumb" aria-hidden="true"><img src="{% static 'pabasa_app/images/letrang_m_s_a/ampalaya.png' %}" alt=""><span class="lesson-msa-thumb__title">Letrang Mm, Ss, at Aa</span><span class="lesson-msa-thumb__blank">______ ma</span></span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">4</span><span><strong>Gawain</strong><br><span class="small text-muted">Letrang Mm, Ss, at Aa</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span></button>
+                                <button type="button" class="prescribed-activity-option" data-prescribed-activity="letrang-aa" data-preview-target="letrangAaPreview" aria-controls="letrangAaPreview" aria-pressed="false"><span class="prescribed-activity-option__thumb lesson-aa-thumb" aria-hidden="true"><img src="{% static 'pabasa_app/images/letrang_a/aso.png' %}" alt=""><span class="lesson-aa-thumb__letter">A a</span><span class="lesson-aa-thumb__box"></span></span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">3</span><span><strong>Lesson 5 · Gawain 1</strong><br><span class="small text-muted">Letrang Aa</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span></button>
+                                <button type="button" class="prescribed-activity-option" data-prescribed-activity="letrang-msa" data-preview-target="letrangMsaPreview" aria-controls="letrangMsaPreview" aria-pressed="false"><span class="prescribed-activity-option__thumb lesson-msa-thumb" aria-hidden="true"><img src="{% static 'pabasa_app/images/letrang_m_s_a/ampalaya.png' %}" alt=""><span class="lesson-msa-thumb__title">Letrang Mm, Ss, at Aa</span><span class="lesson-msa-thumb__blank">______ ma</span></span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">4</span><span><strong>Lesson 6 · Gawain 1</strong><br><span class="small text-muted">Letrang Mm, Ss, at Aa</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span></button>
+                                <button type="button" class="prescribed-activity-option" data-prescribed-activity="lesson-7-gawain-1" data-preview-target="lesson7Gawain1Preview" aria-controls="lesson7Gawain1Preview" aria-pressed="false"><span class="prescribed-activity-option__thumb lesson-i-thumb" aria-hidden="true"><img src="{% static 'pabasa_app/images/letrang_i/ilaw.png' %}" alt=""><img src="{% static 'pabasa_app/images/letrang_i/itlog.png' %}" alt=""><img src="{% static 'pabasa_app/images/letrang_i/ilong.png' %}" alt=""><img src="{% static 'pabasa_app/images/letrang_i/ipis.png' %}" alt=""><img src="{% static 'pabasa_app/images/letrang_i/ilang-ilang.png' %}" alt=""><img src="{% static 'pabasa_app/images/letrang_i/isa.png' %}" alt=""><img src="{% static 'pabasa_app/images/letrang_i/aso.png' %}" alt=""><img src="{% static 'pabasa_app/images/letrang_i/saging.png' %}" alt=""></span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">1</span><span><strong>Lesson 7 · Gawain 1</strong><br><span class="small text-muted">Letrang Ii</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span></button>
                             </div>
                         </div>
                         <div class="prescribed-activity-preview" id="lesson3Gawain2Preview" data-prescribed-preview="lesson-3-gawain-2">
@@ -8824,7 +8839,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             </div>
                         </div>
                         <div class="prescribed-activity-preview" id="letrangAaPreview" data-prescribed-preview="letrang-aa">
-                            <div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview"><i class="bi bi-x-lg"></i></button><div class="small text-uppercase text-muted fw-semibold">Gawain</div><h5>Letrang Aa</h5><p class="mb-0 text-muted">Ikahon ang mga larawang nagsisimula sa tunog /a/.</p></div>
+                            <div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview"><i class="bi bi-x-lg"></i></button><div class="small text-uppercase text-muted fw-semibold">Lesson 5 · Gawain 1</div><h5>Letrang Aa</h5><p class="mb-0 text-muted">Ikahon ang mga larawang nagsisimula sa tunog /a/.</p></div>
                             <div class="lesson-aa-workbook" aria-label="Letrang Aa picture selection worksheet">
                                 <div class="lesson-aa-item is-a-sound"><img src="{% static 'pabasa_app/images/letrang_a/apa.png' %}" alt="apa"></div>
                                 <div class="lesson-aa-item is-a-sound"><img src="{% static 'pabasa_app/images/letrang_a/aso.png' %}" alt="aso"></div>
@@ -8838,7 +8853,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             </div>
                         </div>
                         <div class="prescribed-activity-preview" id="letrangMsaPreview" data-prescribed-preview="letrang-msa">
-                            <div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview"><i class="bi bi-x-lg"></i></button><div class="small text-uppercase text-muted fw-semibold">Gawain</div><h5>Letrang Mm, Ss, at Aa</h5><p class="mb-0 text-muted">Isulat ang nawawalang pantig o tunog. Piliin ang tamang sagot sa loob ng kahon.</p></div>
+                            <div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview"><i class="bi bi-x-lg"></i></button><div class="small text-uppercase text-muted fw-semibold">Lesson 6 · Gawain 1</div><h5>Letrang Mm, Ss, at Aa</h5><p class="mb-0 text-muted">Isulat ang nawawalang pantig o tunog. Piliin ang tamang sagot sa loob ng kahon.</p></div>
                             <div class="lesson-msa-workbook" aria-label="Letrang Mm, Ss, at Aa missing sound worksheet">
                                 <div class="lesson-msa-choices" style="grid-column:1 / -1;"><span class="lesson-msa-choice">ma</span><span class="lesson-msa-choice">am</span><span class="lesson-msa-choice">a</span><span class="lesson-msa-choice">sa</span></div>
                                 <div class="lesson-msa-item"><img src="{% static 'pabasa_app/images/letrang_m_s_a/ampalaya.png' %}" alt="ampalaya"><span class="lesson-msa-item__word"><span class="lesson-msa-item__blank">______</span>palaya</span></div>
@@ -8847,6 +8862,19 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <div class="lesson-msa-item"><img src="{% static 'pabasa_app/images/letrang_m_s_a/sapatos.png' %}" alt="sapatos"><span class="lesson-msa-item__word"><span class="lesson-msa-item__blank">______</span>patos</span></div>
                                 <div class="lesson-msa-item"><img src="{% static 'pabasa_app/images/letrang_m_s_a/araw.png' %}" alt="araw"><span class="lesson-msa-item__word"><span class="lesson-msa-item__blank">______</span>raw</span></div>
                             </div>
+                        </div>
+                        <div class="prescribed-activity-preview" id="lesson7Gawain1Preview" data-prescribed-preview="lesson-7-gawain-1">
+                            <div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview"><i class="bi bi-x-lg"></i></button><div class="small text-uppercase text-muted fw-semibold">Lesson 7 · Gawain 1</div><h5>Letrang Ii</h5><p class="mb-0 text-muted">Bilugan ang larawan na nagsisimula sa tunog na /i/.</p></div>
+                            <div class="lesson-i-workbook"><div class="lesson-i-circle" aria-label="Letrang Ii circular picture activity"><div class="lesson-i-center">Ii</div>
+                                <button type="button" class="lesson-i-picture" aria-label="Ilaw" aria-pressed="false"><img src="{% static 'pabasa_app/images/letrang_i/ilaw.png' %}" alt="Ilaw"></button>
+                                <button type="button" class="lesson-i-picture" aria-label="Aso" aria-pressed="false"><img src="{% static 'pabasa_app/images/letrang_i/aso.png' %}" alt="Aso"></button>
+                                <button type="button" class="lesson-i-picture" aria-label="Saging" aria-pressed="false"><img src="{% static 'pabasa_app/images/letrang_i/saging.png' %}" alt="Saging"></button>
+                                <button type="button" class="lesson-i-picture" aria-label="Itlog" aria-pressed="false"><img src="{% static 'pabasa_app/images/letrang_i/itlog.png' %}" alt="Itlog"></button>
+                                <button type="button" class="lesson-i-picture" aria-label="Ilong" aria-pressed="false"><img src="{% static 'pabasa_app/images/letrang_i/ilong.png' %}" alt="Ilong"></button>
+                                <button type="button" class="lesson-i-picture" aria-label="Ipis" aria-pressed="false"><img src="{% static 'pabasa_app/images/letrang_i/ipis.png' %}" alt="Ipis"></button>
+                                <button type="button" class="lesson-i-picture" aria-label="Ilang-ilang" aria-pressed="false"><img src="{% static 'pabasa_app/images/letrang_i/ilang-ilang.png' %}" alt="Ilang-ilang"></button>
+                                <button type="button" class="lesson-i-picture" aria-label="Isa" aria-pressed="false"><img src="{% static 'pabasa_app/images/letrang_i/isa.png' %}" alt="Isa"></button>
+                            </div></div>
                         </div>
                         <div class="prescribed-activity-preview" id="prescribedActivityPreview" data-prescribed-preview="gawain-1">
                             <div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview"><i class="bi bi-x-lg"></i></button><div class="small text-uppercase text-muted fw-semibold">Lesson 1 · Gawain 1</div><h5>Alfabetong Pilipino</h5><p class="mb-0 text-muted">Kilalanin ang mga titik at salita sa alpabetong Pilipino.</p></div>
@@ -8992,6 +9020,38 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         document.querySelectorAll('.prescribed-preview-close').forEach((closeButton) => {
                             closeButton.addEventListener('click', () => closeButton.closest('.prescribed-activity-preview')?.classList.remove('is-maximized'));
                         });
+                        function positionLessonIWheelItems() {
+                            const wheel = document.querySelector('#lesson7Gawain1Preview .lesson-i-circle');
+                            const items = Array.from(wheel?.querySelectorAll('.lesson-i-picture') || []);
+                            if (!wheel || !items.length) return;
+                            const wedgeAngle = 360 / items.length;
+                            // The left-side source document starts at the
+                            // upper-left wedge: Ilaw → Aso → Saging → Itlog →
+                            // Ilong → Ipis → Ilang-ilang → Isa clockwise.
+                            // A -1 offset moves item 0 from the default
+                            // upper-right center to the upper-left center.
+                            const visualWedgeOffset = -1;
+                            const radialDistance = 34;
+                            items.forEach((item, index) => {
+                                const visualWedgeIndex = (index + visualWedgeOffset) % items.length;
+                                const centerAngle = (visualWedgeIndex * wedgeAngle) + (wedgeAngle / 2);
+                                const radians = centerAngle * Math.PI / 180;
+                                item.style.left = `${50 + (radialDistance * Math.sin(radians))}%`;
+                                item.style.top = `${50 - (radialDistance * Math.cos(radians))}%`;
+                            });
+                            document.querySelectorAll('#prescribedActivityPicker .lesson-i-thumb').forEach((thumbnail) => {
+                                const thumbnailItems = Array.from(thumbnail.querySelectorAll('img'));
+                                thumbnailItems.forEach((item, index) => {
+                                    const visualWedgeIndex = (index + visualWedgeOffset) % thumbnailItems.length;
+                                    const centerAngle = (visualWedgeIndex * wedgeAngle) + (wedgeAngle / 2);
+                                    const radians = centerAngle * Math.PI / 180;
+                                    item.style.left = `${50 + (radialDistance * Math.sin(radians))}%`;
+                                    item.style.top = `${50 - (radialDistance * Math.cos(radians))}%`;
+                                });
+                            });
+                        }
+                        positionLessonIWheelItems();
+                        window.addEventListener('resize', positionLessonIWheelItems);
                         document.querySelectorAll('#lesson3Gawain2Preview .lesson3-gawain2-pair__check').forEach((checkButton) => {
                             checkButton.addEventListener('click', () => {
                                 const selected = !checkButton.classList.contains('is-selected');
@@ -9000,6 +9060,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             });
                         });
                         document.querySelectorAll('#lesson4MmPreview .lesson4-mm-picture').forEach((pictureButton) => {
+                            pictureButton.addEventListener('click', () => {
+                                const selected = !pictureButton.classList.contains('is-selected');
+                                pictureButton.classList.toggle('is-selected', selected);
+                                pictureButton.setAttribute('aria-pressed', String(selected));
+                            });
+                        });
+                        document.querySelectorAll('#lesson7Gawain1Preview .lesson-i-picture').forEach((pictureButton) => {
                             pictureButton.addEventListener('click', () => {
                                 const selected = !pictureButton.classList.contains('is-selected');
                                 pictureButton.classList.toggle('is-selected', selected);
