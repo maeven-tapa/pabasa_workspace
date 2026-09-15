@@ -424,6 +424,14 @@ class AssessmentWorkflowBranchingTests(TestCase):
         )
         self.assertIn('next_stage: "",', source)
 
+    def test_story_choices_accept_official_passage_text_field(self):
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        helper = source.split("function getStoryChoicesFromAssessment", 1)[1].split("function shortStoryPreview", 1)[0]
+
+        # The server's official reading payload uses `text`; custom payloads
+        # use `content`. Both must resolve to a playable Story Reading item.
+        self.assertIn("item.content || item.text || item.storyText", helper)
+
     def test_live_crla_countdown_only_initializes_for_fresh_entry(self):
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
         countdown = source.split("async function startLiveCountdown()", 1)[1].split("const resetPhraseListening", 1)[0]

@@ -871,7 +871,11 @@
                 .map((item, index) => ({
                     key: index + 1,
                     title: String(item.title || "").trim(),
-                    content: String(item.content || "").trim(),
+                    // Official reading payloads historically use `text` for
+                    // passages, while custom/live payloads use `content`.
+                    // Normalize both here so a valid story is not treated as
+                    // missing during a stage transition.
+                    content: String(item.content || item.text || item.storyText || "").trim(),
                 }))
                 .filter(item => item.title || item.content);
         }
