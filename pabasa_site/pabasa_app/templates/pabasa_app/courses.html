@@ -5732,6 +5732,44 @@
     }
     #fiveWStory { appearance:none; padding-right:2.5rem; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%2364758b' d='M3.2 5.8 8 10.2l4.8-4.4 1.1 1.2L8 12.6 2.1 7z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right .8rem center; background-size:1rem; }
 </style>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const picker = document.getElementById('prescribedActivityPicker');
+    const gawain2 = picker?.querySelector('[data-prescribed-activity="session-4-gawain-2"]');
+    if (!picker || !gawain2 || picker.querySelector('[data-prescribed-activity="session-4-gawain-3"]')) return;
+    const option = document.createElement('button');
+    option.type = 'button'; option.className = 'prescribed-activity-option';
+    option.dataset.prescribedActivity = 'session-4-gawain-3'; option.dataset.previewTarget = 'session4Gawain3Preview'; option.setAttribute('aria-controls', 'session4Gawain3Preview'); option.setAttribute('aria-pressed', 'false');
+    option.innerHTML = '<span class="prescribed-activity-option__thumb session4-gawain3-thumb" aria-hidden="true"><span>aba</span><span>lba</span><span>bilbo</span><span>bao</span><span>iba</span><span>baso</span><span>lbaba</span><span>ubo</span><span>bubo</span></span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">3</span><span><strong>Lessons 10, 11, at 12 · Gawain 3</strong><br><span class="small text-muted">I-Decode ang mga Salita</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>';
+    gawain2.after(option);
+    const preview = document.createElement('div');
+    preview.className = 'prescribed-activity-preview'; preview.id = 'session4Gawain3Preview'; preview.dataset.prescribedPreview = 'session-4-gawain-3';
+    preview.innerHTML = '<div class="session4-gawain3-preview"><button type="button" class="prescribed-preview-close" aria-label="Close preview"><i class="bi bi-x-lg"></i></button><main class="session4-gawain3-page" aria-labelledby="session4Gawain3Title"><p class="session4-gawain3-eyebrow">LESSONS 10, 11, AT 12 · GAWAIN 3</p><h1 class="session4-gawain3-title" id="session4Gawain3Title">Gawain 3: I-Decode ang mga Salita</h1><p class="session4-gawain3-instruction">I-decode o basahin ang mga salita na nasa ibaba. Lagyan ng tsek (✓) kung tama ang pagkaka-decode o pagbabasa ng bawat salita.</p><div class="session4-gawain3-grid">'+['aba','lba','bilbo','bao','iba','baso','lbaba','ubo','bubo'].map((word,index)=>'<div class="session4-gawain3-item"><span class="session4-gawain3-number">'+(index+1)+'</span><strong>'+word+'</strong><span class="session4-gawain3-check" aria-label="Check '+word+'"></span></div>').join('')+'</div><aside class="session4-gawain3-competencies"><strong>Competencies</strong><span>Phonics</span><span>Phonological Awareness</span><span>Fluency</span></aside></main></div>';
+    picker.after(preview);
+    option.addEventListener('click', () => { picker.querySelectorAll('.prescribed-activity-option').forEach(button => { button.classList.remove('is-selected'); button.setAttribute('aria-pressed', 'false'); }); option.classList.add('is-selected'); option.setAttribute('aria-pressed', 'true'); preview.classList.add('is-maximized'); });
+    preview.querySelector('.prescribed-preview-close').addEventListener('click', () => preview.classList.remove('is-maximized'));
+});
+</script>
+<style>
+    .session4-gawain3-thumb { align-content:center; background:linear-gradient(145deg,#e8f6fb,#fff8dd); display:grid; gap:.14rem; grid-template-columns:repeat(3,1fr); padding:.45rem; }
+    .session4-gawain3-thumb span { align-items:center; background:#fff; border:1px solid #d3e5e9; border-radius:.25rem; color:#176078; display:flex; font-size:.52rem; font-weight:900; justify-content:center; }
+    .session4-gawain3-preview { background:#f4f8f7; min-height:100%; overflow:auto; padding:clamp(1.25rem,3vw,2.8rem); position:relative; }
+    .session4-gawain3-preview::before,.session4-gawain3-preview::after { border-radius:48% 52% 45% 55%; content:""; pointer-events:none; position:absolute; }
+    .session4-gawain3-preview::before { background:#dceff3; height:18rem; left:-7rem; top:-6rem; transform:rotate(22deg); width:24rem; }
+    .session4-gawain3-preview::after { background:#fff0b8; bottom:-8rem; height:20rem; right:-6rem; transform:rotate(-18deg); width:25rem; }
+    .session4-gawain3-page { margin:0 auto; max-width:1080px; position:relative; z-index:1; }
+    .session4-gawain3-eyebrow { color:#28748a; font-size:.72rem; font-weight:900; letter-spacing:.12em; margin:0 0 .65rem; text-transform:uppercase; }
+    .session4-gawain3-title { color:#16465d; font-size:clamp(1.8rem,4vw,3.35rem); font-weight:900; line-height:1.05; margin:0; }
+    .session4-gawain3-instruction { color:#405c65; font-size:clamp(1rem,1.7vw,1.25rem); line-height:1.55; margin:1.15rem 0 0; max-width:900px; }
+    .session4-gawain3-grid { display:grid; gap:clamp(.8rem,2vw,1.2rem); grid-template-columns:repeat(3,minmax(0,1fr)); margin:clamp(1.7rem,4vw,2.7rem) auto 0; max-width:950px; }
+    .session4-gawain3-item { align-items:center; background:#fff; border:1px solid #d3e5e9; border-radius:1.25rem; box-shadow:0 10px 24px rgba(38,77,84,.1); display:flex; gap:.75rem; min-height:7rem; padding:1rem; }
+    .session4-gawain3-number { align-items:center; background:#dff1f5; border-radius:50%; color:#176078; display:flex; flex:0 0 2rem; font-size:.9rem; height:2rem; justify-content:center; width:2rem; }
+    .session4-gawain3-item strong { color:#16465d; flex:1; font-size:clamp(1.35rem,3vw,2.25rem); letter-spacing:.04em; text-align:center; }
+    .session4-gawain3-check { border:2px solid #82979d; border-radius:.35rem; flex:0 0 1.45rem; height:1.45rem; width:1.45rem; }
+    .session4-gawain3-competencies { background:#e4f4f8; border-radius:1rem; color:#49636a; display:flex; flex-wrap:wrap; gap:.5rem 1.2rem; margin:clamp(1.4rem,3vw,2.2rem) auto 0; max-width:950px; padding:1rem 1.2rem; }
+    .session4-gawain3-competencies strong { color:#16465d; width:100%; }
+    @media(max-width:640px){.session4-gawain3-grid{grid-template-columns:1fr 1fr}.session4-gawain3-item{min-height:5.8rem;padding:.65rem}.session4-gawain3-item strong{font-size:1.45rem}}
+</style>
 {% endblock %}
 
 {% block header %}
