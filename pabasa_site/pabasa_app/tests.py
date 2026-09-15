@@ -10662,6 +10662,29 @@ class LiveAssessmentCloseAndSaveTests(TestCase):
         self.assertIn(self.student.id, session.student_ids)
         self.assertEqual(session.status, 'started')
 
+    def test_end_official_crla_does_not_trust_completed_live_snapshot_without_result(self):
+        session = self.make_session(student_state={
+            'status': 'completed', 'progress': 1, 'items_completed': 10,
+            'items_total': 10, 'connection_status': 'connected',
+        })
+        response = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'end'}), content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        session.refresh_from_db()
+        self.assertEqual(session.student_states[str(self.student.id)]['status'], 'missed')
+        cleaned = session.student_states[str(self.student.id)]
+        self.assertEqual(cleaned['progress'], 0)
+        self.assertEqual(cleaned['current_item'], '')
+        self.assertEqual(cleaned['items_completed'], 0)
+        self.assertEqual(cleaned['items_total'], 0)
+        self.assertNotIn('recovery_state', cleaned)
+        self.assertNotIn('completion_payload', cleaned)
+        self.assertFalse(Assessment.objects.filter(
+            student=self.student, material=self.material, attempt_status='completed',
+        ).exists())
+
     def test_started_saved_resume_releases_students_without_replacing_session(self):
         second_student = User.objects.create(
             custom_id=f"CAS-STD-{uuid.uuid4().hex[:8].upper()}", role="student",

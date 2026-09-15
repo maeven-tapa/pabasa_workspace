@@ -11282,6 +11282,12 @@ def assessment(request):
     if selected_section is None and len(joined_sections) == 1:
         selected_section = joined_sections[0]
     reading_access_state = workflow.get('eligibility') or _reader_assessment_state(user)
+    # A finalized CRLA result takes precedence over calendar availability.
+    # Calendar gates apply only to students who have not completed the active
+    # official assessment.
+    has_completed_official_crla = bool(
+        user and _student_has_completed_official_crla(user)
+    )
     if (
         user
         and getattr(user, 'role', '') == 'student'
@@ -11342,6 +11348,7 @@ def assessment(request):
     if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status == 'after' and not aral_week_mode:
         if (
             not section_assessment_completed
+            and not has_completed_official_crla
             and not _student_has_approved_assessment_request(user, selected_section)
             and not (returning_to_reading_assessment and has_reading_assessment_access)
         ):
@@ -11365,7 +11372,7 @@ def assessment(request):
                 'workflow_message': 'Keep up the great work. You can continue practicing whenever you like.',
             })
             return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
-    if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status in {'before', 'during'} and (not selected_section.assessment_week_enabled or not assessment_week_live or not student_live_assessment) and not section_assessment_completed and not _student_has_completed_official_crla(user) and not aral_week_mode:
+    if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status in {'before', 'during'} and (not selected_section.assessment_week_enabled or not assessment_week_live or not student_live_assessment) and not section_assessment_completed and not has_completed_official_crla and not aral_week_mode:
         context = _dashboard_context(request, 'student')
         context.update({
             'stage': 'assessment_week_locked',
@@ -11425,7 +11432,6 @@ def assessment(request):
     official_availability = _official_assessment_availability_for_student(user, request)
     official_crla_material = _official_crla_material_for_student(user, official_availability.get('assessment_type'))
     has_active_crla_window = bool(official_availability.get('available'))
-    has_completed_official_crla = _student_has_completed_official_crla(user)
     has_terminal_unfinished_live_crla = bool(
         has_active_crla_window
         and official_crla_material
@@ -15311,6 +15317,8 @@ def _live_recovery_reader_stage(recovery_state):
     stage = str(normalized.get('stage') or '').strip().lower()
     if stage in {'transition_to_rhymes', 'transition_to_sentence'}:
         stage = str(normalized.get('next_stage') or '').strip().lower()
+    if stage in {'story', 'story_selection', 'story_ready', 'story_reading', 'story_comprehension'}:
+        return 'story'
     return stage if stage in {'words', 'rhymes', 'sentences'} else ''
 
 
@@ -15324,6 +15332,11 @@ def _build_live_assessment_action_url(material, session_id, start_at, countdown_
     reader_route = {
         'rhymes': 'reading_word_page',
         'sentences': 'reading_sentence_page',
+        'story': 'reading_para_page',
+        'story_selection': 'reading_para_page',
+        'story_ready': 'reading_para_page',
+        'story_reading': 'reading_para_page',
+        'story_comprehension': 'reading_para_page',
     }.get(stage, 'reading_word_page')
     params = {
         'official_assessment_id': str(material.id),
@@ -16858,7 +16871,23 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
                 isinstance(student_state.get('recovery_state'), dict)
                 and student_state['recovery_state'].get('temporary_completed')
             )
-            if str(student_state.get('status', '')).lower() == 'completed' and not is_temporary_live_completion:
+            # For official CRLA, the live status is only a transport snapshot;
+            # the persisted classified Assessment result is authoritative.
+            # This prevents a stale/false "completed" snapshot from hiding an
+            # unfinished student behind an ended-session state.
+            is_authoritative_completed = bool(
+                str(student_state.get('status', '')).lower() == 'completed'
+                and student_key.isdigit()
+                and _official_crla_completed_result_for_material(
+                    User.objects.filter(id=int(student_key), role='student', is_archived=False).first(),
+                    session.material,
+                )
+            )
+            if (
+                str(student_state.get('status', '')).lower() == 'completed'
+                and (not _is_live_crla_material(session.material) or is_authoritative_completed)
+                and not is_temporary_live_completion
+            ):
                 student_state['connection_status'] = student_state.get('connection_status', 'disconnected')
                 states[student_key] = student_state
                 continue
@@ -16946,13 +16975,35 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
                 student_state['status'] = 'missed'
                 student_state['connection_status'] = 'disconnected'
                 student_state['final_score'] = None
-                # Preserve the unfinished CRLA snapshot. Do not fabricate
-                # completion progress/items or erase the recovery position.
-                student_state['progress'] = student_state.get('progress', 0)
-                student_state['accuracy'] = student_state.get('accuracy')
-                student_state['reading_time'] = student_state.get('reading_time')
-                student_state['items_completed'] = student_state.get('items_completed', 0)
-                student_state['items_total'] = student_state.get('items_total', 0)
+                # An ended official CRLA session must not leave a resumable
+                # snapshot for a student without an authoritative result.
+                # Keep only the terminal transport state used by the waiting
+                # room; discard fields that represent active assessment work.
+                fields_to_clear = (
+                    'recovery_state', 'completion_payload', 'current_item',
+                    'items_completed', 'items_total', 'crla_stage',
+                    'crla_stage_label', 'accuracy', 'reading_time',
+                    'reading_time_seconds', 'duration_seconds', 'wpm',
+                    'correct_words', 'correct_sentences', 'final_score',
+                    'task1_score', 'task2_rhymes_score',
+                    'task2_sentences_score', 'crla_question_index',
+                    'locked_items_count', 'selected_story',
+                    'selected_story_content', 'story_segment_index',
+                ) if _is_live_crla_material(session.material) else ()
+                for field in fields_to_clear:
+                    student_state.pop(field, None)
+                if _is_live_crla_material(session.material):
+                    student_state.update({
+                        'progress': 0,
+                        'current_item': '',
+                        'items_completed': 0,
+                        'items_total': 0,
+                        'final_score': None,
+                    })
+                else:
+                    student_state['progress'] = student_state.get('progress', 0)
+                    student_state['items_completed'] = student_state.get('items_completed', 0)
+                    student_state['items_total'] = student_state.get('items_total', 0)
 
                 # An actively attempted CRLA that is terminated by End
                 # Session is an interrupted live attempt, not a student
@@ -17032,6 +17083,20 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
             else:
                 merged = dict(latest_state)
                 merged.update({'status': 'missed', 'connection_status': 'disconnected', 'final_score': None, 'progress': 0})
+                if _is_live_crla_material(current.material):
+                    for field in (
+                        'recovery_state', 'completion_payload', 'current_item',
+                        'items_completed', 'items_total', 'crla_stage',
+                        'crla_stage_label', 'accuracy', 'reading_time',
+                        'reading_time_seconds', 'duration_seconds', 'wpm',
+                        'correct_words', 'correct_sentences', 'final_score',
+                        'task1_score', 'task2_rhymes_score',
+                        'task2_sentences_score', 'crla_question_index',
+                        'locked_items_count', 'selected_story',
+                        'selected_story_content', 'story_segment_index',
+                    ):
+                        merged.pop(field, None)
+                    merged.update({'current_item': '', 'items_completed': 0, 'items_total': 0, 'final_score': None})
                 merged_states[student_key] = merged
         current.student_states = merged_states
         current.status = 'ended'
@@ -18226,7 +18291,7 @@ def live_assessment_session_state(request, session_id):
                     'recovery_state': recovery_state,
                 }
     recovery_stage = _live_recovery_reader_stage(student_state.get('recovery_state'))
-    has_pending_recovery = recovery_stage in {'rhymes', 'sentences'}
+    has_pending_recovery = recovery_stage in {'rhymes', 'sentences', 'story'}
     student_completed = (
         str(student_state.get('status') or '').lower() in {'completed', 'skipped'}
         and not has_pending_recovery
