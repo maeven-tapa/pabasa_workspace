@@ -37,3 +37,24 @@ body:has(.complete)::after{content:'';position:fixed;inset:0;background:rgba(18,
 @media(max-width:600px){.gawain-2 .complete{padding:26px 20px;border-radius:22px}.gawain-2 .complete-badge{width:56px;height:56px;margin-bottom:14px}.gawain-2 .complete-badge svg{width:31px;height:31px}}
 .gawain-2 .complete-done{margin-top:20px;min-width:150px;padding:12px 24px;border:0;border-radius:18px;background:#126d75;color:#fff;font:900 1rem Nunito,"Segoe UI",sans-serif;box-shadow:0 5px #0e4b50;cursor:pointer}.gawain-2 .complete-done:disabled{opacity:.65;cursor:wait}.gawain-2 .complete-error{margin:12px 0 0;color:#a33b35;font:800 .85rem Nunito,"Segoe UI",sans-serif}
 .read.is-recording{animation:lesson3ListeningPulse 1.4s ease-in-out infinite;box-shadow:0 0 0 5px rgba(244,200,93,.3),0 6px #0e4b50}.read.is-processing{position:relative;cursor:wait}.read.is-processing::before{content:"";display:inline-block;width:14px;height:14px;margin-right:8px;vertical-align:-2px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;animation:lesson3Spin .8s linear infinite}@keyframes lesson3ListeningPulse{50%{box-shadow:0 0 0 10px rgba(244,200,93,0),0 0 22px rgba(244,200,93,.7),0 6px #0e4b50}}@keyframes lesson3Spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.read.is-recording{animation:none;box-shadow:0 0 0 5px rgba(244,200,93,.45),0 6px #0e4b50}.read.is-processing::before{animation:none}}
+/* Make the selected answer visibly active, matching the other activities. */
+.gawain-2 .answer:hover,
+.gawain-2 .answer:focus-visible,
+.gawain-2 .answer:active {
+  transform: translateY(-3px);
+  filter: brightness(1.08);
+  box-shadow: 0 0 0 5px rgba(255, 244, 167, .82), 0 0 24px rgba(244, 200, 93, .78), 0 6px #2f7d68;
+}
+.gawain-2 .answer[data-v="no"]:hover,
+.gawain-2 .answer[data-v="no"]:focus-visible,
+.gawain-2 .answer[data-v="no"]:active {
+  box-shadow: 0 0 0 5px rgba(255, 214, 214, .88), 0 0 24px rgba(220, 110, 110, .7), 0 6px #985353;
+}
+@keyframes answerPulse{0%,100%{transform:translateY(0);box-shadow:0 6px #2f7d68,0 0 0 0 rgba(244,200,93,0)}50%{transform:translateY(-3px);box-shadow:0 6px #2f7d68,0 0 0 7px rgba(255,244,167,.28),0 0 26px rgba(244,200,93,.8)}}
+@keyframes answerPulseNo{0%,100%{transform:translateY(0);box-shadow:0 6px #985353,0 0 0 0 rgba(220,110,110,0)}50%{transform:translateY(-3px);box-shadow:0 6px #985353,0 0 0 7px rgba(255,214,214,.3),0 0 26px rgba(220,110,110,.76)}}
+.gawain-2 .answer:focus{animation:answerPulse 1.35s ease-in-out infinite}
+.gawain-2 .answer[data-v="no"]:focus{animation:answerPulseNo 1.35s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){.gawain-2 .answer:focus{animation:none}}
+ .gawain-2 .answers .answer{animation:answerPulse 1.35s ease-in-out infinite}
+ .gawain-2 .answers .answer[data-v="no"]{animation:answerPulseNo 1.35s ease-in-out infinite}
+.read#read{animation:lesson3ReadIdlePulse 1.35s ease-in-out infinite;transition:transform .18s,box-shadow .18s,filter .18s}.read#read:hover,.read#read:focus-visible{filter:brightness(1.08)}.read#read.is-recording,.read#read.is-processing,.read#read[disabled]{animation:lesson3ReadActivePulse 1.15s ease-in-out infinite}@keyframes lesson3ReadIdlePulse{0%,100%{transform:translateY(0);box-shadow:0 6px #0e4b50,0 0 0 0 rgba(244,200,93,0)}50%{transform:translateY(-3px);box-shadow:0 6px #0e4b50,0 0 0 7px rgba(255,244,167,.28),0 0 25px rgba(244,200,93,.78)}}@keyframes lesson3ReadActivePulse{0%,100%{box-shadow:0 6px #0e4b50,0 0 0 0 rgba(244,200,93,0)}50%{box-shadow:0 6px #0e4b50,0 0 0 8px rgba(244,200,93,.3),0 0 28px rgba(244,200,93,.85)}}@media(prefers-reduced-motion:reduce){.read#read{animation:none}}

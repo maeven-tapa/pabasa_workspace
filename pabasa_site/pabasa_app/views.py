@@ -13261,7 +13261,7 @@ def lesson_4_gawain_1_page(request):
 @xframe_options_sameorigin
 def lesson_4_gawain_2_page(request):
     items = [
-        {'word': word, 'image': f'{word}.png', 'starts_m': word == 'mata'}
+        {'word': word, 'image': f'{word}.png', 'starts_m': word in {'mata', 'medyas'}}
         for word in ('saging', 'mata', 'suklay', 'sili', 'medyas', 'sapatos')
     ]
     progress = StudentActivityProgress.objects.filter(
@@ -13301,6 +13301,25 @@ def lesson_3_activity_progress(request):
             raise ValueError('Invalid activity progress.')
         if done and (completed < total or index < total):
             raise ValueError('Activity cannot be completed before all items are complete.')
+        existing_progress = StudentActivityProgress.objects.filter(
+            student_id=request.session.get('user_id'), activity_key=key,
+        ).first()
+        # Progress saves can arrive out of order because the activity sends
+        # them asynchronously. Never let an older request roll back a newer
+        # position or completed result.
+        if existing_progress and (
+            existing_progress.activity_completed
+            or existing_progress.current_index > index
+            or existing_progress.completed_items > completed
+        ):
+            progress = existing_progress
+            return JsonResponse({'success': True, 'progress': {
+                'current_index': progress.current_index,
+                'completed_items': progress.completed_items,
+                'correct_items': progress.correct_items,
+                'total_items': progress.total_items,
+                'activity_completed': progress.activity_completed,
+            }})
         progress, _ = StudentActivityProgress.objects.update_or_create(
             student_id=request.session.get('user_id'), activity_key=key,
             defaults={'current_index': index, 'completed_items': completed, 'correct_items': correct,
