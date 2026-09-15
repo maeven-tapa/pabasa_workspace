@@ -13191,6 +13191,19 @@ def lesson_3_gawain_1_page(request):
 
 @login_required(role='student')
 @xframe_options_sameorigin
+def lesson_3_gawain_2_page(request):
+    pairs = [
+        {'a': 'LOLA', 'b': 'BOLA', 'yes': True}, {'a': 'WALIS', 'b': 'TAMA', 'yes': False},
+        {'a': 'DAHON', 'b': 'KAHON', 'yes': True}, {'a': 'SIGAW', 'b': 'LUGAW', 'yes': True},
+        {'a': 'PULIS', 'b': 'WALIS', 'yes': True}, {'a': 'LOLA', 'b': 'LOLO', 'yes': False},
+    ]
+    context = _dashboard_context(request)
+    context['lesson_3_gawain_2_pairs_json'] = json.dumps(pairs, separators=(',', ':'))
+    return render(request, 'pabasa_app/lesson_3_gawain_2_page.html', context)
+
+
+@login_required(role='student')
+@xframe_options_sameorigin
 def sound_detective_page(request):
     access_response = _enforce_student_access_for_request(request)
     if access_response:

@@ -1,0 +1,29 @@
+{% load static %}
+<!doctype html>
+<html lang="fil">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Coiny&display=swap" rel="stylesheet">
+  <title>Lesson 3 · Gawain 2: Salitang Magkatugma</title>
+  <style>{% include 'pabasa_app/lesson_3_gawain_2_styles.html' %}</style>
+</head>
+<body class="gawain-2">
+  <main class="app">
+    <nav class="nav"><a class="back" href="{% url 'assessment' %}">← Bumalik</a></nav>
+    <section id="game" class="game"></section>
+  </main>
+  <script src="{% static 'pabasa_app/js/lesson3_rhyme_activity.js' %}"></script>
+  <script>
+    mountLesson3RhymeActivity({
+      pairs: {{ lesson_3_gawain_2_pairs_json|safe }},
+      imageBase: "{% static 'pabasa_app/images/salitang_magkatugma/lesson_3_gawain_2/' %}",
+      storageKey: 'pabasa:lesson-3-gawain-2:progress',
+      transcribeUrl: "{% url 'reading_transcribe_api' %}",
+      exitUrl: "{% url 'assessment' %}"
+    });
+  </script>
+</body>
+</html>
