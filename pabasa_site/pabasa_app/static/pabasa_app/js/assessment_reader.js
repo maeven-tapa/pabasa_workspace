@@ -2321,6 +2321,7 @@
             const url = new URL(window.location.href);
             const normalizedStageName = String(stageName || "").trim().toLowerCase();
             const stagePath = {
+                words: "word",
                 rhymes: "word",
                 sentences: "sentence",
                 story_selection: "para",
@@ -2507,7 +2508,7 @@
                 });
             }
             if (isOfficialAssessmentLaunch && officialAssessmentData) {
-                const hasExplicitStageRequest = ["rhymes", "sentences", "story_selection"].includes(requestedCrlaStage);
+                const hasExplicitStageRequest = ["words", "rhymes", "sentences", "story_selection"].includes(requestedCrlaStage);
                 // A completed CRLA attempt must remain completed after refresh, even
                 // when the browser still has the original story-selection URL.
                 if ((!hasExplicitStageRequest || persistedStage === "completed") && renderPersistedEndState(persistedEndState)) return;
