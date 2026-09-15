@@ -99,6 +99,7 @@ urlpatterns = [
     path('dashboard/assessment/activity/syllable-blending/', views.syllable_blending_page, name='syllable_blending_page'),
     path('dashboard/assessment/activity/clap-count-syllables/', views.clap_count_syllables_page, name='clap_count_syllables_page'),
     path('dashboard/assessment/activity/salitang-magkatugma/', views.salitang_magkatugma_page, name='salitang_magkatugma_page'),
+    path('dashboard/assessment/activity/lesson-1-gawain-1/', views.lesson_1_gawain_1_page, name='lesson_1_gawain_1_page'),
     path('dashboard/assessment/activity/lesson-3-gawain-1/', views.lesson_3_gawain_1_page, name='lesson_3_gawain_1_page'),
     path('dashboard/assessment/activity/sound-detective/', views.sound_detective_page, name='sound_detective_page'),
     path('dashboard/assessment/sound-detective/progress/', views.sound_detective_progress, name='sound_detective_progress'),
