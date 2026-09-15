@@ -8790,6 +8790,18 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             #lesson7Gawain1Preview.is-maximized .lesson-i-circle { height:min(100%, calc(100vw - 2rem)); max-height:100%; max-width:100%; width:auto; }
                             @media (max-width:640px) { .lesson-i-circle { max-width:calc(100vw - 2rem); } .lesson-i-center { border-width:2px; } }
                             .lesson-i-2a-thumb { align-items:center; background:linear-gradient(145deg,#eaf8fb,#fff8e8); display:grid; gap:.25rem; grid-template-columns:repeat(2,1fr); padding:.45rem; position:relative; }
+                            .lesson-i-2b-thumb { align-items:center; background:#f2fafc; display:grid; gap:.25rem; grid-template-columns:repeat(3,1fr); padding:.45rem; position:relative; }
+                            .lesson-i-2b-thumb img { height:2.25rem; max-width:100%; object-fit:contain; width:100%; }
+                            .lesson-i-2b-thumb i { border:2px solid #e39b32; border-radius:50%; height:2rem; left:50%; position:absolute; top:50%; transform:translate(-50%,-50%); width:2rem; }
+                            .lesson-i-2b-workbook { display:grid; gap:1rem; grid-template-columns:repeat(3,minmax(0,1fr)); padding:clamp(.75rem,2vw,1.25rem); margin:auto; max-width:900px; }
+                            .lesson-i-2b-item { align-items:center; background:#f8fbfd; border:1px solid #dce8ed; border-radius:1rem; display:flex; justify-content:center; min-height:clamp(8rem,17vw,11rem); padding:.75rem; }
+                            .lesson-i-2b-circle { align-items:center; aspect-ratio:1; background:#fff; border:3px solid #b8cbd2; border-radius:50%; display:flex; justify-content:center; padding:1rem; width:100%; }
+                            .lesson-i-2b-item img { height:100%; max-height:8rem; max-width:100%; object-fit:contain; width:100%; }
+                            .lesson-i-2b-item:focus-visible .lesson-i-2b-circle { border-color:#e39b32; box-shadow:0 0 0 4px rgba(227,155,50,.2); outline:none; }
+                            .lesson-i-2b-item.is-correct .lesson-i-2b-circle { border-color:#e39b32; box-shadow:0 0 0 3px rgba(227,155,50,.18); }
+                            #lesson7Gawain2BPreview.is-maximized { display:flex !important; flex-direction:column; inset:.75rem; overflow:hidden; }
+                            #lesson7Gawain2BPreview.is-maximized .lesson-i-2b-workbook { flex:1 1 auto; min-height:0; overflow:hidden; }
+                            @media (max-width:640px) { .lesson-i-2b-workbook { grid-template-columns:repeat(2,minmax(0,1fr)); } }
                             .lesson-i-2a-thumb img { background:#fff; border:1px solid #c7e2e8; border-radius:.45rem; height:2.25rem; object-fit:contain; width:100%; }
                             .lesson-i-2a-thumb__cue { align-items:center; background:#fff; border:2px solid #e39b32; border-radius:.4rem; color:#176078; display:flex; font-size:1rem; font-weight:900; height:2.25rem; justify-content:center; }
                             .lesson-i-2a-workbook { display:grid; gap:clamp(.55rem,1.2vw,.9rem); grid-template-columns:repeat(3,minmax(0,1fr)); margin:0 auto; max-width:980px; padding:clamp(.55rem,1.3vw,1rem); width:100%; }
@@ -22464,6 +22476,23 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     new MutationObserver(removeClapCountOptions).observe(promptFields, {childList: true, subtree: true});
     removeClapCountOptions();
+});
+document.addEventListener('DOMContentLoaded', () => {
+    const picker = document.getElementById('prescribedActivityPicker');
+    const anchor = picker?.querySelector('[data-prescribed-activity="lesson-7-gawain-2a"]');
+    if (!picker || !anchor || picker.querySelector('[data-prescribed-activity="lesson-7-gawain-2b"]')) return;
+    const base = "{% static 'pabasa_app/images/letrang_i/letrang_i_3/' %}";
+    const names = ['ilog','atis','ipis','ibon','mais','mangga'];
+    const option = document.createElement('button');
+    option.type = 'button'; option.className = 'prescribed-activity-option';
+    option.dataset.prescribedActivity = 'lesson-7-gawain-2b'; option.dataset.previewTarget = 'lesson7Gawain2BPreview'; option.setAttribute('aria-pressed','false');
+    option.innerHTML = `<span class="prescribed-activity-option__thumb lesson-i-2b-thumb" aria-hidden="true"><img src="${base}ilog.png" alt=""><img src="${base}ipis.png" alt=""><img src="${base}ibon.png" alt=""><i></i></span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">2B</span><span><strong>Lesson 7 · Gawain 2B</strong><br><span class="small text-muted">Letrang Ii</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>`;
+    anchor.after(option);
+    const preview = document.createElement('div'); preview.className = 'prescribed-activity-preview'; preview.id = 'lesson7Gawain2BPreview'; preview.dataset.prescribedPreview = 'lesson-7-gawain-2b';
+    preview.innerHTML = `<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview"><i class="bi bi-x-lg"></i></button><div class="small text-uppercase text-muted fw-semibold">Lesson 7 · Gawain 2B</div><h5>Gawain 2B: Letrang Ii</h5><p class="mb-0 text-muted">Bilugan ang larawang nagsisimula sa titik Ii.</p></div><div class="lesson-i-2b-workbook" aria-label="Gawain 2B: Letrang Ii picture grid">${names.map((name,i)=>`<button type="button" class="lesson-i-2b-item ${['ilog','ipis','ibon'].includes(name)?'is-correct':''}" aria-label="${name}" aria-pressed="false"><span class="lesson-i-2b-circle"><img src="${base}${name}.png" alt="${name}"></span></button>`).join('')}</div>`;
+    picker.appendChild(preview);
+    option.addEventListener('click', () => { picker.querySelectorAll('.prescribed-activity-option').forEach(b=>b.classList.remove('is-selected')); option.classList.add('is-selected'); preview.classList.add('is-maximized'); });
+    preview.querySelector('.prescribed-preview-close').addEventListener('click', () => preview.classList.remove('is-maximized'));
 });
 </script>
 {% endblock %}
