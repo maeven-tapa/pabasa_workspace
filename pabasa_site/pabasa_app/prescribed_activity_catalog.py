@@ -164,6 +164,20 @@ PRESCRIBED_ACTIVITIES = {
             {'question': 'How does Ben feel at the end?', 'choices': {'a': 'sad', 'b': 'happy'}, 'answer': 'b'},
         ],
     },
+    'lesson-31-gawain-1': {
+        'activity_key': 'lesson-31-gawain-1', 'session_key': 'session-15',
+        'session_number': 15, 'lesson_number': 31, 'gawain_number': 1,
+        'title': 'Circle the Right Word!', 'display_title': 'Session 15 · Lesson 31 · Activity 1',
+        'instruction': 'Look at the picture. Circle the correct word.',
+        'interaction': 'oral_choice_picture', 'total_items': 5,
+        'items': [
+            {'id': 'pet', 'image_path': 'pabasa_app/images/lesson_31/pet.png', 'choices': ['pet', 'mat', 'sit'], 'answer': 'pet', 'alt_text': 'A dog'},
+            {'id': 'pen', 'image_path': 'pabasa_app/images/lesson_31/pen.png', 'choices': ['mat', 'pen', 'lip'], 'answer': 'pen', 'alt_text': 'A pen'},
+            {'id': 'nose', 'image_path': 'pabasa_app/images/lesson_31/nose.png', 'choices': ['pen', 'nose', 'sun'], 'answer': 'nose', 'alt_text': 'A nose'},
+            {'id': 'bat', 'image_path': 'pabasa_app/images/lesson_31/bat.png', 'choices': ['bat', 'bit', 'bin'], 'answer': 'bat', 'alt_text': 'A bat'},
+            {'id': 'lip', 'image_path': 'pabasa_app/images/lesson_31/lip.png', 'choices': ['sad', 'sit', 'lip'], 'answer': 'lip', 'alt_text': 'Lips'},
+        ],
+    },
     'lesson-13-gawain-1': {
         'activity_key': 'lesson-13-gawain-1',
         'session_number': 5,

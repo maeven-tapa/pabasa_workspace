@@ -6004,10 +6004,44 @@ document.addEventListener('DOMContentLoaded', () => {
     preview.dataset.prescribedPreview = activity.activity_key;
     preview.innerHTML = '<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview">×</button><div class="small text-uppercase text-muted fw-semibold">Session 14 · Lesson 30 · Activity 3</div><h5>Comprehension Check</h5><p class="mb-0 text-muted">Listen to each question, then choose the correct answer.</p></div><div class="lesson30-check-preview"><ol>' + activity.questions.map(item => '<li><strong>' + item.question + '</strong><br><span>a. ' + item.choices.a + ' &nbsp; b. ' + item.choices.b + '</span></li>').join('') + '</ol></div>';
     picker.append(option, preview);
+    // This activity can be registered after the session folders have already
+    // been built. Put it directly in the Session 15 folder in that case.
+    const session15Folder = picker.querySelector('.prescribed-session-folder:nth-child(15)');
+    const session15List = session15Folder?.querySelector('.prescribed-session-modal__list');
+    if (session15List) {
+        session15List.append(option);
+        const count = session15List.querySelectorAll('[data-prescribed-activity]').length;
+        session15Folder.querySelector('.prescribed-session-folder__button small').textContent = `${count} ${count === 1 ? 'activity' : 'activities'}`;
+        session15Folder.querySelector('.prescribed-session-modal__header small').textContent = `— ${count} ${count === 1 ? 'activity' : 'activities'}`;
+    }
     option.onclick = () => { picker.querySelectorAll('[data-prescribed-activity]').forEach(item => item.classList.toggle('is-selected', item === option)); document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(item => item.classList.remove('is-maximized')); preview.classList.add('is-maximized'); };
     preview.querySelector('.prescribed-preview-close').onclick = () => preview.classList.remove('is-maximized');
     const style = document.createElement('style');
     style.textContent = '.lesson30-check-thumb{align-items:center!important;background:#d9f1f4!important;color:#197b78!important;display:grid!important;font-size:2rem!important;font-weight:900!important;justify-content:center!important}.lesson30-check-preview{background:#f4faf9;margin:auto;max-width:760px;padding:clamp(1rem,3vw,2.5rem);width:100%}.lesson30-check-preview ol{display:grid;gap:1rem;margin:0 auto;max-width:560px}.lesson30-check-preview li{font-size:clamp(1rem,2vw,1.25rem)}.lesson30-check-preview span{color:#55727e}#lesson30Gawain3Preview.is-maximized{display:flex!important;flex-direction:column;inset:.75rem;overflow:auto}#lesson30Gawain3Preview.is-maximized .lesson30-check-preview{flex:1 1 auto}';
+    document.head.appendChild(style);
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const picker = document.getElementById('prescribedActivityPicker');
+    const source = document.getElementById('prescribed-lesson-31-activities');
+    if (!picker || !source || picker.querySelector('[data-prescribed-activity="lesson-31-gawain-1"]')) return;
+    const activity = JSON.parse(source.textContent || '[]').find(item => item.activity_key === 'lesson-31-gawain-1');
+    if (!activity) return;
+    const option = document.createElement('button');
+    option.type = 'button'; option.className = 'prescribed-activity-option';
+    option.dataset.prescribedActivity = activity.activity_key;
+    option.dataset.previewTarget = 'lesson31Gawain1Preview';
+    option.innerHTML = '<span class="prescribed-activity-option__thumb lesson31-circle-thumb">⭕</span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">1</span><span><strong>Lesson 31 · Activity 1</strong><br><span class="small text-muted">Circle the Right Word!</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>';
+    const preview = document.createElement('div');
+    preview.className = 'prescribed-activity-preview'; preview.id = 'lesson31Gawain1Preview';
+    preview.dataset.prescribedPreview = activity.activity_key;
+    preview.innerHTML = '<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview">×</button><div class="small text-uppercase text-muted fw-semibold">Session 15 · Lesson 31 · Activity 1</div><h5>Circle the Right Word!</h5><p class="mb-0 text-muted">Read all three choices aloud, then circle the word that matches the picture.</p></div><ol class="lesson31-circle-preview">' + activity.items.map(item => '<li><span>' + item.choices.join(' · ') + '</span></li>').join('') + '</ol>';
+    picker.append(option, preview);
+    option.onclick = () => { picker.querySelectorAll('[data-prescribed-activity]').forEach(item => item.classList.toggle('is-selected', item === option)); document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(item => item.classList.remove('is-maximized')); preview.classList.add('is-maximized'); };
+    preview.querySelector('.prescribed-preview-close').onclick = () => preview.classList.remove('is-maximized');
+    const style = document.createElement('style');
+    style.textContent = '.lesson31-circle-thumb{align-items:center!important;background:#d9f1f4!important;display:grid!important;font-size:2rem!important;justify-content:center!important}.lesson31-circle-preview{background:#f4faf9;margin:0 auto;max-width:580px;padding:clamp(1rem,3vw,2.5rem);width:100%}.lesson31-circle-preview li{font-size:clamp(1rem,2vw,1.25rem);margin:.7rem 0}#lesson31Gawain1Preview.is-maximized{display:flex!important;flex-direction:column;inset:.75rem;overflow:auto}#lesson31Gawain1Preview.is-maximized .lesson31-circle-preview{flex:1 1 auto}';
     document.head.appendChild(style);
 });
 </script>
@@ -9161,6 +9195,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         {{ prescribed_lesson_28_activities|json_script:"prescribed-lesson-28-activities" }}
                         {{ prescribed_lesson_29_activities|json_script:"prescribed-lesson-29-activities" }}
                         {{ prescribed_lesson_30_activities|json_script:"prescribed-lesson-30-activities" }}
+                        {{ prescribed_lesson_31_activities|json_script:"prescribed-lesson-31-activities" }}
                         {{ prescribed_lesson_13_activities|json_script:"prescribed-lesson-13-activities" }}
                         {{ prescribed_lesson_14_activities|json_script:"prescribed-lesson-14-activities" }}
                         <div class="prescribed-activity-picker" aria-label="Prescribed activities">
@@ -22966,6 +23001,8 @@ if (key.startsWith('lesson-7-') || ['lesson7-gawain2c', 'lesson7-gawain4', 'less
         if (key.startsWith('lesson-27-')) return 11;
         if (key.startsWith('lesson-28-')) return 12;
         if (key.startsWith('lesson-29-')) return 13;
+        if (key.startsWith('lesson-30-')) return 14;
+        if (key.startsWith('lesson-31-')) return 15;
         return null;
     };
     if (!picker.querySelector('[data-prescribed-activity="lesson9-gawain1"]')) {

@@ -12988,6 +12988,24 @@ def prescribed_activity_page(request, activity_key):
         context['lesson13_data'] = {'activity_key': activity_key, 'session_key': 'session-5', 'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'], 'title': activity['title'], 'instruction': activity['instruction'], 'competencies': activity['competencies'], 'items': [{'letter': i['letter'], 'word': i['word'], 'image_url': static(i['image_path'])} for i in activity['items']], 'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}), 'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}), 'progress': {'current_index': progress.current_index if progress else 0, 'completed_items': progress.completed_items if progress else 0, 'activity_completed': progress.activity_completed if progress else False, 'state': raw_state}}
         context['lesson13_data']['progress']['current_index'] = lesson13_current_item
         return render(request, 'pabasa_app/lesson_13_gawain_1_page.html', context)
+    if activity['interaction'] == 'oral_choice_picture':
+        context = _dashboard_context(request)
+        context['prescribed_activity_data'] = {
+            'activity_key': activity_key, 'session_number': activity['session_number'],
+            'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
+            'title': activity['title'], 'instruction': activity['instruction'],
+            'items': [{'id': item['id'], 'image_url': static(item['image_path']),
+                       'alt_text': item['alt_text'], 'choices': item['choices']}
+                      for item in activity['items']],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'read_aloud_url': reverse('reading_read_aloud_api'),
+            'transcribe_url': reverse('reading_transcribe_api'),
+            'progress': {'completed_items': progress.completed_items if progress else 0,
+                         'total_items': len(activity['items']), 'activity_completed': progress.activity_completed if progress else False,
+                         'state': raw_state},
+        }
+        return render(request, 'pabasa_app/prescribed_circle_right_word_lesson31_activity1_page.html', context)
     if activity['interaction'] == 'oral_comprehension_choice':
         context = _dashboard_context(request)
         context['prescribed_activity_data'] = {
@@ -13536,6 +13554,80 @@ def prescribed_activity_progress(request, activity_key):
             return JsonResponse({'success': True, 'progress': {'state': payload, 'completed_items': len(completed), 'activity_completed': False}})
         except (TypeError, ValueError, json.JSONDecodeError):
             return JsonResponse({'success': False, 'error': 'Invalid Lesson 9 progress.'}, status=400)
+    if activity['interaction'] == 'oral_choice_picture':
+        try:
+            data = json.loads(request.body or '{}')
+            progress_query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            if data.get('reset') is True:
+                progress_query.delete()
+                return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
+            old_progress = progress_query.first()
+            old = old_progress.state if old_progress and isinstance(old_progress.state, dict) else {}
+            total = len(activity['items'])
+            index = max(0, min(total, int(old.get('current_item', 0))))
+            if index >= total or int(data.get('item_index', -1)) != index:
+                raise ValueError('This item is no longer current.')
+            item = activity['items'][index]
+            phase = old.get('phase', 'reading_choices')
+            choice_index = max(0, min(len(item['choices']), int(old.get('choice_index', 0))))
+            attempts = max(0, int(old.get('attempts', 0)))
+            action = data.get('action')
+            accepted = None
+            if action == 'read_choice':
+                if phase != 'reading_choices' or int(data.get('choice_index', -1)) != choice_index or choice_index >= len(item['choices']):
+                    raise ValueError('Read the current choice first.')
+                heard_words = re.findall(r'[a-z]+', str(data.get('heard', '')).lower())
+                target_word = item['choices'][choice_index].lower()
+                # Keep the child-friendly STT allowances already used in the
+                # English prescribed activities. These are common phonetic
+                # transcriptions, not alternate answers shown to the student.
+                spoken_word_aliases = {
+                    'mat': {'math'},
+                    'hat': {'hot'},
+                    'wore': {'war'},
+                    'bat': {'butt'},
+                    'loved': {'love'},
+                }
+                accepted = bool(set(heard_words) & ({target_word} | spoken_word_aliases.get(target_word, set())))
+                if accepted:
+                    choice_index += 1
+                    attempts = 0
+                    if choice_index >= len(item['choices']):
+                        phase = 'choosing'
+                else:
+                    attempts += 1
+            elif action == 'choose':
+                if phase != 'choosing' or choice_index < len(item['choices']):
+                    raise ValueError('Read all three choices before choosing the picture word.')
+                choice = str(data.get('choice', '')).strip().lower()
+                if choice not in item['choices']:
+                    raise ValueError('Choose one of the displayed words.')
+                accepted = choice == item['answer']
+                if accepted:
+                    index += 1
+                    choice_index = 0
+                    attempts = 0
+                    phase = 'complete' if index >= total else 'reading_choices'
+                else:
+                    attempts += 1
+            else:
+                raise ValueError('Invalid activity action.')
+            finished = index >= total
+            saved = {'activity_key': activity_key, 'current_item': index, 'choice_index': choice_index,
+                     'attempts': attempts, 'completed_items': index,
+                     'phase': 'complete' if finished else phase,
+                     'state_version': int(old.get('state_version') or 0) + 1}
+            progress, _ = StudentActivityProgress.objects.update_or_create(
+                student=student, activity_key=activity_key,
+                defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
+                          'total_items': total, 'activity_completed': finished, 'state': saved},
+            )
+            return JsonResponse({'success': True, 'accepted': accepted, 'progress': {
+                'current_index': index, 'completed_items': index, 'total_items': total,
+                'activity_completed': finished, 'state': saved,
+            }})
+        except (TypeError, ValueError, KeyError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity['interaction'] == 'oral_comprehension_choice':
         try:
             data = json.loads(request.body or '{}')
@@ -14316,6 +14408,16 @@ def prescribed_activity_complete(request, activity_key):
             return JsonResponse({'success': False, 'error': 'Complete the activity first.'}, status=400)
         existing.activity_completed = True; existing.completed_items = existing.correct_items = existing.total_items = 15; existing.save(update_fields=['activity_completed','completed_items','correct_items','total_items','updated_at'])
         return JsonResponse({'success': True})
+    if activity['interaction'] == 'oral_choice_picture':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        state = existing.state if existing and isinstance(existing.state, dict) else {}
+        total = len(activity['items'])
+        if not existing or existing.completed_items < total or state.get('phase') != 'complete':
+            return JsonResponse({'success': False, 'error': 'Complete all five picture words first.'}, status=400)
+        existing.activity_completed = True
+        existing.current_index = existing.completed_items = existing.correct_items = existing.total_items = total
+        existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
+        return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'oral_comprehension_choice':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
@@ -21537,6 +21639,7 @@ def course_teacher_view(request):
         'prescribed_lesson_28_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 28],
         'prescribed_lesson_29_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 29],
         'prescribed_lesson_30_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 30],
+        'prescribed_lesson_31_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 31],
         'prescribed_lesson_13_activities': [PRESCRIBED_ACTIVITIES['lesson-13-gawain-1'], PRESCRIBED_ACTIVITIES['lesson-13-gawain-2'], PRESCRIBED_ACTIVITIES['lesson-13-gawain-3'], PRESCRIBED_ACTIVITIES['lesson-13-gawain-4']],
         'prescribed_lesson_14_activities': [PRESCRIBED_ACTIVITIES['lesson-14-gawain-1']],
     })

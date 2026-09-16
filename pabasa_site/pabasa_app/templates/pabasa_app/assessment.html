@@ -1996,7 +1996,7 @@ document.addEventListener('DOMContentLoaded', function () {
             lesson16Modal.onclick = event => { if (event.target === lesson16Modal) closeLesson16(); };
             grid.appendChild(lesson16Column);
         }
-        [10, 11, 12, 13, 14].forEach(function (sessionNumber) {
+        [10, 11, 12, 13, 14, 15].forEach(function (sessionNumber) {
             const sessionCards = Array.from(grid.children).filter(card => card.classList.contains('pabasa-session-card') && card.dataset.sessionKey === `session-${sessionNumber}`);
             if (!sessionCards.length) return;
             const activityCount = sessionCards.length;
@@ -2023,18 +2023,6 @@ document.addEventListener('DOMContentLoaded', function () {
             emptyColumn.className = 'assessment-week-column session-folder-column';
             emptyColumn.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">📁</span><span class="week-folder-name">Session ${sessionNumber}</span><span class="week-activity-count">0 activities</span></button>`;
             grid.appendChild(emptyColumn);
-        });
-        [15].forEach(function (sessionNumber) {
-            const folder = Array.from(grid.querySelectorAll('.session-folder-column')).find(function (column) {
-                return column.querySelector('.week-folder-name')?.textContent.trim() === `Session ${sessionNumber}`;
-            });
-            if (!folder) return;
-            const modal = Array.from(document.querySelectorAll('.session-folder-modal')).find(function (candidate) {
-                return candidate.querySelector('.week-activities-title')?.textContent.includes(`Session ${sessionNumber}`);
-            });
-            modal?.querySelector('.assessment-week-cards')?.replaceChildren();
-            folder.querySelector('.week-activity-count')?.replaceChildren(document.createTextNode('0 activities'));
-            modal?.querySelector('.week-activities-title small')?.replaceChildren(document.createTextNode('— 0 activities'));
         });
         Array.from(grid.querySelectorAll('.session-folder-column'))
             .sort((a, b) => {
