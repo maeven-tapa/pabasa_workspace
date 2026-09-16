@@ -13075,6 +13075,24 @@ def prescribed_activity_page(request, activity_key):
             },
         }
         return render(request, 'pabasa_app/lesson_13_gawain_3_page.html', context)
+    if activity_key == 'lesson-13-gawain-4':
+        context = _dashboard_context(request)
+        saved_strokes = raw_state.get('strokes') if isinstance(raw_state.get('strokes'), list) else []
+        total_writing_entries = len(activity['items']) * 5
+        context['lesson13_gawain4_data'] = {
+            'activity_key': activity_key, 'session_key': 'session-5',
+            'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
+            'title': activity['title'], 'instruction': activity['instruction'],
+            'letters': [item['letter'] for item in activity['items']],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'progress': {'current_index': progress.current_index if progress else 0,
+                         'completed_items': progress.completed_items if progress else 0,
+                         'total_items': total_writing_entries,
+                         'activity_completed': progress.activity_completed if progress else False,
+                         'strokes': saved_strokes, 'state': raw_state},
+        }
+        return render(request, 'pabasa_app/lesson_13_gawain_4_page.html', context)
     if activity['interaction'] == 'word_search':
         context = _dashboard_context(request)
         saved_matches = raw_state.get('matches') if isinstance(raw_state.get('matches'), dict) else {}
@@ -13633,6 +13651,31 @@ def prescribed_activity_progress(request, activity_key):
         )
         return JsonResponse({'success': True, 'progress': {'state': saved, 'current_index': current_index,
             'completed_items': completed_items, 'activity_completed': progress.activity_completed}})
+    if activity_key == 'lesson-13-gawain-4':
+        try:
+            data = json.loads(request.body or '{}')
+            incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
+            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            old = existing.state if existing and isinstance(existing.state, dict) else {}
+            total = len(activity['items']) * 5
+            current_index = max(0, min(total, int(data.get('current_index', old.get('current_index', 0)) or 0)))
+            strokes = data.get('strokes', old.get('strokes', []))
+            if not isinstance(strokes, list):
+                raise ValueError('Invalid handwriting strokes.')
+            strokes = strokes[:total]
+            payload = {'activity_key': activity_key, 'session_key': 'session-5',
+                       'current_index': current_index, 'completed_items': current_index,
+                       'strokes': strokes, 'state_version': int(old.get('state_version') or 0) + 1,
+                       **{key: incoming[key] for key in ('canvas_width', 'canvas_height') if key in incoming}}
+            progress, _ = StudentActivityProgress.objects.update_or_create(
+                student=student, activity_key=activity_key,
+                defaults={'current_index': current_index, 'completed_items': current_index,
+                          'correct_items': 0, 'total_items': total, 'activity_completed': False, 'state': payload})
+            return JsonResponse({'success': True, 'progress': {'state': payload,
+                'current_index': progress.current_index, 'completed_items': progress.completed_items,
+                'activity_completed': progress.activity_completed}})
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return JsonResponse({'success': False, 'error': 'Invalid handwriting progress.'}, status=400)
     if activity_key == 'lesson-13-gawain-1':
         data = json.loads(request.body or '{}'); state = data.get('state') if isinstance(data.get('state'), dict) else {}
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first(); old = existing.state if existing and isinstance(existing.state, dict) else {}
@@ -13995,6 +14038,16 @@ def prescribed_activity_complete(request, activity_key):
         progress.activity_completed = True
         progress.save(update_fields=['current_index', 'completed_items', 'correct_items', 'total_items', 'activity_completed', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
+    if activity_key == 'lesson-13-gawain-4':
+        progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        total = len(activity['items']) * 5
+        if not progress or progress.completed_items < total:
+            return JsonResponse({'success': False, 'error': 'Complete all twenty writing entries first.'}, status=400)
+        progress.current_index = progress.completed_items = progress.total_items = total
+        progress.correct_items = 0
+        progress.activity_completed = True
+        progress.save(update_fields=['current_index', 'completed_items', 'correct_items', 'total_items', 'activity_completed', 'updated_at'])
+        return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': 0, 'accuracy': None}})
     if activity_key == 'lesson-13-gawain-1':
         progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         if not progress or progress.completed_items < 4:
@@ -21104,7 +21157,7 @@ def course_teacher_view(request):
         'prescribed_lesson_27_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 27],
         'prescribed_lesson_28_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 28],
         'prescribed_lesson_29_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 29],
-        'prescribed_lesson_13_activities': [PRESCRIBED_ACTIVITIES['lesson-13-gawain-1'], PRESCRIBED_ACTIVITIES['lesson-13-gawain-2'], PRESCRIBED_ACTIVITIES['lesson-13-gawain-3']],
+        'prescribed_lesson_13_activities': [PRESCRIBED_ACTIVITIES['lesson-13-gawain-1'], PRESCRIBED_ACTIVITIES['lesson-13-gawain-2'], PRESCRIBED_ACTIVITIES['lesson-13-gawain-3'], PRESCRIBED_ACTIVITIES['lesson-13-gawain-4']],
     })
     return render(request, 'pabasa_app/courses.html', context)
 
