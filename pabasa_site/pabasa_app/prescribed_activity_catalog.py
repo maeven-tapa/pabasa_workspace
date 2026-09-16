@@ -24,6 +24,20 @@ LESSON_16_IMAGE_PATHS = {
 
 
 PRESCRIBED_ACTIVITIES = {
+    'lesson7-gawain2b': {
+        'activity_key': 'lesson7-gawain2b', 'session_number': 3, 'lesson_number': 7,
+        'gawain_number': '2B', 'title': 'Gawain 2B: Letrang Ii',
+        'instruction': 'Bilugan ang larawang nagsisimula sa titik Ii.',
+        'interaction': 'picture_selection_with_oral_reading',
+        'items': [
+            {'word': 'ilog', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_3/ilog.png', 'target': True},
+            {'word': 'ipis', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_3/ipis.png', 'target': True},
+            {'word': 'ibon', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_3/ibon.png', 'target': True},
+            {'word': 'atis', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_3/atis.png', 'target': False},
+            {'word': 'mais', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_3/mais.png', 'target': False},
+            {'word': 'mangga', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_3/mangga.png', 'target': False},
+        ],
+    },
     'lesson7-gawain2a': {
         'activity_key': 'lesson7-gawain2a', 'session_number': 3, 'lesson_number': 7,
         'gawain_number': '2A', 'title': 'Gawain 2A: Letrang Ii',
