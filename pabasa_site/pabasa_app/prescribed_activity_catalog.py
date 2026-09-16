@@ -199,6 +199,18 @@ PRESCRIBED_ACTIVITIES = {
             {'reference':'es','items':[('espada',True),('sinturon',False),('simbahan',False)]},
         ],
     },
+    'lesson9-gawain3': {
+        'activity_key': 'lesson9-gawain3', 'session_key': 'session-3', 'session_number': 3,
+        'lesson_number': 9, 'gawain_number': 3, 'title': 'GAWAIN 3: Letrang Ii, Oo, Ee',
+        'instruction': 'Basahin ang mga salita at pangungusap.',
+        'interaction': 'oral_reading_sequence',
+        'items': [
+            {'word': 'mi'}, {'word': 'si'}, {'word': 'is'}, {'word': 'mo'}, {'word': 'me'},
+            {'word': 'se'}, {'word': 'miso'}, {'word': 'mais'}, {'word': 'amo'}, {'word': 'siso'},
+            {'word': 'Si Ami'}, {'word': 'Si Mimi'}, {'word': 'Ang aso'},
+            {'word': 'Ang aso ay isasama.'}, {'word': 'Si Mimi ay sasama sa ama.'},
+        ],
+    },
     'lesson7-gawain3': {
         'activity_key': 'lesson7-gawain3', 'session_number': 3, 'lesson_number': 7,
         'gawain_number': 3, 'title': 'Gawain 3: Letrang Oo',
