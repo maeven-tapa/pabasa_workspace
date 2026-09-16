@@ -13,6 +13,13 @@ LESSON_16_IMAGE_PATHS = {
     'gusali': 'pabasa_app/images/lesson_16/gusali.png',
     'ngiti': 'pabasa_app/images/lesson_16/ngiti.png',
     'gata': 'pabasa_app/images/lesson_16/gata.png',
+    # These filenames are intentional placeholders.  The Lesson 16 Gawain 3
+    # workbook images can be added later without changing its activity data.
+    'sanga': 'pabasa_app/images/lesson_16/sanga.png',
+    'goma': 'pabasa_app/images/lesson_16/goma.png',
+    'bunga': 'pabasa_app/images/lesson_16/bunga.png',
+    'panga': 'pabasa_app/images/lesson_16/panga.png',
+    'gamot': 'pabasa_app/images/lesson_16/gamot.png',
 }
 
 
@@ -57,6 +64,25 @@ PRESCRIBED_ACTIVITIES = {
             {'word': 'gusali', 'stem': 'sali', 'answer': 'gu'},
             {'word': 'ngiti', 'stem': 'ti', 'answer': 'ngi'},
             {'word': 'gata', 'stem': 'ta', 'answer': 'ga'},
+        ],
+    },
+    'lesson-16-gawain-3': {
+        'activity_key': 'lesson-16-gawain-3',
+        'session_number': 6,
+        'lesson_number': 16,
+        'gawain_number': 3,
+        'title': 'Ikabit ang Wastong Salita',
+        'instruction': 'Ikabit ang wastong salita para sa mga larawan.',
+        'interaction': 'picture_word_match',
+        # The word-bank order follows the numbered workbook list.  The image
+        # order follows the right-hand illustration column in the worksheet.
+        'word_bank': ['panga', 'gamot', 'sanga', 'bunga', 'goma'],
+        'items': [
+            {'id': 'picture-1', 'word': 'sanga'},
+            {'id': 'picture-2', 'word': 'goma'},
+            {'id': 'picture-3', 'word': 'bunga'},
+            {'id': 'picture-4', 'word': 'panga'},
+            {'id': 'picture-5', 'word': 'gamot'},
         ],
     },
 }

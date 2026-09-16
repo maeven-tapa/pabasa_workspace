@@ -4,6 +4,7 @@ import uuid
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.staticfiles import finders
+from django.utils import timezone
 
 from .models import Material, School, Section, StudentActivityProgress, User
 from .prescribed_activity_catalog import prescribed_activity
@@ -34,6 +35,9 @@ class PrescribedLesson16ActivityTests(TestCase):
         session = self.client.session
         session.update({'user_id': self.student.id, 'user_role': 'student', 'email': self.student.email})
         session.save()
+        self.student.active_session_key = session.session_key
+        self.student.last_activity = timezone.now()
+        self.student.save(update_fields=['active_session_key', 'last_activity', 'updated_at'])
 
     def login_teacher(self):
         session = self.client.session
@@ -138,3 +142,87 @@ class PrescribedLesson16ActivityTests(TestCase):
         )
         for item in activity['items']:
             self.assertIsNotNone(finders.find(item['image_path']))
+
+    def test_all_lesson_16_cards_use_the_session_6_key(self):
+        self.login_student()
+        response = self.client.get(reverse('assessment'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {
+                card['activity_key']: card['session_key']
+                for card in response.context['prescribed_activity_cards']
+                if card['activity_key'].startswith('lesson-16-')
+            },
+            {
+                'lesson-16-gawain-1': 'session-6',
+                'lesson-16-gawain-2': 'session-6',
+                'lesson-16-gawain-3': 'session-6',
+            },
+        )
+
+    def test_gawain_3_uses_the_workbook_word_bank_and_placeholder_paths(self):
+        activity = prescribed_activity('lesson-16-gawain-3')
+        self.assertEqual(activity['interaction'], 'picture_word_match')
+        self.assertEqual(activity['word_bank'], ['panga', 'gamot', 'sanga', 'bunga', 'goma'])
+        self.assertEqual([item['word'] for item in activity['items']], ['sanga', 'goma', 'bunga', 'panga', 'gamot'])
+        self.assertEqual(
+            [item['image_path'] for item in activity['items']],
+            [
+                'pabasa_app/images/lesson_16/sanga.png',
+                'pabasa_app/images/lesson_16/goma.png',
+                'pabasa_app/images/lesson_16/bunga.png',
+                'pabasa_app/images/lesson_16/panga.png',
+                'pabasa_app/images/lesson_16/gamot.png',
+            ],
+        )
+
+    def test_gawain_3_hides_answers_from_the_student_page(self):
+        self.login_student()
+        response = self.client.get(
+            reverse('prescribed_activity_page', kwargs={'activity_key': 'lesson-16-gawain-3'}),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'pabasa_app/prescribed_picture_word_matching_page.html')
+        payload = response.context['prescribed_activity_data']
+        self.assertEqual(payload['word_bank'], ['panga', 'gamot', 'sanga', 'bunga', 'goma'])
+        self.assertEqual([item['id'] for item in payload['items']], [
+            'picture-1', 'picture-2', 'picture-3', 'picture-4', 'picture-5',
+        ])
+        self.assertNotIn('word', payload['items'][0])
+
+    def test_gawain_3_validates_matches_and_restores_partial_progress(self):
+        self.login_student()
+        progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': 'lesson-16-gawain-3'})
+        complete_url = reverse('prescribed_activity_complete', kwargs={'activity_key': 'lesson-16-gawain-3'})
+        incorrect = self.client.post(progress_url, data=json.dumps({
+            'matches': {}, 'candidate_match': {'target_id': 'picture-1', 'word': 'panga'},
+            'state': {'match_attempts': 1, 'state_version': 1},
+        }), content_type='application/json')
+        self.assertEqual(incorrect.status_code, 200)
+        self.assertFalse(incorrect.json()['accepted'])
+        self.assertEqual(incorrect.json()['progress']['completed_items'], 0)
+
+        correct = self.client.post(progress_url, data=json.dumps({
+            'matches': {}, 'candidate_match': {'target_id': 'picture-4', 'word': 'panga'},
+            'state': {'match_attempts': 2, 'state_version': 2},
+        }), content_type='application/json')
+        self.assertEqual(correct.status_code, 200)
+        self.assertTrue(correct.json()['accepted'])
+        self.assertEqual(correct.json()['progress']['matches'], {'picture-4': 'panga'})
+        saved = StudentActivityProgress.objects.get(student=self.student, activity_key='lesson-16-gawain-3')
+        self.assertEqual(saved.completed_items, 1)
+        self.assertEqual(saved.state['matches'], {'picture-4': 'panga'})
+
+        page = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': 'lesson-16-gawain-3'}))
+        self.assertEqual(page.context['prescribed_activity_data']['progress']['matches'], {'picture-4': 'panga'})
+        rejected = self.client.post(complete_url, data=json.dumps({'matches': {'picture-4': 'panga'}}), content_type='application/json')
+        self.assertEqual(rejected.status_code, 400)
+
+        completed = self.client.post(complete_url, data=json.dumps({'matches': {
+            'picture-1': 'sanga', 'picture-2': 'goma', 'picture-3': 'bunga',
+            'picture-4': 'panga', 'picture-5': 'gamot',
+        }}), content_type='application/json')
+        self.assertEqual(completed.status_code, 200)
+        saved.refresh_from_db()
+        self.assertTrue(saved.activity_completed)
+        self.assertEqual(saved.correct_items, 5)

@@ -11859,7 +11859,7 @@ def assessment(request):
         prescribed_keys = tuple(PRESCRIBED_ACTIVITIES.keys())
         progress_rows = StudentActivityProgress.objects.filter(
             student_id=getattr(user, 'id', None),
-            activity_key__in=['lesson-1-gawain-1', 'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2', 'lesson-4-gawain-1', 'lesson-4-gawain-2', 'lesson-5-gawain-1', 'lesson-6-gawain-1', 'lesson-7-gawain-1', 'lesson7-gawain2c'],
+            activity_key__in=['lesson-1-gawain-1', 'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2', 'lesson-4-gawain-1', 'lesson-4-gawain-2', 'lesson-5-gawain-1', 'lesson-6-gawain-1', 'lesson-7-gawain-1', 'lesson7-gawain2c', *prescribed_keys],
         )
         context['aral_standalone_progress'] = {
             row.activity_key: {
@@ -11880,6 +11880,7 @@ def assessment(request):
         context['prescribed_activity_cards'] = [
             {
                 'activity_key': activity['activity_key'],
+                'session_key': f"session-{activity['session_number']}",
                 'lesson_number': activity['lesson_number'],
                 'gawain_number': activity['gawain_number'],
                 'title': activity['title'],
@@ -12652,6 +12653,45 @@ def _normalized_prescribed_candidate(activity, item_index, value):
     return answer
 
 
+def _normalized_prescribed_matches(activity, raw_matches):
+    """Validate the saved, correct-only pairs for a picture-word activity."""
+    if not isinstance(raw_matches, dict):
+        raise ValueError('Invalid picture matches.')
+    items_by_id = {str(item['id']): item for item in activity['items']}
+    word_bank = set(activity.get('word_bank') or [])
+    matches, used_words = {}, set()
+    for raw_target, raw_word in raw_matches.items():
+        target = str(raw_target or '').strip()
+        word = str(raw_word or '').strip().lower()
+        if target not in items_by_id or word not in word_bank:
+            raise ValueError('Invalid picture match.')
+        if word in used_words or word != items_by_id[target]['word']:
+            raise ValueError('Invalid picture match.')
+        matches[target] = word
+        used_words.add(word)
+    return matches
+
+
+def _normalized_prescribed_match_state(raw_state):
+    state = raw_state if isinstance(raw_state, dict) else {}
+    try:
+        version = max(0, min(int(state.get('state_version') or 0), 1_000_000_000))
+        attempts = max(0, min(int(state.get('match_attempts') or 0), 99))
+    except (TypeError, ValueError):
+        raise ValueError('Invalid matching activity state.')
+    return {'match_attempts': attempts, 'state_version': version}
+
+
+def _normalized_prescribed_candidate_match(activity, raw_candidate):
+    candidate = raw_candidate if isinstance(raw_candidate, dict) else {}
+    target = str(candidate.get('target_id') or '').strip()
+    word = str(candidate.get('word') or '').strip().lower()
+    items_by_id = {str(item['id']): item for item in activity['items']}
+    if target not in items_by_id or word not in set(activity.get('word_bank') or []):
+        raise ValueError('Pumili ng salita at larawan sa gawain.')
+    return target, word
+
+
 def _active_prescribed_student(request):
     return User.objects.filter(
         pk=request.session.get('user_id'), role='student', is_archived=False,
@@ -12683,6 +12723,34 @@ def prescribed_activity_page(request, activity_key):
             },
         }
         return render(request, 'pabasa_app/lesson_7_gawain_2c_page.html', context)
+    if activity['interaction'] == 'picture_word_match':
+        try:
+            matches = _normalized_prescribed_matches(activity, raw_state.get('matches') or {})
+        except ValueError:
+            matches = {}
+        context = _dashboard_context(request)
+        context['prescribed_activity_data'] = {
+            'activity_key': activity_key, 'material_id': None,
+            'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
+            'title': activity['title'], 'instruction': activity['instruction'],
+            # Answers never appear in the student payload; only stable picture
+            # identifiers, image locations, and the workbook word bank do.
+            'items': [{
+                'id': item['id'], 'image_url': static(item['image_path']),
+                'placeholder_label': f"Larawan {index + 1}",
+            } for index, item in enumerate(activity['items'])],
+            'word_bank': activity['word_bank'],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'progress': {
+                'completed_items': progress.completed_items if progress else 0,
+                'total_items': len(activity['items']),
+                'activity_completed': progress.activity_completed if progress else False,
+                'matches': matches,
+                'state': _normalized_prescribed_match_state(raw_state),
+            },
+        }
+        return render(request, 'pabasa_app/prescribed_picture_word_matching_page.html', context)
     answers = raw_state.get('answers') if isinstance(raw_state.get('answers'), list) else []
     context = _dashboard_context(request)
     context['prescribed_activity_data'] = {
@@ -12731,6 +12799,46 @@ def prescribed_activity_progress(request, activity_key):
         else:
             progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index, 'total_items': 3, 'activity_completed': False, 'state': {'activity_key': activity_key, **state}})
         return JsonResponse({'success': True, 'progress': {'current_index': progress.current_index, 'completed_items': progress.completed_items, 'total_items': 3, 'activity_completed': progress.activity_completed, 'state': progress.state}})
+    if activity['interaction'] == 'picture_word_match':
+        try:
+            data = json.loads(request.body or '{}')
+            if not isinstance(data, dict):
+                raise ValueError('Invalid activity data.')
+            matches = _normalized_prescribed_matches(activity, data.get('matches') or {})
+            state = _normalized_prescribed_match_state(data.get('state'))
+            accepted = None
+            if 'candidate_match' in data:
+                target, word = _normalized_prescribed_candidate_match(activity, data['candidate_match'])
+                expected = next(item['word'] for item in activity['items'] if item['id'] == target)
+                accepted = target not in matches and word not in matches.values() and word == expected
+                if accepted:
+                    matches[target] = word
+            completed = len(matches)
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing_state = existing.state if existing and isinstance(existing.state, dict) else {}
+        existing_version = int(existing_state.get('state_version') or 0)
+        if existing and (existing.activity_completed or existing.completed_items > completed or state['state_version'] < existing_version):
+            progress, accepted = existing, None
+        else:
+            progress, _ = StudentActivityProgress.objects.update_or_create(
+                student=student, activity_key=activity_key,
+                defaults={
+                    'current_index': completed, 'completed_items': completed, 'correct_items': completed,
+                    'total_items': len(activity['items']), 'activity_completed': False,
+                    'state': {'matches': matches, **state},
+                },
+            )
+        saved_state = progress.state if isinstance(progress.state, dict) else {}
+        saved_matches = _normalized_prescribed_matches(activity, saved_state.get('matches') or {})
+        return JsonResponse({'success': True, 'accepted': accepted, 'progress': {
+            'current_index': progress.current_index, 'completed_items': progress.completed_items,
+            'correct_items': progress.correct_items, 'total_items': progress.total_items,
+            'activity_completed': progress.activity_completed, 'matches': saved_matches,
+            'state': _normalized_prescribed_match_state(saved_state),
+        }})
     try:
         data = json.loads(request.body or '{}')
         if not isinstance(data, dict):
@@ -12793,6 +12901,28 @@ def prescribed_activity_complete(request, activity_key):
         existing.current_index = existing.completed_items = existing.correct_items = 3
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': 3, 'accuracy': 100.0}})
+    if activity['interaction'] == 'picture_word_match':
+        try:
+            data = json.loads(request.body or '{}')
+            if not isinstance(data, dict):
+                raise ValueError('Invalid activity data.')
+            matches = _normalized_prescribed_matches(activity, data.get('matches') or {})
+            if len(matches) != len(activity['items']):
+                raise ValueError('Ikabit muna ang lahat ng salita sa tamang larawan.')
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+        total = len(activity['items'])
+        StudentActivityProgress.objects.update_or_create(
+            student=student, activity_key=activity_key,
+            defaults={
+                'current_index': total, 'completed_items': total, 'correct_items': total,
+                'total_items': total, 'activity_completed': True,
+                'state': {'matches': matches, 'match_attempts': 0, 'state_version': 1_000_000_000},
+            },
+        )
+        return JsonResponse({'success': True, 'result': {
+            'correct_items': total, 'items_completed': total, 'accuracy': 100.0,
+        }})
     try:
         data = json.loads(request.body or '{}')
         if not isinstance(data, dict):

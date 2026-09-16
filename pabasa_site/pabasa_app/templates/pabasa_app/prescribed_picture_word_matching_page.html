@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fil">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Pag-uugnay ng Salita at Larawan | PABASA</title>
+  <style>
+    :root{--ink:#16465d;--blue:#1f6f8b;--gold:#e6a33a;--paper:#fffdf7;--line:#bfdde4;--success:#2d8b78;--error:#a63b3b}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(135deg,#e1f5f7,#fff3d8);color:var(--ink);font-family:Nunito,"Segoe UI",sans-serif}.page{width:min(1040px,calc(100% - 28px));margin:auto;padding:20px 0 38px}.back{display:inline-flex;padding:11px 15px;border:2px solid var(--line);border-radius:14px;background:#fff;color:var(--ink);font-weight:900;text-decoration:none}.card{margin-top:18px;padding:clamp(22px,5vw,42px);border-radius:30px;background:var(--paper);box-shadow:0 20px 54px #2d697326;text-align:center}.eyebrow{margin:0;color:#997124;font-size:.78rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.card h1{margin:.3rem 0 .65rem;font-size:clamp(2rem,5vw,3.2rem);line-height:1.05}.instruction{margin:0 auto 18px;max-width:660px;color:#526e78;font-size:1.08rem;font-weight:700;line-height:1.45}.count{font-weight:900}.track{height:12px;margin:12px auto 26px;max-width:760px;overflow:hidden;border-radius:999px;background:#dcebed}.track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--gold),#f6cb55)}.matching-board{display:grid;grid-template-columns:minmax(180px,.72fr) minmax(280px,1.35fr);gap:clamp(18px,4vw,54px);align-items:start;max-width:900px;margin:auto;text-align:left}.board-heading{margin:0 0 10px;font-size:.88rem;font-weight:1000;letter-spacing:.06em;text-transform:uppercase}.word-bank,.picture-list{display:grid;gap:11px}.word,.picture{font:inherit;font-weight:900}.word{min-height:58px;border:2px solid var(--line);border-radius:15px;background:#fff;color:var(--ink);font-size:1.2rem;cursor:grab}.word:hover,.word:focus-visible,.word.is-selected{border-color:var(--blue);outline:3px solid #d7eff4}.word.is-selected{background:#edf9fb}.word.is-used{opacity:.48;cursor:not-allowed;text-decoration:line-through}.picture{display:grid;grid-template-columns:110px 1fr;gap:14px;align-items:center;min-height:116px;padding:10px;border:2px dashed var(--line);border-radius:18px;background:#fff;cursor:pointer}.picture:hover,.picture:focus-visible{border-color:var(--blue);outline:3px solid #d7eff4}.picture.is-matched{border-style:solid;border-color:#8dcdbd;background:#effbf3;cursor:default}.image-frame{position:relative;display:grid;place-items:center;width:110px;height:92px;border-radius:12px;background:#edf6f4;overflow:hidden}.image-frame img{display:block;width:100%;height:100%;object-fit:contain}.image-placeholder{display:none;padding:10px;color:#526e78;font-size:.78rem;font-weight:900;line-height:1.25;text-align:center}.image-frame.is-placeholder img{display:none}.image-frame.is-placeholder .image-placeholder{display:block}.picture-status{font-size:1.05rem}.picture-status small{display:block;margin-top:4px;color:#526e78;font-size:.8rem;font-weight:800}.picture.is-matched .picture-status{color:var(--success)}.hint{min-height:1.5em;margin:19px 0 0;color:#526e78;font-weight:800}.hint.error{color:var(--error)}.complete{padding:18px}.complete .star{font-size:3rem}.score{margin:18px auto;padding:14px;border:2px solid #c9e2d3;border-radius:16px;max-width:340px;background:#effbf3;font-weight:900}.button{display:inline-flex;justify-content:center;align-items:center;min-height:54px;padding:12px 22px;border:0;border-radius:16px;background:var(--blue);box-shadow:0 5px 0 #155369;color:#fff;font:900 1rem Nunito,"Segoe UI",sans-serif;text-decoration:none;cursor:pointer}@media(max-width:650px){.page{width:calc(100% - 18px);padding-top:10px}.card{border-radius:23px}.matching-board{grid-template-columns:1fr}.picture{grid-template-columns:92px 1fr}.image-frame{width:92px;height:78px}}
+  </style>
+</head>
+<body>
+  <main class="page"><a class="back" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a><section id="app" class="card" aria-live="polite"></section></main>
+  {{ prescribed_activity_data|json_script:"prescribed-activity-data" }}
+  <script>
+  (() => {
+    'use strict';
+    const data = JSON.parse(document.getElementById('prescribed-activity-data').textContent || '{}');
+    const items = Array.isArray(data.items) ? data.items : [];
+    const words = Array.isArray(data.word_bank) ? data.word_bank : [];
+    const app = document.getElementById('app');
+    const escape = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+    const csrf = () => ((document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] || '');
+    const restored = data.progress?.state && typeof data.progress.state === 'object' ? data.progress.state : {};
+    let matches = data.progress?.matches && typeof data.progress.matches === 'object' ? {...data.progress.matches} : {};
+    let selectedWord = null, matchAttempts = Math.max(0, Number(restored.match_attempts) || 0);
+    let stateVersion = Math.max(0, Number(restored.state_version) || 0), requestVersion = 0, busy = false, startedAt = Date.now();
+
+    const state = () => ({match_attempts: matchAttempts, state_version: ++stateVersion});
+    const completed = () => Object.keys(matches).length;
+    const heading = () => `<p class="eyebrow">Session 6 · Lesson ${data.lesson_number} · Gawain ${data.gawain_number}</p><h1>${escape(data.title)}</h1><p class="instruction">${escape(data.instruction)}</p><div class="count">${completed()} / ${items.length} na naiuugnay</div><div class="track" aria-hidden="true"><i style="width:${items.length ? completed() / items.length * 100 : 0}%"></i></div>`;
+
+    async function request(url, body) {
+      const response = await fetch(url, {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':csrf()}, body:JSON.stringify(body)});
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) throw Error(result.error || 'Hindi na-save ang iyong sagot.');
+      return result;
+    }
+    async function save(candidateMatch) {
+      const sequence = ++requestVersion;
+      const result = await request(data.progress_url, {material_id:data.material_id, matches, state:state(), ...(candidateMatch ? {candidate_match:candidateMatch} : {})});
+      if (sequence === requestVersion && result.progress) {
+        matches = result.progress.matches && typeof result.progress.matches === 'object' ? {...result.progress.matches} : matches;
+        stateVersion = Math.max(stateVersion, Number(result.progress.state?.state_version) || 0);
+      }
+      return result;
+    }
+    function render() {
+      if (!items.length || !words.length) { app.innerHTML = '<p class="hint error">Walang laman ang gawaing ito.</p>'; return; }
+      if (data.progress?.activity_completed || completed() >= items.length) { complete(); return; }
+      const usedWords = new Set(Object.values(matches));
+      app.innerHTML = heading() + `<div class="matching-board"><section><h2 class="board-heading">Mga salita</h2><div class="word-bank">${words.map(word => `<button class="word${selectedWord === word ? ' is-selected' : ''}${usedWords.has(word) ? ' is-used' : ''}" type="button" data-word="${escape(word)}" draggable="${!usedWords.has(word)}" ${usedWords.has(word) ? 'disabled' : ''}>${escape(word)}</button>`).join('')}</div></section><section><h2 class="board-heading">Mga larawan</h2><div class="picture-list">${items.map(item => { const matched = matches[item.id]; return `<button class="picture${matched ? ' is-matched' : ''}" type="button" data-target="${escape(item.id)}" ${matched ? 'disabled' : ''}><span class="image-frame"><img src="${escape(item.image_url)}" alt="${escape(item.placeholder_label)}"><span class="image-placeholder">${escape(item.placeholder_label)}<br>Idagdag ang larawan</span></span><span class="picture-status">${matched ? `✓ ${escape(matched)}` : 'Piliin ang katumbas na salita'}${matched ? '<small>Tamang pagkakabit</small>' : '<small>I-tap o i-drag ang salita rito</small>'}</span></button>`; }).join('')}</div></section></div><p class="hint" id="hint">${selectedWord ? `Napili: ${escape(selectedWord)}. I-tap ang katumbas na larawan.` : 'Pumili ng salita, pagkatapos ay i-tap ang katumbas na larawan.'}</p>`;
+      app.querySelectorAll('.image-frame img').forEach(image => image.addEventListener('error', () => image.parentElement.classList.add('is-placeholder'), {once:true}));
+      app.querySelectorAll('[data-word]').forEach(button => { button.addEventListener('click', () => { selectedWord = button.dataset.word; render(); }); button.addEventListener('dragstart', event => event.dataTransfer.setData('text/plain', button.dataset.word)); });
+      app.querySelectorAll('[data-target]').forEach(target => { target.addEventListener('click', () => submit(target.dataset.target)); target.addEventListener('dragover', event => event.preventDefault()); target.addEventListener('drop', event => { event.preventDefault(); submit(target.dataset.target, event.dataTransfer.getData('text/plain')); }); });
+    }
+    async function submit(targetId, draggedWord = '') {
+      const word = draggedWord || selectedWord;
+      const hint = document.getElementById('hint');
+      if (!word) { hint.textContent = 'Pumili muna ng salita.'; hint.className = 'hint error'; return; }
+      if (busy) return;
+      busy = true; matchAttempts++; hint.textContent = 'Sinusuri ang pagkakabit…'; hint.className = 'hint';
+      try {
+        const result = await save({target_id:targetId, word});
+        if (result.accepted) { selectedWord = null; render(); return; }
+        hint.textContent = 'Hindi magkatugma. Subukan muli.'; hint.className = 'hint error';
+      } catch (error) { hint.textContent = error.message; hint.className = 'hint error'; }
+      finally { busy = false; }
+    }
+    async function complete() {
+      if (busy) return;
+      busy = true; app.innerHTML = heading() + '<p class="hint">Itinatala ang iyong natapos na gawain…</p>';
+      try { const result = await request(data.completion_url, {material_id:data.material_id, matches, duration_seconds:Math.max(1, Math.round((Date.now() - startedAt) / 1000))}); showDone(result.result); }
+      catch (error) { app.innerHTML = heading() + `<p class="hint error">${escape(error.message)}</p><button class="button" id="retry" type="button">Subukang muli</button>`; document.getElementById('retry').onclick = () => { busy = false; complete(); }; }
+    }
+    function showDone(result) { const correct = Number(result?.correct_items ?? completed()); app.innerHTML = `<div class="complete"><div class="star">⭐</div><h1>Magaling!</h1><p class="instruction">Natapos mo ang Lesson ${data.lesson_number}: Gawain ${data.gawain_number}.</p><div class="score">Puntos: ${correct} / ${items.length}</div><a class="button" href="{% url 'assessment' %}">Balik sa Aking Aralin</a></div>`; busy = false; }
+    render();
+  })();
+  </script>
+</body>
+</html>
