@@ -24,6 +24,19 @@ LESSON_16_IMAGE_PATHS = {
 
 
 PRESCRIBED_ACTIVITIES = {
+    'lesson7-gawain4b': {
+        'activity_key': 'lesson7-gawain4b', 'session_key': 'session-3', 'session_number': 3,
+        'lesson_number': 7, 'gawain_number': '4B', 'title': 'GAWAIN 4B: Letrang Ii at Oo',
+        'instruction': 'I-type ang i kung ang larawan ay nagsisimula sa titik /i/. I-type ang o kung ang larawan ay nagsisimula sa titik /o/.',
+        'interaction': 'oral_then_written', 'items': [
+            {'word': 'orasan', 'answer': 'o', 'image_path': 'pabasa_app/images/letrang_o_4b/orasan.png'},
+            {'word': 'ilog', 'answer': 'i', 'image_path': 'pabasa_app/images/letrang_o_4b/ilog.png'},
+            {'word': 'ibon', 'answer': 'i', 'image_path': 'pabasa_app/images/letrang_o_4b/ibon.png'},
+            {'word': 'okra', 'answer': 'o', 'image_path': 'pabasa_app/images/letrang_o_4b/okra.png'},
+            {'word': 'oso', 'answer': 'o', 'image_path': 'pabasa_app/images/letrang_o_4b/oso.png'},
+            {'word': 'ilaw', 'answer': 'i', 'image_path': 'pabasa_app/images/letrang_o_4b/ilaw.png'},
+        ],
+    },
     'lesson-13-gawain-1': {
         'activity_key': 'lesson-13-gawain-1',
         'session_number': 5,
