@@ -16,5 +16,5 @@ document.addEventListener('click', function(event) {
     event.preventDefault(); event.stopImmediatePropagation(); document.getElementById('completionModal').showModal();
 }, true);
 document.getElementById('modalBack').onclick = () => document.getElementById('completionModal').close();
-document.getElementById('modalNext').onclick = () => { location.href = '{% url "session_4_gawain_3_page" %}'; };
+document.getElementById('modalNext').onclick = async () => { await fetch('{% url "prescribed_activity_progress" activity_key="session-4-gawain-2" %}', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':document.cookie.match(/csrftoken=([^;]+)/)?.[1]||''}, body:JSON.stringify({completed_items:4})}); location.href = '{% url "session_4_gawain_3_page" %}'; };
 </script></body></html>

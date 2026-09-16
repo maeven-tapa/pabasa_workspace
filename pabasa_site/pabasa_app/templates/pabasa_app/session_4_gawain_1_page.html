@@ -65,7 +65,8 @@
     <script>
         (() => {
             const letters = ['B', 'b', 'U', 'u'];
-            let index = 0, recorder = null, stream = null, chunks = [], recordings = [];
+            let index = Math.max(0, Math.min(letters.length - 1, Number({{ session4_progress.current_index|default:0 }}))), recorder = null, stream = null, chunks = [], recordings = [];
+            const saveProgress = completed_items => fetch('{% url "prescribed_activity_progress" activity_key="session-4-gawain-1" %}', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':document.cookie.match(/csrftoken=([^;]+)/)?.[1]||''}, body:JSON.stringify({completed_items}));
             const letter = document.getElementById('letter'), controls = document.getElementById('controls');
             const recordButton = document.getElementById('recordButton'), message = document.getElementById('message');
             const progressText = document.getElementById('progressText'), dots = document.getElementById('dots');
@@ -90,7 +91,8 @@
             const showRecordedActions = () => {
                 controls.innerHTML = `<div class="actions"><button class="secondary-action" id="repeatButton" type="button">ULITIN</button><button class="secondary-action primary-next" id="nextButton" type="button">${index === letters.length - 1 ? 'TAPUSIN ANG GAWAIN' : 'SUNOD NA LETRA'}</button></div>`;
                 document.getElementById('repeatButton').addEventListener('click', () => { recordings[index] = null; resetItem(); });
-                document.getElementById('nextButton').addEventListener('click', () => {
+                document.getElementById('nextButton').addEventListener('click', async () => {
+                    await saveProgress(index + 1);
                     if (index === letters.length - 1) { document.getElementById('completionModal').showModal(); return; }
                     index += 1; resetItem();
                 });
@@ -117,7 +119,7 @@
             };
             const stopRecording = () => { if (recorder && recorder.state === 'recording') recorder.stop(); };
             document.getElementById('modalBack').addEventListener('click', () => document.getElementById('completionModal').close());
-            document.getElementById('modalNext').addEventListener('click', () => { window.location.href = '{% url "lesson_4_gawain_2_page" %}'; });
+            document.getElementById('modalNext').addEventListener('click', async () => { await fetch('{% url "prescribed_activity_progress" activity_key="session-4-gawain-1" %}', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':document.cookie.match(/csrftoken=([^;]+)/)?.[1]||''}, body:JSON.stringify({completed_items:4})}); window.location.href = '{% url "session_4_gawain_2_page" %}'; });
             recordButton.addEventListener('click', () => { if (recorder?.state === 'recording') stopRecording(); else startRecording(); });
             renderProgress();
         })();
