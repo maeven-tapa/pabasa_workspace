@@ -107,6 +107,18 @@ PRESCRIBED_ACTIVITIES = {
         'competencies': ['Phonological Awareness'], 'interaction': 'teacher_word_decode_preview',
         'items': [{'word': 'lola'}, {'word': 'Koko'}, {'word': 'kala'}, {'word': 'ulo'}, {'word': 'keso'}, {'word': 'kili'}, {'word': 'lata'}, {'word': 'luma'}, {'word': 'kuko'}],
     },
+    'lesson-13-gawain-3': {
+        'activity_key': 'lesson-13-gawain-3', 'session_number': 5, 'lesson_number': 13,
+        'gawain_number': 3, 'title': 'I-decode o basahin ang mga pangungusap',
+        'instruction': 'I-decode o basahin ang mga pangungusap na nasa ibaba. Lagyan ng tsek (✓) kung tama ang pagkaka-decode o basa ng mga pangungusap.',
+        'competencies': ['Phonics', 'Phonological Awareness', 'Fluency'], 'interaction': 'teacher_sentence_decode_preview',
+        'items': [
+            {'sentence': 'Si Lili ay may laso.'}, {'sentence': 'Ang laso ay Lila.'},
+            {'sentence': 'Ang laso ay luma.'}, {'sentence': 'Baka kay lola ang laso ni Lili.'},
+            {'sentence': 'May keso sa mesa.'}, {'sentence': 'May kuko ang isa.'},
+            {'sentence': 'Ang lata ni Koko.'},
+        ],
+    },
     'session-4-gawain-1': {'activity_key': 'session-4-gawain-1', 'session_number': 4, 'lesson_number': '10, 11, at 12', 'gawain_number': 1, 'title': 'Gawain 1: Tunog ng mga Letra', 'instruction': 'Piliin ang tamang tunog para sa bawat letra.', 'route_name': 'session_4_gawain_1_page', 'total_items': 4, 'interaction': 'letter_sound', 'items': [{'word': 'Tunog ng mga Letra', 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'}]},
     'session-4-gawain-2': {'activity_key': 'session-4-gawain-2', 'session_number': 4, 'lesson_number': '10, 11, at 12', 'gawain_number': 2, 'title': 'Gawain 2: Pagsamahin ang mga Tunog', 'instruction': 'Pagsamahin ang mga tunog upang mabuo ang salita.', 'route_name': 'session_4_gawain_2_page', 'total_items': 4, 'interaction': 'syllable_blending', 'items': [{'word': 'Pagsamahin ang mga Tunog', 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'}]},
     'session-4-gawain-3': {'activity_key': 'session-4-gawain-3', 'session_number': 4, 'lesson_number': '10, 11, at 12', 'gawain_number': 3, 'title': 'Gawain 3: I-Decode ang mga Salita', 'instruction': 'Basahin at i-decode ang bawat salita.', 'route_name': 'session_4_gawain_3_page', 'total_items': 9, 'interaction': 'word_decoding', 'items': [{'word': 'I-Decode ang mga Salita', 'image_path': 'pabasa_app/images/word-decoding-bg.jpg'}]},
