@@ -53,6 +53,12 @@ class PrescribedLesson26WordSearchTests(TestCase):
         self.lesson29_activity2_key = 'lesson-29-gawain-2'
         self.lesson29_activity1_progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': self.lesson29_activity1_key})
         self.lesson29_activity2_progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': self.lesson29_activity2_key})
+        self.lesson30_activity2_key = 'lesson-30-gawain-2'
+        self.lesson30_activity2_progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': self.lesson30_activity2_key})
+        self.lesson30_activity1_key = 'lesson-30-gawain-1'
+        self.lesson30_activity1_progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': self.lesson30_activity1_key})
+        self.lesson30_activity3_key = 'lesson-30-gawain-3'
+        self.lesson30_activity3_progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': self.lesson30_activity3_key})
 
     def test_activity_page_exposes_existing_english_transcription_route(self):
         response = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': self.activity_key}))
@@ -244,3 +250,141 @@ class PrescribedLesson26WordSearchTests(TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertTrue(response.json()['success'])
             self.assertFalse(StudentActivityProgress.objects.filter(pk=progress.pk).exists())
+
+    def test_lesson29_activity2_accepts_consecutive_word_choices(self):
+        begin = self.client.post(
+            self.lesson29_activity2_progress_url,
+            data=json.dumps({'action': 'begin', 'item_index': 0}), content_type='application/json',
+        )
+        self.assertEqual(begin.status_code, 200)
+        first_target = begin.json()['progress']['state']['target_word']
+        first = self.client.post(
+            self.lesson29_activity2_progress_url,
+            data=json.dumps({'action': 'choose', 'item_index': 0, 'word': first_target}),
+            content_type='application/json',
+        )
+        self.assertEqual(first.status_code, 200)
+        self.assertTrue(first.json()['accepted'])
+        next_target = first.json()['progress']['state']['target_word']
+        second = self.client.post(
+            self.lesson29_activity2_progress_url,
+            data=json.dumps({'action': 'choose', 'item_index': 1, 'word': next_target}),
+            content_type='application/json',
+        )
+        self.assertEqual(second.status_code, 200)
+        self.assertTrue(second.json()['accepted'])
+        self.assertEqual(second.json()['progress']['completed_items'], 2)
+
+    def test_lesson30_story_time_uses_dedicated_line_by_line_speech_flow(self):
+        response = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': self.lesson30_activity2_key}))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'pabasa_app/prescribed_story_time_lesson30_activity2_page.html')
+        data = response.context['prescribed_activity_data']
+        self.assertEqual(data['read_aloud_url'], reverse('reading_read_aloud_api'))
+        self.assertEqual(data['transcribe_url'], reverse('reading_transcribe_api'))
+        self.assertEqual(data['story_title'], 'Ben and the Little Pet')
+        self.assertEqual(len(data['lines']), 6)
+        script = Path(settings.BASE_DIR, 'pabasa_app/static/pabasa_app/js/prescribed_story_time_lesson30_activity2.js').read_text(encoding='utf-8')
+        self.assertIn("action:'line_read'", script)
+        self.assertIn('{reset:true}', script)
+        self.assertIn("language:'English'", script)
+        self.assertNotIn('speechSynthesis', script)
+
+    def test_lesson30_match_it_has_its_own_english_activity_screen_and_reset(self):
+        response = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': self.lesson30_activity1_key}))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'pabasa_app/prescribed_match_it_lesson30_activity1_page.html')
+        self.assertContains(response, 'Read the word aloud first. Then choose the matching picture.')
+        self.assertIn('csrftoken', response.cookies)
+        script = Path(settings.BASE_DIR, 'pabasa_app/static/pabasa_app/js/prescribed_match_it_lesson30_activity1.js').read_text(encoding='utf-8')
+        self.assertIn("language:'English'", script)
+        self.assertIn('id="listen">🔊 Listen</button>', script)
+        self.assertIn("setTimeout(()=>play(target).catch", script)
+        self.assertIn('reset:true', script)
+        self.assertNotIn('speechSynthesis', script)
+        StudentActivityProgress.objects.create(
+            student=self.student, activity_key=self.lesson30_activity1_key,
+            current_index=1, completed_items=1, total_items=5,
+            state={'phase': 'oral_reading', 'state_version': 1},
+        )
+        reset = self.client.post(
+            self.lesson30_activity1_progress_url,
+            data=json.dumps({'reset': True}), content_type='application/json',
+        )
+        self.assertEqual(reset.status_code, 200)
+        self.assertTrue(reset.json()['success'])
+        self.assertFalse(StudentActivityProgress.objects.filter(student=self.student, activity_key=self.lesson30_activity1_key).exists())
+
+    def test_lesson30_match_it_requires_rereading_after_three_wrong_pictures(self):
+        activity = prescribed_activity(self.lesson30_activity1_key)
+        target = activity['word_bank'][0]
+        read_once = self.client.post(
+            self.lesson30_activity1_progress_url,
+            data=json.dumps({'state': {
+                'phase': 'matching', 'current_oral_word_index': 0,
+                'unlocked_oral_words': [target], 'matches': {}, 'state_version': 1,
+            }}), content_type='application/json',
+        )
+        self.assertEqual(read_once.status_code, 200)
+        reread = self.client.post(
+            self.lesson30_activity1_progress_url,
+            data=json.dumps({'state': {
+                'phase': 'oral_reading', 'current_oral_word_index': 0,
+                'unlocked_oral_words': [target], 'matches': {},
+                'picture_attempts': {target: 3}, 'needs_reread': True, 'state_version': 2,
+            }}), content_type='application/json',
+        )
+        self.assertEqual(reread.status_code, 200)
+        state = reread.json()['progress']['state']
+        self.assertEqual(state['phase'], 'oral_reading')
+        self.assertTrue(state['needs_reread'])
+        self.assertEqual(state['picture_attempts'][target], 3)
+
+    def test_lesson30_story_time_saves_line_progress_and_resets_it(self):
+        response = self.client.post(
+            self.lesson30_activity2_progress_url,
+            data=json.dumps({'action': 'line_read', 'line_index': 0, 'success': True}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        progress = response.json()['progress']
+        self.assertTrue(response.json()['accepted'])
+        self.assertEqual(progress['completed_items'], 1)
+        self.assertEqual(progress['state']['current_line'], 1)
+        reset = self.client.post(
+            self.lesson30_activity2_progress_url,
+            data=json.dumps({'reset': True}), content_type='application/json',
+        )
+        self.assertEqual(reset.status_code, 200)
+        self.assertTrue(reset.json()['success'])
+        self.assertFalse(StudentActivityProgress.objects.filter(student=self.student, activity_key=self.lesson30_activity2_key).exists())
+
+    def test_lesson30_comprehension_check_reads_questions_and_validates_choices(self):
+        page = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': self.lesson30_activity3_key}))
+        self.assertEqual(page.status_code, 200)
+        self.assertTemplateUsed(page, 'pabasa_app/prescribed_comprehension_lesson30_activity3_page.html')
+        data = page.context['prescribed_activity_data']
+        self.assertEqual(len(data['questions']), 5)
+        self.assertEqual(data['questions'][0]['question'], 'Who has a pet?')
+        self.assertNotIn('answer', data['questions'][0])
+        incorrect = self.client.post(
+            self.lesson30_activity3_progress_url,
+            data=json.dumps({'action': 'choose', 'item_index': 0, 'choice': 'b'}),
+            content_type='application/json',
+        )
+        self.assertEqual(incorrect.status_code, 200)
+        self.assertFalse(incorrect.json()['accepted'])
+        correct = self.client.post(
+            self.lesson30_activity3_progress_url,
+            data=json.dumps({'action': 'choose', 'item_index': 0, 'choice': 'a'}),
+            content_type='application/json',
+        )
+        self.assertEqual(correct.status_code, 200)
+        self.assertTrue(correct.json()['accepted'])
+        self.assertEqual(correct.json()['progress']['completed_items'], 1)
+        reset = self.client.post(
+            self.lesson30_activity3_progress_url,
+            data=json.dumps({'reset': True}), content_type='application/json',
+        )
+        self.assertEqual(reset.status_code, 200)
+        self.assertTrue(reset.json()['success'])
