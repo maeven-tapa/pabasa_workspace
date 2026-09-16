@@ -11891,7 +11891,9 @@ def assessment(request):
                 'session_key': f"session-{activity['session_number']}",
                 'lesson_number': activity['lesson_number'],
                 'gawain_number': activity['gawain_number'],
-                'title': activity['title'],
+                'title': activity.get('display_title', activity['title']),
+                'activity_title': activity['title'],
+                'description': activity.get('description', activity['instruction']),
                 'total_items': activity.get('total_items', len(activity.get('items', []))),
                 'image_url': static(card_image_path) if (card_image_path := prescribed_card_image_path(activity)) else '',
                 'route_url': reverse(activity['route_name']) if activity.get('route_name') else reverse('prescribed_activity_page', kwargs={'activity_key': activity['activity_key']}),
@@ -12718,6 +12720,28 @@ def _normalized_prescribed_match_state(raw_state):
     return {'match_attempts': attempts, 'state_version': version}
 
 
+def _normalized_oral_picture_match_state(activity, raw_state):
+    """Strict, correct-only resume state for Lesson 17 at 18 Gawain 7."""
+    raw = raw_state if isinstance(raw_state, dict) else {}
+    total = len(activity['items'])
+    words = activity['word_bank']
+    unlocked = [word for word in words if word in set(raw.get('unlocked_oral_words') or [])]
+    matches = _normalized_prescribed_matches(activity, raw.get('matches') or {})
+    try:
+        oral_index = max(0, min(total, int(raw.get('current_oral_word_index') or len(unlocked))))
+        version = max(0, min(int(raw.get('state_version') or 0), 1_000_000_000))
+        stt = {word: max(0, min(3, int((raw.get('stt_attempts') or {}).get(word, 0)))) for word in words}
+        aloud = {word: max(0, min(3, int((raw.get('read_aloud_plays') or {}).get(word, 0)))) for word in words}
+    except (TypeError, ValueError):
+        raise ValueError('Invalid oral matching state.')
+    oral_index = len(unlocked)  # server owns the next word
+    phase = 'completion' if raw.get('phase') == 'completion' else ('matching' if oral_index == total else ('intro' if raw.get('phase') == 'intro' and not unlocked else 'oral_reading'))
+    return {'phase': phase, 'current_oral_word_index': oral_index, 'unlocked_oral_words': unlocked,
+            'stt_attempts': stt, 'read_aloud_plays': aloud, 'matches': matches,
+            'selected_pair': raw.get('selected_pair') if isinstance(raw.get('selected_pair'), dict) else {},
+            'state_version': version}
+
+
 def _normalized_prescribed_candidate_match(activity, raw_candidate):
     candidate = raw_candidate if isinstance(raw_candidate, dict) else {}
     target = str(candidate.get('target_id') or '').strip()
@@ -13027,6 +13051,24 @@ def prescribed_activity_page(request, activity_key):
                          'answers': answers, 'state': state},
         }
         return render(request, 'pabasa_app/prescribed_picture_word_write_page.html', context)
+    if activity['interaction'] == 'oral_then_picture_word_match':
+        state = _normalized_oral_picture_match_state(activity, raw_state)
+        context = _dashboard_context(request)
+        context['prescribed_activity_data'] = {
+            'activity_key': activity_key, 'session_key': activity['session_key'],
+            'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
+            'display_title': activity['display_title'], 'title': activity['title'],
+            'instruction': activity['instruction'], 'items': [
+                {'id': item['id'], 'label': item['label'], 'word': item['word'],
+                 'alt_text': item['alt_text'], 'image_url': static(item['image_path'])}
+                for item in activity['items']], 'word_bank': activity['word_bank'],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'progress': {'completed_items': progress.completed_items if progress else 0, 'total_items': 10,
+                         'correct_items': progress.correct_items if progress else 0,
+                         'activity_completed': progress.activity_completed if progress else False, 'state': state},
+        }
+        return render(request, 'pabasa_app/prescribed_oral_picture_word_matching_page.html', context)
     if activity['interaction'] in {'picture_word_match', 'picture_syllable_match'}:
         try:
             matches = _normalized_prescribed_matches(activity, raw_state.get('matches') or {})
@@ -13107,6 +13149,36 @@ def prescribed_activity_progress(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity['interaction'] == 'oral_then_picture_word_match':
+        try:
+            data = json.loads(request.body or '{}')
+            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            old = _normalized_oral_picture_match_state(activity, existing.state if existing else {})
+            incoming = _normalized_oral_picture_match_state(activity, data.get('state'))
+            if incoming['state_version'] < old['state_version'] or (existing and existing.activity_completed):
+                return JsonResponse({'success': True, 'progress': {'state': old, 'completed_items': existing.completed_items, 'activity_completed': existing.activity_completed}})
+            # A client may only retain existing unlocks and add the immediate next workbook word.
+            unlocked = old['unlocked_oral_words']
+            proposed = incoming['unlocked_oral_words']
+            if proposed[:len(unlocked)] != unlocked or len(proposed) > len(unlocked) + 1:
+                raise ValueError('Invalid oral progress.')
+            if len(proposed) == len(unlocked) + 1 and proposed[-1] != activity['word_bank'][len(unlocked)]:
+                raise ValueError('Read the current word first.')
+            matches = _normalized_prescribed_matches(activity, incoming['matches'])
+            if len(proposed) < len(activity['word_bank']) and matches:
+                raise ValueError('Complete oral reading first.')
+            if not set(old['matches'].items()).issubset(set(matches.items())) or len(matches) > len(old['matches']) + 1:
+                raise ValueError('Completed pairs cannot be removed.')
+            state = incoming; state['unlocked_oral_words'] = proposed; state['current_oral_word_index'] = len(proposed)
+            state['phase'] = 'matching' if len(proposed) == 5 else ('intro' if not proposed and incoming['phase'] == 'intro' else 'oral_reading')
+            state['state_version'] = old['state_version'] + 1
+            completed = len(proposed) + len(matches)
+            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+                'current_index': completed, 'completed_items': completed, 'correct_items': completed, 'total_items': 10,
+                'activity_completed': False, 'state': state})
+            return JsonResponse({'success': True, 'progress': {'state': state, 'completed_items': completed, 'correct_items': completed, 'total_items': 10, 'activity_completed': False}})
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity_key == 'lesson9-gawain2':
         data = json.loads(request.body or '{}'); state = data.get('state') or {}
         state['phase'] = state.get('phase') if state.get('phase') in {'oral','selection','complete'} else 'oral'
@@ -13590,6 +13662,16 @@ def prescribed_activity_complete(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity['interaction'] == 'oral_then_picture_word_match':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        state = _normalized_oral_picture_match_state(activity, existing.state if existing else {})
+        if len(state['unlocked_oral_words']) != 5 or len(state['matches']) != 5:
+            return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang pagbasa at lahat ng pares.'}, status=400)
+        state['phase'] = 'completion'; state['state_version'] = 1_000_000_000
+        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+            'current_index': 10, 'completed_items': 10, 'correct_items': 10, 'total_items': 10,
+            'activity_completed': True, 'state': state})
+        return JsonResponse({'success': True, 'result': {'correct_items': 10, 'items_completed': 10, 'accuracy': 100.0}})
     if activity_key == 'lesson9-gawain2':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         if not existing or not isinstance(existing.state, dict) or existing.state.get('phase') != 'complete':
