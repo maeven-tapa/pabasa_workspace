@@ -12956,7 +12956,7 @@ def prescribed_activity_page(request, activity_key):
                          'answers': answers, 'state': state},
         }
         return render(request, 'pabasa_app/prescribed_picture_word_write_page.html', context)
-    if activity['interaction'] == 'picture_word_match':
+    if activity['interaction'] in {'picture_word_match', 'picture_syllable_match'}:
         try:
             matches = _normalized_prescribed_matches(activity, raw_state.get('matches') or {})
         except ValueError:
@@ -12983,6 +12983,9 @@ def prescribed_activity_page(request, activity_key):
                 'state': _normalized_prescribed_match_state(raw_state),
             },
         }
+        if activity['interaction'] == 'picture_syllable_match':
+            context['prescribed_activity_data'].update({'session_key': activity['session_key'], 'competencies': activity['competencies'], 'items': [{'id': i['id'], 'label': i['label'], 'alt_text': i['alt_text'], 'image_url': static(i['image_path'])} for i in activity['items']]})
+            return render(request, 'pabasa_app/prescribed_picture_syllable_matching_page.html', context)
         return render(request, 'pabasa_app/prescribed_picture_word_matching_page.html', context)
     answers = raw_state.get('answers') if isinstance(raw_state.get('answers'), list) else []
     context = _dashboard_context(request)
@@ -13384,7 +13387,7 @@ def prescribed_activity_progress(request, activity_key):
             }})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
-    if activity['interaction'] == 'picture_word_match':
+    if activity['interaction'] in {'picture_word_match', 'picture_syllable_match'}:
         try:
             data = json.loads(request.body or '{}')
             if not isinstance(data, dict):
@@ -13593,7 +13596,7 @@ def prescribed_activity_complete(request, activity_key):
         return JsonResponse({'success': True, 'result': {
             'items_completed': len(expected), 'correct_items': len(expected), 'accuracy': 100.0,
         }})
-    if activity['interaction'] == 'picture_word_match':
+    if activity['interaction'] in {'picture_word_match', 'picture_syllable_match'}:
         try:
             data = json.loads(request.body or '{}')
             if not isinstance(data, dict):
@@ -13604,12 +13607,14 @@ def prescribed_activity_complete(request, activity_key):
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
         total = len(activity['items'])
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing_state = existing.state if existing and isinstance(existing.state, dict) else {}
         StudentActivityProgress.objects.update_or_create(
             student=student, activity_key=activity_key,
             defaults={
                 'current_index': total, 'completed_items': total, 'correct_items': total,
                 'total_items': total, 'activity_completed': True,
-                'state': {'matches': matches, 'match_attempts': 0, 'state_version': 1_000_000_000},
+                'state': {'matches': matches, 'match_attempts': _normalized_prescribed_match_state(existing_state)['match_attempts'], 'state_version': 1_000_000_000},
             },
         )
         return JsonResponse({'success': True, 'result': {
@@ -20583,7 +20588,7 @@ def course_teacher_view(request):
         'clap_count_word_bank': word_bank_catalog(),
         'sound_detective_catalog': sound_detective_catalog(),
         'picture_word_catalog': _picture_word_catalog(),
-        'prescribed_lesson_16_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 16],
+        'prescribed_lesson_16_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('session_key') == 'session-6' or activity.get('lesson_number') == 16],
         'prescribed_lesson_26_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 26],
         'prescribed_lesson_27_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 27],
         'prescribed_lesson_28_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 28],
