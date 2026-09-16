@@ -11885,7 +11885,6 @@ def assessment(request):
                 (item.get('image_path') for item in activity.get('items', []) if item.get('image_path')),
                 '',
             )
-
         context['prescribed_activity_cards'] = [
             {
                 'activity_key': activity['activity_key'],
@@ -12909,6 +12908,23 @@ def prescribed_activity_page(request, activity_key):
                          'state': raw_state},
         }
         return render(request, 'pabasa_app/prescribed_fill_blank_page.html', context)
+    if activity_key == 'lesson-13-gawain-2':
+        context = _dashboard_context(request)
+        context['lesson13_gawain2_data'] = {
+            'activity_key': activity_key,
+            'session_key': 'session-5',
+            'lesson_number': activity['lesson_number'],
+            'gawain_number': activity['gawain_number'],
+            'title': activity['title'],
+            'instruction': activity['instruction'],
+            'competency': activity['competencies'][0],
+            'columns': [
+                [item['word'] for item in activity['items'][0:3]],
+                [item['word'] for item in activity['items'][3:6]],
+                [item['word'] for item in activity['items'][6:9]],
+            ],
+        }
+        return render(request, 'pabasa_app/lesson_13_gawain_2_page.html', context)
     if activity['interaction'] == 'word_search':
         context = _dashboard_context(request)
         saved_matches = raw_state.get('matches') if isinstance(raw_state.get('matches'), dict) else {}
@@ -20587,7 +20603,7 @@ def course_teacher_view(request):
         'prescribed_lesson_26_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 26],
         'prescribed_lesson_27_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 27],
         'prescribed_lesson_28_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 28],
-        'prescribed_lesson_13_activities': [PRESCRIBED_ACTIVITIES['lesson-13-gawain-1']],
+        'prescribed_lesson_13_activities': [PRESCRIBED_ACTIVITIES['lesson-13-gawain-1'], PRESCRIBED_ACTIVITIES['lesson-13-gawain-2']],
     })
     return render(request, 'pabasa_app/courses.html', context)
 
