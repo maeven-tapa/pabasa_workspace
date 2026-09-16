@@ -122,6 +122,21 @@ urlpatterns = [
     path('api/sentence-bot/complete/', views.sentence_bot_complete, name='sentence_bot_complete'),
     path('dashboard/assessment/activity/phrase-reading/', views.phrase_reading_page, name='phrase_reading_page'),
     path(
+        'dashboard/assessment/activity/prescribed/<slug:activity_key>/',
+        views.prescribed_activity_page,
+        name='prescribed_activity_page',
+    ),
+    path(
+        'api/dashboard/assessment/activity/prescribed/<slug:activity_key>/progress/',
+        views.prescribed_activity_progress,
+        name='prescribed_activity_progress',
+    ),
+    path(
+        'api/dashboard/assessment/activity/prescribed/<slug:activity_key>/complete/',
+        views.prescribed_activity_complete,
+        name='prescribed_activity_complete',
+    ),
+    path(
         'dashboard/assessment/activity/<slug:activity_slug>/',
         views.aral_template_activity_page,
         name='aral_template_activity_page',
