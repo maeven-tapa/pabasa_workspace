@@ -11890,6 +11890,8 @@ def assessment(request):
             """Card artwork is optional for non-image prescribed activities."""
             if activity.get('card_image_path'):
                 return activity['card_image_path']
+            if activity.get('thumbnail'):
+                return activity['thumbnail']
             return next(
                 (item.get('image_path') for item in activity.get('items', []) if item.get('image_path')),
                 '',
@@ -12751,6 +12753,30 @@ def _normalized_oral_picture_match_state(activity, raw_state):
             'state_version': version}
 
 
+def _normalized_odd_word_state(activity, raw_state):
+    raw = raw_state if isinstance(raw_state, dict) else {}
+    total = len(activity['items'])
+    try:
+        version = max(0, min(int(raw.get('state_version') or 0), 1_000_000_000))
+        group = max(0, min(total, int(raw.get('current_group_index') or 0)))
+        oral = max(0, min(3, int(raw.get('current_oral_word_index') or 0)))
+    except (TypeError, ValueError):
+        raise ValueError('Invalid odd-word activity state.')
+    completed = raw.get('completed_answers') if isinstance(raw.get('completed_answers'), dict) else {}
+    completed = {str(i): int(completed[str(i)]) for i in range(total) if str(i) in completed and int(completed[str(i)]) == activity['items'][i]['answer_index']}
+    group = len(completed)
+    oral_done = raw.get('oral_completed') if isinstance(raw.get('oral_completed'), dict) else {}
+    oral_done = {str(i): list(range(min(3, len(oral_done.get(str(i), []))))) for i in range(total) if str(i) not in completed}
+    oral = len(oral_done.get(str(group), [])) if group < total else 3
+    attempts = raw.get('stt_attempts') if isinstance(raw.get('stt_attempts'), dict) else {}
+    plays = raw.get('read_aloud_plays') if isinstance(raw.get('read_aloud_plays'), dict) else {}
+    phase = 'completion' if raw.get('phase') == 'completion' else ('written_selection' if group < total and oral == 3 else ('intro' if raw.get('phase') == 'intro' and not completed and not oral else 'oral_reading'))
+    return {'phase': phase, 'current_group_index': group, 'current_oral_word_index': oral,
+            'oral_completed': oral_done, 'stt_attempts': attempts, 'read_aloud_plays': plays,
+            'selected_answer': raw.get('selected_answer') if isinstance(raw.get('selected_answer'), dict) else {},
+            'completed_answers': completed, 'state_version': version}
+
+
 def _normalized_prescribed_candidate_match(activity, raw_candidate):
     candidate = raw_candidate if isinstance(raw_candidate, dict) else {}
     target = str(candidate.get('target_id') or '').strip()
@@ -13158,6 +13184,21 @@ def prescribed_activity_page(request, activity_key):
                          'activity_completed': progress.activity_completed if progress else False, 'state': state},
         }
         return render(request, 'pabasa_app/prescribed_oral_picture_word_matching_page.html', context)
+    if activity['interaction'] == 'oral_then_odd_word':
+        state = _normalized_odd_word_state(activity, raw_state)
+        context = _dashboard_context(request)
+        context['prescribed_activity_data'] = {
+            'activity_key': activity_key, 'session_key': activity['session_key'],
+            'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
+            'display_title': activity['display_title'], 'title': activity['title'], 'instruction': activity['instruction'],
+            'groups': [{'id': item['id'], 'words': item['words'], 'answer_index': item['answer_index']} for item in activity['items']],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'progress': {'completed_items': progress.completed_items if progress else 0, 'total_items': 20,
+                         'correct_items': progress.correct_items if progress else 0,
+                         'activity_completed': progress.activity_completed if progress else False, 'state': state},
+        }
+        return render(request, 'pabasa_app/prescribed_oral_odd_word_page.html', context)
     if activity['interaction'] in {'picture_word_match', 'picture_syllable_match'}:
         try:
             matches = _normalized_prescribed_matches(activity, raw_state.get('matches') or {})
@@ -13266,6 +13307,34 @@ def prescribed_activity_progress(request, activity_key):
                 'current_index': completed, 'completed_items': completed, 'correct_items': completed, 'total_items': 10,
                 'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'progress': {'state': state, 'completed_items': completed, 'correct_items': completed, 'total_items': 10, 'activity_completed': False}})
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    if activity['interaction'] == 'oral_then_odd_word':
+        try:
+            data = json.loads(request.body or '{}')
+            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            old = _normalized_odd_word_state(activity, existing.state if existing else {})
+            incoming = _normalized_odd_word_state(activity, data.get('state'))
+            if incoming['state_version'] < old['state_version'] or (existing and existing.activity_completed):
+                return JsonResponse({'success': True, 'progress': {'state': old, 'completed_items': existing.completed_items, 'activity_completed': existing.activity_completed}})
+            old_answers, answers = old['completed_answers'], incoming['completed_answers']
+            if not set(old_answers.items()).issubset(set(answers.items())) or len(answers) > len(old_answers) + 1:
+                raise ValueError('Invalid completed group.')
+            if any(int(key) != index for index, key in enumerate(answers)):
+                raise ValueError('Complete groups in order.')
+            group = len(answers)
+            oral_done = incoming['oral_completed']
+            if group < len(activity['items']) and len(oral_done.get(str(group), [])) < len(old['oral_completed'].get(str(group), [])):
+                raise ValueError('Oral progress cannot be removed.')
+            if group < len(activity['items']) and len(oral_done.get(str(group), [])) > len(old['oral_completed'].get(str(group), [])) + 1:
+                raise ValueError('Invalid oral progress.')
+            state = incoming; state['completed_answers'] = answers; state['current_group_index'] = group
+            state['current_oral_word_index'] = len(oral_done.get(str(group), [])) if group < len(activity['items']) else 3
+            state['phase'] = 'written_selection' if group < len(activity['items']) and state['current_oral_word_index'] == 3 else ('completion' if group == len(activity['items']) else ('intro' if not group and state['current_oral_word_index'] == 0 and incoming['phase'] == 'intro' else 'oral_reading'))
+            state['state_version'] = old['state_version'] + 1
+            completed = group * 4 + state['current_oral_word_index']
+            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed, 'total_items': 20, 'activity_completed': False, 'state': state})
+            return JsonResponse({'success': True, 'progress': {'state': state, 'completed_items': completed, 'correct_items': completed, 'total_items': 20, 'activity_completed': False}})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity_key == 'lesson9-gawain2':
@@ -13957,6 +14026,14 @@ def prescribed_activity_complete(request, activity_key):
             'current_index': 10, 'completed_items': 10, 'correct_items': 10, 'total_items': 10,
             'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'correct_items': 10, 'items_completed': 10, 'accuracy': 100.0}})
+    if activity['interaction'] == 'oral_then_odd_word':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        state = _normalized_odd_word_state(activity, existing.state if existing else {})
+        if len(state['completed_answers']) != len(activity['items']):
+            return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang lahat ng pangkat.'}, status=400)
+        state['phase'] = 'completion'; state['state_version'] = 1_000_000_000
+        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': 20, 'completed_items': 20, 'correct_items': 20, 'total_items': 20, 'activity_completed': True, 'state': state})
+        return JsonResponse({'success': True, 'result': {'correct_items': 20, 'items_completed': 20, 'accuracy': 100.0}})
     if activity_key == 'lesson9-gawain2':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         if not existing or not isinstance(existing.state, dict) or existing.state.get('phase') != 'complete':

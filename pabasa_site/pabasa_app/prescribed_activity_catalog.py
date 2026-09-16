@@ -440,6 +440,25 @@ PRESCRIBED_ACTIVITIES = {
             {'id': 'puso', 'word': 'puso', 'label': 'Puso', 'alt_text': 'Larawan ng puso', 'image_path': 'pabasa_app/images/picture_word/prescribe_sets/Set B/Heart-Puso.png'},
         ],
     },
+    'lesson-17-18-gawain-8': {
+        # Single workbook source for the teacher preview, learner UI and validation.
+        'activity_key': 'lesson-17-18-gawain-8', 'session_key': 'session-6',
+        'session_number': 6, 'lesson_number': '17 at 18', 'gawain_number': 8,
+        'title': 'Bilugan ang Naiibang Salita', 'display_title': 'Lesson 17 at 18: Gawain 8',
+        'description': 'Basahin ang bawat pangkat at piliin ang salitang naiiba.',
+        'instruction': 'Basahin ang mga salita. Pagkatapos, bilugan ang salitang naiiba sa pangkat.',
+        'workbook_instruction': 'Bilugan ang naiibang salita sa pangkat.',
+        'teacher_guidance': 'Babasa muna ang mag-aaral ng tatlong salita bago pipiliin ang salitang naiiba.',
+        'competencies': ['Phonics', 'Phonological Awareness'], 'interaction': 'oral_then_odd_word',
+        'total_items': 20, 'thumbnail': 'pabasa_app/images/picture_word/prescribe_sets/Set B/Robot-Robot.png',
+        'items': [
+            {'id': 'group-1', 'words': ['palaka', 'peluka', 'palaka'], 'answer_index': 1},
+            {'id': 'group-2', 'words': ['palaro', 'palara', 'palara'], 'answer_index': 0},
+            {'id': 'group-3', 'words': ['resibo', 'resita', 'resibo'], 'answer_index': 1},
+            {'id': 'group-4', 'words': ['pilay', 'pilay', 'palay'], 'answer_index': 2},
+            {'id': 'group-5', 'words': ['bareta', 'balita', 'bareta'], 'answer_index': 1},
+        ],
+    },
 }
 
 # Each saved item points directly to its own workbook image file.  Keeping the
