@@ -859,13 +859,12 @@
             <div id="classStatusText" class="small mb-0" style="color: var(--dash-muted);">0/15 SESSIONS COMPLETED</div>
         </aside>
     </div>
-
     <section class="subject-card pabasa-preview-subject" aria-label="Grade 2 BALAGTAS reading tracks">
         <div class="pabasa-track-tabs" role="tablist" aria-label="Reading tracks">
             <button id="coreTrackTab" class="active" type="button" role="tab" aria-selected="true" aria-controls="coreTrackPanel" onclick="switchTrack('core')">Aking Aralin</button>
             <button id="supplementaryTrackTab" type="button" role="tab" aria-selected="false" aria-controls="supplementaryTrackPanel" onclick="switchTrack('supplementary')">Dagdag Pagsasanay <span class="pabasa-task-badge">1</span></button>
         </div>
-        <div id="coreTrackPanel" role="tabpanel" aria-labelledby="coreTrackTab"><div id="sessionGrid" class="pabasa-session-grid"></div></div>
+        <div id="coreTrackPanel" role="tabpanel" aria-labelledby="coreTrackTab"><div id="sessionGrid" class="pabasa-session-grid session-grouping-pending"></div></div>
         <div id="supplementaryTrackPanel" class="pabasa-track-hidden" role="tabpanel" aria-labelledby="supplementaryTrackTab" hidden><p class="pabasa-track-intro">Mga gawaing ginawa mula sa Template section.</p><div id="templateFolderGrid" class="pabasa-template-folder-grid"></div></div>
     </section>
 
@@ -1369,7 +1368,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return aPriority - bPriority;
             });
 
-            document.querySelectorAll('body > .week-activities-modal').forEach((modal) => modal.remove());
+            document.querySelectorAll('body > .week-activities-modal:not(.aking-aralin-session-modal)').forEach((modal) => modal.remove());
             document.body.style.overflow = '';
             grid.innerHTML = orderedClassMaterials.map(({ classData, materials, officialAssessments = [] }) => {
                 const itemsToRender = [];
@@ -1801,6 +1800,199 @@ document.addEventListener('DOMContentLoaded',function(){
 <style>#sessionGrid .pabasa-session-card:first-child .session-visual img{height:54px;width:82px}.lesson4-gawain2-progress-label{display:none!important}.pabasa-session-card .lesson4-gawain2-progress{background:#dcebea;border-radius:99px;height:7px;margin:.25rem auto .8rem;overflow:hidden;width:88%}.pabasa-session-card .lesson4-gawain2-progress span{background:#e6a33a;border-radius:inherit;display:block;height:100%}</style>
 <script>document.addEventListener('DOMContentLoaded',function(){const grid=document.getElementById('sessionGrid'),data=document.getElementById('aral-standalone-progress');if(!grid||!data)return;const s=JSON.parse(data.textContent||'{}')['lesson-4-gawain-2']||{},card=grid.querySelector('.pabasa-session-card:nth-child(6)'),bottom=card&&card.querySelector('.session-bottom');if(!bottom)return;const total=Number(s.total_items)||6,n=Math.max(0,Math.min(total,Number(s.completed_items||s.current_index)||0)),done=Boolean(s.activity_completed)&&n>=total;bottom.innerHTML='<div class="lesson4-gawain2-progress"><span style="width:'+(done?100:n/total*100)+'%"></span></div><button type="button" '+(done?'disabled':'')+'>'+(done?'✓ NATAPOS NA':(n?'IPAGPATULOY':'SIMULAN'))+'</button>';if(!done)card.onclick=function(){location.href='{% url "lesson_4_gawain_2_page" %}'}});</script>
 <script>document.addEventListener('DOMContentLoaded',function(){const grid=document.getElementById('sessionGrid'),data=document.getElementById('aral-standalone-progress');if(!grid||!data)return;const progress=JSON.parse(data.textContent||'{}'),state=progress['lesson-4-gawain-2'],card=grid.querySelector('.pabasa-session-card:nth-child(6)');if(!card)return;const total=Number(state?.total_items)||6,current=Math.max(0,Math.min(total,Number(state?.completed_items??state?.current_index)||0)),done=Boolean(state?.activity_completed)&&current>=total,bottom=card.querySelector('.session-bottom');if(!bottom)return;bottom.innerHTML='<div class="lesson4-gawain2-progress-label">'+current+' sa '+total+' larawan</div><div class="lesson4-gawain2-progress"><span style="width:'+(done?100:current/total*100)+'%"></span></div><button type="button" '+(done?'disabled':'')+'>'+(done?'✓ NATAPOS NA':(current?'IPAGPATULOY':'SIMULAN'))+'</button>';if(!done)card.onclick=function(){location.href='{% url "lesson_4_gawain_2_page" %}'};else card.onclick=function(e){e.preventDefault();e.stopPropagation()}});</script>
+<style>
+    /* Aking Aralin Session folders reuse the Dagdag Pagsasanay folder flow. */
+    #sessionGrid.session-folder-mode { display: grid; }
+    #sessionGrid.session-folder-mode > .session-one-activity { display: none; }
+    #sessionGrid.session-folder-mode > .session-folder-column { display: block; }
+    #sessionGrid.session-grouping-pending { visibility: hidden; }
+    .session-folder-column .assessment-week-folder { min-height: 150px; }
+    .week-activities-modal.aking-aralin-session-modal .assessment-week-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: .65rem;
+    }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card {
+        box-sizing: border-box;
+        height: 128px;
+        min-height: 128px;
+        overflow: hidden;
+        padding: .55rem .65rem;
+    }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card .session-visual { min-height: 24px; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card .session-content { min-height: 0; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card h4 { font-size: 1rem; margin: .15rem 0; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card p,
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card .session-content > div { font-size: .75rem; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card button { min-height: 32px; font-size: .78rem; padding: .4rem .6rem; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card .session-visual img { display: none; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card .session-visual { background-image: none !important; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card img { visibility: hidden; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card { position: relative; cursor: pointer; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card::after {
+        content: 'OPEN';
+        position: absolute;
+        top: .45rem;
+        right: .5rem;
+        background: #1f6f8b;
+        border-radius: 999px;
+        color: #fff;
+        font-size: .62rem;
+        font-weight: 900;
+        letter-spacing: .04em;
+        opacity: 0;
+        padding: .28rem .5rem;
+        pointer-events: none;
+        transform: translateY(-2px);
+        transition: opacity .15s ease, transform .15s ease;
+    }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card:hover::after,
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card:focus-within::after {
+        opacity: 1;
+        transform: translateY(0);
+    }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const grid = document.getElementById('sessionGrid');
+    if (!grid) return;
+    setTimeout(function () {
+        if (grid.dataset.sessionFoldersReady === 'true') return;
+        const activities = Array.from(grid.children).slice(0, 4);
+        if (activities.length !== 4) return;
+
+        const column = document.createElement('div');
+        column.className = 'assessment-week-column session-folder-column';
+        column.innerHTML = `
+            <button class="assessment-week-folder" type="button">
+                <span class="week-folder-icon" aria-hidden="true">📁</span>
+                <span class="week-folder-name">Session 1</span>
+                <span class="week-activity-count">4 activities</span>
+            </button>
+            <div class="week-activities-modal session-folder-modal" hidden>
+                <div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="Session 1 activities">
+                    <div class="week-activities-header">
+                        <span class="week-activities-title">📁 Session 1 <small>— 4 activities</small></span>
+                        <button class="week-activities-close" type="button" aria-label="Close">×</button>
+                    </div>
+                    <div class="week-activities-list"><div class="assessment-week-cards"></div></div>
+                </div>
+            </div>`;
+
+        const modal = column.querySelector('.session-folder-modal');
+        modal.classList.add('aking-aralin-session-modal');
+        const cards = modal.querySelector('.assessment-week-cards');
+        const labels = ['Lesson 1: Gawain 1', 'Lesson 2: Gawain 1', 'Lesson 3: Gawain 1', 'Lesson 3: Gawain 2'];
+        activities.forEach((activity, index) => {
+            activity.classList.add('session-one-activity');
+            cards.appendChild(activity);
+            const heading = activity.querySelector('.session-content h4');
+            if (heading) heading.textContent = labels[index];
+        });
+        grid.classList.add('session-folder-mode');
+        grid.appendChild(column);
+        document.body.appendChild(modal);
+        column.querySelector('.assessment-week-folder').addEventListener('click', function () {
+            modal.hidden = false;
+            document.body.style.overflow = 'hidden';
+        });
+        const close = () => { modal.hidden = true; document.body.style.overflow = ''; };
+        modal.querySelector('.week-activities-close').addEventListener('click', close);
+        modal.addEventListener('click', event => { if (event.target === modal) close(); });
+        Array.from(grid.children).filter(card => card.classList.contains('pabasa-session-card')).forEach(function (activity) {
+            const sessionName = activity.querySelector('.session-content h4')?.textContent.trim();
+            if (!/^Session\s+\d+$/.test(sessionName || '')) return;
+            const sessionColumn = document.createElement('div');
+            sessionColumn.className = 'assessment-week-column session-folder-column';
+            sessionColumn.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">📁</span><span class="week-folder-name">${sessionName}</span><span class="week-activity-count">1 activity</span></button><div class="week-activities-modal session-folder-modal" hidden><div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="${sessionName} activities"><div class="week-activities-header"><span class="week-activities-title">📁 ${sessionName} <small>— 1 activity</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div></div>`;
+            const sessionModal = sessionColumn.querySelector('.session-folder-modal');
+            sessionModal.classList.add('aking-aralin-session-modal');
+            sessionModal.querySelector('.assessment-week-cards').appendChild(activity);
+            document.body.appendChild(sessionModal);
+            sessionColumn.querySelector('.assessment-week-folder').onclick = function () { sessionModal.hidden = false; document.body.style.overflow = 'hidden'; };
+            const closeSession = () => { sessionModal.hidden = true; document.body.style.overflow = ''; };
+            sessionModal.querySelector('.week-activities-close').onclick = closeSession;
+            sessionModal.onclick = event => { if (event.target === sessionModal) closeSession(); };
+            grid.appendChild(sessionColumn);
+        });
+        grid.dataset.sessionFoldersReady = 'true';
+        grid.classList.remove('session-grouping-pending');
+        const remaining = Array.from(grid.children).filter(card => card.classList.contains('pabasa-session-card'));
+        const groupedSessions = [['Session 2', 4], ['Session 3', 1]];
+        let offset = 0;
+        groupedSessions.forEach(function (group) {
+            const groupCards = remaining.slice(offset, offset + group[1]);
+            offset += group[1];
+            if (!groupCards.length) return;
+            const groupColumn = document.createElement('div');
+            groupColumn.className = 'assessment-week-column session-folder-column';
+            groupColumn.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">📁</span><span class="week-folder-name">${group[0]}</span><span class="week-activity-count">${groupCards.length} activities</span></button><div class="week-activities-modal session-folder-modal" hidden><div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="${group[0]} activities"><div class="week-activities-header"><span class="week-activities-title">📁 ${group[0]} <small>— ${groupCards.length} activities</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div></div>`;
+            const groupModal = groupColumn.querySelector('.session-folder-modal');
+            groupModal.classList.add('aking-aralin-session-modal');
+            groupCards.forEach(card => groupModal.querySelector('.assessment-week-cards').appendChild(card));
+            document.body.appendChild(groupModal);
+            groupColumn.querySelector('.assessment-week-folder').onclick = () => { groupModal.hidden = false; document.body.style.overflow = 'hidden'; };
+            const closeGroup = () => { groupModal.hidden = true; document.body.style.overflow = ''; };
+            groupModal.querySelector('.week-activities-close').onclick = closeGroup;
+            groupModal.onclick = event => { if (event.target === groupModal) closeGroup(); };
+            grid.appendChild(groupColumn);
+        });
+        const lesson16Cards = Array.from(grid.children).filter(card => card.classList.contains('pabasa-session-card') && card.textContent.includes('Lesson 16'));
+        if (lesson16Cards.length) {
+            const lesson16Column = document.createElement('div');
+            lesson16Column.className = 'assessment-week-column session-folder-column';
+            lesson16Column.innerHTML = '<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">📁</span><span class="week-folder-name">Session 6</span><span class="week-activity-count">2 activities</span></button><div class="week-activities-modal session-folder-modal" hidden><div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="Session 6 activities"><div class="week-activities-header"><span class="week-activities-title">📁 Session 6 <small>— 2 activities</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div></div>';
+            const lesson16Modal = lesson16Column.querySelector('.session-folder-modal');
+            lesson16Modal.classList.add('aking-aralin-session-modal');
+            lesson16Cards.forEach(card => lesson16Modal.querySelector('.assessment-week-cards').appendChild(card));
+            document.body.appendChild(lesson16Modal);
+            lesson16Column.querySelector('.assessment-week-folder').onclick = () => { lesson16Modal.hidden = false; document.body.style.overflow = 'hidden'; };
+            const closeLesson16 = () => { lesson16Modal.hidden = true; document.body.style.overflow = ''; };
+            lesson16Modal.querySelector('.week-activities-close').onclick = closeLesson16;
+            lesson16Modal.onclick = event => { if (event.target === lesson16Modal) closeLesson16(); };
+            grid.appendChild(lesson16Column);
+        }
+        [5, 6, 7, 8, 9].forEach(function (sessionNumber) {
+            const exists = Array.from(grid.querySelectorAll('.session-folder-column .week-folder-name')).some(function (label) {
+                return label.textContent.trim() === `Session ${sessionNumber}`;
+            });
+            if (exists) return;
+            const emptyColumn = document.createElement('div');
+            emptyColumn.className = 'assessment-week-column session-folder-column';
+            emptyColumn.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">📁</span><span class="week-folder-name">Session ${sessionNumber}</span><span class="week-activity-count">0 activities</span></button>`;
+            grid.appendChild(emptyColumn);
+        });
+        [10, 11, 12, 13, 14, 15].forEach(function (sessionNumber) {
+            const folder = Array.from(grid.querySelectorAll('.session-folder-column')).find(function (column) {
+                return column.querySelector('.week-folder-name')?.textContent.trim() === `Session ${sessionNumber}`;
+            });
+            if (!folder) return;
+            const modal = Array.from(document.querySelectorAll('.session-folder-modal')).find(function (candidate) {
+                return candidate.querySelector('.week-activities-title')?.textContent.includes(`Session ${sessionNumber}`);
+            });
+            modal?.querySelector('.assessment-week-cards')?.replaceChildren();
+            folder.querySelector('.week-activity-count')?.replaceChildren(document.createTextNode('0 activities'));
+            modal?.querySelector('.week-activities-title small')?.replaceChildren(document.createTextNode('— 0 activities'));
+        });
+        Array.from(grid.querySelectorAll('.session-folder-column'))
+            .sort((a, b) => {
+                const number = column => Number(column.querySelector('.week-folder-name')?.textContent.match(/\d+/)?.[0] || 999);
+                return number(a) - number(b);
+            })
+            .forEach(column => grid.appendChild(column));
+        grid.querySelectorAll('.session-folder-column').forEach(function (column) {
+            const sessionNumber = column.querySelector('.week-folder-name')?.textContent.match(/\d+/)?.[0];
+            if (!sessionNumber) return;
+            const sessionKey = `session-${sessionNumber}`;
+            column.dataset.sessionKey = sessionKey;
+            const modal = Array.from(document.querySelectorAll('.session-folder-modal')).find(function (candidate) {
+                return candidate.querySelector('.week-activities-title')?.textContent.includes(`Session ${sessionNumber}`);
+            });
+            modal?.setAttribute('data-session-key', sessionKey);
+            modal?.querySelectorAll('.pabasa-session-card').forEach(card => card.dataset.sessionKey = sessionKey);
+        });
+    }, 1600);
+});
+</script>
 {% endblock %}
 <style>
 .lesson2-progress-label,.lesson3-progress-label,.lesson4-progress-label{display:none!important}
