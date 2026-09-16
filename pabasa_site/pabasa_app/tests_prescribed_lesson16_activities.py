@@ -157,8 +157,81 @@ class PrescribedLesson16ActivityTests(TestCase):
                 'lesson-16-gawain-1': 'session-6',
                 'lesson-16-gawain-2': 'session-6',
                 'lesson-16-gawain-3': 'session-6',
+                'session-6-lesson-16-gawain-4': 'session-6',
             },
         )
+
+    def test_gawain_4_uses_fixed_workbook_order_and_available_assets(self):
+        activity = prescribed_activity('session-6-lesson-16-gawain-4')
+        self.assertEqual(activity['session_key'], 'session-6')
+        self.assertEqual(activity['interaction'], 'picture_word_write')
+        self.assertEqual(
+            [item['answer'] for item in activity['items']],
+            ['gamot', 'bunga', 'panga', 'goma', 'sanga'],
+        )
+        self.assertEqual([item['letter_count'] for item in activity['items']], [5, 5, 5, 4, 5])
+        for item in activity['items']:
+            self.assertIsNotNone(finders.find(item['image_path']))
+
+    def test_gawain_4_is_present_in_the_teacher_catalog_from_the_same_definition(self):
+        self.login_teacher()
+        response = self.client.get(reverse('course_teacher_view'))
+        self.assertEqual(response.status_code, 200)
+        catalog_activity = next(
+            activity for activity in response.context['prescribed_lesson_16_activities']
+            if activity['activity_key'] == 'session-6-lesson-16-gawain-4'
+        )
+        self.assertEqual(catalog_activity, prescribed_activity('session-6-lesson-16-gawain-4'))
+
+    def test_gawain_4_persists_correct_items_and_requires_all_for_completion(self):
+        self.login_student()
+        key = 'session-6-lesson-16-gawain-4'
+        progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
+        complete_url = reverse('prescribed_activity_complete', kwargs={'activity_key': key})
+        incorrect = self.client.post(progress_url, data=json.dumps({
+            'candidate_answer': 'gamutx', 'state': {'started': True, 'state_version': 1},
+        }), content_type='application/json')
+        self.assertEqual(incorrect.status_code, 200)
+        self.assertFalse(incorrect.json()['accepted'])
+        self.assertEqual(incorrect.json()['progress']['state']['attempts'], {'0': 1})
+        first = self.client.post(progress_url, data=json.dumps({
+            'candidate_answer': ' GAMOT ', 'state': {'started': True, 'state_version': 2},
+        }), content_type='application/json')
+        self.assertTrue(first.json()['accepted'])
+        self.assertEqual(first.json()['progress']['completed_items'], 1)
+        page = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': key}))
+        self.assertTemplateUsed(page, 'pabasa_app/prescribed_picture_word_write_page.html')
+        self.assertEqual(page.context['prescribed_activity_data']['progress']['current_index'], 1)
+        self.assertNotIn('answer', page.context['prescribed_activity_data']['items'][0])
+        self.assertEqual(self.client.post(complete_url, data='{}', content_type='application/json').status_code, 400)
+        for state_version, answer in enumerate(['bunga', 'panga', 'goma', 'sanga'], start=3):
+            response = self.client.post(progress_url, data=json.dumps({
+                'candidate_answer': answer, 'state': {'started': True, 'state_version': state_version},
+            }), content_type='application/json')
+            self.assertTrue(response.json()['accepted'])
+        self.assertEqual(self.client.post(complete_url, data='{}', content_type='application/json').status_code, 200)
+        saved = StudentActivityProgress.objects.get(student=self.student, activity_key=key)
+        self.assertTrue(saved.activity_completed)
+        self.assertEqual(saved.completed_items, 5)
+
+    def test_gawain_4_recovers_a_saved_final_answer_when_completion_was_interrupted(self):
+        self.login_student()
+        key = 'session-6-lesson-16-gawain-4'
+        StudentActivityProgress.objects.create(
+            student=self.student, activity_key=key, current_index=5, completed_items=5,
+            correct_items=5, total_items=5, activity_completed=False,
+            state={'answers': ['gamot', 'bunga', 'panga', 'goma', 'sanga'],
+                   'attempts': {}, 'started': True, 'state_version': 7},
+        )
+        response = self.client.post(
+            reverse('prescribed_activity_progress', kwargs={'activity_key': key}),
+            data=json.dumps({'candidate_answer': 'sanga', 'state': {'started': True, 'state_version': 8}}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['progress']['activity_completed'])
+        saved = StudentActivityProgress.objects.get(student=self.student, activity_key=key)
+        self.assertTrue(saved.activity_completed)
 
     def test_gawain_3_uses_the_workbook_word_bank_and_placeholder_paths(self):
         activity = prescribed_activity('lesson-16-gawain-3')
