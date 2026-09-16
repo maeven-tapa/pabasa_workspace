@@ -46,6 +46,19 @@ PRESCRIBED_ACTIVITIES = {
         'words': ['mat', 'top', 'tax', 'hat', 'cat'],
         'items': [{'word': word, 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'} for word in ['mat', 'top', 'tax', 'hat', 'cat']],
     },
+    'lesson-26-gawain-2': {
+        'activity_key': 'lesson-26-gawain-2', 'session_number': 10, 'lesson_number': 26,
+        'gawain_number': 2, 'title': 'Fill in the Blanks',
+        'instruction': 'Fill in the blanks with the correct words from the list.',
+        'interaction': 'fill_blank_sentence', 'total_items': 4,
+        'choices': ['hat', 'cat', 'rat', 'mat'],
+        'items': [
+            {'id': 'sentence-1', 'parts': ['The furry ', ' on the warm ', '.'], 'answers': ['cat', 'mat'], 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'},
+            {'id': 'sentence-2', 'parts': ['The ', ' fell off her head.'], 'answers': ['hat'], 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'},
+            {'id': 'sentence-3', 'parts': ['The ', ' ate the ', '.'], 'answers': ['rat', 'hat'], 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'},
+            {'id': 'sentence-4', 'parts': ['The ', ' was placed on the top of the shelf.'], 'answers': ['hat'], 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'},
+        ],
+    },
     'lesson-13-gawain-1': {
         'activity_key': 'lesson-13-gawain-1',
         'session_number': 5,
@@ -214,7 +227,7 @@ PRESCRIBED_ACTIVITIES = {
 # path beside the item also preserves exact image-to-word ordering on every UI.
 for _activity in PRESCRIBED_ACTIVITIES.values():
     for _item in _activity.get('items', []):
-        if _item['word'] in LESSON_16_IMAGE_PATHS:
+        if _item.get('word') in LESSON_16_IMAGE_PATHS:
             _item['image_path'] = LESSON_16_IMAGE_PATHS[_item['word']]
 
 
