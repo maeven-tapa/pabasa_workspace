@@ -11884,7 +11884,9 @@ def assessment(request):
                 'lesson_number': activity['lesson_number'],
                 'gawain_number': activity['gawain_number'],
                 'title': activity['title'],
+                'total_items': activity.get('total_items', len(activity.get('items', []))),
                 'image_url': static(activity['items'][0]['image_path']),
+                'route_url': reverse(activity['route_name']) if activity.get('route_name') else reverse('prescribed_activity_page', kwargs={'activity_key': activity['activity_key']}),
             }
             for activity in PRESCRIBED_ACTIVITIES.values()
         ]
@@ -12786,6 +12788,26 @@ def prescribed_activity_progress(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity_key.startswith('session-4-gawain-'):
+        try:
+            data = json.loads(request.body or '{}')
+            completed_items = max(0, min(int(activity.get('total_items') or 0), int(data.get('completed_items') or 0)))
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return JsonResponse({'success': False, 'error': 'Invalid Session 4 progress.'}, status=400)
+        total = int(activity.get('total_items') or 0)
+        completed = completed_items >= total and total > 0
+        progress, _ = StudentActivityProgress.objects.update_or_create(
+            student=student, activity_key=activity_key,
+            defaults={'current_index': completed_items, 'completed_items': completed_items,
+                      'correct_items': completed_items, 'total_items': total,
+                      'activity_completed': completed,
+                      'state': {'activity_key': activity_key, 'completion_only': True}},
+        )
+        return JsonResponse({'success': True, 'progress': {
+            'current_index': progress.current_index, 'completed_items': progress.completed_items,
+            'correct_items': progress.correct_items, 'total_items': progress.total_items,
+            'activity_completed': progress.activity_completed,
+        }})
     if activity_key == 'lesson7-gawain2c':
         try:
             data = json.loads(request.body or '{}')
@@ -12893,6 +12915,16 @@ def prescribed_activity_complete(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity_key.startswith('session-4-gawain-'):
+        total = int(activity.get('total_items') or 0)
+        progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        if not progress or progress.completed_items < total:
+            return JsonResponse({'success': False, 'error': 'Complete the activity before finishing.'}, status=400)
+        progress.current_index = progress.completed_items = progress.correct_items = total
+        progress.total_items = total
+        progress.activity_completed = True
+        progress.save(update_fields=['current_index', 'completed_items', 'correct_items', 'total_items', 'activity_completed', 'updated_at'])
+        return JsonResponse({'success': True, 'result': {'correct_items': total, 'items_completed': total, 'accuracy': None}})
     if activity_key == 'lesson7-gawain2c':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         if not existing or existing.completed_items < 3:
@@ -13677,6 +13709,10 @@ def lesson_7_gawain_1_page(request):
 @xframe_options_sameorigin
 def session_4_gawain_1_page(request):
     context = _dashboard_context(request)
+    progress = StudentActivityProgress.objects.filter(student=_active_prescribed_student(request), activity_key='session-4-gawain-1').first()
+    if progress and progress.activity_completed:
+        return redirect('assessment')
+    context['session4_progress'] = {'current_index': progress.current_index if progress else 0, 'completed_items': progress.completed_items if progress else 0}
     return render(request, 'pabasa_app/session_4_gawain_1_page.html', context)
 
 
@@ -13684,19 +13720,33 @@ def session_4_gawain_1_page(request):
 @xframe_options_sameorigin
 def lesson_4_gawain_2_page(request):
     context = _dashboard_context(request)
+    progress = StudentActivityProgress.objects.filter(student=_active_prescribed_student(request), activity_key='session-4-gawain-2').first()
+    if progress and progress.activity_completed:
+        return redirect('assessment')
+    context['session4_progress'] = {'current_index': progress.current_index if progress else 0, 'completed_items': progress.completed_items if progress else 0}
     return render(request, 'pabasa_app/session_4_gawain_2_page.html', context)
 
 
 @login_required(role='student')
 @xframe_options_sameorigin
 def session_4_gawain_3_page(request):
-    return render(request, 'pabasa_app/session_4_gawain_3_page.html', _dashboard_context(request))
+    context = _dashboard_context(request)
+    progress = StudentActivityProgress.objects.filter(student=_active_prescribed_student(request), activity_key='session-4-gawain-3').first()
+    if progress and progress.activity_completed:
+        return redirect('assessment')
+    context['session4_progress'] = {'current_index': progress.current_index if progress else 0, 'completed_items': progress.completed_items if progress else 0}
+    return render(request, 'pabasa_app/session_4_gawain_3_page.html', context)
 
 
 @login_required(role='student')
 @xframe_options_sameorigin
 def session_4_gawain_4_page(request):
-    return render(request, 'pabasa_app/session_4_gawain_4_page.html', _dashboard_context(request))
+    context = _dashboard_context(request)
+    progress = StudentActivityProgress.objects.filter(student=_active_prescribed_student(request), activity_key='session-4-gawain-4').first()
+    if progress and progress.activity_completed:
+        return redirect('assessment')
+    context['session4_progress'] = {'current_index': progress.current_index if progress else 0, 'completed_items': progress.completed_items if progress else 0}
+    return render(request, 'pabasa_app/session_4_gawain_4_page.html', context)
 
 
 @login_required(role='student')
