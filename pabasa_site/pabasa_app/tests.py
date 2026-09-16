@@ -3856,7 +3856,7 @@ class ReadingMatcherTests(TestCase):
 
         _, payload = post_google_tts.call_args.args
         self.assertEqual(payload["voice"]["languageCode"], "fil-PH")
-        self.assertEqual(payload["voice"]["name"], "fil-ph-Neural2-A")
+        self.assertEqual(payload["voice"]["name"], "fil-PH-Wavenet-A")
 
     def test_english_homophone_is_accepted(self):
         result = analyze_reading("two", 0, "too", language_code="en-US")

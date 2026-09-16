@@ -11877,6 +11877,15 @@ def assessment(request):
             }
             for row in progress_rows if row.activity_key in prescribed_keys
         }
+        def prescribed_card_image_path(activity):
+            """Card artwork is optional for non-image prescribed activities."""
+            if activity.get('card_image_path'):
+                return activity['card_image_path']
+            return next(
+                (item.get('image_path') for item in activity.get('items', []) if item.get('image_path')),
+                '',
+            )
+
         context['prescribed_activity_cards'] = [
             {
                 'activity_key': activity['activity_key'],
@@ -11885,7 +11894,7 @@ def assessment(request):
                 'gawain_number': activity['gawain_number'],
                 'title': activity['title'],
                 'total_items': activity.get('total_items', len(activity.get('items', []))),
-                'image_url': static(activity['items'][0]['image_path']) if activity.get('items') else '',
+                'image_url': static(card_image_path) if (card_image_path := prescribed_card_image_path(activity)) else '',
                 'route_url': reverse(activity['route_name']) if activity.get('route_name') else reverse('prescribed_activity_page', kwargs={'activity_key': activity['activity_key']}),
             }
             for activity in PRESCRIBED_ACTIVITIES.values()
@@ -12790,6 +12799,20 @@ def prescribed_activity_page(request, activity_key):
         context = _dashboard_context(request)
         context['lesson7_gawain2b_data'] = {'activity_key': activity_key, 'session_key': 'session-3', 'title': activity['title'], 'instruction': activity['instruction'], 'items': [{**i, 'image_url': static(i['image_path'])} for i in activity['items']], 'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}), 'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}), 'progress': {'completed_items': progress.completed_items if progress else 0, 'correct_items': progress.correct_items if progress else 0, 'activity_completed': progress.activity_completed if progress else False, 'state': raw_state}}
         return render(request, 'pabasa_app/lesson_8_gawain_1a_page.html', context)
+    if activity_key == 'lesson9-gawain1':
+        context = _dashboard_context(request)
+        context['lesson9_gawain1_data'] = {
+            'activity_key': activity_key, 'session_key': 'session-3',
+            'lesson_number': 9, 'gawain_number': 1, 'title': activity['title'],
+            'instruction': activity['instruction'],
+            'items': activity['items'],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'progress': {'completed_items': progress.completed_items if progress else 0,
+                         'activity_completed': progress.activity_completed if progress else False,
+                         'state': raw_state},
+        }
+        return render(request, 'pabasa_app/lesson_9_gawain_1_page.html', context)
     if activity_key == 'lesson7-gawain3':
         items = [item for target in activity['targets'] for item in target['items']]
         context = _dashboard_context(request)
@@ -12913,6 +12936,23 @@ def prescribed_activity_progress(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity_key == 'lesson9-gawain1':
+        try:
+            data = json.loads(request.body or '{}')
+            incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
+            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            old = existing.state if existing and isinstance(existing.state, dict) else {}
+            total = len(activity['items'])
+            current_item = max(0, min(total - 1, int(incoming.get('current_item', old.get('current_item', 0)) or 0)))
+            phase = incoming.get('phase', old.get('phase', 'oral_syllables'))
+            if phase not in {'oral_syllables', 'combine', 'oral_word', 'complete'}: phase = 'oral_syllables'
+            selected = [int(x) for x in incoming.get('selected_syllables', old.get('selected_syllables', [])) if str(x).isdigit() and int(x) in (0, 1)][:2]
+            completed = sorted(set(int(x) for x in incoming.get('completed_items', old.get('completed_items', [])) if str(x).isdigit() and 0 <= int(x) < total))
+            payload = {'activity_key': activity_key, 'session_key': 'session-3', 'current_item': current_item, 'phase': phase, 'phase1_completed': bool(incoming.get('phase1_completed', old.get('phase1_completed', False))), 'selected_syllables': selected, 'phase2_completed': bool(incoming.get('phase2_completed', old.get('phase2_completed', False))), 'phase3_completed': bool(incoming.get('phase3_completed', old.get('phase3_completed', False))), 'completed_items': completed, 'state_version': int(old.get('state_version') or 0) + 1}
+            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': len(completed), 'completed_items': len(completed), 'correct_items': len(completed), 'total_items': total, 'activity_completed': False, 'state': payload})
+            return JsonResponse({'success': True, 'progress': {'state': payload, 'completed_items': len(completed), 'activity_completed': False}})
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return JsonResponse({'success': False, 'error': 'Invalid Lesson 9 progress.'}, status=400)
     if activity['interaction'] == 'fill_blank_sentence':
         try:
             data = json.loads(request.body or '{}')
@@ -13207,6 +13247,17 @@ def prescribed_activity_complete(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity_key == 'lesson9-gawain1':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        state = existing.state if existing and isinstance(existing.state, dict) else {}
+        total = len(activity['items'])
+        if not existing or state.get('phase') != 'complete' or state.get('completed_items') != list(range(total)) or not state.get('phase3_completed'):
+            return JsonResponse({'success': False, 'error': 'Complete all three phases first.'}, status=400)
+        existing.activity_completed = True
+        existing.current_index = existing.completed_items = existing.correct_items = total
+        existing.total_items = total
+        existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
+        return JsonResponse({'success': True, 'result': {'items_completed': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'fill_blank_sentence':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
@@ -15874,7 +15925,8 @@ def reading_read_aloud_api(request):
     mode = (request.POST.get('mode') or '').strip().lower()
     language = (request.POST.get('language') or '').strip()
     tts_profile = (request.POST.get('tts_profile') or '').strip().lower()
-    language_code = language_code_for(language, mode)
+    prescribed_key = (request.POST.get('prescribed_activity_key') or '').strip()
+    language_code = 'fil-PH' if prescribed_key and prescribed_activity(prescribed_key) else language_code_for(language, mode)
     api_key = getattr(settings, 'GOOGLE_STT_API_KEY', '').strip()
     credentials_file = getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', None)
 
