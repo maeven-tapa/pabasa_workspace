@@ -99,6 +99,15 @@ PRESCRIBED_ACTIVITIES = {
             {'word': 'Ee', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_e/gawain_1a/espada.png'},
         ],
     },
+    'lesson8-gawain1a': {
+        'activity_key': 'lesson8-gawain1a', 'session_key': 'session-3', 'session_number': 3, 'lesson_number': 8,
+        'gawain_number': '1A', 'title': 'GAWAIN 1A: Letrang Ee',
+        'instruction': 'Panuto: I-click ang larawang nagsisimula sa titik Ee.',
+        'interaction': 'picture_selection_with_oral_reading',
+        'items': [
+            {'word':'elesi','image_path':'pabasa_app/images/letrang_e/gawain_1a/elesi.png','target':True}, {'word':'sasakyan','image_path':'pabasa_app/images/letrang_e/gawain_1a/sasakyan.png','target':False}, {'word':'palaka','image_path':'pabasa_app/images/letrang_e/gawain_1a/palaka.png','target':False}, {'word':'puno','image_path':'pabasa_app/images/letrang_e/gawain_1a/puno.png','target':False}, {'word':'elepante','image_path':'pabasa_app/images/letrang_e/gawain_1a/elepante.png','target':True}, {'word':'isda','image_path':'pabasa_app/images/letrang_e/gawain_1a/isda.png','target':False}, {'word':'eroplano','image_path':'pabasa_app/images/letrang_e/gawain_1a/eroplano.png','target':True}, {'word':'espada','image_path':'pabasa_app/images/letrang_e/gawain_1a/espada.png','target':True}, {'word':'selpon','image_path':'pabasa_app/images/letrang_e/gawain_1a/selpon.png','target':False},
+        ],
+    },
     'lesson7-gawain3': {
         'activity_key': 'lesson7-gawain3', 'session_number': 3, 'lesson_number': 7,
         'gawain_number': 3, 'title': 'Gawain 3: Letrang Oo',

@@ -1769,6 +1769,7 @@ document.addEventListener('DOMContentLoaded',function(){
   const grid=document.getElementById('sessionGrid'), activities=JSON.parse(document.getElementById('prescribed-activity-cards')?.textContent||'[]'), saved=JSON.parse(document.getElementById('prescribed-activity-progress')?.textContent||'{}'); if(!grid)return;
   const routes={};
   routes['lesson8-gawain1']="{% url 'prescribed_activity_page' activity_key='lesson8-gawain1' %}";
+  routes['lesson8-gawain1a']="{% url 'prescribed_activity_page' activity_key='lesson8-gawain1a' %}";
   routes['lesson7-gawain4a']="{% url 'prescribed_activity_page' activity_key='lesson7-gawain4a' %}";
   routes['lesson7-gawain4b']="{% url 'prescribed_activity_page' activity_key='lesson7-gawain4b' %}";
   const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
