@@ -24,6 +24,20 @@ LESSON_16_IMAGE_PATHS = {
 
 
 PRESCRIBED_ACTIVITIES = {
+    'lesson7-gawain2a': {
+        'activity_key': 'lesson7-gawain2a', 'session_number': 3, 'lesson_number': 7,
+        'gawain_number': '2A', 'title': 'Gawain 2A: Letrang Ii',
+        'instruction': 'Isulat ang i sa kahon ng bagay na nagsisimula sa /i/.',
+        'interaction': 'picture_handwriting_with_oral_reading',
+        'items': [
+            {'word': 'ilaw', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_2/ilaw.png', 'target': True},
+            {'word': 'itlog', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_2/itlog.png', 'target': True},
+            {'word': 'isa', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_2/isa.png', 'target': True},
+            {'word': 'bahay', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_2/bahay.png', 'target': False},
+            {'word': 'bola', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_2/bola.png', 'target': False},
+            {'word': 'suklay', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_2/suklay.png', 'target': False},
+        ],
+    },
     'lesson7-gawain2c': {
         'activity_key': 'lesson7-gawain2c',
         'session_number': 3,
