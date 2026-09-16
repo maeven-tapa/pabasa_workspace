@@ -17,6 +17,16 @@ LESSON_16_IMAGE_PATHS = {
 
 
 PRESCRIBED_ACTIVITIES = {
+    'lesson7-gawain2c': {
+        'activity_key': 'lesson7-gawain2c',
+        'session_number': 3,
+        'lesson_number': 7,
+        'gawain_number': '2C',
+        'title': 'GAWAIN 2: Letrang Ii',
+        'instruction': 'Magsanay Magsulat',
+        'interaction': 'handwriting',
+        'items': [{'word': 'Ii', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_i/ilaw.png'}, {'word': 'Ii', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_i/itlog.png'}, {'word': 'Ii', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_i/ilong.png'}],
+    },
     'lesson-16-gawain-1': {
         'activity_key': 'lesson-16-gawain-1',
         'session_number': 6,
@@ -55,7 +65,8 @@ PRESCRIBED_ACTIVITIES = {
 # path beside the item also preserves exact image-to-word ordering on every UI.
 for _activity in PRESCRIBED_ACTIVITIES.values():
     for _item in _activity['items']:
-        _item['image_path'] = LESSON_16_IMAGE_PATHS[_item['word']]
+        if _item['word'] in LESSON_16_IMAGE_PATHS:
+            _item['image_path'] = LESSON_16_IMAGE_PATHS[_item['word']]
 
 
 def prescribed_activity(activity_key):

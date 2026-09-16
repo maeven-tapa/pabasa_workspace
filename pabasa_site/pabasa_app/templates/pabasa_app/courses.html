@@ -22677,11 +22677,11 @@ document.addEventListener('DOMContentLoaded', () => {
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const picker = document.getElementById('prescribedActivityPicker');
-    if (!picker || picker.querySelector('[data-prescribed-activity="lesson-7-gawain-2c"]')) return;
+    if (!picker || picker.querySelector('[data-prescribed-activity="lesson7-gawain2c"]')) return;
     const option = document.createElement('button');
     option.type = 'button';
     option.className = 'prescribed-activity-option';
-    option.dataset.prescribedActivity = 'lesson-7-gawain-2c';
+    option.dataset.prescribedActivity = 'lesson7-gawain2c';
     option.dataset.previewTarget = 'lesson7Gawain2CPreview';
     option.setAttribute('aria-controls', 'lesson7Gawain2CPreview');
     option.setAttribute('aria-pressed', 'false');
@@ -22689,7 +22689,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const preview = document.createElement('div');
     preview.className = 'prescribed-activity-preview';
     preview.id = 'lesson7Gawain2CPreview';
-    preview.dataset.prescribedPreview = 'lesson-7-gawain-2c';
+    preview.dataset.prescribedPreview = 'lesson7-gawain2c';
     preview.innerHTML = '<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview"><i class="bi bi-x-lg"></i></button><div class="small text-uppercase text-muted fw-semibold">Session 3 · Lesson 7 · Gawain 2C</div><h5>GAWAIN 2: Letrang Ii</h5><p class="mb-0 text-muted">Magsanay Magsulat</p></div><div class="lesson7-gawain2c-workbook" aria-label="Static handwriting practice preview"><div class="lesson7-gawain2c-sheet"><div class="lesson7-gawain2c-guide"><span class="lesson7-gawain2c-model">Ii</span><span class="lesson7-gawain2c-model faint">Ii</span></div><div class="lesson7-gawain2c-guide blank"></div><div class="lesson7-gawain2c-guide blank"></div></div></div>';
     picker.append(option, preview);
     option.addEventListener('click', () => { picker.querySelectorAll('[data-prescribed-activity]').forEach(button => { button.classList.toggle('is-selected', button === option); button.setAttribute('aria-pressed', String(button === option)); }); document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(open => open.classList.remove('is-maximized')); preview.classList.add('is-maximized'); });
@@ -22708,7 +22708,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sessionFor = key => {
         if (['gawain-1', 'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2'].includes(key)) return 1;
         if (['lesson-4-gawain-1', 'lesson-4-gawain-2', 'lesson-5-gawain-1', 'lesson-6-gawain-1'].includes(key)) return 2;
-        if (key.startsWith('lesson-7-')) return 3;
+        if (key.startsWith('lesson-7-') || key === 'lesson7-gawain2c') return 3;
         if (key.startsWith('session-4-')) return 4;
         if (key.startsWith('lesson-16-')) return 6;
         return null;

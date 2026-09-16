@@ -11859,7 +11859,7 @@ def assessment(request):
         prescribed_keys = tuple(PRESCRIBED_ACTIVITIES.keys())
         progress_rows = StudentActivityProgress.objects.filter(
             student_id=getattr(user, 'id', None),
-            activity_key__in=['lesson-1-gawain-1', 'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2', 'lesson-4-gawain-1', 'lesson-4-gawain-2', 'lesson-5-gawain-1', 'lesson-6-gawain-1', 'lesson-7-gawain-1'],
+            activity_key__in=['lesson-1-gawain-1', 'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2', 'lesson-4-gawain-1', 'lesson-4-gawain-2', 'lesson-5-gawain-1', 'lesson-6-gawain-1', 'lesson-7-gawain-1', 'lesson7-gawain2c'],
         )
         context['aral_standalone_progress'] = {
             row.activity_key: {
@@ -12668,6 +12668,21 @@ def prescribed_activity_page(request, activity_key):
         return redirect('assessment')
     progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
     raw_state = progress.state if progress and isinstance(progress.state, dict) else {}
+    if activity_key == 'lesson7-gawain2c':
+        context = _dashboard_context(request)
+        context['handwriting_activity_data'] = {
+            'activity_key': activity_key,
+            'title': activity['title'], 'instruction': activity['instruction'],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'progress': {
+                'current_index': progress.current_index if progress else 0,
+                'completed_items': progress.completed_items if progress else 0,
+                'activity_completed': progress.activity_completed if progress else False,
+                'state': raw_state,
+            },
+        }
+        return render(request, 'pabasa_app/lesson_7_gawain_2c_page.html', context)
     answers = raw_state.get('answers') if isinstance(raw_state.get('answers'), list) else []
     context = _dashboard_context(request)
     context['prescribed_activity_data'] = {
@@ -12703,6 +12718,19 @@ def prescribed_activity_progress(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity_key == 'lesson7-gawain2c':
+        try:
+            data = json.loads(request.body or '{}')
+            index = max(0, min(3, int(data.get('current_index') or 0)))
+            state = data.get('state') if isinstance(data.get('state'), dict) else {}
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return JsonResponse({'success': False, 'error': 'Invalid handwriting progress.'}, status=400)
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        if existing and (existing.activity_completed or existing.current_index > index):
+            progress = existing
+        else:
+            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index, 'total_items': 3, 'activity_completed': False, 'state': {'activity_key': activity_key, **state}})
+        return JsonResponse({'success': True, 'progress': {'current_index': progress.current_index, 'completed_items': progress.completed_items, 'total_items': 3, 'activity_completed': progress.activity_completed, 'state': progress.state}})
     try:
         data = json.loads(request.body or '{}')
         if not isinstance(data, dict):
@@ -12757,6 +12785,14 @@ def prescribed_activity_complete(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity_key == 'lesson7-gawain2c':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        if not existing or existing.completed_items < 3:
+            return JsonResponse({'success': False, 'error': 'Complete all writing areas first.'}, status=400)
+        existing.activity_completed = True
+        existing.current_index = existing.completed_items = existing.correct_items = 3
+        existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'updated_at'])
+        return JsonResponse({'success': True, 'result': {'items_completed': 3, 'accuracy': 100.0}})
     try:
         data = json.loads(request.body or '{}')
         if not isinstance(data, dict):

@@ -1778,7 +1778,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 document.addEventListener('DOMContentLoaded',function(){
   const grid=document.getElementById('sessionGrid'), activities=JSON.parse(document.getElementById('prescribed-activity-cards')?.textContent||'[]'), saved=JSON.parse(document.getElementById('prescribed-activity-progress')?.textContent||'{}'); if(!grid)return;
-  const routes={'lesson-16-gawain-1':"{% url 'prescribed_activity_page' activity_key='lesson-16-gawain-1' %}",'lesson-16-gawain-2':"{% url 'prescribed_activity_page' activity_key='lesson-16-gawain-2' %}"};
+  const routes={'lesson7-gawain2c':"{% url 'prescribed_activity_page' activity_key='lesson7-gawain2c' %}",'lesson-16-gawain-1':"{% url 'prescribed_activity_page' activity_key='lesson-16-gawain-1' %}",'lesson-16-gawain-2':"{% url 'prescribed_activity_page' activity_key='lesson-16-gawain-2' %}"};
   const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   activities.forEach(activity=>{const key=String(activity.activity_key||''),progress=saved[key]||{},total=Number(progress.total_items)||5,completed=Math.max(0,Math.min(total,Number(progress.completed_items)||0)),done=Boolean(progress.activity_completed)&&completed>=total;if(!routes[key]||grid.querySelector(`[data-prescribed-activity="${key}"]`))return;const card=document.createElement('article');card.className='pabasa-session-card unlocked lesson16-session-card'+(done?' completed':'');card.dataset.prescribedActivity=key;card.innerHTML=`<div class="session-visual"><img class="lesson16-card-image" src="${escape(activity.image_url)}" alt="Larawan ng ${escape(activity.title)}"></div><div class="session-content"><h4>Lesson ${escape(activity.lesson_number)}</h4><p>Gawain ${escape(activity.gawain_number)}</p><div>${escape(activity.title)}</div></div><div class="session-bottom"><div class="lesson16-progress"><i style="--lesson16-complete:${done?100:(completed/total)*100}%"></i></div><button type="button">${done?'✓ NATAPOS NA':(completed?'IPAGPATULOY':'SIMULAN')}</button></div>`;if(!done)card.onclick=()=>{location.href=routes[key]};else card.querySelector('button').disabled=true;grid.appendChild(card)});
 });
@@ -1917,7 +1917,7 @@ document.addEventListener('DOMContentLoaded', function () {
         grid.dataset.sessionFoldersReady = 'true';
         grid.classList.remove('session-grouping-pending');
         const remaining = Array.from(grid.children).filter(card => card.classList.contains('pabasa-session-card'));
-        const groupedSessions = [['Session 2', 4], ['Session 3', 1]];
+        const groupedSessions = [['Session 2', 4], ['Session 3', 2]];
         let offset = 0;
         groupedSessions.forEach(function (group) {
             const groupCards = remaining.slice(offset, offset + group[1]);
