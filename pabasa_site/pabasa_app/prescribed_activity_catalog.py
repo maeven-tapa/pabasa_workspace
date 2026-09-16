@@ -24,6 +24,29 @@ LESSON_16_IMAGE_PATHS = {
 
 
 PRESCRIBED_ACTIVITIES = {
+    'lesson7-gawain4a': {
+        'activity_key': 'lesson7-gawain4a', 'session_key': 'session-3', 'session_number': 3,
+        'lesson_number': 7, 'gawain_number': '4A', 'title': 'GAWAIN 4A: Letrang Oo',
+        'instruction': 'I-drag ang parisukat sa MALAKING O. I-drag ang bilog sa maliit na o.',
+        'interaction': 'shape_stamp',
+        'cells': [
+            {'id': 'r1c1', 'letter': 'O', 'answer': 'square'}, {'id': 'r1c2', 'letter': 'a', 'answer': None}, {'id': 'r1c3', 'letter': 'o', 'answer': 'circle'},
+            {'id': 'r2c1', 'letter': 'S', 'answer': None}, {'id': 'r2c2', 'letter': 'M', 'answer': None}, {'id': 'r2c3', 'letter': 'M', 'answer': None},
+            {'id': 'r3c1', 'letter': 'O', 'answer': 'square'}, {'id': 'r3c2', 'letter': 'I', 'answer': None}, {'id': 'r3c3', 'letter': 'O', 'answer': 'square'},
+            {'id': 'r4c1', 'letter': 's', 'answer': None}, {'id': 'r4c2', 'letter': 'o', 'answer': 'circle'}, {'id': 'r4c3', 'letter': 'A', 'answer': None},
+        ],
+        'answer_mapping': {'r1c1': 'square', 'r1c3': 'circle', 'r3c1': 'square', 'r3c3': 'square', 'r4c2': 'circle'},
+    },
+    'lesson7-gawain4': {
+        'activity_key': 'lesson7-gawain4', 'session_number': 3, 'lesson_number': 7,
+        'gawain_number': 4, 'title': 'GAWAIN 4: Letrang Oo', 'instruction': 'Magsanay Magsulat',
+        'interaction': 'handwriting',
+        'items': [
+            {'word': 'Oo', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_o/orasan.png'},
+            {'word': 'Oo', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_o/orasan.png'},
+            {'word': 'Oo', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_o/orasan.png'},
+        ],
+    },
     'lesson7-gawain3': {
         'activity_key': 'lesson7-gawain3', 'session_number': 3, 'lesson_number': 7,
         'gawain_number': 3, 'title': 'Gawain 3: Letrang Oo',
@@ -138,7 +161,7 @@ PRESCRIBED_ACTIVITIES = {
 # Each saved item points directly to its own workbook image file.  Keeping the
 # path beside the item also preserves exact image-to-word ordering on every UI.
 for _activity in PRESCRIBED_ACTIVITIES.values():
-    for _item in _activity['items']:
+    for _item in _activity.get('items', []):
         if _item['word'] in LESSON_16_IMAGE_PATHS:
             _item['image_path'] = LESSON_16_IMAGE_PATHS[_item['word']]
 

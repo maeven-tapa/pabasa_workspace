@@ -11884,7 +11884,7 @@ def assessment(request):
                 'lesson_number': activity['lesson_number'],
                 'gawain_number': activity['gawain_number'],
                 'title': activity['title'],
-                'image_url': static(activity['items'][0]['image_path']),
+                'image_url': static(activity['items'][0]['image_path']) if activity.get('items') else '',
             }
             for activity in PRESCRIBED_ACTIVITIES.values()
         ]
@@ -12723,6 +12723,29 @@ def prescribed_activity_page(request, activity_key):
             },
         }
         return render(request, 'pabasa_app/lesson_7_gawain_2c_page.html', context)
+    if activity_key == 'lesson7-gawain4':
+        context = _dashboard_context(request)
+        context['handwriting_activity_data'] = {
+            'activity_key': activity_key, 'title': activity['title'], 'instruction': activity['instruction'],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'progress': {'current_index': progress.current_index if progress else 0, 'completed_items': progress.completed_items if progress else 0, 'activity_completed': progress.activity_completed if progress else False, 'state': raw_state},
+        }
+        return render(request, 'pabasa_app/lesson_7_gawain_4_page.html', context)
+    if activity_key == 'lesson7-gawain4a':
+        context = _dashboard_context(request)
+        context['shape_stamp_activity_data'] = {
+            'activity_key': activity_key, 'session_key': 'session-3',
+            'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
+            'title': activity['title'], 'instruction': activity['instruction'],
+            'cells': activity['cells'], 'answer_mapping': activity['answer_mapping'],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'progress': {'completed_items': progress.completed_items if progress else 0,
+                         'total_items': len(activity['cells']), 'activity_completed': progress.activity_completed if progress else False,
+                         'state': raw_state},
+        }
+        return render(request, 'pabasa_app/prescribed_shape_stamp_page.html', context)
     if activity_key == 'lesson7-gawain2a':
         context = _dashboard_context(request)
         context['lesson7_gawain2a_data'] = {
@@ -12850,6 +12873,36 @@ def prescribed_activity_progress(request, activity_key):
         else:
             progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index, 'total_items': 3, 'activity_completed': False, 'state': {'activity_key': activity_key, **state}})
         return JsonResponse({'success': True, 'progress': {'current_index': progress.current_index, 'completed_items': progress.completed_items, 'total_items': 3, 'activity_completed': progress.activity_completed, 'state': progress.state}})
+    if activity_key == 'lesson7-gawain4':
+        try:
+            data = json.loads(request.body or '{}')
+            index = max(0, min(3, int(data.get('current_index') or 0)))
+            state = data.get('state') if isinstance(data.get('state'), dict) else {}
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return JsonResponse({'success': False, 'error': 'Invalid handwriting progress.'}, status=400)
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        if existing and (existing.activity_completed or existing.current_index > index):
+            progress = existing
+        else:
+            progress, _ = StudentActivityProgress.objects.update_or_create(
+                student=student, activity_key=activity_key,
+                defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
+                          'total_items': 3, 'activity_completed': False,
+                          'state': {'activity_key': activity_key, **state}},
+            )
+        return JsonResponse({'success': True, 'progress': {'current_index': progress.current_index,
+            'completed_items': progress.completed_items, 'total_items': 3,
+            'activity_completed': progress.activity_completed, 'state': progress.state}})
+    if activity_key == 'lesson7-gawain4a':
+        try:
+            data = json.loads(request.body or '{}'); state = data.get('state') if isinstance(data.get('state'), dict) else {}
+            placements = state.get('placements') if isinstance(state.get('placements'), dict) else {}
+            placements = {str(k): v for k, v in placements.items() if str(k) in {c['id'] for c in activity['cells']} and v in ('square', 'circle')}
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return JsonResponse({'success': False, 'error': 'Invalid activity progress.'}, status=400)
+        total = len(placements)
+        progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': total, 'completed_items': total, 'correct_items': 0, 'total_items': len(activity['cells']), 'activity_completed': False, 'state': {'placements': placements, 'state_version': int(state.get('state_version') or 0)}})
+        return JsonResponse({'success': True, 'progress': {'state': progress.state, 'completed_items': total, 'total_items': len(activity['cells']), 'activity_completed': False}})
     if activity_key == 'lesson7-gawain2a':
         try:
             data = json.loads(request.body or '{}'); state = data.get('state') if isinstance(data.get('state'), dict) else {}
@@ -12975,6 +13028,23 @@ def prescribed_activity_complete(request, activity_key):
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': 5, 'accuracy': 100.0}})
     if activity_key == 'lesson7-gawain2c':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        if not existing or existing.completed_items < 3:
+            return JsonResponse({'success': False, 'error': 'Complete all writing areas first.'}, status=400)
+        existing.activity_completed = True
+        existing.current_index = existing.completed_items = existing.correct_items = 3
+        existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'updated_at'])
+        return JsonResponse({'success': True, 'result': {'items_completed': 3, 'accuracy': 100.0}})
+    if activity_key == 'lesson7-gawain4a':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        state = existing.state if existing and isinstance(existing.state, dict) else {}
+        if state.get('placements') != activity['answer_mapping']:
+            return JsonResponse({'success': False, 'error': 'Tingnan muli ang worksheet.'}, status=400)
+        total = len(activity['cells'])
+        existing.activity_completed = True; existing.current_index = existing.completed_items = total; existing.correct_items = total
+        existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'updated_at'])
+        return JsonResponse({'success': True, 'result': {'items_completed': total, 'accuracy': 100.0}})
+    if activity_key == 'lesson7-gawain4':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         if not existing or existing.completed_items < 3:
             return JsonResponse({'success': False, 'error': 'Complete all writing areas first.'}, status=400)
