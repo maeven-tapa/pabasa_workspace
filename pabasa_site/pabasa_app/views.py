@@ -12822,7 +12822,14 @@ def prescribed_activity_page(request, activity_key):
         return render(request, 'pabasa_app/lesson_7_gawain_2b_page.html', context)
     if activity_key == 'lesson8-gawain1a':
         context = _dashboard_context(request)
-        context['lesson7_gawain2b_data'] = {'activity_key': activity_key, 'session_key': 'session-3', 'title': activity['title'], 'instruction': activity['instruction'], 'items': [{**i, 'image_url': static(i['image_path'])} for i in activity['items']], 'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}), 'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}), 'progress': {'completed_items': progress.completed_items if progress else 0, 'correct_items': progress.correct_items if progress else 0, 'activity_completed': progress.activity_completed if progress else False, 'state': raw_state}}
+        safe_state = dict(raw_state)
+        safe_state['phase'] = safe_state.get('phase') if safe_state.get('phase') in {'oral', 'selection', 'final'} else 'oral'
+        safe_state['current_reading_item'] = max(0, min(8, int(safe_state.get('current_reading_item') or 0)))
+        safe_state['completed_reading_items'] = safe_state.get('completed_reading_items') if isinstance(safe_state.get('completed_reading_items'), list) else []
+        safe_state['selections'] = safe_state.get('selections') if isinstance(safe_state.get('selections'), list) else []
+        safe_state['final_targets'] = safe_state.get('final_targets') if isinstance(safe_state.get('final_targets'), list) and safe_state.get('final_targets') else [0, 4, 6, 7]
+        safe_state['final_reading_items'] = safe_state.get('final_reading_items') if isinstance(safe_state.get('final_reading_items'), list) else []
+        context['lesson7_gawain2b_data'] = {'activity_key': activity_key, 'session_key': 'session-3', 'title': activity['title'], 'instruction': activity['instruction'], 'items': [{**i, 'image_url': static(i['image_path'])} for i in activity['items']], 'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}), 'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}), 'progress': {'completed_items': progress.completed_items if progress else 0, 'correct_items': progress.correct_items if progress else 0, 'activity_completed': progress.activity_completed if progress else False, 'state': safe_state}}
         return render(request, 'pabasa_app/lesson_8_gawain_1a_page.html', context)
     if activity_key == 'lesson9-gawain2':
         context = _dashboard_context(request)
