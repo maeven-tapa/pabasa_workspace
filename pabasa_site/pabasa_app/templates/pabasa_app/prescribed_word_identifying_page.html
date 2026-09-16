@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Word Identifying | PABASA</title>
+  <style>
+    :root{--ink:#16465d;--blue:#197b99;--muted:#5b7680;--line:#d6e7e8;--good:#2b9b63;--bad:#c85555;--gold:#efbd4d}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#f3faf8;color:var(--ink);font-family:Nunito,"Segoe UI",sans-serif}
+    .page{width:min(920px,calc(100% - 28px));margin:auto;padding:24px 0}.back{color:var(--ink);font-weight:900;text-decoration:none}
+    .card{margin-top:20px;border:1px solid var(--line);border-radius:24px;background:#fff;padding:clamp(22px,4vw,48px);box-shadow:0 18px 45px #24545d18}
+    .eyebrow{color:#42768a;font-size:.82rem;font-weight:900;letter-spacing:.14em}.title{font-size:clamp(2.2rem,5vw,3.6rem);margin:.3rem 0}.instruction{color:var(--muted);font-size:1.1rem;font-weight:750}
+    .work{max-width:680px;margin:24px auto 0}.progress{color:var(--muted);font-size:.9rem;font-weight:900;text-align:right}.prompt{font-size:clamp(1.2rem,2.6vw,1.65rem);font-weight:900;margin:14px 0;text-align:center}
+    .word-list{display:grid;gap:10px}.word-row{align-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;display:grid;gap:12px;grid-template-columns:42px repeat(2,minmax(0,1fr));min-height:60px;padding:8px 14px;transition:.15s}
+    .word-row.active{background:#fff9e8;border:2px solid var(--gold);box-shadow:0 0 0 3px #f8df9a}.word-number{font-size:1.05rem;font-weight:900}.word-option{font-size:clamp(1.25rem,3vw,1.65rem);padding:5px;text-align:center}.word-row.active .word-option{font-weight:850}
+    .actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:20px auto}.button{border:0;border-radius:12px;background:var(--blue);box-shadow:0 4px 0 #126078;color:#fff;padding:13px 22px;font:inherit;font-weight:900;cursor:pointer}.button.secondary{background:#edf7f6;color:var(--ink);box-shadow:0 4px 0 #c5dbdc}.button:disabled{opacity:.65;cursor:wait}
+    .status{min-height:30px;color:var(--muted);font-size:1rem;font-weight:800;text-align:center}.status.good{color:var(--good)}.status.bad{color:var(--bad)}.done{padding:48px;text-align:center;color:var(--good);font-size:1.5rem;font-weight:900}
+    @media(max-width:480px){.card{padding:18px}.word-row{gap:6px;grid-template-columns:34px repeat(2,minmax(0,1fr));padding:8px}.word-option{font-size:1.25rem}}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <a class="back" href="{% url 'assessment' %}">← Back to My Lessons</a>
+    <section class="card" id="app"></section>
+  </main>
+  {{ prescribed_activity_data|json_script:"prescribed-activity-data" }}
+  <script>
+    (()=>{
+      const d=JSON.parse(document.getElementById('prescribed-activity-data').textContent||'{}');
+      const app=document.getElementById('app');
+      const csrf=()=>((document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)||[])[1]||'');
+      let s={current_item:0,target_word:null,attempts:0,completed_items:0,...(d.progress?.state||{})};
+      let busy=false,ready=false,feedback='',feedbackType='';
+      const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      async function post(url,body){
+        const response=await fetch(url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify(body)});
+        const result=await response.json();
+        if(!response.ok||!result.success)throw Error(result.error||'Could not save progress');
+        return result;
+      }
+      function speak(word){
+        return new Promise(resolve=>{
+          if(!window.speechSynthesis){resolve();return}
+          speechSynthesis.cancel();
+          const utterance=new SpeechSynthesisUtterance(word);
+          utterance.lang='en-US';utterance.rate=.78;utterance.onend=resolve;utterance.onerror=resolve;speechSynthesis.speak(utterance);
+        });
+      }
+      async function playTarget(){
+        ready=false;const button=document.getElementById('answer');if(button)button.disabled=true;
+        await speak(s.target_word);
+        ready=true;const next=document.getElementById('answer');if(next&&!busy)next.disabled=false;
+      }
+      function render(){
+        if(s.phase==='complete'||s.current_item>=d.items.length){
+          app.innerHTML='<div class="done">Great job! You identified all the words.</div>';
+          post(d.completion_url,{}).catch(()=>{});return;
+        }
+        const item=d.items[s.current_item];
+        app.innerHTML=`<div class="eyebrow">SESSION ${d.session_number} · LESSON ${d.lesson_number} · ACTIVITY ${d.gawain_number}</div>
+          <h1 class="title">${esc(d.title)}</h1><p class="instruction">${esc(d.instruction)}</p>
+          <div class="work"><div class="progress">Item ${s.current_item+1} of ${d.items.length}</div>
+            <p class="prompt">Listen to the word, then say the same word.</p>
+            <div class="word-list"><div class="word-row active" aria-current="step">
+              <span class="word-number">${s.current_item+1}.</span>${item.choices.map(word=>`<span class="word-option">${esc(word)}</span>`).join('')}
+            </div></div>
+            <p class="status ${feedbackType}" id="status">${esc(feedback||'Listen carefully. Then say the word you heard.')}</p>
+            <div class="actions"><button class="button" id="speak">🔊 Hear the word</button><button class="button" id="answer" ${busy||!ready?'disabled':''}>${busy?'Listening…':'Say the word'}</button></div>
+          </div>`;
+        document.getElementById('speak').onclick=playTarget;
+        document.getElementById('answer').onclick=record;
+      }
+      async function begin(){
+        if(s.current_item>=d.items.length){s.phase='complete';render();return}
+        try{const result=await post(d.progress_url,{action:'begin',item_index:s.current_item});s=result.progress.state;render();playTarget()}
+        catch(error){app.innerHTML=`<p class="status bad">${esc(error.message)}</p>`}
+      }
+      async function record(){
+        if(busy||!ready||!s.target_word)return;
+        const button=document.getElementById('answer'),status=document.getElementById('status');
+        if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){status.textContent='A microphone is not available in this browser.';return}
+        busy=true;button.disabled=true;button.textContent='Listening…';status.textContent='Listening. Say the word you just heard.';
+        let stream;
+        try{
+          stream=await navigator.mediaDevices.getUserMedia({audio:true});
+          const recorder=new MediaRecorder(stream),chunks=[];
+          recorder.ondataavailable=event=>event.data.size&&chunks.push(event.data);
+          const stopped=new Promise(resolve=>recorder.onstop=()=>resolve(new Blob(chunks,{type:recorder.mimeType||'audio/webm'})));
+          recorder.start();setTimeout(()=>recorder.state==='recording'&&recorder.stop(),2600);
+          const audio=await stopped;stream.getTracks().forEach(track=>track.stop());
+          const form=new FormData();form.append('audio',audio,'word-identifying.webm');
+          form.append('target_text',d.items[s.current_item].choices.join(' '));form.append('language','English');form.append('mode','reading');
+          const response=await fetch('{% url "reading_transcribe_api" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form});
+          const transcription=await response.json(),heard=transcription.success?String(transcription.raw_transcript||transcription.transcript||''):'';
+          const result=await post(d.progress_url,{action:'answer',item_index:s.current_item,heard});s=result.progress.state;ready=false;
+          if(result.accepted){feedback='Correct! Listen to the next word.';feedbackType='good';render();if(s.phase!=='complete')setTimeout(playTarget,250)}
+          else{feedback='That was not the word. Listen to the new word, then try again.';feedbackType='bad';render();playTarget()}
+        }catch(error){const message=error.message==='Permission denied'?'Please allow microphone access and try again.':'I could not hear you. Please try again.';const current=document.getElementById('status');if(current)current.textContent=message}
+        finally{stream?.getTracks().forEach(track=>track.stop());busy=false;const next=document.getElementById('answer');if(next){next.disabled=!ready;next.textContent='Say the word'}}
+      }
+      render();begin();
+    })();
+  </script>
+</body>
+</html>

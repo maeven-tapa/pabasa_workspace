@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Spot the Word | PABASA</title>
+  <style>
+    :root{--ink:#16465d;--blue:#197b99;--muted:#5b7680;--line:#d6e7e8;--good:#21864f;--good-bg:#e4f6e9;--bad:#c53f48;--bad-bg:#fff0f0}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#f3faf8;color:var(--ink);font-family:Nunito,"Segoe UI",sans-serif}
+    .page{width:min(1000px,calc(100% - 28px));margin:auto;padding:24px 0}.back{color:var(--ink);font-weight:900;text-decoration:none}.card{margin-top:20px;border:1px solid var(--line);border-radius:24px;background:#fff;padding:clamp(22px,4vw,48px);box-shadow:0 18px 45px #24545d18}
+    .eyebrow{color:#42768a;font-size:.82rem;font-weight:900;letter-spacing:.14em}.title{font-size:clamp(2.2rem,5vw,3.6rem);margin:.3rem 0}.instruction{color:var(--muted);font-size:clamp(1rem,2vw,1.2rem);font-weight:750;line-height:1.5;max-width:760px}
+    .work{max-width:760px;margin:28px auto 0}.progress{color:var(--muted);font-size:.9rem;font-weight:900;text-align:right}.prompt{font-size:clamp(1.3rem,3vw,2rem);font-weight:900;margin:12px 0 22px;text-align:center}
+    .word-box{border:3px solid #17252b;display:grid;gap:clamp(12px,3vw,26px);grid-template-columns:repeat(3,minmax(0,1fr));padding:clamp(12px,3vw,26px)}
+    .word{align-items:center;aspect-ratio:1.25;background:#fff;border:3px solid transparent;border-radius:50%;color:var(--ink);display:flex;font:inherit;font-size:clamp(1.4rem,4vw,2rem);justify-content:center;min-width:0;transition:background .15s,border-color .15s,transform .15s;cursor:pointer}
+    .word:hover:not(:disabled){background:#f0f8f7;border-color:#9abcc2;transform:scale(1.03)}.word:focus-visible{outline:4px solid #efbd4d;outline-offset:2px}.word.correct{background:var(--good-bg);border-color:var(--good);color:var(--good);font-weight:900}.word.wrong{animation:shake .22s linear;background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}.word:disabled{cursor:default;opacity:1}
+    @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+    .status{color:var(--muted);font-size:1rem;font-weight:850;min-height:32px;text-align:center;margin:18px 0 8px}.status.good{color:var(--good)}.status.bad{color:var(--bad)}.actions{display:flex;justify-content:center;gap:12px;margin:18px auto}.button{border:0;border-radius:12px;background:var(--blue);box-shadow:0 4px 0 #126078;color:#fff;padding:13px 22px;font:inherit;font-weight:900;cursor:pointer}.button:disabled{opacity:.65;cursor:wait}.done{padding:48px;text-align:center;color:var(--good);font-size:1.5rem;font-weight:900}
+    @media(max-width:500px){.card{padding:18px}.word-box{gap:8px;padding:9px}.word{aspect-ratio:1;font-size:clamp(1rem,6vw,1.4rem);border-width:2px}}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <a class="back" href="{% url 'assessment' %}">← Back to My Lessons</a>
+    <section class="card" id="app"></section>
+  </main>
+  {{ prescribed_activity_data|json_script:"prescribed-activity-data" }}
+  <script>
+    (()=>{
+      const d=JSON.parse(document.getElementById('prescribed-activity-data').textContent||'{}'),app=document.getElementById('app');
+      const csrf=()=>((document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)||[])[1]||'');
+      let s={current_item:0,selected_words:[],wrong_word:null,...(d.progress?.state||{})},busy=false;
+      const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      async function post(body){const r=await fetch(d.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify(body)}),j=await r.json();if(!r.ok||!j.success)throw Error(j.error||'Could not save your progress');return j}
+      function speak(word){return new Promise(resolve=>{if(!window.speechSynthesis){resolve();return}speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(word);u.lang='en-US';u.rate=.78;u.onend=resolve;u.onerror=resolve;speechSynthesis.speak(u)})}
+      function playPrompt(){if(!s.target_word)return;speak(s.target_word)}
+      function render(message='',kind=''){
+        if(s.phase==='complete'||s.current_item>=d.words.length){app.innerHTML='<div class="done">Great job! You spotted all nine words.</div>';fetch(d.completion_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf(),'Content-Type':'application/json'},body:'{}'}).catch(()=>{});return}
+        const selected=new Set(s.selected_words||[]);
+        app.innerHTML=`<div class="eyebrow">SESSION ${d.session_number} · LESSON ${d.lesson_number} · ACTIVITY ${d.gawain_number}</div><h1 class="title">${esc(d.title)}</h1><p class="instruction">${esc(d.instruction)}</p>
+          <div class="work"><div class="progress">Word ${s.current_item+1} of ${d.words.length}</div><p class="prompt">Listen to the word, then encircle it.</p>
+          <div class="word-box" role="group" aria-label="Choose the word you heard">${d.words.map(word=>{const state=selected.has(word)?'correct':(s.wrong_word===word?'wrong':'');return `<button type="button" class="word ${state}" data-word="${esc(word)}" ${selected.has(word)||busy?'disabled':''} aria-label="${esc(word)}${selected.has(word)?', correct':''}">${esc(word)}</button>`}).join('')}</div>
+          <p class="status ${kind}" id="status" aria-live="polite">${esc(message||'Listen carefully. The word will be read aloud.')}</p><div class="actions"><button type="button" class="button" id="replay" ${busy?'disabled':''}>🔊 Hear the word again</button></div></div>`;
+        app.querySelectorAll('.word:not(:disabled)').forEach(button=>button.addEventListener('click',()=>choose(button.dataset.word)));
+        document.getElementById('replay').onclick=playPrompt;
+      }
+      async function start(){try{const result=await post({action:'begin',item_index:s.current_item});s=result.progress.state;render('Listen to the word, then encircle it.');playPrompt()}catch(error){render(error.message,'bad')}}
+      async function choose(word){if(busy)return;busy=true;render('Checking your choice…');try{const result=await post({action:'choose',item_index:s.current_item,word});s=result.progress.state;if(result.accepted){render('Correct! Listen for the next word.','good');if(s.phase!=='complete')setTimeout(()=>{render('Listen to the next word.');playPrompt()},650)}else{render('Not that word. Try again.','bad')}}catch(error){render(error.message,'bad')}finally{busy=false;if(s.phase!=='complete')render(s.wrong_word?'Not that word. Try again.':'Listen carefully. The word will be read aloud.',s.wrong_word?'bad':'')}}
+      render();start();
+    })();
+  </script>
+</body>
+</html>
