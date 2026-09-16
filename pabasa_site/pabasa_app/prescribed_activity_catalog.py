@@ -13,8 +13,8 @@ LESSON_16_IMAGE_PATHS = {
     'gusali': 'pabasa_app/images/lesson_16/gusali.png',
     'ngiti': 'pabasa_app/images/lesson_16/ngiti.png',
     'gata': 'pabasa_app/images/lesson_16/gata.png',
-    # These filenames are intentional placeholders.  The Lesson 16 Gawain 3
-    # workbook images can be added later without changing its activity data.
+    # Lesson 16 Gawain 3 uses the same supplied workbook artwork as the
+    # picture-word practice that follows it.
     'sanga': 'pabasa_app/images/lesson_16/sanga.png',
     'goma': 'pabasa_app/images/lesson_16/goma.png',
     'bunga': 'pabasa_app/images/lesson_16/bunga.png',
@@ -135,6 +135,33 @@ PRESCRIBED_ACTIVITIES = {
             {'id': 'picture-3', 'word': 'bunga'},
             {'id': 'picture-4', 'word': 'panga'},
             {'id': 'picture-5', 'word': 'gamot'},
+        ],
+    },
+    'session-6-lesson-16-gawain-4': {
+        # This key is deliberately globally unique.  Labels remain editable
+        # presentation content and are never used for routing or progress.
+        'activity_key': 'session-6-lesson-16-gawain-4',
+        'session_key': 'session-6',
+        'session_number': 6,
+        'lesson': 'Lesson 16',
+        'activity': 'Gawain 4',
+        'lesson_number': 16,
+        'gawain_number': 4,
+        'display_title': 'Lesson 16: Gawain 4',
+        'title': 'Lesson 16: Gawain 4',
+        'instruction': 'Isulat ang wastong salita para sa larawan.',
+        'competencies': ['Phonics', 'Phonological Awareness', 'Vocabulary'],
+        'total_items': 5,
+        'interaction': 'picture_word_write',
+        # The order and words below are transcribed from the supplied ARAL
+        # Learner\'s Workbook, 2nd Edition, Session 6 / Lesson 16 page.
+        # The local panga artwork and workbook answer are both panga.
+        'items': [
+            {'id': 'picture-1', 'word': 'gamot', 'answer': 'gamot', 'alt_text': 'Larawan ng gamot'},
+            {'id': 'picture-2', 'word': 'bunga', 'answer': 'bunga', 'alt_text': 'Larawan ng bunga'},
+            {'id': 'picture-3', 'word': 'panga', 'answer': 'panga', 'alt_text': 'Larawan ng panga', 'image_path': 'pabasa_app/images/lesson_16/panga.png'},
+            {'id': 'picture-4', 'word': 'goma', 'answer': 'goma', 'alt_text': 'Larawan ng goma'},
+            {'id': 'picture-5', 'word': 'sanga', 'answer': 'sanga', 'alt_text': 'Larawan ng sanga'},
         ],
     },
 }
