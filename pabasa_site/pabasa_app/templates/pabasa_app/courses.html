@@ -22677,6 +22677,31 @@ document.addEventListener('DOMContentLoaded', () => {
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const picker = document.getElementById('prescribedActivityPicker');
+    if (!picker || picker.querySelector('[data-prescribed-activity="lesson-7-gawain-2c"]')) return;
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.className = 'prescribed-activity-option';
+    option.dataset.prescribedActivity = 'lesson-7-gawain-2c';
+    option.dataset.previewTarget = 'lesson7Gawain2CPreview';
+    option.setAttribute('aria-controls', 'lesson7Gawain2CPreview');
+    option.setAttribute('aria-pressed', 'false');
+    option.innerHTML = '<span class="prescribed-activity-option__thumb lesson7-gawain2c-thumb" aria-hidden="true"><span>Ii</span><span>Ii</span><span>Ii</span></span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">2C</span><span><strong>Lesson 7 · Gawain 2C</strong><br><span class="small text-muted">Magsanay Magsulat</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>';
+    const preview = document.createElement('div');
+    preview.className = 'prescribed-activity-preview';
+    preview.id = 'lesson7Gawain2CPreview';
+    preview.dataset.prescribedPreview = 'lesson-7-gawain-2c';
+    preview.innerHTML = '<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview"><i class="bi bi-x-lg"></i></button><div class="small text-uppercase text-muted fw-semibold">Session 3 · Lesson 7 · Gawain 2C</div><h5>GAWAIN 2: Letrang Ii</h5><p class="mb-0 text-muted">Magsanay Magsulat</p></div><div class="lesson7-gawain2c-workbook" aria-label="Static handwriting practice preview"><div class="lesson7-gawain2c-sheet"><div class="lesson7-gawain2c-guide"><span class="lesson7-gawain2c-model">Ii</span><span class="lesson7-gawain2c-model faint">Ii</span></div><div class="lesson7-gawain2c-guide blank"></div><div class="lesson7-gawain2c-guide blank"></div></div></div>';
+    picker.append(option, preview);
+    option.addEventListener('click', () => { picker.querySelectorAll('[data-prescribed-activity]').forEach(button => { button.classList.toggle('is-selected', button === option); button.setAttribute('aria-pressed', String(button === option)); }); document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(open => open.classList.remove('is-maximized')); preview.classList.add('is-maximized'); });
+    preview.querySelector('.prescribed-preview-close').addEventListener('click', () => preview.classList.remove('is-maximized'));
+});
+</script>
+<style>
+.lesson7-gawain2c-thumb{align-items:center;background:linear-gradient(180deg,#eaf8fb,#fff);display:flex;gap:.25rem;justify-content:center;padding:.5rem}.lesson7-gawain2c-thumb span{color:#286b93;font-size:1.7rem;font-family:cursive;font-weight:700}.lesson7-gawain2c-workbook{background:#fffdf8;min-height:420px;padding:clamp(1.25rem,4vw,3rem)}.lesson7-gawain2c-sheet{margin:0 auto;max-width:900px;padding-top:1rem}.lesson7-gawain2c-guide{border-top:3px solid #398ac5;border-bottom:3px solid #398ac5;height:112px;position:relative}.lesson7-gawain2c-guide::after{border-top:2px dashed #d64c55;content:"";left:0;position:absolute;right:0;top:50%}.lesson7-gawain2c-guide.blank{margin-top:1.25rem}.lesson7-gawain2c-model{color:#286b93;font-family:cursive;font-size:5.4rem;font-weight:700;left:12%;line-height:1;position:absolute;top:8px;z-index:1}.lesson7-gawain2c-model.faint{left:31%;opacity:.22}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const picker = document.getElementById('prescribedActivityPicker');
     if (!picker || picker.dataset.sessionFoldersReady === 'true') return;
     picker.dataset.sessionFoldersReady = 'true';
 
@@ -22689,6 +22714,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     };
     const activities = [...picker.querySelectorAll(':scope > [data-prescribed-activity]')];
+    const previews = [...picker.querySelectorAll(':scope > .prescribed-activity-preview')];
     const folders = document.createElement('div');
     folders.className = 'prescribed-session-folders';
     folders.setAttribute('aria-label', 'ARAL Workbook sessions');
@@ -22713,7 +22739,7 @@ document.addEventListener('DOMContentLoaded', () => {
         column.append(button, modal);
         folders.append(column);
     }
-    picker.replaceChildren(folders);
+    picker.replaceChildren(folders, ...previews);
     picker.classList.remove('prescribed-activity-picker__list');
     const style = document.createElement('style');
     style.textContent = `.prescribed-session-folders{display:grid;gap:.85rem;grid-template-columns:repeat(4,minmax(0,1fr));width:100%}@media(max-width:900px){.prescribed-session-folders{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:620px){.prescribed-session-folders{grid-template-columns:repeat(2,minmax(0,1fr))}}.prescribed-session-folder__button{align-items:center;background:linear-gradient(145deg,#f7fbef,#fff9dd);border:1px solid #dce8ed;border-radius:1rem;color:#244354;cursor:pointer;display:flex;gap:.7rem;min-height:120px;padding:1rem;text-align:left;width:100%}.prescribed-session-folder__button:hover,.prescribed-session-folder__button:focus-visible{border-color:#2a7891;box-shadow:0 0 0 3px rgba(42,120,145,.12);outline:0}.prescribed-session-folder__icon{font-size:2rem}.prescribed-session-folder__button strong,.prescribed-session-folder__button small{display:block}.prescribed-session-folder__button strong{color:#176078;font-size:1.05rem}.prescribed-session-folder__button small{color:#71828a;margin-top:.2rem}.prescribed-session-modal{background:rgba(15,35,48,.42);inset:0;position:fixed;z-index:1060}.prescribed-session-modal__dialog{background:#fff;border-radius:1.25rem;inset:4vh 4vw;overflow:auto;padding:1rem;position:absolute}.prescribed-session-modal__header{align-items:center;border-bottom:1px solid #dce8ed;color:#176078;display:flex;justify-content:space-between;margin-bottom:1rem;padding:.25rem .25rem 1rem}.prescribed-session-modal__header small{color:#71828a;font-weight:600}.prescribed-session-modal__close{background:#fff3c7;border:1px solid #e3c96a;border-radius:.7rem;color:#176078;font-size:1.5rem;height:2.4rem;line-height:1;width:2.4rem}.prescribed-session-modal__list{display:grid;gap:.85rem;grid-template-columns:repeat(auto-fill,minmax(160px,210px))}.prescribed-session-modal__list .prescribed-activity-option{display:flex}.prescribed-session-modal__list .prescribed-activity-option{aspect-ratio:.86 / 1}`;
