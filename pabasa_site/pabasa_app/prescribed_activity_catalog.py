@@ -305,6 +305,21 @@ PRESCRIBED_ACTIVITIES = {
             {'word': 'sanga', 'answer': 'sanga', 'letter_count': 5, 'alt_text': 'Larawan ng sanga', 'read_aloud': 'sanga'},
         ],
     },
+    'lesson-17-18-gawain-5': {
+        'activity_key': 'lesson-17-18-gawain-5', 'session_key': 'session-6', 'session_number': 6,
+        'lesson_number': '17 at 18', 'gawain_number': 5, 'title': 'Lesson 17 at 18: Gawain 5',
+        'description': 'Ikabit ang bawat larawan sa tamang simulang pantig.',
+        'instruction': 'Ikabit ng linya mula sa mga larawan sa kaliwa papunta sa simulang pantig na nasa kanan.',
+        'competencies': ['Phonics', 'Phonological Awareness', 'Vocabulary'], 'interaction': 'picture_syllable_match', 'total_items': 5,
+        'thumbnail': 'pabasa_app/images/picture_word/prescribe_sets/Set B/Robot-Robot.png', 'word_bank': ['ri', 'pu', 'ro', 'pa', 'pi'],
+        'items': [
+            {'id': 'robot', 'word': 'ro', 'label': 'robot', 'alt_text': 'Larawan ng robot', 'image_path': 'pabasa_app/images/picture_word/prescribe_sets/Set B/Robot-Robot.png'},
+            {'id': 'payong', 'word': 'pa', 'label': 'payong', 'alt_text': 'Larawan ng payong', 'image_path': 'pabasa_app/images/picture_word/prescribe_sets/Set B/Umbrella-Payong.png'},
+            {'id': 'pitaka', 'word': 'pi', 'label': 'pitaka', 'alt_text': 'Larawan ng pitaka', 'image_path': 'pabasa_app/images/picture_word/prescribe_sets/Set B/Wallet-Pitaka.png'},
+            {'id': 'riles', 'word': 'ri', 'label': 'riles', 'alt_text': 'Larawan ng riles', 'image_path': 'pabasa_app/images/picture_word/prescribe_sets/Set B/Railway-Riles.png'},
+            {'id': 'puso', 'word': 'pu', 'label': 'puso', 'alt_text': 'Larawan ng puso', 'image_path': 'pabasa_app/images/picture_word/prescribe_sets/Set B/Heart-Puso.png'},
+        ],
+    },
 }
 
 # Each saved item points directly to its own workbook image file.  Keeping the

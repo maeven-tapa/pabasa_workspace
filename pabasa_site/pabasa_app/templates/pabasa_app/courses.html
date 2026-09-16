@@ -22751,9 +22751,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let activities = [];
     try { activities = JSON.parse(source.textContent || '[]'); } catch (error) { return; }
     const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-    const imageUrl = item => `{% static 'pabasa_app/images/lesson_16/' %}${encodeURIComponent(String(item.word || '').toLowerCase())}.png`;
+    const imageUrl = item => item.image_path ? `{% static 'pabasa_app/' %}${item.image_path.replace(/^pabasa_app\//, '').split('/').map(encodeURIComponent).join('/')}` : `{% static 'pabasa_app/images/lesson_16/' %}${encodeURIComponent(String(item.word || '').toLowerCase())}.png`;
     const image = item => `<img src="${imageUrl(item)}" alt="">`;
-    const previewItems = activity => activity.interaction === 'picture_word_match'
+    const previewItems = activity => activity.interaction === 'picture_syllable_match'
+        ? `<div class="lesson16-match-preview"><section class="lesson16-match-column"><strong>Mga larawan</strong>${activity.items.map(item => `<span class="lesson16-match-picture"><img src="${imageUrl(item)}" alt="${escapeHtml(item.alt_text)}"><b>${escapeHtml(item.label)}</b></span>`).join('')}</section><section class="lesson16-match-column"><strong>Simulang pantig</strong>${activity.word_bank.map(s => `<span class="lesson16-match-word">${escapeHtml(s)}</span>`).join('')}</section></div>`
+        : activity.interaction === 'picture_word_match'
         ? `<div class="lesson16-match-preview"><section class="lesson16-match-column"><strong>Mga salita</strong>${activity.word_bank.map(word => `<span class="lesson16-match-word">${escapeHtml(word)}</span>`).join('')}</section><section class="lesson16-match-column"><strong>Mga larawan</strong>${activity.items.map((item, index) => `<span class="lesson16-match-picture"><img src="${imageUrl(item)}" alt="Placeholder para sa larawan ${index + 1}"><span class="lesson16-match-placeholder">Larawan ${index + 1}<br>Idagdag ang larawan</span></span>`).join('')}</section></div>`
         : activity.interaction === 'picture_word_write'
             ? activity.items.map((item, index) => `<article class="lesson16-preview-item"><img class="lesson16-preview-image" src="${imageUrl(item)}" alt="${escapeHtml(item.alt_text || `Larawan ${index + 1}`)}"><div><strong>${index + 1}. ${escapeHtml(item.answer)}</strong><div class="lesson16-preview-word">${Array.from({length:Number(item.letter_count)||String(item.answer||'').length},()=>'<span class="lesson16-preview-box"></span>').join('')}</div><small class="text-muted"><i class="bi bi-volume-up-fill" aria-hidden="true"></i> Pakinggan ang salita</small></div></article>`).join('')
@@ -22811,7 +22813,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (key.startsWith('lesson-7-') || ['lesson7-gawain2c', 'lesson7-gawain4', 'lesson7-gawain4a', 'lesson8-gawain1', 'lesson8-gawain1a', 'lesson9-gawain1'].includes(key)) return 3;
         if (key.startsWith('session-4-')) return 4;
         if (key.startsWith('lesson-13-')) return 5;
-        if (key.startsWith('lesson-16-') || key.startsWith('session-6-lesson-16-')) return 6;
+        if (key.startsWith('lesson-16-') || key.startsWith('session-6-lesson-16-') || key === 'lesson-17-18-gawain-5') return 6;
         if (key.startsWith('lesson-26-')) return 10;
         if (key.startsWith('lesson-27-')) return 11;
         if (key.startsWith('lesson-28-')) return 12;
