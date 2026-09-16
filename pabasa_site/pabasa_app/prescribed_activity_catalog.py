@@ -230,6 +230,29 @@ PRESCRIBED_ACTIVITIES = {
             {'id': 'picture-5', 'word': 'gamot'},
         ],
     },
+    'session-6-lesson-16-gawain-4': {
+        # This is the sole workbook definition used by both the teacher
+        # picker/preview and the learner activity.  Keep this order fixed.
+        'activity_key': 'session-6-lesson-16-gawain-4',
+        'session_key': 'session-6',
+        'session_number': 6,
+        'lesson_number': 16,
+        'gawain_number': 4,
+        'title': 'Lesson 16: Gawain 4',
+        'description': 'Isulat ang wastong Filipino na salita para sa bawat larawan.',
+        'instruction': 'Isulat ang wastong salita para sa larawan.',
+        'competencies': ['Phonics', 'Phonological Awareness', 'Vocabulary'],
+        'interaction': 'picture_word_write',
+        'total_items': 5,
+        'thumbnail': 'pabasa_app/images/lesson_16/gamot.png',
+        'items': [
+            {'word': 'gamot', 'answer': 'gamot', 'letter_count': 5, 'alt_text': 'Larawan ng gamot', 'read_aloud': 'gamot'},
+            {'word': 'bunga', 'answer': 'bunga', 'letter_count': 5, 'alt_text': 'Larawan ng bunga', 'read_aloud': 'bunga'},
+            {'word': 'panga', 'answer': 'panga', 'letter_count': 5, 'alt_text': 'Larawan ng panga', 'read_aloud': 'panga'},
+            {'word': 'goma', 'answer': 'goma', 'letter_count': 4, 'alt_text': 'Larawan ng goma', 'read_aloud': 'goma'},
+            {'word': 'sanga', 'answer': 'sanga', 'letter_count': 5, 'alt_text': 'Larawan ng sanga', 'read_aloud': 'sanga'},
+        ],
+    },
 }
 
 # Each saved item points directly to its own workbook image file.  Keeping the

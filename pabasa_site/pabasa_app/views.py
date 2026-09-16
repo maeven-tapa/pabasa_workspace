@@ -12655,6 +12655,32 @@ def _normalized_prescribed_candidate(activity, item_index, value):
     return answer
 
 
+def _normalized_picture_word_write_state(raw_state):
+    """Return the small, server-owned resume state for picture-word writing."""
+    state = raw_state if isinstance(raw_state, dict) else {}
+    raw_attempts = state.get('attempts') if isinstance(state.get('attempts'), dict) else {}
+    try:
+        version = max(0, min(int(state.get('state_version') or 0), 1_000_000_000))
+        attempts = {
+            str(int(index)): max(0, min(int(value), 99))
+            for index, value in raw_attempts.items()
+            if str(index).isdigit()
+        }
+    except (TypeError, ValueError):
+        raise ValueError('Invalid writing activity state.')
+    return {'attempts': attempts, 'state_version': version, 'started': bool(state.get('started'))}
+
+
+def _normalized_picture_word_write_answer(value):
+    """Workbook words are exact after trimming and case normalization."""
+    answer = str(value or '').strip().lower()
+    if not answer:
+        raise ValueError('Maglagay ng sagot bago isumite.')
+    if len(answer) > 24:
+        raise ValueError('Masyadong mahaba ang sagot.')
+    return answer
+
+
 def _normalized_prescribed_matches(activity, raw_matches):
     """Validate the saved, correct-only pairs for a picture-word activity."""
     if not isinstance(raw_matches, dict):
@@ -12843,6 +12869,37 @@ def prescribed_activity_page(request, activity_key):
                          'matches': saved_matches, 'state': raw_state},
         }
         return render(request, 'pabasa_app/prescribed_word_search_page.html', context)
+    if activity['interaction'] == 'picture_word_write':
+        state = _normalized_picture_word_write_state(raw_state)
+        answers = raw_state.get('answers') if isinstance(raw_state.get('answers'), list) else []
+        # Saved answers are always revalidated against the immutable workbook
+        # configuration before they are sent back to a learner.
+        valid_answers = []
+        for index, answer in enumerate(answers[:len(activity['items'])]):
+            if answer != activity['items'][index]['answer']:
+                break
+            valid_answers.append(answer)
+        answers = valid_answers
+        context = _dashboard_context(request)
+        context['prescribed_activity_data'] = {
+            'activity_key': activity_key, 'session_key': activity['session_key'],
+            'session_number': activity['session_number'], 'lesson_number': activity['lesson_number'],
+            'gawain_number': activity['gawain_number'], 'title': activity['title'],
+            'description': activity['description'], 'instruction': activity['instruction'],
+            'competencies': activity['competencies'],
+            # The typed-answer field stays server-side; the read-aloud word is
+            # intentionally supplied only to drive the learner support button.
+            'items': [{'image_url': static(item['image_path']), 'alt_text': item['alt_text'],
+                       'letter_count': item['letter_count'], 'read_aloud': item['read_aloud']}
+                      for item in activity['items']],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'progress': {'current_index': len(answers), 'completed_items': len(answers),
+                         'correct_items': len(answers), 'total_items': len(activity['items']),
+                         'activity_completed': progress.activity_completed if progress else False,
+                         'answers': answers, 'state': state},
+        }
+        return render(request, 'pabasa_app/prescribed_picture_word_write_page.html', context)
     if activity['interaction'] == 'picture_word_match':
         try:
             matches = _normalized_prescribed_matches(activity, raw_state.get('matches') or {})
@@ -13113,6 +13170,70 @@ def prescribed_activity_progress(request, activity_key):
             return JsonResponse({'success': True, 'progress': {'current_index': progress.current_index, 'completed_items': progress.completed_items, 'correct_items': progress.correct_items, 'total_items': 6, 'activity_completed': False, 'state': payload}})
         except (TypeError, ValueError, json.JSONDecodeError):
             return JsonResponse({'success': False, 'error': 'Invalid activity progress.'}, status=400)
+    if activity['interaction'] == 'picture_word_write':
+        try:
+            data = json.loads(request.body or '{}')
+            if not isinstance(data, dict):
+                raise ValueError('Invalid activity data.')
+            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing_state = existing.state if existing and isinstance(existing.state, dict) else {}
+            saved_answers = existing_state.get('answers') if isinstance(existing_state.get('answers'), list) else []
+            answers = []
+            for index, answer in enumerate(saved_answers[:len(activity['items'])]):
+                if answer != activity['items'][index]['answer']:
+                    break
+                answers.append(answer)
+            state = _normalized_picture_word_write_state(existing_state)
+            client_state = _normalized_picture_word_write_state(data.get('state'))
+            if client_state['state_version'] < state['state_version']:
+                progress = existing
+                return JsonResponse({'success': True, 'accepted': None, 'progress': {
+                    'current_index': progress.current_index, 'completed_items': progress.completed_items,
+                    'correct_items': progress.correct_items, 'total_items': progress.total_items,
+                    'activity_completed': progress.activity_completed, 'answers': answers, 'state': state,
+                }})
+            state['started'] = state['started'] or client_state['started']
+            accepted = None
+            if 'candidate_answer' in data:
+                if existing and existing.activity_completed:
+                    raise ValueError('Natapos na ang gawaing ito.')
+                candidate = _normalized_picture_word_write_answer(data.get('candidate_answer'))
+                current = len(answers)
+                if current >= len(activity['items']):
+                    # A browser refresh or an interrupted final request can
+                    # leave all server-validated answers saved just before the
+                    # separate completion request.  Finalize only that exact,
+                    # fully-correct state instead of returning a terminal 400.
+                    if answers == [item['answer'] for item in activity['items']]:
+                        existing.activity_completed = True
+                        existing.current_index = existing.completed_items = existing.correct_items = existing.total_items = len(answers)
+                        existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
+                        return JsonResponse({'success': True, 'accepted': True, 'progress': {
+                            'current_index': existing.current_index, 'completed_items': existing.completed_items,
+                            'correct_items': existing.correct_items, 'total_items': existing.total_items,
+                            'activity_completed': True, 'answers': answers, 'state': state,
+                        }})
+                    raise ValueError('Natapos na ang lahat ng larawan.')
+                accepted = candidate == activity['items'][current]['answer']
+                if accepted:
+                    answers.append(candidate)
+                else:
+                    state['attempts'][str(current)] = state['attempts'].get(str(current), 0) + 1
+            state['state_version'] = state['state_version'] + 1
+            completed = len(answers)
+            progress, _ = StudentActivityProgress.objects.update_or_create(
+                student=student, activity_key=activity_key,
+                defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed,
+                          'total_items': len(activity['items']), 'activity_completed': False,
+                          'state': {'answers': answers, **state}},
+            )
+            return JsonResponse({'success': True, 'accepted': accepted, 'progress': {
+                'current_index': progress.current_index, 'completed_items': progress.completed_items,
+                'correct_items': progress.correct_items, 'total_items': progress.total_items,
+                'activity_completed': progress.activity_completed, 'answers': answers, 'state': state,
+            }})
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity['interaction'] == 'picture_word_match':
         try:
             data = json.loads(request.body or '{}')
@@ -13309,6 +13430,19 @@ def prescribed_activity_complete(request, activity_key):
         state['main_activity_completed'] = True; existing.state = state
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'state', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': 6, 'accuracy': 100.0}})
+    if activity['interaction'] == 'picture_word_write':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        state = existing.state if existing and isinstance(existing.state, dict) else {}
+        answers = state.get('answers') if isinstance(state.get('answers'), list) else []
+        expected = [item['answer'] for item in activity['items']]
+        if answers != expected:
+            return JsonResponse({'success': False, 'error': 'Sagutan muna nang tama ang lahat ng larawan.'}, status=400)
+        existing.activity_completed = True
+        existing.current_index = existing.completed_items = existing.correct_items = existing.total_items = len(expected)
+        existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
+        return JsonResponse({'success': True, 'result': {
+            'items_completed': len(expected), 'correct_items': len(expected), 'accuracy': 100.0,
+        }})
     if activity['interaction'] == 'picture_word_match':
         try:
             data = json.loads(request.body or '{}')
