@@ -1767,7 +1767,7 @@ document.addEventListener('DOMContentLoaded',()=>{setTimeout(()=>{const g=docume
 <script>
 document.addEventListener('DOMContentLoaded',function(){
   const grid=document.getElementById('sessionGrid'), activities=JSON.parse(document.getElementById('prescribed-activity-cards')?.textContent||'[]'), saved=JSON.parse(document.getElementById('prescribed-activity-progress')?.textContent||'{}'); if(!grid)return;
-  const routes={'lesson7-gawain2c':"{% url 'prescribed_activity_page' activity_key='lesson7-gawain2c' %}",'lesson-16-gawain-1':"{% url 'prescribed_activity_page' activity_key='lesson-16-gawain-1' %}",'lesson-16-gawain-2':"{% url 'prescribed_activity_page' activity_key='lesson-16-gawain-2' %}",'lesson-16-gawain-3':"{% url 'prescribed_activity_page' activity_key='lesson-16-gawain-3' %}",'session-4-gawain-1':"{% url 'session_4_gawain_1_page' %}",'session-4-gawain-2':"{% url 'lesson_4_gawain_2_page' %}",'session-4-gawain-3':"{% url 'session_4_gawain_3_page' %}",'session-4-gawain-4':"{% url 'session_4_gawain_4_page' %}"};
+  const routes={'lesson7-gawain3':"{% url 'prescribed_activity_page' activity_key='lesson7-gawain3' %}",'lesson7-gawain2b':"{% url 'prescribed_activity_page' activity_key='lesson7-gawain2b' %}",'lesson7-gawain2a':"{% url 'prescribed_activity_page' activity_key='lesson7-gawain2a' %}",'lesson7-gawain2c':"{% url 'prescribed_activity_page' activity_key='lesson7-gawain2c' %}",'lesson-16-gawain-1':"{% url 'prescribed_activity_page' activity_key='lesson-16-gawain-1' %}",'lesson-16-gawain-2':"{% url 'prescribed_activity_page' activity_key='lesson-16-gawain-2' %}",'lesson-16-gawain-3':"{% url 'prescribed_activity_page' activity_key='lesson-16-gawain-3' %}",'session-4-gawain-1':"{% url 'session_4_gawain_1_page' %}",'session-4-gawain-2':"{% url 'session_4_gawain_2_page' %}",'session-4-gawain-3':"{% url 'session_4_gawain_3_page' %}",'session-4-gawain-4':"{% url 'session_4_gawain_4_page' %}"};
   const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   activities.forEach(activity=>{const key=String(activity.activity_key||''),sessionKey=String(activity.session_key||''),route=activity.route_url||routes[key],progress=saved[key]||{},total=Number(progress.total_items)||Number(activity.total_items)||5,completed=Math.max(0,Math.min(total,Number(progress.completed_items)||0)),done=Boolean(progress.activity_completed)&&completed>=total;if(!route||grid.querySelector(`[data-prescribed-activity="${key}"]`))return;const card=document.createElement('article');card.className='pabasa-session-card unlocked lesson16-session-card'+(done?' completed':'');card.dataset.prescribedActivity=key;card.dataset.sessionKey=sessionKey;card.innerHTML=`<div class="session-visual"><div class="lesson16-card-visual"><img class="lesson16-card-image" src="${escape(activity.image_url)}" alt="Larawan ng ${escape(activity.title)}"><span class="lesson16-card-placeholder">Larawan<br>Idagdag</span></div></div><div class="session-content"><h4>Lesson ${escape(activity.lesson_number)}</h4><p>Gawain ${escape(activity.gawain_number)}</p><div>${escape(activity.title)}</div></div><div class="session-bottom"><div class="lesson16-progress"><i style="--lesson16-complete:${done?100:(completed/total)*100}%"></i></div><button type="button">${done?'✓ NATAPOS NA':(completed?'IPAGPATULOY':'SIMULAN')}</button></div>`;card.querySelector('.lesson16-card-image').addEventListener('error',event=>event.currentTarget.parentElement.classList.add('is-placeholder'),{once:true});if(!done)card.onclick=()=>{location.href=route};else card.querySelector('button').disabled=true;grid.appendChild(card)});
 });
@@ -1921,15 +1921,24 @@ document.addEventListener('DOMContentLoaded', function () {
         grid.dataset.sessionFoldersReady = 'true';
         grid.classList.remove('session-grouping-pending');
         const remaining = Array.from(grid.children).filter(card => card.classList.contains('pabasa-session-card'));
-        const groupedSessions = [['Session 2', 4], ['Session 3', 2]];
-        let offset = 0;
+        // Legacy cards predate data-session-key. Preserve their original
+        // placement from the catalog: Lesson 4–6 belong to Session 2 and
+        // Lesson 7 prescribed activities belong to Session 3.
+        remaining.forEach(function (card) {
+            if (card.dataset.sessionKey) return;
+            const text = card.textContent.replace(/\s+/g, ' ').trim();
+            if (/Lesson 4|Lesson 5|Lesson 6/.test(text)) card.dataset.sessionKey = 'session-2';
+            else if (/Lesson 7|Letrang Ii/.test(text)) card.dataset.sessionKey = 'session-3';
+        });
+        const groupedSessions = ['session-2', 'session-3'].map(function (key) {
+            return { key: key, name: key.replace('session-', 'Session ') };
+        });
         groupedSessions.forEach(function (group) {
-            const groupCards = remaining.slice(offset, offset + group[1]);
-            offset += group[1];
+            const groupCards = remaining.filter(card => card.dataset.sessionKey === group.key);
             if (!groupCards.length) return;
             const groupColumn = document.createElement('div');
             groupColumn.className = 'assessment-week-column session-folder-column';
-            groupColumn.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">📁</span><span class="week-folder-name">${group[0]}</span><span class="week-activity-count">${groupCards.length} activities</span></button><div class="week-activities-modal session-folder-modal" hidden><div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="${group[0]} activities"><div class="week-activities-header"><span class="week-activities-title">📁 ${group[0]} <small>— ${groupCards.length} activities</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div></div>`;
+            groupColumn.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">📁</span><span class="week-folder-name">${group.name}</span><span class="week-activity-count">${groupCards.length} activities</span></button><div class="week-activities-modal session-folder-modal" hidden><div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="${group.name} activities"><div class="week-activities-header"><span class="week-activities-title">📁 ${group.name} <small>— ${groupCards.length} activities</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div></div>`;
             const groupModal = groupColumn.querySelector('.session-folder-modal');
             groupModal.classList.add('aking-aralin-session-modal');
             groupCards.forEach(card => groupModal.querySelector('.assessment-week-cards').appendChild(card));

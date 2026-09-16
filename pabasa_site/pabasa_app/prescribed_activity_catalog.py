@@ -25,9 +25,57 @@ LESSON_16_IMAGE_PATHS = {
 
 PRESCRIBED_ACTIVITIES = {
     'session-4-gawain-1': {'activity_key': 'session-4-gawain-1', 'session_number': 4, 'lesson_number': '10, 11, at 12', 'gawain_number': 1, 'title': 'Gawain 1: Tunog ng mga Letra', 'route_name': 'session_4_gawain_1_page', 'total_items': 4, 'interaction': 'letter_sound', 'items': [{'word': 'Tunog ng mga Letra', 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'}]},
-    'session-4-gawain-2': {'activity_key': 'session-4-gawain-2', 'session_number': 4, 'lesson_number': '10, 11, at 12', 'gawain_number': 2, 'title': 'Gawain 2: Pagsamahin ang mga Tunog', 'route_name': 'lesson_4_gawain_2_page', 'total_items': 4, 'interaction': 'syllable_blending', 'items': [{'word': 'Pagsamahin ang mga Tunog', 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'}]},
+    'session-4-gawain-2': {'activity_key': 'session-4-gawain-2', 'session_number': 4, 'lesson_number': '10, 11, at 12', 'gawain_number': 2, 'title': 'Gawain 2: Pagsamahin ang mga Tunog', 'route_name': 'session_4_gawain_2_page', 'total_items': 4, 'interaction': 'syllable_blending', 'items': [{'word': 'Pagsamahin ang mga Tunog', 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'}]},
     'session-4-gawain-3': {'activity_key': 'session-4-gawain-3', 'session_number': 4, 'lesson_number': '10, 11, at 12', 'gawain_number': 3, 'title': 'Gawain 3: I-Decode ang mga Salita', 'route_name': 'session_4_gawain_3_page', 'total_items': 9, 'interaction': 'word_decoding', 'items': [{'word': 'I-Decode ang mga Salita', 'image_path': 'pabasa_app/images/word-decoding-bg.jpg'}]},
     'session-4-gawain-4': {'activity_key': 'session-4-gawain-4', 'session_number': 4, 'lesson_number': '10, 11, at 12', 'gawain_number': 4, 'title': 'Gawain 4: I-Decode ang mga Pangungusap', 'route_name': 'session_4_gawain_4_page', 'total_items': 4, 'interaction': 'sentence_decoding', 'items': [{'word': 'I-Decode ang mga Pangungusap', 'image_path': 'pabasa_app/images/word-decoding-bg.jpg'}]},
+    'lesson7-gawain3': {
+        'activity_key': 'lesson7-gawain3', 'session_number': 3, 'lesson_number': 7,
+        'gawain_number': 3, 'title': 'Gawain 3: Letrang Oo',
+        'instruction': 'Ikahon ang larawang may unang tunog na nasa unang kolum.',
+        'interaction': 'target_picture_selection_with_oral_reading',
+        'targets': [
+            {'letter': 'O', 'items': [{'word': 'ulap', 'image_path': 'pabasa_app/images/letrang_o/ulap.png'}, {'word': 'orasan', 'image_path': 'pabasa_app/images/letrang_o/orasan.png'}, {'word': 'ulan', 'image_path': 'pabasa_app/images/letrang_o/ulan.png'}], 'answer': 1},
+            {'letter': 'I', 'items': [{'word': 'ilaw', 'image_path': 'pabasa_app/images/letrang_o/ilaw.png'}, {'word': 'elepante', 'image_path': 'pabasa_app/images/letrang_o/elepante.png'}, {'word': 'elesi', 'image_path': 'pabasa_app/images/letrang_o/elesi.png'}], 'answer': 0},
+            {'letter': 'M', 'items': [{'word': 'manok', 'image_path': 'pabasa_app/images/letrang_o/manok.png'}, {'word': 'durian', 'image_path': 'pabasa_app/images/letrang_o/durian.png'}, {'word': 'ngipin', 'image_path': 'pabasa_app/images/letrang_o/ngipin.png'}], 'answer': 0},
+            {'letter': 'S', 'items': [{'word': 'kandila', 'image_path': 'pabasa_app/images/letrang_o/kandila.png'}, {'word': 'pamaypay', 'image_path': 'pabasa_app/images/letrang_o/pamaypay.png'}, {'word': 'sandok', 'image_path': 'pabasa_app/images/letrang_o/sandok.png'}], 'answer': 2},
+            {'letter': 'A', 'items': [{'word': 'isa', 'image_path': 'pabasa_app/images/letrang_o/isa.png'}, {'word': 'apoy', 'image_path': 'pabasa_app/images/letrang_o/apoy.png'}, {'word': 'okra', 'image_path': 'pabasa_app/images/letrang_o/okra.png'}], 'answer': 1},
+        ],
+        'items': [
+            {'word': 'ulap', 'image_path': 'pabasa_app/images/letrang_o/ulap.png'},
+            {'word': 'ilaw', 'image_path': 'pabasa_app/images/letrang_o/ilaw.png'},
+            {'word': 'manok', 'image_path': 'pabasa_app/images/letrang_o/manok.png'},
+            {'word': 'kandila', 'image_path': 'pabasa_app/images/letrang_o/kandila.png'},
+            {'word': 'isa', 'image_path': 'pabasa_app/images/letrang_o/isa.png'},
+        ],
+    },
+    'lesson7-gawain2b': {
+        'activity_key': 'lesson7-gawain2b', 'session_number': 3, 'lesson_number': 7,
+        'gawain_number': '2B', 'title': 'Gawain 2B: Letrang Ii',
+        'instruction': 'Bilugan ang larawang nagsisimula sa titik Ii.',
+        'interaction': 'picture_selection_with_oral_reading',
+        'items': [
+            {'word': 'ilog', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_3/ilog.png', 'target': True},
+            {'word': 'ipis', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_3/ipis.png', 'target': True},
+            {'word': 'ibon', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_3/ibon.png', 'target': True},
+            {'word': 'atis', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_3/atis.png', 'target': False},
+            {'word': 'mais', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_3/mais.png', 'target': False},
+            {'word': 'mangga', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_3/mangga.png', 'target': False},
+        ],
+    },
+    'lesson7-gawain2a': {
+        'activity_key': 'lesson7-gawain2a', 'session_number': 3, 'lesson_number': 7,
+        'gawain_number': '2A', 'title': 'Gawain 2A: Letrang Ii',
+        'instruction': 'Isulat ang i sa kahon ng bagay na nagsisimula sa /i/.',
+        'interaction': 'picture_handwriting_with_oral_reading',
+        'items': [
+            {'word': 'ilaw', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_2/ilaw.png', 'target': True},
+            {'word': 'itlog', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_2/itlog.png', 'target': True},
+            {'word': 'isa', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_2/isa.png', 'target': True},
+            {'word': 'bahay', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_2/bahay.png', 'target': False},
+            {'word': 'bola', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_2/bola.png', 'target': False},
+            {'word': 'suklay', 'image_path': 'pabasa_app/images/letrang_i/letrang_i_2/suklay.png', 'target': False},
+        ],
+    },
     'lesson7-gawain2c': {
         'activity_key': 'lesson7-gawain2c',
         'session_number': 3,
