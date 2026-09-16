@@ -12793,6 +12793,22 @@ def prescribed_activity_page(request, activity_key):
         context = _dashboard_context(request)
         context['lesson13_data'] = {'activity_key': activity_key, 'session_key': 'session-5', 'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'], 'title': activity['title'], 'instruction': activity['instruction'], 'competencies': activity['competencies'], 'items': [{'letter': i['letter'], 'word': i['word'], 'image_url': static(i['image_path'])} for i in activity['items']], 'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}), 'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}), 'progress': {'current_index': progress.current_index if progress else 0, 'completed_items': progress.completed_items if progress else 0, 'activity_completed': progress.activity_completed if progress else False, 'state': raw_state}}
         return render(request, 'pabasa_app/lesson_13_gawain_1_page.html', context)
+    if activity['interaction'] == 'word_search':
+        context = _dashboard_context(request)
+        saved_matches = raw_state.get('matches') if isinstance(raw_state.get('matches'), dict) else {}
+        context['prescribed_activity_data'] = {
+            'activity_key': activity_key, 'material_id': None,
+            'session_number': activity['session_number'], 'lesson_number': activity['lesson_number'],
+            'gawain_number': activity['gawain_number'], 'title': activity['title'],
+            'title_fil': activity.get('title_fil', ''), 'instruction': activity['instruction'],
+            'grid': activity['grid'], 'words': activity['words'],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'progress': {'completed_items': progress.completed_items if progress else 0,
+                         'total_items': len(activity['words']), 'activity_completed': progress.activity_completed if progress else False,
+                         'matches': saved_matches, 'state': raw_state},
+        }
+        return render(request, 'pabasa_app/prescribed_word_search_page.html', context)
     if activity['interaction'] == 'picture_word_match':
         try:
             matches = _normalized_prescribed_matches(activity, raw_state.get('matches') or {})
@@ -12856,6 +12872,28 @@ def prescribed_activity_progress(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity['interaction'] == 'word_search':
+        try:
+            data = json.loads(request.body or '{}'); state = data.get('state') if isinstance(data.get('state'), dict) else {}
+            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first(); old = existing.state if existing and isinstance(existing.state, dict) else {}
+            matches, reading, attempts = dict(old.get('matches') or {}), dict(old.get('reading') or {}), dict(old.get('attempts') or {})
+            idx = int(data.get('word_index', -1)); accepted = None
+            if 'reading_result' in data:
+                if idx < 0 or idx >= len(activity['words']): raise ValueError('Invalid word.')
+                reading[str(idx)] = bool(data.get('reading_result')); attempts[str(idx)] = min(3, int(attempts.get(str(idx), 0)) + 1)
+            if 'candidate_match' in data:
+                candidate = data['candidate_match']; idx = int(candidate.get('word_index', -1)); start, end = candidate.get('start'), candidate.get('end')
+                if idx < 0 or idx >= len(activity['words']) or not reading.get(str(idx)): raise ValueError('Basahin muna nang tama ang salita bago hanapin ito.')
+                sr, sc, er, ec = map(int, [start[0], start[1], end[0], end[1]]); dr, dc = er - sr, ec - sc; length = len(activity['words'][idx])
+                valid = 0 <= sr < 5 and 0 <= sc < 4 and 0 <= er < 5 and 0 <= ec < 4 and (dr == 0 or dc == 0 or abs(dr) == abs(dc)) and max(abs(dr), abs(dc)) == length - 1
+                letters = ''.join(activity['grid'][sr + (0 if dr == 0 else (1 if dr > 0 else -1))*n][sc + (0 if dc == 0 else (1 if dc > 0 else -1))*n] for n in range(length)) if valid else ''
+                accepted = letters == activity['words'][idx]
+                if accepted: matches[str(idx)] = {'start': [sr, sc], 'end': [er, ec]}
+            saved = {'activity_key': activity_key, 'matches': matches, 'reading': reading, 'attempts': attempts, 'state_version': int(old.get('state_version') or 0) + 1, **{k:v for k,v in state.items() if k == 'current_index'}}
+            completed = len(matches); progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed, 'total_items': len(activity['words']), 'activity_completed': False, 'state': saved})
+            return JsonResponse({'success': True, 'accepted': accepted, 'progress': {'completed_items': completed, 'total_items': len(activity['words']), 'activity_completed': False, 'matches': matches, 'state': saved}})
+        except (TypeError, ValueError, KeyError, IndexError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity_key == 'lesson-13-gawain-1':
         data = json.loads(request.body or '{}'); state = data.get('state') if isinstance(data.get('state'), dict) else {}
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first(); old = existing.state if existing and isinstance(existing.state, dict) else {}
@@ -13050,6 +13088,14 @@ def prescribed_activity_complete(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity['interaction'] == 'word_search':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        matches = existing.state.get('matches', {}) if existing and isinstance(existing.state, dict) else {}
+        total = len(activity['words'])
+        if len(matches) != total:
+            return JsonResponse({'success': False, 'error': 'Hanapin muna ang lahat ng salita.'}, status=400)
+        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': total, 'completed_items': total, 'correct_items': total, 'total_items': total, 'activity_completed': True, 'state': existing.state if existing else {'matches': matches}})
+        return JsonResponse({'success': True, 'result': {'correct_items': total, 'items_completed': total, 'accuracy': 100.0}})
     if activity_key == 'lesson-13-gawain-1':
         progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         if not progress or progress.completed_items < 4:
@@ -20112,6 +20158,7 @@ def course_teacher_view(request):
         'sound_detective_catalog': sound_detective_catalog(),
         'picture_word_catalog': _picture_word_catalog(),
         'prescribed_lesson_16_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 16],
+        'prescribed_lesson_26_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 26],
         'prescribed_lesson_13_activities': [PRESCRIBED_ACTIVITIES['lesson-13-gawain-1']],
     })
     return render(request, 'pabasa_app/courses.html', context)

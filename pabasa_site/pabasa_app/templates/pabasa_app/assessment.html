@@ -1982,6 +1982,22 @@ document.addEventListener('DOMContentLoaded', function () {
             lesson16Modal.onclick = event => { if (event.target === lesson16Modal) closeLesson16(); };
             grid.appendChild(lesson16Column);
         }
+        const lesson26Cards = Array.from(grid.children).filter(card => card.classList.contains('pabasa-session-card') && card.dataset.sessionKey === 'session-10');
+        if (lesson26Cards.length) {
+            const activityCount = lesson26Cards.length;
+            const lesson26Column = document.createElement('div');
+            lesson26Column.className = 'assessment-week-column session-folder-column';
+            lesson26Column.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">📁</span><span class="week-folder-name">Session 10</span><span class="week-activity-count">${activityCount} ${activityCount === 1 ? 'activity' : 'activities'}</span></button><div class="week-activities-modal session-folder-modal" hidden><div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="Session 10 activities"><div class="week-activities-header"><span class="week-activities-title">📁 Session 10 <small>— ${activityCount} ${activityCount === 1 ? 'activity' : 'activities'}</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div></div>`;
+            const lesson26Modal = lesson26Column.querySelector('.session-folder-modal');
+            lesson26Modal.classList.add('aking-aralin-session-modal');
+            lesson26Cards.forEach(card => lesson26Modal.querySelector('.assessment-week-cards').appendChild(card));
+            document.body.appendChild(lesson26Modal);
+            lesson26Column.querySelector('.assessment-week-folder').onclick = () => { lesson26Modal.hidden = false; document.body.style.overflow = 'hidden'; };
+            const closeLesson26 = () => { lesson26Modal.hidden = true; document.body.style.overflow = ''; };
+            lesson26Modal.querySelector('.week-activities-close').onclick = closeLesson26;
+            lesson26Modal.onclick = event => { if (event.target === lesson26Modal) closeLesson26(); };
+            grid.appendChild(lesson26Column);
+        }
         [5, 6, 7, 8, 9].forEach(function (sessionNumber) {
             const exists = Array.from(grid.querySelectorAll('.session-folder-column .week-folder-name')).some(function (label) {
                 return label.textContent.trim() === `Session ${sessionNumber}`;
@@ -1992,7 +2008,7 @@ document.addEventListener('DOMContentLoaded', function () {
             emptyColumn.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">📁</span><span class="week-folder-name">Session ${sessionNumber}</span><span class="week-activity-count">0 activities</span></button>`;
             grid.appendChild(emptyColumn);
         });
-        [10, 11, 12, 13, 14, 15].forEach(function (sessionNumber) {
+        [11, 12, 13, 14, 15].forEach(function (sessionNumber) {
             const folder = Array.from(grid.querySelectorAll('.session-folder-column')).find(function (column) {
                 return column.querySelector('.week-folder-name')?.textContent.trim() === `Session ${sessionNumber}`;
             });

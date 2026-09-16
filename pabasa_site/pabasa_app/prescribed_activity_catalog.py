@@ -37,6 +37,15 @@ PRESCRIBED_ACTIVITIES = {
             {'word': 'ilaw', 'answer': 'i', 'image_path': 'pabasa_app/images/letrang_o_4b/ilaw.png'},
         ],
     },
+    'lesson-26-gawain-1': {
+        'activity_key': 'lesson-26-gawain-1', 'session_number': 10, 'lesson_number': 26,
+        'gawain_number': 1, 'title': 'Word Search', 'title_fil': 'Hanap-Salita',
+        'instruction': 'Read the word on the left, then find it in the grid. Words may be placed horizontally, vertically, or diagonally.',
+        'interaction': 'word_search', 'total_items': 5,
+        'grid': [['c','a','t','h'], ['t','o','p','m'], ['a','t','a','a'], ['x','p','a','t'], ['h','a','t','f']],
+        'words': ['mat', 'top', 'tax', 'hat', 'cat'],
+        'items': [{'word': word, 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'} for word in ['mat', 'top', 'tax', 'hat', 'cat']],
+    },
     'lesson-13-gawain-1': {
         'activity_key': 'lesson-13-gawain-1',
         'session_number': 5,
