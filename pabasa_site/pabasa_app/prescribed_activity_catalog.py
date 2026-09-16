@@ -24,6 +24,26 @@ LESSON_16_IMAGE_PATHS = {
 
 
 PRESCRIBED_ACTIVITIES = {
+    'lesson7-gawain3': {
+        'activity_key': 'lesson7-gawain3', 'session_number': 3, 'lesson_number': 7,
+        'gawain_number': 3, 'title': 'Gawain 3: Letrang Oo',
+        'instruction': 'Ikahon ang larawang may unang tunog na nasa unang kolum.',
+        'interaction': 'target_picture_selection_with_oral_reading',
+        'targets': [
+            {'letter': 'O', 'items': [{'word': 'ulap', 'image_path': 'pabasa_app/images/letrang_o/ulap.png'}, {'word': 'orasan', 'image_path': 'pabasa_app/images/letrang_o/orasan.png'}, {'word': 'ulan', 'image_path': 'pabasa_app/images/letrang_o/ulan.png'}], 'answer': 1},
+            {'letter': 'I', 'items': [{'word': 'ilaw', 'image_path': 'pabasa_app/images/letrang_o/ilaw.png'}, {'word': 'elepante', 'image_path': 'pabasa_app/images/letrang_o/elepante.png'}, {'word': 'elesi', 'image_path': 'pabasa_app/images/letrang_o/elesi.png'}], 'answer': 0},
+            {'letter': 'M', 'items': [{'word': 'manok', 'image_path': 'pabasa_app/images/letrang_o/manok.png'}, {'word': 'durian', 'image_path': 'pabasa_app/images/letrang_o/durian.png'}, {'word': 'ngipin', 'image_path': 'pabasa_app/images/letrang_o/ngipin.png'}], 'answer': 0},
+            {'letter': 'S', 'items': [{'word': 'kandila', 'image_path': 'pabasa_app/images/letrang_o/kandila.png'}, {'word': 'pamaypay', 'image_path': 'pabasa_app/images/letrang_o/pamaypay.png'}, {'word': 'sandok', 'image_path': 'pabasa_app/images/letrang_o/sandok.png'}], 'answer': 2},
+            {'letter': 'A', 'items': [{'word': 'isa', 'image_path': 'pabasa_app/images/letrang_o/isa.png'}, {'word': 'apoy', 'image_path': 'pabasa_app/images/letrang_o/apoy.png'}, {'word': 'okra', 'image_path': 'pabasa_app/images/letrang_o/okra.png'}], 'answer': 1},
+        ],
+        'items': [
+            {'word': 'ulap', 'image_path': 'pabasa_app/images/letrang_o/ulap.png'},
+            {'word': 'ilaw', 'image_path': 'pabasa_app/images/letrang_o/ilaw.png'},
+            {'word': 'manok', 'image_path': 'pabasa_app/images/letrang_o/manok.png'},
+            {'word': 'kandila', 'image_path': 'pabasa_app/images/letrang_o/kandila.png'},
+            {'word': 'isa', 'image_path': 'pabasa_app/images/letrang_o/isa.png'},
+        ],
+    },
     'lesson7-gawain2b': {
         'activity_key': 'lesson7-gawain2b', 'session_number': 3, 'lesson_number': 7,
         'gawain_number': '2B', 'title': 'Gawain 2B: Letrang Ii',

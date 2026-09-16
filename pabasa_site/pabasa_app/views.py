@@ -12748,6 +12748,19 @@ def prescribed_activity_page(request, activity_key):
             'progress': {'completed_items': progress.completed_items if progress else 0, 'correct_items': progress.correct_items if progress else 0, 'activity_completed': progress.activity_completed if progress else False, 'state': raw_state},
         }
         return render(request, 'pabasa_app/lesson_7_gawain_2b_page.html', context)
+    if activity_key == 'lesson7-gawain3':
+        items = [item for target in activity['targets'] for item in target['items']]
+        context = _dashboard_context(request)
+        context['lesson7_gawain3_data'] = {
+            'activity_key': activity_key, 'session_key': 'session-3', 'title': activity['title'],
+            'instruction': activity['instruction'],
+            'targets': [{**target, 'items': [{**item, 'image_url': static(item['image_path'])} for item in target['items']]} for target in activity['targets']],
+            'items': [{**item, 'image_url': static(item['image_path'])} for item in items],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'progress': {'activity_completed': progress.activity_completed if progress else False, 'state': raw_state},
+        }
+        return render(request, 'pabasa_app/lesson_7_gawain_3_page.html', context)
     if activity['interaction'] == 'picture_word_match':
         try:
             matches = _normalized_prescribed_matches(activity, raw_state.get('matches') or {})
@@ -12817,6 +12830,12 @@ def prescribed_activity_progress(request, activity_key):
         old_state = old.state if old and isinstance(old.state, dict) else {}
         saved = {'activity_key': activity_key, 'current_phase': state.get('current_phase', old_state.get('current_phase', 'oral_reading')), 'current_reading_item': int(state.get('current_reading_item', old_state.get('current_reading_item', 0))), 'completed_reading_items': state.get('completed_reading_items', old_state.get('completed_reading_items', [])), 'read_attempts': int(state.get('read_attempts', old_state.get('read_attempts', 0))), 'listen_attempts': int(state.get('listen_attempts', old_state.get('listen_attempts', 0))), 'oral_reading_completed': bool(state.get('oral_reading_completed', old_state.get('oral_reading_completed', False))), 'selections': state.get('selections', old_state.get('selections', [])), 'correct_count': int(state.get('correct_count', old_state.get('correct_count', 0))), 'state_version': int(state.get('state_version') or 0)}
         progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': len(saved['selections']), 'completed_items': len(saved['selections']), 'correct_items': saved['correct_count'], 'total_items': 6, 'activity_completed': False, 'state': saved})
+        return JsonResponse({'success': True, 'progress': {'state': saved, 'completed_items': progress.completed_items, 'activity_completed': False}})
+    if activity_key == 'lesson7-gawain3':
+        data = json.loads(request.body or '{}'); state = data.get('state') if isinstance(data.get('state'), dict) else {}
+        old = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first(); old_state = old.state if old and isinstance(old.state, dict) else {}
+        saved = {'activity_key': activity_key, 'current_phase': state.get('current_phase', old_state.get('current_phase', 'oral_reading')), 'current_reading_item': int(state.get('current_reading_item', old_state.get('current_reading_item', 0))), 'completed_reading_items': state.get('completed_reading_items', old_state.get('completed_reading_items', [])), 'read_attempts': int(state.get('read_attempts', old_state.get('read_attempts', 0))), 'listen_attempts': int(state.get('listen_attempts', old_state.get('listen_attempts', 0))), 'oral_reading_completed': bool(state.get('oral_reading_completed', old_state.get('oral_reading_completed', False))), 'current_target': int(state.get('current_target', old_state.get('current_target', 0))), 'selections': state.get('selections', old_state.get('selections', {})), 'correct_count': int(state.get('correct_count', old_state.get('correct_count', 0))), 'state_version': int(state.get('state_version') or 0)}
+        progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': saved['current_target'], 'completed_items': saved['current_target'], 'correct_items': saved['correct_count'], 'total_items': 5, 'activity_completed': False, 'state': saved})
         return JsonResponse({'success': True, 'progress': {'state': saved, 'completed_items': progress.completed_items, 'activity_completed': False}})
     if activity_key == 'lesson7-gawain2c':
         try:
@@ -12948,6 +12967,13 @@ def prescribed_activity_complete(request, activity_key):
         existing.activity_completed = True; existing.current_index = existing.completed_items = existing.correct_items = 6
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': 6, 'accuracy': 100.0}})
+    if activity_key == 'lesson7-gawain3':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first(); state = existing.state if existing and isinstance(existing.state, dict) else {}
+        if not state.get('oral_reading_completed') or state.get('correct_count') != 5:
+            return JsonResponse({'success': False, 'error': 'Complete all targets first.'}, status=400)
+        existing.activity_completed = True; existing.current_index = existing.completed_items = existing.correct_items = 5
+        existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'updated_at'])
+        return JsonResponse({'success': True, 'result': {'items_completed': 5, 'accuracy': 100.0}})
     if activity_key == 'lesson7-gawain2c':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         if not existing or existing.completed_items < 3:
