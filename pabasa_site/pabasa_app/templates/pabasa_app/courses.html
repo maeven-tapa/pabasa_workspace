@@ -22674,4 +22674,50 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const picker = document.getElementById('prescribedActivityPicker');
+    if (!picker || picker.dataset.sessionFoldersReady === 'true') return;
+    picker.dataset.sessionFoldersReady = 'true';
+
+    const sessionFor = key => {
+        if (['gawain-1', 'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2'].includes(key)) return 1;
+        if (['lesson-4-gawain-1', 'lesson-4-gawain-2', 'lesson-5-gawain-1', 'lesson-6-gawain-1'].includes(key)) return 2;
+        if (key.startsWith('lesson-7-')) return 3;
+        if (key.startsWith('session-4-')) return 4;
+        if (key.startsWith('lesson-16-')) return 6;
+        return null;
+    };
+    const activities = [...picker.querySelectorAll(':scope > [data-prescribed-activity]')];
+    const folders = document.createElement('div');
+    folders.className = 'prescribed-session-folders';
+    folders.setAttribute('aria-label', 'ARAL Workbook sessions');
+    for (let number = 1; number <= 15; number += 1) {
+        const members = activities.filter(button => sessionFor(button.dataset.prescribedActivity) === number);
+        const column = document.createElement('div');
+        column.className = 'prescribed-session-folder';
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'prescribed-session-folder__button';
+        button.innerHTML = `<span class="prescribed-session-folder__icon" aria-hidden="true">📁</span><span><strong>Session ${number}</strong><small>${members.length} ${members.length === 1 ? 'activity' : 'activities'}</small></span>`;
+        const modal = document.createElement('div');
+        modal.className = 'prescribed-session-modal';
+        modal.hidden = true;
+        modal.innerHTML = `<div class="prescribed-session-modal__dialog" role="dialog" aria-modal="true" aria-label="Session ${number} activities"><div class="prescribed-session-modal__header"><strong>📁 Session ${number} <small>— ${members.length} activities</small></strong><button type="button" class="prescribed-session-modal__close" aria-label="Close">×</button></div><div class="prescribed-session-modal__list"></div></div>`;
+        const list = modal.querySelector('.prescribed-session-modal__list');
+        members.forEach(member => list.append(member));
+        button.addEventListener('click', () => { modal.hidden = false; document.body.style.overflow = 'hidden'; });
+        const close = () => { modal.hidden = true; document.body.style.overflow = ''; };
+        modal.querySelector('.prescribed-session-modal__close').addEventListener('click', close);
+        modal.addEventListener('click', event => { if (event.target === modal) close(); });
+        column.append(button, modal);
+        folders.append(column);
+    }
+    picker.replaceChildren(folders);
+    picker.classList.remove('prescribed-activity-picker__list');
+    const style = document.createElement('style');
+    style.textContent = `.prescribed-session-folders{display:grid;gap:.85rem;grid-template-columns:repeat(4,minmax(0,1fr));width:100%}@media(max-width:900px){.prescribed-session-folders{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:620px){.prescribed-session-folders{grid-template-columns:repeat(2,minmax(0,1fr))}}.prescribed-session-folder__button{align-items:center;background:linear-gradient(145deg,#f7fbef,#fff9dd);border:1px solid #dce8ed;border-radius:1rem;color:#244354;cursor:pointer;display:flex;gap:.7rem;min-height:120px;padding:1rem;text-align:left;width:100%}.prescribed-session-folder__button:hover,.prescribed-session-folder__button:focus-visible{border-color:#2a7891;box-shadow:0 0 0 3px rgba(42,120,145,.12);outline:0}.prescribed-session-folder__icon{font-size:2rem}.prescribed-session-folder__button strong,.prescribed-session-folder__button small{display:block}.prescribed-session-folder__button strong{color:#176078;font-size:1.05rem}.prescribed-session-folder__button small{color:#71828a;margin-top:.2rem}.prescribed-session-modal{background:rgba(15,35,48,.42);inset:0;position:fixed;z-index:1060}.prescribed-session-modal__dialog{background:#fff;border-radius:1.25rem;inset:4vh 4vw;overflow:auto;padding:1rem;position:absolute}.prescribed-session-modal__header{align-items:center;border-bottom:1px solid #dce8ed;color:#176078;display:flex;justify-content:space-between;margin-bottom:1rem;padding:.25rem .25rem 1rem}.prescribed-session-modal__header small{color:#71828a;font-weight:600}.prescribed-session-modal__close{background:#fff3c7;border:1px solid #e3c96a;border-radius:.7rem;color:#176078;font-size:1.5rem;height:2.4rem;line-height:1;width:2.4rem}.prescribed-session-modal__list{display:grid;gap:.85rem;grid-template-columns:repeat(auto-fill,minmax(160px,210px))}.prescribed-session-modal__list .prescribed-activity-option{display:flex}.prescribed-session-modal__list .prescribed-activity-option{aspect-ratio:.86 / 1}`;
+    document.head.appendChild(style);
+});
+</script>
 {% endblock %}
