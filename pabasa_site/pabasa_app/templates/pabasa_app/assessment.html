@@ -1767,7 +1767,8 @@ document.addEventListener('DOMContentLoaded',()=>{setTimeout(()=>{const g=docume
 <script>
 document.addEventListener('DOMContentLoaded',function(){
   const grid=document.getElementById('sessionGrid'), activities=JSON.parse(document.getElementById('prescribed-activity-cards')?.textContent||'[]'), saved=JSON.parse(document.getElementById('prescribed-activity-progress')?.textContent||'{}'); if(!grid)return;
-  const routes={'lesson7-gawain4':"{% url 'prescribed_activity_page' activity_key='lesson7-gawain4' %}",'lesson-13-gawain-1':"{% url 'prescribed_activity_page' activity_key='lesson-13-gawain-1' %}",'lesson7-gawain3':"{% url 'prescribed_activity_page' activity_key='lesson7-gawain3' %}",'lesson7-gawain2b':"{% url 'prescribed_activity_page' activity_key='lesson7-gawain2b' %}",'lesson7-gawain2a':"{% url 'prescribed_activity_page' activity_key='lesson7-gawain2a' %}",'lesson7-gawain2c':"{% url 'prescribed_activity_page' activity_key='lesson7-gawain2c' %}",'lesson-16-gawain-1':"{% url 'prescribed_activity_page' activity_key='lesson-16-gawain-1' %}",'lesson-16-gawain-2':"{% url 'prescribed_activity_page' activity_key='lesson-16-gawain-2' %}",'lesson-16-gawain-3':"{% url 'prescribed_activity_page' activity_key='lesson-16-gawain-3' %}",'session-4-gawain-1':"{% url 'session_4_gawain_1_page' %}",'session-4-gawain-2':"{% url 'session_4_gawain_2_page' %}",'session-4-gawain-3':"{% url 'session_4_gawain_3_page' %}",'session-4-gawain-4':"{% url 'session_4_gawain_4_page' %}"};
+  const routes={};
+  routes['lesson8-gawain1']="{% url 'prescribed_activity_page' activity_key='lesson8-gawain1' %}";
   routes['lesson7-gawain4a']="{% url 'prescribed_activity_page' activity_key='lesson7-gawain4a' %}";
   routes['lesson7-gawain4b']="{% url 'prescribed_activity_page' activity_key='lesson7-gawain4b' %}";
   const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

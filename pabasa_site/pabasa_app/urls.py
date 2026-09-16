@@ -127,6 +127,11 @@ urlpatterns = [
         name='prescribed_activity_page',
     ),
     path(
+        'dashboard/assessment/activity/lesson-8/gawain-1/',
+        views.lesson8_gawain1_page,
+        name='lesson8_gawain1_page',
+    ),
+    path(
         'api/dashboard/assessment/activity/prescribed/<slug:activity_key>/progress/',
         views.prescribed_activity_progress,
         name='prescribed_activity_progress',

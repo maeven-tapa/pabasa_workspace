@@ -80,6 +80,16 @@ PRESCRIBED_ACTIVITIES = {
             {'word': 'Oo', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_o/orasan.png'},
         ],
     },
+    'lesson8-gawain1': {
+        'activity_key': 'lesson8-gawain1', 'session_key': 'session-3', 'session_number': 3, 'lesson_number': 8,
+        'gawain_number': 1, 'title': 'GAWAIN 1: Letrang Ee', 'instruction': 'Magsanay Magsulat',
+        'interaction': 'handwriting',
+        'items': [
+            {'word': 'Ee', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_e/gawain_1a/elepante.png'},
+            {'word': 'Ee', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_e/gawain_1a/eroplano.png'},
+            {'word': 'Ee', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_e/gawain_1a/espada.png'},
+        ],
+    },
     'lesson7-gawain3': {
         'activity_key': 'lesson7-gawain3', 'session_number': 3, 'lesson_number': 7,
         'gawain_number': 3, 'title': 'Gawain 3: Letrang Oo',
