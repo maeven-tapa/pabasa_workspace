@@ -12791,7 +12791,12 @@ def prescribed_activity_page(request, activity_key):
         return render(request, 'pabasa_app/lesson_7_gawain_3_page.html', context)
     if activity_key == 'lesson-13-gawain-1':
         context = _dashboard_context(request)
+        # current_item is the canonical zero-based item; current_index is the
+        # legacy completed-count field and may be one step ahead.
+        lesson13_current_item = raw_state.get('current_item') if isinstance(raw_state.get('current_item'), int) else (progress.current_index if progress else 0)
+        lesson13_current_item = max(0, min(len(activity['items']) - 1, lesson13_current_item))
         context['lesson13_data'] = {'activity_key': activity_key, 'session_key': 'session-5', 'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'], 'title': activity['title'], 'instruction': activity['instruction'], 'competencies': activity['competencies'], 'items': [{'letter': i['letter'], 'word': i['word'], 'image_url': static(i['image_path'])} for i in activity['items']], 'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}), 'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}), 'progress': {'current_index': progress.current_index if progress else 0, 'completed_items': progress.completed_items if progress else 0, 'activity_completed': progress.activity_completed if progress else False, 'state': raw_state}}
+        context['lesson13_data']['progress']['current_index'] = lesson13_current_item
         return render(request, 'pabasa_app/lesson_13_gawain_1_page.html', context)
     if activity['interaction'] == 'word_search':
         context = _dashboard_context(request)
