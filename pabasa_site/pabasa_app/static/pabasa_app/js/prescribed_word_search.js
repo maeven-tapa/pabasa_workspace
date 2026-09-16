@@ -81,7 +81,7 @@
     try {
       const response = await fetch(data.read_aloud_url, {
         method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrf(), 'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({target_text: textToSpeak, language: 'English'}),
+        body: new URLSearchParams({target_text: textToSpeak, language: 'English', lesson_tts_key: 'lesson-26-gawain-1'}),
       });
       const result = await response.json();
       if (!response.ok || !result.success || !result.audio_content) throw new Error(result.error || 'Could not play the audio. Please try again.');

@@ -137,7 +137,7 @@
     const buttons = app.querySelectorAll('button'); buttons.forEach(button => { button.disabled = true; });
     const status = document.getElementById('status'), previousStatus = status?.textContent; if (status) status.textContent = 'Playing audio…';
     try {
-      const response = await fetch(data.read_aloud_url, {method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf(),'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({target_text:text,language:'English'})});
+      const response = await fetch(data.read_aloud_url, {method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf(),'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({target_text:text,language:'English',lesson_tts_key:'lesson-26-gawain-2'})});
       const result = await response.json();
       if (!response.ok || !result.success || !result.audio_content) throw new Error(result.error || 'Could not play audio. Try again.');
       const bytes = Uint8Array.from(atob(result.audio_content), character => character.charCodeAt(0));

@@ -12988,7 +12988,7 @@ def prescribed_activity_page(request, activity_key):
             'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
             'title': activity['title'], 'instruction': activity['instruction'],
             'items': [{'id': item['id'], 'before': item['before'], 'after': item['after'],
-                       'word_length': len(item['answer']), 'image_url': static(item['image_path'])}
+                       'word_length': len(item['answer']), 'tts_word': item['answer'], 'image_url': static(item['image_path'])}
                       for item in activity['items']],
             'recognition_hints': ' '.join(item['answer'] for item in activity['items']),
             'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
@@ -12997,7 +12997,12 @@ def prescribed_activity_page(request, activity_key):
                          'total_items': len(activity['items']), 'activity_completed': progress.activity_completed if progress else False,
                          'state': raw_state},
         }
-        return render(request, 'pabasa_app/prescribed_oral_sentence_blank_page.html', context)
+        if activity_key == 'lesson-29-gawain-1':
+            context['prescribed_activity_data']['read_aloud_url'] = reverse('reading_read_aloud_api')
+            context['prescribed_activity_data']['transcribe_url'] = reverse('reading_transcribe_api')
+        template = ('pabasa_app/prescribed_oral_sentence_blank_lesson29_activity1_page.html'
+                    if activity_key == 'lesson-29-gawain-1' else 'pabasa_app/prescribed_oral_sentence_blank_page.html')
+        return render(request, template, context)
     if activity['interaction'] == 'spot_word_oral':
         context = _dashboard_context(request)
         context['prescribed_activity_data'] = {
@@ -13011,7 +13016,11 @@ def prescribed_activity_page(request, activity_key):
                          'total_items': len(activity['words']), 'activity_completed': progress.activity_completed if progress else False,
                          'state': raw_state},
         }
-        return render(request, 'pabasa_app/prescribed_spot_word_page.html', context)
+        if activity_key == 'lesson-29-gawain-2':
+            context['prescribed_activity_data']['read_aloud_url'] = reverse('reading_read_aloud_api')
+        template = ('pabasa_app/prescribed_spot_word_lesson29_activity2_page.html'
+                    if activity_key == 'lesson-29-gawain-2' else 'pabasa_app/prescribed_spot_word_page.html')
+        return render(request, template, context)
     if activity['interaction'] == 'word_identifying_oral':
         context = _dashboard_context(request)
         context['prescribed_activity_data'] = {
@@ -13487,17 +13496,22 @@ def prescribed_activity_progress(request, activity_key):
     if activity['interaction'] == 'oral_sentence_blank':
         try:
             data = json.loads(request.body or '{}')
+            progress_query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            if activity_key == 'lesson-29-gawain-1' and data.get('reset') is True:
+                progress_query.delete()
+                return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
             if data.get('action') != 'answer':
                 raise ValueError('Invalid activity action.')
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = progress_query.first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             total = len(activity['items'])
             index = max(0, min(total, int(old.get('current_item', 0))))
             if index >= total or int(data.get('item_index', -1)) != index:
                 raise ValueError('This item is no longer current.')
             item = activity['items'][index]
-            heard = re.sub(r'[^a-z]', '', str(data.get('heard', '')).lower())
             target = item['answer'].lower()
+            heard_words = re.findall(r'[a-z]+', str(data.get('heard', '')).lower())
+            heard = target if target in heard_words else ''.join(heard_words)
             accepted = heard == target
             attempts = max(0, int(old.get('attempts', 0)))
             hint_length = max(0, min(len(target), int(old.get('hint_length', 0))))
@@ -13535,7 +13549,11 @@ def prescribed_activity_progress(request, activity_key):
         try:
             data = json.loads(request.body or '{}')
             action = data.get('action')
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            progress_query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            if activity_key == 'lesson-29-gawain-2' and data.get('reset') is True:
+                progress_query.delete()
+                return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
+            existing = progress_query.first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             words = activity['words']
             total = len(words)
@@ -16940,6 +16958,7 @@ def reading_read_aloud_api(request):
     language = (request.POST.get('language') or '').strip()
     tts_profile = (request.POST.get('tts_profile') or '').strip().lower()
     prescribed_key = (request.POST.get('prescribed_activity_key') or '').strip()
+    lesson_tts_key = (request.POST.get('lesson_tts_key') or '').strip()
     language_code = 'fil-PH' if prescribed_key and prescribed_activity(prescribed_key) else language_code_for(language, mode)
     api_key = getattr(settings, 'GOOGLE_STT_API_KEY', '').strip()
     credentials_file = getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', None)
@@ -16950,6 +16969,11 @@ def reading_read_aloud_api(request):
         # Hunt uses the same clear female Assessment voice at a slower teaching
         # pace so young readers can hear each sound. Assessment keeps its defaults.
         tts_options = ({'voice_gender': 'FEMALE'} if prescribed_key and prescribed_activity(prescribed_key)
+                       else {'voice_gender': 'MALE'} if lesson_tts_key in {
+                           'lesson-26-gawain-1', 'lesson-26-gawain-2', 'lesson-27-gawain-1',
+                           'lesson-28-gawain-1', 'lesson-28-gawain-2',
+                           'lesson-29-gawain-1', 'lesson-29-gawain-2',
+                       }
                        else {'voice_gender': 'MALE'} if tts_profile == 'correspondence'
                        else {'speaking_rate': 0.80, 'prosody_rate': '82%'} if tts_profile == 'hunt'
                        else {'speaking_rate': 1.0, 'prosody_rate': '100%'} if tts_profile == 'crla'

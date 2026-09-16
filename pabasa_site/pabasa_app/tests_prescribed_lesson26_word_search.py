@@ -49,6 +49,10 @@ class PrescribedLesson26WordSearchTests(TestCase):
         self.lesson28_activity2_key = 'lesson-28-gawain-2'
         self.lesson28_activity1_progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': self.lesson28_activity1_key})
         self.lesson28_activity2_progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': self.lesson28_activity2_key})
+        self.lesson29_activity1_key = 'lesson-29-gawain-1'
+        self.lesson29_activity2_key = 'lesson-29-gawain-2'
+        self.lesson29_activity1_progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': self.lesson29_activity1_key})
+        self.lesson29_activity2_progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': self.lesson29_activity2_key})
 
     def test_activity_page_exposes_existing_english_transcription_route(self):
         response = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': self.activity_key}))
@@ -212,3 +216,31 @@ class PrescribedLesson26WordSearchTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()['accepted'])
+
+    def test_lesson29_activities_use_dedicated_english_ui_and_google_speech_routes(self):
+        activity1 = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': self.lesson29_activity1_key}))
+        self.assertEqual(activity1.status_code, 200)
+        self.assertTemplateUsed(activity1, 'pabasa_app/prescribed_oral_sentence_blank_lesson29_activity1_page.html')
+        self.assertEqual(activity1.context['prescribed_activity_data']['read_aloud_url'], reverse('reading_read_aloud_api'))
+        self.assertEqual(activity1.context['prescribed_activity_data']['transcribe_url'], reverse('reading_transcribe_api'))
+        activity2 = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': self.lesson29_activity2_key}))
+        self.assertEqual(activity2.status_code, 200)
+        self.assertTemplateUsed(activity2, 'pabasa_app/prescribed_spot_word_lesson29_activity2_page.html')
+        self.assertEqual(activity2.context['prescribed_activity_data']['read_aloud_url'], reverse('reading_read_aloud_api'))
+        for script_name in ('prescribed_oral_sentence_blank_lesson29_activity1.js', 'prescribed_spot_word_lesson29_activity2.js'):
+            script = Path(settings.BASE_DIR, 'pabasa_app/static/pabasa_app/js', script_name).read_text(encoding='utf-8')
+            self.assertIn("language:'English'", script)
+            self.assertNotIn('speechSynthesis', script)
+            self.assertIn('{reset:true}', script)
+
+    def test_lesson29_back_reset_clears_only_its_activity_progress(self):
+        for key, url in ((self.lesson29_activity1_key, self.lesson29_activity1_progress_url),
+                         (self.lesson29_activity2_key, self.lesson29_activity2_progress_url)):
+            progress = StudentActivityProgress.objects.create(
+                student=self.student, activity_key=key, current_index=1, completed_items=1,
+                total_items=5, state={'current_item': 1, 'phase': 'answering'},
+            )
+            response = self.client.post(url, data=json.dumps({'reset': True}), content_type='application/json')
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.json()['success'])
+            self.assertFalse(StudentActivityProgress.objects.filter(pk=progress.pk).exists())

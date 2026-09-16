@@ -69,7 +69,7 @@
     const status = document.getElementById('status'), oldStatus = status?.textContent;
     if (status) status.textContent = 'Playing audio…';
     try {
-      const response = await fetch(data.read_aloud_url, {method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf(),'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({target_text:text,language:'English'})});
+      const response = await fetch(data.read_aloud_url, {method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf(),'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({target_text:text,language:'English',lesson_tts_key:'lesson-27-gawain-1'})});
       const result = await responseJson(response, 'Read-aloud service');
       if (!response.ok || !result.success || !result.audio_content) throw new Error(result.error || 'Could not play audio. Try again.');
       const bytes = Uint8Array.from(atob(result.audio_content), char => char.charCodeAt(0));
