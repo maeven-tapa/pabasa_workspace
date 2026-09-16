@@ -13080,7 +13080,12 @@ def prescribed_activity_page(request, activity_key):
             'progress': {'completed_items': progress.completed_items if progress else 0, 'total_items': len(items),
                          'activity_completed': progress.activity_completed if progress else False, 'state': raw_state},
         }
-        return render(request, 'pabasa_app/prescribed_rhyming_verses_page.html', context)
+        if activity_key == 'lesson-27-gawain-1':
+            context['prescribed_activity_data']['read_aloud_url'] = reverse('reading_read_aloud_api')
+            context['prescribed_activity_data']['transcribe_url'] = reverse('reading_transcribe_api')
+        template = ('pabasa_app/prescribed_rhyming_verses_lesson27_activity1_page.html'
+                    if activity_key == 'lesson-27-gawain-1' else 'pabasa_app/prescribed_rhyming_verses_page.html')
+        return render(request, template, context)
     if activity['interaction'] == 'fill_blank_sentence':
         context = _dashboard_context(request)
         context['prescribed_activity_data'] = {
@@ -13095,7 +13100,12 @@ def prescribed_activity_page(request, activity_key):
                          'total_items': len(activity['items']), 'activity_completed': progress.activity_completed if progress else False,
                          'state': raw_state},
         }
-        return render(request, 'pabasa_app/prescribed_fill_blank_page.html', context)
+        if activity_key == 'lesson-26-gawain-2':
+            context['prescribed_activity_data']['read_aloud_url'] = reverse('reading_read_aloud_api')
+            context['prescribed_activity_data']['transcribe_url'] = reverse('reading_transcribe_api')
+        template = ('pabasa_app/prescribed_fill_blank_lesson26_activity2_page.html'
+                    if activity_key == 'lesson-26-gawain-2' else 'pabasa_app/prescribed_fill_blank_page.html')
+        return render(request, template, context)
     if activity_key == 'lesson-13-gawain-2':
         context = _dashboard_context(request)
         context['lesson13_gawain2_data'] = {
@@ -13177,11 +13187,13 @@ def prescribed_activity_page(request, activity_key):
             'grid': activity['grid'], 'words': activity['words'],
             'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
             'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'read_aloud_url': reverse('reading_read_aloud_api'),
+            'transcribe_url': reverse('reading_transcribe_api'),
             'progress': {'completed_items': progress.completed_items if progress else 0,
                          'total_items': len(activity['words']), 'activity_completed': progress.activity_completed if progress else False,
                          'matches': saved_matches, 'state': raw_state},
         }
-        return render(request, 'pabasa_app/prescribed_word_search_page.html', context)
+        return render(request, 'pabasa_app/prescribed_word_search_activity_page.html', context)
     if activity['interaction'] == 'picture_word_write':
         state = _normalized_picture_word_write_state(raw_state)
         answers = raw_state.get('answers') if isinstance(raw_state.get('answers'), list) else []
@@ -13659,7 +13671,11 @@ def prescribed_activity_progress(request, activity_key):
     if activity['interaction'] == 'rhyming_verses':
         try:
             data = json.loads(request.body or '{}'); action = data.get('action')
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            progress_query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            if activity_key == 'lesson-27-gawain-1' and isinstance(data, dict) and data.get('reset') is True:
+                progress_query.delete()
+                return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
+            existing = progress_query.first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             item_index = max(0, min(len(activity['items']) - 1, int(old.get('item_index', 0))))
             verse_index = max(0, min(4, int(old.get('verse_index', 0))))
@@ -13697,7 +13713,11 @@ def prescribed_activity_progress(request, activity_key):
             data = json.loads(request.body or '{}')
             if not isinstance(data, dict):
                 raise ValueError('Invalid activity data.')
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            progress_query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            if activity_key == 'lesson-26-gawain-2' and data.get('reset') is True:
+                progress_query.delete()
+                return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
+            existing = progress_query.first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             phase = old.get('phase', 'choices')
             choice_index = max(0, min(len(activity['choices']), int(old.get('choice_index', 0))))
@@ -13760,7 +13780,11 @@ def prescribed_activity_progress(request, activity_key):
     if activity['interaction'] == 'word_search':
         try:
             data = json.loads(request.body or '{}'); state = data.get('state') if isinstance(data.get('state'), dict) else {}
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first(); old = existing.state if existing and isinstance(existing.state, dict) else {}
+            progress_query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            if data.get('reset') is True:
+                progress_query.delete()
+                return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'matches': {}, 'state': {}}})
+            existing = progress_query.first(); old = existing.state if existing and isinstance(existing.state, dict) else {}
             matches, reading, attempts = dict(old.get('matches') or {}), dict(old.get('reading') or {}), dict(old.get('attempts') or {})
             idx = int(data.get('word_index', -1)); accepted = None
             if 'reading_result' in data:
