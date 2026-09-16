@@ -157,86 +157,10 @@ class PrescribedLesson16ActivityTests(TestCase):
                 'lesson-16-gawain-1': 'session-6',
                 'lesson-16-gawain-2': 'session-6',
                 'lesson-16-gawain-3': 'session-6',
-                'session-6-lesson-16-gawain-4': 'session-6',
             },
         )
 
-    def test_gawain_4_uses_the_verified_workbook_order_and_local_assets(self):
-        activity = prescribed_activity('session-6-lesson-16-gawain-4')
-        self.assertEqual(activity['session_key'], 'session-6')
-        self.assertEqual(activity['display_title'], 'Lesson 16: Gawain 4')
-        self.assertEqual(activity['competencies'], ['Phonics', 'Phonological Awareness', 'Vocabulary'])
-        self.assertEqual(activity['total_items'], 5)
-        self.assertEqual(
-            [(item['answer'], len(item['answer']), item['image_path']) for item in activity['items']],
-            [
-                ('gamot', 5, 'pabasa_app/images/lesson_16/gamot.png'),
-                ('bunga', 5, 'pabasa_app/images/lesson_16/bunga.png'),
-                # The existing panga file is the supplied workbook nguso art.
-                ('nguso', 5, 'pabasa_app/images/lesson_16/panga.png'),
-                ('goma', 4, 'pabasa_app/images/lesson_16/goma.png'),
-                ('sanga', 5, 'pabasa_app/images/lesson_16/sanga.png'),
-            ],
-        )
-        for item in activity['items']:
-            self.assertIsNotNone(finders.find(item['image_path']))
-
-    def test_gawain_4_hides_answers_resumes_and_completes_only_after_saved_items(self):
-        self.login_student()
-        key = 'session-6-lesson-16-gawain-4'
-        page_url = reverse('prescribed_activity_page', kwargs={'activity_key': key})
-        progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
-        complete_url = reverse('prescribed_activity_complete', kwargs={'activity_key': key})
-        page = self.client.get(page_url)
-        self.assertTemplateUsed(page, 'pabasa_app/prescribed_picture_word_write_page.html')
-        payload = page.context['prescribed_activity_data']
-        self.assertEqual([item['character_count'] for item in payload['items']], [5, 5, 5, 4, 5])
-        self.assertEqual([item['alt_text'] for item in payload['items']], [
-            'Larawan ng gamot', 'Larawan ng bunga', 'Larawan ng nguso',
-            'Larawan ng goma', 'Larawan ng sanga',
-        ])
-        self.assertNotIn('answer', payload['items'][0])
-
-        wrong = self.client.post(progress_url, data=json.dumps({
-            'candidate_answer': 'gamotx', 'state': {'write_attempts': 1, 'state_version': 1},
-        }), content_type='application/json')
-        self.assertEqual(wrong.status_code, 200)
-        self.assertFalse(wrong.json()['accepted'])
-        self.assertEqual(wrong.json()['progress']['completed_items'], 0)
-
-        for version, answer in enumerate(['GAMOT', 'bunga', 'NGUSO'], start=2):
-            response = self.client.post(progress_url, data=json.dumps({
-                'candidate_answer': answer,
-                'state': {'write_attempts': version, 'state_version': version},
-            }), content_type='application/json')
-            self.assertEqual(response.status_code, 200)
-            self.assertTrue(response.json()['accepted'])
-        saved = StudentActivityProgress.objects.get(student=self.student, activity_key=key)
-        self.assertEqual(saved.completed_items, 3)
-        self.assertFalse(saved.activity_completed)
-        resumed = self.client.get(page_url).context['prescribed_activity_data']
-        self.assertEqual(resumed['progress']['completed_items'], 3)
-        self.assertEqual(resumed['progress']['current_index'], 3)
-        self.assertNotIn('answers', resumed['progress'])
-        card_progress = self.client.get(reverse('assessment')).context['prescribed_activity_progress'][key]
-        self.assertEqual((card_progress['completed_items'], card_progress['total_items'], card_progress['activity_completed']), (3, 5, False))
-        self.assertEqual(self.client.post(complete_url, data='{}', content_type='application/json').status_code, 400)
-
-        for version, answer in enumerate(['goma', 'sanga'], start=5):
-            response = self.client.post(progress_url, data=json.dumps({
-                'candidate_answer': answer,
-                'state': {'write_attempts': version, 'state_version': version},
-            }), content_type='application/json')
-            self.assertTrue(response.json()['accepted'])
-        completed = self.client.post(complete_url, data='{}', content_type='application/json')
-        self.assertEqual(completed.status_code, 200)
-        saved.refresh_from_db()
-        self.assertTrue(saved.activity_completed)
-        self.assertEqual((saved.completed_items, saved.correct_items, saved.total_items), (5, 5, 5))
-        card_progress = self.client.get(reverse('assessment')).context['prescribed_activity_progress'][key]
-        self.assertEqual((card_progress['completed_items'], card_progress['total_items'], card_progress['activity_completed']), (5, 5, True))
-
-    def test_gawain_3_uses_the_workbook_word_bank_and_local_assets(self):
+    def test_gawain_3_uses_the_workbook_word_bank_and_placeholder_paths(self):
         activity = prescribed_activity('lesson-16-gawain-3')
         self.assertEqual(activity['interaction'], 'picture_word_match')
         self.assertEqual(activity['word_bank'], ['panga', 'gamot', 'sanga', 'bunga', 'goma'])
@@ -251,8 +175,6 @@ class PrescribedLesson16ActivityTests(TestCase):
                 'pabasa_app/images/lesson_16/gamot.png',
             ],
         )
-        for item in activity['items']:
-            self.assertIsNotNone(finders.find(item['image_path']))
 
     def test_gawain_3_hides_answers_from_the_student_page(self):
         self.login_student()
