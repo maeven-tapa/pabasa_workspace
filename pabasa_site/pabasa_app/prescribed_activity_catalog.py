@@ -377,6 +377,29 @@ PRESCRIBED_ACTIVITIES = {
             {'id': 'kariton', 'word': 'KARITON', 'stem': 'ka__ton', 'answer': 'ri', 'alt_text': 'Larawan ng kariton', 'image_path': 'pabasa_app/images/prescribed_gawain_6/Kariton.png'},
         ],
     },
+    'lesson-17-18-gawain-7': {
+        # Canonical workbook definition shared by the course preview, learner
+        # page and server-side answer validation.  Do not reorder either list.
+        'activity_key': 'lesson-17-18-gawain-7', 'session_key': 'session-6',
+        'session_number': 6, 'lesson_number': '17 at 18', 'gawain_number': 7,
+        'title': 'Ikabit ang Larawan sa Ngalan Nito',
+        'display_title': 'Lesson 17 at 18: Gawain 7',
+        'description': 'Basahin ang mga ngalan at ikabit ang bawat larawan sa tamang salita.',
+        'instruction': 'Basahin muna ang mga ngalan. Pagkatapos, ikabit ang bawat larawan sa tamang ngalan nito.',
+        'workbook_instruction': 'Ikabit na linya ang mga larawan mula sa kaliwa sa ngalan nila sa kanan.',
+        'teacher_guidance': 'Babasa muna ang mag-aaral ng bawat ngalan bago niya maikabit ang larawan sa tamang salita.',
+        'competencies': ['Phonics', 'Phonological Awareness', 'Vocabulary'],
+        'interaction': 'oral_then_picture_word_match', 'total_items': 10,
+        'thumbnail': 'pabasa_app/images/picture_word/prescribe_sets/Set B/Robot-Robot.png',
+        'word_bank': ['riles', 'puso', 'robot', 'payong', 'pitaka'],
+        'items': [
+            {'id': 'robot', 'word': 'robot', 'label': 'Robot', 'alt_text': 'Larawan ng robot', 'image_path': 'pabasa_app/images/picture_word/prescribe_sets/Set B/Robot-Robot.png'},
+            {'id': 'payong', 'word': 'payong', 'label': 'Payong', 'alt_text': 'Larawan ng payong', 'image_path': 'pabasa_app/images/picture_word/prescribe_sets/Set B/Umbrella-Payong.png'},
+            {'id': 'pitaka', 'word': 'pitaka', 'label': 'Pitaka', 'alt_text': 'Larawan ng pitaka', 'image_path': 'pabasa_app/images/picture_word/prescribe_sets/Set B/Wallet-Pitaka.png'},
+            {'id': 'riles', 'word': 'riles', 'label': 'Riles', 'alt_text': 'Larawan ng riles', 'image_path': 'pabasa_app/images/picture_word/prescribe_sets/Set B/Railway-Riles.png'},
+            {'id': 'puso', 'word': 'puso', 'label': 'Puso', 'alt_text': 'Larawan ng puso', 'image_path': 'pabasa_app/images/picture_word/prescribe_sets/Set B/Heart-Puso.png'},
+        ],
+    },
 }
 
 # Each saved item points directly to its own workbook image file.  Keeping the
