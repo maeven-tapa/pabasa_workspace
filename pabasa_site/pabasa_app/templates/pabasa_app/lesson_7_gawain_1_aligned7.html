@@ -3,10 +3,10 @@
 </style><script>
 setInterval(function(){
   const old=document.querySelector('.complete'), oldDone=document.getElementById('done');
-  if(!old||!oldDone||old.dataset.lesson7Refined)return;
-  old.dataset.lesson7Refined='1';
+  if(!old||!oldDone||old.dataset.lesson7CompletionBound)return;
+  old.dataset.lesson7CompletionBound='1';
   old.className='lesson7-completion';
   old.innerHTML='<div class="lesson7-completion-card"><div class="lesson7-completion-stars" aria-hidden="true">★ ★ ★</div><h1>Magaling!</h1><p>Natapos mo ang gawain!</p><div class="lesson7-completion-score">'+score+'<small>/ '+total+' tamang sagot</small></div><button class="done" id="done">TAPUSIN</button></div>';
-  document.getElementById('done').onclick=async function(){const b=this;b.disabled=true;b.textContent='Sine-save...';try{await save(true);location.href="{% url 'assessment' %}"}catch(e){b.disabled=false;b.textContent='TAPUSIN'}};
+  document.getElementById('done').onclick=async function(){const b=this;b.disabled=true;b.textContent='Sine-save...';try{await save(true);location.href="{% url 'assessment' %}"}catch(e){console.error('Lesson 7 completion save failed',e);b.disabled=false;b.textContent='TAPUSIN'}};
 },50);
 </script>
