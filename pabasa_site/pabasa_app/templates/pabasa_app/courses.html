@@ -8932,6 +8932,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             #session4Gawain2Preview.is-maximized .session4-gawain2-preview { flex:1 1 auto; }
                             @media (max-width:640px) { .session4-gawain2-grid { grid-template-columns:1fr; } .session4-gawain2-card { min-height:7.5rem; } .session4-gawain2-footer { grid-template-columns:1fr; } }
                         </style>
+                        {{ prescribed_lesson_16_activities|json_script:"prescribed-lesson-16-activities" }}
                         <div class="prescribed-activity-picker" aria-label="Prescribed activities">
                             <div class="small text-muted text-uppercase fw-semibold mb-2">ARAL Workbook activities</div>
                             <div class="prescribed-activity-picker__list" id="prescribedActivityPicker">
@@ -22648,6 +22649,29 @@ document.addEventListener('DOMContentLoaded', () => {
     picker.appendChild(preview);
     option.addEventListener('click', () => { picker.querySelectorAll('.prescribed-activity-option').forEach(b=>b.classList.remove('is-selected')); option.classList.add('is-selected'); preview.classList.add('is-maximized'); });
     preview.querySelector('.prescribed-preview-close').addEventListener('click', () => preview.classList.remove('is-maximized'));
+});
+</script>
+<style>
+.lesson16-thumb{display:grid!important;grid-template-columns:repeat(5,1fr)!important;gap:.1rem;padding:.3rem!important}.lesson16-thumb img,.lesson16-preview-image{display:block;object-fit:contain;width:100%}.lesson16-thumb img{height:62px}.lesson16-preview-sheet{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));padding:1.4rem}.lesson16-preview-item{align-items:center;border:1px solid #d9e8ec;border-radius:16px;display:grid;gap:.75rem;grid-template-columns:92px 1fr;padding:.8rem}.lesson16-preview-image{height:82px;width:92px}.lesson16-preview-item strong{color:#16465d}.lesson16-preview-answer{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.4rem}.lesson16-preview-answer span{border:1px solid #bddae1;border-radius:10px;padding:.28rem .52rem}.lesson16-preview-word{font-size:1.05rem}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const picker = document.getElementById('prescribedActivityPicker');
+    const source = document.getElementById('prescribed-lesson-16-activities');
+    if (!picker || !source || picker.querySelector('[data-prescribed-activity="lesson-16-gawain-1"]')) return;
+    let activities = [];
+    try { activities = JSON.parse(source.textContent || '[]'); } catch (error) { return; }
+    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    const imageUrl = item => `{% static 'pabasa_app/images/lesson_16/' %}${encodeURIComponent(String(item.word || '').toLowerCase())}.png`;
+    const image = item => `<img src="${imageUrl(item)}" alt="">`;
+    const previewMarkup = activity => `<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview"><i class="bi bi-x-lg"></i></button><div class="small text-uppercase text-muted fw-semibold">Session 6 · Lesson 16 · Gawain ${activity.gawain_number}</div><h5>${escapeHtml(activity.title)}</h5><p class="mb-0 text-muted">${escapeHtml(activity.instruction)}</p><p class="small text-muted mb-0 mt-2">Preview lamang ito. Awtomatikong available ang gawaing ito sa Assessment ng mga mag-aaral.</p></div><div class="lesson16-preview-sheet">${activity.items.map((item, index) => `<article class="lesson16-preview-item"><img class="lesson16-preview-image" src="${imageUrl(item)}" alt="Larawan ng ${escapeHtml(item.word)}"><div><strong>${index + 1}. ${escapeHtml(item.word)}</strong><div class="lesson16-preview-word">${'_'.repeat(String(item.answer || '').length)}${escapeHtml(item.stem)}</div>${activity.interaction === 'choice' ? `<div class="lesson16-preview-answer">${item.choices.map(choice => `<span>${escapeHtml(choice)}</span>`).join('')}</div>` : ''}</div></article>`).join('')}</div>`;
+    activities.forEach(activity => {
+        const option = document.createElement('button'); option.type = 'button'; option.className = 'prescribed-activity-option'; option.dataset.prescribedActivity = activity.activity_key; option.dataset.previewTarget = `preview-${activity.activity_key}`; option.setAttribute('aria-pressed', 'false');
+        option.innerHTML = `<span class="prescribed-activity-option__thumb lesson16-thumb" aria-hidden="true">${activity.items.map(image).join('')}</span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">${activity.gawain_number}</span><span><strong>Lesson 16 · Gawain ${activity.gawain_number}</strong><br><span class="small text-muted">${escapeHtml(activity.title)}</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>`;
+        const preview = document.createElement('div'); preview.className = 'prescribed-activity-preview'; preview.id = option.dataset.previewTarget; preview.dataset.prescribedPreview = activity.activity_key; preview.innerHTML = previewMarkup(activity); picker.append(option, preview);
+        option.addEventListener('click', () => { picker.querySelectorAll('[data-prescribed-activity]').forEach(button => { button.classList.toggle('is-selected', button === option); button.setAttribute('aria-pressed', String(button === option)); }); document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(open => open.classList.remove('is-maximized')); preview.classList.add('is-maximized'); });
+        preview.querySelector('.prescribed-preview-close').addEventListener('click', () => preview.classList.remove('is-maximized'));
+    });
 });
 </script>
 {% endblock %}

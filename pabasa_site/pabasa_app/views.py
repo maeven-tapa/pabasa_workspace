@@ -18,6 +18,7 @@ from django.contrib import messages
 from django.core.mail import send_mail
 from django.conf import settings
 from django.urls import reverse
+from django.templatetags.static import static
 from django.db import DatabaseError, IntegrityError, transaction, OperationalError, connection
 from django.db.models import Count, F, Prefetch, Q
 from django.utils.text import slugify
@@ -84,6 +85,7 @@ from .hunt_scoring import classify_speech
 from .syllable_blending import activity_catalog, build_activity, normalize_format
 from .clap_count_word_bank import score_displayed_words, word_bank_catalog, validate_configuration
 from .sound_detective import catalog as sound_detective_catalog, validate_configuration as validate_sound_detective
+from .prescribed_activity_catalog import PRESCRIBED_ACTIVITIES, prescribed_activity
 from .reader_classification import classify_student_account
 from .scoring import (
     ADAPTED_READING_LEVEL_DISCLAIMER,
@@ -11854,9 +11856,10 @@ def assessment(request):
             raise
 
     if stage == 'original':
+        prescribed_keys = tuple(PRESCRIBED_ACTIVITIES.keys())
         progress_rows = StudentActivityProgress.objects.filter(
             student_id=getattr(user, 'id', None),
-            activity_key__in=['lesson-1-gawain-1', 'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2', 'lesson-4-gawain-1', 'lesson-4-gawain-2', 'lesson-5-gawain-1', 'lesson-6-gawain-1', 'lesson-7-gawain-1'],
+            activity_key__in=['lesson-1-gawain-1', 'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2', 'lesson-4-gawain-1', 'lesson-4-gawain-2', 'lesson-5-gawain-1', 'lesson-6-gawain-1'],
         )
         context['aral_standalone_progress'] = {
             row.activity_key: {
@@ -11866,6 +11869,24 @@ def assessment(request):
                 'activity_completed': row.activity_completed,
             } for row in progress_rows
         }
+        context['prescribed_activity_progress'] = {
+            row.activity_key: {
+                'completed_items': row.completed_items,
+                'total_items': row.total_items,
+                'activity_completed': row.activity_completed,
+            }
+            for row in progress_rows if row.activity_key in prescribed_keys
+        }
+        context['prescribed_activity_cards'] = [
+            {
+                'activity_key': activity['activity_key'],
+                'lesson_number': activity['lesson_number'],
+                'gawain_number': activity['gawain_number'],
+                'title': activity['title'],
+                'image_url': static(activity['items'][0]['image_path']),
+            }
+            for activity in PRESCRIBED_ACTIVITIES.values()
+        ]
         try:
             logger.warning(
                 "DEBUG: RENDER ASSESSMENT TEMPLATE %s",
@@ -12569,6 +12590,192 @@ def _is_sentence_reading_template_material(material):
         for value in values
     }
     return bool({'sentence_reading', 'sentence_reading_practice'} & normalized)
+
+
+PRESCRIBED_RESULT_PREFIX = 'PRESCRIBED_ACTIVITY_RESULT:'
+
+
+def _normalized_prescribed_answers(activity, raw_answers):
+    items = activity.get('items') if isinstance(activity, dict) else []
+    answers = raw_answers if isinstance(raw_answers, list) else []
+    if len(answers) > len(items):
+        raise ValueError('Too many answers were submitted.')
+    normalized = []
+    for index, value in enumerate(answers):
+        answer = str(value or '').strip().lower()
+        item = items[index]
+        if not answer:
+            raise ValueError('Every completed item needs an answer.')
+        if activity.get('interaction') == 'choice' and answer not in item.get('choices', []):
+            raise ValueError('An answer is not one of the workbook choices.')
+        if len(answer) > 12:
+            raise ValueError('An answer is too long.')
+        normalized.append(answer)
+    return normalized
+
+
+def _normalized_prescribed_state(activity, raw_state, completed_items):
+    state = raw_state if isinstance(raw_state, dict) else {}
+    phase = str(state.get('phase') or 'oral').strip().lower()
+    if phase not in {'oral', 'written'} or completed_items >= len(activity['items']):
+        phase = 'oral'
+    oral_mode = str(state.get('oral_mode') or 'read').strip().lower()
+    if oral_mode not in {'read', 'aloud'}:
+        oral_mode = 'read'
+    try:
+        version = max(0, min(int(state.get('state_version') or 0), 1_000_000_000))
+        reading_attempts = max(0, min(int(state.get('reading_attempts') or 0), 3))
+        aloud_attempts = max(0, min(int(state.get('aloud_attempts') or 0), 3))
+        written_attempts = max(0, min(int(state.get('written_attempts') or 0), 3))
+    except (TypeError, ValueError):
+        raise ValueError('Invalid activity state.')
+    if phase == 'written':
+        oral_mode, reading_attempts, aloud_attempts = 'read', 0, 0
+    return {
+        'phase': phase, 'oral_mode': oral_mode, 'reading_attempts': reading_attempts,
+        'aloud_attempts': aloud_attempts, 'written_attempts': written_attempts,
+        'state_version': version,
+    }
+
+
+def _normalized_prescribed_candidate(activity, item_index, value):
+    if item_index >= len(activity['items']):
+        raise ValueError('All workbook items are already complete.')
+    answer = str(value or '').strip().lower()
+    item = activity['items'][item_index]
+    if not answer:
+        raise ValueError('Maglagay ng sagot bago isumite.')
+    if activity.get('interaction') == 'choice' and answer not in item.get('choices', []):
+        raise ValueError('Pumili ng isa sa mga pantig sa gawain.')
+    if len(answer) > 12:
+        raise ValueError('Masyadong mahaba ang sagot.')
+    return answer
+
+
+def _active_prescribed_student(request):
+    return User.objects.filter(
+        pk=request.session.get('user_id'), role='student', is_archived=False,
+        account_status='active',
+    ).first()
+
+
+@login_required(role='student')
+@xframe_options_sameorigin
+def prescribed_activity_page(request, activity_key):
+    activity = prescribed_activity(activity_key)
+    student = _active_prescribed_student(request)
+    if not activity or not student:
+        return redirect('assessment')
+    progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+    raw_state = progress.state if progress and isinstance(progress.state, dict) else {}
+    answers = raw_state.get('answers') if isinstance(raw_state.get('answers'), list) else []
+    context = _dashboard_context(request)
+    context['prescribed_activity_data'] = {
+        'activity_key': activity_key, 'material_id': None,
+        'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
+        'title': activity['title'], 'instruction': activity['instruction'],
+        'interaction': activity['interaction'],
+        'items': [{
+            'word': item['word'], 'stem': item['stem'], 'choices': item.get('choices', []),
+            'image_url': static(item['image_path']), 'blank_length': len(item['answer']),
+        } for item in activity['items']],
+        'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+        'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+        'progress': {
+            'current_index': progress.current_index if progress else 0,
+            'completed_items': progress.completed_items if progress else 0,
+            'correct_items': progress.correct_items if progress else 0,
+            'activity_completed': progress.activity_completed if progress else False,
+            'answers': answers,
+            'state': _normalized_prescribed_state(activity, raw_state, len(answers)),
+        },
+    }
+    return render(request, 'pabasa_app/prescribed_missing_syllable_page.html', context)
+
+
+@login_required(role='student')
+@csrf_protect
+@require_http_methods(['POST'])
+def prescribed_activity_progress(request, activity_key):
+    activity = prescribed_activity(activity_key)
+    student = _active_prescribed_student(request)
+    if not activity:
+        return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
+    if not student:
+        return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    try:
+        data = json.loads(request.body or '{}')
+        if not isinstance(data, dict):
+            raise ValueError('Invalid activity data.')
+        answers = _normalized_prescribed_answers(activity, data.get('answers'))
+        if any(answer != activity['items'][index]['answer'] for index, answer in enumerate(answers)):
+            raise ValueError('Complete the current workbook item before continuing.')
+        state = _normalized_prescribed_state(activity, data.get('state'), len(answers))
+        accepted = None
+        if 'candidate_answer' in data:
+            if state['phase'] != 'written':
+                raise ValueError('Basahin muna ang salita bago sagutan ang pantig.')
+            candidate = _normalized_prescribed_candidate(activity, len(answers), data.get('candidate_answer'))
+            accepted = candidate == activity['items'][len(answers)]['answer']
+            if accepted:
+                answers.append(candidate)
+                state.update({'phase': 'oral', 'oral_mode': 'read', 'reading_attempts': 0, 'aloud_attempts': 0, 'written_attempts': 0})
+        completed = len(answers)
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+
+    existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+    existing_state = existing.state if existing and isinstance(existing.state, dict) else {}
+    existing_version = int(existing_state.get('state_version') or 0)
+    if existing and (existing.activity_completed or existing.completed_items > completed or state['state_version'] < existing_version):
+        progress, accepted = existing, None
+    else:
+        progress, _ = StudentActivityProgress.objects.update_or_create(
+            student=student, activity_key=activity_key,
+            defaults={
+                'current_index': completed, 'completed_items': completed, 'correct_items': completed,
+                'total_items': len(activity['items']), 'activity_completed': False,
+                'state': {'answers': answers, **state},
+            },
+        )
+    saved_state = progress.state if isinstance(progress.state, dict) else {}
+    return JsonResponse({'success': True, 'accepted': accepted, 'progress': {
+        'current_index': progress.current_index, 'completed_items': progress.completed_items,
+        'correct_items': progress.correct_items, 'total_items': progress.total_items,
+        'activity_completed': progress.activity_completed,
+        'state': _normalized_prescribed_state(activity, saved_state, progress.completed_items),
+    }})
+
+
+@login_required(role='student')
+@csrf_protect
+@require_http_methods(['POST'])
+def prescribed_activity_complete(request, activity_key):
+    activity = prescribed_activity(activity_key)
+    student = _active_prescribed_student(request)
+    if not activity:
+        return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
+    if not student:
+        return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    try:
+        data = json.loads(request.body or '{}')
+        if not isinstance(data, dict):
+            raise ValueError('Invalid activity data.')
+        answers = _normalized_prescribed_answers(activity, data.get('answers'))
+        if len(answers) != len(activity['items']) or any(answer != activity['items'][index]['answer'] for index, answer in enumerate(answers)):
+            raise ValueError('Complete each workbook item correctly before finishing.')
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    total = len(activity['items'])
+    StudentActivityProgress.objects.update_or_create(
+        student=student, activity_key=activity_key,
+        defaults={
+            'current_index': total, 'completed_items': total, 'correct_items': total,
+            'total_items': total, 'activity_completed': True,
+            'state': {'answers': answers, 'phase': 'oral', 'oral_mode': 'read', 'reading_attempts': 0, 'aloud_attempts': 0, 'written_attempts': 0, 'state_version': 1_000_000_000},
+        },
+    )
+    return JsonResponse({'success': True, 'result': {'correct_items': total, 'items_completed': total, 'accuracy': 100.0}})
 
 
 ARAL_TEMPLATE_ACTIVITY_PAGES = {
@@ -19499,6 +19706,7 @@ def course_teacher_view(request):
         'clap_count_word_bank': word_bank_catalog(),
         'sound_detective_catalog': sound_detective_catalog(),
         'picture_word_catalog': _picture_word_catalog(),
+        'prescribed_lesson_16_activities': list(PRESCRIBED_ACTIVITIES.values()),
     })
     return render(request, 'pabasa_app/courses.html', context)
 
