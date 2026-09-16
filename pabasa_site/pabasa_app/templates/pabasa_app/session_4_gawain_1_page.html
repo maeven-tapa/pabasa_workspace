@@ -119,7 +119,7 @@
             };
             const stopRecording = () => { if (recorder && recorder.state === 'recording') recorder.stop(); };
             document.getElementById('modalBack').addEventListener('click', () => document.getElementById('completionModal').close());
-            document.getElementById('modalNext').addEventListener('click', async () => { await fetch('{% url "prescribed_activity_progress" activity_key="session-4-gawain-1" %}', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':document.cookie.match(/csrftoken=([^;]+)/)?.[1]||''}, body:JSON.stringify({completed_items:4})}); window.location.href = '{% url "lesson_4_gawain_2_page" %}'; });
+            document.getElementById('modalNext').addEventListener('click', async () => { await fetch('{% url "prescribed_activity_progress" activity_key="session-4-gawain-1" %}', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':document.cookie.match(/csrftoken=([^;]+)/)?.[1]||''}, body:JSON.stringify({completed_items:4})}); window.location.href = '{% url "session_4_gawain_2_page" %}'; });
             recordButton.addEventListener('click', () => { if (recorder?.state === 'recording') stopRecording(); else startRecording(); });
             renderProgress();
         })();

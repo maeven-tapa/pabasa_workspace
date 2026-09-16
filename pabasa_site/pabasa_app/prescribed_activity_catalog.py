@@ -24,6 +24,22 @@ LESSON_16_IMAGE_PATHS = {
 
 
 PRESCRIBED_ACTIVITIES = {
+    'lesson-13-gawain-1': {
+        'activity_key': 'lesson-13-gawain-1',
+        'session_number': 5,
+        'lesson_number': 13,
+        'gawain_number': 1,
+        'title': 'Sabihin ang tunog ng mga letra',
+        'instruction': 'Sabihin ang tunog ng mga letra sa ibaba. Lagyan ng tsek (✓) kung tama ang pagkakabigay ng tunog ng mag-aaral.',
+        'competencies': ['Phonics', 'Phonological Awareness'],
+        'interaction': 'teacher_letter_sound_check',
+        'items': [
+            {'letter': 'L', 'word': 'liyon', 'image_path': 'pabasa_app/images/alpabetong_pilipino/liyon.png'},
+            {'letter': 'l', 'word': 'liyon', 'image_path': 'pabasa_app/images/alpabetong_pilipino/liyon.png'},
+            {'letter': 'K', 'word': 'keso', 'image_path': 'pabasa_app/images/alpabetong_pilipino/cheese.png'},
+            {'letter': 'k', 'word': 'keso', 'image_path': 'pabasa_app/images/alpabetong_pilipino/cheese.png'},
+        ],
+    },
     'session-4-gawain-1': {'activity_key': 'session-4-gawain-1', 'session_number': 4, 'lesson_number': '10, 11, at 12', 'gawain_number': 1, 'title': 'Gawain 1: Tunog ng mga Letra', 'route_name': 'session_4_gawain_1_page', 'total_items': 4, 'interaction': 'letter_sound', 'items': [{'word': 'Tunog ng mga Letra', 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'}]},
     'session-4-gawain-2': {'activity_key': 'session-4-gawain-2', 'session_number': 4, 'lesson_number': '10, 11, at 12', 'gawain_number': 2, 'title': 'Gawain 2: Pagsamahin ang mga Tunog', 'route_name': 'session_4_gawain_2_page', 'total_items': 4, 'interaction': 'syllable_blending', 'items': [{'word': 'Pagsamahin ang mga Tunog', 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'}]},
     'session-4-gawain-3': {'activity_key': 'session-4-gawain-3', 'session_number': 4, 'lesson_number': '10, 11, at 12', 'gawain_number': 3, 'title': 'Gawain 3: I-Decode ang mga Salita', 'route_name': 'session_4_gawain_3_page', 'total_items': 9, 'interaction': 'word_decoding', 'items': [{'word': 'I-Decode ang mga Salita', 'image_path': 'pabasa_app/images/word-decoding-bg.jpg'}]},
