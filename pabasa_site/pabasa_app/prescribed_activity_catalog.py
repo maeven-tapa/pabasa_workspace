@@ -59,6 +59,31 @@ PRESCRIBED_ACTIVITIES = {
             {'id': 'sentence-4', 'parts': ['The ', ' was placed on the top of the shelf.'], 'answers': ['hat'], 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'},
         ],
     },
+    'lesson-27-gawain-1': {
+        'activity_key': 'lesson-27-gawain-1', 'session_number': 11, 'lesson_number': 27,
+        'gawain_number': 1, 'title': 'Rhyming Verses',
+        'instruction': 'Read the rhyming verses. Then choose the words that rhyme.',
+        'interaction': 'rhyming_verses', 'total_items': 4,
+        'items': [
+            {'id': 'verse-1', 'title': 'The Cat in the Hat', 'verses': ['The cat wore a hat,', 'He sat on a mat,', 'Next to a big, fluffy rat,', 'Who loved to chat with a fat bat'], 'rhyme_words': ['cat', 'hat', 'sat', 'mat', 'rat', 'chat', 'fat', 'bat'], 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'},
+            {'id': 'verse-2', 'title': 'The Funny Rat', 'verses': ['A silly little rat,', 'Danced with a playful bat,', 'They jumped on a mat,', 'And both got quite fat!'], 'rhyme_words': ['rat', 'bat', 'mat', 'fat'], 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'},
+            {'id': 'verse-3', 'title': 'Pat the Cat', 'verses': ['Pat the cat with a friendly pat,', 'He loves to play and chase his hat,', 'On a sunny day, he’ll sit and sat,', 'Watching the world with a cheerful chat.'], 'rhyme_words': ['pat', 'cat', 'pat', 'hat', 'sat', 'chat'], 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'},
+            {'id': 'verse-4', 'title': 'The Splat', 'verses': ['There was a loud splat on the mat,', 'A little creature fell from the hat,', 'Upside down was the silly cat,', 'Who laughed at the splash with a gentle pat.'], 'rhyme_words': ['splat', 'mat', 'hat', 'cat', 'pat'], 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'},
+        ],
+    },
+    'lesson-28-gawain-1': {
+        'activity_key': 'lesson-28-gawain-1', 'session_number': 12, 'lesson_number': 28,
+        'gawain_number': 1, 'title': 'Missing Letter',
+        'instruction': 'Write the missing letter.',
+        'interaction': 'missing_letter_image_oral', 'total_items': 5,
+        'items': [
+            {'id': 'sun', 'word': 'sun', 'stem': '__un', 'answer': 's', 'image_path': 'pabasa_app/images/lesson_28/sun.png'},
+            {'id': 'bell', 'word': 'bell', 'stem': '__ell', 'answer': 'b', 'image_path': 'pabasa_app/images/lesson_28/bell.png'},
+            {'id': 'lion', 'word': 'lion', 'stem': '__ion', 'answer': 'l', 'image_path': 'pabasa_app/images/lesson_28/lion.png'},
+            {'id': 'sit', 'word': 'sit', 'stem': '__it', 'answer': 's', 'image_path': 'pabasa_app/images/lesson_28/sit.png'},
+            {'id': 'egg', 'word': 'egg', 'stem': '__gg', 'answer': 'e', 'image_path': 'pabasa_app/images/lesson_28/egg.png'},
+        ],
+    },
     'lesson-13-gawain-1': {
         'activity_key': 'lesson-13-gawain-1',
         'session_number': 5,

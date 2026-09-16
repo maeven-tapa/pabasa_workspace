@@ -1921,7 +1921,19 @@ document.addEventListener('DOMContentLoaded', function () {
             session5Modal.onclick = event => { if (event.target === session5Modal) closeSession5(); };
             grid.appendChild(session5Column);
         }
-        Array.from(grid.children).filter(card => card.classList.contains('pabasa-session-card')).forEach(function (activity) {
+        // Older course data can still include a generic "Session N" card.
+        // Once a real prescribed activity exists for that session, discard the
+        // placeholder so it cannot become a competing folder/activity target.
+        const prescribedSessions = new Set(Array.from(grid.children)
+            .filter(card => card.classList.contains('pabasa-session-card') && card.dataset.prescribedActivity)
+            .map(card => card.dataset.sessionKey));
+        Array.from(grid.children).forEach(function (activity) {
+            if (!activity.classList.contains('pabasa-session-card')) return;
+            const label = activity.querySelector('.session-content h4')?.textContent.trim() || '';
+            const match = label.match(/^Session\s+(\d+)$/);
+            if (match && prescribedSessions.has(`session-${match[1]}`)) activity.remove();
+        });
+        Array.from(grid.children).filter(card => card.classList.contains('pabasa-session-card') && !card.dataset.sessionKey).forEach(function (activity) {
             const sessionName = activity.querySelector('.session-content h4')?.textContent.trim();
             if (!/^Session\s+\d+$/.test(sessionName || '')) return;
             const sessionColumn = document.createElement('div');
@@ -1984,22 +1996,24 @@ document.addEventListener('DOMContentLoaded', function () {
             lesson16Modal.onclick = event => { if (event.target === lesson16Modal) closeLesson16(); };
             grid.appendChild(lesson16Column);
         }
-        const lesson26Cards = Array.from(grid.children).filter(card => card.classList.contains('pabasa-session-card') && card.dataset.sessionKey === 'session-10');
-        if (lesson26Cards.length) {
-            const activityCount = lesson26Cards.length;
-            const lesson26Column = document.createElement('div');
-            lesson26Column.className = 'assessment-week-column session-folder-column';
-            lesson26Column.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">📁</span><span class="week-folder-name">Session 10</span><span class="week-activity-count">${activityCount} ${activityCount === 1 ? 'activity' : 'activities'}</span></button><div class="week-activities-modal session-folder-modal" hidden><div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="Session 10 activities"><div class="week-activities-header"><span class="week-activities-title">📁 Session 10 <small>— ${activityCount} ${activityCount === 1 ? 'activity' : 'activities'}</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div></div>`;
-            const lesson26Modal = lesson26Column.querySelector('.session-folder-modal');
-            lesson26Modal.classList.add('aking-aralin-session-modal');
-            lesson26Cards.forEach(card => lesson26Modal.querySelector('.assessment-week-cards').appendChild(card));
-            document.body.appendChild(lesson26Modal);
-            lesson26Column.querySelector('.assessment-week-folder').onclick = () => { lesson26Modal.hidden = false; document.body.style.overflow = 'hidden'; };
-            const closeLesson26 = () => { lesson26Modal.hidden = true; document.body.style.overflow = ''; };
-            lesson26Modal.querySelector('.week-activities-close').onclick = closeLesson26;
-            lesson26Modal.onclick = event => { if (event.target === lesson26Modal) closeLesson26(); };
-            grid.appendChild(lesson26Column);
-        }
+        [10, 11, 12].forEach(function (sessionNumber) {
+            const sessionCards = Array.from(grid.children).filter(card => card.classList.contains('pabasa-session-card') && card.dataset.sessionKey === `session-${sessionNumber}`);
+            if (!sessionCards.length) return;
+            const activityCount = sessionCards.length;
+            const sessionName = `Session ${sessionNumber}`;
+            const sessionColumn = document.createElement('div');
+            sessionColumn.className = 'assessment-week-column session-folder-column';
+            sessionColumn.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">📁</span><span class="week-folder-name">${sessionName}</span><span class="week-activity-count">${activityCount} ${activityCount === 1 ? 'activity' : 'activities'}</span></button><div class="week-activities-modal session-folder-modal" hidden><div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="${sessionName} activities"><div class="week-activities-header"><span class="week-activities-title">📁 ${sessionName} <small>— ${activityCount} ${activityCount === 1 ? 'activity' : 'activities'}</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div></div>`;
+            const sessionModal = sessionColumn.querySelector('.session-folder-modal');
+            sessionModal.classList.add('aking-aralin-session-modal');
+            sessionCards.forEach(card => sessionModal.querySelector('.assessment-week-cards').appendChild(card));
+            document.body.appendChild(sessionModal);
+            sessionColumn.querySelector('.assessment-week-folder').onclick = () => { sessionModal.hidden = false; document.body.style.overflow = 'hidden'; };
+            const closeSession = () => { sessionModal.hidden = true; document.body.style.overflow = ''; };
+            sessionModal.querySelector('.week-activities-close').onclick = closeSession;
+            sessionModal.onclick = event => { if (event.target === sessionModal) closeSession(); };
+            grid.appendChild(sessionColumn);
+        });
         [5, 6, 7, 8, 9].forEach(function (sessionNumber) {
             const exists = Array.from(grid.querySelectorAll('.session-folder-column .week-folder-name')).some(function (label) {
                 return label.textContent.trim() === `Session ${sessionNumber}`;
@@ -2010,7 +2024,7 @@ document.addEventListener('DOMContentLoaded', function () {
             emptyColumn.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">📁</span><span class="week-folder-name">Session ${sessionNumber}</span><span class="week-activity-count">0 activities</span></button>`;
             grid.appendChild(emptyColumn);
         });
-        [11, 12, 13, 14, 15].forEach(function (sessionNumber) {
+        [13, 14, 15].forEach(function (sessionNumber) {
             const folder = Array.from(grid.querySelectorAll('.session-folder-column')).find(function (column) {
                 return column.querySelector('.week-folder-name')?.textContent.trim() === `Session ${sessionNumber}`;
             });
