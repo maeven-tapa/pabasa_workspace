@@ -107,6 +107,18 @@ PRESCRIBED_ACTIVITIES = {
         'competencies': ['Phonological Awareness'], 'interaction': 'teacher_word_decode_preview',
         'items': [{'word': 'lola'}, {'word': 'Koko'}, {'word': 'kala'}, {'word': 'ulo'}, {'word': 'keso'}, {'word': 'kili'}, {'word': 'lata'}, {'word': 'luma'}, {'word': 'kuko'}],
     },
+    'lesson-13-gawain-3': {
+        'activity_key': 'lesson-13-gawain-3', 'session_number': 5, 'lesson_number': 13,
+        'gawain_number': 3, 'title': 'I-decode o basahin ang mga pangungusap',
+        'instruction': 'I-decode o basahin ang mga pangungusap na nasa ibaba. Lagyan ng tsek (✓) kung tama ang pagkaka-decode o basa ng mga pangungusap.',
+        'competencies': ['Phonics', 'Phonological Awareness', 'Fluency'], 'interaction': 'teacher_sentence_decode_preview',
+        'items': [
+            {'sentence': 'Si Lili ay may laso.'}, {'sentence': 'Ang laso ay Lila.'},
+            {'sentence': 'Ang laso ay luma.'}, {'sentence': 'Baka kay lola ang laso ni Lili.'},
+            {'sentence': 'May keso sa mesa.'}, {'sentence': 'May kuko ang isa.'},
+            {'sentence': 'Ang lata ni Koko.'},
+        ],
+    },
     'session-4-gawain-1': {'activity_key': 'session-4-gawain-1', 'session_number': 4, 'lesson_number': '10, 11, at 12', 'gawain_number': 1, 'title': 'Gawain 1: Tunog ng mga Letra', 'instruction': 'Piliin ang tamang tunog para sa bawat letra.', 'route_name': 'session_4_gawain_1_page', 'total_items': 4, 'interaction': 'letter_sound', 'items': [{'word': 'Tunog ng mga Letra', 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'}]},
     'session-4-gawain-2': {'activity_key': 'session-4-gawain-2', 'session_number': 4, 'lesson_number': '10, 11, at 12', 'gawain_number': 2, 'title': 'Gawain 2: Pagsamahin ang mga Tunog', 'instruction': 'Pagsamahin ang mga tunog upang mabuo ang salita.', 'route_name': 'session_4_gawain_2_page', 'total_items': 4, 'interaction': 'syllable_blending', 'items': [{'word': 'Pagsamahin ang mga Tunog', 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'}]},
     'session-4-gawain-3': {'activity_key': 'session-4-gawain-3', 'session_number': 4, 'lesson_number': '10, 11, at 12', 'gawain_number': 3, 'title': 'Gawain 3: I-Decode ang mga Salita', 'instruction': 'Basahin at i-decode ang bawat salita.', 'route_name': 'session_4_gawain_3_page', 'total_items': 9, 'interaction': 'word_decoding', 'items': [{'word': 'I-Decode ang mga Salita', 'image_path': 'pabasa_app/images/word-decoding-bg.jpg'}]},
@@ -332,6 +344,25 @@ PRESCRIBED_ACTIVITIES = {
             {'id': 'pitaka', 'word': 'pi', 'label': 'pitaka', 'alt_text': 'Larawan ng pitaka', 'image_path': 'pabasa_app/images/picture_word/prescribe_sets/Set B/Wallet-Pitaka.png'},
             {'id': 'riles', 'word': 'ri', 'label': 'riles', 'alt_text': 'Larawan ng riles', 'image_path': 'pabasa_app/images/picture_word/prescribe_sets/Set B/Railway-Riles.png'},
             {'id': 'puso', 'word': 'pu', 'label': 'puso', 'alt_text': 'Larawan ng puso', 'image_path': 'pabasa_app/images/picture_word/prescribe_sets/Set B/Heart-Puso.png'},
+        ],
+    },
+    'lesson-17-18-gawain-6': {
+        # One canonical workbook definition: the teacher picker/preview and
+        # learner page deliberately consume this exact ordered data.
+        'activity_key': 'lesson-17-18-gawain-6', 'session_key': 'session-6',
+        'session_number': 6, 'lesson_number': '17 at 18', 'gawain_number': 6,
+        'title': 'Punan ang Nawawalang Pantig',
+        'description': 'Basahin ang larawan, pagkatapos punan ang nawawalang pantig.',
+        'instruction': 'Basahin ang ngalan ng larawan. Pagkatapos, punan ang nawawalang pantig.',
+        'competencies': ['Phonics', 'Phonological Awareness', 'Vocabulary'],
+        'interaction': 'oral_then_missing_syllable', 'total_items': 5,
+        'thumbnail': 'pabasa_app/images/picture_word/custom/Cat-Pusa.png',
+        'items': [
+            {'id': 'pusa', 'word': 'PUSA', 'stem': '__sa', 'answer': 'pu', 'alt_text': 'Larawan ng pusa', 'image_path': 'pabasa_app/images/picture_word/custom/Cat-Pusa.png'},
+            {'id': 'pako', 'word': 'PAKO', 'stem': 'pa__', 'answer': 'ko', 'alt_text': 'Larawan ng pako', 'image_path': 'pabasa_app/images/prescribed_gawain_6/Pako.png'},
+            {'id': 'paruparo', 'word': 'PARUPARO', 'stem': 'parupa__', 'answer': 'ro', 'alt_text': 'Larawan ng paruparo', 'image_path': 'pabasa_app/images/picture_word/custom/Butterfly-Paruparo.png'},
+            {'id': 'rosas', 'word': 'ROSAS', 'stem': '__sas', 'answer': 'ro', 'alt_text': 'Larawan ng rosas', 'image_path': 'pabasa_app/images/prescribed_gawain_6/Rosas.png'},
+            {'id': 'kariton', 'word': 'KARITON', 'stem': 'ka__ton', 'answer': 'ri', 'alt_text': 'Larawan ng kariton', 'image_path': 'pabasa_app/images/prescribed_gawain_6/Kariton.png'},
         ],
     },
 }
