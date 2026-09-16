@@ -13152,6 +13152,20 @@ def prescribed_activity_page(request, activity_key):
                          'strokes': saved_strokes, 'state': raw_state},
         }
         return render(request, 'pabasa_app/lesson_13_gawain_4_page.html', context)
+    if activity_key == 'lesson-14-gawain-1':
+        context = _dashboard_context(request)
+        context['lesson14_gawain1_data'] = {
+            'activity_key': activity_key, 'session_key': 'session-5',
+            'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
+            'title': activity['title'], 'instruction': activity['instruction'],
+            'items': [{**item, 'image_url': static(item['image_path']), 'audio_url': static(
+                f"pabasa_app/prescribed/audio/SESSION_5/LESSON_14/GAWAIN_1/{item['audio_filename']}"
+            )} for item in activity['items']],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'progress': {'activity_completed': progress.activity_completed if progress else False, 'state': raw_state},
+        }
+        return render(request, 'pabasa_app/lesson_14_gawain_1_page.html', context)
     if activity['interaction'] == 'word_search':
         context = _dashboard_context(request)
         saved_matches = raw_state.get('matches') if isinstance(raw_state.get('matches'), dict) else {}
@@ -21317,6 +21331,7 @@ def course_teacher_view(request):
         'prescribed_lesson_29_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 29],
         'prescribed_lesson_30_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 30],
         'prescribed_lesson_13_activities': [PRESCRIBED_ACTIVITIES['lesson-13-gawain-1'], PRESCRIBED_ACTIVITIES['lesson-13-gawain-2'], PRESCRIBED_ACTIVITIES['lesson-13-gawain-3'], PRESCRIBED_ACTIVITIES['lesson-13-gawain-4']],
+        'prescribed_lesson_14_activities': [PRESCRIBED_ACTIVITIES['lesson-14-gawain-1']],
     })
     return render(request, 'pabasa_app/courses.html', context)
 
