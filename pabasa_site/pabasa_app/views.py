@@ -13026,7 +13026,12 @@ def prescribed_activity_page(request, activity_key):
                          'total_items': len(activity['items']), 'activity_completed': progress.activity_completed if progress else False,
                          'state': raw_state},
         }
-        return render(request, 'pabasa_app/prescribed_word_identifying_page.html', context)
+        if activity_key == 'lesson-28-gawain-2':
+            context['prescribed_activity_data']['read_aloud_url'] = reverse('reading_read_aloud_api')
+            context['prescribed_activity_data']['transcribe_url'] = reverse('reading_transcribe_api')
+        template = ('pabasa_app/prescribed_word_identifying_lesson28_activity2_page.html'
+                    if activity_key == 'lesson-28-gawain-2' else 'pabasa_app/prescribed_word_identifying_page.html')
+        return render(request, template, context)
     if activity['interaction'] == 'missing_letter_image_oral':
         context = _dashboard_context(request)
         context['prescribed_activity_data'] = {
@@ -13039,7 +13044,12 @@ def prescribed_activity_page(request, activity_key):
             'progress': {'completed_items': progress.completed_items if progress else 0, 'total_items': len(activity['items']),
                          'activity_completed': progress.activity_completed if progress else False, 'state': raw_state},
         }
-        return render(request, 'pabasa_app/prescribed_missing_letter_page.html', context)
+        if activity_key == 'lesson-28-gawain-1':
+            context['prescribed_activity_data']['read_aloud_url'] = reverse('reading_read_aloud_api')
+            context['prescribed_activity_data']['transcribe_url'] = reverse('reading_transcribe_api')
+        template = ('pabasa_app/prescribed_missing_letter_lesson28_activity1_page.html'
+                    if activity_key == 'lesson-28-gawain-1' else 'pabasa_app/prescribed_missing_letter_page.html')
+        return render(request, template, context)
     if activity['interaction'] == 'oral_then_missing_syllable':
         context = _dashboard_context(request)
         answers = raw_state.get('answers') if isinstance(raw_state.get('answers'), list) else []
@@ -13581,7 +13591,11 @@ def prescribed_activity_progress(request, activity_key):
         try:
             data = json.loads(request.body or '{}')
             action = data.get('action')
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            progress_query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            if activity_key == 'lesson-28-gawain-2' and data.get('reset') is True:
+                progress_query.delete()
+                return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
+            existing = progress_query.first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             total = len(activity['items'])
             index = max(0, min(total, int(old.get('current_item', 0))))
@@ -13598,7 +13612,8 @@ def prescribed_activity_progress(request, activity_key):
                     raise ValueError('Start the current word before answering.')
                 if int(data.get('item_index', -1)) != index:
                     raise ValueError('This item is no longer current.')
-                heard = re.sub(r'[^a-z]', '', str(data.get('heard', '')).lower())
+                heard_words = re.findall(r'[a-z]+', str(data.get('heard', '')).lower())
+                heard = target if target in heard_words else ''.join(heard_words)
                 if heard == target:
                     index += 1
                     attempts = 0
@@ -13630,7 +13645,11 @@ def prescribed_activity_progress(request, activity_key):
     if activity['interaction'] == 'missing_letter_image_oral':
         try:
             data = json.loads(request.body or '{}'); action = data.get('action')
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            progress_query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            if activity_key == 'lesson-28-gawain-1' and data.get('reset') is True:
+                progress_query.delete()
+                return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
+            existing = progress_query.first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             total = len(activity['items']); index = max(0, min(total, int(old.get('current_item', 0))))
             phase = old.get('phase', 'reading'); attempts = max(0, int(old.get('reading_attempts', 0)))
