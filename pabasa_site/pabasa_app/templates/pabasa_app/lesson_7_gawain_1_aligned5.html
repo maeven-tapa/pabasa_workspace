@@ -1,0 +1,23 @@
+{% include "pabasa_app/lesson_7_gawain_1_aligned4.html" %}<script>
+setInterval(function(){
+  if(typeof phase==='undefined'||phase!=='classify')return;
+  const x=items[index];
+  document.querySelectorAll('.choice').forEach(function(b){
+    if(b.dataset.lesson7FeedbackBound)return;
+    b.dataset.lesson7FeedbackBound='1';
+    b.onclick=function(){
+      const yes=b.dataset.v==='yes';
+      const statusEl=document.getElementById('status');
+      if(yes===x.starts_i){
+        if(x.starts_i)circled.push(index);score++;index++;phase='read';tries=0;listens=0;save();render();
+        return;
+      }
+      tries++;
+      if(statusEl)statusEl.textContent='Subukan muli. ('+tries+'/3)';
+      if(tries>=3){
+        setTimeout(function(){tries=0;phase='read';render()},900);
+      }
+    };
+  });
+},50);
+</script>

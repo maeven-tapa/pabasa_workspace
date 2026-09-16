@@ -1,0 +1,12 @@
+{% include "pabasa_app/lesson_7_gawain_1_aligned5.html" %}<style>
+.read.is-reading,.read.is-processing{animation:lesson7Pulse 1.35s ease-in-out infinite;box-shadow:0 0 0 0 rgba(216,144,61,.72),0 0 18px rgba(216,144,61,.55)}
+@keyframes lesson7Pulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(216,144,61,.72),0 0 12px rgba(216,144,61,.4)}50%{transform:scale(1.035);box-shadow:0 0 0 10px rgba(216,144,61,0),0 0 28px rgba(216,144,61,.85)}}
+</style><script>
+setInterval(function(){
+  const b=document.getElementById('read');
+  if(!b)return;
+  const t=b.textContent.toLowerCase();
+  b.classList.toggle('is-reading',t.includes('nagbabasa'));
+  b.classList.toggle('is-processing',t.includes('pinoproseso'));
+},50);
+</script>

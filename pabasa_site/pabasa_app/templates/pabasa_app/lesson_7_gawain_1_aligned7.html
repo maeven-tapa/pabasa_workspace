@@ -1,0 +1,12 @@
+{% include "pabasa_app/lesson_7_gawain_1_aligned6.html" %}<style>
+.lesson7-completion{height:100%;display:grid;place-items:center;padding:18px;box-sizing:border-box}.lesson7-completion-card{width:min(560px,92%);padding:34px 28px 28px;background:#fff;border-radius:28px;box-shadow:0 14px 30px rgba(22,75,93,.16);text-align:center}.lesson7-completion-stars{font-size:2.1rem;letter-spacing:8px;color:#f2b632;margin-bottom:8px}.lesson7-completion h1{margin:0;color:#164b5d;font-size:clamp(1.7rem,4vw,2.5rem)}.lesson7-completion p{margin:10px 0 18px;color:#52727a;font-size:1.05rem;font-weight:700}.lesson7-completion-score{display:inline-flex;align-items:baseline;gap:8px;padding:12px 24px;border-radius:18px;background:#fff3bd;color:#a65e2d;font-size:2.6rem;font-weight:900}.lesson7-completion-score small{font-size:1rem;color:#52727a}.lesson7-completion .done{display:block;width:min(360px,100%);margin:24px auto 0}.lesson7-completion .done:disabled{opacity:.75;cursor:wait}
+</style><script>
+setInterval(function(){
+  const old=document.querySelector('.complete'), oldDone=document.getElementById('done');
+  if(!old||!oldDone||old.dataset.lesson7Refined)return;
+  old.dataset.lesson7Refined='1';
+  old.className='lesson7-completion';
+  old.innerHTML='<div class="lesson7-completion-card"><div class="lesson7-completion-stars" aria-hidden="true">★ ★ ★</div><h1>Magaling!</h1><p>Natapos mo ang gawain!</p><div class="lesson7-completion-score">'+score+'<small>/ '+total+' tamang sagot</small></div><button class="done" id="done">TAPUSIN</button></div>';
+  document.getElementById('done').onclick=async function(){const b=this;b.disabled=true;b.textContent='Sine-save...';try{await save(true);location.href="{% url 'assessment' %}"}catch(e){b.disabled=false;b.textContent='TAPUSIN'}};
+},50);
+</script>
