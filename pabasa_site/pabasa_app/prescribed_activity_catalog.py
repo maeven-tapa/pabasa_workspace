@@ -332,6 +332,25 @@ PRESCRIBED_ACTIVITIES = {
             {'id': 'puso', 'word': 'pu', 'label': 'puso', 'alt_text': 'Larawan ng puso', 'image_path': 'pabasa_app/images/picture_word/prescribe_sets/Set B/Heart-Puso.png'},
         ],
     },
+    'lesson-17-18-gawain-6': {
+        # One canonical workbook definition: the teacher picker/preview and
+        # learner page deliberately consume this exact ordered data.
+        'activity_key': 'lesson-17-18-gawain-6', 'session_key': 'session-6',
+        'session_number': 6, 'lesson_number': '17 at 18', 'gawain_number': 6,
+        'title': 'Punan ang Nawawalang Pantig',
+        'description': 'Basahin ang larawan, pagkatapos punan ang nawawalang pantig.',
+        'instruction': 'Basahin ang ngalan ng larawan. Pagkatapos, punan ang nawawalang pantig.',
+        'competencies': ['Phonics', 'Phonological Awareness', 'Vocabulary'],
+        'interaction': 'oral_then_missing_syllable', 'total_items': 5,
+        'thumbnail': 'pabasa_app/images/picture_word/custom/Cat-Pusa.png',
+        'items': [
+            {'id': 'pusa', 'word': 'PUSA', 'stem': '__sa', 'answer': 'pu', 'alt_text': 'Larawan ng pusa', 'image_path': 'pabasa_app/images/picture_word/custom/Cat-Pusa.png'},
+            {'id': 'pako', 'word': 'PAKO', 'stem': 'pa__', 'answer': 'ko', 'alt_text': 'Larawan ng pako', 'image_path': 'pabasa_app/images/prescribed_gawain_6/Pako.png'},
+            {'id': 'paruparo', 'word': 'PARUPARO', 'stem': 'parupa__', 'answer': 'ro', 'alt_text': 'Larawan ng paruparo', 'image_path': 'pabasa_app/images/picture_word/custom/Butterfly-Paruparo.png'},
+            {'id': 'rosas', 'word': 'ROSAS', 'stem': '__sas', 'answer': 'ro', 'alt_text': 'Larawan ng rosas', 'image_path': 'pabasa_app/images/prescribed_gawain_6/Rosas.png'},
+            {'id': 'kariton', 'word': 'KARITON', 'stem': 'ka__ton', 'answer': 'ri', 'alt_text': 'Larawan ng kariton', 'image_path': 'pabasa_app/images/prescribed_gawain_6/Kariton.png'},
+        ],
+    },
 }
 
 # Each saved item points directly to its own workbook image file.  Keeping the

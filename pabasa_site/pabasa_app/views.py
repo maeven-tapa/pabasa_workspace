@@ -12873,6 +12873,27 @@ def prescribed_activity_page(request, activity_key):
                          'activity_completed': progress.activity_completed if progress else False, 'state': raw_state},
         }
         return render(request, 'pabasa_app/prescribed_missing_letter_page.html', context)
+    if activity['interaction'] == 'oral_then_missing_syllable':
+        context = _dashboard_context(request)
+        answers = raw_state.get('answers') if isinstance(raw_state.get('answers'), list) else []
+        context['prescribed_activity_data'] = {
+            'activity_key': activity_key, 'session_key': activity['session_key'],
+            'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
+            'title': activity['title'], 'instruction': activity['instruction'],
+            'items': [{'id': item['id'], 'word': item['word'], 'stem': item['stem'],
+                       'alt_text': item['alt_text'], 'image_url': static(item['image_path']),
+                       'blank_length': len(item['answer'])} for item in activity['items']],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'progress': {'current_index': progress.current_index if progress else 0,
+                         'completed_items': progress.completed_items if progress else 0,
+                         'correct_items': progress.correct_items if progress else 0,
+                         'total_items': len(activity['items']),
+                         'activity_completed': progress.activity_completed if progress else False,
+                         'answers': answers,
+                         'state': _normalized_prescribed_state(activity, raw_state, len(answers))},
+        }
+        return render(request, 'pabasa_app/prescribed_oral_missing_syllable_page.html', context)
     if activity['interaction'] == 'rhyming_verses':
         context = _dashboard_context(request)
         items = []
@@ -16238,7 +16259,7 @@ def reading_read_aloud_api(request):
     if access_response:
         return access_response
 
-    target_text = (request.POST.get('target_text') or '').strip()
+    target_text = (request.POST.get('target_text') or request.POST.get('text') or '').strip()
     mode = (request.POST.get('mode') or '').strip().lower()
     language = (request.POST.get('language') or '').strip()
     tts_profile = (request.POST.get('tts_profile') or '').strip().lower()
@@ -16252,7 +16273,8 @@ def reading_read_aloud_api(request):
     try:
         # Hunt uses the same clear female Assessment voice at a slower teaching
         # pace so young readers can hear each sound. Assessment keeps its defaults.
-        tts_options = ({'voice_gender': 'MALE'} if tts_profile == 'correspondence'
+        tts_options = ({'voice_gender': 'FEMALE'} if prescribed_key and prescribed_activity(prescribed_key)
+                       else {'voice_gender': 'MALE'} if tts_profile == 'correspondence'
                        else {'speaking_rate': 0.80, 'prosody_rate': '82%'} if tts_profile == 'hunt'
                        else {'speaking_rate': 1.0, 'prosody_rate': '100%'} if tts_profile == 'crla'
                        else {})
@@ -16268,6 +16290,8 @@ def reading_read_aloud_api(request):
             'audio_content': audio_content,
             'mime_type': 'audio/mpeg',
             'language_code': language_code,
+            'tts_language': 'fil-PH' if prescribed_key and prescribed_activity(prescribed_key) else language_code,
+            'voice_name': 'fil-PH-Wavenet-A' if prescribed_key and prescribed_activity(prescribed_key) else '',
         })
     except Exception as exc:
         logger.exception('Read aloud synthesis failed')
