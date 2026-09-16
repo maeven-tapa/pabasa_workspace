@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
+<script>document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('[data-prescribed-activity="letrang-msa"]').forEach(x=>x.dataset.prescribedActivity='lesson-6-gawain-1');document.querySelectorAll('[data-prescribed-preview="letrang-msa"]').forEach(x=>x.dataset.prescribedPreview='lesson-6-gawain-1')});</script>
 <link rel="stylesheet" href="{% static 'pabasa_app/sound_detective.css' %}?v=20260831-7">
 <style>
     @font-face {
