@@ -9,6 +9,32 @@ function sync(t){let active=timing.findIndex(x=>x.start!==null&&t>=x.start&&(x.e
 <script>document.addEventListener('DOMContentLoaded',()=>{const v=document.querySelector('.video-wrap');if(!v)return;const panel=document.createElement('section');panel.className='song-panel';panel.innerHTML='<p class="song-kicker">Awit ng Alpabasa</p><h2>Opisyal na awit para sa gawaing ito</h2><p>Sabayan ang awit habang sinusundan ang mga letra sa Alpabetong Pilipino.</p><a class="youtube-link" href="https://www.youtube.com/watch?v=OxAsjUK6aB4" target="_blank" rel="noopener noreferrer">▶ Panoorin ang Awit sa YouTube ↗</a><p class="song-note">Magbubukas ang opisyal na video sa bagong tab.</p><div class="song-divider"></div><p>Pagkatapos mong umawit:</p><button id="singDone" class="sing-done" type="button">✓ Tapos na akong umawit</button>';v.parentNode.insertBefore(panel,v);v.remove();window.onYouTubeIframeAPIReady=()=>{};const link=panel.querySelector('a'),done=document.getElementById('completion'),button=panel.querySelector('#singDone');link.addEventListener('click',()=>fetch('{{ lesson_1_progress_url }}',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':document.cookie.match(/csrftoken=([^;]+)/)?.[1]||''},body:JSON.stringify({activity_key:'lesson-1-gawain-1',total_items:28,current_index:1,completed_items:1,correct_items:0,activity_completed:false,state:{started:true}})}).catch(console.error));button.addEventListener('click',()=>done.classList.add('show'))});</script>
 <style>p.instruction:nth-of-type(2){display:none!important}</style>
 <style>#retry{display:none!important}</style>
+<style>body{background:#e1f5f7 url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover no-repeat}</style>
+<style>
+/* Sing-along visual refinement: larger touch-friendly alphabet cards. */
+.shell{background:rgba(255,253,247,.88);backdrop-filter:blur(8px)}
+.eyebrow{display:inline-block;padding:5px 10px;border-radius:999px;background:#fff1c9;color:#7a4d0b!important;text-shadow:none}
+.board{gap:14px;padding:8px 4px;align-content:start;overflow:auto}
+.tile{min-height:clamp(115px,14vh,165px);padding:13px 10px;border:2px solid #c9dfdf;border-radius:20px;background:rgba(255,253,247,.96);box-shadow:0 7px 14px #164b6218;cursor:default}
+.tile-letter{font-size:clamp(1.5rem,3vw,2.35rem)}.tile img{height:52%;margin:10px auto 6px}.tile-word{font-size:clamp(.75rem,1.35vw,1rem)}
+.tile.active{border:4px solid #e7a13c;outline:4px solid #299e9a66;background:#fff4bd;box-shadow:0 0 0 7px #f8df9580,0 12px 24px #e7a13c45;transform:scale(1.04);z-index:2}
+.youtube-link{background:transparent!important;border:2px solid #c94b3f!important;color:#a63831!important;box-shadow:none}.youtube-link:hover,.youtube-link:focus-visible{background:#fff0ed!important}
+.sing-done{box-shadow:0 5px 0 #b77b1b;transform:translateY(0)}.sing-done:hover,.sing-done:focus-visible{filter:brightness(1.06);transform:translateY(-1px)}
+@media(max-width:760px){.shell{display:block;height:auto;min-height:calc(100dvh - 44px)}.board{grid-template-columns:repeat(3,minmax(125px,1fr));overflow-x:auto;grid-auto-rows:minmax(125px,auto)}.tile{min-height:125px}.tile img{height:50%}}
+@media(max-width:430px){.board{grid-template-columns:repeat(3,minmax(108px,1fr));gap:10px}.tile{padding:10px 7px;min-height:112px}.tile-letter{font-size:1.4rem}.tile-word{font-size:.72rem}}
+</style>
+<style>
+.tile-word{display:none!important}.tile{justify-content:center}.tile-letter{font-size:clamp(1.7rem,3.4vw,2.65rem);margin-bottom:6px}.tile img{height:62%;margin:4px auto 0}.song-panel{align-self:center;display:flex;flex-direction:column;justify-content:center;min-height:0}.song-panel .song-note{color:#526b72;font-size:.86rem!important;font-weight:800;opacity:1}.song-panel .song-divider{margin:15px 0 10px}
+.tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}.tile img{width:min(82%,64px);height:64px;margin:4px auto 0;object-fit:contain}.back{display:inline-flex;align-items:center;width:max-content;max-width:calc(100% - 8px);padding:8px 14px;border:1px solid rgba(24,62,99,.18);border-radius:999px;background:rgba(255,253,247,.86);box-shadow:0 3px 8px rgba(24,62,99,.12);color:#123b5c!important;opacity:1}
+.song-panel{min-height:100%;justify-content:center}
+.tile{cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}.tile:hover,.tile:focus-visible{border-color:#e7a13c;box-shadow:0 0 0 4px #f8df9580,0 10px 20px #e7a13c30;transform:translateY(-3px) scale(1.025);outline:none}.tile:active{transform:translateY(1px) scale(.985);box-shadow:0 0 0 5px #f8df9580}.tile.active{transform:translateY(-3px) scale(1.04)}
+.song-panel{align-self:stretch;height:100%;justify-content:center}.tile img{width:min(90%,76px);height:76px}
+.tile img{width:min(94%,88px);height:88px}.song-panel .song-note{color:#405b63!important}
+@media(prefers-reduced-motion:reduce){.tile{transition:none}.tile:hover,.tile:focus-visible,.tile:active{transform:none}}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{const board=document.getElementById('board');if(!board)return;const removeLabels=()=>board.querySelectorAll('.tile-word').forEach(label=>label.remove());removeLabels();new MutationObserver(removeLabels).observe(board,{childList:true,subtree:true})});
+</script>
 <style>.sing-mic{display:grid;place-items:center;width:112px;height:112px;margin:20px auto;border-radius:50%;background:#fff4d8;border:5px solid #e5a53e;font-size:3.5rem;box-shadow:0 8px 20px #a7792525}.recording-mic{background:#ffe1dc;border-color:#d94e43;animation:sing-pulse 1.2s ease-in-out infinite}.sing-stop,.sing-again{display:inline-flex;align-items:center;justify-content:center;width:100%;max-width:290px;margin:8px auto;padding:11px 14px;border:0;border-radius:13px;background:#d94e43;color:#fff;font-weight:1000;cursor:pointer}.sing-again{background:#627b84}.sing-stop:disabled,.sing-again:disabled{opacity:.55;cursor:wait}@keyframes sing-pulse{50%{transform:scale(1.06);box-shadow:0 0 0 12px #d94e4330}}@media(prefers-reduced-motion:reduce){.recording-mic{animation:none}}</style>
 <script>
 document.addEventListener('DOMContentLoaded',()=>{
