@@ -117,6 +117,23 @@ PRESCRIBED_ACTIVITIES = {
         'interaction': 'spot_word_oral', 'total_items': 9,
         'words': ['mat', 'sell', 'lit', 'till', 'last', 'stem', 'list', 'tell', 'sit'],
     },
+    'lesson-30-gawain-1': {
+        'activity_key': 'lesson-30-gawain-1', 'session_key': 'session-14',
+        'session_number': 14, 'lesson_number': 30, 'gawain_number': 1,
+        'title': 'Match It!', 'display_title': 'Session 14 · Lesson 30 · Activity 1',
+        'description': 'Basahin ang bawat salita at piliin ang katugmang larawan.',
+        'instruction': 'Basahin muna ang salita. Pagkatapos, piliin ang katugmang larawan.',
+        'interaction': 'oral_then_picture_word_match', 'sequence_mode': 'per_item',
+        'total_items': 5, 'word_bank': ['pet', 'mat', 'pat', 'little', 'happy'],
+        # Picture order follows Column B in the workbook reference.
+        'items': [
+            {'id': 'mat', 'word': 'mat', 'label': 'Mat', 'alt_text': 'A mat', 'image_path': 'pabasa_app/images/lesson_30/mat.png'},
+            {'id': 'happy', 'word': 'happy', 'label': 'Happy', 'alt_text': 'A happy person', 'image_path': 'pabasa_app/images/lesson_30/happy.png'},
+            {'id': 'pet', 'word': 'pet', 'label': 'Pet', 'alt_text': 'A pet dog', 'image_path': 'pabasa_app/images/lesson_30/pet.png'},
+            {'id': 'little', 'word': 'little', 'label': 'Little', 'alt_text': 'A little person', 'image_path': 'pabasa_app/images/lesson_30/little.png'},
+            {'id': 'pat', 'word': 'pat', 'label': 'Pat', 'alt_text': 'A hand patting', 'image_path': 'pabasa_app/images/lesson_30/pat.png'},
+        ],
+    },
     'lesson-13-gawain-1': {
         'activity_key': 'lesson-13-gawain-1',
         'session_number': 5,

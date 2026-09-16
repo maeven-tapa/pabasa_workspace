@@ -5922,6 +5922,40 @@ document.addEventListener('DOMContentLoaded',()=>{
     const style=document.createElement('style');style.textContent='.lesson29-spot-thumb{align-content:center!important;display:grid!important;gap:3px!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;padding:8px!important}.lesson29-spot-thumb span{background:#fff;border:1px solid #d6e7e8;border-radius:50%;color:#16465d;font-size:.55rem;font-weight:800;padding:3px 1px;text-align:center}.lesson29-spot-preview{background:#f4faf9;display:grid;place-items:center;margin:auto;max-width:900px;padding:clamp(1rem,4vw,3rem);width:100%}.lesson29-spot-box{background:#fff;border:2px solid #17252b;display:grid;gap:clamp(.6rem,2vw,1.4rem);grid-template-columns:repeat(3,minmax(0,1fr));max-width:650px;padding:clamp(.8rem,3vw,2rem);width:100%}.lesson29-spot-box span{align-items:center;aspect-ratio:1.25;border:1px solid #d6e7e8;border-radius:50%;display:flex;font-size:clamp(1rem,2vw,1.5rem);justify-content:center}#lesson29Gawain2Preview.is-maximized{display:flex!important;flex-direction:column;inset:.75rem;overflow:auto}#lesson29Gawain2Preview.is-maximized .lesson29-spot-preview{flex:1 1 auto}';document.head.appendChild(style);
 });
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const picker = document.getElementById('prescribedActivityPicker');
+    const source = document.getElementById('prescribed-lesson-30-activities');
+    if (!picker || !source || picker.querySelector('[data-prescribed-activity="lesson-30-gawain-1"]')) return;
+    const activity = JSON.parse(source.textContent || '[]').find(item => item.activity_key === 'lesson-30-gawain-1');
+    if (!activity) return;
+    const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    const staticBase = "{% static 'pabasa_app/' %}";
+    const imageUrl = item => staticBase + item.image_path.replace(/^pabasa_app\//, '');
+    const images = activity.items.map(item => `<span><img src="${imageUrl(item)}" alt="${esc(item.alt_text)}"></span>`).join('');
+    const words = activity.word_bank.map((word, index) => `<li><b>${index + 1}.</b> ${esc(word)}</li>`).join('');
+    const pictures = activity.items.map(item => `<figure><img src="${imageUrl(item)}" alt="${esc(item.alt_text)}"><figcaption>${esc(item.label)}</figcaption></figure>`).join('');
+    const option = document.createElement('button');
+    option.type = 'button'; option.className = 'prescribed-activity-option';
+    option.dataset.prescribedActivity = activity.activity_key;
+    option.dataset.previewTarget = 'lesson30Gawain1Preview';
+    option.innerHTML = `<span class="prescribed-activity-option__thumb lesson30-match-thumb">${images}</span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">1</span><span><strong>Lesson 30 · Activity 1</strong><br><span class="small text-muted">Match It!</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>`;
+    const preview = document.createElement('div');
+    preview.className = 'prescribed-activity-preview'; preview.id = 'lesson30Gawain1Preview';
+    preview.dataset.prescribedPreview = activity.activity_key;
+    preview.innerHTML = `<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview">×</button><div class="small text-uppercase text-muted fw-semibold">Session 14 · Lesson 30 · Activity 1</div><h5>Match It!</h5><p class="mb-0 text-muted">Read one word aloud, then choose its matching picture.</p></div><div class="lesson30-match-preview"><section><h6>Column A · Words</h6><ol>${words}</ol></section><section><h6>Column B · Pictures</h6><div class="lesson30-match-pictures">${pictures}</div></section></div>`;
+    picker.append(option, preview);
+    option.onclick = () => {
+        picker.querySelectorAll('[data-prescribed-activity]').forEach(item => item.classList.toggle('is-selected', item === option));
+        document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(item => item.classList.remove('is-maximized'));
+        preview.classList.add('is-maximized');
+    };
+    preview.querySelector('.prescribed-preview-close').onclick = () => preview.classList.remove('is-maximized');
+    const style = document.createElement('style');
+    style.textContent = '.lesson30-match-thumb{align-content:center!important;display:grid!important;gap:3px!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;padding:8px!important}.lesson30-match-thumb img{background:#fff;border-radius:4px;height:40px;object-fit:contain;width:100%}.lesson30-match-preview{background:#f4faf9;display:grid;gap:1.5rem;grid-template-columns:minmax(130px,.7fr) minmax(0,1.3fr);margin:auto;max-width:920px;padding:clamp(1rem,3vw,2.5rem);width:100%}.lesson30-match-preview h6{color:#16465d;font-weight:900}.lesson30-match-preview ol{display:grid;gap:.7rem;padding-left:2rem}.lesson30-match-preview li{font-size:clamp(1.1rem,2vw,1.5rem)}.lesson30-match-pictures{display:grid;gap:.7rem;grid-template-columns:repeat(2,minmax(0,1fr))}.lesson30-match-pictures figure{align-items:center;background:#fff;border:1px solid #d6e7e8;border-radius:.8rem;display:flex;flex-direction:column;justify-content:center;margin:0;min-height:120px;padding:.6rem}.lesson30-match-pictures img{height:90px;max-width:100%;object-fit:contain}.lesson30-match-pictures figcaption{color:#16465d;font-weight:800}@media(max-width:650px){.lesson30-match-preview{grid-template-columns:1fr}}#lesson30Gawain1Preview.is-maximized{display:flex!important;flex-direction:column;inset:.75rem;overflow:auto}#lesson30Gawain1Preview.is-maximized .lesson30-match-preview{flex:1 1 auto}';
+    document.head.appendChild(style);
+});
+</script>
 {% endblock %}
 
 {% block header %}
@@ -9071,6 +9105,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         {{ prescribed_lesson_27_activities|json_script:"prescribed-lesson-27-activities" }}
                         {{ prescribed_lesson_28_activities|json_script:"prescribed-lesson-28-activities" }}
                         {{ prescribed_lesson_29_activities|json_script:"prescribed-lesson-29-activities" }}
+                        {{ prescribed_lesson_30_activities|json_script:"prescribed-lesson-30-activities" }}
                         {{ prescribed_lesson_13_activities|json_script:"prescribed-lesson-13-activities" }}
                         <div class="prescribed-activity-picker" aria-label="Prescribed activities">
                             <div class="small text-muted text-uppercase fw-semibold mb-2">ARAL Workbook activities</div>
