@@ -173,6 +173,20 @@ PRESCRIBED_ACTIVITIES = {
             {'syllables': ['ma', 'is'], 'word': 'mais'},
         ],
     },
+    'lesson9-gawain2': {
+        'activity_key': 'lesson9-gawain2', 'session_key': 'session-3', 'session_number': 3,
+        'lesson_number': 9, 'gawain_number': 2, 'title': 'GAWAIN 2: Letrang Ii, Oo, Ee',
+        'instruction': 'Tukuyin at Basahin ang pangalan ng mga larawan.',
+        'interaction': 'initial_syllable_picture_selection_with_oral_reading',
+        'card_image_path': 'pabasa_app/images/sound_detective/detective_bg.png',
+        'rows': [
+            {'reference':'me','items':[('pari',False),('sopas',False),('mesa',True)]},
+            {'reference':'mo','items':[('motor',True),('musika',False),('sultan',False)]},
+            {'reference':'si','items':[('santol',False),('isla',False),('sibuyas',True)]},
+            {'reference':'is','items':[('upuan',False),('isda',True),('salamin',False)]},
+            {'reference':'es','items':[('espada',True),('sinturon',False),('simbahan',False)]},
+        ],
+    },
     'lesson7-gawain3': {
         'activity_key': 'lesson7-gawain3', 'session_number': 3, 'lesson_number': 7,
         'gawain_number': 3, 'title': 'Gawain 3: Letrang Oo',

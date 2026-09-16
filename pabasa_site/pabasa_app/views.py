@@ -12824,6 +12824,12 @@ def prescribed_activity_page(request, activity_key):
         context = _dashboard_context(request)
         context['lesson7_gawain2b_data'] = {'activity_key': activity_key, 'session_key': 'session-3', 'title': activity['title'], 'instruction': activity['instruction'], 'items': [{**i, 'image_url': static(i['image_path'])} for i in activity['items']], 'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}), 'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}), 'progress': {'completed_items': progress.completed_items if progress else 0, 'correct_items': progress.correct_items if progress else 0, 'activity_completed': progress.activity_completed if progress else False, 'state': raw_state}}
         return render(request, 'pabasa_app/lesson_8_gawain_1a_page.html', context)
+    if activity_key == 'lesson9-gawain2':
+        context = _dashboard_context(request)
+        rows = [{**row, 'items': [{'word': word, 'target': target, 'image_url': static(f"pabasa_app/images/letrang_i_o_e/{word}.png")} for word, target in row['items']]} for row in activity['rows']]
+        oral_items = [item for row in rows for item in row['items']]
+        context['lesson9_gawain2_data'] = {'activity_key': activity_key, 'session_key': 'session-3', 'title': activity['title'], 'instruction': activity['instruction'], 'rows': rows, 'oral_items': oral_items, 'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}), 'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}), 'progress': {'state': raw_state, 'activity_completed': progress.activity_completed if progress else False}}
+        return render(request, 'pabasa_app/lesson_9_gawain_2_page.html', context)
     if activity_key == 'lesson9-gawain1':
         context = _dashboard_context(request)
         context['lesson9_gawain1_data'] = {
@@ -13045,6 +13051,11 @@ def prescribed_activity_progress(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity_key == 'lesson9-gawain2':
+        data = json.loads(request.body or '{}'); state = data.get('state') or {}
+        state['phase'] = state.get('phase') if state.get('phase') in {'oral','selection','complete'} else 'oral'
+        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': int(state.get('oral_index',0) or 0), 'completed_items': int(state.get('oral_index',0) or 0), 'correct_items': int(state.get('oral_index',0) or 0), 'total_items': 15, 'activity_completed': False, 'state': state})
+        return JsonResponse({'success': True, 'progress': {'state': state}})
     if activity_key == 'lesson9-gawain1':
         try:
             data = json.loads(request.body or '{}')
@@ -13497,6 +13508,12 @@ def prescribed_activity_complete(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity_key == 'lesson9-gawain2':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        if not existing or not isinstance(existing.state, dict) or existing.state.get('phase') != 'complete':
+            return JsonResponse({'success': False, 'error': 'Complete the activity first.'}, status=400)
+        existing.activity_completed = True; existing.completed_items = existing.correct_items = existing.total_items = 15; existing.save(update_fields=['activity_completed','completed_items','correct_items','total_items','updated_at'])
+        return JsonResponse({'success': True})
     if activity['interaction'] == 'fill_blank_sentence':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
