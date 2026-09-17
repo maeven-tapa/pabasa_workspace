@@ -148,7 +148,7 @@
       // The API's `complete` flag is syllable-analyzer feedback, not the STT
       // transcript itself. For this single-word task, accept an exact spoken
       // word token and reject substring lookalikes such as “matter” for “mat”.
-      const acceptedWords = target === 'mat' ? ['mat', 'math'] : [target];
+      const acceptedWords = ({mat:['mat','math'],hat:['hat','hot'],wore:['wore','war'],bat:['bat','butt'],loved:['loved','love']})[target] || [target];
       const saidTarget = heardWords.some(token => acceptedWords.includes(normalizedWord(token)));
       const saved = await save({word_index: wordIndex, reading_result: saidTarget});
       reading = saved.progress?.state?.reading || reading;

@@ -132,9 +132,19 @@ urlpatterns = [
         name='lesson8_gawain1_page',
     ),
     path(
+        'api/dashboard/assessment/activity/prescribed/lesson-29-trace-say/progress/',
+        views.lesson29_trace_say_progress,
+        name='lesson29_trace_say_progress',
+    ),
+    path(
         'api/dashboard/assessment/activity/prescribed/<slug:activity_key>/progress/',
         views.prescribed_activity_progress,
         name='prescribed_activity_progress',
+    ),
+    path(
+        'api/dashboard/assessment/activity/prescribed/lesson-29-trace-say/complete/',
+        views.lesson29_trace_say_complete,
+        name='lesson29_trace_say_complete',
     ),
     path(
         'api/dashboard/assessment/activity/prescribed/<slug:activity_key>/complete/',

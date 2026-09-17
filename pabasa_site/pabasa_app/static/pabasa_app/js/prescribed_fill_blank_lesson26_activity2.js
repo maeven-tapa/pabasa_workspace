@@ -80,7 +80,7 @@
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.error || 'Speech recognition failed. Try again.');
       const transcript = String(result.raw_transcript || result.transcript || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').match(/[a-z]+/g) || [];
-      const target = normalize(word), accepted = target === 'mat' ? ['mat','math'] : target === 'hat' ? ['hat','hot'] : [target];
+      const target = normalize(word), accepted = ({mat:['mat','math'],hat:['hat','hot'],wore:['wore','war'],bat:['bat','butt'],loved:['loved','love']})[target] || [target];
       const correct = transcript.some(token => accepted.includes(normalize(token)));
       const saved = await save({action:'choice_read',choice_index:index,success:correct});
       if (saved.progress?.state) state = {...saved.progress.state};

@@ -7,7 +7,7 @@
   const csrf = () => (document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] || '';
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
-  const canonicalTranscript = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\bhot\b/g, 'hat').replace(/\bmath\b/g, 'mat').replace(/\bwar\b/g, 'wore').replace(/\bbutt\b/g, 'bat').replace(/\blove\b/g, 'loved');
+  const canonicalTranscript = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\bdanced\b/g, 'dance').replace(/\bhot\b/g, 'hat').replace(/\bmath\b/g, 'mat').replace(/\bwar\b/g, 'wore').replace(/\bbutt\b/g, 'bat').replace(/\bbath\b/g, 'bat').replace(/\bbut\b/g, 'bat').replace(/\bquiet\b/g, 'quite').replace(/\blaugh\b/g, 'laughed').replace(/\blove\b/g, 'loved');
   let state = {phase:'reading', item_index:0, verse_index:0, attempts:0, help_visible:false, selected:[], completed_items:0, ...(data.progress?.state || {})};
   let busy = false;
   let stream = null;
@@ -36,6 +36,17 @@
   function frame(body) {
     app.innerHTML = `<div class="lesson27-eyebrow">SESSION 11 · LESSON 27 · ACTIVITY 1</div><h1 class="lesson27-title">Rhyming Verses</h1><p class="lesson27-instruction">Read each verse, then select the words that rhyme with “at.”</p>${body}${progressDots()}`;
   }
+  function renderLineWords(line, lineIndex) {
+    let cursor = 0;
+    const renderedWords = line.words.map(word => {
+      const start = line.text.toLowerCase().indexOf(word.text.toLowerCase(), cursor);
+      if (start < cursor) return `<button type="button" class="lesson27-word ${state.selected.includes(word.id) ? 'selected' : ''}" data-id="${esc(word.id)}" ${state.phase !== 'rhymes' ? 'disabled' : ''}>${esc(word.text)}</button> `;
+      const separator = line.text.slice(cursor, start);
+      cursor = start + word.text.length;
+      return `${esc(separator)}<button type="button" class="lesson27-word ${state.selected.includes(word.id) ? 'selected' : ''}" data-id="${esc(word.id)}" ${state.phase !== 'rhymes' ? 'disabled' : ''}>${esc(word.text)}</button>`;
+    }).join('');
+    return renderedWords + esc(line.text.slice(cursor));
+  }
   function render(message = '', type = '') {
     if (state.phase === 'complete') {
       frame('<div class="lesson27-complete">🎉 Great job! You finished all the rhyming verses.</div>');
@@ -44,7 +55,7 @@
     const item = data.items[state.item_index];
     if (!item) { state.phase = 'complete'; render(); return; }
     const lines = item.lines.map((line, lineIndex) => {
-      const words = line.words.map(word => `<button type="button" class="lesson27-word ${state.selected.includes(word.id) ? 'selected' : ''}" data-id="${esc(word.id)}" ${state.phase !== 'rhymes' ? 'disabled' : ''}>${esc(word.text)}</button>`).join(' ');
+      const words = renderLineWords(line, lineIndex);
       const status = state.phase === 'reading' && lineIndex < state.verse_index ? 'read' : state.phase === 'reading' && lineIndex === state.verse_index ? 'active' : '';
       return `<div class="lesson27-verse ${status}">${words}</div>`;
     }).join('');
@@ -105,9 +116,14 @@
       const response = await fetch(data.transcribe_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form});
       const result = await responseJson(response, 'Speech recognition');
       if (!response.ok || !result.success) throw new Error(result.error || 'Speech recognition failed. Try again.');
-      const spoken = normalize(canonicalTranscript(result.raw_transcript || result.transcript));
+      const heardText = result.raw_transcript || result.transcript;
+      const spoken = normalize(canonicalTranscript(heardText));
       const expected = normalize(canonicalTranscript(target));
-      const correct = Boolean(expected && spoken.includes(expected));
+      const spokenTokens = canonicalTranscript(heardText).match(/[a-z]+/g) || [];
+      const expectedTokens = canonicalTranscript(target).match(/[a-z]+/g) || [];
+      const isPlayfulBatVerse = expectedTokens.includes('dance') && expectedTokens.includes('playful') && expectedTokens.includes('bat');
+      const playfulBatHeard = spokenTokens.includes('bat') && (spokenTokens.includes('dance') || spokenTokens.includes('playful'));
+      const correct = Boolean(expected && (spoken.includes(expected) || (isPlayfulBatVerse && playfulBatHeard)));
       const message = correct ? 'Correct! Read the next verse.' : `I heard “${result.raw_transcript || result.transcript || 'unclear speech'}”. Please try the verse again.`;
       await save({action:'verse_read',item_index:state.item_index,verse_index:state.verse_index,success:correct});
       render(message, correct ? 'good' : 'bad');
