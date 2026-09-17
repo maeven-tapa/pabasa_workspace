@@ -1318,21 +1318,21 @@ logger = logging.getLogger(__name__)
 PROFILE_PHOTOS_DIR = settings.BASE_DIR / 'pabasa_app' / 'static' / 'pabasa_app' / 'uploads' / 'profiles'
 
 STUDENT_AVATAR_CATALOG = [
-    {'slug': 'fox', 'name': 'Fox', 'emoji': '🦊', 'pack': 'forest_friends'},
-    {'slug': 'owl', 'name': 'Owl', 'emoji': '🦉', 'pack': 'forest_friends'},
-    {'slug': 'rabbit', 'name': 'Rabbit', 'emoji': '🐰', 'pack': 'forest_friends'},
-    {'slug': 'bear', 'name': 'Bear', 'emoji': '🐻', 'pack': 'forest_friends'},
-    {'slug': 'squirrel', 'name': 'Squirrel', 'emoji': '🐿️', 'pack': 'forest_friends'},
-    {'slug': 'raccoon', 'name': 'Raccoon', 'emoji': '🦝', 'pack': 'forest_friends'},
-    {'slug': 'hedgehog', 'name': 'Hedgehog', 'emoji': '🦔', 'pack': 'forest_friends'},
-    {'slug': 'frog', 'name': 'Frog', 'emoji': '🐸', 'pack': 'pond_friends'},
-    {'slug': 'duck', 'name': 'Duck', 'emoji': '🦆', 'pack': 'pond_friends'},
-    {'slug': 'penguin', 'name': 'Penguin', 'emoji': '🐧', 'pack': 'pond_friends'},
-    {'slug': 'turtle', 'name': 'Turtle', 'emoji': '🐢', 'pack': 'pond_friends'},
-    {'slug': 'butterfly', 'name': 'Butterfly', 'emoji': '🦋', 'pack': 'garden_friends'},
-    {'slug': 'bee', 'name': 'Bee', 'emoji': '🐝', 'pack': 'garden_friends'},
-    {'slug': 'panda', 'name': 'Panda', 'emoji': '🐼', 'pack': 'forest_friends'},
-    {'slug': 'koala', 'name': 'Koala', 'emoji': '🐨', 'pack': 'forest_friends'},
+    {'slug': 'fox', 'name': 'Fox', 'emoji': 'ðŸ¦Š', 'pack': 'forest_friends'},
+    {'slug': 'owl', 'name': 'Owl', 'emoji': 'ðŸ¦‰', 'pack': 'forest_friends'},
+    {'slug': 'rabbit', 'name': 'Rabbit', 'emoji': 'ðŸ°', 'pack': 'forest_friends'},
+    {'slug': 'bear', 'name': 'Bear', 'emoji': 'ðŸ»', 'pack': 'forest_friends'},
+    {'slug': 'squirrel', 'name': 'Squirrel', 'emoji': 'ðŸ¿ï¸', 'pack': 'forest_friends'},
+    {'slug': 'raccoon', 'name': 'Raccoon', 'emoji': 'ðŸ¦', 'pack': 'forest_friends'},
+    {'slug': 'hedgehog', 'name': 'Hedgehog', 'emoji': 'ðŸ¦”', 'pack': 'forest_friends'},
+    {'slug': 'frog', 'name': 'Frog', 'emoji': 'ðŸ¸', 'pack': 'pond_friends'},
+    {'slug': 'duck', 'name': 'Duck', 'emoji': 'ðŸ¦†', 'pack': 'pond_friends'},
+    {'slug': 'penguin', 'name': 'Penguin', 'emoji': 'ðŸ§', 'pack': 'pond_friends'},
+    {'slug': 'turtle', 'name': 'Turtle', 'emoji': 'ðŸ¢', 'pack': 'pond_friends'},
+    {'slug': 'butterfly', 'name': 'Butterfly', 'emoji': 'ðŸ¦‹', 'pack': 'garden_friends'},
+    {'slug': 'bee', 'name': 'Bee', 'emoji': 'ðŸ', 'pack': 'garden_friends'},
+    {'slug': 'panda', 'name': 'Panda', 'emoji': 'ðŸ¼', 'pack': 'forest_friends'},
+    {'slug': 'koala', 'name': 'Koala', 'emoji': 'ðŸ¨', 'pack': 'forest_friends'},
 ]
 STUDENT_AVATAR_BY_SLUG = {avatar['slug']: avatar for avatar in STUDENT_AVATAR_CATALOG}
 
@@ -2019,12 +2019,12 @@ def _practice_score_payload(data):
 
 
 PRACTICE_FEEDBACK_RULES = (
-    (90, "🎉 Excellent work! You're all ready for when an assessment comes. Keep up the amazing reading!"),
-    (80, "🌟 Great job! You're doing very well. A little more practice and you'll be assessment-ready!"),
-    (70, "👏 Good work! You're making great progress. Keep practicing to become an even stronger reader."),
-    (60, "📖 Nice effort! You're improving every time you practice. Keep reading and you'll continue to get better."),
-    (50, "💪 Keep going! You're learning with every practice session. Read carefully and don't give up!"),
-    (0, "💙 Don't worry! Every great reader starts with practice. Keep trying—you'll improve one word at a time!"),
+    (90, "ðŸŽ‰ Excellent work! You're all ready for when an assessment comes. Keep up the amazing reading!"),
+    (80, "ðŸŒŸ Great job! You're doing very well. A little more practice and you'll be assessment-ready!"),
+    (70, "ðŸ‘ Good work! You're making great progress. Keep practicing to become an even stronger reader."),
+    (60, "ðŸ“– Nice effort! You're improving every time you practice. Keep reading and you'll continue to get better."),
+    (50, "ðŸ’ª Keep going! You're learning with every practice session. Read carefully and don't give up!"),
+    (0, "ðŸ’™ Don't worry! Every great reader starts with practice. Keep tryingâ€”you'll improve one word at a time!"),
 )
 
 
@@ -2612,7 +2612,7 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
         'grade_level_ready_count': level_counts['Reading At Grade Level'],
         'avg_improvement_30d': round(sum(improvement_values) / len(improvement_values), 1) if improvement_values else 0,
         'active_this_week_count': active_this_week,
-        'top_performer_name': top_student['name'] if top_student else '—',
+        'top_performer_name': top_student['name'] if top_student else 'â€”',
         'top_performer_score': top_score,
         'level_counts': level_counts,
         'average_score': round(sum(score for _, score in scored_students) / len(scored_students), 1) if scored_students else 0,
@@ -3449,7 +3449,7 @@ def _build_structured_reading_progress_pdf(report, message='', course=None, teac
     elements.append(Paragraph(text(message, 'No teacher note was added.'), body))
     elements.append(Paragraph('NEXT STEPS', heading))
     for recommendation in report.get('recommendations') or []:
-        elements.append(Paragraph('• ' + text(recommendation), body))
+        elements.append(Paragraph('â€¢ ' + text(recommendation), body))
 
     doc = SimpleDocTemplate(buffer, pagesize=page_size, leftMargin=margin, rightMargin=margin, topMargin=margin, bottomMargin=margin)
     doc.build(elements)
@@ -5420,8 +5420,8 @@ def _dashboard_context(request, nav_role=None, extra=None):
             ('midline_assessment', 'Mid-Assessment'),
             ('post_assessment', 'Post-Assessment'),
             ('school_closing', 'Closing Block'),
-            ('aral_1', 'ARAL 1 — After Class'),
-            ('aral_2', 'ARAL 2 — End of Term (last 1–5 days)'),
+            ('aral_1', 'ARAL 1 â€” After Class'),
+            ('aral_2', 'ARAL 2 â€” End of Term (last 1â€“5 days)'),
         ]
         print("CONTEXT_KEY_DONE", "calendar_legend")
         perf_log('student_calendar_built', 'student_calendar_start', {
@@ -6082,7 +6082,7 @@ def admin_official_reading_override_request(request, material_id):
     supporting_lines = '\n'.join(f"{idx}. {link}" for idx, link in enumerate(supporting_links, start=1)) or 'No supporting documentation links provided.'
     try:
         _send_pabasa_email(
-            '[PABASA] Official Assessment Integrity Override Request — Review Required',
+            '[PABASA] Official Assessment Integrity Override Request â€” Review Required',
             f"Integrity Override Request\n\nRequest ID: {request_id}\nRequested by: {admin_user.first_name} {admin_user.last_name}\nAdmin account: {admin_user.custom_id} / {admin_user.email}\nDate/Time submitted: {timezone.localtime(override_request.submitted_at).strftime('%B %d, %Y %I:%M %p')}\nOfficial Material Set: {material.title}\n\nDepEd Source / Reference\n{deped_reference}\n\nMaterial to Be Changed\n{material_change}\n\nJustification\n{justification}\n\nSupporting Documentation\n{supporting_lines}\n\nStatus\nPending Review\n\nPlease review this request through the PABASA Admin interface and determine whether the requested integrity override should be authorized.",
             ['im.donapalacios@gmail.com'],
             heading='Integrity override review required',
@@ -6196,7 +6196,7 @@ def _active_principal_for_school(school):
 def _validate_principal_form_data(form_data):
     """Return validation errors for the admin's principal-account form."""
     errors = []
-    name_pattern = r"[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ .'-]*"
+    name_pattern = r"[A-Za-zÃ€-Ã–Ã˜-Ã¶Ã¸-Ã¿][A-Za-zÃ€-Ã–Ã˜-Ã¶Ã¸-Ã¿ .'-]*"
 
     for label, key in (('First name', 'first_name'), ('Last name', 'last_name')):
         value = form_data[key]
@@ -6206,7 +6206,7 @@ def _validate_principal_form_data(form_data):
             errors.append(f'{label} may contain letters, spaces, periods, hyphens, and apostrophes only.')
 
     middle_initial = form_data['middle_initial']
-    if middle_initial and not re.fullmatch(r'[A-Za-zÀ-ÖØ-öø-ÿ]', middle_initial):
+    if middle_initial and not re.fullmatch(r'[A-Za-zÃ€-Ã–Ã˜-Ã¶Ã¸-Ã¿]', middle_initial):
         errors.append('Middle initial must be one letter.')
 
     suffix = form_data['suffix']
@@ -6425,14 +6425,14 @@ def _student_enrollment_activity(user):
         year = enrollment.school_calendar.school_year if enrollment.school_calendar else 'School year not set'
         activities.append({
             'title': 'Student enrolled',
-            'message': f'{year} · {enrollment.grade_level or "Grade 2"} · {section_label}',
+            'message': f'{year} Â· {enrollment.grade_level or "Grade 2"} Â· {section_label}',
             'created_at': enrollment.joined_at,
             'actor': None,
         })
         if enrollment.finalized_at:
             activities.append({
                 'title': f'Enrollment finalized: {enrollment.get_outcome_display()}',
-                'message': f'{year} · {enrollment.grade_level or "Grade 2"} · {section_label}',
+                'message': f'{year} Â· {enrollment.grade_level or "Grade 2"} Â· {section_label}',
                 'created_at': enrollment.finalized_at,
                 'actor': enrollment.finalized_by,
             })
@@ -7368,7 +7368,7 @@ def _admin_edit_section(request, section_id):
     if request.method == 'POST':
         class_name = request.POST.get('class_name', '').strip()
         subject = request.POST.get('subject', '').strip()
-        # Per-class `section` field removed from Section model — ignore any posted value
+        # Per-class `section` field removed from Section model â€” ignore any posted value
         header = request.POST.get('header', '').strip()
         description = request.POST.get('description', '').strip()
 
@@ -7832,7 +7832,7 @@ def _seed_philippine_holidays(school_calendar):
         august_last_day = date(year, 8, 31)
         national_heroes_day = august_last_day - timedelta(days=(august_last_day.weekday() - 0) % 7)
         holidays.extend([
-            ('New Year’s Day', date(year, 1, 1)),
+            ('New Yearâ€™s Day', date(year, 1, 1)),
             ('Maundy Thursday', easter - timedelta(days=3)),
             ('Good Friday', easter - timedelta(days=2)),
             ('Black Saturday', easter - timedelta(days=1)),
@@ -7841,8 +7841,8 @@ def _seed_philippine_holidays(school_calendar):
             ('Independence Day', date(year, 6, 12)),
             ('National Heroes Day', national_heroes_day),
             ('Ninoy Aquino Day', date(year, 8, 21)),
-            ('All Saints’ Day', date(year, 11, 1)),
-            ('All Souls’ Day', date(year, 11, 2)),
+            ('All Saintsâ€™ Day', date(year, 11, 1)),
+            ('All Soulsâ€™ Day', date(year, 11, 2)),
             ('Bonifacio Day', date(year, 11, 30)),
             ('Feast of the Immaculate Conception', date(year, 12, 8)),
             ('Christmas Eve', date(year, 12, 24)),
@@ -8982,7 +8982,7 @@ def admin_school_calendar(request):
                     ).order_by('id').first()
                     previous_closing = previous_event.start_date if previous_event else None
                 if previous_closing and term_dates[term][0] <= _add_weekdays(previous_closing, 9):
-                    return HttpResponseForbidden(f'Term {term} must start after the previous term’s 10-day end-of-term block.')
+                    return HttpResponseForbidden(f'Term {term} must start after the previous termâ€™s 10-day end-of-term block.')
 
             assessment_types = {
                 1: ('pre_assessment', 'Pre-Assessment Week'),
@@ -10640,7 +10640,7 @@ def _practice_game_progression(mode, student_user=None, language=None):
                 'difficulty': difficulty,
                 'difficulty_label': _practice_config_label(difficulty, AdminPracticeMaterialForm.DIFFICULTY_CHOICES),
                 'mode_label': _practice_progression_mode_title(normalized_mode),
-                'subtitle_label': f"{_practice_progression_mode_title(normalized_mode)} • {_practice_config_label(difficulty, AdminPracticeMaterialForm.DIFFICULTY_CHOICES)}",
+                'subtitle_label': f"{_practice_progression_mode_title(normalized_mode)} â€¢ {_practice_config_label(difficulty, AdminPracticeMaterialForm.DIFFICULTY_CHOICES)}",
                 'level': level_key,
                 'level_label': _practice_config_label(level_key, AdminPracticeMaterialForm.LEVEL_CHOICES),
                 'title': material.title if material else 'Coming soon',
@@ -10679,11 +10679,11 @@ def _practice_game_progression(mode, student_user=None, language=None):
 
     total_levels = len(level_keys) * len(difficulty_keys)
     if total_levels and total_completed >= total_levels:
-        current_challenge_label = 'All Challenges Completed 🎉'
+        current_challenge_label = 'All Challenges Completed ðŸŽ‰'
     elif next_challenge:
-        current_challenge_label = f"{next_challenge['difficulty_label']} • {next_challenge['level_label']}"
+        current_challenge_label = f"{next_challenge['difficulty_label']} â€¢ {next_challenge['level_label']}"
     else:
-        current_challenge_label = 'Easy • Level 1'
+        current_challenge_label = 'Easy â€¢ Level 1'
     return {
         'mode': normalized_mode,
         'mode_title': _practice_progression_mode_title(normalized_mode),
@@ -11324,7 +11324,7 @@ def assessment(request):
         context.update({
             'stage': 'grade_level_complete',
             'workflow_title': 'Congratulations!',
-            'workflow_subtitle': 'You’re reading at grade level!',
+            'workflow_subtitle': 'Youâ€™re reading at grade level!',
             'workflow_message': 'Keep up the great work. You can continue practicing whenever you like.',
             'eligibility': reading_access_state,
         })
@@ -11382,7 +11382,7 @@ def assessment(request):
                 'stage': 'assessment_not_taken',
                 'workflow_title': 'Assessment Not Taken',
                 'workflow_subtitle': selected_section.class_name,
-                'workflow_message': "You didn’t complete the Assessment Week assessment, so this reading assessment isn’t available to you yet.",
+                'workflow_message': "You didnâ€™t complete the Assessment Week assessment, so this reading assessment isnâ€™t available to you yet.",
                 'assessment_request_pending': bool(pending_request),
                 'assessment_request_section_id': selected_section.id,
             })
@@ -11392,7 +11392,7 @@ def assessment(request):
             context.update({
                 'stage': 'grade_level_complete',
                 'workflow_title': 'Congratulations!',
-                'workflow_subtitle': 'You’re reading at grade level!',
+                'workflow_subtitle': 'Youâ€™re reading at grade level!',
                 'workflow_message': 'Keep up the great work. You can continue practicing whenever you like.',
             })
             return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
@@ -11899,6 +11899,28 @@ def assessment(request):
             }
             for row in progress_rows if row.activity_key in prescribed_keys
         }
+        # Lesson 7 Gawain 1 predates the prescribed-activity catalog, but it
+        # belongs in Session 3 with the catalog-backed cards.  Supply its card
+        # payload here so it participates in the same folder assembly.
+        lesson7_gawain1_card = {
+            'activity_key': 'lesson-7-gawain-1',
+            'session_key': 'session-3',
+            'lesson_number': 7,
+            'gawain_number': 1,
+            'title': 'Letrang Ii',
+            'activity_title': 'Letrang Ii',
+            'description': 'Bilugan ang larawan na nagsisimula sa tunog na /i/.',
+            'total_items': 8,
+            'image_url': static('pabasa_app/images/letrang_i/ilaw.png'),
+            'route_url': reverse('lesson_7_gawain_1_page'),
+        }
+        legacy_lesson7_progress = context['aral_standalone_progress'].get('lesson-7-gawain-1')
+        if legacy_lesson7_progress:
+            context['prescribed_activity_progress']['lesson-7-gawain-1'] = {
+                'completed_items': legacy_lesson7_progress['completed_items'],
+                'total_items': legacy_lesson7_progress['total_items'],
+                'activity_completed': legacy_lesson7_progress['activity_completed'],
+            }
         def prescribed_card_image_path(activity):
             """Card artwork is optional for non-image prescribed activities."""
             if activity.get('card_image_path'):
@@ -11909,7 +11931,35 @@ def assessment(request):
                 (item.get('image_path') for item in activity.get('items', []) if item.get('image_path')),
                 '',
             )
-        context['prescribed_activity_cards'] = [
+        session_three_order = (
+            'lesson-7-gawain-1', 'lesson7-gawain2a', 'lesson7-gawain2b',
+            'lesson7-gawain2c', 'lesson7-gawain3', 'lesson7-gawain4',
+            'lesson7-gawain4a', 'lesson7-gawain4b', 'lesson8-gawain1',
+            'lesson8-gawain1a', 'lesson9-gawain1', 'lesson9-gawain2',
+            'lesson9-gawain3',
+        )
+        catalog_activities = list(PRESCRIBED_ACTIVITIES.values())
+        session_three_activities_by_key = {
+            activity['activity_key']: activity
+            for activity in catalog_activities
+            if activity.get('session_number') == 3
+        }
+        # This is an explicit stable-key sequence, not a lexical or database
+        # ordering.  Lesson 7 Â· Gawain 1 is a legacy card and is added by the
+        # template's Session 3 folder assembly.
+        ordered_session_three = [
+            session_three_activities_by_key[key]
+            for key in session_three_order
+            if key in session_three_activities_by_key
+        ]
+        session_three_iterator = iter(ordered_session_three)
+        # Preserve the catalog ordering for every other session. Only replace
+        # the Session 3 slots with their deterministic Lesson/Gawain order.
+        presentation_activities = [
+            next(session_three_iterator) if activity.get('session_number') == 3 else activity
+            for activity in catalog_activities
+        ]
+        context['prescribed_activity_cards'] = [lesson7_gawain1_card, *[
             {
                 'activity_key': activity['activity_key'],
                 'session_key': f"session-{activity['session_number']}",
@@ -11922,8 +11972,8 @@ def assessment(request):
                 'image_url': static(image_path) if (image_path := (prescribed_card_image_path(activity) or _prescribed_activity_thumbnail_path(activity))) else '',
                 'route_url': reverse(activity['route_name']) if activity.get('route_name') else reverse('prescribed_activity_page', kwargs={'activity_key': activity['activity_key']}),
             }
-            for activity in PRESCRIBED_ACTIVITIES.values()
-        ]
+            for activity in presentation_activities
+        ]]
         try:
             logger.warning(
                 "DEBUG: RENDER ASSESSMENT TEMPLATE %s",
@@ -12104,7 +12154,7 @@ def teacher_aral_action(request):
     if action == 'exit':
         _log_activity(
             'enrollment',
-            'Exited ARAL Program — Reading at Grade Level',
+            'Exited ARAL Program â€” Reading at Grade Level',
             'Student was promoted to Reading at Grade Level through the Exit ARAL Program action.',
             actor=teacher,
             metadata={
@@ -18014,7 +18064,7 @@ def reading_transcribe_api(request):
         )
         # English prescribed activities contain very short words, for which
         # speech-to-text commonly returns these phonetic spellings. Canonicalize
-        # only the returned reading target so every Lesson 26–31 client (some
+        # only the returned reading target so every Lesson 26â€“31 client (some
         # validate in JavaScript, others on the server) receives one result.
         target_words = re.findall(r'[a-z]+', target_text.lower())
         heard_words = set(re.findall(r'[a-z]+', str(transcript or '').lower()))
@@ -20297,9 +20347,9 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
                         session.id,
                         student_user.id,
                     )
-                    existing_title = '😔 Oops! You Missed a Reading Activity'
+                    existing_title = 'ðŸ˜” Oops! You Missed a Reading Activity'
                     existing_message = (
-                        f"You missed this reading activity:\n\n📖 {session.material.title or 'Reading Activity'}\n\n"
+                        f"You missed this reading activity:\n\nðŸ“– {session.material.title or 'Reading Activity'}\n\n"
                         "The reading activity is already over.\n\n"
                         "Please tell your teacher if you still need to do today's reading."
                     )
@@ -23222,7 +23272,7 @@ def profile(request):
         'section_name': user.section or '',
         'school_name': user.school_record.name if user.role == 'teacher' and user.school_record_id else (user.school or ''),
         'teacher_grade_section': (
-            f'{teacher_assigned_section.grade_level} – {teacher_assigned_section.section}'
+            f'{teacher_assigned_section.grade_level} â€“ {teacher_assigned_section.section}'
             if teacher_assigned_section and teacher_assigned_section.grade_level and teacher_assigned_section.section
             else (teacher_assigned_section.class_name if teacher_assigned_section else '')
         ),
@@ -23507,7 +23557,7 @@ def unenroll_class(request):
             # Create an in-app notification for the teacher
             teacher_user = section.teacher
             title = 'Student Unenrolled from a Class'
-            message = f"• {student_user.first_name} {student_user.last_name} unenrolled from {section.class_name}."
+            message = f"â€¢ {student_user.first_name} {student_user.last_name} unenrolled from {section.class_name}."
             Notification.objects.create(
                 recipient=teacher_user,
                 created_by=student_user,
@@ -23551,7 +23601,7 @@ def generate_class_code(request):
     """Legacy endpoint retained only to explain the canonical class workflow."""
     return JsonResponse({
         'success': False,
-        'error': 'Classes are managed through Admin → School. Teachers are assigned to existing sections.',
+        'error': 'Classes are managed through Admin â†’ School. Teachers are assigned to existing sections.',
     }, status=410)
 
 
@@ -23562,7 +23612,7 @@ def create_reading_class(request):
     """Reject the retired teacher-owned class creation workflow."""
     return JsonResponse({
         'success': False,
-        'error': 'Classes are managed through Admin → School. Teachers can only be assigned to an existing section.',
+        'error': 'Classes are managed through Admin â†’ School. Teachers can only be assigned to an existing section.',
     }, status=410)
 
 def _teacher_year_end_finalization_open(section, on_date=None):
@@ -24707,21 +24757,21 @@ def _material_activity_type_label(material):
 
 def _material_result_score_display(result):
     if result is None:
-        return '—'
+        return 'â€”'
     correct = result.correct_items if result.correct_items is not None else None
     total = result.items_completed if result.items_completed not in (None, '') else None
     if correct is None or total is None or total <= 0:
-        return '—'
+        return 'â€”'
     return f"{int(correct)}/{int(total)}"
 
 
 def _material_result_percentage_display(result):
     if result is None:
-        return '—'
+        return 'â€”'
     correct = result.correct_items if result.correct_items is not None else None
     total = result.items_completed if result.items_completed not in (None, '') else None
     if correct is None or total in (None, '', 0) or total <= 0:
-        return '—'
+        return 'â€”'
     percentage = round((float(correct) / float(total)) * 100, 2)
     return f"{percentage:g}%"
 
@@ -24803,7 +24853,7 @@ def export_material_results(request):
     header_fill = PatternFill('solid', fgColor='E9ECEF')
     header_font = Font(bold=True)
 
-    ws['A1'] = 'PABASA — Student Activity Results'
+    ws['A1'] = 'PABASA â€” Student Activity Results'
     ws['A1'].font = Font(bold=True, size=14)
     ws.merge_cells('A1:J1')
     ws['A2'] = f'Activity: {material.title}'
@@ -24834,13 +24884,13 @@ def export_material_results(request):
         result = results_by_student.get(student.id)
         story_submission = story_submissions_by_student.get(student.id)
         completed = bool(result and str(result.attempt_status or '').strip().lower() == 'completed')
-        score_display = '—'
-        percent_display = '—'
+        score_display = 'â€”'
+        percent_display = 'â€”'
         status_display = 'Not Attempted'
-        date_display = '—'
+        date_display = 'â€”'
         if story_submission:
-            score_display = str(story_submission.grade) if story_submission.grade is not None else '—'
-            percent_display = f"{story_submission.grade * 20:g}%" if story_submission.grade is not None else '—'
+            score_display = str(story_submission.grade) if story_submission.grade is not None else 'â€”'
+            percent_display = f"{story_submission.grade * 20:g}%" if story_submission.grade is not None else 'â€”'
             status_display = 'Graded' if story_submission.grade is not None else 'Pending Grade'
             date_display = timezone.localtime(story_submission.submitted_at).strftime('%B %d, %Y')
         elif result and completed:
@@ -24863,7 +24913,7 @@ def export_material_results(request):
             score_display,
             percent_display,
             status_display,
-            '' if date_display == '—' else date_display,
+            '' if date_display == 'â€”' else date_display,
         ])
 
     for column_cells in ws.columns:
@@ -25641,7 +25691,7 @@ def teacher_add_student(request):
                 _create_notification(
                     section.teacher,
                     'Student Enrolled in a Section',
-                    f'• {student_name} joined {section.class_name}.',
+                    f'â€¢ {student_name} joined {section.class_name}.',
                     'success',
                     f"{reverse('class_management')}?section_id={section.id}",
                     section.teacher,
@@ -25684,7 +25734,7 @@ def teacher_add_student(request):
         _create_notification(
             teacher_user,
             'Student Enrolled in a Course',
-            f'• {student_name} joined {course.title}.',
+            f'â€¢ {student_name} joined {course.title}.',
             'success',
             reverse('courses'),
             teacher_user,
@@ -25821,7 +25871,7 @@ def teacher_remove_student(request):
 @login_required(role='teacher')
 def get_teacher_classes(request):
     try:
-        user_id = request.session.get('user_id')  # ← this is already the session-bound user
+        user_id = request.session.get('user_id')  # â† this is already the session-bound user
         teacher_user = User.objects.filter(id=user_id).first()
         if not teacher_user or teacher_user.role != 'teacher':
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
@@ -26444,7 +26494,7 @@ def delete_reading_class(request):
     """Reject teacher changes to canonical Section lifecycle."""
     return JsonResponse({
         'success': False,
-        'error': 'Sections are managed through Admin → School. Contact an administrator to change a class.',
+        'error': 'Sections are managed through Admin â†’ School. Contact an administrator to change a class.',
     }, status=403)
 
 def _parse_selected_pages(raw_value, page_count):
@@ -28008,7 +28058,7 @@ def add_reading_material(request):
 
         logger.debug(f"add_reading_material received: title={title}, status={status}, section_id={section_id_raw}, source_type={source_type}")
 
-        # ── server-side validation ──────────────────────────────────────────
+        # â”€â”€ server-side validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         errors = {}
         if not title:
             errors['title'] = 'Material title is required.'
@@ -28059,7 +28109,7 @@ def add_reading_material(request):
         ).strip()
         language = Material.normalize_language_value(submitted_language) if submitted_language else _material_language_from_subject(getattr(section, 'subject', '') if section else '')
 
-        # ── parse scheduled_at datetime if provided ─────────────────────────
+        # â”€â”€ parse scheduled_at datetime if provided â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         scheduled_at = None
         if status == 'scheduled' and scheduled_at_str:
             # Frontend sends ISO format from datetime-local: "2026-06-15T14:30"
@@ -29117,7 +29167,7 @@ def get_teacher_students_api(request):
             if any(item.get('completed_at') and item['completed_at'] >= seven_days_ago for item in attempts)
         })
 
-        top_performer_name = '—'
+        top_performer_name = 'â€”'
         top_performer_score = None
         improvement_values = []
 
@@ -29977,13 +30027,13 @@ def _principal_report_pdf_response(request, analytics, report_type, grade_filter
         completion_rate = _pct(completed, total_students) if total_students else 0
         avg_score = round(sum(float(row.get('average_score', 0) or 0) for row in filtered_grade_rows) / len(filtered_grade_rows), 1) if filtered_grade_rows else 0
         summary_cards = [
-            _build_card('Focused Grade', selected_grade_label, 'Selected performance scope', '#8B3E2F', '◉'),
-            _build_card('Students', _format_count(total_students), 'Students in scope', '#4CAF50', '◌'),
-            _build_card('Completed', _format_count(completed), 'Finished work', '#4A90E2', '◍'),
-            _build_card('In Progress', _format_count(in_progress), 'Still active', '#FFC107', '↺'),
-            _build_card('Not Started', _format_count(not_started), 'Pending participation', '#E53935', '•'),
+            _build_card('Focused Grade', selected_grade_label, 'Selected performance scope', '#8B3E2F', 'â—‰'),
+            _build_card('Students', _format_count(total_students), 'Students in scope', '#4CAF50', 'â—Œ'),
+            _build_card('Completed', _format_count(completed), 'Finished work', '#4A90E2', 'â—'),
+            _build_card('In Progress', _format_count(in_progress), 'Still active', '#FFC107', 'â†º'),
+            _build_card('Not Started', _format_count(not_started), 'Pending participation', '#E53935', 'â€¢'),
             _build_card('Completion Rate', _format_percentage(completion_rate), 'Grade-level progress', '#8B3E2F', '%'),
-            _build_card('Average Score', _format_percentage(avg_score), 'Reading mastery', '#4CAF50', '★'),
+            _build_card('Average Score', _format_percentage(avg_score), 'Reading mastery', '#4CAF50', 'â˜…'),
         ]
     elif report_type == 'assessment':
         assessment_rows = analytics.get('assessment_rows', []) or []
@@ -29992,23 +30042,23 @@ def _principal_report_pdf_response(request, analytics, report_type, grade_filter
         pending_count = sum(1 for row in assessment_rows if str(row.get('status') or '').lower() == 'pending')
         avg_score = round(sum(float(row.get('avg_score', 0) or 0) for row in assessment_rows) / len(assessment_rows), 1) if assessment_rows else 0
         summary_cards = [
-            _build_card('Assessments', _format_count(len(assessment_rows)), 'Available assessment tasks', '#8B3E2F', '◉'),
-            _build_card('Completed', _format_count(completed_count), 'Tasks finished', '#4CAF50', '◌'),
-            _build_card('In Progress', _format_count(in_progress_count), 'Currently active', '#4A90E2', '◍'),
-            _build_card('Pending', _format_count(pending_count), 'Awaiting action', '#E53935', '•'),
+            _build_card('Assessments', _format_count(len(assessment_rows)), 'Available assessment tasks', '#8B3E2F', 'â—‰'),
+            _build_card('Completed', _format_count(completed_count), 'Tasks finished', '#4CAF50', 'â—Œ'),
+            _build_card('In Progress', _format_count(in_progress_count), 'Currently active', '#4A90E2', 'â—'),
+            _build_card('Pending', _format_count(pending_count), 'Awaiting action', '#E53935', 'â€¢'),
             _build_card('Completion Rate', _format_percentage(analytics.get('completion_rate', 0)), 'School-wide completion', '#8B3E2F', '%'),
-            _build_card('Average Score', _format_percentage(avg_score), 'Assessment mastery', '#4CAF50', '★'),
+            _build_card('Average Score', _format_percentage(avg_score), 'Assessment mastery', '#4CAF50', 'â˜…'),
         ]
     else:
         summary_cards = [
-            _build_card('Total Students', _format_count(analytics.get('total_students', 0)), 'Enrollment overview', '#8B3E2F', '◉'),
-            _build_card('Total Teachers', _format_count(analytics.get('total_teachers', 0)), 'Active school staff', '#4CAF50', '◌'),
-            _build_card('Total Assessments', _format_count(analytics.get('total_assessments', 0)), 'Assigned reading tasks', '#4A90E2', '◍'),
-            _build_card('Completed', _format_count(analytics.get('completed_assessments', 0)), 'Finished assessments', '#2e7d32', '✓'),
-            _build_card('In Progress', _format_count(analytics.get('in_progress_assessments', 0)), 'Currently active', '#FFC107', '↺'),
-            _build_card('Pending', _format_count(analytics.get('pending_assessments', 0)), 'Awaiting action', '#E53935', '•'),
+            _build_card('Total Students', _format_count(analytics.get('total_students', 0)), 'Enrollment overview', '#8B3E2F', 'â—‰'),
+            _build_card('Total Teachers', _format_count(analytics.get('total_teachers', 0)), 'Active school staff', '#4CAF50', 'â—Œ'),
+            _build_card('Total Assessments', _format_count(analytics.get('total_assessments', 0)), 'Assigned reading tasks', '#4A90E2', 'â—'),
+            _build_card('Completed', _format_count(analytics.get('completed_assessments', 0)), 'Finished assessments', '#2e7d32', 'âœ“'),
+            _build_card('In Progress', _format_count(analytics.get('in_progress_assessments', 0)), 'Currently active', '#FFC107', 'â†º'),
+            _build_card('Pending', _format_count(analytics.get('pending_assessments', 0)), 'Awaiting action', '#E53935', 'â€¢'),
             _build_card('Completion Rate', _format_percentage(analytics.get('completion_rate', 0)), 'Overall progress', '#8B3E2F', '%'),
-            _build_card('Average Score', _format_percentage(analytics.get('average_score', 0)), 'Reading mastery', '#4CAF50', '★'),
+            _build_card('Average Score', _format_percentage(analytics.get('average_score', 0)), 'Reading mastery', '#4CAF50', 'â˜…'),
         ]
     summary_rows = [summary_cards[i:i + 2] for i in range(0, len(summary_cards), 2)]
     summary_grid = Table(summary_rows, colWidths=[card_width, card_width], repeatRows=0)
@@ -30085,7 +30135,7 @@ def _principal_report_pdf_response(request, analytics, report_type, grade_filter
         canvas_obj.setFillColor(colors.HexColor('#6b7280'))
         canvas_obj.drawString(left_margin, 0.38 * inch, 'PABASA Automated Reading Assessment System')
         canvas_obj.drawCentredString(page_size[0] / 2.0, 0.38 * inch, f'Page {canvas_obj.getPageNumber()}')
-        canvas_obj.drawRightString(page_size[0] - right_margin, 0.38 * inch, f'Confidential School Report • Generated {generated_at}')
+        canvas_obj.drawRightString(page_size[0] - right_margin, 0.38 * inch, f'Confidential School Report â€¢ Generated {generated_at}')
         canvas_obj.restoreState()
 
     doc = SimpleDocTemplate(

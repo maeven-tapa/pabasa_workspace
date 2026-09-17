@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
-<style>.lesson7-progress{height:8px;margin:.25rem auto .8rem;border-radius:99px;background:#dcebea;overflow:hidden;width:88%}.lesson7-progress span{display:block;height:100%;background:#e6a33a}</style><script>document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){const g=document.getElementById('sessionGrid'),c=[...(g?.children||[])].find(x=>x.querySelector('.session-content h4')?.textContent.trim()==='Session 9'),p=JSON.parse(document.getElementById('aral-standalone-progress')?.textContent||'{}')['lesson-7-gawain-1']||{};if(!c)return;const n=Math.min(8,Number(p.completed_items)||0),done=Boolean(p.activity_completed)&&n===8;c.className='pabasa-session-card unlocked';c.innerHTML='<div class="session-visual"><span class="pabasa-session-badge">⭐</span><img src="{% static 'pabasa_app/images/letrang_i/ilaw.png' %}" alt="Larawan ng ilaw"></div><div class="session-content"><h4>Lesson 7</h4><p>Gawain 1</p><div>Letrang Ii</div></div><div class="session-bottom"><div class="lesson7-progress"><span style="width:'+(n/8*100)+'%"></span></div><button type="button" '+(done?'disabled':'')+'>'+(done?'✓ NATAPOS NA':n?'IPAGPATULOY':'SIMULAN')+'</button></div>';if(!done)c.onclick=()=>location.href='{% url "lesson_7_gawain_1_page" %}'},500)});</script>
+<style>.lesson7-progress{height:8px;margin:.25rem auto .8rem;border-radius:99px;background:#dcebea;overflow:hidden;width:88%}.lesson7-progress span{display:block;height:100%;background:#e6a33a}</style><script>document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){const g=document.getElementById('sessionGrid'),c=[...(g?.children||[])].find(x=>x.querySelector('.session-content h4')?.textContent.trim()==='Session 9'),p=JSON.parse(document.getElementById('aral-standalone-progress')?.textContent||'{}')['lesson-7-gawain-1']||{};if(!c)return;if(g.querySelector('[data-prescribed-activity="lesson-7-gawain-1"]')){c.remove();return;}const n=Math.min(8,Number(p.completed_items)||0),done=Boolean(p.activity_completed)&&n===8;c.className='pabasa-session-card unlocked';c.dataset.prescribedActivity='lesson-7-gawain-1';c.dataset.sessionKey='session-3';c.innerHTML='<div class="session-visual"><span class="pabasa-session-badge">⭐</span><img src="{% static 'pabasa_app/images/letrang_i/ilaw.png' %}" alt="Larawan ng ilaw"></div><div class="session-content"><h4>Lesson 7</h4><p>Gawain 1</p><div>Letrang Ii</div></div><div class="session-bottom"><div class="lesson7-progress"><span style="width:'+(n/8*100)+'%"></span></div><button type="button" '+(done?'disabled':'')+'>'+(done?'✓ NATAPOS NA':n?'IPAGPATULOY':'SIMULAN')+'</button></div>';if(!done)c.onclick=()=>location.href='{% url "lesson_7_gawain_1_page" %}'},500)});</script>
 <style>.lesson6-progress{height:8px;margin:.25rem auto .8rem;border-radius:99px;background:#dcebea;overflow:hidden;width:88%}.lesson6-progress span{display:block;height:100%;background:#e6a33a}</style>
 <script>document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){const g=document.getElementById('sessionGrid'),c=[...(g?.children||[])].find(x=>x.querySelector('.session-content h4')?.textContent.trim()==='Session 8'),p=JSON.parse(document.getElementById('aral-standalone-progress')?.textContent||'{}')['lesson-6-gawain-1']||{};if(!c)return;const n=Math.min(5,Number(p.completed_items)||0),done=Boolean(p.activity_completed)&&n===5;c.className='pabasa-session-card unlocked';c.innerHTML='<div class="session-visual"><span class="pabasa-session-badge">⭐</span><img src="{% static 'pabasa_app/images/letrang_m_s_a/ampalaya.png' %}" alt="Larawan ng ampalaya"></div><div class="session-content"><h4>Lesson 6</h4><p>Gawain 1</p><div>Letrang Mm, Ss, at Aa</div></div><div class="session-bottom"><div class="lesson6-progress"><span style="width:'+(n/5*100)+'%"></span></div><button type="button" '+(done?'disabled':'')+'>'+(done?'✓ NATAPOS NA':n?'IPAGPATULOY':'SIMULAN')+'</button></div>';if(!done)c.onclick=()=>location.href='{% url "lesson_6_gawain_1_page" %}'},500)});</script>
 <script>document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){const card=[...document.querySelectorAll('#sessionGrid .pabasa-session-card')].find(function(c){return c.querySelector('.session-content h4')?.textContent.trim()==='Lesson 5'});const visual=card?.querySelector('.session-visual');if(!visual||visual.querySelector('img'))return;const img=document.createElement('img');img.src="{% static 'pabasa_app/images/letrang_a/aso.png' %}";img.alt='Larawan ng aso';img.style.cssText='display:block;width:82px;height:54px;margin:auto;object-fit:contain';visual.appendChild(img)},500)});</script>
@@ -1960,11 +1960,26 @@ document.addEventListener('DOMContentLoaded', function () {
             if (/Lesson 4|Lesson 5|Lesson 6/.test(text)) card.dataset.sessionKey = 'session-2';
             else if (/Lesson 7|Letrang Ii/.test(text)) card.dataset.sessionKey = 'session-3';
         });
+        const session3ActivityKeys = [
+            'lesson-7-gawain-1',
+            'lesson7-gawain2a',
+            'lesson7-gawain2b',
+            'lesson7-gawain2c',
+            'lesson7-gawain3',
+            'lesson7-gawain4',
+            'lesson7-gawain4a',
+            'lesson7-gawain4b',
+            'lesson8-gawain1',
+            'lesson8-gawain1a',
+            'lesson9-gawain1',
+            'lesson9-gawain2',
+            'lesson9-gawain3',
+        ];
         const groupedSessions = ['session-2', 'session-3'].map(function (key) {
             return { key: key, name: key.replace('session-', 'Session ') };
         });
         groupedSessions.forEach(function (group) {
-            const groupCards = remaining.filter(card => card.dataset.sessionKey === group.key);
+            let groupCards = remaining.filter(card => card.dataset.sessionKey === group.key);
             if (group.key === 'session-2') {
                 const session2Order = card => {
                     if (card.dataset.prescribedActivity === 'session-2-lesson-4-gawain-2') return 1;
@@ -1977,30 +1992,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 groupCards.sort((a, b) => session2Order(a) - session2Order(b));
             }
             if (group.key === 'session-3') {
-                // Session 3 contains a mix of catalog cards and legacy cards.
-                // Sort by the Lesson/Gawain information carried by each card,
-                // rather than relying on insertion timing from the catalog.
-                const session3Position = card => {
-                    const activityKey = String(card.dataset.prescribedActivity || '').toLowerCase();
-                    const label = `${activityKey} ${card.textContent}`.replace(/\s+/g, ' ').toLowerCase();
-                    const lessonMatch = label.match(/lesson[-\s]*(\d+)/);
-                    const gawainMatch = label.match(/gawain[-\s]*(\d+)\s*([a-z]?)/);
-                    const lesson = lessonMatch ? Number(lessonMatch[1]) : Number.MAX_SAFE_INTEGER;
-                    const gawain = gawainMatch ? Number(gawainMatch[1]) : Number.MAX_SAFE_INTEGER;
-                    const suffix = gawainMatch && gawainMatch[2]
-                        ? gawainMatch[2].charCodeAt(0) - 96
-                        : 0;
-
-                    return [lesson, gawain, suffix, activityKey || label];
-                };
-                groupCards.sort((a, b) => {
-                    const left = session3Position(a);
-                    const right = session3Position(b);
-                    for (let index = 0; index < 3; index += 1) {
-                        if (left[index] !== right[index]) return left[index] - right[index];
-                    }
-                    return left[3].localeCompare(right[3]);
-                });
+                const cardsByActivityKey = new Map(
+                    groupCards.map(card => [card.dataset.prescribedActivity, card])
+                );
+                // This direct lookup is the only ordering point for Session 3.
+                // Build the modal from this key sequence, rather than retaining
+                // any earlier grid placement or insertion order.
+                groupCards = session3ActivityKeys.reduce(function (cards, key) {
+                    const card = cardsByActivityKey.get(key);
+                    if (card) cards.push(card);
+                    return cards;
+                }, []);
             }
             if (!groupCards.length) return;
             const groupColumn = document.createElement('div');
@@ -2008,9 +2010,25 @@ document.addEventListener('DOMContentLoaded', function () {
             groupColumn.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">📁</span><span class="week-folder-name">${group.name}</span><span class="week-activity-count">${groupCards.length} activities</span></button><div class="week-activities-modal session-folder-modal" hidden><div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="${group.name} activities"><div class="week-activities-header"><span class="week-activities-title">📁 ${group.name} <small>— ${groupCards.length} activities</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div></div>`;
             const groupModal = groupColumn.querySelector('.session-folder-modal');
             groupModal.classList.add('aking-aralin-session-modal');
-            groupCards.forEach(card => groupModal.querySelector('.assessment-week-cards').appendChild(card));
+            groupModal.dataset.sessionKey = group.key;
+            const groupCardGrid = groupModal.querySelector('.assessment-week-cards');
+            if (group.key === 'session-3') groupCardGrid.style.setProperty('grid-auto-flow', 'row', 'important');
+            groupCardGrid.replaceChildren(...groupCards);
             document.body.appendChild(groupModal);
-            groupColumn.querySelector('.assessment-week-folder').onclick = () => { groupModal.hidden = false; document.body.style.overflow = 'hidden'; };
+            const placeSession3Cards = () => {
+                if (group.key !== 'session-3') return;
+                const cardsByActivityKey = new Map(
+                    Array.from(groupCardGrid.children).map(card => [card.dataset.prescribedActivity, card])
+                );
+                groupCardGrid.replaceChildren(...session3ActivityKeys
+                    .map(key => cardsByActivityKey.get(key))
+                    .filter(Boolean));
+            };
+            groupColumn.querySelector('.assessment-week-folder').onclick = () => {
+                placeSession3Cards();
+                groupModal.hidden = false;
+                document.body.style.overflow = 'hidden';
+            };
             const closeGroup = () => { groupModal.hidden = true; document.body.style.overflow = ''; };
             groupModal.querySelector('.week-activities-close').onclick = closeGroup;
             groupModal.onclick = event => { if (event.target === groupModal) closeGroup(); };
@@ -2107,50 +2125,3 @@ document.addEventListener('DOMContentLoaded',function(){
 <style>.lesson4-gawain2-progress-label{display:none!important}</style>
 <style>.pabasa-session-card button:disabled,.pabasa-session-card button.activity-completed{background:#6da77a!important;color:#fff!important;cursor:default!important;box-shadow:none!important;opacity:1!important}.pabasa-session-card button:disabled:hover,.pabasa-session-card button:disabled:active{transform:none!important}</style>
 <script>document.addEventListener('DOMContentLoaded',function(){const g=document.getElementById('sessionGrid');if(!g)return;function apply(){const c=g.querySelector('.pabasa-session-card:nth-child(7)'),s=JSON.parse(document.getElementById('aral-standalone-progress')?.textContent||'{}')['lesson-5-gawain-1']||{};if(!c)return;const n=Math.max(0,Math.min(9,Number(s.completed_items)||0)),d=Boolean(s.activity_completed)&&n>=9;c.className='pabasa-session-card unlocked';c.innerHTML='<div class="session-visual"><span class="pabasa-session-badge">⭐</span></div><div class="session-content"><h4>Lesson 5</h4><p>Gawain 1</p><div>Letrang Aa</div></div><div class="session-bottom"><div class="lesson5-progress"><span style="width:'+(d?100:n/9*100)+'%"></span></div><button type="button" '+(d?'disabled':'')+'>'+(d?'✓ NATAPOS NA':(n?'IPAGPATULOY':'SIMULAN'))+'</button></div>';if(!d)c.onclick=function(){location.href='{% url "lesson_5_gawain_1_page" %}'}}apply();new MutationObserver(apply).observe(g,{childList:true,subtree:true})});</script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const session3Position = card => {
-        const activityKey = String(card.dataset.prescribedActivity || '').toLowerCase();
-        const lessonLabel = card.querySelector('.session-content h4')?.textContent || '';
-        const gawainLabel = card.querySelector('.session-content p')?.textContent || '';
-        const label = `${activityKey} ${lessonLabel} ${gawainLabel}`.toLowerCase();
-        const lessonMatch = label.match(/lesson[-\s]*(\d+)/);
-        const gawainMatch = label.match(/gawain[-\s]*(\d+)\s*([a-z]?)/);
-        return [
-            lessonMatch ? Number(lessonMatch[1]) : Number.MAX_SAFE_INTEGER,
-            gawainMatch ? Number(gawainMatch[1]) : Number.MAX_SAFE_INTEGER,
-            gawainMatch?.[2] ? gawainMatch[2].charCodeAt(0) - 96 : 0,
-            activityKey || label,
-        ];
-    };
-
-    const sortSession3Modal = () => {
-        const modal = Array.from(document.querySelectorAll('.session-folder-modal')).find(candidate =>
-            candidate.dataset.sessionKey === 'session-3' ||
-            candidate.querySelector('.week-activities-title')?.textContent.includes('Session 3')
-        );
-        const cards = modal ? Array.from(modal.querySelectorAll('.assessment-week-cards > .pabasa-session-card')) : [];
-        const sorted = cards.slice().sort((a, b) => {
-            const left = session3Position(a);
-            const right = session3Position(b);
-            for (let index = 0; index < 3; index += 1) {
-                if (left[index] !== right[index]) return left[index] - right[index];
-            }
-            return left[3].localeCompare(right[3]);
-        });
-        if (cards.some((card, index) => card !== sorted[index])) {
-            cards[0]?.parentElement.append(...sorted);
-        }
-    };
-
-    // The folder itself is assembled after the activity cards.  Observe that
-    // final DOM insertion so the visible Session 3 modal is always sorted.
-    new MutationObserver(sortSession3Modal).observe(document.body, { childList: true, subtree: true });
-    setTimeout(sortSession3Modal, 1800);
-    document.addEventListener('click', event => {
-        if (event.target.closest('.session-folder-column[data-session-key="session-3"]')) {
-            sortSession3Modal();
-        }
-    });
-});
-</script>
