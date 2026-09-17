@@ -9,13 +9,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Coiny&display=swap" rel="stylesheet">
   <title>Lesson 3 · Gawain 2: Salitang Magkatugma</title>
   <style>{% include 'pabasa_app/lesson_3_gawain_2_styles.html' %}</style>
+  <style>.gawain-2:not(:has(.answers)) .status.warning{font-size:1rem!important;color:#92400e;background:#fef3c7;border-radius:12px;padding:7px 12px}.gawain-2:not(:has(.answers)) .status.warning::after{content:none!important}</style>
 </head>
 <body class="gawain-2">
   <main class="app">
     <nav class="nav"><a class="back" href="{% url 'assessment' %}">← Bumalik</a></nav>
     <section id="game" class="game"></section>
   </main>
-  <script src="{% static 'pabasa_app/js/lesson3_rhyme_activity.js' %}"></script>
+  <script src="{% static 'pabasa_app/js/lesson3_gawain_2_sequence.js' %}"></script>
   <script>
     const savedLesson3Progress = {{ lesson_3_progress|safe }};
     if (savedLesson3Progress) localStorage.setItem('pabasa:lesson-3-gawain-2:progress', String(savedLesson3Progress.activity_completed?6:savedLesson3Progress.current_index));
@@ -30,11 +31,76 @@
       progressUrl: "{{ lesson_3_progress_url }}",
       initialProgress: {{ lesson_3_progress|default:'null'|safe }},
       transcribeUrl: "{% url 'reading_transcribe_api' %}",
+      readAloudUrl: "{% url 'reading_read_aloud_api' %}",
       exitUrl: "{% url 'assessment' %}"
     });
   </script>
 </body>
 </html>
+<script>
+document.addEventListener('click', async function(event){
+  const button=event.target.closest('#read');
+  if(!button||button.dataset.ttsUnlocked==='1'||button.dataset.ttsPlaying==='1')return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  button.dataset.ttsPlaying='1';
+  const indicator=document.querySelector('.audio-cue');
+  indicator?.classList.add('active-audio');
+  try{
+    const response=await fetch("{% url 'reading_read_aloud_api' %}",{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||''},body:new URLSearchParams({target_text:'Sabihin ito.',language:'Filipino',mode:'word'})});
+    const data=await response.json();
+    if(!response.ok||!data.success||!data.audio_content)throw new Error(data.error||'TTS unavailable');
+    const audio=new Audio('data:'+(data.mime_type||'audio/mpeg')+';base64,'+data.audio_content);
+    await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=reject;audio.play().catch(reject)});
+  }catch(error){console.error('Lesson 3 Gawain 2 instruction audio failed',error)}
+  finally{
+    indicator?.classList.remove('active-audio');
+    button.dataset.ttsPlaying='0';
+    button.dataset.ttsUnlocked='1';
+    button.click();
+    setTimeout(()=>button.removeAttribute('data-tts-unlocked'),0);
+  }
+},true);
+</script>
+<script>
+(function(){
+  const game=document.getElementById('game');
+  if(!game)return;
+  const ttsUrl="{% url 'reading_read_aloud_api' %}";
+  let audio=null,sequence=0,initialNarrated=false,lastStatus='';
+  const csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
+  const speak=async text=>{
+    const id=++sequence;
+    if(audio){audio.pause();audio=null}
+    const indicator=game.querySelector('.audio-cue');
+    indicator?.classList.add('active-audio');
+    try{
+      const response=await fetch(ttsUrl,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',mode:'word'})});
+      const data=await response.json();
+      if(id!==sequence||!response.ok||!data.success||!data.audio_content)return;
+      audio=new Audio('data:'+(data.mime_type||'audio/mpeg')+';base64,'+data.audio_content);
+      await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=reject;audio.play().catch(reject)});
+    }catch(error){console.error('Lesson 3 Gawain 2 feedback TTS failed',error)}
+    finally{if(id===sequence){audio=null;indicator?.classList.remove('active-audio')}}
+  };
+  const statusNarration=()=>{
+    const status=game.querySelector('#status');
+    if(!status||status.textContent===lastStatus)return;
+    lastStatus=status.textContent;
+    if(/^Hindi pa\./i.test(status.textContent))speak('Hindi ito ang tamang sagot. Subukan natin muli.');
+  };
+  const initialInstruction=async()=>{
+    if(initialNarrated)return;
+    initialNarrated=true;
+    const instruction=game.querySelector('.instruction')?.textContent?.trim();
+    if(!instruction)return;
+    await speak(instruction);
+    if(document.querySelector('.word.active'))await speak('Sabihin ito.');
+  };
+  setTimeout(initialInstruction,150);
+  new MutationObserver(statusNarration).observe(game,{subtree:true,childList:true,characterData:true});
+})();
+</script>
 <script>document.addEventListener('click',function(e){const b=e.target.closest('.answer');if(!b)return;setTimeout(function(){const s=document.getElementById('status');if(s&&s.textContent.trim()==='')s.textContent='Subukan muli.'},0)},true);</script>
 <script>document.addEventListener('click',function(e){const b=e.target.closest('.answer');if(!b)return;const before=document.querySelector('.progress')?.textContent;setTimeout(function(){if(before===document.querySelector('.progress')?.textContent){const s=document.getElementById('status');if(s){s.textContent='Subukan muli.';s.classList.add('warning')}}},80)},true);</script>
 <script>(function(){const p=document.querySelector('.progress');if(!p)return;let saved=0;const url="{{ lesson_3_progress_url }}",csrf=document.cookie.match(/csrftoken=([^;]+)/)?.[1]||'';function save(done,n){fetch(url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf},body:JSON.stringify({activity_key:'lesson-3-gawain-2',current_index:n,completed_items:n,correct_items:n,total_items:6,activity_completed:done,state:{}})}).catch(console.error)}setInterval(function(){const n=Number((p.textContent.match(/\d+/)||[0])[0]);if(n>saved){saved=n;save(n>=6,n)}if(document.querySelector('.complete'))save(true,6)},250)})();</script>
