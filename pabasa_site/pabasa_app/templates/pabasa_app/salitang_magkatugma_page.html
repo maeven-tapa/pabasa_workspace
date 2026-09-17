@@ -47,4 +47,61 @@ const pairs=[['aso','laso'],['bundok','sandok'],['tatay','nanay'],['bola','lola'
 <script>window.lesson2ProgressUrl="{{ lesson_2_progress_url }}";</script>
 <style>.complete-done{display:none!important}</style>
 <style>body{background:#e9f6f0 url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover fixed!important}</style>
-<style>.card{background:rgba(255,253,245,.94)!important;box-shadow:0 18px 43px #164f5538}.card .status{color:#093f50;text-shadow:none}</style>
+<style>.card{background:rgba(255,253,245,.94)!important;box-shadow:0 18px 43px #164f5538}.card .status{color:#093f50;text-shadow:none}</style><script>window.salitangTtsUrl="{% url 'reading_read_aloud_api' %}";</script><script src="{% static 'pabasa_app/js/salitang_magkatugma_guided_flow.js' %}?v=20260917-7"></script>
+<style>.pair .word.active::before{content:'SABIHIN ITO';position:absolute;top:-18px;left:50%;z-index:3;transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:#ffc928;color:#5b3b00;font-size:.72rem;font-weight:900;letter-spacing:.06em;white-space:nowrap;box-shadow:0 3px 8px #b77b1b55}</style>
+<style>.pair .word strong{text-transform:lowercase}</style>
+<style>
+.pair .word{position:relative;transition:opacity .25s,transform .25s,box-shadow .25s,border-color .25s}.pair.naming-phase .word{opacity:.62;filter:saturate(.72)}.pair.naming-phase .word.active{opacity:1;filter:none;transform:translateY(-3px) scale(1.025);border:5px solid #ffc928;box-shadow:0 0 0 7px #ffe36b,0 0 30px #ffc928cc,0 12px 26px #e09a2255;animation:salitangCuePulse 1.5s ease-in-out infinite}.pair.naming-phase .word.active::before{content:'SABIHIN ITO';position:absolute;top:-18px;left:50%;z-index:3;transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:#ffc928;color:#5b3b00;font-size:.72rem;font-weight:900;letter-spacing:.06em;white-space:nowrap;box-shadow:0 3px 8px #b77b1b55}.pair.naming-phase .word:first-child::after{content:none!important}@keyframes salitangCuePulse{50%{box-shadow:0 0 0 10px #ffe36b99,0 0 34px #ffc928dd,0 12px 28px #e09a2255}}
+.pair.phase2 .word{opacity:1;filter:none}.phase2-instruction{font-weight:900}
+</style>
+<script>
+(function(){
+  if(window.salitangDedicatedFlow)return;
+  const stage=document.getElementById('stage');
+  if(!stage)return;
+  const phase2Text='Magkatunog ba ang dalawang larawan na ito? Pindutin ang nawawastong sagot.';
+  const csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
+  let generation=0, speaking=false, lastPhase2='', lastPhase1='', currentAudio=null;
+  const speak=async text=>{
+    const id=++generation;
+    if(currentAudio){currentAudio.pause();currentAudio=null;}
+    const response=await fetch('{% url "reading_read_aloud_api" %}',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',mode:'word'})});
+    const data=await response.json();
+    if(id!==generation||!response.ok||!data.success||!data.audio_content)return;
+    currentAudio=new Audio('data:'+(data.mime_type||'audio/mpeg')+';base64,'+data.audio_content);
+    await new Promise((resolve,reject)=>{currentAudio.onended=resolve;currentAudio.onerror=reject;currentAudio.play().catch(reject)});
+    if(id===generation)currentAudio=null;
+  };
+  const phase1=async()=>{
+    if(speaking||stage.querySelector('#answers:not([hidden])'))return;
+    const pair=stage.querySelector('.pair'), instruction=stage.querySelector('.prompt'), read=stage.querySelector('#read');
+    if(!pair||!instruction||!read)return;
+    const currentPair=stage.querySelector('.progress')?.textContent||'';
+    const isNextPicture=lastPhase1.startsWith(currentPair+'|') && lastPhase1!==currentPair+'|'+(stage.querySelector('.word img')?.getAttribute('alt')||'');
+    speaking=true; pair.classList.add('naming-phase'); pair.classList.remove('phase2'); pair.querySelectorAll('.word').forEach(card=>card.classList.remove('active')); read.disabled=true;
+    try{if(isNextPicture)await speak('Magaling! Susunod na larawan.');else await speak(instruction.textContent.trim()); pair.querySelectorAll('.word')[document.querySelectorAll('.word').length>1&&stage.querySelector('.word:first-child')?.classList.contains('done')?1:0]?.classList.add('active'); await speak('Sabihin ito.')}catch(error){console.error('Salitang Magkatugma Phase 1 TTS failed',error); pair.querySelectorAll('.word')[0]?.classList.add('active')}
+    speaking=false; if(stage.contains(read))read.disabled=false;
+  };
+  const sync=()=>{
+    const answers=stage.querySelector('#answers:not([hidden])'), instruction=stage.querySelector('.prompt'), pair=stage.querySelector('.pair');
+    const status=stage.querySelector('#status');
+    if(!speaking&&status&&status.classList.contains('warning')&&status.textContent.trim()!=='Hindi ito ang tamang sagot. Subukan natin muli.'){
+      status.textContent='Hindi ito ang tamang sagot. Subukan natin muli.';
+      speak('Hindi ito ang tamang sagot. Subukan natin muli.').catch(()=>{});
+    }
+    if(answers){
+      if(instruction)instruction.textContent=phase2Text,instruction.classList.add('phase2-instruction');
+      pair?.classList.remove('naming-phase'); pair?.classList.add('phase2');
+      const key=stage.querySelector('.progress')?.textContent||'';
+      if(key!==lastPhase2){lastPhase2=key;speaking=true;answers.querySelectorAll('button').forEach(b=>b.disabled=true);speak(phase2Text).catch(()=>{}).finally(()=>{speaking=false;answers.querySelectorAll('button').forEach(b=>b.disabled=false)})}
+      return;
+    }
+    lastPhase2='';
+    if(instruction)instruction.classList.remove('phase2-instruction');
+    const pairKey=(stage.querySelector('.progress')?.textContent||'')+'|'+(stage.querySelector('.word img')?.getAttribute('alt')||'');
+    if(pairKey!==lastPhase1){lastPhase1=pairKey;phase1();}
+  };
+  new MutationObserver(()=>setTimeout(sync,0)).observe(stage,{childList:true,subtree:true,characterData:true});
+  setTimeout(sync,50);
+})();
+</script>

@@ -112,3 +112,40 @@ const startInitial=async()=>{if(initialStarted)return;initialStarted=true;const 
   new MutationObserver(()=>{const status=game.querySelector('#status');if(!status||status.textContent===lastStatus)return;lastStatus=status.textContent;if(/^Hindi pa\./i.test(lastStatus))speak('Hindi ito ang tamang sagot. Subukan natin muli.')}).observe(game,{childList:true,subtree:true,characterData:true});
 })();
 </script><script>(function(){const game=document.getElementById('game');if(!game)return;const url="{% url 'reading_read_aloud_api' %}",csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';let current='',busy=false,audio=null;const say=async text=>{if(audio){audio.pause();audio=null}const response=await fetch(url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',mode:'word'})}),data=await response.json();if(!response.ok||!data.success||!data.audio_content)return;audio=new Audio('data:'+(data.mime_type||'audio/mpeg')+';base64,'+data.audio_content);await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=reject;audio.play().catch(reject)})};const run=async key=>{if(busy||!key||key===current)return;current=key;busy=true;const instruction=game.querySelector('.instruction'),read=game.querySelector('#read');game.querySelectorAll('.word').forEach(card=>card.classList.remove('active'));if(read)read.disabled=true;try{await say(instruction?.textContent?.trim()||'Tingnan ang kumikislap na larawan.');const active=game.querySelectorAll('.word')[0];active?.classList.add('active');await say('Sabihin ito.')}catch(error){console.error('Gawain 1 pair transition TTS failed',error);game.querySelectorAll('.word')[0]?.classList.add('active')}finally{if(read)read.disabled=false;busy=false}};const key=()=>game.querySelector('.progress')?.textContent?.trim()||'';setTimeout(()=>run(key()),250);new MutationObserver(()=>{const next=key();if(next!==current)run(next)}).observe(game,{childList:true,subtree:true,characterData:true})})();</script>
+<script>
+(function(){
+  const game=document.getElementById('game');
+  if(!game)return;
+  const url="{% url 'reading_read_aloud_api' %}";
+  const csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
+  let audio=null;
+  async function speakWord(word){
+    if(audio){audio.pause();audio=null;}
+    const response=await fetch(url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:word,language:'Filipino',mode:'word'})});
+    const data=await response.json();
+    if(!response.ok||!data.success||!data.audio_content)throw new Error(data.error||'TTS unavailable');
+    audio=new Audio('data:'+(data.mime_type||'audio/mpeg')+';base64,'+data.audio_content);
+    await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=reject;audio.play().catch(reject)});
+    audio=null;
+  }
+  document.addEventListener('click',async function(event){
+    const listen=event.target.closest('#listen');
+    if(!listen||listen.dataset.prescribedBusy==='1')return;
+    event.preventDefault();event.stopImmediatePropagation();
+    const word=game.querySelector('.word.active img')?.alt;
+    if(!word)return;
+    listen.dataset.prescribedBusy='1';
+    listen.dataset.listenCount=String(Number(listen.dataset.listenCount||0)+1);
+    listen.disabled=true;
+    try{await speakWord(word)}catch(error){console.error('Lesson 3 Gawain 1 Pakinggan TTS failed',error)}
+    finally{
+      listen.disabled=false;listen.dataset.prescribedBusy='0';
+      if(Number(listen.dataset.listenCount)>=3){
+        listen.hidden=true;
+        const read=game.querySelector('#read');
+        if(read){read.hidden=false;read.disabled=false;read.textContent='🎙 Sabihin ngayon'}
+      }
+    }
+  },true);
+})();
+</script>
