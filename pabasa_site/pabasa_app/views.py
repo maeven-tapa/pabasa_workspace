@@ -67,6 +67,7 @@ from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingInte
 from .student_session_lock import claim_student_session, release_student_session
 from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
 from .reading_stt import (
+    ReadingMatcher,
     align_story_transcript,
     analyze_reading,
     analyze_sentence_reading,
@@ -13657,6 +13658,42 @@ def prescribed_activity_progress(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity_key == 'session-2-lesson-4-gawain-2':
+        try:
+            data = json.loads(request.body or '{}')
+            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            old = existing.state if existing and isinstance(existing.state, dict) else {}
+            total = len(activity['items'])
+            index = max(0, min(total, int(old.get('current_item', 0))))
+            phase = str(old.get('phase') or 'say')
+            oral_attempts = max(0, min(3, int(old.get('oral_attempts', 0))))
+            sound_attempts = max(0, min(3, int(old.get('sound_attempts', 0))))
+            action = str(data.get('action') or '')
+            if index >= total:
+                raise ValueError('Natapos na ang gawain.')
+            if int(data.get('item_index', -1)) != index:
+                raise ValueError('Ito ay hindi na ang kasalukuyang larawan.')
+            item = activity['items'][index]
+            accepted = False
+            if action == 'oral':
+                if phase != 'say': raise ValueError('Piliin muna ang unang tunog.')
+                heard = re.sub(r'[^a-z]', '', unicodedata.normalize('NFD', str(data.get('heard') or '').lower()))
+                target = re.sub(r'[^a-z]', '', unicodedata.normalize('NFD', item['word'].lower()))
+                accepted = bool(heard and (heard == target or target in heard))
+                oral_attempts = 0 if accepted else min(3, oral_attempts + 1)
+                phase = 'identify' if accepted else 'say'
+            elif action == 'choose':
+                if phase != 'identify': raise ValueError('Sabihin muna ang ngalan ng larawan.')
+                accepted = str(data.get('choice') or '').upper() == item['answer']
+                sound_attempts = 0 if accepted else min(3, sound_attempts + 1)
+                if accepted:
+                    index += 1; phase = 'complete' if index >= total else 'say'; oral_attempts = sound_attempts = 0
+            else: raise ValueError('Invalid activity action.')
+            state = {'current_item': index, 'phase': phase, 'oral_attempts': oral_attempts, 'sound_attempts': sound_attempts, 'state_version': int(old.get('state_version') or 0) + 1}
+            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index, 'total_items': total, 'activity_completed': index >= total, 'state': state})
+            return JsonResponse({'success': True, 'accepted': accepted, 'progress': {'completed_items': index, 'activity_completed': index >= total, 'state': state}})
+        except (TypeError, ValueError, KeyError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity_key == 'lesson-14-gawain-3':
         try:
             data = json.loads(request.body or '{}')
