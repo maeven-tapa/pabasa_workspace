@@ -386,6 +386,22 @@ PRESCRIBED_ACTIVITIES = {
             {'id': 'b5', 'text': 'yu'},
         ],
     },
+    'lesson-15-gawain-3': {
+        'activity_key': 'lesson-15-gawain-3', 'session_number': 5, 'lesson_number': 15,
+        'gawain_number': 3, 'title': 'Gawain 3',
+        'instruction': "Lagyan ng tsek (/) ang bawat hanay kung nagawa ng bata ang kanyang gawain.",
+        'competencies': ['Phonics', 'Phonological Awareness', 'Fluency'],
+        'interaction': 'teacher_reading_checklist', 'total_items': 22,
+        'legend': {'good': 'Nabasa nang maayos', 'choppy': 'Nabasa pero medyo putol-putol', 'not_read': 'Di nabasa'},
+        'section_labels': [{'label': 'Parirala', 'after_item': 6}, {'label': 'Pangungusap', 'after_item': 16}],
+        'items': [
+            {'text': 'tawa'}, {'text': 'sawa'}, {'text': 'lawa'}, {'text': 'wala'}, {'text': 'walis'}, {'text': 'matamis'},
+            {'text': 'Ang walis may'}, {'text': 'Sawa sa lawa'}, {'text': 'Yaman sa'}, {'text': 'May kawa'}, {'text': 'Ang yoyo'}, {'text': 'Nasa mesa'},
+            {'text': 'Si tata ay'}, {'text': 'Sina nanay at tatay'}, {'text': 'Matamis ang'}, {'text': 'Yema ni'},
+            {'text': 'Si Tala ay may yoyo.'}, {'text': 'Matamis ang yema ni Tim.'}, {'text': 'May kawa sa mesa nila Tala.'},
+            {'text': 'Ang walis tambo ay nasa mesa.'}, {'text': 'Sina nanay at tatay ay mayaman.'}, {'text': 'Sasama sina nanay at tatay kat1ala.'},
+        ],
+    },
     'lesson-15-gawain-1': {
         'activity_key': 'lesson-15-gawain-1', 'session_number': 5, 'lesson_number': 15,
         'gawain_number': 1, 'title': 'Letrang Ww at Yy', 'instruction': '',

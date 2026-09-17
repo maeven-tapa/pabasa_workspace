@@ -13496,6 +13496,32 @@ def prescribed_activity_page(request, activity_key):
                          'state': state},
         }
         return render(request, 'pabasa_app/session_5_lesson_14_gawain_4_page.html', context)
+    if activity_key == 'lesson-15-gawain-3':
+        context = _dashboard_context(request)
+        state = dict(raw_state)
+        state.setdefault('current_index', progress.current_index if progress else 0)
+        state.setdefault('completed_reading_items', [])
+        state.setdefault('reading_attempts', {})
+        state.setdefault('transcripts', {})
+        state.setdefault('reading_matches', {})
+        state.setdefault('statuses', {})
+        state.setdefault('state_version', 1)
+        context['session_5_lesson_15_gawain_3_data'] = {
+            'activity_key': activity_key, 'session_key': 'session-5',
+            'session_number': 5, 'lesson_number': 15, 'gawain_number': 3,
+            'title': activity['title'], 'instruction': activity['instruction'],
+            'items': [{'text': item['text']} for item in activity['items']],
+            'section_labels': activity['section_labels'], 'legend': activity['legend'],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'transcribe_url': reverse('reading_transcribe_api'),
+            'progress': {'current_index': progress.current_index if progress else 0,
+                         'completed_items': progress.completed_items if progress else 0,
+                         'total_items': len(activity['items']),
+                         'activity_completed': progress.activity_completed if progress else False,
+                         'state': state},
+        }
+        return render(request, 'pabasa_app/session_5_lesson_15_gawain_3_page.html', context)
     if activity_key == 'lesson-14-gawain-3':
         context = _dashboard_context(request)
         context['lesson14_gawain3_data'] = {
