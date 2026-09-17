@@ -122,7 +122,7 @@ PRESCRIBED_ACTIVITIES = {
         'items': [
             {'id': 'verse-1', 'title': 'The Cat in the Hat', 'verses': ['The cat wore a hat,', 'He sat on a mat,', 'Next to a big, fluffy rat,', 'Who loved to chat with a fat bat'], 'rhyme_words': ['cat', 'hat', 'sat', 'mat', 'rat', 'chat', 'fat', 'bat'], 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'},
             {'id': 'verse-2', 'title': 'The Funny Rat', 'verses': ['A silly little rat,', 'Danced with a playful bat,', 'They jumped on a mat,', 'And both got quite fat!'], 'rhyme_words': ['rat', 'bat', 'mat', 'fat'], 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'},
-            {'id': 'verse-3', 'title': 'Pat the Cat', 'verses': ['Pat the cat with a friendly pat,', 'He loves to play and chase his hat,', 'On a sunny day, he’ll sit and sat,', 'Watching the world with a cheerful chat.'], 'rhyme_words': ['pat', 'cat', 'pat', 'hat', 'sat', 'chat'], 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'},
+            {'id': 'verse-3', 'title': 'Pat the Cat', 'verses': ['Pat the cat with a friendly pat,', 'He loves to play and chase his hat,', "On a sunny day, he'll sit and sat,", 'Watching the world with a cheerful chat.'], 'rhyme_words': ['pat', 'cat', 'pat', 'hat', 'sat', 'chat'], 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'},
             {'id': 'verse-4', 'title': 'The Splat', 'verses': ['There was a loud splat on the mat,', 'A little creature fell from the hat,', 'Upside down was the silly cat,', 'Who laughed at the splash with a gentle pat.'], 'rhyme_words': ['splat', 'mat', 'hat', 'cat', 'pat'], 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'},
         ],
     },
@@ -171,6 +171,20 @@ PRESCRIBED_ACTIVITIES = {
         'instruction': 'Spot the word challenge. Look carefully at the words inside the box. Listen attentively as the word is read aloud. Find and encircle the word you hear.',
         'interaction': 'spot_word_oral', 'total_items': 9,
         'words': ['mat', 'sell', 'lit', 'till', 'last', 'stem', 'list', 'tell', 'sit'],
+    },
+    'lesson-29-gawain-3': {
+        'activity_key': 'lesson-29-gawain-3', 'session_number': 13, 'lesson_number': 29,
+        'gawain_number': 3, 'title': 'Trace & Say',
+        'instruction': 'Say each letter sound, then trace the letter three times.',
+        'interaction': 'oral_trace_letter', 'total_items': 11,
+        'items': [
+            {'letter': 'Pp', 'sound': 'p'}, {'letter': 'Ff', 'sound': 'f'},
+            {'letter': 'Hh', 'sound': 'h'}, {'letter': 'Nn', 'sound': 'n'},
+            {'letter': 'Ss', 'sound': 's'}, {'letter': 'Ii', 'sound': 'i'},
+            {'letter': 'Ll', 'sound': 'l'}, {'letter': 'Mm', 'sound': 'm'},
+            {'letter': 'Tt', 'sound': 't'}, {'letter': 'Ee', 'sound': 'e'},
+            {'letter': 'Aa', 'sound': 'a'},
+        ],
     },
     'lesson-30-gawain-1': {
         'activity_key': 'lesson-30-gawain-1', 'session_key': 'session-14',

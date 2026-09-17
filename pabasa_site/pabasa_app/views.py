@@ -67,6 +67,7 @@ from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingInte
 from .student_session_lock import claim_student_session, release_student_session
 from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
 from .reading_stt import (
+    ReadingMatcher,
     align_story_transcript,
     analyze_reading,
     analyze_sentence_reading,
@@ -81,6 +82,18 @@ from .reading_stt import (
     transcribe_audio_bytes_with_model,
     word_numbers_in_transcript,
 )
+
+# Common short-word substitutions returned by speech-to-text for the English
+# prescribed lessons. These are recognition allowances only; they never alter
+# the word displayed to a learner or an answer key.
+PRESCRIBED_ENGLISH_RECOGNITION_ALIASES = {
+    'mat': {'math'}, 'hat': {'hot'}, 'wore': {'war'}, 'bat': {'butt', 'bath', 'but'}, 'loved': {'love'}, 'quite': {'quiet'}, 'laughed': {'laugh'},
+}
+
+
+def _prescribed_spoken_word_matches(target, heard_words):
+    target = str(target or '').lower()
+    return bool(set(heard_words or ()) & ({target} | PRESCRIBED_ENGLISH_RECOGNITION_ALIASES.get(target, set())))
 from .hunt_scoring import classify_speech
 from .syllable_blending import activity_catalog, build_activity, normalize_format
 from .clap_count_word_bank import score_displayed_words, word_bank_catalog, validate_configuration
@@ -13080,6 +13093,23 @@ def prescribed_activity_page(request, activity_key):
         context['lesson13_data'] = {'activity_key': activity_key, 'session_key': 'session-5', 'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'], 'title': activity['title'], 'instruction': activity['instruction'], 'competencies': activity['competencies'], 'items': [{'letter': i['letter'], 'word': i['word'], 'image_url': static(i['image_path'])} for i in activity['items']], 'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}), 'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}), 'progress': {'current_index': progress.current_index if progress else 0, 'completed_items': progress.completed_items if progress else 0, 'activity_completed': progress.activity_completed if progress else False, 'state': raw_state}}
         context['lesson13_data']['progress']['current_index'] = lesson13_current_item
         return render(request, 'pabasa_app/lesson_13_gawain_1_page.html', context)
+    if activity['interaction'] == 'oral_trace_letter':
+        context = _dashboard_context(request)
+        context['prescribed_activity_data'] = {
+            'activity_key': activity_key, 'session_number': activity['session_number'],
+            'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
+            'title': activity['title'], 'instruction': activity['instruction'],
+            'items': activity['items'],
+            'progress_url': reverse('lesson29_trace_say_progress'),
+            'completion_url': reverse('lesson29_trace_say_complete'),
+            'read_aloud_url': reverse('reading_read_aloud_api'),
+            'transcribe_url': reverse('reading_transcribe_api'),
+            'progress': {'completed_items': progress.completed_items if progress else 0,
+                         'total_items': len(activity['items']),
+                         'activity_completed': progress.activity_completed if progress else False,
+                         'state': raw_state},
+        }
+        return render(request, 'pabasa_app/prescribed_trace_say_lesson29_activity3_page.html', context)
     if activity['interaction'] == 'oral_choice_picture':
         context = _dashboard_context(request)
         context['prescribed_activity_data'] = {
@@ -13650,6 +13680,115 @@ def lesson8_gawain1_page(request):
 @login_required(role='student')
 @csrf_protect
 @require_http_methods(['POST'])
+def lesson29_trace_say_progress(request):
+    """Persist Session 13 Lesson 29 Activity 3 without routing through shared activity handlers."""
+    activity_key = 'lesson-29-gawain-3'
+    activity = prescribed_activity(activity_key)
+    student = _active_prescribed_student(request)
+    if not activity or activity.get('interaction') != 'oral_trace_letter':
+        return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
+    if not student:
+        return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    try:
+        data = json.loads(request.body or '{}')
+        if not isinstance(data, dict):
+            raise ValueError('Invalid activity data.')
+        query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+        existing = query.first()
+        old = existing.state if existing and isinstance(existing.state, dict) else {}
+        if data.get('reset') is True:
+            query.delete()
+            return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
+        total = len(activity['items'])
+        if existing and existing.activity_completed:
+            return JsonResponse({'success': True, 'progress': {'state': old, 'completed_items': total, 'activity_completed': True}})
+        index = max(0, min(total, int(old.get('current_item', 0) or 0)))
+        phase = old.get('phase', 'sound')
+        traces = old.get('traces') if isinstance(old.get('traces'), list) else []
+        traces = traces[:total * 3]
+        action = data.get('action')
+        if action == 'read_sound':
+            if phase != 'sound' or index >= total or int(data.get('item_index', -1)) != index:
+                raise ValueError('Read the current letter sound first.')
+            # This activity follows Lesson 13 Gawain 1: recording the prompted sound
+            # completes the oral turn; it is intentionally not speech-to-text scored.
+            phase = 'trace'
+        elif action == 'save_trace':
+            if phase != 'trace' or index >= total or int(data.get('item_index', -1)) != index:
+                raise ValueError('Say the letter sound before tracing.')
+            stroke_set = data.get('strokes')
+            if not isinstance(stroke_set, list) or not stroke_set:
+                raise ValueError('Write the letter before continuing.')
+            sanitized = []
+            for stroke in stroke_set[:100]:
+                if not isinstance(stroke, list):
+                    continue
+                points = []
+                for point in stroke[:1000]:
+                    if not isinstance(point, dict):
+                        continue
+                    try:
+                        x, y = float(point.get('x')), float(point.get('y'))
+                    except (TypeError, ValueError):
+                        continue
+                    if 0 <= x <= 1 and 0 <= y <= 1:
+                        points.append({'x': x, 'y': y})
+                if len(points) >= 2:
+                    sanitized.append(points)
+            if not sanitized:
+                raise ValueError('Write the letter before continuing.')
+            repetition = len(traces) % 3
+            if len(traces) // 3 != index:
+                traces = traces[:index * 3]
+                repetition = 0
+            traces.append(sanitized)
+            if repetition == 2:
+                index += 1
+                phase = 'sound' if index < total else 'complete'
+        else:
+            raise ValueError('Invalid activity action.')
+        payload = {'current_item': index, 'phase': phase, 'traces': traces,
+                   'state_version': int(old.get('state_version', 0) or 0) + 1}
+        completed = min(total, index)
+        progress, _ = StudentActivityProgress.objects.update_or_create(
+            student=student, activity_key=activity_key,
+            defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed,
+                      'total_items': total, 'activity_completed': False, 'state': payload})
+        return JsonResponse({'success': True, 'accepted': True,
+                             'progress': {'state': payload, 'current_index': completed,
+                                          'completed_items': completed, 'total_items': total,
+                                          'activity_completed': progress.activity_completed}})
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+
+
+@login_required(role='student')
+@csrf_protect
+@require_http_methods(['POST'])
+def lesson29_trace_say_complete(request):
+    """Complete only the dedicated Session 13 Lesson 29 Trace & Say activity."""
+    activity_key = 'lesson-29-gawain-3'
+    activity = prescribed_activity(activity_key)
+    student = _active_prescribed_student(request)
+    if not activity or activity.get('interaction') != 'oral_trace_letter':
+        return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
+    if not student:
+        return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+    state = existing.state if existing and isinstance(existing.state, dict) else {}
+    total = len(activity['items'])
+    traces = state.get('traces') if isinstance(state.get('traces'), list) else []
+    if not existing or int(state.get('current_item', 0) or 0) < total or len(traces) < total * 3:
+        return JsonResponse({'success': False, 'error': 'Complete each letter and all three traces first.'}, status=400)
+    existing.activity_completed = True
+    existing.current_index = existing.completed_items = existing.correct_items = existing.total_items = total
+    existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
+    return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
+
+
+@login_required(role='student')
+@csrf_protect
+@require_http_methods(['POST'])
 def prescribed_activity_progress(request, activity_key):
     activity = prescribed_activity(activity_key)
     student = _active_prescribed_student(request)
@@ -13837,7 +13976,7 @@ def prescribed_activity_progress(request, activity_key):
                     raise ValueError('Choose a word first.')
                 heard = set(re.findall(r'[a-z]+', str(data.get('heard', '')).lower()))
                 target = item['word'].lower()
-                accepted = target in heard
+                accepted = _prescribed_spoken_word_matches(target, heard)
                 if accepted:
                     phase, attempts = 'choosing', 0
                 else:
@@ -13889,13 +14028,12 @@ def prescribed_activity_progress(request, activity_key):
             placements = list(old.get('placements', []))
             attempts = max(0, int(old.get('attempts', 0)))
             action, accepted = data.get('action'), None
-            aliases = {'mat': {'math'}, 'hat': {'hot'}, 'wore': {'war'}, 'bat': {'butt'}, 'loved': {'love'}}
             if action == 'read_word':
                 if phase != 'reading_words' or int(data.get('word_index', -1)) != word_index or word_index >= len(item['jumbled_words']):
                     raise ValueError('Read the current word first.')
                 target = item['jumbled_words'][word_index].lower()
                 heard = set(re.findall(r'[a-z]+', str(data.get('heard', '')).lower()))
-                accepted = bool(heard & ({target} | aliases.get(target, set())))
+                accepted = _prescribed_spoken_word_matches(target, heard)
                 if accepted:
                     word_index += 1
                     attempts = 0
@@ -13922,7 +14060,7 @@ def prescribed_activity_progress(request, activity_key):
                     raise ValueError('Arrange the sentence before reading it.')
                 heard = set(re.findall(r'[a-z]+', str(data.get('heard', '')).lower()))
                 expected = re.findall(r'[a-z]+', item['sentence'].lower())
-                accepted = all(heard & ({word} | aliases.get(word, set())) for word in expected)
+                accepted = all(_prescribed_spoken_word_matches(word, heard) for word in expected)
                 if accepted:
                     index += 1
                     word_index = attempts = 0
@@ -13965,13 +14103,12 @@ def prescribed_activity_progress(request, activity_key):
             sentence_attempts = max(0, int(old.get('sentence_attempts', 0)))
             placed_word = str(old.get('placed_word', ''))
             item, action, accepted = activity['items'][index], data.get('action'), None
-            aliases = {'mat': {'math'}, 'hat': {'hot'}, 'wore': {'war'}, 'bat': {'butt'}, 'loved': {'love'}}
             if action == 'read_choice':
                 if phase != 'reading_choices' or int(data.get('choice_index', -1)) != choice_index or choice_index >= len(activity['word_choices']):
                     raise ValueError('Read the current choice first.')
                 target = activity['word_choices'][choice_index].lower()
                 heard = set(re.findall(r'[a-z]+', str(data.get('heard', '')).lower()))
-                accepted = bool(heard & ({target} | aliases.get(target, set())))
+                accepted = _prescribed_spoken_word_matches(target, heard)
                 if accepted:
                     choice_index += 1; choice_attempts = 0
                     if choice_index >= len(activity['word_choices']): phase = 'sentence_listen'
@@ -13990,7 +14127,7 @@ def prescribed_activity_progress(request, activity_key):
                 if phase != 'reading_sentence': raise ValueError('Place the correct word before reading the sentence.')
                 heard = set(re.findall(r'[a-z]+', str(data.get('heard', '')).lower()))
                 expected = re.findall(r'[a-z]+', item['sentence'].lower())
-                accepted = all(heard & ({word} | aliases.get(word, set())) for word in expected)
+                accepted = all(_prescribed_spoken_word_matches(word, heard) for word in expected)
                 if accepted:
                     index += 1; choice_attempts = sentence_attempts = 0; placed_word = ''
                     phase = 'complete' if index >= total else 'sentence_listen'
@@ -14170,14 +14307,7 @@ def prescribed_activity_progress(request, activity_key):
                 # Keep the child-friendly STT allowances already used in the
                 # English prescribed activities. These are common phonetic
                 # transcriptions, not alternate answers shown to the student.
-                spoken_word_aliases = {
-                    'mat': {'math'},
-                    'hat': {'hot'},
-                    'wore': {'war'},
-                    'bat': {'butt'},
-                    'loved': {'love'},
-                }
-                accepted = bool(set(heard_words) & ({target_word} | spoken_word_aliases.get(target_word, set())))
+                accepted = _prescribed_spoken_word_matches(target_word, heard_words)
                 if accepted:
                     choice_index += 1
                     attempts = 0
@@ -14312,8 +14442,7 @@ def prescribed_activity_progress(request, activity_key):
             item = activity['items'][index]
             target = item['answer'].lower()
             heard_words = re.findall(r'[a-z]+', str(data.get('heard', '')).lower())
-            heard = target if target in heard_words else ''.join(heard_words)
-            accepted = heard == target
+            accepted = _prescribed_spoken_word_matches(target, heard_words)
             attempts = max(0, int(old.get('attempts', 0)))
             hint_length = max(0, min(len(target), int(old.get('hint_length', 0))))
             help_visible = bool(old.get('help_visible', False))
@@ -14433,7 +14562,7 @@ def prescribed_activity_progress(request, activity_key):
                     raise ValueError('This item is no longer current.')
                 heard_words = re.findall(r'[a-z]+', str(data.get('heard', '')).lower())
                 heard = target if target in heard_words else ''.join(heard_words)
-                if heard == target:
+                if _prescribed_spoken_word_matches(target, heard_words):
                     index += 1
                     attempts = 0
                     target = random.choice(activity['items'][index]['choices']) if index < total else None
@@ -14453,7 +14582,7 @@ def prescribed_activity_progress(request, activity_key):
                 defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
                           'total_items': total, 'activity_completed': finished, 'state': saved},
             )
-            return JsonResponse({'success': True, 'accepted': heard == old.get('target_word') if action == 'answer' else None,
+            return JsonResponse({'success': True, 'accepted': _prescribed_spoken_word_matches(old.get('target_word'), heard_words) if action == 'answer' else None,
                                  'target_word': target, 'progress': {
                                      'current_index': progress.current_index,
                                      'completed_items': progress.completed_items, 'total_items': total,
@@ -17790,6 +17919,19 @@ def reading_transcribe_api(request):
             mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
             credentials_file=credentials_file,
         )
+        # English prescribed activities contain very short words, for which
+        # speech-to-text commonly returns these phonetic spellings. Canonicalize
+        # only the returned reading target so every Lesson 26–31 client (some
+        # validate in JavaScript, others on the server) receives one result.
+        target_words = re.findall(r'[a-z]+', target_text.lower())
+        heard_words = set(re.findall(r'[a-z]+', str(transcript or '').lower()))
+        if (
+            language_code.startswith('en')
+            and mode == 'reading'
+            and len(target_words) == 1
+            and _prescribed_spoken_word_matches(target_words[0], heard_words)
+        ):
+            transcript = target_text
         syllable_context = (request.POST.get('syllable_context') or '')[:80]
         try:
             activity_syllables = json.loads(request.POST.get('syllables') or '[]')
@@ -17921,7 +18063,7 @@ def reading_read_aloud_api(request):
                        else {'voice_gender': 'MALE'} if lesson_tts_key in {
                            'lesson-26-gawain-1', 'lesson-26-gawain-2', 'lesson-27-gawain-1',
                            'lesson-28-gawain-1', 'lesson-28-gawain-2',
-                           'lesson-29-gawain-1', 'lesson-29-gawain-2',
+                           'lesson-29-gawain-1', 'lesson-29-gawain-2', 'lesson-29-gawain-3',
                        }
                        else {'voice_gender': 'MALE'} if tts_profile == 'correspondence'
                        else {'speaking_rate': 0.80, 'prosody_rate': '82%'} if tts_profile == 'hunt'
