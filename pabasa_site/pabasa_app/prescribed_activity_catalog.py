@@ -24,6 +24,19 @@ LESSON_16_IMAGE_PATHS = {
 
 
 PRESCRIBED_ACTIVITIES = {
+    'session-2-lesson-4-gawain-2': {
+        'activity_key': 'session-2-lesson-4-gawain-2', 'session_key': 'session-2', 'session_number': 2, 'lesson_number': 4, 'gawain_number': 2,
+        'display_title': 'Letrang Mm at Ss', 'title': 'Letrang Mm at Ss', 'instruction': 'Bilangin ang tunog ng unang tunog ng nasa larawan.',
+        'interaction': 'oral_choice_picture', 'total_items': 6, 'thumbnail': 'pabasa_app/images/letrang_m_s/saging.png',
+        'items': [
+            {'id': 'saging', 'word': 'saging', 'image_path': 'pabasa_app/images/letrang_m_s/saging.png', 'choices': ['M', 'S'], 'answer': 'S', 'alt_text': 'Saging'},
+            {'id': 'mata', 'word': 'mata', 'image_path': 'pabasa_app/images/letrang_m_s/mata.png', 'choices': ['M', 'S'], 'answer': 'M', 'alt_text': 'Mata'},
+            {'id': 'suklay', 'word': 'suklay', 'image_path': 'pabasa_app/images/letrang_m_s/suklay.png', 'choices': ['M', 'S'], 'answer': 'S', 'alt_text': 'Suklay'},
+            {'id': 'sili', 'word': 'sili', 'image_path': 'pabasa_app/images/letrang_m_s/sili.png', 'choices': ['M', 'S'], 'answer': 'S', 'alt_text': 'Sili'},
+            {'id': 'medyas', 'word': 'medyas', 'image_path': 'pabasa_app/images/letrang_m_s/medyas.png', 'choices': ['M', 'S'], 'answer': 'M', 'alt_text': 'Medyas'},
+            {'id': 'sapatos', 'word': 'sapatos', 'image_path': 'pabasa_app/images/letrang_m_s/sapatos.png', 'choices': ['M', 'S'], 'answer': 'S', 'alt_text': 'Sapatos'},
+        ],
+    },
     'session-7-lesson-19-gawain-1': {
         # Canonical ARAL workbook data.  Course preview, learner routing,
         # validation, reports and Filipino audio all use this stable key.

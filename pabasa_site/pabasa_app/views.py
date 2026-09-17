@@ -12931,6 +12931,10 @@ def prescribed_activity_page(request, activity_key):
         return redirect('assessment')
     progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
     raw_state = progress.state if progress and isinstance(progress.state, dict) else {}
+    if activity_key == 'session-2-lesson-4-gawain-2':
+        context = _dashboard_context(request)
+        context['prescribed_activity_data'] = {'activity_key': activity_key, 'session_number': activity['session_number'], 'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'], 'title': activity['title'], 'instruction': activity['instruction'], 'items': [{**item, 'image_url': static(item['image_path'])} for item in activity['items']], 'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}), 'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}), 'progress': {'completed_items': progress.completed_items if progress else 0, 'total_items': len(activity['items']), 'activity_completed': progress.activity_completed if progress else False, 'state': raw_state}}
+        return render(request, 'pabasa_app/session_2_lesson_4_gawain_2_page.html', context)
     if activity_key == 'lesson7-gawain2c':
         context = _dashboard_context(request)
         context['handwriting_activity_data'] = {
