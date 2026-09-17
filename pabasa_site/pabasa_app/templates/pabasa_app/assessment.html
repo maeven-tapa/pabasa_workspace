@@ -1976,6 +1976,32 @@ document.addEventListener('DOMContentLoaded', function () {
                 };
                 groupCards.sort((a, b) => session2Order(a) - session2Order(b));
             }
+            if (group.key === 'session-3') {
+                // Session 3 contains a mix of catalog cards and legacy cards.
+                // Sort by the Lesson/Gawain information carried by each card,
+                // rather than relying on insertion timing from the catalog.
+                const session3Position = card => {
+                    const activityKey = String(card.dataset.prescribedActivity || '').toLowerCase();
+                    const label = `${activityKey} ${card.textContent}`.replace(/\s+/g, ' ').toLowerCase();
+                    const lessonMatch = label.match(/lesson[-\s]*(\d+)/);
+                    const gawainMatch = label.match(/gawain[-\s]*(\d+)\s*([a-z]?)/);
+                    const lesson = lessonMatch ? Number(lessonMatch[1]) : Number.MAX_SAFE_INTEGER;
+                    const gawain = gawainMatch ? Number(gawainMatch[1]) : Number.MAX_SAFE_INTEGER;
+                    const suffix = gawainMatch && gawainMatch[2]
+                        ? gawainMatch[2].charCodeAt(0) - 96
+                        : 0;
+
+                    return [lesson, gawain, suffix, activityKey || label];
+                };
+                groupCards.sort((a, b) => {
+                    const left = session3Position(a);
+                    const right = session3Position(b);
+                    for (let index = 0; index < 3; index += 1) {
+                        if (left[index] !== right[index]) return left[index] - right[index];
+                    }
+                    return left[3].localeCompare(right[3]);
+                });
+            }
             if (!groupCards.length) return;
             const groupColumn = document.createElement('div');
             groupColumn.className = 'assessment-week-column session-folder-column';
@@ -2078,3 +2104,50 @@ document.addEventListener('DOMContentLoaded',function(){
 <style>.lesson4-gawain2-progress-label{display:none!important}</style>
 <style>.pabasa-session-card button:disabled,.pabasa-session-card button.activity-completed{background:#6da77a!important;color:#fff!important;cursor:default!important;box-shadow:none!important;opacity:1!important}.pabasa-session-card button:disabled:hover,.pabasa-session-card button:disabled:active{transform:none!important}</style>
 <script>document.addEventListener('DOMContentLoaded',function(){const g=document.getElementById('sessionGrid');if(!g)return;function apply(){const c=g.querySelector('.pabasa-session-card:nth-child(7)'),s=JSON.parse(document.getElementById('aral-standalone-progress')?.textContent||'{}')['lesson-5-gawain-1']||{};if(!c)return;const n=Math.max(0,Math.min(9,Number(s.completed_items)||0)),d=Boolean(s.activity_completed)&&n>=9;c.className='pabasa-session-card unlocked';c.innerHTML='<div class="session-visual"><span class="pabasa-session-badge">⭐</span></div><div class="session-content"><h4>Lesson 5</h4><p>Gawain 1</p><div>Letrang Aa</div></div><div class="session-bottom"><div class="lesson5-progress"><span style="width:'+(d?100:n/9*100)+'%"></span></div><button type="button" '+(d?'disabled':'')+'>'+(d?'✓ NATAPOS NA':(n?'IPAGPATULOY':'SIMULAN'))+'</button></div>';if(!d)c.onclick=function(){location.href='{% url "lesson_5_gawain_1_page" %}'}}apply();new MutationObserver(apply).observe(g,{childList:true,subtree:true})});</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const session3Position = card => {
+        const activityKey = String(card.dataset.prescribedActivity || '').toLowerCase();
+        const lessonLabel = card.querySelector('.session-content h4')?.textContent || '';
+        const gawainLabel = card.querySelector('.session-content p')?.textContent || '';
+        const label = `${activityKey} ${lessonLabel} ${gawainLabel}`.toLowerCase();
+        const lessonMatch = label.match(/lesson[-\s]*(\d+)/);
+        const gawainMatch = label.match(/gawain[-\s]*(\d+)\s*([a-z]?)/);
+        return [
+            lessonMatch ? Number(lessonMatch[1]) : Number.MAX_SAFE_INTEGER,
+            gawainMatch ? Number(gawainMatch[1]) : Number.MAX_SAFE_INTEGER,
+            gawainMatch?.[2] ? gawainMatch[2].charCodeAt(0) - 96 : 0,
+            activityKey || label,
+        ];
+    };
+
+    const sortSession3Modal = () => {
+        const modal = Array.from(document.querySelectorAll('.session-folder-modal')).find(candidate =>
+            candidate.dataset.sessionKey === 'session-3' ||
+            candidate.querySelector('.week-activities-title')?.textContent.includes('Session 3')
+        );
+        const cards = modal ? Array.from(modal.querySelectorAll('.assessment-week-cards > .pabasa-session-card')) : [];
+        const sorted = cards.slice().sort((a, b) => {
+            const left = session3Position(a);
+            const right = session3Position(b);
+            for (let index = 0; index < 3; index += 1) {
+                if (left[index] !== right[index]) return left[index] - right[index];
+            }
+            return left[3].localeCompare(right[3]);
+        });
+        if (cards.some((card, index) => card !== sorted[index])) {
+            cards[0]?.parentElement.append(...sorted);
+        }
+    };
+
+    // The folder itself is assembled after the activity cards.  Observe that
+    // final DOM insertion so the visible Session 3 modal is always sorted.
+    new MutationObserver(sortSession3Modal).observe(document.body, { childList: true, subtree: true });
+    setTimeout(sortSession3Modal, 1800);
+    document.addEventListener('click', event => {
+        if (event.target.closest('.session-folder-column[data-session-key="session-3"]')) {
+            sortSession3Modal();
+        }
+    });
+});
+</script>
