@@ -13411,6 +13411,21 @@ def prescribed_activity_page(request, activity_key):
                          'strokes': saved_strokes, 'state': raw_state},
         }
         return render(request, 'pabasa_app/lesson_13_gawain_4_page.html', context)
+    if activity_key == 'lesson-14-gawain-3':
+        context = _dashboard_context(request)
+        context['lesson14_gawain3_data'] = {
+            'activity_key': activity_key, 'session_key': 'session-5',
+            'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
+            'title': activity['title'], 'instruction': activity['instruction'],
+            'items': [{**item, 'image_url': static(item['image_path']) if item.get('image_path') else ''}
+                      for item in activity['items']],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'transcribe_url': reverse('reading_transcribe_api'),
+            'read_aloud_url': reverse('reading_read_aloud_api'),
+            'progress': {'state': raw_state, 'activity_completed': progress.activity_completed if progress else False},
+        }
+        return render(request, 'pabasa_app/lesson_14_gawain_3_page.html', context)
     if activity_key == 'lesson-14-gawain-2':
         context = _dashboard_context(request)
         image_paths = {
@@ -13638,6 +13653,36 @@ def prescribed_activity_progress(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity_key == 'lesson-14-gawain-3':
+        try:
+            data = json.loads(request.body or '{}')
+            query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            if data.get('reset'):
+                query.delete()
+                return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
+            existing = query.first()
+            old = existing.state if existing and isinstance(existing.state, dict) else {}
+            incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
+            if existing and existing.activity_completed:
+                return JsonResponse({'success': True, 'progress': {'state': old, 'completed_items': existing.completed_items, 'activity_completed': True}})
+            total = len(activity['items'])
+            index = max(0, min(total, int(incoming.get('current_index', old.get('current_index', 0)))))
+            answers = incoming.get('answers') if isinstance(incoming.get('answers'), dict) else old.get('answers', {})
+            valid_ids = {str(item['id']) for item in activity['items'] if not item.get('unresolved')}
+            answers = {str(k): str(v)[:80] for k, v in answers.items() if str(k) in valid_ids}
+            reading_attempts = incoming.get('reading_attempts') if isinstance(incoming.get('reading_attempts'), dict) else old.get('reading_attempts', {})
+            listening_attempts = incoming.get('listening_attempts') if isinstance(incoming.get('listening_attempts'), dict) else old.get('listening_attempts', {})
+            state = dict(incoming, current_index=index, answers=answers, reading_attempts=reading_attempts, listening_attempts=listening_attempts,
+                         state_version=max(int(incoming.get('state_version') or 0), int(old.get('state_version') or 0) + 1))
+            completed = len([item for item in activity['items'][:index] if not item.get('unresolved') and str(item['id']) in answers])
+            progress, _ = StudentActivityProgress.objects.update_or_create(
+                student=student, activity_key=activity_key,
+                defaults={'current_index': index, 'completed_items': completed,
+                          'correct_items': 0, 'total_items': total, 'activity_completed': False, 'state': state})
+            return JsonResponse({'success': True, 'progress': {'state': state, 'completed_items': completed,
+                'correct_items': 0, 'total_items': total, 'activity_completed': False}})
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity_key == 'lesson-14-gawain-2':
         try:
             data = json.loads(request.body or '{}')
@@ -14914,6 +14959,28 @@ def prescribed_activity_complete(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity_key == 'lesson-14-gawain-3':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        state = existing.state if existing and isinstance(existing.state, dict) else {}
+        answers = state.get('answers') if isinstance(state.get('answers'), dict) else {}
+        required = {str(item['id']): item for item in activity['items'] if not item.get('unresolved')}
+        if not set(required).issubset(answers):
+            return JsonResponse({'success': False, 'error': 'Complete muna ang lahat ng larawan na available.'}, status=400)
+        def normalize_gawain3_answer(value):
+            normalized = unicodedata.normalize('NFD', str(value or '').lower())
+            normalized = ''.join(char for char in normalized if unicodedata.category(char) != 'Mn')
+            return re.sub(r'[^a-z]', '', normalized)
+        records = [{'item_id': item_id, 'answer': str(answers[item_id]),
+                    'correct': normalize_gawain3_answer(answers[item_id]) == normalize_gawain3_answer(item['expected_input'])}
+                   for item_id, item in required.items()]
+        correct = sum(record['correct'] for record in records)
+        state = dict(state, answer_records=records, submitted=True, completed=True, phase='complete', state_version=1_000_000_000)
+        StudentActivityProgress.objects.update_or_create(
+            student=student, activity_key=activity_key,
+            defaults={'current_index': len(activity['items']), 'completed_items': len(required),
+                      'correct_items': correct, 'total_items': len(activity['items']), 'activity_completed': True, 'state': state})
+        return JsonResponse({'success': True, 'result': {'items_completed': len(required), 'correct_items': correct,
+            'accuracy': round(correct / len(required) * 100, 2), 'records': records}})
     if activity_key == 'lesson-14-gawain-2':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
