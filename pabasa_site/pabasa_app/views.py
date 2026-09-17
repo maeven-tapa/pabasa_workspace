@@ -13511,6 +13511,20 @@ def prescribed_activity_page(request, activity_key):
             'progress': {'state': raw_state, 'activity_completed': progress.activity_completed if progress else False},
         }
         return render(request, 'pabasa_app/lesson_14_gawain_3_page.html', context)
+    if activity_key == 'lesson-15-gawain-1':
+        context = _dashboard_context(request)
+        context['lesson15_gawain1_data'] = {
+            'activity_key': activity_key, 'session_key': 'session-5',
+            'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
+            'title': activity['title'], 'instruction': activity['instruction'],
+            'items': [{**item, 'image_url': static(item['image_path'])} for item in activity['items']],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'transcribe_url': reverse('reading_transcribe_api'),
+            'read_aloud_url': reverse('reading_read_aloud_api'),
+            'progress': {'state': raw_state, 'activity_completed': progress.activity_completed if progress else False},
+        }
+        return render(request, 'pabasa_app/lesson_15_gawain_1_page.html', context)
     if activity_key == 'lesson-14-gawain-2':
         context = _dashboard_context(request)
         image_paths = {
@@ -13942,6 +13956,23 @@ def prescribed_activity_progress(request, activity_key):
                           'correct_items': 0, 'total_items': total, 'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'progress': {'state': state, 'completed_items': completed,
                 'correct_items': 0, 'total_items': total, 'activity_completed': False}})
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    if activity_key == 'lesson-15-gawain-1':
+        try:
+            data = json.loads(request.body or '{}')
+            query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            if data.get('reset'):
+                query.delete()
+                return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
+            existing = query.first(); old = existing.state if existing and isinstance(existing.state, dict) else {}
+            incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
+            selected = incoming.get('selected_answers') if isinstance(incoming.get('selected_answers'), dict) else old.get('selected_answers', {})
+            selected = {str(k): str(v)[:80] for k, v in selected.items() if str(k) in {str(i['id']) for i in activity['items']}}
+            state = dict(incoming, selected_answers=selected, state_version=max(int(incoming.get('state_version') or 0), int(old.get('state_version') or 0) + 1))
+            index = max(0, min(len(activity['items']), int(state.get('current_index', 0))))
+            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': index, 'completed_items': len(selected), 'correct_items': 0, 'total_items': len(activity['items']), 'activity_completed': False, 'state': state})
+            return JsonResponse({'success': True, 'progress': {'state': state, 'completed_items': len(selected), 'total_items': len(activity['items']), 'activity_completed': False}})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity_key == 'lesson-14-gawain-2':
@@ -15240,6 +15271,17 @@ def prescribed_activity_complete(request, activity_key):
                       'correct_items': correct, 'total_items': len(activity['items']), 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'items_completed': len(required), 'correct_items': correct,
             'accuracy': round(correct / len(required) * 100, 2), 'records': records}})
+    if activity_key == 'lesson-15-gawain-1':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        state = existing.state if existing and isinstance(existing.state, dict) else {}
+        selected = state.get('selected_answers') if isinstance(state.get('selected_answers'), dict) else {}
+        if set(selected) != {str(i['id']) for i in activity['items']}:
+            return JsonResponse({'success': False, 'error': 'Piliin muna ang sagot sa lahat ng larawan.'}, status=400)
+        records = [{'item_id': i['id'], 'expected': i['word'], 'selected': selected[str(i['id'])], 'correct': selected[str(i['id'])].casefold() == i['word'].casefold()} for i in activity['items']]
+        correct = sum(r['correct'] for r in records)
+        state = dict(state, answer_records=records, completed=True, state_version=1_000_000_000)
+        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': len(activity['items']), 'completed_items': len(activity['items']), 'correct_items': correct, 'total_items': len(activity['items']), 'activity_completed': True, 'state': state})
+        return JsonResponse({'success': True, 'result': {'items_completed': len(records), 'correct_items': correct, 'records': records}})
     if activity_key == 'lesson-14-gawain-2':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
@@ -22623,6 +22665,7 @@ def course_teacher_view(request):
             activity for activity in PRESCRIBED_ACTIVITIES.values()
             if activity.get('session_number') == 5 and activity.get('lesson_number') == 14
         ],
+        'prescribed_lesson_15_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('session_number') == 5 and activity.get('lesson_number') == 15],
     })
     return render(request, 'pabasa_app/courses.html', context)
 

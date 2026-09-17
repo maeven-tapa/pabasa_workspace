@@ -367,6 +367,20 @@ PRESCRIBED_ACTIVITIES = {
             {'id': 'b7', 'text': 'tu'},
         ],
     },
+    'lesson-15-gawain-1': {
+        'activity_key': 'lesson-15-gawain-1', 'session_number': 5, 'lesson_number': 15,
+        'gawain_number': 1, 'title': 'Letrang Ww at Yy', 'instruction': '',
+        'competencies': ['Phonics', 'Phonological Awareness', 'Vocabulary'],
+        'interaction': 'lesson15_gawain1_student', 'total_items': 6,
+        'items': [
+            {'id': 1, 'word': 'tawa', 'image_path': 'pabasa_app/images/picture_word/custom/Boy-Lalaki.png', 'choices': ['tawa', 'sawa']},
+            {'id': 2, 'word': 'lawa', 'image_path': 'pabasa_app/images/picture_word/custom/River-Ilog.png', 'choices': ['lawa', 'hawa']},
+            {'id': 3, 'word': 'gawa', 'image_path': 'pabasa_app/images/letrang_a/medalya.png', 'choices': ['gawa', 'wagi']},
+            {'id': 4, 'word': 'kawa', 'image_path': 'pabasa_app/images/picture_word/custom/Pan-Kawali.png', 'choices': ['kawa', 'diwa']},
+            {'id': 5, 'word': 'walo', 'image_path': 'pabasa_app/images/alpabetong_pilipino/walo.png', 'choices': ['wala', 'walo']},
+            {'id': 6, 'word': 'walis', 'image_path': 'pabasa_app/images/picture_word/custom/Broom-Walis.png', 'choices': ['bawang', 'walis']},
+        ],
+    },
     'lesson-14-gawain-3': {
         'activity_key': 'lesson-14-gawain-3', 'session_number': 5, 'lesson_number': 14,
         'gawain_number': 3, 'title': 'Gawain 3',
