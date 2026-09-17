@@ -1,0 +1,192 @@
+/* Shared workbook presentation for teacher preview and student interaction. */
+(() => {
+  'use strict';
+  const data = JSON.parse(document.getElementById('workbook-payload').textContent);
+  const a = data.activity, preview = data.preview;
+  const cBuilder = a.activity_key === 'aral-l22-g1-c-syllable-builder';
+  let state = data.state, busy = false, selected = [], builder = [], words = [];
+  let activeRecorder = null, activeStream = null;
+  const content = document.getElementById('wb-content'), action = document.getElementById('wb-action');
+  const status = document.getElementById('wb-status');
+  const fil = a.language === 'Filipino';
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const token = () => document.querySelector('[name=csrfmiddlewaretoken]').value;
+  const endpoint = data.progress_url;
+  const item = () => a.items[state.index];
+  const oral = () => state.oral[item()?.id] || {passed:false,attempts:0,listens:0,phase:a.model_first?'model':'read'};
+  const message = (text, error=false) => {status.textContent=text; status.className=error?'wb-error':'wb-save';};
+  let queue = Promise.resolve();
+  function send(event, form=null) {
+    if(preview) return Promise.resolve();
+    const operation = async () => {
+      let body;
+      if(form) {form.set('revision',state.revision);if(event?.action)form.set('action',event.action);body=form;}
+      else body=JSON.stringify({...event,revision:state.revision});
+      const response=await fetch(endpoint,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':token(),...(form?{}:{'Content-Type':'application/json'})},body});
+      const result=await response.json();
+      if(!response.ok||!result.success) throw Error(result.error||'Hindi na-save. Subukan muli.');
+      const latestDraft=state.draft;
+      state=result.state;
+      if(event?.action==='draft')state.draft=latestDraft;
+      message(fil?'Na-save ang iyong gawain.':'Your work is saved.');
+    };
+    const pending=queue.then(operation);queue=pending.catch(()=>{});return pending;
+  }
+  async function perform(event,form=null){if(busy)return;busy=true;lock();try{await send(event,form);render();}catch(e){message(e.message,true);}finally{busy=false;lock();}}
+  function lock(){action.querySelectorAll('button').forEach(b=>b.disabled=busy||preview);}
+  function button(text,fn,primary=false){const b=document.createElement('button');b.type='button';b.textContent=text;b.className=primary?'wb-primary':'';b.onclick=fn;action.appendChild(b);return b;}
+  function table(){let n=0;return `<table class="wb-table">${a.column_headers?'<thead><tr>'+a.column_headers.map(h=>`<th>${esc(h)}</th>`).join('')+'</tr></thead>':''}<tbody>${a.rows.map(row=>'<tr>'+row.map(text=>{const i=text?a.items[n++]:null;return `<td class="${!preview&&i?(n-1===state.index?'wb-current':n-1<state.index?'wb-done':''):''}">${i&&a.images?.[i.id]?`<img src="${esc(a.images[i.id])}" alt="${esc(text)}"><br>`:''}${esc(i?(a.cell_display?.[i.id]||text):'')}</td>`;}).join('')+'</tr>').join('')}</tbody></table>`;}
+  function render(){
+    selected=[];builder=state.draft.builder||[];words=state.draft.words||[];
+    document.getElementById('wb-progress').textContent=preview?'Preview':`${state.index} / ${a.progress_total||a.items.length}`;
+    document.getElementById('wb-back').hidden=preview;
+    action.replaceChildren();
+    if(state.completed){
+      content.innerHTML=`<div class="wb-focus"><h2>${cBuilder?'Magaling! Natapos mo ang Gawain 1.':fil?'Natapos mo ang gawain!':'Activity complete!'}</h2>${cBuilder?`<p>Nabuo mo na: ${esc((state.found_words||[]).join(', '))}</p>`:a.review_required?'<p>Your written work is saved for teacher review.</p>':''}</div>`;
+      if(cBuilder)button('Susunod',()=>{if(data.next_url)location.href=data.next_url;},true).disabled=!data.next_url;
+      return;
+    }
+    if(cBuilder&&!preview){renderCBuilder();lock();return;}
+    if(state.index>=a.items.length&&!preview){content.innerHTML='<div class="wb-focus">'+(fil?'Na-save ang lahat ng bahagi ng gawain.':'All required parts are saved.')+'</div>';button(fil?'Tapusin ang gawain':'Finish activity',()=>perform({action:'finish'}),true);return;}
+    const kind=a.interaction_type;
+    content.innerHTML=preview?'<p class="wb-preview-note">Preview · '+(fil?'Walang sagot na napili.':'No answers selected.')+'</p>':'';
+    if(kind==='search')renderSearch();
+    else if(kind==='drawing')renderDrawing();
+    else if(kind==='fill')renderFill();
+    else if(kind==='syllables')renderSyllables();
+    else if(a.group_titles){content.innerHTML+=a.rows.map((row,i)=>`<section class="wb-focus"><h2>${esc(a.group_titles[i])}</h2><p class="wb-verse">${esc(row[0])}</p></section>`).join('');}
+    else if(kind==='builder'){if(preview)content.innerHTML+=table();}
+    else if(kind==='reading'){if(preview)content.innerHTML+=table();}
+    else content.innerHTML+=table();
+    if(preview){if(kind==='builder')renderBuilder();return;}
+    if(a.oral_flow&&!oral().passed){
+      const focus=document.createElement('div');focus.className='wb-focus wb-reading-focus';
+      const image=a.images?.[item().id]?`<img class="wb-hero-image" src="${esc(a.images[item().id])}" alt="${esc(item().text)}">`:'';
+      const verseTitle=a.group_titles?.[state.index]?`<h2>${esc(a.group_titles[state.index])}</h2>`:'';
+      focus.innerHTML=`${image}${verseTitle}<strong>${esc(item().text)}</strong>`;action.appendChild(focus);
+      const o=oral();
+      button(o.phase==='read'?(fil?`Basahin (${o.attempts}/3)`:`Read (${o.attempts}/3)`):o.phase==='model'?'Read Aloud':`Read Aloud (${o.listens}/3)`,o.phase==='read'?record:aloud,true);
+    }else if(kind==='reading'||kind==='builder'&&state.index<a.items.length-1){button(fil?'Susunod':'Next',()=>perform({action:'answer',answer:null}),true);}
+    else if(kind==='builder')renderBuilder();
+    else if(kind==='search'){button(fil?'Piliin ang salita':'Select word',()=>perform({action:'answer',answer:selected}),true);}
+    else if(kind==='syllables'){button(fil?'Isumite':'Submit',()=>perform({action:'answer',answer:{text:document.getElementById('wb-written').value}}),true);}
+    else if(kind==='fill'){button('Submit',()=>perform({action:'answer',answer:{blanks:[...content.querySelectorAll('[data-blank]')].map(s=>s.value)}}),true);}
+    else if(kind==='drawing'){button('Submit drawing and writing',()=>perform({action:'answer',answer:{text:document.getElementById('wb-written').value,strokes:state.draft.strokes||[]}}),true);}
+    lock();
+  }
+  function draft(value){state.draft={...state.draft,...value};if(cBuilder&&Object.prototype.hasOwnProperty.call(value,'builder')){state.last_feedback='';const feedback=content.querySelector('.wb-builder-feedback');if(feedback)feedback.textContent='';}const snapshot=structuredClone(state.draft);send({action:'draft',draft:snapshot}).catch(e=>message(e.message,true));}
+  function renderCBuilder(){
+    const readDone=Boolean(state.read_aloud_completed), piecesById=Object.fromEntries(a.items.map(i=>[i.id,i.text]));
+    let fallbackIndex=0;
+    const boxCells=a.bigbox_cells||a.rows.map(row=>row.filter(Boolean).map(()=>[`item-${++fallbackIndex}`]));
+    builder=state.draft.builder||[];
+    content.className='wb-l22-builder';
+    content.innerHTML=`<section class="wb-bigbox"><h2>BIG BOX</h2><div class="wb-bigbox-grid">${boxCells.map(row=>`<div class="wb-bigbox-row">${row.map(()=>'<div class="wb-bigbox-cell"></div>').join('')}</div>`).join('')}</div></section><section class="wb-reading-panel"><h2>BASAHIN ANG MGA PANTIG</h2><p>Basahin nang malakas ang mga pantig sa loob ng Big Box.</p><p class="wb-reading-guidance">Basahin ang lahat ng pantig. Hindi kailangang maging perpekto ang bigkas para magpatuloy.</p><p class="wb-phase-status" role="status">${readDone?'Natapos mo ang pagbasa. Ngayon, bumuo ng salita gamit ang mga pantig sa Big Box.':state.read_aloud_started?'Handa ka na bang subukan muli?':'Handa na kapag ikaw ay handa.'}</p></section><section class="wb-word-panel ${readDone?'':'is-locked'}" aria-disabled="${!readDone}"><h2>BUMUO NG SALITA</h2><p>Piliin ang mga pantig sa Big Box upang makabuo ng salita.</p>${readDone?`<div class="wb-selected-parts" id="wb-selected-parts" aria-live="polite"></div><div class="wb-tools"><button type="button" id="wb-erase">Bura</button><button type="button" id="wb-retry">Ulitin</button></div><p class="wb-builder-feedback" aria-live="polite">${esc(state.last_feedback||'')}</p>${state.found_words?.length?`<div class="wb-builder-words"><strong>Nabuo mo na:</strong><ul>${state.found_words.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`:''}`:'<p class="wb-locked-note">Basahin muna ang mga pantig bago bumuo ng salita.</p>'}</section>`;
+    const itemById=Object.fromEntries(a.items.map(i=>[i.id,i]));
+    content.querySelectorAll('.wb-bigbox-row').forEach((row,rowIndex)=>{
+      row.querySelectorAll('.wb-bigbox-cell').forEach((cell,cellIndex)=>{
+        const itemIds=boxCells[rowIndex][cellIndex]||[];
+        cell.replaceChildren(...itemIds.map(id=>{
+          const item=itemById[id];if(!item)return null;
+          const tile=document.createElement('button');tile.type='button';tile.className='wb-bigbox-tile';tile.dataset.tile=item.id;tile.textContent=item.text;tile.disabled=!readDone||preview;tile.setAttribute('aria-label',`Pantig ${item.text}`);if(builder.includes(item.id))tile.classList.add('is-picked');tile.onclick=()=>{if(busy)return;builder.push(item.id);paint();tile.classList.add('is-picked');draft({builder});};return tile;
+        }).filter(Boolean));
+      });
+    });
+    const paint=()=>{const selected=document.getElementById('wb-selected-parts');if(!selected)return;selected.replaceChildren(...builder.map(id=>{const span=document.createElement('span');span.className='wb-selected-part';span.textContent=piecesById[id]||'';return span;}));};
+    paint();
+    if(readDone){
+      document.getElementById('wb-erase').onclick=()=>{builder.pop();draft({builder});paint();content.querySelectorAll('[data-tile]').forEach(t=>t.classList.toggle('is-picked',builder.includes(t.dataset.tile)));};
+      document.getElementById('wb-retry').onclick=()=>{builder=[];draft({builder});paint();content.querySelectorAll('[data-tile]').forEach(t=>t.classList.remove('is-picked'));};
+      button('Suriin ang Sagot',()=>perform({action:'build_word',parts:builder}),true).disabled=!builder.length;
+      button('Tapusin ang Gawain',()=>perform({action:'finish'}),false).disabled=!(state.found_words||[]).length;
+      button('Susunod',()=>{if(data.next_url)location.href=data.next_url;}).disabled=true;
+    }else if(!preview){
+      button(state.read_aloud_started?'Simulan muli ang Pagbasa':'Simulan ang Pagbasa',startCReading,true);
+    }
+  }
+  async function startCReading(){
+    if(busy)return;busy=true;lock();let chunks=[],readTimer;
+    try{
+      await send({action:'reading_started'});
+      if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw new Error('microphone');
+      activeStream=await navigator.mediaDevices.getUserMedia({audio:true});
+      activeRecorder=new MediaRecorder(activeStream);
+      const audioDone=new Promise((resolve,reject)=>{activeRecorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};activeRecorder.onerror=()=>reject(new Error('recording'));activeRecorder.onstop=()=>resolve(new Blob(chunks,{type:activeRecorder.mimeType||'audio/webm'}));});
+      activeRecorder.start();message('Nakikinig… Basahin nang malakas ang mga pantig sa loob ng Big Box.');
+      action.replaceChildren();const stop=button('Tapusin ang Pagbasa',()=>activeRecorder?.state==='recording'&&activeRecorder.stop(),true);stop.disabled=false;
+      readTimer=setTimeout(()=>{if(activeRecorder?.state==='recording')activeRecorder.stop();},60000);
+      const audio=await audioDone;clearTimeout(readTimer);activeStream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
+      if(!audio.size)throw new Error('empty');
+      const form=new FormData();form.append('audio',audio,'reading.webm');message('Sinusuri ang iyong pagbasa…');
+      await send({action:'reading_attempt'},form);render();
+    }catch(_error){
+      clearTimeout(readTimer);
+      activeStream?.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
+      message('Hindi magamit ang mikropono. Subukan muli.',true);
+      render();
+    }finally{clearTimeout(readTimer);busy=false;lock();}
+  }
+  function renderSearch(){
+    content.innerHTML+=`<div class="wb-search-wrap"><ul class="wb-word-list">${a.items.map((i,n)=>`<li>${esc(a.item_labels?.[n]||`${n+1}.`)} ${esc(i.text)}${!preview&&state.answers[i.id]?' ✓':''}</li>`).join('')}</ul><label>${fil?'Kulay':'Color'} <input id="wb-color" type="color" value="${esc(state.draft.color||'#b6e6c3')}"></label><div class="wb-search ${a.mark_style}" style="--cols:${a.grid[0].length}">${a.grid.map((row,y)=>Array.from(row).map((letter,x)=>`<button type="button" data-y="${y}" data-x="${x}" aria-label="Row ${y+1}, column ${x+1}: ${esc(letter)}">${esc(letter)}</button>`).join('')).join('')}</div></div>`;
+    const found=Object.values(state.answers).flat();
+    content.querySelectorAll('.wb-search button').forEach(b=>{
+      const y=Number(b.dataset.y),x=Number(b.dataset.x);
+      if(!preview&&found.some(p=>p[0]===y&&p[1]===x)){b.classList.add('wb-found');const match=Object.entries(state.answers).find(([,path])=>path.some(p=>p[0]===y&&p[1]===x));b.style.setProperty('--mark',state.mark_colors?.[match?.[0]]||'#b6e6c3');}
+      b.disabled=preview||!oral().passed;
+      b.onclick=()=>{if(busy)return;if(!selected.length){selected=[[y,x]];}else{const [sy,sx]=selected[0],dy=y-sy,dx=x-sx;if(dx&&dy&&Math.abs(dx)!==Math.abs(dy)){selected=[[y,x]];}else{selected=Array.from({length:Math.max(Math.abs(dx),Math.abs(dy))+1},(_,i)=>[sy+i*Math.sign(dy),sx+i*Math.sign(dx)]);}}content.querySelectorAll('.wb-search button').forEach(cell=>cell.classList.toggle('wb-selected',selected.some(p=>p[0]===+cell.dataset.y&&p[1]===+cell.dataset.x)));draft({selected});};
+    });
+    if(!preview){selected=state.draft.selected||[];content.querySelectorAll('.wb-search button').forEach(b=>b.classList.toggle('wb-selected',selected.some(p=>p[0]===+b.dataset.y&&p[1]===+b.dataset.x)));}
+    document.getElementById('wb-color').oninput=e=>{content.style.setProperty('--mark',e.target.value);draft({color:e.target.value});};
+  }
+  function renderBuilder(){
+    const box=document.createElement('div');box.className='wb-builder';box.innerHTML=`<p>${fil?'Pumili ng mga pantig upang bumuo ng salita.':'Choose syllables to build a word.'}</p><div class="wb-syllable-tiles">${a.items.map(i=>`<button type="button" data-part="${i.id}">${esc(i.text)}</button>`).join('')}</div><div id="wb-building" class="wb-building">${fil?'Pipiliin mong salita ay lalabas dito.':'Your word will appear here.'}</div><div class="wb-tools"><button type="button" id="wb-add">${fil?'Idagdag':'Add word'}</button><button type="button" id="wb-clear">${fil?'Burahin':'Clear'}</button></div><div id="wb-words" class="wb-builder-words"></div>`;content.appendChild(box);
+    const wordText=parts=>parts.map(id=>a.items.find(i=>i.id===id)?.text||'').join('');
+    const paint=()=>{box.querySelector('#wb-building').textContent=builder.length?wordText(builder):(fil?'Pipiliin mong salita ay lalabas dito.':'Your word will appear here.');box.querySelector('#wb-words').textContent=words.map(wordText).join(', ');};
+    box.querySelectorAll('[data-part]').forEach(b=>{b.disabled=preview||!oral().passed;b.onclick=()=>{builder.push(b.dataset.part);b.classList.add('is-picked');paint();draft({builder,words});};});
+    box.querySelector('#wb-add').disabled=preview||!oral().passed;box.querySelector('#wb-clear').disabled=preview||!oral().passed;
+    box.querySelector('#wb-add').onclick=()=>{if(builder.length){words.push([...builder]);builder=[];box.querySelectorAll('[data-part]').forEach(b=>b.classList.remove('is-picked'));paint();draft({builder,words});}};
+    box.querySelector('#wb-clear').onclick=()=>{builder=[];box.querySelectorAll('[data-part]').forEach(b=>b.classList.remove('is-picked'));paint();draft({builder,words});};paint();
+    if(!preview)button(fil?'Isumite ang mga salita':'Submit words',()=>perform({action:'answer',answer:words}),true);
+    else box.querySelectorAll('button').forEach(b=>b.disabled=true);
+  }
+  function written(prompt){content.innerHTML+=`<div class="wb-focus"><p>${esc(prompt)}</p><label for="wb-written">${fil?'Sagot':'Answer'}</label><textarea id="wb-written" ${preview||a.oral_flow&&!oral().passed?'disabled':''}>${esc(preview?'':state.draft.text||'')}</textarea></div>`;document.getElementById('wb-written').oninput=e=>draft({text:e.target.value});}
+  function renderSyllables(){
+    if(a.worked_example)content.innerHTML+=`<p>${esc(a.worked_example)}</p>`;
+    if(preview){content.innerHTML+=a.items.map((it,n)=>`<p>${esc(a.item_labels?.[n]||`${n+1}.`)} ${esc(it.text)} = ________________</p>`).join('');}
+    else {const it=item();const n=state.index;content.innerHTML+=`<div class="wb-focus wb-syllable-focus"><p>${esc(a.item_labels?.[n]||`${n+1}.`)} ${esc(it.text)} = ________________</p></div>`;}
+    if(!preview)written(item().text+' = __________');
+  }
+  function renderFill(){
+    content.innerHTML+=`<p>( ${a.options.map(esc).join(', ')} )</p><table class="wb-table"><tr>${a.options.map(x=>`<td>${esc(x)}</td>`).join('')}</tr></table>`;
+    if(preview){content.innerHTML+=a.items.map(it=>`<p>${esc(it.text)}</p>`).join('');return;}
+    let index=0;
+    const sentence=esc(item().text).replace(/_+/g,()=>{const i=index++;return `<select data-blank="${i}" aria-label="Blank ${i+1}"><option value="">_____</option>${a.options.map(o=>`<option value="${esc(o)}" ${state.draft.blanks?.[i]===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`;});
+    content.innerHTML+=`<div class="wb-focus">${sentence}</div>`;
+    content.querySelectorAll('[data-blank]').forEach(select=>select.onchange=()=>draft({blanks:[...content.querySelectorAll('[data-blank]')].map(s=>s.value)}));
+  }
+  function renderDrawing(){
+    content.innerHTML+='<div class="wb-drawing-card"><div class="wb-tools"><label>Color <input type="color" id="wb-pen" value="#24576b"></label><button type="button" id="wb-undo">Undo stroke</button></div><canvas id="wb-canvas" width="900" height="500" aria-label="Draw your picture"></canvas></div>';
+    written('Write under your drawing.');
+    const canvas=document.getElementById('wb-canvas'),ctx=canvas.getContext('2d');let strokes=structuredClone(state.draft.strokes||[]),stroke=null;
+    const redraw=()=>{ctx.clearRect(0,0,900,500);for(const s of strokes){ctx.strokeStyle=s.color;ctx.lineWidth=5;ctx.lineCap='round';ctx.beginPath();s.points.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p));ctx.stroke();}};
+    const point=e=>{const r=canvas.getBoundingClientRect();return [Math.max(0,Math.min(900,(e.clientX-r.left)*900/r.width)),Math.max(0,Math.min(500,(e.clientY-r.top)*500/r.height))];};
+    canvas.onpointerdown=e=>{if(preview||busy)return;canvas.setPointerCapture(e.pointerId);stroke={color:document.getElementById('wb-pen').value,points:[point(e)]};strokes.push(stroke);};
+    canvas.onpointermove=e=>{if(!stroke)return;if(stroke.points.length<3000)stroke.points.push(point(e));redraw();};
+    const end=()=>{if(stroke){if(stroke.points.length===1)stroke.points.push([...stroke.points[0]]);stroke=null;draft({strokes});}};canvas.onpointerup=end;canvas.onpointercancel=end;
+    document.getElementById('wb-undo').onclick=()=>{strokes.pop();redraw();draft({strokes});};redraw();
+  }
+  async function record(){
+    if(busy)return;busy=true;lock();let stream;
+    try{
+      stream=await navigator.mediaDevices.getUserMedia({audio:true});const chunks=[];const recorder=new MediaRecorder(stream);
+      const audio=await new Promise((resolve,reject)=>{recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};recorder.onerror=reject;recorder.onstop=()=>resolve(new Blob(chunks,{type:recorder.mimeType}));recorder.start();message(fil?'Nagbabasa…':'Recording…');const stop=button(fil?'Tapos nang basahin':'Done reading',()=>recorder.stop());stop.disabled=false;const timer=setTimeout(()=>{if(recorder.state==='recording')recorder.stop();},60000);recorder.addEventListener('stop',()=>{clearTimeout(timer);stop.remove();});});
+      stream.getTracks().forEach(t=>t.stop());message(fil?'Pinakikinggan ang iyong pagbasa…':'Checking your reading…');const form=new FormData();form.append('audio',audio,'reading.webm');await send(null,form);render();
+    }catch(e){message(e.message||'Microphone unavailable. Please try again.',true);}finally{stream?.getTracks().forEach(t=>t.stop());busy=false;lock();}
+  }
+  async function aloud(){
+    if(busy)return;busy=true;lock();
+    await window.PabasaTemplateTts.speak({text:item().text,profile:'word',onEnd:async()=>{try{await send({action:oral().phase==='model'?'model_listened':'listened'});render();}catch(e){message(e.message,true);}finally{busy=false;lock();}},onError:e=>{message(e.message,true);busy=false;lock();}});
+  }
+  window.addEventListener('beforeunload',e=>{activeRecorder?.stop();activeStream?.getTracks().forEach(t=>t.stop());if(!cBuilder&&busy){e.preventDefault();e.returnValue='';}});
+  render();
+})();

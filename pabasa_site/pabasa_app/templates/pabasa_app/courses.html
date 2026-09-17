@@ -23068,9 +23068,14 @@ document.addEventListener('DOMContentLoaded',()=>{const p=document.getElementByI
 document.addEventListener('DOMContentLoaded', () => {
     const picker = document.getElementById('prescribedActivityPicker');
     if (!picker || picker.dataset.sessionFoldersReady === 'true') return;
+    // Workbook cards are inserted by a shared handler; group after it has run.
+    setTimeout(() => {
     picker.dataset.sessionFoldersReady = 'true';
 
-    const sessionFor = key => {
+    const sessionFor = button => {
+        const assignedSession = Number(button.dataset.sessionNumber);
+        if (assignedSession > 0) return assignedSession;
+        const key = button.dataset.prescribedActivity || '';
         if (['gawain-1', 'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2'].includes(key)) return 1;
         if (['lesson-4-gawain-1', 'lesson-4-gawain-2', 'lesson-5-gawain-1', 'lesson-6-gawain-1'].includes(key)) return 2;
 if (key.startsWith('lesson-7-') || ['lesson7-gawain2c', 'lesson7-gawain4', 'lesson7-gawain4a', 'lesson8-gawain1', 'lesson8-gawain1a', 'lesson9-gawain1', 'lesson9-gawain2', 'lesson9-gawain3'].includes(key)) return 3;
@@ -23098,7 +23103,7 @@ if (key.startsWith('lesson-7-') || ['lesson7-gawain2c', 'lesson7-gawain4', 'less
     folders.className = 'prescribed-session-folders';
     folders.setAttribute('aria-label', 'ARAL Workbook sessions');
     for (let number = 1; number <= 15; number += 1) {
-        const members = activities.filter(button => sessionFor(button.dataset.prescribedActivity) === number);
+        const members = activities.filter(button => sessionFor(button) === number);
         const column = document.createElement('div');
         column.className = 'prescribed-session-folder';
         const button = document.createElement('button');
@@ -23123,6 +23128,7 @@ if (key.startsWith('lesson-7-') || ['lesson7-gawain2c', 'lesson7-gawain4', 'less
     const style = document.createElement('style');
     style.textContent = `.prescribed-session-folders{display:grid;gap:.85rem;grid-template-columns:repeat(4,minmax(0,1fr));width:100%}@media(max-width:900px){.prescribed-session-folders{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:620px){.prescribed-session-folders{grid-template-columns:repeat(2,minmax(0,1fr))}}.prescribed-session-folder__button{align-items:center;background:linear-gradient(145deg,#f7fbef,#fff9dd);border:1px solid #dce8ed;border-radius:1rem;color:#244354;cursor:pointer;display:flex;gap:.7rem;min-height:120px;padding:1rem;text-align:left;width:100%}.prescribed-session-folder__button:hover,.prescribed-session-folder__button:focus-visible{border-color:#2a7891;box-shadow:0 0 0 3px rgba(42,120,145,.12);outline:0}.prescribed-session-folder__icon{font-size:2rem}.prescribed-session-folder__button strong,.prescribed-session-folder__button small{display:block}.prescribed-session-folder__button strong{color:#176078;font-size:1.05rem}.prescribed-session-folder__button small{color:#71828a;margin-top:.2rem}.prescribed-session-modal{background:rgba(15,35,48,.42);inset:0;position:fixed;z-index:1060}.prescribed-session-modal__dialog{background:#fff;border-radius:1.25rem;inset:4vh 4vw;overflow:auto;padding:1rem;position:absolute}.prescribed-session-modal__header{align-items:center;border-bottom:1px solid #dce8ed;color:#176078;display:flex;justify-content:space-between;margin-bottom:1rem;padding:.25rem .25rem 1rem}.prescribed-session-modal__header small{color:#71828a;font-weight:600}.prescribed-session-modal__close{background:#fff3c7;border:1px solid #e3c96a;border-radius:.7rem;color:#176078;font-size:1.5rem;height:2.4rem;line-height:1;width:2.4rem}.prescribed-session-modal__list{display:grid;gap:.85rem;grid-template-columns:repeat(auto-fill,minmax(160px,210px))}.prescribed-session-modal__list .prescribed-activity-option{display:flex}.prescribed-session-modal__list .prescribed-activity-option{aspect-ratio:.86 / 1}`;
     document.head.appendChild(style);
+    }, 0);
 });
 </script>
 <style>
@@ -23148,4 +23154,15 @@ if (key.startsWith('lesson-7-') || ['lesson7-gawain2c', 'lesson7-gawain4', 'less
 <style>
 .session2-gawain4-preview{background:#f8fbfd;padding:1.5rem;overflow:auto}.session2-gawain4-legend{display:flex;flex-wrap:wrap;gap:.75rem 1.25rem;margin:1rem 0;padding:.75rem 1rem;background:#fff;border:1px solid #d7e5e5;border-radius:.75rem}.session2-gawain4-row{display:grid;grid-template-columns:2rem minmax(0,1fr) repeat(3,2rem);align-items:center;gap:.5rem;padding:.55rem .75rem;background:#fff;border-bottom:1px solid #e4eeee}.session2-gawain4-label{margin:1rem 0 .35rem;padding:.5rem .75rem;background:#e4f4f8;color:#176078;font-weight:800}.session2-gawain4-status{display:block;width:1.25rem;height:1.25rem;border:2px solid currentColor;border-radius:50%}.session2-gawain4-status.good{color:#218739}.session2-gawain4-status.choppy{color:#c79500}.session2-gawain4-status.not-read{color:#c93636}
 </style>
+{{ prescribed_workbook_activities|default:"[]"|json_script:"prescribed-workbook-activities" }}
+<style>
+.prescribed-workbook-teacher-preview{border:0;border-radius:1rem;box-shadow:0 1.5rem 4rem rgba(13,54,74,.28);max-height:92vh;padding:0;width:min(1120px,94vw)}
+.prescribed-workbook-teacher-preview::backdrop{background:rgba(9,40,56,.48)}
+.prescribed-workbook-teacher-preview header,.prescribed-workbook-teacher-preview footer{align-items:center;display:flex;justify-content:space-between;padding:.8rem 1rem}
+.prescribed-workbook-teacher-preview header{border-bottom:1px solid #dce8ed;color:#176078}.prescribed-workbook-teacher-preview footer{border-top:1px solid #dce8ed;color:#627b84;font-size:.9rem}
+.prescribed-workbook-teacher-preview button{background:#fff;border:1px solid #bcdce4;border-radius:.6rem;color:#176078;padding:.35rem .7rem}
+.prescribed-workbook-teacher-preview__content{padding:1rem}.prescribed-workbook-teacher-preview__content>img{display:none}.prescribed-workbook-teacher-preview__content h2{color:#16465d;font-size:1.1rem;margin:0}.prescribed-workbook-teacher-preview__content p{color:#627b84;margin:.25rem 0 .8rem}
+.prescribed-workbook-teacher-preview iframe{border:0;border-radius:.75rem;height:min(68vh,760px);width:100%}
+</style>
+<script src="{% static 'pabasa_app/js/prescribed_workbook_cards.js' %}"></script>
 {% endblock %}

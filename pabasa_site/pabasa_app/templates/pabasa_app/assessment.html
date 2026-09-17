@@ -879,13 +879,24 @@
 <style>#subjectGrid{display:block}.pabasa-preview-subject{display:block}.pabasa-track-intro{color:#647883;font-weight:700}.pabasa-template-folder-grid{display:none}</style>
 <style>
     .pabasa-preview-subject { background: transparent; border: 0; border-radius: 0; padding: 0; }
-    .assessment-dock { align-content: start; max-height: calc(100dvh - 88px); overflow-y: auto; padding-bottom: 2rem; scrollbar-gutter: stable; }
+    /* Let the folder grid grow, while the assessment dock owns desktop scrolling. */
+    .assessment-dock { align-content: start; min-width: 0; overflow-x: hidden; overflow-y: auto; padding-bottom: 5rem; scroll-padding-bottom: 5rem; scrollbar-gutter: stable; }
     .pabasa-track-tabs { display: flex; justify-content: center; margin-inline: auto; width: fit-content; }
     .pabasa-track-tabs button { font-size: 1.08rem; min-height: 58px; padding: .8rem 1.5rem; }
     .pabasa-task-badge { font-size: .8rem; height: 27px; line-height: 27px; width: 27px; }
-    .pabasa-preview-subject { min-height: 0; overflow: visible; }
+    .assessment-dock .pabasa-preview-subject { flex: 0 0 auto; height: auto; min-height: 0; overflow: visible; }
+    .assessment-dock #coreTrackPanel, .assessment-dock #sessionGrid, .assessment-dock .subject-grid { min-width: 0; overflow: visible; }
+    .assessment-dock #sessionGrid { padding-bottom: 2rem; }
     .pabasa-preview-subject::before { display: none; }
-    @media (max-width: 767.98px) { .assessment-dock { max-height: calc(100dvh - 72px); } }
+    @media (min-width: 992px) {
+        body:has(.assessment-dock) .dashboard-main, body:has(.assessment-dock) .dashboard-page-wrap { min-height: 0; overflow: hidden; }
+        body:has(.assessment-dock) .dashboard-main { height: var(--dashboard-normalized-viewport-height); }
+        body:has(.assessment-dock) .dashboard-page-wrap { height: calc(var(--dashboard-normalized-viewport-height) - 1rem); }
+        body:has(.assessment-dock) .dashboard-page-wrap, body:has(.assessment-dock) .dashboard-content-wrap { display: flex; flex-direction: column; }
+        body:has(.assessment-dock) .dashboard-content-wrap { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+        .assessment-dock { height: 100%; max-height: none; min-height: 0; }
+    }
+    @media (max-width: 991.98px) { .assessment-dock { height: auto; max-height: none; overflow: visible; padding-bottom: 4rem; scroll-padding-bottom: 4rem; } }
 </style>
 <script>
 function playTTS(text){if(!('speechSynthesis'in window))return;window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='fil-PH';u.rate=.85;window.speechSynthesis.speak(u)}
@@ -1851,7 +1862,7 @@ document.addEventListener('DOMContentLoaded', function () {
     setTimeout(function () {
         if (grid.dataset.sessionFoldersReady === 'true') return;
         const activities = Array.from(grid.children).slice(0, 4);
-        if (activities.length !== 4) return;
+        if (activities.length < 4) return;
 
         const column = document.createElement('div');
         column.className = 'assessment-week-column session-folder-column';
@@ -2076,6 +2087,65 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }, 1600);
+});
+</script>
+<script>
+/* Rebuild only the PDF-backed Sessions 8–11 after legacy cards finish their
+   own setup.  Counts come from the same prescribed payload as the cards. */
+document.addEventListener('DOMContentLoaded', function () {
+    setTimeout(function () {
+        const grid = document.getElementById('sessionGrid');
+        const source = document.getElementById('prescribed-activity-cards');
+        if (!grid || !source) return;
+        let activities;
+        try { activities = JSON.parse(source.textContent || '[]'); } catch (_) { return; }
+        const sessions = [8, 9, 10, 11];
+        const workbook = activities.filter(activity => sessions.includes(Number(activity.session_number)));
+        const bySession = new Map(sessions.map(session => [session, []]));
+
+        workbook.forEach(function (activity) {
+            const matchingCards = Array.from(document.querySelectorAll('#sessionGrid [data-prescribed-activity], .session-folder-modal [data-prescribed-activity]'))
+                .filter(node => node.dataset.prescribedActivity === String(activity.activity_key));
+            const card = matchingCards.shift();
+            matchingCards.forEach(node => node.remove());
+            if (!card) return;
+            card.dataset.sessionKey = `session-${activity.session_number}`;
+            const heading = card.querySelector('.session-content h4');
+            const label = card.querySelector('.session-content p');
+            if (heading) heading.textContent = activity.lesson_number ? `Lesson ${activity.lesson_number}` : `Session ${activity.session_number}`;
+            if (label) label.textContent = activity.lesson_number ? `Gawain ${activity.gawain_number}` : `Activity ${activity.gawain_number}`;
+            bySession.get(Number(activity.session_number)).push(card);
+        });
+
+        sessions.forEach(function (session) {
+            const label = `Session ${session}`;
+            Array.from(grid.querySelectorAll('.session-folder-column')).filter(column => column.querySelector('.week-folder-name')?.textContent.trim() === label).forEach(column => column.remove());
+            Array.from(document.querySelectorAll('.session-folder-modal')).filter(modal => modal.querySelector('.week-activities-title')?.textContent.includes(label)).forEach(modal => modal.remove());
+            const cards = bySession.get(session);
+            if (!cards.length) return;
+            const count = cards.length;
+            const column = document.createElement('div');
+            column.className = 'assessment-week-column session-folder-column';
+            column.dataset.sessionKey = `session-${session}`;
+            column.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">📁</span><span class="week-folder-name">${label}</span><span class="week-activity-count">${count} ${count === 1 ? 'activity' : 'activities'}</span></button>`;
+            const modal = document.createElement('div');
+            modal.className = 'week-activities-modal session-folder-modal aking-aralin-session-modal';
+            modal.hidden = true;
+            modal.dataset.sessionKey = `session-${session}`;
+            modal.innerHTML = `<div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="${label} activities"><div class="week-activities-header"><span class="week-activities-title">📁 ${label} <small>— ${count} ${count === 1 ? 'activity' : 'activities'}</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div>`;
+            cards.forEach(card => modal.querySelector('.assessment-week-cards').appendChild(card));
+            const close = () => { modal.hidden = true; document.body.style.overflow = ''; };
+            column.querySelector('.assessment-week-folder').addEventListener('click', () => { modal.hidden = false; document.body.style.overflow = 'hidden'; });
+            modal.querySelector('.week-activities-close').addEventListener('click', close);
+            modal.addEventListener('click', event => { if (event.target === modal) close(); });
+            grid.appendChild(column);
+            document.body.appendChild(modal);
+        });
+        Array.from(grid.querySelectorAll('.session-folder-column')).sort((left, right) => {
+            const number = node => Number(node.querySelector('.week-folder-name')?.textContent.match(/\d+/)?.[0] || Number.MAX_SAFE_INTEGER);
+            return number(left) - number(right);
+        }).forEach(column => grid.appendChild(column));
+    }, 2200);
 });
 </script>
 {% endblock %}

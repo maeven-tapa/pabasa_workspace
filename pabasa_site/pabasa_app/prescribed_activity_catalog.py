@@ -782,6 +782,47 @@ for _activity in PRESCRIBED_ACTIVITIES.values():
             _item['image_path'] = LESSON_16_IMAGE_PATHS[_item['word']]
 
 
+# Sessions 8–11 use the shared prescribed activity catalog and learner progress
+# flow.  Keep their detailed interaction data in one workbook definition, and
+# expose only the catalog fields required by the existing student/teacher UI.
+from .prescribed_workbook import ACTIVITIES as PRESCRIBED_WORKBOOK_ACTIVITIES
+
+for _key, _workbook in PRESCRIBED_WORKBOOK_ACTIVITIES.items():
+    PRESCRIBED_ACTIVITIES[_key] = {
+        'activity_key': _key,
+        'session_key': _workbook['session_key'],
+        'session_number': _workbook['session'],
+        'lesson_number': _workbook.get('lesson') or '',
+        'gawain_number': _workbook.get('activity_number'),
+        'title': _workbook['title'],
+        'display_title': _workbook['display_label'],
+        'description': _workbook['instruction'],
+        'instruction': _workbook['instruction'],
+        'interaction': 'prescribed_workbook',
+        'total_items': _workbook.get('progress_total', len(_workbook['items'])),
+        'thumbnail': next(
+            (item.get('image_path') for item in _workbook['items'] if item.get('image_path')),
+        '',
+    ),
+    }
+
+# Existing Session 10–11 activities have their own established interaction
+# handlers.  Give them the same stable session metadata as the new workbook
+# entries so both teacher and student folder views use one grouping rule.
+for _activity in PRESCRIBED_ACTIVITIES.values():
+    _session_number = _activity.get('session_number')
+    if _session_number in (8, 9, 10, 11):
+        _activity.setdefault('session_key', f'session-{_session_number}')
+
+
+def active_prescribed_activities():
+    """Return prescribed activities which are current student-facing entries."""
+    return [
+        activity for activity in PRESCRIBED_ACTIVITIES.values()
+        if not activity.get('superseded_by')
+    ]
+
+
 def prescribed_activity(activity_key):
     """Return a copy so request handling cannot mutate the shared workbook data."""
     activity = PRESCRIBED_ACTIVITIES.get(str(activity_key or '').strip())

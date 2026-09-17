@@ -98,7 +98,11 @@ from .hunt_scoring import classify_speech
 from .syllable_blending import activity_catalog, build_activity, normalize_format
 from .clap_count_word_bank import score_displayed_words, word_bank_catalog, validate_configuration
 from .sound_detective import catalog as sound_detective_catalog, validate_configuration as validate_sound_detective
-from .prescribed_activity_catalog import PRESCRIBED_ACTIVITIES, prescribed_activity
+from .prescribed_activity_catalog import (
+    PRESCRIBED_ACTIVITIES,
+    active_prescribed_activities,
+    prescribed_activity,
+)
 from .handwriting_validation import is_recognizable_ii, normalize_strokes
 from .reader_classification import classify_student_account
 from .scoring import (
@@ -11914,6 +11918,7 @@ def assessment(request):
             {
                 'activity_key': activity['activity_key'],
                 'session_key': f"session-{activity['session_number']}",
+                'session_number': activity['session_number'],
                 'lesson_number': activity['lesson_number'],
                 'gawain_number': activity['gawain_number'],
                 'title': activity.get('display_title', activity['title']),
@@ -11923,7 +11928,7 @@ def assessment(request):
                 'image_url': static(image_path) if (image_path := (prescribed_card_image_path(activity) or _prescribed_activity_thumbnail_path(activity))) else '',
                 'route_url': reverse(activity['route_name']) if activity.get('route_name') else reverse('prescribed_activity_page', kwargs={'activity_key': activity['activity_key']}),
             }
-            for activity in PRESCRIBED_ACTIVITIES.values()
+            for activity in active_prescribed_activities()
         ]
         try:
             logger.warning(
@@ -12935,13 +12940,43 @@ def _active_prescribed_student(request):
     ).first()
 
 
-@login_required(role='student')
+@login_required()
 @xframe_options_sameorigin
 @ensure_csrf_cookie
 def prescribed_activity_page(request, activity_key):
     activity = prescribed_activity(activity_key)
+    if not activity:
+        return redirect('assessment')
+    if activity.get('interaction') == 'prescribed_workbook':
+        from .prescribed_workbook import get_activity, initial_state, normalize_l22_c_state
+
+        preview = request.GET.get('preview') == '1'
+        role = request.session.get('user_role')
+        if preview:
+            if role not in {'teacher', 'admin'}:
+                return HttpResponseForbidden()
+            student = None
+        else:
+            if role != 'student':
+                return HttpResponseForbidden()
+            student = _active_prescribed_student(request)
+            if not student:
+                return redirect('assessment')
+        progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first() if student else None
+        state = progress.state if progress and isinstance(progress.state, dict) else initial_state()
+        if activity_key == 'aral-l22-g1-c-syllable-builder':
+            state = normalize_l22_c_state(state)
+        next_key = 'aral-l22-g2-c-word-reading'
+        next_url = reverse('prescribed_activity_page', kwargs={'activity_key': next_key}) if activity_key == 'aral-l22-g1-c-syllable-builder' and next_key in PRESCRIBED_ACTIVITIES else ''
+        return render(request, 'pabasa_app/prescribed_workbook_page.html', {
+            'workbook_payload': {
+                'activity': get_activity(activity_key), 'state': state, 'preview': preview,
+                'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+                'next_url': next_url,
+            },
+        })
     student = _active_prescribed_student(request)
-    if not activity or not student:
+    if not student:
         return redirect('assessment')
     progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
     raw_state = progress.state if progress and isinstance(progress.state, dict) else {}
@@ -13908,6 +13943,8 @@ def prescribed_activity_progress(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity.get('interaction') == 'prescribed_workbook':
+        return _prescribed_workbook_activity_progress(request, activity_key, activity, student)
     if activity_key == 'session-2-lesson-4-gawain-2':
         try:
             data = json.loads(request.body or '{}')
@@ -15284,6 +15321,64 @@ def prescribed_activity_progress(request, activity_key):
         'activity_completed': progress.activity_completed,
         'state': _normalized_prescribed_state(activity, saved_state, progress.completed_items),
     }})
+
+
+def _prescribed_workbook_activity_progress(request, activity_key, activity, student):
+    """Persist Sessions 8–11 workbook state through the shared prescribed route."""
+    from copy import deepcopy
+    from .prescribed_workbook import apply_event, get_activity, initial_state, normalize_l22_c_state
+
+    workbook = get_activity(activity_key)
+    try:
+        event = json.loads(request.body or '{}') if request.content_type == 'application/json' else request.POST.dict()
+        if not isinstance(event, dict):
+            raise ValueError('Invalid event.')
+        row = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        state = deepcopy(row.state if row and isinstance(row.state, dict) else initial_state())
+        if activity_key == 'aral-l22-g1-c-syllable-builder':
+            state = normalize_l22_c_state(state)
+        if int(event.get('revision', -1)) != int(state.get('revision', 0)):
+            return JsonResponse({'success': False, 'error': 'Activity changed in another tab. Reload to resume.', 'state': state}, status=409)
+
+        verified = None
+        if event.get('action') in {'reading', 'reading_attempt'}:
+            item_index = int(state.get('index', 0))
+            if item_index >= len(workbook['items']) and activity_key != 'aral-l22-g1-c-syllable-builder':
+                raise ValueError('No reading item remains.')
+            request.POST = request.POST.copy()
+            if activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_attempt':
+                if not state.get('read_aloud_started'):
+                    raise ValueError('Simulan muna ang pagbasa.')
+                request.POST.update(target_text=' '.join(item['text'] for item in workbook['items']), language='Filipino', mode='reading', current_syllable_index='0', syllable_context='')
+            else:
+                item = workbook['items'][item_index]
+                request.POST.update(target_text=item['text'], language=workbook.get('language', 'Filipino'), mode='reading', current_syllable_index='0', syllable_context='')
+            response = reading_transcribe_api(request)
+            result = json.loads(response.content)
+            if response.status_code != 200 or not result.get('success'):
+                return response
+            verified = bool(str(result.get('transcript') or result.get('raw_transcript') or '').strip()) if activity_key == 'aral-l22-g1-c-syllable-builder' else bool(result.get('complete'))
+            if not verified and activity_key == 'aral-l22-g1-c-syllable-builder':
+                return JsonResponse({'success': False, 'error': 'Hindi nakuha ang pagbasa. Subukan muli.'}, status=422)
+
+        updated = apply_event(workbook, state, event, verified)
+        updated['revision'] = int(updated.get('revision', 0)) + 1
+        total = int(workbook.get('progress_total') or len(workbook['items']))
+        index = total if updated.get('completed') else min(int(updated.get('index', 0)), total)
+        oral = updated.get('oral') if isinstance(updated.get('oral'), dict) else {}
+        correct = sum(bool(value.get('passed')) for value in oral.values() if isinstance(value, dict))
+        progress, _ = StudentActivityProgress.objects.update_or_create(
+            student=student, activity_key=activity_key,
+            defaults={'current_index': index, 'completed_items': index, 'correct_items': correct,
+                      'total_items': total, 'activity_completed': bool(updated.get('completed')), 'state': updated},
+        )
+        return JsonResponse({'success': True, 'state': updated, 'progress': {
+            'current_index': progress.current_index, 'completed_items': progress.completed_items,
+            'correct_items': progress.correct_items, 'total_items': progress.total_items,
+            'activity_completed': progress.activity_completed,
+        }})
+    except (ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=400)
 
 
 @login_required(role='student')
@@ -22687,6 +22782,7 @@ def course_teacher_view(request):
     if request.session.get('user_role') not in ['teacher', 'admin']:
         return redirect('auth')
     context = _dashboard_context(request, 'teacher')
+    visible_prescribed_activities = active_prescribed_activities()
     teacher_user = User.objects.filter(id=request.session.get('user_id'), role='teacher').first()
     crla_existing, _school_year_label = _existing_crla_assessment_for_school_year(teacher_user)
     active_calendar = _active_school_calendar()
@@ -22698,15 +22794,16 @@ def course_teacher_view(request):
         'clap_count_word_bank': word_bank_catalog(),
         'sound_detective_catalog': sound_detective_catalog(),
         'picture_word_catalog': _picture_word_catalog(),
-        'prescribed_lesson_16_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('session_key') == 'session-6' or activity.get('lesson_number') == 16],
-        'prescribed_lesson_26_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 26],
-        'prescribed_lesson_27_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 27],
-        'prescribed_lesson_28_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 28],
-        'prescribed_lesson_29_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 29],
-        'prescribed_lesson_30_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 30],
-        'prescribed_lesson_31_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values() if activity.get('lesson_number') == 31],
-        'prescribed_lesson_19_activities': [activity for activity in PRESCRIBED_ACTIVITIES.values()
+        'prescribed_lesson_16_activities': [activity for activity in visible_prescribed_activities if activity.get('session_key') == 'session-6' or activity.get('lesson_number') == 16],
+        'prescribed_lesson_26_activities': [activity for activity in visible_prescribed_activities if activity.get('lesson_number') == 26],
+        'prescribed_lesson_27_activities': [activity for activity in visible_prescribed_activities if activity.get('lesson_number') == 27],
+        'prescribed_lesson_28_activities': [activity for activity in visible_prescribed_activities if activity.get('lesson_number') == 28],
+        'prescribed_lesson_29_activities': [activity for activity in visible_prescribed_activities if activity.get('lesson_number') == 29],
+        'prescribed_lesson_30_activities': [activity for activity in visible_prescribed_activities if activity.get('lesson_number') == 30],
+        'prescribed_lesson_31_activities': [activity for activity in visible_prescribed_activities if activity.get('lesson_number') == 31],
+        'prescribed_lesson_19_activities': [activity for activity in visible_prescribed_activities
                                             if activity.get('session_key') == 'session-7' and activity.get('lesson_number') == 19],
+        'prescribed_workbook_activities': [activity for activity in visible_prescribed_activities if activity.get('interaction') == 'prescribed_workbook'],
         'prescribed_lesson_13_activities': [PRESCRIBED_ACTIVITIES['lesson-13-gawain-1'], PRESCRIBED_ACTIVITIES['lesson-13-gawain-2'], PRESCRIBED_ACTIVITIES['lesson-13-gawain-3'], PRESCRIBED_ACTIVITIES['lesson-13-gawain-4']],
         'prescribed_lesson_14_activities': [
             activity for activity in PRESCRIBED_ACTIVITIES.values()
@@ -26169,6 +26266,9 @@ def get_class_materials(request):
             | Q(system_assessment_key__in=list(OFFICIAL_CRLA_CONTENT.keys()))
             | Q(system_assessment_phase__in=['pretest', 'posttest'])
         )
+        # Prescribed workbook activities are served from their stable catalog
+        # routes.  A legacy Material copy would create a second class card.
+        materials_qs = materials_qs.exclude(content_json__activity_type='prescribed_workbook')
         assessment_week_enabled = bool(
             request_user.role == 'student' and _expire_assessment_week_if_needed(section)
         )

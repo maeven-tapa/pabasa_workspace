@@ -92,6 +92,15 @@ ACTIVITIES = OrderedDict([
     }),
 ])
 
+from .prescribed_workbook import ACTIVITIES as WORKBOOK_ACTIVITIES
+
+for _key, _activity in WORKBOOK_ACTIVITIES.items():
+    ACTIVITIES[_key] = {
+        'name': _activity['display_label'] + ': ' + _activity['title'],
+        'identifiers': (_key,),
+        'competencies': ('Fluency',) if _activity['interaction_type'] == 'reading' else ('Phonics',),
+    }
+
 IDENTIFIER_TO_ACTIVITY = {
     identifier: activity_id
     for activity_id, definition in ACTIVITIES.items()
