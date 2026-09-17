@@ -99,6 +99,7 @@ from .syllable_blending import activity_catalog, build_activity, normalize_forma
 from .clap_count_word_bank import score_displayed_words, word_bank_catalog, validate_configuration
 from .sound_detective import catalog as sound_detective_catalog, validate_configuration as validate_sound_detective
 from .prescribed_activity_catalog import PRESCRIBED_ACTIVITIES, prescribed_activity
+from .handwriting_validation import is_recognizable_ii, normalize_strokes
 from .reader_classification import classify_student_account
 from .scoring import (
     ADAPTED_READING_LEVEL_DISCLAIMER,
@@ -12949,6 +12950,30 @@ def prescribed_activity_page(request, activity_key):
         context['prescribed_activity_data'] = {'activity_key': activity_key, 'session_number': activity['session_number'], 'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'], 'title': activity['title'], 'instruction': activity['instruction'], 'items': [{**item, 'image_url': static(item['image_path'])} for item in activity['items']], 'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}), 'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}), 'progress': {'completed_items': progress.completed_items if progress else 0, 'total_items': len(activity['items']), 'activity_completed': progress.activity_completed if progress else False, 'state': raw_state}}
         return render(request, 'pabasa_app/session_2_lesson_4_gawain_2_page.html', context)
     if activity_key == 'lesson7-gawain2c':
+        # Legacy browser-only progress has no proof of handwriting.  Retain
+        # only contiguous rows whose stored strokes still pass the server-side
+        # validator, then resume at the first unvalidated row.
+        stored_rows = raw_state.get('validated_rows') if isinstance(raw_state.get('validated_rows'), dict) else {}
+        verified_rows = {}
+        for row_index in range(3):
+            row_strokes = stored_rows.get(str(row_index))
+            if not is_recognizable_ii(row_strokes):
+                break
+            verified_rows[str(row_index)] = row_strokes
+        verified_count = len(verified_rows)
+        if progress and (
+            raw_state != {'validated_rows': verified_rows}
+            or progress.current_index != verified_count
+            or progress.completed_items != verified_count
+            or progress.correct_items != verified_count
+            or (progress.activity_completed and verified_count != 3)
+        ):
+            progress.current_index = progress.completed_items = progress.correct_items = verified_count
+            progress.total_items = 3
+            progress.activity_completed = False if verified_count != 3 else progress.activity_completed
+            progress.state = {'validated_rows': verified_rows}
+            progress.save(update_fields=['current_index', 'completed_items', 'correct_items', 'total_items', 'activity_completed', 'state', 'updated_at'])
+            raw_state = progress.state
         context = _dashboard_context(request)
         context['handwriting_activity_data'] = {
             'activity_key': activity_key,
@@ -14959,15 +14984,23 @@ def prescribed_activity_progress(request, activity_key):
     if activity_key == 'lesson7-gawain2c':
         try:
             data = json.loads(request.body or '{}')
-            index = max(0, min(3, int(data.get('current_index') or 0)))
-            state = data.get('state') if isinstance(data.get('state'), dict) else {}
+            row_index = int(data.get('row_index'))
+            strokes = data.get('strokes')
         except (TypeError, ValueError, json.JSONDecodeError):
             return JsonResponse({'success': False, 'error': 'Invalid handwriting progress.'}, status=400)
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
-        if existing and (existing.activity_completed or existing.current_index > index):
-            progress = existing
-        else:
-            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index, 'total_items': 3, 'activity_completed': False, 'state': {'activity_key': activity_key, **state}})
+        if row_index not in range(3) or normalize_strokes(strokes) is None or not is_recognizable_ii(strokes):
+            return JsonResponse({'success': False, 'error': 'Isulat ang buong Ii: malaking I at maliit na i na may tuldok.'}, status=400)
+        progress, _ = StudentActivityProgress.objects.get_or_create(student=student, activity_key=activity_key, defaults={'total_items': 3, 'state': {'validated_rows': {}}})
+        state = progress.state if isinstance(progress.state, dict) else {}
+        rows = state.get('validated_rows') if isinstance(state.get('validated_rows'), dict) else {}
+        rows[str(row_index)] = strokes
+        contiguous_rows = 0
+        while str(contiguous_rows) in rows:
+            contiguous_rows += 1
+        progress.current_index = progress.completed_items = progress.correct_items = contiguous_rows
+        progress.total_items = 3
+        progress.state = {'validated_rows': rows}
+        progress.save(update_fields=['current_index', 'completed_items', 'correct_items', 'total_items', 'state', 'updated_at'])
         return JsonResponse({'success': True, 'progress': {'current_index': progress.current_index, 'completed_items': progress.completed_items, 'total_items': 3, 'activity_completed': progress.activity_completed, 'state': progress.state}})
     if activity_key == 'lesson7-gawain4':
         try:
@@ -15487,7 +15520,8 @@ def prescribed_activity_complete(request, activity_key):
         return JsonResponse({'success': True, 'result': {'items_completed': 9, 'accuracy': 100.0}})
     if activity_key == 'lesson7-gawain2c':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
-        if not existing or existing.completed_items < 3:
+        rows = existing.state.get('validated_rows', {}) if existing and isinstance(existing.state, dict) else {}
+        if not existing or set(rows) != {'0', '1', '2'} or not all(is_recognizable_ii(rows[row]) for row in ('0', '1', '2')):
             return JsonResponse({'success': False, 'error': 'Complete all writing areas first.'}, status=400)
         existing.activity_completed = True
         existing.current_index = existing.completed_items = existing.correct_items = 3
