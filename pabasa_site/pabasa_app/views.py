@@ -15611,7 +15611,10 @@ def lesson_1_gawain_1_page(request):
         },
     }
     context['lesson_1_progress_url'] = reverse('lesson_3_activity_progress')
-    return render(request, 'pabasa_app/lesson_1_gawain_1_page.html', context)
+    response = render(request, 'pabasa_app/lesson_1_gawain_1_page.html', context)
+    response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response['Pragma'] = 'no-cache'
+    return response
 
 
 @login_required(role='student')
