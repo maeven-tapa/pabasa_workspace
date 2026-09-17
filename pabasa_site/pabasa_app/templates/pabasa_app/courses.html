@@ -6045,6 +6045,62 @@ document.addEventListener('DOMContentLoaded', () => {
     document.head.appendChild(style);
 });
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const picker = document.getElementById('prescribedActivityPicker');
+    const lesson13 = document.getElementById('prescribed-lesson-13-activities');
+    const lesson14 = document.getElementById('prescribed-lesson-14-activities');
+    if (!picker || !lesson13 || !lesson14) return;
+    const activities = [...JSON.parse(lesson13.textContent || '[]'), ...JSON.parse(lesson14.textContent || '[]')].sort((a, b) => {
+        const number = value => Number(String(value ?? '').match(/\d+/)?.[0] || 0);
+        return number(a.lesson_number) - number(b.lesson_number) || number(a.gawain_number) - number(b.gawain_number);
+    });
+    const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const existing = new Set([...picker.querySelectorAll('[data-prescribed-activity]')].map(node => node.dataset.prescribedActivity));
+    const sessionCards = new Map();
+    [...document.querySelectorAll('.session-folder-column')].forEach(column => {
+        const name = column.querySelector('.week-folder-name')?.textContent.trim();
+        const list = column.querySelector('.assessment-week-cards');
+        if (name && list) sessionCards.set(name, list);
+    });
+    activities.forEach(activity => {
+        if (!activity.activity_key || existing.has(activity.activity_key)) return;
+        const session = `Session ${activity.session_number}`;
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'prescribed-activity-option';
+        card.dataset.prescribedActivity = activity.activity_key;
+        card.dataset.sessionKey = `session-${activity.session_number}`;
+        card.setAttribute('aria-pressed', 'false');
+        card.innerHTML = `<span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">${escape(activity.gawain_number)}</span><span><strong>Lesson ${escape(activity.lesson_number)} · Gawain ${escape(activity.gawain_number)}</strong><br><span class="small text-muted">${escape(activity.title)}</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>`;
+        const preview = document.createElement('div');
+        preview.className = 'prescribed-activity-preview';
+        preview.dataset.prescribedPreview = activity.activity_key;
+        preview.innerHTML = `<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview"><i class="bi bi-x-lg"></i></button><div class="small text-uppercase text-muted fw-semibold">${session} · Lesson ${escape(activity.lesson_number)} · Gawain ${escape(activity.gawain_number)}</div><h5>${escape(activity.title)}</h5><p class="mb-0 text-muted">${escape(activity.instruction)}</p>${activity.competencies?.length ? `<p class="mt-2 mb-0 text-muted"><strong>Competencies:</strong> ${escape(activity.competencies.join(', '))}</p>` : ''}</div>`;
+        card.onclick = () => { picker.querySelectorAll('[data-prescribed-activity]').forEach(option => option.classList.toggle('is-selected', option === card)); document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(open => open.classList.remove('is-maximized')); preview.classList.add('is-maximized'); };
+        preview.querySelector('.prescribed-preview-close').onclick = () => preview.classList.remove('is-maximized');
+        picker.append(card, preview);
+        const list = sessionCards.get(session);
+        if (list) list.appendChild(card);
+        existing.add(activity.activity_key);
+    });
+    const seen = new Set();
+    [...document.querySelectorAll('[data-prescribed-activity]')].forEach(node => {
+        const key = node.dataset.prescribedActivity;
+        if (seen.has(key)) node.remove();
+        else seen.add(key);
+    });
+    document.querySelectorAll('.session-folder-column').forEach(column => {
+        const list = column.querySelector('.assessment-week-cards');
+        const count = list?.querySelectorAll('.pabasa-session-card').length;
+        if (!count) return;
+        column.querySelectorAll('.week-activity-count').forEach(label => { label.textContent = `${count} ${count === 1 ? 'activity' : 'activities'}`; });
+        column.querySelectorAll('.week-activities-title small').forEach(label => { label.textContent = `— ${count} ${count === 1 ? 'activity' : 'activities'}`; });
+    });
+});
+</script>
+{{ prescribed_lesson_19_activities|json_script:"prescribed-lesson-19-activities" }}
+<script>document.addEventListener('DOMContentLoaded',()=>{const a=(JSON.parse(document.getElementById('prescribed-lesson-19-activities')?.textContent||'[]'))[0],p=document.getElementById('prescribedActivityPicker');if(!a||!p||p.querySelector('[data-prescribed-activity="'+a.activity_key+'"]'))return;const o=document.createElement('button');o.type='button';o.className='prescribed-activity-option';o.dataset.prescribedActivity=a.activity_key;o.innerHTML='<span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">'+a.gawain_number+'</span><span><strong>Session '+a.session_number+' · Lesson '+a.lesson_number+' · Gawain '+a.gawain_number+'</strong><br><span class="small text-muted">'+a.title+'</span></span></span><span class="prescribed-activity-option__overlay">Preview</span>';const v=document.createElement('div');v.className='prescribed-activity-preview';v.dataset.prescribedPreview=a.activity_key;v.innerHTML='<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close">×</button><div>Session '+a.session_number+' · '+a.display_title+'</div><h5>'+a.title+'</h5><p>'+a.instruction+'</p><p class="small">'+a.teacher_guidance+'</p><div class="s7l19"></div></div>';const b=v.querySelector('.s7l19');a.items.forEach((item,i)=>b.insertAdjacentHTML('beforeend','<div><b>'+(i+1)+'.</b><img src="{% get_static_prefix %}'+item.image_path+'" alt="'+item.alt_text+'"><span>'+item.choices.join(', ')+'</span></div>'));p.append(o,v);o.onclick=()=>{p.querySelectorAll('[data-prescribed-activity]').forEach(x=>x.classList.toggle('is-selected',x===o));v.classList.add('is-maximized')};v.querySelector('.prescribed-preview-close').onclick=()=>v.classList.remove('is-maximized')});</script><style>.s7l19{display:grid;gap:.4rem}.s7l19>div{align-items:center;display:grid;grid-template-columns:2rem 70px 1fr;gap:.5rem;border:1px solid #bfdde4;padding:.3rem}.s7l19 img{height:55px;width:70px;object-fit:contain}.s7l19 span{font-weight:800;word-spacing:.9rem}</style>
 {% endblock %}
 
 {% block header %}
@@ -22937,8 +22993,8 @@ document.addEventListener('DOMContentLoaded', () => {
         ? `<div class="lesson16-match-preview"><section class="lesson16-match-column"><strong>Mga salita</strong>${activity.word_bank.map(word => `<span class="lesson16-match-word">${escapeHtml(word)}</span>`).join('')}</section><section class="lesson16-match-column"><strong>Mga larawan</strong>${activity.items.map((item, index) => `<span class="lesson16-match-picture"><img src="${imageUrl(item)}" alt="Placeholder para sa larawan ${index + 1}"><span class="lesson16-match-placeholder">Larawan ${index + 1}<br>Idagdag ang larawan</span></span>`).join('')}</section></div>`
         : activity.interaction === 'oral_then_odd_word'
         ? `<div class="lesson16-match-preview">${activity.items.map((item, index) => `<section class="lesson16-match-column"><strong>${index + 1}.</strong><div class="lesson16-match-word">${item.words.map(word => `<span>${escapeHtml(word)}</span>`).join(' &nbsp; ')}</div></section>`).join('')}</div>`
-        : activity.interaction === 'picture_word_write'
-            ? activity.items.map((item, index) => `<article class="lesson16-preview-item"><img class="lesson16-preview-image" src="${imageUrl(item)}" alt="${escapeHtml(item.alt_text || `Larawan ${index + 1}`)}"><div><strong>${index + 1}. ${escapeHtml(item.answer)}</strong><div class="lesson16-preview-word">${Array.from({length:Number(item.letter_count)||String(item.answer||'').length},()=>'<span class="lesson16-preview-box"></span>').join('')}</div><small class="text-muted"><i class="bi bi-volume-up-fill" aria-hidden="true"></i> Pakinggan ang salita</small></div></article>`).join('')
+        : ['picture_word_write','oral_then_picture_word_write'].includes(activity.interaction)
+            ? activity.items.map((item, index) => `<article class="lesson16-preview-item"><img class="lesson16-preview-image" src="${imageUrl(item)}" alt="${escapeHtml(item.alt_text || `Larawan ${index + 1}`)}"><div><strong>${index + 1}. ${escapeHtml(item.answer)}</strong><div class="lesson16-preview-word">${Array.from({length:Number(item.letter_count)||String(item.answer||'').length},()=>'<span class="lesson16-preview-box"></span>').join('')}</div><small class="text-muted">${activity.interaction === 'oral_then_picture_word_write' ? 'Basahin muna nang malakas, pagkatapos isulat ang ngalan.' : '<i class="bi bi-volume-up-fill" aria-hidden="true"></i> Pakinggan ang salita'}</small></div></article>`).join('')
         : activity.items.map((item, index) => `<article class="lesson16-preview-item"><img class="lesson16-preview-image" src="${imageUrl(item)}" alt="Larawan ng ${escapeHtml(item.word)}"><div><strong>${index + 1}. ${escapeHtml(item.word)}</strong><div class="lesson16-preview-word">${'_'.repeat(String(item.answer || '').length)}${escapeHtml(item.stem)}</div>${activity.interaction === 'choice' ? `<div class="lesson16-preview-answer">${item.choices.map(choice => `<span>${escapeHtml(choice)}</span>`).join('')}</div>` : ''}</div></article>`).join('');
     const previewMarkup = activity => `<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview"><i class="bi bi-x-lg"></i></button><div class="small text-uppercase text-muted fw-semibold">Session 6 · Lesson ${escapeHtml(activity.lesson_number)} · Gawain ${activity.gawain_number}</div><h5>${escapeHtml(activity.title)}</h5><p class="mb-0 text-muted">${escapeHtml(activity.instruction)}</p><p class="small text-muted mb-0 mt-2">Preview lamang ito. Awtomatikong available ang gawaing ito sa Assessment ng mga mag-aaral.</p></div><div class="lesson16-preview-sheet">${previewItems(activity)}</div>`;
     activities.forEach(activity => {
@@ -22996,6 +23052,7 @@ document.addEventListener('DOMContentLoaded', () => {
 if (key.startsWith('lesson-7-') || ['lesson7-gawain2c', 'lesson7-gawain4', 'lesson7-gawain4a', 'lesson8-gawain1', 'lesson8-gawain1a', 'lesson9-gawain1', 'lesson9-gawain2', 'lesson9-gawain3'].includes(key)) return 3;
         if (key.startsWith('session-4-')) return 4;
         if (key.startsWith('lesson-13-')) return 5;
+        if (key.startsWith('lesson-14-')) return 5;
         if (key.startsWith('lesson-16-') || key.startsWith('session-6-lesson-16-') || ['lesson-17-18-gawain-5','lesson-17-18-gawain-6','lesson-17-18-gawain-7','lesson-17-18-gawain-8'].includes(key)) return 6;
         if (key.startsWith('lesson-26-')) return 10;
         if (key.startsWith('lesson-27-')) return 11;

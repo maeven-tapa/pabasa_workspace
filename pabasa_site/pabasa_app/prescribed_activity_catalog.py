@@ -24,6 +24,27 @@ LESSON_16_IMAGE_PATHS = {
 
 
 PRESCRIBED_ACTIVITIES = {
+    'session-7-lesson-19-gawain-1': {
+        # Canonical ARAL workbook data.  Course preview, learner routing,
+        # validation, reports and Filipino audio all use this stable key.
+        'activity_key': 'session-7-lesson-19-gawain-1', 'session_key': 'session-7',
+        'session_number': 7, 'lesson_number': 19, 'gawain_number': 1,
+        'display_title': 'Lesson 19: Gawain 1', 'title': 'Bilugan ang Simulang Pantig',
+        'description': 'Basahin ang ngalan ng larawan at bilugan ang simulang pantig.',
+        'instruction': 'Basahin ang ngalan ng larawan. Pagkatapos, bilugan ang simulang pantig nito.',
+        'workbook_instruction': 'Bilugan ang simulang pantig ng mga larawan.',
+        'teacher_guidance': 'Babasa muna ang mag-aaral ng buong salita bago pipiliin ang simulang pantig.',
+        'competencies': ['Phonics', 'Phonological Awareness', 'Vocabulary'],
+        'interaction': 'oral_then_starting_syllable', 'total_items': 5,
+        'thumbnail': 'pabasa_app/images/session_7_lesson_19/dagat.svg',
+        'items': [
+            {'id': 'dagat', 'word': 'dagat', 'choices': ['ba', 'da', 'pa'], 'answer': 'da', 'alt_text': 'Larawan ng dagat na may araw at alon', 'image_path': 'pabasa_app/images/session_7_lesson_19/dagat.svg'},
+            {'id': 'hipon', 'word': 'hipon', 'choices': ['hi', 'gi', 'to'], 'answer': 'hi', 'alt_text': 'Larawan ng hipon', 'image_path': 'pabasa_app/images/session_7_lesson_19/hipon.svg'},
+            {'id': 'labi', 'word': 'labi', 'choices': ['la', 'di', 'bi'], 'answer': 'la', 'alt_text': 'Larawan ng labi', 'image_path': 'pabasa_app/images/session_7_lesson_19/labi.svg'},
+            {'id': 'hikaw', 'word': 'hikaw', 'choices': ['ki', 'he', 'hi'], 'answer': 'hi', 'alt_text': 'Larawan ng pares ng hikaw', 'image_path': 'pabasa_app/images/session_7_lesson_19/hikaw.svg'},
+            {'id': 'daga', 'word': 'daga', 'choices': ['ma', 'da', 'na'], 'answer': 'da', 'alt_text': 'Larawan ng daga', 'image_path': 'pabasa_app/images/picture_word/custom/Mouse-Daga.png'},
+        ],
+    },
     'lesson7-gawain4b': {
         'activity_key': 'lesson7-gawain4b', 'session_key': 'session-3', 'session_number': 3,
         'lesson_number': 7, 'gawain_number': '4B', 'title': 'GAWAIN 4B: Letrang Ii at Oo',
@@ -275,6 +296,27 @@ PRESCRIBED_ACTIVITIES = {
             {'prompt': '___ abo', 'word': 'tabo', 'answer': 'T', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/LESSON_14/GAWAIN_1/tabo.jpg', 'audio_filename': 'tabo_s5-l14-g1.mp3'},
             {'prompt': '___ asa', 'word': 'tasa', 'answer': 'T', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/LESSON_14/GAWAIN_1/tasa.jpg', 'audio_filename': 'tasa_s5-l14-g1.mp3'},
             {'prompt': '___ ars', 'word': 'nars', 'answer': 'N', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/LESSON_14/GAWAIN_1/nars.jpg', 'audio_filename': 'nars_s5-l14-g1.mp3'},
+        ],
+    },
+    'lesson-14-gawain-2': {
+        'activity_key': 'lesson-14-gawain-2', 'session_number': 5, 'lesson_number': 14,
+        'gawain_number': 2, 'title': 'Pagtutugma ng mga Salita',
+        'instruction': 'Itugma ang mga salita sa Hanay A sa tamang sagot sa Hanay B.',
+        'competencies': ['Phonics', 'Phonological Awareness', 'Vocabulary'],
+        'interaction': 'teacher_word_match_preview', 'total_items': 6,
+        'items': [
+            {'id': 'a1', 'incomplete': 'ma__', 'word': 'mata', 'expected_b_id': 'b3'},
+            {'id': 'a2', 'incomplete': 'bu__', 'word': 'buto', 'expected_b_id': 'b1'},
+            {'id': 'a3', 'incomplete': '__la', 'word': 'tala', 'expected_b_id': 'b3'},
+            {'id': 'a4', 'incomplete': '__pa', 'word': 'nipa', 'expected_b_id': 'b2'},
+            {'id': 'a5', 'incomplete': '__bo', 'word': 'tubo', 'expected_b_id': 'b7'},
+            {'id': 'a6', 'incomplete': '__ta', 'word': 'nota', 'expected_b_id': 'b4'},
+        ],
+        'choices': [
+            {'id': 'b1', 'text': 'to'}, {'id': 'b2', 'text': 'ni'},
+            {'id': 'b3', 'text': 'ta'}, {'id': 'b4', 'text': 'no'},
+            {'id': 'b5', 'text': 'nu'}, {'id': 'b6', 'text': 'te'},
+            {'id': 'b7', 'text': 'tu'},
         ],
     },
     'session-4-gawain-1': {'activity_key': 'session-4-gawain-1', 'session_number': 4, 'lesson_number': '10, 11, at 12', 'gawain_number': 1, 'title': 'Gawain 1: Tunog ng mga Letra', 'instruction': 'Piliin ang tamang tunog para sa bawat letra.', 'route_name': 'session_4_gawain_1_page', 'total_items': 4, 'interaction': 'letter_sound', 'items': [{'word': 'Tunog ng mga Letra', 'image_path': 'pabasa_app/images/sound_detective/detective_bg.png'}]},
@@ -575,6 +617,28 @@ PRESCRIBED_ACTIVITIES = {
             {'id': 'group-3', 'words': ['resibo', 'resita', 'resibo'], 'answer_index': 1},
             {'id': 'group-4', 'words': ['pilay', 'pilay', 'palay'], 'answer_index': 2},
             {'id': 'group-5', 'words': ['bareta', 'balita', 'bareta'], 'answer_index': 1},
+        ],
+    },
+    'lesson-17-18-gawain-9': {
+        # One canonical workbook source for the teacher picker/preview, the
+        # learner screen, answer validation, reporting, and audio support.
+        'activity_key': 'lesson-17-18-gawain-9', 'session_key': 'session-6',
+        'session_number': 6, 'lesson_number': '17 at 18', 'gawain_number': 9,
+        'display_title': 'Lesson 17 at 18: Gawain 9',
+        'title': 'Isulat ang Ngalan ng mga Larawan',
+        'description': 'Basahin ang larawan at isulat ang tamang ngalan nito.',
+        'instruction': 'Basahin ang ngalan ng larawan. Pagkatapos, isulat ang tamang salita.',
+        'workbook_instruction': 'Isulat ang ngalan ng mga larawan.',
+        'teacher_guidance': 'Babasa muna ang mag-aaral ng ngalan ng larawan bago niya ito isulat.',
+        'competencies': ['Phonics', 'Phonological Awareness', 'Vocabulary'],
+        'interaction': 'oral_then_picture_word_write', 'total_items': 5,
+        'thumbnail': 'pabasa_app/images/picture_word/custom/Gift-Regalo.png',
+        'items': [
+            {'id': 'pana', 'answer': 'pana', 'read_aloud': 'pana', 'letter_count': 4, 'alt_text': 'Larawan ng pana at palaso', 'image_path': 'pabasa_app/images/prescribed_gawain_9/pana.svg'},
+            {'id': 'pisara', 'answer': 'pisara', 'read_aloud': 'pisara', 'letter_count': 6, 'alt_text': 'Larawan ng pisara', 'image_path': 'pabasa_app/images/picture_word/custom/Board-Pisara.png'},
+            {'id': 'palaka', 'answer': 'palaka', 'read_aloud': 'palaka', 'letter_count': 6, 'alt_text': 'Larawan ng palaka', 'image_path': 'pabasa_app/images/picture_word/custom/Frog-Palaka.png'},
+            {'id': 'pito', 'answer': 'pito', 'read_aloud': 'pito', 'letter_count': 4, 'alt_text': 'Larawan ng bilang pito', 'image_path': 'pabasa_app/images/sound_detective/filipino/Set_3/pito.png'},
+            {'id': 'regalo', 'answer': 'regalo', 'read_aloud': 'regalo', 'letter_count': 6, 'alt_text': 'Larawan ng regalo', 'image_path': 'pabasa_app/images/picture_word/custom/Gift-Regalo.png'},
         ],
     },
 }

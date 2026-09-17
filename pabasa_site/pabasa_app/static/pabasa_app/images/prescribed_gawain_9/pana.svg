@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" role="img" aria-label="Pana at palaso">
+  <rect width="300" height="300" rx="24" fill="#fff8de"/>
+  <path d="M77 43c122 35 122 179 0 214" fill="none" stroke="#b63832" stroke-width="15" stroke-linecap="round"/>
+  <path d="M81 43L167 150 81 257" fill="none" stroke="#764126" stroke-width="5"/>
+  <path d="M38 225L252 74" stroke="#714127" stroke-width="11" stroke-linecap="round"/>
+  <path d="M246 47l39 22-32 31z" fill="#c4d8e6" stroke="#714127" stroke-width="5"/>
+  <path d="M44 221l-26 37 43-10z" fill="#d4463d" stroke="#714127" stroke-width="5"/>
+  <path d="M107 211l-32 30 15 23 37-30z" fill="#a52e29"/><path d="M99 210l-26 27m17-35l-24 26m17-35l-23 25" stroke="#f4c73f" stroke-width="4"/>
+</svg>

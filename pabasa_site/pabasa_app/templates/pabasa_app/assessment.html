@@ -1996,7 +1996,9 @@ document.addEventListener('DOMContentLoaded', function () {
             lesson16Modal.onclick = event => { if (event.target === lesson16Modal) closeLesson16(); };
             grid.appendChild(lesson16Column);
         }
-        [10, 11, 12, 13, 14, 15].forEach(function (sessionNumber) {
+        // Session 7 is a real prescribed folder, not a standalone activity
+        // tile.  Keep it in this shared folder pass with the later sessions.
+        [7, 10, 11, 12, 13, 14, 15].forEach(function (sessionNumber) {
             const sessionCards = Array.from(grid.children).filter(card => card.classList.contains('pabasa-session-card') && card.dataset.sessionKey === `session-${sessionNumber}`);
             if (!sessionCards.length) return;
             const activityCount = sessionCards.length;
