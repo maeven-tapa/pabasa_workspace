@@ -598,6 +598,28 @@ PRESCRIBED_ACTIVITIES = {
             {'id': 'group-5', 'words': ['bareta', 'balita', 'bareta'], 'answer_index': 1},
         ],
     },
+    'lesson-17-18-gawain-9': {
+        # One canonical workbook source for the teacher picker/preview, the
+        # learner screen, answer validation, reporting, and audio support.
+        'activity_key': 'lesson-17-18-gawain-9', 'session_key': 'session-6',
+        'session_number': 6, 'lesson_number': '17 at 18', 'gawain_number': 9,
+        'display_title': 'Lesson 17 at 18: Gawain 9',
+        'title': 'Isulat ang Ngalan ng mga Larawan',
+        'description': 'Basahin ang larawan at isulat ang tamang ngalan nito.',
+        'instruction': 'Basahin ang ngalan ng larawan. Pagkatapos, isulat ang tamang salita.',
+        'workbook_instruction': 'Isulat ang ngalan ng mga larawan.',
+        'teacher_guidance': 'Babasa muna ang mag-aaral ng ngalan ng larawan bago niya ito isulat.',
+        'competencies': ['Phonics', 'Phonological Awareness', 'Vocabulary'],
+        'interaction': 'oral_then_picture_word_write', 'total_items': 5,
+        'thumbnail': 'pabasa_app/images/picture_word/custom/Gift-Regalo.png',
+        'items': [
+            {'id': 'pana', 'answer': 'pana', 'read_aloud': 'pana', 'letter_count': 4, 'alt_text': 'Larawan ng pana at palaso', 'image_path': 'pabasa_app/images/prescribed_gawain_9/pana.svg'},
+            {'id': 'pisara', 'answer': 'pisara', 'read_aloud': 'pisara', 'letter_count': 6, 'alt_text': 'Larawan ng pisara', 'image_path': 'pabasa_app/images/picture_word/custom/Board-Pisara.png'},
+            {'id': 'palaka', 'answer': 'palaka', 'read_aloud': 'palaka', 'letter_count': 6, 'alt_text': 'Larawan ng palaka', 'image_path': 'pabasa_app/images/picture_word/custom/Frog-Palaka.png'},
+            {'id': 'pito', 'answer': 'pito', 'read_aloud': 'pito', 'letter_count': 4, 'alt_text': 'Larawan ng bilang pito', 'image_path': 'pabasa_app/images/sound_detective/filipino/Set_3/pito.png'},
+            {'id': 'regalo', 'answer': 'regalo', 'read_aloud': 'regalo', 'letter_count': 6, 'alt_text': 'Larawan ng regalo', 'image_path': 'pabasa_app/images/picture_word/custom/Gift-Regalo.png'},
+        ],
+    },
 }
 
 # Each saved item points directly to its own workbook image file.  Keeping the

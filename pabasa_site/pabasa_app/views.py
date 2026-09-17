@@ -12816,6 +12816,40 @@ def _normalized_odd_word_state(activity, raw_state):
             'completed_answers': completed, 'state_version': version}
 
 
+def _normalized_oral_picture_write_state(activity, raw_state):
+    """Canonical, contiguous state for Lesson 17 at 18: Gawain 9."""
+    raw = raw_state if isinstance(raw_state, dict) else {}
+    total = len(activity['items'])
+    saved_answers = raw.get('answers') if isinstance(raw.get('answers'), list) else []
+    answers = []
+    for index, answer in enumerate(saved_answers[:total]):
+        if str(answer or '').strip().casefold() != activity['items'][index]['answer']:
+            break
+        answers.append(activity['items'][index]['answer'])
+    current = len(answers)
+    raw_oral = raw.get('completed_oral_reads') if isinstance(raw.get('completed_oral_reads'), list) else []
+    oral = list(range(max(current, min(total, len(raw_oral)))))
+    try:
+        version = max(0, min(int(raw.get('state_version') or 0), 1_000_000_000))
+        attempts = {str(i): max(0, min(3, int((raw.get('oral_attempts') or {}).get(str(i), 0)))) for i in range(total)}
+        plays = {str(i): max(0, min(3, int((raw.get('read_aloud_plays') or {}).get(str(i), 0)))) for i in range(total)}
+    except (TypeError, ValueError):
+        raise ValueError('Invalid oral writing activity state.')
+    phase = raw.get('phase')
+    if phase == 'completion':
+        phase = 'completion'
+    elif phase == 'feedback' and answers:
+        phase = 'feedback'
+    elif phase == 'intro' and not answers and not oral:
+        phase = 'intro'
+    else:
+        phase = 'written_answer' if current in oral else 'oral_reading'
+    return {'phase': phase, 'current_item_index': current, 'completed_oral_reads': oral,
+            'oral_attempts': attempts, 'read_aloud_plays': plays, 'answers': answers,
+            'completed_item_count': current, 'correct_answer_count': current,
+            'state_version': version}
+
+
 def _normalized_prescribed_candidate_match(activity, raw_candidate):
     candidate = raw_candidate if isinstance(raw_candidate, dict) else {}
     target = str(candidate.get('target_id') or '').strip()
@@ -13419,6 +13453,26 @@ def prescribed_activity_page(request, activity_key):
                          'activity_completed': progress.activity_completed if progress else False, 'state': state},
         }
         return render(request, 'pabasa_app/prescribed_oral_odd_word_page.html', context)
+    if activity['interaction'] == 'oral_then_picture_word_write':
+        state = _normalized_oral_picture_write_state(activity, raw_state)
+        context = _dashboard_context(request)
+        context['prescribed_activity_data'] = {
+            'activity_key': activity_key, 'session_key': activity['session_key'],
+            'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
+            'display_title': activity['display_title'], 'title': activity['title'],
+            'instruction': activity['instruction'],
+            'items': [{'id': item['id'], 'read_aloud': item.get('read_aloud', item['answer']),
+                       'alt_text': item['alt_text'], 'letter_count': item['letter_count'],
+                       'image_url': static(item['image_path'])} for item in activity['items']],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'progress': {'completed_items': progress.completed_items if progress else 0,
+                         'correct_items': progress.correct_items if progress else 0,
+                         'total_items': len(activity['items']),
+                         'activity_completed': progress.activity_completed if progress else False,
+                         'state': state},
+        }
+        return render(request, 'pabasa_app/prescribed_oral_picture_word_write_page.html', context)
     if activity['interaction'] in {'picture_word_match', 'picture_syllable_match'}:
         try:
             matches = _normalized_prescribed_matches(activity, raw_state.get('matches') or {})
@@ -13532,6 +13586,36 @@ def prescribed_activity_progress(request, activity_key):
                           'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'progress': {'state': state, 'completed_items': completed,
                 'correct_items': 0, 'total_items': len(activity['items']), 'activity_completed': False}})
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    if activity['interaction'] == 'oral_then_picture_word_write':
+        try:
+            data = json.loads(request.body or '{}')
+            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            old = _normalized_oral_picture_write_state(activity, existing.state if existing else {})
+            incoming = _normalized_oral_picture_write_state(activity, data.get('state'))
+            if incoming['state_version'] < old['state_version'] or (existing and existing.activity_completed):
+                return JsonResponse({'success': True, 'progress': {'state': old, 'completed_items': existing.completed_items, 'activity_completed': existing.activity_completed}})
+            current, oral = len(old['answers']), incoming['completed_oral_reads']
+            if incoming['answers'] != old['answers'] or oral[:len(old['completed_oral_reads'])] != old['completed_oral_reads'] or len(oral) > len(old['completed_oral_reads']) + 1:
+                raise ValueError('Invalid activity progress.')
+            if len(oral) == len(old['completed_oral_reads']) + 1 and oral[-1] != current:
+                raise ValueError('Basahin muna ang kasalukuyang larawan.')
+            state, accepted = incoming, None
+            if 'candidate_answer' in data:
+                if current not in oral:
+                    raise ValueError('Basahin muna ang ngalan ng larawan.')
+                answer = _normalized_picture_word_write_answer(data.get('candidate_answer'))
+                accepted = answer == activity['items'][current]['answer']
+                state['answers'] = old['answers'] + [answer] if accepted else old['answers']
+                state['phase'] = 'feedback' if accepted else 'written_answer'
+            else:
+                state['answers'] = old['answers']
+                state['phase'] = 'intro' if not oral and not old['answers'] and incoming['phase'] == 'intro' else ('written_answer' if current in oral else 'oral_reading')
+            completed = len(state['answers'])
+            state.update({'completed_oral_reads': oral, 'current_item_index': completed, 'completed_item_count': completed, 'correct_answer_count': completed, 'state_version': old['state_version'] + 1})
+            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed, 'total_items': len(activity['items']), 'activity_completed': False, 'state': state})
+            return JsonResponse({'success': True, 'accepted': accepted, 'progress': {'state': state, 'completed_items': completed, 'correct_items': completed, 'total_items': len(activity['items']), 'activity_completed': False}})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity['interaction'] == 'oral_picture_box':
@@ -14703,6 +14787,17 @@ def prescribed_activity_complete(request, activity_key):
                       'total_items': len(items), 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'items_completed': len(items), 'correct_items': correct,
             'accuracy': round(correct / len(items) * 100, 2), 'records': records}})
+    if activity['interaction'] == 'oral_then_picture_word_write':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        state = _normalized_oral_picture_write_state(activity, existing.state if existing else {})
+        total = len(activity['items'])
+        if len(state['answers']) != total or len(state['completed_oral_reads']) != total:
+            return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang pagbasa at pagsulat ng lahat ng larawan.'}, status=400)
+        state['phase'], state['state_version'] = 'completion', 1_000_000_000
+        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+            'current_index': total, 'completed_items': total, 'correct_items': total, 'total_items': total,
+            'activity_completed': True, 'state': state})
+        return JsonResponse({'success': True, 'result': {'correct_items': total, 'items_completed': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'oral_picture_box':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
@@ -17496,6 +17591,13 @@ def reading_transcribe_api(request):
         )
         analysis['raw_transcript'] = transcript
         analysis['transcript'] = word_numbers_in_transcript(transcript, language_code)
+        # Prescribed one-word activities historically compare `transcript`
+        # literally in the browser.  Preserve Google's raw result above, but
+        # return the canonical target after the shared Filipino matcher has
+        # already accepted it.  This prevents a valid phonetic segmentation or
+        # near-match of short words such as "pana" from being rejected again.
+        if mode == 'reading' and analysis.get('complete') and len(ReadingMatcher.readable_words(target_text)) == 1:
+            analysis['transcript'] = target_text
         analysis['syllable_context'] = next_syllable_context
         analysis['syllable_stitching_applied'] = stitching_applied
         analysis['syllable_stitched_transcript'] = analysis_transcript if stitching_applied else ''
