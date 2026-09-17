@@ -522,32 +522,31 @@
         grid-column: 1 / -1;
     }
 
-    /* The desktop assessment hub deliberately shares one available viewport.
-       On mobile/tablet the stage stacks above the class cards, so it must be
-       allowed to grow into the document and scroll naturally. */
+    /* Keep the assessment hub in normal document flow at every viewport size. */
     @media (min-width: 992px) {
         body:has(.assessment-dock) {
-            height: 100dvh;
-            min-height: 0;
-            overflow: hidden;
+            height: auto;
+            min-height: 100dvh;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
         body:has(.assessment-dock) > main {
             min-height: 0;
-            overflow: hidden;
+            overflow: visible;
             padding-bottom: 1rem !important;
             padding-top: 1rem !important;
         }
 
         body:has(.assessment-dock) > main > .container {
-            height: 100%;
+            height: auto;
             min-height: 0;
         }
 
         .assessment-dock {
-            height: calc(100% - 0.75rem);
+            height: auto;
             min-height: 0;
-            grid-template-rows: auto minmax(0, 1fr);
+            grid-template-rows: auto auto;
         }
 
         .subject-grid {
@@ -571,7 +570,7 @@
 
         .assessment-grid {
             grid-auto-rows: minmax(0, 1fr);
-            height: 100%;
+            height: auto;
         }
 
         .assessment-week-column {
@@ -579,7 +578,7 @@
         }
 
         .assessment-week-folder {
-            height: 100%;
+            height: auto;
             min-height: 0;
         }
     }
