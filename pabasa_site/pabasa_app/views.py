@@ -13006,6 +13006,61 @@ def prescribed_activity_page(request, activity_key):
                          'state': raw_state},
         }
         return render(request, 'pabasa_app/prescribed_circle_right_word_lesson31_activity1_page.html', context)
+    if activity['interaction'] == 'oral_drag_sentence':
+        context = _dashboard_context(request)
+        context['prescribed_activity_data'] = {
+            'activity_key': activity_key, 'session_number': activity['session_number'],
+            'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
+            'title': activity['title'], 'instruction': activity['instruction'],
+            'word_choices': activity['word_choices'],
+            'items': [{'id': item['id'], 'before': item['before'], 'after': item['after'],
+                       'sentence': item['sentence'], 'choices': item['choices']}
+                      for item in activity['items']],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'read_aloud_url': reverse('reading_read_aloud_api'),
+            'transcribe_url': reverse('reading_transcribe_api'),
+            'progress': {'completed_items': progress.completed_items if progress else 0,
+                         'total_items': len(activity['items']), 'activity_completed': progress.activity_completed if progress else False,
+                         'state': raw_state},
+        }
+        return render(request, 'pabasa_app/prescribed_drag_blank_lesson31_activity2_page.html', context)
+    if activity['interaction'] == 'oral_jumbled_sentence':
+        context = _dashboard_context(request)
+        context['prescribed_activity_data'] = {
+            'activity_key': activity_key, 'session_number': activity['session_number'],
+            'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
+            'title': activity['title'], 'instruction': activity['instruction'],
+            'items': [{'id': item['id'], 'jumbled_words': item['jumbled_words'],
+                       'ordered_words': item['ordered_words'], 'sentence': item['sentence']}
+                      for item in activity['items']],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'read_aloud_url': reverse('reading_read_aloud_api'),
+            'transcribe_url': reverse('reading_transcribe_api'),
+            'progress': {'completed_items': progress.completed_items if progress else 0,
+                         'total_items': len(activity['items']), 'activity_completed': progress.activity_completed if progress else False,
+                         'state': raw_state},
+        }
+        return render(request, 'pabasa_app/prescribed_fix_sentence_lesson31_activity3_page.html', context)
+    if activity['interaction'] == 'oral_picture_box':
+        context = _dashboard_context(request)
+        context['prescribed_activity_data'] = {
+            'activity_key': activity_key, 'session_number': activity['session_number'],
+            'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
+            'title': activity['title'], 'instruction': activity['instruction'],
+            'items': [{'id': item['id'], 'word': item['word'], 'choices': item['choices'],
+                       'image_url': static(item['image_path']), 'alt_text': item['alt_text']}
+                      for item in activity['items']],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'read_aloud_url': reverse('reading_read_aloud_api'),
+            'transcribe_url': reverse('reading_transcribe_api'),
+            'progress': {'completed_items': progress.completed_items if progress else 0,
+                         'total_items': len(activity['items']), 'activity_completed': progress.activity_completed if progress else False,
+                         'state': raw_state},
+        }
+        return render(request, 'pabasa_app/prescribed_say_circle_lesson31_activity4_page.html', context)
     if activity['interaction'] == 'oral_comprehension_choice':
         context = _dashboard_context(request)
         context['prescribed_activity_data'] = {
@@ -13421,6 +13476,201 @@ def prescribed_activity_progress(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity['interaction'] == 'oral_picture_box':
+        try:
+            data = json.loads(request.body or '{}')
+            query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            if data.get('reset'):
+                query.delete()
+                return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
+            existing = query.first()
+            old = existing.state if existing and isinstance(existing.state, dict) else {}
+            total = len(activity['items'])
+            index = max(0, min(total, int(old.get('current_item', 0))))
+            if index >= total:
+                raise ValueError('This activity is already complete.')
+            item = activity['items'][index]
+            phase = old.get('phase', 'reading')
+            attempts = max(0, int(old.get('attempts', 0)))
+            action, accepted = data.get('action'), None
+            if action == 'read_word':
+                if phase != 'reading':
+                    raise ValueError('Choose a word first.')
+                heard = set(re.findall(r'[a-z]+', str(data.get('heard', '')).lower()))
+                target = item['word'].lower()
+                accepted = target in heard
+                if accepted:
+                    phase, attempts = 'choosing', 0
+                else:
+                    attempts += 1
+            elif action == 'choose':
+                if phase != 'choosing':
+                    raise ValueError('Say the picture word first.')
+                choice = str(data.get('choice', '')).strip().lower()
+                if choice not in [word.lower() for word in item['choices']]:
+                    raise ValueError('Choose one of the displayed words.')
+                accepted = choice == item['word'].lower()
+                if accepted:
+                    index += 1
+                    attempts = 0
+                    phase = 'complete' if index >= total else 'reading'
+                else:
+                    phase, attempts = 'reading', 0
+            else:
+                raise ValueError('Invalid activity action.')
+            finished = index >= total
+            saved = {'activity_key': activity_key, 'current_item': index, 'attempts': attempts,
+                     'completed_items': index, 'phase': 'complete' if finished else phase,
+                     'state_version': int(old.get('state_version') or 0) + 1}
+            progress, _ = StudentActivityProgress.objects.update_or_create(
+                student=student, activity_key=activity_key,
+                defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
+                          'total_items': total, 'activity_completed': finished, 'state': saved})
+            return JsonResponse({'success': True, 'accepted': accepted, 'progress': {
+                'current_index': progress.current_index, 'completed_items': progress.completed_items,
+                'total_items': total, 'activity_completed': finished, 'state': saved}})
+        except (TypeError, ValueError, KeyError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    if activity['interaction'] == 'oral_jumbled_sentence':
+        try:
+            data = json.loads(request.body or '{}')
+            query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            if data.get('reset'):
+                query.delete()
+                return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
+            existing = query.first()
+            old = existing.state if existing and isinstance(existing.state, dict) else {}
+            total = len(activity['items'])
+            index = max(0, min(total, int(old.get('current_item', 0))))
+            if index >= total:
+                raise ValueError('This activity is already complete.')
+            item = activity['items'][index]
+            phase = old.get('phase', 'reading_words')
+            word_index = max(0, min(len(item['jumbled_words']), int(old.get('word_index', 0))))
+            placements = list(old.get('placements', []))
+            attempts = max(0, int(old.get('attempts', 0)))
+            action, accepted = data.get('action'), None
+            aliases = {'mat': {'math'}, 'hat': {'hot'}, 'wore': {'war'}, 'bat': {'butt'}, 'loved': {'love'}}
+            if action == 'read_word':
+                if phase != 'reading_words' or int(data.get('word_index', -1)) != word_index or word_index >= len(item['jumbled_words']):
+                    raise ValueError('Read the current word first.')
+                target = item['jumbled_words'][word_index].lower()
+                heard = set(re.findall(r'[a-z]+', str(data.get('heard', '')).lower()))
+                accepted = bool(heard & ({target} | aliases.get(target, set())))
+                if accepted:
+                    word_index += 1
+                    attempts = 0
+                    if word_index >= len(item['jumbled_words']):
+                        phase = 'arranging'
+                else:
+                    attempts += 1
+            elif action == 'place_word':
+                if phase != 'arranging':
+                    raise ValueError('Read all the words before arranging the sentence.')
+                slot = int(data.get('slot', -1))
+                word = str(data.get('word', '')).strip()
+                if slot != len(placements) or slot >= len(item['ordered_words']):
+                    raise ValueError('Place the next word in order.')
+                if word not in item['jumbled_words'] or placements.count(word) >= item['jumbled_words'].count(word):
+                    raise ValueError('Choose one of the remaining words.')
+                accepted = word.lower() == item['ordered_words'][slot].lower()
+                if accepted:
+                    placements.append(word)
+                    if len(placements) == len(item['ordered_words']):
+                        phase = 'reading_sentence'
+            elif action == 'read_sentence':
+                if phase != 'reading_sentence':
+                    raise ValueError('Arrange the sentence before reading it.')
+                heard = set(re.findall(r'[a-z]+', str(data.get('heard', '')).lower()))
+                expected = re.findall(r'[a-z]+', item['sentence'].lower())
+                accepted = all(heard & ({word} | aliases.get(word, set())) for word in expected)
+                if accepted:
+                    index += 1
+                    word_index = attempts = 0
+                    placements = []
+                    phase = 'complete' if index >= total else 'reading_words'
+                else:
+                    attempts += 1
+            else:
+                raise ValueError('Invalid activity action.')
+            finished = index >= total
+            saved = {'activity_key': activity_key, 'current_item': index, 'word_index': word_index,
+                     'placements': placements, 'attempts': attempts, 'completed_items': index,
+                     'phase': 'complete' if finished else phase,
+                     'state_version': int(old.get('state_version') or 0) + 1}
+            progress, _ = StudentActivityProgress.objects.update_or_create(
+                student=student, activity_key=activity_key,
+                defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
+                          'total_items': total, 'activity_completed': finished, 'state': saved})
+            return JsonResponse({'success': True, 'accepted': accepted, 'progress': {
+                'current_index': progress.current_index, 'completed_items': progress.completed_items,
+                'total_items': total, 'activity_completed': finished, 'state': saved}})
+        except (TypeError, ValueError, KeyError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    if activity['interaction'] == 'oral_drag_sentence':
+        try:
+            data = json.loads(request.body or '{}')
+            query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            if data.get('reset'):
+                query.delete()
+                return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
+            existing = query.first()
+            old = existing.state if existing and isinstance(existing.state, dict) else {}
+            total = len(activity['items'])
+            index = max(0, min(total, int(old.get('current_item', 0))))
+            if index >= total:
+                raise ValueError('This activity is already complete.')
+            phase = old.get('phase', 'reading_choices')
+            choice_index = max(0, min(len(activity['word_choices']), int(old.get('choice_index', 0))))
+            choice_attempts = max(0, int(old.get('choice_attempts', 0)))
+            sentence_attempts = max(0, int(old.get('sentence_attempts', 0)))
+            placed_word = str(old.get('placed_word', ''))
+            item, action, accepted = activity['items'][index], data.get('action'), None
+            aliases = {'mat': {'math'}, 'hat': {'hot'}, 'wore': {'war'}, 'bat': {'butt'}, 'loved': {'love'}}
+            if action == 'read_choice':
+                if phase != 'reading_choices' or int(data.get('choice_index', -1)) != choice_index or choice_index >= len(activity['word_choices']):
+                    raise ValueError('Read the current choice first.')
+                target = activity['word_choices'][choice_index].lower()
+                heard = set(re.findall(r'[a-z]+', str(data.get('heard', '')).lower()))
+                accepted = bool(heard & ({target} | aliases.get(target, set())))
+                if accepted:
+                    choice_index += 1; choice_attempts = 0
+                    if choice_index >= len(activity['word_choices']): phase = 'sentence_listen'
+                else: choice_attempts += 1
+            elif action == 'sentence_played':
+                if phase != 'sentence_listen': raise ValueError('Listen to the sentence first.')
+                accepted, phase = True, 'dragging'
+            elif action == 'place_word':
+                if phase != 'dragging': raise ValueError('Listen to the sentence before choosing a word.')
+                word = str(data.get('word', '')).strip().lower()
+                if word not in [choice.lower() for choice in item['choices']]: raise ValueError('Choose one of the displayed words.')
+                accepted = word == item['answer'].lower()
+                placed_word = item['answer'] if accepted else ''
+                if accepted: phase = 'reading_sentence'
+            elif action == 'read_sentence':
+                if phase != 'reading_sentence': raise ValueError('Place the correct word before reading the sentence.')
+                heard = set(re.findall(r'[a-z]+', str(data.get('heard', '')).lower()))
+                expected = re.findall(r'[a-z]+', item['sentence'].lower())
+                accepted = all(heard & ({word} | aliases.get(word, set())) for word in expected)
+                if accepted:
+                    index += 1; choice_attempts = sentence_attempts = 0; placed_word = ''
+                    phase = 'complete' if index >= total else 'sentence_listen'
+                else: sentence_attempts += 1
+            else: raise ValueError('Invalid activity action.')
+            finished = index >= total
+            saved = {'activity_key': activity_key, 'current_item': index, 'choice_index': choice_index,
+                     'choice_attempts': choice_attempts, 'sentence_attempts': sentence_attempts,
+                     'placed_word': placed_word, 'completed_items': index,
+                     'phase': 'complete' if finished else phase,
+                     'state_version': int(old.get('state_version') or 0) + 1}
+            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+                'current_index': index, 'completed_items': index, 'correct_items': index,
+                'total_items': total, 'activity_completed': finished, 'state': saved})
+            return JsonResponse({'success': True, 'accepted': accepted, 'progress': {
+                'current_index': progress.current_index, 'completed_items': progress.completed_items,
+                'total_items': total, 'activity_completed': finished, 'state': saved}})
+        except (TypeError, ValueError, KeyError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity['interaction'] == 'oral_then_picture_word_match':
         try:
             data = json.loads(request.body or '{}')
@@ -14374,6 +14624,36 @@ def prescribed_activity_complete(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity['interaction'] == 'oral_picture_box':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        state = existing.state if existing and isinstance(existing.state, dict) else {}
+        total = len(activity['items'])
+        if not existing or existing.completed_items < total or state.get('phase') != 'complete':
+            return JsonResponse({'success': False, 'error': 'Complete every picture word first.'}, status=400)
+        existing.activity_completed = True
+        existing.current_index = existing.completed_items = existing.correct_items = existing.total_items = total
+        existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
+        return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
+    if activity['interaction'] == 'oral_jumbled_sentence':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        state = existing.state if existing and isinstance(existing.state, dict) else {}
+        total = len(activity['items'])
+        if not existing or existing.completed_items < total or state.get('phase') != 'complete':
+            return JsonResponse({'success': False, 'error': 'Complete every fixed sentence first.'}, status=400)
+        existing.activity_completed = True
+        existing.current_index = existing.completed_items = existing.correct_items = existing.total_items = total
+        existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
+        return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
+    if activity['interaction'] == 'oral_drag_sentence':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        state = existing.state if existing and isinstance(existing.state, dict) else {}
+        total = len(activity['items'])
+        if not existing or existing.completed_items < total or state.get('phase') != 'complete':
+            return JsonResponse({'success': False, 'error': 'Complete every sentence first.'}, status=400)
+        existing.activity_completed = True
+        existing.current_index = existing.completed_items = existing.correct_items = existing.total_items = total
+        existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
+        return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'oral_then_picture_word_match':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         state = _normalized_oral_picture_match_state(activity, existing.state if existing else {})
