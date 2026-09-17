@@ -18,7 +18,7 @@
     <nav class="nav"><a class="back" href="{% url 'assessment' %}">← Bumalik</a></nav>
     <section id="game" class="game"></section>
   </main>
-  <script src="{% static 'pabasa_app/js/lesson3_gawain_2_sequence.js' %}?v=20260917-3"></script>
+  <script src="{% static 'pabasa_app/js/lesson3_gawain_2_sequence.js' %}?v=20260917-4"></script>
   <script>
     const savedLesson3Progress = {{ lesson_3_progress|safe }};
     if (savedLesson3Progress) localStorage.setItem('pabasa:lesson-3-gawain-2:progress', String(savedLesson3Progress.activity_completed?6:savedLesson3Progress.current_index));

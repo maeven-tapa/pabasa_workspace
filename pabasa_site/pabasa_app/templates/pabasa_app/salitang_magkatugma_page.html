@@ -59,7 +59,7 @@ const pairs=[['aso','laso'],['bundok','sandok'],['tatay','nanay'],['bola','lola'
   if(window.salitangDedicatedFlow)return;
   const stage=document.getElementById('stage');
   if(!stage)return;
-  const phase2Text='Magkatunog ba ang dalawang larawan na ito? Pindutin ang nawawastong sagot.';
+  const phase2Text='Piliin kung magkatugma o hindi magkatugma ang pares.';
   const csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
   let generation=0, speaking=false, lastPhase2='', lastPhase1='', currentAudio=null;
   const speak=async text=>{
