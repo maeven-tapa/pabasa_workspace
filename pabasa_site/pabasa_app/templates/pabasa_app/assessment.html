@@ -2078,6 +2078,9 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             modal?.setAttribute('data-session-key', sessionKey);
             modal?.querySelectorAll('.pabasa-session-card').forEach(card => card.dataset.sessionKey = sessionKey);
+            if ([1, 2, 3].includes(Number(sessionNumber))) {
+                modal?.querySelectorAll('.pabasa-session-badge').forEach(badge => badge.remove());
+            }
         });
     }, 1600);
 });
