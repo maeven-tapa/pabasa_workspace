@@ -367,6 +367,25 @@ PRESCRIBED_ACTIVITIES = {
             {'id': 'b7', 'text': 'tu'},
         ],
     },
+    'lesson-15-gawain-2-angkop-na-pantig': {
+        'activity_key': 'lesson-15-gawain-2-angkop-na-pantig', 'session_number': 5, 'lesson_number': 15,
+        'gawain_number': 2, 'title': 'Punan ang patlang ng angkop na pantig.',
+        'instruction': 'Punan ang patlang ng angkop na pantig.',
+        'competencies': ['Phonics', 'Phonological Awareness', 'Vocabulary'],
+        'interaction': 'teacher_syllable_fill_preview', 'total_items': 5,
+        'items': [
+            {'id': 'yo-yo', 'incomplete': 'yo__', 'answer': 'yo', 'word': 'yo-yo', 'expected_b_id': 'b4'},
+            {'id': 'masaya', 'incomplete': 'masa__', 'answer': 'ya', 'word': 'masaya', 'expected_b_id': 'b1'},
+            {'id': 'yungib', 'incomplete': '__ngib', 'answer': 'yu', 'word': 'yungib', 'expected_b_id': 'b5'},
+            {'id': 'oyayi', 'incomplete': 'oya__', 'answer': 'yi', 'word': 'oyayi', 'expected_b_id': 'b3'},
+            {'id': 'yelo', 'incomplete': '__lo', 'answer': 'ye', 'word': 'yelo', 'expected_b_id': 'b2'},
+        ],
+        'choices': [
+            {'id': 'b1', 'text': 'ya'}, {'id': 'b2', 'text': 'ye'},
+            {'id': 'b3', 'text': 'yi'}, {'id': 'b4', 'text': 'yo'},
+            {'id': 'b5', 'text': 'yu'},
+        ],
+    },
     'lesson-15-gawain-1': {
         'activity_key': 'lesson-15-gawain-1', 'session_number': 5, 'lesson_number': 15,
         'gawain_number': 1, 'title': 'Letrang Ww at Yy', 'instruction': '',

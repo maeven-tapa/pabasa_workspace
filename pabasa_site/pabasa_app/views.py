@@ -13548,6 +13548,27 @@ def prescribed_activity_page(request, activity_key):
             'progress': {'state': raw_state, 'activity_completed': progress.activity_completed if progress else False},
         }
         return render(request, 'pabasa_app/lesson_14_gawain_2_page.html', context)
+    if activity_key == 'lesson-15-gawain-2-angkop-na-pantig':
+        context = _dashboard_context(request)
+        image_paths = {
+            'yo-yo': 'pabasa_app/images/alpabetong_pilipino/yoyo.png',
+            'masaya': 'pabasa_app/images/picture_word/custom/Happy-Masaya.png',
+            'yungib': 'pabasa_app/images/picture_word/custom/Cave-Kuweba.png',
+            'oyayi': 'pabasa_app/images/picture_word/custom/Baby-Sanggol.png',
+            'yelo': 'pabasa_app/images/picture_word/custom/Ice-Yelo.png',
+        }
+        context['lesson15_gawain2_data'] = {
+            'activity_key': activity_key, 'session_key': 'session-5',
+            'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
+            'title': activity['title'], 'instruction': activity['instruction'],
+            'items': [{**item, 'image_url': static(image_paths.get(item['id'], ''))} for item in activity['items']],
+            'choices': activity['choices'],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'transcribe_url': reverse('reading_transcribe_api'), 'read_aloud_url': reverse('reading_read_aloud_api'),
+            'progress': {'state': raw_state, 'activity_completed': progress.activity_completed if progress else False},
+        }
+        return render(request, 'pabasa_app/lesson_15_gawain_2_angkop_na_pantig_page.html', context)
     if activity_key == 'lesson-14-gawain-1':
         context = _dashboard_context(request)
         context['lesson14_gawain1_data'] = {
@@ -13975,7 +13996,7 @@ def prescribed_activity_progress(request, activity_key):
             return JsonResponse({'success': True, 'progress': {'state': state, 'completed_items': len(selected), 'total_items': len(activity['items']), 'activity_completed': False}})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
-    if activity_key == 'lesson-14-gawain-2':
+    if activity_key in ('lesson-14-gawain-2', 'lesson-15-gawain-2-angkop-na-pantig'):
         try:
             data = json.loads(request.body or '{}')
             incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
@@ -15282,7 +15303,7 @@ def prescribed_activity_complete(request, activity_key):
         state = dict(state, answer_records=records, completed=True, state_version=1_000_000_000)
         StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': len(activity['items']), 'completed_items': len(activity['items']), 'correct_items': correct, 'total_items': len(activity['items']), 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'items_completed': len(records), 'correct_items': correct, 'records': records}})
-    if activity_key == 'lesson-14-gawain-2':
+    if activity_key in ('lesson-14-gawain-2', 'lesson-15-gawain-2-angkop-na-pantig'):
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         connections = state.get('connections') if isinstance(state.get('connections'), dict) else {}
