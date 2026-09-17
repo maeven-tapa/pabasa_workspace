@@ -24,6 +24,27 @@ LESSON_16_IMAGE_PATHS = {
 
 
 PRESCRIBED_ACTIVITIES = {
+    'session-7-lesson-19-gawain-1': {
+        # Canonical ARAL workbook data.  Course preview, learner routing,
+        # validation, reports and Filipino audio all use this stable key.
+        'activity_key': 'session-7-lesson-19-gawain-1', 'session_key': 'session-7',
+        'session_number': 7, 'lesson_number': 19, 'gawain_number': 1,
+        'display_title': 'Lesson 19: Gawain 1', 'title': 'Bilugan ang Simulang Pantig',
+        'description': 'Basahin ang ngalan ng larawan at bilugan ang simulang pantig.',
+        'instruction': 'Basahin ang ngalan ng larawan. Pagkatapos, bilugan ang simulang pantig nito.',
+        'workbook_instruction': 'Bilugan ang simulang pantig ng mga larawan.',
+        'teacher_guidance': 'Babasa muna ang mag-aaral ng buong salita bago pipiliin ang simulang pantig.',
+        'competencies': ['Phonics', 'Phonological Awareness', 'Vocabulary'],
+        'interaction': 'oral_then_starting_syllable', 'total_items': 5,
+        'thumbnail': 'pabasa_app/images/session_7_lesson_19/dagat.svg',
+        'items': [
+            {'id': 'dagat', 'word': 'dagat', 'choices': ['ba', 'da', 'pa'], 'answer': 'da', 'alt_text': 'Larawan ng dagat na may araw at alon', 'image_path': 'pabasa_app/images/session_7_lesson_19/dagat.svg'},
+            {'id': 'hipon', 'word': 'hipon', 'choices': ['hi', 'gi', 'to'], 'answer': 'hi', 'alt_text': 'Larawan ng hipon', 'image_path': 'pabasa_app/images/session_7_lesson_19/hipon.svg'},
+            {'id': 'labi', 'word': 'labi', 'choices': ['la', 'di', 'bi'], 'answer': 'la', 'alt_text': 'Larawan ng labi', 'image_path': 'pabasa_app/images/session_7_lesson_19/labi.svg'},
+            {'id': 'hikaw', 'word': 'hikaw', 'choices': ['ki', 'he', 'hi'], 'answer': 'hi', 'alt_text': 'Larawan ng pares ng hikaw', 'image_path': 'pabasa_app/images/session_7_lesson_19/hikaw.svg'},
+            {'id': 'daga', 'word': 'daga', 'choices': ['ma', 'da', 'na'], 'answer': 'da', 'alt_text': 'Larawan ng daga', 'image_path': 'pabasa_app/images/picture_word/custom/Mouse-Daga.png'},
+        ],
+    },
     'lesson7-gawain4b': {
         'activity_key': 'lesson7-gawain4b', 'session_key': 'session-3', 'session_number': 3,
         'lesson_number': 7, 'gawain_number': '4B', 'title': 'GAWAIN 4B: Letrang Ii at Oo',
