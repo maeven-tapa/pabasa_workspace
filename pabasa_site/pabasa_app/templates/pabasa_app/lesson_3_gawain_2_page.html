@@ -10,6 +10,7 @@
   <title>Lesson 3 · Gawain 2: Salitang Magkatugma</title>
   <style>{% include 'pabasa_app/lesson_3_gawain_2_styles.html' %}</style>
   <style>body.gawain-2,body.gawain-2::before{background:linear-gradient(#093f5030,#093f5018),url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover fixed!important}</style>
+  <style>.gawain-2 .pairs .word::before{content:none!important;display:none!important}.gawain-2 .pairs .word.active::before{content:'SABIHIN ITO'!important;display:block!important;position:absolute;top:-18px;left:50%;z-index:3;transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:#ffc928;color:#5b3b00;font-size:.72rem;font-weight:900;letter-spacing:.06em;white-space:nowrap;box-shadow:0 3px 8px #b77b1b55}.gawain-2:not(:has(.answers)) .status{font-size:1rem!important}.gawain-2:not(:has(.answers)) .status::after{content:none!important}</style>
   <style>.gawain-2:not(:has(.answers)) .status.warning{font-size:1rem!important;color:#92400e;background:#fef3c7;border-radius:12px;padding:7px 12px}.gawain-2:not(:has(.answers)) .status.warning::after{content:none!important}</style>
 </head>
 <body class="gawain-2">
@@ -17,7 +18,7 @@
     <nav class="nav"><a class="back" href="{% url 'assessment' %}">← Bumalik</a></nav>
     <section id="game" class="game"></section>
   </main>
-  <script src="{% static 'pabasa_app/js/lesson3_gawain_2_sequence.js' %}"></script>
+  <script src="{% static 'pabasa_app/js/lesson3_gawain_2_sequence.js' %}?v=20260917-3"></script>
   <script>
     const savedLesson3Progress = {{ lesson_3_progress|safe }};
     if (savedLesson3Progress) localStorage.setItem('pabasa:lesson-3-gawain-2:progress', String(savedLesson3Progress.activity_completed?6:savedLesson3Progress.current_index));
@@ -36,9 +37,23 @@
       exitUrl: "{% url 'assessment' %}"
     });
   </script>
+  <script>
+    (() => {
+      const phase2Instruction = 'Magkatunog ba ang dalawang larawan na ito? Pindutin ang nawawastong sagot.';
+      const syncPhase2Instruction = () => {
+        const game = document.getElementById('game');
+        if (!game || !game.querySelector('.answers')) return;
+        const instruction = game.querySelector('.instruction');
+        if (instruction && instruction.textContent.trim() !== phase2Instruction) instruction.textContent = phase2Instruction;
+      };
+      new MutationObserver(syncPhase2Instruction).observe(document.getElementById('game'), {childList: true, subtree: true, characterData: true});
+      syncPhase2Instruction();
+      window.setInterval(syncPhase2Instruction, 100);
+    })();
+  </script>
 </body>
 </html>
-<script>
+<!-- duplicate legacy Gawain 2 handlers intentionally disabled; the shared activity script above owns the flow.
 document.addEventListener('click', async function(event){
   const button=event.target.closest('#read');
   if(!button||button.dataset.ttsUnlocked==='1'||button.dataset.ttsPlaying==='1')return;
