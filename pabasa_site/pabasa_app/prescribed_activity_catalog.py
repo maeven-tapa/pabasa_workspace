@@ -45,6 +45,27 @@ PRESCRIBED_ACTIVITIES = {
             {'id': 'daga', 'word': 'daga', 'choices': ['ma', 'da', 'na'], 'answer': 'da', 'alt_text': 'Larawan ng daga', 'image_path': 'pabasa_app/images/picture_word/custom/Mouse-Daga.png'},
         ],
     },
+    'session-7-lesson-19-gawain-2': {
+        # This canonical workbook data is consumed by the picker, learner UI,
+        # progress validation, reporting, and Filipino Google TTS.
+        'activity_key': 'session-7-lesson-19-gawain-2', 'session_key': 'session-7',
+        'session_number': 7, 'lesson_number': 19, 'gawain_number': 2,
+        'display_title': 'Lesson 19: Gawain 2', 'title': 'Isulat ang Nawawalang Pantig',
+        'description': 'Basahin ang ngalan ng larawan at isulat ang nawawalang pantig.',
+        'instruction': 'Basahin ang ngalan ng larawan. Pagkatapos, isulat ang nawawalang pantig.',
+        'workbook_instruction': 'Isulat ang nawawalang pantig.',
+        'teacher_guidance': 'Babasa muna ang mag-aaral ng buong salita bago niya isusulat ang nawawalang pantig.',
+        'competencies': ['Phonics', 'Phonological Awareness', 'Vocabulary'],
+        'interaction': 'session7_oral_missing_syllable', 'total_items': 5,
+        'thumbnail': 'pabasa_app/images/session_7_lesson_19/daan.svg',
+        'items': [
+            {'id': 'daan', 'word': 'daan', 'stem': '__an', 'answer': 'da', 'alt_text': 'Larawan ng daan na may araw at mga burol', 'image_path': 'pabasa_app/images/session_7_lesson_19/daan.svg'},
+            {'id': 'dalandan', 'word': 'dalandan', 'stem': '__landan', 'answer': 'da', 'alt_text': 'Larawan ng dalandan', 'image_path': 'pabasa_app/images/session_7_lesson_19/dalandan.svg'},
+            {'id': 'tahi', 'word': 'tahi', 'stem': 'ta__', 'answer': 'hi', 'alt_text': 'Larawan ng batang tumatahi', 'image_path': 'pabasa_app/images/session_7_lesson_19/tahi.svg'},
+            {'id': 'lila', 'word': 'lila', 'stem': 'li__', 'answer': 'la', 'alt_text': 'Larawan ng lilang tela', 'image_path': 'pabasa_app/images/session_7_lesson_19/lila.svg'},
+            {'id': 'hilik', 'word': 'hilik', 'stem': '__lik', 'answer': 'hi', 'alt_text': 'Larawan ng batang tulik', 'image_path': 'pabasa_app/images/session_7_lesson_19/hilik.svg'},
+        ],
+    },
     'lesson7-gawain4b': {
         'activity_key': 'lesson7-gawain4b', 'session_key': 'session-3', 'session_number': 3,
         'lesson_number': 7, 'gawain_number': '4B', 'title': 'GAWAIN 4B: Letrang Ii at Oo',
