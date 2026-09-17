@@ -879,8 +879,8 @@
 <style>#subjectGrid{display:block}.pabasa-preview-subject{display:block}.pabasa-track-intro{color:#647883;font-weight:700}.pabasa-template-folder-grid{display:none}</style>
 <style>
     .pabasa-preview-subject { background: transparent; border: 0; border-radius: 0; padding: 0; }
-    /* Let the folder grid grow, while the assessment dock owns desktop scrolling. */
-    .assessment-dock { align-content: start; min-width: 0; overflow-x: hidden; overflow-y: auto; padding-bottom: 5rem; scroll-padding-bottom: 5rem; scrollbar-gutter: stable; }
+    /* Let the assessment page grow naturally so the document owns the main scroll. */
+    .assessment-dock { align-content: start; min-width: 0; overflow: visible; padding-bottom: 5rem; }
     .pabasa-track-tabs { display: flex; justify-content: center; margin-inline: auto; width: fit-content; }
     .pabasa-track-tabs button { font-size: 1.08rem; min-height: 58px; padding: .8rem 1.5rem; }
     .pabasa-task-badge { font-size: .8rem; height: 27px; line-height: 27px; width: 27px; }
@@ -889,12 +889,17 @@
     .assessment-dock #sessionGrid { padding-bottom: 2rem; }
     .pabasa-preview-subject::before { display: none; }
     @media (min-width: 992px) {
-        body:has(.assessment-dock) .dashboard-main, body:has(.assessment-dock) .dashboard-page-wrap { min-height: 0; overflow: hidden; }
-        body:has(.assessment-dock) .dashboard-main { height: var(--dashboard-normalized-viewport-height); }
-        body:has(.assessment-dock) .dashboard-page-wrap { height: calc(var(--dashboard-normalized-viewport-height) - 1rem); }
-        body:has(.assessment-dock) .dashboard-page-wrap, body:has(.assessment-dock) .dashboard-content-wrap { display: flex; flex-direction: column; }
-        body:has(.assessment-dock) .dashboard-content-wrap { flex: 1 1 auto; min-height: 0; overflow: hidden; }
-        .assessment-dock { height: 100%; max-height: none; min-height: 0; }
+        body:has(.assessment-dock) .dashboard-main,
+        body:has(.assessment-dock) .dashboard-page-wrap,
+        body:has(.assessment-dock) .dashboard-content-wrap {
+            min-height: 0;
+            height: auto;
+            overflow: visible;
+        }
+        body:has(.assessment-dock) .dashboard-main { min-height: 100dvh; }
+        body:has(.assessment-dock) .dashboard-page-wrap,
+        body:has(.assessment-dock) .dashboard-content-wrap { display: block; }
+        .assessment-dock { height: auto; max-height: none; min-height: 0; overflow: visible; }
     }
     @media (max-width: 991.98px) { .assessment-dock { height: auto; max-height: none; overflow: visible; padding-bottom: 4rem; scroll-padding-bottom: 4rem; } }
 </style>
