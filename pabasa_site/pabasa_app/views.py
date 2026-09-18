@@ -16864,10 +16864,30 @@ def session_4_gawain_2_page(request):
 @xframe_options_sameorigin
 def session_4_gawain_3_page(request):
     context = _dashboard_context(request)
-    progress = StudentActivityProgress.objects.filter(student=_active_prescribed_student(request), activity_key='session-4-gawain-3').first()
+    activity = prescribed_activity('session-4-gawain-3')
+    activity_key = 'session-4-gawain-3'
+    progress = StudentActivityProgress.objects.filter(student=_active_prescribed_student(request), activity_key=activity_key).first()
     if progress and progress.activity_completed:
         return redirect('assessment')
-    context['session4_progress'] = {'current_index': progress.current_index if progress else 0, 'completed_items': progress.completed_items if progress else 0}
+    raw_state = progress.state if progress and isinstance(progress.state, dict) else {}
+    context['session4_gawain3_data'] = {
+        'activity_key': activity_key,
+        'session_key': 'session-4',
+        'lesson_number': activity['lesson_number'],
+        'gawain_number': activity['gawain_number'],
+        'title': activity['title'],
+        'instruction': activity['instruction'],
+        'columns': [[item['word'] for item in activity['items'][start:start + 3]] for start in (0, 3, 6)],
+        'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+        'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+        'next_url': reverse('session_4_gawain_4_page'),
+        'transcribe_url': reverse('reading_transcribe_api'),
+        'progress': {'current_index': progress.current_index if progress else 0,
+                     'completed_items': progress.completed_items if progress else 0,
+                     'total_items': activity['total_items'],
+                     'activity_completed': progress.activity_completed if progress else False,
+                     'state': raw_state},
+    }
     return render(request, 'pabasa_app/session_4_gawain_3_page.html', context)
 
 
