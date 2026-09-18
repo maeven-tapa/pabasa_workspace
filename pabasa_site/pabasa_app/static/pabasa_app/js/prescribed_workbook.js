@@ -38,7 +38,9 @@
   function table(){let n=0;return `<table class="wb-table">${a.column_headers?'<thead><tr>'+a.column_headers.map(h=>`<th>${esc(h)}</th>`).join('')+'</tr></thead>':''}<tbody>${a.rows.map(row=>'<tr>'+row.map(text=>{const i=text?a.items[n++]:null;return `<td class="${!preview&&i?(n-1===state.index?'wb-current':n-1<state.index?'wb-done':''):''}">${i&&a.images?.[i.id]?`<img src="${esc(a.images[i.id])}" alt="${esc(text)}"><br>`:''}${esc(i?(a.cell_display?.[i.id]||text):'')}</td>`;}).join('')+'</tr>').join('')}</tbody></table>`;}
   function render(){
     selected=[];builder=state.draft.builder||[];words=state.draft.words||[];
-    document.getElementById('wb-progress').textContent=preview?'Preview':`${state.index} / ${a.progress_total||a.items.length}`;
+    const totalProgress=a.progress_total||a.items.length, progressValue=state.completed?totalProgress:Math.min(totalProgress, cBuilder?Number(state.index||0)+1:Number(state.index||0));
+    document.getElementById('wb-progress').textContent=preview?'Preview':`${progressValue} / ${totalProgress}`;
+    const progressFill=document.getElementById('wb-progress-fill');if(progressFill)progressFill.style.width=`${preview?0:Math.max(0,Math.min(100,progressValue/totalProgress*100))}%`;
     document.getElementById('wb-back').hidden=preview;
     action.replaceChildren();
     if(state.completed){
@@ -81,14 +83,15 @@
     const boxCells=a.bigbox_cells||a.rows.map(row=>row.filter(Boolean).map(()=>[`item-${++fallbackIndex}`]));
     builder=state.draft.builder||[];
     content.className='wb-l22-builder';
-    content.innerHTML=`<section class="wb-bigbox"><h2>BIG BOX</h2><div class="wb-bigbox-grid">${boxCells.map(row=>`<div class="wb-bigbox-row">${row.map(()=>'<div class="wb-bigbox-cell"></div>').join('')}</div>`).join('')}</div></section><section class="wb-reading-panel"><h2>BASAHIN ANG MGA PANTIG</h2><p>Basahin nang malakas ang mga pantig sa loob ng Big Box.</p><p class="wb-reading-guidance">Basahin ang lahat ng pantig. Hindi kailangang maging perpekto ang bigkas para magpatuloy.</p><p class="wb-phase-status" role="status">${readDone?'Natapos mo ang pagbasa. Ngayon, bumuo ng salita gamit ang mga pantig sa Big Box.':state.read_aloud_started?'Handa ka na bang subukan muli?':'Handa na kapag ikaw ay handa.'}</p></section><section class="wb-word-panel ${readDone?'':'is-locked'}" aria-disabled="${!readDone}"><h2>BUMUO NG SALITA</h2><p>Piliin ang mga pantig sa Big Box upang makabuo ng salita.</p>${readDone?`<div class="wb-selected-parts" id="wb-selected-parts" aria-live="polite"></div><div class="wb-tools"><button type="button" id="wb-erase">Bura</button><button type="button" id="wb-retry">Ulitin</button></div><p class="wb-builder-feedback" aria-live="polite">${esc(state.last_feedback||'')}</p>${state.found_words?.length?`<div class="wb-builder-words"><strong>Nabuo mo na:</strong><ul>${state.found_words.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`:''}`:'<p class="wb-locked-note">Basahin muna ang mga pantig bago bumuo ng salita.</p>'}</section>`;
+    const current=Math.min(Number(state.index||0),a.items.length-1), phase=state.reading_phase||'read';
+    content.innerHTML=`<div class="wb-l22-banner"><span class="wb-speaker-icon" aria-hidden="true">🔊</span><strong>Basahin ang naka-highlight na pantig.</strong></div><section class="wb-bigbox"><h2>BIG BOX</h2><p class="wb-box-help">Sundan ang dilaw na highlight.</p><div class="wb-bigbox-grid">${boxCells.map(row=>`<div class="wb-bigbox-row">${row.map(()=>'<div class="wb-bigbox-cell"></div>').join('')}</div>`).join('')}</div></section><section class="wb-reading-panel"><h2>BASAHIN</h2><div class="wb-mic-illustration" aria-hidden="true"><span class="wb-mic-symbol">●</span><i></i><b></b></div><p class="wb-phase-status" role="status">${readDone?'Magaling!':phase==='listen'?'Pakinggan muna.':state.last_feedback==='Tama!'?'Tama!':'Handa ka na?'}</p><div id="wb-l22-reading-action"></div><p class="wb-reading-tip"><span aria-hidden="true">💡</span><span> pindutin ang button kapag handa ka nang magbasa.</span></p></section><section class="wb-word-panel ${readDone?'':'is-locked'}" aria-disabled="${!readDone}"><h2>BUMUO NG SALITA</h2>${readDone?`<p>Piliin ang mga pantig sa Big Box.</p><div class="wb-selected-parts" id="wb-selected-parts" aria-live="polite"></div><div class="wb-tools"><button type="button" id="wb-erase">Bura</button><button type="button" id="wb-retry">Ulitin</button></div><p class="wb-builder-feedback" aria-live="polite">${esc(state.last_feedback||'')}</p>${state.found_words?.length?`<div class="wb-builder-words"><strong>Nabuo mo na:</strong><ul>${state.found_words.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`:''}`:'<p class="wb-locked-note"><span class="wb-lock-icon" aria-hidden="true">🔒</span><span>Basahin muna ang lahat ng pantig.</span></p>'}</section>`;
     const itemById=Object.fromEntries(a.items.map(i=>[i.id,i]));
     content.querySelectorAll('.wb-bigbox-row').forEach((row,rowIndex)=>{
       row.querySelectorAll('.wb-bigbox-cell').forEach((cell,cellIndex)=>{
         const itemIds=boxCells[rowIndex][cellIndex]||[];
         cell.replaceChildren(...itemIds.map(id=>{
           const item=itemById[id];if(!item)return null;
-          const tile=document.createElement('button');tile.type='button';tile.className='wb-bigbox-tile';tile.dataset.tile=item.id;tile.textContent=item.text;tile.disabled=!readDone||preview;tile.setAttribute('aria-label',`Pantig ${item.text}`);if(builder.includes(item.id))tile.classList.add('is-picked');tile.onclick=()=>{if(busy)return;builder.push(item.id);paint();tile.classList.add('is-picked');draft({builder});};return tile;
+          const tile=document.createElement('button');tile.type='button';tile.className='wb-bigbox-tile';tile.dataset.tile=item.id;tile.textContent=item.text;tile.disabled=!readDone||preview;tile.setAttribute('aria-label',`Pantig ${item.text}`);if(builder.includes(item.id))tile.classList.add('is-picked');if(!readDone){const itemIndex=a.items.findIndex(candidate=>candidate.id===item.id);if(itemIndex<current)tile.classList.add('is-complete');if(itemIndex===current){tile.classList.add('is-active');if(current===0)tile.insertAdjacentHTML('afterbegin','<span class="wb-start-cue">Simulan dito</span>');}}tile.onclick=()=>{if(busy)return;builder.push(item.id);paint();tile.classList.add('is-picked');draft({builder});};return tile;
         }).filter(Boolean));
       });
     });
@@ -101,7 +104,10 @@
       button('Tapusin ang Gawain',()=>perform({action:'finish'}),false).disabled=!(state.found_words||[]).length;
       button('Susunod',()=>{if(data.next_url)location.href=data.next_url;}).disabled=true;
     }else if(!preview){
-      button(state.read_aloud_started?'Simulan muli ang Pagbasa':'Simulan ang Pagbasa',startCReading,true);
+      const readingButton=(text,fn)=>{const b=button(text,fn,true),target=document.getElementById('wb-l22-reading-action');if(target)target.appendChild(b);return b;};
+      if(!state.read_aloud_started)readingButton('Basahin Ko',startCReading);
+      else if(phase==='listen')readingButton(`Read Aloud (${state.read_aloud_listens||0}/3)`,readAloudC);
+      else readingButton(state.reading_attempts?'Basahin Ko muli':'Basahin Ko',startCReading);
     }
   }
   async function startCReading(){
@@ -112,19 +118,23 @@
       activeStream=await navigator.mediaDevices.getUserMedia({audio:true});
       activeRecorder=new MediaRecorder(activeStream);
       const audioDone=new Promise((resolve,reject)=>{activeRecorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};activeRecorder.onerror=()=>reject(new Error('recording'));activeRecorder.onstop=()=>resolve(new Blob(chunks,{type:activeRecorder.mimeType||'audio/webm'}));});
-      activeRecorder.start();message('Nakikinig… Basahin nang malakas ang mga pantig sa loob ng Big Box.');
-      action.replaceChildren();const stop=button('Tapusin ang Pagbasa',()=>activeRecorder?.state==='recording'&&activeRecorder.stop(),true);stop.disabled=false;
+      activeRecorder.start();message('Nakikinig…');
+      action.replaceChildren();const stop=button('Tapusin ang Pagbasa',()=>activeRecorder?.state==='recording'&&activeRecorder.stop(),true);stop.disabled=false;const readingAction=document.getElementById('wb-l22-reading-action');if(readingAction)readingAction.appendChild(stop);
       readTimer=setTimeout(()=>{if(activeRecorder?.state==='recording')activeRecorder.stop();},60000);
       const audio=await audioDone;clearTimeout(readTimer);activeStream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
       if(!audio.size)throw new Error('empty');
-      const form=new FormData();form.append('audio',audio,'reading.webm');message('Sinusuri ang iyong pagbasa…');
-      await send({action:'reading_attempt'},form);render();
+      const form=new FormData();form.append('audio',audio,'reading.webm');message('Sinusuri…');
+      await send({action:'reading_syllable_attempt'},form);render();
     }catch(_error){
       clearTimeout(readTimer);
       activeStream?.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
       message('Hindi magamit ang mikropono. Subukan muli.',true);
       render();
     }finally{clearTimeout(readTimer);busy=false;lock();}
+  }
+  async function readAloudC(){
+    if(busy)return;busy=true;lock();const current=Math.min(Number(state.index||0),a.items.length-1);
+    try{const form=new FormData();form.append('target_text',a.items[current].text);form.append('language','Filipino');form.append('mode','reading');const response=await fetch('{% url "reading_read_aloud_api" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':token()},body:form});const result=await response.json();if(!response.ok||!result.success)throw Error(result.error||'Hindi available ang audio.');const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);await audio.play();await new Promise(resolve=>audio.onended=resolve);await send({action:'read_aloud'});render();}catch(e){message(e.message||'Hindi available ang audio.',true);}finally{busy=false;lock();}
   }
   function renderSearch(){
     content.innerHTML+=`<div class="wb-search-wrap"><ul class="wb-word-list">${a.items.map((i,n)=>`<li>${esc(a.item_labels?.[n]||`${n+1}.`)} ${esc(i.text)}${!preview&&state.answers[i.id]?' ✓':''}</li>`).join('')}</ul><label>${fil?'Kulay':'Color'} <input id="wb-color" type="color" value="${esc(state.draft.color||'#b6e6c3')}"></label><div class="wb-search ${a.mark_style}" style="--cols:${a.grid[0].length}">${a.grid.map((row,y)=>Array.from(row).map((letter,x)=>`<button type="button" data-y="${y}" data-x="${x}" aria-label="Row ${y+1}, column ${x+1}: ${esc(letter)}">${esc(letter)}</button>`).join('')).join('')}</div></div>`;

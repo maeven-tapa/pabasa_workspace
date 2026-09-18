@@ -15458,15 +15458,16 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             return JsonResponse({'success': False, 'error': 'Activity changed in another tab. Reload to resume.', 'state': state}, status=409)
 
         verified = None
-        if event.get('action') in {'reading', 'reading_attempt'}:
+        if event.get('action') in {'reading', 'reading_attempt', 'reading_syllable_attempt'}:
             item_index = int(state.get('index', 0))
             if item_index >= len(workbook['items']) and activity_key != 'aral-l22-g1-c-syllable-builder':
                 raise ValueError('No reading item remains.')
             request.POST = request.POST.copy()
-            if activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_attempt':
+            if activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
                 if not state.get('read_aloud_started'):
                     raise ValueError('Simulan muna ang pagbasa.')
-                request.POST.update(target_text=' '.join(item['text'] for item in workbook['items']), language='Filipino', mode='reading', current_syllable_index='0', syllable_context='')
+                current_index = min(int(state.get('index', 0)), len(workbook['items']) - 1)
+                request.POST.update(target_text=workbook['items'][current_index]['text'], language='Filipino', mode='reading', current_syllable_index='0', syllable_context='')
             else:
                 item = workbook['items'][item_index]
                 request.POST.update(target_text=item['text'], language=workbook.get('language', 'Filipino'), mode='reading', current_syllable_index='0', syllable_context='')
@@ -15474,9 +15475,10 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             result = json.loads(response.content)
             if response.status_code != 200 or not result.get('success'):
                 return response
-            verified = bool(str(result.get('transcript') or result.get('raw_transcript') or '').strip()) if activity_key == 'aral-l22-g1-c-syllable-builder' else bool(result.get('complete'))
-            if not verified and activity_key == 'aral-l22-g1-c-syllable-builder':
-                return JsonResponse({'success': False, 'error': 'Hindi nakuha ang pagbasa. Subukan muli.'}, status=422)
+            if activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_attempt':
+                verified = bool(str(result.get('transcript') or result.get('raw_transcript') or '').strip())
+            else:
+                verified = bool(result.get('complete'))
 
         updated = apply_event(workbook, state, event, verified)
         updated['revision'] = int(updated.get('revision', 0)) + 1

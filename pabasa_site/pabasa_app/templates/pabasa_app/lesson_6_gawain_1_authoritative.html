@@ -1,6 +1,6 @@
 {% load static %}
 <!doctype html>
-<html lang="fil">
+<html lang="fil" class="activity-responsive">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -10,8 +10,9 @@
     @font-face{font-family:'Fredoka One';src:url("{% static 'pabasa_app/font/fredoka-one.one-regular.ttf' %}") format('truetype');font-display:swap}
     html,body{height:100%;overflow:hidden}body{margin:0;background:#bce8eb url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover no-repeat fixed;color:#164b5d;font-family:'Nunito',sans-serif}.page{box-sizing:border-box;height:100dvh;padding:clamp(8px,1.6vw,18px);display:flex;flex-direction:column}.card{height:calc(100dvh - 78px);max-height:720px;max-width:1000px;width:100%;margin:6px auto 0;padding:clamp(14px,2vw,24px);overflow:hidden;background:rgba(255,253,247,.94);border:1px solid rgba(255,255,255,.92);border-radius:28px;box-shadow:0 16px 42px rgba(20,75,93,.24);text-align:center}.back{align-self:center;width:min(100%,1000px);font-family:'Nunito',sans-serif;font-size:.95rem;font-weight:900;color:#164b5d;text-decoration:none}.head{display:flex;justify-content:space-between;align-items:flex-start;text-align:left}.eyebrow{font-family:'Fredoka One';font-weight:400;letter-spacing:.055em;color:#e46b58}.head h1,#app>h1{margin:3px 0;font-family:'Fredoka One';font-size:clamp(1.4rem,3vw,2.2rem);font-weight:400;line-height:1.1}.head>b{padding:7px 10px;border-radius:12px;background:#e8f5f4;color:#287287;font-family:'Nunito',sans-serif;font-size:.96rem;font-weight:900}.instruction{margin:10px 0 0;color:#286473;font-family:'Nunito',sans-serif;font-size:18px;font-weight:800;line-height:1.4}.instruction--identify{margin-top:40px;font-size:23px;font-weight:900}.instruction--classify{margin-top:0;font-size:23px;font-weight:900}.focus{height:calc(100% - 105px);display:flex;align-items:center;justify-content:center;gap:clamp(18px,5vw,65px)}.picture img{width:min(35vw,300px);height:min(52vh,330px);object-fit:contain}.wordbox{font-family:'Fredoka One';font-size:clamp(2rem,5vw,3.4rem);font-weight:400;line-height:1.15}.read-label,.red-label,.blank,.placed,.wrong{font-family:'Fredoka One'}.blank{display:inline-block;min-width:150px;border-bottom:5px solid #e6a33a}.choices{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:20px}.choice,.action{border:0;border-radius:16px;padding:14px 22px;color:#fff;cursor:pointer;box-shadow:0 5px #b77b1b}.action{background:#e6a33a;font-family:'Nunito',sans-serif;font-size:1.15rem;font-weight:900}.choice{background:#2d8b78;font-family:'Fredoka One';font-size:1.35rem;font-weight:400;line-height:1}.choice:disabled,.action:disabled{cursor:default;filter:saturate(.65);opacity:.72}.status{min-height:28px;font-family:'Nunito',sans-serif;font-weight:900}.placed{color:#2d8b78}.wrong{color:#b33b2f}@media(max-width:650px){body{background-attachment:scroll}.page{padding:8px}.card{height:calc(100dvh - 58px)}.instruction--identify{margin-top:30px;font-size:21px}.instruction--classify{margin-top:30px;font-size:21px}.focus{flex-direction:column;gap:5px}.picture img{height:32vh}.wordbox{font-size:2rem}.choice{padding:10px 16px}}
   </style>
+  <link rel="stylesheet" href="{% static 'pabasa_app/css/responsive_activity_layout.css' %}">
 </head>
-<body>
+<body class="lesson-6-responsive">
   <div class="page"><a class="back" href="{% url 'assessment' %}">← Bumalik</a><main class="card" id="app"></main></div>
   {{ lesson_6_data|json_script:"lesson-six-data" }}
   <script>
