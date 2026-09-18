@@ -14020,6 +14020,41 @@ def prescribed_activity_progress(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity_key == 'session-4-gawain-1':
+        try:
+            data = json.loads(request.body or '{}')
+            incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
+            is_reset = data.get('reset') is True
+            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            old = existing.state if existing and isinstance(existing.state, dict) else {}
+            total = len(activity['items'])
+            current_index = max(0, min(total - 1, int(incoming.get('current_index', old.get('current_index', 0))))) if total else 0
+            completed_items = max(0, min(total, int(incoming.get('completed_items', old.get('completed_items', 0)))))
+            if existing and existing.activity_completed:
+                return JsonResponse({'success': True, 'progress': {
+                    'current_index': existing.current_index, 'completed_items': existing.completed_items,
+                    'correct_items': existing.correct_items, 'total_items': existing.total_items,
+                    'activity_completed': True, 'state': old,
+                }})
+            if not is_reset and completed_items < int(old.get('completed_items', existing.completed_items if existing else 0) or 0):
+                completed_items = int(old.get('completed_items', 0) or 0)
+            state = dict(old)
+            state.update(incoming)
+            state.update({'current_index': current_index, 'completed_items': completed_items,
+                          'phase': str(incoming.get('phase') or old.get('phase') or 'initial'),
+                          'state_version': int(old.get('state_version') or 0) + 1})
+            progress, _ = StudentActivityProgress.objects.update_or_create(
+                student=student, activity_key=activity_key,
+                defaults={'current_index': current_index, 'completed_items': completed_items,
+                          'correct_items': completed_items, 'total_items': total,
+                          'activity_completed': False, 'state': state})
+            return JsonResponse({'success': True, 'progress': {
+                'current_index': progress.current_index, 'completed_items': progress.completed_items,
+                'correct_items': progress.correct_items, 'total_items': progress.total_items,
+                'activity_completed': False, 'state': state,
+            }})
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity.get('interaction') == 'prescribed_workbook':
         return _prescribed_workbook_activity_progress(request, activity_key, activity, student)
     if activity_key == 'session-2-lesson-4-gawain-2':
@@ -15182,21 +15217,29 @@ def prescribed_activity_progress(request, activity_key):
         try:
             data = json.loads(request.body or '{}')
             completed_items = max(0, min(int(activity.get('total_items') or 0), int(data.get('completed_items') or 0)))
+            incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
         except (TypeError, ValueError, json.JSONDecodeError):
             return JsonResponse({'success': False, 'error': 'Invalid Session 4 progress.'}, status=400)
         total = int(activity.get('total_items') or 0)
         completed = completed_items >= total and total > 0
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        old = existing.state if existing and isinstance(existing.state, dict) else {}
+        saved = {'activity_key': activity_key,
+                 'current_item': max(0, min(total, int(incoming.get('current_item', old.get('current_item', completed_items))))),
+                 'completed_items': completed_items,
+                 'recorded_items': sorted(set(int(value) for value in incoming.get('recorded_items', old.get('recorded_items', [])) if str(value).isdigit() and 0 <= int(value) < total)),
+                 'phase': str(incoming.get('phase', old.get('phase', 'ready'))),
+                 'state_version': int(old.get('state_version', 0) or 0) + 1}
         progress, _ = StudentActivityProgress.objects.update_or_create(
             student=student, activity_key=activity_key,
             defaults={'current_index': completed_items, 'completed_items': completed_items,
                       'correct_items': completed_items, 'total_items': total,
-                      'activity_completed': completed,
-                      'state': {'activity_key': activity_key, 'completion_only': True}},
+                      'activity_completed': completed, 'state': saved},
         )
         return JsonResponse({'success': True, 'progress': {
             'current_index': progress.current_index, 'completed_items': progress.completed_items,
             'correct_items': progress.correct_items, 'total_items': progress.total_items,
-            'activity_completed': progress.activity_completed,
+            'activity_completed': progress.activity_completed, 'state': saved,
         }})
     if activity_key == 'lesson7-gawain2b':
         data = json.loads(request.body or '{}'); state = data.get('state') if isinstance(data.get('state'), dict) else {}
@@ -15458,15 +15501,16 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             return JsonResponse({'success': False, 'error': 'Activity changed in another tab. Reload to resume.', 'state': state}, status=409)
 
         verified = None
-        if event.get('action') in {'reading', 'reading_attempt'}:
+        if event.get('action') in {'reading', 'reading_attempt', 'reading_syllable_attempt'}:
             item_index = int(state.get('index', 0))
             if item_index >= len(workbook['items']) and activity_key != 'aral-l22-g1-c-syllable-builder':
                 raise ValueError('No reading item remains.')
             request.POST = request.POST.copy()
-            if activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_attempt':
+            if activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
                 if not state.get('read_aloud_started'):
                     raise ValueError('Simulan muna ang pagbasa.')
-                request.POST.update(target_text=' '.join(item['text'] for item in workbook['items']), language='Filipino', mode='reading', current_syllable_index='0', syllable_context='')
+                current_index = min(int(state.get('index', 0)), len(workbook['items']) - 1)
+                request.POST.update(target_text=workbook['items'][current_index]['text'], language='Filipino', mode='reading', current_syllable_index='0', syllable_context='')
             else:
                 item = workbook['items'][item_index]
                 request.POST.update(target_text=item['text'], language=workbook.get('language', 'Filipino'), mode='reading', current_syllable_index='0', syllable_context='')
@@ -15474,9 +15518,10 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             result = json.loads(response.content)
             if response.status_code != 200 or not result.get('success'):
                 return response
-            verified = bool(str(result.get('transcript') or result.get('raw_transcript') or '').strip()) if activity_key == 'aral-l22-g1-c-syllable-builder' else bool(result.get('complete'))
-            if not verified and activity_key == 'aral-l22-g1-c-syllable-builder':
-                return JsonResponse({'success': False, 'error': 'Hindi nakuha ang pagbasa. Subukan muli.'}, status=422)
+            if activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_attempt':
+                verified = bool(str(result.get('transcript') or result.get('raw_transcript') or '').strip())
+            else:
+                verified = bool(result.get('complete'))
 
         updated = apply_event(workbook, state, event, verified)
         updated['revision'] = int(updated.get('revision', 0)) + 1
@@ -15508,6 +15553,19 @@ def prescribed_activity_complete(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity_key == 'session-4-gawain-1':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        state = existing.state if existing and isinstance(existing.state, dict) else {}
+        total = len(activity['items'])
+        completed_items = int(existing.completed_items if existing else state.get('completed_items', 0) or 0)
+        if completed_items < total:
+            return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang lahat ng letra.'}, status=400)
+        state = dict(state, phase='complete', completed_items=total, state_version=1_000_000_000)
+        StudentActivityProgress.objects.update_or_create(
+            student=student, activity_key=activity_key,
+            defaults={'current_index': total, 'completed_items': total, 'correct_items': total,
+                      'total_items': total, 'activity_completed': True, 'state': state})
+        return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity_key == 'lesson-14-gawain-3':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
@@ -16687,11 +16745,46 @@ def lesson_7_gawain_1_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def session_4_gawain_1_page(request):
+    # TEMPORARY TEST FLAG: remove/disable after resume-modal verification.
+    TEST_RESUME_MODAL = True
     context = _dashboard_context(request)
+    activity = prescribed_activity('session-4-gawain-1')
     progress = StudentActivityProgress.objects.filter(student=_active_prescribed_student(request), activity_key='session-4-gawain-1').first()
     if progress and progress.activity_completed:
         return redirect('assessment')
-    context['session4_progress'] = {'current_index': progress.current_index if progress else 0, 'completed_items': progress.completed_items if progress else 0}
+    state = progress.state if progress and isinstance(progress.state, dict) else {}
+    # Test injection is opt-in only: the normal URL and resume_test=0 use real progress.
+    test_resume_modal = TEST_RESUME_MODAL and request.GET.get('resume_test') == '1'
+    if test_resume_modal:
+        state = {'current_index': 1, 'completed_items': 1, 'phase': 'initial', 'state_version': 0}
+        test_progress = {'current_index': 1, 'completed_items': 1, 'correct_items': 1,
+                         'total_items': activity['total_items'], 'activity_completed': False,
+                         'state': state}
+    else:
+        test_progress = None
+    has_incomplete_progress = bool(
+        (test_progress and not test_progress['activity_completed']) or
+        (progress and not progress.activity_completed and (
+            progress.completed_items > 0 or progress.current_index > 0
+        ))
+    )
+    context['lesson13_data'] = {
+        'activity_key': activity['activity_key'], 'session_number': activity['session_number'],
+        'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
+        'title': activity['title'], 'instruction': activity['instruction'],
+        'items': activity['items'], 'total_items': activity['total_items'],
+        'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity['activity_key']}),
+        'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity['activity_key']}),
+        'next_url': reverse('session_4_gawain_2_page'), 'back_url': reverse('assessment'),
+        'session_key': 'session-4', 'has_incomplete_progress': has_incomplete_progress,
+        'test_resume_modal': bool(test_progress),
+        'progress': test_progress or {'current_index': progress.current_index if progress else 0,
+                     'completed_items': progress.completed_items if progress else 0,
+                     'correct_items': progress.correct_items if progress else 0,
+                     'total_items': activity['total_items'],
+                     'activity_completed': progress.activity_completed if progress else False,
+                     'state': state},
+    }
     return render(request, 'pabasa_app/session_4_gawain_1_page.html', context)
 
 

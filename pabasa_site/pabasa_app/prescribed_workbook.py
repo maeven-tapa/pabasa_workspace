@@ -16,10 +16,11 @@ L22_C_ACCEPTED_BUILDS = {
     'cactus': ('cac', 'tus'),
     'Cebu': ('ce', 'bu'),
     'Cagayan': ('ca', 'ga', 'yan'),
-    'Cardo': ('car', 'do'),
+    'Cardo': ('Car', 'do'),
     'cabinet': ('ca', 'bi', 'net'),
-    'Celeste': ('ce', 'les', 'te'),
-    'computer': ('co', 'm', 'pu', 'ter'),
+    'Celeste': ('Ce', 'les', 'te'),
+    'com': ('com',),
+    'computer': ('com', 'pu', 'ter'),
 }
 
 
@@ -48,12 +49,11 @@ def add(key, page, lesson, number, title, instruction, kind, rows, **config):
 
 BOX = 'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salita mula rito.'
 add('aral-l22-g1-c-syllable-builder', 38, 22, '1', 'Letrang Cc', BOX, 'builder',
-    [['cac', 'ce', 'ca'], ['bu', 'co', 'm', 'pu'], ['ga', 'tus', 'ter'],
+    [['cac', 'ce', 'ca'], ['bu', 'com', 'pu'], ['ga', 'tus', 'ter'],
      ['yan', 'Car', 'do'], ['bi', 'ca', 'net'], ['te', 'Ce', 'les']],
-    item_ids=[f'item-{i}' for i in (1, 2, 3, 4, 5, 19, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18)],
     bigbox_cells=[
         [['item-1'], ['item-2'], ['item-3']],
-        [['item-4'], ['item-5', 'item-19'], ['item-6']],
+        [['item-4'], ['item-5'], ['item-6']],
         [['item-7'], ['item-8'], ['item-9']],
         [['item-10'], ['item-11'], ['item-12']],
         [['item-13'], ['item-14'], ['item-15']],
@@ -181,15 +181,28 @@ def _l22_c_word_for_parts(parts):
     piece_by_id = {item['id']: item['text'] for item in activity['items']}
     if not isinstance(parts, list) or not 1 <= len(parts) <= 15 or any(part not in piece_by_id for part in parts):
         return None
-    formed = tuple(piece_by_id[part].casefold() for part in parts)
+    formed = tuple(piece_by_id[part] for part in parts)
     return next((word for word, pieces in L22_C_ACCEPTED_BUILDS.items() if formed == pieces), None)
+
+
+def _normalize_l22_c_parts(parts):
+    """Convert the legacy co + m selection into the current single com tile."""
+    if not isinstance(parts, list):
+        return parts
+    normalized = []
+    for part in parts:
+        if part == 'item-19' and normalized[-1:] == ['item-5']:
+            continue
+        normalized.append(part)
+    return normalized
 
 
 def normalize_l22_c_state(state):
     """Upgrade saved pre-specialized Gawain 1 state without trusting old word answers."""
     legacy_index = int(state.get('index') or 0)
     oral = state.get('oral') if isinstance(state.get('oral'), dict) else {}
-    legacy_read = legacy_index >= 18
+    item_count = len(ACTIVITIES['aral-l22-g1-c-syllable-builder']['items'])
+    legacy_read = legacy_index > item_count or legacy_index >= item_count and bool(state.get('read_aloud_completed'))
     if 'read_aloud_completed' not in state:
         state['read_aloud_completed'] = legacy_read
     if 'read_aloud_started' not in state:
@@ -201,11 +214,18 @@ def normalize_l22_c_state(state):
             saved_words = state['draft'].get('words', [])
         if isinstance(saved_words, list):
             for parts in saved_words:
-                word = _l22_c_word_for_parts(parts)
+                word = _l22_c_word_for_parts(_normalize_l22_c_parts(parts))
                 if word and word.casefold() not in {str(existing).casefold() for existing in state['found_words']}:
                     state['found_words'].append(word)
     state.setdefault('last_feedback', '')
     state.setdefault('pending_words', [])
+    state.setdefault('reading_attempts', 0)
+    state.setdefault('read_aloud_listens', 0)
+    state.setdefault('reading_phase', 'complete' if state.get('read_aloud_completed') else 'read')
+    if isinstance(state.get('draft'), dict) and isinstance(state['draft'].get('builder'), list):
+        state['draft']['builder'] = _normalize_l22_c_parts(state['draft']['builder'])
+    if state.get('read_aloud_completed'):
+        state['index'] = item_count
     if state.get('completed') and (not state['read_aloud_completed'] or not state['found_words']):
         state['completed'] = False
         state['index'] = 0
@@ -333,7 +353,7 @@ def _apply_l22_c_builder(state, event, verified_reading):
         draft = event.get('draft', {})
         if not isinstance(draft, dict) or len(json.dumps(draft)) > 350000:
             raise ValueError('Hindi na-save ang iyong sagot. Subukan muli.')
-        parts = draft.get('builder', [])
+        parts = _normalize_l22_c_parts(draft.get('builder', []))
         allowed_ids = {item['id'] for item in ACTIVITIES[
             'aral-l22-g1-c-syllable-builder']['items']}
         if (not isinstance(parts, list) or len(parts) > 15
@@ -348,19 +368,52 @@ def _apply_l22_c_builder(state, event, verified_reading):
         if state['read_aloud_completed']:
             raise ValueError('Natapos na ang pagbasa.')
         state['read_aloud_started'] = True
+        state['reading_phase'] = 'read'
         return state
     if action == 'reading_attempt':
+        # Keep the pre-specialized event compatible with saved/test clients.
         if not state['read_aloud_started']:
             raise ValueError('Simulan muna ang pagbasa.')
         if verified_reading is not True:
             raise ValueError('Hindi nakuha ang pagbasa. Subukan muli.')
         state['read_aloud_completed'] = True
+        state['index'] = len(ACTIVITIES['aral-l22-g1-c-syllable-builder']['items'])
+        state['reading_phase'] = 'complete'
         state['last_feedback'] = ''
+        return state
+    if action == 'reading_syllable_attempt':
+        if not state['read_aloud_started']:
+            raise ValueError('Simulan muna ang pagbasa.')
+        if state.get('reading_phase') != 'read':
+            raise ValueError('Pakinggan muna ang halimbawa.')
+        if verified_reading is True:
+            item_count = len(ACTIVITIES['aral-l22-g1-c-syllable-builder']['items'])
+            state['index'] = min(item_count, int(state.get('index', 0)) + 1)
+            state['reading_attempts'] = 0
+            state['last_feedback'] = 'Tama!'
+            if state['index'] >= item_count:
+                state['read_aloud_completed'] = True
+                state['reading_phase'] = 'complete'
+        else:
+            state['reading_attempts'] = int(state.get('reading_attempts', 0)) + 1
+            state['last_feedback'] = 'Subukan muli.'
+            if state['reading_attempts'] >= 3:
+                state['reading_phase'] = 'listen'
+                state['read_aloud_listens'] = 0
+        return state
+    if action == 'read_aloud':
+        if state.get('reading_phase') != 'listen':
+            raise ValueError('Hindi pa kailangan ang Read Aloud.')
+        state['read_aloud_listens'] = int(state.get('read_aloud_listens', 0)) + 1
+        state['last_feedback'] = ''
+        if state['read_aloud_listens'] >= 3:
+            state['reading_phase'] = 'read'
+            state['reading_attempts'] = 0
         return state
     if action == 'build_word':
         if not state['read_aloud_completed']:
             raise ValueError('Basahin muna ang mga pantig.')
-        parts = event.get('parts')
+        parts = _normalize_l22_c_parts(event.get('parts'))
         activity = ACTIVITIES['aral-l22-g1-c-syllable-builder']
         piece_by_id = {item['id']: item['text'] for item in activity['items']}
         if (not isinstance(parts, list) or not 1 <= len(parts) <= 15

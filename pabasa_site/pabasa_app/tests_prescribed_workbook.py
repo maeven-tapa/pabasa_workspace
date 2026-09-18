@@ -62,18 +62,18 @@ class WorkbookStateTests(SimpleTestCase):
         self.assertEqual(a['title'], 'Letrang Cc')
         self.assertEqual(a['instruction'], 'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salita mula rito.')
         self.assertEqual(a['rows'], [
-            ['cac', 'ce', 'ca'], ['bu', 'co', 'm', 'pu'], ['ga', 'tus', 'ter'],
+            ['cac', 'ce', 'ca'], ['bu', 'com', 'pu'], ['ga', 'tus', 'ter'],
             ['yan', 'Car', 'do'], ['bi', 'ca', 'net'], ['te', 'Ce', 'les'],
         ])
         self.assertEqual(a['bigbox_cells'][1], [
-            ['item-4'], ['item-5', 'item-19'], ['item-6'],
+            ['item-4'], ['item-5'], ['item-6'],
         ])
         box_piece_by_id = {item['id']: item['text'] for item in a['items']}
         self.assertEqual(
             [[box_piece_by_id[item_id] for item_id in cell] for cell in a['bigbox_cells'][1]],
-            [['bu'], ['co', 'm'], ['pu']],
+            [['bu'], ['com'], ['pu']],
         )
-        self.assertEqual(len(a['items']), 19)
+        self.assertEqual(len(a['items']), 18)
         s = initial_state()
         with self.assertRaisesMessage(ValueError, 'Basahin muna'):
             apply_event(a, s, {'action': 'build_word', 'parts': ['item-1', 'item-8']})
@@ -93,6 +93,25 @@ class WorkbookStateTests(SimpleTestCase):
         apply_event(a, s, {'action': 'finish'})
         self.assertTrue(s['completed'])
         self.assertEqual(s['found_words'], ['cactus'])
+
+    def test_lesson22_gawain1_com_is_one_big_box_piece(self):
+        a = get_activity('aral-l22-g1-c-syllable-builder')
+        self.assertEqual(a['items'][4], {'id': 'item-5', 'text': 'com'})
+        self.assertNotIn('m', [item['text'] for item in a['items']])
+        s = initial_state()
+        apply_event(a, s, {'action': 'reading_started'})
+        apply_event(a, s, {'action': 'reading_attempt'}, True)
+        apply_event(a, s, {'action': 'build_word', 'parts': ['item-5']})
+        self.assertEqual(s['found_words'], ['com'])
+
+    def test_lesson22_gawain1_migrates_legacy_co_m_selection_to_com(self):
+        a = get_activity('aral-l22-g1-c-syllable-builder')
+        legacy = {
+            'index': 19, 'completed': False, 'read_aloud_completed': True,
+            'draft': {'builder': ['item-5', 'item-19']},
+        }
+        apply_event(a, legacy, {'action': 'draft', 'draft': {'builder': ['item-5', 'item-19']}})
+        self.assertEqual(legacy['draft']['builder'], ['item-5'])
 
 
 class PrescribedWorkbookFlowTests(TestCase):

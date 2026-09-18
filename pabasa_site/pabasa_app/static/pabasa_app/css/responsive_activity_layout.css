@@ -1,0 +1,137 @@
+/* Shared viewport safeguards for the selected card-based activities. */
+html.activity-responsive,
+body.activity-responsive {
+  min-width: 0;
+}
+
+body.activity-responsive {
+  overflow-x: hidden;
+}
+
+@media (max-height: 760px) and (min-width: 761px) {
+  html.activity-responsive,
+  body.activity-responsive {
+    height: auto;
+    min-height: 100%;
+    overflow-y: auto;
+  }
+
+  body.activity-responsive .page,
+  body.activity-responsive .app {
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  body.activity-responsive .card,
+  body.activity-responsive .game {
+    height: auto;
+    min-height: calc(100dvh - 58px);
+    overflow: visible;
+  }
+}
+
+@media (max-width: 760px) {
+  html.activity-responsive,
+  body.activity-responsive {
+    height: auto;
+    min-height: 100%;
+    overflow-y: auto;
+  }
+
+  body.activity-responsive .page,
+  body.activity-responsive .app {
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  body.activity-responsive .card,
+  body.activity-responsive .game {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    min-height: calc(100dvh - 58px);
+    overflow: visible;
+  }
+
+  body.activity-responsive .head,
+  body.activity-responsive .header {
+    min-width: 0;
+  }
+
+  body.activity-responsive .head h1,
+  body.activity-responsive .brand h1,
+  body.activity-responsive .question,
+  body.activity-responsive .instruction,
+  body.activity-responsive .status {
+    overflow-wrap: anywhere;
+  }
+
+  body.activity-responsive button,
+  body.activity-responsive a {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  body.activity-responsive .page,
+  body.activity-responsive .app {
+    padding-inline: 8px;
+  }
+
+  body.activity-responsive .card,
+  body.activity-responsive .game {
+    border-radius: 18px;
+    padding-inline: 12px;
+  }
+}
+
+@media (max-width: 650px) {
+  body.lesson-3-responsive .answers {
+    width: 100%;
+    gap: 12px;
+  }
+
+  body.lesson-3-responsive .answer {
+    min-width: 0;
+    width: min(100%, 320px);
+  }
+
+  body.lesson-6-responsive .focus {
+    height: auto;
+    min-height: 0;
+    flex-direction: column;
+  }
+
+  body.lesson-6-responsive .picture img {
+    width: min(78vw, 300px);
+    height: min(34vh, 260px);
+  }
+
+  body.lesson-6-responsive .choices {
+    width: 100%;
+  }
+
+  body.lesson-6-responsive .choice {
+    flex: 1 1 120px;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  body.lesson-4-responsive .focused,
+  body.lesson-7-responsive .layout {
+    min-width: 0;
+  }
+
+  body.lesson-4-responsive .controls,
+  body.lesson-7-responsive .controls {
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  body.lesson-4-responsive .read,
+  body.lesson-7-responsive .read,
+  body.lesson-7-responsive .done {
+    min-height: 48px;
+  }
+}
