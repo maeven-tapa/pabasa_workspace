@@ -21,12 +21,54 @@
   .gawain-2 #game:has(#listen)>#listen{grid-column:2;grid-row:5;width:100%;min-width:0}
   @media(max-width:650px){.gawain-2 #game:has(#listen){column-gap:10px}.gawain-2 #game:has(#listen)>#read,.gawain-2 #game:has(#listen)>#listen{min-height:64px;font-size:1rem;padding:12px 8px}}
 </style>
+<style>
+  /* Part 2: compact, balanced choice group matching the activity buttons. */
+  .gawain-2 #game.game:has(.answers) .status {
+    width: min(760px, 100%);
+    margin: 8px auto 4px !important;
+  }
+  .gawain-2 #game.game:has(.answers) .answers {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    width: min(760px, 100%);
+    margin: 10px auto 0 !important;
+    gap: 14px !important;
+  }
+  .gawain-2 #game.game:has(.answers) .answer {
+    width: 100%;
+    min-width: 0 !important;
+    min-height: 70px !important;
+    padding: 12px 16px;
+    border: 3px solid #94d9d6;
+    border-radius: 999px;
+    background: #299e9a;
+    color: #fff;
+    box-shadow: 0 7px 0 #187b7a, 0 10px 20px #187b7a40;
+    font: 900 clamp(.95rem, 1.8vw, 1.2rem)/1.1 Nunito, "Segoe UI", sans-serif;
+  }
+  .gawain-2 #game.game:has(.answers) .answer small {
+    font: inherit;
+    letter-spacing: .01em;
+  }
+  @media(max-width:650px) {
+    .gawain-2 #game.game:has(.answers) .answers {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px !important;
+    }
+    .gawain-2 #game.game:has(.answers) .answer {
+      min-height: 62px !important;
+      padding: 10px 6px;
+      font-size: clamp(.72rem, 3.2vw, .95rem);
+    }
+  }
+</style>
 <body class="gawain-2">
   <main class="app">
     <nav class="nav"><a class="back" href="{% url 'assessment' %}">← Bumalik sa<br>Aking Aralin</a></nav>
     <section id="game" class="game"></section>
   </main>
-  <script src="{% static 'pabasa_app/js/lesson3_gawain_2_sequence.js' %}?v=20260917-4"></script>
+  <script src="{% static 'pabasa_app/js/lesson3_gawain_2_sequence.js' %}?v=20260919-1"></script>
   <script>
     const savedLesson3Progress = {{ lesson_3_progress|safe }};
     if (savedLesson3Progress) localStorage.setItem('pabasa:lesson-3-gawain-2:progress', String(savedLesson3Progress.activity_completed?6:savedLesson3Progress.current_index));
@@ -83,10 +125,13 @@
       new MutationObserver(syncButtons).observe(game,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});
     });
   </script>
-  <style>
-    .gawain-2 .lesson3-g2-actions{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:stretch!important;justify-content:center!important;gap:14px!important;grid-column:1/-1!important;width:100%!important;margin:0 auto!important}
+<style>
+  .gawain-2 .lesson3-g2-actions{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:stretch!important;justify-content:center!important;gap:14px!important;grid-column:1/-1!important;width:100%!important;margin:0 auto!important}
     .gawain-2 .lesson3-g2-actions>#read,.gawain-2 .lesson3-g2-actions>#listen{flex:1 1 0!important;width:auto!important;min-width:0!important;margin:0!important}
     @media(max-width:650px){.gawain-2 .lesson3-g2-actions{gap:10px!important}.gawain-2 .lesson3-g2-actions>#read,.gawain-2 .lesson3-g2-actions>#listen{min-height:64px!important;padding:12px 8px!important;font-size:1rem!important}}
+  </style>
+  <style>
+    .gawain-2 button.narration-disabled{opacity:.5!important;filter:grayscale(.65);cursor:not-allowed!important;pointer-events:none!important;box-shadow:none!important}
   </style>
   <script>
     document.addEventListener('DOMContentLoaded',function(){
@@ -200,3 +245,24 @@ document.addEventListener('click', async function(event){
 <script>document.addEventListener('click',function(e){const b=e.target.closest('.answer');if(!b)return;setTimeout(function(){const s=document.getElementById('status');if(s&&s.textContent.trim()==='')s.textContent='Subukan muli.'},0)},true);</script>
 <script>document.addEventListener('click',function(e){const b=e.target.closest('.answer');if(!b)return;const before=document.querySelector('.progress')?.textContent;setTimeout(function(){if(before===document.querySelector('.progress')?.textContent){const s=document.getElementById('status');if(s){s.textContent='Subukan muli.';s.classList.add('warning')}}},80)},true);</script>
 <script>(function(){const p=document.querySelector('.progress');if(!p)return;let saved=0;const url="{{ lesson_3_progress_url }}",csrf=document.cookie.match(/csrftoken=([^;]+)/)?.[1]||'';function save(done,n){fetch(url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf},body:JSON.stringify({activity_key:'lesson-3-gawain-2',current_index:n,completed_items:n,correct_items:n,total_items:6,activity_completed:done,state:{}})}).catch(console.error)}setInterval(function(){const n=Number((p.textContent.match(/\d+/)||[0])[0]);if(n>saved){saved=n;save(n>=6,n)}if(document.querySelector('.complete'))save(true,6)},250)})();</script>
+<style>
+.gawain-2{min-height:100vh;background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover fixed!important;color:#183e63}
+.gawain-2 .shell{width:min(1250px,100%);min-height:100vh}
+.gawain-2 .nav{left:0;width:100%}
+.gawain-2 .back{display:inline-flex;align-items:center;justify-content:center;width:280px;min-height:64px;padding:12px 22px;border-radius:999px;background:#fff;color:#183e63;font:900 1.2rem/1.15 Nunito,"Segoe UI",sans-serif;box-shadow:0 8px 17px #145ca744}
+.gawain-2 #game.game{top:50%;width:min(1250px,calc(100% - 32px))!important;height:calc(100vh - 190px)!important;max-height:calc(100vh - 190px)!important;min-height:0!important;margin-top:31px!important;padding:clamp(24px,3.2vh,42px) clamp(20px,6vw,80px) 20px!important;border:2px solid #ffffffaa!important;border-radius:42px!important;background:#ffffff70!important;box-shadow:0 18px 45px #1e5b7a35!important}
+.gawain-2 .header{border-radius:20px;background:#ffffffe0;box-shadow:0 8px 18px #251c1620}
+.gawain-2 .instruction{border:1px solid #dbe5e8;border-radius:16px;background:#fffffff0;box-shadow:0 6px 14px #251c2218;color:#315b74}
+.gawain-2 .pairs .word{border:3px solid #94d9d6;border-radius:22px;background:#fffdf5;box-shadow:0 8px 18px #187b7a18}
+.gawain-2 .pairs .word.active{border-color:#e6a33a;background:#ffe9a7;box-shadow:0 0 0 5px #fff4c7,0 10px 20px #0001}
+.gawain-2 .read,.gawain-2 .listen{min-height:68px;border-radius:999px;font-weight:900;transition:.16s}
+.gawain-2 .read{background:#299e9a;box-shadow:0 7px 0 #187b7a,0 10px 20px #187b7a40}
+.gawain-2 .listen{background:#fffffff0;color:#187b7a;border:3px solid #94d9d6;box-shadow:0 5px 0 #b7d6dc,0 8px 16px #187b7a20}
+.gawain-2 .read:not(:disabled):hover,.gawain-2 .listen:not(:disabled):hover{transform:translateY(-2px)}
+.gawain-2 .answers{gap:14px}
+.gawain-2 .answer{border-radius:18px;box-shadow:0 6px 0 #187b7a}
+.gawain-2 .complete{border:2px solid #ffffffaa;border-radius:32px;background:#ffffffc9;box-shadow:0 18px 42px #12373445}
+.gawain-2 #game.game:has(.complete){position:fixed!important;inset:0!important;z-index:2;display:grid!important;place-items:center!important;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;margin:0!important;padding:24px!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;transform:none!important}
+.gawain-2 #game.game:has(.complete) .complete{width:min(560px,100%);margin:0;padding:clamp(32px,5vw,54px) clamp(24px,6vw,64px);text-align:center}
+@media(max-width:650px){.gawain-2 #game.game{width:calc(100% - 24px)!important;height:calc(100vh - 150px)!important;max-height:calc(100vh - 150px)!important;margin-top:23px!important;border-radius:30px!important;padding:22px 14px 16px!important}.gawain-2 .back{width:230px;min-height:58px;font-size:1rem}.gawain-2 .read,.gawain-2 .listen{min-height:62px}}
+</style>
