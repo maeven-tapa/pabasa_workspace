@@ -21,6 +21,7 @@
     const narrationText='Magsanay magsulat ng letrang o. Isulat nang tatlong beses ang letrang o.';
     const normalHint='Isulat ang Oo sa bawat hanay.';
     const retryMessage='Subukan ulit! Isulat nang malinaw ang letrang Oo.';
+    const retryNarration='Subukan ulit! Isulat nang malinaw ang letrang Oo.';
     const csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
     let index=Math.max(0,Math.min(3,Number(data.progress?.current_index)||0));
     let busy=false;
@@ -32,7 +33,7 @@
     const setControlsDisabled=disabled=>controls().forEach(button=>{button.disabled=disabled});
     const setHint=text=>{const hint=app.querySelector('#hint');if(hint)hint.textContent=text};
     const narrateInstruction=async()=>{if(index>=3||instructionPlayedFor===index)return;instructionPlayedFor=index;busy=true;setControlsDisabled(true);await speak(narrationText);busy=false;setControlsDisabled(false)};
-    const retry=async()=>{setHint(retryMessage);busy=true;setControlsDisabled(true);await speak(retryMessage);busy=false;setControlsDisabled(false)};
+    const retry=async()=>{setHint(retryMessage);busy=true;setControlsDisabled(true);await speak(retryNarration);busy=false;setControlsDisabled(false)};
     const point=(event,canvas)=>{const rect=canvas.getBoundingClientRect();return{x:(event.clientX-rect.left)/rect.width,y:(event.clientY-rect.top)/rect.height}};
 
     const valid=canvas=>{
@@ -54,6 +55,7 @@
       const inkDensity=points.length/(width*height);
       return inkDensity>.01&&inkDensity<.6&&holes.every(hole=>hole.area>=8);
     };
+
 
     const bindCanvas=canvas=>{const rect=canvas.getBoundingClientRect(),ratio=devicePixelRatio||1;canvas.width=Math.max(1,Math.round(rect.width*ratio));canvas.height=Math.max(1,Math.round(rect.height*ratio));const context=canvas.getContext('2d');context.setTransform(ratio,0,0,ratio,0,0);context.strokeStyle='#286b93';context.lineWidth=5;context.lineCap='round';context.lineJoin='round';let active=null;const append=event=>{if(!active)return;const pointValue=point(event,canvas),last=active.points[active.points.length-1];if(!last||pointValue.x!==last.x||pointValue.y!==last.y){active.points.push(pointValue);context.lineTo(pointValue.x*rect.width,pointValue.y*rect.height);context.stroke()}};canvas.addEventListener('pointerdown',event=>{if(busy)return;event.preventDefault();const pointValue=point(event,canvas);active={pointerId:event.pointerId,points:[pointValue]};rows[index].push(active.points);context.beginPath();context.moveTo(pointValue.x*rect.width,pointValue.y*rect.height);canvas.setPointerCapture?.(event.pointerId)});canvas.addEventListener('pointermove',event=>{if(active?.pointerId===event.pointerId)(event.getCoalescedEvents?.()||[event]).forEach(append)});const finish=event=>{if(active?.pointerId!==event.pointerId)return;append(event);canvas.releasePointerCapture?.(event.pointerId);active=null};canvas.addEventListener('pointerup',finish);canvas.addEventListener('pointercancel',finish)};
 

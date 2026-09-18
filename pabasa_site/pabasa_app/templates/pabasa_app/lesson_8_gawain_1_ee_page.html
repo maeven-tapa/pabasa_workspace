@@ -1,0 +1,62 @@
+{% load static %}
+<!doctype html>
+<html lang="fil">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>GAWAIN 1: Letrang Ee</title>
+  <link rel="stylesheet" href="{% static 'pabasa_app/css/lesson_7_gawain_4.css' %}?v=20260918-2">
+  <style>
+    .lesson8-gawain1-page .model{top:12%;height:76%;align-items:center}
+    .lesson8-gawain1-page .model b{font-size:clamp(3.2rem,6.5vh,4.5rem);transform:none}
+    .lesson8-gawain1-page .model i{margin-top:0;font-size:clamp(2.7rem,5.4vh,3.8rem)}
+  </style>
+</head>
+<body class="lesson8-gawain1-page">
+  <main class="page">
+    <a class="back" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a>
+    <section id="app" class="card"></section>
+  </main>
+  {{ handwriting_activity_data|json_script:"handwriting-data" }}
+  <script>
+  (()=>{
+    const data=JSON.parse(document.getElementById('handwriting-data').textContent||'{}'),app=document.getElementById('app'),csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
+    const instructionText='Magsanay magsulat ng Letrang Ee. Isulat nang tatlong beses ang Letrang Ee.';
+    const narrationText='Magsanay magsulat ng letrang E. Isulat nang tatlong beses ang letrang E.';
+    const normalHint='Isulat ang Ee sa bawat hanay.';
+    const retryMessage='Subukan ulit! Isulat nang malinaw ang letrang Ee.';
+    const retryNarration='Subukan ulit! Isulat nang malinaw ang letrang E.';
+    let index=Math.max(0,Math.min(3,Number(data.progress?.current_index)||0)),busy=false,narrationBusy=false,instructionPlayedFor=-1;
+    const rows=[[],[],[]];
+    const speak=text=>fetch('{% url "reading_read_aloud_api" %}',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',prescribed_activity_key:data.activity_key})}).then(response=>response.ok?response.json():null).then(result=>new Promise(resolve=>{if(!result?.success||!result.audio_content){resolve();return}const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);audio.onended=resolve;audio.onerror=resolve;audio.play().catch(resolve)})).catch(()=>{});
+    const controls=()=>[app.querySelector('#clear'),app.querySelector('#next')].filter(Boolean);
+    const setControlsDisabled=disabled=>controls().forEach(control=>{control.disabled=disabled});
+    const setHint=text=>{const hint=app.querySelector('#hint');if(hint)hint.textContent=text};
+    const narrateInstruction=async()=>{if(index>=3||instructionPlayedFor===index)return;instructionPlayedFor=index;narrationBusy=true;busy=true;setControlsDisabled(true);await speak(narrationText);narrationBusy=false;busy=false;setControlsDisabled(false)};
+    const retry=async()=>{setHint(retryMessage);busy=true;setControlsDisabled(true);await speak(retryNarration);busy=false;setControlsDisabled(false)};
+    const point=(event,canvas)=>{const rect=canvas.getBoundingClientRect();return{x:(event.clientX-rect.left)/rect.width,y:(event.clientY-rect.top)/rect.height}};
+    const validEe=canvas=>{
+      const pixels=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data,points=[];
+      for(let y=0;y<canvas.height;y+=2)for(let x=0;x<canvas.width;x+=2)if(pixels[(y*canvas.width+x)*4+3]>35)points.push([x,y]);
+      if(points.length<60)return false;
+      const xs=points.map(point=>point[0]),ys=points.map(point=>point[1]),left=Math.min(...xs),right=Math.max(...xs),top=Math.min(...ys),bottom=Math.max(...ys),width=right-left+1,height=bottom-top+1;
+      if(width<34||height<22||width/height<.9||width/height>4.5)return false;
+      const span=(from,to)=>{const row=points.filter(point=>point[1]>=top+height*from&&point[1]<=top+height*to);return row.length?Math.max(...row.map(point=>point[0]))-Math.min(...row.map(point=>point[0]))+1:0};
+      const occupied=(fromX,fromY,toX,toY)=>points.some(point=>point[0]>=left+width*fromX&&point[0]<=left+width*toX&&point[1]>=top+height*fromY&&point[1]<=top+height*toY);
+      const leftStroke=points.filter(point=>point[0]<=left+width*.28&&point[1]>=top+height*.08&&point[1]<=bottom-height*.08).length>height*.22;
+      const topBar=span(.05,.25)>width*.42,midBar=span(.38,.62)>width*.28,bottomBar=span(.75,.95)>width*.3;
+      const rightSide=points.filter(point=>point[0]>=left+width*.52).length>points.length*.2;
+      const rightLoop=occupied(.52,.24,.96,.9)&&occupied(.66,.48,.94,.9);
+      const uppercase=leftStroke&&[topBar,midBar,bottomBar].filter(Boolean).length>=2&&width>height*1.45;
+      const lowercase=midBar&&occupied(.2,.08,.9,.42)&&occupied(.2,.58,.9,.92)&&!occupied(.72,.25,.98,.78)&&width>height*1.45;
+      return (uppercase||lowercase)&&rightSide&&rightLoop;
+    };
+    const bindCanvas=canvas=>{const rect=canvas.getBoundingClientRect(),ratio=devicePixelRatio||1;canvas.width=Math.max(1,Math.round(rect.width*ratio));canvas.height=Math.max(1,Math.round(rect.height*ratio));const context=canvas.getContext('2d');context.setTransform(ratio,0,0,ratio,0,0);context.strokeStyle='#286b93';context.lineWidth=5;context.lineCap='round';context.lineJoin='round';let active=null;const append=event=>{if(!active)return;const value=point(event,canvas),last=active.points[active.points.length-1];if(!last||value.x!==last.x||value.y!==last.y){active.points.push(value);context.lineTo(value.x*rect.width, value.y*rect.height);context.stroke()}};canvas.addEventListener('pointerdown',event=>{if(busy)return;event.preventDefault();const value=point(event,canvas);active={pointerId:event.pointerId,points:[value]};rows[index].push(active.points);context.beginPath();context.moveTo(value.x*rect.width,value.y*rect.height);canvas.setPointerCapture?.(event.pointerId)});canvas.addEventListener('pointermove',event=>{if(active?.pointerId===event.pointerId)(event.getCoalescedEvents?.()||[event]).forEach(append)});const finish=event=>{if(active?.pointerId!==event.pointerId)return;append(event);canvas.releasePointerCapture?.(event.pointerId);active=null};canvas.addEventListener('pointerup',finish);canvas.addEventListener('pointercancel',finish)};
+    const save=async()=>{const response=await fetch(data.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({current_index:index+1,completed_items:index+1,state:{activity_key:data.activity_key,completed_areas:index+1}})});if(!response.ok)throw Error('progress')};
+    const submitCurrent=async()=>{if(busy)return;const canvas=app.querySelector('canvas');if(!canvas||!validEe(canvas)){await retry();return}busy=true;setControlsDisabled(true);try{await save();if(index<2){index+=1;render();return}const completion=await fetch(data.completion_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'});if(!completion.ok)throw Error('completion');index=3;render()}catch(error){await retry()}finally{busy=false;if(index<3&&!narrationBusy)setControlsDisabled(false)}};
+    function render(){if(index>=3){app.innerHTML='<div class="done"><div><h1>Magaling!</h1><p>Natapos mo ang GAWAIN 1: Letrang Ee.</p></div></div>';return}const row='<div class="row"><span class="model"><b>E</b><i>e</i></span><canvas aria-label="Hanay '+(index+1)+'"></canvas></div>';app.innerHTML='<p class="eyebrow">SESSION 3 · LESSON 8 · GAWAIN 1</p><h1>GAWAIN 1: Letrang Ee</h1><p class="instruction">'+instructionText+'</p><p class="progress">Hanay '+(index+1)+' ng 3</p><div class="sheet">'+row+'</div><p class="hint" id="hint">'+normalHint+'</p><div class="actions"><button class="button clear" id="clear" type="button">Burahin</button><button class="button" id="next" type="button">'+(index===2?'Tapusin':'Susunod')+'</button></div>';const canvas=app.querySelector('canvas');bindCanvas(canvas);app.querySelector('#clear').onclick=()=>{if(busy)return;rows[index]=[];canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);setHint(normalHint)};app.querySelector('#next').onclick=submitCurrent;narrateInstruction()}
+    render();
+  })();
+  </script>
+</body>
+</html>

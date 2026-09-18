@@ -13100,7 +13100,7 @@ def prescribed_activity_page(request, activity_key):
             'progress': {'current_index': progress.current_index if progress else 0, 'completed_items': progress.completed_items if progress else 0,
                          'activity_completed': progress.activity_completed if progress else False, 'state': raw_state},
         }
-        return render(request, 'pabasa_app/lesson_8_gawain_1_page.html', context)
+        return render(request, 'pabasa_app/lesson_8_gawain_1_ee_page.html', context)
     if activity_key == 'lesson7-gawain4a':
         context = _dashboard_context(request)
         context['shape_stamp_activity_data'] = {
