@@ -12,10 +12,18 @@
   <style>body.gawain-2,body.gawain-2::before{background:linear-gradient(#093f5030,#093f5018),url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover fixed!important}</style>
   <style>.gawain-2 .pairs .word::before{content:none!important;display:none!important}.gawain-2 .pairs .word.active::before{content:'SABIHIN ITO'!important;display:block!important;position:absolute;top:-18px;left:50%;z-index:3;transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:#ffc928;color:#5b3b00;font-size:.72rem;font-weight:900;letter-spacing:.06em;white-space:nowrap;box-shadow:0 3px 8px #b77b1b55}.gawain-2:not(:has(.answers)) .status{font-size:1rem!important}.gawain-2:not(:has(.answers)) .status::after{content:none!important}</style>
   <style>.gawain-2:not(:has(.answers)) .status.warning{font-size:1rem!important;color:#92400e;background:#fef3c7;border-radius:12px;padding:7px 12px}.gawain-2:not(:has(.answers)) .status.warning::after{content:none!important}</style>
+  <style>.gawain-2{height:100dvh;min-height:0;overflow:hidden;padding:16px clamp(16px,4vw,42px) 22px;background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover fixed}.gawain-2 .app{height:100dvh;padding:0;display:block;position:relative}.gawain-2 .nav{position:absolute;top:0;left:0;z-index:3;width:min(1250px,100%);margin:0 auto}.gawain-2 .back{width:280px;min-height:64px;border-radius:999px;background:#fff;color:#183e63;font:900 1.2rem/1.15 Nunito,"Segoe UI",sans-serif;box-shadow:0 8px 17px #145ca744}.gawain-2 .game{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(1250px,100%);height:calc(100vh - 110px);max-height:none;min-height:0;margin:31px 0 0;padding:clamp(24px,3.3vh,42px) clamp(20px,6vw,80px) 20px;border:2px solid #ffffffaa;border-radius:42px;background:#ffffff63;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 18px 45px #1e5b7a35;overflow:hidden}.gawain-2 .header{width:min(980px,100%);margin:0 auto;align-items:center;padding:8px 12px;border-radius:18px;background:rgba(255,253,244,.82);box-shadow:0 8px 18px rgba(37,28,22,.12)}.gawain-2 .brand h1{font-family:Coiny,Nunito,"Segoe UI",sans-serif;font-size:clamp(1.35rem,3vw,2rem);font-weight:400;line-height:1;color:#176078}.gawain-2 .brand p{margin:4px 0;color:#65777b;font:800 .8rem Nunito,"Segoe UI",sans-serif}.gawain-2 .progress{color:#526e75;font:900 .82rem Nunito,"Segoe UI",sans-serif}.gawain-2 .instruction{width:min(760px,100%);margin:18px auto 14px;padding:12px 18px;border:1px solid #dbe5e8;border-radius:16px;background:rgba(255,255,255,.94);box-shadow:0 6px 14px rgba(37,28,22,.1);font:800 1rem/1.35 Nunito,"Segoe UI",sans-serif}.gawain-2 .task:has(#listen){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:stretch;justify-content:initial;gap:0;width:min(760px,100%);height:100%;min-height:0}.gawain-2 .task:has(#listen)>:is(.header,.instruction,.pairs,.status){grid-column:1/-1}.gawain-2 .pairs{width:min(760px,100%);max-width:none;min-height:0;gap:14px;margin:auto}.gawain-2 .pairs .word,.gawain-2 .pairs .word:nth-child(2){width:100%;height:clamp(170px,28vh,240px);min-height:0;padding:12px;border:3px solid #d4ebe1;border-radius:20px;background:#fffdf5;box-shadow:0 10px 20px #0001;transform:none}.gawain-2 .pairs .word.active{background:#ffe9a7;border:5px solid #e6a33a;box-shadow:0 0 0 4px #fff4c7,0 10px 20px #0001}.gawain-2 .pairs .word img{height:clamp(90px,17vh,135px);max-width:80%;object-fit:contain}.gawain-2 .status{margin:10px auto 8px;color:#302a32;font:900 1rem Nunito,"Segoe UI",sans-serif}.gawain-2 .read,.gawain-2 .listen{width:100%;min-width:0;min-height:76px;margin:0;border-radius:999px;font:900 clamp(1rem,1.8vw,1.35rem) Nunito,"Segoe UI",sans-serif}.gawain-2 .read{background:#299e9a;box-shadow:0 7px 0 #187b7a,0 10px 20px #187b7a40}.gawain-2 .listen{background:#fffffff0;color:#187b7a;border:4px solid #94d9d6;box-shadow:0 5px 0 #b7d6dc,0 8px 16px #187b7a20}.gawain-2 .answers{gap:14px;margin:18px auto 0}.gawain-2 .answer{min-width:210px;min-height:92px;border-radius:16px;font:900 clamp(1.8rem,4vw,2.7rem) Nunito,"Segoe UI",sans-serif}.gawain-2 .complete{width:min(520px,calc(100% - 24px));margin:auto;padding:clamp(28px,5vw,46px) clamp(22px,6vw,58px);border:2px solid #d7e7dc;border-radius:26px;background:#fffdf5;box-shadow:0 18px 42px rgba(18,55,52,.28);text-align:center}@media(max-width:650px){.gawain-2 .game{width:100%;height:calc(100vh - 92px);padding:22px 14px 16px;border-radius:30px}.gawain-2 .back{width:230px;min-height:58px;font-size:1rem}.gawain-2 .task:has(#listen){width:100%}.gawain-2 .pairs{gap:12px}.gawain-2 .pairs .word,.gawain-2 .pairs .word:nth-child(2){height:170px}.gawain-2 .pairs .word img{height:100px}.gawain-2 .answers{flex-direction:column;align-items:center}.gawain-2 .answer{width:min(300px,100%)}.gawain-2 .read,.gawain-2 .listen{min-height:64px}}</style>
 </head>
+<style>.gawain-2 .game{background:#ffffff9e!important}</style>
+<style>
+  .gawain-2 #game:has(#listen){grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:14px}
+  .gawain-2 #game:has(#listen)>#read{grid-column:1;grid-row:5;width:100%;min-width:0}
+  .gawain-2 #game:has(#listen)>#listen{grid-column:2;grid-row:5;width:100%;min-width:0}
+  @media(max-width:650px){.gawain-2 #game:has(#listen){column-gap:10px}.gawain-2 #game:has(#listen)>#read,.gawain-2 #game:has(#listen)>#listen{min-height:64px;font-size:1rem;padding:12px 8px}}
+</style>
 <body class="gawain-2">
   <main class="app">
-    <nav class="nav"><a class="back" href="{% url 'assessment' %}">← Bumalik</a></nav>
+    <nav class="nav"><a class="back" href="{% url 'assessment' %}">← Bumalik sa<br>Aking Aralin</a></nav>
     <section id="game" class="game"></section>
   </main>
   <script src="{% static 'pabasa_app/js/lesson3_gawain_2_sequence.js' %}?v=20260917-4"></script>
@@ -51,6 +59,51 @@
       window.setInterval(syncPhase2Instruction, 100);
     })();
   </script>
+  <script>
+    document.addEventListener('DOMContentLoaded',function(){
+      const game=document.getElementById('game');
+      if(!game)return;
+      const syncButtons=()=>{
+        const read=game.querySelector('#read'),listen=game.querySelector('#listen');
+        if(read&&read.hidden)read.hidden=false;
+        if(!listen)return;
+        if(listen.hidden)listen.hidden=false;
+        if(listen.textContent!=='🔊 Pakinggan')listen.textContent='🔊 Pakinggan';
+        if(listen.dataset.alwaysAvailable==='1')return;
+        const original=listen.onclick;
+        listen.dataset.alwaysAvailable='1';
+        listen.onclick=async function(event){
+          if(this.disabled)return;
+          this.disabled=true;
+          try{if(original)await original.call(this,event)}
+          finally{this.disabled=false;if(this.hidden)this.hidden=false;if(this.textContent!=='🔊 Pakinggan')this.textContent='🔊 Pakinggan'}
+        };
+      };
+      syncButtons();
+      new MutationObserver(syncButtons).observe(game,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});
+    });
+  </script>
+  <style>
+    .gawain-2 .lesson3-g2-actions{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:stretch!important;justify-content:center!important;gap:14px!important;grid-column:1/-1!important;width:100%!important;margin:0 auto!important}
+    .gawain-2 .lesson3-g2-actions>#read,.gawain-2 .lesson3-g2-actions>#listen{flex:1 1 0!important;width:auto!important;min-width:0!important;margin:0!important}
+    @media(max-width:650px){.gawain-2 .lesson3-g2-actions{gap:10px!important}.gawain-2 .lesson3-g2-actions>#read,.gawain-2 .lesson3-g2-actions>#listen{min-height:64px!important;padding:12px 8px!important;font-size:1rem!important}}
+  </style>
+  <script>
+    document.addEventListener('DOMContentLoaded',function(){
+      const game=document.getElementById('game');
+      if(!game)return;
+      const arrange=()=>{
+        const read=game.querySelector('#read'),listen=game.querySelector('#listen');
+        if(!read||!listen)return;
+        let row=game.querySelector('.lesson3-g2-actions');
+        if(!row){row=document.createElement('div');row.className='lesson3-g2-actions';read.parentNode.insertBefore(row,read)}
+        if(read.parentNode!==row)row.append(read);
+        if(listen.parentNode!==row)row.append(listen);
+      };
+      arrange();
+      new MutationObserver(arrange).observe(game,{childList:true,subtree:true});
+    });
+  </script>
 </body>
 </html>
 <!-- duplicate legacy Gawain 2 handlers intentionally disabled; the shared activity script above owns the flow.
@@ -78,6 +131,33 @@ document.addEventListener('click', async function(event){
   }
 },true);
 </script>
+<style>
+  .gawain-2{height:100dvh;min-height:0;overflow:hidden;padding:16px clamp(16px,4vw,42px) 22px;background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover fixed}
+  .gawain-2 .app{height:100dvh;padding:0;display:block;position:relative}
+  .gawain-2 .nav{position:absolute;top:0;left:0;z-index:3;width:min(1250px,100%);margin:0 auto}
+  .gawain-2 .back{width:280px;min-height:64px;border-radius:999px;background:#fff;color:#183e63;font:900 1.2rem/1.15 Nunito,"Segoe UI",sans-serif;box-shadow:0 8px 17px #145ca744}
+  .gawain-2 .game{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(1250px,100%);height:calc(100vh - 110px);max-height:none;min-height:0;margin:31px 0 0;padding:clamp(24px,3.3vh,42px) clamp(20px,6vw,80px) 20px;border:2px solid #ffffffaa;border-radius:42px;background:#ffffff63;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 18px 45px #1e5b7a35;overflow:hidden}
+  .gawain-2 .header{width:min(980px,100%);margin:0 auto;align-items:center;padding:8px 12px;border-radius:18px;background:rgba(255,253,244,.82);box-shadow:0 8px 18px rgba(37,28,22,.12)}
+  .gawain-2 .brand h1{font-family:Coiny,Nunito,"Segoe UI",sans-serif;font-size:clamp(1.35rem,3vw,2rem);font-weight:400;line-height:1;color:#176078}
+  .gawain-2 .brand p{margin:4px 0;color:#65777b;font:800 .8rem Nunito,"Segoe UI",sans-serif}
+  .gawain-2 .progress{color:#526e75;font:900 .82rem Nunito,"Segoe UI",sans-serif}
+  .gawain-2 .instruction{width:min(760px,100%);margin:18px auto 14px;padding:12px 18px;border:1px solid #dbe5e8;border-radius:16px;background:rgba(255,255,255,.94);box-shadow:0 6px 14px rgba(37,28,22,.1);font:800 1rem/1.35 Nunito,"Segoe UI",sans-serif}
+  .gawain-2 #game:has(#listen){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:stretch;gap:0;width:min(760px,100%);height:100%;min-height:0}
+  .gawain-2 #game:has(#listen)>:is(.header,.instruction,.pairs,.status){grid-column:1/-1}
+  .gawain-2 #game:has(#listen[hidden]) #read{grid-column:1/-1;width:min(330px,100%);justify-self:center}
+  .gawain-2 .pairs{width:min(760px,100%);max-width:none;min-height:0;gap:14px;margin:auto}
+  .gawain-2 .pairs .word,.gawain-2 .pairs .word:nth-child(2){width:100%;height:clamp(170px,28vh,240px);min-height:0;padding:12px;border:3px solid #d4ebe1;border-radius:20px;background:#fffdf5;box-shadow:0 10px 20px #0001;transform:none}
+  .gawain-2 .pairs .word.active{background:#ffe9a7;border:5px solid #e6a33a;box-shadow:0 0 0 4px #fff4c7,0 10px 20px #0001}
+  .gawain-2 .pairs .word img{height:clamp(90px,17vh,135px);max-width:80%;object-fit:contain}
+  .gawain-2 .status{margin:10px auto 8px;color:#302a32;font:900 1rem Nunito,"Segoe UI",sans-serif}
+  .gawain-2 .read,.gawain-2 .listen{width:100%;min-width:0;min-height:76px;margin:0;border-radius:999px;font:900 clamp(1rem,1.8vw,1.35rem) Nunito,"Segoe UI",sans-serif}
+  .gawain-2 .read{background:#299e9a;box-shadow:0 7px 0 #187b7a,0 10px 20px #187b7a40}
+  .gawain-2 .listen{background:#fffffff0;color:#187b7a;border:4px solid #94d9d6;box-shadow:0 5px 0 #b7d6dc,0 8px 16px #187b7a20}
+  .gawain-2 .answers{gap:14px;margin:18px auto 0}
+  .gawain-2 .answer{min-width:210px;min-height:92px;border-radius:16px;font:900 clamp(1.8rem,4vw,2.7rem) Nunito,"Segoe UI",sans-serif}
+  .gawain-2 .complete{width:min(520px,calc(100% - 24px));margin:auto;padding:clamp(28px,5vw,46px) clamp(22px,6vw,58px);border:2px solid #d7e7dc;border-radius:26px;background:#fffdf5;box-shadow:0 18px 42px rgba(18,55,52,.28);text-align:center}
+  @media(max-width:650px){.gawain-2 .game{width:100%;height:calc(100vh - 92px);padding:22px 14px 16px;border-radius:30px}.gawain-2 .back{width:230px;min-height:58px;font-size:1rem}.gawain-2 #game:has(#listen){width:100%}.gawain-2 .pairs{gap:12px}.gawain-2 .pairs .word,.gawain-2 .pairs .word:nth-child(2){height:170px}.gawain-2 .pairs .word img{height:100px}.gawain-2 .answers{flex-direction:column;align-items:center}.gawain-2 .answer{width:min(300px,100%)}.gawain-2 .read,.gawain-2 .listen{min-height:64px}}
+</style>
 <script>
 (function(){
   const game=document.getElementById('game');
