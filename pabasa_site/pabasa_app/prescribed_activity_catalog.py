@@ -457,7 +457,7 @@ PRESCRIBED_ACTIVITIES = {
     'lesson7-gawain4a': {
         'activity_key': 'lesson7-gawain4a', 'session_key': 'session-3', 'session_number': 3,
         'lesson_number': 7, 'gawain_number': '4A', 'title': 'GAWAIN 4A: Letrang Oo',
-        'instruction': 'I-drag ang parisukat sa MALAKING O. I-drag ang bilog sa maliit na o.',
+        'instruction': 'I-drag ang parisukat sa MALAKING O at I-drag ang bilog sa maliit na o.',
         'interaction': 'shape_stamp',
         'cells': [
             {'id': 'r1c1', 'letter': 'O', 'answer': 'square'}, {'id': 'r1c2', 'letter': 'a', 'answer': None}, {'id': 'r1c3', 'letter': 'o', 'answer': 'circle'},
