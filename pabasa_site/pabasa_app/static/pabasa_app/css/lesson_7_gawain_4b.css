@@ -1,0 +1,289 @@
+@font-face {
+  font-family: Fredoka;
+  src: url('../font/fredoka-one.one-regular.ttf') format('truetype');
+  font-display: swap;
+}
+
+.lesson7-gawain4b-page {
+  min-height: 100vh;
+  margin: 0;
+  padding: 16px clamp(16px, 4vw, 42px) 22px;
+  overflow: hidden;
+  color: #183e63;
+  font-family: Fredoka, Nunito, "Segoe UI", sans-serif;
+  background: url('../prescribed/PRESCRIBED-BG.jpg') center / cover no-repeat;
+}
+
+.lesson7-gawain4b-page .page {
+  width: min(1250px, 100%);
+  height: 100vh;
+  margin: 0 auto;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.lesson7-gawain4b-page .back {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 280px;
+  min-height: 64px;
+  padding: 10px 24px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: #183e63;
+  font: inherit;
+  font-size: 1.15rem;
+  font-weight: 900;
+  text-decoration: none;
+  box-shadow: 0 8px 17px #145ca744;
+}
+
+.lesson7-gawain4b-page .card {
+  width: 100%;
+  flex: 0 1 auto;
+  height: min(680px, calc(100dvh - 150px));
+  min-height: 0;
+  margin: auto;
+  padding: clamp(24px, 3.3vh, 42px) clamp(20px, 6vw, 80px) 20px;
+  border: 2px solid #ffffffaa;
+  border-radius: 42px;
+  background: #ffffff63;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 18px 45px #1e5b7a35;
+  text-align: center;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.lesson7-gawain4b-page .card h1 {
+  margin: 0 0 10px;
+  color: #183e63;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  line-height: 1.08;
+  font-weight: 900;
+}
+
+.lesson7-gawain4b-page .instruction {
+  width: min(820px, 100%);
+  margin: 0 auto 14px;
+  padding: 10px 18px;
+  border-radius: 18px;
+  background: #ffffffaa;
+  color: #405c65;
+  font-size: clamp(1rem, 1.8vw, 1.25rem);
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.lesson7-gawain4b-page .reading img {
+  width: min(330px, 55vw);
+  height: min(250px, 32vh);
+  padding: 10px;
+  object-fit: contain;
+  border: 4px solid #94d9d6;
+  border-radius: 28px;
+  background: #ffffffe8;
+  box-shadow: 0 10px 22px #2d69731f;
+}
+
+.lesson7-gawain4b-page .reading-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 16px;
+  width: min(660px, 100%);
+}
+
+.lesson7-gawain4b-page .reading-actions .button {
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.lesson7-gawain4b-page .progress {
+  margin: 10px 0 4px;
+  color: #527585;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.lesson7-gawain4b-page .status {
+  min-height: 26px;
+  margin: 4px 0 12px;
+  color: #397b56;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.lesson7-gawain4b-page .button {
+  min-width: min(330px, 70vw);
+  min-height: 62px;
+  padding: 12px 24px;
+  border: 0;
+  border-radius: 999px;
+  background: #299e9a;
+  color: #fff;
+  font: inherit;
+  font-size: clamp(1.05rem, 1.8vw, 1.35rem);
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 7px 0 #187b7a, 0 10px 20px #187b7a40;
+}
+
+.lesson7-gawain4b-page .button:hover:not(:disabled) {
+  background: #238d8a;
+}
+
+.lesson7-gawain4b-page .button.is-listening,
+.lesson7-gawain4b-page .button:disabled {
+  background: #a7adb3;
+  color: #f5f7f8;
+  box-shadow: 0 0 0 5px #d9dde1;
+}
+
+.lesson7-gawain4b-page .items {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  width: min(900px, 100%);
+  max-width: none;
+}
+
+.lesson7-gawain4b-page .item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 3px solid #94d9d6;
+  border-radius: 20px;
+  background: #ffffffe8;
+  box-shadow: 0 8px 16px #1e5b7a14;
+}
+
+.lesson7-gawain4b-page .item.is-disabled {
+  opacity: .5;
+  filter: grayscale(1);
+}
+
+.lesson7-gawain4b-page .item img {
+  width: 100%;
+  height: clamp(82px, 13vh, 125px);
+  border: 0;
+  border-radius: 14px;
+  object-fit: contain;
+}
+
+.lesson7-gawain4b-page .item input {
+  width: 58px;
+  height: 44px;
+  border: 3px solid #bfdde4;
+  border-radius: 12px;
+  background: #fff;
+  color: #183e63;
+  font: inherit;
+  font-size: 1.5rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.lesson7-gawain4b-page .item input:disabled {
+  background: #d9dde1;
+  color: #77818a;
+  cursor: not-allowed;
+}
+
+.lesson7-gawain4b-page .done {
+  width: 100%;
+  font: inherit;
+  color: #26784e;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  line-height: 1.2;
+  font-weight: 900;
+}
+
+@media (max-height: 760px) {
+  .lesson7-gawain4b-page {
+    padding: 8px clamp(12px, 3vw, 28px) 10px;
+  }
+
+  .lesson7-gawain4b-page .back {
+    width: 240px;
+    min-height: 46px;
+    padding: 7px 16px;
+    font-size: 1rem;
+  }
+
+  .lesson7-gawain4b-page .card {
+    height: min(600px, calc(100dvh - 112px));
+    margin: auto;
+    padding: 14px clamp(14px, 4vw, 42px) 12px;
+    border-radius: 32px;
+  }
+
+  .lesson7-gawain4b-page .card h1 {
+    margin-bottom: 6px;
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+  }
+
+  .lesson7-gawain4b-page .instruction {
+    margin-bottom: 8px;
+    padding: 7px 12px;
+    font-size: clamp(.88rem, 1.7vw, 1.05rem);
+  }
+
+  .lesson7-gawain4b-page .reading img {
+    height: min(190px, 27vh);
+  }
+
+  .lesson7-gawain4b-page .items {
+    gap: 7px;
+  }
+
+  .lesson7-gawain4b-page .item {
+    gap: 4px;
+    padding: 6px;
+    border-radius: 15px;
+  }
+
+  .lesson7-gawain4b-page .item img {
+    height: clamp(58px, 10vh, 84px);
+  }
+
+  .lesson7-gawain4b-page .item input {
+    width: 46px;
+    height: 34px;
+    font-size: 1.2rem;
+  }
+
+  .lesson7-gawain4b-page .button {
+    min-height: 48px;
+    padding: 8px 18px;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 620px) {
+  .lesson7-gawain4b-page .back {
+    width: 230px;
+  }
+
+  .lesson7-gawain4b-page .card {
+    padding-inline: 12px;
+    border-radius: 28px;
+  }
+
+  .lesson7-gawain4b-page .items {
+    gap: 6px;
+  }
+
+  .lesson7-gawain4b-page .item {
+    padding: 5px;
+  }
+}
