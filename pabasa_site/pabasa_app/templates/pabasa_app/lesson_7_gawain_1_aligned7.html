@@ -1,5 +1,5 @@
 {% include "pabasa_app/lesson_7_gawain_1_aligned6.html" %}<style>
-.lesson7-completion{height:100%;display:grid;place-items:center;padding:18px;box-sizing:border-box}.lesson7-completion-card{width:min(560px,92%);padding:34px 28px 28px;background:#fff;border-radius:28px;box-shadow:0 14px 30px rgba(22,75,93,.16);text-align:center}.lesson7-completion-stars{font-size:2.1rem;letter-spacing:8px;color:#f2b632;margin-bottom:8px}.lesson7-completion h1{margin:0;color:#164b5d;font-size:clamp(1.7rem,4vw,2.5rem)}.lesson7-completion p{margin:10px 0 18px;color:#52727a;font-size:1.05rem;font-weight:700}.lesson7-completion-score{display:inline-flex;align-items:baseline;gap:8px;padding:12px 24px;border-radius:18px;background:#fff3bd;color:#a65e2d;font-size:2.6rem;font-weight:900}.lesson7-completion-score small{font-size:1rem;color:#52727a}.lesson7-completion .done{display:block;width:min(360px,100%);margin:24px auto 0}.lesson7-completion .done:disabled{opacity:.75;cursor:wait}
+.lesson7-completion{position:absolute;inset:0;width:auto;height:auto;display:grid;place-items:center;padding:18px;box-sizing:border-box}.lesson7-completion-card{position:relative;top:auto;left:auto;transform:none;width:min(560px,92%);padding:34px 28px 28px;background:#fff;border-radius:28px;box-shadow:0 14px 30px rgba(22,75,93,.16);text-align:center}.lesson7-completion-stars{font-size:2.1rem;letter-spacing:8px;color:#f2b632;margin-bottom:8px}.lesson7-completion h1{margin:0;color:#164b5d;font-size:clamp(1.7rem,4vw,2.5rem)}.lesson7-completion p{margin:10px 0 18px;color:#52727a;font-size:1.05rem;font-weight:700}.lesson7-completion-score{display:inline-flex;align-items:baseline;gap:8px;padding:12px 24px;border-radius:18px;background:#fff3bd;color:#a65e2d;font-size:2.6rem;font-weight:900}.lesson7-completion-score small{font-size:1rem;color:#52727a}.lesson7-completion .done{display:block;width:min(360px,100%);margin:24px auto 0}.lesson7-completion .done:disabled{opacity:.75;cursor:wait}
 </style><script>
 setInterval(function(){
   const old=document.querySelector('.complete'), oldDone=document.getElementById('done');
@@ -9,4 +9,31 @@ setInterval(function(){
   old.innerHTML='<div class="lesson7-completion-card"><div class="lesson7-completion-stars" aria-hidden="true">★ ★ ★</div><h1>Magaling!</h1><p>Natapos mo ang gawain!</p><div class="lesson7-completion-score">'+score+'<small>/ '+total+' tamang sagot</small></div><button class="done" id="done">TAPUSIN</button></div>';
   document.getElementById('done').onclick=async function(){const b=this;b.disabled=true;b.textContent='Sine-save...';try{await save(true);location.href="{% url 'assessment' %}"}catch(e){console.error('Lesson 7 completion save failed',e);b.disabled=false;b.textContent='TAPUSIN'}};
 },50);
+</script>
+<style>
+.lesson7-start{transition:transform .18s ease,filter .18s ease,box-shadow .18s ease,opacity .18s ease}.lesson7-start:disabled{opacity:.48!important;filter:grayscale(.55)!important;cursor:not-allowed!important;background:#9baeb3!important;box-shadow:0 4px 0 #71868c!important}.lesson7-start.is-ready{background:#d8903d!important;box-shadow:0 6px 0 #b36d21,0 10px 18px #8b531d45!important}.lesson7-start.is-ready:hover,.lesson7-start.is-ready:focus-visible{filter:brightness(1.08);transform:translateY(-2px);outline:3px solid #fff4c7;outline-offset:3px}.lesson7-start.is-ready:active{transform:translateY(3px);box-shadow:0 2px 0 #b36d21!important}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  const app=document.getElementById('app');
+  if(!app)return;
+  const csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
+  const speak=text=>fetch('{% url "reading_read_aloud_api" %}',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',mode:'reading',prescribed_activity_key:'lesson-7-gawain-1'})}).then(r=>r.ok?r.json():null).then(result=>new Promise(resolve=>{if(!result?.success||!result.audio_content){resolve();return}const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);audio.onended=resolve;audio.onerror=resolve;audio.play().catch(resolve)})).catch(error=>console.error('Lesson 7 Gawain 1 intro narration failed',error));
+  const setup=()=>{
+    const intro=app.querySelector('.lesson7-overview'),button=app.querySelector('#lesson7Start');
+    if(!intro||!button||intro.dataset.narrationBound)return;
+    intro.dataset.narrationBound='1';
+    const first='Tingnan ang mga larawan sa bilog',second='Isa-isa nating pangalanan ang mga ito.',start='Magsimula na tayo!';
+    const heading=intro.querySelector('h2'),description=intro.querySelector('p');
+    if(heading)heading.textContent=first;
+    if(description)description.textContent=second;
+    button.textContent='Magsimula';
+    button.disabled=true;
+    button.setAttribute('aria-disabled','true');
+    button.classList.remove('is-ready');
+    (async()=>{await speak(first);await speak(second);await speak(start);button.disabled=false;button.setAttribute('aria-disabled','false');button.classList.add('is-ready')})().catch(()=>{button.disabled=false;button.setAttribute('aria-disabled','false');button.classList.add('is-ready')});
+  };
+  setup();
+  new MutationObserver(setup).observe(app,{childList:true,subtree:true});
+});
 </script>
