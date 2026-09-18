@@ -1,0 +1,44 @@
+@font-face{font-family:Fredoka;src:url('../font/fredoka-one.one-regular.ttf') format('truetype');font-display:swap}
+
+*{box-sizing:border-box}
+html,body{min-height:100%;margin:0}
+body{overflow:hidden;color:#183e63;font-family:Fredoka,Nunito,"Segoe UI",sans-serif;background:url('../prescribed/PRESCRIBED-BG.jpg') center/cover fixed}
+.page{width:min(1250px,100%);height:100vh;margin:auto;padding:16px clamp(16px,4vw,42px) 22px;display:flex;flex-direction:column}
+.page>a{align-self:flex-start;display:inline-flex;align-items:center;justify-content:center;min-height:64px;width:280px;padding:10px 24px;border-radius:999px;background:#fff;color:#183e63;font:inherit;font-size:1.2rem;font-weight:900;text-decoration:none;box-shadow:0 8px 17px #145ca744;position:relative;z-index:2}
+.card{width:100%;flex:1;min-height:0;margin:14px auto 0;padding:clamp(24px,3.3vh,42px) clamp(20px,6vw,80px) 20px;border:2px solid #ffffffaa;border-radius:42px;background:#ffffff63;backdrop-filter:blur(10px);box-shadow:0 18px 45px #1e5b7a35}
+.card>div{width:100%}
+.eyebrow{width:max-content;max-width:100%;margin:-8px auto 16px;padding:10px 30px;border-radius:999px;background:#277f82;color:#fff;font-size:clamp(.85rem,1.4vw,1.15rem);font-weight:900;letter-spacing:.02em}
+.card h1{margin:0;color:#183e63;font-size:clamp(2rem,4vw,3.7rem);line-height:1.08;font-weight:900}
+.instruction{max-width:620px;margin:14px auto 18px;padding:10px 18px;border-radius:16px;background:#ffffffaa;color:#405c65;font-size:clamp(1rem,1.7vw,1.25rem);font-weight:900;line-height:1.4}
+.reading img{display:block;width:min(80vw,360px);height:min(43vh,300px);margin:0 auto;padding:12px;border:4px solid #94d9d6;border-radius:34px;background:#ffffffe8;box-shadow:0 10px 22px #2d69731f;object-fit:contain}
+.progress{margin:14px auto 8px;color:#55727e;font-weight:900;line-height:1.5}
+.status{min-height:28px;margin:8px auto 12px;color:#397b56;font-weight:900;line-height:1.35}
+.button{display:inline-flex;align-items:center;justify-content:center;min-width:min(330px,40vw);min-height:68px;padding:14px 24px;border:0;border-radius:999px;background:#299e9a;color:#fff;font:inherit;font-size:clamp(1.05rem,1.8vw,1.45rem);font-weight:900;cursor:pointer;box-shadow:0 7px 0 #187b7a,0 10px 20px #187b7a40;transition:.16s}
+.reading-actions{display:flex;justify-content:center;align-items:stretch;gap:18px;margin:8px auto 0;width:min(680px,100%)}
+.reading-actions .button{flex:1;min-width:0}
+.button:disabled,.button:disabled:hover{background:#b5c5c7!important;color:#edf3f4!important;border-color:transparent!important;box-shadow:none!important;cursor:not-allowed!important;transform:none!important;opacity:1!important}
+.button:not(:disabled):hover{background:#38b0aa;transform:translateY(-2px)}
+.choices{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;width:min(820px,100%);margin:18px auto 10px}
+.choice{padding:10px;border:3px solid #d7e5e5;border-radius:22px;background:#ffffffe8;cursor:pointer;box-shadow:0 8px 16px #1e5b7a14;transition:.16s}
+.choice:hover{border-color:#94d9d6;transform:translateY(-2px)}
+.choice img{width:100%;height:clamp(120px,23vh,210px);object-fit:contain}
+.choice.selected{border-color:#e7af45;box-shadow:0 0 0 5px #e7af45,0 8px 16px #e7af4540;border-radius:50%}
+.choice:disabled,.choice.is-disabled{opacity:.42!important;filter:grayscale(1)!important;cursor:not-allowed!important;transform:none!important;border-color:#aab7bb!important;background:#dfe6e8!important;box-shadow:inset 0 0 0 2px #b8c3c7!important}
+.done{display:grid!important;place-items:center;min-height:70%;padding:36px;border:2px solid #ffffffd9;border-radius:34px;background:linear-gradient(145deg,#ffffffd9,#e6f9f8d9 58%,#fff4d6d9);color:#183e63;font-size:1.8rem;font-weight:900;box-shadow:0 18px 36px #145c7a26}
+.done h1{margin:0;color:#183e63}
+.done a{display:inline-flex;align-items:center;justify-content:center;min-height:58px;padding:12px 24px;border-radius:999px;background:#299e9a;color:#fff;text-decoration:none;box-shadow:0 6px 0 #187b7a}
+@media(max-width:800px){.page{padding:12px}.page>a{width:230px;min-height:58px;font-size:1rem}.card{border-radius:30px;padding:22px 14px 16px}.reading img{height:min(40vh,270px)}.button{min-width:220px;min-height:58px}}
+@media(max-width:560px){.choices{gap:8px}.choice{padding:6px;border-radius:16px}.choice img{height:120px}.button{width:100%;min-width:0}.done{padding:24px 16px}}
+
+/* Keep every Gawain 3 state inside the fixed activity card. */
+.card{padding:clamp(12px,1.8vh,24px) clamp(16px,5vw,64px) 14px}
+.eyebrow{margin:0 auto 8px;padding:8px 24px}
+.card h1{font-size:clamp(1.8rem,3.6vw,3.2rem)}
+.instruction{margin:8px auto 12px;padding:8px 16px}
+.reading img{width:min(70vw,320px);height:min(34vh,240px);padding:10px}
+.progress{margin:8px auto 4px}
+.status{min-height:22px;margin:5px auto 8px}
+.button{min-height:58px;padding:11px 22px}
+.choices{gap:10px;margin:12px auto 6px}
+.choice img{height:clamp(100px,18vh,165px)}
+@media(max-width:560px){.card{padding:12px 10px}.reading img{height:min(32vh,210px)}.choices{gap:6px}.choice img{height:clamp(86px,16vh,120px)}.instruction{margin:6px auto 10px}.reading-actions{gap:10px}.reading-actions .button{font-size:1rem;padding-inline:10px}}
