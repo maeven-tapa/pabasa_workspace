@@ -26,7 +26,7 @@ LESSON_16_IMAGE_PATHS = {
 PRESCRIBED_ACTIVITIES = {
     'session-2-lesson-4-gawain-2': {
         'activity_key': 'session-2-lesson-4-gawain-2', 'session_key': 'session-2', 'session_number': 2, 'lesson_number': 4, 'gawain_number': 2,
-        'display_title': 'Letrang Mm at Ss', 'title': 'Letrang Mm at Ss', 'instruction': 'Bilangin ang tunog ng unang tunog ng nasa larawan.',
+        'display_title': 'Letrang Mm at Ss', 'title': 'Letrang Mm at Ss', 'instruction': 'Tingnan ang larawan. Sabihin ang pangalan nito.',
         'interaction': 'oral_choice_picture', 'total_items': 6, 'thumbnail': 'pabasa_app/images/letrang_m_s/saging.png',
         'items': [
             {'id': 'saging', 'word': 'saging', 'image_path': 'pabasa_app/images/letrang_m_s/saging.png', 'choices': ['M', 'S'], 'answer': 'S', 'alt_text': 'Saging'},

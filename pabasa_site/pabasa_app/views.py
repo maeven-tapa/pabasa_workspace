@@ -13273,7 +13273,7 @@ def prescribed_activity_page(request, activity_key):
             'activity_key': activity_key, 'session_number': activity['session_number'],
             'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
             'title': activity['title'], 'instruction': activity['instruction'],
-            'items': [{'id': item['id'], 'image_url': static(item['image_path']),
+            'items': [{'id': item['id'], 'word': item['word'], 'image_url': static(item['image_path']),
                        'alt_text': item['alt_text'], 'choices': item['choices']}
                       for item in activity['items']],
             'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
