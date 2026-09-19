@@ -215,6 +215,31 @@ PRESCRIBED_ACTIVITIES = {
              'alt_text': 'Larawan ng pitsel', 'image_path': 'pabasa_app/prescribed/session_7/lesson_20_21/gawain_3/pitsel.png'},
         ],
     },
+    'session-7-lesson-20-21-gawain-4': {
+        # One workbook definition is shared by the teacher picker/preview,
+        # learner sequence, progress validation, cards, and Filipino TTS.
+        'activity_key': 'session-7-lesson-20-21-gawain-4',
+        'session_key': 'session-7', 'session_number': 7,
+        'lesson_number': '20 at 21', 'gawain_number': 4,
+        'display_title': 'Lesson 20 at 21: Gawain 4',
+        'card_label': 'Lesson 20 at 21: Gawain 4',
+        'title': 'Bilugan ang Salitang May Klaster',
+        'description': 'Basahin at bilugan ang salitang may klaster sa bawat pangkat.',
+        'instruction': 'Basahin ang bawat pangkat ng salita. Bilugan ang salitang may klaster.',
+        'workbook_instruction': 'Bilugan ang salitang may klaster sa sumusunod na salita.',
+        'teacher_guidance': 'Pabasahin muna ang apat na salita mula kaliwa hanggang kanan bago ipabilog ang salitang may klaster.',
+        'competencies': ['Phonics', 'Phonological Awareness'],
+        'interaction': 'session7_oral_cluster_word_circle', 'total_items': 5,
+        'thumbnail': 'pabasa_app/prescribed/session_7/lesson_20_21/gawain_4/cluster-circle.svg',
+        # Exact ARAL Workbook 2nd Edition row and left-to-right choice order.
+        'items': [
+            {'id': 'row-1', 'words': ['pato', 'plato', 'dagat', 'pera'], 'answer': 'plato'},
+            {'id': 'row-2', 'words': ['grupo', 'ganda', 'masa', 'tasa'], 'answer': 'grupo'},
+            {'id': 'row-3', 'words': ['Enero', 'Pebrero', 'Mayo', 'Agosto'], 'answer': 'Pebrero'},
+            {'id': 'row-4', 'words': ['krayola', 'parola', 'tinola', 'bola'], 'answer': 'krayola'},
+            {'id': 'row-5', 'words': ['tono', 'trono', 'maso', 'baso'], 'answer': 'trono'},
+        ],
+    },
     'lesson7-gawain4b': {
         'activity_key': 'lesson7-gawain4b', 'session_key': 'session-3', 'session_number': 3,
         'lesson_number': 7, 'gawain_number': '4B', 'title': 'GAWAIN 4B: Letrang Ii at Oo',
