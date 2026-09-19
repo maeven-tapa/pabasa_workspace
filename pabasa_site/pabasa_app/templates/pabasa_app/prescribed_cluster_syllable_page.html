@@ -81,6 +81,7 @@
       }catch(error){if(mine===requestId)render(error.message||'Hindi available ang audio. Subukan muli.','bad')}finally{busy=false}
     }
     async function answer(value){if(busy)return;busy=true;try{const data=await save({candidate_answer:value});if(data.accepted){state.phase='feedback';render()}else render('Subukan muli. Bilugan ang pantig na may klaster.','bad')}catch(error){render(error.message,'bad')}finally{busy=false}}
+    async function finish(){if(busy)return;busy=true;state.phase='completion';try{const response=await fetch(d.completion_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'}),data=await response.json().catch(()=>({}));if(!response.ok||!data.success)throw Error(data.error||'Hindi na-save ang pagtatapos. Subukan muli.');d.progress.activity_completed=true;render()}catch(error){state.phase='feedback';render(error.message,'bad');const retry=document.createElement('button');retry.className='button';retry.textContent='SUBUKANG MULI';retry.onclick=finish;app.querySelector('.status')?.after(retry)}finally{busy=false}}
     addEventListener('pagehide',stopMedia);render();
   })();
   </script>
