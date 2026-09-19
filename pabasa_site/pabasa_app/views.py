@@ -12924,6 +12924,51 @@ def _normalized_session7_missing_syllable_state(activity, raw_state):
             'completed_item_count': current, 'correct_answer_count': current, 'state_version': version}
 
 
+def _normalized_session7_cluster_syllabification_state(activity, raw_state):
+    """Retain only earned, in-order work for Lesson 20 at 21 Gawain 2.
+
+    The first workbook row is an example, so state indices deliberately refer
+    to the nine scored rows rather than the ten displayed rows.
+    """
+    raw = raw_state if isinstance(raw_state, dict) else {}
+    scored_items = [item for item in activity['items'] if not item.get('worked_example')]
+    total = len(scored_items)
+    submitted = []
+    raw_submitted = raw.get('submitted_syllable_divisions')
+    raw_submitted = raw_submitted if isinstance(raw_submitted, list) else []
+    for index, value in enumerate(raw_submitted[:total]):
+        if str(value).strip() != scored_items[index]['answer']:
+            break
+        submitted.append(scored_items[index]['answer'])
+    try:
+        version = max(0, min(int(raw.get('state_version') or 0), 1_000_000_000))
+        attempts = {str(index): max(0, min(3, int((raw.get('stt_attempts') or {}).get(str(index), 0)))) for index in range(total)}
+        plays = {str(index): max(0, min(3, int((raw.get('tts_plays') or {}).get(str(index), 0)))) for index in range(total)}
+    except (TypeError, ValueError):
+        raise ValueError('Invalid cluster-syllabification activity state.')
+    raw_oral = raw.get('completed_oral_reads') if isinstance(raw.get('completed_oral_reads'), list) else []
+    oral = list(range(max(len(submitted), min(total, len(raw_oral)))))
+    current = len(submitted)
+    phase = str(raw.get('phase') or '').lower()
+    if phase == 'completion' and current == total:
+        phase = 'completion'
+    elif phase == 'feedback' and submitted:
+        phase = 'feedback'
+    elif phase in ('', 'intro') and not submitted and not oral:
+        phase = 'intro'
+    else:
+        phase = 'syllabification' if current in oral else 'oral_reading'
+    return {
+        'phase': phase, 'current_scored_index': current,
+        # This is the matching row in the displayed, ten-row workbook.
+        'current_item_index': min(len(activity['items']), current + 1),
+        'completed_oral_reads': oral, 'stt_attempts': attempts, 'tts_plays': plays,
+        'submitted_syllable_divisions': submitted,
+        'completed_item_count': current, 'correct_answer_count': current,
+        'state_version': version,
+    }
+
+
 def _normalized_session7_letter_ordering_state(activity, raw_state):
     """Server-authoritative, contiguous state for Lesson 19 Gawain 4."""
     raw, total = (raw_state if isinstance(raw_state, dict) else {}), len(activity['items'])
@@ -13472,6 +13517,33 @@ def prescribed_activity_page(request, activity_key):
                          'state': _normalized_prescribed_state(activity, raw_state, len(answers))},
         }
         return render(request, 'pabasa_app/prescribed_oral_missing_syllable_page.html', context)
+    if activity['interaction'] == 'session7_oral_cluster_syllabification':
+        state = _normalized_session7_cluster_syllabification_state(activity, raw_state)
+        scored_items = [item for item in activity['items'] if not item.get('worked_example')]
+        context = _dashboard_context(request)
+        context['prescribed_activity_data'] = {
+            'activity_key': activity_key, 'session_key': activity['session_key'],
+            'session_number': activity['session_number'], 'lesson_number': activity['lesson_number'],
+            'gawain_number': activity['gawain_number'], 'display_title': activity['display_title'],
+            'title': activity['title'], 'instruction': activity['instruction'],
+            # Answers are intentionally omitted. The server is the authority
+            # for the required bullet divisions and the preview has no student work.
+            'items': [{'id': item['id'], 'word': item['word'],
+                       'worked_example': bool(item.get('worked_example')),
+                       'example_division': item['answer'] if item.get('worked_example') else ''}
+                      for item in activity['items']],
+            'total_items': len(scored_items),
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'read_aloud_url': reverse('reading_read_aloud_api'),
+            'transcribe_url': reverse('reading_transcribe_api'),
+            'progress': {'completed_items': progress.completed_items if progress else 0,
+                         'correct_items': progress.correct_items if progress else 0,
+                         'total_items': len(scored_items),
+                         'activity_completed': progress.activity_completed if progress else False,
+                         'state': state},
+        }
+        return render(request, 'pabasa_app/prescribed_cluster_syllabification_page.html', context)
     if activity['interaction'] == 'session7_oral_missing_syllable':
         state = _normalized_session7_missing_syllable_state(activity, raw_state)
         context = _dashboard_context(request)
@@ -14475,6 +14547,48 @@ def prescribed_activity_progress(request, activity_key):
                           'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'progress': {'state': state, 'completed_items': completed,
                 'correct_items': 0, 'total_items': len(activity['items']), 'activity_completed': False}})
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    if activity['interaction'] == 'session7_oral_cluster_syllabification':
+        try:
+            data = json.loads(request.body or '{}')
+            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            old = _normalized_session7_cluster_syllabification_state(activity, existing.state if existing else {})
+            incoming = _normalized_session7_cluster_syllabification_state(activity, data.get('state'))
+            scored = [item for item in activity['items'] if not item.get('worked_example')]
+            total, current = len(scored), len(old['submitted_syllable_divisions'])
+            if (existing and existing.activity_completed) or incoming['state_version'] < old['state_version']:
+                return JsonResponse({'success': True, 'progress': {'state': old, 'completed_items': current, 'correct_items': current, 'total_items': total, 'activity_completed': bool(existing and existing.activity_completed)}})
+            oral = incoming['completed_oral_reads']
+            if (incoming['submitted_syllable_divisions'] != old['submitted_syllable_divisions']
+                    or oral[:len(old['completed_oral_reads'])] != old['completed_oral_reads']
+                    or len(oral) > len(old['completed_oral_reads']) + 1):
+                raise ValueError('Invalid activity progress.')
+            if len(oral) == len(old['completed_oral_reads']) + 1 and oral[-1] != current:
+                raise ValueError('Basahin muna ang kasalukuyang salita.')
+            state, accepted = incoming, None
+            if 'candidate_answer' in data:
+                if current not in oral:
+                    raise ValueError('Basahin muna ang salita.')
+                answer = str(data.get('candidate_answer') or '').strip()
+                if not answer or len(answer) > 24:
+                    raise ValueError('Ilagay ang wastong paghahati ng pantig.')
+                accepted = answer == scored[current]['answer']
+                state['submitted_syllable_divisions'] = old['submitted_syllable_divisions'] + [answer] if accepted else old['submitted_syllable_divisions']
+                state['phase'] = 'feedback' if accepted else 'syllabification'
+            else:
+                state['submitted_syllable_divisions'] = old['submitted_syllable_divisions']
+                state['phase'] = 'intro' if not oral and not current and incoming['phase'] == 'intro' else ('syllabification' if current in oral else 'oral_reading')
+            completed = len(state['submitted_syllable_divisions'])
+            state.update({'current_scored_index': completed, 'current_item_index': min(len(activity['items']), completed + 1),
+                          'completed_oral_reads': oral, 'completed_item_count': completed,
+                          'correct_answer_count': completed, 'state_version': old['state_version'] + 1})
+            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+                'current_index': completed, 'completed_items': completed, 'correct_items': completed,
+                'total_items': total, 'activity_completed': False, 'state': state})
+            return JsonResponse({'success': True, 'accepted': accepted, 'progress': {
+                'state': state, 'completed_items': completed, 'correct_items': completed,
+                'total_items': total, 'activity_completed': False}})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity['interaction'] == 'session7_oral_missing_syllable':
@@ -15911,6 +16025,17 @@ def prescribed_activity_complete(request, activity_key):
         total = len(activity['items'])
         if len(state['completed_correct_words']) != total or len(state['completed_oral_reads']) != total:
             return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang pagbasa at pag-aayos sa lahat ng larawan.'}, status=400)
+        state['phase'], state['state_version'] = 'completion', 1_000_000_000
+        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+            'current_index': total, 'completed_items': total, 'correct_items': total,
+            'total_items': total, 'activity_completed': True, 'state': state})
+        return JsonResponse({'success': True, 'result': {'correct_items': total, 'items_completed': total, 'accuracy': 100.0}})
+    if activity['interaction'] == 'session7_oral_cluster_syllabification':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        state = _normalized_session7_cluster_syllabification_state(activity, existing.state if existing else {})
+        total = len([item for item in activity['items'] if not item.get('worked_example')])
+        if len(state['submitted_syllable_divisions']) != total or len(state['completed_oral_reads']) != total:
+            return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang pagbasa at pagpapantig sa lahat ng salita.'}, status=400)
         state['phase'], state['state_version'] = 'completion', 1_000_000_000
         StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
             'current_index': total, 'completed_items': total, 'correct_items': total,
@@ -23462,7 +23587,8 @@ def course_teacher_view(request):
         'prescribed_lesson_19_activities': [activity for activity in visible_prescribed_activities
                                             if activity.get('session_key') == 'session-7' and activity.get('lesson_number') == 19],
         'prescribed_lesson_20_21_activities': [activity for activity in visible_prescribed_activities
-                                                if activity.get('activity_key') == 'session-7-lesson-20-21-gawain-1'],
+                                                if activity.get('session_key') == 'session-7'
+                                                and activity.get('lesson_number') == '20 at 21'],
         'prescribed_workbook_activities': [activity for activity in visible_prescribed_activities if activity.get('interaction') == 'prescribed_workbook'],
         'prescribed_lesson_13_activities': [PRESCRIBED_ACTIVITIES['lesson-13-gawain-1'], PRESCRIBED_ACTIVITIES['lesson-13-gawain-2'], PRESCRIBED_ACTIVITIES['lesson-13-gawain-3'], PRESCRIBED_ACTIVITIES['lesson-13-gawain-4']],
         'prescribed_lesson_14_activities': [
