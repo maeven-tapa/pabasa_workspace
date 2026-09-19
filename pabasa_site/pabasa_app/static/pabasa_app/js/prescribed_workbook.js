@@ -111,30 +111,31 @@
     }
   }
   async function startCReading(){
-    if(busy)return;busy=true;lock();let chunks=[],readTimer;
+    if(busy)return;busy=true;lock();let chunks=[],readTimer,recorder;
     try{
       await send({action:'reading_started'});
-      if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw new Error('microphone');
-      activeStream=await navigator.mediaDevices.getUserMedia({audio:true});
-      activeRecorder=new MediaRecorder(activeStream);
-      const audioDone=new Promise((resolve,reject)=>{activeRecorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};activeRecorder.onerror=()=>reject(new Error('recording'));activeRecorder.onstop=()=>resolve(new Blob(chunks,{type:activeRecorder.mimeType||'audio/webm'}));});
-      activeRecorder.start();message('Nakikinig…');
-      action.replaceChildren();const stop=button('Tapusin ang Pagbasa',()=>activeRecorder?.state==='recording'&&activeRecorder.stop(),true);stop.disabled=false;const readingAction=document.getElementById('wb-l22-reading-action');if(readingAction)readingAction.appendChild(stop);
-      readTimer=setTimeout(()=>{if(activeRecorder?.state==='recording')activeRecorder.stop();},60000);
+      if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw new Error('Hindi available ang mikropono sa browser na ito.');
+      activeStream=await Promise.race([navigator.mediaDevices.getUserMedia({audio:true}),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Hindi tumugon ang mikropono.')),8000))]);
+      recorder=activeRecorder=new MediaRecorder(activeStream);
+      const audioDone=new Promise((resolve,reject)=>{recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};recorder.onerror=()=>reject(new Error('Hindi mabasa ang recording.'));recorder.onstop=()=>resolve(new Blob(chunks,{type:recorder.mimeType||'audio/webm'}));});
+      recorder.start();message('Nakikinig… Basahin ang naka-highlight na pantig.');
+      action.replaceChildren();const stop=button('Tapusin ang Pagbasa',()=>recorder.state==='recording'&&recorder.stop(),true);stop.disabled=false;const readingAction=document.getElementById('wb-l22-reading-action');if(readingAction)readingAction.appendChild(stop);
+      readTimer=setTimeout(()=>{if(recorder.state==='recording')recorder.stop();},3500);
       const audio=await audioDone;clearTimeout(readTimer);activeStream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
-      if(!audio.size)throw new Error('empty');
-      const form=new FormData();form.append('audio',audio,'reading.webm');message('Sinusuri…');
+      if(!audio.size)throw new Error('Walang nakuha sa recording. Subukan muli.');
+      const form=new FormData();form.append('audio',audio,'reading.webm');message('Pinoproseso...');
       await send({action:'reading_syllable_attempt'},form);render();
-    }catch(_error){
+    }catch(error){
       clearTimeout(readTimer);
       activeStream?.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
-      message('Hindi magamit ang mikropono. Subukan muli.',true);
+      const micError=error?.name==='NotAllowedError'||error?.name==='NotFoundError'||error?.name==='NotReadableError'||error?.name==='SecurityError';
+      message(micError?'Hindi magamit ang mikropono. Subukan muli.':(error?.message||'Hindi nakuha ang iyong boses. Subukan muli.'),true);
       render();
     }finally{clearTimeout(readTimer);busy=false;lock();}
   }
   async function readAloudC(){
     if(busy)return;busy=true;lock();const current=Math.min(Number(state.index||0),a.items.length-1);
-    try{const form=new FormData();form.append('target_text',a.items[current].text);form.append('language','Filipino');form.append('mode','reading');const response=await fetch('{% url "reading_read_aloud_api" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':token()},body:form});const result=await response.json();if(!response.ok||!result.success)throw Error(result.error||'Hindi available ang audio.');const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);await audio.play();await new Promise(resolve=>audio.onended=resolve);await send({action:'read_aloud'});render();}catch(e){message(e.message||'Hindi available ang audio.',true);}finally{busy=false;lock();}
+    try{const form=new FormData();form.append('target_text',a.items[current].text);form.append('language','Filipino');form.append('mode','reading');const response=await fetch(data.read_aloud_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':token()},body:form});const result=await response.json();if(!response.ok||!result.success)throw Error(result.error||'Hindi available ang audio.');const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);await audio.play();await new Promise(resolve=>audio.onended=resolve);await send({action:'read_aloud'});render();}catch(e){message(e.message||'Hindi available ang audio.',true);}finally{busy=false;lock();}
   }
   function renderSearch(){
     content.innerHTML+=`<div class="wb-search-wrap"><ul class="wb-word-list">${a.items.map((i,n)=>`<li>${esc(a.item_labels?.[n]||`${n+1}.`)} ${esc(i.text)}${!preview&&state.answers[i.id]?' ✓':''}</li>`).join('')}</ul><label>${fil?'Kulay':'Color'} <input id="wb-color" type="color" value="${esc(state.draft.color||'#b6e6c3')}"></label><div class="wb-search ${a.mark_style}" style="--cols:${a.grid[0].length}">${a.grid.map((row,y)=>Array.from(row).map((letter,x)=>`<button type="button" data-y="${y}" data-x="${x}" aria-label="Row ${y+1}, column ${x+1}: ${esc(letter)}">${esc(letter)}</button>`).join('')).join('')}</div></div>`;

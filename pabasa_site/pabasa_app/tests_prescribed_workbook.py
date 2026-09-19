@@ -104,6 +104,21 @@ class WorkbookStateTests(SimpleTestCase):
         apply_event(a, s, {'action': 'build_word', 'parts': ['item-5']})
         self.assertEqual(s['found_words'], ['com'])
 
+    def test_lesson22_gawain1_advances_only_the_verified_current_syllable(self):
+        a = get_activity('aral-l22-g1-c-syllable-builder')
+        s = initial_state()
+        apply_event(a, s, {'action': 'reading_started'})
+        apply_event(a, s, {'action': 'reading_syllable_attempt'}, True)
+        self.assertEqual(s['index'], 1)
+        self.assertFalse(s['read_aloud_completed'])
+        apply_event(a, s, {'action': 'reading_syllable_attempt'}, False)
+        self.assertEqual(s['index'], 1)
+        self.assertEqual(s['last_feedback'], 'Subukan muli.')
+        for _ in range(len(a['items']) - 1):
+            apply_event(a, s, {'action': 'reading_syllable_attempt'}, True)
+        self.assertEqual(s['index'], len(a['items']))
+        self.assertTrue(s['read_aloud_completed'])
+
     def test_lesson22_gawain1_migrates_legacy_co_m_selection_to_com(self):
         a = get_activity('aral-l22-g1-c-syllable-builder')
         legacy = {
@@ -212,6 +227,7 @@ class PrescribedWorkbookFlowTests(TestCase):
         self.assertEqual(preview.status_code, 200)
         self.assertTrue(preview.context['workbook_payload']['preview'])
         self.assertEqual(preview.context['workbook_payload']['progress_url'], progress_url)
+        self.assertEqual(preview.context['workbook_payload']['read_aloud_url'], reverse('reading_read_aloud_api'))
 
         self.session_student(self.student)
         page = self.client.get(activity_url)
@@ -221,6 +237,29 @@ class PrescribedWorkbookFlowTests(TestCase):
         response = self.client.post(progress_url, json.dumps({'action': 'reading_started', 'revision': state['revision']}), content_type='application/json')
         self.assertEqual(response.status_code, 200, response.content)
         state = response.json()['state']
+        with patch('pabasa_app.views.reading_transcribe_api', return_value=JsonResponse({
+            'success': True, 'transcript': 'cac', 'complete': True,
+        })) as speech:
+            response = self.client.post(progress_url, {
+                'action': 'reading_syllable_attempt', 'revision': state['revision'],
+                'audio': SimpleUploadedFile('reading.webm', b'audio', content_type='audio/webm'),
+            })
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertTrue(speech.called)
+        state = response.json()['state']
+        self.assertEqual(state['index'], 1)
+        self.assertFalse(state['read_aloud_completed'])
+        with patch('pabasa_app.views.reading_transcribe_api', return_value=JsonResponse({
+            'success': True, 'transcript': 'wrong', 'complete': False,
+        })):
+            response = self.client.post(progress_url, {
+                'action': 'reading_syllable_attempt', 'revision': state['revision'],
+                'audio': SimpleUploadedFile('reading.webm', b'audio', content_type='audio/webm'),
+            })
+        self.assertEqual(response.status_code, 200, response.content)
+        state = response.json()['state']
+        self.assertEqual(state['index'], 1)
+        self.assertEqual(state['last_feedback'], 'Subukan muli.')
         with patch('pabasa_app.views.reading_transcribe_api', return_value=JsonResponse({
             'success': True, 'transcript': 'cac ce ca', 'complete': False,
         })) as speech:
