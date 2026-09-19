@@ -11922,6 +11922,7 @@ def assessment(request):
                 'lesson_number': activity['lesson_number'],
                 'gawain_number': activity['gawain_number'],
                 'title': activity.get('display_title', activity['title']),
+                'card_label': activity.get('card_label', ''),
                 'activity_title': activity['title'],
                 'description': activity.get('description', activity['instruction']),
                 'total_items': activity.get('total_items', len(activity.get('items', []))),
@@ -13537,7 +13538,10 @@ def prescribed_activity_page(request, activity_key):
             'progress': {'completed_items': progress.completed_items if progress else 0, 'correct_items': progress.correct_items if progress else 0,
                          'total_items': len(activity['items']), 'activity_completed': progress.activity_completed if progress else False, 'state': state},
         }
-        return render(request, 'pabasa_app/prescribed_starting_syllable_page.html', context)
+        template = ('pabasa_app/prescribed_cluster_syllable_page.html'
+                    if activity_key == 'session-7-lesson-20-21-gawain-1'
+                    else 'pabasa_app/prescribed_starting_syllable_page.html')
+        return render(request, template, context)
     if activity['interaction'] == 'rhyming_verses':
         context = _dashboard_context(request)
         items = []
@@ -23228,6 +23232,8 @@ def course_teacher_view(request):
         'prescribed_lesson_31_activities': [activity for activity in visible_prescribed_activities if activity.get('lesson_number') == 31],
         'prescribed_lesson_19_activities': [activity for activity in visible_prescribed_activities
                                             if activity.get('session_key') == 'session-7' and activity.get('lesson_number') == 19],
+        'prescribed_lesson_20_21_activities': [activity for activity in visible_prescribed_activities
+                                                if activity.get('activity_key') == 'session-7-lesson-20-21-gawain-1'],
         'prescribed_workbook_activities': [activity for activity in visible_prescribed_activities if activity.get('interaction') == 'prescribed_workbook'],
         'prescribed_lesson_13_activities': [PRESCRIBED_ACTIVITIES['lesson-13-gawain-1'], PRESCRIBED_ACTIVITIES['lesson-13-gawain-2'], PRESCRIBED_ACTIVITIES['lesson-13-gawain-3'], PRESCRIBED_ACTIVITIES['lesson-13-gawain-4']],
         'prescribed_lesson_14_activities': [
