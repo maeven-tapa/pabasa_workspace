@@ -14081,6 +14081,58 @@ def prescribed_activity_progress(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity_key == 'session-4-gawain-3':
+        try:
+            data = json.loads(request.body or '{}')
+            incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
+            is_reset = data.get('reset') is True
+            total = 9
+            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            old = existing.state if existing and isinstance(existing.state, dict) else {}
+            if is_reset:
+                state = {'current_index': 0, 'completed_items': 0, 'correct_items': 0,
+                         'total_items': total, 'activity_completed': False, 'state_version': 0}
+                progress, _ = StudentActivityProgress.objects.update_or_create(
+                    student=student, activity_key=activity_key,
+                    defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
+                              'total_items': total, 'activity_completed': False, 'state': state})
+            else:
+                def bounded(value, fallback, upper=total):
+                    try:
+                        return max(0, min(upper, int(value)))
+                    except (TypeError, ValueError):
+                        return fallback
+                current_index = bounded(incoming.get('current_index', old.get('current_index', existing.current_index if existing else 0)), 0)
+                completed_items = bounded(incoming.get('completed_items', old.get('completed_items', existing.completed_items if existing else 0)), 0)
+                correct_items = bounded(incoming.get('correct_items', old.get('correct_items', existing.correct_items if existing else 0)), 0)
+                if existing and existing.activity_completed:
+                    return JsonResponse({'success': True, 'progress': {
+                        'current_index': existing.current_index, 'completed_items': existing.completed_items,
+                        'correct_items': existing.correct_items, 'total_items': existing.total_items,
+                        'activity_completed': True, 'state': old}})
+                old_index = bounded(old.get('current_index', existing.current_index if existing else 0), 0)
+                old_completed = bounded(old.get('completed_items', existing.completed_items if existing else 0), 0)
+                old_correct = bounded(old.get('correct_items', existing.correct_items if existing else 0), 0)
+                current_index = max(current_index, old_index)
+                completed_items = max(completed_items, old_completed)
+                correct_items = max(correct_items, old_correct)
+                state = dict(old)
+                state.update(incoming)
+                state.update({'current_index': current_index, 'completed_items': completed_items,
+                              'correct_items': correct_items, 'total_items': total,
+                              'activity_completed': False,
+                              'state_version': int(old.get('state_version') or 0) + 1})
+                progress, _ = StudentActivityProgress.objects.update_or_create(
+                    student=student, activity_key=activity_key,
+                    defaults={'current_index': current_index, 'completed_items': completed_items,
+                              'correct_items': correct_items, 'total_items': total,
+                              'activity_completed': False, 'state': state})
+            return JsonResponse({'success': True, 'progress': {
+                'current_index': progress.current_index, 'completed_items': progress.completed_items,
+                'correct_items': progress.correct_items, 'total_items': total,
+                'activity_completed': False, 'state': progress.state}})
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity_key == 'session-4-gawain-2':
         try:
             data = json.loads(request.body or '{}')
@@ -15679,6 +15731,24 @@ def prescribed_activity_complete(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity_key == 'session-4-gawain-3':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        total = 9
+        completed_items = int(existing.completed_items if existing else 0)
+        if not existing or completed_items < total:
+            return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang lahat ng salita.'}, status=400)
+        state = dict(existing.state if isinstance(existing.state, dict) else {})
+        correct_items = max(0, min(total, int(existing.correct_items or state.get('correct_items', 0) or 0)))
+        state.update({'current_index': total, 'completed_items': total, 'correct_items': correct_items,
+                      'total_items': total, 'activity_completed': True, 'phase': 'complete',
+                      'state_version': 1_000_000_000})
+        StudentActivityProgress.objects.update_or_create(
+            student=student, activity_key=activity_key,
+            defaults={'current_index': total, 'completed_items': total, 'correct_items': correct_items,
+                      'total_items': total, 'activity_completed': True, 'state': state})
+        return JsonResponse({'success': True, 'result': {
+            'items_completed': total, 'correct_items': correct_items,
+            'accuracy': round(correct_items / total * 100, 2)}})
     if activity_key == 'session-4-gawain-2':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
@@ -16987,6 +17057,20 @@ def session_4_gawain_3_page(request):
     if progress and progress.activity_completed:
         return redirect('assessment')
     raw_state = progress.state if progress and isinstance(progress.state, dict) else {}
+    total_items = 9
+    try:
+        saved_index = max(0, min(total_items, int(progress.current_index))) if progress else 0
+    except (TypeError, ValueError):
+        saved_index = 0
+    try:
+        saved_completed = max(0, min(total_items, int(progress.completed_items))) if progress else 0
+    except (TypeError, ValueError):
+        saved_completed = 0
+    try:
+        saved_correct = max(0, min(total_items, int(progress.correct_items))) if progress else 0
+    except (TypeError, ValueError):
+        saved_correct = 0
+    activity_completed = bool(progress and progress.activity_completed)
     context['session4_gawain3_data'] = {
         'activity_key': activity_key,
         'session_key': 'session-4',
@@ -16999,10 +17083,12 @@ def session_4_gawain_3_page(request):
         'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
         'next_url': reverse('session_4_gawain_4_page'),
         'transcribe_url': reverse('reading_transcribe_api'),
-        'progress': {'current_index': progress.current_index if progress else 0,
-                     'completed_items': progress.completed_items if progress else 0,
-                     'total_items': activity['total_items'],
-                     'activity_completed': progress.activity_completed if progress else False,
+        'has_incomplete_progress': bool(progress and not activity_completed and (saved_completed > 0 or saved_correct > 0 or saved_index > 0)),
+        'progress': {'current_index': saved_index,
+                     'completed_items': saved_completed,
+                     'correct_items': saved_correct,
+                     'total_items': total_items,
+                     'activity_completed': activity_completed,
                      'state': raw_state},
     }
     return render(request, 'pabasa_app/session_4_gawain_3_page.html', context)

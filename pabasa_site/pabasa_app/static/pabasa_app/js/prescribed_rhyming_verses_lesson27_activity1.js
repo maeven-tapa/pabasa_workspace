@@ -7,12 +7,17 @@
   const csrf = () => (document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] || '';
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
-  const canonicalTranscript = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\bdanced\b/g, 'dance').replace(/\bhot\b/g, 'hat').replace(/\bmath\b/g, 'mat').replace(/\bwar\b/g, 'wore').replace(/\bbutt\b/g, 'bat').replace(/\bbath\b/g, 'bat').replace(/\bbut\b/g, 'bat').replace(/\bquiet\b/g, 'quite').replace(/\blaugh\b/g, 'laughed').replace(/\blove\b/g, 'loved');
+  const canonicalTranscript = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\bdanced\b/g, 'dance').replace(/\bjump\b/g, 'jumped').replace(/\bhot\b/g, 'hat').replace(/\bmath\b/g, 'mat').replace(/\bwar\b/g, 'wore').replace(/\bbutt\b/g, 'bat').replace(/\bbath\b/g, 'bat').replace(/\bbut\b/g, 'bat').replace(/\bquiet\b/g, 'quite').replace(/\blaugh\b/g, 'laughed').replace(/\blove\b/g, 'loved');
   let state = {phase:'reading', item_index:0, verse_index:0, attempts:0, help_visible:false, selected:[], completed_items:0, ...(data.progress?.state || {})};
   let busy = false;
   let stream = null;
   let audio = null;
   let audioUrl = null;
+  const RETRY_FEEDBACK = "Hmm, let's try that again.";
+  const READ_CORRECT_FEEDBACK = "That's right, now let's read the next verse.";
+  const RHYME_INSTRUCTION_FEEDBACK = "That's right, now choose the rhyming words.";
+  const RHYME_CORRECT_FEEDBACK = "That's right, now let's read the next verse.";
+  const COMPLETION_FEEDBACK = "Great job! You finished all the rhyming verses.";
 
   async function responseJson(response, label) {
     const type = response.headers.get('content-type') || '';
@@ -62,9 +67,10 @@
     const activeVerse = item.lines[state.verse_index]?.text || '';
     let controls = '';
     if (state.phase === 'reading') {
-      controls = `<p class="lesson27-prompt">Read verse ${state.verse_index + 1} of ${item.lines.length} aloud.</p><p class="lesson27-status ${type}" id="status">${esc(message || (state.help_visible ? 'Listen to hear the verse, then try reading it again.' : 'Read the highlighted verse aloud.'))}</p><div class="lesson27-actions"><button class="lesson27-button" id="record-verse" type="button">🎙️ Read the verse</button><button class="lesson27-button secondary" id="listen-verse" type="button">🔊 Listen</button></div>`;
+      const canListen = Boolean(state.help_visible || state.attempts >= 3);
+      controls = `<p class="lesson27-prompt">Read verse ${state.verse_index + 1} of ${item.lines.length} aloud.</p>${message ? `<p class="lesson27-status ${type}" id="status">${esc(message)}</p>` : ''}<div class="lesson27-actions"><button class="lesson27-button" id="record-verse" type="button">🎙️ Read the verse</button><button class="lesson27-button secondary" id="listen-verse" type="button" ${canListen ? '' : 'disabled'}>🔊 Listen</button></div>`;
     } else {
-      controls = `<p class="lesson27-prompt">Click all the words that rhyme with “at.”</p><p class="lesson27-status ${type}" id="status">${esc(message || 'Select every rhyming word. They will turn green when correct.')}</p><div class="lesson27-actions"><button class="lesson27-button secondary" id="listen-rhyme-directions" type="button">🔊 Listen to directions</button><button class="lesson27-button" id="listen-poem" type="button">🔊 Listen to the poem</button></div>`;
+      controls = `<p class="lesson27-prompt">Click all the words that rhyme with “at.”</p>${message ? `<p class="lesson27-status ${type}" id="status">${esc(message)}</p>` : ''}<div class="lesson27-actions"><button class="lesson27-button secondary" id="listen-rhyme-directions" type="button">🔊 Listen to directions</button><button class="lesson27-button" id="listen-poem" type="button">🔊 Listen to the poem</button></div>`;
     }
     frame(`<div class="lesson27-content"><h2 class="lesson27-poem-title">${esc(item.title)}</h2><div class="lesson27-verses">${lines}</div>${controls}</div>`);
     document.getElementById('record-verse')?.addEventListener('click', () => recordVerse(activeVerse));
@@ -76,9 +82,8 @@
   async function playAudio(text) {
     if (busy || !text) return;
     busy = true;
-    const buttons = app.querySelectorAll('button'); buttons.forEach(button => { button.disabled = true; });
-    const status = document.getElementById('status'), oldStatus = status?.textContent;
-    if (status) status.textContent = 'Playing audio…';
+    const buttons = [...app.querySelectorAll('button')];
+    const buttonStates = buttons.map(button => ({button, disabled:button.disabled}));
     try {
       const response = await fetch(data.read_aloud_url, {method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf(),'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({target_text:text,language:'English',lesson_tts_key:'lesson-27-gawain-1'})});
       const result = await responseJson(response, 'Read-aloud service');
@@ -94,8 +99,7 @@
       });
     } finally {
       busy = false;
-      app.querySelectorAll('button').forEach(button => { button.disabled = false; });
-      if (status?.isConnected && status.textContent === 'Playing audio…') status.textContent = oldStatus;
+      buttonStates.forEach(({button, disabled}) => { if (button.isConnected) button.disabled = disabled; });
       audio = null;
       if (audioUrl) { URL.revokeObjectURL(audioUrl); audioUrl = null; }
     }
@@ -103,9 +107,9 @@
   async function recordVerse(target) {
     if (busy) return;
     busy = true;
-    const button = document.getElementById('record-verse'), status = document.getElementById('status');
-    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { status.textContent = 'Microphone recording is not available in this browser.'; busy = false; return; }
-    button.disabled = true; button.textContent = 'Listening…'; status.textContent = 'Listening…';
+    const button = document.getElementById('record-verse');
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { busy = false; return; }
+    button.disabled = true; button.textContent = 'Listening…';
     try {
       stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
       const recorder = new MediaRecorder(stream), chunks = [];
@@ -124,9 +128,11 @@
       const isPlayfulBatVerse = expectedTokens.includes('dance') && expectedTokens.includes('playful') && expectedTokens.includes('bat');
       const playfulBatHeard = spokenTokens.includes('bat') && (spokenTokens.includes('dance') || spokenTokens.includes('playful'));
       const correct = Boolean(expected && (spoken.includes(expected) || (isPlayfulBatVerse && playfulBatHeard)));
-      const message = correct ? 'Correct! Read the next verse.' : `I heard “${result.raw_transcript || result.transcript || 'unclear speech'}”. Please try the verse again.`;
       await save({action:'verse_read',item_index:state.item_index,verse_index:state.verse_index,success:correct});
-      render(message, correct ? 'good' : 'bad');
+      busy = false;
+      const correctFeedback = state.phase === 'rhymes' ? RHYME_INSTRUCTION_FEEDBACK : READ_CORRECT_FEEDBACK;
+      render(correct ? correctFeedback : `I heard “${heardText || 'unclear speech'}”. ${RETRY_FEEDBACK}`, correct ? 'good' : 'bad');
+      await playAudio(correct ? correctFeedback : RETRY_FEEDBACK);
     } catch (error) { stopStream(); render(error.message || 'Could not recognize your speech. Try again.','bad'); }
     finally { busy = false; }
   }
@@ -138,6 +144,8 @@
       if (!result.accepted) {
         button.classList.add('wrong');
         window.setTimeout(() => button.classList.remove('wrong'), 500);
+        busy = false;
+        render('That word does not rhyme with “at.”', 'bad');
         return;
       }
       if (state.phase === 'complete') {
@@ -145,7 +153,11 @@
         const payload = await responseJson(response, 'Saving completion');
         if (!response.ok || !payload.success) throw new Error(payload.error || 'Could not save completion.');
       }
-      render(result.accepted ? 'Correct! Keep finding the rhyming words.' : '', 'good');
+      const completedRhymeSelection = state.phase !== 'rhymes';
+      const response = state.phase === 'complete' ? COMPLETION_FEEDBACK : RHYME_CORRECT_FEEDBACK;
+      busy = false;
+      render(completedRhymeSelection ? response : 'Correct selection. Keep finding the rhyming words.', completedRhymeSelection ? 'good' : '');
+      if (completedRhymeSelection) await playAudio(response);
     } catch (error) { render(error.message || 'Could not save your selection. Try again.','bad'); }
     finally { busy = false; }
   }

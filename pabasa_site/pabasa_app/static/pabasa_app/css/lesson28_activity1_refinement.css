@@ -1,0 +1,19 @@
+/* Scoped visual refinement for Lesson 28 · Gawain 1. */
+html body .page{position:relative;display:block;width:min(1250px,calc(100% - 36px));height:100dvh;padding:16px 0 22px}
+html body .page .back{position:absolute;top:16px;left:0;z-index:2;width:280px;min-height:64px}
+html body .page .stage{position:absolute;inset:clamp(136px,18vh,188px) 0 clamp(18px,5vh,50px);height:auto;min-height:0;margin:0;padding:clamp(22px,3.3vh,42px) clamp(20px,6vw,80px) 20px;border-radius:42px;display:grid;place-items:center;overflow:hidden}
+html body #app{width:min(100%,1050px);max-height:100%}
+html body .eyebrow{margin:-8px auto 16px;padding:10px 30px;font-size:clamp(.85rem,1.4vw,1.15rem);letter-spacing:.02em}
+html body .title{font-size:clamp(2.2rem,4.2vw,3.8rem)}
+html body .instruction{margin:14px auto;font-size:clamp(1rem,1.5vw,1.25rem)}
+html body .content{margin:clamp(14px,2.5vh,26px) auto}
+html body .item{gap:clamp(24px,5vw,64px)}
+html body .picture{width:min(100%,280px);max-height:clamp(150px,27vh,270px)}
+html body .word{font-size:clamp(4rem,8vw,6rem)}
+html body .stem{margin:14px 0;font-size:clamp(2.4rem,4.8vw,4.2rem)}
+html body .status{min-height:2.2em;margin:10px auto}
+html body .actions{gap:18px}
+html body .button{min-width:min(310px,42vw);min-height:72px}
+html body .progress{gap:9px;margin-top:clamp(14px,2vh,24px)}
+html body .step{width:36px;height:36px}
+@media(max-width:680px){html body .page{width:min(100% - 24px,680px);padding:12px}html body .page .back{top:12px;left:0;width:245px;min-height:58px}html body .page .stage{inset:116px 0 12px;padding:22px 14px 16px;border-radius:30px}html body .picture{max-height:180px}html body .item{gap:8px}html body .button{min-height:64px}html body .step{width:32px;height:32px}}
