@@ -23,6 +23,9 @@ html body .button:hover:not(:disabled){background:#f4fffe;color:var(--dark);tran
 html body .button:active:not(:disabled){background:#d8f2f0;transform:translateY(3px);box-shadow:0 2px 0 #b7d6dc}
 html body .button:focus-visible{outline:4px solid #f5d47c;outline-offset:4px}
 html body .button:disabled{background:#b5c5c7!important;color:#edf3f4!important;border-color:transparent!important;box-shadow:none!important;cursor:not-allowed;transform:none;opacity:1}
+html body .button.is-busy{animation:lesson29Activity2AudioPulse 1.15s ease-in-out infinite;opacity:1!important}
+html body .button.is-busy:disabled{background:#b5c5c7!important;color:#edf3f4!important;border-color:transparent!important;box-shadow:none!important;opacity:1!important;cursor:not-allowed}
+@keyframes lesson29Activity2AudioPulse{0%,100%{transform:scale(1);box-shadow:0 7px 0 var(--dark),0 12px 24px #187b7a40}50%{transform:scale(1.025);box-shadow:0 0 0 9px #f5d47c55,0 7px 0 var(--dark),0 15px 28px #187b7a55}}
 html body .start-actions button{transition:transform .16s,filter .16s,box-shadow .16s}
 html body .start:hover{filter:brightness(1.08);transform:translateY(-2px);box-shadow:0 7px 0 var(--dark),0 10px 18px #187b7a35}
 html body .start:active{filter:brightness(.98);transform:translateY(3px);box-shadow:0 2px 0 var(--dark)}

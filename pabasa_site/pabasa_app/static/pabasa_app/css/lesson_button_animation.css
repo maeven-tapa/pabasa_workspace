@@ -1,0 +1,31 @@
+.button.is-playing,
+.button.is-recording,
+.button.is-busy,
+.button:focus:not(:focus-visible),
+.lesson27-button.is-playing,
+.lesson27-button.is-recording {
+  animation: lesson30ButtonPulse 1.15s ease-in-out infinite;
+  opacity: 1 !important;
+}
+.button.is-playing:not(.secondary),
+.button.is-recording:not(.secondary),
+.button.is-busy:not(.secondary),
+.lesson27-button.is-playing:not(.secondary),
+.lesson27-button.is-recording:not(.secondary) {
+  background: var(--teal) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+.button.secondary.is-playing,
+.button.secondary.is-recording,
+.button.secondary.is-busy,
+.lesson27-button.secondary.is-playing,
+.lesson27-button.secondary.is-recording {
+  background: #fffffff0 !important;
+  color: var(--dark, var(--teal-dark)) !important;
+  border-color: var(--line) !important;
+}
+@keyframes lesson30ButtonPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 7px 0 var(--dark, var(--teal-dark)), 0 12px 24px #187b7a40; }
+  50% { transform: scale(1.025); box-shadow: 0 0 0 9px #f5d47c55, 0 7px 0 var(--dark, var(--teal-dark)), 0 15px 28px #187b7a55; }
+}

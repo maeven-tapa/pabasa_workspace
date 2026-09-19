@@ -36,12 +36,17 @@
     html body .page #app{width:min(100%,1050px);max-height:100%}
     @media(max-width:800px){html body .page{width:min(100% - 24px,680px);padding:12px}html body .page .back{top:12px;left:0}html body .page .lesson26-stage{top:116px;bottom:12px;padding:22px 14px 16px;border-radius:30px}}
   </style>
+<link rel="stylesheet" href="{% static 'pabasa_app/css/lesson_button_animation.css' %}?v=1">
+<style>
+  #app .button.is-busy:disabled { background:#b5c5c7!important;color:#edf3f4!important;border-color:transparent!important;box-shadow:none!important;opacity:1!important;cursor:not-allowed; }
+</style>
+<style>html body .page .lesson26-stage{top:calc(50% + 24px);bottom:auto;height:auto;max-height:calc(100dvh - 32px);padding:20px 48px 16px;transform:translate(-50%,-50%)}html body .lesson26-content{margin-top:14px}html body .instruction{margin-top:12px}html body .word{margin:8px 0}html body .status{min-height:1.8em;margin:8px auto}html body .word-bank{margin:14px auto}html body .lesson26-progress{margin-top:14px}@media(max-width:800px){html body .page .lesson26-stage{top:calc(50% + 12px);bottom:auto;max-height:calc(100dvh - 24px);padding:18px 14px 14px;transform:translate(-50%,-50%)}}</style>
 </head>
 <body>
   <main class="page"><a class="back" id="lesson26-back" href="{% url 'assessment' %}"><span aria-hidden="true">←</span><span>Back to My Lessons</span></a><section class="lesson26-stage is-waiting" id="lesson26-stage"><div id="app" aria-live="polite"></div></section></main>
   <div class="lesson26-start-backdrop" id="lesson26-start" role="dialog" aria-modal="true" aria-labelledby="lesson26-start-title"><div class="lesson26-start-modal"><p class="lesson26-start-label">SESSION 10 · LESSON 26 · ACTIVITY 2</p><h2 class="lesson26-start-title" id="lesson26-start-title">FILL IN THE BLANKS</h2><p class="lesson26-start-description">Read the words, then fill in the blanks.</p><div class="lesson26-start-actions"><button class="lesson26-start-button" id="lesson26-start-button" type="button">START</button><button class="lesson26-later-button" id="lesson26-later-button" type="button">NOT NOW</button></div></div></div>
   {{ prescribed_activity_data|json_script:"prescribed-activity-data" }}
-  <script src="{% static 'pabasa_app/js/prescribed_fill_blank_lesson26_activity2.js' %}?v=lesson26-activity2-ui-4" defer></script>
+  <script src="{% static 'pabasa_app/js/prescribed_fill_blank_lesson26_activity2.js' %}?v=lesson26-activity2-ui-8" defer></script>
   <script>(()=>{const modal=document.getElementById('lesson26-start'),stage=document.getElementById('lesson26-stage'),start=document.getElementById('lesson26-start-button');start.addEventListener('click',()=>{modal.hidden=true;stage.classList.remove('is-waiting')});start.focus()})();</script>
 </body>
 </html>

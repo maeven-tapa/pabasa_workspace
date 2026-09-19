@@ -44,3 +44,6 @@ html body .board canvas{cursor:url("/static/pabasa_app/images/lesson_29/lesson29
 @media(max-width:680px){html body .page{width:min(100% - 24px,680px);padding:12px}html body .page .back{top:12px;left:0;width:245px;min-height:58px}html body .page .stage{top:92px;bottom:12px;padding:18px 14px 14px;border-radius:30px}html body .button{width:100%;min-width:0;min-height:64px}html body .step{width:32px;height:32px}}
 html body .page .stage{top:calc(50% + 24px);left:50%;right:auto;bottom:auto;width:100%;height:auto;min-height:0;max-height:calc(100dvh - 32px);transform:translate(-50%,-50%);box-shadow:0 18px 45px #1e5b7a35}
 @media(max-width:680px){html body .page .stage{top:calc(50% + 12px);bottom:auto;max-height:calc(100dvh - 24px);padding:22px 14px 16px;border-radius:30px;transform:translate(-50%,-50%)}}
+html body .button.is-busy{animation:lesson27ButtonPulse 1.15s ease-in-out infinite}
+html body .button.is-busy:disabled{background:#b5c5c7!important;color:#edf3f4!important;border-color:transparent!important;box-shadow:none!important;opacity:1!important;cursor:not-allowed}
+@keyframes lesson27ButtonPulse{0%,100%{transform:scale(1);box-shadow:0 8px 0 var(--dark),0 12px 24px #187b7a40}50%{transform:scale(1.025);box-shadow:0 0 0 9px #f5d47c55,0 8px 0 var(--dark),0 15px 28px #187b7a55}}

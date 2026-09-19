@@ -19418,6 +19418,7 @@ def reading_read_aloud_api(request):
                        else {'voice_gender': 'MALE'} if lesson_tts_key in {
                            'lesson-26-gawain-1', 'lesson-26-gawain-2', 'lesson-27-gawain-1',
                            'lesson-28-gawain-1', 'lesson-28-gawain-2',
+                           'lesson-30-gawain-1', 'lesson-30-gawain-2', 'lesson-30-gawain-3',
                            'lesson-29-gawain-1', 'lesson-29-gawain-2', 'lesson-29-gawain-3',
                        }
                        else {'voice_gender': 'MALE'} if tts_profile == 'correspondence'

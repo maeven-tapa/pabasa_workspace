@@ -84,6 +84,7 @@
     busy = true;
     const buttons = [...app.querySelectorAll('button')];
     const buttonStates = buttons.map(button => ({button, disabled:button.disabled}));
+    buttons.forEach(button => { button.disabled = true; button.classList.add('is-busy'); });
     try {
       const response = await fetch(data.read_aloud_url, {method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf(),'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({target_text:text,language:'English',lesson_tts_key:'lesson-27-gawain-1'})});
       const result = await responseJson(response, 'Read-aloud service');
@@ -100,6 +101,7 @@
     } finally {
       busy = false;
       buttonStates.forEach(({button, disabled}) => { if (button.isConnected) button.disabled = disabled; });
+      buttons.forEach(button => { if (button.isConnected) button.classList.remove('is-busy'); });
       audio = null;
       if (audioUrl) { URL.revokeObjectURL(audioUrl); audioUrl = null; }
     }
@@ -108,8 +110,9 @@
     if (busy) return;
     busy = true;
     const button = document.getElementById('record-verse');
+    button?.classList.add('is-busy');
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { busy = false; return; }
-    button.disabled = true; button.textContent = 'Listening…';
+    button.textContent = 'Listening…';
     try {
       stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
       const recorder = new MediaRecorder(stream), chunks = [];
@@ -134,7 +137,7 @@
       render(correct ? correctFeedback : `I heard “${heardText || 'unclear speech'}”. ${RETRY_FEEDBACK}`, correct ? 'good' : 'bad');
       await playAudio(correct ? correctFeedback : RETRY_FEEDBACK);
     } catch (error) { stopStream(); render(error.message || 'Could not recognize your speech. Try again.','bad'); }
-    finally { busy = false; }
+    finally { button?.classList.remove('is-busy'); busy = false; }
   }
   async function selectWord(button) {
     if (busy || button.classList.contains('selected')) return;

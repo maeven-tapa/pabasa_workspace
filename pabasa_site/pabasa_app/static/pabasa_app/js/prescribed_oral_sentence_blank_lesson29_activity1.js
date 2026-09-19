@@ -13,7 +13,7 @@
   function hydrate() { state.current_item = Number(state.current_item || 0); state.completed_items = Number(state.completed_items || 0); state.phase ||= 'answering'; }
   async function post(url, body) { const response = await fetch(url, {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':csrf()}, body:JSON.stringify(body)}), result = await response.json(); if (!response.ok || !result.success) throw Error(result.error || 'Could not save your progress.'); if (result.progress?.state) state = {...result.progress.state}; hydrate(); return result; }
   function steps() { const current = state.phase === 'complete' ? data.items.length : state.current_item; return `<div class="progress">${data.items.map((_, index) => `<span class="step ${index < current ? 'done' : ''} ${index === current && state.phase !== 'complete' ? 'active' : ''}">${index + 1}</span>`).join('')}</div>`; }
-  function setButtonState(mode) { const read = document.getElementById('read'), listen = document.getElementById('listen'); if (!read || !listen) return; const enabled = mode === 'ready'; read.disabled = !enabled; listen.disabled = !enabled; read.classList.toggle('is-recording', mode === 'recording'); read.classList.toggle('is-playing', mode === 'audio'); listen.classList.toggle('is-playing', mode === 'audio'); }
+  function setButtonState(mode) { const read = document.getElementById('read'), listen = document.getElementById('listen'); if (!read || !listen) return; const enabled = mode === 'ready'; read.disabled = mode === 'audio'; listen.disabled = !enabled; read.classList.toggle('is-busy', mode === 'recording' || mode === 'audio'); listen.classList.toggle('is-busy', mode === 'audio'); }
   function render(message = '', kind = '') {
     hydrate();
     if (state.phase === 'complete' || state.current_item >= data.items.length) { app.innerHTML = `<div class="complete">🎉 Great job! You completed all the sentences.</div>${steps()}`; post(data.completion_url, {}).catch(() => {}); return; }
@@ -25,10 +25,10 @@
   }
   async function play(text, lockButtons = true) {
     if (busy || !text) return;
-    busy = true; if (lockButtons) setButtonState('audio');
+    busy = true; const buttons=[...app.querySelectorAll('button')],buttonStates=buttons.map(button=>({button,disabled:button.disabled})); buttons.forEach(button=>{button.disabled=true;button.classList.add('is-busy');});
     try { const response = await fetch(data.read_aloud_url, {method:'POST', credentials:'same-origin', headers:{'X-CSRFToken':csrf(),'Content-Type':'application/x-www-form-urlencoded'}, body:new URLSearchParams({target_text:text, language:'English', lesson_tts_key:'lesson-29-gawain-1'})}), result = await response.json(); if (!response.ok || !result.success || !result.audio_content) throw Error(result.error || 'Could not play audio.'); const bytes = Uint8Array.from(atob(result.audio_content), char => char.charCodeAt(0)); audioUrl = URL.createObjectURL(new Blob([bytes], {type:result.mime_type || 'audio/mpeg'})); audio = new Audio(audioUrl); await new Promise((resolve, reject) => { audio.onended = resolve; audio.onerror = () => reject(Error('Audio playback failed.')); audio.play().catch(reject); }); }
     catch (error) {}
-    finally { busy = false; if (audioUrl) { URL.revokeObjectURL(audioUrl); audioUrl = null; } audio = null; if (lockButtons) setButtonState('ready'); }
+    finally { busy=false; buttonStates.forEach(({button,disabled})=>{if(button.isConnected)button.disabled=disabled;}); buttons.forEach(button=>{if(button.isConnected)button.classList.remove('is-busy');}); if(audioUrl){URL.revokeObjectURL(audioUrl);audioUrl=null;} audio=null; }
   }
   async function record() {
     if (busy || !navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { if (!busy) render('Microphone recording is not available in this browser.', 'bad'); return; }
@@ -53,7 +53,7 @@
   async function reset(event) { event.preventDefault(); if (busy) return; busy = true; try { await post(data.progress_url, {reset:true}); location.assign(document.getElementById('lesson29a1-back').href); } catch (error) { busy = false; alert(error.message); } }
   document.getElementById('lesson29a1-back').onclick = reset;
   document.getElementById('lesson29a1-later').onclick = reset;
-  document.getElementById('lesson29a1-go').onclick = async () => { document.getElementById('lesson29a1-start').hidden = true; document.getElementById('lesson29a1-stage').classList.remove('waiting'); try { await play('Fill in the Blank. Say the missing word to complete each sentence.', false); } catch (error) { render(error.message, 'bad'); } };
+  document.getElementById('lesson29a1-go').onclick = async () => { document.getElementById('lesson29a1-start').hidden = true; document.getElementById('lesson29a1-stage').classList.remove('waiting'); try { await play('Fill in the Blank. Say the missing word to complete each sentence.'); } catch (error) { render(error.message, 'bad'); } };
   window.addEventListener('pagehide', () => { stop(); audio?.pause(); });
   hydrate(); render();
 })();
