@@ -1,0 +1,15 @@
+/* Scoped visual refinement for Lesson 28 · Activity 2. */
+html body .page{position:relative;display:block;width:min(1250px,calc(100% - 36px));height:100dvh;padding:16px 0 22px}
+html body .page .back{position:absolute;top:16px;left:0;z-index:2}
+html body .page .stage{position:absolute;top:clamp(136px,18vh,188px);left:50%;right:auto;bottom:clamp(18px,5vh,50px);width:100%;height:auto;min-height:0;margin:0;transform:translateX(-50%);padding:clamp(22px,3.3vh,42px) clamp(20px,6vw,80px) 20px;display:grid;place-items:center;overflow:hidden}
+html body #app{width:min(100%,1050px);max-height:100%}
+html body .content{margin:clamp(14px,2.5vh,26px) auto}
+html body .word{font-size:clamp(4rem,8vw,6rem)}
+html body .choices{gap:14px;margin:16px auto}
+html body .choice{min-width:145px;padding:13px 22px}
+html body .progress{gap:9px;margin-top:clamp(14px,2vh,24px)}
+html body .step{width:36px;height:36px}
+html body .status{display:none!important}
+@media(max-width:680px){html body .page{width:min(100% - 24px,680px);padding:12px}html body .page .back{top:12px;left:0;width:245px;min-height:58px}html body .page .stage{top:116px;bottom:12px;padding:22px 14px 16px;border-radius:30px}html body .choice{min-width:125px;padding:11px 16px}html body .step{width:32px;height:32px}}
+html body .page .stage{top:calc(50% + 24px);left:50%;right:auto;bottom:auto;width:100%;height:auto;min-height:0;max-height:calc(100dvh - 32px);transform:translate(-50%,-50%);box-shadow:0 18px 45px #1e5b7a35}
+@media(max-width:680px){html body .page .stage{top:calc(50% + 12px);bottom:auto;max-height:calc(100dvh - 24px);padding:22px 14px 16px;border-radius:30px;transform:translate(-50%,-50%)}}

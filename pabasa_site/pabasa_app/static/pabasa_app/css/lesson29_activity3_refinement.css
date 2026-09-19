@@ -1,0 +1,46 @@
+/* Scoped visual refinement for Lesson 29 · Gawain 3. */
+html,body{height:100%;overflow:hidden}
+html body .page{position:relative;width:min(1250px,calc(100% - 36px));height:100dvh;min-height:0;padding:16px 0 22px}
+html body .page .back{position:absolute;top:16px;left:0;z-index:2;transition:transform .16s,box-shadow .16s}
+html body .page .back:hover{transform:translateY(-2px);box-shadow:0 10px 22px #145ca755}
+html body .page .back:active{transform:translateY(2px);box-shadow:0 3px 8px #145ca744}
+html body .page .stage{position:absolute;top:clamp(92px,12vh,128px);left:50%;right:auto;bottom:12px;width:100%;height:auto;min-height:0;margin:0;transform:translateX(-50%);padding:clamp(18px,2.5vh,30px) clamp(20px,6vw,80px) 16px;border-radius:42px;display:grid;place-items:center;overflow:hidden;box-shadow:0 18px 45px #1e5b7a35}
+html body .page .stage.is-reading{top:50%;bottom:auto;height:auto;max-height:calc(100dvh - 150px);padding:26px clamp(20px,6vw,80px);transform:translate(-50%,-50%)}
+html body .page .stage.is-reading .eyebrow{margin-bottom:8px}
+html body .page .stage.is-reading .instruction{margin:6px auto}
+html body .page .stage.is-reading .letter{height:clamp(140px,17vh,165px);margin:6px auto 8px}
+html body .page .stage.is-reading .actions{margin:8px auto}
+html body .page .stage.is-reading .progress{margin-top:18px;transform:translateY(4px)}
+html body .page .stage.is-reading #app{transform:translateY(12px)}
+html body #app{width:min(100%,950px);max-height:100%}
+html body .eyebrow{margin:-8px auto 12px;padding:10px 30px;font-size:clamp(.85rem,1.4vw,1.15rem);letter-spacing:.02em}
+html body .title{font-size:clamp(2.05rem,3.8vw,3.35rem)}
+html body .instruction{margin:10px auto;font-size:clamp(1rem,1.5vw,1.25rem)}
+html body .item-label,html body .status{display:none!important}
+html body .letter{width:min(300px,60vw);height:clamp(120px,20vh,190px);margin:10px auto 12px;border-width:3px;border-radius:24px;font-size:clamp(5rem,11vw,8rem)}
+html body .trace-label{margin:8px auto;color:var(--muted);font-weight:900}
+html body .board{width:min(560px,82vw);height:clamp(150px,24vh,230px);margin:10px auto;border-width:3px;border-radius:22px}
+html body .actions{gap:14px;margin:12px auto}
+html body .button{min-width:min(280px,40vw);min-height:66px;transition:transform .16s,filter .16s,box-shadow .16s}
+html body .button:hover:not(:disabled){background:#38b0aa;color:#fff;transform:translateY(-2px);box-shadow:0 8px 0 var(--dark),0 12px 22px #187b7a26}
+html body .button.secondary:hover:not(:disabled){background:#f4fffe;color:var(--dark);transform:translateY(-2px);box-shadow:0 8px 0 #b7d6dc,0 12px 22px #187b7a26}
+html body .button:active:not(:disabled){background:#218783;transform:translateY(3px);box-shadow:0 2px 0 var(--dark)}
+html body .button.secondary:active:not(:disabled){background:#d8f2f0;color:var(--dark);transform:translateY(3px);box-shadow:0 2px 0 #b7d6dc}
+html body .button:focus-visible{outline:4px solid #f5d47c;outline-offset:4px}
+html body .button:disabled{background:#b5c5c7!important;color:#edf3f4!important;border-color:transparent!important;box-shadow:none!important;cursor:not-allowed;transform:none;opacity:1}
+html body .button.is-playing{animation:lesson29Activity3AudioPulse 1s ease-in-out infinite}
+html body .trace-count{gap:9px;margin:8px}
+html body .trace-count span{width:34px;height:34px}
+html body .progress{gap:9px;margin-top:clamp(12px,2vh,20px)}
+html body .step{width:36px;height:36px}
+html body .start-actions button{transition:transform .16s,filter .16s,box-shadow .16s}
+html body .start:hover{filter:brightness(1.08);transform:translateY(-2px);box-shadow:0 7px 0 var(--dark),0 10px 18px #187b7a35}
+html body .start:active{filter:brightness(.98);transform:translateY(3px);box-shadow:0 2px 0 var(--dark)}
+html body .later:hover{background:#f4fffe;transform:translateY(-2px);box-shadow:0 6px 0 #b7d6dc,0 10px 18px #187b7a20}
+html body .later:active{background:#d8f2f0;transform:translateY(3px);box-shadow:0 2px 0 #b7d6dc}
+@keyframes lesson29Activity3AudioPulse{50%{filter:brightness(1.12)}}
+html body .letter{padding-bottom:24px}
+html body .board canvas{cursor:url("/static/pabasa_app/images/lesson_29/lesson29-pencil-cursor.png?v=1") 3 42,crosshair}
+@media(max-width:680px){html body .page{width:min(100% - 24px,680px);padding:12px}html body .page .back{top:12px;left:0;width:245px;min-height:58px}html body .page .stage{top:92px;bottom:12px;padding:18px 14px 14px;border-radius:30px}html body .button{width:100%;min-width:0;min-height:64px}html body .step{width:32px;height:32px}}
+html body .page .stage{top:calc(50% + 24px);left:50%;right:auto;bottom:auto;width:100%;height:auto;min-height:0;max-height:calc(100dvh - 32px);transform:translate(-50%,-50%);box-shadow:0 18px 45px #1e5b7a35}
+@media(max-width:680px){html body .page .stage{top:calc(50% + 12px);bottom:auto;max-height:calc(100dvh - 24px);padding:22px 14px 16px;border-radius:30px;transform:translate(-50%,-50%)}}

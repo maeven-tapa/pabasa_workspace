@@ -1,0 +1,41 @@
+/* Scoped visual refinement for Lesson 29 · Gawain 1. */
+html,body{height:100%;overflow:hidden}
+html body .page{position:relative;width:min(1250px,calc(100% - 36px));height:100dvh;min-height:0;padding:16px 0 22px}
+html body .page .back{position:absolute;top:16px;left:0;z-index:2;transition:transform .16s,box-shadow .16s}
+html body .page .back:hover{transform:translateY(-2px);box-shadow:0 10px 22px #145ca755}
+html body .page .back:active{transform:translateY(2px);box-shadow:0 3px 8px #145ca744}
+html body .page .stage{position:absolute;top:clamp(136px,18vh,188px);left:50%;right:auto;bottom:clamp(18px,5vh,50px);width:100%;height:auto;min-height:0;margin:0;transform:translateX(-50%);padding:clamp(22px,3.3vh,42px) clamp(20px,6vw,80px) 20px;border-radius:42px;display:grid;place-items:center;overflow:hidden;box-shadow:0 18px 45px #1e5b7a35}
+html body #app{width:min(100%,1050px);max-height:100%}
+html body .eyebrow{margin:-8px auto 16px;padding:10px 30px;font-size:clamp(.85rem,1.4vw,1.15rem);letter-spacing:.02em}
+html body .title{font-size:clamp(2.2rem,4.2vw,3.8rem)}
+html body .instruction{margin:14px auto;font-size:clamp(1rem,1.5vw,1.25rem)}
+html body .content{margin:clamp(14px,2.5vh,26px) auto}
+html body .item{grid-template-columns:max-content minmax(100px,140px) max-content;width:fit-content;max-width:100%;gap:12px;justify-content:center;margin-inline:auto;transform:none}
+html body .picture{width:min(100%,140px);max-height:clamp(110px,18vh,150px);justify-self:center}
+html body .sentence{font-size:clamp(1.45rem,2.8vw,2.35rem);line-height:1.35}
+html body .lead,html body .tail{text-align:left}
+html body .status{min-height:2.2em;margin:10px auto}
+html body .actions{gap:18px;margin-top:12px}
+html body .button{min-width:min(310px,42vw);min-height:72px;transition:transform .16s,filter .16s,box-shadow .16s}
+html body .button:hover:not(:disabled){background:#38b0aa;transform:translateY(-2px)}
+html body .button.secondary:hover:not(:disabled){background:#f4fffe;color:var(--dark);transform:translateY(-2px);box-shadow:0 6px 16px #187b7a26}
+html body .button:active:not(:disabled){background:#218783;transform:translateY(3px);box-shadow:0 2px 0 var(--dark)}
+html body .button.secondary:active:not(:disabled){background:#d8f2f0;color:var(--dark);transform:translateY(3px);box-shadow:0 2px 0 #b7d6dc}
+html body .status{display:none!important}
+html body .button:focus-visible{outline:4px solid #f5d47c;outline-offset:4px}
+html body .button:disabled{background:#b5c5c7!important;color:#edf3f4!important;border-color:transparent!important;box-shadow:none!important;cursor:not-allowed;transform:none;filter:none;opacity:1}
+html body .button.is-recording{animation:lesson29RecordingPulse 1.2s ease-in-out infinite}
+html body .button.is-playing{animation:lesson29AudioPulse 1s ease-in-out infinite}
+html body .button.secondary.is-playing{background:#fff;color:var(--dark);border-color:var(--line)}
+html body .start-actions button{transition:transform .16s,filter .16s,box-shadow .16s}
+html body .start:hover{filter:brightness(1.08);transform:translateY(-2px);box-shadow:0 7px 0 var(--dark),0 10px 18px #187b7a35}
+html body .start:active{filter:brightness(.98);transform:translateY(3px);box-shadow:0 2px 0 var(--dark)}
+html body .later:hover{background:#f4fffe;transform:translateY(-2px);box-shadow:0 6px 0 #b7d6dc,0 10px 18px #187b7a20}
+html body .later:active{background:#d8f2f0;transform:translateY(3px);box-shadow:0 2px 0 #b7d6dc}
+@keyframes lesson29RecordingPulse{0%,100%{box-shadow:0 7px 0 var(--dark),0 12px 24px #187b7a40}50%{box-shadow:0 0 0 10px #f5d47c55,0 7px 0 var(--dark),0 16px 30px #187b7a55}}
+@keyframes lesson29AudioPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.12)}}
+html body .progress{gap:9px;margin-top:clamp(14px,2vh,24px)}
+html body .step{width:36px;height:36px}
+@media(max-width:680px){html body .page{width:min(100% - 24px,680px);padding:12px}html body .page .back{top:12px;left:0;width:245px;min-height:58px}html body .page .stage{top:116px;bottom:12px;padding:22px 14px 16px;border-radius:30px}html body .item{grid-template-columns:1fr;gap:0;transform:none}html body .lead,html body .tail{text-align:center}html body .picture{max-height:180px}html body .sentence{font-size:clamp(1.35rem,6vw,2rem)}html body .button{width:100%;min-width:0;min-height:64px}html body .step{width:32px;height:32px}}
+html body .page .stage{top:calc(50% + 24px);left:50%;right:auto;bottom:auto;width:100%;height:auto;min-height:0;max-height:calc(100dvh - 32px);transform:translate(-50%,-50%);box-shadow:0 18px 45px #1e5b7a35}
+@media(max-width:680px){html body .page .stage{top:calc(50% + 12px);bottom:auto;max-height:calc(100dvh - 24px);padding:22px 14px 16px;border-radius:30px;transform:translate(-50%,-50%)}}

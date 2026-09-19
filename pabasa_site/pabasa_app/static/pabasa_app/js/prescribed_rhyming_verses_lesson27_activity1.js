@@ -68,9 +68,9 @@
     let controls = '';
     if (state.phase === 'reading') {
       const canListen = Boolean(state.help_visible || state.attempts >= 3);
-      controls = `<p class="lesson27-prompt">Read verse ${state.verse_index + 1} of ${item.lines.length} aloud.</p>${message ? `<p class="lesson27-status ${type}" id="status">${esc(message)}</p>` : ''}<div class="lesson27-actions"><button class="lesson27-button" id="record-verse" type="button">🎙️ Read the verse</button><button class="lesson27-button secondary" id="listen-verse" type="button" ${canListen ? '' : 'disabled'}>🔊 Listen</button></div>`;
+      controls = `<p class="lesson27-prompt">Read verse ${state.verse_index + 1} of ${item.lines.length} aloud.</p><div class="lesson27-actions"><button class="lesson27-button" id="record-verse" type="button">🎙️ Read the verse</button><button class="lesson27-button secondary" id="listen-verse" type="button" ${canListen ? '' : 'disabled'}>🔊 Listen</button></div>`;
     } else {
-      controls = `<p class="lesson27-prompt">Click all the words that rhyme with “at.”</p>${message ? `<p class="lesson27-status ${type}" id="status">${esc(message)}</p>` : ''}<div class="lesson27-actions"><button class="lesson27-button secondary" id="listen-rhyme-directions" type="button">🔊 Listen to directions</button><button class="lesson27-button" id="listen-poem" type="button">🔊 Listen to the poem</button></div>`;
+      controls = `<p class="lesson27-prompt">Click all the words that rhyme with “at.”</p><div class="lesson27-actions"><button class="lesson27-button secondary" id="listen-rhyme-directions" type="button">🔊 Listen to directions</button><button class="lesson27-button" id="listen-poem" type="button">🔊 Listen to the poem</button></div>`;
     }
     frame(`<div class="lesson27-content"><h2 class="lesson27-poem-title">${esc(item.title)}</h2><div class="lesson27-verses">${lines}</div>${controls}</div>`);
     document.getElementById('record-verse')?.addEventListener('click', () => recordVerse(activeVerse));

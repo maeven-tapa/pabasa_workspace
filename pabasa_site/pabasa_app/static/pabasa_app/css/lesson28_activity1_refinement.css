@@ -16,4 +16,7 @@ html body .actions{gap:18px}
 html body .button{min-width:min(310px,42vw);min-height:72px}
 html body .progress{gap:9px;margin-top:clamp(14px,2vh,24px)}
 html body .step{width:36px;height:36px}
+html body .status{display:none!important}
 @media(max-width:680px){html body .page{width:min(100% - 24px,680px);padding:12px}html body .page .back{top:12px;left:0;width:245px;min-height:58px}html body .page .stage{inset:116px 0 12px;padding:22px 14px 16px;border-radius:30px}html body .picture{max-height:180px}html body .item{gap:8px}html body .button{min-height:64px}html body .step{width:32px;height:32px}}
+html body .page .stage{top:calc(50% + 24px);left:50%;right:auto;bottom:auto;width:100%;height:auto;min-height:0;max-height:calc(100dvh - 32px);transform:translate(-50%,-50%);box-shadow:0 18px 45px #1e5b7a35}
+@media(max-width:680px){html body .page .stage{top:calc(50% + 12px);bottom:auto;max-height:calc(100dvh - 24px);padding:22px 14px 16px;border-radius:30px;transform:translate(-50%,-50%)}}
