@@ -14,6 +14,11 @@
   let activeAudio = null;
   let audioUrl = null;
   let started = false;
+  const RETRY_FEEDBACK = "Hmm, let's try that again.";
+  const CHOICE_CORRECT_FEEDBACK = "That's right, now let's read the next word.";
+  const SENTENCE_CORRECT_FEEDBACK = "That's right, now let's choose the words.";
+  const WORD_CORRECT_FEEDBACK = "That's right, now let's choose the next word.";
+  const READ_SENTENCE_FEEDBACK = "That's right, now let's read the whole sentence.";
 
   function hydrate() {
     state.phase ||= 'choices';
@@ -51,10 +56,16 @@
   }
   function renderChoices(message = '', kind = '') {
     const word = data.choices[state.choice_index] || '';
-    const body = `<div class="lesson26-content"><div class="label">Read the word aloud</div><div class="word">${escapeHtml(word || 'Great job!')}</div><p class="status ${kind}" id="status">${escapeHtml(message || (word ? `Say “${word}” aloud, or listen to the word.` : 'Preparing the sentences…'))}</p>${word ? `<div class="actions"><button class="button" id="read" type="button">🎙️ Read the word</button><button class="button secondary" id="listen" type="button">🔊 Listen</button></div>` : ''}<div class="word-bank">${data.choices.map((choice, i) => `<span class="word-chip ${i < state.choice_index ? 'word-chip-done' : ''} ${i === state.choice_index ? 'word-chip-active' : ''}">${escapeHtml(choice)}</span>`).join('')}</div></div>`;
+    const canListen = Boolean(state.choice_help || state.choice_attempts >= 3);
+    const body = `<div class="lesson26-content"><div class="label">Read the word aloud</div><div class="word">${escapeHtml(word || 'Great job!')}</div>${word ? `<div class="actions"><button class="button" id="read" type="button">🎙️ Read the word</button><button class="button secondary" id="listen" type="button" ${canListen ? '' : 'disabled'}>🔊 Listen</button></div>` : ''}<div class="word-bank">${data.choices.map((choice, i) => `<span class="word-chip ${i < state.choice_index ? 'word-chip-done' : ''} ${i === state.choice_index ? 'word-chip-active' : ''}">${escapeHtml(choice)}</span>`).join('')}</div></div>`;
     shell('Fill in the Blanks', 'Read the words, then fill in the blanks.', body);
     document.getElementById('read')?.addEventListener('click', () => recordWord(word, state.choice_index));
     document.getElementById('listen')?.addEventListener('click', () => playTts(word).catch(error => renderChoices(error.message || 'Could not play the word. Try again.','bad')));
+  }
+
+  async function announce(text) {
+    busy = false;
+    try { await playTts(text); } catch (error) { console.error('Lesson 26 Activity 2 feedback audio failed', error); }
   }
   async function recordWord(word, index) {
     if (busy) return;
@@ -62,9 +73,9 @@
     const status = document.getElementById('status');
     const button = document.getElementById('read');
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
-      status.textContent = 'Microphone recording is not available in this browser.'; busy = false; return;
+      if (status) status.textContent = 'Microphone recording is not available in this browser.'; busy = false; return;
     }
-    button.disabled = true; button.textContent = 'Listening…'; status.textContent = 'Listening…';
+    button.disabled = true; button.textContent = 'Listening…'; if (status) status.textContent = 'Listening…';
     try {
       stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
       const recorder = new MediaRecorder(stream), chunks = [];
@@ -84,8 +95,15 @@
       const correct = transcript.some(token => accepted.includes(normalize(token)));
       const saved = await save({action:'choice_read',choice_index:index,success:correct});
       if (saved.progress?.state) state = {...saved.progress.state};
-      if (state.phase === 'sentence') render();
-      else renderChoices(correct ? 'Correct! Read the next word.' : transcript.length ? `I heard “${result.raw_transcript || result.transcript}”. Try “${word}” again.` : `I could not hear “${word}” clearly. Try again.`, correct ? 'good' : 'bad');
+      if (state.phase === 'sentence') {
+        started = false;
+        render();
+        await announce(correct ? SENTENCE_CORRECT_FEEDBACK : RETRY_FEEDBACK);
+        if (correct) { started = true; await playSentence(); }
+      } else {
+        renderChoices(correct ? 'Correct! Read the next word.' : transcript.length ? `I heard “${result.raw_transcript || result.transcript}”. Try “${word}” again.` : `I could not hear “${word}” clearly. Try again.`, correct ? 'good' : 'bad');
+        await announce(correct ? CHOICE_CORRECT_FEEDBACK : RETRY_FEEDBACK);
+      }
     } catch (error) { stopStream(); renderChoices(error.message || 'Could not recognize your speech. Try again.', 'bad'); }
     finally { busy = false; }
   }
@@ -107,7 +125,8 @@
       return `${part}<button type="button" class="blank ${value ? 'correct' : ''}" data-blank="${n}" aria-label="Blank ${n + 1}">${escapeHtml(value || 'Choose word')}</button>`;
     }).join('');
     const remaining = data.choices.filter(word => !Object.values(state.placements).includes(word));
-    const body = `<div class="lesson26-content"><p class="prompt">Listen to the sentence, then fill in each blank.</p><div class="actions"><button class="button secondary" id="listen" type="button">🔊 Listen to the sentence</button></div><div class="sentence">${sentence}</div><div class="word-bank">${remaining.map(word => `<button type="button" draggable="true" class="word-chip" data-word="${escapeHtml(word)}">${escapeHtml(word)}</button>`).join('')}</div><p class="status ${kind}" id="status">${escapeHtml(message || (state.sentence_read ? 'Choose the correct words for the blanks.' : 'Listen to the sentence first.'))}</p>${Object.keys(state.placements).length === item.blank_count ? '<div class="actions"><button class="button" id="read-sentence" type="button">🎙️ Read the sentence</button></div>' : ''}</div>`;
+    const sentenceComplete = Object.keys(state.placements).length === item.blank_count;
+    const body = `<div class="lesson26-content"><p class="prompt">Listen to the sentence, then fill in each blank.</p><div class="actions"><button class="button secondary" id="listen" type="button">🔊 Listen to the sentence</button></div><div class="sentence">${sentence}</div><div class="word-bank">${remaining.map(word => `<button type="button" draggable="true" class="word-chip" data-word="${escapeHtml(word)}">${escapeHtml(word)}</button>`).join('')}</div>${sentenceComplete ? '<div class="actions"><button class="button" id="read-sentence" type="button">🎙️ Read the sentence</button></div>' : ''}</div>`;
     shell('Fill in the Blanks', 'Find the correct words and complete the sentence.', body);
     document.getElementById('listen').addEventListener('click', () => playSentence());
     document.getElementById('read-sentence')?.addEventListener('click', readSentence);
@@ -134,7 +153,9 @@
   async function playTts(text) {
     if (busy || !text) return;
     busy = true;
-    const buttons = app.querySelectorAll('button'); buttons.forEach(button => { button.disabled = true; });
+    const buttons = [...app.querySelectorAll('button')];
+    const buttonStates = buttons.map(button => ({button, disabled:button.disabled}));
+    buttons.forEach(button => { button.disabled = true; });
     const status = document.getElementById('status'), previousStatus = status?.textContent; if (status) status.textContent = 'Playing audio…';
     try {
       const response = await fetch(data.read_aloud_url, {method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf(),'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({target_text:text,language:'English',lesson_tts_key:'lesson-26-gawain-2'})});
@@ -151,7 +172,7 @@
       });
     } finally {
       busy = false;
-      app.querySelectorAll('button').forEach(button => { button.disabled = false; });
+      buttonStates.forEach(({button, disabled}) => { if (button.isConnected) button.disabled = disabled; });
       if (status?.isConnected && status.textContent === 'Playing audio…') status.textContent = previousStatus;
       if (audioUrl) { URL.revokeObjectURL(audioUrl); audioUrl = null; }
       activeAudio = null;
@@ -163,10 +184,10 @@
     try {
       const result = await save({action:'place_word',item_index:state.current_item,blank_index:blankIndex,word});
       selectedWord = '';
-      if (!result.accepted) { renderSentence('That is not the correct word. Try another one.', 'bad'); return; }
+      if (!result.accepted) { renderSentence('That is not the correct word. Try another one.', 'bad'); await announce(RETRY_FEEDBACK); return; }
       state = {...result.progress.state};
-      if (result.sentence_complete) renderSentence('Correct! Read the whole sentence aloud.','good');
-      else renderSentence('Correct! Choose a word for the next blank.','good');
+      if (result.sentence_complete) { renderSentence(); await announce(READ_SENTENCE_FEEDBACK); }
+      else { renderSentence(); await announce(WORD_CORRECT_FEEDBACK); }
     } catch (error) { renderSentence(error.message || 'Could not save your answer. Try again.','bad'); }
     finally { busy = false; }
   }
@@ -175,7 +196,7 @@
     busy = true;
     const item = data.items[state.current_item], target = sentenceText(item, false);
     const button = document.getElementById('read-sentence'), status = document.getElementById('status');
-    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { status.textContent = 'Microphone recording is not available in this browser.'; busy = false; return; }
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { if (status) status.textContent = 'Microphone recording is not available in this browser.'; busy = false; return; }
     button.disabled = true; button.textContent = 'Listening…';
     try {
       stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
@@ -187,17 +208,32 @@
       const response = await fetch(data.transcribe_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form}), result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.error || 'Speech recognition failed. Try again.');
       const spokenText = String(result.raw_transcript || result.transcript || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\bhot\b/g, 'hat');
-      const transcript = normalize(spokenText), expected = normalize(target);
-      const correct = Boolean(expected && transcript.includes(expected));
+      const transcript = normalize(spokenText), correct = sentenceReadMatches(target, spokenText);
       await save({action:'sentence_reading',success:correct});
       if (correct && state.phase === 'complete') {
         const completed = await fetch(data.completion_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'});
         const payload = await completed.json(); if (!completed.ok || !payload.success) throw new Error(payload.error || 'Could not save completion.');
       }
-      render();
-      if (!correct) renderSentence(transcript ? `I heard “${result.raw_transcript || result.transcript}”. Please read the sentence again.` : 'I could not hear the sentence clearly. Try again.','bad');
+      started = false;
+      if (correct) render();
+      else renderSentence(transcript ? `I heard “${result.raw_transcript || result.transcript}”. Please read the sentence again.` : 'I could not hear the sentence clearly. Try again.', 'bad');
+      await announce(correct ? (state.phase === 'complete' ? 'Great job! You completed the activity.' : "That's right, now let's read the next sentence.") : RETRY_FEEDBACK);
+      if (correct && state.phase !== 'complete') { started = true; await playSentence(); }
     } catch (error) { stopStream(); renderSentence(error.message || 'Could not recognize your speech. Try again.','bad'); }
     finally { busy = false; }
+  }
+  function sentenceReadMatches(target, transcript) {
+    const expectedWords = String(target || '').toLowerCase().match(/[a-z]+/g) || [];
+    const spokenWords = String(transcript || '').toLowerCase().match(/[a-z]+/g) || [];
+    if (!expectedWords.length || !spokenWords.length) return false;
+    let spokenIndex = 0, matched = 0;
+    for (const expected of expectedWords) {
+      const found = spokenWords.slice(spokenIndex).findIndex(word => word === expected || (expected === 'hat' && ['hot', 'had'].includes(word)));
+      if (found < 0) continue;
+      matched += 1;
+      spokenIndex += found + 1;
+    }
+    return matched >= Math.max(1, Math.ceil(expectedWords.length * 0.75));
   }
   function stopStream() { stream?.getTracks().forEach(track => track.stop()); stream = null; }
   async function resetAndExit(event) {

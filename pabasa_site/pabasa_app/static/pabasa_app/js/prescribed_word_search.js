@@ -24,6 +24,9 @@
   let busy = false;
   let activeStream = null;
   let instructionAudioUrl = null;
+  const RETRY_FEEDBACK = "Hmm, let's try that again.";
+  const READING_CORRECT_FEEDBACK = "That's right, now let's find the word.";
+  const GRID_CORRECT_FEEDBACK = "That's right, now let's read the next word.";
 
   async function save(payload) {
     const response = await fetch(data.progress_url, {
@@ -53,12 +56,13 @@
     }
     const targetWord = words[currentIndex];
     const hasReadCorrectly = Boolean(reading[String(currentIndex)]);
+    const readAttempts = Number(attempts[String(currentIndex)] || 0);
+    const canListen = hasReadCorrectly || readAttempts >= 3;
     app.innerHTML = `<div class="eyebrow">SESSION ${escapeHtml(data.session_number)} · LESSON ${escapeHtml(data.lesson_number)} · ACTIVITY ${escapeHtml(data.gawain_number)}</div>
       <h1 class="title">Word Search</h1><p class="instruction">Find the words on the grid.</p>
       <div class="layout"><section class="word-panel"><div class="label">Read the word aloud first</div>
       <div class="word">${escapeHtml(targetWord)}</div>
-      <p class="status ${messageType}" id="status">${escapeHtml(message || (hasReadCorrectly ? 'Correct! Find the word in the grid.' : 'Say the word clearly to unlock the grid.'))}</p>
-      <div class="actions"><button class="button" id="read" type="button">🎙️ ${hasReadCorrectly ? 'Read the word again' : 'Read the word'}</button><button class="button secondary" id="listen-instructions" type="button">🔊 Listen</button></div></section>
+      <div class="actions"><button class="button" id="read" type="button" ${hasReadCorrectly ? 'disabled' : ''}>🎙️ ${hasReadCorrectly ? 'Read the word again' : 'Read the word'}</button><button class="button secondary" id="listen-instructions" type="button" ${canListen ? '' : 'disabled'}>🔊 Listen</button></div></section>
       <section><div class="grid-wrap"><div class="grid">${grid.flatMap((row, rowIndex) => row.map((letter, columnIndex) => {
         const locked = !hasReadCorrectly || Boolean(matches[String(currentIndex)]);
         const match = matches[String(currentIndex)];
@@ -67,17 +71,11 @@
         return `<button class="cell ${locked ? '' : ''} ${found ? 'found' : ''}" data-row="${rowIndex}" data-column="${columnIndex}" type="button" ${locked ? 'disabled' : ''}>${escapeHtml(letter)}</button>`;
       })).join('')}</div></div></section></div>${progress}`;
     app.querySelector('#read').addEventListener('click', readWord);
-    app.querySelector('#listen-instructions').addEventListener('click', () => readAloud(targetWord));
+    app.querySelector('#listen-instructions')?.addEventListener('click', () => readAloud(targetWord));
     app.querySelectorAll('.cell:not(:disabled)').forEach(button => button.addEventListener('click', () => selectCell(button)));
   }
 
-  async function readAloud(textToSpeak) {
-    if (busy) return;
-    busy = true;
-    const status = app.querySelector('#status');
-    const buttons = app.querySelectorAll('#read, #listen-instructions');
-    buttons.forEach(button => { button.disabled = true; });
-    if (status) { status.textContent = 'Playing instructions…'; status.className = 'status'; }
+  async function playReadAloud(textToSpeak) {
     try {
       const response = await fetch(data.read_aloud_url, {
         method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrf(), 'Content-Type': 'application/x-www-form-urlencoded'},
@@ -94,13 +92,22 @@
         audio.addEventListener('ended', resolve, {once: true});
         audio.addEventListener('error', () => reject(new Error('Audio playback failed. Please try again.')), {once: true});
       });
-      render();
+      return true;
     } catch (error) {
-      render(error.message || 'Could not play the audio. Please try again.', 'bad');
+      return false;
     } finally {
-      busy = false;
       if (instructionAudioUrl) { URL.revokeObjectURL(instructionAudioUrl); instructionAudioUrl = null; }
     }
+  }
+
+  async function readAloud(textToSpeak) {
+    if (busy) return;
+    busy = true;
+    const buttons = app.querySelectorAll('#read, #listen-instructions');
+    buttons.forEach(button => { button.disabled = true; });
+    const played = await playReadAloud(textToSpeak);
+    busy = false;
+    render(played ? '' : 'Could not play the audio. Please try again.', played ? '' : 'bad');
   }
 
   async function readWord() {
@@ -108,11 +115,8 @@
     const wordIndex = currentIndex;
     const targetWord = words[wordIndex];
     const button = app.querySelector('#read');
-    const status = app.querySelector('#status');
     busy = true;
     button.disabled = true;
-    status.textContent = 'Listening…';
-    status.className = 'status';
     try {
       if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
         throw new Error('Microphone recording is not available in this browser.');
@@ -153,12 +157,8 @@
       const saved = await save({word_index: wordIndex, reading_result: saidTarget});
       reading = saved.progress?.state?.reading || reading;
       attempts = saved.progress?.state?.attempts || attempts;
-      const feedback = saidTarget
-        ? 'Correct! Find the word in the grid.'
-        : transcript
-          ? `I heard “${transcript}”. Say “${targetWord}” clearly, then try again.`
-          : `I could not hear “${targetWord}” clearly. Please try again.`;
-      render(feedback, saidTarget ? 'good' : 'bad');
+      render('', saidTarget ? 'good' : 'bad');
+      await playReadAloud(saidTarget ? READING_CORRECT_FEEDBACK : RETRY_FEEDBACK);
     } catch (error) {
       stopStream();
       render(error.message || 'Could not recognize your speech. Please try again.', 'bad');
@@ -183,13 +183,16 @@
     const start = selectedCell;
     const end = point;
     selectedCell = null;
+    busy = true;
     const result = await save({candidate_match: {word_index: currentIndex, start, end}}).catch(error => {
       render(error.message, 'bad');
       return null;
     });
-    if (!result) return;
+    if (!result) { busy = false; return; }
     if (!result.accepted) {
-      render('Those letters do not spell the word. Try another selection.', 'bad');
+      render('', 'bad');
+      await playReadAloud(RETRY_FEEDBACK);
+      busy = false;
       return;
     }
     matches = result.progress.matches;
@@ -203,12 +206,17 @@
         if (!response.ok || !completed.success) throw new Error(completed.error || 'Could not save completion.');
       } catch (error) {
         render(error.message, 'bad');
+        await playReadAloud(error.message);
+        busy = false;
         return;
       }
       render();
+      await playReadAloud(GRID_CORRECT_FEEDBACK);
     } else {
-      render('Correct! The next word is ready. Read it aloud first.', 'good');
+      render('', 'good');
+      await playReadAloud(GRID_CORRECT_FEEDBACK);
     }
+    busy = false;
   }
 
   window.addEventListener('pagehide', stopStream);
