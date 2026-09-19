@@ -6138,6 +6138,21 @@ document.addEventListener('DOMContentLoaded',()=>{
     picker.append(option,preview);option.onclick=()=>{picker.querySelectorAll('[data-prescribed-activity]').forEach(node=>node.classList.toggle('is-selected',node===option));document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(node=>node.classList.remove('is-maximized'));preview.classList.add('is-maximized')};preview.querySelector('.prescribed-preview-close').onclick=()=>preview.classList.remove('is-maximized');
 });
 </script>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+    const picker=document.getElementById('prescribedActivityPicker'),source=document.getElementById('prescribed-lesson-19-activities'),key='session-7-lesson-19-gawain-4';
+    if(!picker||!source||picker.querySelector(`[data-prescribed-activity="${key}"]`))return;
+    const activity=JSON.parse(source.textContent||'[]').find(value=>value.activity_key===key);if(!activity)return;
+    const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    const base='{% get_static_prefix %}',option=document.createElement('button'),preview=document.createElement('div');
+    option.type='button';option.className='prescribed-activity-option';option.dataset.prescribedActivity=key;
+    option.innerHTML=`<span class="prescribed-activity-option__thumb lesson16-thumb" aria-hidden="true"><img src="${base}${escape(activity.thumbnail)}" alt=""></span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">${escape(activity.gawain_number)}</span><span><strong>${escape(activity.display_title)}</strong><br><span class="small text-muted">${escape(activity.description)}</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>`;
+    preview.className='prescribed-activity-preview';preview.dataset.prescribedPreview=key;
+    preview.innerHTML=`<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview"><i class="bi bi-x-lg"></i></button><div class="small text-uppercase text-muted fw-semibold">Session 7 · ${escape(activity.display_title)}</div><h5>${escape(activity.title)}</h5><p class="mb-0 text-muted">${escape(activity.workbook_instruction)}</p><p class="small text-muted mt-2 mb-0"><strong>Gabay sa guro:</strong> ${escape(activity.teacher_guidance)}</p></div><div class="s7l19 s7l19-letters">${activity.items.map((item,index)=>`<div><b>${index+1}.</b><img src="${base}${escape(item.image_path)}" alt="${escape(item.alt_text)}"><span class="s7l19-tiles">${item.scrambled_letters.map(letter=>`<i>${escape(letter)}</i>`).join('')}</span><strong>${escape(item.answer)}</strong></div>`).join('')}</div>`;
+    picker.append(option,preview);option.onclick=()=>{picker.querySelectorAll('[data-prescribed-activity]').forEach(node=>node.classList.toggle('is-selected',node===option));document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(node=>node.classList.remove('is-maximized'));preview.classList.add('is-maximized')};preview.querySelector('.prescribed-preview-close').onclick=()=>preview.classList.remove('is-maximized');
+});
+</script>
+<style>.s7l19-letters>div{grid-template-columns:2rem 70px 1fr auto}.s7l19-tiles{display:flex;gap:.22rem;flex-wrap:wrap}.s7l19-tiles i{min-width:1.55rem;padding:.1rem .32rem;border:1px solid #7ba6b3;border-radius:.25rem;background:#fff;font-style:normal;text-align:center}.s7l19-letters strong{color:#278750}</style>
 {% endblock %}
 
 {% block header %}

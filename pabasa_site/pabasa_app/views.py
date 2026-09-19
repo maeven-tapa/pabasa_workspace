@@ -12923,6 +12923,44 @@ def _normalized_session7_missing_syllable_state(activity, raw_state):
             'completed_item_count': current, 'correct_answer_count': current, 'state_version': version}
 
 
+def _normalized_session7_letter_ordering_state(activity, raw_state):
+    """Server-authoritative, contiguous state for Lesson 19 Gawain 4."""
+    raw, total = (raw_state if isinstance(raw_state, dict) else {}), len(activity['items'])
+    correct = []
+    for index, answer in enumerate((raw.get('completed_correct_words') or [])[:total]):
+        if str(answer).casefold() != activity['items'][index]['answer']:
+            break
+        correct.append(activity['items'][index]['answer'])
+    current = len(correct)
+    try:
+        version = max(0, min(int(raw.get('state_version') or 0), 1_000_000_000))
+        attempts = {str(i): max(0, min(3, int((raw.get('stt_attempt_counts') or {}).get(str(i), 0)))) for i in range(total)}
+        plays = {str(i): max(0, min(3, int((raw.get('tts_play_counts') or {}).get(str(i), 0)))) for i in range(total)}
+    except (TypeError, ValueError):
+        raise ValueError('Invalid letter-ordering activity state.')
+    oral_raw = raw.get('completed_oral_reads') if isinstance(raw.get('completed_oral_reads'), list) else []
+    oral = list(range(max(current, min(total, len(oral_raw)))))
+    selected_raw = raw.get('selected_tile_order') if isinstance(raw.get('selected_tile_order'), list) else []
+    selected = []
+    if current < total:
+        available = list(activity['items'][current]['scrambled_letters'])
+        for letter in selected_raw[:len(available)]:
+            letter = str(letter).casefold()
+            if letter not in available:
+                break
+            selected.append(letter); available.remove(letter)
+    phase = str(raw.get('phase') or '').lower()
+    if phase == 'completion' and current == total: phase = 'completion'
+    elif phase == 'feedback' and correct: phase = 'feedback'
+    elif phase == 'intro' and not correct and not oral: phase = 'intro'
+    else: phase = 'letter_ordering' if current in oral else 'oral_reading'
+    return {'phase': phase, 'current_item_index': current, 'completed_oral_reads': oral,
+            'stt_attempt_counts': attempts, 'tts_play_counts': plays,
+            'selected_tile_order': selected, 'completed_correct_words': correct,
+            'completed_item_count': current, 'correct_answer_count': current,
+            'state_version': version}
+
+
 def _normalized_session7_oral_circle_word_state(activity, raw_state):
     """Server-authoritative state for Session 7 Lesson 19 Gawain 3.
 
@@ -13448,6 +13486,25 @@ def prescribed_activity_page(request, activity_key):
                          'total_items': len(activity['items']), 'activity_completed': progress.activity_completed if progress else False, 'state': state},
         }
         return render(request, 'pabasa_app/session7_missing_syllable_page.html', context)
+    if activity['interaction'] == 'session7_oral_letter_ordering':
+        state = _normalized_session7_letter_ordering_state(activity, raw_state)
+        context = _dashboard_context(request)
+        context['prescribed_activity_data'] = {
+            'activity_key': activity_key, 'session_key': activity['session_key'],
+            'session_number': activity['session_number'], 'lesson_number': activity['lesson_number'],
+            'gawain_number': activity['gawain_number'], 'display_title': activity['display_title'],
+            'title': activity['title'], 'instruction': activity['instruction'],
+            'items': [{**{field: item[field] for field in ('id', 'word', 'answer', 'scrambled_letters', 'alt_text')},
+                       'image_url': static(item['image_path'])} for item in activity['items']],
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'read_aloud_url': reverse('reading_read_aloud_api'), 'transcribe_url': reverse('reading_transcribe_api'),
+            'progress': {'completed_items': progress.completed_items if progress else 0,
+                         'correct_items': progress.correct_items if progress else 0,
+                         'total_items': len(activity['items']), 'activity_completed': progress.activity_completed if progress else False,
+                         'state': state},
+        }
+        return render(request, 'pabasa_app/session7_letter_ordering_page.html', context)
     if activity['interaction'] == 'session7_oral_circle_word':
         state = _normalized_session7_oral_circle_word_state(activity, raw_state)
         context = _dashboard_context(request)
@@ -14229,6 +14286,51 @@ def prescribed_activity_progress(request, activity_key):
             state.update({'current_item_index': completed, 'current_oral_word_index': 3 if completed == total else len(state['orally_completed_words'].get(str(completed), [])), 'completed_item_count': completed, 'correct_answer_count': completed, 'state_version': old['state_version'] + 1})
             StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed, 'total_items': total, 'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'accepted': accepted, 'progress': {'state': state, 'completed_items': completed, 'correct_items': completed, 'total_items': total, 'activity_completed': False}})
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    if activity['interaction'] == 'session7_oral_letter_ordering':
+        try:
+            data = json.loads(request.body or '{}')
+            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            old = _normalized_session7_letter_ordering_state(activity, existing.state if existing else {})
+            incoming = _normalized_session7_letter_ordering_state(activity, data.get('state'))
+            total, current = len(activity['items']), len(old['completed_correct_words'])
+            if (existing and existing.activity_completed) or incoming['state_version'] < old['state_version']:
+                return JsonResponse({'success': True, 'progress': {'state': old, 'completed_items': current, 'correct_items': current, 'total_items': total, 'activity_completed': bool(existing and existing.activity_completed)}})
+            if incoming['completed_correct_words'] != old['completed_correct_words']:
+                raise ValueError('Invalid activity progress.')
+            old_oral = old['completed_oral_reads']
+            oral = incoming['completed_oral_reads']
+            if oral[:len(old_oral)] != old_oral or len(oral) > len(old_oral) + 1 or (len(oral) == len(old_oral) + 1 and oral[-1] != current):
+                raise ValueError('Basahin muna ang kasalukuyang salita.')
+            state, accepted = incoming, None
+            if 'candidate_answer' in data:
+                if current >= total or current not in old_oral:
+                    raise ValueError('Basahin muna ang ngalan ng larawan.')
+                candidate = data.get('candidate_answer')
+                if not isinstance(candidate, list) or candidate != incoming['selected_tile_order']:
+                    raise ValueError('Ayusin muna ang mga letra sa mga kahon.')
+                answer = ''.join(str(x).casefold() for x in candidate)
+                target = activity['items'][current]['answer']
+                if len(candidate) != len(target):
+                    raise ValueError('Punan muna ang lahat ng kahon.')
+                accepted = answer == target
+                state['completed_correct_words'] = old['completed_correct_words'] + [target] if accepted else old['completed_correct_words']
+                state['completed_oral_reads'] = old_oral
+                state['selected_tile_order'] = [] if accepted else []
+                state['phase'] = 'feedback' if accepted else 'letter_ordering'
+            else:
+                state['completed_correct_words'] = old['completed_correct_words']
+                state['completed_oral_reads'] = oral
+                state['phase'] = 'intro' if not current and not oral and incoming['phase'] == 'intro' else ('letter_ordering' if current in oral else 'oral_reading')
+            completed = len(state['completed_correct_words'])
+            state.update({'current_item_index': completed, 'completed_item_count': completed,
+                          'correct_answer_count': completed, 'state_version': old['state_version'] + 1})
+            StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+                'current_index': completed, 'completed_items': completed, 'correct_items': completed,
+                'total_items': total, 'activity_completed': False, 'state': state})
+            return JsonResponse({'success': True, 'accepted': accepted, 'progress': {'state': state,
+                'completed_items': completed, 'correct_items': completed, 'total_items': total, 'activity_completed': False}})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity_key in ('lesson-14-gawain-2', 'lesson-15-gawain-2-angkop-na-pantig'):
@@ -15657,6 +15759,17 @@ def prescribed_activity_complete(request, activity_key):
             return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang pagbasa at pagpili sa lahat ng larawan.'}, status=400)
         state['phase'], state['state_version'] = 'completion', 1_000_000_000
         StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': total, 'completed_items': total, 'correct_items': total, 'total_items': total, 'activity_completed': True, 'state': state})
+        return JsonResponse({'success': True, 'result': {'correct_items': total, 'items_completed': total, 'accuracy': 100.0}})
+    if activity['interaction'] == 'session7_oral_letter_ordering':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        state = _normalized_session7_letter_ordering_state(activity, existing.state if existing else {})
+        total = len(activity['items'])
+        if len(state['completed_correct_words']) != total or len(state['completed_oral_reads']) != total:
+            return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang pagbasa at pag-aayos sa lahat ng larawan.'}, status=400)
+        state['phase'], state['state_version'] = 'completion', 1_000_000_000
+        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+            'current_index': total, 'completed_items': total, 'correct_items': total,
+            'total_items': total, 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'correct_items': total, 'items_completed': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'session7_oral_missing_syllable':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()

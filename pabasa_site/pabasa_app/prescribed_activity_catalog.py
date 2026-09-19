@@ -101,6 +101,27 @@ PRESCRIBED_ACTIVITIES = {
             {'id': 'daga', 'word': 'daga', 'choices': ['masa', 'daga', 'nata'], 'answer': 'daga', 'alt_text': 'Larawan ng daga', 'image_path': 'pabasa_app/images/picture_word/custom/Mouse-Daga.png'},
         ],
     },
+    'session-7-lesson-19-gawain-4': {
+        # One canonical workbook definition: picker, preview, learner flow,
+        # persistence, reporting, and Filipino Cloud TTS all use this key.
+        'activity_key': 'session-7-lesson-19-gawain-4', 'session_key': 'session-7',
+        'session_number': 7, 'lesson_number': 19, 'gawain_number': 4,
+        'display_title': 'Lesson 19: Gawain 4', 'title': 'Ayusin ang mga Letra',
+        'description': 'Basahin ang ngalan ng larawan at ayusin ang mga letra upang mabuo ang salita.',
+        'instruction': 'Basahin ang ngalan ng larawan. Pagkatapos, ayusin ang mga letra upang mabuo ang salita.',
+        'workbook_instruction': 'Ayusin ang mga letra para sa ngalan ng mga larawan.',
+        'teacher_guidance': 'Babasa muna ang mag-aaral ng buong salita bago niya aayusin ang mga letra.',
+        'competencies': ['Phonics', 'Phonological Awareness', 'Vocabulary'],
+        'interaction': 'session7_oral_letter_ordering', 'total_items': 5,
+        'thumbnail': 'pabasa_app/images/session_7_lesson_19/daan.png',
+        'items': [
+            {'id': 'daan', 'word': 'daan', 'answer': 'daan', 'scrambled_letters': ['a', 'd', 'a', 'n'], 'alt_text': 'Larawan ng daan na may araw at mga burol', 'image_path': 'pabasa_app/images/session_7_lesson_19/daan.png'},
+            {'id': 'dalandan', 'word': 'dalandan', 'answer': 'dalandan', 'scrambled_letters': ['l', 'a', 'n', 'd', 'd', 'a', 'a', 'n'], 'alt_text': 'Larawan ng dalandan', 'image_path': 'pabasa_app/images/session_7_lesson_19/dalandan.png'},
+            {'id': 'tahi', 'word': 'tahi', 'answer': 'tahi', 'scrambled_letters': ['h', 't', 'i', 'a'], 'alt_text': 'Larawan ng batang tumatahi', 'image_path': 'pabasa_app/images/session_7_lesson_19/tahi.png'},
+            {'id': 'lila', 'word': 'lila', 'answer': 'lila', 'scrambled_letters': ['i', 'l', 'a', 'l'], 'alt_text': 'Larawan ng lilang tela', 'image_path': 'pabasa_app/images/session_7_lesson_19/lila.png'},
+            {'id': 'hilik', 'word': 'hilik', 'answer': 'hilik', 'scrambled_letters': ['i', 'l', 'i', 'h', 'k'], 'alt_text': 'Larawan ng batang humihilik', 'image_path': 'pabasa_app/images/session_7_lesson_19/hilik.png'},
+        ],
+    },
     'lesson7-gawain4b': {
         'activity_key': 'lesson7-gawain4b', 'session_key': 'session-3', 'session_number': 3,
         'lesson_number': 7, 'gawain_number': '4B', 'title': 'GAWAIN 4B: Letrang Ii at Oo',
