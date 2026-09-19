@@ -10,6 +10,15 @@ const pairs=[['aso','laso'],['bundok','sandok'],['tatay','nanay'],['bola','lola'
 @media(max-width:600px){.pair .connector{width:clamp(54px,15vw,82px)}.pair .connector::after{font-size:.58rem;padding:5px 6px}}
 </style>
 <style>
+/* Picture-identification controls: equal, visible side-by-side buttons. */
+ .card:has(#read){display:grid;grid-template-columns:1fr 1fr;align-items:center;justify-items:stretch}
+.card:has(#read) .activity-header-card,.card:has(#read) .pair,.card:has(#read) .status,.card:has(#read) .answers{grid-column:1/-1}
+#read,#listen{width:100%;min-width:0;margin-top:0}
+.card:has(#read) .status{visibility:hidden}
+.card:has(#read) .status.warning,.card:has(#read) .status.correct{visibility:visible}
+@media(max-width:700px){#read,#listen{min-width:0;flex:1;padding-inline:8px}}
+</style>
+<style>
 .pair .connector{background:radial-gradient(circle at 3px 50%,#167985 0 3px,transparent 3.5px),radial-gradient(circle at calc(100% - 3px) 50%,#167985 0 3px,transparent 3.5px);height:34px;width:clamp(82px,11vw,116px)}
 .pair .connector::before{background:none;border-top:2px dashed #4b9aa0;height:0;left:4px;right:4px;top:50%;transform:none}
 .pair .connector::after{border:1px solid #c8dfe1;border-radius:999px;box-shadow:0 2px 6px rgba(15,23,42,.07);font-size:.68rem;padding:5px 8px}
@@ -47,7 +56,7 @@ const pairs=[['aso','laso'],['bundok','sandok'],['tatay','nanay'],['bola','lola'
 <script>window.lesson2ProgressUrl="{{ lesson_2_progress_url }}";</script>
 <style>.complete-done{display:none!important}</style>
 <style>body{background:#e9f6f0 url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover fixed!important}</style>
-<style>.card{background:rgba(255,253,245,.94)!important;box-shadow:0 18px 43px #164f5538}.card .status{color:#093f50;text-shadow:none}</style><script>window.salitangTtsUrl="{% url 'reading_read_aloud_api' %}";</script><script src="{% static 'pabasa_app/js/salitang_magkatugma_guided_flow.js' %}?v=20260917-7"></script>
+<style>.card{background:rgba(255,253,245,.94)!important;box-shadow:0 18px 43px #164f5538}.card .status{color:#093f50;text-shadow:none}</style><script>window.salitangTtsUrl="{% url 'reading_read_aloud_api' %}";</script><script src="{% static 'pabasa_app/js/salitang_magkatugma_guided_flow.js' %}?v=20260919-4"></script>
 <style>.pair .word.active::before{content:'SABIHIN ITO';position:absolute;top:-18px;left:50%;z-index:3;transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:#ffc928;color:#5b3b00;font-size:.72rem;font-weight:900;letter-spacing:.06em;white-space:nowrap;box-shadow:0 3px 8px #b77b1b55}</style>
 <style>.pair .word strong{text-transform:lowercase}</style>
 <style>
@@ -59,7 +68,8 @@ const pairs=[['aso','laso'],['bundok','sandok'],['tatay','nanay'],['bola','lola'
   if(window.salitangDedicatedFlow)return;
   const stage=document.getElementById('stage');
   if(!stage)return;
-  const phase2Text='Piliin kung magkatugma o hindi magkatugma ang pares.';
+  const phase2Text='Magkatunog ba ang dalawang larawan na ito? Pindutin ang nawawastong sagot.';
+  const phase2ChoiceText='Piliin ang tamang kamay.';
   const csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
   let generation=0, speaking=false, lastPhase2='', lastPhase1='', currentAudio=null;
   const speak=async text=>{
@@ -93,7 +103,7 @@ const pairs=[['aso','laso'],['bundok','sandok'],['tatay','nanay'],['bola','lola'
       if(instruction)instruction.textContent=phase2Text,instruction.classList.add('phase2-instruction');
       pair?.classList.remove('naming-phase'); pair?.classList.add('phase2');
       const key=stage.querySelector('.progress')?.textContent||'';
-      if(key!==lastPhase2){lastPhase2=key;speaking=true;answers.querySelectorAll('button').forEach(b=>b.disabled=true);speak(phase2Text).catch(()=>{}).finally(()=>{speaking=false;answers.querySelectorAll('button').forEach(b=>b.disabled=false)})}
+      if(key!==lastPhase2){lastPhase2=key;speaking=true;answers.querySelectorAll('button').forEach(b=>b.disabled=true);speak(phase2Text).then(()=>speak(phase2ChoiceText)).catch(()=>{}).finally(()=>{speaking=false;answers.querySelectorAll('button').forEach(b=>b.disabled=false)})}
       return;
     }
     lastPhase2='';
@@ -105,3 +115,59 @@ const pairs=[['aso','laso'],['bundok','sandok'],['tatay','nanay'],['bola','lola'
   setTimeout(sync,50);
 })();
 </script>
+<style>
+/* Lesson 2 visual refinement only: preserve the existing renderer and feedback flow. */
+body{background:#b9e8f5 url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover fixed no-repeat;color:#123f68;font-family:Fredoka,Arial,sans-serif}
+.app{width:min(1250px,calc(100% - 48px));height:calc(100dvh - 32px);margin:16px auto;padding:24px 34px 30px;background:#ffffffc9;border:2px solid #fff;border-radius:38px;box-shadow:0 20px 45px #164f5530}
+.head{min-height:72px;padding:10px 18px;border:0;border-radius:999px;background:#fffdfb;box-shadow:0 8px 18px #1648781c}
+.head strong{color:#164878;font-family:Fredoka,Arial,sans-serif;font-size:clamp(1.05rem,2vw,1.4rem)}
+.back{min-height:52px;padding:0 24px;border:0;border-radius:999px;background:#fff;color:#164878;box-shadow:0 8px 16px #16487824;font-family:Fredoka,Arial,sans-serif}
+.progress{padding:12px 20px;border-radius:999px;background:#fff;color:#147b83;box-shadow:0 8px 16px #1648781c}
+.stage{padding:24px 0 0}
+.card{width:min(100%,1000px);height:auto;min-height:0;padding:26px 34px 30px;background:transparent;border:0;border-radius:0;box-shadow:none;overflow:visible;gap:18px}
+.activity-header-card{margin-bottom:0;padding:15px 24px;background:#fffdfb;border:2px solid #8ed9d5;border-radius:18px;box-shadow:0 8px 18px #16487814}
+.prompt{color:#315975;font-family:Fredoka,Arial,sans-serif;font-weight:900}
+.word{min-height:clamp(170px,27vh,235px);padding:14px;background:#fff;border:3px solid #8ed9d5;border-radius:24px;box-shadow:0 10px 20px #16487818}
+.word:first-child{border:3px solid #8ed9d5;box-shadow:0 10px 20px #16487818}
+.word.active{border-color:#f4c85d;box-shadow:0 0 0 5px #fff0b6,0 10px 20px #16487818}
+.word strong{color:#164878;font-family:Fredoka,Arial,sans-serif}
+.read-btn,.listen,.hand,.complete-done{font-family:Fredoka,Arial,sans-serif}
+.read-btn{background:#2ca4a2;box-shadow:0 6px #147b83}
+.listen{background:#fff;color:#147b83;border:3px solid #8ed9d5;box-shadow:0 5px #b9dedb}
+.read-btn:disabled,.listen:disabled,.hand:disabled{background:#b8c5c8!important;border-color:#b8c5c8!important;color:#fff!important;box-shadow:0 4px #8f9da0!important;opacity:1}
+.status.warning{background:#fff1c9;color:#8a5a11!important}
+@media(max-width:700px){.app{width:calc(100% - 20px);height:calc(100dvh - 12px);margin:6px auto;padding:16px 14px 22px;border-radius:26px}.head{border-radius:24px}.card{padding:10px 0}.back{padding:0 15px}.stage{padding-top:14px}}
+</style>
+<style>
+/* Deep visual refinement for Lesson 2 only. */
+@font-face{font-family:Fredoka;src:url("{% static 'pabasa_app/font/fredoka-one.one-regular.ttf' %}") format('truetype');font-display:swap}
+html,body{height:100%;overflow:hidden}
+body{display:grid;place-items:center;padding:16px}
+.app{width:min(1280px,100%);height:min(900px,calc(100dvh - 32px));min-height:0;margin:0;padding:26px clamp(20px,5vw,76px) 30px;background:#ffffff70;border:2px solid #ffffffb5;border-radius:42px;backdrop-filter:blur(10px);box-shadow:0 18px 45px #1e5b7a35}
+.head{flex:0 0 auto;min-height:70px;padding:0;background:transparent;border:0;border-radius:0;box-shadow:none}
+.head strong{font-size:clamp(1.35rem,2.3vw,2rem);letter-spacing:.01em}
+.back{min-height:62px;padding:0 28px;font-size:clamp(1rem,1.5vw,1.2rem);box-shadow:0 8px 17px #145ca744}
+.progress{padding:11px 18px;font-size:1rem;box-shadow:0 8px 17px #145ca730}
+.progress:after{content:'';display:block;width:128px;height:7px;margin:7px auto 0;border-radius:999px;background:linear-gradient(to right,#e7af45 0 20%,#d8e8e8 20% 100%)}
+.stage{min-height:0;overflow:auto;padding:18px 0 0;scrollbar-width:none}
+.stage::-webkit-scrollbar{display:none}
+.card{width:min(100%,940px);max-width:940px;padding:12px 0 18px;gap:15px;background:transparent!important}
+.activity-header-card{width:100%;min-height:84px;display:grid;place-items:center;padding:18px 28px;border:3px solid #94d9d6;border-radius:28px;background:#ffffffe8;box-shadow:0 10px 22px #187b7a18}
+.prompt{font-size:clamp(.95rem,1.7vw,1.2rem);line-height:1.25}
+.pair{width:100%;gap:clamp(18px,4vw,52px);max-width:none;margin-bottom:0}
+.word{min-height:clamp(190px,30vh,270px);padding:18px;border:3px solid #94d9d6;border-radius:30px;background:#fffffff2;box-shadow:0 12px 24px #187b7a18;transition:transform .16s,box-shadow .16s,border-color .16s}
+.word.active{transform:translateY(-4px);border:5px solid #f4c85d;box-shadow:0 0 0 5px #fff0b6,0 14px 28px #187b7a2b}
+.word img{width:min(100%,220px);height:clamp(112px,18vh,165px);object-fit:contain}
+.word strong{font-size:clamp(1.8rem,4vw,3rem);line-height:1.05}
+.connector{width:clamp(90px,12vw,130px);height:36px;color:#176078;font-size:.78rem}
+.read-btn,.listen{min-height:60px;border-radius:999px;padding:13px 26px;font-size:clamp(1rem,1.7vw,1.25rem);font-weight:900;box-shadow:0 7px 0 #147b83,0 10px 20px #187b7a30}
+.listen{border:4px solid #94d9d6;background:#fffffff0;color:#187b7a;box-shadow:0 5px 0 #b7d6dc,0 8px 16px #187b7a20}
+.status.warning,.status.correct{border-radius:16px;font-size:1.05rem}
+.completion-card a{display:none!important}
+.answers{gap:18px;margin-top:2px}
+.hand{min-width:260px;min-height:72px;padding:12px 24px;border-radius:999px;background:#299e9a;border:0;color:#fff;box-shadow:0 7px 0 #187b7a,0 10px 20px #187b7a30;font-size:clamp(1.05rem,1.7vw,1.3rem);font-weight:900;transition:.16s}
+.hand:hover:not(:disabled){background:#38b0aa;transform:translateY(-2px)}
+.hand small{display:inline;margin:0 0 0 8px;font-size:inherit}
+@media(max-width:700px){html,body{overflow:auto}body{display:block;padding:8px}.app{width:100%;height:calc(100dvh - 16px);min-height:0;padding:14px 14px 18px;border-radius:28px}.head{min-height:112px;display:grid;grid-template-columns:1fr 1fr;gap:10px}.head strong{grid-column:1/-1;grid-row:1;font-size:1.35rem}.back,.progress{grid-row:2;min-height:48px;padding-inline:14px;font-size:.86rem}.back{justify-self:start}.progress{justify-self:end}.stage{padding-top:10px}.card{padding:8px 0 18px;gap:15px}.activity-header-card{min-height:76px;padding:14px 16px;border-radius:22px}.pair{gap:7px}.word{min-height:165px;padding:9px;border-radius:22px}.word img{height:105px}.word strong{font-size:1.45rem}.connector{width:52px;font-size:.62rem}.read-btn,.listen{min-height:56px;padding-inline:9px;font-size:.9rem}.hand{min-width:0;min-height:96px;padding:9px;font-size:1.7rem}.hand small{font-size:.76rem}}
+@media(max-width:420px){.head{min-height:104px}.back,.progress{font-size:.75rem}.pair{grid-template-columns:minmax(0,1fr) 36px minmax(0,1fr)}.word{min-height:145px}.word img{height:88px}.word strong{font-size:1.2rem}.connector{width:36px;font-size:0}.connector::after{font-size:.52rem;padding:4px 3px}.answers{gap:8px}.hand small{font-size:.68rem}}
+</style>
