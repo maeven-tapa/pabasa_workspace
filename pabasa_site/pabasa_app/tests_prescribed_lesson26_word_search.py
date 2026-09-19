@@ -463,11 +463,11 @@ class PrescribedLesson26WordSearchTests(TestCase):
             self.assertTrue(result.json()['accepted'])
         listened = self.client.post(self.lesson31_activity2_progress_url, data=json.dumps({'action': 'sentence_played'}), content_type='application/json')
         self.assertEqual(listened.status_code, 200)
-        wrong = self.client.post(self.lesson31_activity2_progress_url, data=json.dumps({'action': 'place_word', 'word': 'pen'}), content_type='application/json')
+        wrong = self.client.post(self.lesson31_activity2_progress_url, data=json.dumps({'action': 'place_word', 'word': 'sit'}), content_type='application/json')
         self.assertFalse(wrong.json()['accepted'])
         placed = self.client.post(self.lesson31_activity2_progress_url, data=json.dumps({'action': 'place_word', 'word': 'pet'}), content_type='application/json')
         self.assertTrue(placed.json()['accepted'])
-        read = self.client.post(self.lesson31_activity2_progress_url, data=json.dumps({'action': 'read_sentence', 'heard': 'Ben has a pet'}), content_type='application/json')
+        read = self.client.post(self.lesson31_activity2_progress_url, data=json.dumps({'action': 'read_sentence', 'heard': 'The pet is on the mat'}), content_type='application/json')
         self.assertTrue(read.json()['accepted'])
         self.assertEqual(read.json()['progress']['completed_items'], 1)
 

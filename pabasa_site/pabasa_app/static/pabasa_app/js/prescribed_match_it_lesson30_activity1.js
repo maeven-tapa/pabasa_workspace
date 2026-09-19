@@ -82,6 +82,8 @@
     if(busy)return;
     busy=true;
     setBusyButton('read',true);
+    const listenButton=document.getElementById('listen');
+    if(listenButton){listenButton.disabled=true;listenButton.classList.add('is-busy')}
     try{
       if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw Error('Microphone recording is not available in this browser.');
       stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
@@ -109,7 +111,7 @@
       s.stt_attempts[target]=Math.min(3,Number(s.stt_attempts[target]||0)+1);
       try{await save()}catch(_){}
       render(e.message||'I could not hear you. Try again.','bad');
-    }finally{busy=false;setBusyButton('read',false)}
+    }finally{busy=false;setBusyButton('read',false);if(listenButton?.isConnected){listenButton.disabled=false;listenButton.classList.remove('is-busy')}}
   }
   async function choose(button){
     if(busy)return;

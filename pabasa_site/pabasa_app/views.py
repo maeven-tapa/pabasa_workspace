@@ -13421,7 +13421,7 @@ def prescribed_activity_page(request, activity_key):
             'activity_key': activity_key, 'session_number': activity['session_number'],
             'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
             'title': activity['title'], 'instruction': activity['instruction'],
-            'items': [{'id': item['id'], 'word': item['word'], 'image_url': static(item['image_path']),
+            'items': [{'id': item['id'], 'word': item['answer'], 'image_url': static(item['image_path']),
                        'alt_text': item['alt_text'], 'choices': item['choices']}
                       for item in activity['items']],
             'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
@@ -15076,7 +15076,11 @@ def prescribed_activity_progress(request, activity_key):
                     raise ValueError('Read the current choice first.')
                 target = activity['word_choices'][choice_index].lower()
                 heard = set(re.findall(r'[a-z]+', str(data.get('heard', '')).lower()))
-                accepted = _prescribed_spoken_word_matches(target, heard)
+                if activity_key == 'lesson-31-gawain-2':
+                    aliases = {'sip': {'zip', 'ship', 'sipped', 'shipped'}, 'sit': {'seat'}, 'mat': {'math'}}
+                    accepted = bool(heard & ({target} | aliases.get(target, set())))
+                else:
+                    accepted = _prescribed_spoken_word_matches(target, heard)
                 if accepted:
                     choice_index += 1; choice_attempts = 0
                     if choice_index >= len(activity['word_choices']): phase = 'sentence_listen'
@@ -15095,7 +15099,11 @@ def prescribed_activity_progress(request, activity_key):
                 if phase != 'reading_sentence': raise ValueError('Place the correct word before reading the sentence.')
                 heard = set(re.findall(r'[a-z]+', str(data.get('heard', '')).lower()))
                 expected = re.findall(r'[a-z]+', item['sentence'].lower())
-                accepted = all(_prescribed_spoken_word_matches(word, heard) for word in expected)
+                if activity_key == 'lesson-31-gawain-2':
+                    aliases = {'sip': {'zip', 'ship', 'sipped', 'shipped'}, 'sit': {'seat'}, 'mat': {'math'}}
+                    accepted = all(bool(heard & ({word} | aliases.get(word, set()))) for word in expected)
+                else:
+                    accepted = all(_prescribed_spoken_word_matches(word, heard) for word in expected)
                 if accepted:
                     index += 1; choice_attempts = sentence_attempts = 0; placed_word = ''
                     phase = 'complete' if index >= total else 'sentence_listen'
@@ -15272,9 +15280,6 @@ def prescribed_activity_progress(request, activity_key):
                     raise ValueError('Read the current choice first.')
                 heard_words = re.findall(r'[a-z]+', str(data.get('heard', '')).lower())
                 target_word = item['choices'][choice_index].lower()
-                # Keep the child-friendly STT allowances already used in the
-                # English prescribed activities. These are common phonetic
-                # transcriptions, not alternate answers shown to the student.
                 accepted = _prescribed_spoken_word_matches(target_word, heard_words)
                 if accepted:
                     choice_index += 1
@@ -19419,6 +19424,7 @@ def reading_read_aloud_api(request):
                            'lesson-26-gawain-1', 'lesson-26-gawain-2', 'lesson-27-gawain-1',
                            'lesson-28-gawain-1', 'lesson-28-gawain-2',
                            'lesson-30-gawain-1', 'lesson-30-gawain-2', 'lesson-30-gawain-3',
+                           'lesson-31-gawain-1', 'lesson-31-gawain-2',
                            'lesson-29-gawain-1', 'lesson-29-gawain-2', 'lesson-29-gawain-3',
                        }
                        else {'voice_gender': 'MALE'} if tts_profile == 'correspondence'

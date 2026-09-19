@@ -501,9 +501,12 @@ def transcribe_audio_bytes_v1(
         "enableAutomaticPunctuation": str(language_code).lower().startswith("en-"),
         "maxAlternatives": 3,
     }
-    if "webm" in (mime_type or "").lower():
+    # MediaRecorder WebM/Opus payloads can arrive with a generic content
+    # type. Detect the container header so Google receives a matching config.
+    audio_header = bytes(audio_bytes[:4])
+    if "webm" in (mime_type or "").lower() or audio_header == b"\x1a\x45\xdf\xa3":
         config.update({"encoding": "WEBM_OPUS", "sampleRateHertz": 48000})
-    elif "ogg" in (mime_type or "").lower():
+    elif "ogg" in (mime_type or "").lower() or audio_header == b"OggS":
         config.update({"encoding": "OGG_OPUS", "sampleRateHertz": 48000})
     else:
         config.update({"encoding": "LINEAR16", "sampleRateHertz": 16000})
