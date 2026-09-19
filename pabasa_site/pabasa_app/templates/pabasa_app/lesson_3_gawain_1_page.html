@@ -12,6 +12,167 @@
 <style>
 .pairs.picture-naming-phase .word{opacity:.62;filter:saturate(.72);transition:opacity .3s,filter .3s,transform .3s,box-shadow .3s,border-color .3s}.pairs.picture-naming-phase .word.active{opacity:1;filter:none;position:relative;transform:translateY(-3px) scale(1.025);border-color:#ffc928;box-shadow:0 0 0 7px #ffe36b,0 0 30px #ffc928cc,0 12px 26px #e09a2255}.pairs.picture-naming-phase .word.active::before{content:'SABIHIN ITO';position:absolute;top:-18px;left:50%;z-index:3;transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:#ffc928;color:#5b3b00;font-size:.72rem;font-weight:1000;letter-spacing:.06em;white-space:nowrap;box-shadow:0 3px 8px #b77b1b55}.pairs.picture-naming-phase .word strong{display:none}.pairs.picture-naming-phase .word.active img{transform:scale(1.08)}.pairs.picture-naming-phase .word img{transition:transform .3s}
 </style>
+<style>
+/* Completion is a centered viewport state, not a vertically constrained stage. */
+.lesson-3-responsive #game:has(.complete) {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 24px !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+.lesson-3-responsive #game:has(.complete) .complete { margin: 0 !important; }
+</style>
+<style>body:has(.complete)::after { display: none !important; }</style>
+<style>
+/* Remove the completion dimming overlay. */
+body:has(.complete)::after { display: none !important; }
+</style>
+<script>
+// Completion is silent: stop any narration already in flight and block queued audio.
+(function () {
+  const game = document.getElementById('game');
+  if (!game) return;
+  const stopOnCompletion = () => {
+    if (!game.querySelector('.complete')) return;
+    window.__lesson3CompletionReached = true;
+    window.speechSynthesis?.cancel();
+    window.__lesson3StopAudio?.();
+  };
+  new MutationObserver(stopOnCompletion).observe(game, { childList: true, subtree: true });
+  stopOnCompletion();
+})();
+</script>
+<script>
+// The legacy recorder references `status` as a bare global. Bind it to the
+// live activity status element so its wrong-answer branch can reach feedback.
+(function () {
+  try {
+    Object.defineProperty(window, 'status', {
+      configurable: true,
+      get: () => document.getElementById('status'),
+    });
+  } catch (error) {
+    console.warn('Lesson 3 status binding could not be installed', error);
+  }
+})();
+</script>
+<style>
+/* Anchor progress to the full card width, not the narrower content header. */
+.lesson-3-responsive #game:not(:has(.complete)) .header {
+  width: 100% !important;
+}
+.lesson-3-responsive #game:not(:has(.complete)) .progress {
+  right: 0 !important;
+  left: auto !important;
+}
+@media (min-width: 701px) {
+  .lesson-3-responsive #game:not(:has(.complete)) .progress {
+    right: calc(-1 * clamp(24px, 4vw, 70px)) !important;
+  }
+}
+</style>
+<style>
+/* Keep the title block centered while progress occupies the card corner. */
+.lesson-3-responsive #game:not(:has(.complete)) .header {
+  position: relative !important;
+  display: block !important;
+  text-align: center !important;
+}
+.lesson-3-responsive #game:not(:has(.complete)) .brand {
+  width: 100%;
+  text-align: center;
+}
+.lesson-3-responsive #game:not(:has(.complete)) .brand h1,
+.lesson-3-responsive #game:not(:has(.complete)) .brand h2,
+.lesson-3-responsive #game:not(:has(.complete)) .brand p {
+  text-align: center;
+}
+.lesson-3-responsive #game:not(:has(.complete)) .progress {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 0;
+  text-align: right;
+}
+@media (max-width: 700px) {
+  .lesson-3-responsive #game:not(:has(.complete)) .header {
+    padding-top: 42px !important;
+  }
+  .lesson-3-responsive #game:not(:has(.complete)) .progress {
+    top: 0;
+    right: 0;
+  }
+}
+</style>
+<style>
+/* Compact Part 2 answer choices. */
+.lesson-3-responsive .answer {
+  min-width: min(270px, 42%) !important;
+  min-height: 62px !important;
+  padding: 8px 14px !important;
+  font-size: clamp(1.35rem, 2.4vw, 1.9rem) !important;
+}
+.lesson-3-responsive .answer small {
+  font-size: .62rem !important;
+}
+@media (max-width: 700px) {
+  .lesson-3-responsive .answer {
+    min-width: 0 !important;
+    min-height: 58px !important;
+    padding: 7px 12px !important;
+  }
+}
+</style>
+<style>
+/* Override the older centered-absolute stage rule that caused nav overlap. */
+.lesson-3-responsive .app {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  height: 100dvh !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+}
+
+.lesson-3-responsive .nav {
+  position: relative !important;
+  inset: auto !important;
+  transform: none !important;
+  flex: 0 0 auto !important;
+  margin: 0 auto 14px !important;
+}
+
+.lesson-3-responsive .game {
+  position: relative !important;
+  inset: auto !important;
+  transform: none !important;
+  flex: 0 1 auto !important;
+  margin: 0 auto !important;
+  max-height: calc(100dvh - 112px) !important;
+}
+
+@media (max-width: 700px) {
+  .lesson-3-responsive .app {
+    height: auto !important;
+    min-height: 100dvh !important;
+  }
+
+  .lesson-3-responsive .game {
+    max-height: none !important;
+  }
+}
+</style>
 </style>
 <script>
 </script><style>#game #listen:not([hidden]){display:inline-flex!important;align-self:center;margin:10px auto 0}#game #read[hidden]{display:none!important}</style><script>document.addEventListener('click',function(e){if(!e.target.closest('#read'))return;let n=0;const timer=setInterval(function(){const s=document.getElementById('status'),r=document.getElementById('read'),l=document.getElementById('listen');if(s&&s.classList.contains('warning')){r.hidden=true;l.hidden=false;l.textContent='🔊 Pakinggan';clearInterval(timer)}if(++n>50)clearInterval(timer)},250)},true);document.addEventListener('click',function(e){if(!e.target.closest('#listen'))return;const l=document.getElementById('listen'),r=document.getElementById('read');setTimeout(function(){if(l&&l.hidden){r.hidden=false;r.textContent='🎙 Sabihin ngayon'}},0)},true);</script>
@@ -72,9 +233,9 @@
 <style>.pairs .word{position:relative}.pairs .word::before{content:'CLUE';display:block;position:absolute;left:-13px;top:25px;padding:5px 11px;border-radius:8px 8px 8px 2px;background:#d9912c;color:#fffaf0;font:.6rem Nunito,"Segoe UI",sans-serif;font-weight:900;letter-spacing:.14em;transform:rotate(-5deg);z-index:2}</style>
 <style>.complete-done{margin-top:20px;min-width:150px;padding:12px 24px;border:0;border-radius:18px;background:#126d75;color:#fff;font:900 1rem Nunito,"Segoe UI",sans-serif;box-shadow:0 5px #0e4b50;cursor:pointer}.complete-done:disabled{opacity:.65;cursor:wait}.complete-error{margin:12px 0 0;color:#a33b35;font:800 .85rem Nunito,"Segoe UI",sans-serif}</style>
 <style>body:has(.complete)::after{content:'';position:fixed;inset:0;background:rgba(18,35,38,.34);backdrop-filter:blur(3px);pointer-events:none;z-index:1}#game:has(.complete){position:relative;z-index:2;background:transparent;box-shadow:none}.complete{width:min(520px,calc(100% - 24px));padding:clamp(28px,5vw,46px) clamp(22px,6vw,58px);background:#fffdf5;border:2px solid #d7e7dc;border-radius:26px;box-shadow:0 18px 42px rgba(18,55,52,.28);text-align:center}.complete-badge{display:grid;place-items:center;width:64px;height:64px;margin:0 auto 18px;border-radius:50%;background:#dff3df;color:#167064}.complete-badge svg{width:36px;height:36px;display:block}.complete h2{margin:0;color:#145b4a;font:800 clamp(1.45rem,3.2vw,2rem)/1.18 Nunito,"Segoe UI",sans-serif}.complete p{margin:14px 0 0;color:#496b66;font:700 clamp(.92rem,2vw,1.05rem)/1.4 Nunito,"Segoe UI",sans-serif}@media(max-width:650px){.complete{padding:26px 20px;border-radius:22px}.complete-badge{width:56px;height:56px;margin-bottom:14px}.complete-badge svg{width:31px;height:31px}}</style>
-<script>document.addEventListener('click',function(e){const b=e.target.closest('.answer');if(!b)return;setTimeout(function(){const s=document.getElementById('status');if(s&&s.textContent.trim()==='')s.textContent='Subukan muli.'},0)},true);</script>
-<script>document.addEventListener('click',function(e){const b=e.target.closest('.answer');if(!b)return;const before=document.getElementById('progress')?.textContent;setTimeout(function(){if(before===document.getElementById('progress')?.textContent){const s=document.getElementById('status');if(s){s.textContent='Subukan muli.';s.classList.add('warning')}}},80)},true);</script>
-<script>document.addEventListener('click',function(e){const b=e.target.closest('.answer');if(!b||typeof pi!=='number')return;const before=pi;setTimeout(function(){if(pi>before){const s=document.getElementById('status');if(s){s.textContent='';s.classList.remove('warning')}}},140)},true);</script>
+<script>document.addEventListener('click',function(e){if(window.__lesson3PictureFlowInstalled)return;const b=e.target.closest('.answer');if(!b)return;setTimeout(function(){const s=document.getElementById('status');if(s&&s.textContent.trim()==='')s.textContent='Subukan muli.'},0)},true);</script>
+<script>document.addEventListener('click',function(e){if(window.__lesson3PictureFlowInstalled)return;const b=e.target.closest('.answer');if(!b)return;const before=document.getElementById('progress')?.textContent;setTimeout(function(){if(before===document.getElementById('progress')?.textContent){const s=document.getElementById('status');if(s){s.textContent='Subukan muli.';s.classList.add('warning')}}},80)},true);</script>
+<script>document.addEventListener('click',function(e){if(window.__lesson3PictureFlowInstalled)return;const b=e.target.closest('.answer');if(!b||typeof pi!=='number')return;const before=pi;setTimeout(function(){if(pi>before){const s=document.getElementById('status');if(s){s.textContent='';s.classList.remove('warning')}}},140)},true);</script>
 <script>window.addEventListener('load',function(){if(typeof pi==='number'&&typeof pairs!=='undefined'&&pi>=pairs.length&&typeof progressKey==='string')localStorage.setItem(progressKey,String(pairs.length))});</script>
 <style>body:has(.complete)::after{backdrop-filter:none!important}.complete,.complete *{filter:none!important;backdrop-filter:none!important}</style>
 <style>.pairs.picture-naming-phase .word{opacity:.62;filter:saturate(.72);transition:opacity .3s,filter .3s,transform .3s,box-shadow .3s,border-color .3s}.pairs.picture-naming-phase .word.active{opacity:1;filter:none;transform:translateY(-3px) scale(1.025);border:5px solid #ffc928;box-shadow:0 0 0 7px #ffe36b,0 0 30px #ffc928cc,0 12px 26px #e09a2255;animation:pictureNamingPulse 1.5s ease-in-out infinite}.pairs.picture-naming-phase .word.active::before{content:'SABIHIN ITO';display:block!important;position:absolute;top:-18px;left:50%;z-index:3;transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:#ffc928;color:#5b3b00;font-size:.72rem;font-weight:900;letter-spacing:.06em;white-space:nowrap;box-shadow:0 3px 8px #b77b1b55}.pairs.picture-naming-phase .word strong{display:none}.pairs.picture-naming-phase .word.active img{transform:scale(1.08)}.pairs.picture-naming-phase .word img{transition:transform .3s}@keyframes pictureNamingPulse{50%{box-shadow:0 0 0 10px #ffe36b99,0 0 34px #ffc928dd,0 12px 28px #e09a2255}}@media(prefers-reduced-motion:reduce){.pairs.picture-naming-phase .word.active{animation:none}}</style>
@@ -83,7 +244,7 @@
 <script>document.addEventListener('DOMContentLoaded',function(){if(typeof record!=='function'||typeof listen!=='function'||typeof render!=='function')return;var originalRecord=record,originalListen=listen,originalRender=render;function updateNamingControls(){var r=document.getElementById('read'),l=document.getElementById('listen'),s=document.getElementById('status');if(!r||!l)return;r.textContent='🎙 Sabihin ngayon';l.textContent='🔊 Pakinggan';if(!l.hidden&&s&&s.classList.contains('warning')){r.hidden=true;l.hidden=false}else if(l.hidden){r.hidden=false}}window.record=async function(){await originalRecord();updateNamingControls()};window.listen=function(){originalListen();updateNamingControls()};window.render=function(){originalRender();updateNamingControls()};updateNamingControls()});</script>
 <script>document.addEventListener('DOMContentLoaded',function(){if(typeof window.render!=='function')return;var renderActivity=window.render;function bind(){var r=document.getElementById('read'),l=document.getElementById('listen');if(r&&typeof window.record==='function')r.onclick=window.record;if(l&&typeof window.listen==='function')l.onclick=window.listen}window.render=function(){renderActivity();bind()};bind()});</script>
 <style>#game .status.warning{display:block!important;font-size:1rem!important;color:#92400e!important;background:#fef3c7!important;border-radius:12px;padding:7px 12px}#game .status.warning::before,#game .status.warning::after{content:none!important;display:none!important}</style>
-<script>document.addEventListener('DOMContentLoaded',function(){var game=document.getElementById('game');if(!game)return;new MutationObserver(function(){var status=game.querySelector('#status');if(status&&status.classList.contains('warning')&&status.textContent!=='Hindi ito ang tamang sagot. Subukan natin muli.')status.textContent='Hindi ito ang tamang sagot. Subukan natin muli.'}).observe(game,{subtree:true,childList:true,characterData:true})});</script>
+<script>document.addEventListener('DOMContentLoaded',function(){var game=document.getElementById('game');if(!game)return;new MutationObserver(function(){if(window.__lesson3PictureFlowInstalled)return;var status=game.querySelector('#status');if(status&&status.classList.contains('warning')&&status.textContent!=='Hindi ito ang tamang sagot. Subukan natin muli.')status.textContent='Hindi ito ang tamang sagot. Subukan natin muli.'}).observe(game,{subtree:true,childList:true,characterData:true})});</script>
 <script>
 (function(){
   const game=document.getElementById('game');if(!game)return;
@@ -109,7 +270,7 @@
 const startInitial=async()=>{if(initialStarted)return;initialStarted=true;const instruction=game.querySelector('.instruction')?.textContent?.trim();if(!instruction)return;const first=await speak(instruction);if(!first){initialStarted=false;return}if(document.querySelector('.word.active')){await speak('Sabihin ito.');initialDone=true}};
   document.addEventListener('click',function(event){const button=event.target.closest('#read');if(!button||initialDone||button.dataset.initialTts==='1')return;event.preventDefault();event.stopImmediatePropagation();button.dataset.initialTts='1';startInitial().then(()=>{initialDone=true;button.click()})},true);
   setTimeout(()=>startInitial(),150);
-  new MutationObserver(()=>{const status=game.querySelector('#status');if(!status||status.textContent===lastStatus)return;lastStatus=status.textContent;if(/^Hindi pa\./i.test(lastStatus))speak('Hindi ito ang tamang sagot. Subukan natin muli.')}).observe(game,{childList:true,subtree:true,characterData:true});
+  new MutationObserver(()=>{if(window.__lesson3PictureFlowInstalled)return;const status=game.querySelector('#status');if(!status||status.textContent===lastStatus)return;lastStatus=status.textContent;if(/^Hindi pa\./i.test(lastStatus))speak('Hindi ito ang tamang sagot. Subukan natin muli.')}).observe(game,{childList:true,subtree:true,characterData:true});
 })();
 </script><script>(function(){const game=document.getElementById('game');if(!game)return;const url="{% url 'reading_read_aloud_api' %}",csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';let current='',busy=false,audio=null;const say=async text=>{if(audio){audio.pause();audio=null}const response=await fetch(url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',mode:'word'})}),data=await response.json();if(!response.ok||!data.success||!data.audio_content)return;audio=new Audio('data:'+(data.mime_type||'audio/mpeg')+';base64,'+data.audio_content);await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=reject;audio.play().catch(reject)})};const run=async key=>{if(busy||!key||key===current)return;current=key;busy=true;const instruction=game.querySelector('.instruction'),read=game.querySelector('#read');game.querySelectorAll('.word').forEach(card=>card.classList.remove('active'));if(read)read.disabled=true;try{await say(instruction?.textContent?.trim()||'Tingnan ang kumikislap na larawan.');const active=game.querySelectorAll('.word')[0];active?.classList.add('active');await say('Sabihin ito.')}catch(error){console.error('Gawain 1 pair transition TTS failed',error);game.querySelectorAll('.word')[0]?.classList.add('active')}finally{if(read)read.disabled=false;busy=false}};const key=()=>game.querySelector('.progress')?.textContent?.trim()||'';setTimeout(()=>run(key()),250);new MutationObserver(()=>{const next=key();if(next!==current)run(next)}).observe(game,{childList:true,subtree:true,characterData:true})})();</script>
 <script>
@@ -149,3 +310,1552 @@ const startInitial=async()=>{if(initialStarted)return;initialStarted=true;const 
   },true);
 })();
 </script>
+<style>
+/* Final layout guard: keep the navigation outside the activity stage. */
+.lesson-3-responsive .app {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.lesson-3-responsive .nav {
+  flex: 0 0 auto;
+  margin-bottom: 14px;
+}
+
+.lesson-3-responsive .game {
+  flex: 0 1 auto;
+  margin: 0 auto;
+  max-height: calc(100dvh - 112px);
+  padding-top: clamp(26px, 3.5vh, 40px);
+}
+
+.lesson-3-responsive .brand h1 {
+  font-size: clamp(1.85rem, 3.2vw, 3.1rem);
+}
+
+.lesson-3-responsive .header {
+  margin-bottom: 16px;
+}
+
+.lesson-3-responsive .instruction {
+  margin-bottom: 20px;
+}
+
+.lesson-3-responsive .pairs {
+  align-items: stretch;
+}
+
+.lesson-3-responsive .lesson3-read-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.lesson-3-responsive .lesson3-read-actions .listen {
+  margin: 0;
+}
+
+@media (max-width: 700px) {
+  .lesson-3-responsive .game {
+    max-height: calc(100dvh - 102px);
+    padding-top: 22px;
+  }
+
+  .lesson-3-responsive .header {
+    flex-wrap: wrap;
+    gap: 10px 16px;
+  }
+
+  .lesson-3-responsive .progress {
+    margin-left: auto;
+  }
+
+  .lesson-3-responsive .lesson3-read-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .lesson-3-responsive .lesson3-read-actions .read,
+  .lesson-3-responsive .lesson3-read-actions .listen {
+    width: min(330px, 100%);
+  }
+}
+
+@media (max-height: 760px) and (min-width: 701px) {
+  .lesson-3-responsive .game {
+    padding-top: 22px;
+    padding-bottom: 22px;
+  }
+
+  .lesson-3-responsive .word {
+    min-height: 170px;
+  }
+
+  .lesson-3-responsive .word img {
+    height: 112px;
+  }
+}
+</style>
+<script>
+// Part 2 retries stay on the same pair and bypass the legacy three-attempt reset.
+(function () {
+  const game = document.getElementById('game');
+  if (!game) return;
+  let retrySequence = 0;
+  document.addEventListener('click', function (event) {
+    const button = event.target.closest('.answer');
+    if (!button || button.disabled || typeof wi === 'undefined' || wi < 2 || typeof pi === 'undefined') return;
+    const expected = pairs[pi].yes ? 'yes' : 'no';
+    if (button.dataset.v === expected) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const status = game.querySelector('#status');
+    if (status) {
+      retrySequence += 1;
+      status.textContent = 'Hindi pa. Subukan muli.' + '\u200b'.repeat(retrySequence % 2 + 1);
+      status.classList.add('warning');
+    }
+  }, true);
+})();
+</script>
+<style>
+/* Reuse the existing status pseudo-element as the single visible feedback line. */
+#game #status[data-feedback-mode="feedback"] {
+  font-size: 0 !important;
+}
+#game #status[data-feedback-mode="feedback"]::before {
+  content: attr(data-feedback-text) !important;
+  display: block;
+  color: inherit;
+  font: 900 clamp(.9rem, 1.7vw, 1.05rem)/1.2 Fredoka, Nunito, "Segoe UI", sans-serif;
+}
+#game #status[data-feedback-mode="feedback"]::after {
+  display: none !important;
+  content: none !important;
+}
+</style>
+<script>
+(function () {
+  const game = document.getElementById('game');
+  if (!game || window.__lesson3StatusFeedbackInstalled) return;
+  window.__lesson3StatusFeedbackInstalled = true;
+
+  function syncStatusFeedback() {
+    const status = game.querySelector('#status');
+    if (!status) return;
+    const text = status.textContent.trim();
+    let feedback = '';
+    if (/^Magaling!/.test(text)) feedback = text;
+    if (/^Hindi pa\. Subukan muli\./.test(text)) feedback = 'Hindi pa. Subukan muli.';
+    const mode = feedback ? 'feedback' : 'default';
+    const display = feedback || 'Basahin nang malakas';
+    if (status.dataset.feedbackMode !== mode) status.dataset.feedbackMode = mode;
+    if (status.dataset.feedbackText !== display) status.dataset.feedbackText = display;
+  }
+
+  new MutationObserver(syncStatusFeedback).observe(game, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+  });
+  document.addEventListener('click', function (event) {
+    const button = event.target.closest('.answer');
+    if (!button || button.disabled || typeof wi === 'undefined' || wi < 2 || typeof pi === 'undefined' || typeof pairs === 'undefined') return;
+    const expected = pairs[pi].yes ? 'yes' : 'no';
+    if (button.dataset.v === expected) window.__lesson3Part2CorrectPending = true;
+  }, true);
+  syncStatusFeedback();
+})();
+</script>
+<style>
+.lesson-3-responsive .lesson3-read-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  width: 100%;
+  margin: 0 auto;
+}
+.lesson-3-responsive .lesson3-read-actions > #read,
+.lesson-3-responsive .lesson3-read-actions > #prescribed-listen {
+  margin: 0 !important;
+}
+.lesson-3-responsive #prescribed-listen {
+  min-width: min(260px, 100%);
+  min-height: 76px;
+  padding: 14px 24px;
+  border: 4px solid #94d9d6;
+  border-radius: 999px;
+  background: #fffffff0;
+  color: #187b7a;
+  font: 900 clamp(1.1rem, 1.8vw, 1.45rem)/1.1 Fredoka, Nunito, "Segoe UI", sans-serif;
+  cursor: pointer;
+  box-shadow: 0 5px 0 #b7d6dc, 0 8px 16px #187b7a20;
+  transition: transform .16s ease, filter .16s ease, box-shadow .16s ease;
+}
+.lesson-3-responsive #prescribed-listen:not(:disabled):hover,
+.lesson-3-responsive #prescribed-listen:not(:disabled):focus-visible {
+  filter: brightness(1.06);
+  outline: 3px solid #f4c866;
+  outline-offset: 3px;
+  transform: translateY(-2px);
+}
+.lesson-3-responsive #prescribed-listen:disabled {
+  background: #b5c5c7 !important;
+  border-color: transparent !important;
+  color: #edf3f4 !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
+  transform: none;
+}
+.lesson-3-responsive #status.lesson3-feedback {
+  min-height: 25px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: #ffffffd9;
+  color: #187b7a !important;
+  font-weight: 900;
+}
+.lesson-3-responsive #status.lesson3-feedback.retry {
+  background: #fff3d1;
+  color: #8b5b16 !important;
+}
+@media (max-width: 700px) {
+  .lesson-3-responsive .lesson3-read-actions { flex-direction: column; gap: 12px; }
+  .lesson-3-responsive .lesson3-read-actions > #read,
+  .lesson-3-responsive .lesson3-read-actions > #prescribed-listen { width: 100%; min-width: 0; }
+}
+</style>
+<script>
+(function () {
+  const game = document.getElementById('game');
+  if (!game || window.__lesson3ReadAloudControlsInstalled) return;
+  window.__lesson3ReadAloudControlsInstalled = true;
+
+  const readAloudUrl = "{% url 'reading_read_aloud_api' %}";
+  const csrf = () => document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || '';
+  const nativeFetch = window.fetch.bind(window);
+  const readAloudEndpoint = new URL(readAloudUrl, window.location.href).href;
+  window.fetch = function (input, init = {}) {
+    const requestUrl = typeof input === 'string' ? new URL(input, window.location.href).href : input?.url;
+    if (requestUrl === readAloudEndpoint) {
+      const headers = new Headers(init.headers || {});
+      if (headers.get('X-Lesson3-Narration') !== 'controller') {
+        return Promise.resolve({ ok: false, status: 204, json: async () => ({ success: false }) });
+      }
+    }
+    return nativeFetch(input, init);
+  };
+  let introFinished = false;
+  let introStarted = false;
+  let narrationPhase = 'boot';
+  let narrationBusy = false;
+  let feedbackToken = 0;
+  let previousPair = '';
+  let previousActiveWord = '';
+  let previousWarning = '';
+
+  const currentWord = () => game.querySelector('.word.active img')?.alt || '';
+  const pairKey = () => game.querySelector('.progress')?.textContent?.trim() || '';
+  const readButton = () => game.querySelector('#read');
+  const status = () => game.querySelector('#status');
+
+  async function readAloud(text) {
+    if (!text) return false;
+    window.speechSynthesis?.cancel();
+    const response = await fetch(readAloudUrl, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': csrf(),
+        'X-Lesson3-Narration': 'controller',
+      },
+      body: new URLSearchParams({ target_text: text, language: 'Filipino', mode: 'word' }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success || !data.audio_content) return false;
+    const audio = new Audio(`data:${data.mime_type || 'audio/mpeg'};base64,${data.audio_content}`);
+    await new Promise((resolve) => {
+      audio.onended = resolve;
+      audio.onerror = resolve;
+      audio.play().catch(resolve);
+    });
+    return true;
+  }
+
+  function ensureControls() {
+    const read = readButton();
+    if (!read) return null;
+    let actions = game.querySelector('.lesson3-read-actions');
+    if (!actions) {
+      actions = document.createElement('div');
+      actions.className = 'lesson3-read-actions';
+      read.parentNode.insertBefore(actions, read);
+      actions.appendChild(read);
+    }
+    let listen = actions.querySelector('#prescribed-listen');
+    if (!listen) {
+      listen = document.createElement('button');
+      listen.id = 'prescribed-listen';
+      listen.type = 'button';
+      listen.textContent = '🔊 Pakinggan';
+      actions.appendChild(listen);
+      listen.addEventListener('click', async () => {
+        if (narrationBusy || listen.disabled) return;
+        const word = currentWord();
+        if (!word) return;
+        narrationBusy = true;
+        syncControls();
+        try { await readAloud(word); } catch (error) { console.error('Lesson 3 Pakinggan failed', error); }
+        narrationBusy = false;
+        syncControls();
+      });
+    }
+    return listen;
+  }
+
+  function syncControls() {
+    const read = readButton();
+    const listen = ensureControls();
+    if (!read || !listen) return;
+    const locked = narrationBusy;
+    const readIsRecording = read.classList.contains('is-recording') || read.classList.contains('is-processing');
+    if (locked) {
+      if (read.textContent !== '🎙 Sabihin ngayon') read.textContent = '🎙 Sabihin ngayon';
+      read.disabled = true;
+    } else if ((narrationPhase === 'ready' || read.dataset.pictureFlowReady === '1') && !readIsRecording) {
+      if (read.textContent !== '🎙 Basahin ngayon') read.textContent = '🎙 Basahin ngayon';
+      read.disabled = false;
+    }
+    if (listen.disabled !== locked) listen.disabled = locked;
+    const ariaBusy = locked ? 'true' : 'false';
+    if (read.getAttribute('aria-busy') !== ariaBusy) read.setAttribute('aria-busy', ariaBusy);
+  }
+
+  async function speakFeedback(text, retry) {
+    const currentToken = ++feedbackToken;
+    const target = status();
+    if (!target) return;
+    target.textContent = text;
+    target.dataset.feedbackControllerText = text;
+    target.classList.add('lesson3-feedback');
+    target.classList.toggle('retry', Boolean(retry));
+    if (retry) target.classList.remove('warning');
+    if (retry) game.querySelectorAll('.answer').forEach(button => { button.disabled = true; });
+    narrationBusy = true;
+    syncControls();
+    try { await readAloud(text); } catch (error) { console.error('Lesson 3 feedback narration failed', error); }
+    if (currentToken !== feedbackToken) return;
+    narrationBusy = false;
+    syncControls();
+    if (retry && typeof wi !== 'undefined' && wi >= 2) {
+      game.querySelectorAll('.answer').forEach(button => { button.disabled = false; });
+    }
+    const next = status();
+    if (next && next.classList.contains('lesson3-feedback') && !next.classList.contains('retry')) {
+      next.textContent = `Basahin ang ${currentWord()}.`;
+      next.classList.remove('lesson3-feedback');
+    }
+  }
+  window.__lesson3SpeakFeedback = speakFeedback;
+
+  async function startIntro() {
+    if (window.__lesson3PictureFlowInstalled || introStarted || narrationBusy) return;
+    const read = readButton();
+    if (!read) return;
+    introStarted = true;
+    introFinished = false;
+    narrationPhase = 'narrating';
+    narrationBusy = true;
+    syncControls();
+    try {
+      await readAloud('Tingnan ang kumikislap na larawan. Sabihin ang pangalan nito at pakinggan ang iyong sarili.');
+      await readAloud('Sabihin ito.');
+    } catch (error) { console.error('Lesson 3 intro narration failed', error); }
+    narrationBusy = false;
+    introFinished = true;
+    narrationPhase = 'ready';
+    syncControls();
+  }
+
+  function inspectState() {
+    const listen = ensureControls();
+    if (!listen) return;
+    syncControls();
+    const pair = pairKey();
+    const word = currentWord();
+    const currentStatus = status();
+    const pictureChanged = pair !== previousPair || word !== previousActiveWord;
+    if (pictureChanged) previousWarning = '';
+    if (!previousPair) previousPair = pair;
+    if (!previousActiveWord) previousActiveWord = word;
+
+    if (!window.__lesson3PictureFlowInstalled && (typeof wi === 'undefined' || wi < 2) && pair === previousPair && word && previousActiveWord && word !== previousActiveWord && !narrationBusy) {
+      speakFeedback('Magaling! Susunod na larawan.', false);
+    }
+    if (currentStatus?.classList.contains('warning') && currentStatus.textContent !== previousWarning && !narrationBusy) {
+      previousWarning = currentStatus.textContent;
+      speakFeedback('Hindi pa. Subukan muli.', true);
+    }
+    previousPair = pair;
+    previousActiveWord = word;
+  }
+
+  // Do not observe attributes here: syncControls() changes disabled/aria-busy,
+  // and observing those attributes would create a self-triggering loop.
+  new MutationObserver(inspectState).observe(game, { childList: true, subtree: true, characterData: true });
+  ensureControls();
+  syncControls();
+  setTimeout(startIntro, 80);
+})();
+</script>
+<style>
+/* Final reference-alignment pass.  This is presentation-only; the activity
+   markup, recording flow, scoring, and progress persistence remain unchanged. */
+body.lesson-3-responsive {
+  overflow: hidden !important;
+  background: url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center / cover fixed !important;
+  font-family: Fredoka, Nunito, "Segoe UI", sans-serif !important;
+}
+
+.lesson-3-responsive .app {
+  height: 100dvh !important;
+  min-height: 0 !important;
+  padding: 16px !important;
+  display: block !important;
+  position: relative !important;
+}
+
+.lesson-3-responsive .nav {
+  width: min(1280px, calc(100% - 32px)) !important;
+  margin: 0 auto !important;
+  position: absolute !important;
+  top: 16px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 4 !important;
+}
+
+.lesson-3-responsive .back {
+  min-width: 280px !important;
+  min-height: 64px !important;
+  padding: 12px 26px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #fff !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  box-shadow: 0 8px 17px #145ca744 !important;
+}
+
+.lesson-3-responsive .back::after {
+  content: '← Bumalik sa Aking Aralin';
+  color: #183e63;
+  font: 900 1.2rem/1.15 Fredoka, Nunito, "Segoe UI", sans-serif;
+}
+
+.lesson-3-responsive .game {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(1250px, calc(100% - 32px)) !important;
+  height: auto !important;
+  max-height: calc(100dvh - 40px) !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: clamp(28px, 4vh, 42px) clamp(24px, 6vw, 80px) 28px !important;
+  border: 2px solid #ffffffaa !important;
+  border-radius: 42px !important;
+  background: #ffffff63 !important;
+  backdrop-filter: blur(10px) !important;
+  box-shadow: 0 18px 45px #1e5b7a35 !important;
+  overflow: auto !important;
+}
+
+.lesson-3-responsive .header {
+  width: min(980px, 100%) !important;
+  margin: 0 auto 18px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.lesson-3-responsive .brand h1 {
+  color: #183e63 !important;
+  font: 900 clamp(2rem, 4vw, 3.7rem)/1.08 Fredoka, Nunito, "Segoe UI", sans-serif !important;
+  letter-spacing: 0 !important;
+}
+
+.lesson-3-responsive .brand p {
+  display: inline-block !important;
+  margin: 10px 0 0 !important;
+  padding: 8px 22px !important;
+  border-radius: 999px !important;
+  background: #277f82 !important;
+  color: #fff !important;
+  font-size: clamp(.85rem, 1.4vw, 1.05rem) !important;
+  line-height: 1.1 !important;
+}
+
+.lesson-3-responsive .progress {
+  color: #55727e !important;
+  font-size: 1rem !important;
+}
+
+.lesson-3-responsive .segments {
+  gap: 7px !important;
+  margin-top: 9px !important;
+}
+
+.lesson-3-responsive .segments i {
+  width: 28px !important;
+  height: 9px !important;
+  border-radius: 999px !important;
+  background: #cfe0e1 !important;
+}
+
+.lesson-3-responsive .segments i.done,
+.lesson-3-responsive .segments i.active {
+  background: #f4c866 !important;
+}
+
+.lesson-3-responsive .instruction {
+  width: min(900px, 100%) !important;
+  min-height: 86px !important;
+  margin: 0 auto 22px !important;
+  padding: 19px 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 5px solid #94d9d6 !important;
+  border-radius: 34px !important;
+  background: #ffffffe8 !important;
+  color: #183e63 !important;
+  font-size: clamp(1.05rem, 1.7vw, 1.25rem) !important;
+  line-height: 1.3 !important;
+  box-shadow: none !important;
+}
+
+.lesson-3-responsive .pairs {
+  width: min(900px, 100%) !important;
+  max-width: none !important;
+  gap: clamp(18px, 3vw, 30px) !important;
+  margin: 0 auto !important;
+}
+
+.lesson-3-responsive .word,
+.lesson-3-responsive .word.active,
+.lesson-3-responsive .word.done {
+  min-height: clamp(190px, 28vh, 260px) !important;
+  padding: 18px !important;
+  border-radius: 34px !important;
+  transform: none !important;
+  background: #ffffffe8 !important;
+  box-shadow: 0 10px 22px #187b7a22 !important;
+}
+
+.lesson-3-responsive .word {
+  border: 5px solid #94d9d6 !important;
+}
+
+.lesson-3-responsive .word.active {
+  border-color: #ffc928 !important;
+  box-shadow: 0 0 0 6px #ffe36b, 0 0 26px #ffc928aa, 0 12px 26px #e09a2255 !important;
+}
+
+.lesson-3-responsive .word.done {
+  border-color: #9ed6ac !important;
+  background: #e9f8dde8 !important;
+}
+
+.lesson-3-responsive .word::before {
+  top: 20px !important;
+  left: -13px !important;
+  padding: 6px 12px !important;
+  border-radius: 999px !important;
+  background: #299e9a !important;
+  font: 900 .65rem/1 Nunito, "Segoe UI", sans-serif !important;
+  transform: rotate(-4deg) !important;
+}
+
+.lesson-3-responsive .word::after {
+  inset: 9px !important;
+  border: 1px dashed #299e9a2f !important;
+  border-radius: 25px !important;
+}
+
+.lesson-3-responsive .word img {
+  width: 80% !important;
+  height: clamp(110px, 18vh, 170px) !important;
+}
+
+.lesson-3-responsive .word strong {
+  color: #183e63 !important;
+  font: 900 clamp(1.6rem, 3vw, 2.5rem)/1.1 Fredoka, Nunito, "Segoe UI", sans-serif !important;
+}
+
+.lesson-3-responsive .status {
+  width: min(760px, 100%) !important;
+  margin: 18px auto 8px !important;
+  color: #183e63 !important;
+}
+
+.lesson-3-responsive .read,
+.lesson-3-responsive .listen,
+.lesson-3-responsive .answer,
+.lesson-3-responsive .complete-done {
+  border-radius: 999px !important;
+  font-family: Fredoka, Nunito, "Segoe UI", sans-serif !important;
+}
+
+.lesson-3-responsive .read {
+  min-width: min(330px, 100%) !important;
+  min-height: 76px !important;
+  padding: 14px 24px !important;
+  background: #299e9a !important;
+  box-shadow: 0 7px 0 #187b7a, 0 10px 20px #187b7a40 !important;
+  font-size: clamp(1.1rem, 1.8vw, 1.55rem) !important;
+}
+
+.lesson-3-responsive .listen {
+  min-height: 62px !important;
+  margin: 12px auto 0 !important;
+  padding: 12px 24px !important;
+  border: 4px solid #94d9d6 !important;
+  background: #fffffff0 !important;
+  color: #187b7a !important;
+  box-shadow: 0 5px 0 #b7d6dc, 0 8px 16px #187b7a20 !important;
+}
+
+.lesson-3-responsive .answer {
+  min-width: min(330px, 45%) !important;
+  min-height: 76px !important;
+  border: 4px solid #94d9d6 !important;
+  background: #fffffff0 !important;
+  color: #187b7a !important;
+  box-shadow: 0 5px 0 #b7d6dc, 0 8px 16px #187b7a20 !important;
+}
+
+@media (max-width: 700px) {
+  body.lesson-3-responsive { overflow-y: auto !important; background-attachment: scroll !important; }
+  .lesson-3-responsive .app { height: auto !important; min-height: 100dvh !important; padding: 12px !important; display: block !important; }
+  .lesson-3-responsive .nav { width: 100% !important; position: relative !important; top: auto !important; left: auto !important; transform: none !important; margin-bottom: 12px !important; }
+  .lesson-3-responsive .back { min-width: 230px !important; min-height: 58px !important; }
+  .lesson-3-responsive .back::after { font-size: 1rem; }
+  .lesson-3-responsive .game { position: relative !important; top: auto !important; left: auto !important; transform: none !important; width: 100% !important; max-height: none !important; padding: 24px 14px 20px !important; border-radius: 30px !important; }
+  .lesson-3-responsive .header { align-items: flex-start !important; gap: 10px !important; }
+  .lesson-3-responsive .brand h1 { font-size: clamp(1.8rem, 8vw, 2.5rem) !important; }
+  .lesson-3-responsive .progress { font-size: .86rem !important; }
+  .lesson-3-responsive .segments { gap: 3px !important; }
+  .lesson-3-responsive .segments i { width: 17px !important; height: 7px !important; }
+  .lesson-3-responsive .pairs { gap: 12px !important; }
+  .lesson-3-responsive .word, .lesson-3-responsive .word.active, .lesson-3-responsive .word.done { min-height: 155px !important; padding: 10px 6px !important; border-radius: 26px !important; }
+  .lesson-3-responsive .word img { height: 96px !important; }
+  .lesson-3-responsive .word strong { font-size: 1.4rem !important; }
+  .lesson-3-responsive .answers { flex-direction: column !important; align-items: stretch !important; }
+  .lesson-3-responsive .answer { min-width: 0 !important; width: 100% !important; }
+}
+</style>
+<style>
+/* Lesson 3 visual refinement: keep the original activity logic, but bring its
+   presentation in line with the prescribed activity visual system. */
+:root {
+  --lesson3-ink: #183e63;
+  --lesson3-teal: #299e9a;
+  --lesson3-teal-dark: #187b7a;
+  --lesson3-yellow: #f4c866;
+  --lesson3-mint-border: #94d9d6;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body.lesson-3-responsive {
+  min-height: 100dvh;
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  color: var(--lesson3-ink);
+  font-family: Fredoka, Nunito, "Segoe UI", sans-serif;
+  background:
+    linear-gradient(rgba(24, 62, 99, .08), rgba(24, 62, 99, .08)),
+    url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center / cover fixed;
+}
+
+.lesson-3-responsive .app {
+  min-height: 100dvh;
+  height: auto;
+  padding: 16px clamp(16px, 4vw, 42px) 22px;
+  position: relative;
+}
+
+.lesson-3-responsive .nav {
+  width: min(1280px, 100%);
+  margin: 0 auto 12px;
+  position: relative;
+  z-index: 3;
+}
+
+.lesson-3-responsive .back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 280px;
+  min-height: 64px;
+  padding: 12px 26px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--lesson3-ink) !important;
+  font: 900 1.2rem/1.15 Fredoka, Nunito, "Segoe UI", sans-serif;
+  box-shadow: 0 8px 17px rgba(20, 92, 167, .27);
+  transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease;
+}
+
+.lesson-3-responsive .back:hover,
+.lesson-3-responsive .back:focus-visible {
+  background: #f4fffe;
+  box-shadow: 0 10px 20px rgba(20, 92, 167, .32);
+  outline: 3px solid rgba(244, 200, 102, .85);
+  outline-offset: 3px;
+  transform: translateY(-2px);
+}
+
+.lesson-3-responsive .game {
+  width: min(1280px, 100%);
+  height: auto;
+  min-height: 0;
+  max-height: calc(100dvh - 96px);
+  flex: 0 1 auto;
+  margin: auto;
+  padding: clamp(24px, 3.3vh, 42px) clamp(20px, 6vw, 80px) 28px;
+  border: 2px solid rgba(255, 255, 255, .67);
+  border-radius: 42px;
+  background: rgba(255, 255, 255, .42);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 18px 45px rgba(30, 91, 122, .21);
+  overflow: auto;
+}
+
+.lesson-3-responsive .header {
+  align-items: center;
+  gap: 24px;
+  width: min(980px, 100%);
+  margin: 0 auto 18px;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.lesson-3-responsive .brand h1 {
+  margin: 0;
+  color: var(--lesson3-ink);
+  font-size: clamp(2rem, 4vw, 3.7rem);
+  line-height: 1.08;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.lesson-3-responsive .brand p,
+.lesson-3-responsive .progress {
+  color: #55727e;
+  font-weight: 800;
+}
+
+.lesson-3-responsive .brand p {
+  margin: 7px 0 0;
+  font-size: clamp(.95rem, 1.5vw, 1.12rem);
+}
+
+.lesson-3-responsive .progress {
+  font-size: 1rem;
+}
+
+.lesson-3-responsive .segments {
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.lesson-3-responsive .segments i {
+  width: 27px;
+  height: 9px;
+  background: #dce8e8;
+}
+
+.lesson-3-responsive .segments i.done,
+.lesson-3-responsive .segments i.active {
+  background: var(--lesson3-yellow);
+}
+
+.lesson-3-responsive .instruction {
+  width: min(900px, 100%);
+  margin: 0 auto 22px;
+  padding: 14px 22px;
+  border: 1px solid rgba(148, 217, 214, .8);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .88);
+  color: var(--lesson3-ink);
+  font-size: clamp(1rem, 1.5vw, 1.15rem);
+  line-height: 1.35;
+  box-shadow: 0 8px 18px rgba(24, 123, 122, .09);
+}
+
+.lesson-3-responsive .pairs {
+  width: min(900px, 100%);
+  gap: clamp(16px, 3vw, 30px);
+  margin: 0 auto;
+}
+
+.lesson-3-responsive .word {
+  min-height: clamp(170px, 26vh, 240px);
+  padding: 18px;
+  border: 4px solid var(--lesson3-mint-border);
+  border-radius: 30px;
+  background: rgba(255, 255, 255, .9);
+  box-shadow: 0 12px 24px rgba(30, 91, 122, .14);
+  transform: none;
+}
+
+.lesson-3-responsive .word::before {
+  top: 20px;
+  left: -12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--lesson3-teal);
+  color: #fff;
+  font: 900 .65rem/1 Nunito, "Segoe UI", sans-serif;
+  letter-spacing: .11em;
+  transform: rotate(-4deg);
+}
+
+.lesson-3-responsive .word::after {
+  inset: 9px;
+  border: 1px dashed rgba(41, 158, 154, .18);
+  border-radius: 23px;
+}
+
+.lesson-3-responsive .word img {
+  width: 80%;
+  height: clamp(100px, 17vh, 160px);
+}
+
+.lesson-3-responsive .word strong {
+  color: var(--lesson3-ink);
+  font-size: clamp(1.55rem, 3vw, 2.4rem);
+  font-weight: 900;
+}
+
+.lesson-3-responsive .word.active {
+  border: 5px solid #ffc928;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 0 0 6px rgba(255, 227, 107, .85), 0 0 26px rgba(255, 201, 40, .65), 0 14px 28px rgba(224, 154, 34, .25);
+}
+
+.lesson-3-responsive .word.done {
+  border-color: #9ed6ac;
+  background: rgba(233, 248, 221, .94);
+}
+
+.lesson-3-responsive .status {
+  width: min(760px, 100%);
+  margin: 18px auto 8px;
+  color: var(--lesson3-ink);
+  font-size: 1rem;
+}
+
+.lesson-3-responsive .read,
+.lesson-3-responsive .listen,
+.lesson-3-responsive .answer,
+.lesson-3-responsive .complete-done {
+  border-radius: 999px;
+  font-family: Fredoka, Nunito, "Segoe UI", sans-serif;
+  transition: transform .16s ease, filter .16s ease, box-shadow .16s ease;
+}
+
+.lesson-3-responsive .read {
+  min-width: min(330px, 100%);
+  min-height: 76px;
+  padding: 14px 24px;
+  background: var(--lesson3-teal);
+  box-shadow: 0 7px 0 var(--lesson3-teal-dark), 0 10px 20px rgba(24, 123, 122, .25);
+  font-size: clamp(1.1rem, 1.8vw, 1.45rem);
+}
+
+.lesson-3-responsive .read:hover,
+.lesson-3-responsive .read:focus-visible,
+.lesson-3-responsive .listen:hover,
+.lesson-3-responsive .listen:focus-visible,
+.lesson-3-responsive .answer:hover,
+.lesson-3-responsive .answer:focus-visible {
+  filter: brightness(1.06);
+  outline: 3px solid rgba(244, 200, 102, .85);
+  outline-offset: 3px;
+  transform: translateY(-2px);
+}
+
+.lesson-3-responsive .listen {
+  min-height: 62px;
+  margin: 12px auto 0;
+  padding: 12px 24px;
+  border: 4px solid var(--lesson3-mint-border);
+  background: rgba(255, 255, 255, .92);
+  color: var(--lesson3-teal-dark);
+  box-shadow: 0 5px 0 #b7d6dc, 0 8px 16px rgba(24, 123, 122, .12);
+}
+
+.lesson-3-responsive .answers {
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.lesson-3-responsive .answer {
+  min-width: min(330px, 45%);
+  min-height: 76px;
+  padding: 12px 20px;
+  border: 4px solid var(--lesson3-mint-border);
+  background: rgba(255, 255, 255, .92);
+  color: var(--lesson3-teal-dark);
+  box-shadow: 0 5px 0 #b7d6dc, 0 8px 16px rgba(24, 123, 122, .12);
+  font-size: clamp(1.65rem, 3vw, 2.5rem);
+}
+
+.lesson-3-responsive .answer small {
+  font-size: .7rem;
+  line-height: 1.2;
+}
+
+.lesson-3-responsive .answer:disabled {
+  background: rgba(181, 197, 199, .88);
+  border-color: transparent;
+  box-shadow: none;
+  color: #edf3f4;
+}
+
+.lesson-3-responsive .complete {
+  border-radius: 34px;
+  border: 2px solid rgba(255, 255, 255, .72);
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 18px 45px rgba(30, 91, 122, .2);
+}
+
+@media (max-width: 700px) {
+  body.lesson-3-responsive { background-attachment: scroll; }
+  .lesson-3-responsive .app { padding: 12px; }
+  .lesson-3-responsive .nav { margin-bottom: 10px; }
+  .lesson-3-responsive .back { min-width: 230px; min-height: 58px; font-size: 1rem; }
+  .lesson-3-responsive .game { max-height: none; padding: 22px 14px 20px; border-radius: 30px; }
+  .lesson-3-responsive .header { align-items: flex-start; }
+  .lesson-3-responsive .brand h1 { font-size: clamp(1.8rem, 8vw, 2.5rem); }
+  .lesson-3-responsive .progress { font-size: .86rem; }
+  .lesson-3-responsive .segments { gap: 3px; }
+  .lesson-3-responsive .segments i { width: 17px; height: 7px; }
+  .lesson-3-responsive .pairs { gap: 12px; }
+  .lesson-3-responsive .word { min-height: 150px; padding: 10px 6px; border-radius: 24px; }
+  .lesson-3-responsive .word img { height: 94px; }
+  .lesson-3-responsive .word strong { font-size: 1.4rem; }
+  .lesson-3-responsive .answers { flex-direction: column; align-items: stretch; }
+  .lesson-3-responsive .answer { min-width: 0; width: 100%; }
+}
+</style>
+<script>
+// Keep the existing Lesson 3 activity flow, but ensure its layered narration
+// helpers can never play two audio responses at the same time.
+(function () {
+  if (window.__lesson3AudioArbiterInstalled) return;
+  window.__lesson3AudioArbiterInstalled = true;
+  const NativeAudio = window.Audio;
+  let activeAudio = null;
+  window.__lesson3StopAudio = () => {
+    if (activeAudio) {
+      activeAudio.pause();
+      activeAudio.currentTime = 0;
+      activeAudio = null;
+    }
+  };
+
+  window.Audio = function (...args) {
+    const audio = new NativeAudio(...args);
+    const nativePlay = audio.play.bind(audio);
+    audio.play = function () {
+      if (window.__lesson3CompletionReached) {
+        audio.pause();
+        return Promise.resolve();
+      }
+      if (activeAudio && activeAudio !== audio) {
+        activeAudio.pause();
+        activeAudio.currentTime = 0;
+      }
+      activeAudio = audio;
+      const playback = nativePlay();
+      if (playback && typeof playback.catch === 'function') playback.catch(() => {});
+      return playback;
+    };
+    const release = () => { if (activeAudio === audio) activeAudio = null; };
+    audio.addEventListener('ended', release);
+    audio.addEventListener('error', release);
+    return audio;
+  };
+  window.Audio.prototype = NativeAudio.prototype;
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+})();
+</script>
+<style>
+/* Match the prescribed activity's actual typeface, not just its fallback stack. */
+@font-face {
+  font-family: Fredoka;
+  src: url("{% static 'pabasa_app/font/fredoka-one.one-regular.ttf' %}") format('truetype');
+  font-display: swap;
+}
+
+body.lesson-3-responsive,
+.lesson-3-responsive .app,
+.lesson-3-responsive .game,
+.lesson-3-responsive .game * {
+  font-family: Fredoka, Nunito, "Segoe UI", sans-serif !important;
+}
+
+.lesson-3-responsive .back::after {
+  font-family: Fredoka, Nunito, "Segoe UI", sans-serif !important;
+}
+</style>
+<style>
+/* Keep the existing answer buttons in a distinct Part 2 stage. */
+#game.part1-phase .answers { display: none !important; }
+#game.part2-narrating .answers,
+#game.part2-ready .answers { display: flex !important; }
+#game.part2-narrating .lesson3-read-actions,
+#game.part2-ready .lesson3-read-actions { display: none !important; }
+#game.part2-narrating .answer:disabled {
+  opacity: .48 !important;
+  filter: grayscale(.35) !important;
+  cursor: wait !important;
+}
+</style>
+<script>
+(function () {
+  const game = document.getElementById('game');
+  if (!game || window.__lesson3PartTransitionInstalled) return;
+  window.__lesson3PartTransitionInstalled = true;
+
+  const readAloudUrl = "{% url 'reading_read_aloud_api' %}";
+  const csrf = () => document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || '';
+  const firstPrompt = 'Magkatunog ba ang dalawang larawan na ito? Pindutin ang nawawastong sagot.';
+  const secondPrompt = 'Piliin ang tamang kamay.';
+  let part2Key = '';
+  let part2Busy = false;
+
+  async function narrate(text) {
+    const response = await fetch(readAloudUrl, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': csrf(),
+        'X-Lesson3-Narration': 'controller',
+      },
+      body: new URLSearchParams({ target_text: text, language: 'Filipino', mode: 'word' }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success || !data.audio_content) return;
+    const audio = new Audio(`data:${data.mime_type || 'audio/mpeg'};base64,${data.audio_content}`);
+    await new Promise(resolve => {
+      audio.onended = resolve;
+      audio.onerror = resolve;
+      audio.play().catch(resolve);
+    });
+  }
+
+  function answers() { return [...game.querySelectorAll('.answer')]; }
+  function setAnswersDisabled(disabled) {
+    answers().forEach(button => { if (button.disabled !== disabled) button.disabled = disabled; });
+  }
+  function setInstruction(text) {
+    const instruction = game.querySelector('.instruction');
+    if (instruction && instruction.textContent !== text) instruction.textContent = text;
+  }
+
+  async function beginPart2(key) {
+    if (part2Busy || part2Key === key) return;
+    part2Busy = true;
+    part2Key = key;
+    game.classList.remove('part1-phase', 'part1-ready', 'part1-instruction', 'part1-feedback', 'part1-transition', 'part2-ready');
+    game.classList.add('part2-narrating');
+    setAnswersDisabled(true);
+    setInstruction(firstPrompt);
+    try {
+      await narrate(firstPrompt);
+      setInstruction(secondPrompt);
+      await narrate(secondPrompt);
+    } catch (error) {
+      console.error('Lesson 3 Part 2 instruction narration failed', error);
+    }
+    setAnswersDisabled(false);
+    game.classList.remove('part2-narrating');
+    game.classList.add('part2-ready');
+    part2Busy = false;
+  }
+
+  function syncPart() {
+    if (typeof wi === 'undefined') return;
+    const key = game.querySelector('.progress')?.textContent?.trim() || '';
+    if (wi >= 2) {
+      if (part2Key === key && !part2Busy) {
+        game.classList.remove('part1-phase', 'part1-ready', 'part1-instruction', 'part1-feedback', 'part1-transition', 'part2-narrating');
+        game.classList.add('part2-ready');
+        setInstruction(secondPrompt);
+        setAnswersDisabled(false);
+      } else {
+        beginPart2(key);
+      }
+    } else {
+      part2Key = '';
+      part2Busy = false;
+      game.classList.remove('part2-narrating', 'part2-ready');
+      game.classList.add('part1-phase');
+    }
+  }
+
+  new MutationObserver(syncPart).observe(game, { childList: true, subtree: true, characterData: true });
+  syncPart();
+})();
+</script>
+<style>
+/* Part 1 narration gates the picture pair and its controls. */
+#game.part1-instruction .answers,
+#game.part1-feedback .answers,
+#game.part1-transition .answers,
+#game.part1-ready .answers,
+#game.part1-instruction .pairs .word,
+#game.part1-feedback .pairs .word,
+#game.part1-transition .pairs .word {
+  pointer-events: none !important;
+}
+#game.part1-instruction .answers,
+#game.part1-feedback .answers,
+#game.part1-transition .answers,
+#game.part1-ready .answers { display: none !important; }
+#game.part1-instruction .pairs .word {
+  opacity: .42 !important;
+  filter: grayscale(.25) !important;
+  transform: none !important;
+}
+#game.part1-instruction .pairs .word.active {
+  animation: none !important;
+  border-color: #94d9d6 !important;
+  box-shadow: 0 10px 22px #187b7a22 !important;
+}
+#game.part1-instruction .pairs .word.active::before {
+  display: none !important;
+}
+#game.part1-feedback .pairs .word {
+  opacity: .55 !important;
+  filter: grayscale(.18) !important;
+}
+#game.part1-transition .pairs .word:not(.active) {
+  opacity: .55 !important;
+  filter: grayscale(.18) !important;
+}
+#game.part1-instruction .lesson3-read-actions,
+#game.part1-feedback .lesson3-read-actions,
+#game.part1-transition .lesson3-read-actions {
+  opacity: .62;
+}
+</style>
+<script>
+(function () {
+  const game = document.getElementById('game');
+  if (!game || window.__lesson3PictureFlowInstalled) return;
+  window.__lesson3PictureFlowInstalled = true;
+
+  const readAloudUrl = "{% url 'reading_read_aloud_api' %}";
+  const csrf = () => document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || '';
+  const instructionText = 'Tingnan ang kumikislap na larawan. Sabihin ang pangalan nito at pakinggan ang iyong sarili.';
+  const sayItText = 'Sabihin ito.';
+  const nextText = 'Magaling! Susunod na larawan.';
+  let stateKey = '';
+  let flowBusy = false;
+  let initialized = false;
+  let picturePhase = '';
+  let pictureIndex = -1;
+
+  // The older page-level speechSynthesis helper is not part of this flow.
+  // The prescribed read-aloud endpoint below is the single narration source.
+  window.speechSynthesis?.cancel();
+  if (window.speechSynthesis) window.speechSynthesis.speak = () => {};
+
+  async function narrate(text) {
+    const response = await fetch(readAloudUrl, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': csrf(),
+        'X-Lesson3-Narration': 'controller',
+      },
+      body: new URLSearchParams({ target_text: text, language: 'Filipino', mode: 'word' }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success || !data.audio_content) return;
+    const audio = new Audio(`data:${data.mime_type || 'audio/mpeg'};base64,${data.audio_content}`);
+    await new Promise(resolve => {
+      audio.onended = resolve;
+      audio.onerror = resolve;
+      audio.play().catch(resolve);
+    });
+  }
+
+  const pairs = () => game.querySelector('.pairs');
+  const cards = () => [...game.querySelectorAll('.pairs .word')];
+  const readButton = () => game.querySelector('#read');
+  const listenButton = () => game.querySelector('#prescribed-listen');
+  const status = () => game.querySelector('#status');
+  const currentWord = index => cards()[index]?.querySelector('img')?.alt || '';
+  const key = () => `${game.querySelector('.progress')?.textContent?.trim() || ''}:${typeof wi === 'undefined' ? '' : wi}`;
+
+  function setText(element, text) {
+    if (element && element.textContent !== text) element.textContent = text;
+  }
+
+  function setControls(disabled) {
+    const read = readButton();
+    const listen = listenButton();
+    if (read) {
+      setText(read, disabled ? '🎙 Sabihin ngayon' : '🎙 Basahin ngayon');
+      read.dataset.pictureFlowReady = disabled ? '0' : '1';
+      if (read.disabled !== disabled) read.disabled = disabled;
+      if (read.getAttribute('aria-busy') !== String(disabled)) read.setAttribute('aria-busy', String(disabled));
+    }
+    if (listen && listen.disabled !== disabled) listen.disabled = disabled;
+  }
+
+  function setPictureState(phase, activeIndex) {
+    picturePhase = phase;
+    pictureIndex = activeIndex;
+    applyPictureState();
+  }
+
+  function applyPictureState() {
+    const pair = pairs();
+    if (!pair) return;
+    if (!pair.classList.contains('picture-naming-phase')) pair.classList.add('picture-naming-phase');
+    if (!pair.classList.contains('picture-naming-phrase')) pair.classList.add('picture-naming-phrase');
+    cards().forEach((card, index) => {
+      const active = (picturePhase === 'transition' || picturePhase === 'ready') && index === pictureIndex;
+      card.classList.toggle('active', active);
+      const disabled = picturePhase !== 'ready' || !active;
+      if (card.getAttribute('aria-disabled') !== String(disabled)) {
+        card.setAttribute('aria-disabled', String(disabled));
+      }
+    });
+    ['part1-instruction', 'part1-feedback', 'part1-transition'].forEach(className => {
+      if (className !== `part1-${picturePhase}` && game.classList.contains(className)) {
+        game.classList.remove(className);
+      }
+    });
+    const phaseClass = `part1-${picturePhase}`;
+    if (!game.classList.contains(phaseClass)) game.classList.add(phaseClass);
+  }
+
+  async function runFirstPicture() {
+    flowBusy = true;
+    setPictureState('instruction', 0);
+    setControls(true);
+    setText(game.querySelector('.instruction'), instructionText);
+    try {
+      await narrate(instructionText);
+      setPictureState('transition', 0);
+      setText(status(), `Basahin ang ${currentWord(0)}.`);
+      await narrate(sayItText);
+    } catch (error) { console.error('Lesson 3 first-picture narration failed', error); }
+    setPictureState('ready', 0);
+    setControls(false);
+    flowBusy = false;
+  }
+
+  async function runNextPicture(index) {
+    flowBusy = true;
+    setPictureState('feedback', index);
+    setControls(true);
+    setText(status(), nextText);
+    try {
+      await narrate(nextText);
+      setPictureState('transition', index);
+      setText(status(), `Basahin ang ${currentWord(index)}.`);
+      await narrate(sayItText);
+    } catch (error) { console.error('Lesson 3 next-picture narration failed', error); }
+    setPictureState('ready', index);
+    setControls(false);
+    flowBusy = false;
+  }
+
+  function syncPictureFlow() {
+    if (typeof wi === 'undefined' || wi >= 2) return;
+    const nextKey = key();
+    if (flowBusy || nextKey === stateKey) return;
+    stateKey = nextKey;
+    if (!initialized) {
+      initialized = true;
+      runFirstPicture();
+    } else if (window.__lesson3Part2CorrectPending) {
+      window.__lesson3Part2CorrectPending = false;
+      // A correct Part 2 answer starts the next pair's normal Part 1 flow.
+      runFirstPicture();
+    } else {
+      runNextPicture(wi);
+    }
+  }
+
+  new MutationObserver(() => {
+    if (typeof wi !== 'undefined' && wi >= 2) return;
+    applyPictureState();
+    syncPictureFlow();
+  }).observe(game, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+    attributes: true,
+    attributeFilter: ['class'],
+  });
+  syncPictureFlow();
+})();
+</script>
+<style>
+/* Final layout guard: keep the navigation outside the activity stage. */
+.lesson-3-responsive .app { display: flex; flex-direction: column; align-items: stretch; gap: 0; }
+.lesson-3-responsive .nav { flex: 0 0 auto; margin-bottom: 14px; }
+.lesson-3-responsive .game { flex: 0 1 auto; margin: 0 auto; max-height: calc(100dvh - 112px); padding-top: clamp(26px, 3.5vh, 40px); }
+.lesson-3-responsive .brand h1 { font-size: clamp(1.85rem, 3.2vw, 3.1rem); }
+.lesson-3-responsive .header { margin-bottom: 16px; }
+.lesson-3-responsive .instruction { margin-bottom: 20px; }
+.lesson-3-responsive .pairs { align-items: stretch; }
+.lesson-3-responsive .lesson3-read-actions { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 8px; }
+.lesson-3-responsive .lesson3-read-actions .listen { margin: 0; }
+@media (max-width: 700px) {
+  .lesson-3-responsive .game { max-height: calc(100dvh - 102px); padding-top: 22px; }
+  .lesson-3-responsive .header { flex-wrap: wrap; gap: 10px 16px; }
+  .lesson-3-responsive .progress { margin-left: auto; }
+  .lesson-3-responsive .lesson3-read-actions { flex-direction: column; gap: 10px; }
+  .lesson-3-responsive .lesson3-read-actions .read,
+  .lesson-3-responsive .lesson3-read-actions .listen { width: min(330px, 100%); }
+}
+@media (max-height: 760px) and (min-width: 701px) {
+  .lesson-3-responsive .game { padding-top: 22px; padding-bottom: 22px; }
+  .lesson-3-responsive .word { min-height: 170px; }
+  .lesson-3-responsive .word img { height: 112px; }
+}
+</style>
+<style>
+/* Final cascade fix: the stage must flow below the back navigation. */
+.lesson-3-responsive .app {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  height: 100dvh !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+}
+.lesson-3-responsive .nav {
+  position: relative !important;
+  inset: auto !important;
+  transform: none !important;
+  flex: 0 0 auto !important;
+  margin: 0 auto 14px !important;
+}
+.lesson-3-responsive .game {
+  position: relative !important;
+  inset: auto !important;
+  transform: none !important;
+  flex: 0 1 auto !important;
+  margin: 0 auto !important;
+  max-height: calc(100dvh - 112px) !important;
+}
+@media (max-width: 700px) {
+  .lesson-3-responsive .app { height: auto !important; min-height: 100dvh !important; }
+  .lesson-3-responsive .game { max-height: none !important; }
+}
+.lesson-3-responsive .game {
+  overflow: hidden !important;
+}
+@media (max-height: 800px) and (min-width: 701px) {
+  .lesson-3-responsive .game {
+    padding-top: 18px !important;
+    padding-bottom: 16px !important;
+  }
+  .lesson-3-responsive .header {
+    margin-bottom: 10px !important;
+  }
+  .lesson-3-responsive .instruction {
+    margin-bottom: 12px !important;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+  }
+  .lesson-3-responsive .word,
+  .lesson-3-responsive .word.active,
+  .lesson-3-responsive .word.done {
+    min-height: 150px !important;
+  }
+  .lesson-3-responsive .word img {
+    height: 96px !important;
+  }
+  .lesson-3-responsive .status {
+    margin-top: 8px !important;
+    margin-bottom: 4px !important;
+  }
+  .lesson-3-responsive .read,
+.lesson-3-responsive #prescribed-listen {
+    min-height: 58px !important;
+    padding-top: 9px !important;
+    padding-bottom: 9px !important;
+  }
+  .lesson-3-responsive .lesson3-read-actions {
+    gap: 10px !important;
+    margin-top: 4px !important;
+  }
+}
+</style>
+<style>
+/* Final compact sizing for the Part 2 answer choices. */
+.lesson-3-responsive .answer {
+  min-width: min(270px, 42%) !important;
+  min-height: 62px !important;
+  padding: 8px 14px !important;
+  font-size: clamp(1.35rem, 2.4vw, 1.9rem) !important;
+}
+.lesson-3-responsive .answer small { font-size: .62rem !important; }
+@media (max-width: 700px) {
+  .lesson-3-responsive .answer {
+    min-width: 0 !important;
+    min-height: 58px !important;
+    padding: 7px 12px !important;
+  }
+}
+</style>
+<style>
+/* Final header positioning: centered title/subtitle, corner progress. */
+.lesson-3-responsive #game:not(:has(.complete)) .header {
+  position: relative !important;
+  display: block !important;
+  text-align: center !important;
+}
+.lesson-3-responsive #game:not(:has(.complete)) .brand {
+  width: 100%;
+  text-align: center;
+}
+.lesson-3-responsive #game:not(:has(.complete)) .brand h1,
+.lesson-3-responsive #game:not(:has(.complete)) .brand h2,
+.lesson-3-responsive #game:not(:has(.complete)) .brand p { text-align: center; }
+.lesson-3-responsive #game:not(:has(.complete)) .progress {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 0;
+  text-align: right;
+}
+@media (max-width: 700px) {
+  .lesson-3-responsive #game:not(:has(.complete)) .header { padding-top: 42px !important; }
+  .lesson-3-responsive #game:not(:has(.complete)) .progress { top: 0; right: 0; }
+}
+</style>
+<script>
+// Ensure Part 1 retry feedback is visible even when a legacy observer races the controller.
+(function () {
+  const game = document.getElementById('game');
+  if (!game) return;
+  const retryText = 'Hindi pa. Subukan muli.';
+  const url = "{% url 'reading_read_aloud_api' %}";
+  const csrf = () => document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || '';
+  let audio = null;
+
+  async function narrate() {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': csrf(),
+          'X-Lesson3-Narration': 'controller',
+        },
+        body: new URLSearchParams({ target_text: retryText, language: 'Filipino', mode: 'word' }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success || !data.audio_content) return;
+      audio = new Audio(`data:${data.mime_type || 'audio/mpeg'};base64,${data.audio_content}`);
+      await new Promise(resolve => { audio.onended = resolve; audio.onerror = resolve; audio.play().catch(resolve); });
+    } catch (error) { console.error('Lesson 3 picture retry feedback failed', error); }
+    audio = null;
+  }
+
+  new MutationObserver(() => {
+    if (typeof wi === 'undefined' || wi >= 2) return;
+    const status = game.querySelector('#status');
+    if (!status || !status.classList.contains('warning')) return;
+    const sourceText = status.textContent;
+    const controllerClaimed = status.dataset.feedbackControllerText === sourceText;
+    status.textContent = retryText;
+    status.classList.add('lesson3-feedback', 'retry');
+    status.dataset.feedbackMode = 'feedback';
+    status.dataset.feedbackText = retryText;
+    if (controllerClaimed || status.dataset.retryNarrated === '1') return;
+    status.dataset.retryNarrated = '1';
+    const feedback = window.__lesson3SpeakFeedback;
+    if (typeof feedback === 'function') {
+      Promise.resolve(feedback(retryText, true)).finally(() => { status.dataset.retryNarrated = '0'; });
+    } else {
+      narrate().finally(() => { status.dataset.retryNarrated = '0'; });
+    }
+  }).observe(game, { childList: true, subtree: true, characterData: true });
+})();
+</script>
+<style>
+/* Keep progress anchored to the card's right inner edge. */
+.lesson-3-responsive #game:not(:has(.complete)) .progress {
+  right: clamp(0px, 1vw, 14px) !important;
+  left: auto !important;
+  margin-left: 0 !important;
+  text-align: right !important;
+  justify-self: end;
+}
+</style>
+<style>
+/* Final progress alignment: use the full card width. */
+.lesson-3-responsive #game:not(:has(.complete)) .header { width: 100% !important; }
+.lesson-3-responsive #game:not(:has(.complete)) .progress {
+  right: 0 !important;
+  left: auto !important;
+}
+</style>
+<style>
+/* Final completion layout: center the card in the viewport. */
+.lesson-3-responsive #game:has(.complete) {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 24px !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+.lesson-3-responsive #game:has(.complete) .complete { margin: 0 !important; }
+</style>
