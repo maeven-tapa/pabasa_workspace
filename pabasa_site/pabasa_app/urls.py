@@ -174,6 +174,7 @@ urlpatterns = [
     path('dashboard/assessment/session-4/gawain-2/', views.session_4_gawain_2_page, name='session_4_gawain_2_page'),
     path('dashboard/assessment/session-4/gawain-3/', views.session_4_gawain_3_page, name='session_4_gawain_3_page'),
     path('dashboard/assessment/session-4/gawain-4/', views.session_4_gawain_4_page, name='session_4_gawain_4_page'),
+    path('dashboard/assessment/session-4/gawain-5/', views.session_4_gawain_5_page, name='session_4_gawain_5_page'),
     path('dashboard/assessment/lesson-3/activity-progress/', views.lesson_3_activity_progress, name='lesson_3_activity_progress'),
     path('dashboard/assessment/lesson-4/activity-progress/', views.lesson_3_activity_progress, name='lesson_4_activity_progress'),
     path('dashboard/assessment/lesson-5/activity-progress/', views.lesson_3_activity_progress, name='lesson_5_activity_progress'),

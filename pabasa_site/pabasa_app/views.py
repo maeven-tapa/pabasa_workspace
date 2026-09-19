@@ -17205,6 +17205,49 @@ def session_4_gawain_4_page(request):
 
 
 @login_required(role='student')
+@xframe_options_sameorigin
+def session_4_gawain_5_page(request):
+    context = _dashboard_context(request)
+    activity_key = 'session-4-gawain-5'
+    activity = prescribed_activity(activity_key)
+    progress = StudentActivityProgress.objects.filter(
+        student=_active_prescribed_student(request), activity_key=activity_key
+    ).first()
+    if progress and progress.activity_completed:
+        return redirect('assessment')
+    raw_state = progress.state if progress and isinstance(progress.state, dict) else {}
+    try:
+        saved_index = max(0, min(4, int(progress.current_index))) if progress else 0
+    except (TypeError, ValueError):
+        saved_index = 0
+    try:
+        saved_completed = max(0, min(4, int(progress.completed_items))) if progress else 0
+    except (TypeError, ValueError):
+        saved_completed = 0
+    context['session4_gawain5_data'] = {
+        'activity_key': activity_key,
+        'session_key': 'session-4',
+        'lesson_number': '10, 11, at 12',
+        'gawain_number': 5,
+        'title': activity['title'],
+        'instruction': activity['instruction'],
+        'letters': [item['letter'] for item in activity['items']],
+        'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+        'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+        'next_url': reverse('assessment'),
+        'progress': {
+            'current_index': saved_index,
+            'completed_items': saved_completed,
+            'total_items': 4,
+            'activity_completed': progress.activity_completed if progress else False,
+            'strokes': raw_state.get('strokes') if isinstance(raw_state.get('strokes'), list) else [],
+            'state': raw_state,
+        },
+    }
+    return render(request, 'pabasa_app/session_4_gawain_5_page.html', context)
+
+
+@login_required(role='student')
 @csrf_protect
 @require_http_methods(['POST'])
 def lesson_3_activity_progress(request):
