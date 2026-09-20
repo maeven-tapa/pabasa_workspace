@@ -6,6 +6,7 @@ layout, and repeated numbering. Open-ended answers require teacher review.
 from copy import deepcopy
 import json
 import re
+import unicodedata
 
 
 ACTIVITIES = {}
@@ -54,6 +55,40 @@ L22_G2_C_WORDS = (
     'Vicente', 'Caloocan', 'Celeste', 'Coron', 'Celsa', 'Vic', 'Carlos',
 )
 L22_G2_C_SOUNDS = ('/k/', '/s/') * 7
+
+# Lesson 22 Gawain 2 keeps the workbook spelling as the canonical display
+# value while allowing only explicit Filipino STT spellings for pronunciation.
+L22_G2_ACCEPTED_SPEECH = {
+    'computer': {'computer', 'komputer', 'kompyuter'},
+    'cebu': {'cebu', 'sebu'},
+    'cactus': {'cactus', 'kaktus'},
+    'cita': {'cita', 'sita'},
+    'camera': {'camera', 'kamera'},
+    'celso': {'celso', 'selso'},
+    'cabinet': {'cabinet', 'kabinet'},
+    'vicente': {'vicente', 'bisente'},
+    'caloocan': {'caloocan', 'kaloocan'},
+    'celeste': {'celeste', 'seleste'},
+    'coron': {'coron', 'koron'},
+    'celsa': {'celsa', 'selsa'},
+    'vic': {'vic', 'bik'},
+    'carlos': {'carlos', 'karlos'},
+}
+
+
+def normalize_l22_g2_speech(value):
+    """Normalize one STT result without changing the workbook word."""
+    text = unicodedata.normalize('NFKC', str(value or '')).casefold()
+    text = re.sub(r'[^0-9a-z\s]', ' ', text)
+    return ' '.join(text.split())
+
+
+def l22_g2_pronunciation_match(canonical_word, transcript):
+    """Match an explicit accepted speech form for the current word only."""
+    canonical = normalize_l22_g2_speech(canonical_word)
+    heard = normalize_l22_g2_speech(transcript)
+    accepted = L22_G2_ACCEPTED_SPEECH.get(canonical, {canonical})
+    return bool(heard and heard in accepted)
 
 
 def add(key, page, lesson, number, title, instruction, kind, rows, **config):

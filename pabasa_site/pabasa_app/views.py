@@ -16296,7 +16296,10 @@ def prescribed_activity_progress(request, activity_key):
 def _prescribed_workbook_activity_progress(request, activity_key, activity, student):
     """Persist Sessions 8–11 workbook state through the shared prescribed route."""
     from copy import deepcopy
-    from .prescribed_workbook import apply_event, get_activity, initial_l22_g2_state, initial_state, normalize_l22_c_state, normalize_l22_g2_state
+    from .prescribed_workbook import (
+        apply_event, get_activity, initial_l22_g2_state, initial_state,
+        l22_g2_pronunciation_match, normalize_l22_c_state, normalize_l22_g2_state,
+    )
 
     workbook = get_activity(activity_key)
     try:
@@ -16352,6 +16355,10 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             elif activity_key == 'aral-l22-g2-c-word-reading' and event.get('action') == 'reading_attempt':
                 event = dict(event)
                 event['transcript'] = str(result.get('raw_transcript') or result.get('transcript') or '').strip()
+                result['complete'] = l22_g2_pronunciation_match(
+                    workbook['items'][item_index]['text'],
+                    result.get('raw_transcript') or result.get('transcript') or '',
+                )
             if activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_attempt':
                 verified = bool(str(result.get('transcript') or result.get('raw_transcript') or '').strip())
             elif activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_syllable_attempt':

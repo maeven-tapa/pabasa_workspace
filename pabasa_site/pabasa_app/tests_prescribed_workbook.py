@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -9,7 +10,11 @@ from django.urls import reverse
 
 from .models import Material, School, Section, StudentActivityProgress, User
 from .prescribed_activity_catalog import PRESCRIBED_ACTIVITIES, active_prescribed_activities
-from .prescribed_workbook import ACTIVITIES, L22_G2_C_WORDS, apply_event, get_activity, initial_l22_g2_state, initial_state, normalize_l22_c_state, search_paths
+from .prescribed_workbook import (
+    ACTIVITIES, L22_G2_C_WORDS, apply_event, get_activity, initial_l22_g2_state,
+    initial_state, l22_g2_pronunciation_match, normalize_l22_g2_speech,
+    normalize_l22_c_state, search_paths,
+)
 from .reading_stt import l22_c_pronunciation_match
 
 
@@ -46,6 +51,28 @@ class WorkbookStateTests(SimpleTestCase):
         self.assertTrue(state['completed'])
         self.assertEqual(state['sequence_index'], 14)
         self.assertEqual(state['completed_words'], list(range(14)))
+
+    def test_lesson22_gawain2_cita_alias_is_normalized_and_scoped(self):
+        activity = get_activity('aral-l22-g2-c-word-reading')
+        self.assertEqual(activity['items'][3]['text'], 'Cita')
+        self.assertEqual(normalize_l22_g2_speech('  SITA!  '), 'sita')
+        self.assertTrue(l22_g2_pronunciation_match('Cita', 'SITA'))
+        self.assertTrue(l22_g2_pronunciation_match('Cita', 'cita'))
+        self.assertFalse(l22_g2_pronunciation_match('Cita', 'camera'))
+        self.assertFalse(l22_g2_pronunciation_match('Celso', 'sita'))
+
+    def test_lesson22_gawain2_instruction_tts_is_exact_and_single_path(self):
+        activity = get_activity('aral-l22-g2-c-word-reading')
+        instruction = 'Basahin ang mga salitang nagtataglay ng hiram na letrang C na may tunog na /k/ at /s/.'
+        self.assertEqual(activity['instruction'], instruction)
+        source = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_l22_g2_reading.js').read_text(encoding='utf-8')
+        self.assertEqual(source.count("const INSTRUCTION_TEXT='" + instruction + "';"), 1)
+        self.assertEqual(source.count("f.append('target_text',INSTRUCTION_TEXT)"), 1)
+        self.assertEqual(source.count('function playInstruction()'), 1)
+        self.assertEqual(source.count('function playSpeech(text)'), 1)
+        self.assertNotIn('speechSynthesis', source)
+        instruction_flow = source.split('async function playInstruction()', 1)[1].split('async function playSpeech', 1)[0]
+        self.assertNotIn('playSpeech(', instruction_flow)
     def test_lesson22_c_pronunciation_accepts_scoped_hard_and_soft_c_spellings(self):
         self.assertTrue(l22_c_pronunciation_match('cac', 'cactus', 'kak', 'hard'))
         self.assertTrue(l22_c_pronunciation_match('com', 'computer', 'kom', 'hard'))
