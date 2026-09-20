@@ -14510,8 +14510,18 @@ def prescribed_activity_progress(request, activity_key):
             data = json.loads(request.body or '{}')
             query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
             if data.get('reset'):
-                query.delete()
-                return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
+                reset_state = {'part': 1, 'current_index': 0, 'attempts': 0, 'plays': 0,
+                               'recording': False, 'selected_answers': {}, 'state_version': 0}
+                progress, _ = query.update_or_create(defaults={
+                    'current_index': 0, 'completed_items': 0, 'correct_items': 0,
+                    'total_items': len(activity['items']), 'activity_completed': False,
+                    'state': reset_state,
+                })
+                return JsonResponse({'success': True, 'progress': {
+                    'current_index': progress.current_index, 'completed_items': 0,
+                    'correct_items': 0, 'total_items': len(activity['items']),
+                    'activity_completed': False, 'state': reset_state,
+                }})
             existing = query.first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
