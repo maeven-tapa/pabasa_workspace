@@ -13276,8 +13276,11 @@ def prescribed_activity_page(request, activity_key):
             state = normalize_l22_c_state(state)
         elif activity_key == 'aral-l22-g2-c-word-reading':
             state = normalize_l22_g2_state(state)
-        next_key = 'aral-l22-g2-c-word-reading'
-        next_url = reverse('prescribed_activity_page', kwargs={'activity_key': next_key}) if activity_key == 'aral-l22-g1-c-syllable-builder' and next_key in PRESCRIBED_ACTIVITIES else ''
+        next_key = {
+            'aral-l22-g1-c-syllable-builder': 'aral-l22-g2-c-word-reading',
+            'aral-l22-g2-c-word-reading': 'aral-l22-g3-c-word-search',
+        }.get(activity_key, '')
+        next_url = reverse('prescribed_activity_page', kwargs={'activity_key': next_key}) if next_key in PRESCRIBED_ACTIVITIES else ''
         if activity_key == 'aral-l22-g2-c-word-reading':
             return render(request, 'pabasa_app/prescribed_l22_g2_reading_page.html', {
                 'workbook_payload': {
@@ -13285,6 +13288,7 @@ def prescribed_activity_page(request, activity_key):
                     'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
                     'read_aloud_url': reverse('reading_read_aloud_api'),
                     'back_url': reverse('assessment'),
+                    'next_url': next_url,
                 },
             })
         return render(request, 'pabasa_app/prescribed_workbook_page.html', {
