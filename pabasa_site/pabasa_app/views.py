@@ -13950,6 +13950,7 @@ def prescribed_activity_page(request, activity_key):
         context = _dashboard_context(request)
         saved_strokes = raw_state.get('strokes') if isinstance(raw_state.get('strokes'), list) else []
         total_writing_entries = len(activity['items']) * 5
+        has_incomplete_progress = bool(progress and not progress.activity_completed and (progress.current_index > 0 or saved_strokes))
         context['lesson13_gawain4_data'] = {
             'activity_key': activity_key, 'session_key': 'session-5',
             'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
@@ -13957,6 +13958,7 @@ def prescribed_activity_page(request, activity_key):
             'letters': [item['letter'] for item in activity['items']],
             'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
             'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'has_incomplete_progress': has_incomplete_progress,
             'progress': {'current_index': progress.current_index if progress else 0,
                          'completed_items': progress.completed_items if progress else 0,
                          'total_items': total_writing_entries,
