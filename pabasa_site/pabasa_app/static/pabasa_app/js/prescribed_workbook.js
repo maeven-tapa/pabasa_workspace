@@ -16,7 +16,10 @@
   const endpoint = data.progress_url;
   const item = () => a.items[state.index];
   const oral = () => state.oral[item()?.id] || {passed:false,attempts:0,listens:0,phase:a.model_first?'model':'read'};
-  const message = (text, error=false) => {status.textContent=text; status.className=error?'wb-error':'wb-save';};
+  const message = (text, error=false) => {
+    status.textContent=text;status.className=error?'wb-error':'wb-save';status.hidden=cBuilder;
+    if(cBuilder){const primary=content.querySelector('.wb-phase-status');if(primary){primary.textContent=text;primary.classList.toggle('wb-feedback-error',error);}}
+  };
   const stopReadAloud = () => {
     audioRun += 1;
     audioController?.abort();
@@ -151,10 +154,11 @@
       button('Tapusin ang Gawain',()=>perform({action:'finish'}),false).disabled=!(state.found_words||[]).length;
       button('Susunod',()=>{if(data.next_url)location.href=data.next_url;}).disabled=true;
     }else if(!preview){
-      const readingButton=(text,fn)=>{const b=button(text,fn,true),target=document.getElementById('wb-l22-reading-action');if(target)target.appendChild(b);return b;};
-      if(phase==='help'&&!state.pronunciation_help_played)readingButton('Pakinggan ang Tamang Pagbigkas',readAloudC);
-      else if(phase==='help'&&state.pronunciation_help_played)readingButton('Subukan Muli',retryCReading);
-      else readingButton(state.read_aloud_started?'Basahin Muli':'Simulan ang Pagbasa',startCReading);
+      const readingButton=(text,fn,primary=true)=>{const b=button(text,fn,primary);if(!primary)b.classList.add('wb-secondary');const target=document.getElementById('wb-l22-reading-action');if(target)target.appendChild(b);return b;};
+      if(phase==='help'){
+        readingButton('Pakinggan ang Tamang Pagbigkas',readAloudC,true);
+        if(state.pronunciation_help_played)readingButton('Subukan Muli',retryCReading,false);
+      }else readingButton(state.read_aloud_started?'Basahin Muli':'Simulan ang Pagbasa',startCReading);
     }
   }
   async function startCReading(){
