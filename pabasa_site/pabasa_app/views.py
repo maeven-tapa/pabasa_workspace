@@ -15806,10 +15806,41 @@ def prescribed_activity_progress(request, activity_key):
     if activity_key == 'lesson-13-gawain-1':
         data = json.loads(request.body or '{}'); state = data.get('state') if isinstance(data.get('state'), dict) else {}
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first(); old = existing.state if existing and isinstance(existing.state, dict) else {}
-        completed = max(0, min(4, int(data.get('completed_items', existing.completed_items if existing else 0) or 0)))
-        saved = {'activity_key': activity_key, 'phase': state.get('phase', old.get('phase', 'oral')), 'current_item': max(0, min(4, int(state.get('current_item', old.get('current_item', completed)) or 0))), 'reading_attempts': max(0, min(3, int(state.get('reading_attempts', old.get('reading_attempts', 0)) or 0))), 'aloud_attempts': max(0, min(3, int(state.get('aloud_attempts', old.get('aloud_attempts', 0)) or 0))), 'oral_satisfied': bool(state.get('oral_satisfied', old.get('oral_satisfied', False))), 'state_version': int(state.get('state_version', old.get('state_version', 0)) or 0) + 1}
-        progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed, 'total_items': 4, 'activity_completed': False, 'state': saved})
-        return JsonResponse({'success': True, 'progress': {'current_index': completed, 'completed_items': completed, 'total_items': 4, 'activity_completed': False, 'state': saved}})
+        if data.get('reset') is True:
+            saved = {'activity_key': activity_key, 'phase': 'initial', 'current_item': 0,
+                     'reading_attempts': 0, 'aloud_attempts': 0, 'oral_satisfied': False,
+                     'state_version': 0}
+            progress, _ = StudentActivityProgress.objects.update_or_create(
+                student=student, activity_key=activity_key,
+                defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
+                          'total_items': 4, 'activity_completed': False, 'state': saved},
+            )
+        else:
+            def bounded_l13(value, fallback, upper=4):
+                try:
+                    return max(0, min(upper, int(value)))
+                except (TypeError, ValueError):
+                    return fallback
+            old_completed = bounded_l13(old.get('completed_items', existing.completed_items if existing else 0), 0)
+            old_index = bounded_l13(old.get('current_index', existing.current_index if existing else old_completed), old_completed)
+            completed = bounded_l13(data.get('completed_items', old_completed), old_completed)
+            incoming_index = bounded_l13(state.get('current_item', data.get('current_index', old_index)), old_index)
+            completed = max(completed, old_completed)
+            current_index = max(incoming_index, old_index, completed)
+            saved = {'activity_key': activity_key,
+                     'phase': state.get('phase', old.get('phase', 'initial')),
+                     'current_item': current_index,
+                     'reading_attempts': bounded_l13(state.get('reading_attempts', old.get('reading_attempts', 0)), 0, 3),
+                     'aloud_attempts': bounded_l13(state.get('aloud_attempts', old.get('aloud_attempts', 0)), 0, 3),
+                     'oral_satisfied': bool(state.get('oral_satisfied', old.get('oral_satisfied', False))),
+                     'state_version': int(old.get('state_version', 0) or 0) + 1}
+            progress, _ = StudentActivityProgress.objects.update_or_create(
+                student=student, activity_key=activity_key,
+                defaults={'current_index': current_index, 'completed_items': completed,
+                          'correct_items': completed, 'total_items': 4,
+                          'activity_completed': False, 'state': saved},
+            )
+        return JsonResponse({'success': True, 'progress': {'current_index': progress.current_index, 'completed_items': progress.completed_items, 'correct_items': progress.correct_items, 'total_items': 4, 'activity_completed': False, 'state': saved}})
     if activity_key.startswith('session-4-gawain-'):
         try:
             data = json.loads(request.body or '{}')
