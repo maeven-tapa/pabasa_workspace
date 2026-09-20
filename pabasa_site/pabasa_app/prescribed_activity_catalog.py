@@ -812,21 +812,23 @@ PRESCRIBED_ACTIVITIES = {
     },
     'lesson-16-gawain-3': {
         'activity_key': 'lesson-16-gawain-3',
-        'session_number': 6,
+        'session_key': 'session-6', 'session_number': 6,
         'lesson_number': 16,
         'gawain_number': 3,
         'title': 'Ikabit ang Wastong Salita',
+        'description': 'Ikabit ang bawat larawan sa wastong salita.',
         'instruction': 'Ikabit ang wastong salita para sa mga larawan.',
-        'interaction': 'picture_word_match',
+        'interaction': 'picture_word_match', 'total_items': 5,
+        'thumbnail': 'pabasa_app/images/lesson_16/sanga.png',
         # The word-bank order follows the numbered workbook list.  The image
         # order follows the right-hand illustration column in the worksheet.
         'word_bank': ['panga', 'gamot', 'sanga', 'bunga', 'goma'],
         'items': [
-            {'id': 'picture-1', 'word': 'sanga'},
-            {'id': 'picture-2', 'word': 'goma'},
-            {'id': 'picture-3', 'word': 'bunga'},
-            {'id': 'picture-4', 'word': 'panga'},
-            {'id': 'picture-5', 'word': 'gamot'},
+            {'id': 'picture-1', 'word': 'sanga', 'alt_text': 'Larawan ng sanga'},
+            {'id': 'picture-2', 'word': 'goma', 'alt_text': 'Larawan ng goma'},
+            {'id': 'picture-3', 'word': 'bunga', 'alt_text': 'Larawan ng bunga'},
+            {'id': 'picture-4', 'word': 'panga', 'alt_text': 'Larawan ng panga'},
+            {'id': 'picture-5', 'word': 'gamot', 'alt_text': 'Larawan ng gamot'},
         ],
     },
     'session-6-lesson-16-gawain-4': {

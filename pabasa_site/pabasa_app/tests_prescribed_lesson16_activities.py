@@ -1,5 +1,6 @@
 import json
 import uuid
+from unittest.mock import patch
 
 from django.test import TestCase
 from django.urls import reverse
@@ -188,14 +189,20 @@ class PrescribedLesson16ActivityTests(TestCase):
         key = 'session-6-lesson-16-gawain-4'
         progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
         complete_url = reverse('prescribed_activity_complete', kwargs={'activity_key': key})
+        blocked = self.client.post(progress_url, data=json.dumps({
+            'candidate_answer': 'gamot', 'state': {'started': True, 'state_version': 1},
+        }), content_type='application/json')
+        self.assertEqual(blocked.status_code, 400)
+        oral_state = {'started': True, 'phase': 'written', 'completed_oral_reads': [0, 1, 2, 3, 4],
+                      'stt_attempts': {}, 'tts_plays': {}}
         incorrect = self.client.post(progress_url, data=json.dumps({
-            'candidate_answer': 'gamutx', 'state': {'started': True, 'state_version': 1},
+            'candidate_answer': 'gamutx', 'state': {**oral_state, 'state_version': 2},
         }), content_type='application/json')
         self.assertEqual(incorrect.status_code, 200)
         self.assertFalse(incorrect.json()['accepted'])
         self.assertEqual(incorrect.json()['progress']['state']['attempts'], {'0': 1})
         first = self.client.post(progress_url, data=json.dumps({
-            'candidate_answer': ' GAMOT ', 'state': {'started': True, 'state_version': 2},
+            'candidate_answer': ' GAMOT ', 'state': {**oral_state, 'state_version': 3},
         }), content_type='application/json')
         self.assertTrue(first.json()['accepted'])
         self.assertEqual(first.json()['progress']['completed_items'], 1)
@@ -204,9 +211,9 @@ class PrescribedLesson16ActivityTests(TestCase):
         self.assertEqual(page.context['prescribed_activity_data']['progress']['current_index'], 1)
         self.assertNotIn('answer', page.context['prescribed_activity_data']['items'][0])
         self.assertEqual(self.client.post(complete_url, data='{}', content_type='application/json').status_code, 400)
-        for state_version, answer in enumerate(['bunga', 'panga', 'goma', 'sanga'], start=3):
+        for state_version, answer in enumerate(['bunga', 'panga', 'goma', 'sanga'], start=4):
             response = self.client.post(progress_url, data=json.dumps({
-                'candidate_answer': answer, 'state': {'started': True, 'state_version': state_version},
+                'candidate_answer': answer, 'state': {**oral_state, 'state_version': state_version},
             }), content_type='application/json')
             self.assertTrue(response.json()['accepted'])
         self.assertEqual(self.client.post(complete_url, data='{}', content_type='application/json').status_code, 200)
@@ -221,11 +228,12 @@ class PrescribedLesson16ActivityTests(TestCase):
             student=self.student, activity_key=key, current_index=5, completed_items=5,
             correct_items=5, total_items=5, activity_completed=False,
             state={'answers': ['gamot', 'bunga', 'panga', 'goma', 'sanga'],
-                   'attempts': {}, 'started': True, 'state_version': 7},
+                   'attempts': {}, 'started': True, 'completed_oral_reads': [0, 1, 2, 3, 4],
+                   'stt_attempts': {}, 'tts_plays': {}, 'state_version': 7},
         )
         response = self.client.post(
             reverse('prescribed_activity_progress', kwargs={'activity_key': key}),
-            data=json.dumps({'candidate_answer': 'sanga', 'state': {'started': True, 'state_version': 8}}),
+            data=json.dumps({'candidate_answer': 'sanga', 'state': {'started': True, 'completed_oral_reads': [0, 1, 2, 3, 4], 'state_version': 8}}),
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 200)
@@ -267,9 +275,19 @@ class PrescribedLesson16ActivityTests(TestCase):
         self.login_student()
         progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': 'lesson-16-gawain-3'})
         complete_url = reverse('prescribed_activity_complete', kwargs={'activity_key': 'lesson-16-gawain-3'})
-        incorrect = self.client.post(progress_url, data=json.dumps({
+        blocked = self.client.post(progress_url, data=json.dumps({
             'matches': {}, 'candidate_match': {'target_id': 'picture-1', 'word': 'panga'},
             'state': {'match_attempts': 1, 'state_version': 1},
+        }), content_type='application/json')
+        self.assertEqual(blocked.status_code, 400)
+        oral = self.client.post(progress_url, data=json.dumps({
+            'matches': {}, 'state': {'phase': 'matching', 'oral_index': 5, 'stt_attempts': {}, 'tts_plays': {}, 'state_version': 2},
+        }), content_type='application/json')
+        self.assertEqual(oral.status_code, 200)
+        self.assertEqual(oral.json()['progress']['state']['phase'], 'matching')
+        incorrect = self.client.post(progress_url, data=json.dumps({
+            'matches': {}, 'candidate_match': {'target_id': 'picture-1', 'word': 'panga'},
+            'state': {'phase': 'matching', 'oral_index': 5, 'state_version': 3},
         }), content_type='application/json')
         self.assertEqual(incorrect.status_code, 200)
         self.assertFalse(incorrect.json()['accepted'])
@@ -277,7 +295,7 @@ class PrescribedLesson16ActivityTests(TestCase):
 
         correct = self.client.post(progress_url, data=json.dumps({
             'matches': {}, 'candidate_match': {'target_id': 'picture-4', 'word': 'panga'},
-            'state': {'match_attempts': 2, 'state_version': 2},
+            'state': {'phase': 'matching', 'oral_index': 5, 'match_attempts': 2, 'state_version': 4},
         }), content_type='application/json')
         self.assertEqual(correct.status_code, 200)
         self.assertTrue(correct.json()['accepted'])
@@ -299,3 +317,40 @@ class PrescribedLesson16ActivityTests(TestCase):
         saved.refresh_from_db()
         self.assertTrue(saved.activity_completed)
         self.assertEqual(saved.correct_items, 5)
+
+    def test_lesson_17_18_gawain_5_requires_saved_oral_reading_before_matching(self):
+        self.login_student()
+        key = 'lesson-17-18-gawain-5'
+        activity = prescribed_activity(key)
+        self.assertEqual(activity['activity_key'], key)
+        self.assertEqual([item['id'] for item in activity['items']], ['robot', 'payong', 'pitaka', 'riles', 'puso'])
+        page = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': key}))
+        self.assertTemplateUsed(page, 'pabasa_app/prescribed_picture_syllable_matching_page.html')
+        self.assertEqual(page.context['prescribed_activity_data']['read_aloud_url'], reverse('reading_read_aloud_api'))
+        progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
+        blocked = self.client.post(progress_url, data=json.dumps({
+            'matches': {}, 'candidate_match': {'target_id': 'robot', 'word': 'ro'},
+            'state': {'phase': 'oral_reading', 'oral_index': 0, 'state_version': 1},
+        }), content_type='application/json')
+        self.assertEqual(blocked.status_code, 400)
+        resumed = self.client.post(progress_url, data=json.dumps({
+            'matches': {}, 'state': {'phase': 'matching', 'oral_index': 5, 'stt_attempts': {'0': 2}, 'tts_plays': {}, 'state_version': 2},
+        }), content_type='application/json')
+        self.assertEqual(resumed.status_code, 200)
+        self.assertEqual(resumed.json()['progress']['state']['oral_index'], 5)
+        self.assertEqual(resumed.json()['progress']['state']['phase'], 'matching')
+
+    @patch('pabasa_app.views.synthesize_read_aloud_audio', return_value='encoded-audio')
+    def test_session_6_activities_use_the_prescribed_filipino_google_voice(self, synthesize):
+        self.login_student()
+        for key in ('lesson-16-gawain-3', 'session-6-lesson-16-gawain-4', 'lesson-17-18-gawain-5'):
+            with self.subTest(activity_key=key):
+                response = self.client.post(reverse('reading_read_aloud_api'), {
+                    'target_text': 'gamot', 'language': '', 'mode': 'reading',
+                    'prescribed_activity_key': key,
+                })
+                self.assertEqual(response.status_code, 200, response.content)
+                self.assertEqual(response.json()['tts_language'], 'fil-PH')
+                self.assertEqual(response.json()['voice_name'], 'fil-PH-Wavenet-A')
+                self.assertEqual(synthesize.call_args.args[2], 'fil-PH')
+                self.assertEqual(synthesize.call_args.kwargs['voice_gender'], 'FEMALE')
