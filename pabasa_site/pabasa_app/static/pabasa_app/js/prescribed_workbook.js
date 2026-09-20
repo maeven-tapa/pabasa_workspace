@@ -15,6 +15,19 @@
   const item = () => a.items[state.index];
   const oral = () => state.oral[item()?.id] || {passed:false,attempts:0,listens:0,phase:a.model_first?'model':'read'};
   const message = (text, error=false) => {status.textContent=text; status.className=error?'wb-error':'wb-save';};
+  async function responseJson(response, fallback) {
+    const contentType = response.headers.get('content-type') || '';
+    const body = await response.text();
+    if (!contentType.toLowerCase().includes('application/json')) {
+      console.error('Workbook request returned a non-JSON response.', {status:response.status,url:response.url,contentType,body:body.slice(0,500)});
+      throw Error(fallback);
+    }
+    try { return JSON.parse(body); }
+    catch (error) {
+      console.error('Workbook request returned invalid JSON.', {status:response.status,url:response.url,contentType,body:body.slice(0,500),error});
+      throw Error(fallback);
+    }
+  }
   let queue = Promise.resolve();
   function send(event, form=null) {
     if(preview) return Promise.resolve();
@@ -22,8 +35,8 @@
       let body;
       if(form) {form.set('revision',state.revision);if(event?.action)form.set('action',event.action);body=form;}
       else body=JSON.stringify({...event,revision:state.revision});
-      const response=await fetch(endpoint,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':token(),...(form?{}:{'Content-Type':'application/json'})},body});
-      const result=await response.json();
+      const response=await fetch(endpoint,{method:'POST',credentials:'same-origin',headers:{'Accept':'application/json','X-CSRFToken':token(),...(form?{}:{'Content-Type':'application/json'})},body});
+      const result=await responseJson(response,'Hindi na-save. Subukan muli.');
       if(!response.ok||!result.success) throw Error(result.error||'Hindi na-save. Subukan muli.');
       const latestDraft=state.draft;
       state=result.state;
@@ -135,7 +148,7 @@
   }
   async function readAloudC(){
     if(busy)return;busy=true;lock();const current=Math.min(Number(state.index||0),a.items.length-1);
-    try{const form=new FormData();form.append('target_text',a.items[current].text);form.append('language','Filipino');form.append('mode','reading');const response=await fetch(data.read_aloud_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':token()},body:form});const result=await response.json();if(!response.ok||!result.success)throw Error(result.error||'Hindi available ang audio.');const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);await audio.play();await new Promise(resolve=>audio.onended=resolve);await send({action:'read_aloud'});render();}catch(e){message(e.message||'Hindi available ang audio.',true);}finally{busy=false;lock();}
+    try{const form=new FormData();form.append('target_text',a.items[current].text);form.append('language','Filipino');form.append('mode','reading');const response=await fetch(data.read_aloud_url,{method:'POST',credentials:'same-origin',headers:{'Accept':'application/json','X-CSRFToken':token()},body:form});const result=await responseJson(response,'Hindi available ang audio. Subukan muli.');if(!response.ok||!result.success)throw Error(result.error||'Hindi available ang audio.');const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);await audio.play();await new Promise(resolve=>audio.onended=resolve);await send({action:'read_aloud'});render();}catch(e){message(e.message||'Hindi available ang audio.',true);}finally{busy=false;lock();}
   }
   function renderSearch(){
     content.innerHTML+=`<div class="wb-search-wrap"><ul class="wb-word-list">${a.items.map((i,n)=>`<li>${esc(a.item_labels?.[n]||`${n+1}.`)} ${esc(i.text)}${!preview&&state.answers[i.id]?' ✓':''}</li>`).join('')}</ul><label>${fil?'Kulay':'Color'} <input id="wb-color" type="color" value="${esc(state.draft.color||'#b6e6c3')}"></label><div class="wb-search ${a.mark_style}" style="--cols:${a.grid[0].length}">${a.grid.map((row,y)=>Array.from(row).map((letter,x)=>`<button type="button" data-y="${y}" data-x="${x}" aria-label="Row ${y+1}, column ${x+1}: ${esc(letter)}">${esc(letter)}</button>`).join('')).join('')}</div></div>`;

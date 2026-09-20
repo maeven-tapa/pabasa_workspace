@@ -284,6 +284,18 @@ class PrescribedWorkbookFlowTests(TestCase):
         self.assertTrue(progress.state['completed'])
         self.assertEqual(progress.current_index, 1)
 
+    def test_workbook_progress_returns_json_for_an_expired_student_session(self):
+        key = 'aral-l22-g1-c-syllable-builder'
+        self.client.session.flush()
+        response = self.client.post(
+            reverse('prescribed_activity_progress', kwargs={'activity_key': key}),
+            {'action': 'reading_started', 'revision': 0},
+            HTTP_ACCEPT='application/json',
+        )
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response['Content-Type'].split(';', 1)[0], 'application/json')
+        self.assertEqual(response.json(), {'success': False, 'error': 'Authentication required'})
+
     def test_each_new_workbook_activity_keeps_its_workbook_route(self):
         for key, expected_session in (
             ('aral-l22-g1-c-syllable-builder', 8),
