@@ -23429,4 +23429,32 @@ if (key.startsWith('lesson-7-') || ['lesson7-gawain2c', 'lesson7-gawain4', 'less
 .prescribed-workbook-teacher-preview iframe{border:0;border-radius:.75rem;height:min(68vh,760px);width:100%}
 </style>
 <script src="{% static 'pabasa_app/js/prescribed_workbook_cards.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const picker = document.getElementById('prescribedActivityPicker');
+    if (!picker) return;
+    const labels = {
+        'session-4-gawain-1': ['Lesson 10, 11, at 12: Gawain 1', 'Tunog ng mga letra'],
+        'session-4-gawain-2': ['Lesson 10, 11, at 12: Gawain 2', 'Pagsamahin ang mga tunog'],
+        'session-4-gawain-3': ['Lesson 10, 11, at 12: Gawain 3', 'Basahin ang salita'],
+        'session-4-gawain-4': ['Lesson 10, 11, at 12: Gawain 4', 'Basahin ang pangungusap'],
+        'session-4-gawain-5': ['Lesson 10, 11, at 12: Gawain 5', 'Pagsusulat ng letrang Bb at Uu'],
+    };
+    Object.entries(labels).forEach(([key, [heading, description]]) => {
+        const card = picker.querySelector(`[data-prescribed-activity="${key}"]`);
+        if (!card) return;
+        const body = card.querySelector('.prescribed-activity-option__body');
+        if (!body) return;
+        const number = body.querySelector('.prescribed-activity-option__number')?.outerHTML || '';
+        body.innerHTML = `${number}<span><strong>${heading}</strong><br><span class="small text-muted">${description}</span></span>`;
+    });
+    if (picker.querySelector('[data-prescribed-activity="session-4-gawain-5"]')) return;
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'prescribed-activity-option';
+    card.dataset.prescribedActivity = 'session-4-gawain-5';
+    card.innerHTML = '<span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">5</span><span><strong>Lesson 10, 11, at 12: Gawain 5</strong><br><span class="small text-muted">Pagsusulat ng letrang Bb at Uu</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>';
+    picker.append(card);
+});
+</script>
 {% endblock %}
