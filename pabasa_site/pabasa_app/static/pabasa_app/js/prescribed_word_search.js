@@ -27,6 +27,7 @@
   const RETRY_FEEDBACK = "Hmm, let's try that again.";
   const READING_CORRECT_FEEDBACK = "That's right, now let's find the word.";
   const GRID_CORRECT_FEEDBACK = "That's right, now let's read the next word.";
+  const COMPLETION_FEEDBACK = 'Great job! You completed the Word Search.';
 
   async function save(payload) {
     const response = await fetch(data.progress_url, {
@@ -216,7 +217,7 @@
         return;
       }
       render();
-      await playReadAloud(GRID_CORRECT_FEEDBACK);
+      await playReadAloud(COMPLETION_FEEDBACK);
     } else {
       render('', 'good');
       await playReadAloud(GRID_CORRECT_FEEDBACK);

@@ -87,7 +87,7 @@ from .reading_stt import (
 # prescribed lessons. These are recognition allowances only; they never alter
 # the word displayed to a learner or an answer key.
 PRESCRIBED_ENGLISH_RECOGNITION_ALIASES = {
-    'mat': {'math'}, 'hat': {'hot'}, 'wore': {'war'}, 'bat': {'butt', 'bath', 'but'}, 'loved': {'love'}, 'quite': {'quiet'}, 'laughed': {'laugh'},
+    'mat': {'math'}, 'hat': {'hot'}, 'wore': {'war'}, 'bat': {'butt', 'bath', 'but'}, 'bee': {'be', 'b'}, 'loved': {'love'}, 'quite': {'quiet'}, 'laughed': {'laugh'},
 }
 
 
@@ -14043,6 +14043,7 @@ def prescribed_activity_page(request, activity_key):
                       for item in activity['items']],
             'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
             'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'read_aloud_url': reverse('reading_read_aloud_api'),
             'progress': {'current_index': len(answers), 'completed_items': len(answers),
                          'correct_items': len(answers), 'total_items': len(activity['items']),
                          'activity_completed': progress.activity_completed if progress else False,
@@ -14138,7 +14139,7 @@ def prescribed_activity_page(request, activity_key):
             },
         }
         if activity['interaction'] == 'picture_syllable_match':
-            context['prescribed_activity_data'].update({'session_key': activity['session_key'], 'competencies': activity['competencies'], 'items': [{'id': i['id'], 'label': i['label'], 'alt_text': i['alt_text'], 'image_url': static(i['image_path'])} for i in activity['items']]})
+            context['prescribed_activity_data'].update({'session_key': activity['session_key'], 'competencies': activity['competencies'], 'read_aloud_url': reverse('reading_read_aloud_api'), 'items': [{'id': i['id'], 'label': i['label'], 'alt_text': i['alt_text'], 'image_url': static(i['image_path'])} for i in activity['items']]})
             return render(request, 'pabasa_app/prescribed_picture_syllable_matching_page.html', context)
         return render(request, 'pabasa_app/prescribed_picture_word_matching_page.html', context)
     answers = raw_state.get('answers') if isinstance(raw_state.get('answers'), list) else []
@@ -14956,7 +14957,7 @@ def prescribed_activity_progress(request, activity_key):
                 choice = str(data.get('choice', '')).strip().lower()
                 if choice not in [word.lower() for word in item['choices']]:
                     raise ValueError('Choose one of the displayed words.')
-                accepted = choice == item['word'].lower()
+                accepted = choice == item['word'][0].lower()
                 if accepted:
                     index += 1
                     attempts = 0
@@ -19425,7 +19426,7 @@ def reading_read_aloud_api(request):
                            'lesson-26-gawain-1', 'lesson-26-gawain-2', 'lesson-27-gawain-1',
                            'lesson-28-gawain-1', 'lesson-28-gawain-2',
                            'lesson-30-gawain-1', 'lesson-30-gawain-2', 'lesson-30-gawain-3',
-                           'lesson-31-gawain-1', 'lesson-31-gawain-2',
+                           'lesson-31-gawain-1', 'lesson-31-gawain-2', 'lesson-31-gawain-3', 'lesson-31-gawain-4',
                            'lesson-29-gawain-1', 'lesson-29-gawain-2', 'lesson-29-gawain-3',
                        }
                        else {'voice_gender': 'MALE'} if tts_profile == 'correspondence'

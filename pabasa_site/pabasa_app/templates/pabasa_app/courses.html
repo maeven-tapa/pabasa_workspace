@@ -5873,10 +5873,56 @@ document.addEventListener('DOMContentLoaded', () => {
     const a=JSON.parse(source.textContent||'[]')[0];if(!a)return;const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const tokenLine=line=>line.match(/[A-Za-z]+/g)?.map(w=>`<button type="button" class="lesson27-preview-word ${w.toLowerCase().endsWith('at')?'rhyme':''}">${esc(w)}</button>`).join(' ')||'';
     const preview=document.createElement('div');preview.className='prescribed-activity-preview';preview.id='lesson27Gawain1Preview';preview.dataset.prescribedPreview=a.activity_key;preview.innerHTML=`<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview">×</button><div class="small text-uppercase text-muted fw-semibold">Session 11 · Lesson 27 · Activity 1</div><h5>Rhyming Verses</h5><p class="mb-0 text-muted">Read the rhyming verses. Then choose the words that rhyme.</p></div><div class="lesson27-preview-content">${a.items.map((item,n)=>`<article><h6>${n+1}. ${esc(item.title)}</h6><div>${item.verses.map(tokenLine).join('<br>')}</div></article>`).join('')}<p class="lesson27-preview-result">Click the words ending in -at.</p></div>`;
-    const option=document.createElement('button');option.type='button';option.className='prescribed-activity-option';option.dataset.prescribedActivity=a.activity_key;option.dataset.previewTarget=preview.id;option.innerHTML=`<span class="prescribed-activity-option__thumb lesson27-thumb" aria-hidden="true"><span>cat</span><span>hat</span><span>rat</span><span>mat</span></span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">1</span><span><strong>Lesson 27 · Activity 1</strong><br><span class="small text-muted">Rhyming Verses</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>`;picker.append(option,preview);option.onclick=()=>{picker.querySelectorAll('[data-prescribed-activity]').forEach(x=>x.classList.toggle('is-selected',x===option));document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(x=>x.classList.remove('is-maximized'));preview.classList.add('is-maximized')};preview.querySelector('.prescribed-preview-close').onclick=()=>preview.classList.remove('is-maximized');preview.querySelectorAll('.lesson27-preview-word').forEach(w=>w.onclick=()=>{w.classList.toggle(w.classList.contains('rhyme')?'correct':'wrong');});
+    const option=document.createElement('button');option.type='button';option.className='prescribed-activity-option';option.dataset.prescribedActivity=a.activity_key;option.dataset.previewTarget=preview.id;option.innerHTML=`<span class="prescribed-activity-option__thumb lesson27-thumb" aria-hidden="true"><span class="lesson27-thumb-line">The&nbsp;<b>Cat</b>&nbsp;in&nbsp;the&nbsp;<b>Hat</b></span><span class="lesson27-thumb-line">The&nbsp;Funny&nbsp;<b>Rat</b></span><span class="lesson27-thumb-line"><b>Pat</b>&nbsp;the&nbsp;<b>Cat</b></span><span class="lesson27-thumb-line">The&nbsp;<b>Splat</b></span></span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">1</span><span><strong>Lesson 27 · Activity 1</strong><br><span class="small text-muted">Rhyming Verses</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>`;picker.append(option,preview);option.onclick=()=>{picker.querySelectorAll('[data-prescribed-activity]').forEach(x=>x.classList.toggle('is-selected',x===option));document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(x=>x.classList.remove('is-maximized'));preview.classList.add('is-maximized')};preview.querySelector('.prescribed-preview-close').onclick=()=>preview.classList.remove('is-maximized');preview.querySelectorAll('.lesson27-preview-word').forEach(w=>w.onclick=()=>{w.classList.toggle(w.classList.contains('rhyme')?'correct':'wrong');});
     const style=document.createElement('style');style.textContent='.lesson27-thumb{align-items:center!important;display:flex!important;gap:4px!important;justify-content:center!important;padding:12px!important}.lesson27-thumb span{align-items:center!important;background:#d9e8e8!important;border-radius:50%!important;color:#194e60!important;display:inline-flex!important;font-size:.58rem!important;font-weight:900!important;height:34px!important;justify-content:center!important;width:34px!important}.lesson27-preview-content{background:#f4faf9;display:grid;gap:1.2rem;max-width:1000px;margin:auto;padding:2rem}.lesson27-preview-content article{background:#fff;border:1px solid #d6e7e8;border-radius:1rem;padding:1rem 1.4rem}.lesson27-preview-content h6{color:#16465d;font-size:1.1rem;margin:0 0 .65rem}.lesson27-preview-word{background:none;border:0;color:#16465d;cursor:pointer;font:inherit;font-size:1.1rem;padding:.1rem .2rem}.lesson27-preview-word:hover{background:#f5d47c;border-radius:.3rem}.lesson27-preview-word.correct{background:#d7f2df;color:#287b4c;border-radius:.3rem}.lesson27-preview-word.wrong{background:#f7dada;color:#c85555;border-radius:.3rem}.lesson27-preview-result{color:#527585;font-weight:800;text-align:center}@media(max-width:700px){.lesson27-preview-content{padding:1rem}}#lesson27Gawain1Preview.is-maximized{display:flex!important;flex-direction:column;inset:.75rem;overflow:auto}#lesson27Gawain1Preview.is-maximized .lesson27-preview-content{flex:1 1 auto;width:min(1000px,100%)}';document.head.appendChild(style);
 });
 </script>
+<style>
+    #prescribedActivityPicker .lesson27-thumb {
+        align-content: center !important;
+        display: grid !important;
+        gap: 2px !important;
+        grid-template-columns: 1fr !important;
+        grid-template-rows: repeat(4, 1fr) !important;
+        justify-items: center !important;
+        flex: 1 1 0 !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        padding: 8px 10px !important;
+    }
+    #prescribedActivityPicker .lesson27-thumb-line {
+        background: transparent !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        color: #194e60 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 1.02rem !important;
+        font-weight: 800 !important;
+        height: auto !important;
+        line-height: 1.35 !important;
+        min-width: 0 !important;
+        white-space: nowrap !important;
+        width: 100% !important;
+        word-spacing: .12rem !important;
+    }
+    #prescribedActivityPicker .lesson27-thumb-line b {
+        color: #287b4c !important;
+        font-weight: 1000 !important;
+    }
+    #lesson27Gawain1Preview.is-maximized .lesson27-preview-content {
+        align-content: center !important;
+        justify-items: center !important;
+    }
+    #lesson27Gawain1Preview.is-maximized .lesson27-preview-content article,
+    #lesson27Gawain1Preview.is-maximized .lesson27-preview-result {
+        width: min(100%, 800px) !important;
+    }
+    #lesson27Gawain1Preview.is-maximized .lesson27-preview-content article {
+        text-align: center !important;
+    }
+</style>
 <script>
 document.addEventListener('DOMContentLoaded',()=>{
     const picker=document.getElementById('prescribedActivityPicker'),source=document.getElementById('prescribed-lesson-28-activities');
@@ -5900,7 +5946,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     const option=document.createElement('button');option.type='button';option.className='prescribed-activity-option';option.dataset.prescribedActivity=a.activity_key;option.dataset.previewTarget='lesson28Gawain2Preview';option.innerHTML=`<span class="prescribed-activity-option__thumb lesson28-identify-thumb">${a.items.map(item=>`<span>${esc(item.choices[0])}</span><span>${esc(item.choices[1])}</span>`).join('')}</span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">2</span><span><strong>Lesson 28 · Activity 2</strong><br><span class="small text-muted">Word Identifying</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>`;
     const preview=document.createElement('div');preview.className='prescribed-activity-preview';preview.id='lesson28Gawain2Preview';preview.dataset.prescribedPreview=a.activity_key;preview.innerHTML=`<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview">×</button><div class="small text-uppercase text-muted fw-semibold">Session 12 · Lesson 28 · Activity 2</div><h5>Word Identifying</h5><p class="mb-0 text-muted">Listen to the word, then say the same word.</p></div><div class="lesson28-identify-preview"><p>Listen to the word, then say it.</p><div class="lesson28-identify-rows">${rows}</div></div>`;
     picker.append(option,preview);option.onclick=()=>{picker.querySelectorAll('[data-prescribed-activity]').forEach(x=>x.classList.toggle('is-selected',x===option));document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(x=>x.classList.remove('is-maximized'));preview.classList.add('is-maximized')};preview.querySelector('.prescribed-preview-close').onclick=()=>preview.classList.remove('is-maximized');
-    const style=document.createElement('style');style.textContent='.lesson28-identify-thumb{align-content:center!important;display:grid!important;gap:2px 6px!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;padding:8px!important}.lesson28-identify-thumb span{background:#f3faf8;border-radius:5px;color:#16465d;font-size:.55rem;font-weight:800;padding:2px;text-align:center}.lesson28-identify-preview{background:#f4faf9;display:grid;gap:1rem;justify-items:center;margin:auto;max-width:900px;padding:clamp(1rem,4vw,3rem);text-align:center}.lesson28-identify-preview>p{font-size:clamp(1.2rem,2.5vw,2rem);font-weight:900}.lesson28-identify-rows{display:grid;gap:.65rem;max-width:640px;width:100%}.lesson28-identify-row{align-items:center;background:#fff;border:1px solid #d6e7e8;border-radius:.75rem;display:grid;font-size:clamp(1.2rem,2.3vw,1.7rem);grid-template-columns:48px repeat(2,1fr);min-height:58px;padding:.5rem 1rem}.lesson28-identify-row b{text-align:left}#lesson28Gawain2Preview.is-maximized{display:flex!important;flex-direction:column;inset:.75rem;overflow:auto}#lesson28Gawain2Preview.is-maximized .lesson28-identify-preview{flex:1 1 auto;width:min(1000px,100%)}';document.head.appendChild(style);
+    const style=document.createElement('style');style.textContent='.lesson28-identify-thumb{align-content:center!important;display:grid!important;gap:2px 4px!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;padding:8px!important}.lesson28-identify-thumb span{background:#f3faf8;border-radius:5px;color:#16465d;font-size:1.1rem;font-weight:800;padding:3px 2px;text-align:center}.lesson28-identify-preview{background:#f4faf9;display:grid;gap:.35rem;justify-items:center;margin:auto;max-width:900px;padding:clamp(1rem,4vw,3rem);text-align:center}.lesson28-identify-preview>p{font-size:clamp(1.2rem,2.5vw,2rem);font-weight:900;margin:0 0 .25rem}.lesson28-identify-rows{display:grid;gap:.4rem;max-width:640px;width:100%}.lesson28-identify-row{align-items:center;background:#fff;border:1px solid #d6e7e8;border-radius:.75rem;display:grid;font-size:clamp(1.2rem,2.3vw,1.7rem);grid-template-columns:40px repeat(2,minmax(90px,130px));justify-content:center;column-gap:1rem;min-height:58px;padding:.5rem 1rem}.lesson28-identify-row b{text-align:left}#lesson28Gawain2Preview.is-maximized{display:flex!important;flex-direction:column;inset:.75rem;overflow:auto}#lesson28Gawain2Preview.is-maximized .lesson28-identify-preview{align-content:center;flex:1 1 auto;width:min(1000px,100%)}';document.head.appendChild(style);
 });
 </script>
 <script>
@@ -5928,8 +5974,35 @@ document.addEventListener('DOMContentLoaded',()=>{
     const words=a.words||[],chips=words.map(word=>`<span>${esc(word)}</span>`).join('');
     const option=document.createElement('button');option.type='button';option.className='prescribed-activity-option';option.dataset.prescribedActivity=a.activity_key;option.dataset.previewTarget='lesson29Gawain2Preview';option.innerHTML=`<span class="prescribed-activity-option__thumb lesson29-spot-thumb">${chips}</span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">2</span><span><strong>Lesson 29 · Activity 2</strong><br><span class="small text-muted">Spot the Word</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>`;
     const preview=document.createElement('div');preview.className='prescribed-activity-preview';preview.id='lesson29Gawain2Preview';preview.dataset.prescribedPreview=a.activity_key;preview.innerHTML=`<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview">×</button><div class="small text-uppercase text-muted fw-semibold">Session 13 · Lesson 29 · Activity 2</div><h5>Spot the Word</h5><p class="mb-0 text-muted">Listen to the word read aloud, then encircle it.</p></div><div class="lesson29-spot-preview"><div class="lesson29-spot-box">${chips}</div></div>`;
-    picker.append(option,preview);option.onclick=()=>{picker.querySelectorAll('[data-prescribed-activity]').forEach(x=>x.classList.toggle('is-selected',x===option));document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(x=>x.classList.remove('is-maximized'));preview.classList.add('is-maximized')};preview.querySelector('.prescribed-preview-close').onclick=()=>preview.classList.remove('is-maximized');
-    const style=document.createElement('style');style.textContent='.lesson29-spot-thumb{align-content:center!important;display:grid!important;gap:3px!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;padding:8px!important}.lesson29-spot-thumb span{background:#fff;border:1px solid #d6e7e8;border-radius:50%;color:#16465d;font-size:.55rem;font-weight:800;padding:3px 1px;text-align:center}.lesson29-spot-preview{background:#f4faf9;display:grid;place-items:center;margin:auto;max-width:900px;padding:clamp(1rem,4vw,3rem);width:100%}.lesson29-spot-box{background:#fff;border:2px solid #17252b;display:grid;gap:clamp(.6rem,2vw,1.4rem);grid-template-columns:repeat(3,minmax(0,1fr));max-width:650px;padding:clamp(.8rem,3vw,2rem);width:100%}.lesson29-spot-box span{align-items:center;aspect-ratio:1.25;border:1px solid #d6e7e8;border-radius:50%;display:flex;font-size:clamp(1rem,2vw,1.5rem);justify-content:center}#lesson29Gawain2Preview.is-maximized{display:flex!important;flex-direction:column;inset:.75rem;overflow:auto}#lesson29Gawain2Preview.is-maximized .lesson29-spot-preview{flex:1 1 auto}';document.head.appendChild(style);
+    picker.append(option,preview);option.onclick=()=>{picker.querySelectorAll('[data-prescribed-activity]').forEach(x=>x.classList.toggle('is-selected',x===option));document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(x=>x.classList.remove('is-maximized'));preview.classList.add('is-maximized')};preview.querySelector('.prescribed-preview-close').onclick=()=>preview.classList.remove('is-maximized');preview.querySelectorAll('.lesson29-spot-box span').forEach(chip=>chip.addEventListener('click',()=>chip.classList.toggle('is-selected')));
+    const style=document.createElement('style');style.textContent='.lesson29-spot-thumb{align-content:center!important;align-items:center!important;display:grid!important;gap:2px!important;grid-auto-rows:minmax(0,1fr)!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-template-rows:repeat(3,minmax(0,1fr))!important;height:100%!important;min-height:0!important;padding:6px!important}.lesson29-spot-thumb span{align-items:center;background:#fff;border:1px solid #d6e7e8;border-radius:50%;color:#16465d;display:flex;aspect-ratio:1;font-size:.58rem;font-weight:800;height:100%;justify-content:center;justify-self:center;max-height:48px;max-width:48px;min-height:0;min-width:0;padding:0;text-align:center;width:100%}.lesson29-spot-preview{background:#f4faf9;display:grid;place-items:center;margin:auto;max-width:900px;padding:clamp(1rem,4vw,3rem);width:100%}.lesson29-spot-box{background:#fff;border:2px solid #17252b;column-gap:clamp(1.2rem,4vw,2.8rem);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));max-width:650px;padding:clamp(.8rem,3vw,2rem);row-gap:clamp(.8rem,2vw,1.4rem);width:100%}.lesson29-spot-box span{align-items:center;aspect-ratio:1;border:1px solid #d6e7e8;border-radius:50%;cursor:pointer;display:flex;font-size:clamp(1rem,2vw,1.5rem);justify-content:center;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease,transform .18s ease;width:100%}.lesson29-spot-box span:hover{background:#fff4c7;border-color:#efb947;box-shadow:0 0 0 4px rgba(239,185,71,.25);transform:translateY(-2px)}.lesson29-spot-box span.is-selected{background:#f5d47c;border-color:#d99b25;box-shadow:0 0 0 4px rgba(239,185,71,.32)}#lesson29Gawain2Preview.is-maximized{display:flex!important;flex-direction:column;inset:.75rem;overflow:auto}#lesson29Gawain2Preview.is-maximized .lesson29-spot-preview{flex:1 1 auto}';document.head.appendChild(style);
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const picker = document.getElementById('prescribedActivityPicker');
+    const source = document.getElementById('prescribed-lesson-29-activities');
+    if (!picker || !source || picker.querySelector('[data-prescribed-activity="lesson-29-gawain-3"]')) return;
+    const activity = JSON.parse(source.textContent || '[]').find(item => item.activity_key === 'lesson-29-gawain-3');
+    if (!activity) return;
+    const esc = value => String(value ?? '').replace(/[&<>"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[char]));
+    const lines = '<span class="lesson29-trace-line"></span><span class="lesson29-trace-line"></span><span class="lesson29-trace-line"></span>';
+    const first = activity.items[0]?.letter || 'Pp';
+    const option = document.createElement('button');
+    option.type = 'button'; option.className = 'prescribed-activity-option';
+    option.dataset.prescribedActivity = activity.activity_key;
+    option.dataset.previewTarget = 'lesson29Gawain3Preview';
+    option.innerHTML = `<span class="prescribed-activity-option__thumb lesson29-trace-thumb" aria-hidden="true"><strong>${esc(first)}</strong>${lines}</span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">3</span><span><strong>Lesson 29 · Activity 3</strong><br><span class="small text-muted">Trace &amp; Say</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>`;
+    const preview = document.createElement('div');
+    preview.className = 'prescribed-activity-preview'; preview.id = 'lesson29Gawain3Preview';
+    preview.dataset.prescribedPreview = activity.activity_key;
+    preview.innerHTML = `<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview">×</button><div class="small text-uppercase text-muted fw-semibold">Session 13 · Lesson 29 · Activity 3</div><h5>Trace &amp; Say</h5><p class="mb-0 text-muted">Say each letter sound, then trace the letter three times.</p></div><div class="lesson29-trace-preview">${activity.items.map(item => `<article><strong>${esc(item.letter)}</strong>${lines}</article>`).join('')}</div>`;
+    picker.append(option, preview);
+    option.onclick = () => { picker.querySelectorAll('[data-prescribed-activity]').forEach(item => item.classList.toggle('is-selected', item === option)); document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(item => item.classList.remove('is-maximized')); preview.classList.add('is-maximized'); };
+    preview.querySelector('.prescribed-preview-close').onclick = () => preview.classList.remove('is-maximized');
+    const style = document.createElement('style');
+    style.textContent = '.lesson29-trace-thumb{align-content:center!important;background:#fff!important;display:grid!important;gap:4px!important;grid-template-columns:1fr!important;justify-items:center!important;padding:10px!important}.lesson29-trace-thumb strong{color:#222;font-size:1.05rem;font-weight:500;line-height:1}.lesson29-trace-line{border-bottom:1px solid #6b7478;display:block;height:9px;width:72%}.lesson29-trace-preview{align-content:center;background:#fff;display:grid;gap:clamp(1.5rem,4vw,3rem);grid-template-columns:repeat(4,minmax(0,1fr));margin:auto;max-width:1050px;padding:clamp(1.5rem,4vw,3.5rem);width:100%}.lesson29-trace-preview article{align-items:center;display:grid;gap:clamp(1rem,2vw,1.8rem);justify-items:center;min-height:11rem}.lesson29-trace-preview article strong{color:#222;font-size:clamp(1.25rem,2.5vw,2rem);font-weight:500}.lesson29-trace-preview .lesson29-trace-line{height:1rem;width:min(100%,150px)}#lesson29Gawain3Preview.is-maximized{display:flex!important;flex-direction:column;inset:.75rem;overflow:auto}#lesson29Gawain3Preview.is-maximized .lesson29-trace-preview{align-content:center;flex:1 1 auto}@media(max-width:700px){.lesson29-trace-preview{grid-template-columns:repeat(2,minmax(0,1fr));gap:1.5rem 1rem}}';
+    document.head.appendChild(style);
 });
 </script>
 <script>
@@ -5943,7 +6016,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const staticBase = "{% static 'pabasa_app/' %}";
     const imageUrl = item => staticBase + item.image_path.replace(/^pabasa_app\//, '');
     const images = activity.items.map(item => `<span><img src="${imageUrl(item)}" alt="${esc(item.alt_text)}"></span>`).join('');
-    const words = activity.word_bank.map((word, index) => `<li><b>${index + 1}.</b> ${esc(word)}</li>`).join('');
+    const words = activity.word_bank.map((word, index) => `<div class="lesson30-match-word"><b>${index + 1}.</b><span>${esc(word)}</span></div>`).join('');
     const pictures = activity.items.map(item => `<figure><img src="${imageUrl(item)}" alt="${esc(item.alt_text)}"><figcaption>${esc(item.label)}</figcaption></figure>`).join('');
     const option = document.createElement('button');
     option.type = 'button'; option.className = 'prescribed-activity-option';
@@ -5962,7 +6035,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     preview.querySelector('.prescribed-preview-close').onclick = () => preview.classList.remove('is-maximized');
     const style = document.createElement('style');
-    style.textContent = '.lesson30-match-thumb{align-content:center!important;display:grid!important;gap:3px!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;padding:8px!important}.lesson30-match-thumb img{background:#fff;border-radius:4px;height:40px;object-fit:contain;width:100%}.lesson30-match-preview{background:#f4faf9;display:grid;gap:1.5rem;grid-template-columns:minmax(130px,.7fr) minmax(0,1.3fr);margin:auto;max-width:920px;padding:clamp(1rem,3vw,2.5rem);width:100%}.lesson30-match-preview h6{color:#16465d;font-weight:900}.lesson30-match-preview ol{display:grid;gap:.7rem;padding-left:2rem}.lesson30-match-preview li{font-size:clamp(1.1rem,2vw,1.5rem)}.lesson30-match-pictures{display:grid;gap:.7rem;grid-template-columns:repeat(2,minmax(0,1fr))}.lesson30-match-pictures figure{align-items:center;background:#fff;border:1px solid #d6e7e8;border-radius:.8rem;display:flex;flex-direction:column;justify-content:center;margin:0;min-height:120px;padding:.6rem}.lesson30-match-pictures img{height:90px;max-width:100%;object-fit:contain}.lesson30-match-pictures figcaption{color:#16465d;font-weight:800}@media(max-width:650px){.lesson30-match-preview{grid-template-columns:1fr}}#lesson30Gawain1Preview.is-maximized{display:flex!important;flex-direction:column;inset:.75rem;overflow:auto}#lesson30Gawain1Preview.is-maximized .lesson30-match-preview{flex:1 1 auto}';
+    style.textContent = '.lesson30-match-thumb{align-content:center!important;display:grid!important;gap:3px!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;padding:8px!important}.lesson30-match-thumb img{background:#fff;border-radius:4px;height:40px;object-fit:contain;width:100%}.lesson30-match-preview{align-content:center;background:#f4faf9;display:grid;gap:1.5rem;grid-template-columns:minmax(130px,.7fr) minmax(0,1.3fr);margin:auto;max-width:920px;padding:clamp(1rem,3vw,2.5rem);width:100%}.lesson30-match-preview h6{color:#16465d;font-weight:900;text-align:center}.lesson30-match-word{align-items:center;display:grid;font-size:clamp(1.1rem,2vw,1.5rem);gap:.6rem;grid-template-columns:2.2rem 1fr}.lesson30-match-word b{text-align:right}.lesson30-match-pictures{display:grid;gap:.7rem;grid-template-columns:1fr}.lesson30-match-pictures figure{align-items:center;background:#fff;border:1px solid #d6e7e8;border-radius:.8rem;display:flex;flex-direction:column;justify-content:center;margin:0;min-height:120px;padding:.6rem}.lesson30-match-pictures img{height:90px;max-width:100%;object-fit:contain}.lesson30-match-pictures figcaption{color:#16465d;font-weight:800}@media(max-width:650px){.lesson30-match-preview{grid-template-columns:1fr}}#lesson30Gawain1Preview.is-maximized{display:flex!important;flex-direction:column;inset:.75rem;overflow:auto}#lesson30Gawain1Preview.is-maximized .lesson30-match-preview{flex:1 1 auto}';
     document.head.appendChild(style);
 });
 </script>
@@ -5973,11 +6046,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!picker || !source || picker.querySelector('[data-prescribed-activity="lesson-30-gawain-2"]')) return;
     const activity = JSON.parse(source.textContent || '[]').find(item => item.activity_key === 'lesson-30-gawain-2');
     if (!activity) return;
+    const storyThumb = activity.lines.slice(0, 4).map(line => `<span>${line}</span>`).join('');
     const option = document.createElement('button');
     option.type = 'button'; option.className = 'prescribed-activity-option';
     option.dataset.prescribedActivity = activity.activity_key;
     option.dataset.previewTarget = 'lesson30Gawain2Preview';
-    option.innerHTML = '<span class="prescribed-activity-option__thumb lesson30-story-thumb">📖</span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">2</span><span><strong>Lesson 30 · Activity 2</strong><br><span class="small text-muted">Story Time!</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>';
+    option.innerHTML = `<span class="prescribed-activity-option__thumb lesson30-story-thumb">${storyThumb}</span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">2</span><span><strong>Lesson 30 · Activity 2</strong><br><span class="small text-muted">Story Time!</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>`;
     const preview = document.createElement('div');
     preview.className = 'prescribed-activity-preview'; preview.id = 'lesson30Gawain2Preview';
     preview.dataset.prescribedPreview = activity.activity_key;
@@ -5990,7 +6064,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     preview.querySelector('.prescribed-preview-close').onclick = () => preview.classList.remove('is-maximized');
     const style = document.createElement('style');
-    style.textContent = '.lesson30-story-thumb{align-items:center!important;background:#d9f1f4!important;display:grid!important;font-size:2rem!important;justify-content:center!important}.lesson30-story-preview{background:#f4faf9;margin:auto;max-width:720px;padding:clamp(1rem,3vw,2.5rem);width:100%}.lesson30-story-preview h6{color:#16465d;font-size:clamp(1.25rem,2vw,1.7rem);font-weight:900;text-align:center}.lesson30-story-preview ol{display:grid;gap:.65rem;margin:1.2rem auto 0;max-width:440px}.lesson30-story-preview li{font-size:clamp(1.05rem,2vw,1.35rem)}#lesson30Gawain2Preview.is-maximized{display:flex!important;flex-direction:column;inset:.75rem;overflow:auto}#lesson30Gawain2Preview.is-maximized .lesson30-story-preview{flex:1 1 auto}';
+    style.textContent = '.lesson30-story-thumb{align-content:center!important;align-items:center!important;background:#fff!important;display:grid!important;gap:4px!important;grid-template-columns:1fr!important;justify-items:center!important;padding:8px!important}.lesson30-story-thumb span{color:#16465d;font-size:1.02rem;font-weight:800;line-height:1.25;overflow:hidden;text-align:center;text-overflow:ellipsis;white-space:nowrap;width:100%}.lesson30-story-preview{align-content:center;background:#f4faf9;display:grid;gap:.65rem;margin:auto;max-width:720px;padding:clamp(1rem,3vw,2.5rem);width:100%}.lesson30-story-preview h6{color:#16465d;font-size:clamp(1.25rem,2vw,1.7rem);font-weight:900;margin:0;text-align:center}.lesson30-story-preview ol{display:grid;gap:.65rem;margin:0 auto;max-width:440px;padding-left:1.5rem;text-align:center}.lesson30-story-preview li{font-size:clamp(1.05rem,2vw,1.35rem)}#lesson30Gawain2Preview.is-maximized{display:flex!important;flex-direction:column;inset:.75rem;overflow:auto}#lesson30Gawain2Preview.is-maximized .lesson30-story-preview{align-content:center;flex:1 1 auto}';
     document.head.appendChild(style);
 });
 </script>
@@ -6001,15 +6075,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!picker || !source || picker.querySelector('[data-prescribed-activity="lesson-30-gawain-3"]')) return;
     const activity = JSON.parse(source.textContent || '[]').find(item => item.activity_key === 'lesson-30-gawain-3');
     if (!activity) return;
+    const displayChoice = value => String(value || '').replace(/^./, char => char.toUpperCase());
+    const choiceThumb = activity.questions.map(item => `<span><span>a. ${displayChoice(item.choices.a)}</span><span>b. ${displayChoice(item.choices.b)}</span></span>`).join('');
     const option = document.createElement('button');
     option.type = 'button'; option.className = 'prescribed-activity-option';
     option.dataset.prescribedActivity = activity.activity_key;
     option.dataset.previewTarget = 'lesson30Gawain3Preview';
-    option.innerHTML = '<span class="prescribed-activity-option__thumb lesson30-check-thumb">✓</span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">3</span><span><strong>Lesson 30 · Activity 3</strong><br><span class="small text-muted">Comprehension Check</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>';
+    option.innerHTML = `<span class="prescribed-activity-option__thumb lesson30-check-thumb">${choiceThumb}</span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">3</span><span><strong>Lesson 30 · Activity 3</strong><br><span class="small text-muted">Comprehension Check</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>`;
     const preview = document.createElement('div');
     preview.className = 'prescribed-activity-preview'; preview.id = 'lesson30Gawain3Preview';
     preview.dataset.prescribedPreview = activity.activity_key;
-    preview.innerHTML = '<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview">×</button><div class="small text-uppercase text-muted fw-semibold">Session 14 · Lesson 30 · Activity 3</div><h5>Comprehension Check</h5><p class="mb-0 text-muted">Listen to each question, then choose the correct answer.</p></div><div class="lesson30-check-preview"><ol>' + activity.questions.map(item => '<li><strong>' + item.question + '</strong><br><span>a. ' + item.choices.a + ' &nbsp; b. ' + item.choices.b + '</span></li>').join('') + '</ol></div>';
+    preview.innerHTML = '<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview">×</button><div class="small text-uppercase text-muted fw-semibold">Session 14 · Lesson 30 · Activity 3</div><h5>Comprehension Check</h5><p class="mb-0 text-muted">Listen to each question, then choose the correct answer.</p></div><div class="lesson30-check-preview"><ol>' + activity.questions.map(item => '<li><strong>' + item.question + '</strong><br><span>a. ' + displayChoice(item.choices.a) + ' &nbsp; b. ' + displayChoice(item.choices.b) + '</span></li>').join('') + '</ol></div>';
     picker.append(option, preview);
     // This activity can be registered after the session folders have already
     // been built. Put it directly in the Session 15 folder in that case.
@@ -6024,7 +6100,7 @@ document.addEventListener('DOMContentLoaded', () => {
     option.onclick = () => { picker.querySelectorAll('[data-prescribed-activity]').forEach(item => item.classList.toggle('is-selected', item === option)); document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(item => item.classList.remove('is-maximized')); preview.classList.add('is-maximized'); };
     preview.querySelector('.prescribed-preview-close').onclick = () => preview.classList.remove('is-maximized');
     const style = document.createElement('style');
-    style.textContent = '.lesson30-check-thumb{align-items:center!important;background:#d9f1f4!important;color:#197b78!important;display:grid!important;font-size:2rem!important;font-weight:900!important;justify-content:center!important}.lesson30-check-preview{background:#f4faf9;margin:auto;max-width:760px;padding:clamp(1rem,3vw,2.5rem);width:100%}.lesson30-check-preview ol{display:grid;gap:1rem;margin:0 auto;max-width:560px}.lesson30-check-preview li{font-size:clamp(1rem,2vw,1.25rem)}.lesson30-check-preview span{color:#55727e}#lesson30Gawain3Preview.is-maximized{display:flex!important;flex-direction:column;inset:.75rem;overflow:auto}#lesson30Gawain3Preview.is-maximized .lesson30-check-preview{flex:1 1 auto}';
+    style.textContent = '.lesson30-check-thumb{align-content:center!important;align-items:center!important;background:#fff!important;color:#16465d!important;display:grid!important;gap:6px!important;grid-template-columns:1fr!important;justify-content:center!important;justify-items:center!important;padding:8px!important}.lesson30-check-thumb>span{column-gap:.75rem;display:grid;font-size:.95rem;font-weight:800;grid-template-columns:3.1rem 6.7rem;line-height:1.2;margin-inline:auto!important;text-align:left;transform:translateX(20px);white-space:nowrap;width:max-content}.lesson30-check-thumb>span>span{display:block}.lesson30-check-preview{align-content:center;background:#f4faf9;display:grid;justify-items:center;margin:auto;max-width:760px;padding:clamp(1rem,3vw,2.5rem);text-align:center;width:100%}.lesson30-check-preview ol{display:grid;gap:1rem;list-style-position:inside;margin:0 auto;max-width:560px;padding:0;text-align:center}.lesson30-check-preview li{font-size:clamp(1rem,2vw,1.25rem)}.lesson30-check-preview span{color:#55727e}#lesson30Gawain3Preview.is-maximized{display:flex!important;flex-direction:column;inset:.75rem;overflow:auto}#lesson30Gawain3Preview.is-maximized .lesson30-check-preview{align-content:center;flex:1 1 auto}';
     document.head.appendChild(style);
 });
 </script>
@@ -6039,26 +6115,31 @@ document.addEventListener('DOMContentLoaded', () => {
     option.type = 'button'; option.className = 'prescribed-activity-option';
     option.dataset.prescribedActivity = activity.activity_key;
     option.dataset.previewTarget = 'lesson31Gawain1Preview';
-    option.innerHTML = '<span class="prescribed-activity-option__thumb lesson31-circle-thumb">⭕</span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">1</span><span><strong>Lesson 31 · Activity 1</strong><br><span class="small text-muted">Circle the Right Word!</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>';
+    const base = "{% static 'pabasa_app/' %}";
+    option.innerHTML = '<span class="prescribed-activity-option__thumb lesson31-circle-thumb"><img src="' + base + activity.items[0].image_path.replace(/^pabasa_app\//,'') + '" alt=""><span>' + activity.items[0].choices.join(' · ') + '</span></span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">1</span><span><strong>Lesson 31 · Activity 1</strong><br><span class="small text-muted">Circle the Right Word!</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>';
     const preview = document.createElement('div');
     preview.className = 'prescribed-activity-preview'; preview.id = 'lesson31Gawain1Preview';
     preview.dataset.prescribedPreview = activity.activity_key;
-    preview.innerHTML = '<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview">×</button><div class="small text-uppercase text-muted fw-semibold">Session 15 · Lesson 31 · Activity 1</div><h5>Circle the Right Word!</h5><p class="mb-0 text-muted">Read all three choices aloud, then circle the word that matches the picture.</p></div><ol class="lesson31-circle-preview">' + activity.items.map(item => '<li><span>' + item.choices.join(' · ') + '</span></li>').join('') + '</ol>';
+    preview.innerHTML = '<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview">×</button><div class="small text-uppercase text-muted fw-semibold">Session 15 · Lesson 31 · Activity 1</div><h5>Circle the Right Word!</h5><p class="mb-0 text-muted">Look at the picture. Circle the correct word.</p></div><div class="lesson31-circle-preview">' + activity.items.map(item => '<article><img src="' + base + item.image_path.replace(/^pabasa_app\//,'') + '" alt="' + item.alt_text + '"><div>' + item.choices.map(choice => '<button type="button">' + choice + '</button>').join('') + '</div></article>').join('') + '</div>';
     picker.append(option, preview);
     option.onclick = () => { picker.querySelectorAll('[data-prescribed-activity]').forEach(item => item.classList.toggle('is-selected', item === option)); document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(item => item.classList.remove('is-maximized')); preview.classList.add('is-maximized'); };
     preview.querySelector('.prescribed-preview-close').onclick = () => preview.classList.remove('is-maximized');
     const style = document.createElement('style');
-    style.textContent = '.lesson31-circle-thumb{align-items:center!important;background:#d9f1f4!important;display:grid!important;font-size:2rem!important;justify-content:center!important}.lesson31-circle-preview{background:#f4faf9;margin:0 auto;max-width:580px;padding:clamp(1rem,3vw,2.5rem);width:100%}.lesson31-circle-preview li{font-size:clamp(1rem,2vw,1.25rem);margin:.7rem 0}#lesson31Gawain1Preview.is-maximized{display:flex!important;flex-direction:column;inset:.75rem;overflow:auto}#lesson31Gawain1Preview.is-maximized .lesson31-circle-preview{flex:1 1 auto}';
+    style.textContent = '.lesson31-circle-thumb{align-items:center!important;background:#d9f1f4!important;display:grid!important;gap:4px!important;grid-template-columns:1fr!important;justify-content:center!important;justify-items:center!important;padding:6px!important}.lesson31-circle-thumb img{height:58px;object-fit:contain;width:100%}.lesson31-circle-thumb span{color:#16465d;font-size:.66rem;font-weight:900;white-space:nowrap}.lesson31-circle-preview{align-content:start;background:#f4faf9;display:grid;gap:clamp(.65rem,1.5vw,1rem);grid-template-columns:repeat(2,minmax(0,1fr));margin:auto;max-width:850px;padding:clamp(1rem,3vw,2.5rem);width:100%}.lesson31-circle-preview article{align-items:center;background:#fff;border:1px solid #d6e7e8;border-radius:1rem;display:grid;gap:.7rem;padding:.75rem}.lesson31-circle-preview img{height:clamp(100px,12vw,150px);object-fit:contain;width:100%}.lesson31-circle-preview article>div{display:flex;gap:.35rem;justify-content:center}.lesson31-circle-preview button{background:transparent;border:2px solid transparent;border-radius:999px;color:#16465d;font-size:clamp(1rem,1.8vw,1.35rem);font-weight:900;padding:.35rem .65rem}.lesson31-circle-preview button:hover,.lesson31-circle-preview button:focus-visible{background:#fff4c7;border-color:#efb947;outline:0}#lesson31Gawain1Preview.is-maximized{display:flex!important;flex-direction:column;inset:.75rem;overflow:auto}#lesson31Gawain1Preview.is-maximized .lesson31-circle-preview{flex:1 1 auto}@media(max-width:650px){.lesson31-circle-preview{grid-template-columns:1fr}}';
     document.head.appendChild(style);
 });
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const picker = document.getElementById('prescribedActivityPicker');
-    const lesson13 = document.getElementById('prescribed-lesson-13-activities');
-    const lesson14 = document.getElementById('prescribed-lesson-14-activities');
-    if (!picker || !lesson13 || !lesson14) return;
-    const activities = [...JSON.parse(lesson13.textContent || '[]'), ...JSON.parse(lesson14.textContent || '[]')].sort((a, b) => {
+    const sourceIds = [
+        'prescribed-lesson-13-activities', 'prescribed-lesson-14-activities',
+        'prescribed-lesson-26-activities', 'prescribed-lesson-27-activities',
+        'prescribed-lesson-28-activities', 'prescribed-lesson-29-activities',
+        'prescribed-lesson-30-activities', 'prescribed-lesson-31-activities',
+    ];
+    if (!picker || sourceIds.some(id => !document.getElementById(id))) return;
+    const activities = sourceIds.flatMap(id => JSON.parse(document.getElementById(id).textContent || '[]')).sort((a, b) => {
         const number = value => Number(String(value ?? '').match(/\d+/)?.[0] || 0);
         return number(a.lesson_number) - number(b.lesson_number) || number(a.gawain_number) - number(b.gawain_number);
     });
@@ -6113,6 +6194,100 @@ document.addEventListener('DOMContentLoaded', () => {
         column.querySelectorAll('.week-activity-count').forEach(label => { label.textContent = `${count} ${count === 1 ? 'activity' : 'activities'}`; });
         column.querySelectorAll('.week-activities-title small').forEach(label => { label.textContent = `— ${count} ${count === 1 ? 'activity' : 'activities'}`; });
     });
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const picker = document.getElementById('prescribedActivityPicker');
+    const source = document.getElementById('prescribed-lesson-31-activities');
+    if (!picker || !source) return;
+    const activities = JSON.parse(source.textContent || '[]');
+    const base = "{% static 'pabasa_app/' %}";
+    const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    const image = item => `${base}${String(item.image_path || '').replace(/^pabasa_app\//, '')}`;
+    const get = key => activities.find(item => item.activity_key === key);
+    const getNodes = key => [...picker.querySelectorAll(`[data-prescribed-activity="${key}"], [data-folder-activity="${key}"]`)];
+    const getPreview = key => picker.querySelector(`[data-prescribed-preview="${key}"]`);
+    const setCard = (key, html) => getNodes(key).forEach(node => { node.innerHTML = html; });
+    const closeAndOpen = (preview, key) => {
+        picker.querySelectorAll('[data-prescribed-activity]').forEach(node => node.classList.toggle('is-selected', node.dataset.prescribedActivity === key));
+        document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(node => node.classList.remove('is-maximized'));
+        preview.classList.add('is-maximized');
+    };
+    const wirePreview = (key, setup) => {
+        const preview = getPreview(key);
+        if (!preview) return;
+        preview.querySelector('.prescribed-preview-close').onclick = () => preview.classList.remove('is-maximized');
+        setup(preview);
+        getNodes(key).filter(node => node.dataset.prescribedActivity === key).forEach(node => { node.onclick = () => closeAndOpen(preview, key); });
+    };
+
+    const one = get('lesson-31-gawain-2');
+    if (one) {
+        setCard(one.activity_key, `<span class="prescribed-activity-option__thumb lesson31-fill-thumb"><span class="lesson31-fill-thumb__box">${one.word_choices.map(word => `<span>${escape(word)}</span>`).join('')}</span></span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">2</span><span><strong>Lesson 31 · Activity 2</strong><br><span class="small text-muted">Fill in the Blank</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>`);
+        const preview = getPreview(one.activity_key);
+        if (preview) {
+            preview.innerHTML = `<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview">×</button><div class="small text-uppercase text-muted fw-semibold">Session 15 · Lesson 31 · Activity 2</div><h5>Fill in the Blank</h5><p class="mb-0 text-muted">Complete each sentence. Choose the correct word from the box.</p></div><div class="lesson31-fill-preview"><div class="lesson31-fill-bank">${one.word_choices.map(word => `<button type="button" draggable="true" data-word="${escape(word)}">${escape(word)}</button>`).join('')}</div><div class="lesson31-fill-rows">${one.items.map((item, index) => `<div class="lesson31-fill-row"><b>${index + 1}.</b><span>${escape(item.before)}</span><span class="lesson31-drop" data-answer="${escape(item.answer)}" aria-label="Blank for item ${index + 1}"></span><span>${escape(item.after)}</span></div>`).join('')}</div></div>`;
+            wirePreview(one.activity_key, root => {
+                let dragged = '';
+                root.querySelectorAll('.lesson31-fill-bank button').forEach(button => {
+                    button.addEventListener('dragstart', event => { dragged = button.dataset.word; event.dataTransfer.setData('text/plain', dragged); });
+                });
+                root.querySelectorAll('.lesson31-drop').forEach(drop => {
+                    drop.addEventListener('dragover', event => event.preventDefault());
+                    drop.addEventListener('drop', event => {
+                        event.preventDefault();
+                        const word = event.dataTransfer.getData('text/plain') || dragged;
+                        drop.textContent = word;
+                        drop.classList.toggle('is-correct', word === drop.dataset.answer);
+                        drop.classList.toggle('is-wrong', word !== drop.dataset.answer);
+                    });
+                });
+            });
+        }
+    }
+
+    const two = get('lesson-31-gawain-3');
+    if (two) {
+        setCard(two.activity_key, `<span class="prescribed-activity-option__thumb lesson31-fix-thumb">${two.items[0].jumbled_words.map(word => `<span>${escape(word)}</span><i>/</i>`).join('').replace(/<i>\/<\/i>$/, '')}</span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">3</span><span><strong>Lesson 31 · Activity 3</strong><br><span class="small text-muted">Fix the Sentence!</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>`);
+        const preview = getPreview(two.activity_key);
+        if (preview) {
+            preview.innerHTML = `<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview">×</button><div class="small text-uppercase text-muted fw-semibold">Session 15 · Lesson 31 · Activity 3</div><h5>Fix the Sentence!</h5><p class="mb-0 text-muted">Read each word, arrange the sentence, then read the complete sentence.</p></div><div class="lesson31-fix-preview">${two.items.map((item, index) => `<article><div class="lesson31-fix-jumbled"><b>${index + 1}.</b>${item.jumbled_words.map(word => `<button type="button" draggable="true" data-word="${escape(word)}">${escape(word)}</button>`).join('<i>/</i>')}</div><div class="lesson31-fix-line" data-answer="${escape(item.ordered_words.join(' '))}" aria-label="Sentence line">→</div></article>`).join('')}</div>`;
+            wirePreview(two.activity_key, root => {
+                let dragged = '';
+                root.querySelectorAll('.lesson31-fix-jumbled button').forEach(button => button.addEventListener('dragstart', event => { dragged = button.dataset.word; event.dataTransfer.setData('text/plain', dragged); }));
+                root.querySelectorAll('.lesson31-fix-line').forEach(line => {
+                    line.addEventListener('dragover', event => event.preventDefault());
+                    line.addEventListener('drop', event => { event.preventDefault(); const word = event.dataTransfer.getData('text/plain') || dragged; const token = document.createElement('span'); token.textContent = word; line.append(token); });
+                });
+            });
+        }
+    }
+
+    const three = get('lesson-31-gawain-4');
+    if (three) {
+        const first = three.items[0];
+        setCard(three.activity_key, `<span class="prescribed-activity-option__thumb lesson31-say-thumb"><img src="${image(first)}" alt=""><span>${first.choices.map(escape).join(' · ')}</span></span><span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">4</span><span><strong>Lesson 31 · Activity 4</strong><br><span class="small text-muted">Say and Circle!</span></span></span><span class="prescribed-activity-option__overlay"><i class="bi bi-eye me-2"></i>Preview</span>`);
+        const preview = getPreview(three.activity_key);
+        if (preview) {
+            preview.innerHTML = `<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview">×</button><div class="small text-uppercase text-muted fw-semibold">Session 15 · Lesson 31 · Activity 4</div><h5>Say and Circle!</h5><p class="mb-0 text-muted">Say the name of each picture and box the beginning letter of its name.</p></div><div class="lesson31-say-preview">${three.items.map(item => `<article><img src="${image(item)}" alt="${escape(item.alt_text)}"><div>${item.choices.map(choice => `<button type="button">${escape(choice)}</button>`).join('')}</div></article>`).join('')}</div>`;
+            wirePreview(three.activity_key, root => root.querySelectorAll('.lesson31-say-preview button').forEach(button => button.addEventListener('click', () => { button.parentElement.querySelectorAll('button').forEach(choice => choice.classList.remove('is-selected')); button.classList.add('is-selected'); })));
+        }
+    }
+
+    const style = document.createElement('style');
+    style.textContent = `
+        .lesson31-fill-thumb,.lesson31-fix-thumb,.lesson31-say-thumb{align-items:center!important;background:#d9f1f4!important;color:#16465d!important;display:flex!important;justify-content:center!important;gap:4px!important;overflow:hidden!important;padding:7px!important;text-align:center!important}.lesson31-circle-thumb img{height:92px!important}.lesson31-circle-thumb span{font-size:.86rem!important;font-weight:900!important}
+        .lesson31-fill-thumb{flex-wrap:wrap}.lesson31-fill-thumb__box{border:2px solid #17252b;display:flex;flex-wrap:wrap;gap:5px 18px;justify-content:space-evenly;padding:8px 14px}.lesson31-fill-thumb__box span{font-size:.84rem;font-weight:900;white-space:nowrap}.lesson31-fix-thumb span{background:#fff;border:1px solid #9acfd0;border-radius:.45rem;font-size:.88rem;font-weight:900;padding:3px 7px;white-space:nowrap}.lesson31-fix-thumb i{font-style:normal;font-weight:900}
+        .lesson31-say-thumb{display:grid!important;gap:3px!important;grid-template-columns:1fr!important;grid-template-rows:minmax(0,1fr) auto!important;justify-items:center!important}.lesson31-say-thumb img{display:block!important;height:110px!important;max-width:160px!important;object-fit:contain!important;width:100%!important}.lesson31-say-thumb span{font-size:.86rem;font-weight:900;white-space:nowrap}
+        .lesson31-fill-preview,.lesson31-fix-preview,.lesson31-say-preview{align-content:start;background:#f4faf9;display:grid;gap:1rem;margin:auto;max-width:900px;padding:clamp(1rem,3vw,2.5rem);width:100%}
+        .lesson31-fill-bank{border:2px solid #17252b;display:flex;flex-wrap:wrap;gap:clamp(.7rem,2vw,1.6rem);justify-content:space-evenly;padding:1rem}.lesson31-fill-bank button,.lesson31-fix-jumbled button{background:#fff;border:2px solid #9acfd0;border-radius:.7rem;color:#16465d;cursor:grab;font-size:clamp(1rem,2vw,1.4rem);font-weight:900;padding:.45rem .8rem}.lesson31-fill-bank button:hover,.lesson31-fix-jumbled button:hover{background:#fff4c7;border-color:#efb947}
+        .lesson31-fill-rows{display:grid;gap:.7rem}.lesson31-fill-row{align-items:center;background:#fff;border:1px solid #d6e7e8;border-radius:.8rem;display:flex;flex-wrap:wrap;font-size:clamp(1rem,2vw,1.3rem);gap:.35rem;padding:.8rem}.lesson31-fill-row b{margin-right:.35rem}.lesson31-drop{border-bottom:3px solid #55727e;display:inline-flex;min-width:5.5rem;min-height:2rem;justify-content:center}.lesson31-drop.is-correct{background:#d7f3dc;border-color:#2d8b57;color:#237645}.lesson31-drop.is-wrong{background:#ffdede;border-color:#c83d3d;color:#b52b2b}
+        .lesson31-fix-preview article{background:#fff;border:1px solid #d6e7e8;border-radius:.8rem;padding:.8rem}.lesson31-fix-jumbled{align-items:center;display:flex;flex-wrap:wrap;gap:.4rem}.lesson31-fix-jumbled b{margin-right:.25rem}.lesson31-fix-jumbled i{color:#55727e;font-style:normal;font-weight:900}.lesson31-fix-line{border-bottom:2px solid #55727e;color:#16465d;display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 1.5rem 0;padding:.3rem 0;min-height:2.5rem}.lesson31-fix-line span{background:#eaf6f6;border:1px solid #9acfd0;border-radius:.5rem;padding:.2rem .5rem}
+        .lesson31-say-preview{grid-template-columns:repeat(2,minmax(0,1fr))}.lesson31-say-preview article{align-items:center;background:#fff;border:1px solid #d6e7e8;border-radius:1rem;display:grid;gap:.5rem;padding:.75rem}.lesson31-say-preview img{height:clamp(120px,15vw,190px);object-fit:contain;width:100%}.lesson31-say-preview article>div{display:flex;gap:.8rem;justify-content:center}.lesson31-say-preview button{background:#fff;border:3px solid #9acfd0;border-radius:.35rem;color:#16465d;cursor:pointer;font-size:clamp(1.2rem,2.5vw,1.8rem);font-weight:900;height:3.4rem;width:3.4rem}.lesson31-say-preview button:hover,.lesson31-say-preview button.is-selected{background:#fff4c7;border-color:#efb947;box-shadow:0 0 0 4px rgba(239,185,71,.25)}
+        #lesson31Gawain2Preview.is-maximized,#lesson31Gawain3Preview.is-maximized,#lesson31Gawain4Preview.is-maximized{display:flex!important;flex-direction:column;inset:.75rem;overflow:auto}#lesson31Gawain2Preview.is-maximized .lesson31-fill-preview,#lesson31Gawain3Preview.is-maximized .lesson31-fix-preview,#lesson31Gawain4Preview.is-maximized .lesson31-say-preview{flex:1 1 auto}@media(max-width:650px){.lesson31-say-preview{grid-template-columns:1fr}}
+    `;
+    document.head.appendChild(style);
 });
 </script>
 {{ prescribed_lesson_19_activities|json_script:"prescribed-lesson-19-activities" }}
