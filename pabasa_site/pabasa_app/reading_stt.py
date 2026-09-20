@@ -212,6 +212,31 @@ def language_code_for(language="", mode=""):
     return "en-PH"
 
 
+def l22_c_pronunciation_match(expected_syllable, target_word, transcript, c_sound):
+    """Judge one Lesson 22 Cc tile without requiring literal STT text.
+
+    The workbook tile is intentionally kept separate from the whole-word STT
+    context.  This narrow matcher accepts the expected C sound's common STT
+    spelling (for example ``cac``/``kak`` or ``Ce``/``se``), while leaving all
+    other reading activities on the shared matcher.
+    """
+    matcher = ReadingMatcher(target_word or expected_syllable, 0, "en-PH")
+    expected = matcher.normalize_word(expected_syllable)
+    heard_words = matcher.normalize_spoken_words(transcript)
+    if not expected or not heard_words:
+        return False
+
+    variants = {expected}
+    if expected.startswith('c'):
+        sound = str(c_sound or '').strip().lower()
+        if sound == 'hard':
+            variants.add(expected.replace('c', 'k'))
+        elif sound == 'soft':
+            variants.add('s' + expected[1:])
+
+    return any(word in variants or matcher.words_match(word, expected) for word in heard_words)
+
+
 def phrase_hints_for(language="", mode=""):
     return MARUNGKO_PHRASE_HINTS if language_code_for(language, mode) == "fil-PH" else []
 

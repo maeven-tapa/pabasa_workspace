@@ -23,6 +23,29 @@ L22_C_ACCEPTED_BUILDS = {
     'computer': ('com', 'pu', 'ter'),
 }
 
+# Reading context for the Cc Big Box. The tile remains the learner-facing
+# target; the whole word gives STT enough context to judge hard/soft C sounds.
+L22_C_READING_CONTEXTS = {
+    'item-1': {'word': 'cactus', 'syllables': ('cac', 'tus'), 'sound': 'hard'},
+    'item-2': {'word': 'Cebu', 'syllables': ('ce', 'bu'), 'sound': 'soft'},
+    'item-3': {'word': 'Cagayan', 'syllables': ('ca', 'ga', 'yan'), 'sound': 'hard'},
+    'item-4': {'word': 'Cebu', 'syllables': ('ce', 'bu'), 'sound': 'soft'},
+    'item-5': {'word': 'computer', 'syllables': ('com', 'pu', 'ter'), 'sound': 'hard'},
+    'item-6': {'word': 'computer', 'syllables': ('com', 'pu', 'ter'), 'sound': 'hard'},
+    'item-7': {'word': 'Cagayan', 'syllables': ('ca', 'ga', 'yan'), 'sound': 'hard'},
+    'item-8': {'word': 'cactus', 'syllables': ('cac', 'tus'), 'sound': 'hard'},
+    'item-9': {'word': 'computer', 'syllables': ('com', 'pu', 'ter'), 'sound': 'hard'},
+    'item-10': {'word': 'Cagayan', 'syllables': ('ca', 'ga', 'yan'), 'sound': 'hard'},
+    'item-11': {'word': 'Cardo', 'syllables': ('Car', 'do'), 'sound': 'hard'},
+    'item-12': {'word': 'Cardo', 'syllables': ('Car', 'do'), 'sound': 'hard'},
+    'item-13': {'word': 'cabinet', 'syllables': ('ca', 'bi', 'net'), 'sound': 'hard'},
+    'item-14': {'word': 'cabinet', 'syllables': ('ca', 'bi', 'net'), 'sound': 'hard'},
+    'item-15': {'word': 'cabinet', 'syllables': ('ca', 'bi', 'net'), 'sound': 'hard'},
+    'item-16': {'word': 'Celeste', 'syllables': ('Ce', 'les', 'te'), 'sound': 'soft'},
+    'item-17': {'word': 'Celeste', 'syllables': ('Ce', 'les', 'te'), 'sound': 'soft'},
+    'item-18': {'word': 'Celeste', 'syllables': ('Ce', 'les', 'te'), 'sound': 'soft'},
+}
+
 
 def add(key, page, lesson, number, title, instruction, kind, rows, **config):
     session = 8 if page <= 47 else 9 if page <= 49 else 10 if page <= 51 else 11
@@ -59,6 +82,7 @@ add('aral-l22-g1-c-syllable-builder', 38, 22, '1', 'Letrang Cc', BOX, 'builder',
         [['item-13'], ['item-14'], ['item-15']],
         [['item-16'], ['item-17'], ['item-18']],
     ],
+    reading_contexts=L22_C_READING_CONTEXTS,
     oral_flow=False, review_required=True, progress_total=1)
 add('aral-l22-g2-c-word-reading', 38, 22, '2', 'Mga salitang may letrang C',
     'Basahin ang mga salitang nagtataglay ng hiram na letrang C na may tunog na /k/ at /s/.',

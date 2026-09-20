@@ -86,6 +86,7 @@ from .reading_stt import (
     synthesize_maya_read_aloud_audio,
     transcribe_audio_bytes_with_model,
     google_stt_credentials,
+    l22_c_pronunciation_match,
     word_numbers_in_transcript,
 )
 
@@ -16148,7 +16149,23 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
                 if not state.get('read_aloud_started'):
                     raise ValueError('Simulan muna ang pagbasa.')
                 current_index = min(int(state.get('index', 0)), len(workbook['items']) - 1)
-                request.POST.update(target_text=workbook['items'][current_index]['text'], language='Filipino', mode='reading', current_syllable_index='0', syllable_context='')
+                tile = workbook['items'][current_index]
+                context = (workbook.get('reading_contexts') or {}).get(tile['id']) or {}
+                context_syllables = list(context.get('syllables') or ())
+                try:
+                    syllable_index = context_syllables.index(tile['text'])
+                except ValueError:
+                    syllable_index = 0
+                request.POST.update(
+                    target_text=context.get('word') or tile['text'],
+                    language='English' if context else 'Filipino',
+                    mode='reading',
+                    current_syllable_index=str(syllable_index),
+                    syllable_context='',
+                    l22_c_pronunciation='1' if context else '0',
+                    l22_c_syllable=tile['text'],
+                    l22_c_sound=context.get('sound', ''),
+                )
             else:
                 item = workbook['items'][item_index]
                 request.POST.update(target_text=item['text'], language=workbook.get('language', 'Filipino'), mode='reading', current_syllable_index='0', syllable_context='')
@@ -19449,6 +19466,7 @@ def reading_transcribe_api(request):
             mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
             credentials_file=credentials_file,
         )
+        l22_c_pronunciation = request.POST.get('l22_c_pronunciation') == '1'
         # English prescribed activities contain very short words, for which
         # speech-to-text commonly returns these phonetic spellings. Canonicalize
         # only the returned reading target so every Lesson 26–31 client (some
@@ -19456,7 +19474,8 @@ def reading_transcribe_api(request):
         target_words = re.findall(r'[a-z]+', target_text.lower())
         heard_words = set(re.findall(r'[a-z]+', str(transcript or '').lower()))
         if (
-            language_code.startswith('en')
+            not l22_c_pronunciation
+            and language_code.startswith('en')
             and mode == 'reading'
             and len(target_words) == 1
             and _prescribed_spoken_word_matches(target_words[0], heard_words)
@@ -19489,6 +19508,15 @@ def reading_transcribe_api(request):
             )
         else:
             analysis = analyze_reading(target_text, current_syllable_index, analysis_transcript, language_code, strict_rhyme=request.POST.get('crla_rhymes') == '1')
+        if l22_c_pronunciation:
+            l22_match = l22_c_pronunciation_match(
+                request.POST.get('l22_c_syllable'),
+                target_text,
+                transcript,
+                request.POST.get('l22_c_sound'),
+            )
+            analysis['complete'] = l22_match
+            analysis['l22_c_pronunciation_match'] = l22_match
         metrics_context = analysis_transcript if stitching_applied else next_syllable_context
         context_count, target_count, context_progress = syllable_context_metrics(
             target_text,
@@ -19505,7 +19533,7 @@ def reading_transcribe_api(request):
         # return the canonical target after the shared Filipino matcher has
         # already accepted it.  This prevents a valid phonetic segmentation or
         # near-match of short words such as "pana" from being rejected again.
-        if mode == 'reading' and analysis.get('complete') and len(ReadingMatcher.readable_words(target_text)) == 1:
+        if mode == 'reading' and not l22_c_pronunciation and analysis.get('complete') and len(ReadingMatcher.readable_words(target_text)) == 1:
             analysis['transcript'] = target_text
         analysis['syllable_context'] = next_syllable_context
         analysis['syllable_stitching_applied'] = stitching_applied

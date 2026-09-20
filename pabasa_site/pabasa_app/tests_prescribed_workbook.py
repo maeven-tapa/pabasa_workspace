@@ -10,9 +10,17 @@ from django.urls import reverse
 from .models import Material, School, Section, StudentActivityProgress, User
 from .prescribed_activity_catalog import PRESCRIBED_ACTIVITIES, active_prescribed_activities
 from .prescribed_workbook import ACTIVITIES, apply_event, get_activity, initial_state, normalize_l22_c_state, search_paths
+from .reading_stt import l22_c_pronunciation_match
 
 
 class WorkbookStateTests(SimpleTestCase):
+    def test_lesson22_c_pronunciation_accepts_scoped_hard_and_soft_c_spellings(self):
+        self.assertTrue(l22_c_pronunciation_match('cac', 'cactus', 'kak', 'hard'))
+        self.assertTrue(l22_c_pronunciation_match('com', 'computer', 'kom', 'hard'))
+        self.assertTrue(l22_c_pronunciation_match('Ce', 'Celeste', 'se', 'soft'))
+        self.assertFalse(l22_c_pronunciation_match('Ce', 'Celeste', 'ke', 'soft'))
+        self.assertFalse(l22_c_pronunciation_match('cac', 'cactus', 'tat', 'hard'))
+
     def test_exact_scope_and_searches(self):
         self.assertEqual(len(ACTIVITIES), len(set(ACTIVITIES)))
         for a in ACTIVITIES.values():
@@ -346,6 +354,28 @@ class PrescribedWorkbookFlowTests(TestCase):
         self.assertTrue(progress.activity_completed)
         self.assertTrue(progress.state['completed'])
         self.assertEqual(progress.current_index, 1)
+
+    def test_lesson22_syllable_attempt_sends_whole_word_context_to_english_stt(self):
+        key = 'aral-l22-g1-c-syllable-builder'
+        progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
+        state = initial_state()
+        self.client.post(progress_url, json.dumps({'action': 'reading_started', 'revision': state['revision']}), content_type='application/json')
+
+        def inspect_reading_request(request):
+            self.assertEqual(request.POST['target_text'], 'cactus')
+            self.assertEqual(request.POST['language'], 'English')
+            self.assertEqual(request.POST['l22_c_pronunciation'], '1')
+            self.assertEqual(request.POST['l22_c_syllable'], 'cac')
+            self.assertEqual(request.POST['l22_c_sound'], 'hard')
+            return JsonResponse({'success': True, 'transcript': 'kak', 'complete': True})
+
+        with patch('pabasa_app.views.reading_transcribe_api', side_effect=inspect_reading_request):
+            response = self.client.post(progress_url, {
+                'action': 'reading_syllable_attempt', 'revision': 1,
+                'audio': SimpleUploadedFile('reading.webm', b'audio', content_type='audio/webm'),
+            })
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()['state']['index'], 1)
 
     @patch('pabasa_app.views.synthesize_read_aloud_audio', return_value='encoded-audio')
     def test_lesson_22_read_aloud_uses_prescribed_filipino_voice(self, synthesize):
