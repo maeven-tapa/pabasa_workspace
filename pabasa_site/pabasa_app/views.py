@@ -17785,6 +17785,8 @@ def session_4_gawain_3_page(request):
     activity = prescribed_activity('session-4-gawain-3')
     activity_key = 'session-4-gawain-3'
     progress = StudentActivityProgress.objects.filter(student=_active_prescribed_student(request), activity_key=activity_key).first()
+    if progress and progress.activity_completed:
+        return redirect('assessment')
     raw_state = progress.state if progress and isinstance(progress.state, dict) else {}
     total_items = 9
     try:
