@@ -25,6 +25,7 @@ from django.utils.text import slugify
 from functools import wraps
 from urllib.parse import quote, urlencode, urlparse
 import logging
+import base64
 import json
 import os
 import mimetypes
@@ -37,6 +38,8 @@ from html import escape
 import random
 import traceback
 import ssl
+import subprocess
+import tempfile
 from smtplib import SMTPException
 import time
 import threading
@@ -44,6 +47,8 @@ import uuid
 import zipfile
 import csv
 import unicodedata
+import urllib.error
+import urllib.request
 from io import BytesIO
 from datetime import date, timedelta
 
@@ -80,6 +85,7 @@ from .reading_stt import (
     synthesize_read_aloud_audio,
     synthesize_maya_read_aloud_audio,
     transcribe_audio_bytes_with_model,
+    google_stt_credentials,
     word_numbers_in_transcript,
 )
 
@@ -17329,6 +17335,7 @@ def lesson_1_gawain_1_page(request):
     ).first()
     context = _dashboard_context(request)
     context['lesson_1_data'] = {
+        'progress_url': reverse('lesson_3_activity_progress'),
         'progress': {
             'current_index': progress.current_index if progress else 0,
             'completed_items': progress.completed_items if progress else 0,
@@ -19230,6 +19237,119 @@ def word_decoding_transcribe_api(request):
     except Exception as exc:
         logger.exception('Word Decoding transcription failed')
         return JsonResponse({'success': False, 'error': str(exc)}, status=502)
+
+
+def _lesson1_ffmpeg_binary():
+    configured = os.environ.get('FFMPEG_BINARY', '').strip() or 'ffmpeg'
+    return shutil.which(configured)
+
+
+def _lesson1_google_transcribe_wav(wav_bytes, target_text):
+    api_key = getattr(settings, 'GOOGLE_STT_API_KEY', '').strip()
+    credentials_file = str(getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', '') or '')
+    config = {
+        'languageCode': 'fil-PH',
+        'encoding': 'LINEAR16',
+        'sampleRateHertz': 16000,
+        'audioChannelCount': 1,
+        'enableAutomaticPunctuation': False,
+        'maxAlternatives': 3,
+    }
+    hints = target_phrase_hints(target_text, 'fil-PH')
+    if hints:
+        config['speechContexts'] = [{'phrases': hints, 'boost': 20.0}]
+    payload = {
+        'config': config,
+        'audio': {'content': base64.b64encode(wav_bytes).decode('ascii')},
+    }
+    headers = {'Content-Type': 'application/json'}
+    url = 'https://speech.googleapis.com/v1p1beta1/speech:recognize'
+    if api_key:
+        url += '?key=' + api_key
+    else:
+        from google.auth.transport.requests import Request
+        from google.oauth2 import service_account
+        credentials = google_stt_credentials(service_account, credentials_file)
+        credentials.refresh(Request())
+        headers['Authorization'] = 'Bearer ' + credentials.token
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode('utf-8'),
+        headers=headers,
+        method='POST',
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=35) as response:
+            result = json.load(response)
+    except urllib.error.HTTPError as exc:
+        details = exc.read().decode('utf-8', errors='replace')
+        try:
+            message = json.loads(details).get('error', {}).get('message', details)
+        except json.JSONDecodeError:
+            message = details or exc.reason
+        raise RuntimeError(f'Google STT HTTP {exc.code}: {message}') from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f'Network error contacting Google STT: {exc.reason}') from exc
+    results = result.get('results') or []
+    transcripts = []
+    for item in results:
+        alternatives = item.get('alternatives') or []
+        if alternatives and alternatives[0].get('transcript'):
+            transcripts.append(alternatives[0]['transcript'].strip())
+    return ' '.join(transcripts).strip()
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+def lesson_1_gawain_1_transcribe_api(request):
+    if not _check_auth(request):
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+    access_response = _enforce_student_access_for_request(request, json_response=True)
+    if access_response:
+        return access_response
+    if request.POST.get('activity_key') != 'lesson-1-gawain-1':
+        return JsonResponse({'success': False, 'error': 'Invalid activity.'}, status=400)
+    audio = request.FILES.get('audio')
+    target_text = (request.POST.get('target_text') or '').strip()
+    if not audio or not target_text:
+        return JsonResponse({'success': False, 'error': 'Audio is required.'}, status=400)
+
+    ffmpeg = _lesson1_ffmpeg_binary()
+    if not ffmpeg:
+        logger.error('Lesson 1 transcription requires FFmpeg; FFMPEG_BINARY was not found.')
+        return JsonResponse({'success': False, 'error': 'Lesson 1 audio conversion is unavailable.'}, status=503)
+
+    try:
+        with tempfile.TemporaryDirectory(prefix='lesson1-stt-') as temp_dir:
+            source_path = os.path.join(temp_dir, 'source.webm')
+            wav_path = os.path.join(temp_dir, 'converted.wav')
+            with open(source_path, 'wb') as source:
+                for chunk in audio.chunks():
+                    source.write(chunk)
+            completed = subprocess.run(
+                [
+                    ffmpeg, '-hide_banner', '-loglevel', 'error', '-nostdin', '-y',
+                    '-i', source_path, '-vn', '-ac', '1', '-ar', '16000',
+                    '-sample_fmt', 's16', '-c:a', 'pcm_s16le', '-f', 'wav', wav_path,
+                ],
+                capture_output=True,
+                timeout=60,
+                check=False,
+            )
+            if completed.returncode != 0 or not os.path.isfile(wav_path) or os.path.getsize(wav_path) == 0:
+                logger.error('Lesson 1 FFmpeg conversion failed: %s', completed.stderr.decode('utf-8', errors='replace')[-1000:])
+                return JsonResponse({'success': False, 'error': 'Hindi ma-convert ang audio. Subukan muli.'}, status=502)
+            with open(wav_path, 'rb') as converted:
+                transcript = _lesson1_google_transcribe_wav(converted.read(), target_text)
+        if not transcript:
+            return JsonResponse({'success': False, 'error': 'Hindi naproseso ang audio. Subukan muli.'}, status=502)
+        return JsonResponse({'success': True, 'raw_transcript': transcript, 'transcript': transcript})
+    except subprocess.TimeoutExpired:
+        logger.exception('Lesson 1 FFmpeg conversion timed out')
+        return JsonResponse({'success': False, 'error': 'Hindi natapos ang audio conversion. Subukan muli.'}, status=502)
+    except Exception:
+        logger.exception('Lesson 1 isolated transcription failed')
+        return JsonResponse({'success': False, 'error': 'Hindi naproseso ang audio. Subukan muli.'}, status=502)
 
 
 @csrf_protect

@@ -165,6 +165,7 @@ urlpatterns = [
     path('dashboard/assessment/reading_ui/vowel/', views.reading_vowel_page, name='reading_vowel_page'),
     path('api/dashboard/assessment/activity/word-decoding/transcribe/', views.word_decoding_transcribe_api, name='word_decoding_transcribe_api'),
     path('api/reading/transcribe/', views.reading_transcribe_api, name='reading_transcribe_api'),
+    path('api/reading/lesson-1-gawain-1/transcribe/', views.lesson_1_gawain_1_transcribe_api, name='lesson_1_gawain_1_transcribe_api'),
     path('dashboard/assessment/lesson-3/gawain-2/', views.lesson_3_gawain_2_page, name='lesson_3_gawain_2_page'),
     path('dashboard/assessment/lesson-4/gawain-1/', views.lesson_4_gawain_1_page, name='lesson_4_gawain_1_page'),
     path('dashboard/assessment/lesson-5/gawain-1/', views.lesson_5_gawain_1_page, name='lesson_5_gawain_1_page'),
