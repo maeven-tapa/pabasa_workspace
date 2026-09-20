@@ -28,11 +28,13 @@
     const stopMedia=()=>{stream?.getTracks().forEach(track=>track.stop());stream=null;if(audio){audio.pause();audio=null}};
     async function playReadAloud(text){
       if(!text)return;
-      const response=await fetch(d.read_aloud_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',mode:'word',prescribed_activity_key:d.activity_key})}),data=await response.json().catch(()=>({}));
-      if(!response.ok||!data.success||!data.audio_content)throw Error(data.error||'Hindi available ang audio.');
-      const url=URL.createObjectURL(new Blob([Uint8Array.from(atob(data.audio_content),character=>character.charCodeAt(0))],{type:data.mime_type||'audio/mpeg'}));
-      const spoken=new Audio(url);
-      try{await spoken.play();await new Promise((resolve,reject)=>{spoken.onended=resolve;spoken.onerror=reject})}finally{URL.revokeObjectURL(url)}
+      try{
+        const response=await fetch(d.read_aloud_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',mode:'word',prescribed_activity_key:d.activity_key})}),data=await response.json().catch(()=>({}));
+        if(!response.ok||!data.success||data.tts_language!=='fil-PH'||data.voice_name!=='fil-PH-Wavenet-A'||!data.audio_content)throw Error(data.error||'Hindi available ang Filipino audio.');
+        const url=URL.createObjectURL(new Blob([Uint8Array.from(atob(data.audio_content),character=>character.charCodeAt(0))],{type:data.mime_type||'audio/mpeg'}));
+        const spoken=new Audio(url);
+        try{await spoken.play();await new Promise((resolve,reject)=>{spoken.onended=resolve;spoken.onerror=()=>reject(Error('Hindi ma-play ang audio.'))})}finally{URL.revokeObjectURL(url)}
+      }catch(error){const status=app.querySelector('.status');if(status)status.textContent=error.message||'Hindi available ang Filipino audio.'}
     }
     const current=()=>Number(state.current_item_index)||0,total=items.length;
     const header=()=>`<p class="eyebrow">SESSION 7 · LESSON 20 AT 21 · GAWAIN 1</p><h1>${esc(d.display_title)}</h1><h2>${esc(d.title)}</h2><p class="instruction">${esc(d.instruction)}</p><div class="track" aria-label="${state.correct_answers.length} sa ${total} natapos"><i style="width:${total?state.correct_answers.length/total*100:0}%"></i></div>`;

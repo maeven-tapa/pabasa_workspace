@@ -72,9 +72,9 @@
       if (!response.ok || !result.success || !result.audio_content || result.tts_language !== 'fil-PH' || result.voice_name !== 'fil-PH-Wavenet-A') throw Error(result.error || 'Hindi available ang Filipino audio.');
       if (oralAudio) oralAudio.pause(); oralAudio = new Audio(URL.createObjectURL(new Blob([Uint8Array.from(atob(result.audio_content), char => char.charCodeAt(0))], {type:result.mime_type || 'audio/mpeg'}))); await oralAudio.play(); await new Promise((resolve, reject) => { oralAudio.onended = resolve; oralAudio.onerror = () => reject(Error('Hindi ma-play ang audio.')); });
     }
-    const narrateFeedback = async message => { try { await playPrescribedReadAloud(message); } catch (_) {} };
-    const announceOralItem = () => { const item = items[oralIndex]; if (!item || announcedOralIndex === oralIndex) return; announcedOralIndex = oralIndex; void playPrescribedReadAloud(`${data.instruction} Basahin ang salita: ${item.read_word}.`).catch(() => {}); };
-    const announceMatching = () => { if (announcedMatching) return; announcedMatching = true; void playPrescribedReadAloud(data.instruction).catch(() => {}); };
+    const narrateFeedback = async message => { try { await playPrescribedReadAloud(message); } catch (error) { const status = app.querySelector('.oral-status, .hint'); if (status) status.textContent = error.message || 'Hindi available ang Filipino audio.'; } };
+    const announceOralItem = () => { const item = items[oralIndex]; if (!item || announcedOralIndex === oralIndex) return; announcedOralIndex = oralIndex; void playPrescribedReadAloud(`${data.instruction} Basahin ang salita: ${item.read_word}.`).catch(error => { const status = app.querySelector('.oral-status'); if (status) status.textContent = error.message || 'Hindi available ang Filipino audio.'; }); };
+    const announceMatching = () => { if (announcedMatching) return; announcedMatching = true; void playPrescribedReadAloud(data.instruction).catch(error => { const status = app.querySelector('.hint'); if (status) status.textContent = error.message || 'Hindi available ang Filipino audio.'; }); };
     function renderOral(message = '', kind = '') {
       const item = items[oralIndex];
       const actionLabel = oralMode === 'aloud' ? '🔊 Pakinggan muna' : oralStatus || '🎙 Basahin ngayon';
