@@ -833,6 +833,52 @@
     .pabasa-session-card h4{color:#16465d;font-weight:900}.pabasa-session-card p{color:#647883;font-size:.86rem}.pabasa-session-card button{background:#1f6f8b;border:0;border-radius:13px;color:#fff;cursor:pointer;font-weight:900;min-height:48px;padding:.65rem 1rem;width:100%}.pabasa-session-card.locked button{background:#c4cdd0;color:#68777c;cursor:not-allowed}.pabasa-session-badge{font-size:1.5rem}
     .pabasa-track-tabs{background:#f1f6f7;border-radius:999px;display:inline-flex;gap:.3rem;margin:1rem 0;padding:.35rem}.pabasa-track-tabs button{background:transparent;border:0;border-radius:999px;color:#536b75;cursor:pointer;font-weight:900;min-height:48px;padding:.6rem 1rem}.pabasa-track-tabs button.active{background:#1f6f8b;color:#fff}.pabasa-track-tabs button:nth-child(2).active{background:#e6a33a}.pabasa-task-badge{background:#ef5c45;border-radius:50%;color:#fff;display:inline-flex;font-size:.7rem;height:23px;justify-content:center;line-height:23px;margin-left:.3rem;width:23px}
 </style>
+<style>
+    /* Reading Assessment desktop layout: keep the compact 5-by-3 lesson grid in view. */
+    @media (min-width: 992px) {
+        body:has(.assessment-dock) .assessment-stage {
+            grid-template-columns: 1fr;
+            padding: 1.15rem 1.5rem;
+        }
+        body:has(.assessment-dock) .assessment-stage::after {
+            display: none;
+        }
+        body:has(.assessment-dock) .assessment-stage h2 {
+            font-size: 1.35rem;
+            margin-bottom: .45rem;
+        }
+        body:has(.assessment-dock) .assessment-stage p {
+            font-size: .88rem;
+        }
+        body:has(.assessment-dock) #sessionGrid {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: .75rem;
+            padding-bottom: 0;
+        }
+        body:has(.assessment-dock) .assessment-dock { padding-bottom: 0; }
+        body:has(.assessment-dock) #sessionGrid .pabasa-session-card {
+            min-height: 198px;
+            padding: .75rem;
+        }
+        body:has(.assessment-dock) #sessionGrid .pabasa-session-card .session-visual {
+            min-height: 38px;
+        }
+        body:has(.assessment-dock) #sessionGrid .pabasa-session-card .session-content {
+            min-height: 70px;
+        }
+        body:has(.assessment-dock) #sessionGrid .pabasa-session-card button {
+            min-height: 38px;
+            padding: .45rem .7rem;
+        }
+        body:has(.assessment-dock) .pabasa-track-tabs {
+            margin: .5rem auto;
+        }
+        body:has(.assessment-dock) .pabasa-track-tabs button {
+            min-height: 44px;
+            padding: .55rem 1.2rem;
+        }
+    }
+</style>
 <script>document.addEventListener('DOMContentLoaded',function(){const grid=document.getElementById('sessionGrid');if(!grid)return;const fix=function(){const card=grid.querySelector('.pabasa-session-card:first-child');if(!card)return;const heading=card.querySelector('.session-content h4');const label=card.querySelector('.session-content>p');if(heading&&heading.textContent!=='Lesson 1')heading.textContent='Lesson 1';if(label&&label.textContent!=='Gawain 1')label.textContent='Gawain 1'};fix();new MutationObserver(fix).observe(grid,{childList:true,subtree:true})});</script>
 <style>#sessionGrid .lesson1-progress-label{display:none!important}</style>
 <style>.lesson4-gawain2-progress-label{display:none!important}.pabasa-session-card .lesson4-gawain2-progress{background:#dcebea;border-radius:99px;height:7px;margin:.25rem auto .8rem;overflow:hidden;width:88%}.pabasa-session-card .lesson4-gawain2-progress span{background:#e6a33a;border-radius:inherit;display:block;height:100%}</style>
@@ -849,15 +895,9 @@
     {% include "pabasa_app/partials/_student_falling_shapes.html" %}
     <div class="assessment-stage">
         <div>
-            <span class="dash-pill mb-3">Main reading check</span>
-            <div class="assessment-title-row"><h2>Pumili ng iyong aralin ngayong araw!</h2></div>
+            <span class="dash-pill mb-3"><i class="bi bi-journal-bookmark-fill me-2" aria-hidden="true"></i>Aralin Mo Ngayon</span>
             <p>Piliin ang aralin na itinalaga sa iyo ng iyong guro.</p>
         </div>
-        <aside class="status-ticket">
-            <span class="ticket-label">Class status</span>
-            <strong id="classStatusTitle">Waiting for class</strong>
-            <div id="classStatusText" class="small mb-0" style="color: var(--dash-muted);">0/15 SESSIONS COMPLETED</div>
-        </aside>
     </div>
     <section class="subject-card pabasa-preview-subject" aria-label="Grade 2 BALAGTAS reading tracks">
         <div class="pabasa-track-tabs" role="tablist" aria-label="Reading tracks">
