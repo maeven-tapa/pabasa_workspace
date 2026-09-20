@@ -13919,6 +13919,13 @@ def prescribed_activity_page(request, activity_key):
         return render(request, 'pabasa_app/lesson_13_gawain_2_page.html', context)
     if activity_key == 'lesson-13-gawain-3':
         context = _dashboard_context(request)
+        has_incomplete_progress = bool(
+            progress and not progress.activity_completed and (
+                progress.current_index > 0
+                or progress.completed_items > 0
+                or raw_state.get('phase') not in {None, '', 'initial'}
+            )
+        )
         context['lesson13_gawain3_data'] = {
             'activity_key': activity_key,
             'session_key': 'session-5',
@@ -13930,6 +13937,7 @@ def prescribed_activity_page(request, activity_key):
             'sentences': [item['sentence'] for item in activity['items']],
             'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
             'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'has_incomplete_progress': has_incomplete_progress,
             'progress': {
                 'current_index': progress.current_index if progress else 0,
                 'completed_items': progress.completed_items if progress else 0,
@@ -14494,19 +14502,20 @@ def prescribed_activity_progress(request, activity_key):
                 correct_items = max(correct_items, old_correct)
                 state = dict(old)
                 state.update(incoming)
+                activity_completed = bool(incoming.get('activity_completed')) and completed_items >= total and current_index >= total
                 state.update({'current_index': current_index, 'completed_items': completed_items,
                               'correct_items': correct_items, 'total_items': total,
-                              'activity_completed': False,
+                              'activity_completed': activity_completed,
                               'state_version': int(old.get('state_version') or 0) + 1})
                 progress, _ = StudentActivityProgress.objects.update_or_create(
                     student=student, activity_key=activity_key,
                     defaults={'current_index': current_index, 'completed_items': completed_items,
                               'correct_items': correct_items, 'total_items': total,
-                              'activity_completed': False, 'state': state})
+                              'activity_completed': activity_completed, 'state': state})
             return JsonResponse({'success': True, 'progress': {
                 'current_index': progress.current_index, 'completed_items': progress.completed_items,
                 'correct_items': progress.correct_items, 'total_items': total,
-                'activity_completed': False, 'state': progress.state}})
+                'activity_completed': progress.activity_completed, 'state': progress.state}})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity_key == 'session-4-gawain-4':
