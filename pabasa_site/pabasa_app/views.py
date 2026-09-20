@@ -14139,7 +14139,7 @@ def prescribed_activity_page(request, activity_key):
             },
         }
         if activity['interaction'] == 'picture_syllable_match':
-            context['prescribed_activity_data'].update({'session_key': activity['session_key'], 'competencies': activity['competencies'], 'items': [{'id': i['id'], 'label': i['label'], 'alt_text': i['alt_text'], 'image_url': static(i['image_path'])} for i in activity['items']]})
+            context['prescribed_activity_data'].update({'session_key': activity['session_key'], 'competencies': activity['competencies'], 'read_aloud_url': reverse('reading_read_aloud_api'), 'items': [{'id': i['id'], 'label': i['label'], 'alt_text': i['alt_text'], 'image_url': static(i['image_path'])} for i in activity['items']]})
             return render(request, 'pabasa_app/prescribed_picture_syllable_matching_page.html', context)
         return render(request, 'pabasa_app/prescribed_picture_word_matching_page.html', context)
     answers = raw_state.get('answers') if isinstance(raw_state.get('answers'), list) else []
