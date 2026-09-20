@@ -414,6 +414,30 @@ class PrescribedWorkbookFlowTests(TestCase):
         self.assertTrue(progress.state['completed'])
         self.assertEqual(progress.current_index, 1)
 
+    def test_lesson22_gawain2_completion_payload_points_to_gawain3_and_assessment(self):
+        g2_key = 'aral-l22-g2-c-word-reading'
+        g3_key = 'aral-l22-g3-c-word-search'
+        self.session_student(self.teacher)
+        response = self.client.get(
+            reverse('prescribed_activity_page', kwargs={'activity_key': g2_key}),
+            {'preview': '1'},
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.context['workbook_payload']
+        self.assertEqual(
+            payload['next_url'],
+            reverse('prescribed_activity_page', kwargs={'activity_key': g3_key}),
+        )
+        self.assertEqual(payload['back_url'], reverse('assessment'))
+        next_response = self.client.get(payload['next_url'], {'preview': '1'})
+        self.assertEqual(next_response.status_code, 200)
+        self.assertEqual(next_response.context['workbook_payload']['activity']['activity_key'], g3_key)
+
+        source = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_l22_g2_reading.js').read_text(encoding='utf-8')
+        self.assertIn('Magpatuloy sa Gawain 3', source)
+        self.assertIn('Bumalik sa Aking Aralin', source)
+        self.assertNotIn('id="restart">Ulitin Mula sa Simula</button></section></div>`;document.getElementById(\'restart\')', source)
+
     def test_lesson22_syllable_attempt_sends_whole_word_context_to_english_stt(self):
         key = 'aral-l22-g1-c-syllable-builder'
         progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
