@@ -11,7 +11,8 @@ from django.urls import reverse
 from .models import Material, School, Section, StudentActivityProgress, User
 from .prescribed_activity_catalog import PRESCRIBED_ACTIVITIES, active_prescribed_activities
 from .prescribed_workbook import (
-    ACTIVITIES, L22_G2_C_WORDS, apply_event, get_activity, initial_l22_g2_state,
+    ACTIVITIES, L22_G2_C_WORDS, L22_G3_C_WORD_PATHS, apply_event, get_activity,
+    initial_l22_g2_state, initial_l22_g3_state,
     initial_state, l22_g2_pronunciation_match, normalize_l22_g2_speech,
     normalize_l22_c_state, search_paths,
 )
@@ -437,6 +438,24 @@ class PrescribedWorkbookFlowTests(TestCase):
         self.assertIn('Magpatuloy sa Gawain 3', source)
         self.assertIn('Bumalik sa Aking Aralin', source)
         self.assertNotIn('id="restart">Ulitin Mula sa Simula</button></section></div>`;document.getElementById(\'restart\')', source)
+
+    def test_lesson22_gawain3_route_and_persisted_state(self):
+        key = 'aral-l22-g3-c-word-search'
+        page_url = reverse('prescribed_activity_page', kwargs={'activity_key': key})
+        progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
+        page = self.client.get(page_url)
+        self.assertEqual(page.status_code, 200, page.content)
+        self.assertEqual(page.context['workbook_payload']['activity']['activity_key'], key)
+        self.assertIn('pabasa_app/prescribed_l22_g3_word_search_page.html', [template.name for template in page.templates])
+        state = page.context['workbook_payload']['state']
+        response = self.client.post(progress_url, json.dumps({
+            'action': 'select_word', 'word': 'Cebu', 'path': L22_G3_C_WORD_PATHS['Cebu'],
+            'color': '#f2c94c', 'revision': state['revision'],
+        }), content_type='application/json')
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()['progress']['completed_items'], 1)
+        reopened = self.client.get(page_url)
+        self.assertEqual(reopened.context['workbook_payload']['state']['found_words']['Cebu']['color'], '#f2c94c')
 
     def test_lesson22_syllable_attempt_sends_whole_word_context_to_english_stt(self):
         key = 'aral-l22-g1-c-syllable-builder'

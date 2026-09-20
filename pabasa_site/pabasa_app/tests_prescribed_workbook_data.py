@@ -3,7 +3,9 @@ import json
 import unittest
 from copy import deepcopy
 
-from .prescribed_workbook import ACTIVITIES, apply_event, get_activity, initial_state, search_paths
+from .prescribed_workbook import (ACTIVITIES, L22_G3_C_WORD_PATHS, apply_event,
+                                  get_activity, initial_l22_g3_state, initial_state,
+                                  normalize_l22_g3_state, search_paths)
 
 
 class PrescribedWorkbookDataTests(unittest.TestCase):
@@ -29,6 +31,12 @@ class PrescribedWorkbookDataTests(unittest.TestCase):
         for a in ACTIVITIES.values():
             with self.subTest(activity=a['activity_key']):
                 s=initial_state()
+                if a['activity_key']=='aral-l22-g3-c-word-search':
+                    s=initial_l22_g3_state()
+                    for word, path in L22_G3_C_WORD_PATHS.items():
+                        apply_event(a, s, {'action':'select_word','word':word,'path':path,'color':'#55a9df'})
+                    self.assertTrue(s['completed'])
+                    continue
                 if a['activity_key']=='aral-l22-g1-c-syllable-builder':
                     apply_event(a,s,{'action':'reading_started'})
                     apply_event(a,s,{'action':'reading_attempt'},True)
@@ -79,8 +87,44 @@ class PrescribedWorkbookDataTests(unittest.TestCase):
 
     def test_wrong_grid_path_rejected_and_color_saved(self):
         a=get_activity('aral-l22-g3-c-word-search');s=initial_state()
-        apply_event(a,s,{'action':'reading'},True)
-        with self.assertRaises(ValueError):apply_event(a,s,{'action':'answer','answer':[[0,0],[0,1]]})
-        apply_event(a,s,{'action':'draft','draft':{'color':'#ff0000'}})
-        apply_event(a,s,{'action':'answer','answer':search_paths(a,'computer')[0]})
-        self.assertEqual(s['mark_colors']['item-1'],'#ff0000')
+        s=initial_l22_g3_state()
+        apply_event(a,s,{'action':'select_word','word':'computer','path':[[0,0],[0,1]],'color':'#ff0000'})
+        self.assertFalse(s['found_words'])
+        apply_event(a,s,{'action':'select_word','word':'computer','path':search_paths(a,'computer')[0],'color':'#ff0000'})
+        self.assertEqual(s['found_words']['computer']['color'],'#ff0000')
+
+    def test_lesson22_gawain3_exact_grid_words_and_coordinates(self):
+        activity = get_activity('aral-l22-g3-c-word-search')
+        self.assertEqual(activity['grid'], [
+            'CARLAMREA', 'CAGAYANMS', 'ABCACTUSP', 'NAMHCARDO',
+            'COMPUTERD', 'OCELESTEM', 'STCABINET', 'CEBUBRTDM', 'ABDCAMERA',
+        ])
+        self.assertEqual(list(activity['items'][i]['text'] for i in range(9)),
+                         ['computer', 'Cagayan', 'camera', 'cabinet', 'Cebu', 'cactus', 'Cardo', 'Celeste', 'Carla'])
+        for word, path in L22_G3_C_WORD_PATHS.items():
+            self.assertEqual(search_paths(activity, word), [path])
+
+    def test_lesson22_gawain3_any_order_invalid_and_duplicate_protection(self):
+        activity = get_activity('aral-l22-g3-c-word-search')
+        state = initial_l22_g3_state()
+        apply_event(activity, state, {'action': 'select_word', 'word': 'Cebu', 'path': L22_G3_C_WORD_PATHS['Cebu'], 'color': '#f2c94c'})
+        self.assertEqual(state['found_words']['Cebu']['color'], '#f2c94c')
+        apply_event(activity, state, {'action': 'select_word', 'word': 'Cebu', 'path': L22_G3_C_WORD_PATHS['Cebu'], 'color': '#55a9df'})
+        self.assertEqual(len(state['found_words']), 1)
+        apply_event(activity, state, {'action': 'select_word', 'word': 'computer', 'path': [[0, 0], [0, 1]], 'color': '#55a9df'})
+        self.assertEqual(len(state['found_words']), 1)
+        apply_event(activity, state, {'action': 'select_word', 'word': 'computer', 'path': L22_G3_C_WORD_PATHS['computer'], 'color': '#55a9df'})
+        self.assertEqual(len(state['found_words']), 2)
+        self.assertEqual(normalize_l22_g3_state(state)['found_words']['Cebu']['color'], '#f2c94c')
+
+    def test_lesson22_gawain3_completion_is_once_and_restorable(self):
+        activity = get_activity('aral-l22-g3-c-word-search')
+        state = initial_l22_g3_state()
+        for word in L22_G3_C_WORD_PATHS:
+            apply_event(activity, state, {'action': 'select_word', 'word': word, 'path': L22_G3_C_WORD_PATHS[word], 'color': '#55a9df'})
+        self.assertTrue(state['completed'])
+        self.assertEqual(len(state['found_words']), 9)
+        before = dict(state['found_words'])
+        apply_event(activity, state, {'action': 'select_word', 'word': 'Carla', 'path': L22_G3_C_WORD_PATHS['Carla'], 'color': '#ef8d8d'})
+        self.assertEqual(state['found_words'], before)
+        self.assertTrue(normalize_l22_g3_state(state)['completed'])

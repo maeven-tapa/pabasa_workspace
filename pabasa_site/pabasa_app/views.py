@@ -13256,7 +13256,9 @@ def prescribed_activity_page(request, activity_key):
     if not activity:
         return redirect('assessment')
     if activity.get('interaction') == 'prescribed_workbook':
-        from .prescribed_workbook import get_activity, initial_state, initial_l22_g2_state, normalize_l22_c_state, normalize_l22_g2_state
+        from .prescribed_workbook import (get_activity, initial_state, initial_l22_g2_state,
+                                          initial_l22_g3_state, normalize_l22_c_state,
+                                          normalize_l22_g2_state, normalize_l22_g3_state)
 
         preview = request.GET.get('preview') == '1'
         role = request.session.get('user_role')
@@ -13271,11 +13273,15 @@ def prescribed_activity_page(request, activity_key):
             if not student:
                 return redirect('assessment')
         progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first() if student else None
-        state = progress.state if progress and isinstance(progress.state, dict) else (initial_l22_g2_state() if activity_key == 'aral-l22-g2-c-word-reading' else initial_state())
+        state = progress.state if progress and isinstance(progress.state, dict) else (
+            initial_l22_g2_state() if activity_key == 'aral-l22-g2-c-word-reading' else
+            initial_l22_g3_state() if activity_key == 'aral-l22-g3-c-word-search' else initial_state())
         if activity_key == 'aral-l22-g1-c-syllable-builder':
             state = normalize_l22_c_state(state)
         elif activity_key == 'aral-l22-g2-c-word-reading':
             state = normalize_l22_g2_state(state)
+        elif activity_key == 'aral-l22-g3-c-word-search':
+            state = normalize_l22_g3_state(state)
         next_key = {
             'aral-l22-g1-c-syllable-builder': 'aral-l22-g2-c-word-reading',
             'aral-l22-g2-c-word-reading': 'aral-l22-g3-c-word-search',
@@ -13289,6 +13295,14 @@ def prescribed_activity_page(request, activity_key):
                     'read_aloud_url': reverse('reading_read_aloud_api'),
                     'back_url': reverse('assessment'),
                     'next_url': next_url,
+                },
+            })
+        if activity_key == 'aral-l22-g3-c-word-search':
+            return render(request, 'pabasa_app/prescribed_l22_g3_word_search_page.html', {
+                'workbook_payload': {
+                    'activity': get_activity(activity_key), 'state': state, 'preview': preview,
+                    'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+                    'read_aloud_url': reverse('reading_read_aloud_api'), 'back_url': reverse('assessment'),
                 },
             })
         return render(request, 'pabasa_app/prescribed_workbook_page.html', {
@@ -16429,8 +16443,9 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
     """Persist Sessions 8–11 workbook state through the shared prescribed route."""
     from copy import deepcopy
     from .prescribed_workbook import (
-        apply_event, get_activity, initial_l22_g2_state, initial_state,
+        apply_event, get_activity, initial_l22_g2_state, initial_l22_g3_state, initial_state,
         l22_g2_pronunciation_match, normalize_l22_c_state, normalize_l22_g2_state,
+        normalize_l22_g3_state,
     )
 
     workbook = get_activity(activity_key)
@@ -16439,11 +16454,15 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
         if not isinstance(event, dict):
             raise ValueError('Invalid event.')
         row = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
-        state = deepcopy(row.state if row and isinstance(row.state, dict) else (initial_l22_g2_state() if activity_key == 'aral-l22-g2-c-word-reading' else initial_state()))
+        state = deepcopy(row.state if row and isinstance(row.state, dict) else (
+            initial_l22_g2_state() if activity_key == 'aral-l22-g2-c-word-reading' else
+            initial_l22_g3_state() if activity_key == 'aral-l22-g3-c-word-search' else initial_state()))
         if activity_key == 'aral-l22-g1-c-syllable-builder':
             state = normalize_l22_c_state(state)
         elif activity_key == 'aral-l22-g2-c-word-reading':
             state = normalize_l22_g2_state(state)
+        elif activity_key == 'aral-l22-g3-c-word-search':
+            state = normalize_l22_g3_state(state)
         if int(event.get('revision', -1)) != int(state.get('revision', 0)):
             return JsonResponse({'success': False, 'error': 'Activity changed in another tab. Reload to resume.', 'state': state}, status=409)
 
@@ -16506,10 +16525,14 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
         updated['revision'] = int(updated.get('revision', 0)) + 1
         total = int(workbook.get('progress_total') or len(workbook['items']))
         index = total if updated.get('completed') else min(int(updated.get('index', 0)), total)
+        if activity_key == 'aral-l22-g3-c-word-search':
+            index = min(len(updated.get('found_words') or {}), total)
         oral = updated.get('oral') if isinstance(updated.get('oral'), dict) else {}
         correct = sum(bool(value.get('passed')) for value in oral.values() if isinstance(value, dict))
         if activity_key == 'aral-l22-g2-c-word-reading':
             correct = len(updated.get('completed_words') or [])
+        elif activity_key == 'aral-l22-g3-c-word-search':
+            correct = len(updated.get('found_words') or {})
         progress, _ = StudentActivityProgress.objects.update_or_create(
             student=student, activity_key=activity_key,
             defaults={'current_index': index, 'completed_items': index, 'correct_items': correct,

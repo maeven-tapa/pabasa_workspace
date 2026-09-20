@@ -75,6 +75,18 @@ L22_G2_ACCEPTED_SPEECH = {
     'carlos': {'carlos', 'karlos'},
 }
 
+L22_G3_C_WORD_PATHS = {
+    'Carla': [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4]],
+    'Cagayan': [[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6]],
+    'cactus': [[2, 2], [2, 3], [2, 4], [2, 5], [2, 6], [2, 7]],
+    'Cardo': [[3, 4], [3, 5], [3, 6], [3, 7], [3, 8]],
+    'computer': [[4, 0], [4, 1], [4, 2], [4, 3], [4, 4], [4, 5], [4, 6], [4, 7]],
+    'Celeste': [[5, 1], [5, 2], [5, 3], [5, 4], [5, 5], [5, 6], [5, 7]],
+    'cabinet': [[6, 2], [6, 3], [6, 4], [6, 5], [6, 6], [6, 7], [6, 8]],
+    'Cebu': [[7, 0], [7, 1], [7, 2], [7, 3]],
+    'camera': [[8, 3], [8, 4], [8, 5], [8, 6], [8, 7], [8, 8]],
+}
+
 
 def normalize_l22_g2_speech(value):
     """Normalize one STT result without changing the workbook word."""
@@ -249,6 +261,64 @@ def initial_l22_g2_state():
     }
 
 
+def initial_l22_g3_state():
+    return {'found_words': {}, 'last_feedback': '', 'completed': False, 'revision': 0}
+
+
+def normalize_l22_g3_state(state):
+    """Keep only legitimate Lesson 22 Gawain 3 word selections and colors."""
+    if not isinstance(state, dict):
+        state = initial_l22_g3_state()
+    found = state.get('found_words') if isinstance(state.get('found_words'), dict) else {}
+    clean = {}
+    for word, entry in found.items():
+        if word not in L22_G3_C_WORD_PATHS or not isinstance(entry, dict):
+            continue
+        color = str(entry.get('color') or '')
+        if not re.fullmatch(r'#[0-9a-fA-F]{6}', color):
+            continue
+        path = entry.get('path')
+        if path != L22_G3_C_WORD_PATHS[word]:
+            continue
+        clean[word] = {'path': L22_G3_C_WORD_PATHS[word], 'color': color}
+    state['found_words'] = clean
+    state['completed'] = bool(state.get('completed')) and len(clean) == len(L22_G3_C_WORD_PATHS)
+    if len(clean) == len(L22_G3_C_WORD_PATHS):
+        state['completed'] = True
+    state.setdefault('last_feedback', '')
+    state['revision'] = max(0, int(state.get('revision', 0) or 0))
+    return state
+
+
+def _apply_l22_g3_word_search(state, event):
+    normalize_l22_g3_state(state)
+    if event.get('action') == 'restart':
+        state.clear()
+        state.update(initial_l22_g3_state())
+        return state
+    if state['completed']:
+        return state
+    if event.get('action') != 'select_word':
+        raise ValueError('Unknown action.')
+    word = str(event.get('word') or '')
+    path = event.get('path')
+    color = str(event.get('color') or '')
+    if word not in L22_G3_C_WORD_PATHS or path != L22_G3_C_WORD_PATHS[word]:
+        state['last_feedback'] = 'Subukan muli.'
+        return state
+    if word in state['found_words']:
+        state['last_feedback'] = 'Nahanap mo na ang salitang ito.'
+        return state
+    if not re.fullmatch(r'#[0-9a-fA-F]{6}', color):
+        color = '#b6e6c3'
+    state['found_words'][word] = {'path': L22_G3_C_WORD_PATHS[word], 'color': color}
+    state['last_feedback'] = f'Tama! Nahanap mo ang {word}.'
+    if len(state['found_words']) == len(L22_G3_C_WORD_PATHS):
+        state['completed'] = True
+        state['last_feedback'] = 'Magaling! Nahanap mo ang lahat ng salita!'
+    return state
+
+
 def normalize_l22_g2_state(state):
     """Keep Gawain 2 progress contiguous and safe to resume after navigation."""
     if not isinstance(state, dict):
@@ -390,6 +460,8 @@ def apply_event(activity, state, event, verified_reading=None):
     """Advance only the current item's required phases; never trust client scores."""
     if activity['activity_key'] == 'aral-l22-g2-c-word-reading':
         return _apply_l22_g2_reading(state, event, verified_reading)
+    if activity['activity_key'] == 'aral-l22-g3-c-word-search':
+        return _apply_l22_g3_word_search(state, event)
     if activity['activity_key'] == 'aral-l22-g1-c-syllable-builder':
         normalize_l22_c_state(state)
         if state['completed']:
