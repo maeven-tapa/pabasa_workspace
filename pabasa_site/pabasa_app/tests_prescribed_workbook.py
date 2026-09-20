@@ -347,6 +347,22 @@ class PrescribedWorkbookFlowTests(TestCase):
         self.assertTrue(progress.state['completed'])
         self.assertEqual(progress.current_index, 1)
 
+    @patch('pabasa_app.views.synthesize_read_aloud_audio', return_value='encoded-audio')
+    def test_lesson_22_read_aloud_uses_prescribed_filipino_voice(self, synthesize):
+        self.session_student(self.student)
+        response = self.client.post(reverse('reading_read_aloud_api'), {
+            'target_text': 'Basahin ang naka-highlight na pantig.',
+            'language': 'Filipino',
+            'mode': 'reading',
+            'prescribed_activity_key': 'aral-l22-g1-c-syllable-builder',
+        })
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()['tts_language'], 'fil-PH')
+        self.assertEqual(response.json()['voice_name'], 'fil-PH-Wavenet-A')
+        self.assertEqual(synthesize.call_args.args[2], 'fil-PH')
+        self.assertEqual(synthesize.call_args.kwargs['voice_gender'], 'FEMALE')
+
     def test_workbook_progress_returns_json_for_an_expired_student_session(self):
         key = 'aral-l22-g1-c-syllable-builder'
         self.client.session.flush()
