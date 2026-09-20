@@ -47,3 +47,4 @@ html body .page .stage{top:calc(50% + 24px);left:50%;right:auto;bottom:auto;widt
 html body .button.is-busy{animation:lesson27ButtonPulse 1.15s ease-in-out infinite}
 html body .button.is-busy:disabled{background:#b5c5c7!important;color:#edf3f4!important;border-color:transparent!important;box-shadow:none!important;opacity:1!important;cursor:not-allowed}
 @keyframes lesson27ButtonPulse{0%,100%{transform:scale(1);box-shadow:0 8px 0 var(--dark),0 12px 24px #187b7a40}50%{transform:scale(1.025);box-shadow:0 0 0 9px #f5d47c55,0 8px 0 var(--dark),0 15px 28px #187b7a55}}
+html body .trace-count{display:none!important}

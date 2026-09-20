@@ -34,3 +34,4 @@ html body .start:hover{background:#38b0aa}
 html body .later:hover{background:#f4fffe}
 @keyframes lesson31Activity2Pulse{0%,100%{transform:scale(1);box-shadow:0 7px 0 #187b7a,0 12px 24px #187b7a40}50%{transform:scale(1.025);box-shadow:0 0 0 9px #f5d47c55,0 7px 0 #187b7a,0 15px 28px #187b7a55}}
 @media(max-width:680px){html body .page{width:min(100% - 24px,680px);padding:12px}html body .page .back{top:12px;left:0;width:245px;min-height:58px}html body .page .stage{top:calc(50% + 12px);max-height:calc(100dvh - 24px);padding:18px 14px 14px;border-radius:30px}html body .sentence{padding:14px 10px;font-size:1.35rem}html body .button{width:100%;min-width:0;min-height:64px}html body .choice{min-width:40%;min-height:64px;padding:10px 14px}html body .step{width:34px;height:34px}}
+html body .status{display:none!important}
