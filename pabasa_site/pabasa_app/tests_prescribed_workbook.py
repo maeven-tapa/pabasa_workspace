@@ -9,7 +9,7 @@ from django.urls import reverse
 
 from .models import Material, School, Section, StudentActivityProgress, User
 from .prescribed_activity_catalog import PRESCRIBED_ACTIVITIES, active_prescribed_activities
-from .prescribed_workbook import ACTIVITIES, apply_event, get_activity, initial_state, search_paths
+from .prescribed_workbook import ACTIVITIES, apply_event, get_activity, initial_state, normalize_l22_c_state, search_paths
 
 
 class WorkbookStateTests(SimpleTestCase):
@@ -118,6 +118,33 @@ class WorkbookStateTests(SimpleTestCase):
             apply_event(a, s, {'action': 'reading_syllable_attempt'}, True)
         self.assertEqual(s['index'], len(a['items']))
         self.assertTrue(s['read_aloud_completed'])
+
+    def test_lesson22_gawain1_restores_partial_reading_at_the_next_unread_syllable(self):
+        a = get_activity('aral-l22-g1-c-syllable-builder')
+        s = initial_state()
+        apply_event(a, s, {'action': 'reading_started'})
+        for _ in range(4):
+            apply_event(a, s, {'action': 'reading_syllable_attempt'}, True)
+        apply_event(a, s, {'action': 'reading_syllable_attempt'}, False)
+        self.assertEqual(s['index'], 4)
+        self.assertFalse(s['read_aloud_completed'])
+        self.assertEqual(s['reading_phase'], 'read')
+        restored = normalize_l22_c_state(dict(s))
+        self.assertEqual(restored['index'], 4)
+        self.assertFalse(restored['read_aloud_completed'])
+        self.assertFalse(restored['found_words'])
+
+    def test_lesson22_gawain1_completion_unlocks_word_building_without_resetting_reading(self):
+        a = get_activity('aral-l22-g1-c-syllable-builder')
+        s = initial_state()
+        apply_event(a, s, {'action': 'reading_started'})
+        for _ in a['items']:
+            apply_event(a, s, {'action': 'reading_syllable_attempt'}, True)
+        self.assertEqual(s['index'], len(a['items']))
+        self.assertTrue(s['read_aloud_completed'])
+        apply_event(a, s, {'action': 'build_word', 'parts': ['item-1', 'item-8']})
+        self.assertEqual(s['found_words'], ['cactus'])
+        self.assertEqual(s['index'], len(a['items']))
 
     def test_lesson22_gawain1_migrates_legacy_co_m_selection_to_com(self):
         a = get_activity('aral-l22-g1-c-syllable-builder')
