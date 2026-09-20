@@ -149,6 +149,43 @@
       new MutationObserver(arrange).observe(game,{childList:true,subtree:true});
     });
   </script>
+<style>
+  @font-face{font-family:Lesson3Fredoka;src:url("{% static 'pabasa_app/font/fredoka-one.one-regular.ttf' %}") format('truetype');font-display:swap}
+  .gawain-2{min-height:100dvh;height:100dvh;padding:16px clamp(16px,4vw,42px) 22px;overflow:hidden;background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover fixed!important;color:#183e63;font-family:Lesson3Fredoka,Nunito,"Segoe UI",sans-serif}
+  .gawain-2::before{background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover fixed;filter:none;transform:none}
+  .gawain-2 .app{height:100dvh;padding:0;display:block;position:relative}
+  .gawain-2 .nav{position:absolute;top:0;left:0;z-index:3;width:min(1250px,100%);margin:0 auto}
+  .gawain-2 .back{display:inline-flex;align-items:center;justify-content:center;width:280px;min-height:64px;padding:11px 22px;border:0;border-radius:999px;background:#fffffff0;color:#183e63;font:900 1.12rem/1.15 Lesson3Fredoka,Nunito,"Segoe UI",sans-serif;text-align:center;text-decoration:none;box-shadow:0 8px 17px #145ca744;transition:transform .16s,background .16s}
+  .gawain-2 .back:hover{background:#fff;transform:translateY(-1px)}
+  .gawain-2 #game.game,.gawain-2 #game.game:has(#listen){position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:stretch;width:min(1250px,calc(100vw - 32px))!important;height:calc(100dvh - 110px)!important;max-height:calc(100dvh - 110px)!important;min-height:0;margin:31px 0 0;padding:clamp(24px,3.3vh,42px) clamp(20px,6vw,80px) 20px;border:2px solid #ffffffaa;border-radius:42px;background:#ffffff63!important;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 18px 45px #1e5b7a35;overflow:hidden}
+  .gawain-2 .header{width:min(980px,100%);margin:0 auto;align-items:center;padding:8px 12px;border:0;border-radius:18px;background:rgba(255,253,244,.82);box-shadow:0 8px 18px rgba(37,28,22,.12)}
+  .gawain-2 .brand h1{margin:0;color:#176078;font-family:Lesson3Fredoka,Nunito,"Segoe UI",sans-serif;font-size:clamp(1.45rem,3vw,2rem);font-weight:400;line-height:1}
+  .gawain-2 .brand p{margin:4px 0;color:#65777b;font:800 .8rem Nunito,"Segoe UI",sans-serif}.gawain-2 .progress{color:#526e75;font:900 .82rem Nunito,"Segoe UI",sans-serif}
+  .gawain-2 .instruction{width:min(760px,100%);margin:18px auto 14px;padding:12px 18px;border:1px solid #dbe5e8;border-radius:16px;background:#fffffff0;box-shadow:0 6px 14px #251c2218;color:#315b74;font:800 1rem/1.35 Nunito,"Segoe UI",sans-serif;text-align:center}
+  .gawain-2 .pairs{width:min(760px,100%);max-width:none;min-height:0;gap:14px;margin:auto}.gawain-2 .pairs .word,.gawain-2 .pairs .word:nth-child(2){width:100%;height:clamp(150px,25vh,220px);min-height:0;padding:12px;border:3px solid #94d9d6;border-radius:22px;background:#fffdf5;box-shadow:0 10px 20px #187b7a18;transform:none}.gawain-2 .pairs .word.active{background:#ffe9a7;border:5px solid #e6a33a;box-shadow:0 0 0 4px #fff4c7,0 12px 22px #0001}.gawain-2 .pairs .word img{height:clamp(80px,15vh,125px);max-width:80%;object-fit:contain}
+  .gawain-2 .status{margin:10px auto 8px;color:#302a32;font:900 1rem Nunito,"Segoe UI",sans-serif}.gawain-2 .lesson3-g2-actions{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:stretch!important;justify-content:center!important;gap:14px!important;grid-column:1/-1!important;width:min(760px,100%)!important;margin:0 auto!important}.gawain-2 .lesson3-g2-actions>#read,.gawain-2 .lesson3-g2-actions>#listen{flex:1 1 0!important;width:auto!important;min-width:0!important;margin:0!important}
+  .gawain-2 .read,.gawain-2 .listen{min-height:68px;border-radius:999px;font:900 clamp(1rem,1.8vw,1.35rem) Nunito,"Segoe UI",sans-serif;transition:.16s}.gawain-2 .read{background:#299e9a;box-shadow:0 7px 0 #187b7a,0 10px 20px #187b7a40}.gawain-2 .listen{background:#fffffff0;color:#187b7a;border:3px solid #94d9d6;box-shadow:0 5px 0 #b7d6dc,0 8px 16px #187b7a20}
+  .gawain-2 #game.game:has(.answers) .answers{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;width:min(760px,100%);margin:10px auto 0!important;gap:14px!important}.gawain-2 #game.game:has(.answers) .answer{width:100%;min-width:0!important;min-height:70px!important;padding:12px 16px;border:3px solid #94d9d6;border-radius:999px;background:#299e9a;color:#fff;box-shadow:0 7px 0 #187b7a,0 10px 20px #187b7a40;font:900 clamp(.95rem,1.8vw,1.2rem)/1.1 Nunito,"Segoe UI",sans-serif}.gawain-2 #game.game:has(.answers) .answer[data-v="no"]{border-color:#d98b8b;background:#d97878;box-shadow:0 7px 0 #a95757,0 10px 20px #a9575740}.gawain-2 #game.game:has(.answers) .answer small{font:inherit;letter-spacing:.01em}
+  @media(max-width:650px){.gawain-2{padding:12px}.gawain-2 .back{width:230px;min-height:58px;font-size:1rem}.gawain-2 #game.game,.gawain-2 #game.game:has(#listen){width:100%;height:calc(100dvh - 92px);padding:22px 14px 16px;border-radius:30px}.gawain-2 .pairs{gap:12px}.gawain-2 .pairs .word,.gawain-2 .pairs .word:nth-child(2){height:170px}.gawain-2 .pairs .word img{height:100px}.gawain-2 .lesson3-g2-actions{gap:10px!important}.gawain-2 .lesson3-g2-actions>#read,.gawain-2 .lesson3-g2-actions>#listen{min-height:64px!important;padding:12px 8px!important;font-size:1rem!important}.gawain-2 #game.game:has(.answers) .answers{gap:10px!important}.gawain-2 #game.game:has(.answers) .answer{min-height:62px!important;padding:10px 6px;font-size:clamp(.72rem,3.2vw,.95rem)}}
+</style>
+<style>
+  /* Final visual polish: keep the activity's type and card language consistent. */
+  .gawain-2 #game.game{font-family:Lesson3Fredoka,Nunito,"Segoe UI",sans-serif}
+  .gawain-2 .brand h1,.gawain-2 .brand p,.gawain-2 .progress,.gawain-2 .instruction,.gawain-2 .status,.gawain-2 .read,.gawain-2 .listen,.gawain-2 .answer{font-family:inherit}
+  .gawain-2 .brand h1{font-size:clamp(1.55rem,3vw,2.15rem);letter-spacing:.01em}
+  .gawain-2 .brand p{font-size:.82rem;letter-spacing:.01em}
+  .gawain-2 .progress{font-size:.86rem;letter-spacing:.01em}
+  .gawain-2 .instruction{font-size:clamp(.95rem,1.45vw,1.08rem);line-height:1.3;letter-spacing:.005em}
+  .gawain-2 .pairs{gap:18px}
+  .gawain-2 .pairs .word,.gawain-2 .pairs .word:nth-child(2){height:clamp(165px,26vh,230px);padding:14px;border:4px solid #94d9d6;border-radius:28px;background:#fffffff2;box-shadow:0 10px 22px rgba(24,123,122,.14)}
+  .gawain-2 .pairs .word img{height:clamp(92px,16vh,138px);max-width:72%}
+  .gawain-2 .pairs .word.active{border-width:5px;border-color:#e6a33a;background:#ffe9a7;box-shadow:0 0 0 4px #fff4c7,0 12px 24px rgba(230,163,58,.28)}
+  .gawain-2 .status{font-size:1rem;letter-spacing:.005em}
+  .gawain-2 .read,.gawain-2 .listen{min-height:72px;font-size:clamp(1rem,1.65vw,1.25rem);letter-spacing:.005em}
+  .gawain-2 #game.game:has(.answers) .answer{font-size:clamp(.98rem,1.7vw,1.2rem);letter-spacing:.005em}
+  @media(min-width:651px){.gawain-2 #game.game,.gawain-2 #game.game:has(#listen){height:calc(100dvh - 145px)!important;max-height:calc(100dvh - 145px)!important;margin-top:0!important}}
+  @media(max-width:650px){.gawain-2 .pairs{gap:12px}.gawain-2 .pairs .word,.gawain-2 .pairs .word:nth-child(2){height:170px;border-radius:22px}.gawain-2 .pairs .word img{height:100px}.gawain-2 .read,.gawain-2 .listen{min-height:64px;font-size:1rem}}
+</style>
 </body>
 </html>
 <!-- duplicate legacy Gawain 2 handlers intentionally disabled; the shared activity script above owns the flow.
