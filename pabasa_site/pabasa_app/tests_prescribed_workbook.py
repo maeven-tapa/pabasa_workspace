@@ -457,6 +457,18 @@ class PrescribedWorkbookFlowTests(TestCase):
         reopened = self.client.get(page_url)
         self.assertEqual(reopened.context['workbook_payload']['state']['found_words']['Cebu']['color'], '#f2c94c')
 
+    def test_lesson22_gawain3_uses_single_replayable_filipino_audio_feedback_path(self):
+        source = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_l22_g3_word_search.js').read_text(encoding='utf-8')
+        template = (Path(__file__).parent / 'templates/pabasa_app/prescribed_l22_g3_word_search_page.html').read_text(encoding='utf-8')
+        self.assertIn("const instruction = 'Hanapin at kulayan ng paboritong kulay ang sumusunod na salita sa ibaba.'", source)
+        self.assertIn('setTimeout(() => playInstruction({automatic:true}), 0)', source)
+        self.assertIn("result.tts_language !== 'fil-PH' || result.voice_name !== 'fil-PH-Wavenet-A'", source)
+        self.assertIn('function speakFeedback(message)', source)
+        self.assertIn("Pakinggan Muli ang Panuto", source)
+        self.assertIn('finish?.()', source)
+        self.assertNotIn('speechSynthesis', source)
+        self.assertIn('font-size:clamp(1rem,2.2vw,1.35rem)', template)
+
     def test_lesson22_syllable_attempt_sends_whole_word_context_to_english_stt(self):
         key = 'aral-l22-g1-c-syllable-builder'
         progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
