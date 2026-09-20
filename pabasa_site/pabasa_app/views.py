@@ -16115,8 +16115,14 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             result = json.loads(response.content)
             if response.status_code != 200 or not result.get('success'):
                 return response
+            if activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
+                event = dict(event)
+                event['transcript'] = str(result.get('transcript') or result.get('raw_transcript') or '').strip()
             if activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_attempt':
                 verified = bool(str(result.get('transcript') or result.get('raw_transcript') or '').strip())
+            elif activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
+                transcript = str(result.get('transcript') or result.get('raw_transcript') or '').strip()
+                verified = None if not transcript else bool(result.get('complete'))
             else:
                 verified = bool(result.get('complete'))
 

@@ -218,10 +218,15 @@ def normalize_l22_c_state(state):
                 if word and word.casefold() not in {str(existing).casefold() for existing in state['found_words']}:
                     state['found_words'].append(word)
     state.setdefault('last_feedback', '')
+    state.setdefault('last_transcript', '')
     state.setdefault('pending_words', [])
     state.setdefault('reading_attempts', 0)
     state.setdefault('read_aloud_listens', 0)
     state.setdefault('reading_phase', 'complete' if state.get('read_aloud_completed') else 'read')
+    state.setdefault('pronunciation_help_played', False)
+    if state.get('reading_phase') == 'listen':
+        state['reading_phase'] = 'help'
+        state['pronunciation_help_played'] = bool(state.get('read_aloud_listens'))
     if isinstance(state.get('draft'), dict) and isinstance(state['draft'].get('builder'), list):
         state['draft']['builder'] = _normalize_l22_c_parts(state['draft']['builder'])
     if state.get('read_aloud_completed'):
@@ -369,6 +374,7 @@ def _apply_l22_c_builder(state, event, verified_reading):
             raise ValueError('Natapos na ang pagbasa.')
         state['read_aloud_started'] = True
         state['reading_phase'] = 'read'
+        state['last_transcript'] = ''
         return state
     if action == 'reading_attempt':
         # Keep the pre-specialized event compatible with saved/test clients.
@@ -385,7 +391,11 @@ def _apply_l22_c_builder(state, event, verified_reading):
         if not state['read_aloud_started']:
             raise ValueError('Simulan muna ang pagbasa.')
         if state.get('reading_phase') != 'read':
-            raise ValueError('Pakinggan muna ang halimbawa.')
+            raise ValueError('Pakinggan muna ang tamang pagbigkas o pindutin ang Subukan Muli.')
+        state['last_transcript'] = str(event.get('transcript') or '').strip()
+        if verified_reading is None:
+            state['last_feedback'] = 'Hindi ko malinaw na narinig. Subukan muli.'
+            return state
         if verified_reading is True:
             item_count = len(ACTIVITIES['aral-l22-g1-c-syllable-builder']['items'])
             state['index'] = min(item_count, int(state.get('index', 0)) + 1)
@@ -398,17 +408,23 @@ def _apply_l22_c_builder(state, event, verified_reading):
             state['reading_attempts'] = int(state.get('reading_attempts', 0)) + 1
             state['last_feedback'] = 'Subukan muli.'
             if state['reading_attempts'] >= 3:
-                state['reading_phase'] = 'listen'
-                state['read_aloud_listens'] = 0
+                state['reading_phase'] = 'help'
+                state['pronunciation_help_played'] = False
         return state
     if action == 'read_aloud':
-        if state.get('reading_phase') != 'listen':
-            raise ValueError('Hindi pa kailangan ang Read Aloud.')
-        state['read_aloud_listens'] = int(state.get('read_aloud_listens', 0)) + 1
+        if state.get('reading_phase') != 'help':
+            raise ValueError('Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.')
+        state['pronunciation_help_played'] = True
         state['last_feedback'] = ''
-        if state['read_aloud_listens'] >= 3:
-            state['reading_phase'] = 'read'
-            state['reading_attempts'] = 0
+        return state
+    if action == 'retry_reading':
+        if state.get('reading_phase') != 'help' or not state.get('pronunciation_help_played'):
+            raise ValueError('Pakinggan muna ang tamang pagbigkas.')
+        state['reading_phase'] = 'read'
+        state['reading_attempts'] = 0
+        state['pronunciation_help_played'] = False
+        state['last_transcript'] = ''
+        state['last_feedback'] = ''
         return state
     if action == 'build_word':
         if not state['read_aloud_completed']:

@@ -97,7 +97,11 @@
     builder=state.draft.builder||[];
     content.className='wb-l22-builder';
     const current=Math.min(Number(state.index||0),a.items.length-1), phase=state.reading_phase||'read';
-    content.innerHTML=`<div class="wb-l22-banner"><span class="wb-speaker-icon" aria-hidden="true">🔊</span><strong>Basahin ang naka-highlight na pantig.</strong></div><section class="wb-bigbox"><h2>BIG BOX</h2><p class="wb-box-help">Sundan ang dilaw na highlight.</p><div class="wb-bigbox-grid">${boxCells.map(row=>`<div class="wb-bigbox-row">${row.map(()=>'<div class="wb-bigbox-cell"></div>').join('')}</div>`).join('')}</div></section><section class="wb-reading-panel"><h2>BASAHIN</h2><div class="wb-mic-illustration" aria-hidden="true"><span class="wb-mic-symbol">●</span><i></i><b></b></div><p class="wb-phase-status" role="status">${readDone?'Magaling!':phase==='listen'?'Pakinggan muna.':state.last_feedback==='Tama!'?'Tama!':'Handa ka na?'}</p><div id="wb-l22-reading-action"></div><p class="wb-reading-tip"><span aria-hidden="true">💡</span><span> pindutin ang button kapag handa ka nang magbasa.</span></p></section><section class="wb-word-panel ${readDone?'':'is-locked'}" aria-disabled="${!readDone}"><h2>BUMUO NG SALITA</h2>${readDone?`<p>Piliin ang mga pantig sa Big Box.</p><div class="wb-selected-parts" id="wb-selected-parts" aria-live="polite"></div><div class="wb-tools"><button type="button" id="wb-erase">Bura</button><button type="button" id="wb-retry">Ulitin</button></div><p class="wb-builder-feedback" aria-live="polite">${esc(state.last_feedback||'')}</p>${state.found_words?.length?`<div class="wb-builder-words"><strong>Nabuo mo na:</strong><ul>${state.found_words.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`:''}`:'<p class="wb-locked-note"><span class="wb-lock-icon" aria-hidden="true">🔒</span><span>Basahin muna ang lahat ng pantig.</span></p>'}</section>`;
+    content.innerHTML=`<div class="wb-l22-banner"><span class="wb-speaker-icon" aria-hidden="true">🔊</span><strong>Basahin ang naka-highlight na pantig.</strong></div><section class="wb-bigbox"><h2>BIG BOX</h2><p class="wb-box-help">Sundan ang dilaw na highlight.</p><div class="wb-bigbox-grid">${boxCells.map(row=>`<div class="wb-bigbox-row">${row.map(()=>'<div class="wb-bigbox-cell"></div>').join('')}</div>`).join('')}</div></section><section class="wb-reading-panel"><h2>BASAHIN</h2><div class="wb-mic-illustration" aria-hidden="true"><span class="wb-mic-symbol">●</span><i></i><b></b></div><p class="wb-phase-status" role="status">${readDone?'Magaling!':state.last_feedback==='Tama!'?'Tama!':'Handa ka na?'}</p><div id="wb-l22-reading-action"></div><p class="wb-reading-tip"><span aria-hidden="true">💡</span><span> pindutin ang button kapag handa ka nang magbasa.</span></p></section><section class="wb-word-panel ${readDone?'':'is-locked'}" aria-disabled="${!readDone}"><h2>BUMUO NG SALITA</h2>${readDone?`<p>Piliin ang mga pantig sa Big Box.</p><div class="wb-selected-parts" id="wb-selected-parts" aria-live="polite"></div><div class="wb-tools"><button type="button" id="wb-erase">Bura</button><button type="button" id="wb-retry">Ulitin</button></div><p class="wb-builder-feedback" aria-live="polite">${esc(state.last_feedback||'')}</p>${state.found_words?.length?`<div class="wb-builder-words"><strong>Nabuo mo na:</strong><ul>${state.found_words.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`:''}`:'<p class="wb-locked-note"><span class="wb-lock-icon" aria-hidden="true">🔒</span><span>Basahin muna ang lahat ng pantig.</span></p>'}</section>`;
+    const readingPanel=content.querySelector('.wb-reading-panel');
+    const phaseStatus=readingPanel.querySelector('.wb-phase-status');
+    phaseStatus.textContent=readDone?'Magaling! Nabasa mo nang tama ang lahat ng pantig.':state.last_feedback||'Handa ka na?';
+    phaseStatus.insertAdjacentHTML('beforebegin',`<p class="wb-reading-target-label">Pantig na babasahin</p><strong class="wb-reading-target">${esc(readDone?'Natapos na ang pagbasa.':a.items[current]?.text||'')}</strong><p class="wb-reading-attempts">Pagsubok: ${readDone?0:Number(state.reading_attempts||0)} / 3</p><div class="wb-transcript" aria-live="polite"><span>NARINIG KO</span><strong>${esc(state.last_transcript||'Hindi ko malinaw na narinig.')}</strong></div>`);
     const itemById=Object.fromEntries(a.items.map(i=>[i.id,i]));
     content.querySelectorAll('.wb-bigbox-row').forEach((row,rowIndex)=>{
       row.querySelectorAll('.wb-bigbox-cell').forEach((cell,cellIndex)=>{
@@ -118,9 +122,9 @@
       button('Susunod',()=>{if(data.next_url)location.href=data.next_url;}).disabled=true;
     }else if(!preview){
       const readingButton=(text,fn)=>{const b=button(text,fn,true),target=document.getElementById('wb-l22-reading-action');if(target)target.appendChild(b);return b;};
-      if(!state.read_aloud_started)readingButton('Basahin Ko',startCReading);
-      else if(phase==='listen')readingButton(`Read Aloud (${state.read_aloud_listens||0}/3)`,readAloudC);
-      else readingButton(state.reading_attempts?'Basahin Ko muli':'Basahin Ko',startCReading);
+      if(phase==='help'&&!state.pronunciation_help_played)readingButton('Pakinggan ang Tamang Pagbigkas',readAloudC);
+      else if(phase==='help'&&state.pronunciation_help_played)readingButton('Subukan Muli',retryCReading);
+      else readingButton(state.read_aloud_started?'Basahin Muli':'Simulan ang Pagbasa',startCReading);
     }
   }
   async function startCReading(){
@@ -146,6 +150,12 @@
       render();
       message(micError?'Hindi magamit ang mikropono. Subukan muli.':(error?.message||'Hindi nakuha ang iyong boses. Subukan muli.'),true);
     }finally{clearTimeout(readTimer);busy=false;lock();}
+  }
+  async function retryCReading(){
+    if(busy)return;busy=true;lock();
+    try{await send({action:'retry_reading'},null,false);render();message('Handa ka na?');}
+    catch(e){render();message(e.message||'Hindi maihanda ang pagbasa. Subukan muli.',true);}
+    finally{busy=false;lock();}
   }
   async function readAloudC(){
     if(busy)return;busy=true;lock();const current=Math.min(Number(state.index||0),a.items.length-1);

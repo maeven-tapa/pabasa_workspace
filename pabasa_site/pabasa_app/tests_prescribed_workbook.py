@@ -146,6 +146,29 @@ class WorkbookStateTests(SimpleTestCase):
         self.assertEqual(s['found_words'], ['cactus'])
         self.assertEqual(s['index'], len(a['items']))
 
+    def test_lesson22_gawain1_uses_three_real_mistakes_before_pronunciation_help(self):
+        a = get_activity('aral-l22-g1-c-syllable-builder')
+        s = initial_state()
+        apply_event(a, s, {'action': 'reading_started'})
+        apply_event(a, s, {'action': 'reading_syllable_attempt', 'transcript': ''}, None)
+        self.assertEqual(s['reading_attempts'], 0)
+        self.assertEqual(s['index'], 0)
+        for attempt in range(1, 4):
+            apply_event(a, s, {'action': 'reading_syllable_attempt', 'transcript': 'wrong'}, False)
+            self.assertEqual(s['reading_attempts'], attempt)
+            self.assertEqual(s['index'], 0)
+        self.assertEqual(s['reading_phase'], 'help')
+        self.assertFalse(s['read_aloud_completed'])
+        apply_event(a, s, {'action': 'read_aloud'})
+        self.assertTrue(s['pronunciation_help_played'])
+        self.assertEqual(s['index'], 0)
+        apply_event(a, s, {'action': 'retry_reading'})
+        self.assertEqual(s['reading_attempts'], 0)
+        self.assertEqual(s['reading_phase'], 'read')
+        apply_event(a, s, {'action': 'reading_syllable_attempt', 'transcript': 'cac'}, True)
+        self.assertEqual(s['index'], 1)
+        self.assertEqual(s['reading_attempts'], 0)
+
     def test_lesson22_gawain1_migrates_legacy_co_m_selection_to_com(self):
         a = get_activity('aral-l22-g1-c-syllable-builder')
         legacy = {
@@ -287,6 +310,19 @@ class PrescribedWorkbookFlowTests(TestCase):
         state = response.json()['state']
         self.assertEqual(state['index'], 1)
         self.assertEqual(state['last_feedback'], 'Subukan muli.')
+        with patch('pabasa_app.views.reading_transcribe_api', return_value=JsonResponse({
+            'success': True, 'transcript': '', 'complete': False,
+        })):
+            response = self.client.post(progress_url, {
+                'action': 'reading_syllable_attempt', 'revision': state['revision'],
+                'audio': SimpleUploadedFile('reading.webm', b'audio', content_type='audio/webm'),
+            })
+        self.assertEqual(response.status_code, 200, response.content)
+        state = response.json()['state']
+        self.assertEqual(state['index'], 1)
+        self.assertEqual(state['reading_attempts'], 1)
+        self.assertEqual(state['last_transcript'], '')
+        self.assertEqual(state['last_feedback'], 'Hindi ko malinaw na narinig. Subukan muli.')
         with patch('pabasa_app.views.reading_transcribe_api', return_value=JsonResponse({
             'success': True, 'transcript': 'cac ce ca', 'complete': False,
         })) as speech:
