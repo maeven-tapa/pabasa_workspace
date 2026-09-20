@@ -38,6 +38,12 @@ class PrescribedWorkbookDataTests(unittest.TestCase):
                     apply_event(a,s,{'action':'finish'})
                     self.assertTrue(s['completed'])
                     continue
+                if a['activity_key']=='aral-l22-g2-c-word-reading':
+                    for word in a['items']:
+                        apply_event(a, s, {'action': 'reading_started'})
+                        apply_event(a, s, {'action': 'reading_attempt', 'transcript': word['text']}, True)
+                    self.assertTrue(s['completed'])
+                    continue
                 for i,item in enumerate(a['items']):
                     if a.get('model_first'):
                         with self.assertRaises(ValueError):apply_event(a,s,{'action':'reading'},True)
