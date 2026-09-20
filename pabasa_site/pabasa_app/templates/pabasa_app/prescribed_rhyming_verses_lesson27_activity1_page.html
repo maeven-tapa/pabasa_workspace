@@ -36,12 +36,18 @@
     html body .lesson27-step{width:36px;height:36px}
     @media(max-width:800px){html body .page{width:min(100% - 24px,680px);padding:12px}html body .page .back{top:12px;left:0;width:245px;min-height:58px}html body .page .lesson27-stage{top:116px;bottom:12px;padding:22px 14px 16px;border-radius:30px}html body .lesson27-verse{min-height:60px;padding:10px 12px}}
   </style>
+  <style>
+    .lesson27-button.is-busy{animation:lesson27ButtonPulse 1.15s ease-in-out infinite}
+    @keyframes lesson27ButtonPulse{0%,100%{transform:scale(1);box-shadow:0 8px 0 var(--teal-dark),0 12px 24px #187b7a40}50%{transform:scale(1.025);box-shadow:0 0 0 9px #f5d47c55,0 8px 0 var(--teal-dark),0 15px 28px #187b7a55}}
+  </style>
+<link rel="stylesheet" href="{% static 'pabasa_app/css/lesson_button_animation.css' %}?v=1">
+<style>html body .page .lesson27-stage{top:calc(50% + 24px);bottom:auto;height:auto;max-height:calc(100dvh - 32px);padding:20px 48px 16px;transform:translate(-50%,-50%)}html body .lesson27-instruction{margin-top:12px}html body .lesson27-content{margin-top:14px}html body .lesson27-poem-title{margin-bottom:10px}html body .lesson27-prompt{margin:12px 0 6px}html body .lesson27-progress{margin-top:14px}@media(max-width:800px){html body .page .lesson27-stage{top:calc(50% + 12px);bottom:auto;max-height:calc(100dvh - 24px);padding:18px 14px 14px;transform:translate(-50%,-50%)}}</style>
 </head>
 <body>
   <main class="page"><a class="back" id="lesson27-back" href="{% url 'assessment' %}"><span aria-hidden="true">←</span><span>Back to My Lessons</span></a><section class="lesson27-stage is-waiting" id="lesson27-stage"><div id="app" aria-live="polite"></div></section></main>
   <div class="lesson27-start-backdrop" id="lesson27-start" role="dialog" aria-modal="true" aria-labelledby="lesson27-start-title"><div class="lesson27-start-modal"><p class="lesson27-start-label">SESSION 11 · LESSON 27 · ACTIVITY 1</p><h2 class="lesson27-start-title" id="lesson27-start-title">RHYMING VERSES</h2><p class="lesson27-start-description">Read each verse, then select the words that rhyme with “at.”</p><div class="lesson27-start-actions"><button class="lesson27-start-button" id="lesson27-start-button" type="button">START</button><button class="lesson27-later-button" id="lesson27-later-button" type="button">NOT NOW</button></div></div></div>
   {{ prescribed_activity_data|json_script:"prescribed-activity-data" }}
-  <script src="{% static 'pabasa_app/js/prescribed_rhyming_verses_lesson27_activity1.js' %}?v=lesson27-ui-14" defer></script>
+  <script src="{% static 'pabasa_app/js/prescribed_rhyming_verses_lesson27_activity1.js' %}?v=lesson27-ui-17" defer></script>
   <script>(()=>{const modal=document.getElementById('lesson27-start'),stage=document.getElementById('lesson27-stage'),start=document.getElementById('lesson27-start-button');start.addEventListener('click',()=>{modal.hidden=true;stage.classList.remove('is-waiting')});start.focus()})();</script>
 </body>
 </html>

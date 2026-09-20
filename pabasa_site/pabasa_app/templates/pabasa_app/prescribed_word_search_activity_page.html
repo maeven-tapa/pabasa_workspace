@@ -5,7 +5,7 @@
   <title>Word Search | PABASA</title>
   <style>
     @font-face{font-family:Lesson26Fredoka;src:url("{% static 'pabasa_app/images/lesson_26/lesson26-fredoka.ttf' %}") format('truetype');font-display:swap}
-    :root{--ink:#183e63;--blue:#197b99;--muted:#55768b;--line:#94d9d6;--gold:#efb947;--good:#24889a;--bad:#b33b43;--teal:#299e9a;--teal-dark:#187b7a}
+    :root{--ink:#183e63;--blue:#197b99;--muted:#55768b;--line:#94d9d6;--gold:#efb947;--good:#24889a;--bad:#b33b43;--teal:#299e9a;--teal-dark:#187b7a;--dark:#187b7a}
     *{box-sizing:border-box}html,body{height:100%;overflow:hidden}body{margin:0;min-height:100dvh;background:#49b8e0 url("{% static 'pabasa_app/images/lesson_26/lesson26-ui-background.jpg' %}") center/cover fixed no-repeat;color:var(--ink);font-family:Lesson26Fredoka,Nunito,"Segoe UI",sans-serif}
     .page{width:min(1250px,calc(100% - 36px));height:100dvh;min-height:0;margin:auto;padding:16px 0 18px;display:flex;flex-direction:column;overflow:visible}
     .back{align-self:flex-start;display:flex;align-items:center;justify-content:center;gap:12px;width:280px;min-height:64px;padding:10px 22px;border-radius:999px;background:#fff;color:var(--ink);font-size:1.15rem;line-height:1.1;text-align:center;text-decoration:none;box-shadow:0 8px 17px #145ca744;transition:.16s}.back:hover{transform:translateY(-2px);box-shadow:0 10px 22px #145ca755}.back:active{transform:translateY(2px);box-shadow:0 3px 8px #145ca744}.back:focus-visible,.button:focus-visible{outline:4px solid #f5d47c;outline-offset:4px}
@@ -22,12 +22,16 @@
   <style>
     .back:focus-visible,.button:focus-visible,.lesson26-start-actions button:focus-visible{outline:3px solid #94d9d6;outline-offset:3px}
   </style>
+  <style>
+    .button.is-busy{animation:l30ButtonPulse 1.15s ease-in-out infinite}
+    @keyframes l30ButtonPulse{0%,100%{transform:scale(1);box-shadow:0 7px 0 var(--dark),0 12px 24px #187b7a40}50%{transform:scale(1.025);box-shadow:0 0 0 9px #f5d47c55,0 7px 0 var(--dark),0 15px 28px #187b7a55}}
+  </style>
 </head>
 <body>
   <main class="page"><a class="back" id="lesson26-back" href="{% url 'assessment' %}"><span aria-hidden="true">←</span><span>Back to My Lessons</span></a><section class="lesson26-stage is-waiting" id="lesson26-stage"><div id="app" aria-live="polite"></div></section></main>
   <div class="lesson26-start-backdrop" id="lesson26-start" role="dialog" aria-modal="true" aria-labelledby="lesson26-start-title"><div class="lesson26-start-modal"><p class="lesson26-start-label">SESSION 10 · LESSON 26 · ACTIVITY 1</p><h2 class="lesson26-start-title" id="lesson26-start-title">WORD SEARCH</h2><p class="lesson26-start-description">Find the words on the grid.</p><div class="lesson26-start-actions"><button class="lesson26-start-button" id="lesson26-start-button" type="button">START</button><button class="lesson26-later-button" id="lesson26-later-button" type="button">NOT NOW</button></div></div></div>
   {{ prescribed_activity_data|json_script:"prescribed-activity-data" }}
-  <script src="{% static 'pabasa_app/js/prescribed_word_search.js' %}?v=lesson26-ui-4" defer></script>
+  <script src="{% static 'pabasa_app/js/prescribed_word_search.js' %}?v=lesson26-ui-8" defer></script>
   <script>(()=>{const modal=document.getElementById('lesson26-start'),stage=document.getElementById('lesson26-stage'),start=document.getElementById('lesson26-start-button');start.addEventListener('click',()=>{modal.hidden=true;stage.classList.remove('is-waiting')});start.focus()})();</script>
 </body>
 </html>

@@ -5,7 +5,7 @@
   if (!node || !app) return;
   const refinement = document.createElement('link');
   refinement.rel = 'stylesheet';
-  refinement.href = '/static/pabasa_app/css/lesson29_activity2_refinement.css?v=lesson29-a2-ui-4';
+  refinement.href = '/static/pabasa_app/css/lesson29_activity2_refinement.css?v=lesson29-a2-ui-5';
   document.head.appendChild(refinement);
   const data = JSON.parse(node.textContent || '{}');
   const csrf = () => ((document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] || '');
@@ -25,11 +25,12 @@
   async function play(text) {
     if (busy || !text) return;
     busy = true;
-    const listen = document.getElementById('listen');
-    listen?.classList.add('is-playing');
+    const buttons=[...app.querySelectorAll('button')],buttonStates=buttons.map(button=>({button,disabled:button.disabled})); buttons.forEach(button=>{button.disabled=true;button.classList.add('is-busy');});
+
+
     try { const response = await fetch(data.read_aloud_url, {method:'POST', credentials:'same-origin', headers:{'X-CSRFToken':csrf(),'Content-Type':'application/x-www-form-urlencoded'}, body:new URLSearchParams({target_text:text, language:'English', lesson_tts_key:'lesson-29-gawain-2'})}), result = await response.json(); if (!response.ok || !result.success || !result.audio_content) throw Error(result.error || 'Could not play audio.'); const bytes = Uint8Array.from(atob(result.audio_content), char => char.charCodeAt(0)); audioUrl = URL.createObjectURL(new Blob([bytes], {type:result.mime_type || 'audio/mpeg'})); audio = new Audio(audioUrl); await new Promise((resolve, reject) => { audio.onended = resolve; audio.onerror = () => reject(Error('Audio playback failed.')); audio.play().catch(reject); }); }
     catch (error) {}
-    finally { busy = false; listen?.classList.remove('is-playing'); if (audioUrl) { URL.revokeObjectURL(audioUrl); audioUrl = null; } audio = null; }
+    finally { busy=false; buttonStates.forEach(({button,disabled})=>{if(button.isConnected)button.disabled=disabled;}); buttons.forEach(button=>{if(button.isConnected)button.classList.remove('is-busy');}); if(audioUrl){URL.revokeObjectURL(audioUrl);audioUrl=null;} audio=null; }
   }
   async function begin() { await post(data.progress_url, {action:'begin', item_index:state.current_item}); render(); }
   async function choose(word) {

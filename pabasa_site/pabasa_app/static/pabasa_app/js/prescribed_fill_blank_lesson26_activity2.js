@@ -72,10 +72,11 @@
     busy = true;
     const status = document.getElementById('status');
     const button = document.getElementById('read');
+    button?.classList.add('is-busy');
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
-      if (status) status.textContent = 'Microphone recording is not available in this browser.'; busy = false; return;
+      if (status) status.textContent = 'Microphone recording is not available in this browser.'; button?.classList.remove('is-busy'); busy = false; return;
     }
-    button.disabled = true; button.textContent = 'Listening…'; if (status) status.textContent = 'Listening…';
+    button.textContent = 'Listening…'; if (status) status.textContent = 'Listening…';
     try {
       stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
       const recorder = new MediaRecorder(stream), chunks = [];
@@ -105,7 +106,7 @@
         await announce(correct ? CHOICE_CORRECT_FEEDBACK : RETRY_FEEDBACK);
       }
     } catch (error) { stopStream(); renderChoices(error.message || 'Could not recognize your speech. Try again.', 'bad'); }
-    finally { busy = false; }
+    finally { button?.classList.remove('is-busy'); busy = false; }
   }
   function sentenceText(item, blanks = true) {
     let blankIndex = 0;
@@ -153,9 +154,9 @@
   async function playTts(text) {
     if (busy || !text) return;
     busy = true;
-    const buttons = [...app.querySelectorAll('button')];
+    const buttons = [...app.querySelectorAll('.button')];
     const buttonStates = buttons.map(button => ({button, disabled:button.disabled}));
-    buttons.forEach(button => { button.disabled = true; });
+    buttons.forEach(button => { button.disabled = true; button.classList.add('is-busy'); });
     const status = document.getElementById('status'), previousStatus = status?.textContent; if (status) status.textContent = 'Playing audio…';
     try {
       const response = await fetch(data.read_aloud_url, {method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf(),'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({target_text:text,language:'English',lesson_tts_key:'lesson-26-gawain-2'})});
@@ -173,6 +174,7 @@
     } finally {
       busy = false;
       buttonStates.forEach(({button, disabled}) => { if (button.isConnected) button.disabled = disabled; });
+      buttons.forEach(button => { if (button.isConnected) button.classList.remove('is-busy'); });
       if (status?.isConnected && status.textContent === 'Playing audio…') status.textContent = previousStatus;
       if (audioUrl) { URL.revokeObjectURL(audioUrl); audioUrl = null; }
       activeAudio = null;
@@ -196,8 +198,9 @@
     busy = true;
     const item = data.items[state.current_item], target = sentenceText(item, false);
     const button = document.getElementById('read-sentence'), status = document.getElementById('status');
-    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { if (status) status.textContent = 'Microphone recording is not available in this browser.'; busy = false; return; }
-    button.disabled = true; button.textContent = 'Listening…';
+    button?.classList.add('is-busy');
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { if (status) status.textContent = 'Microphone recording is not available in this browser.'; button?.classList.remove('is-busy'); busy = false; return; }
+    button.textContent = 'Listening…';
     try {
       stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
       const recorder = new MediaRecorder(stream), chunks = [];
@@ -220,7 +223,7 @@
       await announce(correct ? (state.phase === 'complete' ? 'Great job! You completed the activity.' : "That's right, now let's read the next sentence.") : RETRY_FEEDBACK);
       if (correct && state.phase !== 'complete') { started = true; await playSentence(); }
     } catch (error) { stopStream(); renderSentence(error.message || 'Could not recognize your speech. Try again.','bad'); }
-    finally { busy = false; }
+    finally { button?.classList.remove('is-busy'); busy = false; }
   }
   function sentenceReadMatches(target, transcript) {
     const expectedWords = String(target || '').toLowerCase().match(/[a-z]+/g) || [];

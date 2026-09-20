@@ -103,9 +103,13 @@
   async function readAloud(textToSpeak) {
     if (busy) return;
     busy = true;
-    const buttons = app.querySelectorAll('#read, #listen-instructions');
-    buttons.forEach(button => { button.disabled = true; });
+    const buttons = [...app.querySelectorAll('#read, #listen-instructions')];
+    const buttonStates = buttons.map(button => ({button, disabled: button.disabled}));
+    buttons.forEach(button => { button.disabled = true; button.classList.add('is-busy'); });
     const played = await playReadAloud(textToSpeak);
+    buttonStates.forEach(({button, disabled}) => {
+      if (button.isConnected) { button.disabled = disabled; button.classList.remove('is-busy'); }
+    });
     busy = false;
     render(played ? '' : 'Could not play the audio. Please try again.', played ? '' : 'bad');
   }
@@ -116,7 +120,7 @@
     const targetWord = words[wordIndex];
     const button = app.querySelector('#read');
     busy = true;
-    button.disabled = true;
+    button.classList.add('is-busy');
     try {
       if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
         throw new Error('Microphone recording is not available in this browser.');
@@ -163,6 +167,7 @@
       stopStream();
       render(error.message || 'Could not recognize your speech. Please try again.', 'bad');
     } finally {
+      if (button?.isConnected) button.classList.remove('is-busy');
       busy = false;
     }
   }
