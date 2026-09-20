@@ -13199,7 +13199,7 @@ def prescribed_activity_page(request, activity_key):
     if not activity:
         return redirect('assessment')
     if activity.get('interaction') == 'prescribed_workbook':
-        from .prescribed_workbook import get_activity, initial_state, normalize_l22_c_state
+        from .prescribed_workbook import get_activity, initial_state, initial_l22_g2_state, normalize_l22_c_state, normalize_l22_g2_state
 
         preview = request.GET.get('preview') == '1'
         role = request.session.get('user_role')
@@ -13214,11 +13214,21 @@ def prescribed_activity_page(request, activity_key):
             if not student:
                 return redirect('assessment')
         progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first() if student else None
-        state = progress.state if progress and isinstance(progress.state, dict) else initial_state()
+        state = progress.state if progress and isinstance(progress.state, dict) else (initial_l22_g2_state() if activity_key == 'aral-l22-g2-c-word-reading' else initial_state())
         if activity_key == 'aral-l22-g1-c-syllable-builder':
             state = normalize_l22_c_state(state)
+        elif activity_key == 'aral-l22-g2-c-word-reading':
+            state = normalize_l22_g2_state(state)
         next_key = 'aral-l22-g2-c-word-reading'
         next_url = reverse('prescribed_activity_page', kwargs={'activity_key': next_key}) if activity_key == 'aral-l22-g1-c-syllable-builder' and next_key in PRESCRIBED_ACTIVITIES else ''
+        if activity_key == 'aral-l22-g2-c-word-reading':
+            return render(request, 'pabasa_app/prescribed_l22_g2_reading_page.html', {
+                'workbook_payload': {
+                    'activity': get_activity(activity_key), 'state': state, 'preview': preview,
+                    'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+                    'read_aloud_url': reverse('reading_read_aloud_api'),
+                },
+            })
         return render(request, 'pabasa_app/prescribed_workbook_page.html', {
             'workbook_payload': {
                 'activity': get_activity(activity_key), 'state': state, 'preview': preview,
@@ -16125,7 +16135,7 @@ def prescribed_activity_progress(request, activity_key):
 def _prescribed_workbook_activity_progress(request, activity_key, activity, student):
     """Persist Sessions 8–11 workbook state through the shared prescribed route."""
     from copy import deepcopy
-    from .prescribed_workbook import apply_event, get_activity, initial_state, normalize_l22_c_state
+    from .prescribed_workbook import apply_event, get_activity, initial_l22_g2_state, initial_state, normalize_l22_c_state, normalize_l22_g2_state
 
     workbook = get_activity(activity_key)
     try:
@@ -16133,9 +16143,11 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
         if not isinstance(event, dict):
             raise ValueError('Invalid event.')
         row = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
-        state = deepcopy(row.state if row and isinstance(row.state, dict) else initial_state())
+        state = deepcopy(row.state if row and isinstance(row.state, dict) else (initial_l22_g2_state() if activity_key == 'aral-l22-g2-c-word-reading' else initial_state()))
         if activity_key == 'aral-l22-g1-c-syllable-builder':
             state = normalize_l22_c_state(state)
+        elif activity_key == 'aral-l22-g2-c-word-reading':
+            state = normalize_l22_g2_state(state)
         if int(event.get('revision', -1)) != int(state.get('revision', 0)):
             return JsonResponse({'success': False, 'error': 'Activity changed in another tab. Reload to resume.', 'state': state}, status=409)
 
@@ -16176,10 +16188,16 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             if activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
                 event = dict(event)
                 event['transcript'] = str(result.get('transcript') or result.get('raw_transcript') or '').strip()
+            elif activity_key == 'aral-l22-g2-c-word-reading' and event.get('action') == 'reading_attempt':
+                event = dict(event)
+                event['transcript'] = str(result.get('raw_transcript') or result.get('transcript') or '').strip()
             if activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_attempt':
                 verified = bool(str(result.get('transcript') or result.get('raw_transcript') or '').strip())
             elif activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
                 transcript = str(result.get('transcript') or result.get('raw_transcript') or '').strip()
+                verified = None if not transcript else bool(result.get('complete'))
+            elif activity_key == 'aral-l22-g2-c-word-reading' and event.get('action') == 'reading_attempt':
+                transcript = str(result.get('raw_transcript') or result.get('transcript') or '').strip()
                 verified = None if not transcript else bool(result.get('complete'))
             else:
                 verified = bool(result.get('complete'))
@@ -16190,6 +16208,8 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
         index = total if updated.get('completed') else min(int(updated.get('index', 0)), total)
         oral = updated.get('oral') if isinstance(updated.get('oral'), dict) else {}
         correct = sum(bool(value.get('passed')) for value in oral.values() if isinstance(value, dict))
+        if activity_key == 'aral-l22-g2-c-word-reading':
+            correct = len(updated.get('completed_words') or [])
         progress, _ = StudentActivityProgress.objects.update_or_create(
             student=student, activity_key=activity_key,
             defaults={'current_index': index, 'completed_items': index, 'correct_items': correct,

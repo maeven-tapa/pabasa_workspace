@@ -46,6 +46,15 @@ L22_C_READING_CONTEXTS = {
     'item-18': {'word': 'Celeste', 'syllables': ('Ce', 'les', 'te'), 'sound': 'soft'},
 }
 
+# Lesson 22, Gawain 2 is intentionally stored as a single alternating flow.
+# The visual columns below are only presentation; this is the authoritative
+# learner order and must not be changed to column-major reading.
+L22_G2_C_WORDS = (
+    'computer', 'Cebu', 'cactus', 'Cita', 'camera', 'Celso', 'cabinet',
+    'Vicente', 'Caloocan', 'Celeste', 'Coron', 'Celsa', 'Vic', 'Carlos',
+)
+L22_G2_C_SOUNDS = ('/k/', '/s/') * 7
+
 
 def add(key, page, lesson, number, title, instruction, kind, rows, **config):
     session = 8 if page <= 47 else 9 if page <= 49 else 10 if page <= 51 else 11
@@ -88,7 +97,7 @@ add('aral-l22-g2-c-word-reading', 38, 22, '2', 'Mga salitang may letrang C',
     'Basahin ang mga salitang nagtataglay ng hiram na letrang C na may tunog na /k/ at /s/.',
     'reading', [['computer', 'Cebu'], ['cactus', 'Cita'], ['camera', 'Celso'],
                 ['cabinet', 'Vicente'], ['Caloocan', 'Celeste'], ['Coron', 'Celsa'], ['Vic', 'Carlos']],
-    column_headers=['c= /k/', 'c= /s/'])
+    column_headers=['C = /k/', 'C = /s/'])
 add('aral-l22-g3-c-word-search', 39, 22, '3', 'Hanapin ang mga salita: C',
     'Hanapin at kulayan ng paboritong kulay ang sumusunod na salita sa ibaba.', 'search',
     [['computer'], ['Cagayan'], ['camera'], ['cabinet'], ['Cebu'], ['cactus'], ['Cardo'], ['Celeste'], ['Carla']],
@@ -196,6 +205,85 @@ def initial_state():
     return dict(index=0, oral={}, answers={}, draft={}, completed=False, revision=0)
 
 
+def initial_l22_g2_state():
+    return {
+        'index': 0, 'sequence_index': 0, 'completed_words': [],
+        'reading_attempts': 0, 'reading_phase': 'read',
+        'last_feedback': '', 'last_transcript': '',
+        'completed': False, 'revision': 0,
+    }
+
+
+def normalize_l22_g2_state(state):
+    """Keep Gawain 2 progress contiguous and safe to resume after navigation."""
+    if not isinstance(state, dict):
+        state = initial_l22_g2_state()
+    completed = state.get('completed_words') if isinstance(state.get('completed_words'), list) else []
+    completed = sorted({int(i) for i in completed if str(i).isdigit() and 0 <= int(i) < len(L22_G2_C_WORDS)})
+    expected = list(range(len(completed)))
+    completed = completed if completed == expected else expected
+    state['completed_words'] = completed
+    state['sequence_index'] = max(0, min(len(L22_G2_C_WORDS), int(state.get('sequence_index', len(completed)) or 0)))
+    state['index'] = state['sequence_index']
+    state['reading_attempts'] = max(0, min(3, int(state.get('reading_attempts', 0) or 0)))
+    state['reading_phase'] = state.get('reading_phase') if state.get('reading_phase') in {'read', 'help'} else 'read'
+    state.setdefault('last_feedback', '')
+    state.setdefault('last_transcript', '')
+    state['completed'] = bool(state.get('completed')) or len(completed) == len(L22_G2_C_WORDS)
+    if state['completed']:
+        state['sequence_index'] = state['index'] = len(L22_G2_C_WORDS)
+        state['reading_phase'] = 'complete'
+    return state
+
+
+def _apply_l22_g2_reading(state, event, verified_reading):
+    normalize_l22_g2_state(state)
+    action = event.get('action')
+    if action == 'restart':
+        state.clear()
+        state.update(initial_l22_g2_state())
+        return state
+    if state['completed']:
+        return state
+    if action == 'reading_started':
+        state['reading_phase'] = 'read'
+        state['last_feedback'] = ''
+        return state
+    if action == 'reading_attempt':
+        if state['reading_phase'] != 'read':
+            raise ValueError('Pakinggan muna ang tamang pagbigkas o pindutin ang Subukan Muli.')
+        transcript = str(event.get('transcript') or '').strip()
+        state['last_transcript'] = transcript
+        if verified_reading is None:
+            state['last_feedback'] = 'Hindi ko malinaw na narinig. Subukan muli.'
+            return state
+        if verified_reading:
+            state['completed_words'].append(state['sequence_index'])
+            state['sequence_index'] += 1
+            state['index'] = state['sequence_index']
+            state['reading_attempts'] = 0
+            state['reading_phase'] = 'complete' if state['sequence_index'] >= len(L22_G2_C_WORDS) else 'read'
+            state['last_feedback'] = 'Magaling! Natapos mo ang Gawain 2.' if state['reading_phase'] == 'complete' else 'Tama!'
+            state['completed'] = state['reading_phase'] == 'complete'
+        else:
+            state['reading_attempts'] = min(3, state['reading_attempts'] + 1)
+            state['last_feedback'] = 'Subukan muli.'
+            if state['reading_attempts'] >= 3:
+                state['reading_phase'] = 'help'
+        return state
+    if action == 'read_aloud':
+        if state['reading_phase'] != 'help':
+            raise ValueError('Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.')
+        state['last_feedback'] = ''
+        return state
+    if action == 'retry_reading':
+        if state['reading_phase'] != 'help':
+            raise ValueError('Hindi pa kailangan ang pag-ulit.')
+        state.update(reading_phase='read', reading_attempts=0, last_feedback='', last_transcript='')
+        return state
+    raise ValueError('Unknown action.')
+
+
 def _oral(state, item, model_first=False):
     return state['oral'].setdefault(item['id'], dict(passed=False, attempts=0, listens=0, phase='model' if model_first else 'read'))
 
@@ -265,6 +353,8 @@ def normalize_l22_c_state(state):
 
 def apply_event(activity, state, event, verified_reading=None):
     """Advance only the current item's required phases; never trust client scores."""
+    if activity['activity_key'] == 'aral-l22-g2-c-word-reading':
+        return _apply_l22_g2_reading(state, event, verified_reading)
     if activity['activity_key'] == 'aral-l22-g1-c-syllable-builder':
         normalize_l22_c_state(state)
         if state['completed']:

@@ -9,11 +9,43 @@ from django.urls import reverse
 
 from .models import Material, School, Section, StudentActivityProgress, User
 from .prescribed_activity_catalog import PRESCRIBED_ACTIVITIES, active_prescribed_activities
-from .prescribed_workbook import ACTIVITIES, apply_event, get_activity, initial_state, normalize_l22_c_state, search_paths
+from .prescribed_workbook import ACTIVITIES, L22_G2_C_WORDS, apply_event, get_activity, initial_l22_g2_state, initial_state, normalize_l22_c_state, search_paths
 from .reading_stt import l22_c_pronunciation_match
 
 
 class WorkbookStateTests(SimpleTestCase):
+    def test_lesson22_gawain2_preserves_exact_words_columns_and_alternating_order(self):
+        activity = get_activity('aral-l22-g2-c-word-reading')
+        self.assertEqual(tuple(item['text'] for item in activity['items']), L22_G2_C_WORDS)
+        self.assertEqual(activity['column_headers'], ['C = /k/', 'C = /s/'])
+        self.assertEqual([row[0] for row in activity['rows']], ['computer', 'cactus', 'camera', 'cabinet', 'Caloocan', 'Coron', 'Vic'])
+        self.assertEqual([row[1] for row in activity['rows']], ['Cebu', 'Cita', 'Celso', 'Vicente', 'Celeste', 'Celsa', 'Carlos'])
+
+    def test_lesson22_gawain2_advances_only_after_correct_reading_and_supports_restart(self):
+        activity = get_activity('aral-l22-g2-c-word-reading')
+        state = initial_l22_g2_state()
+        apply_event(activity, state, {'action': 'reading_started'})
+        for _ in range(3):
+            apply_event(activity, state, {'action': 'reading_attempt', 'transcript': 'wrong'}, False)
+        self.assertEqual(state['sequence_index'], 0)
+        self.assertEqual(state['reading_phase'], 'help')
+        apply_event(activity, state, {'action': 'read_aloud'})
+        apply_event(activity, state, {'action': 'retry_reading'})
+        apply_event(activity, state, {'action': 'reading_attempt', 'transcript': 'computer'}, True)
+        self.assertEqual(state['completed_words'], [0])
+        self.assertEqual(state['sequence_index'], 1)
+        apply_event(activity, state, {'action': 'restart'})
+        self.assertEqual(state, initial_l22_g2_state())
+
+    def test_lesson22_gawain2_completion_persists_at_fourteen(self):
+        activity = get_activity('aral-l22-g2-c-word-reading')
+        state = initial_l22_g2_state()
+        for word in L22_G2_C_WORDS:
+            apply_event(activity, state, {'action': 'reading_started'})
+            apply_event(activity, state, {'action': 'reading_attempt', 'transcript': word}, True)
+        self.assertTrue(state['completed'])
+        self.assertEqual(state['sequence_index'], 14)
+        self.assertEqual(state['completed_words'], list(range(14)))
     def test_lesson22_c_pronunciation_accepts_scoped_hard_and_soft_c_spellings(self):
         self.assertTrue(l22_c_pronunciation_match('cac', 'cactus', 'kak', 'hard'))
         self.assertTrue(l22_c_pronunciation_match('com', 'computer', 'kom', 'hard'))
