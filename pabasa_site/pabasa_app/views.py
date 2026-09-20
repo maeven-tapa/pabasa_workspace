@@ -17530,8 +17530,6 @@ def session_4_gawain_1_page(request):
     context = _dashboard_context(request)
     activity = prescribed_activity('session-4-gawain-1')
     progress = StudentActivityProgress.objects.filter(student=_active_prescribed_student(request), activity_key='session-4-gawain-1').first()
-    if progress and progress.activity_completed:
-        return redirect('assessment')
     state = progress.state if progress and isinstance(progress.state, dict) else {}
     # Test injection is opt-in only: the normal URL and resume_test=0 use real progress.
     test_resume_modal = TEST_RESUME_MODAL and request.GET.get('resume_test') == '1'
@@ -17596,7 +17594,12 @@ def session_4_gawain_2_page(request):
         'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity['activity_key']}),
         'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity['activity_key']}),
         'next_url': reverse('session_4_gawain_3_page'), 'back_url': reverse('assessment'),
-        'session_key': 'session-4', 'has_incomplete_progress': bool(progress and not progress.activity_completed and (progress.completed_items > 0 or saved_index > 0 or saved_substep > 0)),
+        'session_key': 'session-4', 'has_incomplete_progress': bool(progress and not progress.activity_completed and (
+            progress.completed_items > 0
+            or saved_index > 0
+            or saved_substep > 0
+            or state.get('phase') not in (None, '', 'initial')
+        )),
         'test_resume_modal': False,
         'progress': {'current_index': saved_index, 'current_substep': saved_substep, 'completed_items': progress.completed_items if progress else 0, 'correct_items': progress.correct_items if progress else 0, 'total_items': activity['total_items'], 'activity_completed': progress.activity_completed if progress else False, 'state': {**state, 'current_index': saved_index, 'current_substep': saved_substep}},
     }
@@ -17610,8 +17613,6 @@ def session_4_gawain_3_page(request):
     activity = prescribed_activity('session-4-gawain-3')
     activity_key = 'session-4-gawain-3'
     progress = StudentActivityProgress.objects.filter(student=_active_prescribed_student(request), activity_key=activity_key).first()
-    if progress and progress.activity_completed:
-        return redirect('assessment')
     raw_state = progress.state if progress and isinstance(progress.state, dict) else {}
     total_items = 9
     try:
@@ -17637,7 +17638,7 @@ def session_4_gawain_3_page(request):
         'columns': [[item['word'] for item in activity['items'][start:start + 3]] for start in (0, 3, 6)],
         'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
         'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
-        'next_url': reverse('session_4_gawain_4_page'),
+        'next_url': reverse('assessment'),
         'transcribe_url': reverse('reading_transcribe_api'),
         'has_incomplete_progress': bool(progress and not activity_completed and (saved_completed > 0 or saved_correct > 0 or saved_index > 0)),
         'progress': {'current_index': saved_index,
