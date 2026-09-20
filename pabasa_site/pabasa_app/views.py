@@ -87,7 +87,7 @@ from .reading_stt import (
 # prescribed lessons. These are recognition allowances only; they never alter
 # the word displayed to a learner or an answer key.
 PRESCRIBED_ENGLISH_RECOGNITION_ALIASES = {
-    'mat': {'math'}, 'hat': {'hot'}, 'wore': {'war'}, 'bat': {'butt', 'bath', 'but'}, 'loved': {'love'}, 'quite': {'quiet'}, 'laughed': {'laugh'},
+    'mat': {'math'}, 'hat': {'hot'}, 'wore': {'war'}, 'bat': {'butt', 'bath', 'but'}, 'bee': {'be', 'b'}, 'loved': {'love'}, 'quite': {'quiet'}, 'laughed': {'laugh'},
 }
 
 
@@ -14957,7 +14957,7 @@ def prescribed_activity_progress(request, activity_key):
                 choice = str(data.get('choice', '')).strip().lower()
                 if choice not in [word.lower() for word in item['choices']]:
                     raise ValueError('Choose one of the displayed words.')
-                accepted = choice == item['word'].lower()
+                accepted = choice == item['word'][0].lower()
                 if accepted:
                     index += 1
                     attempts = 0
@@ -19426,7 +19426,7 @@ def reading_read_aloud_api(request):
                            'lesson-26-gawain-1', 'lesson-26-gawain-2', 'lesson-27-gawain-1',
                            'lesson-28-gawain-1', 'lesson-28-gawain-2',
                            'lesson-30-gawain-1', 'lesson-30-gawain-2', 'lesson-30-gawain-3',
-                           'lesson-31-gawain-1', 'lesson-31-gawain-2',
+                           'lesson-31-gawain-1', 'lesson-31-gawain-2', 'lesson-31-gawain-3', 'lesson-31-gawain-4',
                            'lesson-29-gawain-1', 'lesson-29-gawain-2', 'lesson-29-gawain-3',
                        }
                        else {'voice_gender': 'MALE'} if tts_profile == 'correspondence'

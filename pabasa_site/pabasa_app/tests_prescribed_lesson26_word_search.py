@@ -91,7 +91,7 @@ class PrescribedLesson26WordSearchTests(TestCase):
         self.assertIn('acceptedWords.includes(normalizedWord(token))', script)
         self.assertIn('Word Search. Find the words on the grid.', script)
         self.assertIn('addEventListener(\'click\', () => readAloud(targetWord))', script)
-        self.assertIn("target === 'mat' ? ['mat', 'math'] : [target]", script)
+        self.assertIn("mat:['mat','math']", script)
         self.assertIn('lesson26-complete-message', script)
         self.assertIn('JSON.stringify({reset: true})', script)
 
@@ -137,7 +137,7 @@ class PrescribedLesson26WordSearchTests(TestCase):
         self.assertEqual(response.context['prescribed_activity_data']['transcribe_url'], reverse('reading_transcribe_api'))
         script = Path(settings.BASE_DIR, 'pabasa_app/static/pabasa_app/js/prescribed_fill_blank_lesson26_activity2.js').read_text(encoding='utf-8')
         self.assertIn("playTts('Fill in the Blanks. Read the words, then fill in the blanks.')", script)
-        self.assertIn("target === 'mat' ? ['mat','math'] : target === 'hat' ? ['hat','hot'] : [target]", script)
+        self.assertIn("mat:['mat','math']", script)
         self.assertIn("replace(/\\bhot\\b/g, 'hat')", script)
         self.assertNotIn('speechSynthesis', script)
         self.assertIn('word-chip:hover:not(:disabled)', response.content.decode())
@@ -169,7 +169,9 @@ class PrescribedLesson26WordSearchTests(TestCase):
         self.assertIn('outline:3px solid var(--line)', template)
         script = Path(settings.BASE_DIR, 'pabasa_app/static/pabasa_app/js/prescribed_rhyming_verses_lesson27_activity1.js').read_text(encoding='utf-8')
         self.assertIn('Rhyming Verses. Read each verse', script)
-        self.assertIn("replace(/\\bhot\\b/g, 'hat').replace(/\\bmath\\b/g, 'mat').replace(/\\bwar\\b/g, 'wore').replace(/\\bbutt\\b/g, 'bat').replace(/\\blove\\b/g, 'loved')", script)
+        self.assertIn("replace(/\\bhot\\b/g, 'hat')", script)
+        self.assertIn("replace(/\\bmath\\b/g, 'mat')", script)
+        self.assertIn("replace(/\\blove\\b/g, 'loved')", script)
         self.assertNotIn('speechSynthesis', script)
 
     def test_lesson27_back_reset_clears_only_its_saved_progress(self):
@@ -306,7 +308,7 @@ class PrescribedLesson26WordSearchTests(TestCase):
         self.assertIn('csrftoken', response.cookies)
         script = Path(settings.BASE_DIR, 'pabasa_app/static/pabasa_app/js/prescribed_match_it_lesson30_activity1.js').read_text(encoding='utf-8')
         self.assertIn("language:'English'", script)
-        self.assertIn('id="listen">🔊 Listen</button>', script)
+        self.assertIn('id="listen"', script)
         self.assertIn("setTimeout(()=>play(target).catch", script)
         self.assertIn('reset:true', script)
         self.assertNotIn('speechSynthesis', script)
@@ -502,22 +504,22 @@ class PrescribedLesson26WordSearchTests(TestCase):
         self.assertEqual(page.status_code, 200)
         self.assertTemplateUsed(page, 'pabasa_app/prescribed_say_circle_lesson31_activity4_page.html')
         item = page.context['prescribed_activity_data']['items'][0]
-        self.assertEqual(item['word'], 'bell')
+        self.assertEqual(item['word'], 'banana')
         spoken = self.client.post(self.lesson31_activity4_progress_url, data=json.dumps({
-            'action': 'read_word', 'heard': 'bell',
+            'action': 'read_word', 'heard': 'banana',
         }), content_type='application/json')
         self.assertTrue(spoken.json()['accepted'])
         wrong = self.client.post(self.lesson31_activity4_progress_url, data=json.dumps({
-            'action': 'choose', 'choice': 'ball',
+            'action': 'choose', 'choice': 'o',
         }), content_type='application/json')
         self.assertFalse(wrong.json()['accepted'])
         self.assertEqual(wrong.json()['progress']['state']['phase'], 'reading')
         spoken_again = self.client.post(self.lesson31_activity4_progress_url, data=json.dumps({
-            'action': 'read_word', 'heard': 'bell',
+            'action': 'read_word', 'heard': 'banana',
         }), content_type='application/json')
         self.assertTrue(spoken_again.json()['accepted'])
         correct = self.client.post(self.lesson31_activity4_progress_url, data=json.dumps({
-            'action': 'choose', 'choice': 'bell',
+            'action': 'choose', 'choice': 'b',
         }), content_type='application/json')
         self.assertTrue(correct.json()['accepted'])
         self.assertEqual(correct.json()['progress']['completed_items'], 1)

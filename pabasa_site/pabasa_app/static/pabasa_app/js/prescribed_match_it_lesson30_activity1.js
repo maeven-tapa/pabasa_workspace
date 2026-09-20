@@ -25,6 +25,7 @@
   const index=()=>Math.min(Object.keys(s.matches||{}).length,words.length);
   const current=()=>words[index()];
   const complete=()=>s.phase==='completion'||Object.keys(s.matches||{}).length===words.length;
+  const syncListen=()=>{const button=document.getElementById('listen'),target=current();if(button)button.disabled=Number(s.stt_attempts?.[target]||0)<3};
 
   async function save(){
     const r=await fetch(d.progress_url,{method:'POST',credentials:'same-origin',headers:headers({'Content-Type':'application/json'}),body:JSON.stringify({state:{...s,state_version:(Number(s.state_version)||0)+1}})});
@@ -47,6 +48,7 @@
     if(complete()){
       app.innerHTML=`<div class="complete">🎉 Great job! You matched every picture.</div>${steps()}`;
       finish();
+      announce('Great job! You matched every picture.');
       return;
     }
     const target=current();
@@ -55,7 +57,7 @@
       app.querySelectorAll('.picture').forEach(button=>button.onclick=()=>choose(button));
       return;
     }
-    app.innerHTML=`<div class="eyebrow">SESSION 14 · LESSON 30 · ACTIVITY 1</div><h1 class="title">Match It!</h1><p class="instruction">Read the word aloud first. Then choose the matching picture.</p><div class="word">${esc(target)}</div><p class="status ${kind}">${esc(message||'Read the word aloud.')}</p><div class="actions"><button class="button" id="read">🎙️ Read the word</button><button class="button secondary" id="listen">🔊 Listen</button></div>${steps()}`;
+    app.innerHTML=`<div class="eyebrow">SESSION 14 · LESSON 30 · ACTIVITY 1</div><h1 class="title">Match It!</h1><p class="instruction">Read the word aloud first. Then choose the matching picture.</p><div class="word">${esc(target)}</div><p class="status ${kind}">${esc(message||'Read the word aloud.')}</p><div class="actions"><button class="button" id="read">🎙️ Read the word</button><button class="button secondary" id="listen" ${Number(s.stt_attempts?.[target]||0)<3?'disabled':''}>🔊 Listen</button></div>${steps()}`;
     app.querySelector('#read').onclick=()=>read(target);
     app.querySelector('#listen')?.addEventListener('click',()=>play(target).then(()=>{render('Now read the word aloud.');announce('Now read the word aloud.')} ).catch(e=>render(e.message,'bad')));
   }
@@ -75,7 +77,7 @@
       busy=false;
       if(audioUrl){URL.revokeObjectURL(audioUrl);audioUrl=null}
       audio=null;
-      buttonStates.forEach(({button,disabled})=>{if(button.isConnected)button.disabled=disabled;}); buttons.forEach(button=>{if(button.isConnected)button.classList.remove('is-busy');});
+      buttonStates.forEach(({button,disabled})=>{if(button.isConnected)button.disabled=disabled;}); syncListen(); buttons.forEach(button=>{if(button.isConnected)button.classList.remove('is-busy');});
     }
   }
   async function read(target){
@@ -111,7 +113,7 @@
       s.stt_attempts[target]=Math.min(3,Number(s.stt_attempts[target]||0)+1);
       try{await save()}catch(_){}
       render(e.message||'I could not hear you. Try again.','bad');
-    }finally{busy=false;setBusyButton('read',false);if(listenButton?.isConnected){listenButton.disabled=false;listenButton.classList.remove('is-busy')}}
+    }finally{busy=false;setBusyButton('read',false);if(listenButton?.isConnected){listenButton.disabled=Number(s.stt_attempts?.[target]||0)<3;listenButton.classList.remove('is-busy')}}
   }
   async function choose(button){
     if(busy)return;
