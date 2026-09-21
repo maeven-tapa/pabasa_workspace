@@ -19,6 +19,34 @@
   const SENTENCE_CORRECT_FEEDBACK = "That's right, now let's choose the words.";
   const WORD_CORRECT_FEEDBACK = "That's right, now let's choose the next word.";
   const READ_SENTENCE_FEEDBACK = "That's right, now let's read the whole sentence.";
+  const localAudioBase = '/static/pabasa_app/prescribed/audio/SESSION_10/LESSON_26/GAWAIN_2/';
+
+  function localAudioKey(value) {
+    return String(value || '').trim().toLowerCase()
+      .replace(/[’']/g, "'").replace(/[.!?]+$/, '');
+  }
+
+  const localAudioFiles = {
+    [localAudioKey('Fill in the Blanks. Read the words, then fill in the blanks.')]: 'Fill in the Blanks. Read the words, then fill in the blanks..mp3',
+    hat: 'Hat.mp3',
+    cat: 'Cat.mp3',
+    rat: 'Rat.mp3',
+    mat: 'Mat.mp3',
+    [localAudioKey(RETRY_FEEDBACK)]: 'Hmm, let’s try that again..mp3',
+    [localAudioKey(CHOICE_CORRECT_FEEDBACK)]: 'That’s right, now let’s read the next word..mp3',
+    [localAudioKey(SENTENCE_CORRECT_FEEDBACK)]: 'That’s right, now let’s choose the words..mp3',
+    [localAudioKey(WORD_CORRECT_FEEDBACK)]: 'That’s right, now let’s choose the next word..mp3',
+    [localAudioKey(READ_SENTENCE_FEEDBACK)]: 'That’s right, now let’s read the whole sentence..mp3',
+    [localAudioKey('The furry blank on the warm blank.')]: 'The furry blank on the warm blank..mp3',
+    [localAudioKey('The furry cat on the warm mat.')]: 'The furry cat on the warm mat..mp3',
+    [localAudioKey('The blank fell off her head.')]: 'The blank fell off her head..mp3',
+    [localAudioKey('The hat fell off her head.')]: 'The hat fell off her head..mp3',
+    [localAudioKey('The blank ate the blank.')]: 'The blank ate the blank..mp3',
+    [localAudioKey('The rat ate the hat.')]: 'The rat ate the hat..mp3',
+    [localAudioKey('The blank was placed on the top of the shelf.')]: 'The blank was placed on the top of the shelf..mp3',
+    [localAudioKey('The hat was placed on the top of the shelf.')]: 'The hat was placed on the top of the shelf..mp3',
+    [localAudioKey('Great job! You completed the activity.')]: 'Great job! You completed the Fill in the Blanks..mp3',
+  };
 
   function hydrate() {
     state.phase ||= 'choices';
@@ -98,12 +126,13 @@
       if (saved.progress?.state) state = {...saved.progress.state};
       if (state.phase === 'sentence') {
         started = false;
-        render();
         await announce(correct ? SENTENCE_CORRECT_FEEDBACK : RETRY_FEEDBACK);
+        render();
         if (correct) { started = true; await playSentence(); }
       } else {
+        if (correct) await announce(CHOICE_CORRECT_FEEDBACK);
         renderChoices(correct ? 'Correct! Read the next word.' : transcript.length ? `I heard “${result.raw_transcript || result.transcript}”. Try “${word}” again.` : `I could not hear “${word}” clearly. Try again.`, correct ? 'good' : 'bad');
-        await announce(correct ? CHOICE_CORRECT_FEEDBACK : RETRY_FEEDBACK);
+        if (!correct) await announce(RETRY_FEEDBACK);
       }
     } catch (error) { stopStream(); renderChoices(error.message || 'Could not recognize your speech. Try again.', 'bad'); }
     finally { button?.classList.remove('is-busy'); busy = false; }
@@ -159,13 +188,9 @@
     buttons.forEach(button => { button.disabled = true; button.classList.add('is-busy'); });
     const status = document.getElementById('status'), previousStatus = status?.textContent; if (status) status.textContent = 'Playing audio…';
     try {
-      const response = await fetch(data.read_aloud_url, {method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf(),'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({target_text:text,language:'English',lesson_tts_key:'lesson-26-gawain-2'})});
-      const result = await response.json();
-      if (!response.ok || !result.success || !result.audio_content) throw new Error(result.error || 'Could not play audio. Try again.');
-      const bytes = Uint8Array.from(atob(result.audio_content), character => character.charCodeAt(0));
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
-      audioUrl = URL.createObjectURL(new Blob([bytes], {type:result.mime_type || 'audio/mpeg'}));
-      activeAudio = new Audio(audioUrl);
+      const filename = localAudioFiles[localAudioKey(text)];
+      if (!filename) throw new Error('Could not find the audio for this activity.');
+      activeAudio = new Audio(`${localAudioBase}${filename.split('/').map(encodeURIComponent).join('/')}`);
       await new Promise((resolve, reject) => {
         activeAudio.addEventListener('ended', resolve, {once:true});
         activeAudio.addEventListener('error', () => reject(new Error('Audio playback failed. Try again.')), {once:true});
@@ -188,8 +213,8 @@
       selectedWord = '';
       if (!result.accepted) { renderSentence('That is not the correct word. Try another one.', 'bad'); await announce(RETRY_FEEDBACK); return; }
       state = {...result.progress.state};
-      if (result.sentence_complete) { renderSentence(); await announce(READ_SENTENCE_FEEDBACK); }
-      else { renderSentence(); await announce(WORD_CORRECT_FEEDBACK); }
+      if (result.sentence_complete) { await announce(READ_SENTENCE_FEEDBACK); renderSentence(); }
+      else { await announce(WORD_CORRECT_FEEDBACK); renderSentence(); }
     } catch (error) { renderSentence(error.message || 'Could not save your answer. Try again.','bad'); }
     finally { busy = false; }
   }
@@ -218,9 +243,13 @@
         const payload = await completed.json(); if (!completed.ok || !payload.success) throw new Error(payload.error || 'Could not save completion.');
       }
       started = false;
-      if (correct) render();
-      else renderSentence(transcript ? `I heard “${result.raw_transcript || result.transcript}”. Please read the sentence again.` : 'I could not hear the sentence clearly. Try again.', 'bad');
-      await announce(correct ? (state.phase === 'complete' ? 'Great job! You completed the activity.' : "That's right, now let's read the next sentence.") : RETRY_FEEDBACK);
+      if (correct) {
+        await announce(state.phase === 'complete' ? 'Great job! You completed the activity.' : "That's right, now let's read the next sentence.");
+        render();
+      } else {
+        renderSentence(transcript ? `I heard “${result.raw_transcript || result.transcript}”. Please read the sentence again.` : 'I could not hear the sentence clearly. Try again.', 'bad');
+        await announce(RETRY_FEEDBACK);
+      }
       if (correct && state.phase !== 'complete') { started = true; await playSentence(); }
     } catch (error) { stopStream(); renderSentence(error.message || 'Could not recognize your speech. Try again.','bad'); }
     finally { button?.classList.remove('is-busy'); busy = false; }
