@@ -182,6 +182,16 @@ L22_G5_F_WORD_PATHS = {
     'Felix': [[5, 3], [5, 4], [5, 5], [5, 6], [5, 7]],
 }
 
+# Lesson 23 Gawain 5 is the Jj word-search Big Box.  These are the exact
+# workbook coordinates; validation must use the path as well as the spelling.
+L23_G5_J_WORD_PATHS = {
+    'jacket': [[2, 0], [2, 1], [2, 2], [2, 3], [2, 4], [2, 5]],
+    'pajama': [[3, 3], [3, 4], [3, 5], [3, 6], [3, 7], [3, 8]],
+    'jam': [[1, 0], [1, 1], [1, 2]],
+    'Jonathan': [[0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [0, 7], [0, 8]],
+    'Jennifer': [[4, 0], [4, 1], [4, 2], [4, 3], [4, 4], [4, 5], [4, 6], [4, 7]],
+}
+
 
 def normalize_l22_g2_speech(value):
     """Normalize one STT result without changing the workbook word."""
@@ -301,7 +311,13 @@ add('aral-l23-g4-j-syllabication', 42, 23, '4', 'Pantigin ang mga salita: J',
 add('aral-l23-g5-j-word-search', 43, 23, '5', 'Hanapin ang mga salita: J',
     'Hanapin at bilugan sa loob ng Big Box ang sumusunod na mga salita.', 'search',
     [['jacket'], ['pajama'], ['jam'], ['Jonathan'], ['Jennifer']],
-    visible_activity_label='GAWAIN 5', grid=['ZJONATHAN','JAMLTYZSI','JACKETERG','BZOPAJAMA','JENNIFERM'], mark_style='circle')
+    visible_activity_label='GAWAIN 5', grid=[
+        ['Z','J','O','N','A','T','H','A','N'],
+        ['J','A','M','L','T','Y','Z','S','I'],
+        ['J','A','C','K','E','T','E','R','G'],
+        ['B','Z','O','P','A','J','A','M','A'],
+        ['J','E','N','N','I','F','E','R','M'],
+    ], mark_style='circle')
 add('aral-l23-g6-q-syllable-builder', 43, 23, '6', 'Big Box: Q',
     'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salitang.', 'builder',
     [['Que','En','Qui','tos'], ['no','A','Quin','An'], ['ta','ja','na','to'], ['ri','zon','que','ti']],
@@ -534,6 +550,10 @@ def initial_l22_g5_state():
     return {'found_words': {}, 'last_feedback': '', 'completed': False, 'revision': 0}
 
 
+def initial_l23_g5_state():
+    return {'found_words': {}, 'last_feedback': '', 'completed': False, 'revision': 0}
+
+
 def normalize_l23_g1_state(state):
     if not isinstance(state, dict):
         state = initial_l23_g1_state()
@@ -630,6 +650,28 @@ def normalize_l22_g5_state(state):
         clean[word] = {'path': L22_G5_F_WORD_PATHS[word], 'color': color}
     state['found_words'] = clean
     state['completed'] = len(clean) == len(L22_G5_F_WORD_PATHS)
+    state['last_feedback'] = str(state.get('last_feedback') or '')
+    state['revision'] = max(0, int(state.get('revision', 0) or 0))
+    return state
+
+
+def normalize_l23_g5_state(state):
+    """Restore only unique, canonical Lesson 23 Gawain 5 selections."""
+    if not isinstance(state, dict):
+        state = initial_l23_g5_state()
+    found = state.get('found_words') if isinstance(state.get('found_words'), dict) else {}
+    clean = {}
+    for word, entry in found.items():
+        if word not in L23_G5_J_WORD_PATHS or not isinstance(entry, dict):
+            continue
+        if entry.get('path') != L23_G5_J_WORD_PATHS[word]:
+            continue
+        color = str(entry.get('color') or '')
+        if not re.fullmatch(r'#[0-9a-fA-F]{6}', color):
+            color = '#b6e6c3'
+        clean[word] = {'path': L23_G5_J_WORD_PATHS[word], 'color': color}
+    state['found_words'] = clean
+    state['completed'] = len(clean) == len(L23_G5_J_WORD_PATHS)
     state['last_feedback'] = str(state.get('last_feedback') or '')
     state['revision'] = max(0, int(state.get('revision', 0) or 0))
     return state
@@ -777,6 +819,33 @@ def _apply_l22_g5_word_search(state, event):
     state['found_words'][word] = {'path': L22_G5_F_WORD_PATHS[word], 'color': color}
     state['last_feedback'] = f'Tama! Nahanap mo ang {word}.'
     if len(state['found_words']) == len(L22_G5_F_WORD_PATHS):
+        state['completed'] = True
+        state['last_feedback'] = 'Magaling! Nahanap mo ang lahat ng salita!'
+    return state
+
+
+def _apply_l23_g5_word_search(state, event):
+    normalize_l23_g5_state(state)
+    if event.get('action') == 'restart':
+        state.clear(); state.update(initial_l23_g5_state()); return state
+    if state['completed']:
+        return state
+    if event.get('action') != 'select_word':
+        raise ValueError('Unknown action.')
+    word = str(event.get('word') or '')
+    path = event.get('path')
+    if word not in L23_G5_J_WORD_PATHS or path != L23_G5_J_WORD_PATHS[word]:
+        state['last_feedback'] = 'Subukan Muli.'
+        return state
+    if word in state['found_words']:
+        state['last_feedback'] = 'Nahanap mo na ito.'
+        return state
+    color = str(event.get('color') or '')
+    if not re.fullmatch(r'#[0-9a-fA-F]{6}', color):
+        color = '#b6e6c3'
+    state['found_words'][word] = {'path': L23_G5_J_WORD_PATHS[word], 'color': color}
+    state['last_feedback'] = 'Mahusay!'
+    if len(state['found_words']) == len(L23_G5_J_WORD_PATHS):
         state['completed'] = True
         state['last_feedback'] = 'Magaling! Nahanap mo ang lahat ng salita!'
     return state
@@ -1128,6 +1197,8 @@ def apply_event(activity, state, event, verified_reading=None):
         return _apply_l22_g3_word_search(state, event)
     if activity['activity_key'] == 'aral-l22-g5-f-word-search':
         return _apply_l22_g5_word_search(state, event)
+    if activity['activity_key'] == 'aral-l23-g5-j-word-search':
+        return _apply_l23_g5_word_search(state, event)
     # Keep the legacy generic state shape usable by older workbook tests and
     # imported draft states; persisted learner progress uses reading_index and
     # therefore always takes the complete specialized flow below.

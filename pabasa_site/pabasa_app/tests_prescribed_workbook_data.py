@@ -3,8 +3,8 @@ import json
 import unittest
 from copy import deepcopy
 
-from .prescribed_workbook import (ACTIVITIES, L22_G3_C_WORD_PATHS, L22_G5_F_WORD_PATHS, apply_event,
-                                  get_activity, initial_l22_g3_state, initial_l22_g5_state, initial_state,
+from .prescribed_workbook import (ACTIVITIES, L22_G3_C_WORD_PATHS, L22_G5_F_WORD_PATHS, L23_G5_J_WORD_PATHS, apply_event,
+                                  get_activity, initial_l22_g3_state, initial_l22_g5_state, initial_l23_g5_state, initial_state,
                                   normalize_l22_g3_state, search_paths)
 
 
@@ -41,6 +41,12 @@ class PrescribedWorkbookDataTests(unittest.TestCase):
                     s=initial_l22_g5_state()
                     for word, path in L22_G5_F_WORD_PATHS.items():
                         apply_event(a, s, {'action':'select_word','word':word,'path':path,'color':'#55a9df'})
+                    self.assertTrue(s['completed'])
+                    continue
+                if a['activity_key']=='aral-l23-g5-j-word-search':
+                    s=initial_l23_g5_state()
+                    for word, path in L23_G5_J_WORD_PATHS.items():
+                        apply_event(a,s,{'action':'select_word','word':word,'path':path,'color':'#55a9df'})
                     self.assertTrue(s['completed'])
                     continue
                 if a['activity_key']=='aral-l22-g1-c-syllable-builder':
