@@ -29,6 +29,30 @@
   const GRID_CORRECT_FEEDBACK = "That's right, now let's read the next word.";
   const COMPLETION_FEEDBACK = 'Great job! You completed the Word Search.';
 
+  function configureStartModal() {
+    if (data.progress?.activity_completed) return;
+    const meaningful = Object.keys(matches || {}).length > 0
+      || Object.values(reading || {}).some(Boolean)
+      || Object.values(attempts || {}).some(value => Number(value) > 0);
+    if (!meaningful) return;
+    const modal = document.getElementById('lesson26-start');
+    const label = modal?.querySelector('.lesson26-start-label');
+    const title = document.getElementById('lesson26-start-title');
+    const description = modal?.querySelector('.lesson26-start-description');
+    const continueButton = document.getElementById('lesson26-start-button');
+    const restartButton = document.getElementById('lesson26-later-button');
+    if (!modal || !label || !title || !description || !continueButton || !restartButton) return;
+    label.textContent = 'PROGRESS SAVED!';
+    title.textContent = 'You’ve already started this activity. Would you like to continue where you left off?';
+    description.hidden = true;
+    continueButton.textContent = 'CONTINUE';
+    restartButton.textContent = 'START OVER';
+  }
+
+  function renderCompletion() {
+    window.PrescribedLessonUi.showCompletion(app);
+  }
+
   async function save(payload) {
     const response = await fetch(data.progress_url, {
       method: 'POST',
@@ -51,8 +75,8 @@
     const next = words.findIndex((_, index) => !matches[String(index)]);
     currentIndex = next < 0 ? words.length : next;
     const progress = `<div class="lesson26-progress" aria-label="Word progress">${words.map((_, index) => `<span class="lesson26-step ${matches[String(index)] ? 'done' : ''} ${index === currentIndex ? 'active' : ''}" ${index === currentIndex ? 'aria-current="step"' : ''}>${index + 1}</span>`).join('')}</div>`;
-    if (currentIndex >= words.length) {
-      app.innerHTML = `<div class="lesson26-complete-message">🎉 Great job! You completed the Word Search.</div>${progress}`;
+    if (data.progress?.activity_completed || currentIndex >= words.length) {
+      renderCompletion();
       return;
     }
     const targetWord = words[currentIndex];
@@ -239,17 +263,17 @@
       });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.error || 'Could not reset this activity. Please try again.');
-      window.location.assign(document.getElementById('lesson26-back').href);
+      window.location.reload();
     } catch (error) {
       busy = false;
       button.disabled = false;
       window.alert(error.message || 'Could not reset this activity. Please try again.');
     }
   }
-  document.getElementById('lesson26-back')?.addEventListener('click', resetAndExit);
   document.getElementById('lesson26-later-button')?.addEventListener('click', resetAndExit);
   document.getElementById('lesson26-start-button')?.addEventListener('click', () => {
     window.setTimeout(() => readAloud('Word Search. Find the words on the grid.'), 0);
   });
+  configureStartModal();
   render();
 })();

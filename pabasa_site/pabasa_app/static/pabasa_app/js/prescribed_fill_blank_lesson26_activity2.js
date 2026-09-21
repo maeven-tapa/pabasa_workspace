@@ -48,7 +48,7 @@
   function render() {
     hydrate();
     if (state.phase === 'complete') {
-      shell('Fill in the Blanks', 'Read each word, then fill in the blanks.', '<div class="lesson26-complete-message">🎉 Great job! You completed Activity 2.</div>');
+      window.PrescribedLessonUi.showCompletion(app);
       return;
     }
     if (state.phase === 'choices') renderChoices();
@@ -245,10 +245,10 @@
     try {
       const response = await fetch(data.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({reset:true})});
       const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.error || 'Could not reset the activity. Try again.');
-      window.location.assign(document.getElementById('lesson26-back').href);
+      window.location.reload();
     } catch (error) { busy = false; button.disabled = false; window.alert(error.message || 'Could not reset the activity. Try again.'); }
   }
-  document.getElementById('lesson26-back')?.addEventListener('click',resetAndExit);
+
   document.getElementById('lesson26-later-button')?.addEventListener('click',resetAndExit);
   document.getElementById('lesson26-start-button')?.addEventListener('click',() => {
     started = true;

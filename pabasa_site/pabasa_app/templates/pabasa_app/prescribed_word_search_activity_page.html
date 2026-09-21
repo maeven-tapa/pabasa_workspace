@@ -26,12 +26,25 @@
     .button.is-busy{animation:l30ButtonPulse 1.15s ease-in-out infinite}
     @keyframes l30ButtonPulse{0%,100%{transform:scale(1);box-shadow:0 7px 0 var(--dark),0 12px 24px #187b7a40}50%{transform:scale(1.025);box-shadow:0 0 0 9px #f5d47c55,0 7px 0 var(--dark),0 15px 28px #187b7a55}}
   </style>
+  <style>
+    .lesson26-start-modal{width:min(500px,calc(100vw - 36px));padding:32px 34px 30px}
+    .lesson26-start-title{margin-bottom:22px}
+    .lesson26-start-description[hidden]{display:none}
+    .lesson26-completion-card{width:min(540px,100%);margin:auto;padding:38px 34px 34px;border:2px solid #ffffffd9;border-radius:30px;background:#fff;box-shadow:0 22px 60px #173f6340;text-align:center}
+    .lesson26-completion-card h1{margin:0;color:var(--ink);font-size:clamp(28px,3vw,32px);font-weight:900;line-height:1.2}
+    .lesson26-completion-card p{margin:18px 0 0;color:var(--ink);font-size:clamp(18px,2vw,20px);font-weight:800;line-height:1.4}
+    .lesson26-completion-actions{display:flex;justify-content:center;width:100%;margin-top:26px}
+    .back.lesson26-completion-button{align-self:auto;width:min(100%,390px);min-width:0;min-height:68px;padding:14px 24px;background:var(--teal);color:#fff;font-size:clamp(18px,2vw,20px);font-weight:900;box-shadow:0 5px 0 var(--teal-dark),0 8px 18px #187b7a26}
+    .lesson26-stage.is-complete{align-items:stretch;margin-top:0;padding:24px;border:0;border-radius:0;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none}
+    .lesson26-stage.is-complete #app{display:flex;flex:1;align-items:center;justify-content:center;width:100%}
+    @media(max-width:480px){.lesson26-completion-card{padding:30px 22px 26px}.lesson26-stage.is-complete{padding:14px}}
+  </style>
 </head>
 <body>
   <main class="page"><a class="back" id="lesson26-back" href="{% url 'assessment' %}"><span aria-hidden="true">←</span><span>Back to My Lessons</span></a><section class="lesson26-stage is-waiting" id="lesson26-stage"><div id="app" aria-live="polite"></div></section></main>
   <div class="lesson26-start-backdrop" id="lesson26-start" role="dialog" aria-modal="true" aria-labelledby="lesson26-start-title"><div class="lesson26-start-modal"><p class="lesson26-start-label">SESSION 10 · LESSON 26 · ACTIVITY 1</p><h2 class="lesson26-start-title" id="lesson26-start-title">WORD SEARCH</h2><p class="lesson26-start-description">Find the words on the grid.</p><div class="lesson26-start-actions"><button class="lesson26-start-button" id="lesson26-start-button" type="button">START</button><button class="lesson26-later-button" id="lesson26-later-button" type="button">NOT NOW</button></div></div></div>
   {{ prescribed_activity_data|json_script:"prescribed-activity-data" }}
-  <script src="{% static 'pabasa_app/js/prescribed_word_search.js' %}?v=lesson26-ui-8" defer></script>
+  <script src="{% static 'pabasa_app/js/prescribed_lesson26_31_ui.js' %}?v=lesson26-31-ui-2-resume2" defer></script><script src="{% static 'pabasa_app/js/prescribed_word_search.js' %}?v=lesson26-ui-9-resume2-startover" defer></script>
   <script>(()=>{const modal=document.getElementById('lesson26-start'),stage=document.getElementById('lesson26-stage'),start=document.getElementById('lesson26-start-button');start.addEventListener('click',()=>{modal.hidden=true;stage.classList.remove('is-waiting')});start.focus()})();</script>
 </body>
 </html>

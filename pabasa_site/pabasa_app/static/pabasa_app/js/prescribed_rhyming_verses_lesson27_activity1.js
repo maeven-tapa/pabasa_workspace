@@ -54,7 +54,7 @@
   }
   function render(message = '', type = '') {
     if (state.phase === 'complete') {
-      frame('<div class="lesson27-complete">🎉 Great job! You finished all the rhyming verses.</div>');
+      window.PrescribedLessonUi.showCompletion(app);
       return;
     }
     const item = data.items[state.item_index];
@@ -124,10 +124,14 @@
       const result = await responseJson(response, 'Speech recognition');
       if (!response.ok || !result.success) throw new Error(result.error || 'Speech recognition failed. Try again.');
       const heardText = result.raw_transcript || result.transcript;
-      const spoken = normalize(canonicalTranscript(heardText));
-      const expected = normalize(canonicalTranscript(target));
-      const spokenTokens = canonicalTranscript(heardText).match(/[a-z]+/g) || [];
-      const expectedTokens = canonicalTranscript(target).match(/[a-z]+/g) || [];
+      const expectedText = canonicalTranscript(target);
+      const expectedHasHeLl = /\bhe(?:['’]?)ll\b/.test(expectedText);
+      const spokenText = canonicalTranscript(heardText);
+      const acceptedSpokenText = expectedHasHeLl ? spokenText.replace(/\bhill\b/g, "he'll") : spokenText;
+      const spoken = normalize(acceptedSpokenText);
+      const expected = normalize(expectedText);
+      const spokenTokens = acceptedSpokenText.match(/[a-z]+/g) || [];
+      const expectedTokens = expectedText.match(/[a-z]+/g) || [];
       const isPlayfulBatVerse = expectedTokens.includes('dance') && expectedTokens.includes('playful') && expectedTokens.includes('bat');
       const playfulBatHeard = spokenTokens.includes('bat') && (spokenTokens.includes('dance') || spokenTokens.includes('playful'));
       const correct = Boolean(expected && (spoken.includes(expected) || (isPlayfulBatVerse && playfulBatHeard)));
@@ -172,10 +176,10 @@
       const response = await fetch(data.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({reset:true})});
       const result = await responseJson(response, 'Resetting activity');
       if (!response.ok || !result.success) throw new Error(result.error || 'Could not reset the activity. Try again.');
-      window.location.assign(document.getElementById('lesson27-back').href);
+      window.location.reload();
     } catch (error) { busy = false; button.disabled = false; window.alert(error.message || 'Could not reset the activity. Try again.'); }
   }
-  document.getElementById('lesson27-back')?.addEventListener('click', resetAndExit);
+
   document.getElementById('lesson27-later-button')?.addEventListener('click', resetAndExit);
   document.getElementById('lesson27-start-button')?.addEventListener('click', () => {
     window.setTimeout(() => playAudio('Rhyming Verses. Read each verse, then select the words that rhyme with at.').catch(error => render(error.message || 'Could not play the instructions. Try again.','bad')), 0);
