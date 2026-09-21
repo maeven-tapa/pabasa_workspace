@@ -3,7 +3,9 @@
   'use strict';
   const data = JSON.parse(document.getElementById('workbook-payload').textContent);
   const a = data.activity, preview = data.preview;
-  const cBuilder = Boolean(a.specialized_builder) || a.activity_key === 'aral-l22-g1-c-syllable-builder';
+  const qBuilder = a.activity_key === 'aral-l23-g6-q-syllable-builder';
+  const cBuilder = (Boolean(a.specialized_builder) && !qBuilder) || a.activity_key === 'aral-l22-g1-c-syllable-builder';
+  const specializedBuilder = cBuilder || qBuilder;
   const jReading = a.activity_key === 'aral-l23-g3-j-word-reading';
   const jSyllables = a.activity_key === 'aral-l23-g4-j-syllabication';
   let state = data.state, busy = false, selected = [], builder = [], words = [];
@@ -19,8 +21,8 @@
   const item = () => a.items[state.index];
   const oral = () => state.oral[item()?.id] || {passed:false,attempts:0,listens:0,phase:a.model_first?'model':'read'};
   const message = (text, error=false) => {
-    status.textContent=text;status.className=error?'wb-error':'wb-save';status.hidden=cBuilder||jReading||jSyllables;
-    if(cBuilder){const primary=content.querySelector('.wb-phase-status');if(primary){primary.textContent=text;primary.classList.toggle('wb-feedback-error',error);}}
+    status.textContent=text;status.className=error?'wb-error':'wb-save';status.hidden=specializedBuilder||jReading||jSyllables;
+    if(specializedBuilder){const primary=content.querySelector('.wb-phase-status');if(primary){primary.textContent=text;primary.classList.toggle('wb-feedback-error',error);}}
   };
   const stopReadAloud = () => {
     audioRun += 1;
@@ -83,7 +85,7 @@
   function table(){let n=0;return `<table class="wb-table">${a.column_headers?'<thead><tr>'+a.column_headers.map(h=>`<th>${esc(h)}</th>`).join('')+'</tr></thead>':''}<tbody>${a.rows.map(row=>'<tr>'+row.map(text=>{const i=text?a.items[n++]:null;return `<td class="${!preview&&i?(n-1===state.index?'wb-current':n-1<state.index?'wb-done':''):''}">${i&&a.images?.[i.id]?`<img src="${esc(a.images[i.id])}" alt="${esc(text)}"><br>`:''}${esc(i?(a.cell_display?.[i.id]||text):'')}</td>`;}).join('')+'</tr>').join('')}</tbody></table>`;}
   function render(){
     selected=[];builder=state.draft.builder||[];words=state.draft.words||[];
-    const totalProgress=a.progress_total||a.items.length, progressValue=state.completed?totalProgress:Math.min(totalProgress, cBuilder?Number(state.index||0)+1:Number(state.index||0));
+    const totalProgress=a.progress_total||a.items.length, progressValue=state.completed?totalProgress:Math.min(totalProgress, qBuilder?Number(state.index||0):cBuilder?Number(state.index||0)+1:Number(state.index||0));
     document.getElementById('wb-progress').textContent=preview?'Preview':(a.activity_key==='aral-l23-g1-n-syllable-builder'?`Nabasa: ${Math.min(12,Number(state.index||0))} / 12`:`${progressValue} / ${totalProgress}`);
     const progressFill=document.getElementById('wb-progress-fill');if(progressFill)progressFill.style.width=`${preview?0:Math.max(0,Math.min(100,progressValue/totalProgress*100))}%`;
     document.getElementById('wb-back').hidden=preview;
@@ -96,7 +98,7 @@
     }
     if(jReading){renderJReading();return;}
     if(jSyllables){renderJSyllables();return;}
-    if(cBuilder&&!preview){renderCBuilder();lock();return;}
+    if(specializedBuilder&&!preview){renderCBuilder();lock();return;}
     if(state.index>=a.items.length&&!preview){content.innerHTML='<div class="wb-focus">'+(fil?'Na-save ang lahat ng bahagi ng gawain.':'All required parts are saved.')+'</div>';button(fil?'Tapusin ang gawain':'Finish activity',()=>perform({action:'finish'}),true);return;}
     const kind=a.interaction_type;
     content.innerHTML=preview?'<p class="wb-preview-note">Preview · '+(fil?'Walang sagot na napili.':'No answers selected.')+'</p>':'';
@@ -180,13 +182,13 @@
       const denied=e?.name==='NotAllowedError'||e?.name==='SecurityError';setJFeedback(denied?'Hindi pinayagan ang mikropono.':e.message||'Hindi nakuha ang iyong boses. Subukan muli.',true);
     }finally{busy=false;lock();}
   }
-  function draft(value){state.draft={...state.draft,...value};if(cBuilder&&Object.prototype.hasOwnProperty.call(value,'builder')){state.last_feedback='';const feedback=content.querySelector('.wb-builder-feedback');if(feedback)feedback.textContent='';}const snapshot=structuredClone(state.draft);send({action:'draft',draft:snapshot}).catch(e=>message(e.message,true));}
+  function draft(value){state.draft={...state.draft,...value};if(specializedBuilder&&Object.prototype.hasOwnProperty.call(value,'builder')){state.last_feedback='';const feedback=content.querySelector('.wb-builder-feedback');if(feedback)feedback.textContent='';}const snapshot=structuredClone(state.draft);send({action:'draft',draft:snapshot}).catch(e=>message(e.message,true));}
   function renderCBuilder(){
     const readDone=Boolean(state.read_aloud_completed), piecesById=Object.fromEntries(a.items.map(i=>[i.id,i.text]));
     let fallbackIndex=0;
     const boxCells=a.bigbox_cells||a.rows.map(row=>row.filter(Boolean).map(()=>[`item-${++fallbackIndex}`]));
     builder=state.draft.builder||[];
-    content.className='wb-l22-builder';
+    content.className=`wb-l22-builder ${qBuilder?'wb-q-builder':''}`;
     const current=Math.min(Number(state.index||0),a.items.length-1), phase=state.reading_phase||'read';
     content.innerHTML=`<div class="wb-l22-banner"><span class="wb-speaker-icon" aria-hidden="true">🔊</span><strong>${instructionText}</strong><button type="button" id="wb-l22-instruction-replay" aria-label="Pakinggan muli ang panuto">Pakinggan muli</button></div><section class="wb-bigbox"><h2>BIG BOX</h2><p class="wb-box-help">Sundan ang dilaw na highlight.</p><div class="wb-bigbox-grid">${boxCells.map(row=>`<div class="wb-bigbox-row">${row.map(()=>'<div class="wb-bigbox-cell"></div>').join('')}</div>`).join('')}</div></section><section class="wb-reading-panel"><h2>BASAHIN</h2><p class="wb-phase-status" role="status">${readDone?'Magaling!':state.last_feedback==='Tama!'?'Tama!':'Handa ka na?'}</p><div id="wb-l22-reading-action"></div><p class="wb-reading-tip"><span aria-hidden="true">💡</span><span> pindutin ang button kapag handa ka nang magbasa.</span></p></section><section class="wb-word-panel ${readDone?'':'is-locked'}" aria-disabled="${!readDone}"><h2>BUMUO NG SALITA</h2>${readDone?`<p>Piliin ang mga pantig sa Big Box.</p><div class="wb-selected-parts" id="wb-selected-parts" aria-live="polite"></div><div class="wb-tools"><button type="button" id="wb-erase">Bura</button><button type="button" id="wb-retry">Ulitin</button></div><p class="wb-builder-feedback" aria-live="polite">${esc(state.last_feedback||'')}</p>${state.found_words?.length?`<div class="wb-builder-words"><strong>Nabuo mo na:</strong><ul>${state.found_words.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`:''}`:'<p class="wb-locked-note"><span class="wb-lock-icon" aria-hidden="true">🔒</span><span>Basahin muna ang lahat ng pantig.</span></p>'}</section>`;
     const replay=document.getElementById('wb-l22-instruction-replay');
@@ -223,13 +225,13 @@
     }
     if(!preview){
       const restart=button('Ulitin Mula sa Simula',()=>{
-        if(window.confirm('Sigurado ka bang gusto mong magsimula muli? Mawawala ang kasalukuyang progreso sa Gawain 1.')) perform({action:'restart'});
+        if(window.confirm(`Sigurado ka bang gusto mong magsimula muli? Mawawala ang kasalukuyang progreso sa ${qBuilder?'Gawain 6':'Gawain 1'}.`)) perform({action:'restart'});
       },false);
       restart.classList.add('wb-secondary');
     }
   }
   async function startCReading(){
-    if(busy)return;stopReadAloud();busy=true;lock();let chunks=[],readTimer,recorder;
+    if(busy)return;stopReadAloud();busy=true;lock();let chunks=[],readTimer,recorder;const requestIndex=Number(state.index||0),requestActivity=a.activity_key;
     try{
       await send({action:'reading_started'},null,false);
       if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw new Error('Hindi available ang mikropono sa browser na ito.');
@@ -241,8 +243,9 @@
       readTimer=setTimeout(()=>{if(recorder.state==='recording')recorder.stop();},3500);
       const audio=await audioDone;clearTimeout(readTimer);activeStream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
       if(!audio.size)throw new Error('Walang nakuha sa recording. Subukan muli.');
+      if(requestActivity!==a.activity_key||requestIndex!==Number(state.index||0))return;
       const form=new FormData();form.append('audio',audio,'reading.webm');message('Sinusuri ang iyong pagbasa...');
-      await send({action:'reading_syllable_attempt'},form,false);render();
+      await send({action:'reading_syllable_attempt',item_index:requestIndex},form,false);render();
       pendingSpeech=state.read_aloud_completed?'Magaling! Nabasa mo nang tama ang lahat ng pantig.':state.last_feedback==='Tama!'?'Tama!':'Subukan muli.';
       message(pendingSpeech);
     }catch(error){
@@ -325,6 +328,6 @@
     if(busy)return;busy=true;lock();
     await window.PabasaTemplateTts.speak({text:item().text,profile:'word',onEnd:async()=>{try{await send({action:oral().phase==='model'?'model_listened':'listened'});render();}catch(e){message(e.message,true);}finally{busy=false;lock();}},onError:e=>{message(e.message,true);busy=false;lock();}});
   }
-  window.addEventListener('beforeunload',e=>{activeRecorder?.stop();activeStream?.getTracks().forEach(t=>t.stop());stopReadAloud();if(!cBuilder&&busy){e.preventDefault();e.returnValue='';}});
+  window.addEventListener('beforeunload',e=>{activeRecorder?.stop();activeStream?.getTracks().forEach(t=>t.stop());stopReadAloud();if(!specializedBuilder&&busy){e.preventDefault();e.returnValue='';}});
   render();
 })();
