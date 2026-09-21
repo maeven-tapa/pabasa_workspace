@@ -2,7 +2,7 @@
 <!doctype html><html lang="{% if workbook_payload.activity.language == 'English' %}en{% else %}fil{% endif %}">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{ workbook_payload.activity.display_label }} | PABASA</title>
-<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_workbook.css' %}"><link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_intro.css' %}">
+<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_workbook.css' %}">
 {% if workbook_payload.activity.specialized_builder %}<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_l22_c_builder.css' %}">{% endif %}</head>
 <body class="wb-page{% if workbook_payload.activity.specialized_builder %} wb-l22-page{% endif %}{% if workbook_payload.activity.activity_key == 'aral-l23-g1-n-syllable-builder' %} wb-l23-page{% endif %}{% if workbook_payload.activity.activity_key == 'aral-l24-g1-v-syllable-builder' %} wb-l24-page{% endif %}{% if workbook_payload.activity.activity_key == 'aral-l23-g6-q-syllable-builder' %} wb-l23-g6-page{% endif %}">{% csrf_token %}
 <main class="wb-shell">
@@ -19,5 +19,5 @@
 </main>
 {{ workbook_payload|json_script:'workbook-payload' }}
 <script src="{% static 'pabasa_app/js/template_google_tts.js' %}"></script>
-<script src="{% static 'pabasa_app/js/prescribed_workbook.js' %}"></script><script src="{% static 'pabasa_app/js/prescribed_intro.js' %}"></script>
+<script src="{% static 'pabasa_app/js/prescribed_workbook.js' %}"></script>
 </body></html>

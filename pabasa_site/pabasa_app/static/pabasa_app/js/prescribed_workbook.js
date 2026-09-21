@@ -3,7 +3,6 @@
   'use strict';
   const data = JSON.parse(document.getElementById('workbook-payload').textContent);
   const a = data.activity, preview = data.preview;
-  const hasPrescribedIntro = !preview && [8, 9].includes(Number(a.session));
   const qBuilder = a.activity_key === 'aral-l23-g6-q-syllable-builder';
   const l24Builder = a.activity_key === 'aral-l24-g1-v-syllable-builder';
   const cBuilder = (Boolean(a.specialized_builder) && !qBuilder) || a.activity_key === 'aral-l22-g1-c-syllable-builder';
@@ -199,7 +198,7 @@
     content.innerHTML=`<div class="wb-l22-banner"><span class="wb-speaker-icon" aria-hidden="true">🔊</span><strong>${instructionText}</strong><button type="button" id="wb-l22-instruction-replay" aria-label="Pakinggan muli ang panuto">Pakinggan muli</button></div><section class="wb-bigbox"><h2>BIG BOX</h2><p class="wb-box-help">Sundan ang dilaw na highlight.</p><div class="wb-bigbox-grid">${boxCells.map(row=>`<div class="wb-bigbox-row">${row.map(()=>'<div class="wb-bigbox-cell"></div>').join('')}</div>`).join('')}</div></section><section class="wb-reading-panel"><h2>BASAHIN</h2><p class="wb-phase-status" role="status">${readDone?'Magaling!':state.last_feedback==='Tama!'?'Tama!':'Handa ka na?'}</p><div id="wb-l22-reading-action"></div><p class="wb-reading-tip"><span aria-hidden="true">💡</span><span> pindutin ang button kapag handa ka nang magbasa.</span></p></section><section class="wb-word-panel ${readDone?'':'is-locked'}" aria-disabled="${!readDone}"><h2>BUMUO NG SALITA</h2>${readDone?`<p>Piliin ang mga pantig sa Big Box.</p><div class="wb-selected-parts" id="wb-selected-parts" aria-live="polite"></div><div class="wb-tools"><button type="button" id="wb-erase">Bura</button><button type="button" id="wb-retry">Ulitin</button></div><p class="wb-builder-feedback" aria-live="polite">${esc(state.last_feedback||'')}</p>${state.found_words?.length?`<div class="wb-builder-words"><strong>Nabuo mo na:</strong><ul>${state.found_words.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`:''}`:'<p class="wb-locked-note"><span class="wb-lock-icon" aria-hidden="true">🔒</span><span>Basahin muna ang lahat ng pantig.</span></p>'}</section>`;
     const replay=document.getElementById('wb-l22-instruction-replay');
     replay.onclick=()=>{if(!busy&&!activeStream)playPrescribedAudio(instructionText).catch(e=>message(e.message||'Hindi available ang panuto.',true));};
-    if(!preview&&!hasPrescribedIntro&&!instructionSpoken){instructionSpoken=true;setTimeout(()=>playPrescribedAudio(instructionText).catch(e=>console.error('Lesson 22 instruction audio failed',e)),0);}
+    if(!preview&&!instructionSpoken){instructionSpoken=true;setTimeout(()=>playPrescribedAudio(instructionText).catch(e=>console.error('Lesson 22 instruction audio failed',e)),0);}
     const readingPanel=content.querySelector('.wb-reading-panel');
     const phaseStatus=readingPanel.querySelector('.wb-phase-status');
     phaseStatus.textContent=readDone?'Magaling! Nabasa mo nang tama ang lahat ng pantig.':state.last_feedback||'Handa ka na?';
