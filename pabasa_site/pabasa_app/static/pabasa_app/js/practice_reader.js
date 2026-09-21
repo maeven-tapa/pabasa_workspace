@@ -132,6 +132,24 @@
     const huntSpeechStatus = document.getElementById("huntSpeechStatus");
     const huntSpeechTranscript = document.getElementById("huntSpeechTranscript");
     const huntRawMicInput = document.getElementById("huntRawMicInput");
+    const practiceSpeechPanel = document.getElementById("practiceSpeechPanel");
+    const practiceSpeechStatus = document.getElementById("practiceSpeechStatus");
+    const practiceSpeechTranscript = document.getElementById("practiceSpeechTranscript");
+    const practiceRawMicInput = document.getElementById("practiceRawMicInput");
+    const practiceSpeechDebugToggle = document.getElementById("practiceSpeechDebugToggle");
+    function setPracticeSpeechDebugVisible(enabled, persist = true) {
+        if (!practiceSpeechPanel) return;
+        const visible = Boolean(enabled);
+        practiceSpeechPanel.classList.toggle("d-none", !visible);
+        practiceSpeechPanel.toggleAttribute("hidden", !visible);
+        practiceSpeechPanel.setAttribute("aria-hidden", String(!visible));
+        if (practiceSpeechDebugToggle) practiceSpeechDebugToggle.checked = visible;
+        if (persist) localStorage.setItem("pabasaShowSpeechDebugPanel", visible ? "true" : "false");
+    }
+    if (isFreeMode) {
+        setPracticeSpeechDebugVisible(localStorage.getItem("pabasaShowSpeechDebugPanel") === "true", false);
+        practiceSpeechDebugToggle?.addEventListener("change", () => setPracticeSpeechDebugVisible(practiceSpeechDebugToggle.checked, true));
+    }
     let huntTranscriptItemIndex = -1;
     let huntAutoAdvanceTimer = null;
     let huntRetryTimer = null;
@@ -399,15 +417,21 @@
     }
 
     function setHuntSpeechPanel(status, transcript, listening = false) {
-        if (!isHuntMode) return;
-        huntSpeechPanel?.classList.toggle("is-listening", listening);
-        if (huntSpeechStatus) huntSpeechStatus.textContent = status;
-        if (huntSpeechTranscript) huntSpeechTranscript.textContent = transcript || "Google Speech results will appear here while you read.";
+        const panel = isFreeMode ? practiceSpeechPanel : huntSpeechPanel;
+        const panelStatus = isFreeMode ? practiceSpeechStatus : huntSpeechStatus;
+        const panelTranscript = isFreeMode ? practiceSpeechTranscript : huntSpeechTranscript;
+        const panelRawMic = isFreeMode ? practiceRawMicInput : huntRawMicInput;
+        if (!isHuntMode && !isFreeMode) return;
+        panel?.classList.toggle("is-listening", listening);
+        if (panelStatus) panelStatus.textContent = status;
+        if (panelTranscript) panelTranscript.textContent = transcript || "No words recognized yet. Keep reading clearly.";
+        if (panelRawMic && transcript && !transcript.startsWith("Interim:") && !transcript.startsWith("Google Speech")) panelRawMic.textContent = transcript.replace(/^Final:\s*/, "") || "No speech recognized";
     }
 
     function resetHuntSpeechPanel() {
-        setHuntSpeechPanel("Ready to start reading", "Google Speech results will appear here while you read.");
-        if (huntRawMicInput) huntRawMicInput.textContent = "Waiting for speech...";
+        setHuntSpeechPanel("Ready to start reading", "No words recognized yet. Keep reading clearly.");
+        const rawMic = isFreeMode ? practiceRawMicInput : huntRawMicInput;
+        if (rawMic) rawMic.textContent = "Waiting for speech...";
     }
 
     function classifyHuntSpeech(transcript, target, confidence) {
@@ -546,7 +570,18 @@
             }
             if (!response.ok || !data.success) throw new Error(data.error || "Speech recognition failed.");
 
+            if (isFreeMode) console.info("FREE_MODE_STT_DIAGNOSTIC final_json", {
+                language_code: data.language_code,
+                stt_model: data.stt_model,
+                raw_transcript: data.raw_transcript,
+                transcript: data.transcript,
+            });
+
             const transcript = String(data.transcript || "").trim();
+            if (isFreeMode) {
+                setHuntSpeechPanel("Final Google Speech result", `Final: ${transcript || "No speech recognized"}`);
+                if (practiceRawMicInput) practiceRawMicInput.textContent = String(data.raw_transcript || transcript || "No speech recognized");
+            }
             if (isHuntMode) {
                 if (speechItemIndex !== currentIndex || huntAdvanceInProgress || huntResults[speechItemIndex]) return;
                 const isCorrect = normalizeHuntSpeech(transcript) === normalizeHuntSpeech(targetText);

@@ -20088,6 +20088,11 @@ def reading_transcribe_api(request):
     project_id = getattr(settings, 'GOOGLE_CLOUD_PROJECT_ID', '').strip()
     location = getattr(settings, 'GOOGLE_STT_LOCATION', 'global').strip()
     stt_model = getattr(settings, 'GOOGLE_STT_MODEL', 'chirp_3').strip()
+    # Filipino CRLA speech uses the Speech-to-Text v1 configuration.  Keep
+    # Free Mode aligned with that proven path instead of accepting a Chirp 3
+    # result when the global default is enabled.
+    if language_code.lower() == 'fil-ph':
+        stt_model = ''
     credentials_file = str(getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', '') or '')
 
     if not api_key and stt_model != 'chirp_3':
@@ -20104,6 +20109,14 @@ def reading_transcribe_api(request):
             location=location,
             mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
             credentials_file=credentials_file,
+        )
+        logger.warning(
+            "FREE_MODE_STT_DIAGNOSTIC provider=Google Speech model=%s language=%s "
+            "provider_transcript=%r provider_raw_result=unavailable fallback=%r",
+            model_used,
+            language_code,
+            transcript,
+            fallback_reason,
         )
         l22_c_pronunciation = request.POST.get('l22_c_pronunciation') == '1'
         # English prescribed activities contain very short words, for which
@@ -20174,6 +20187,11 @@ def reading_transcribe_api(request):
         # near-match of short words such as "pana" from being rejected again.
         if mode == 'reading' and not l22_c_pronunciation and analysis.get('complete') and len(ReadingMatcher.readable_words(target_text)) == 1:
             analysis['transcript'] = target_text
+        logger.warning(
+            "FREE_MODE_STT_DIAGNOSTIC processed_transcript=%r raw_transcript=%r",
+            transcript,
+            analysis.get('transcript'),
+        )
         analysis['syllable_context'] = next_syllable_context
         analysis['syllable_stitching_applied'] = stitching_applied
         analysis['syllable_stitched_transcript'] = analysis_transcript if stitching_applied else ''
@@ -20225,6 +20243,11 @@ def reading_transcribe_api(request):
             'stt_model': model_used,
             'stt_fallback_reason': fallback_reason,
         })
+        logger.warning(
+            "FREE_MODE_STT_DIAGNOSTIC final_json raw_transcript=%r transcript=%r",
+            analysis.get('raw_transcript'),
+            analysis.get('transcript'),
+        )
         return JsonResponse(analysis)
     except Exception as exc:
         logger.exception('Reading transcription failed')
