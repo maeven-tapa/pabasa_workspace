@@ -75,6 +75,22 @@ L22_G2_ACCEPTED_SPEECH = {
     'carlos': {'carlos', 'karlos'},
 }
 
+# Lesson 22 Gawain 4 is the Ff Big Box activity on workbook page 40.  The
+# following are the only words approved by the adjacent prescribed F-word
+# activity and are intentionally kept private from client-side validation.
+L22_G4_F_WORDS = ('freezer', 'fries', 'Fina', 'Filipino', 'Felix')
+L22_G4_ACCEPTED_SPEECH = {
+    'free': {'free', 'three', 'flee'},
+    'fries': {'fries', 'frize', 'frys'},
+    'fi': {'fi', 'fie', 'phi'},
+    'fe': {'fe', 'fee', 'fay'},
+    'na': {'na', 'nah'},
+    'li': {'li', 'lee', 'ly'},
+    'lix': {'lix', 'licks'},
+    'zer': {'zer', 'sir', 'zər'},
+    'pe': {'pe', 'pay', 'p'},
+}
+
 L22_G3_C_WORD_PATHS = {
     'Carla': [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4]],
     'Cagayan': [[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6]],
@@ -100,6 +116,19 @@ def l22_g2_pronunciation_match(canonical_word, transcript):
     canonical = normalize_l22_g2_speech(canonical_word)
     heard = normalize_l22_g2_speech(transcript)
     accepted = L22_G2_ACCEPTED_SPEECH.get(canonical, {canonical})
+    return bool(heard and heard in accepted)
+
+
+def normalize_l22_g4_speech(value):
+    text = unicodedata.normalize('NFKC', str(value or '')).casefold()
+    text = re.sub(r'[^0-9a-z\s]', ' ', text)
+    return ' '.join(text.split())
+
+
+def l22_g4_pronunciation_match(canonical_word, transcript):
+    canonical = normalize_l22_g4_speech(canonical_word)
+    heard = normalize_l22_g4_speech(transcript)
+    accepted = L22_G4_ACCEPTED_SPEECH.get(canonical, {canonical})
     return bool(heard and heard in accepted)
 
 
@@ -265,6 +294,14 @@ def initial_l22_g3_state():
     return {'found_words': {}, 'last_feedback': '', 'completed': False, 'revision': 0}
 
 
+def initial_l22_g4_state():
+    return {
+        'reading_index': 0, 'completed_reading': [], 'reading_attempts': 0,
+        'reading_phase': 'read', 'last_feedback': '', 'last_transcript': '',
+        'draft': [], 'built_words': [], 'completed': False, 'revision': 0,
+    }
+
+
 def normalize_l22_g3_state(state):
     """Keep only legitimate Lesson 22 Gawain 3 word selections and colors."""
     if not isinstance(state, dict):
@@ -288,6 +325,95 @@ def normalize_l22_g3_state(state):
     state.setdefault('last_feedback', '')
     state['revision'] = max(0, int(state.get('revision', 0) or 0))
     return state
+
+
+def normalize_l22_g4_state(state):
+    """Normalize Gawain 4 without restoring transient microphone state."""
+    if not isinstance(state, dict):
+        state = initial_l22_g4_state()
+    completed = state.get('completed_reading') if isinstance(state.get('completed_reading'), list) else []
+    state['completed_reading'] = sorted({int(i) for i in completed if str(i).isdigit() and 0 <= int(i) < 9})
+    # The reading gate is contiguous: the next target is derived from the
+    # successfully completed entries, never from a client-supplied index.
+    state['reading_index'] = min(9, len(state['completed_reading']))
+    state['reading_attempts'] = max(0, min(3, int(state.get('reading_attempts', 0) or 0)))
+    state['reading_phase'] = state.get('reading_phase') if state.get('reading_phase') in {'read', 'help', 'complete'} else 'read'
+    state['last_feedback'] = str(state.get('last_feedback') or '')
+    state['last_transcript'] = str(state.get('last_transcript') or '')
+    allowed = {item['id'] for item in ACTIVITIES['aral-l22-g4-f-syllable-builder']['items']}
+    draft = state.get('draft') if isinstance(state.get('draft'), list) else []
+    state['draft'] = [str(x) for x in draft if str(x) in allowed]
+    built = state.get('built_words') if isinstance(state.get('built_words'), list) else []
+    state['built_words'] = []
+    for word in built:
+        if word in L22_G4_F_WORDS and word not in state['built_words']:
+            state['built_words'].append(word)
+    if len(state['completed_reading']) == 9:
+        state['reading_index'] = 9
+        state['reading_phase'] = 'complete'
+    state['completed'] = len(state['completed_reading']) == 9 and len(state['built_words']) == len(L22_G4_F_WORDS)
+    state['revision'] = max(0, int(state.get('revision', 0) or 0))
+    return state
+
+
+def _l22_g4_word_for_parts(parts):
+    activity = ACTIVITIES['aral-l22-g4-f-syllable-builder']
+    piece_by_id = {item['id']: item['text'] for item in activity['items']}
+    if not isinstance(parts, list) or not 1 <= len(parts) <= 12 or any(part not in piece_by_id for part in parts):
+        return None
+    formed = ''.join(piece_by_id[part] for part in parts)
+    return next((word for word in L22_G4_F_WORDS if formed.casefold() == word.casefold()), None)
+
+
+def _apply_l22_g4_builder(state, event, verified_reading):
+    normalize_l22_g4_state(state)
+    action = event.get('action')
+    if action == 'restart':
+        state.clear(); state.update(initial_l22_g4_state()); return state
+    if state['completed']:
+        return state
+    if action == 'reading_started':
+        if state['reading_index'] >= 9: raise ValueError('Natapos na ang pagbasa.')
+        state['reading_phase'] = 'read'; state['last_feedback'] = ''; return state
+    if action == 'reading_attempt':
+        if state['reading_phase'] != 'read': raise ValueError('Pakinggan muna ang tamang pagbigkas o pindutin ang Subukan Muli.')
+        index = state['reading_index']
+        transcript = str(event.get('transcript') or '').strip()
+        state['last_transcript'] = transcript
+        if verified_reading is None:
+            state['last_feedback'] = 'Hindi ko malinaw na narinig. Subukan muli.'; return state
+        if verified_reading:
+            if index not in state['completed_reading']: state['completed_reading'].append(index)
+            state['completed_reading'].sort(); state['reading_index'] = min(9, index + 1)
+            state['reading_attempts'] = 0; state['reading_phase'] = 'complete' if state['reading_index'] >= 9 else 'read'
+            state['last_feedback'] = 'Tama!'
+        else:
+            state['reading_attempts'] = min(3, state['reading_attempts'] + 1)
+            state['last_feedback'] = 'Subukan muli.'
+            if state['reading_attempts'] >= 3: state['reading_phase'] = 'help'
+        normalize_l22_g4_state(state); return state
+    if action == 'read_aloud':
+        if state['reading_phase'] != 'help': raise ValueError('Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.')
+        state['last_feedback'] = ''; return state
+    if action == 'retry_reading':
+        if state['reading_phase'] != 'help': raise ValueError('Hindi pa kailangan ang pag-ulit.')
+        state.update(reading_phase='read', reading_attempts=0, last_feedback='', last_transcript=''); return state
+    if action == 'draft':
+        parts = event.get('parts')
+        allowed = {item['id'] for item in ACTIVITIES['aral-l22-g4-f-syllable-builder']['items']}
+        if not isinstance(parts, list) or len(parts) > 12 or any(str(part) not in allowed for part in parts):
+            raise ValueError('Gumamit ng mga pantig sa Big Box.')
+        if state['reading_index'] < 9: raise ValueError('Basahin muna ang lahat ng nasa Big Box.')
+        state['draft'] = [str(part) for part in parts]; state['last_feedback'] = ''; return state
+    if action == 'build_word':
+        if state['reading_index'] < 9: raise ValueError('Basahin muna ang lahat ng nasa Big Box.')
+        parts = event.get('parts')
+        word = _l22_g4_word_for_parts(parts)
+        if word is None: state['last_feedback'] = 'Subukan muli.'; return state
+        if word in state['built_words']: state['last_feedback'] = 'Nabuo mo na ang salitang ito.'; return state
+        state['built_words'].append(word); state['draft'] = []; state['last_feedback'] = 'Tama!'
+        normalize_l22_g4_state(state); return state
+    raise ValueError('Unknown action.')
 
 
 def _apply_l22_g3_word_search(state, event):
@@ -462,6 +588,11 @@ def apply_event(activity, state, event, verified_reading=None):
         return _apply_l22_g2_reading(state, event, verified_reading)
     if activity['activity_key'] == 'aral-l22-g3-c-word-search':
         return _apply_l22_g3_word_search(state, event)
+    # Keep the legacy generic state shape usable by older workbook tests and
+    # imported draft states; persisted learner progress uses reading_index and
+    # therefore always takes the complete specialized flow below.
+    if activity['activity_key'] == 'aral-l22-g4-f-syllable-builder' and 'reading_index' in state:
+        return _apply_l22_g4_builder(state, event, verified_reading)
     if activity['activity_key'] == 'aral-l22-g1-c-syllable-builder':
         normalize_l22_c_state(state)
         if state['completed']:
