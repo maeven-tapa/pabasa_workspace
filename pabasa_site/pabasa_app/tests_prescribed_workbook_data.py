@@ -52,6 +52,14 @@ class PrescribedWorkbookDataTests(unittest.TestCase):
                     apply_event(a,s,{'action':'finish'})
                     self.assertTrue(s['completed'])
                     continue
+                if a['activity_key']=='aral-l23-g1-n-syllable-builder':
+                    apply_event(a, s, {'action':'reading_started'})
+                    for item in a['items']:
+                        apply_event(a, s, {'action':'reading_syllable_attempt', 'transcript':item['text']}, True)
+                    apply_event(a, s, {'action':'build_word','parts':['item-1','item-8']})
+                    apply_event(a, s, {'action':'finish'})
+                    self.assertTrue(s['completed'])
+                    continue
                 if a['activity_key']=='aral-l22-g2-c-word-reading':
                     for word in a['items']:
                         apply_event(a, s, {'action': 'reading_started'})

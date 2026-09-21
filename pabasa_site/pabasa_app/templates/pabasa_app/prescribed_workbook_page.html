@@ -3,18 +3,18 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{ workbook_payload.activity.display_label }} | PABASA</title>
 <link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_workbook.css' %}">
-{% if workbook_payload.activity.activity_key == 'aral-l22-g1-c-syllable-builder' %}<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_l22_c_builder.css' %}">{% endif %}</head>
-<body class="wb-page{% if workbook_payload.activity.activity_key == 'aral-l22-g1-c-syllable-builder' %} wb-l22-page{% endif %}">{% csrf_token %}
+{% if workbook_payload.activity.specialized_builder %}<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_l22_c_builder.css' %}">{% endif %}</head>
+<body class="wb-page{% if workbook_payload.activity.specialized_builder %} wb-l22-page{% endif %}{% if workbook_payload.activity.activity_key == 'aral-l23-g1-n-syllable-builder' %} wb-l23-page{% endif %}">{% csrf_token %}
 <main class="wb-shell">
-  {% if workbook_payload.activity.activity_key == 'aral-l22-g1-c-syllable-builder' %}
+  {% if workbook_payload.activity.specialized_builder %}
   <header class="wb-lesson-header"><div class="wb-lesson-copy"><a href="{% url 'assessment' %}" id="wb-back">Aking Aralin</a><p class="wb-lesson-label">{{ workbook_payload.activity.display_label }} · p. {{ workbook_payload.activity.printed_page }}</p>
-  <h1>{{ workbook_payload.activity.title }}</h1><p class="wb-instruction">Basahin ang mga pantig sa Big Box at bumuo ng mga salita.</p></div><div class="wb-lesson-art" aria-label="Letrang Cc at pusa"><span class="wb-lesson-letter">Cc</span><span class="wb-cat-art" aria-hidden="true">🐱</span></div></header>
+  <h1>{{ workbook_payload.activity.title }}</h1><p class="wb-instruction">{{ workbook_payload.activity.instruction }}</p></div><div class="wb-lesson-art" aria-label="{{ workbook_payload.activity.title }}"><span class="wb-lesson-letter">{% if workbook_payload.activity.activity_key == 'aral-l23-g1-n-syllable-builder' %}Ññ{% else %}Cc{% endif %}</span><span class="wb-cat-art" aria-hidden="true">{% if workbook_payload.activity.activity_key == 'aral-l23-g1-n-syllable-builder' %}📖{% else %}🐱{% endif %}</span></div></header>
   {% else %}
   <header><a href="{% url 'assessment' %}" id="wb-back">Aking Aralin</a><p>{{ workbook_payload.activity.display_label }} · p. {{ workbook_payload.activity.printed_page }}</p>
   <h1>{{ workbook_payload.activity.title }}</h1><p class="wb-instruction">{{ workbook_payload.activity.instruction }}</p></header>
   {% endif %}
   <p id="wb-status" role="status" aria-live="polite"></p><div id="wb-progress"></div>
-  {% if workbook_payload.activity.activity_key == 'aral-l22-g1-c-syllable-builder' %}<div id="wb-progress-track" aria-hidden="true"><span id="wb-progress-fill"></span></div>{% endif %}
+  {% if workbook_payload.activity.specialized_builder %}<div id="wb-progress-track" aria-hidden="true"><span id="wb-progress-fill"></span></div>{% endif %}
   <section id="wb-content"></section><section id="wb-action" aria-label="Activity controls"></section>
 </main>
 {{ workbook_payload|json_script:'workbook-payload' }}

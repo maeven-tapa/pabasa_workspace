@@ -3,11 +3,11 @@
   'use strict';
   const data = JSON.parse(document.getElementById('workbook-payload').textContent);
   const a = data.activity, preview = data.preview;
-  const cBuilder = a.activity_key === 'aral-l22-g1-c-syllable-builder';
+  const cBuilder = Boolean(a.specialized_builder) || a.activity_key === 'aral-l22-g1-c-syllable-builder';
   let state = data.state, busy = false, selected = [], builder = [], words = [];
   let activeRecorder = null, activeStream = null, activeReadAloud = null, audioController = null;
   let audioRun = 0, instructionSpoken = false, pendingSpeech = '';
-  const instructionText = 'Basahin ang naka-highlight na pantig.';
+  const instructionText = cBuilder ? a.instruction : 'Basahin ang naka-highlight na pantig.';
   const content = document.getElementById('wb-content'), action = document.getElementById('wb-action');
   const status = document.getElementById('wb-status');
   const fil = a.language === 'Filipino';
@@ -82,7 +82,7 @@
   function render(){
     selected=[];builder=state.draft.builder||[];words=state.draft.words||[];
     const totalProgress=a.progress_total||a.items.length, progressValue=state.completed?totalProgress:Math.min(totalProgress, cBuilder?Number(state.index||0)+1:Number(state.index||0));
-    document.getElementById('wb-progress').textContent=preview?'Preview':`${progressValue} / ${totalProgress}`;
+    document.getElementById('wb-progress').textContent=preview?'Preview':(a.activity_key==='aral-l23-g1-n-syllable-builder'?`Nabasa: ${Math.min(12,Number(state.index||0))} / 12`:`${progressValue} / ${totalProgress}`);
     const progressFill=document.getElementById('wb-progress-fill');if(progressFill)progressFill.style.width=`${preview?0:Math.max(0,Math.min(100,progressValue/totalProgress*100))}%`;
     document.getElementById('wb-back').hidden=preview;
     action.replaceChildren();
@@ -159,6 +159,12 @@
         readingButton('Pakinggan ang Tamang Pagbigkas',readAloudC,true);
         if(state.pronunciation_help_played)readingButton('Subukan Muli',retryCReading,false);
       }else readingButton(state.read_aloud_started?'Basahin Muli':'Simulan ang Pagbasa',startCReading);
+    }
+    if(!preview){
+      const restart=button('Ulitin Mula sa Simula',()=>{
+        if(window.confirm('Sigurado ka bang gusto mong magsimula muli? Mawawala ang kasalukuyang progreso sa Gawain 1.')) perform({action:'restart'});
+      },false);
+      restart.classList.add('wb-secondary');
     }
   }
   async function startCReading(){

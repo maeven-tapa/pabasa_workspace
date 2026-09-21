@@ -108,6 +108,17 @@ L22_G4_ACCEPTED_SPEECH = {
     'pe': {'pe', 'pay', 'p'},
 }
 
+# Lesson 23 Gawain 1 uses the workbook's Ñ Big Box.  The only target word
+# that is both present in the validated Lesson 23 word list and constructible
+# from the requested box is Niño.
+L23_G1_WORDS = ('Niño',)
+L23_G1_ACCEPTED_SPEECH = {
+    'ni': {'ni'}, 'la': {'la'}, 'ñg': {'ng', 'eng', 'ing'},
+    'cas': {'cas', 'kas', 'kass'}, 'bi': {'bi', 'bee'}, 'da': {'da'},
+    'el': {'el', 'ell'}, 'ño': {'no', 'nyo'}, 'ñan': {'nan', 'nyan'},
+    'cen': {'cen', 'sen'}, 'ta': {'ta'}, 'ñe': {'ne', 'nye'},
+}
+
 L22_G3_C_WORD_PATHS = {
     'Carla': [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4]],
     'Cagayan': [[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6]],
@@ -231,7 +242,13 @@ add('aral-l22-g6-f-word-reading', 41, 22, '6', 'Mga salitang may letrang Ff',
 
 
 add('aral-l23-g1-n-syllable-builder', 41, 23, '1', 'Big Box: Ñ', BOX, 'builder',
-    [['Ni', 'La', 'ña'], ['Cas', 'Bi', 'da'], ['El', 'ño', 'ñan'], ['Cen', 'ta', 'ñe']], review_required=True)
+    [['Ni', 'La', 'ñg'], ['Cas', 'Bi', 'da'], ['El', 'ño', 'ñan'], ['Cen', 'ta', 'ñe']],
+    bigbox_cells=[
+        [['item-1'], ['item-2'], ['item-3']],
+        [['item-4'], ['item-5'], ['item-6']],
+        [['item-7'], ['item-8'], ['item-9']],
+        [['item-10'], ['item-11'], ['item-12']],
+    ], review_required=True, specialized_builder=True, progress_total=1)
 add('aral-l23-g2-n-word-reading', 42, 23, '2', 'Mga salitang may letrang Ññ',
     'Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Ññ.', 'reading',
     [['Penafrañcia', 'España'], ['Los Baños'], ['Biñan', 'Cendaña'], ['Castañeda', 'Orduña'], ['Niño'], ['Niña']])
@@ -319,6 +336,16 @@ def initial_state():
     return dict(index=0, oral={}, answers={}, draft={}, completed=False, revision=0)
 
 
+def initial_l23_g1_state():
+    return {
+        'index': 0, 'read_aloud_started': False, 'read_aloud_completed': False,
+        'reading_attempts': 0, 'reading_phase': 'read',
+        'pronunciation_help_played': False, 'last_feedback': '',
+        'last_transcript': '', 'found_words': [], 'pending_words': [],
+        'draft': {'builder': []}, 'completed': False, 'revision': 0,
+    }
+
+
 def initial_l22_g2_state():
     return {
         'index': 0, 'sequence_index': 0, 'completed_words': [],
@@ -343,6 +370,41 @@ def initial_l22_g3_state():
 
 def initial_l22_g5_state():
     return {'found_words': {}, 'last_feedback': '', 'completed': False, 'revision': 0}
+
+
+def normalize_l23_g1_state(state):
+    if not isinstance(state, dict):
+        state = initial_l23_g1_state()
+    count = len(ACTIVITIES['aral-l23-g1-n-syllable-builder']['items'])
+    state['index'] = max(0, min(count, int(state.get('index', 0) or 0)))
+    state['read_aloud_started'] = bool(state.get('read_aloud_started'))
+    state['read_aloud_completed'] = bool(state.get('read_aloud_completed')) or state['index'] >= count
+    state['reading_attempts'] = max(0, min(3, int(state.get('reading_attempts', 0) or 0)))
+    state['reading_phase'] = state.get('reading_phase') if state.get('reading_phase') in {'read', 'help', 'complete'} else 'read'
+    state['last_feedback'] = str(state.get('last_feedback') or '')
+    state['last_transcript'] = str(state.get('last_transcript') or '')
+    state['pronunciation_help_played'] = bool(state.get('pronunciation_help_played'))
+    state['found_words'] = [w for w in state.get('found_words', []) if w in L23_G1_WORDS]
+    state['found_words'] = list(dict.fromkeys(state['found_words']))
+    draft = state.get('draft') if isinstance(state.get('draft'), dict) else {}
+    allowed = {item['id'] for item in ACTIVITIES['aral-l23-g1-n-syllable-builder']['items']}
+    state['draft'] = {'builder': [x for x in draft.get('builder', []) if x in allowed]}
+    state['pending_words'] = state.get('pending_words') if isinstance(state.get('pending_words'), list) else []
+    if state['read_aloud_completed']:
+        state['index'] = count
+        state['reading_phase'] = 'complete'
+    state['completed'] = bool(state.get('completed')) and state['read_aloud_completed'] and len(state['found_words']) == len(L23_G1_WORDS)
+    state['revision'] = max(0, int(state.get('revision', 0) or 0))
+    return state
+
+
+def l23_g1_pronunciation_match(expected, transcript):
+    canonical = unicodedata.normalize('NFKC', str(expected or '')).casefold()
+    heard = unicodedata.normalize('NFKC', str(transcript or '')).casefold()
+    canonical = re.sub(r'[^a-zñ\s]', ' ', canonical).strip()
+    heard_words = [re.sub(r'[^a-zñ]', '', word) for word in heard.split()]
+    accepted = L23_G1_ACCEPTED_SPEECH.get(canonical, {canonical})
+    return bool(heard_words and any(word in accepted for word in heard_words))
 
 
 def initial_l22_g4_state():
@@ -747,6 +809,72 @@ def normalize_l22_c_state(state):
     return state
 
 
+def _l23_g1_word_for_parts(parts):
+    activity = ACTIVITIES['aral-l23-g1-n-syllable-builder']
+    pieces = {item['id']: item['text'] for item in activity['items']}
+    if not isinstance(parts, list) or not 1 <= len(parts) <= 12 or any(p not in pieces for p in parts):
+        return None
+    formed = ''.join(pieces[p] for p in parts)
+    return next((word for word in L23_G1_WORDS if formed.casefold() == word.casefold()), None)
+
+
+def _apply_l23_g1_builder(state, event, verified_reading):
+    normalize_l23_g1_state(state)
+    action = event.get('action')
+    if action == 'restart':
+        state.clear(); state.update(initial_l23_g1_state()); return state
+    if state['completed']:
+        return state
+    if action == 'draft':
+        draft = event.get('draft', {})
+        if not isinstance(draft, dict) or len(json.dumps(draft)) > 350000:
+            raise ValueError('Hindi na-save ang iyong sagot. Subukan muli.')
+        parts = draft.get('builder', [])
+        allowed = {item['id'] for item in ACTIVITIES['aral-l23-g1-n-syllable-builder']['items']}
+        if not isinstance(parts, list) or len(parts) > 12 or any(part not in allowed for part in parts):
+            raise ValueError('Hindi wastong mga pantig.')
+        if parts and not state['read_aloud_completed']:
+            raise ValueError('Basahin muna ang lahat ng nasa Big Box.')
+        state['draft'] = {'builder': parts}; state['last_feedback'] = ''; return state
+    if action == 'reading_started':
+        if state['read_aloud_completed']: raise ValueError('Natapos na ang pagbasa.')
+        state.update(read_aloud_started=True, reading_phase='read', last_feedback='', last_transcript=''); return state
+    if action == 'reading_syllable_attempt':
+        if not state['read_aloud_started']: raise ValueError('Simulan muna ang pagbasa.')
+        if state['reading_phase'] != 'read': raise ValueError('Pakinggan muna ang tamang pagbigkas o pindutin ang Subukan Muli.')
+        state['last_transcript'] = str(event.get('transcript') or '').strip()
+        if verified_reading is None:
+            state['last_feedback'] = 'Hindi ko malinaw na narinig. Subukan muli.'; return state
+        if verified_reading:
+            state['index'] += 1; state['reading_attempts'] = 0; state['last_feedback'] = 'Tama!'
+            if state['index'] >= len(ACTIVITIES['aral-l23-g1-n-syllable-builder']['items']):
+                state.update(index=12, read_aloud_completed=True, reading_phase='complete')
+        else:
+            state['reading_attempts'] = min(3, state['reading_attempts'] + 1); state['last_feedback'] = 'Subukan muli.'
+            if state['reading_attempts'] >= 3:
+                state['reading_phase'] = 'help'; state['pronunciation_help_played'] = False
+        return state
+    if action == 'read_aloud':
+        if state['reading_phase'] != 'help': raise ValueError('Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.')
+        state['pronunciation_help_played'] = True; state['last_feedback'] = ''; return state
+    if action == 'retry_reading':
+        if state['reading_phase'] != 'help' or not state['pronunciation_help_played']: raise ValueError('Pakinggan muna ang tamang pagbigkas.')
+        state.update(reading_phase='read', reading_attempts=0, pronunciation_help_played=False, last_transcript='', last_feedback=''); return state
+    if action == 'build_word':
+        if not state['read_aloud_completed']: raise ValueError('Basahin muna ang lahat ng nasa Big Box.')
+        parts = event.get('parts')
+        accepted = _l23_g1_word_for_parts(parts)
+        if accepted is None:
+            state['last_feedback'] = 'Subukan muli.'; state['draft'] = {'builder': []}; return state
+        if accepted in state['found_words']: raise ValueError('Bumuo ng ibang salita.')
+        state['found_words'].append(accepted); state['draft'] = {'builder': []}; state['last_feedback'] = 'Tama!'; return state
+    if action == 'finish':
+        if not state['read_aloud_completed'] or len(state['found_words']) != len(L23_G1_WORDS):
+            raise ValueError('Bumuo muna ng lahat ng wastong salita.')
+        state['completed'] = True; state['last_feedback'] = 'Magaling! Natapos mo ang Gawain 1.'; return state
+    raise ValueError('Unknown action.')
+
+
 def apply_event(activity, state, event, verified_reading=None):
     """Advance only the current item's required phases; never trust client scores."""
     if activity['activity_key'] == 'aral-l22-g2-c-word-reading':
@@ -767,6 +895,8 @@ def apply_event(activity, state, event, verified_reading=None):
         if state['completed']:
             return state
         return _apply_l22_c_builder(state, event, verified_reading)
+    if activity['activity_key'] == 'aral-l23-g1-n-syllable-builder':
+        return _apply_l23_g1_builder(state, event, verified_reading)
     if state['completed']:
         return state
     items = activity['items']
