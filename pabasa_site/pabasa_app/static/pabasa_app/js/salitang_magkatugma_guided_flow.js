@@ -10,7 +10,7 @@
   let runId = 0;
   let lastKey = '';
   let phase2Narrated = '';
-  let feedbackNarrated = '';
+  let feedbackNarrationKey = '';
   let busy = false;
   let scheduled = false;
 
@@ -32,11 +32,23 @@
   async function sync() {
     const status = stage.querySelector('#status');
     if (status?.classList.contains('warning')) {
-      const feedback = 'Hindi pa. Subukan muli.';
+      const feedback = 'Hindi pa ito tama. Subukan muli.';
+      const rawFeedback = status.textContent.trim();
+      const feedbackKey = rawFeedback === feedback
+        ? status.dataset.feedbackNarrationKey || feedback
+        : rawFeedback;
+      status.dataset.feedbackNarrationKey = feedbackKey;
       if (status.textContent !== feedback) status.textContent = feedback;
+      const answers = stage.querySelector('#answers:not([hidden])');
+      if (!answers) {
+        const read = stage.querySelector('#read');
+        const listen = stage.querySelector('#listen');
+        if (read) read.hidden = false;
+        if (listen) listen.hidden = false;
+      }
       if (busy) return;
-      if (feedbackNarrated !== feedback) {
-        feedbackNarrated = feedback;
+      if (feedbackNarrationKey !== feedbackKey) {
+        feedbackNarrationKey = feedbackKey;
         busy = true;
         stage.querySelectorAll('#read,#listen,#answers button').forEach(button => { button.disabled = true; });
         try { await speak(feedback); }
@@ -50,11 +62,13 @@
       return;
     }
     if (busy) return;
-    feedbackNarrated = '';
+    feedbackNarrationKey = '';
     const answers = stage.querySelector('#answers:not([hidden])');
     const prompt = stage.querySelector('.prompt');
     if (answers) {
+      const read = stage.querySelector('#read');
       const listen = stage.querySelector('#listen');
+      if (read) read.hidden = true;
       if (listen) { listen.hidden = true; listen.disabled = true; }
       if (prompt && prompt.textContent !== phase2Text) prompt.textContent = phase2Text;
       const phase2Key = document.getElementById('progress')?.textContent || '';
@@ -102,7 +116,7 @@
       pair.querySelectorAll('.word').forEach(card => {
         if (card.querySelector('img')?.getAttribute('alt') === target) card.classList.add('active');
       });
-      await speak('Sabihin ito.');
+      await speak('Basahin ito.');
     } catch (error) {
       console.error('Salitang Magkatugma guided TTS failed', error);
       pair.querySelectorAll('.word').forEach(card => {
@@ -130,18 +144,13 @@
     const word = stage.querySelector('.word.active img')?.getAttribute('alt');
     if (!word) return;
     listen.dataset.apiBusy = '1';
-    listen.dataset.listenCount = String(Number(listen.dataset.listenCount || 0) + 1);
     listen.disabled = true;
     try { await speak(word); }
     catch (error) { console.error('Salitang Magkatugma Pakinggan TTS failed', error); }
     finally {
       listen.disabled = false;
       listen.dataset.apiBusy = '0';
-      if (Number(listen.dataset.listenCount) >= 3) {
-        listen.hidden = true;
-        const read = stage.querySelector('#read');
-        if (read) { read.hidden = false; read.disabled = false; read.textContent = 'Basahin ngayon'; }
-      }
+      listen.hidden = Boolean(stage.querySelector('#answers:not([hidden])'));
     }
   }, true);
   setTimeout(sync, 80);
