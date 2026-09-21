@@ -11,8 +11,8 @@ from django.urls import reverse
 from .models import Material, School, Section, StudentActivityProgress, User
 from .prescribed_activity_catalog import PRESCRIBED_ACTIVITIES, active_prescribed_activities
 from .prescribed_workbook import (
-    ACTIVITIES, L22_G2_C_WORDS, L22_G3_C_WORD_PATHS, apply_event, get_activity,
-    initial_l22_g2_state, initial_l22_g3_state,
+    ACTIVITIES, L22_G2_C_WORDS, L22_G3_C_WORD_PATHS, L22_G5_F_WORD_PATHS, apply_event, get_activity,
+    initial_l22_g2_state, initial_l22_g3_state, initial_l22_g5_state,
     initial_state, l22_g2_pronunciation_match, normalize_l22_g2_speech,
     normalize_l22_c_state, search_paths,
 )
@@ -91,10 +91,10 @@ class WorkbookStateTests(SimpleTestCase):
                     self.assertTrue(search_paths(a, item['text']), (a['activity_key'], item['text']))
 
     def test_three_readings_three_listens_repeat_and_gate(self):
-        a = get_activity('aral-l22-g5-f-word-search')
+        a = get_activity('aral-l23-g5-j-word-search')
         state = initial_state()
         with self.assertRaises(ValueError):
-            apply_event(a, state, {'action': 'answer', 'answer': search_paths(a, 'freezer')[0]})
+            apply_event(a, state, {'action': 'answer', 'answer': search_paths(a, 'jacket')[0]})
         for _ in range(2):
             for _ in range(3):
                 apply_event(a, state, {'action': 'reading'}, False)
@@ -108,7 +108,7 @@ class WorkbookStateTests(SimpleTestCase):
         self.assertEqual(state['index'], 0)
         with self.assertRaises(ValueError):
             apply_event(a, state, {'action': 'finish'})
-        apply_event(a, state, {'action': 'answer', 'answer': search_paths(a, 'freezer')[0]})
+        apply_event(a, state, {'action': 'answer', 'answer': search_paths(a, 'jacket')[0]})
         self.assertEqual(state['index'], 1)
 
     def test_builder_needs_written_word_after_every_syllable(self):

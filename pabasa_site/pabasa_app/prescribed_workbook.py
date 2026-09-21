@@ -103,6 +103,17 @@ L22_G3_C_WORD_PATHS = {
     'camera': [[8, 3], [8, 4], [8, 5], [8, 6], [8, 7], [8, 8]],
 }
 
+# Lesson 22 Gawain 5 is the Ff Big Box on workbook page 40.  These ordered
+# paths are the workbook authority for the five horizontal, left-to-right
+# answers; client selections are never accepted by letter matching alone.
+L22_G5_F_WORD_PATHS = {
+    'Fina': [[0, 3], [0, 4], [0, 5], [0, 6]],
+    'fries': [[2, 1], [2, 2], [2, 3], [2, 4], [2, 5]],
+    'Filipino': [[3, 0], [3, 1], [3, 2], [3, 3], [3, 4], [3, 5], [3, 6]],
+    'freezer': [[4, 0], [4, 1], [4, 2], [4, 3], [4, 4], [4, 5], [4, 6]],
+    'Felix': [[5, 3], [5, 4], [5, 5], [5, 6], [5, 7]],
+}
+
 
 def normalize_l22_g2_speech(value):
     """Normalize one STT result without changing the workbook word."""
@@ -294,6 +305,10 @@ def initial_l22_g3_state():
     return {'found_words': {}, 'last_feedback': '', 'completed': False, 'revision': 0}
 
 
+def initial_l22_g5_state():
+    return {'found_words': {}, 'last_feedback': '', 'completed': False, 'revision': 0}
+
+
 def initial_l22_g4_state():
     return {
         'reading_index': 0, 'completed_reading': [], 'reading_attempts': 0,
@@ -323,6 +338,28 @@ def normalize_l22_g3_state(state):
     if len(clean) == len(L22_G3_C_WORD_PATHS):
         state['completed'] = True
     state.setdefault('last_feedback', '')
+    state['revision'] = max(0, int(state.get('revision', 0) or 0))
+    return state
+
+
+def normalize_l22_g5_state(state):
+    """Restore only unique, canonical Gawain 5 coordinate selections."""
+    if not isinstance(state, dict):
+        state = initial_l22_g5_state()
+    found = state.get('found_words') if isinstance(state.get('found_words'), dict) else {}
+    clean = {}
+    for word, entry in found.items():
+        if word not in L22_G5_F_WORD_PATHS or not isinstance(entry, dict):
+            continue
+        color = str(entry.get('color') or '')
+        if not re.fullmatch(r'#[0-9a-fA-F]{6}', color):
+            color = '#b6e6c3'
+        if entry.get('path') != L22_G5_F_WORD_PATHS[word]:
+            continue
+        clean[word] = {'path': L22_G5_F_WORD_PATHS[word], 'color': color}
+    state['found_words'] = clean
+    state['completed'] = len(clean) == len(L22_G5_F_WORD_PATHS)
+    state['last_feedback'] = str(state.get('last_feedback') or '')
     state['revision'] = max(0, int(state.get('revision', 0) or 0))
     return state
 
@@ -440,6 +477,35 @@ def _apply_l22_g3_word_search(state, event):
     state['found_words'][word] = {'path': L22_G3_C_WORD_PATHS[word], 'color': color}
     state['last_feedback'] = f'Tama! Nahanap mo ang {word}.'
     if len(state['found_words']) == len(L22_G3_C_WORD_PATHS):
+        state['completed'] = True
+        state['last_feedback'] = 'Magaling! Nahanap mo ang lahat ng salita!'
+    return state
+
+
+def _apply_l22_g5_word_search(state, event):
+    normalize_l22_g5_state(state)
+    if event.get('action') == 'restart':
+        state.clear()
+        state.update(initial_l22_g5_state())
+        return state
+    if state['completed']:
+        return state
+    if event.get('action') != 'select_word':
+        raise ValueError('Unknown action.')
+    word = str(event.get('word') or '')
+    path = event.get('path')
+    if word not in L22_G5_F_WORD_PATHS or path != L22_G5_F_WORD_PATHS[word]:
+        state['last_feedback'] = 'Subukan muli.'
+        return state
+    if word in state['found_words']:
+        state['last_feedback'] = 'Nahanap mo na ang salitang ito.'
+        return state
+    color = str(event.get('color') or '')
+    if not re.fullmatch(r'#[0-9a-fA-F]{6}', color):
+        color = '#b6e6c3'
+    state['found_words'][word] = {'path': L22_G5_F_WORD_PATHS[word], 'color': color}
+    state['last_feedback'] = f'Tama! Nahanap mo ang {word}.'
+    if len(state['found_words']) == len(L22_G5_F_WORD_PATHS):
         state['completed'] = True
         state['last_feedback'] = 'Magaling! Nahanap mo ang lahat ng salita!'
     return state
@@ -588,6 +654,8 @@ def apply_event(activity, state, event, verified_reading=None):
         return _apply_l22_g2_reading(state, event, verified_reading)
     if activity['activity_key'] == 'aral-l22-g3-c-word-search':
         return _apply_l22_g3_word_search(state, event)
+    if activity['activity_key'] == 'aral-l22-g5-f-word-search':
+        return _apply_l22_g5_word_search(state, event)
     # Keep the legacy generic state shape usable by older workbook tests and
     # imported draft states; persisted learner progress uses reading_index and
     # therefore always takes the complete specialized flow below.
