@@ -132,6 +132,33 @@ L23_G2_ACCEPTED_SPEECH = {
     'niña': {'niña', 'nina'},
 }
 
+# Lesson 23 Gawain 3 keeps the workbook's eight Jj words as the only
+# accepted reading targets.  Normalization is deliberately limited to case,
+# Unicode compatibility, punctuation, and whitespace.
+L23_G3_J_WORDS = ('Jacket', 'Jennifer', 'jam', 'Jeffrey', 'pajama', 'Jerry', 'Jojo', 'Jonathan')
+L23_G3_J_ACCEPTED_SPEECH = {word.casefold(): {word.casefold()} for word in L23_G3_J_WORDS}
+
+
+def normalize_l23_g3_speech(value):
+    text = unicodedata.normalize('NFKC', str(value or '')).casefold()
+    text = re.sub(r'[^0-9a-z\s]', ' ', text)
+    return ' '.join(text.split())
+
+
+def l23_g3_pronunciation_match(canonical_word, transcript):
+    canonical = normalize_l23_g3_speech(canonical_word)
+    heard = normalize_l23_g3_speech(transcript)
+    return bool(heard and heard in L23_G3_J_ACCEPTED_SPEECH.get(canonical, {canonical}))
+
+
+L23_G4_SYLLABLE_ANSWERS = ('jack-et', 'pa-ja-ma', 'Jo-na-than', 'jam', 'Jo-se-li-to')
+
+
+def normalize_l23_g4_syllables(value):
+    text = unicodedata.normalize('NFKC', str(value or '')).strip().casefold()
+    text = text.replace('•', '-').replace('·', '-')
+    return re.sub(r'\s*-\s*', '-', text)
+
 L22_G3_C_WORD_PATHS = {
     'Carla': [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4]],
     'Cagayan': [[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6]],
@@ -270,7 +297,7 @@ add('aral-l23-g3-j-word-reading', 42, 23, '3', 'Mga salitang may letrang Jj',
     [['Jacket', 'Jennifer', 'jam', 'Jeffrey'], ['pajama', 'Jerry', 'Jojo', 'Jonathan']])
 add('aral-l23-g4-j-syllabication', 42, 23, '4', 'Pantigin ang mga salita: J',
     'Pantigin ang sumusunod na salita.', 'syllables', [['jacket'], ['pajama'], ['Jonathan'], ['jam'], ['Joselito']],
-    syllable_answers=['jack-et', 'pa-ja-ma', 'Jo-na-than', 'jam', 'Jo-se-li-to'])
+    syllable_answers=['jack-et', 'pa-ja-ma', 'Jo-na-than', 'jam', 'Jo-se-li-to'], oral_flow=False)
 add('aral-l23-g5-j-word-search', 43, 23, '5', 'Hanapin ang mga salita: J',
     'Hanapin at bilugan sa loob ng Big Box ang sumusunod na mga salita.', 'search',
     [['jacket'], ['pajama'], ['jam'], ['Jonathan'], ['Jennifer']],
@@ -384,6 +411,119 @@ def initial_l23_g2_state():
         'last_feedback': '', 'last_transcript': '',
         'completed': False, 'revision': 0,
     }
+
+
+def initial_l23_g3_state():
+    return {
+        'index': 0, 'completed_words': [], 'reading_attempts': 0,
+        'last_feedback': '', 'last_transcript': '', 'completed': False,
+        'revision': 0, 'draft': {},
+    }
+
+
+def normalize_l23_g3_state(state):
+    total = len(L23_G3_J_WORDS)
+    completed_words = state.get('completed_words') if isinstance(state.get('completed_words'), list) else []
+    state['completed_words'] = sorted({int(i) for i in completed_words if str(i).isdigit() and 0 <= int(i) < total})
+    state['index'] = max(0, min(total, int(state.get('index') or len(state['completed_words']))))
+    state['index'] = max(state['index'], len(state['completed_words']))
+    state['reading_attempts'] = max(0, int(state.get('reading_attempts') or 0))
+    state.setdefault('last_feedback', '')
+    state.setdefault('last_transcript', '')
+    state.setdefault('draft', {})
+    state['completed'] = bool(state.get('completed')) and state['index'] >= total
+    if state['index'] >= total or len(state['completed_words']) >= total:
+        state['index'] = total
+        state['completed_words'] = list(range(total))
+        state['completed'] = True
+    return state
+
+
+def initial_l23_g4_state():
+    return {
+        'index': 0, 'answers': {}, 'draft': {'text': ''},
+        'last_feedback': '', 'completed': False, 'revision': 0,
+    }
+
+
+def normalize_l23_g4_state(state):
+    total = len(L23_G4_SYLLABLE_ANSWERS)
+    answers = state.get('answers') if isinstance(state.get('answers'), dict) else {}
+    state['answers'] = {str(k): str(v) for k, v in answers.items() if str(k).isdigit() and 0 <= int(k) < total}
+    state['index'] = max(0, min(total, int(state.get('index') or len(state['answers']))))
+    state['index'] = max(state['index'], len(state['answers']))
+    draft = state.get('draft') if isinstance(state.get('draft'), dict) else {}
+    state['draft'] = {'text': str(draft.get('text') or '')}
+    state.setdefault('last_feedback', '')
+    state['completed'] = bool(state.get('completed')) and state['index'] >= total
+    if state['index'] >= total or len(state['answers']) >= total:
+        state['index'] = total
+        state['completed'] = True
+    return state
+
+
+def _apply_l23_g3_reading(state, event, verified_reading):
+    normalize_l23_g3_state(state)
+    if state['completed']:
+        return state
+    action = event.get('action')
+    if action == 'reading_started':
+        state['last_feedback'] = 'Handa ka na.'
+        return state
+    if action == 'reading':
+        action = 'reading_attempt'
+    if action != 'reading_attempt':
+        raise ValueError('Unknown action.')
+    if event.get('item_index') is not None and int(event.get('item_index')) != state['index']:
+        raise ValueError('Ito ay hindi na ang kasalukuyang salita.')
+    state['last_transcript'] = str(event.get('transcript') or '').strip()
+    if verified_reading is None:
+        state['last_feedback'] = 'Hindi ko malinaw na narinig. Subukan muli.'
+        return state
+    if verified_reading:
+        index = state['index']
+        if index not in state['completed_words']:
+            state['completed_words'].append(index)
+        state['completed_words'].sort()
+        state['index'] = min(len(L23_G3_J_WORDS), index + 1)
+        state['reading_attempts'] = 0
+        state['completed'] = state['index'] >= len(L23_G3_J_WORDS)
+        state['last_feedback'] = 'Mahusay!' if state['completed'] else 'Mahusay!'
+    else:
+        state['reading_attempts'] = min(99, state['reading_attempts'] + 1)
+        state['last_feedback'] = 'Subukan Muli.'
+    return state
+
+
+def _apply_l23_g4_syllabication(state, event):
+    normalize_l23_g4_state(state)
+    if state['completed']:
+        return state
+    action = event.get('action')
+    if action == 'draft':
+        draft = event.get('draft') if isinstance(event.get('draft'), dict) else {}
+        state['draft'] = {'text': str(draft.get('text') or '')[:500]}
+        return state
+    if action != 'answer':
+        raise ValueError('Unknown action.')
+    index = state['index']
+    if index >= len(L23_G4_SYLLABLE_ANSWERS):
+        return state
+    answer = event.get('answer') if isinstance(event.get('answer'), dict) else {}
+    text = str(answer.get('text') or '').strip()
+    if not text:
+        raise ValueError('Isulat muna ang sagot.')
+    state['draft'] = {'text': text}
+    if normalize_l23_g4_syllables(text) != normalize_l23_g4_syllables(L23_G4_SYLLABLE_ANSWERS[index]):
+        state['last_feedback'] = 'Subukan Muli.'
+        return state
+    state['answers'][str(index)] = text
+    state['index'] += 1
+    state['draft'] = {'text': ''}
+    state['last_feedback'] = 'Mahusay!'
+    if state['index'] >= len(L23_G4_SYLLABLE_ANSWERS):
+        state['completed'] = True
+    return state
 
 
 def initial_l22_g3_state():
@@ -972,12 +1112,18 @@ def _apply_l23_g1_builder(state, event, verified_reading):
 
 def apply_event(activity, state, event, verified_reading=None):
     """Advance only the current item's required phases; never trust client scores."""
+    if activity['activity_key'] in {'aral-l22-g6-f-word-reading', 'aral-l23-g2-n-word-reading'} and event.get('action') == 'reading':
+        event = dict(event, action='reading_attempt')
     if activity['activity_key'] == 'aral-l22-g2-c-word-reading':
         return _apply_l22_g2_reading(state, event, verified_reading)
     if activity['activity_key'] == 'aral-l22-g6-f-word-reading':
         return _apply_l22_g6_reading(state, event, verified_reading)
     if activity['activity_key'] == 'aral-l23-g2-n-word-reading':
         return _apply_l23_g2_reading(state, event, verified_reading)
+    if activity['activity_key'] == 'aral-l23-g3-j-word-reading':
+        return _apply_l23_g3_reading(state, event, verified_reading)
+    if activity['activity_key'] == 'aral-l23-g4-j-syllabication':
+        return _apply_l23_g4_syllabication(state, event)
     if activity['activity_key'] == 'aral-l22-g3-c-word-search':
         return _apply_l22_g3_word_search(state, event)
     if activity['activity_key'] == 'aral-l22-g5-f-word-search':

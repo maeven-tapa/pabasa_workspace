@@ -15,11 +15,62 @@ from .prescribed_workbook import (
     initial_l22_g2_state, initial_l22_g3_state, initial_l22_g5_state,
     initial_state, l22_g2_pronunciation_match, normalize_l22_g2_speech,
     normalize_l22_c_state, search_paths,
+    L23_G3_J_WORDS, L23_G4_SYLLABLE_ANSWERS, initial_l23_g3_state,
+    initial_l23_g4_state, l23_g3_pronunciation_match, normalize_l23_g4_syllables,
 )
 from .reading_stt import l22_c_pronunciation_match
 
 
 class WorkbookStateTests(SimpleTestCase):
+    def test_lesson23_j_activities_keep_exact_workbook_content(self):
+        reading = get_activity('aral-l23-g3-j-word-reading')
+        syllables = get_activity('aral-l23-g4-j-syllabication')
+        self.assertEqual(reading['instruction'], 'Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Jj.')
+        self.assertEqual(tuple(item['text'] for item in reading['items']), L23_G3_J_WORDS)
+        self.assertEqual(syllables['instruction'], 'Pantigin ang sumusunod na salita.')
+        self.assertEqual(tuple(item['text'] for item in syllables['items']), ('jacket', 'pajama', 'Jonathan', 'jam', 'Joselito'))
+        self.assertEqual(tuple(syllables['syllable_answers']), L23_G4_SYLLABLE_ANSWERS)
+
+    def test_lesson23_gawain3_advances_once_and_restores_completion(self):
+        activity = get_activity('aral-l23-g3-j-word-reading')
+        state = initial_l23_g3_state()
+        apply_event(activity, state, {'action': 'reading_attempt', 'transcript': 'wrong'}, False)
+        self.assertEqual(state['index'], 0)
+        apply_event(activity, state, {'action': 'reading_attempt', 'item_index': 0, 'transcript': 'Jacket'}, True)
+        with self.assertRaisesMessage(ValueError, 'kasalukuyang salita'):
+            apply_event(activity, state, {'action': 'reading_attempt', 'item_index': 0, 'transcript': 'Jacket'}, True)
+        self.assertEqual(state['index'], 1)
+        self.assertEqual(state['completed_words'], [0])
+        for word in L23_G3_J_WORDS[1:]:
+            apply_event(activity, state, {'action': 'reading_attempt', 'transcript': word}, True)
+        self.assertTrue(state['completed'])
+        self.assertEqual(state['index'], 8)
+        self.assertEqual(state['completed_words'], list(range(8)))
+
+    def test_lesson23_gawain3_proper_name_matching_is_scoped(self):
+        self.assertTrue(l23_g3_pronunciation_match('Jennifer', '  JENNIFER! '))
+        self.assertFalse(l23_g3_pronunciation_match('Jennifer', 'Jeffrey'))
+
+    def test_lesson23_gawain4_requires_exact_verified_syllable_boundaries(self):
+        activity = get_activity('aral-l23-g4-j-syllabication')
+        state = initial_l23_g4_state()
+        apply_event(activity, state, {'action': 'answer', 'answer': {'text': 'jack - et'} })
+        self.assertEqual(state['index'], 1)
+        self.assertEqual(normalize_l23_g4_syllables('PA - JA - MA'), 'pa-ja-ma')
+        apply_event(activity, state, {'action': 'answer', 'answer': {'text': 'pa-ja-ma'}})
+        apply_event(activity, state, {'action': 'answer', 'answer': {'text': 'Jo-na-than'}})
+        apply_event(activity, state, {'action': 'answer', 'answer': {'text': 'jam'}})
+        apply_event(activity, state, {'action': 'answer', 'answer': {'text': 'Jo-se-li-to'}})
+        self.assertTrue(state['completed'])
+        self.assertEqual(len(state['answers']), 5)
+
+    def test_lesson23_gawain4_wrong_boundary_does_not_advance(self):
+        activity = get_activity('aral-l23-g4-j-syllabication')
+        state = initial_l23_g4_state()
+        apply_event(activity, state, {'action': 'answer', 'answer': {'text': 'ja-cket'}})
+        self.assertEqual(state['index'], 0)
+        self.assertFalse(state['completed'])
+
     def test_lesson22_gawain2_preserves_exact_words_columns_and_alternating_order(self):
         activity = get_activity('aral-l22-g2-c-word-reading')
         self.assertEqual(tuple(item['text'] for item in activity['items']), L22_G2_C_WORDS)
