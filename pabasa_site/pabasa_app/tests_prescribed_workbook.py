@@ -15,13 +15,45 @@ from .prescribed_workbook import (
     initial_l22_g2_state, initial_l22_g3_state, initial_l22_g5_state,
     initial_state, l22_g2_pronunciation_match, normalize_l22_g2_speech,
     normalize_l22_c_state, search_paths,
-    L23_G3_J_WORDS, L23_G4_SYLLABLE_ANSWERS, initial_l23_g3_state,
-    initial_l23_g4_state, l23_g3_pronunciation_match, normalize_l23_g4_syllables,
+    L23_G3_J_WORDS, L23_G4_SYLLABLE_ANSWERS, L23_G7_Q_WORDS, initial_l23_g3_state,
+    initial_l23_g4_state, initial_l23_g7_state, l23_g3_pronunciation_match,
+    l23_g7_pronunciation_match, normalize_l23_g4_syllables,
 )
 from .reading_stt import l22_c_pronunciation_match
 
 
 class WorkbookStateTests(SimpleTestCase):
+    def test_lesson23_gawain7_keeps_exact_q_words_and_instruction(self):
+        reading = get_activity('aral-l23-g7-q-word-reading')
+        self.assertEqual(reading['instruction'], 'Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Qq.')
+        self.assertEqual(tuple(item['text'] for item in reading['items']), L23_G7_Q_WORDS)
+        self.assertEqual(len(reading['items']), 5)
+        self.assertNotEqual(reading['activity_key'], 'aral-l23-g3-j-word-reading')
+
+    def test_lesson23_gawain7_reading_progress_retry_duplicate_and_completion(self):
+        activity = get_activity('aral-l23-g7-q-word-reading')
+        state = initial_l23_g7_state()
+        apply_event(activity, state, {'action': 'reading_attempt', 'item_index': 0, 'transcript': 'wrong'}, False)
+        self.assertEqual(state['index'], 0)
+        self.assertEqual(state['completed_words'], [])
+        apply_event(activity, state, {'action': 'reading_attempt', 'item_index': 0, 'transcript': 'QUISUMBING!'}, True)
+        with self.assertRaisesMessage(ValueError, 'kasalukuyang salita'):
+            apply_event(activity, state, {'action': 'reading_attempt', 'item_index': 0, 'transcript': 'Quisumbing'}, True)
+        self.assertEqual(state['index'], 1)
+        self.assertEqual(state['completed_words'], [0])
+        for word in L23_G7_Q_WORDS[1:]:
+            apply_event(activity, state, {'action': 'reading_attempt', 'transcript': word}, True)
+        self.assertTrue(state['completed'])
+        self.assertEqual(state['completed_words'], list(range(5)))
+        before = dict(state)
+        apply_event(activity, state, {'action': 'reading_attempt', 'item_index': 4, 'transcript': 'Quintos'}, True)
+        self.assertEqual(state, before)
+
+    def test_lesson23_gawain7_proper_name_matching_is_scoped_and_case_safe(self):
+        for word in L23_G7_Q_WORDS:
+            with self.subTest(word=word):
+                self.assertTrue(l23_g7_pronunciation_match(word, word.lower() + '!'))
+                self.assertFalse(l23_g7_pronunciation_match(word, 'unrelated word'))
     def test_lesson23_j_activities_keep_exact_workbook_content(self):
         reading = get_activity('aral-l23-g3-j-word-reading')
         syllables = get_activity('aral-l23-g4-j-syllabication')
