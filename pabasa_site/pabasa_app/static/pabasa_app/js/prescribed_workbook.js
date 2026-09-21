@@ -7,6 +7,8 @@
   const cBuilder = (Boolean(a.specialized_builder) && !qBuilder) || a.activity_key === 'aral-l22-g1-c-syllable-builder';
   const specializedBuilder = cBuilder || qBuilder;
   const jReading = a.activity_key === 'aral-l23-g3-j-word-reading';
+  const qReading = a.activity_key === 'aral-l23-g7-q-word-reading';
+  const prescribedWordReading = jReading || qReading;
   const jSyllables = a.activity_key === 'aral-l23-g4-j-syllabication';
   let state = data.state, busy = false, selected = [], builder = [], words = [];
   let activeRecorder = null, activeStream = null, activeReadAloud = null, audioController = null;
@@ -21,7 +23,7 @@
   const item = () => a.items[state.index];
   const oral = () => state.oral[item()?.id] || {passed:false,attempts:0,listens:0,phase:a.model_first?'model':'read'};
   const message = (text, error=false) => {
-    status.textContent=text;status.className=error?'wb-error':'wb-save';status.hidden=specializedBuilder||jReading||jSyllables;
+    status.textContent=text;status.className=error?'wb-error':'wb-save';status.hidden=specializedBuilder||prescribedWordReading||jSyllables;
     if(specializedBuilder){const primary=content.querySelector('.wb-phase-status');if(primary){primary.textContent=text;primary.classList.toggle('wb-feedback-error',error);}}
   };
   const stopReadAloud = () => {
@@ -93,10 +95,10 @@
     if(state.completed){
       content.innerHTML=`<div class="wb-focus"><h2>${cBuilder?'Magaling! Natapos mo ang Gawain 1.':fil?'Natapos mo ang gawain!':'Activity complete!'}</h2>${cBuilder?`<p>Nabuo mo na: ${esc((state.found_words||[]).join(', '))}</p>`:a.review_required?'<p>Your written work is saved for teacher review.</p>':''}</div>`;
       if(cBuilder)button('Susunod',()=>{if(data.next_url)location.href=data.next_url;},true).disabled=!data.next_url;
-      if((jReading||jSyllables)&&data.next_url)button('Susunod',()=>{location.href=data.next_url;},true);
+      if((prescribedWordReading||jSyllables)&&data.next_url)button('Susunod',()=>{location.href=data.next_url;},true);
       return;
     }
-    if(jReading){renderJReading();return;}
+    if(prescribedWordReading){renderJReading();return;}
     if(jSyllables){renderJSyllables();return;}
     if(specializedBuilder&&!preview){renderCBuilder();lock();return;}
     if(state.index>=a.items.length&&!preview){content.innerHTML='<div class="wb-focus">'+(fil?'Na-save ang lahat ng bahagi ng gawain.':'All required parts are saved.')+'</div>';button(fil?'Tapusin ang gawain':'Finish activity',()=>perform({action:'finish'}),true);return;}
@@ -137,6 +139,8 @@
   function renderJReading(){
     const current=Number(state.index||0), done=new Set(state.completed_words||[]);
     content.innerHTML=`${instructionBanner()}<section class="wb-focus wb-j-reading"><h2>Mga salitang may letrang Jj</h2><div class="wb-j-grid">${a.items.map((it,i)=>`<div class="wb-j-word ${done.has(i)?'is-done':''} ${i===current?'is-current':''}" aria-current="${i===current?'step':'false'}">${esc(it.text)}${done.has(i)?'<span aria-label="Tapos na"> ✓</span>':''}</div>`).join('')}</div><p class="wb-j-feedback" id="wb-j-feedback" role="status" aria-live="polite">${esc(state.last_feedback||'Handa ka na.')}</p></section>`;
+    const readingHeading=content.querySelector('.wb-j-reading h2');
+    if(readingHeading)readingHeading.textContent=a.title;
     const replay=document.getElementById('wb-instruction-replay');
     replay.onclick=()=>{if(!busy&&!activeStream)playPrescribedAudio(instructionText).catch(e=>setJFeedback(e.message||'Hindi available ang panuto.',true));};
     if(!preview)speakInstruction();
@@ -165,7 +169,7 @@
   }
   async function recordJ(){
     if(busy||!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){setJFeedback('Hindi magamit ang mikropono. Subukan muli.',true);return;}
-    busy=true;lock();let stream=null,recorder=null,timer=null,requestId=Number(state.index||0);
+    busy=true;lock();let stream=null,recorder=null,timer=null,requestId=Number(state.index||0),requestActivity=a.activity_key;
     try{
       setJFeedback('Nakikinig...');stream=activeStream=await navigator.mediaDevices.getUserMedia({audio:true});
       const chunks=[];recorder=activeRecorder=new MediaRecorder(stream);
@@ -174,7 +178,7 @@
       const stop=button('Tapusin ang Pagbasa',()=>{if(recorder?.state==='recording')recorder.stop();},true);stop.setAttribute('aria-label','Tapusin ang pagbasa');
       action.replaceChildren(stop);setJFeedback('Nakikinig...');
       const audio=await audioDone;clearTimeout(timer);stream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
-      if(requestId!==Number(state.index||0))return;
+      if(requestActivity!==a.activity_key||requestId!==Number(state.index||0))return;
       setJFeedback('Sinusuri...');const form=new FormData();form.append('audio',audio,'reading.webm');
       await send({action:'reading_attempt'},form,false);render();
     }catch(e){
