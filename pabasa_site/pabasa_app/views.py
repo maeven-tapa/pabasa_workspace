@@ -13402,6 +13402,7 @@ def prescribed_activity_page(request, activity_key):
                 'activity': get_activity(activity_key), 'state': state, 'preview': preview,
                 'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
                 'read_aloud_url': reverse('reading_read_aloud_api'),
+                'back_url': reverse('assessment'),
                 'next_url': next_url,
             },
         })
