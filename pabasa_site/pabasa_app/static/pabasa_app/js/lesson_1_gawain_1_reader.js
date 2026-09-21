@@ -2,17 +2,24 @@
   'use strict';
 
   const TARGETS = [
-    'aso', 'bola', 'cactus', 'daga', 'eroplano', 'french fries',
-    'gatas', 'hipon', 'ilaw', 'jeepney', 'keso', 'lamok', 'medyas',
-    'noo', 'okra', 'pato', 'quezon', 'rosas', 'sisiw', 'tigre', 'ubas',
-    'venus', 'watawat', 'xylophone', 'yoyo', 'zebra', 'ngipin niya', 'enye',
+    'Ang ating alpabeto, ating pag-aralan',
+    'Umpisahan ngayon',
+    'Aso, bola, cactus, daga, eroplano',
+    'French fries, gatas, hipon, ilaw, jeepney',
+    'Keso, lamok, medyas, noo, okra',
+    'Pato, Quezon, rosas, sisiw, tigre',
+    'Ubas, Venus, watawat, xylophone',
+    'Yoyo, zebra, ngipin niya, enye',
+    'Ating alpabeto, madaling pag-aralan',
+    'At ’wag mong kakalimutan',
+    'Laging tatandaan',
   ];
   const TOTAL = TARGETS.length;
   const ACTIVITY_KEY = 'lesson-1-gawain-1';
   const CHUNK_MS = 40000;
   const REQUEST_TIMEOUT_MS = 35000;
   const MAX_CHUNK_RETRIES = 2;
-  const MIN_MATCHED = 18;
+  const MIN_MATCHED = 8;
   const MIN_RATIO = 0.65;
   const SONG_URL = 'https://www.youtube.com/watch?v=OxAsjUK6aB4';
   const READ_ALOUD_URL = '/api/reading/read-aloud/';
@@ -45,13 +52,13 @@
     'Ating alpabeto, madaling pag-aralan', "At ’wag mong kakalimutan",
     'Laging tatandaan',
   ].join('\n');
-  const VARIANTS = {
-    cactus: [['cactus'], ['kaktus'], ['cacts']],
-    quezon: [['quezon'], ['kewzon'], ['qezon']],
-    venus: [['venus'], ['venous'], ['benus']],
-    xylophone: [['xylophone'], ['silophone'], ['sailophone'], ['zylophone']],
-    enye: [['enye'], ['enyeh'], ['enyee']],
-    'ngipin niya': [['ngipin', 'niya'], ['ngipeen', 'niya'], ['ngipen', 'niya']],
+  const TOKEN_VARIANTS = {
+    cactus: ['cactus', 'kaktus', 'cacts'],
+    quezon: ['quezon', 'kewzon', 'qezon'],
+    venus: ['venus', 'venous', 'benus'],
+    xylophone: ['xylophone', 'silophone', 'sailophone', 'zylophone'],
+    enye: ['enye', 'enyeh', 'enyee'],
+    ngipin: ['ngipin', 'ngipeen', 'ngipen'],
   };
   const state = {
     panel: null, stream: null, recorder: null, rotationTimer: null,
@@ -239,6 +246,7 @@
     .replace(/[’‘ʼ\u0060]/g, "'").toLocaleLowerCase()
     .replace(/[^\p{L}\p{N}']+/gu, ' ').replace(/\s+/g, ' ').trim();
   const tokens = (value) => normalize(value).replace(/'/g, '').split(' ').filter(Boolean);
+  const tokenMatches = (expected, actual) => (TOKEN_VARIANTS[expected] || [expected]).includes(actual);
 
   function clearWelcomeAudio() {
     state.welcomeAudio?.pause();
@@ -699,18 +707,36 @@
     return result;
   }
 
+  function findLyricLine(expected, spoken, start) {
+    const expectedTokens = tokens(expected);
+    for (let lineStart = start; lineStart < spoken.length; lineStart += 1) {
+      if (!tokenMatches(expectedTokens[0], spoken[lineStart])) continue;
+      let spokenIndex = lineStart + 1;
+      let matched = true;
+      for (const expectedToken of expectedTokens.slice(1)) {
+        while (spokenIndex < spoken.length && !tokenMatches(expectedToken, spoken[spokenIndex])) {
+          spokenIndex += 1;
+        }
+        if (spokenIndex >= spoken.length) {
+          matched = false;
+          break;
+        }
+        spokenIndex += 1;
+      }
+      if (matched) return spokenIndex;
+    }
+    return -1;
+  }
+
   function match() {
     const spoken = mergedTokens();
     let cursor = 0;
     const detected = [];
     TARGETS.forEach(target => {
-      let found = -1;
-      for (let start = cursor; start < spoken.length && found < 0; start += 1) {
-        if (variants(target).some(v => v.every((word, offset) => spoken[start + offset] === word))) found = start;
-      }
-      if (found >= 0) {
+      const nextCursor = findLyricLine(target, spoken, cursor);
+      if (nextCursor >= 0) {
         detected.push(target);
-        cursor = found + Math.max(...variants(target).map(v => v.length));
+        cursor = nextCursor;
       }
     });
     const undetected = TARGETS.filter(target => !detected.includes(target));
