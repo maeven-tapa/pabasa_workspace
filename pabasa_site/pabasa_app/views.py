@@ -13260,7 +13260,7 @@ def prescribed_activity_page(request, activity_key):
                                           initial_l22_g4_state,
                                            initial_l22_g3_state, initial_l22_g5_state, initial_l23_g5_state, normalize_l22_c_state,
                                           normalize_l22_g2_state, normalize_l22_g6_state, normalize_l22_g3_state, normalize_l22_g5_state,
-                                           normalize_l22_g4_state, initial_l23_g1_state, normalize_l23_g1_state, initial_l23_g6_state, normalize_l23_g6_state,
+                                           normalize_l22_g4_state, initial_l23_g1_state, normalize_l23_g1_state, initial_l24_g1_state, normalize_l24_g1_state, initial_l23_g6_state, normalize_l23_g6_state,
                                           initial_l23_g2_state, normalize_l23_g2_state)
         from .prescribed_workbook import initial_l23_g3_state, normalize_l23_g3_state, initial_l23_g4_state, normalize_l23_g4_state, normalize_l23_g5_state, initial_l23_g7_state, normalize_l23_g7_state
 
@@ -13328,6 +13328,7 @@ def prescribed_activity_page(request, activity_key):
              'aral-l23-g4-j-syllabication': 'aral-l23-g5-j-word-search',
              'aral-l23-g5-j-word-search': 'aral-l23-g6-q-syllable-builder',
              'aral-l23-g6-q-syllable-builder': 'aral-l23-g7-q-word-reading',
+             'aral-l24-g1-v-syllable-builder': 'aral-l24-g2-v-word-reading',
          }.get(activity_key, '')
         next_url = reverse('prescribed_activity_page', kwargs={'activity_key': next_key}) if next_key in PRESCRIBED_ACTIVITIES else ''
         if activity_key == 'aral-l22-g2-c-word-reading':
@@ -16540,7 +16541,7 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
         apply_event, get_activity, initial_l22_g2_state, initial_l22_g6_state, initial_l22_g3_state, initial_l22_g4_state, initial_l22_g5_state, initial_l23_g5_state, initial_state,
         l22_g2_pronunciation_match, l22_g6_pronunciation_match, normalize_l22_c_state, normalize_l22_g2_state, normalize_l22_g6_state,
         normalize_l22_g3_state, normalize_l22_g4_state, normalize_l22_g5_state, l22_g4_pronunciation_match,
-        initial_l23_g1_state, normalize_l23_g1_state, l23_g1_pronunciation_match, initial_l23_g6_state, normalize_l23_g6_state, l23_g6_pronunciation_match,
+        initial_l23_g1_state, normalize_l23_g1_state, l23_g1_pronunciation_match, initial_l24_g1_state, normalize_l24_g1_state, l24_g1_pronunciation_match, initial_l23_g6_state, normalize_l23_g6_state, l23_g6_pronunciation_match,
         initial_l23_g2_state, normalize_l23_g2_state, l23_g2_pronunciation_match,
         initial_l23_g3_state, normalize_l23_g3_state, l23_g3_pronunciation_match, initial_l23_g7_state, normalize_l23_g7_state, l23_g7_pronunciation_match,
         initial_l23_g4_state, normalize_l23_g4_state, normalize_l23_g5_state,
@@ -16559,6 +16560,7 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             initial_l22_g3_state() if activity_key == 'aral-l22-g3-c-word-search' else
             initial_l22_g5_state() if activity_key == 'aral-l22-g5-f-word-search' else
             initial_l23_g1_state() if activity_key == 'aral-l23-g1-n-syllable-builder' else
+            initial_l24_g1_state() if activity_key == 'aral-l24-g1-v-syllable-builder' else
             initial_l23_g6_state() if activity_key == 'aral-l23-g6-q-syllable-builder' else
             initial_l23_g2_state() if activity_key == 'aral-l23-g2-n-word-reading' else
             initial_l23_g3_state() if activity_key == 'aral-l23-g3-j-word-reading' else
@@ -16579,6 +16581,8 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             state = normalize_l22_g5_state(state)
         elif activity_key == 'aral-l23-g1-n-syllable-builder':
             state = normalize_l23_g1_state(state)
+        elif activity_key == 'aral-l24-g1-v-syllable-builder':
+            state = normalize_l24_g1_state(state)
         elif activity_key == 'aral-l23-g6-q-syllable-builder':
             state = normalize_l23_g6_state(state)
         elif activity_key == 'aral-l23-g2-n-word-reading':
@@ -16645,6 +16649,13 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
                 event = dict(event)
                 event['transcript'] = str(result.get('raw_transcript') or result.get('transcript') or '').strip()
                 result['complete'] = l23_g1_pronunciation_match(
+                    workbook['items'][item_index]['text'],
+                    result.get('raw_transcript') or result.get('transcript') or '',
+                )
+            elif activity_key == 'aral-l24-g1-v-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
+                event = dict(event)
+                event['transcript'] = str(result.get('raw_transcript') or result.get('transcript') or '').strip()
+                result['complete'] = l24_g1_pronunciation_match(
                     workbook['items'][item_index]['text'],
                     result.get('raw_transcript') or result.get('transcript') or '',
                 )
@@ -16716,6 +16727,9 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
                 verified = None if not transcript else bool(result.get('complete'))
             elif activity_key == 'aral-l23-g1-n-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
                 transcript = str(result.get('raw_transcript') or result.get('transcript') or '').strip()
+                verified = None if not transcript else bool(result.get('complete'))
+            elif activity_key == 'aral-l24-g1-v-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
+                transcript = str(result.get('transcript') or result.get('raw_transcript') or '').strip()
                 verified = None if not transcript else bool(result.get('complete'))
             elif activity_key == 'aral-l23-g2-n-word-reading' and event.get('action') == 'reading_attempt':
                 transcript = str(result.get('raw_transcript') or result.get('transcript') or '').strip()

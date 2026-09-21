@@ -156,6 +156,16 @@ L23_G6_ACCEPTED_SPEECH = {
     'ri': {'ri'}, 'zon': {'zon'}, 'ti': {'ti'},
 }
 
+# Lesson 24 Gawain 1's visible Big Box is present in the workbook source, but
+# no authoritative answer key or ordered word paths are available in the
+# project. Keep this empty rather than accepting guessed combinations.
+L24_G1_CANONICAL_WORDS = ()
+L24_G1_ACCEPTED_SPEECH = {
+    'lin': {'lin'}, 'sa': {'sa'}, 'van': {'van'}, 'va': {'va'},
+    'e': {'e'}, 'la': {'la'}, 'i': {'i'}, 'vi': {'vi'}, 'vio': {'vio'},
+    'le': {'le'}, 'val': {'val'}, 'a': {'a'},
+}
+
 
 def normalize_l23_g3_speech(value):
     text = unicodedata.normalize('NFKC', str(value or '')).casefold()
@@ -358,7 +368,15 @@ add('aral-l23-g7-q-word-reading', 44, 23, '7', 'Mga salitang may letrang Qq',
 
 add('aral-l24-g1-v-syllable-builder', 44, 24, '1', 'Big Box: V',
     'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salita.', 'builder',
-    [['lin','sa','van'], ['va','E','la'], ['I','Vi','Vio'], ['le','val','A']], review_required=True)
+    [['lin','sa','van'], ['va','E','la'], ['I','Vi','Vio'], ['le','val','A']],
+    item_ids=['r1c1','r1c2','r1c3','r2c1','r2c2','r2c3','r3c1','r3c2','r3c3','r4c1','r4c2','r4c3'],
+    bigbox_cells=[
+        [['r1c1'], ['r1c2'], ['r1c3']],
+        [['r2c1'], ['r2c2'], ['r2c3']],
+        [['r3c1'], ['r3c2'], ['r3c3']],
+        [['r4c1'], ['r4c2'], ['r4c3']],
+    ], review_required=True, specialized_builder=True, progress_total=12,
+    canonical_answer_source='Not found in available authoritative workbook/project sources.')
 add('aral-l24-g2-v-word-reading', 44, 24, '2', 'Mga salitang may letrang Vv',
     'Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Vv.', 'reading',
     [['Vina','vanilla'], ['Vilma','vila'], ['Victor','vinta'], ['Victoria','van'], ['Valdez','visa'], ['Valle','violin'], ['Visayas','volleybal']], column_headers=['V','v'])
@@ -423,6 +441,16 @@ def initial_state():
 
 
 def initial_l23_g1_state():
+    return {
+        'index': 0, 'read_aloud_started': False, 'read_aloud_completed': False,
+        'reading_attempts': 0, 'reading_phase': 'read',
+        'pronunciation_help_played': False, 'last_feedback': '',
+        'last_transcript': '', 'found_words': [], 'pending_words': [],
+        'draft': {'builder': []}, 'completed': False, 'revision': 0,
+    }
+
+
+def initial_l24_g1_state():
     return {
         'index': 0, 'read_aloud_started': False, 'read_aloud_completed': False,
         'reading_attempts': 0, 'reading_phase': 'read',
@@ -680,6 +708,43 @@ def l23_g1_pronunciation_match(expected, transcript):
     heard_words = [re.sub(r'[^a-zñ]', '', word) for word in heard.split()]
     accepted = L23_G1_ACCEPTED_SPEECH.get(canonical, {canonical})
     return bool(heard_words and any(word in accepted for word in heard_words))
+
+
+def normalize_l24_g1_speech(value):
+    text = unicodedata.normalize('NFKC', str(value or '')).casefold()
+    return ' '.join(re.sub(r'[^a-z\s]', ' ', text).split())
+
+
+def l24_g1_pronunciation_match(expected, transcript):
+    canonical = normalize_l24_g1_speech(expected)
+    heard = normalize_l24_g1_speech(transcript)
+    return bool(heard and heard in L24_G1_ACCEPTED_SPEECH.get(canonical, {canonical}))
+
+
+def normalize_l24_g1_state(state):
+    if not isinstance(state, dict):
+        state = initial_l24_g1_state()
+    count = len(ACTIVITIES['aral-l24-g1-v-syllable-builder']['items'])
+    state['index'] = max(0, min(count, int(state.get('index', 0) or 0)))
+    state['read_aloud_started'] = bool(state.get('read_aloud_started'))
+    state['read_aloud_completed'] = bool(state.get('read_aloud_completed')) or state['index'] >= count
+    state['reading_attempts'] = max(0, min(3, int(state.get('reading_attempts', 0) or 0)))
+    state['reading_phase'] = state.get('reading_phase') if state.get('reading_phase') in {'read', 'help', 'complete'} else 'read'
+    state['last_feedback'] = str(state.get('last_feedback') or '')
+    state['last_transcript'] = str(state.get('last_transcript') or '')
+    state['pronunciation_help_played'] = bool(state.get('pronunciation_help_played'))
+    state['found_words'] = [w for w in state.get('found_words', []) if w in L24_G1_CANONICAL_WORDS]
+    state['found_words'] = list(dict.fromkeys(state['found_words']))
+    draft = state.get('draft') if isinstance(state.get('draft'), dict) else {}
+    allowed = {item['id'] for item in ACTIVITIES['aral-l24-g1-v-syllable-builder']['items']}
+    state['draft'] = {'builder': [x for x in draft.get('builder', []) if x in allowed]}
+    state['pending_words'] = state.get('pending_words') if isinstance(state.get('pending_words'), list) else []
+    if state['read_aloud_completed']:
+        state['index'] = count
+        state['reading_phase'] = 'complete'
+    state['completed'] = bool(state.get('completed')) and state['read_aloud_completed'] and len(state['found_words']) == len(L24_G1_CANONICAL_WORDS)
+    state['revision'] = max(0, int(state.get('revision', 0) or 0))
+    return state
 
 
 def initial_l23_g6_state():
@@ -1379,6 +1444,64 @@ def _apply_l23_g1_builder(state, event, verified_reading):
     raise ValueError('Unknown action.')
 
 
+def _apply_l24_g1_builder(state, event, verified_reading):
+    normalize_l24_g1_state(state)
+    action = event.get('action')
+    if action == 'restart':
+        state.clear(); state.update(initial_l24_g1_state()); return state
+    if state['completed']:
+        return state
+    if action == 'draft':
+        draft = event.get('draft', {})
+        if not isinstance(draft, dict) or len(json.dumps(draft)) > 350000:
+            raise ValueError('Hindi na-save ang iyong sagot. Subukan muli.')
+        parts = draft.get('builder', [])
+        allowed = {item['id'] for item in ACTIVITIES['aral-l24-g1-v-syllable-builder']['items']}
+        if not isinstance(parts, list) or len(parts) > 12 or any(part not in allowed for part in parts):
+            raise ValueError('Hindi wastong mga pantig.')
+        if parts and not state['read_aloud_completed']:
+            raise ValueError('Basahin muna ang lahat ng nasa Big Box.')
+        state['draft'] = {'builder': parts}; state['last_feedback'] = ''; return state
+    if action == 'reading_started':
+        if state['read_aloud_completed']: raise ValueError('Natapos na ang pagbasa.')
+        state.update(read_aloud_started=True, reading_phase='read', last_feedback='', last_transcript=''); return state
+    if action == 'reading_syllable_attempt':
+        if not state['read_aloud_started']: raise ValueError('Simulan muna ang pagbasa.')
+        if state['reading_phase'] != 'read': raise ValueError('Pakinggan muna ang tamang pagbigkas o pindutin ang Subukan Muli.')
+        expected_index = state['index']
+        if event.get('item_index') is not None and int(event['item_index']) != expected_index:
+            return state
+        state['last_transcript'] = str(event.get('transcript') or '').strip()
+        if verified_reading is None:
+            state['last_feedback'] = 'Hindi ko malinaw na narinig. Subukan muli.'; return state
+        if verified_reading:
+            state['index'] = min(len(ACTIVITIES['aral-l24-g1-v-syllable-builder']['items']), expected_index + 1)
+            state['reading_attempts'] = 0; state['last_feedback'] = 'Tama!'
+            if state['index'] >= len(ACTIVITIES['aral-l24-g1-v-syllable-builder']['items']):
+                state.update(read_aloud_completed=True, reading_phase='complete')
+        else:
+            state['reading_attempts'] = min(3, state['reading_attempts'] + 1); state['last_feedback'] = 'Subukan muli.'
+            if state['reading_attempts'] >= 3:
+                state['reading_phase'] = 'help'; state['pronunciation_help_played'] = False
+        return state
+    if action == 'read_aloud':
+        if state['reading_phase'] != 'help': raise ValueError('Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.')
+        state['pronunciation_help_played'] = True; state['last_feedback'] = ''; return state
+    if action == 'retry_reading':
+        if state['reading_phase'] != 'help' or not state['pronunciation_help_played']: raise ValueError('Pakinggan muna ang tamang pagbigkas.')
+        state.update(reading_phase='read', reading_attempts=0, pronunciation_help_played=False, last_transcript='', last_feedback=''); return state
+    if action == 'build_word':
+        if not state['read_aloud_completed']: raise ValueError('Basahin muna ang lahat ng nasa Big Box.')
+        state['last_feedback'] = 'Hindi pa available ang opisyal na sagot. Subukan muli.'
+        state['draft'] = {'builder': []}
+        return state
+    if action == 'finish':
+        if not state['read_aloud_completed'] or len(state['found_words']) != len(L24_G1_CANONICAL_WORDS):
+            raise ValueError('Hindi pa nabe-verify ang mga wastong salita.')
+        state['completed'] = True; state['last_feedback'] = 'Magaling! Natapos mo ang Gawain 1.'; return state
+    raise ValueError('Unknown action.')
+
+
 def apply_event(activity, state, event, verified_reading=None):
     """Advance only the current item's required phases; never trust client scores."""
     if activity['activity_key'] in {'aral-l22-g6-f-word-reading', 'aral-l23-g2-n-word-reading'} and event.get('action') == 'reading':
@@ -1413,6 +1536,8 @@ def apply_event(activity, state, event, verified_reading=None):
         return _apply_l22_c_builder(state, event, verified_reading)
     if activity['activity_key'] == 'aral-l23-g1-n-syllable-builder':
         return _apply_l23_g1_builder(state, event, verified_reading)
+    if activity['activity_key'] == 'aral-l24-g1-v-syllable-builder':
+        return _apply_l24_g1_builder(state, event, verified_reading)
     if activity['activity_key'] == 'aral-l23-g6-q-syllable-builder':
         return _apply_l23_g6_builder(state, event, verified_reading)
     if state['completed']:

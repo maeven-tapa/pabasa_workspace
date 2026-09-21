@@ -4,7 +4,7 @@ import unittest
 from copy import deepcopy
 
 from .prescribed_workbook import (ACTIVITIES, L22_G3_C_WORD_PATHS, L22_G5_F_WORD_PATHS, L23_G5_J_WORD_PATHS, apply_event,
-                                  get_activity, initial_l22_g3_state, initial_l22_g5_state, initial_l23_g5_state, initial_state,
+                                  get_activity, initial_l22_g3_state, initial_l22_g5_state, initial_l23_g5_state, initial_l24_g1_state, initial_state,
                                   normalize_l22_g3_state, search_paths)
 
 
@@ -65,6 +65,14 @@ class PrescribedWorkbookDataTests(unittest.TestCase):
                     apply_event(a, s, {'action':'build_word','parts':['item-1','item-8']})
                     apply_event(a, s, {'action':'finish'})
                     self.assertTrue(s['completed'])
+                    continue
+                if a['activity_key']=='aral-l24-g1-v-syllable-builder':
+                    s = initial_l24_g1_state()
+                    apply_event(a, s, {'action':'reading_started'})
+                    for index, item in enumerate(a['items']):
+                        apply_event(a, s, {'action':'reading_syllable_attempt', 'item_index': index, 'transcript':item['text']}, True)
+                    self.assertTrue(s['read_aloud_completed'])
+                    self.assertFalse(s['completed'])
                     continue
                 if a['activity_key']=='aral-l22-g2-c-word-reading':
                     for word in a['items']:

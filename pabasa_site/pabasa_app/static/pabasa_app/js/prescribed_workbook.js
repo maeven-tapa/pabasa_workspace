@@ -4,6 +4,7 @@
   const data = JSON.parse(document.getElementById('workbook-payload').textContent);
   const a = data.activity, preview = data.preview;
   const qBuilder = a.activity_key === 'aral-l23-g6-q-syllable-builder';
+  const l24Builder = a.activity_key === 'aral-l24-g1-v-syllable-builder';
   const cBuilder = (Boolean(a.specialized_builder) && !qBuilder) || a.activity_key === 'aral-l22-g1-c-syllable-builder';
   const specializedBuilder = cBuilder || qBuilder;
   const jReading = a.activity_key === 'aral-l23-g3-j-word-reading';
@@ -88,7 +89,7 @@
   function render(){
     selected=[];builder=state.draft.builder||[];words=state.draft.words||[];
     const totalProgress=a.progress_total||a.items.length, progressValue=state.completed?totalProgress:Math.min(totalProgress, qBuilder?Number(state.index||0):cBuilder?Number(state.index||0)+1:Number(state.index||0));
-    document.getElementById('wb-progress').textContent=preview?'Preview':(a.activity_key==='aral-l23-g1-n-syllable-builder'?`Nabasa: ${Math.min(12,Number(state.index||0))} / 12`:`${progressValue} / ${totalProgress}`);
+    document.getElementById('wb-progress').textContent=preview?'Preview':(a.activity_key==='aral-l23-g1-n-syllable-builder'||l24Builder?`Nabasa: ${Math.min(12,Number(state.index||0))} / 12`:`${progressValue} / ${totalProgress}`);
     const progressFill=document.getElementById('wb-progress-fill');if(progressFill)progressFill.style.width=`${preview?0:Math.max(0,Math.min(100,progressValue/totalProgress*100))}%`;
     document.getElementById('wb-back').hidden=preview;
     action.replaceChildren();
