@@ -17343,6 +17343,20 @@ def prescribed_activity_complete(request, activity_key):
         existing.activity_completed = True; existing.current_index = existing.completed_items = existing.correct_items = 3
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': 3, 'accuracy': 100.0}})
+    if activity_key == 'session-5-lesson-14-gawain-4':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        total = len(activity['items'])
+        if not existing or int(existing.current_index or 0) < total:
+            return JsonResponse({'success': False, 'error': 'Complete all reading items first.'}, status=400)
+        state = dict(existing.state if isinstance(existing.state, dict) else {})
+        state.update({'current_index': total, 'completed_items': total,
+                      'total_items': total, 'activity_completed': True,
+                      'state_version': 1_000_000_000})
+        existing.current_index = existing.completed_items = existing.total_items = total
+        existing.activity_completed = True
+        existing.state = state
+        existing.save(update_fields=['current_index', 'completed_items', 'total_items', 'activity_completed', 'state', 'updated_at'])
+        return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': existing.correct_items, 'accuracy': 100.0}})
     if activity_key == 'lesson7-gawain2a':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
