@@ -1,0 +1,10 @@
+.l24g2-page .prescribed-intro-overlay{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:clamp(16px,4vw,42px);background:rgba(16,55,75,.42);backdrop-filter:blur(2px)}
+.l24g2-page .prescribed-intro-modal{width:min(560px,100%);padding:clamp(24px,5vw,42px);background:#fff;border:1px solid rgba(255,255,255,.9);border-radius:28px;box-shadow:0 24px 70px rgba(18,61,78,.28);text-align:center;color:#173f53}
+.l24g2-page .prescribed-intro-meta{margin:0 0 16px;color:#287f91;font-size:clamp(12px,1.5vw,15px);font-weight:900;letter-spacing:.05em;text-transform:uppercase}
+.l24g2-page .prescribed-intro-instruction{margin:0 auto 28px;max-width:470px;font-size:clamp(22px,3.2vw,34px);font-weight:900;line-height:1.18;white-space:pre-line}
+.l24g2-page .prescribed-intro-actions{display:grid;gap:12px;max-width:330px;margin:auto}
+.l24g2-page .prescribed-intro-actions button{min-height:54px;border-radius:999px;padding:12px 22px;font:inherit;font-weight:900;cursor:pointer}
+.l24g2-page .prescribed-intro-start{background:#287f91;border:2px solid #287f91;color:#fff;box-shadow:0 8px 18px rgba(40,127,145,.2)}
+.l24g2-page .prescribed-intro-later{background:#fff;border:2px solid #8bd4d4;color:#287f91}
+.l24g2-page .prescribed-intro-actions button:focus-visible{outline:4px solid #f5c64f;outline-offset:3px}
+@media(max-width:420px){.l24g2-page .prescribed-intro-modal{border-radius:22px}.l24g2-page .prescribed-intro-instruction{font-size:23px}.l24g2-page .prescribed-intro-actions button{min-height:50px}}

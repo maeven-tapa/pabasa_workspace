@@ -1,0 +1,7 @@
+@import url('./prescribed_l22_g2_reading.css');
+.l24g2-page{background:url('../prescribed/PRESCRIBED-BG.jpg') center/cover fixed no-repeat;color:#173f53}
+.l24g2-page .shell{width:min(1160px,calc(100% - 32px));padding-top:clamp(22px,4vh,42px)}
+.l24g2-page .header,.l24g2-page .panel,.l24g2-page .group{background:#ffffffd9;border-color:#c8e0e5}
+.l24g2-page .groups{grid-template-columns:1fr 1fr}
+.l24g2-page .word.current{outline:3px solid #f4b942;outline-offset:2px}
+@media(max-width:760px){.l24g2-page .groups{grid-template-columns:1fr}.l24g2-page .group:first-child,.l24g2-page .group:last-child{border-radius:18px;margin-bottom:10px}}
