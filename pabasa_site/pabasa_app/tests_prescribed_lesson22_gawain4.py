@@ -1,4 +1,5 @@
 import uuid
+from pathlib import Path
 
 from django.test import TestCase
 from django.urls import reverse
@@ -62,6 +63,16 @@ class PrescribedLesson22Gawain4Tests(TestCase):
     def test_target_aware_matching_is_scoped(self):
         self.assertTrue(l22_g4_pronunciation_match('free', 'three'))
         self.assertFalse(l22_g4_pronunciation_match('free', 'banana'))
+
+    def test_reading_client_exposes_listening_processing_result_and_voice_feedback(self):
+        script = (Path(__file__).resolve().parent / 'static/pabasa_app/js/prescribed_l22_g4_f_builder.js').read_text(encoding='utf-8')
+        self.assertIn("uiPhase='listening'", script)
+        self.assertIn("uiPhase='processing'", script)
+        self.assertIn('Pinoproseso ang iyong pagbasa', script)
+        self.assertIn('spinner', script)
+        self.assertIn('await tts(feedback)', script)
+        self.assertIn("if(busy||speechBusy||uiPhase==='listening'||uiPhase==='processing')return", script)
+        self.assertIn('stopStream()', script)
 
     def test_page_uses_specialized_template_and_canonical_next_route(self):
         token = uuid.uuid4().hex
