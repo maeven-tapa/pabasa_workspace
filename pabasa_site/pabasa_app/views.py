@@ -13744,6 +13744,8 @@ def prescribed_activity_page(request, activity_key):
                        'blank_length': len(item['answer'])} for item in activity['items']],
             'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
             'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'read_aloud_url': reverse('reading_read_aloud_api'),
+            'transcribe_url': reverse('reading_transcribe_api'),
             'progress': {'current_index': progress.current_index if progress else 0,
                          'completed_items': progress.completed_items if progress else 0,
                          'correct_items': progress.correct_items if progress else 0,
