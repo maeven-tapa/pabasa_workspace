@@ -75,6 +75,23 @@ L22_G2_ACCEPTED_SPEECH = {
     'carlos': {'carlos', 'karlos'},
 }
 
+L22_G6_F_WORDS = (
+    'freezer', 'fries', 'Filipino', 'Fina', 'Filipiniana',
+    'Felipe', 'Felix', 'Ferrer', 'Faith', 'Fontana',
+)
+L22_G6_ACCEPTED_SPEECH = {
+    'freezer': {'freezer', 'frizer', 'freezer'},
+    'fries': {'fries', 'frize', 'frys'},
+    'filipino': {'filipino', 'filipina'},
+    'fina': {'fina', 'feena', 'fena'},
+    'filipiniana': {'filipiniana', 'filipiniana'},
+    'felipe': {'felipe', 'felipeh', 'felipay'},
+    'felix': {'felix', 'feliks', 'felics'},
+    'ferrer': {'ferrer', 'ferer'},
+    'faith': {'faith', 'fayth', 'feith'},
+    'fontana': {'fontana', 'fontanna'},
+}
+
 # Lesson 22 Gawain 4 is the Ff Big Box activity on workbook page 40.  The
 # following are the only words approved by the adjacent prescribed F-word
 # activity and are intentionally kept private from client-side validation.
@@ -130,6 +147,13 @@ def l22_g2_pronunciation_match(canonical_word, transcript):
     return bool(heard and heard in accepted)
 
 
+def l22_g6_pronunciation_match(canonical_word, transcript):
+    canonical = normalize_l22_g2_speech(canonical_word)
+    heard = normalize_l22_g2_speech(transcript)
+    accepted = L22_G6_ACCEPTED_SPEECH.get(canonical, {canonical})
+    return bool(heard and heard in accepted)
+
+
 def normalize_l22_g4_speech(value):
     text = unicodedata.normalize('NFKC', str(value or '')).casefold()
     text = re.sub(r'[^0-9a-z\s]', ' ', text)
@@ -147,10 +171,10 @@ def add(key, page, lesson, number, title, instruction, kind, rows, **config):
     session = 8 if page <= 47 else 9 if page <= 49 else 10 if page <= 51 else 11
     label = f'Lesson {lesson}: Gawain {number}' if lesson else f'Session {session}: Activity {number}'
     item_ids = config.pop('item_ids', None)
+    reading_words = config.pop('reading_words', None)
     oral_flow = config.pop('oral_flow', kind not in {'drawing', 'fill'})
-    items = [dict(id=f'item-{i + 1}', text=text) for i, text in enumerate(
-        [text for row in rows for text in row if text]
-    )]
+    source_words = reading_words if reading_words is not None else [text for row in rows for text in row if text]
+    items = [dict(id=f'item-{i + 1}', text=text) for i, text in enumerate(source_words)]
     if item_ids:
         for item, item_id in zip(items, item_ids):
             item['id'] = item_id
@@ -164,6 +188,8 @@ def add(key, page, lesson, number, title, instruction, kind, rows, **config):
         randomize_order=False, oral_flow=oral_flow,
         reading_attempt_limit=3, read_aloud_limit=3, **config,
     )
+    if reading_words is not None:
+        ACTIVITIES[key]['reading_words'] = list(reading_words)
 
 
 BOX = 'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salita mula rito.'
@@ -200,7 +226,8 @@ add('aral-l22-g5-f-word-search', 40, 22, '5', 'Hanapin ang mga salita: F',
     grid=['MTGFINAE', 'FELIPEGR', 'MFRIESMD', 'FILIPINO', 'FREEZERH', 'SADFELIX'], mark_style='circle')
 add('aral-l22-g6-f-word-reading', 41, 22, '6', 'Mga salitang may letrang Ff',
     'Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Ff.', 'reading',
-    [['freezer', 'Felipe'], ['fries', 'Felix'], ['Filipino', 'Ferrer'], ['Fina', 'Faith'], ['Filipiniana', 'Fontana']])
+    [['freezer', 'Felipe'], ['fries', 'Felix'], ['Filipino', 'Ferrer'], ['Fina', 'Faith'], ['Filipiniana', 'Fontana']],
+    reading_words=L22_G6_F_WORDS, column_headers=['', ''])
 
 
 add('aral-l23-g1-n-syllable-builder', 41, 23, '1', 'Big Box: Ñ', BOX, 'builder',
@@ -293,6 +320,15 @@ def initial_state():
 
 
 def initial_l22_g2_state():
+    return {
+        'index': 0, 'sequence_index': 0, 'completed_words': [],
+        'reading_attempts': 0, 'reading_phase': 'read',
+        'last_feedback': '', 'last_transcript': '',
+        'completed': False, 'revision': 0,
+    }
+
+
+def initial_l22_g6_state():
     return {
         'index': 0, 'sequence_index': 0, 'completed_words': [],
         'reading_attempts': 0, 'reading_phase': 'read',
@@ -581,6 +617,69 @@ def _apply_l22_g2_reading(state, event, verified_reading):
     raise ValueError('Unknown action.')
 
 
+def normalize_l22_g6_state(state):
+    """Keep Gawain 6 progress contiguous and clear transient recorder state."""
+    if not isinstance(state, dict):
+        state = initial_l22_g6_state()
+    completed = state.get('completed_words') if isinstance(state.get('completed_words'), list) else []
+    completed = sorted({int(i) for i in completed if str(i).isdigit() and 0 <= int(i) < len(L22_G6_F_WORDS)})
+    expected = list(range(len(completed)))
+    state['completed_words'] = completed if completed == expected else expected
+    state['sequence_index'] = max(0, min(len(L22_G6_F_WORDS), int(state.get('sequence_index', len(state['completed_words'])) or 0)))
+    state['index'] = state['sequence_index']
+    state['reading_attempts'] = max(0, min(3, int(state.get('reading_attempts', 0) or 0)))
+    state['reading_phase'] = state.get('reading_phase') if state.get('reading_phase') in {'read', 'help', 'complete'} else 'read'
+    state['last_feedback'] = str(state.get('last_feedback') or '')
+    state['last_transcript'] = str(state.get('last_transcript') or '')
+    state['completed'] = bool(state.get('completed')) or len(state['completed_words']) == len(L22_G6_F_WORDS)
+    if state['completed']:
+        state['sequence_index'] = state['index'] = len(L22_G6_F_WORDS)
+        state['reading_phase'] = 'complete'
+    return state
+
+
+def _apply_l22_g6_reading(state, event, verified_reading):
+    normalize_l22_g6_state(state)
+    action = event.get('action')
+    if action == 'restart':
+        state.clear(); state.update(initial_l22_g6_state()); return state
+    if state['completed']:
+        return state
+    if action == 'reading_started':
+        state['reading_phase'] = 'read'; state['last_feedback'] = ''; return state
+    if action == 'reading_attempt':
+        if state['reading_phase'] != 'read':
+            raise ValueError('Pakinggan muna ang tamang pagbigkas o pindutin ang Subukan Muli.')
+        state['last_transcript'] = str(event.get('transcript') or '').strip()
+        if verified_reading is None:
+            state['last_feedback'] = 'Hindi ko malinaw na narinig. Subukan muli.'
+            return state
+        if verified_reading:
+            index = state['sequence_index']
+            if index not in state['completed_words']:
+                state['completed_words'].append(index)
+            state['completed_words'].sort()
+            state['sequence_index'] = state['index'] = min(len(L22_G6_F_WORDS), index + 1)
+            state['reading_attempts'] = 0
+            state['completed'] = state['sequence_index'] >= len(L22_G6_F_WORDS)
+            state['reading_phase'] = 'complete' if state['completed'] else 'read'
+            state['last_feedback'] = 'Tama!' if not state['completed'] else 'Magaling!'
+        else:
+            state['reading_attempts'] = min(3, state['reading_attempts'] + 1)
+            state['last_feedback'] = 'Subukan muli.'
+            if state['reading_attempts'] >= 3: state['reading_phase'] = 'help'
+        return state
+    if action == 'read_aloud':
+        if state['reading_phase'] != 'help':
+            raise ValueError('Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.')
+        state['last_feedback'] = ''; return state
+    if action == 'retry_reading':
+        if state['reading_phase'] != 'help':
+            raise ValueError('Hindi pa kailangan ang pag-ulit.')
+        state.update(reading_phase='read', reading_attempts=0, last_feedback='', last_transcript=''); return state
+    raise ValueError('Unknown action.')
+
+
 def _oral(state, item, model_first=False):
     return state['oral'].setdefault(item['id'], dict(passed=False, attempts=0, listens=0, phase='model' if model_first else 'read'))
 
@@ -652,6 +751,8 @@ def apply_event(activity, state, event, verified_reading=None):
     """Advance only the current item's required phases; never trust client scores."""
     if activity['activity_key'] == 'aral-l22-g2-c-word-reading':
         return _apply_l22_g2_reading(state, event, verified_reading)
+    if activity['activity_key'] == 'aral-l22-g6-f-word-reading':
+        return _apply_l22_g6_reading(state, event, verified_reading)
     if activity['activity_key'] == 'aral-l22-g3-c-word-search':
         return _apply_l22_g3_word_search(state, event)
     if activity['activity_key'] == 'aral-l22-g5-f-word-search':
