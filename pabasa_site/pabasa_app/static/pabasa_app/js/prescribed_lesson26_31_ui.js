@@ -42,6 +42,7 @@
       .pabasa-resume-actions .pabasa-resume-continue{border:0!important;background:#299e9a!important;color:#fff!important;box-shadow:0 5px 0 #187b7a,0 8px 18px #187b7a26!important}
       .pabasa-resume-actions .pabasa-resume-restart{border:3px solid #94d9d6!important;background:#fff!important;color:#187b7a!important;box-shadow:0 4px 0 #b7d6dc!important}
       body.pabasa-completion-active{min-height:100vh!important;overflow:hidden!important}
+      body.pabasa-completion-active> :not(#app){display:none!important}
       #app.pabasa-completion-root{position:fixed!important;inset:0!important;z-index:1001!important;display:grid!important;place-items:center!important;width:100vw!important;height:100vh!important;height:100dvh!important;min-height:100dvh!important;margin:0!important;padding:24px!important;overflow:auto!important;box-sizing:border-box!important;background:transparent!important;filter:none!important;opacity:1!important}
       .pabasa-completion-card{box-sizing:border-box!important;width:min(550px,calc(100vw - 40px))!important;margin:auto!important;padding:38px 34px 34px!important;border:2px solid #ffffffd9!important;border-radius:30px!important;background:#fff!important;box-shadow:0 22px 60px #173f6340!important;text-align:center!important}
       .pabasa-completion-card h1{margin:0!important;color:#183e63!important;font-size:clamp(28px,3vw,32px)!important;font-weight:900!important;line-height:1.2!important}
