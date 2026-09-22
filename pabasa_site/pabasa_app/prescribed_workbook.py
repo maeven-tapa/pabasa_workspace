@@ -62,6 +62,13 @@ L24_G2_V_WORDS = (
 )
 L24_G2_ACCEPTED_SPEECH = {word.casefold(): {word.casefold()} for word in L24_G2_V_WORDS}
 
+L24_G4_X_WORDS = ('x-ray', 'fax machine', 'fox')
+L24_G4_X_ACCEPTED_SPEECH = {
+    'x-ray': {'x ray', 'x-ray'},
+    'fax machine': {'fax machine'},
+    'fox': {'fox'},
+}
+
 # Lesson 22 Gawain 2 keeps the workbook spelling as the canonical display
 # value while allowing only explicit Filipino STT spellings for pronunciation.
 L22_G2_ACCEPTED_SPEECH = {
@@ -259,6 +266,19 @@ def l24_g2_pronunciation_match(canonical_word, transcript):
     return bool(heard and heard in accepted)
 
 
+def normalize_l24_g4_speech(value):
+    text = unicodedata.normalize('NFKD', str(value or '').casefold())
+    text = re.sub(r'[^a-z\s-]', ' ', text)
+    return ' '.join(text.replace('-', ' ').split())
+
+
+def l24_g4_pronunciation_match(canonical_word, transcript):
+    canonical = normalize_l24_g4_speech(canonical_word)
+    heard = normalize_l24_g4_speech(transcript)
+    accepted = {normalize_l24_g4_speech(item) for item in L24_G4_X_ACCEPTED_SPEECH.get(str(canonical_word).casefold(), {canonical})}
+    return bool(heard and heard in accepted)
+
+
 def l22_g6_pronunciation_match(canonical_word, transcript):
     canonical = normalize_l22_g2_speech(canonical_word)
     heard = normalize_l22_g2_speech(transcript)
@@ -400,9 +420,9 @@ add('aral-l24-g2-v-word-reading', 44, 24, '2', 'Mga salitang may letrang Vv',
 add('aral-l24-g3-x-repeat', 45, 24, '3', 'Pakinggan at ulitin: X',
     'Pakinggang mabuti ang mga salitang bibigkasin ng guro pagkatapos ay ulitin ito.', 'reading',
     [['Alex'], ['Felix'], ['x-factor'], ['fixer']], model_first=True)
-add('aral-l24-g2-x-pictures', 45, 24, '2', 'Kilalanin ang mga larawan: X',
+add('aral-l24-g4-x-pictures', 45, 24, '4', 'Kilalanin at Basahin',
     'Kilalanin ang bawat larawan at subuking basahin ito kasabay ng guro.', 'reading',
-    [['x-ray','fax machine','fox']], model_first=True,
+    [['x-ray','fax machine','fox']],
     images={f'item-{i+1}':f'/static/pabasa_app/images/aral_workbook/{name}.png' for i,name in enumerate(['x-ray','fax-machine','fox'])})
 add('aral-l24-g3-x-word-reading', 45, 24, '3', 'Mga salitang may letrang Xx',
     'Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Xx.', 'reading',
@@ -496,6 +516,15 @@ def initial_l22_g6_state():
 
 
 def initial_l24_g2_state():
+    return {
+        'index': 0, 'sequence_index': 0, 'completed_words': [],
+        'reading_attempts': 0, 'reading_phase': 'read',
+        'last_feedback': '', 'last_transcript': '',
+        'completed': False, 'revision': 0,
+    }
+
+
+def initial_l24_g4_state():
     return {
         'index': 0, 'sequence_index': 0, 'completed_words': [],
         'reading_attempts': 0, 'reading_phase': 'read',
@@ -1358,6 +1387,58 @@ def _apply_l24_g2_reading(state, event, verified_reading):
     raise ValueError('Unknown action.')
 
 
+def normalize_l24_g4_state(state):
+    total = len(L24_G4_X_WORDS)
+    completed = state.get('completed_words') if isinstance(state.get('completed_words'), list) else []
+    state['completed_words'] = sorted({int(i) for i in completed if str(i).isdigit() and 0 <= int(i) < total})
+    state['index'] = max(0, min(total, int(state.get('index') or len(state['completed_words']))))
+    state['index'] = max(state['index'], len(state['completed_words']))
+    state['sequence_index'] = state['index']
+    state['reading_attempts'] = max(0, int(state.get('reading_attempts') or 0))
+    state['reading_phase'] = state.get('reading_phase') if state.get('reading_phase') in {'read', 'complete'} else 'read'
+    state.setdefault('last_feedback', '')
+    state.setdefault('last_transcript', '')
+    state['completed'] = bool(state.get('completed')) or state['index'] >= total
+    if state['completed']:
+        state['index'] = state['sequence_index'] = total
+        state['completed_words'] = list(range(total))
+        state['reading_phase'] = 'complete'
+    state['revision'] = max(0, int(state.get('revision', 0) or 0))
+    return state
+
+
+def _apply_l24_g4_reading(state, event, verified_reading):
+    normalize_l24_g4_state(state)
+    if state['completed']:
+        return state
+    action = event.get('action')
+    if action == 'reading_started':
+        state['last_feedback'] = 'Handa ka na.'
+        return state
+    if action not in {'reading', 'reading_attempt'}:
+        raise ValueError('Unknown action.')
+    index = state['index']
+    if event.get('item_index') is not None and int(event['item_index']) != index:
+        return state
+    state['last_transcript'] = str(event.get('transcript') or '').strip()
+    if verified_reading is None:
+        state['last_feedback'] = 'Hindi ko malinaw na narinig. Subukan muli.'
+        return state
+    if verified_reading:
+        if index not in state['completed_words']:
+            state['completed_words'].append(index)
+            state['completed_words'].sort()
+        state['index'] = state['sequence_index'] = min(len(L24_G4_X_WORDS), index + 1)
+        state['reading_attempts'] = 0
+        state['completed'] = state['index'] >= len(L24_G4_X_WORDS)
+        state['reading_phase'] = 'complete' if state['completed'] else 'read'
+        state['last_feedback'] = 'Magaling! Natapos mo ang gawain.' if state['completed'] else 'Tama! Magaling!'
+    else:
+        state['reading_attempts'] += 1
+        state['last_feedback'] = 'Subukan muli.'
+    return state
+
+
 def _apply_l22_g6_reading(state, event, verified_reading):
     normalize_l22_g6_state(state)
     action = event.get('action')
@@ -1601,6 +1682,8 @@ def apply_event(activity, state, event, verified_reading=None):
         return _apply_l22_g6_reading(state, event, verified_reading)
     if activity['activity_key'] == 'aral-l24-g2-v-word-reading':
         return _apply_l24_g2_reading(state, event, verified_reading)
+    if activity['activity_key'] == 'aral-l24-g4-x-pictures':
+        return _apply_l24_g4_reading(state, event, verified_reading)
     if activity['activity_key'] == 'aral-l23-g2-n-word-reading':
         return _apply_l23_g2_reading(state, event, verified_reading)
     if activity['activity_key'] == 'aral-l23-g3-j-word-reading':
