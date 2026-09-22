@@ -24,7 +24,7 @@ class PrescribedLesson22Gawain5Tests(SimpleTestCase):
         self.assertEqual([item['text'] for item in activity['items']], ['freezer', 'fries', 'Fina', 'Filipino', 'Felix'])
         self.assertEqual(L22_G5_F_WORD_PATHS['Fina'], [[0, 3], [0, 4], [0, 5], [0, 6]])
         self.assertEqual(L22_G5_F_WORD_PATHS['fries'], [[2, 1], [2, 2], [2, 3], [2, 4], [2, 5]])
-        self.assertEqual(L22_G5_F_WORD_PATHS['Filipino'], [[3, 0], [3, 1], [3, 2], [3, 3], [3, 4], [3, 5], [3, 6]])
+        self.assertEqual(L22_G5_F_WORD_PATHS['Filipino'], [[3, 0], [3, 1], [3, 2], [3, 3], [3, 4], [3, 5], [3, 6], [3, 7]])
         self.assertEqual(L22_G5_F_WORD_PATHS['freezer'], [[4, 0], [4, 1], [4, 2], [4, 3], [4, 4], [4, 5], [4, 6]])
         self.assertEqual(L22_G5_F_WORD_PATHS['Felix'], [[5, 3], [5, 4], [5, 5], [5, 6], [5, 7]])
 
