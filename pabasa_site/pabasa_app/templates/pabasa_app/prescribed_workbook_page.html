@@ -3,7 +3,8 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{ workbook_payload.activity.display_label }} | PABASA</title>
 <link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_workbook.css' %}">
-{% if workbook_payload.activity.specialized_builder or workbook_payload.activity.activity_key == 'aral-l22-g1-c-syllable-builder' %}<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_l22_c_builder.css' %}">{% endif %}</head>
+{% if workbook_payload.activity.specialized_builder or workbook_payload.activity.activity_key == 'aral-l22-g1-c-syllable-builder' %}<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_l22_c_builder.css' %}">{% endif %}
+{% if workbook_payload.activity.activity_key == 'aral-l23-g1-n-syllable-builder' %}<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_l23_g1_standard.css' %}">{% endif %}</head>
 <body class="wb-page{% if workbook_payload.activity.specialized_builder or workbook_payload.activity.activity_key == 'aral-l22-g1-c-syllable-builder' %} wb-l22-page{% endif %}{% if workbook_payload.activity.activity_key == 'aral-l22-g1-c-syllable-builder' %} wb-l22-g1-page{% endif %}{% if workbook_payload.activity.activity_key == 'aral-l23-g1-n-syllable-builder' %} wb-l23-page{% endif %}{% if workbook_payload.activity.activity_key == 'aral-l24-g1-v-syllable-builder' %} wb-l24-page{% endif %}{% if workbook_payload.activity.activity_key == 'aral-l23-g6-q-syllable-builder' %} wb-l23-g6-page{% endif %}">{% csrf_token %}
 <main class="wb-shell">
   {% if workbook_payload.activity.specialized_builder or workbook_payload.activity.activity_key == 'aral-l22-g1-c-syllable-builder' %}
