@@ -59,6 +59,16 @@
     const meaningful = Number(progress.completed_items || 0) > 0
       || Number(progress.current_index || 0) > 0
       || isMeaningful(state);
+    const laterButton = modal.querySelector('button[id$="-later"],button[id$="-later-button"]');
+    if (laterButton && !meaningful) {
+      laterButton.textContent = 'MAYBE LATER';
+      modal.addEventListener('click', event => {
+        if (event.target !== laterButton && !laterButton.contains(event.target)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (back?.href) window.location.assign(back.href);
+      }, true);
+    }
     if (!meaningful) return;
 
     const card = modal.querySelector('.modal, .lesson26-start-modal, .lesson27-start-modal') || modal.firstElementChild;
