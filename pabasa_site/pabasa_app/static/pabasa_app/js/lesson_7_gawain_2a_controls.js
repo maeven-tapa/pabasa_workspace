@@ -13,6 +13,11 @@ document.addEventListener('DOMContentLoaded', function () {
   const part2Instruction = 'Isulat ang i sa kahon ng bagay na nagsisimula sa i.';
   const part2InvalidFeedback = 'May mga larawan na nagsisimula sa /i/. Isulat ang i sa tamang kahon, pagkatapos ay isumite muli.';
   const csrf = () => document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || '';
+  const wordAudioFiles = {
+    ilaw: 'ilaw.mp3', itlog: 'itlog.mp3', isa: 'isa.mp3',
+    bahay: 'bahay.mp3', bola: 'bola.mp3', suklay: 'suklay.mp3'
+  };
+  const wordAudioBase = '/static/pabasa_app/prescribed/audio/SESSION%203/LESSON%207/GAWAIN%202A/';
   const requestAudio = text => fetch('/api/reading/read-aloud/', {
     method: 'POST',
     credentials: 'same-origin',
@@ -90,9 +95,18 @@ document.addEventListener('DOMContentLoaded', function () {
         if (listen.disabled) return;
         const word = reading.querySelector('img')?.alt?.replace(/^Larawan:\s*/i, '').trim();
         if (!word) return;
+        const audioFile = wordAudioFiles[word.toLowerCase()];
+        if (!audioFile) return;
         setButtonsDisabled(true);
         listen.classList.add('is-speaking');
-        try { await requestAudio(word); }
+        try {
+          const audio = new Audio(wordAudioBase + encodeURIComponent(audioFile));
+          await new Promise(resolve => {
+            audio.onended = resolve;
+            audio.onerror = resolve;
+            audio.play().catch(resolve);
+          });
+        }
         finally { listen.classList.remove('is-speaking'); setButtonsDisabled(false); }
       });
     }
