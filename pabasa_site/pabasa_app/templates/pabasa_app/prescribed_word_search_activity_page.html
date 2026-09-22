@@ -4,6 +4,30 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Word Search | PABASA</title>
   <style>
+    .prescribed-l26a1-tools{position:fixed;top:22px;right:24px;z-index:8;display:flex;gap:14px;align-items:center}
+    .prescribed-l26a1-tool{width:64px;height:64px;border:2px solid #ffffffaa;border-radius:20px;background:#ffffffe8;color:#187b7a;box-shadow:0 8px 18px #145ca733;display:grid;place-items:center;font:inherit;font-size:1.8rem;cursor:pointer;transition:transform .16s,filter .16s,background .16s}
+    .prescribed-l26a1-tool:hover{transform:translateY(-2px);filter:brightness(1.04)}
+    .prescribed-l26a1-tool:active{transform:translateY(2px)}
+    .prescribed-l26a1-tool.is-muted{background:#fff1f1;color:#b33b43}
+    .prescribed-l26a1-tool:focus-visible,.prescribed-l26a1-modal button:focus-visible{outline:4px solid #f5d47c;outline-offset:3px}
+    .prescribed-l26a1-modal{position:fixed;inset:0;z-index:30;display:grid;place-items:center;padding:20px;background:#173f6370;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+    .prescribed-l26a1-modal[hidden]{display:none}
+    .prescribed-l26a1-modal-card{width:min(500px,calc(100vw - 36px));padding:28px 30px 30px;border-radius:26px;background:#fffffff5;box-shadow:0 22px 60px #173f6340;color:var(--ink)}
+    .prescribed-l26a1-modal-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
+    .prescribed-l26a1-modal-head h2{margin:0;font-size:1.55rem;line-height:1.2}
+    .prescribed-l26a1-modal-close{width:36px;height:36px;border:0;border-radius:50%;background:#eef5f4;color:#365c60;font:inherit;font-size:1.2rem;cursor:pointer}
+    .prescribed-l26a1-help-steps{display:grid;gap:12px}
+    .prescribed-l26a1-help-step{display:flex;gap:12px;align-items:flex-start;padding:12px;border-radius:14px;background:#f5faf9;color:#365c60}
+    .prescribed-l26a1-help-step strong,.prescribed-l26a1-help-step span{display:block}.prescribed-l26a1-help-step strong{font-size:1rem}.prescribed-l26a1-help-step span{margin-top:3px;font-family:Nunito,"Segoe UI",sans-serif;font-size:.9rem;line-height:1.4;color:#64777a}
+    .prescribed-l26a1-settings-label{display:block;margin:0 0 8px;color:#277f82;font-size:.82rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+    .prescribed-l26a1-device-select{width:100%;min-height:48px;padding:10px 12px;border:2px solid #94d9d6;border-radius:12px;background:#fff;color:var(--ink);font:inherit}
+    .prescribed-l26a1-debug-row{display:flex;gap:8px;align-items:center;margin-top:16px;font-family:Nunito,"Segoe UI",sans-serif;color:#365c60}
+    .prescribed-l26a1-settings-copy{margin:20px 0 12px;font-family:Nunito,"Segoe UI",sans-serif;color:#64777a;line-height:1.45;text-align:center}
+    .prescribed-l26a1-status{min-height:48px;padding:12px;border-radius:12px;background:#f5faf9;color:#365c60;font-family:Nunito,"Segoe UI",sans-serif;text-align:center;white-space:pre-line}
+    .prescribed-l26a1-settings-actions{display:flex;justify-content:center;gap:12px;margin-top:14px}.prescribed-l26a1-settings-actions button{min-height:48px;padding:10px 18px;border-radius:999px;font:inherit;font-weight:900;cursor:pointer}.prescribed-l26a1-record{border:0;background:var(--teal);color:#fff}.prescribed-l26a1-play{border:2px solid #94d9d6;background:#fff;color:var(--teal-dark)}.prescribed-l26a1-settings-actions button:disabled{opacity:.5;cursor:not-allowed}
+    @media(max-width:800px){.prescribed-l26a1-tools{top:14px;right:14px;gap:8px}.prescribed-l26a1-tool{width:52px;height:52px;border-radius:16px;font-size:1.45rem}.prescribed-l26a1-modal-card{padding:24px 20px}}
+  </style>
+  <style>
     @font-face{font-family:Lesson26Fredoka;src:url("{% static 'pabasa_app/images/lesson_26/lesson26-fredoka.ttf' %}") format('truetype');font-display:swap}
     :root{--ink:#183e63;--blue:#197b99;--muted:#55768b;--line:#94d9d6;--gold:#efb947;--good:#24889a;--bad:#b33b43;--teal:#299e9a;--teal-dark:#187b7a;--dark:#187b7a}
     *{box-sizing:border-box}html,body{height:100%;overflow:hidden}body{margin:0;min-height:100dvh;background:#49b8e0 url("{% static 'pabasa_app/images/lesson_26/lesson26-ui-background.jpg' %}") center/cover fixed no-repeat;color:var(--ink);font-family:Lesson26Fredoka,Nunito,"Segoe UI",sans-serif}
@@ -41,10 +65,17 @@
   </style>
 </head>
 <body>
+  <div class="prescribed-l26a1-tools" aria-label="Reading tools">
+    <button class="prescribed-l26a1-tool" id="prescribed-l26a1-help-btn" type="button" aria-label="Open reading assessment help" aria-haspopup="dialog">?</button>
+    <button class="prescribed-l26a1-tool" id="prescribed-l26a1-mic-toggle" type="button" aria-label="Mute microphone" aria-pressed="false">🎙️</button>
+    <button class="prescribed-l26a1-tool" id="prescribed-l26a1-audio-settings-btn" type="button" aria-label="Open audio settings" aria-haspopup="dialog">🎧</button>
+  </div>
   <main class="page"><a class="back" id="lesson26-back" href="{% url 'assessment' %}"><span aria-hidden="true">←</span><span>Back to My Lessons</span></a><section class="lesson26-stage is-waiting" id="lesson26-stage"><div id="app" aria-live="polite"></div></section></main>
   <div class="lesson26-start-backdrop" id="lesson26-start" role="dialog" aria-modal="true" aria-labelledby="lesson26-start-title"><div class="lesson26-start-modal"><p class="lesson26-start-label">SESSION 10 · LESSON 26 · ACTIVITY 1</p><h2 class="lesson26-start-title" id="lesson26-start-title">WORD SEARCH</h2><p class="lesson26-start-description">Find the words on the grid.</p><div class="lesson26-start-actions"><button class="lesson26-start-button" id="lesson26-start-button" type="button">START</button><button class="lesson26-later-button" id="lesson26-later-button" type="button">NOT NOW</button></div></div></div>
+  <div class="prescribed-l26a1-modal" id="prescribed-l26a1-help-modal" role="dialog" aria-modal="true" aria-labelledby="prescribed-l26a1-help-title" hidden><section class="prescribed-l26a1-modal-card"><div class="prescribed-l26a1-modal-head"><h2 id="prescribed-l26a1-help-title">Reading assessment help</h2><button class="prescribed-l26a1-modal-close" id="prescribed-l26a1-help-close" type="button" aria-label="Close reading assessment help">×</button></div><div class="prescribed-l26a1-help-steps"><div class="prescribed-l26a1-help-step"><span aria-hidden="true">▶</span><div><strong>Start when ready</strong><span>Choose Start and wait for the activity to begin.</span></div></div><div class="prescribed-l26a1-help-step"><span aria-hidden="true">🎙️</span><div><strong>Speak clearly</strong><span>Read the word aloud at a comfortable pace and normal volume.</span></div></div><div class="prescribed-l26a1-help-step"><span aria-hidden="true">↔</span><div><strong>Move through the set</strong><span>Use the activity controls to continue through the words.</span></div></div></div></section></div>
+  <div class="prescribed-l26a1-modal" id="prescribed-l26a1-audio-settings-modal" role="dialog" aria-modal="true" aria-labelledby="prescribed-l26a1-audio-title" hidden><section class="prescribed-l26a1-modal-card"><div class="prescribed-l26a1-modal-head"><h2 id="prescribed-l26a1-audio-title">Audio Settings</h2><button class="prescribed-l26a1-modal-close" id="prescribed-l26a1-audio-close" type="button" aria-label="Close audio settings">×</button></div><label class="prescribed-l26a1-settings-label" for="prescribed-l26a1-device-select">Microphone</label><select class="prescribed-l26a1-device-select" id="prescribed-l26a1-device-select"><option value="">Default microphone</option></select><label class="prescribed-l26a1-debug-row"><input id="prescribed-l26a1-debug-toggle" type="checkbox"> <span>Show speech debug panel</span></label><p class="prescribed-l26a1-settings-copy">Record a short sample, then listen to the playback to confirm your microphone is clear.</p><div class="prescribed-l26a1-status" id="prescribed-l26a1-settings-status">Ready for a sample recording.</div><div class="prescribed-l26a1-settings-actions"><button class="prescribed-l26a1-record" id="prescribed-l26a1-sample-record" type="button">● Sample Record</button><button class="prescribed-l26a1-play" id="prescribed-l26a1-sample-play" type="button" disabled>▶ Play Sample</button></div></section></div>
   {{ prescribed_activity_data|json_script:"prescribed-activity-data" }}
-  <script src="{% static 'pabasa_app/js/prescribed_lesson26_31_ui.js' %}?v=lesson26-31-ui-3" defer></script><script src="{% static 'pabasa_app/js/prescribed_word_search.js' %}?v=lesson26-ui-13-completion-audio" defer></script>
+  <script src="{% static 'pabasa_app/js/prescribed_lesson26_31_ui.js' %}?v=lesson26-31-ui-3" defer></script><script src="{% static 'pabasa_app/js/prescribed_word_search.js' %}?v=lesson26-ui-13-completion-audio" defer></script><script src="{% static 'pabasa_app/js/prescribed_lesson26_activity1_tools.js' %}?v=1" defer></script>
   <script>(()=>{const modal=document.getElementById('lesson26-start'),stage=document.getElementById('lesson26-stage'),start=document.getElementById('lesson26-start-button');start.addEventListener('click',()=>{modal.hidden=true;stage.classList.remove('is-waiting')});start.focus()})();</script>
 </body>
 </html>
