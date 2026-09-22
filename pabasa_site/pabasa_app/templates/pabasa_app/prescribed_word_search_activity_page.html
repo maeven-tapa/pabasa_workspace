@@ -44,7 +44,7 @@
   <main class="page"><a class="back" id="lesson26-back" href="{% url 'assessment' %}"><span aria-hidden="true">←</span><span>Back to My Lessons</span></a><section class="lesson26-stage is-waiting" id="lesson26-stage"><div id="app" aria-live="polite"></div></section></main>
   <div class="lesson26-start-backdrop" id="lesson26-start" role="dialog" aria-modal="true" aria-labelledby="lesson26-start-title"><div class="lesson26-start-modal"><p class="lesson26-start-label">SESSION 10 · LESSON 26 · ACTIVITY 1</p><h2 class="lesson26-start-title" id="lesson26-start-title">WORD SEARCH</h2><p class="lesson26-start-description">Find the words on the grid.</p><div class="lesson26-start-actions"><button class="lesson26-start-button" id="lesson26-start-button" type="button">START</button><button class="lesson26-later-button" id="lesson26-later-button" type="button">NOT NOW</button></div></div></div>
   {{ prescribed_activity_data|json_script:"prescribed-activity-data" }}
-  <script src="{% static 'pabasa_app/js/prescribed_lesson26_31_ui.js' %}?v=lesson26-31-ui-3" defer></script><script src="{% static 'pabasa_app/js/prescribed_word_search.js' %}?v=lesson26-ui-12-grid-match-highlight" defer></script>
+  <script src="{% static 'pabasa_app/js/prescribed_lesson26_31_ui.js' %}?v=lesson26-31-ui-3" defer></script><script src="{% static 'pabasa_app/js/prescribed_word_search.js' %}?v=lesson26-ui-13-completion-audio" defer></script>
   <script>(()=>{const modal=document.getElementById('lesson26-start'),stage=document.getElementById('lesson26-stage'),start=document.getElementById('lesson26-start-button');start.addEventListener('click',()=>{modal.hidden=true;stage.classList.remove('is-waiting')});start.focus()})();</script>
 </body>
 </html>

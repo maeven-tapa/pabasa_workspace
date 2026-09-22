@@ -160,6 +160,7 @@
   };
 
   async function playReadAloud(textToSpeak) {
+    if (textToSpeak === COMPLETION_FEEDBACK && !app.querySelector('.pabasa-completion-card')) return false;
     const normalized = localAudioKey(textToSpeak);
     const key = normalized === 'word search. find the words on the grid'
       ? 'word search' : normalized;
@@ -171,13 +172,15 @@
       activeAudio.currentTime = 0;
     }
     const audio = new Audio(`${localAudioBase}${filename.split('/').map(encodeURIComponent).join('/')}`);
+    audio.preload = 'auto';
     activeAudio = audio;
     try {
-      await audio.play();
-      await new Promise((resolve, reject) => {
+      const finished = new Promise((resolve, reject) => {
         audio.addEventListener('ended', resolve, {once: true});
         audio.addEventListener('error', () => reject(new Error('Audio playback failed. Please try again.')), {once: true});
       });
+      await audio.play();
+      await finished;
       return true;
     } catch (error) {
       return false;
@@ -303,8 +306,12 @@
         busy = false;
         return;
       }
-      await playReadAloud(COMPLETION_FEEDBACK);
       render();
+      const completionCard = app.querySelector('.pabasa-completion-card');
+      if (completionCard) {
+        await new Promise(resolve => window.setTimeout(resolve, 0));
+        await playReadAloud(COMPLETION_FEEDBACK);
+      }
     } else {
       await playReadAloud(GRID_CORRECT_FEEDBACK);
       render('', 'good');

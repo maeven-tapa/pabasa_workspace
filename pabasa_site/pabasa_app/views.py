@@ -20335,6 +20335,61 @@ def reading_transcribe_api(request):
         return JsonResponse({'success': False, 'error': str(exc)}, status=502)
 
 
+_LOCAL_PRESCRIBED_AUDIO_PATHS = {
+    **{f'lesson-29-gawain-{index}': ('SESSION_13', 'LESSON_29', f'GAWAIN_{index}') for index in (1, 2, 3)},
+    **{f'lesson-30-gawain-{index}': ('SESSION_14', 'LESSON_30', f'GAWAIN_{index}') for index in (1, 2, 3)},
+    **{f'lesson-31-gawain-{index}': ('SESSION_15', 'LESSON_31', f'GAWAIN_{index}') for index in (1, 2, 3, 4)},
+}
+
+_LOCAL_PRESCRIBED_AUDIO_ALIASES = {
+    ('lesson-29-gawain-3', 'greatjobyoutracedandsaid everyletter'.replace(' ', '')):
+        'Great job! You completed Trace and Say..mp3',
+    ('lesson-29-gawain-2', 'greatjobyouspottedallthewords'):
+        'Great job! You completed Spot the Word..mp3',
+    ('lesson-29-gawain-3', 'puh'): 'P.mp3',
+    ('lesson-29-gawain-3', 'fuh'): 'F.mp3',
+    ('lesson-29-gawain-3', 'hah'): 'H.mp3',
+    ('lesson-29-gawain-3', 'nuh'): 'N.mp3',
+    ('lesson-29-gawain-3', 'sah'): 'S.mp3',
+    ('lesson-29-gawain-3', 'luh'): 'L.mp3',
+    ('lesson-29-gawain-3', 'mmm'): 'M.mp3',
+    ('lesson-29-gawain-3', 'tuh'): 'T.mp3',
+    ('lesson-29-gawain-3', 'eh'): 'E.mp3',
+    ('lesson-29-gawain-3', 'aah'): 'A.mp3',
+    ('lesson-30-gawain-1', 'greatjobyoucompletedtheactivity'):
+        'Great job! You completed Match It..mp3',
+    ('lesson-30-gawain-2', 'greatjobyoureadthewholestory'):
+        'Great job! You completed Story Time..mp3',
+    ('lesson-31-gawain-1', 'wonderfulyoufinishedtheactivity'):
+        'Great job! You completed Circle the Right Word..mp3',
+    ('lesson-31-gawain-2', 'greatjobyoucompletedeverysentence'):
+        'Great job! You completed Fill in the Blank..mp3',
+    ('lesson-31-gawain-3', 'greatjobyoucompletedeverysentence'):
+        'Great job! You completed Fix the Sentence..mp3',
+    ('lesson-31-gawain-4', 'greatjobyoucompletedtheactivity'):
+        'Great job! You completed Say and Circle..mp3',
+}
+
+
+def _local_prescribed_audio_file(lesson_tts_key, target_text):
+    location = _LOCAL_PRESCRIBED_AUDIO_PATHS.get(lesson_tts_key)
+    if not location:
+        return None
+    root = Path(settings.BASE_DIR) / 'pabasa_app' / 'static' / 'pabasa_app' / 'prescribed' / 'audio'
+    folder = root.joinpath(*location)
+    normalize = lambda value: re.sub(r'[^a-z0-9]+', '', str(value or '').lower())
+    alias = _LOCAL_PRESCRIBED_AUDIO_ALIASES.get((lesson_tts_key, normalize(target_text)))
+    if alias:
+        candidate = folder / alias
+        if candidate.is_file():
+            return candidate
+    target_key = normalize(target_text)
+    for candidate in folder.glob('*.mp3'):
+        if normalize(candidate.stem) == target_key:
+            return candidate
+    return None
+
+
 @csrf_protect
 @require_http_methods(["POST"])
 def reading_read_aloud_api(request):
@@ -20358,6 +20413,21 @@ def reading_read_aloud_api(request):
     if not target_text:
         return JsonResponse({'success': False, 'error': 'Reading text is required.'}, status=400)
     try:
+        local_audio_file = _local_prescribed_audio_file(lesson_tts_key, target_text)
+        if local_audio_file:
+            return JsonResponse({
+                'success': True,
+                'audio_content': base64.b64encode(local_audio_file.read_bytes()).decode('ascii'),
+                'mime_type': 'audio/mpeg',
+                'language_code': language_code,
+                'tts_language': language_code,
+                'voice_name': '',
+            })
+        if lesson_tts_key in _LOCAL_PRESCRIBED_AUDIO_PATHS:
+            return JsonResponse({
+                'success': False,
+                'error': 'Local audio is unavailable for this activity line.',
+            }, status=404)
         # Hunt uses the same clear female Assessment voice at a slower teaching
         # pace so young readers can hear each sound. Assessment keeps its defaults.
         tts_options = ({'voice_gender': 'FEMALE'} if prescribed_key and prescribed_activity(prescribed_key)

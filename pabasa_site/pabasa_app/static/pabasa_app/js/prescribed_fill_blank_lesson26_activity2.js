@@ -19,6 +19,7 @@
   const SENTENCE_CORRECT_FEEDBACK = "That's right, now let's choose the words.";
   const WORD_CORRECT_FEEDBACK = "That's right, now let's choose the next word.";
   const READ_SENTENCE_FEEDBACK = "That's right, now let's read the whole sentence.";
+  const COMPLETION_FEEDBACK = 'Great job! You completed the activity.';
   const localAudioBase = '/static/pabasa_app/prescribed/audio/SESSION_10/LESSON_26/GAWAIN_2/';
 
   function localAudioKey(value) {
@@ -45,7 +46,7 @@
     [localAudioKey('The rat ate the hat.')]: 'The rat ate the hat..mp3',
     [localAudioKey('The blank was placed on the top of the shelf.')]: 'The blank was placed on the top of the shelf..mp3',
     [localAudioKey('The hat was placed on the top of the shelf.')]: 'The hat was placed on the top of the shelf..mp3',
-    [localAudioKey('Great job! You completed the activity.')]: 'Great job! You completed the Fill in the Blanks..mp3',
+    [localAudioKey(COMPLETION_FEEDBACK)]: 'Great job! You completed the Fill in the Blanks..mp3',
   };
 
   function hydrate() {
@@ -145,6 +146,14 @@
       return part + (word ? ` ${word} ` : ' ');
     }).join('').replace(/\s+([.,!?])/g, '$1').trim();
   }
+  function sentenceAudioText(item) {
+    let blankIndex = 0;
+    return item.parts.map((part, index) => {
+      if (index >= item.blank_count) return part;
+      blankIndex += 1;
+      return `${part} blank `;
+    }).join('').replace(/\s+/g, ' ').replace(/\s+([.,!?])/g, '$1').trim();
+  }
   function renderSentence(message = '', kind = '') {
     const item = data.items[state.current_item];
     if (!item) { state.phase = 'complete'; render(); return; }
@@ -174,7 +183,7 @@
   async function playSentence() {
     const item = data.items[state.current_item];
     if (!item) return;
-    const text = sentenceText(item);
+    const text = sentenceAudioText(item);
     try {
       await playTts(text);
       if (!state.sentence_read) { await save({action:'sentence_read'}); renderSentence(); }
@@ -182,6 +191,7 @@
   }
   async function playTts(text) {
     if (busy || !text) return;
+    if (text === COMPLETION_FEEDBACK && !app.querySelector('.pabasa-completion-card')) return;
     busy = true;
     const buttons = [...app.querySelectorAll('.button')];
     const buttonStates = buttons.map(button => ({button, disabled:button.disabled}));
@@ -244,8 +254,14 @@
       }
       started = false;
       if (correct) {
-        await announce(state.phase === 'complete' ? 'Great job! You completed the activity.' : "That's right, now let's read the next sentence.");
         render();
+        const completionCard = app.querySelector('.pabasa-completion-card');
+        if (state.phase === 'complete' && completionCard) {
+          await new Promise(resolve => window.setTimeout(resolve, 0));
+          await announce(COMPLETION_FEEDBACK);
+        } else {
+          await announce("That's right, now let's read the next sentence.");
+        }
       } else {
         renderSentence(transcript ? `I heard “${result.raw_transcript || result.transcript}”. Please read the sentence again.` : 'I could not hear the sentence clearly. Try again.', 'bad');
         await announce(RETRY_FEEDBACK);
