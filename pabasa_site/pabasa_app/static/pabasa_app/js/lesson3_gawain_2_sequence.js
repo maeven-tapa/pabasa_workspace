@@ -19,6 +19,12 @@
     let cueBusy = false;
     let pairIntroPending = true;
     const phase2Instruction = 'Magkatunog ba ang dalawang larawan na ito? Pindutin ang nawawastong sagot.';
+    const wordAudioFiles = {
+      lola: 'lola.mp3', bola: 'bola.mp3', walis: 'walis.mp3', tama: 'tama.mp3',
+      dahon: 'dahon.mp3', kahon: 'kahon.mp3', sigaw: 'sigaw.mp3', lugaw: 'lugaw.mp3',
+      pulis: 'pulis.mp3', lolo: 'lolo.mp3'
+    };
+    const wordAudioBase = '/static/pabasa_app/prescribed/audio/SESSION%201/LESSON%203/GAWAIN%202/';
 
     const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
     const csrf = () => document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || '';
@@ -42,6 +48,14 @@
       if (!response.ok || !data.success || !data.audio_content) throw new Error(data.error || 'TTS unavailable');
       audioUrl = URL.createObjectURL(new Blob([Uint8Array.from(atob(data.audio_content), char => char.charCodeAt(0))], {type: data.mime_type || 'audio/mpeg'}));
       audio = new Audio(audioUrl);
+      await new Promise((resolve, reject) => { audio.onended = resolve; audio.onerror = reject; audio.play().catch(reject); });
+    }
+
+    async function speakWord(word) {
+      stopAudio();
+      const filename = wordAudioFiles[String(word || '').toLowerCase()];
+      if (!filename) throw new Error('Pre-recorded word audio unavailable');
+      audio = new Audio(wordAudioBase + filename);
       await new Promise((resolve, reject) => { audio.onended = resolve; audio.onerror = reject; audio.play().catch(reject); });
     }
 
@@ -102,7 +116,7 @@
       }
       else {
         document.getElementById('read').onclick = record;
-        document.getElementById('listen').onclick = async () => { if (cueBusy) return; cueBusy = true; setNarrationLock(true); listenAttempts[wordIndex] += 1; try { await speak(words[wordIndex]); } finally { cueBusy = false; setNarrationLock(false); } if (listenAttempts[wordIndex] >= 3) document.getElementById('listen').hidden = true; };
+        document.getElementById('listen').onclick = async () => { if (cueBusy) return; cueBusy = true; setNarrationLock(true); listenAttempts[wordIndex] += 1; try { await speakWord(words[wordIndex]); } finally { cueBusy = false; setNarrationLock(false); } if (listenAttempts[wordIndex] >= 3) document.getElementById('listen').hidden = true; };
         setTimeout(() => activateAndCue(), 0);
       }
     }
