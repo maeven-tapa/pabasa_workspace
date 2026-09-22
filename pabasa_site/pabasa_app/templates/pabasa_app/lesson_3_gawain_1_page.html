@@ -540,6 +540,8 @@ const startInitial=async()=>{if(initialStarted)return;initialStarted=true;const 
 
   const readAloudUrl = "{% url 'reading_read_aloud_api' %}";
   const csrf = () => document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || '';
+  const wordAudioBase = "{% static 'pabasa_app/prescribed/audio/SESSION 1/LESSON 3/GAWAIN 1/' %}";
+  const wordAudioFiles = { MAIS: 'mais.mp3', LAPIS: 'lapis.mp3', BATA: 'bata.mp3', MATA: 'mata.mp3', TASA: 'tasa.mp3', PAGONG: 'pagong.mp3', WALO: 'walo.mp3', TATLO: 'tatlo.mp3', BAKA: 'baka.mp3', BABOY: 'baboy.mp3', KAHON: 'kahon.mp3', DAHON: 'dahon.mp3' };
   const nativeFetch = window.fetch.bind(window);
   const readAloudEndpoint = new URL(readAloudUrl, window.location.href).href;
   window.fetch = function (input, init = {}) {
@@ -566,8 +568,13 @@ const startInitial=async()=>{if(initialStarted)return;initialStarted=true;const 
   const readButton = () => game.querySelector('#read');
   const status = () => game.querySelector('#status');
 
-  async function readAloud(text) {
+  async function readAloud(text, audioUrl) {
     if (!text) return false;
+    if (audioUrl) {
+      const audio = new Audio(audioUrl);
+      await new Promise(resolve => { audio.onended = resolve; audio.onerror = resolve; audio.play().catch(resolve); });
+      return true;
+    }
     window.speechSynthesis?.cancel();
     const response = await fetch(readAloudUrl, {
       method: 'POST',
@@ -613,7 +620,7 @@ const startInitial=async()=>{if(initialStarted)return;initialStarted=true;const 
         if (!word) return;
         narrationBusy = true;
         syncControls();
-        try { await readAloud(word); } catch (error) { console.error('Lesson 3 Pakinggan failed', error); }
+        try { await readAloud(word, wordAudioFiles[word] ? wordAudioBase + wordAudioFiles[word] : ''); } catch (error) { console.error('Lesson 3 Pakinggan failed', error); }
         narrationBusy = false;
         syncControls();
       });
