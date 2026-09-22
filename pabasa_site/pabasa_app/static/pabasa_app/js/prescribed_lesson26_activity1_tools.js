@@ -90,7 +90,9 @@
     micToggle.setAttribute('aria-pressed', String(!muted));
     micToggle.setAttribute('aria-label', muted ? 'Mute microphone' : 'Unmute microphone');
     micToggle.classList.toggle('is-muted', !muted);
+    window.dispatchEvent(new CustomEvent('prescribed-l26a1-mic-state', {detail: {muted: !muted}}));
   });
+  deviceSelect?.addEventListener('change', () => window.dispatchEvent(new CustomEvent('prescribed-l26a1-device-state', {detail: {deviceId: deviceSelect.value}})));
   debugToggle?.addEventListener('change', () => { status.textContent = debugToggle.checked ? 'Speech debug panel enabled for this activity.' : 'Speech debug panel disabled for this activity.'; });
   recordButton?.addEventListener('click', recordSample);
   playButton?.addEventListener('click', playSample);

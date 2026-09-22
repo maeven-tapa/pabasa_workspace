@@ -24,10 +24,28 @@
   let busy = false;
   let activeStream = null;
   let activeAudio = null;
+  let prescribedMicMuted = false;
+  let selectedMicDeviceId = '';
+  let vadFrame = null;
+  let vadContext = null;
+  const VAD_CALIBRATION_MS = 800;
+  const VAD_SILENCE_MS = 1000;
+  const VAD_MAX_RECORDING_MS = 6000;
+  const VAD_MIN_SPEECH_FRAMES = 3;
+  const VAD_BASE_THRESHOLD = 0.018;
+  const VAD_NOISE_MULTIPLIER = 1.8;
   const RETRY_FEEDBACK = "Hmm, let's try that again.";
   const READING_CORRECT_FEEDBACK = "That's right, now let's find the word.";
   const GRID_CORRECT_FEEDBACK = "That's right, now let's read the next word.";
   const COMPLETION_FEEDBACK = 'Great job! You completed the Word Search.';
+
+  window.addEventListener('prescribed-l26a1-mic-state', event => {
+    prescribedMicMuted = Boolean(event.detail?.muted);
+    if (prescribedMicMuted) stopVAD();
+  });
+  window.addEventListener('prescribed-l26a1-device-state', event => {
+    selectedMicDeviceId = String(event.detail?.deviceId || '');
+  });
 
   function configureStartModal() {
     if (data.progress?.activity_completed) return;
@@ -205,6 +223,10 @@
 
   async function readWord() {
     if (busy || currentIndex >= words.length) return;
+    if (prescribedMicMuted) {
+      render('Microphone is muted. Turn it on and try again.', 'bad');
+      return;
+    }
     const wordIndex = currentIndex;
     const targetWord = words[wordIndex];
     const button = app.querySelector('#read');
@@ -214,7 +236,9 @@
       if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
         throw new Error('Microphone recording is not available in this browser.');
       }
-      activeStream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: true, noiseSuppression: true}});
+      const audioConstraints = {echoCancellation: true, noiseSuppression: false, autoGainControl: true};
+      if (selectedMicDeviceId) audioConstraints.deviceId = {exact: selectedMicDeviceId};
+      activeStream = await navigator.mediaDevices.getUserMedia({audio: audioConstraints});
       const recorder = new MediaRecorder(activeStream);
       const chunks = [];
       recorder.ondataavailable = event => { if (event.data?.size) chunks.push(event.data); };
@@ -222,7 +246,14 @@
         recorder.onerror = () => reject(new Error('Could not record your voice. Please try again.'));
         recorder.onstop = () => resolve(new Blob(chunks, {type: recorder.mimeType || 'audio/webm'}));
         recorder.start();
-        window.setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, 3000);
+        monitorVAD(activeStream, recorder).then(({speechDetected}) => {
+          if (!speechDetected) reject(new Error('No speech detected. Please try again.'));
+        }).catch(error => {
+          if (recorder.state === 'recording') {
+            try { recorder.stop(); } catch (_) { /* The outer cleanup handles the stream. */ }
+          }
+          reject(error);
+        });
       });
       const audio = await recording;
       stopStream();
@@ -262,8 +293,98 @@
   }
 
   function stopStream() {
+    stopVAD();
     activeStream?.getTracks().forEach(track => track.stop());
     activeStream = null;
+  }
+
+  function stopVAD() {
+    if (vadFrame) {
+      window.cancelAnimationFrame(vadFrame);
+      vadFrame = null;
+    }
+    if (vadContext) {
+      vadContext.close().catch(() => {});
+      vadContext = null;
+    }
+  }
+
+  function monitorVAD(stream, recorder) {
+    stopVAD();
+    return new Promise((resolve, reject) => {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) {
+        window.setTimeout(() => {
+          if (recorder.state === 'recording') recorder.stop();
+          resolve({speechDetected: true});
+        }, VAD_MAX_RECORDING_MS);
+        return;
+      }
+      let analyser;
+      let settled = false;
+      let ambientNoiseFloor = 0;
+      let speechFrameCount = 0;
+      let speechDetected = false;
+      let lastSpeechAt = 0;
+      const startedAt = performance.now();
+
+      const finish = reason => {
+        if (settled) return;
+        settled = true;
+        if (vadFrame) window.cancelAnimationFrame(vadFrame);
+        vadFrame = null;
+        if (recorder.state === 'recording') {
+          try { recorder.requestData(); } catch (_) { /* The stop event still finalizes the blob. */ }
+          try { recorder.stop(); } catch (error) { reject(error); return; }
+        }
+        if (vadContext) {
+          vadContext.close().catch(() => {});
+          vadContext = null;
+        }
+        resolve({speechDetected, reason});
+      };
+
+      try {
+        vadContext = new AudioContextClass();
+        if (vadContext.state === 'suspended') vadContext.resume().catch(() => {});
+        const source = vadContext.createMediaStreamSource(stream);
+        analyser = vadContext.createAnalyser();
+        analyser.fftSize = 1024;
+        source.connect(analyser);
+        const samples = new Uint8Array(analyser.fftSize);
+        const tick = () => {
+          if (settled || recorder.state !== 'recording') return;
+          const now = performance.now();
+          analyser.getByteTimeDomainData(samples);
+          let sum = 0;
+          for (let index = 0; index < samples.length; index += 1) {
+            const centered = (samples[index] - 128) / 128;
+            sum += centered * centered;
+          }
+          const rms = Math.sqrt(sum / samples.length);
+          const elapsed = now - startedAt;
+          const calibrating = elapsed < VAD_CALIBRATION_MS;
+          if (!ambientNoiseFloor) ambientNoiseFloor = rms;
+          else if (calibrating || rms < ambientNoiseFloor * 1.8) ambientNoiseFloor = (ambientNoiseFloor * 0.94) + (rms * 0.06);
+          const threshold = Math.max(VAD_BASE_THRESHOLD, ambientNoiseFloor * VAD_NOISE_MULTIPLIER + 0.004);
+          if (!calibrating && rms > threshold) speechFrameCount += 1;
+          else speechFrameCount = Math.max(0, speechFrameCount - 1);
+          if (speechFrameCount >= VAD_MIN_SPEECH_FRAMES) {
+            speechDetected = true;
+            lastSpeechAt = now;
+          }
+          if ((speechDetected && now - lastSpeechAt >= VAD_SILENCE_MS) || elapsed >= VAD_MAX_RECORDING_MS) {
+            finish(speechDetected ? 'silence' : 'maximum-duration');
+            return;
+          }
+          vadFrame = window.requestAnimationFrame(tick);
+        };
+        tick();
+      } catch (error) {
+        stopVAD();
+        reject(error);
+      }
+    });
   }
 
   async function selectCell(button) {
