@@ -99,29 +99,23 @@ document.addEventListener('DOMContentLoaded', function () {
     const listens = Number(listen.dataset.listens || 0) + 1;
     listen.dataset.listens = String(listens);
     try {
-      const response = await fetch('/api/reading/read-aloud/', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-          'X-CSRFToken': csrf(),
-        },
-        body: new URLSearchParams({
-          target_text: word,
-          language: 'Filipino',
-          mode: 'reading',
-          prescribed_activity_key: 'lesson-7-gawain-1',
-        }),
+      const audioFilename = {
+        aso: 'aso.mp3',
+        'ilang-ilang': 'ilang-ilang.mp3',
+        ilaw: 'ilaw.mp3',
+        ilong: 'ilong.mp3',
+        ipis: 'ipis.mp3',
+        isa: 'isa.mp3',
+        itlog: 'itlog.mp3',
+        saging: 'saging.mp3',
+      }[String(word).trim().toLowerCase()];
+      if (!audioFilename) throw new Error(`No prescribed audio found for ${word}`);
+      const audio = new Audio(`/static/pabasa_app/prescribed/audio/SESSION%203/LESSON%207/GAWAIN%201/${encodeURIComponent(audioFilename)}`);
+      await new Promise(resolve => {
+        audio.onended = resolve;
+        audio.onerror = resolve;
+        audio.play().catch(resolve);
       });
-      const result = response.ok ? await response.json() : null;
-      if (result?.success && result.audio_content) {
-        const audio = new Audio(`data:${result.mime_type || 'audio/mpeg'};base64,${result.audio_content}`);
-        await new Promise(resolve => {
-          audio.onended = resolve;
-          audio.onerror = resolve;
-          audio.play().catch(resolve);
-        });
-      }
       if (listens >= 3) listen.hidden = true;
     } catch (error) {
       console.error('Lesson 7 Gawain 1 word narration failed', error);

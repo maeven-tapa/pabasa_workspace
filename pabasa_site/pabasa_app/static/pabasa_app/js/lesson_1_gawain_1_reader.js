@@ -22,8 +22,8 @@
   const MIN_MATCHED = 8;
   const MIN_RATIO = 0.65;
   const SONG_URL = 'https://www.youtube.com/watch?v=OxAsjUK6aB4';
-  const READ_ALOUD_URL = '/api/reading/read-aloud/';
-  const WELCOME_NARRATION = 'Hello, Ka-BASA. Para sa iyong unang Gawain, sabay nating panuorin at pakinggan ang Awiting Alpabeto ng Filipino.\n\nHanda ka na ba?';
+  const WELCOME_AUDIO_URL = '/static/pabasa_app/prescribed/audio/SESSION%201/LESSON%201/GAWAIN%201/hello_ka-basa.mp3';
+  const SONG_PANEL_NARRATION_URL = '/static/pabasa_app/prescribed/audio/SESSION%201/LESSON%201/GAWAIN%201/makinig_at_awitin.mp3';
   const CARD_DATA = [
     ['Aa', 'apa', 'apa.png'], ['Bb', 'bahay', 'bahay.png'],
     ['Cc', 'computer', '../picture_word/custom/Computer-Kompyuter.png'],
@@ -68,6 +68,8 @@
     mimeType: '', currentSegment: null, transcripts: new Map(), finalizedSequences: new Set(),
     transcriptionFailed: null,
     welcomeModal: null, welcomeAudio: null, welcomeAudioUrl: null,
+    songPanelNarration: null, songPanelNarrationFinished: false,
+    youtubeOpened: false, youtubePageHidden: false, youtubeReturned: false,
   };
 
   const data = () => JSON.parse(document.getElementById('lesson-one-data')?.textContent || '{}');
@@ -271,23 +273,7 @@
     if (status) status.textContent = 'Inihahanda ang pagsasalaysay…';
     clearWelcomeAudio();
     try {
-      const response = await fetch(READ_ALOUD_URL, {
-        method: 'POST', credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrf() },
-        body: new URLSearchParams({
-          target_text: WELCOME_NARRATION,
-          language: 'Filipino',
-          mode: 'sentence',
-          prescribed_activity_key: 'lesson-1-gawain-1',
-        }),
-      });
-      const result = await response.json();
-      if (!response.ok || !result.success || !result.audio_content) {
-        throw new Error(result.error || 'Hindi available ang pagsasalaysay.');
-      }
-      const bytes = Uint8Array.from(atob(result.audio_content), char => char.charCodeAt(0));
-      state.welcomeAudioUrl = URL.createObjectURL(new Blob([bytes], { type: result.mime_type || 'audio/mpeg' }));
-      state.welcomeAudio = new Audio(state.welcomeAudioUrl);
+      state.welcomeAudio = new Audio(WELCOME_AUDIO_URL);
       await new Promise((resolve, reject) => {
         state.welcomeAudio.onended = resolve;
         state.welcomeAudio.onerror = () => reject(new Error('Hindi mapatugtog ang pagsasalaysay.'));
@@ -315,6 +301,7 @@
     modal.querySelector('[data-welcome-choice="yes"]').onclick = () => {
       modal.remove();
       state.welcomeModal = null;
+      narrateSongPanel();
     };
     modal.querySelector('[data-welcome-choice="no"]').onclick = () => {
       clearWelcomeAudio();
@@ -322,6 +309,62 @@
     };
     modal.querySelector('[data-welcome-retry]').onclick = narrateWelcome;
     narrateWelcome();
+  }
+
+  function setSongPanelControlsEnabled(panel, enabled) {
+    const youtubeLink = panel?.querySelector('.youtube-link');
+    const readyButton = panel?.querySelector('#ready');
+    if (!youtubeLink || !readyButton) return;
+    const youtubeEnabled = enabled && state.songPanelNarrationFinished;
+    const readyEnabled = enabled && state.songPanelNarrationFinished && state.youtubeReturned;
+    readyButton.disabled = !readyEnabled;
+    youtubeLink.setAttribute('aria-disabled', String(!youtubeEnabled));
+    youtubeLink.style.opacity = youtubeEnabled ? '' : '.45';
+    youtubeLink.style.pointerEvents = youtubeEnabled ? '' : 'none';
+    youtubeLink.style.cursor = youtubeEnabled ? '' : 'wait';
+    if (youtubeEnabled) youtubeLink.removeAttribute('tabindex');
+    else youtubeLink.setAttribute('tabindex', '-1');
+  }
+
+  function updateSongPanelGate() {
+    setSongPanelControlsEnabled(state.panel, true);
+  }
+
+  function showSongGateFeedback() {
+    const status = state.panel?.querySelector('.song-note');
+    if (!status) return;
+    status.textContent = 'Panoorin muna ang awit bago tayo umawit.';
+    status.setAttribute('aria-live', 'assertive');
+  }
+
+  async function narrateSongPanel() {
+    if (state.songPanelNarration || !state.panel) return;
+    setSongPanelControlsEnabled(state.panel, false);
+    const audio = new Audio(SONG_PANEL_NARRATION_URL);
+    state.songPanelNarration = audio;
+    try {
+      await new Promise((resolve, reject) => {
+        audio.onended = resolve;
+        audio.onerror = () => reject(new Error('Hindi mapatugtog ang pagsasalaysay.'));
+        audio.play().catch(reject);
+      });
+    } catch (error) {
+      console.error(error);
+    } finally {
+      if (state.songPanelNarration === audio) state.songPanelNarration = null;
+      state.songPanelNarrationFinished = true;
+      updateSongPanelGate();
+    }
+  }
+
+  function handleSongPanelReturn() {
+    if (!state.youtubeOpened || !state.youtubePageHidden || document.visibilityState !== 'visible') return;
+    state.youtubeReturned = true;
+    updateSongPanelGate();
+  }
+
+  function markSongPanelHidden() {
+    if (state.youtubeOpened) state.youtubePageHidden = true;
   }
   const mimeType = () => ['audio/webm;codecs=opus', 'audio/webm',
     'audio/ogg;codecs=opus', 'audio/ogg']
@@ -845,8 +888,16 @@
   function reference(panel) {
     state.panel = panel;
     panel.classList.remove('is-recording');
-    panel.innerHTML = '<p class="song-kicker">AWIT NG ALPABETO</p><h2>Makinig at umawit kasabay ng opisyal na awit.</h2><a class="youtube-link" href="' + SONG_URL + '" target="_blank" rel="noopener noreferrer">▶ Panonoorin ang Awit sa YouTube ↗</a><p class="song-note">Magbubukas ang opisyal na video sa bagong tab.</p><div class="song-divider"></div><button id="ready" class="sing-done" type="button">Handa na akong umawit</button>';
+    panel.innerHTML = '<p class="song-kicker">AWIT NG ALPABETO</p><h2>Makinig at awitin ang Alpabeto ng Filipino</h2><a class="youtube-link" href="' + SONG_URL + '" target="_blank" rel="noopener noreferrer">▶ Panonoorin ang Awit sa YouTube ↗</a><p class="song-note">Magbubukas ang opisyal na video sa bagong tab.</p><div class="song-divider"></div><button id="ready" class="sing-done" type="button">Handa na akong umawit</button>';
+    panel.querySelector('.youtube-link').addEventListener('click', () => {
+      state.youtubeOpened = true;
+    }, { once: true });
+    setSongPanelControlsEnabled(panel, true);
     panel.querySelector('#ready').onclick = () => {
+      if (!state.songPanelNarrationFinished || !state.youtubeReturned) {
+        showSongGateFeedback();
+        return;
+      }
       panel.innerHTML = '<p class="song-kicker">AWITIN ANG ALPABETO</p><h2>Sabayan ang awit at awitin ang Alpabetong Pilipino.</h2><p class="song-note">Handa ka na ba?</p><button id="startSing" class="sing-done" type="button">MAGSIMULA</button>';
       panel.querySelector('#startSing').onclick = startRecording;
     };
@@ -874,6 +925,12 @@
       clearWelcomeAudio();
       cleanup();
     }, { once: true });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') markSongPanelHidden();
+      else handleSongPanelReturn();
+    });
+    window.addEventListener('blur', markSongPanelHidden);
+    window.addEventListener('focus', handleSongPanelReturn);
   }
 
   document.addEventListener('DOMContentLoaded', init, { once: true });
