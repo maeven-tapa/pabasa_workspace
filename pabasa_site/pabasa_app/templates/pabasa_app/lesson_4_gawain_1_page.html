@@ -64,6 +64,20 @@ document.addEventListener('DOMContentLoaded',()=>{
 	(async()=>{try{await speak(heading.textContent.trim());await speak(paragraph.textContent.trim());await speak('Magsimula na tayo!')}catch(error){}finally{button.disabled=false}})();
 });
 </script>
+<script>
+/* Use prescribed audio for Lesson 4 Gawain 1 target-word playback only. */
+(function(){
+  document.addEventListener('DOMContentLoaded',()=>{
+    const wordAudioFiles={manok:'manok.mp3',manika:'manika.mp3',susi:'susi.mp3',mangga:'mangga.mp3',mais:'mais.mp3',mani:'mani.mp3'};
+    const wordAudioBase='/static/pabasa_app/prescribed/audio/SESSION%202/LESSON%204/GAWAIN%201/';
+    const playWordAudio=async word=>{const audio=new Audio(wordAudioBase+wordAudioFiles[String(word||'').toLowerCase()]);await audio.play();await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=reject})};
+    const bind=()=>{const button=document.getElementById('read');if(button&&typeof phase==='string'&&phase==='listen')button.onclick=()=>playWordAudio(items[index].word).catch(()=>{})};
+    const currentRender=window.render;
+    if(typeof currentRender==='function')window.render=function(){const result=currentRender.apply(this,arguments);bind();return result};
+    bind();
+  }, {once:true});
+})();
+</script>
 <style>
 .lesson-4-responsive .lesson4-audio-actions{display:flex!important;align-items:stretch!important;justify-content:center!important;gap:10px!important;width:100%!important}
 .lesson-4-responsive .lesson4-audio-actions .read,.lesson-4-responsive .lesson4-audio-actions .listen{flex:1 1 0!important;width:auto!important;min-width:0!important;margin:0!important}
@@ -117,7 +131,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 		}
 		if(listen.dataset.lesson4ListenBound!=='1'){
 			listen.dataset.lesson4ListenBound='1';
-			listen.onclick=async()=>{if(listen.disabled||listen.dataset.busy==='1')return;listen.dataset.busy='1';listen.disabled=true;try{const form=new FormData();form.append('target_text',items[index].word);form.append('language','Filipino');form.append('mode','reading');const response=await fetch('{% url "reading_read_aloud_api" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':token()},body:form}),result=await response.json();if(!response.ok||!result.success||!result.audio_content)throw Error(result.error||'Hindi available ang audio.');const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=reject;audio.play().catch(reject)})}catch(error){console.error('Lesson 4 Pakinggan narration failed',error)}finally{if(listen.isConnected){listen.disabled=false;listen.dataset.busy='0'}}};
+			listen.onclick=async()=>{if(listen.disabled||listen.dataset.busy==='1')return;listen.dataset.busy='1';listen.disabled=true;try{const wordAudioFiles={manok:'manok.mp3',manika:'manika.mp3',susi:'susi.mp3',mangga:'mangga.mp3',mais:'mais.mp3',mani:'mani.mp3'},audio=new Audio('/static/pabasa_app/prescribed/audio/SESSION%202/LESSON%204/GAWAIN%201/'+wordAudioFiles[items[index].word.toLowerCase()]);await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=reject;audio.play().catch(reject)})}catch(error){console.error('Lesson 4 Pakinggan narration failed',error)}finally{if(listen.isConnected){listen.disabled=false;listen.dataset.busy='0'}}};
 		}
 		listen.disabled=read.disabled;
 	};
