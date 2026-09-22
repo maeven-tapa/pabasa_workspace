@@ -46,7 +46,7 @@
   function announce(message){window.setTimeout(()=>play(message).catch(()=>{}),0)}
   function render(message='',kind=''){
     if(complete()){
-      app.innerHTML=`<div class="complete">🎉 Great job! You matched every picture.</div>${steps()}`;
+      window.PrescribedLessonUi.showCompletion(app);
       finish();
       announce('Great job! You matched every picture.');
       return;
@@ -142,8 +142,8 @@
     }catch(e){console.error(e)}
   }
   function stop(){stream?.getTracks().forEach(t=>t.stop());stream=null}
-  async function leave(e){e.preventDefault();if(busy)return;busy=true;try{await reset();location.assign(document.getElementById('lesson30a1-back').href)}catch(x){busy=false;alert(x.message)}}
-  document.getElementById('lesson30a1-back').onclick=leave;
+  async function leave(e){e.preventDefault();if(busy)return;busy=true;try{await reset();window.location.reload()}catch(x){busy=false;alert(x.message)}}
+
   document.getElementById('lesson30a1-later').onclick=leave;
   document.getElementById('lesson30a1-go').onclick=async()=>{document.getElementById('lesson30a1-start').hidden=true;document.getElementById('lesson30a1-stage').classList.remove('waiting');try{await play('Match It. Read the word aloud first. Then choose the matching picture.')}catch(e){render(e.message,'bad')}};
   window.addEventListener('pagehide',()=>{stop();audio?.pause()});

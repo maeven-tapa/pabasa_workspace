@@ -18,6 +18,49 @@
   const RHYME_INSTRUCTION_FEEDBACK = "That's right, now choose the rhyming words.";
   const RHYME_CORRECT_FEEDBACK = "That's right, now let's read the next verse.";
   const COMPLETION_FEEDBACK = "Great job! You finished all the rhyming verses.";
+  const localAudioBase = '/static/pabasa_app/prescribed/audio/SESSION_11/LESSON_27/GAWAIN_1/';
+
+  function localAudioKey(value) {
+    return String(value || '').trim().toLowerCase()
+      .replace(/[’']/g, "'").replace(/[.!?]+$/, '');
+  }
+
+  const localAudioFiles = {
+    [localAudioKey('Rhyming Verses. Read each verse, then select the words that rhyme with at.')]: 'Rhyming Verses. Read each verse, then select the words that rhyme with at..mp3',
+    [localAudioKey('Click all the words that rhyme with at.')]: 'Click all the words that rhyme with at..mp3',
+    [localAudioKey(RETRY_FEEDBACK)]: 'Hmm, let’s try that again..mp3',
+    [localAudioKey(RHYME_INSTRUCTION_FEEDBACK)]: 'That’s right, now choose the rhyming words..mp3',
+    [localAudioKey(RHYME_CORRECT_FEEDBACK)]: 'That’s right, now let’s read the next verse..mp3',
+    [localAudioKey(COMPLETION_FEEDBACK)]: 'Great job! You completed the Rhyming Verses..mp3',
+    [localAudioKey('The Cat in the Hat')]: 'The Cat in the Hat.mp3',
+    [localAudioKey('The Funny Rat')]: 'The Funny Rat.mp3',
+    [localAudioKey('Pat the Cat')]: 'Pat the Cat.mp3',
+    [localAudioKey('The Splat')]: 'The Splat.mp3',
+    [localAudioKey('The cat wore a hat,')]: 'The cat wore a hat,.mp3',
+    [localAudioKey('He sat on a mat,')]: 'He sat on a mat,.mp3',
+    [localAudioKey('Next to a big, fluffy rat,')]: 'Next to a big, fluffy rat,.mp3',
+    [localAudioKey('Who loved to chat with a fat bat.')]: 'Who loved to chat with a fat bat..mp3',
+    [localAudioKey('A little creature fell from the hat,')]: 'A little creature fell from the hat,.mp3',
+    [localAudioKey('Danced with a playful bat,')]: 'Danced with a playful bat,.mp3',
+    [localAudioKey('They jumped on a mat,')]: 'They jumped on a mat,.mp3',
+    [localAudioKey('And both got quite fat!')]: 'And both got quite fat!.mp3',
+    [localAudioKey('Upside down was the silly cat,')]: 'Upside down was the silly cat,.mp3',
+    [localAudioKey('There was a loud splat on the mat,')]: 'There was a loud splat on the mat,.mp3',
+    [localAudioKey('Who laughed at the splash with a gentle pat.')]: 'Who laughed at the splash with a gentle pat..mp3',
+    [localAudioKey('On a sunny day, he’ll sit and sat,')]: 'On a sunny day, he’ll sit and sat,.mp3',
+    [localAudioKey('He loves to play and chase his hat,')]: 'He loves to play and chase his hat,.mp3',
+    [localAudioKey('Watching the world with a cheerful chat.')]: 'Watching the world with a cheerful chat..mp3',
+    [localAudioKey('A silly little rat,')]: 'A silly little rat,.mp3',
+  };
+
+  function audioFilesFor(text) {
+    const direct = localAudioFiles[localAudioKey(text)];
+    if (direct) return [direct];
+    const item = data.items[state.item_index];
+    const lines = item?.lines || [];
+    if (localAudioKey(lines.map(line => line.text).join(' ')) !== localAudioKey(text)) return [];
+    return lines.map(line => localAudioFiles[localAudioKey(line.text)]).filter(Boolean);
+  }
 
   async function responseJson(response, label) {
     const type = response.headers.get('content-type') || '';
@@ -54,7 +97,7 @@
   }
   function render(message = '', type = '') {
     if (state.phase === 'complete') {
-      frame('<div class="lesson27-complete">🎉 Great job! You finished all the rhyming verses.</div>');
+      window.PrescribedLessonUi.showCompletion(app);
       return;
     }
     const item = data.items[state.item_index];
@@ -86,18 +129,16 @@
     const buttonStates = buttons.map(button => ({button, disabled:button.disabled}));
     buttons.forEach(button => { button.disabled = true; button.classList.add('is-busy'); });
     try {
-      const response = await fetch(data.read_aloud_url, {method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf(),'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({target_text:text,language:'English',lesson_tts_key:'lesson-27-gawain-1'})});
-      const result = await responseJson(response, 'Read-aloud service');
-      if (!response.ok || !result.success || !result.audio_content) throw new Error(result.error || 'Could not play audio. Try again.');
-      const bytes = Uint8Array.from(atob(result.audio_content), char => char.charCodeAt(0));
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
-      audioUrl = URL.createObjectURL(new Blob([bytes], {type:result.mime_type || 'audio/mpeg'}));
-      audio = new Audio(audioUrl);
-      await new Promise((resolve, reject) => {
-        audio.addEventListener('ended', resolve, {once:true});
-        audio.addEventListener('error', () => reject(new Error('Audio playback failed. Try again.')), {once:true});
-        audio.play().catch(reject);
-      });
+      const filenames = audioFilesFor(text);
+      if (!filenames.length) throw new Error('Could not find the audio for this activity.');
+      for (const filename of filenames) {
+        audio = new Audio(`${localAudioBase}${filename.split('/').map(encodeURIComponent).join('/')}`);
+        await new Promise((resolve, reject) => {
+          audio.addEventListener('ended', resolve, {once:true});
+          audio.addEventListener('error', () => reject(new Error('Audio playback failed. Try again.')), {once:true});
+          audio.play().catch(reject);
+        });
+      }
     } finally {
       busy = false;
       buttonStates.forEach(({button, disabled}) => { if (button.isConnected) button.disabled = disabled; });
@@ -124,10 +165,14 @@
       const result = await responseJson(response, 'Speech recognition');
       if (!response.ok || !result.success) throw new Error(result.error || 'Speech recognition failed. Try again.');
       const heardText = result.raw_transcript || result.transcript;
-      const spoken = normalize(canonicalTranscript(heardText));
-      const expected = normalize(canonicalTranscript(target));
-      const spokenTokens = canonicalTranscript(heardText).match(/[a-z]+/g) || [];
-      const expectedTokens = canonicalTranscript(target).match(/[a-z]+/g) || [];
+      const expectedText = canonicalTranscript(target);
+      const expectedHasHeLl = /\bhe(?:['’]?)ll\b/.test(expectedText);
+      const spokenText = canonicalTranscript(heardText);
+      const acceptedSpokenText = expectedHasHeLl ? spokenText.replace(/\bhill\b/g, "he'll") : spokenText;
+      const spoken = normalize(acceptedSpokenText);
+      const expected = normalize(expectedText);
+      const spokenTokens = acceptedSpokenText.match(/[a-z]+/g) || [];
+      const expectedTokens = expectedText.match(/[a-z]+/g) || [];
       const isPlayfulBatVerse = expectedTokens.includes('dance') && expectedTokens.includes('playful') && expectedTokens.includes('bat');
       const playfulBatHeard = spokenTokens.includes('bat') && (spokenTokens.includes('dance') || spokenTokens.includes('playful'));
       const correct = Boolean(expected && (spoken.includes(expected) || (isPlayfulBatVerse && playfulBatHeard)));
@@ -172,10 +217,10 @@
       const response = await fetch(data.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({reset:true})});
       const result = await responseJson(response, 'Resetting activity');
       if (!response.ok || !result.success) throw new Error(result.error || 'Could not reset the activity. Try again.');
-      window.location.assign(document.getElementById('lesson27-back').href);
+      window.location.reload();
     } catch (error) { busy = false; button.disabled = false; window.alert(error.message || 'Could not reset the activity. Try again.'); }
   }
-  document.getElementById('lesson27-back')?.addEventListener('click', resetAndExit);
+
   document.getElementById('lesson27-later-button')?.addEventListener('click', resetAndExit);
   document.getElementById('lesson27-start-button')?.addEventListener('click', () => {
     window.setTimeout(() => playAudio('Rhyming Verses. Read each verse, then select the words that rhyme with at.').catch(error => render(error.message || 'Could not play the instructions. Try again.','bad')), 0);

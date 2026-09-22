@@ -23,11 +23,35 @@
   let selectedCell = null;
   let busy = false;
   let activeStream = null;
-  let instructionAudioUrl = null;
+  let activeAudio = null;
   const RETRY_FEEDBACK = "Hmm, let's try that again.";
   const READING_CORRECT_FEEDBACK = "That's right, now let's find the word.";
   const GRID_CORRECT_FEEDBACK = "That's right, now let's read the next word.";
   const COMPLETION_FEEDBACK = 'Great job! You completed the Word Search.';
+
+  function configureStartModal() {
+    if (data.progress?.activity_completed) return;
+    const meaningful = Object.keys(matches || {}).length > 0
+      || Object.values(reading || {}).some(Boolean)
+      || Object.values(attempts || {}).some(value => Number(value) > 0);
+    if (!meaningful) return;
+    const modal = document.getElementById('lesson26-start');
+    const label = modal?.querySelector('.lesson26-start-label');
+    const title = document.getElementById('lesson26-start-title');
+    const description = modal?.querySelector('.lesson26-start-description');
+    const continueButton = document.getElementById('lesson26-start-button');
+    const restartButton = document.getElementById('lesson26-later-button');
+    if (!modal || !label || !title || !description || !continueButton || !restartButton) return;
+    label.textContent = 'PROGRESS SAVED!';
+    title.textContent = 'You’ve already started this activity. Would you like to continue where you left off?';
+    description.hidden = true;
+    continueButton.textContent = 'CONTINUE';
+    restartButton.textContent = 'START OVER';
+  }
+
+  function renderCompletion() {
+    window.PrescribedLessonUi.showCompletion(app);
+  }
 
   async function save(payload) {
     const response = await fetch(data.progress_url, {
@@ -51,8 +75,8 @@
     const next = words.findIndex((_, index) => !matches[String(index)]);
     currentIndex = next < 0 ? words.length : next;
     const progress = `<div class="lesson26-progress" aria-label="Word progress">${words.map((_, index) => `<span class="lesson26-step ${matches[String(index)] ? 'done' : ''} ${index === currentIndex ? 'active' : ''}" ${index === currentIndex ? 'aria-current="step"' : ''}>${index + 1}</span>`).join('')}</div>`;
-    if (currentIndex >= words.length) {
-      app.innerHTML = `<div class="lesson26-complete-message">🎉 Great job! You completed the Word Search.</div>${progress}`;
+    if (data.progress?.activity_completed || currentIndex >= words.length) {
+      renderCompletion();
       return;
     }
     const targetWord = words[currentIndex];
@@ -73,21 +97,82 @@
       })).join('')}</div></div></section></div>${progress}`;
     app.querySelector('#read').addEventListener('click', readWord);
     app.querySelector('#listen-instructions')?.addEventListener('click', () => readAloud(targetWord));
-    app.querySelectorAll('.cell:not(:disabled)').forEach(button => button.addEventListener('click', () => selectCell(button)));
+    app.querySelectorAll('.cell:not(:disabled)').forEach(button => {
+      button.addEventListener('click', () => selectCell(button));
+      button.addEventListener('mouseenter', () => previewSelection([
+        Number(button.dataset.row), Number(button.dataset.column),
+      ]));
+    });
+    app.querySelector('.grid')?.addEventListener('mouseleave', clearSelectionPreview);
   }
 
+  function lineBetween(start, end) {
+    const rowDelta = end[0] - start[0];
+    const columnDelta = end[1] - start[1];
+    const steps = Math.max(Math.abs(rowDelta), Math.abs(columnDelta));
+    if (!steps || (rowDelta !== 0 && columnDelta !== 0 && Math.abs(rowDelta) !== Math.abs(columnDelta))) {
+      return [start, end];
+    }
+    const rowStep = rowDelta === 0 ? 0 : rowDelta / steps;
+    const columnStep = columnDelta === 0 ? 0 : columnDelta / steps;
+    return Array.from({length: steps + 1}, (_, index) => [
+      start[0] + rowStep * index, start[1] + columnStep * index,
+    ]);
+  }
+
+  function clearSelectionPreview() {
+    app.querySelectorAll('.cell.selection-preview').forEach(cell => cell.classList.remove('selection-preview'));
+  }
+
+  function previewSelection(end) {
+    if (!selectedCell || busy) return;
+    clearSelectionPreview();
+    lineBetween(selectedCell, end).forEach(([row, column]) => {
+      app.querySelector(`.cell[data-row="${row}"][data-column="${column}"]`)
+        ?.classList.add('selection-preview');
+    });
+  }
+
+  function showAcceptedMatch(start, end) {
+    lineBetween(start, end).forEach(([row, column]) => {
+      app.querySelector(`.cell[data-row="${row}"][data-column="${column}"]`)
+        ?.classList.add('found');
+    });
+  }
+
+  const localAudioBase = '/static/pabasa_app/prescribed/audio/SESSION_10/LESSON_26/GAWAIN_1/';
+  function localAudioKey(value) {
+    return String(value || '').trim().toLowerCase()
+      .replace(/[’']/g, "'").replace(/[.!?]+$/, '');
+  }
+
+  const localAudioFiles = {
+    'word search': 'Word Search.mp3',
+    cat: 'Cat.mp3',
+    hat: 'Hat.mp3',
+    mat: 'Mat.mp3',
+    tax: 'Tax.mp3',
+    top: 'Top.mp3',
+    [localAudioKey(READING_CORRECT_FEEDBACK)]: 'That’s right, now let’s find the word..mp3',
+    [localAudioKey(GRID_CORRECT_FEEDBACK)]: 'That’s right, now let’s read the next word..mp3',
+    [localAudioKey(RETRY_FEEDBACK)]: 'Hmm, let’s try that again..mp3',
+    [localAudioKey(COMPLETION_FEEDBACK)]: 'Great job! You completed the Word Search..mp3',
+  };
+
   async function playReadAloud(textToSpeak) {
+    const normalized = localAudioKey(textToSpeak);
+    const key = normalized === 'word search. find the words on the grid'
+      ? 'word search' : normalized;
+    const filename = localAudioFiles[key];
+    if (!filename) return false;
+
+    if (activeAudio) {
+      activeAudio.pause();
+      activeAudio.currentTime = 0;
+    }
+    const audio = new Audio(`${localAudioBase}${filename.split('/').map(encodeURIComponent).join('/')}`);
+    activeAudio = audio;
     try {
-      const response = await fetch(data.read_aloud_url, {
-        method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrf(), 'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({target_text: textToSpeak, language: 'English', lesson_tts_key: 'lesson-26-gawain-1'}),
-      });
-      const result = await response.json();
-      if (!response.ok || !result.success || !result.audio_content) throw new Error(result.error || 'Could not play the audio. Please try again.');
-      const bytes = Uint8Array.from(atob(result.audio_content), character => character.charCodeAt(0));
-      if (instructionAudioUrl) URL.revokeObjectURL(instructionAudioUrl);
-      instructionAudioUrl = URL.createObjectURL(new Blob([bytes], {type: result.mime_type || 'audio/mpeg'}));
-      const audio = new Audio(instructionAudioUrl);
       await audio.play();
       await new Promise((resolve, reject) => {
         audio.addEventListener('ended', resolve, {once: true});
@@ -97,7 +182,7 @@
     } catch (error) {
       return false;
     } finally {
-      if (instructionAudioUrl) { URL.revokeObjectURL(instructionAudioUrl); instructionAudioUrl = null; }
+      if (activeAudio === audio) activeAudio = null;
     }
   }
 
@@ -189,6 +274,7 @@
     const start = selectedCell;
     const end = point;
     selectedCell = null;
+    clearSelectionPreview();
     busy = true;
     const result = await save({candidate_match: {word_index: currentIndex, start, end}}).catch(error => {
       render(error.message, 'bad');
@@ -202,6 +288,7 @@
       return;
     }
     matches = result.progress.matches;
+    showAcceptedMatch(start, end);
     if (Object.keys(matches).length >= words.length) {
       try {
         const response = await fetch(data.completion_url, {
@@ -216,11 +303,11 @@
         busy = false;
         return;
       }
-      render();
       await playReadAloud(COMPLETION_FEEDBACK);
+      render();
     } else {
-      render('', 'good');
       await playReadAloud(GRID_CORRECT_FEEDBACK);
+      render('', 'good');
     }
     busy = false;
   }
@@ -239,17 +326,17 @@
       });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.error || 'Could not reset this activity. Please try again.');
-      window.location.assign(document.getElementById('lesson26-back').href);
+      window.location.reload();
     } catch (error) {
       busy = false;
       button.disabled = false;
       window.alert(error.message || 'Could not reset this activity. Please try again.');
     }
   }
-  document.getElementById('lesson26-back')?.addEventListener('click', resetAndExit);
   document.getElementById('lesson26-later-button')?.addEventListener('click', resetAndExit);
   document.getElementById('lesson26-start-button')?.addEventListener('click', () => {
     window.setTimeout(() => readAloud('Word Search. Find the words on the grid.'), 0);
   });
+  configureStartModal();
   render();
 })();

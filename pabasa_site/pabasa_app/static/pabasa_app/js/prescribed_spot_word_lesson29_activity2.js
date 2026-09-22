@@ -16,7 +16,7 @@
   function steps() { const current = state.phase === 'complete' ? data.words.length : state.current_item; return `<div class="progress">${data.words.map((_, index) => `<span class="step ${index < current ? 'done' : ''} ${index === current && state.phase !== 'complete' ? 'active' : ''}">${index + 1}</span>`).join('')}</div>`; }
   function render(message = '', kind = '') {
     hydrate();
-    if (state.phase === 'complete' || state.current_item >= data.words.length) { app.innerHTML = `<div class="complete">🎉 Great job! You spotted all the words.</div>${steps()}`; post(data.completion_url, {}).catch(() => {}); if (!completionAnnounced) { completionAnnounced = true; play('Great job! You spotted all the words.').catch(() => {}); } return; }
+    if (state.phase === 'complete' || state.current_item >= data.words.length) { window.PrescribedLessonUi.showCompletion(app); post(data.completion_url, {}).catch(() => {}); if (!completionAnnounced) { completionAnnounced = true; play('Great job! You spotted all the words.').catch(() => {}); } return; }
     const selected = new Set(state.selected_words);
     app.innerHTML = `<div class="eyebrow">SESSION 13 · LESSON 29 · ACTIVITY 2</div><h1 class="title">Spot the Word</h1><p class="instruction">Listen to the word, then encircle it.</p><div class="grid">${data.words.map(word => `<button class="word ${selected.has(word) ? 'correct' : state.wrong_word === word ? 'wrong' : ''}" data-word="${esc(word)}" ${selected.has(word) || busy ? 'disabled' : ''}>${esc(word)}</button>`).join('')}</div><p class="status ${kind}">${esc(message || 'Listen carefully, then choose the word you heard.')}</p><button class="button" id="listen" ${busy ? 'disabled' : ''}>🔊 Listen</button>${steps()}`;
     app.querySelectorAll('[data-word]').forEach(button => { button.onclick = () => choose(button.dataset.word); });
@@ -43,8 +43,8 @@
     if (feedback) await play(feedback).catch(() => {});
     if (nextTarget) await play(nextTarget).catch(error => render(error.message, 'bad'));
   }
-  async function reset(event) { event.preventDefault(); if (busy) return; busy = true; try { await post(data.progress_url, {reset:true}); location.assign(document.getElementById('lesson29a2-back').href); } catch (error) { busy = false; alert(error.message); } }
-  document.getElementById('lesson29a2-back').onclick = reset;
+  async function reset(event) { event.preventDefault(); if (busy) return; busy = true; try { await post(data.progress_url, {reset:true}); window.location.reload(); } catch (error) { busy = false; alert(error.message); } }
+
   document.getElementById('lesson29a2-later').onclick = reset;
   document.getElementById('lesson29a2-go').onclick = async () => { document.getElementById('lesson29a2-start').hidden = true; document.getElementById('lesson29a2-stage').classList.remove('waiting'); try { await play('Spot the Word. Listen to the word, then encircle it.'); await begin(); await play(state.target_word); } catch (error) { render(error.message, 'bad'); } };
   window.addEventListener('pagehide', () => audio?.pause());

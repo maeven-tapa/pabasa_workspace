@@ -6,6 +6,13 @@
   const phase2Text = 'Magkatunog ba ang dalawang larawan na ito? Pindutin ang nawawastong sagot.';
   const phase2ChoiceText = 'Piliin ang tamang kamay.';
   const csrf = () => document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || '';
+  const wordAudioFiles = {
+    aso: 'aso.mp3', laso: 'laso.mp3',
+    bundok: 'bundok.mp3', sandok: 'sandok.mp3',
+    tatay: 'tatay.mp3', nanay: 'nanay.mp3',
+    bola: 'bola.mp3', lola: 'lola.mp3',
+    pusa: 'pusa.mp3', tasa: 'tasa.mp3'
+  };
   let audio = null;
   let runId = 0;
   let lastKey = '';
@@ -14,17 +21,20 @@
   let busy = false;
   let scheduled = false;
 
-  async function speak(text) {
+  async function speak(text, audioUrl) {
     const id = ++runId;
     if (audio) { audio.pause(); audio = null; }
-    const response = await fetch(window.salitangTtsUrl, {
-      method: 'POST', credentials: 'same-origin',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrf()},
-      body: new URLSearchParams({target_text: text, language: 'Filipino', mode: 'word'})
-    });
-    const data = await response.json();
-    if (id !== runId || !response.ok || !data.success || !data.audio_content) return;
-    audio = new Audio('data:' + (data.mime_type || 'audio/mpeg') + ';base64,' + data.audio_content);
+    if (!audioUrl) {
+      const response = await fetch(window.salitangTtsUrl, {
+        method: 'POST', credentials: 'same-origin',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrf()},
+        body: new URLSearchParams({target_text: text, language: 'Filipino', mode: 'word'})
+      });
+      const data = await response.json();
+      if (id !== runId || !response.ok || !data.success || !data.audio_content) return;
+      audioUrl = 'data:' + (data.mime_type || 'audio/mpeg') + ';base64,' + data.audio_content;
+    }
+    audio = new Audio(audioUrl);
     await new Promise((resolve, reject) => { audio.onended = resolve; audio.onerror = reject; audio.play().catch(reject); });
     if (id === runId) audio = null;
   }
@@ -145,8 +155,12 @@
     if (!word) return;
     listen.dataset.apiBusy = '1';
     listen.disabled = true;
-    try { await speak(word); }
-    catch (error) { console.error('Salitang Magkatugma Pakinggan TTS failed', error); }
+    try {
+      const file = wordAudioFiles[word];
+      if (!file || !window.salitangWordAudioBase) throw new Error('Missing recording for: ' + word);
+      await speak(word, window.salitangWordAudioBase + file);
+    }
+    catch (error) { console.error('Salitang Magkatugma Pakinggan audio failed', error); }
     finally {
       listen.disabled = false;
       listen.dataset.apiBusy = '0';

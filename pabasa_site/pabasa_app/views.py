@@ -17360,6 +17360,20 @@ def prescribed_activity_complete(request, activity_key):
         existing.activity_completed = True; existing.current_index = existing.completed_items = existing.correct_items = 3
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': 3, 'accuracy': 100.0}})
+    if activity_key == 'session-5-lesson-14-gawain-4':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        total = len(activity['items'])
+        if not existing or int(existing.current_index or 0) < total:
+            return JsonResponse({'success': False, 'error': 'Complete all reading items first.'}, status=400)
+        state = dict(existing.state if isinstance(existing.state, dict) else {})
+        state.update({'current_index': total, 'completed_items': total,
+                      'total_items': total, 'activity_completed': True,
+                      'state_version': 1_000_000_000})
+        existing.current_index = existing.completed_items = existing.total_items = total
+        existing.activity_completed = True
+        existing.state = state
+        existing.save(update_fields=['current_index', 'completed_items', 'total_items', 'activity_completed', 'state', 'updated_at'])
+        return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': existing.correct_items, 'accuracy': 100.0}})
     if activity_key == 'lesson7-gawain2a':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
@@ -20229,12 +20243,30 @@ def reading_transcribe_api(request):
         )
         analysis['raw_transcript'] = transcript
         analysis['transcript'] = word_numbers_in_transcript(transcript, language_code)
+        salitang_magkatugma_exact = request.POST.get('salitang_magkatugma_exact') == '1'
+        if salitang_magkatugma_exact:
+            expected_words = ReadingMatcher.normalize_spoken_words(target_text)
+            spoken_words = ReadingMatcher.normalize_spoken_words(transcript)
+            expected_word = ''.join(expected_words) if len(expected_words) == 1 else ''
+            spoken_word = ''.join(spoken_words)
+            # Permit provider syllable spacing (for example, "ta tay") only
+            # when the normalized tokens concatenate exactly to the target.
+            strict_activity_match = bool(
+                expected_word and spoken_word == expected_word
+            )
+            analysis['complete'] = strict_activity_match
         # Prescribed one-word activities historically compare `transcript`
         # literally in the browser.  Preserve Google's raw result above, but
         # return the canonical target after the shared Filipino matcher has
         # already accepted it.  This prevents a valid phonetic segmentation or
         # near-match of short words such as "pana" from being rejected again.
-        if mode == 'reading' and not l22_c_pronunciation and analysis.get('complete') and len(ReadingMatcher.readable_words(target_text)) == 1:
+        if (
+            mode == 'reading'
+            and not l22_c_pronunciation
+            and analysis.get('complete')
+            and len(ReadingMatcher.readable_words(target_text)) == 1
+            and not salitang_magkatugma_exact
+        ):
             analysis['transcript'] = target_text
         logger.warning(
             "FREE_MODE_STT_DIAGNOSTIC processed_transcript=%r raw_transcript=%r",

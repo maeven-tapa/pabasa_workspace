@@ -16,7 +16,7 @@
   function setButtonState(mode) { const read = document.getElementById('read'), listen = document.getElementById('listen'); if (!read || !listen) return; const enabled = mode === 'ready'; read.disabled = mode === 'audio'; listen.disabled = !enabled; read.classList.toggle('is-busy', mode === 'recording' || mode === 'audio'); listen.classList.toggle('is-busy', mode === 'audio'); }
   function render(message = '', kind = '') {
     hydrate();
-    if (state.phase === 'complete' || state.current_item >= data.items.length) { app.innerHTML = `<div class="complete">🎉 Great job! You completed all the sentences.</div>${steps()}`; post(data.completion_url, {}).catch(() => {}); return; }
+    if (state.phase === 'complete' || state.current_item >= data.items.length) { window.PrescribedLessonUi.showCompletion(app); post(data.completion_url, {}).catch(() => {}); return; }
     const item = data.items[state.current_item], hint = String(state.hint || ''), blank = hint + '_'.repeat(Math.max(0, item.word_length - hint.length));
     app.innerHTML = `<div class="eyebrow">SESSION 13 · LESSON 29 · ACTIVITY 1</div><h1 class="title">Fill in the Blank</h1><p class="instruction">Say the missing word to complete each sentence.</p><div class="content"><div class="item"><div class="sentence lead">${esc(item.before)}</div><img class="picture" src="${esc(item.image_url)}" alt="Picture clue"><div class="sentence tail"><span class="blank">${esc(blank)}</span>${esc(item.after)}</div></div><p class="status ${kind}" id="status">${esc(message || (hint ? 'Use the letter hint and say the missing word.' : 'Read the sentence, then say the missing word.'))}</p><div class="actions"><button class="button" id="read" type="button">🎙️ Say the missing word</button><button class="button secondary" id="listen" type="button">🔊 Listen</button></div></div>${steps()}`;
     document.getElementById('read').onclick = record;
@@ -50,8 +50,8 @@
     finally { busy = false; if (document.getElementById('read')) setButtonState('ready'); }
   }
   function stop() { stream?.getTracks().forEach(track => track.stop()); stream = null; }
-  async function reset(event) { event.preventDefault(); if (busy) return; busy = true; try { await post(data.progress_url, {reset:true}); location.assign(document.getElementById('lesson29a1-back').href); } catch (error) { busy = false; alert(error.message); } }
-  document.getElementById('lesson29a1-back').onclick = reset;
+  async function reset(event) { event.preventDefault(); if (busy) return; busy = true; try { await post(data.progress_url, {reset:true}); window.location.reload(); } catch (error) { busy = false; alert(error.message); } }
+
   document.getElementById('lesson29a1-later').onclick = reset;
   document.getElementById('lesson29a1-go').onclick = async () => { document.getElementById('lesson29a1-start').hidden = true; document.getElementById('lesson29a1-stage').classList.remove('waiting'); try { await play('Fill in the Blank. Say the missing word to complete each sentence.'); } catch (error) { render(error.message, 'bad'); } };
   window.addEventListener('pagehide', () => { stop(); audio?.pause(); });

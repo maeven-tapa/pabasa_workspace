@@ -554,7 +554,7 @@ PRESCRIBED_ACTIVITIES = {
         'competencies': ['Phonics', 'Phonological Awareness', 'Fluency'],
         'interaction': 'teacher_reading_checklist', 'total_items': 22,
         'legend': {'good': 'Nabasa nang maayos', 'choppy': 'Nabasa pero medyo putol-putol', 'not_read': 'Di nabasa'},
-        'section_labels': [{'label': 'Parirala', 'after_item': 6}, {'label': 'Pangungusap', 'after_item': 16}],
+        'section_labels': [{'label': 'Parirala', 'after_item': 6}],
         'items': [
             {'text': 'tawa'}, {'text': 'sawa'}, {'text': 'lawa'}, {'text': 'wala'}, {'text': 'walis'}, {'text': 'matamis'},
             {'text': 'Ang walis may'}, {'text': 'Sawa sa lawa'}, {'text': 'Yaman sa'}, {'text': 'May kawa'}, {'text': 'Ang yoyo'}, {'text': 'Nasa mesa'},
