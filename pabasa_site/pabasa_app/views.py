@@ -20226,12 +20226,30 @@ def reading_transcribe_api(request):
         )
         analysis['raw_transcript'] = transcript
         analysis['transcript'] = word_numbers_in_transcript(transcript, language_code)
+        salitang_magkatugma_exact = request.POST.get('salitang_magkatugma_exact') == '1'
+        if salitang_magkatugma_exact:
+            expected_words = ReadingMatcher.normalize_spoken_words(target_text)
+            spoken_words = ReadingMatcher.normalize_spoken_words(transcript)
+            expected_word = ''.join(expected_words) if len(expected_words) == 1 else ''
+            spoken_word = ''.join(spoken_words)
+            # Permit provider syllable spacing (for example, "ta tay") only
+            # when the normalized tokens concatenate exactly to the target.
+            strict_activity_match = bool(
+                expected_word and spoken_word == expected_word
+            )
+            analysis['complete'] = strict_activity_match
         # Prescribed one-word activities historically compare `transcript`
         # literally in the browser.  Preserve Google's raw result above, but
         # return the canonical target after the shared Filipino matcher has
         # already accepted it.  This prevents a valid phonetic segmentation or
         # near-match of short words such as "pana" from being rejected again.
-        if mode == 'reading' and not l22_c_pronunciation and analysis.get('complete') and len(ReadingMatcher.readable_words(target_text)) == 1:
+        if (
+            mode == 'reading'
+            and not l22_c_pronunciation
+            and analysis.get('complete')
+            and len(ReadingMatcher.readable_words(target_text)) == 1
+            and not salitang_magkatugma_exact
+        ):
             analysis['transcript'] = target_text
         logger.warning(
             "FREE_MODE_STT_DIAGNOSTIC processed_transcript=%r raw_transcript=%r",
