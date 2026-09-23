@@ -1,0 +1,6 @@
+.wb-l24-g6-page{background:radial-gradient(circle at 90% 8%,#ffe8aa 0 9rem,transparent 20rem),linear-gradient(145deg,#e8f8f6,#f8fbff 58%,#fff3df)}
+.wb-l24-g6-page .wb-shell{width:min(1040px,100%)}
+.wb-l24-g6-page .wb-shell header,.wb-l24-g6-page .wb-focus{background:#ffffffd9;border-color:#c8e0e5;border-radius:28px}
+.wb-l24-g6-page #wb-back{display:inline-flex;padding:9px 17px;border-radius:999px;background:#fff;box-shadow:0 5px 14px #1f56661a}
+.wb-l24-g6-page .wb-search{width:min(100%,720px);gap:7px;padding:13px;border-radius:24px}.wb-l24-g6-page .wb-search button{min-height:44px;border-radius:12px}
+@media(max-width:600px){.wb-l24-g6-page .wb-search{gap:3px;padding:7px}.wb-l24-g6-page .wb-search button{min-height:34px;font-size:16px}}
