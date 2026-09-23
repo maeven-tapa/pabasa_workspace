@@ -18277,8 +18277,8 @@ def lesson_4_gawain_1_page(request):
 def lesson_5_gawain_1_page(request):
     progress = StudentActivityProgress.objects.filter(student_id=request.session.get('user_id'), activity_key='lesson-5-gawain-1').first()
     state = progress.state if progress and isinstance(progress.state, dict) else {}
-    words = [('Apa', True), ('Aso', True), ('Lamesa', False), ('Sabon', False), ('Medalya', False), ('Anim', True), ('Araw', True), ('Pamaypay', False), ('Avocado', True)]
-    items = [{'word': w, 'image': w.lower() + '.png', 'starts_a': a} for w, a in words]
+    words = [('Apa', True), ('Aso', True), ('Mesa', False), ('Sabon', False), ('Medalya', False), ('Anim', True), ('Araw', True), ('Pamaypay', False), ('Avocado', True)]
+    items = [{'word': w, 'image': ('lamesa.png' if w == 'Mesa' else w.lower() + '.png'), 'starts_a': a} for w, a in words]
     context = _dashboard_context(request)
     context['lesson_5_data'] = {'items': items, 'progress': {'current_index': progress.current_index if progress else 0, 'completed_items': progress.completed_items if progress else 0, 'correct_items': progress.correct_items if progress else 0, 'activity_completed': progress.activity_completed if progress else False, 'answers': state.get('answers', [])}}
     context['lesson_5_progress_url'] = reverse('lesson_5_activity_progress')
