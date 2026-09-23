@@ -48,6 +48,8 @@
   appObserver?.observe(app, {childList:true, subtree:true});
   window.addEventListener(`session13-${prefix}-mute`, event => { muted = Boolean(event.detail?.muted); streams.forEach(stream => stream.getTracks().forEach(track => { track.enabled = !muted; })); refreshDebug(); });
   window.addEventListener(`session13-${prefix}-pause`, stop);
+  window.addEventListener(`session13-${prefix}-help`, stop);
+  document.getElementById(`${prefix}-help-btn`)?.addEventListener('click', stop);
   window.addEventListener(`session13-${prefix}-cleanup`, stop);
   window.addEventListener('pagehide', () => { appObserver?.disconnect(); stop(); }, {once:true});
 })();

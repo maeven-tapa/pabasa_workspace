@@ -9,7 +9,7 @@
   const RETRY_FEEDBACK = "Hmm, let's try that again.";
   const CORRECT_FEEDBACK = "That's right, now let's read the next sentence.";
   const COMPLETION_FEEDBACK = 'Great job! You completed all the sentences.';
-  let state = {...(data.progress?.state || {})}, busy = false, paused = false, muted = false, generation = 0, stream = null, recorder = null, recorderTimer = null, audioUrl = null, audio = null;
+  let state = {...(data.progress?.state || {})}, busy = false, paused = false, muted = false, speechAttemptActive = false, generation = 0, stream = null, recorder = null, recorderTimer = null, audioUrl = null, audio = null;
   const emitDebug = detail => window.dispatchEvent(new CustomEvent('session13-prescribed-s13l29g1-debug', {detail}));
   const normalizeTranscript = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
   function hydrate() { state.current_item = Number(state.current_item || 0); state.completed_items = Number(state.completed_items || 0); state.phase ||= 'answering'; }
@@ -36,7 +36,7 @@
   async function record() {
     if (busy || paused || muted || !navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { if (!busy && !paused && !muted) render('Microphone recording is not available in this browser.', 'bad'); return; }
     const attemptGeneration = generation;
-    busy = true; setButtonState('recording'); emitDebug({status:'Listening', expected:data.items[state.current_item]?.answer || data.items[state.current_item]?.tts_word || '—', mic:'Active · Unmuted', recorder:'Recording', vad:'waiting', error:'—', raw:'Listening for speech...'});
+    busy = true; speechAttemptActive = true; setButtonState('recording'); emitDebug({status:'Listening', expected:data.items[state.current_item]?.answer || data.items[state.current_item]?.tts_word || '—', mic:'Active · Unmuted', recorder:'Recording', vad:'waiting', error:'—', raw:'Listening for speech...'});
     try {
       stream = await navigator.mediaDevices.getUserMedia({audio:true});
       stream.getTracks().forEach(track => { track.enabled = !muted; });
@@ -56,18 +56,21 @@
       busy = false; render(correct ? 'Correct!' : `I heard “${heard}”. Try again.`, correct ? 'good' : 'bad');
       await play(feedback);
     } catch (error) { stop(); busy = false; emitDebug({status:'Error', mic:'Inactive · Unmuted', recorder:'inactive', vad:'waiting', error:error.message || 'Recording failed.', raw:`Error: ${error.message || 'Recording failed.'}`}); render(error.message || 'I could not hear you. Try again.', 'bad'); }
-    finally { busy = false; if (document.getElementById('read')) setButtonState('ready'); }
+    finally { speechAttemptActive = false; busy = false; if (document.getElementById('read')) setButtonState('ready'); }
   }
   function stop() { if (recorder?.state === 'recording') { try { recorder.stop(); } catch (_) {} } if (recorderTimer) clearTimeout(recorderTimer); recorderTimer = null; recorder = null; stream?.getTracks().forEach(track => track.stop()); stream = null; }
+  function cancelSpeechAttempt() { generation += 1; if (recorderTimer) { clearTimeout(recorderTimer); recorderTimer = null; } const activeRecorder = recorder; recorder = null; if (activeRecorder && activeRecorder.state !== 'inactive') { try { activeRecorder.stop(); } catch (_) {} } stop(); speechAttemptActive = false; busy = false; document.getElementById('read')?.classList.remove('is-busy'); emitDebug({status:paused ? 'Paused' : (muted ? 'Muted' : 'Ready'), mic:`Inactive · ${muted ? 'Muted' : 'Unmuted'}`, recorder:'inactive'}, 'Speech attempt cancelled'); }
   async function reset(event) { event.preventDefault(); if (busy) return; busy = true; try { await post(data.progress_url, {reset:true}); window.location.reload(); } catch (error) { busy = false; alert(error.message); } }
 
   document.getElementById('lesson29a1-later').onclick = reset;
+  document.getElementById('prescribed-s13l29g1-help-btn')?.addEventListener('click', () => { if (speechAttemptActive) cancelSpeechAttempt(); });
   document.getElementById('lesson29a1-go').onclick = async () => { document.getElementById('lesson29a1-start').hidden = true; document.getElementById('lesson29a1-stage').classList.remove('waiting'); try { await play('Fill in the Blank. Say the missing word to complete each sentence.'); } catch (error) { render(error.message, 'bad'); } };
   window.addEventListener('pagehide', () => { stop(); audio?.pause(); });
-  window.addEventListener('session13-prescribed-s13l29g1-pause', () => { paused = true; generation += 1; stop(); audio?.pause(); });
+  window.addEventListener('session13-prescribed-s13l29g1-help', () => { if (speechAttemptActive) cancelSpeechAttempt(); });
+  window.addEventListener('session13-prescribed-s13l29g1-pause', () => { paused = true; cancelSpeechAttempt(); audio?.pause(); });
   window.addEventListener('session13-prescribed-s13l29g1-resume', () => { paused = false; render(); });
   window.addEventListener('session13-prescribed-s13l29g1-restart', () => reset(new Event('submit')));
-  window.addEventListener('session13-prescribed-s13l29g1-cleanup', () => { generation += 1; stop(); audio?.pause(); });
+  window.addEventListener('session13-prescribed-s13l29g1-cleanup', () => { cancelSpeechAttempt(); audio?.pause(); });
   window.addEventListener('session13-prescribed-s13l29g1-mute', event => { muted = Boolean(event.detail?.muted); stream?.getTracks().forEach(track => { track.enabled = !muted; }); emitDebug({mic:`${stream ? 'Active' : 'Inactive'} · ${muted ? 'Muted' : 'Unmuted'}`}); });
   hydrate(); render();
 })();

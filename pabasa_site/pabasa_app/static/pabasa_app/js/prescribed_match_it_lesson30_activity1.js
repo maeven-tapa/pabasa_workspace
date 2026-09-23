@@ -13,7 +13,10 @@
   const headers=extra=>({'X-CSRFToken':csrf(),'X-Requested-With':'XMLHttpRequest',...extra});
   const setBusyButton=(id,busyState)=>document.getElementById(id)?.classList.toggle('is-busy',busyState);
   let s={phase:'intro',current_oral_word_index:0,unlocked_oral_words:[],stt_attempts:{},read_aloud_plays:{},matches:{},picture_attempts:{},needs_reread:false,state_version:0,...(d.progress?.state||{})};
-  let busy=false,stream=null,audio=null,audioUrl=null;
+  let busy=false,paused=false,muted=false,recordingAttemptActive=false,generation=0,stream=null,recorder=null,recordTimer=null,audio=null,audioUrl=null;
+  const debugState={status:'Ready',transcript:'No transcript yet.',expected:'—',normalized:'—',result:'—',mic:'Inactive · Unmuted',recorder:'inactive',vad:'waiting',error:'—',raw:'Waiting for speech...'};
+  const emitDebug=detail=>{Object.assign(debugState,detail);Object.entries(debugState).forEach(([key,value])=>{const field=document.getElementById(`lesson30a1-debug-${key}`);if(field)field.textContent=String(value)});window.dispatchEvent(new CustomEvent('lesson30-lesson30a1-debug',{detail:{...debugState}}));};
+  window.Lesson30ActivityDebug={getState:()=>({...debugState}),reset:()=>emitDebug({status:'Ready',transcript:'No transcript yet.',expected:'—',normalized:'—',result:'—',mic:`Inactive · ${muted?'Muted':'Unmuted'}`,recorder:'inactive',vad:'waiting',error:'—',raw:'Waiting for speech...'})};
 
   async function jsonResponse(response){
     const body=await response.text();
@@ -55,14 +58,16 @@
     if(s.phase==='matching'){
       app.innerHTML=`<div class="eyebrow">SESSION 14 · LESSON 30 · ACTIVITY 1</div><h1 class="title">Match It!</h1><p class="instruction">Choose the picture that matches the word.</p><div class="word">${esc(target)}</div><div class="pictures">${items.map(item=>`<button class="picture" data-id="${esc(item.id)}" aria-label="${esc(item.alt_text)}"><img src="${esc(item.image_url)}" alt="${esc(item.alt_text)}"></button>`).join('')}</div><p class="status ${kind}">${esc(message||'Choose the matching picture.')}</p>${steps()}</div>`;
       app.querySelectorAll('.picture').forEach(button=>button.onclick=()=>choose(button));
+      emitDebug({status:paused?'Paused':'Ready',expected:target,mic:`Inactive · ${muted?'Muted':'Unmuted'}`,recorder:'inactive',vad:'waiting',raw:'Reading passed. Choose the matching picture.'});
       return;
     }
     app.innerHTML=`<div class="eyebrow">SESSION 14 · LESSON 30 · ACTIVITY 1</div><h1 class="title">Match It!</h1><p class="instruction">Read the word aloud first. Then choose the matching picture.</p><div class="word">${esc(target)}</div><p class="status ${kind}">${esc(message||'Read the word aloud.')}</p><div class="actions"><button class="button" id="read">🎙️ Read the word</button><button class="button secondary" id="listen" ${Number(s.stt_attempts?.[target]||0)<3?'disabled':''}>🔊 Listen</button></div>${steps()}`;
     app.querySelector('#read').onclick=()=>read(target);
     app.querySelector('#listen')?.addEventListener('click',()=>play(target).then(()=>{render('Now read the word aloud.');announce('Now read the word aloud.')} ).catch(e=>render(e.message,'bad')));
+    emitDebug({status:paused?'Paused':'Ready',transcript:'No transcript yet.',expected:target,normalized:'—',result:'—',mic:`Inactive · ${muted?'Muted':'Unmuted'}`,recorder:'inactive',vad:'waiting',error:'—',raw:'Waiting for speech...'});
   }
   async function play(text){
-    if(busy)return;
+    if(busy||paused)return;
     busy=true;
     const buttons=[...app.querySelectorAll('button')],buttonStates=buttons.map(button=>({button,disabled:button.disabled})); buttons.forEach(button=>{button.disabled=true;button.classList.add('is-busy');});
     try{
@@ -81,22 +86,30 @@
     }
   }
   async function read(target){
-    if(busy)return;
+    if(busy||paused||muted)return;
     busy=true;
+    const attemptGeneration=generation;
+    recordingAttemptActive=true;
+    emitDebug({status:'Listening',expected:target,mic:'Active · Unmuted',recorder:'recording',vad:'waiting',raw:'Listening for speech...'});
     setBusyButton('read',true);
     const listenButton=document.getElementById('listen');
     if(listenButton){listenButton.disabled=true;listenButton.classList.add('is-busy')}
     try{
       if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw Error('Microphone recording is not available in this browser.');
-      stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
-      const recorder=new MediaRecorder(stream),chunks=[];
+      stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); stream.getTracks().forEach(track=>{track.enabled=!muted}); emitDebug({mic:`Active · ${muted?'Muted':'Unmuted'}`,recorder:'inactive',raw:'Microphone access granted.'});
+      if(attemptGeneration!==generation||paused)throw Error('Recording cancelled.');
+      recorder=new MediaRecorder(stream);const chunks=[];emitDebug({mic:`Active · ${muted?'Muted':'Unmuted'}`,recorder:'recording',raw:'Recording started.'});
       recorder.ondataavailable=e=>e.data.size&&chunks.push(e.data);
-      const blob=await new Promise((ok,bad)=>{recorder.onerror=()=>bad(Error('Could not record your voice.'));recorder.onstop=()=>ok(new Blob(chunks,{type:recorder.mimeType||'audio/webm'}));recorder.start();setTimeout(()=>recorder.state==='recording'&&recorder.stop(),3500)});
+      const blob=await new Promise((ok,bad)=>{recorder.onerror=()=>bad(Error('Could not record your voice.'));recorder.onstop=()=>ok(new Blob(chunks,{type:recorder.mimeType||'audio/webm'}));recorder.start();recordTimer=setTimeout(()=>recorder?.state==='recording'&&recorder.stop(),3500)});
       stop();
+      if(attemptGeneration!==generation||paused)throw Error('Recording cancelled.');
+      emitDebug({status:'Processing',recorder:'inactive',raw:'Processing the recording...'});
       const form=new FormData();form.append('audio',blob,'lesson30-match-it.webm');form.append('target_text',target);form.append('language','English');form.append('mode','reading');
       const r=await fetch(d.transcribe_url,{method:'POST',credentials:'same-origin',headers:headers(),body:form});
       const j=await jsonResponse(r);
+      if(attemptGeneration!==generation||paused)throw Error('Recording cancelled.');
       const heard=String(j.raw_transcript||j.transcript||''),ok=Boolean(r.ok&&j.success&&norm(heard).includes(norm(target)));
+      emitDebug({status:ok?'Correct':'Try again',transcript:heard||'No transcript yet.',normalized:norm(heard)||'—',result:ok?'Correct':'Try again',mic:`Inactive · ${muted?'Muted':'Unmuted'}`,recorder:'inactive',vad:'waiting',error:'—',raw:`Transcript: ${heard||'No transcript yet.'} · Result: ${ok?'Correct':'Try again'}`});
       if(!ok){
         s.stt_attempts[target]=Math.min(3,Number(s.stt_attempts[target]||0)+1);
         await save();
@@ -110,10 +123,12 @@
       announce('Correct! Now choose the matching picture.');
     }catch(e){
       stop();
+      if(e.message==='Recording cancelled.')return;
+      emitDebug({status:'Error',mic:`Inactive · ${muted?'Muted':'Unmuted'}`,recorder:'inactive',vad:'waiting',error:e.message||'Recording failed.',raw:`Error: ${e.message||'Recording failed.'}`});
       s.stt_attempts[target]=Math.min(3,Number(s.stt_attempts[target]||0)+1);
       try{await save()}catch(_){}
       render(e.message||'I could not hear you. Try again.','bad');
-    }finally{busy=false;setBusyButton('read',false);if(listenButton?.isConnected){listenButton.disabled=Number(s.stt_attempts?.[target]||0)<3;listenButton.classList.remove('is-busy')}}
+    }finally{recordingAttemptActive=false;busy=false;setBusyButton('read',false);if(listenButton?.isConnected){listenButton.disabled=Number(s.stt_attempts?.[target]||0)<3;listenButton.classList.remove('is-busy')}}
   }
   async function choose(button){
     if(busy)return;
@@ -141,11 +156,20 @@
       d.progress.activity_completed=true;
     }catch(e){console.error(e)}
   }
-  function stop(){stream?.getTracks().forEach(t=>t.stop());stream=null}
+  function stop(){if(recorder?.state==='recording'){try{recorder.stop()}catch(_){}}if(recordTimer)clearTimeout(recordTimer);recordTimer=null;recorder=null;stream?.getTracks().forEach(t=>t.stop());stream=null}
+  function cancelSpeechAttempt(){generation++;if(recordTimer){clearTimeout(recordTimer);recordTimer=null}const activeRecorder=recorder;recorder=null;if(activeRecorder&&activeRecorder.state!=='inactive'){try{activeRecorder.stop()}catch(_){}}stop();recordingAttemptActive=false;busy=false;setBusyButton('read',false);document.getElementById('listen')?.classList.remove('is-busy');emitDebug({status:paused?'Paused':'Ready',recorder:'inactive'},'Speech attempt cancelled')}
+  function cancel(){cancelSpeechAttempt();audio?.pause();audio=null}
   async function leave(e){e.preventDefault();if(busy)return;busy=true;try{await reset();window.location.reload()}catch(x){busy=false;alert(x.message)}}
 
   document.getElementById('lesson30a1-later').onclick=leave;
   document.getElementById('lesson30a1-go').onclick=async()=>{document.getElementById('lesson30a1-start').hidden=true;document.getElementById('lesson30a1-stage').classList.remove('waiting');try{await play('Match It. Read the word aloud first. Then choose the matching picture.')}catch(e){render(e.message,'bad')}};
-  window.addEventListener('pagehide',()=>{stop();audio?.pause()});
+  window.addEventListener('pagehide',()=>{cancel()});
+  document.getElementById('lesson30a1-help-btn')?.addEventListener('click',()=>{if(recordingAttemptActive)cancelSpeechAttempt()});
+  window.addEventListener('lesson30-lesson30a1-help',()=>{if(recordingAttemptActive)cancelSpeechAttempt()});
+  window.addEventListener('lesson30-lesson30a1-pause',()=>{paused=true;cancel();emitDebug({status:'Paused',recorder:'inactive',raw:'Activity paused.'})});
+  window.addEventListener('lesson30-lesson30a1-resume',()=>{paused=false;render()});
+  window.addEventListener('lesson30-lesson30a1-restart',cancel);
+  window.addEventListener('lesson30-lesson30a1-cleanup',cancel);
+  window.addEventListener('lesson30-lesson30a1-mute',event=>{muted=Boolean(event.detail?.muted);stream?.getTracks().forEach(t=>{t.enabled=!muted});emitDebug({mic:`${stream?'Active':'Inactive'} · ${muted?'Muted':'Unmuted'}`})});
   render();
 })();

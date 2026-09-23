@@ -23,8 +23,9 @@
     const readData = () => { const node = document.getElementById('prescribed-activity-data'); try { return node ? JSON.parse(node.textContent || '{}') : {}; } catch (_) { return {}; } };
     const resetActivity = async () => { const data = readData(); const csrf = (document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] || ''; if (data.progress_url) await fetch(data.progress_url, {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':csrf}, body:JSON.stringify({reset:true})}); window.location.reload(); };
     const stopActivityResources = () => window.dispatchEvent(new Event('pagehide'));
+    const bindHelpCleanup = () => { const button = q('-help-btn'); if (!button || button.dataset.cleanupBound === 'true') return; button.dataset.cleanupBound = 'true'; button.addEventListener('click', () => emit('help')); };
     const adapter = { pause() { emit('pause'); stopActivityResources(); }, resume() { emit('resume'); }, restart() { stopActivityResources(); return resetActivity(); }, cleanup() { stopTest(); emit('cleanup'); stopActivityResources(); }, setMuted(value) { muted = Boolean(value); updateMic(); emit('mute', {muted}); }, bindAudioTest, bindDebug };
-    try { updateMic(); window.PrescribedControls.init({prefix, adapter}); bindAudioTest(); bindDebug(); root.dataset.initialized = 'true'; } catch (_) { stopTest(); return; }
+    try { updateMic(); window.PrescribedControls.init({prefix, adapter}); bindHelpCleanup(); bindAudioTest(); bindDebug(); root.dataset.initialized = 'true'; } catch (_) { stopTest(); return; }
     window.addEventListener('keydown', event => { if (event.key !== 'Escape') return; const help = q('-help-modal'), restart = q('-restart-modal'); if (help && !help.hidden) help.hidden = true; else if (restart && !restart.hidden) q('-restart-no')?.click(); });
     window.addEventListener('pagehide', stopTest, {once:true});
   };
