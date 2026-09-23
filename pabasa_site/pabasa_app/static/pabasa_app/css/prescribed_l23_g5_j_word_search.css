@@ -1,0 +1,76 @@
+/* Lesson 23 · Gawain 5 only: standard prescribed activity presentation. */
+.l23g5-page {
+  --l23g5-ink: #183e63;
+  --l23g5-teal: #299e9a;
+  --l23g5-teal-dark: #187b7a;
+  --l23g5-gold: #e7af45;
+  --l23g5-line: #cce7e8;
+  min-height: 100dvh;
+  margin: 0;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 9% 8%, rgba(255, 255, 255, .76) 0 11rem, transparent 28rem),
+    radial-gradient(circle at 92% 86%, rgba(254, 221, 145, .43) 0 12rem, transparent 28rem),
+    url("../prescribed/PRESCRIBED-BG.jpg") center / cover fixed,
+    linear-gradient(135deg, #d9f1ef, #eaf7fb);
+  color: var(--l23g5-ink);
+  font: 18px/1.5 "Nunito", system-ui, sans-serif;
+}
+.l23g5-page *, .l23g5-page *::before, .l23g5-page *::after { box-sizing: border-box; }
+.l23g5-page .shell { width: min(1120px, 100%); min-height: 100dvh; margin: auto; padding: clamp(14px, 3vh, 30px) clamp(16px, 4vw, 48px); display: grid; grid-template-rows: auto minmax(0, 1fr); align-content: center; gap: clamp(12px, 2vh, 22px); }
+.l23g5-page .header, .l23g5-page .activity-card { border: 2px solid rgba(255, 255, 255, .78); border-radius: clamp(28px, 4vw, 42px); background: rgba(255, 255, 255, .68); box-shadow: 0 18px 45px rgba(30, 91, 122, .20); backdrop-filter: blur(12px); }
+.l23g5-page .header { padding: clamp(20px, 3vh, 32px) clamp(20px, 5vw, 58px) clamp(18px, 2.4vh, 28px); text-align: center; }
+.l23g5-page .back { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 10px 20px; border: 2px solid rgba(255, 255, 255, .88); border-radius: 999px; background: rgba(255, 255, 255, .94); box-shadow: 0 6px 15px rgba(24, 62, 99, .14); color: var(--l23g5-ink); font-size: clamp(.95rem, 1.6vw, 1.08rem); font-weight: 900; line-height: 1.1; text-decoration: none; }
+.l23g5-page .back::before { content: "←"; color: var(--l23g5-teal); font-size: 1.45em; }
+.l23g5-page .back:hover { color: var(--l23g5-teal-dark); transform: translateY(-1px); }
+.l23g5-page .eyebrow { width: max-content; max-width: 100%; margin: 14px auto 6px; padding: 8px 20px; border-radius: 999px; background: var(--l23g5-teal); color: #fff; font-size: clamp(.78rem, 1.35vw, 1rem); font-weight: 900; letter-spacing: .08em; line-height: 1.2; }
+.l23g5-page .header h1 { margin: 0; color: var(--l23g5-ink); font-size: clamp(2rem, 4.2vw, 3.55rem); font-weight: 900; line-height: 1.08; letter-spacing: -.035em; }
+.l23g5-page .instruction { max-width: 780px; margin: 10px auto 16px; color: #365a72; font-size: clamp(1rem, 1.7vw, 1.2rem); font-weight: 800; line-height: 1.42; }
+.l23g5-page .tts { min-height: 46px; padding: 10px 20px; border: 3px solid #a7dcda; border-radius: 999px; background: #fff; box-shadow: 0 4px 0 #b7d6dc; color: var(--l23g5-teal-dark); font: inherit; font-weight: 900; cursor: pointer; }
+.l23g5-page .tts:hover { transform: translateY(-2px); border-color: var(--l23g5-teal); }
+.l23g5-page .progress { margin: 18px 0 0; color: var(--l23g5-teal-dark); font-size: clamp(1rem, 1.5vw, 1.15rem); font-weight: 900; }
+.l23g5-page .activity-card { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(260px, .75fr); align-items: center; gap: clamp(18px, 3vw, 34px); margin: 0; padding: clamp(20px, 3vw, 34px); }
+.l23g5-page .grid-wrap { min-width: 0; }
+.l23g5-page .grid { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: clamp(4px, .7vw, 8px); padding: clamp(8px, 1.2vw, 13px); border: 3px solid rgba(255, 255, 255, .82); border-radius: 24px; background: rgba(203, 230, 234, .86); box-shadow: inset 0 0 0 3px rgba(153, 205, 210, .34), 0 12px 24px rgba(24, 62, 99, .10); touch-action: none; user-select: none; }
+.l23g5-page .cell { display: grid; place-items: center; aspect-ratio: 1; min-width: 0; padding: 0; border: 3px solid #cce7e8; border-radius: clamp(8px, 1vw, 15px); background: rgba(255, 255, 255, .96); box-shadow: 0 5px 0 rgba(153, 205, 210, .48), 0 7px 12px rgba(24, 62, 99, .08); color: var(--l23g5-ink); font: 900 clamp(1rem, 3.2vw, 2rem)/1 "Nunito", system-ui, sans-serif; cursor: pointer; user-select: none; }
+.l23g5-page .cell:hover { border-color: var(--l23g5-teal); transform: translateY(-1px); }
+.l23g5-page .cell.selected { border-color: var(--l23g5-gold); background: #fff3bf; box-shadow: inset 0 0 0 3px #ffe39a, 0 5px 0 #e6b84f, 0 8px 14px rgba(24, 62, 99, .10); }
+.l23g5-page .cell.found { border-color: #87c9a7; background: #dff4ee; box-shadow: 0 5px 0 #9fd0b5, 0 8px 14px rgba(24, 62, 99, .08); color: #276c50; }
+.l23g5-page .helper { margin: 14px 0 0; color: #466a79; font-size: clamp(.92rem, 1.4vw, 1.05rem); font-weight: 800; line-height: 1.35; text-align: center; }
+.l23g5-page .word-list { min-width: 0; padding: clamp(18px, 2.5vw, 28px); border: 2px solid rgba(255, 255, 255, .84); border-radius: 26px; background: rgba(255, 255, 255, .82); box-shadow: 0 12px 28px rgba(24, 62, 99, .10); }
+.l23g5-page .word-list h2 { margin: 0 0 14px; color: var(--l23g5-teal-dark); font-size: clamp(1rem, 1.6vw, 1.2rem); letter-spacing: .07em; line-height: 1.2; }
+.l23g5-page .word-list ul { margin: 0; padding: 0; list-style: none; }
+.l23g5-page .word-list li { display: flex; align-items: center; gap: 10px; min-height: 45px; padding: 8px 10px; border-bottom: 2px solid #e4f0ef; color: var(--l23g5-ink); font-size: clamp(1.05rem, 1.8vw, 1.3rem); font-weight: 900; }
+.l23g5-page .word-list li:last-child { border-bottom: 0; }
+.l23g5-page .word-list li span:first-child { color: var(--l23g5-gold); font-size: 1.25em; }
+.l23g5-page .word-list li.found { color: #6f8589; text-decoration: line-through; }
+.l23g5-page .word-list li.found span:first-child { color: #348362; }
+.l23g5-page .feedback { min-height: 2.8em; margin: 18px 0 0; color: #26784e; font-size: clamp(1rem, 1.7vw, 1.2rem); font-weight: 900; line-height: 1.35; text-align: center; }
+.l23g5-page .complete { margin: 0; padding: clamp(28px, 5vh, 56px); border: 2px solid rgba(255, 255, 255, .78); border-radius: clamp(28px, 4vw, 42px); background: rgba(255, 255, 255, .75); box-shadow: 0 18px 45px rgba(24, 62, 99, .16); text-align: center; }
+.l23g5-page .complete h2 { margin: 0; color: #26784e; font-size: clamp(1.5rem, 3vw, 2.2rem); line-height: 1.15; }
+.l23g5-page .complete .progress { margin: 16px 0 0; }
+.l23g5-page .complete .button { display: inline-flex; align-items: center; justify-content: center; min-height: 58px; margin-top: 24px; padding: 12px 28px; border-radius: 999px; background: var(--l23g5-teal); box-shadow: 0 7px 0 var(--l23g5-teal-dark), 0 12px 22px rgba(24, 123, 122, .24); color: #fff; font-size: 1.1rem; font-weight: 900; text-decoration: none; }
+.l23g5-page .complete .button:hover { transform: translateY(-2px); }
+@media (max-height: 720px) and (min-width: 701px) {
+  .l23g5-page .shell { gap: 10px; padding-top: 10px; padding-bottom: 10px; }
+  .l23g5-page .header { padding-top: 16px; padding-bottom: 16px; }
+  .l23g5-page .instruction { margin-top: 7px; margin-bottom: 10px; }
+  .l23g5-page .activity-card { padding: 20px; }
+  .l23g5-page .cell { border-width: 2px; }
+}
+@media (max-width: 700px) {
+  .l23g5-page { background-attachment: scroll; }
+  .l23g5-page .shell { display: block; padding: 14px 12px 28px; }
+  .l23g5-page .header { padding: 20px 15px 18px; }
+  .l23g5-page .back { min-height: 46px; padding: 9px 16px; }
+  .l23g5-page .eyebrow { margin-top: 12px; }
+  .l23g5-page .activity-card { grid-template-columns: 1fr; gap: 20px; margin-top: 14px; padding: 16px 13px 20px; }
+  .l23g5-page .grid { gap: 3px; padding: 7px; border-radius: 18px; }
+  .l23g5-page .cell { border-width: 2px; border-radius: 7px; font-size: clamp(.9rem, 5.8vw, 1.4rem); }
+  .l23g5-page .word-list { padding: 18px 16px; }
+}
+@media (max-width: 380px) {
+  .l23g5-page .shell { padding-inline: 8px; }
+  .l23g5-page .activity-card { padding-inline: 9px; }
+  .l23g5-page .cell { font-size: 1rem; }
+}
