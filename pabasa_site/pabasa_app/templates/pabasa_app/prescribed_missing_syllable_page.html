@@ -44,6 +44,7 @@
     let requestVersion = 0, busy = false, startedAt = Date.now(), activeNarration = null, narratedKey = '', narrationQueue = Promise.resolve();
     const isLesson16Gawain = ['lesson-16-gawain-1', 'lesson-16-gawain-2'].includes(data.activity_key);
     const isLesson16Gawain1 = data.activity_key === 'lesson-16-gawain-1';
+    const isLesson16Gawain2 = data.activity_key === 'lesson-16-gawain-2';
     const lesson16Gawain1Audio = {
       readingSuccess: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/01_reading_success_choose_missing_syllable.mp3' %}",
       listenFirst: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/02_listen_first_prompt.mp3' %}",
@@ -66,6 +67,31 @@
       {word: 'gusaliWord', prompt: 'gusaliPrompt'}, {word: 'ngitiWord', prompt: 'ngitiPrompt'},
       {word: 'gataWord', prompt: 'gataPrompt'},
     ];
+    const lesson16Gawain2Audio = {
+      readingSuccess: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_2/01_reading_success_choose_missing_syllable.mp3' %}",
+      listenFirst: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_2/02_listen_first_prompt.mp3' %}",
+      gumamelaWord: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_2/03_item_01_gumamela_word.mp3' %}",
+      gumamelaPrompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_2/04_item_01_gumamela_missing_syllable_prompt.mp3' %}",
+      bangaWord: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_2/05_item_02_banga_word.mp3' %}",
+      bangaPrompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_2/06_item_02_banga_missing_syllable_prompt.mp3' %}",
+      gusaliWord: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_2/07_item_03_gusali_word.mp3' %}",
+      gusaliPrompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_2/08_item_03_gusali_missing_syllable_prompt.mp3' %}",
+      ngitiWord: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_2/09_item_04_ngiti_word.mp3' %}",
+      ngitiPrompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_2/10_item_04_ngiti_missing_syllable_prompt.mp3' %}",
+      gataWord: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_2/11_item_05_gata_word.mp3' %}",
+      gataPrompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_2/12_item_05_gata_missing_syllable_prompt.mp3' %}",
+      completion: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_2/13_feedback_final_correct.mp3' %}",
+      tryAgain: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_2/14_feedback_try_again.mp3' %}",
+      correct: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_2/15_feedback_item_correct.mp3' %}",
+    };
+    const lesson16Gawain2ItemAudio = [
+      {word: 'gumamelaWord', prompt: 'gumamelaPrompt'}, {word: 'bangaWord', prompt: 'bangaPrompt'},
+      {word: 'gusaliWord', prompt: 'gusaliPrompt'}, {word: 'ngitiWord', prompt: 'ngitiPrompt'},
+      {word: 'gataWord', prompt: 'gataPrompt'},
+    ];
+    const hasMappedLesson16Audio = isLesson16Gawain1 || isLesson16Gawain2;
+    const mappedLesson16Audio = isLesson16Gawain1 ? lesson16Gawain1Audio : isLesson16Gawain2 ? lesson16Gawain2Audio : {};
+    const mappedLesson16ItemAudio = isLesson16Gawain1 ? lesson16Gawain1ItemAudio : isLesson16Gawain2 ? lesson16Gawain2ItemAudio : [];
 
     const state = () => ({phase, oral_mode: oralMode, reading_attempts: readingAttempts, aloud_attempts: aloudAttempts, written_attempts: writtenAttempts, state_version: ++stateVersion});
     const heading = () => `<p class="eyebrow">Session 6 · Lesson ${data.lesson_number} · Gawain ${data.gawain_number}</p><h1>${escape(data.title)}</h1><p class="instruction">${escape(data.instruction)}</p><div class="count">${Math.min(index + 1, items.length)} / ${items.length}</div><div class="track" aria-hidden="true"><i style="width:${items.length ? index / items.length * 100 : 0}%"></i></div>`;
@@ -101,7 +127,7 @@
       await audio.play();
     }
     function playMappedAudio(audioKey) {
-      const source = lesson16Gawain1Audio[audioKey];
+      const source = mappedLesson16Audio[audioKey];
       if (!source) return Promise.resolve();
       narrationQueue = narrationQueue.then(() => new Promise((resolve, reject) => {
         if (activeNarration) { activeNarration.pause(); activeNarration = null; }
@@ -116,7 +142,7 @@
     function narrate(text, key, mappedAudioKey = '') {
       if (!isLesson16Gawain || narratedKey === key) return;
       narratedKey = key;
-      if (isLesson16Gawain1) { playMappedAudio(mappedAudioKey); return; }
+      if (hasMappedLesson16Audio) { playMappedAudio(mappedAudioKey); return; }
       playPrescribedReadAloud(text).catch(() => {});
     }
     function render() {
@@ -127,8 +153,8 @@
         const listen = oralMode === 'aloud';
         app.innerHTML = heading() + picture(item) + `<p class="oral">Basahin nang malakas: <strong>${escape(item.word)}</strong>.</p><p class="hint">${listen ? 'Pakinggan ang salita nang tatlong beses bago muling magbasa.' : 'May tatlong pagkakataon kang basahin ang salita.'}</p><button class="button ${listen ? 'gold' : ''}" id="oralAction" type="button">${listen ? '🔊 Pakinggan' : '🎙 Simulan ang Pagbasa'}</button><p class="hint" id="oralStatus"></p>`;
         document.getElementById('oralAction').onclick = listen ? () => readAloud(item) : () => readWord(item);
-        if (isLesson16Gawain1 && readingAttempts === 0 && aloudAttempts === 0) {
-          narrate('', `missing-syllable-prompt-${index}`, lesson16Gawain1ItemAudio[index]?.prompt);
+        if (hasMappedLesson16Audio && readingAttempts === 0 && aloudAttempts === 0) {
+          narrate('', `missing-syllable-prompt-${index}`, mappedLesson16ItemAudio[index]?.prompt);
         }
         if (!isLesson16Gawain1 && index === 0 && readingAttempts === 0 && aloudAttempts === 0) narrate(`${data.instruction} Basahin nang malakas ang ${item.word}.`, 'lesson-16-instruction');
         return;
@@ -168,7 +194,7 @@
       if (busy) return;
       busy = true; aloudAttempts++;
       if (aloudAttempts >= 3) { oralMode = 'read'; readingAttempts = 0; aloudAttempts = 0; }
-      try { if (isLesson16Gawain1) await playMappedAudio(lesson16Gawain1ItemAudio[index]?.word); else await playPrescribedReadAloud(item.word); await save(); render(); } catch (error) { const status = app.querySelector('#oralStatus'); if (status) status.textContent = error.message; } finally { busy = false; }
+      try { if (hasMappedLesson16Audio) await playMappedAudio(mappedLesson16ItemAudio[index]?.word); else await playPrescribedReadAloud(item.word); await save(); render(); } catch (error) { const status = app.querySelector('#oralStatus'); if (status) status.textContent = error.message; } finally { busy = false; }
     }
     async function submit(value) {
       if (busy) return;
