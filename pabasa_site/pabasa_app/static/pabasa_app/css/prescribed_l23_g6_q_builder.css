@@ -1,0 +1,130 @@
+/* Lesson 23 · Gawain 6 only. Presentation refinement for the existing Q Big Box. */
+.wb-l23-g6-page {
+  --g6-ink: #183e63;
+  --g6-teal: #299e9a;
+  --g6-teal-dark: #187b7a;
+  --g6-gold: #e7af45;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 8% 7%, rgba(255, 255, 255, .78) 0 10rem, transparent 28rem),
+    radial-gradient(circle at 94% 88%, rgba(254, 221, 145, .42) 0 11rem, transparent 27rem),
+    url("../prescribed/PRESCRIBED-BG.jpg") center / cover fixed,
+    linear-gradient(135deg, #d9f1ef, #eaf7fb);
+  color: var(--g6-ink);
+  font-family: "Nunito", system-ui, sans-serif;
+}
+.wb-l23-g6-page .wb-shell {
+  width: min(1180px, 100%);
+  min-height: 100dvh;
+  margin: auto;
+  padding: clamp(14px, 3vh, 30px) clamp(14px, 4vw, 46px) clamp(22px, 4vh, 42px);
+}
+.wb-l23-g6-page .wb-lesson-header {
+  display: flex;
+  align-items: center;
+  gap: clamp(18px, 4vw, 48px);
+  margin-bottom: 16px;
+  padding: clamp(20px, 3vh, 32px) clamp(22px, 4vw, 52px);
+  border: 2px solid rgba(255, 255, 255, .82);
+  border-radius: clamp(28px, 4vw, 42px);
+  background: rgba(255, 255, 255, .72);
+  box-shadow: 0 18px 45px rgba(30, 91, 122, .2);
+  backdrop-filter: blur(12px);
+}
+.wb-l23-g6-page .wb-lesson-copy { min-width: 0; flex: 1; }
+.wb-l23-g6-page #wb-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 10px 20px;
+  border: 2px solid rgba(255, 255, 255, .9);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 6px 15px rgba(24, 62, 99, .14);
+  color: var(--g6-ink);
+  font-size: 1.02rem;
+  font-weight: 900;
+  line-height: 1.1;
+  text-decoration: none;
+}
+.wb-l23-g6-page #wb-back::before { content: "←"; color: var(--g6-teal); font-size: 1.45em; }
+.wb-l23-g6-page #wb-back:hover { color: var(--g6-teal-dark); transform: translateY(-1px); }
+.wb-l23-g6-page .wb-lesson-label {
+  margin: 12px 0 4px !important;
+  color: var(--g6-teal-dark) !important;
+  font-size: .92rem !important;
+  font-weight: 900 !important;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.wb-l23-g6-page .wb-lesson-header h1 { margin: 0; font-size: clamp(2rem, 4.3vw, 3.65rem); line-height: 1.05; letter-spacing: -.035em; }
+.wb-l23-g6-page .wb-instruction { max-width: 820px; margin: 10px 0 0 !important; color: #365a72 !important; font-size: clamp(1rem, 1.7vw, 1.2rem); line-height: 1.4; }
+.wb-l23-g6-page .wb-lesson-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 clamp(150px, 18vw, 220px);
+  min-height: 132px;
+  margin: -32px -52px -32px 0;
+  border-radius: 50% 0 0 50%;
+  background: radial-gradient(circle, #fff4b0 0 48%, transparent 49%);
+}
+.wb-l23-g6-page .wb-lesson-letter { color: #087bd6; font-size: clamp(4rem, 8vw, 6.6rem); font-weight: 950; line-height: 1; }
+.wb-l23-g6-page .wb-cat-art { position: absolute; right: 17%; bottom: 15%; font-size: clamp(2.8rem, 5vw, 4.8rem); filter: drop-shadow(0 5px 1px rgba(74, 50, 34, .12)); }
+.wb-l23-g6-page #wb-status { min-height: 20px; margin: 0; }
+.wb-l23-g6-page #wb-progress { margin: 0 auto 5px; padding: 6px 20px; border: 0; background: rgba(255, 255, 255, .92); color: var(--g6-teal-dark); box-shadow: 0 6px 15px rgba(31, 86, 102, .1); }
+.wb-l23-g6-page #wb-progress-track { width: min(360px, 62%); height: 10px; margin: 0 auto 16px; border: 1px solid #cddfe7; border-radius: 999px; background: #e7f0f3; overflow: hidden; }
+.wb-l23-g6-page #wb-progress-fill { background: linear-gradient(90deg, #51bdf7, #1689e5); }
+.wb-l23-g6-page .wb-q-builder { display: grid; grid-template-columns: minmax(0, 1fr) minmax(270px, 330px); gap: clamp(14px, 2vw, 22px); align-items: stretch; }
+.wb-l23-g6-page .wb-l22-banner,
+.wb-l23-g6-page .wb-bigbox,
+.wb-l23-g6-page .wb-reading-panel,
+.wb-l23-g6-page .wb-word-panel {
+  border: 2px solid rgba(255, 255, 255, .84);
+  border-radius: 26px;
+  background: rgba(255, 255, 255, .86);
+  box-shadow: 0 12px 28px rgba(24, 62, 99, .12);
+}
+.wb-l23-g6-page .wb-l22-banner { grid-column: 1 / -1; width: min(760px, 100%); margin: 0 auto; padding: 14px 22px; color: var(--g6-ink); text-align: center; }
+.wb-l23-g6-page .wb-l22-banner strong { font-size: clamp(1rem, 1.7vw, 1.18rem); }
+.wb-l23-g6-page #wb-l22-instruction-replay { min-height: 42px; padding: 8px 16px; border: 3px solid #a7dcda; border-radius: 999px; background: #fff; color: var(--g6-teal-dark); font-weight: 900; box-shadow: 0 4px 0 #b7d6dc; }
+.wb-l23-g6-page .wb-bigbox, .wb-l23-g6-page .wb-reading-panel, .wb-l23-g6-page .wb-word-panel { padding: clamp(18px, 2.5vw, 28px); }
+.wb-l23-g6-page .wb-bigbox h2, .wb-l23-g6-page .wb-reading-panel h2, .wb-l23-g6-page .wb-word-panel h2 { color: var(--g6-teal-dark); font-size: clamp(1.15rem, 2vw, 1.45rem); letter-spacing: .06em; }
+.wb-l23-g6-page .wb-bigbox-grid { border: 3px solid #8cc4ce; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 22px rgba(24, 62, 99, .1); }
+.wb-l23-g6-page .wb-q-builder .wb-bigbox-tile { color: var(--g6-ink); background: #fff; font-size: clamp(1.35rem, 3vw, 2.1rem); transition: background .16s, box-shadow .16s, transform .16s; }
+.wb-l23-g6-page .wb-q-builder .wb-bigbox-tile:hover:not(:disabled) { background: #f6fdff; transform: translateY(-1px); }
+.wb-l23-g6-page .wb-q-builder .wb-bigbox-tile.is-active { background: #fff3bf; box-shadow: inset 0 0 0 4px var(--g6-gold); }
+.wb-l23-g6-page .wb-q-builder .wb-bigbox-tile.is-complete { background: #dff4ee; color: #276c50; }
+.wb-l23-g6-page .wb-start-cue { padding: 5px 13px; border-radius: 999px; background: #ffbd20; color: #714a00; font-size: .8rem; box-shadow: 0 3px 0 #e9a91b; }
+.wb-l23-g6-page .wb-reading-panel { display: flex; flex-direction: column; }
+.wb-l23-g6-page .wb-phase-status { color: var(--g6-ink) !important; }
+.wb-l23-g6-page #wb-l22-reading-action button { border-radius: 999px; background: var(--g6-teal); box-shadow: 0 6px 0 var(--g6-teal-dark), 0 10px 18px rgba(24, 123, 122, .2); }
+.wb-l23-g6-page #wb-l22-reading-action button.wb-secondary { border: 3px solid #a7dcda; background: #fff; color: var(--g6-teal-dark); box-shadow: 0 4px 0 #b7d6dc; }
+.wb-l23-g6-page .wb-word-panel { grid-column: 1 / -1; }
+.wb-l23-g6-page .wb-word-panel.is-locked { background: rgba(244, 248, 248, .92); }
+.wb-l23-g6-page .wb-builder-feedback { min-height: 26px; font-size: 1.05rem; }
+@media (max-height: 760px) and (min-width: 701px) {
+  .wb-l23-g6-page .wb-shell { padding-top: 10px; padding-bottom: 16px; }
+  .wb-l23-g6-page .wb-lesson-header { padding-top: 17px; padding-bottom: 17px; }
+  .wb-l23-g6-page .wb-lesson-art { min-height: 105px; }
+  .wb-l23-g6-page .wb-bigbox, .wb-l23-g6-page .wb-reading-panel, .wb-l23-g6-page .wb-word-panel { padding: 18px; }
+}
+@media (max-width: 760px) {
+  .wb-l23-g6-page { background-attachment: scroll; }
+  .wb-l23-g6-page .wb-lesson-header { display: block; padding: 20px 18px 14px; }
+  .wb-l23-g6-page .wb-lesson-art { min-height: 82px; margin: 8px -18px -14px; border-radius: 0; }
+  .wb-l23-g6-page .wb-cat-art { right: 30%; bottom: 8%; }
+  .wb-l23-g6-page .wb-q-builder { grid-template-columns: 1fr; }
+  .wb-l23-g6-page .wb-word-panel { grid-column: auto; }
+  .wb-l23-g6-page .wb-reading-panel { order: 3; }
+  .wb-l23-g6-page .wb-bigbox { order: 2; }
+  .wb-l23-g6-page .wb-l22-banner { order: 1; }
+  .wb-l23-g6-page .wb-word-panel { order: 4; }
+}
+@media (max-width: 420px) {
+  .wb-l23-g6-page .wb-shell { padding-inline: 10px; }
+  .wb-l23-g6-page .wb-l22-banner { padding-inline: 12px; }
+  .wb-l23-g6-page .wb-bigbox, .wb-l23-g6-page .wb-reading-panel, .wb-l23-g6-page .wb-word-panel { padding: 16px 13px; }
+}
