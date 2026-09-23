@@ -35,11 +35,27 @@
     const restored = data.progress?.state && typeof data.progress.state === 'object' ? data.progress.state : {};
     let matches = data.progress?.matches && typeof data.progress.matches === 'object' ? {...data.progress.matches} : {};
     let selectedWord = null, matchAttempts = Math.max(0, Number(restored.match_attempts) || 0);
-    let stateVersion = Math.max(0, Number(restored.state_version) || 0), requestVersion = 0, busy = false, startedAt = Date.now(), phase = restored.phase === 'matching' ? 'matching' : 'oral_reading', oralIndex = Math.max(0, Math.min(items.length, Number(restored.oral_index) || 0)), readingAttempts = 0, aloudAttempts = 0, oralMode = 'read', oralStatus = '', stream = null, oralAudio = null, announcedOralIndex = -1, announcedMatching = false;
+    let stateVersion = Math.max(0, Number(restored.state_version) || 0), requestVersion = 0, busy = false, startedAt = Date.now(), phase = restored.phase === 'matching' ? 'matching' : 'oral_reading', oralIndex = Math.max(0, Math.min(items.length, Number(restored.oral_index) || 0)), readingAttempts = 0, aloudAttempts = 0, oralMode = 'read', oralStatus = '', stream = null, oralAudio = null, announcedOralIndex = -1, announcedMatching = false, mappedAudioQueue = Promise.resolve();
     let sttAttempts = restored.stt_attempts && typeof restored.stt_attempts === 'object' ? {...restored.stt_attempts} : {};
     let ttsPlays = restored.tts_plays && typeof restored.tts_plays === 'object' ? {...restored.tts_plays} : {};
     const restoreOralAttempts = () => { readingAttempts = Math.max(0, Number(sttAttempts[String(oralIndex)]) || 0); aloudAttempts = Math.max(0, Number(ttsPlays[String(oralIndex)]) || 0); oralMode = readingAttempts >= 3 ? 'aloud' : 'read'; };
     restoreOralAttempts();
+    const isLesson16Gawain3 = data.activity_key === 'lesson-16-gawain-3';
+    const lesson16Gawain3Audio = {
+      readingCorrect: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/11_feedback_reading_correct.mp3' %}",
+      readingRetry: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/12_feedback_reading_retry.mp3' %}",
+      matchingStart: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/13_matching_start_prompt.mp3' %}",
+      matchingCorrect: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/14_feedback_matching_correct.mp3' %}",
+      matchingRetry: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/15_feedback_matching_retry.mp3' %}",
+      completion: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/16_feedback_completion.mp3' %}",
+    };
+    const lesson16Gawain3Items = [
+      {prompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/01_item_01_sanga_match_prompt.mp3' %}", word: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/02_item_01_sanga_word.mp3' %}"},
+      {prompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/03_item_02_goma_match_prompt.mp3' %}", word: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/04_item_02_goma_word.mp3' %}"},
+      {prompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/05_item_03_bunga_match_prompt.mp3' %}", word: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/06_item_03_bunga_word.mp3' %}"},
+      {prompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/07_item_04_panga_match_prompt.mp3' %}", word: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/08_item_04_panga_word.mp3' %}"},
+      {prompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/09_item_05_gamot_match_prompt.mp3' %}", word: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/10_item_05_gamot_word.mp3' %}"},
+    ];
 
     const state = () => ({match_attempts: matchAttempts, phase, oral_index: oralIndex, stt_attempts: sttAttempts, tts_plays: ttsPlays, state_version: ++stateVersion});
     const completed = () => Object.keys(matches).length;
@@ -72,9 +88,23 @@
       if (!response.ok || !result.success || !result.audio_content || result.tts_language !== 'fil-PH' || result.voice_name !== 'fil-PH-Wavenet-A') throw Error(result.error || 'Hindi available ang Filipino audio.');
       if (oralAudio) oralAudio.pause(); oralAudio = new Audio(URL.createObjectURL(new Blob([Uint8Array.from(atob(result.audio_content), char => char.charCodeAt(0))], {type:result.mime_type || 'audio/mpeg'}))); await oralAudio.play(); await new Promise((resolve, reject) => { oralAudio.onended = resolve; oralAudio.onerror = () => reject(Error('Hindi ma-play ang audio.')); });
     }
-    const narrateFeedback = async message => { try { await playPrescribedReadAloud(message); } catch (error) { const status = app.querySelector('.oral-status, .hint'); if (status) status.textContent = error.message || 'Hindi available ang Filipino audio.'; } };
-    const announceOralItem = () => { const item = items[oralIndex]; if (!item || announcedOralIndex === oralIndex) return; announcedOralIndex = oralIndex; void playPrescribedReadAloud(`${data.instruction} Basahin ang salita: ${item.read_word}.`).catch(error => { const status = app.querySelector('.oral-status'); if (status) status.textContent = error.message || 'Hindi available ang Filipino audio.'; }); };
-    const announceMatching = () => { if (announcedMatching) return; announcedMatching = true; void playPrescribedReadAloud(data.instruction).catch(error => { const status = app.querySelector('.hint'); if (status) status.textContent = error.message || 'Hindi available ang Filipino audio.'; }); };
+    function playMappedAudio(source) {
+      if (!source) return Promise.resolve();
+      mappedAudioQueue = mappedAudioQueue.then(() => new Promise((resolve, reject) => {
+        if (oralAudio) { oralAudio.pause(); oralAudio = null; }
+        const audio = new Audio(source); oralAudio = audio;
+        const clear = () => { if (oralAudio === audio) oralAudio = null; };
+        audio.onended = () => { clear(); resolve(); };
+        audio.onerror = () => { clear(); reject(Error('Hindi ma-play ang nakatalagang audio.')); };
+        audio.play().catch(error => { clear(); reject(error); });
+      })).catch(() => {});
+      return mappedAudioQueue;
+    }
+    const narrateFeedback = async (message, mappedAudio = '') => { try { if (isLesson16Gawain3) await playMappedAudio(lesson16Gawain3Audio[mappedAudio]); else await playPrescribedReadAloud(message); } catch (error) { const status = app.querySelector('.oral-status, .hint'); if (status) status.textContent = error.message || 'Hindi available ang Filipino audio.'; } };
+    // The match prompt introduces each item. Its word recording is reserved for
+    // the learner's Pakinggan action after three unsuccessful reading attempts.
+    const announceOralItem = () => { const item = items[oralIndex]; if (!item || announcedOralIndex === oralIndex) return; announcedOralIndex = oralIndex; if (isLesson16Gawain3) { void playMappedAudio(lesson16Gawain3Items[oralIndex]?.prompt); return; } void playPrescribedReadAloud(`${data.instruction} Basahin ang salita: ${item.read_word}.`).catch(error => { const status = app.querySelector('.oral-status'); if (status) status.textContent = error.message || 'Hindi available ang Filipino audio.'; }); };
+    const announceMatching = () => { if (announcedMatching) return; announcedMatching = true; if (isLesson16Gawain3) { void playMappedAudio(lesson16Gawain3Audio.matchingStart); return; } void playPrescribedReadAloud(data.instruction).catch(error => { const status = app.querySelector('.hint'); if (status) status.textContent = error.message || 'Hindi available ang Filipino audio.'; }); };
     function renderOral(message = '', kind = '') {
       const item = items[oralIndex];
       const actionLabel = oralMode === 'aloud' ? '🔊 Pakinggan muna' : oralStatus || '🎙 Basahin ngayon';
@@ -85,7 +115,7 @@
     async function readCurrentWord() {
       if (busy) return;
       const item = items[oralIndex], button = app.querySelector('#oral-action');
-      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { readingAttempts = Math.min(3, readingAttempts + 1); oralMode = readingAttempts >= 3 ? 'aloud' : 'read'; const feedback = oralMode === 'aloud' ? 'Pakinggan muna ang salita.' : `Hindi available ang mikropono. May ${3 - readingAttempts} pagkakataon pa.`; renderOral(feedback, 'error'); await narrateFeedback(feedback); return; }
+      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { readingAttempts = Math.min(3, readingAttempts + 1); oralMode = readingAttempts >= 3 ? 'aloud' : 'read'; const feedback = oralMode === 'aloud' ? 'Pakinggan muna ang salita.' : `Hindi available ang mikropono. May ${3 - readingAttempts} pagkakataon pa.`; renderOral(feedback, 'error'); await narrateFeedback(feedback, 'readingRetry'); return; }
       busy = true; oralStatus = '🎙 Nakikinig…'; renderOral('Nakikinig sa iyong pagbasa…', 'good');
       try {
         button.disabled = true; button.textContent = 'Nagbabasa...';
@@ -99,20 +129,35 @@
         if (!response.ok || !result.success || !String(result.transcript || '').toLowerCase().includes(item.read_word.toLowerCase())) throw Error('Hindi pa. Subukan muli.');
         sttAttempts[String(oralIndex)] = 0; ttsPlays[String(oralIndex)] = 0;
         oralIndex += 1; phase = oralIndex >= items.length ? 'matching' : 'oral_reading'; restoreOralAttempts();
-        await save(); oralStatus = ''; await narrateFeedback('Tama ang pagbasa!');
+        await save(); oralStatus = ''; await narrateFeedback('Tama ang pagbasa!', 'readingCorrect');
         if (phase === 'matching') render(); else renderOral('Tama ang pagbasa!', 'good');
       } catch (error) {
         oralStatus = ''; readingAttempts = Math.min(3, readingAttempts + 1); sttAttempts[String(oralIndex)] = readingAttempts; if (readingAttempts >= 3) oralMode = 'aloud'; await save().catch(() => {});
-        const feedback = oralMode === 'aloud' ? 'Pakinggan muna ang salita.' : error.message || 'Hindi nakuha ang boses. Subukan muli.'; renderOral(feedback, 'error'); await narrateFeedback(feedback);
-      } finally { stopOral(); busy = false; }
+        const feedback = oralMode === 'aloud' ? 'Pakinggan muna ang salita.' : error.message || 'Hindi nakuha ang boses. Subukan muli.'; renderOral(feedback, 'error'); await narrateFeedback(feedback, 'readingRetry');
+      } finally {
+        stopOral();
+        busy = false;
+        // renderOral can run while the recording request is still marked busy.
+        // Restore the newly-rendered control once that request has finished so
+        // the learner can continue to the next word.
+        const action = app.querySelector('#oral-action');
+        if (action) action.disabled = false;
+      }
     }
     async function listenCurrentWord() {
       if (busy) return;
       const item = items[oralIndex], button = app.querySelector('#oral-action'); busy = true;
       try {
-        button.disabled = true; button.textContent = 'Nilo-load...'; await playPrescribedReadAloud(item.read_word);
+        button.disabled = true; button.textContent = 'Nilo-load...'; if (isLesson16Gawain3) await playMappedAudio(lesson16Gawain3Items[oralIndex]?.word); else await playPrescribedReadAloud(item.read_word);
         aloudAttempts = Math.min(3, aloudAttempts + 1); ttsPlays[String(oralIndex)] = aloudAttempts; if (aloudAttempts >= 3) { readingAttempts = 0; aloudAttempts = 0; sttAttempts[String(oralIndex)] = 0; ttsPlays[String(oralIndex)] = 0; oralMode = 'read'; } await save(); renderOral('Subukan mong basahin ang salita.');
-      } catch (error) { renderOral(error.message || 'Hindi available ang Read Aloud.', 'error'); } finally { stopOral(); busy = false; }
+      } catch (error) { renderOral(error.message || 'Hindi available ang Read Aloud.', 'error'); }
+      finally {
+        stopOral();
+        busy = false;
+        // See readCurrentWord: the render happens before `busy` is cleared.
+        const action = app.querySelector('#oral-action');
+        if (action) action.disabled = false;
+      }
     }
     function render() {
       if (!items.length || !words.length) { app.innerHTML = '<p class="hint error">Walang laman ang gawaing ito.</p>'; return; }
@@ -133,8 +178,8 @@
       busy = true; matchAttempts++; hint.textContent = 'Sinusuri ang pagkakabit…'; hint.className = 'hint';
       try {
         const result = await save({target_id:targetId, word});
-        if (result.accepted) { selectedWord = null; const feedback = 'Tama! Magaling!'; await narrateFeedback(feedback); if (completed() >= items.length) { busy = false; await complete(); return; } render(); return; }
-        const feedback = 'Hindi magkatugma. Subukan muli.'; hint.textContent = feedback; hint.className = 'hint error'; await narrateFeedback(feedback);
+        if (result.accepted) { selectedWord = null; const finalMatch = completed() >= items.length; const feedback = 'Tama! Magaling!'; await narrateFeedback(feedback, finalMatch ? 'completion' : 'matchingCorrect'); if (finalMatch) { busy = false; await complete(); return; } render(); return; }
+        const feedback = 'Hindi magkatugma. Subukan muli.'; hint.textContent = feedback; hint.className = 'hint error'; await narrateFeedback(feedback, 'matchingRetry');
       } catch (error) { hint.textContent = error.message; hint.className = 'hint error'; }
       finally { busy = false; }
     }
