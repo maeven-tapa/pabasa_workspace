@@ -1,0 +1,6 @@
+.wb-l24-g3-repeat-page{background:radial-gradient(circle at 88% 10%,#ffe9a9 0 8rem,transparent 19rem),linear-gradient(150deg,#e9f8fb,#fbfcff 60%,#fff2df)}
+.wb-l24-g3-repeat-page .wb-shell{width:min(980px,100%)}
+.wb-l24-g3-repeat-page .wb-shell header,.wb-l24-g3-repeat-page .wb-focus{background:#ffffffdc;border-color:#c7e3e8;border-radius:28px}
+.wb-l24-g3-repeat-page #wb-back{display:inline-flex;padding:9px 17px;border-radius:999px;background:#fff;box-shadow:0 5px 14px #1f56661a}
+.wb-l24-g3-repeat-page .wb-reading-focus strong{font-size:clamp(44px,8vw,82px);text-align:center;letter-spacing:.02em}
+.wb-l24-g3-repeat-page #wb-action button{min-width:190px;border-radius:999px}

@@ -1,7 +1,8 @@
-@import url('./prescribed_l22_g2_reading.css');
-.l24g2-page{background:url('../prescribed/PRESCRIBED-BG.jpg') center/cover fixed no-repeat;color:#173f53}
-.l24g2-page .shell{width:min(1160px,calc(100% - 32px));padding-top:clamp(22px,4vh,42px)}
-.l24g2-page .header,.l24g2-page .panel,.l24g2-page .group{background:#ffffffd9;border-color:#c8e0e5}
-.l24g2-page .groups{grid-template-columns:1fr 1fr}
-.l24g2-page .word.current{outline:3px solid #f4b942;outline-offset:2px}
-@media(max-width:760px){.l24g2-page .groups{grid-template-columns:1fr}.l24g2-page .group:first-child,.l24g2-page .group:last-child{border-radius:18px;margin-bottom:10px}}
+.wb-l24-g2-page{background:radial-gradient(circle at 90% 8%,#fff1bd 0 10rem,transparent 20rem),linear-gradient(145deg,#e8f8f7,#f8fbff 55%,#fff4df)}
+.wb-l24-g2-page .wb-shell{width:min(1120px,100%);padding-top:clamp(18px,4vh,42px)}
+.wb-l24-g2-page .wb-shell header,.wb-l24-g2-page .wb-focus{background:#ffffffd9;border-color:#c8e0e5;backdrop-filter:blur(8px)}
+.wb-l24-g2-page #wb-back,.wb-l24-g2-page .wb-tools button{border-radius:999px}
+.wb-l24-g2-page .wb-table{font-size:clamp(20px,2.4vw,30px)}
+.wb-l24-g2-page .wb-table td{min-height:64px;padding:17px 14px;font-weight:900}
+.wb-l24-g2-page .wb-table td.wb-current{outline:3px solid #f4b942;outline-offset:-3px}
+@media(max-width:600px){.wb-l24-g2-page .wb-table{font-size:18px}.wb-l24-g2-page .wb-table td{padding:12px 7px}}

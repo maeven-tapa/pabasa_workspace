@@ -1,0 +1,5 @@
+.wb-l24-g3-word-page{background:radial-gradient(circle at 10% 8%,#fff0b8 0 8rem,transparent 20rem),linear-gradient(145deg,#e7f8f7,#f8fbff 58%,#fff4df)}
+.wb-l24-g3-word-page .wb-shell{width:min(1120px,100%)}
+.wb-l24-g3-word-page .wb-shell header,.wb-l24-g3-word-page .wb-focus{background:#ffffffd9;border-color:#c8e0e5;border-radius:28px}
+.wb-l24-g3-word-page #wb-back{display:inline-flex;padding:9px 17px;border-radius:999px;background:#fff;box-shadow:0 5px 14px #1f56661a}
+.wb-l24-g3-word-page .wb-table{font-size:clamp(21px,3vw,34px)}.wb-l24-g3-word-page .wb-table td{padding:18px 12px;font-weight:900}

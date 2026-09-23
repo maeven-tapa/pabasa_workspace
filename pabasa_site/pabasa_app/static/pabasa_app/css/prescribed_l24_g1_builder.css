@@ -1,0 +1,6 @@
+.wb-l24-g1-page{background:radial-gradient(circle at 12% 8%,#fff0b8 0 9rem,transparent 20rem),linear-gradient(145deg,#e6f8f4,#f8fbff 55%,#fff4dd)}
+.wb-l24-g1-page .wb-shell{width:min(1120px,100%);padding-top:clamp(16px,3vh,34px)}
+.wb-l24-g1-page .wb-lesson-header,.wb-l24-g1-page .wb-bigbox,.wb-l24-g1-page .wb-reading-panel,.wb-l24-g1-page .wb-word-panel{border-radius:28px}
+.wb-l24-g1-page #wb-back{display:inline-flex;padding:9px 17px;border-radius:999px;background:#fff;box-shadow:0 5px 14px #1f56661a}
+.wb-l24-g1-page .wb-lesson-header{margin-bottom:18px}.wb-l24-g1-page #wb-progress{font-size:16px}
+@media(max-width:600px){.wb-l24-g1-page .wb-shell{padding-inline:14px}.wb-l24-g1-page .wb-lesson-header{padding:19px}}
