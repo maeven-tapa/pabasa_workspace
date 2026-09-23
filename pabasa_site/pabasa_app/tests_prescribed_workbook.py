@@ -145,22 +145,22 @@ class WorkbookStateTests(SimpleTestCase):
         self.assertFalse(l22_g2_pronunciation_match('Cita', 'camera'))
         self.assertFalse(l22_g2_pronunciation_match('Celso', 'sita'))
 
-    def test_lesson22_gawain2_instruction_tts_is_exact_and_single_path(self):
+    def test_lesson22_gawain2_local_audio_precedence_and_scoped_fallback(self):
         activity = get_activity('aral-l22-g2-c-word-reading')
         instruction = 'Basahin ang mga salitang nagtataglay ng hiram na letrang C na may tunog na /k/ at /s/.'
         self.assertEqual(activity['instruction'], instruction)
         source = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_l22_g2_reading.js').read_text(encoding='utf-8')
         self.assertEqual(source.count("const INSTRUCTION_TEXT='" + instruction + "';"), 1)
-        self.assertEqual(source.count('instructionText=INSTRUCTION_TEXT'), 1)
-        self.assertEqual(source.count('async function playInstruction(){return speak(INSTRUCTION_TEXT)}'), 1)
-        self.assertNotIn('playInstruction(){return speak(instructionText)}', source)
-        self.assertNotIn('function instructionPayload()', source)
-        self.assertNotIn('innerText', source)
+        self.assertIn("isL22G2=a.activity_key==='aral-l22-g2-c-word-reading'", source)
+        self.assertIn('localAudio=isL22G2?(data.local_audio||{}):{}', source)
+        self.assertIn('if(url)return playAudioUrl(url,true,text)', source)
+        self.assertIn('async function playFeedback(text){if(!isL22G2)return false;', source)
+        self.assertIn('async function playCompletion(){if(!isL22G2)return;', source)
+        self.assertIn("for(const text of ['Magaling!','Natapos mo ang Gawain 2.'])", source)
         self.assertEqual(source.count('function playInstruction()'), 1)
         self.assertEqual(source.count('function playSpeech(text)'), 1)
         self.assertNotIn('speechSynthesis', source)
-        instruction_flow = source.split('async function playInstruction()', 1)[1].split('async function playSpeech', 1)[0]
-        self.assertNotIn('playSpeech(', instruction_flow)
+        self.assertNotIn('speakWithGoogle(text)', source.split('async function playFeedback', 1)[1].split('async function playCompletion', 1)[0])
     def test_lesson22_c_pronunciation_accepts_scoped_hard_and_soft_c_spellings(self):
         self.assertTrue(l22_c_pronunciation_match('cac', 'cactus', 'kak', 'hard'))
         self.assertTrue(l22_c_pronunciation_match('com', 'computer', 'kom', 'hard'))

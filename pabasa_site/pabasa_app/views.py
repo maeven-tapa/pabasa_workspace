@@ -13338,6 +13338,33 @@ def prescribed_activity_page(request, activity_key):
          }.get(activity_key, '')
         next_url = reverse('prescribed_activity_page', kwargs={'activity_key': next_key}) if next_key in PRESCRIBED_ACTIVITIES else ''
         if activity_key == 'aral-l22-g2-c-word-reading':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_22/GAWAIN_2/'
+            audio_files = {
+                'instruction': 'Basahin ang mga salitang nagtataglay ng hiram na letrang C na may tunog na k at s_TTS.mp3',
+                'words': {
+                    'computer': 'computer_TTS.mp3', 'Cebu': 'Cebu_TTS.mp3', 'cactus': 'cactus_TTS.mp3',
+                    'Cita': 'Cita_TTS.mp3', 'camera': 'camera_TTS.mp3', 'Celso': 'Celso_TTS.mp3',
+                    'cabinet': 'cabinet_TTS.mp3', 'Vicente': 'Vicente_TTS.mp3', 'Caloocan': 'Caloocan_TTS.mp3',
+                    'Celeste': 'Celeste,_TTS.mp3', 'Coron': 'Coron_TTS.mp3', 'Celsa': 'Celsa_TTS.mp3',
+                    'Vic': 'Vic_TTS.mp3', 'Carlos': 'Carlos._TTS.mp3',
+                },
+                'feedback': {
+                    'Tama!': 'Tama!_TTS.mp3',
+                    'Subukan muli.': 'Subukan muli._TTS.mp3',
+                    'Hindi ko malinaw na narinig. Subukan muli.': 'Hindi ko malinaw na narinig. Subukan muli_TTS.mp3',
+                    'Handa ka na?': 'Handa ka na_TTS.mp3',
+                },
+                'completion': {
+                    'Magaling!': 'Magaling!_TTS.mp3',
+                    'Natapos mo ang Gawain 2.': 'Natapos mo ang Gawain 2_TTS.mp3',
+                },
+            }
+            local_audio = {
+                'instruction': static(audio_root + audio_files['instruction']),
+                'words': {text: static(audio_root + filename) for text, filename in audio_files['words'].items()},
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+                'completion': {text: static(audio_root + filename) for text, filename in audio_files['completion'].items()},
+            }
             return render(request, 'pabasa_app/prescribed_l22_g2_reading_page.html', {
                 'workbook_payload': {
                     'activity': get_activity(activity_key), 'state': state, 'preview': preview,
@@ -13345,6 +13372,7 @@ def prescribed_activity_page(request, activity_key):
                     'read_aloud_url': reverse('reading_read_aloud_api'),
                     'back_url': reverse('assessment'),
                     'next_url': next_url,
+                    'local_audio': local_audio,
                 },
             })
         if activity_key == 'aral-l22-g6-f-word-reading':
