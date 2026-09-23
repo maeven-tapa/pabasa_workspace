@@ -11220,7 +11220,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const body = document.getElementById('lesson1RecordingsBody'); body.innerHTML = '<div class="text-muted">Loading recordings...</div>'; bootstrap.Modal.getOrCreateInstance(modal).show();
         const response = await fetch('{% url "teacher_lesson_1_gawain_1_recordings" %}', {credentials:'same-origin'}); const data = await response.json();
         if (!response.ok || !data.success) { body.innerHTML = `<div class="text-danger">${escapeHtml(data.error || 'Unable to load recordings.')}</div>`; return; }
-        body.innerHTML = (data.submissions || []).map(row => `<div class="story-response-review-row"><div class="story-response-review-header"><strong class="story-response-student-name">${escapeHtml(row.student_name)}</strong><span class="story-response-status-badge">${escapeHtml(row.status)}</span></div><p class="small text-muted">${new Date(row.submitted_at).toLocaleString()}</p><audio class="w-100" controls preload="none" src="${escapeHtml(row.recording_url)}"></audio><div class="d-flex gap-2 mt-2"><button type="button" class="btn btn-outline-secondary lesson1-review-action" data-id="${row.id}" data-action="retry" ${row.can_retry ? '' : 'disabled'}>Retry</button><button type="button" class="btn btn-primary lesson1-review-action" data-id="${row.id}" data-action="checked" ${row.can_check ? '' : 'disabled'}>Mark as Checked</button></div></div>`).join('') || '<div class="text-muted">No recordings yet.</div>';
+        body.innerHTML = (data.submissions || []).map(row => `<div class="story-response-review-row"><div class="story-response-review-header"><strong class="story-response-student-name">${escapeHtml(row.student_name)}</strong><span class="story-response-status-badge">${escapeHtml(row.status)}</span></div><p class="small text-muted">${new Date(row.submitted_at).toLocaleString()}</p><audio class="w-100" controls preload="none" src="${escapeHtml(row.recording_url)}"></audio>${row.can_retry || row.can_check ? `<div class="d-flex gap-2 mt-2 lesson1-review-actions">${row.can_retry ? `<button type="button" class="btn btn-outline-secondary lesson1-review-action" data-id="${row.id}" data-action="retry">Retry</button>` : ''}${row.can_check ? `<button type="button" class="btn btn-primary lesson1-review-action" data-id="${row.id}" data-action="checked">Mark as Checked</button>` : ''}</div>` : ''}</div>`).join('') || '<div class="text-muted">No recordings yet.</div>';
     }
 
     async function openStoryResponseReview(materialId) {
@@ -11318,7 +11318,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const result = await response.json().catch(() => ({}));
             if (!response.ok || !result.success) { lesson1Action.disabled = false; showToast(result.error || 'Review action failed', 'error'); return; }
             const row = lesson1Action.closest('.story-response-review-row'); row?.querySelector('.story-response-status-badge')?.replaceChildren(document.createTextNode(result.status));
-            row?.querySelectorAll('.lesson1-review-action').forEach(button => { button.disabled = true; });
+            if (result.status === 'checked') {
+                row?.querySelector('.lesson1-review-actions')?.remove();
+            } else {
+                row?.querySelectorAll('.lesson1-review-action').forEach(button => { button.disabled = true; });
+            }
             showToast('Recording review updated', 'success');
             return;
         }

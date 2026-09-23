@@ -70,6 +70,7 @@
     welcomeModal: null, welcomeAudio: null, welcomeAudioUrl: null,
     songPanelNarration: null, songPanelNarrationFinished: false,
     youtubeOpened: false, youtubePageHidden: false, youtubeReturned: false, statusPollTimer: null,
+    awaitingTeacherCheck: false, retryTransitionConsumed: false,
   };
 
   const data = () => JSON.parse(document.getElementById('lesson-one-data')?.textContent || '{}');
@@ -206,9 +207,9 @@
       .lesson-one-page .song-panel h2 { font-size: clamp(1.35rem, 2.5vw, 2.1rem); }
       .lesson-one-page .song-panel p { font-size: clamp(.9rem, 1.5vw, 1.05rem); }
       .lesson-one-page .review-audio { display: block; margin: 18px auto 0; }
-      .lesson-one-page .review-actions { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; margin-top: 18px; }
+      .lesson-one-page .review-actions { display: flex; flex-direction: row; flex-wrap: nowrap; justify-content: center; align-items: center; gap: 14px; width: 100%; margin-top: 18px; }
       .lesson-one-page .review-actions .sing-again,
-      .lesson-one-page .review-actions .sing-done { margin: 0; }
+      .lesson-one-page .review-actions .sing-done { flex: 0 1 190px; width: min(190px, calc(50% - 7px)); max-width: 190px; min-width: 0; min-height: 64px; margin: 0; font-size: clamp(1rem, 1.8vw, 1.35rem); }
       .lesson-one-page .youtube-link,
       .lesson-one-page .sing-done,
       .lesson-one-page .sing-stop,
@@ -920,14 +921,19 @@
   function showPersistedActivityState(panel, payload = data()) {
     const progress = payload.progress || {};
     if (progress.activity_completed) {
+      state.awaitingTeacherCheck = false;
+      state.retryTransitionConsumed = true;
       panel.innerHTML = '<p class="song-kicker">Tapos na</p><h2>Naipasa na ang iyong pag-awit.</h2><p class="song-note">Nasuri na ito ng iyong guro.</p>';
       document.getElementById('completion')?.classList.add('show');
       return true;
     }
     if (payload.submitted) {
+      state.awaitingTeacherCheck = true;
+      state.retryTransitionConsumed = false;
       panel.innerHTML = '<p class="song-kicker">Naghihintay ng pagsusuri</p><h2>Naipasa na ang iyong pag-awit.</h2><p class="song-note">Hihintayin ang pagsusuri ng iyong guro.</p>';
       return true;
     }
+    state.awaitingTeacherCheck = false;
     return false;
   }
 
@@ -939,12 +945,56 @@
       const html = await response.text();
       const documentCopy = new DOMParser().parseFromString(html, 'text/html');
       const payload = JSON.parse(documentCopy.getElementById('lesson-one-data')?.textContent || '{}');
+      const retryRequested = payload.progress?.state?.retry_requested === true;
+      console.debug('[Lesson1 Retry] poll response', {
+        activity_completed: payload.progress?.activity_completed,
+        submitted: payload.submitted,
+        retry_requested: retryRequested,
+        awaitingTeacherCheck: state.awaitingTeacherCheck,
+        retryTransitionConsumed: state.retryTransitionConsumed,
+      });
+      console.debug('[Lesson1 Retry] before condition', {
+        activity_completed: payload.progress?.activity_completed,
+        retry_requested: retryRequested,
+        awaitingTeacherCheck: state.awaitingTeacherCheck,
+        retryTransitionConsumed: state.retryTransitionConsumed,
+      });
       if (payload.progress?.activity_completed) {
         clearInterval(state.statusPollTimer);
         state.statusPollTimer = null;
         clearWelcomeAudio();
         cleanup();
         showPersistedActivityState(state.panel, payload);
+      } else if (state.awaitingTeacherCheck && retryRequested && !state.retryTransitionConsumed &&
+                 state.recorder?.state !== 'recording' && !state.finalizing) {
+        console.debug('[Lesson1 Retry] branch fired');
+        state.awaitingTeacherCheck = false;
+        state.retryTransitionConsumed = true;
+        console.debug('[Lesson1 Retry] before cleanup');
+        try {
+          cleanup();
+        } catch (error) {
+          console.error('[Lesson1 Retry] cleanup failed', error);
+          throw error;
+        }
+        console.debug('[Lesson1 Retry] after cleanup');
+        state.recordingBlob = null;
+        if (state.recordingUrl) URL.revokeObjectURL(state.recordingUrl);
+        state.recordingUrl = '';
+        console.debug('[Lesson1 Retry] before reference');
+        try {
+          reference(state.panel);
+        } catch (error) {
+          console.error('[Lesson1 Retry] reference failed', error);
+          throw error;
+        }
+        console.debug('[Lesson1 Retry] after reference', {
+          hasReadyText: state.panel?.innerText?.includes('Handa na akong umawit'),
+          hasStartButton: Boolean(state.panel?.querySelector('#startSing')),
+          startButtonDisabled: state.panel?.querySelector('#startSing')?.disabled ?? null,
+          startButtonHidden: state.panel?.querySelector('#startSing')?.hidden ?? null,
+          panelText: state.panel?.innerText,
+        });
       }
     } catch (_) {
       // A temporary status-request failure is non-disruptive; the next poll retries.
