@@ -41,8 +41,31 @@
     let aloudAttempts = Math.min(3, Math.max(0, Number(restored.aloud_attempts) || 0));
     let writtenAttempts = Math.min(3, Math.max(0, Number(restored.written_attempts) || 0));
     let stateVersion = Math.max(0, Number(restored.state_version) || 0);
-    let requestVersion = 0, busy = false, startedAt = Date.now(), activeNarration = null, narratedKey = '';
+    let requestVersion = 0, busy = false, startedAt = Date.now(), activeNarration = null, narratedKey = '', narrationQueue = Promise.resolve();
     const isLesson16Gawain = ['lesson-16-gawain-1', 'lesson-16-gawain-2'].includes(data.activity_key);
+    const isLesson16Gawain1 = data.activity_key === 'lesson-16-gawain-1';
+    const lesson16Gawain1Audio = {
+      readingSuccess: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/01_reading_success_choose_missing_syllable.mp3' %}",
+      listenFirst: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/02_listen_first_prompt.mp3' %}",
+      gumamelaWord: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/03_item_01_gumamela_word.mp3' %}",
+      gumamelaPrompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/04_item_01_gumamela_missing_syllable_prompt.mp3' %}",
+      bangaWord: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/05_item_02_banga_word.mp3' %}",
+      bangaPrompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/06_item_02_banga_missing_syllable_prompt.mp3' %}",
+      gusaliWord: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/07_item_03_gusali_word.mp3' %}",
+      gusaliPrompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/08_item_03_gusali_missing_syllable_prompt.mp3' %}",
+      ngitiWord: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/09_item_04_ngiti_word.mp3' %}",
+      ngitiPrompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/10_item_04_ngiti_missing_syllable_prompt.mp3' %}",
+      gataWord: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/11_item_05_gata_word.mp3' %}",
+      gataPrompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/12_item_05_gata_missing_syllable_prompt.mp3' %}",
+      completion: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/13_feedback_final_correct.mp3' %}",
+      tryAgain: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/14_feedback_try_again.mp3' %}",
+      correct: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/15_feedback_item_correct.mp3' %}",
+    };
+    const lesson16Gawain1ItemAudio = [
+      {word: 'gumamelaWord', prompt: 'gumamelaPrompt'}, {word: 'bangaWord', prompt: 'bangaPrompt'},
+      {word: 'gusaliWord', prompt: 'gusaliPrompt'}, {word: 'ngitiWord', prompt: 'ngitiPrompt'},
+      {word: 'gataWord', prompt: 'gataPrompt'},
+    ];
 
     const state = () => ({phase, oral_mode: oralMode, reading_attempts: readingAttempts, aloud_attempts: aloudAttempts, written_attempts: writtenAttempts, state_version: ++stateVersion});
     const heading = () => `<p class="eyebrow">Session 6 · Lesson ${data.lesson_number} · Gawain ${data.gawain_number}</p><h1>${escape(data.title)}</h1><p class="instruction">${escape(data.instruction)}</p><div class="count">${Math.min(index + 1, items.length)} / ${items.length}</div><div class="track" aria-hidden="true"><i style="width:${items.length ? index / items.length * 100 : 0}%"></i></div>`;
@@ -77,9 +100,23 @@
       audio.onended = clear; audio.onerror = clear;
       await audio.play();
     }
-    function narrate(text, key) {
+    function playMappedAudio(audioKey) {
+      const source = lesson16Gawain1Audio[audioKey];
+      if (!source) return Promise.resolve();
+      narrationQueue = narrationQueue.then(() => new Promise((resolve, reject) => {
+        if (activeNarration) { activeNarration.pause(); activeNarration = null; }
+        const audio = new Audio(source); activeNarration = audio;
+        const clear = () => { if (activeNarration === audio) activeNarration = null; };
+        audio.onended = () => { clear(); resolve(); };
+        audio.onerror = () => { clear(); reject(Error('Hindi ma-play ang nakatalagang audio.')); };
+        audio.play().catch(error => { clear(); reject(error); });
+      })).catch(() => {});
+      return narrationQueue;
+    }
+    function narrate(text, key, mappedAudioKey = '') {
       if (!isLesson16Gawain || narratedKey === key) return;
       narratedKey = key;
+      if (isLesson16Gawain1) { playMappedAudio(mappedAudioKey); return; }
       playPrescribedReadAloud(text).catch(() => {});
     }
     function render() {
@@ -90,7 +127,10 @@
         const listen = oralMode === 'aloud';
         app.innerHTML = heading() + picture(item) + `<p class="oral">Basahin nang malakas: <strong>${escape(item.word)}</strong>.</p><p class="hint">${listen ? 'Pakinggan ang salita nang tatlong beses bago muling magbasa.' : 'May tatlong pagkakataon kang basahin ang salita.'}</p><button class="button ${listen ? 'gold' : ''}" id="oralAction" type="button">${listen ? '🔊 Pakinggan' : '🎙 Simulan ang Pagbasa'}</button><p class="hint" id="oralStatus"></p>`;
         document.getElementById('oralAction').onclick = listen ? () => readAloud(item) : () => readWord(item);
-        if (index === 0 && readingAttempts === 0 && aloudAttempts === 0) narrate(`${data.instruction} Basahin nang malakas ang ${item.word}.`, 'lesson-16-instruction');
+        if (isLesson16Gawain1 && readingAttempts === 0 && aloudAttempts === 0) {
+          narrate('', `missing-syllable-prompt-${index}`, lesson16Gawain1ItemAudio[index]?.prompt);
+        }
+        if (!isLesson16Gawain1 && index === 0 && readingAttempts === 0 && aloudAttempts === 0) narrate(`${data.instruction} Basahin nang malakas ang ${item.word}.`, 'lesson-16-instruction');
         return;
       }
       const prompt = `<span class="blank">${'_'.repeat(Number(item.blank_length) || 2)}</span>${escape(item.stem)}`;
@@ -116,10 +156,10 @@
         const form = new FormData(); form.append('audio', audio, 'prescribed-reading.webm'); form.append('target_text', item.word); form.append('language', 'Filipino'); form.append('mode', 'reading');
         const response = await fetch('{% url "reading_transcribe_api" %}', {method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrf()}, body: form});
         const result = await response.json();
-        if (result.success && normalize(result.transcript).includes(normalize(item.word))) { phase = 'written'; oralMode = 'read'; readingAttempts = 0; aloudAttempts = 0; writtenAttempts = 0; narrate('Tama! Magaling ang iyong pagbasa. Piliin ang nawawalang pantig.', `reading-correct-${index}`); await save(); render(); return; }
+        if (result.success && normalize(result.transcript).includes(normalize(item.word))) { phase = 'written'; oralMode = 'read'; readingAttempts = 0; aloudAttempts = 0; writtenAttempts = 0; narrate('Tama! Magaling ang iyong pagbasa. Piliin ang nawawalang pantig.', `reading-correct-${index}`, 'readingSuccess'); await save(); render(); return; }
         readingAttempts++;
         if (readingAttempts >= 3) oralMode = 'aloud';
-        narrate(readingAttempts >= 3 ? 'Pakinggan muna ang salita bago muling magbasa.' : 'Hindi pa. Subukan muli.', `reading-feedback-${index}-${readingAttempts}`);
+        narrate(readingAttempts >= 3 ? 'Pakinggan muna ang salita bago muling magbasa.' : 'Hindi pa. Subukan muli.', `reading-feedback-${index}-${readingAttempts}`, readingAttempts >= 3 ? 'listenFirst' : 'tryAgain');
         await save(); render();
       } catch (error) { button.disabled = false; button.textContent = '🎙 Subukang Muli'; status.textContent = 'Hindi nakuha ang iyong boses. Subukan muli.'; }
       finally { if (stream) stream.getTracks().forEach(track => track.stop()); busy = false; }
@@ -128,7 +168,7 @@
       if (busy) return;
       busy = true; aloudAttempts++;
       if (aloudAttempts >= 3) { oralMode = 'read'; readingAttempts = 0; aloudAttempts = 0; }
-      try { await playPrescribedReadAloud(item.word); await save(); render(); } catch (error) { const status = app.querySelector('#oralStatus'); if (status) status.textContent = error.message; } finally { busy = false; }
+      try { if (isLesson16Gawain1) await playMappedAudio(lesson16Gawain1ItemAudio[index]?.word); else await playPrescribedReadAloud(item.word); await save(); render(); } catch (error) { const status = app.querySelector('#oralStatus'); if (status) status.textContent = error.message; } finally { busy = false; }
     }
     async function submit(value) {
       if (busy) return;
@@ -136,8 +176,8 @@
       busy = true; writtenAttempts++; const hint = document.getElementById('hint'); if (hint) hint.textContent = 'Sinusuri ang sagot…';
       try {
         const result = await save({candidate_answer: answer});
-        if (result.accepted) { answers.push(answer); index = answers.length; narrate(index >= items.length ? 'Tama! Magaling!' : 'Tama! Magaling ang iyong sagot.', `answer-correct-${index}`); resetOral(); busy = false; render(); return; }
-        narrate('Hindi pa tama. Subukan muli.', `answer-feedback-${index}-${writtenAttempts}`);
+        if (result.accepted) { answers.push(answer); index = answers.length; narrate(index >= items.length ? 'Tama! Magaling!' : 'Tama! Magaling ang iyong sagot.', `answer-correct-${index}`, index >= items.length ? 'completion' : 'correct'); resetOral(); busy = false; render(); return; }
+        narrate('Hindi pa tama. Subukan muli.', `answer-feedback-${index}-${writtenAttempts}`, 'tryAgain');
         await save(); render();
       } catch (error) { if (hint) hint.textContent = error.message; }
       finally { busy = false; }
