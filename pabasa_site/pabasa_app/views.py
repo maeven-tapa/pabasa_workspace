@@ -13418,7 +13418,7 @@ def prescribed_activity_page(request, activity_key):
     raw_state = progress.state if progress and isinstance(progress.state, dict) else {}
     if activity_key == 'session-2-lesson-4-gawain-2':
         context = _dashboard_context(request)
-        context['prescribed_activity_data'] = {'activity_key': activity_key, 'session_number': activity['session_number'], 'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'], 'title': activity['title'], 'instruction': activity['instruction'], 'items': [{**item, 'image_url': static(item['image_path'])} for item in activity['items']], 'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}), 'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}), 'progress': {'completed_items': progress.completed_items if progress else 0, 'total_items': len(activity['items']), 'activity_completed': progress.activity_completed if progress else False, 'state': raw_state}}
+        context['prescribed_activity_data'] = {'activity_key': activity_key, 'session_number': activity['session_number'], 'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'], 'title': activity['title'], 'instruction': activity['instruction'], 'items': [{**item, 'image_url': static(item['image_path'])} for item in activity['items']], 'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}), 'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}), 'progress': {'current_index': progress.current_index if progress else 0, 'completed_items': progress.completed_items if progress else 0, 'correct_items': progress.correct_items if progress else 0, 'total_items': len(activity['items']), 'activity_completed': progress.activity_completed if progress else False, 'state': raw_state}}
         return render(request, 'pabasa_app/session_2_lesson_4_gawain_2_page.html', context)
     if activity_key == 'lesson7-gawain2c':
         # Legacy browser-only progress has no proof of handwriting.  Retain
@@ -14803,6 +14803,16 @@ def prescribed_activity_progress(request, activity_key):
             existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             total = len(activity['items'])
+            if data.get('reset') is True:
+                state = {'current_item': 0, 'phase': 'say', 'oral_attempts': 0, 'sound_attempts': 0, 'state_version': 0}
+                progress, _ = StudentActivityProgress.objects.update_or_create(
+                    student=student, activity_key=activity_key,
+                    defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
+                              'total_items': total, 'activity_completed': False, 'state': state})
+                return JsonResponse({'success': True, 'progress': {
+                    'current_index': progress.current_index, 'completed_items': progress.completed_items,
+                    'correct_items': progress.correct_items, 'total_items': progress.total_items,
+                    'activity_completed': progress.activity_completed, 'state': progress.state}})
             index = max(0, min(total, int(old.get('current_item', 0))))
             phase = str(old.get('phase') or 'say')
             oral_attempts = max(0, min(3, int(old.get('oral_attempts', 0))))
@@ -18439,7 +18449,7 @@ def lesson_3_activity_progress(request):
         existing_progress = StudentActivityProgress.objects.filter(
             student_id=request.session.get('user_id'), activity_key=key,
         ).first()
-        if reset and key in {'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2'}:
+        if reset and key in {'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2', 'lesson-4-gawain-1', 'lesson-5-gawain-1', 'lesson-6-gawain-1'}:
             progress, _ = StudentActivityProgress.objects.update_or_create(
                 student_id=request.session.get('user_id'), activity_key=key,
                 defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,

@@ -28,7 +28,11 @@
     if (!config || !config.progress) return null;
     const progress = config.progress;
     if (progress.activity_completed === true) return { config, progress, state: 'completed' };
-    if (Number(progress.current_index) > 0) return { config, progress, state: 'resume' };
+    const state = progress.state && typeof progress.state === 'object' ? progress.state : {};
+    const hasSavedProgress = Number(progress.current_index) > 0
+      || Number(progress.completed_items) > 0
+      || ![undefined, null, '', 'initial', 'say'].includes(state.phase);
+    if (hasSavedProgress) return { config, progress, state: 'resume' };
     return { config, progress, state: 'fresh' };
   }
   function startCompletedActivity() {
