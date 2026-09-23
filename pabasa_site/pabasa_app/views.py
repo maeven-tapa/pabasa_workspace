@@ -18427,6 +18427,7 @@ def lesson_3_activity_progress(request):
         completed = int(data.get('completed_items') or 0)
         correct = int(data.get('correct_items') or completed)
         done = bool(data.get('activity_completed'))
+        reset = data.get('reset') is True
         state = data.get('state') if key in {'lesson-1-gawain-1', 'lesson-4-gawain-1', 'lesson-4-gawain-2', 'lesson-5-gawain-1', 'lesson-6-gawain-1', 'lesson-7-gawain-1'} else {}
         if not isinstance(state, dict): state = {}
         if key not in {'lesson-1-gawain-1', 'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2', 'lesson-4-gawain-1', 'lesson-4-gawain-2', 'lesson-5-gawain-1', 'lesson-6-gawain-1', 'lesson-7-gawain-1'} or total <= 0:
@@ -18438,6 +18439,17 @@ def lesson_3_activity_progress(request):
         existing_progress = StudentActivityProgress.objects.filter(
             student_id=request.session.get('user_id'), activity_key=key,
         ).first()
+        if reset and key in {'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2'}:
+            progress, _ = StudentActivityProgress.objects.update_or_create(
+                student_id=request.session.get('user_id'), activity_key=key,
+                defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
+                          'total_items': total, 'activity_completed': False, 'state': {}},
+            )
+            return JsonResponse({'success': True, 'progress': {
+                'current_index': progress.current_index, 'completed_items': progress.completed_items,
+                'correct_items': progress.correct_items, 'total_items': progress.total_items,
+                'activity_completed': progress.activity_completed,
+            }})
         # Progress saves can arrive out of order because the activity sends
         # them asynchronously. Never let an older request roll back a newer
         # position or completed result.

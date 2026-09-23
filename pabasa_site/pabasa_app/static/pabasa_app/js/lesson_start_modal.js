@@ -15,10 +15,24 @@
     return originalFetch.apply(this, arguments);
   };
   function closeModal(button) {
+    if (window.__lessonStartReady) return;
     const backdrop = button.closest('.lesson-start-backdrop');
     if (!backdrop) return;
     backdrop.remove();
     document.body.classList.remove('lesson-start-open');
+    window.__lessonStartReady = true;
+    window.dispatchEvent(new Event('lesson-start-ready'));
+  }
+  function resumeConfig() {
+    const config = window.__lessonStartProgress;
+    if (!config || !config.progress) return null;
+    const progress = config.progress;
+    if (progress.activity_completed === true) return { config, progress, state: 'completed' };
+    if (Number(progress.current_index) > 0) return { config, progress, state: 'resume' };
+    return { config, progress, state: 'fresh' };
+  }
+  function startCompletedActivity() {
+    if (window.__lessonStartReady) return;
     window.__lessonStartReady = true;
     window.dispatchEvent(new Event('lesson-start-ready'));
   }
@@ -39,22 +53,54 @@
     link.href = '/static/pabasa_app/css/lesson_start_modal.css';
     document.head.append(link);
     const [id, label] = target;
+    const saved = resumeConfig();
+    if (saved?.state === 'completed') {
+      startCompletedActivity();
+      return;
+    }
     const backdrop = document.createElement('div');
     backdrop.className = 'lesson-start-backdrop lesson-13-start-backdrop';
     backdrop.id = id;
     backdrop.setAttribute('role', 'dialog');
     backdrop.setAttribute('aria-modal', 'true');
-    backdrop.innerHTML = `<div class="lesson-start-modal lesson-13-start-modal"><p class="lesson-start-label lesson-13-start-label">${label}</p><h2 class="lesson-start-title lesson-13-start-title">Salitang Magkatugma</h2><div class="lesson-start-actions lesson-13-start-actions"><button type="button" data-start>SIMULAN</button><button type="button" data-later>MAMAYA NA LANG</button></div></div>`;
+    const isResume = saved?.state === 'resume';
+    const modalLabel = isResume ? 'MAY NA-SAVE KANG PROGRESO!' : label;
+    const title = isResume ? 'May nasimulan ka nang gawain. Gusto mo bang ipagpatuloy ang iyong nasimulan?' : 'Salitang Magkatugma';
+    const startLabel = isResume ? 'IPAGPATULOY' : 'SIMULAN';
+    const laterLabel = isResume ? 'SIMULAN ULIT' : 'MAMAYA NA LANG';
+    backdrop.innerHTML = `<div class="lesson-start-modal lesson-13-start-modal"><p class="lesson-start-label lesson-13-start-label">${modalLabel}</p><h2 class="lesson-start-title lesson-13-start-title">${title}</h2><div class="lesson-start-actions lesson-13-start-actions"><button type="button" data-start>${startLabel}</button><button type="button" data-later>${laterLabel}</button></div></div>`;
     document.body.prepend(backdrop);
     document.body.classList.add('lesson-start-open');
     backdrop.querySelector('[data-start]').focus();
+    if (isResume) backdrop.dataset.resume = 'true';
   }
   document.addEventListener('click', event => {
     const button = event.target.closest('.lesson-start-actions button');
     if (!button) return;
+    const backdrop = button.closest('.lesson-start-backdrop');
+    if (button.matches('[data-later]') && backdrop?.dataset.resume === 'true') {
+      const config = window.__lessonStartProgress;
+      button.disabled = true;
+      fetch(config.progressUrl, {
+        method: 'POST', credentials: 'same-origin',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || ''},
+        body: JSON.stringify({activity_key: config.activityKey, reset: true, total_items: config.totalItems})
+      }).then(response => {
+        if (!response.ok) throw new Error('Progress reset failed');
+        config.storageKeys.forEach(key => localStorage.removeItem(key));
+        location.reload();
+      }).catch(error => {
+        console.error('Lesson progress reset failed', error);
+        button.disabled = false;
+      });
+      return;
+    }
     if (button.matches('[data-later]')) {
       window.location.href = '/dashboard/assessment/';
       return;
+    }
+    if (backdrop?.dataset.resume === 'true') {
+      window.__lessonStartResumeIndex = Number(window.__lessonStartProgress.progress.current_index) || 0;
     }
     closeModal(button);
   });

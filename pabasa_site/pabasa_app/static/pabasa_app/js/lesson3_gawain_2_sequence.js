@@ -60,7 +60,7 @@
     }
 
     async function activateAndCue() {
-      if (pairIndex >= pairs.length || answerPhase) return;
+      if (pairIndex >= pairs.length || answerPhase || cueBusy) return;
       cueBusy = true;
       const currentGeneration = generation;
       const instruction = game.querySelector('.instruction');
