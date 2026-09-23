@@ -96,7 +96,7 @@
           placeItems: 'center', background: 'transparent', border: '0',
           borderRadius: '0', boxShadow: 'none', zIndex: '2'
         });
-        game.innerHTML = `<div class="complete"><h2>Magaling! Natapos mo ang gawain!</h2><p>Mahusay! Maaari ka nang magpatuloy.</p></div>`;
+        game.innerHTML = `<div class="complete"><h2>Tapos na ang gawain! 🎉</h2><p>Mahusay! Nakumpleto mo na ang aktibidad.</p></div>`;
         return;
       }
       const pair = pairs[pairIndex];
