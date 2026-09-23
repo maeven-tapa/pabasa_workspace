@@ -4,3 +4,23 @@
 <style>.row.is-disabled{opacity:.45;filter:grayscale(.7);pointer-events:none}.row.is-disabled .choice{cursor:not-allowed}.choice:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}</style>
 <style>.done{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;width:min(760px,100%);padding:clamp(28px,6vw,64px);border:2px solid #ffffffaa;border-radius:32px;background:#ffffff70;box-shadow:0 14px 30px #1e5b7a25;color:#26784e;font-size:clamp(1.8rem,4vw,2.8rem);line-height:1.15;font-weight:900}.done:first-letter{color:#299e9a}.done span{display:block}</style>
 <script>(()=>{const wordAudioFiles={pari:'pari.mp3',sopas:'sopas.mp3',mesa:'mesa.mp3',motor:'motor.mp3',musika:'musika.mp3',sultan:'sultan.mp3',santol:'santol.mp3',isla:'isla.mp3',sibuyas:'sibuyas.mp3',espada:'espada.mp3',isda:'isda.mp3',salamin:'salamin.mp3',sinturon:'sinturon.mp3',simbahan:'simbahan.mp3',upuan:'upuan.mp3'},wordAudioBase='/static/pabasa_app/prescribed/audio/SESSION%203/LESSON%209/GAWAIN%202/';document.addEventListener('click',event=>{const button=event.target.closest('#listen,#read');if(!button||!(button.id==='listen'||button.textContent.trim().startsWith('Pakinggan')))return;const progress=document.querySelector('.progress')?.textContent||'',match=progress.match(/Larawan\s+(\d+)/i),data=JSON.parse(document.getElementById('lesson9-g2-data')?.textContent||'{}'),index=Math.max(0,(Number(match?.[1])||1)-1),word=data.oral_items?.[index]?.word||'',file=wordAudioFiles[word.toLowerCase()];if(!file)return;event.preventDefault();event.stopImmediatePropagation();const buttons=[...document.querySelectorAll('#read,#listen')];buttons.forEach(item=>{item.disabled=true});button.classList.add('processing');const audio=new Audio(wordAudioBase+file),done=()=>{button.classList.remove('processing');buttons.forEach(item=>{item.disabled=false})};audio.onended=done;audio.onerror=done;audio.play().catch(done)},true)})();</script>
+<style>
+  .lesson9-g2-eyebrow{width:max-content;max-width:100%;margin:-8px auto 16px;padding:10px 30px;border-radius:999px;background:#277f82;color:#fff;font-size:clamp(.85rem,1.4vw,1.15rem);letter-spacing:.02em;font-weight:900}
+  .lesson9-g2-title{margin:0;color:#183e63;font-size:clamp(2rem,4vw,3.7rem);line-height:1.08;font-weight:900}
+  #app .task>.lesson9-g2-eyebrow{display:block}#app .task>.lesson9-g2-title{display:block}
+  #app .instruction{margin:12px auto 16px;color:#315b74;font-size:clamp(1.05rem,2vw,1.45rem);line-height:1.3;font-weight:800}
+  @media(max-width:520px){.lesson9-g2-eyebrow{padding:8px 16px}.lesson9-g2-title{font-size:clamp(1.7rem,8vw,2.35rem)}#app .instruction{font-size:1rem}}
+</style>
+<script>
+  document.addEventListener('DOMContentLoaded',()=>{const app=document.getElementById('app');if(!app)return;const update=()=>{app.querySelectorAll('.task').forEach(task=>{let eyebrow=task.querySelector(':scope>.lesson9-g2-eyebrow'),title=task.querySelector(':scope>.lesson9-g2-title');if(!eyebrow){eyebrow=document.createElement('p');eyebrow.className='lesson9-g2-eyebrow';task.prepend(eyebrow)}if(!title){title=document.createElement('h1');title.className='lesson9-g2-title';eyebrow.after(title)}eyebrow.textContent='SESSION 3 · LESSON 9 · GAWAIN 2';title.textContent='Gawain 2: Letrang Ii, Oo, Ee'})};update();new MutationObserver(update).observe(app,{childList:true,subtree:true})});
+</script>
+<style>@font-face{font-family:Fredoka;src:url("{% static 'pabasa_app/font/fredoka-one.one-regular.ttf' %}") format('truetype');font-display:swap}</style>
+<style>
+  #app.card{height:calc(100vh - 110px);max-height:calc(100vh - 110px);overflow:auto}
+  @media(max-width:520px){#app.card{height:calc(100svh - 100px);max-height:calc(100svh - 100px)}}
+</style>
+<style>
+  #app.card{top:50%!important;left:50%!important;transform:translate(-50%,-50%)!important;height:calc(100vh - 130px)!important;max-height:calc(100vh - 130px)!important}
+  .page>.back{position:absolute;top:72px;left:calc((100% - min(1250px, calc(100% - 300px)))/2 + 16px);transform:none;width:220px;min-height:50px;padding:10px 18px;border-radius:999px;font-size:1rem;line-height:1.1;text-align:center;z-index:4}
+  @media(max-width:520px){#app.card{height:calc(100svh - 120px)!important;max-height:calc(100svh - 120px)!important}.page>.back{top:62px;left:28px;width:205px;min-height:46px;padding:9px 14px;font-size:.9rem}}
+</style>
