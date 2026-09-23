@@ -3,7 +3,7 @@
     const lesson8G1aWordAudioFiles={elesi:'elesi.mp3',sasakyan:'sasakyan.mp3',palaka:'palaka.mp3',puno:'puno.mp3',elepante:'elepante.mp3',isda:'isda.mp3',eroplano:'eroplano.mp3',espada:'espada.mp3',selpon:'selpon.mp3'};
     const lesson8G1aWordAudioBase='/static/pabasa_app/prescribed/audio/SESSION%203/LESSON%208/GAWAIN%201A/';
     document.addEventListener('click',event=>{const listen=event.target.closest('#listen');if(!listen)return;const picture=document.querySelector('.picture');const word=picture?.getAttribute('alt')||'';const file=lesson8G1aWordAudioFiles[word.toLowerCase()];if(!file)return;event.preventDefault();event.stopImmediatePropagation();if(listen.disabled)return;const read=document.querySelector('#read');[listen,read].forEach(button=>{if(button)button.disabled=true});read?.classList.add('processing');const audio=new Audio(lesson8G1aWordAudioBase+file);const done=()=>{read?.classList.remove('processing');[listen,read].forEach(button=>{if(button)button.disabled=false})};audio.onended=done;audio.onerror=done;audio.play().catch(done)},true);
-  </script></body></html>
+  </script>{% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l8g1a' help_text='Basahin ang salita at piliin ang larawang nagsisimula sa Ee.' %}</body></html>
 <script>
 document.addEventListener('DOMContentLoaded',()=>{
   const app=document.getElementById('app'),dataNode=document.getElementById('activity-data');

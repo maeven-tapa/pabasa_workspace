@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded',function(){
     (async()=>{await speak(first);await speak(second);await speak(start);button.disabled=false;button.setAttribute('aria-disabled','false');button.classList.add('is-ready')})().catch(()=>{button.disabled=false;button.setAttribute('aria-disabled','false');button.classList.add('is-ready')});
   };
   setup();
-  new MutationObserver(setup).observe(app,{childList:true,subtree:true});
+new MutationObserver(setup).observe(app,{childList:true,subtree:true});
 });
 </script>
+{% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g1' help_text='Tingnan ang larawan, basahin ang salita, at piliin ang tamang sagot.' %}
