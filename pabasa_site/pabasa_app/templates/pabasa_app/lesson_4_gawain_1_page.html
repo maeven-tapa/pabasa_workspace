@@ -471,3 +471,8 @@ setTimeout(function(){
   };
 }());
 </script>
+{% include 'pabasa_app/session4_prescribed_controls.html' with prefix='prescribed-s2l4g1' help_text='Basahin ang pangalan ng larawan, pagkatapos piliin ang tamang sagot.' %}
+<script>(function(){const e=document.getElementById('lesson-four-data');if(!e)return;const d=JSON.parse(e.textContent||'{}');d.progress_url='{% url "lesson_4_activity_progress" %}';e.textContent=JSON.stringify(d)})();</script>
+{% include 'pabasa_app/session4_prescribed_bootstrap.html' with prefix='prescribed-s2l4g1' speech=True data_id='lesson-four-data' %}
+<script src="{% static 'pabasa_app/js/session2_prescribed_debug.js' %}?v=1"></script>
+<script>window.Session2PrescribedDebug.init({prefix:'prescribed-s2l4g1',expected:(()=>{const d=JSON.parse(document.getElementById('lesson-four-data').textContent||'{}');return d.items?.[Number(d.progress?.current_index)||0]?.word||''})(),normalize:value=>String(value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]/g,''),evaluateResult:result=>Boolean(result?.success&&result?.complete)});</script>
