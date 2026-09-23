@@ -20462,12 +20462,25 @@ def reading_transcribe_api(request):
 
 
 _LOCAL_PRESCRIBED_AUDIO_PATHS = {
+    'aral-l22-g1-c-syllable-builder': ('SESSION_8', 'LESSON_22', 'GAWAIN_1'),
     **{f'lesson-29-gawain-{index}': ('SESSION_13', 'LESSON_29', f'GAWAIN_{index}') for index in (1, 2, 3)},
     **{f'lesson-30-gawain-{index}': ('SESSION_14', 'LESSON_30', f'GAWAIN_{index}') for index in (1, 2, 3)},
     **{f'lesson-31-gawain-{index}': ('SESSION_15', 'LESSON_31', f'GAWAIN_{index}') for index in (1, 2, 3, 4)},
 }
 
 _LOCAL_PRESCRIBED_AUDIO_ALIASES = {
+    ('aral-l22-g1-c-syllable-builder', 'basahinangmgapantigsaloobngbigboxatsubukingbumuongmgasalitamularito'):
+        'Basahin_ang_mga_pantig_mula_sa_Bid_box_TTS.mp3',
+    **{('aral-l22-g1-c-syllable-builder', word): f'{word}_TTS.mp3'
+       for word in ('bi', 'bu', 'ca', 'cac', 'car', 'ce', 'com', 'do', 'ga', 'les', 'net', 'pu', 'te', 'ter', 'tus', 'yan')},
+    ('aral-l22-g1-c-syllable-builder', 'handakana'):
+        'Handa ka na_TTS.mp3',
+    ('aral-l22-g1-c-syllable-builder', 'magalingnabasamonanangtamangmgapantig'):
+        'Magaling! Nabasa mo nang tama ang lahat ng pantig._TTS.mp3',
+    ('aral-l22-g1-c-syllable-builder', 'subukanmuli'):
+        'Subukan muli._TTS.mp3',
+    ('aral-l22-g1-c-syllable-builder', 'tama'):
+        'Tama!_TTS.mp3',
     ('lesson-29-gawain-3', 'greatjobyoutracedandsaid everyletter'.replace(' ', '')):
         'Great job! You completed Trace and Say..mp3',
     ('lesson-29-gawain-2', 'greatjobyouspottedallthewords'):
@@ -20539,7 +20552,8 @@ def reading_read_aloud_api(request):
     if not target_text:
         return JsonResponse({'success': False, 'error': 'Reading text is required.'}, status=400)
     try:
-        local_audio_file = _local_prescribed_audio_file(lesson_tts_key, target_text)
+        local_audio_key = lesson_tts_key or prescribed_key
+        local_audio_file = _local_prescribed_audio_file(local_audio_key, target_text)
         if local_audio_file:
             return JsonResponse({
                 'success': True,
@@ -20548,8 +20562,9 @@ def reading_read_aloud_api(request):
                 'language_code': language_code,
                 'tts_language': language_code,
                 'voice_name': '',
+                'local_audio': True,
             })
-        if lesson_tts_key in _LOCAL_PRESCRIBED_AUDIO_PATHS:
+        if local_audio_key in _LOCAL_PRESCRIBED_AUDIO_PATHS:
             return JsonResponse({
                 'success': False,
                 'error': 'Local audio is unavailable for this activity line.',

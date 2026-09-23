@@ -253,6 +253,14 @@ class WorkbookStateTests(SimpleTestCase):
         a = get_activity('aral-l22-g1-c-syllable-builder')
         self.assertEqual(a['items'][4], {'id': 'item-5', 'text': 'com'})
         self.assertNotIn('m', [item['text'] for item in a['items']])
+        self.assertEqual(
+            [a['items'][item_id - 1]['text'] for item_id in (4, 5, 6)],
+            ['bu', 'com', 'pu'],
+        )
+        renderer = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_workbook.js').read_text(encoding='utf-8')
+        styles = (Path(__file__).parent / 'static/pabasa_app/css/prescribed_l22_c_builder.css').read_text(encoding='utf-8')
+        self.assertIn('tile.textContent=item.text', renderer)
+        self.assertIn('white-space:nowrap', styles)
         s = initial_state()
         apply_event(a, s, {'action': 'reading_started'})
         apply_event(a, s, {'action': 'reading_attempt'}, True)
