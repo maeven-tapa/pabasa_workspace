@@ -74,7 +74,7 @@
         if (currentGeneration === generation) {
           game.querySelectorAll('.word')[wordIndex]?.classList.add('active');
           pairIntroPending = false;
-          await speak('Sabihin ito.');
+          await speak('Basahin ito.');
         }
       } catch (error) { console.error('Lesson 3 Gawain 2 TTS failed', error); }
       cue?.classList.remove('active-audio');
@@ -127,7 +127,7 @@
       const word = pairs[pairIndex][wordIndex ? 'b' : 'a'];
       const read = document.getElementById('read');
       const status = document.getElementById('status');
-      recording = true; read.disabled = true; read.textContent = '🎙️ Nakikinig…';
+      recording = true; read.disabled = true; read.classList.add('is-recording'); read.textContent = '🎙️ Nakikinig…';
       let stream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({audio: true});
@@ -162,7 +162,7 @@
           if (readAttempts[wordIndex] >= 3) document.getElementById('listen').hidden = false;
         }
       } catch (error) { if (currentGeneration === generation) { status.textContent = 'Hindi nakuha ang iyong boses. Subukan muli.'; read.disabled = false; read.textContent = '🎙 Sabihin ngayon'; } }
-      finally { stream?.getTracks().forEach(track => track.stop()); recording = false; }
+      finally { stream?.getTracks().forEach(track => track.stop()); read?.classList.remove('is-recording'); recording = false; }
     }
 
     new MutationObserver(() => {
@@ -197,7 +197,7 @@
         }
       } else {
         answerAttempts += 1;
-        render('Hindi pa. Subukan muli.');
+        render('Hindi pa ito tama. Subukan muli.');
         if (answerAttempts >= 3) answerAttempts = 0;
       }
     }

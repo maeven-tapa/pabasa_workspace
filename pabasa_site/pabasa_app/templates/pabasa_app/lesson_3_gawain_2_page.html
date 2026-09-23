@@ -11,7 +11,7 @@
   <title>Lesson 3 · Gawain 2: Salitang Magkatugma</title>
   <style>{% include 'pabasa_app/lesson_3_gawain_2_styles.html' %}</style>
   <style>body.gawain-2,body.gawain-2::before{background:linear-gradient(#093f5030,#093f5018),url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover fixed!important}</style>
-  <style>.gawain-2 .pairs .word::before{content:none!important;display:none!important}.gawain-2 .pairs .word.active::before{content:'SABIHIN ITO'!important;display:block!important;position:absolute;top:-18px;left:50%;z-index:3;transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:#ffc928;color:#5b3b00;font-size:.72rem;font-weight:900;letter-spacing:.06em;white-space:nowrap;box-shadow:0 3px 8px #b77b1b55}.gawain-2:not(:has(.answers)) .status{font-size:1rem!important}.gawain-2:not(:has(.answers)) .status::after{content:none!important}</style>
+  <style>.gawain-2 .pairs .word::before{content:none!important;display:none!important}.gawain-2 .pairs .word.active::before{content:'BASAHIN ITO'!important;display:block!important;position:absolute;top:-18px;left:50%;z-index:3;transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:#ffc928;color:#5b3b00;font-size:.72rem;font-weight:900;letter-spacing:.06em;white-space:nowrap;box-shadow:0 3px 8px #b77b1b55}.gawain-2:not(:has(.answers)) .status{font-size:1rem!important}.gawain-2:not(:has(.answers)) .status::after{content:none!important}</style>
   <style>.gawain-2:not(:has(.answers)) .status.warning{font-size:1rem!important;color:#92400e;background:#fef3c7;border-radius:12px;padding:7px 12px}.gawain-2:not(:has(.answers)) .status.warning::after{content:none!important}</style>
   <style>.gawain-2{height:100dvh;min-height:0;overflow:hidden;padding:16px clamp(16px,4vw,42px) 22px;background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover fixed}.gawain-2 .app{height:100dvh;padding:0;display:block;position:relative}.gawain-2 .nav{position:absolute;top:0;left:0;z-index:3;width:min(1250px,100%);margin:0 auto}.gawain-2 .back{width:280px;min-height:64px;border-radius:999px;background:#fff;color:#183e63;font:900 1.2rem/1.15 Nunito,"Segoe UI",sans-serif;box-shadow:0 8px 17px #145ca744}.gawain-2 .game{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(1250px,100%);height:calc(100vh - 110px);max-height:none;min-height:0;margin:31px 0 0;padding:clamp(24px,3.3vh,42px) clamp(20px,6vw,80px) 20px;border:2px solid #ffffffaa;border-radius:42px;background:#ffffff63;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 18px 45px #1e5b7a35;overflow:hidden}.gawain-2 .header{width:min(980px,100%);margin:0 auto;align-items:center;padding:8px 12px;border-radius:18px;background:rgba(255,253,244,.82);box-shadow:0 8px 18px rgba(37,28,22,.12)}.gawain-2 .brand h1{font-family:Coiny,Nunito,"Segoe UI",sans-serif;font-size:clamp(1.35rem,3vw,2rem);font-weight:400;line-height:1;color:#176078}.gawain-2 .brand p{margin:4px 0;color:#65777b;font:800 .8rem Nunito,"Segoe UI",sans-serif}.gawain-2 .progress{color:#526e75;font:900 .82rem Nunito,"Segoe UI",sans-serif}.gawain-2 .instruction{width:min(760px,100%);margin:18px auto 14px;padding:12px 18px;border:1px solid #dbe5e8;border-radius:16px;background:rgba(255,255,255,.94);box-shadow:0 6px 14px rgba(37,28,22,.1);font:800 1rem/1.35 Nunito,"Segoe UI",sans-serif}.gawain-2 .task:has(#listen){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:stretch;justify-content:initial;gap:0;width:min(760px,100%);height:100%;min-height:0}.gawain-2 .task:has(#listen)>:is(.header,.instruction,.pairs,.status){grid-column:1/-1}.gawain-2 .pairs{width:min(760px,100%);max-width:none;min-height:0;gap:14px;margin:auto}.gawain-2 .pairs .word,.gawain-2 .pairs .word:nth-child(2){width:100%;height:clamp(170px,28vh,240px);min-height:0;padding:12px;border:3px solid #d4ebe1;border-radius:20px;background:#fffdf5;box-shadow:0 10px 20px #0001;transform:none}.gawain-2 .pairs .word.active{background:#ffe9a7;border:5px solid #e6a33a;box-shadow:0 0 0 4px #fff4c7,0 10px 20px #0001}.gawain-2 .pairs .word img{height:clamp(90px,17vh,135px);max-width:80%;object-fit:contain}.gawain-2 .status{margin:10px auto 8px;color:#302a32;font:900 1rem Nunito,"Segoe UI",sans-serif}.gawain-2 .read,.gawain-2 .listen{width:100%;min-width:0;min-height:76px;margin:0;border-radius:999px;font:900 clamp(1rem,1.8vw,1.35rem) Nunito,"Segoe UI",sans-serif}.gawain-2 .read{background:#299e9a;box-shadow:0 7px 0 #187b7a,0 10px 20px #187b7a40}.gawain-2 .listen{background:#fffffff0;color:#187b7a;border:4px solid #94d9d6;box-shadow:0 5px 0 #b7d6dc,0 8px 16px #187b7a20}.gawain-2 .answers{gap:14px;margin:18px auto 0}.gawain-2 .answer{min-width:210px;min-height:92px;border-radius:16px;font:900 clamp(1.8rem,4vw,2.7rem) Nunito,"Segoe UI",sans-serif}.gawain-2 .complete{width:min(520px,calc(100% - 24px));margin:auto;padding:clamp(28px,5vw,46px) clamp(22px,6vw,58px);border:2px solid #d7e7dc;border-radius:26px;background:#fffdf5;box-shadow:0 18px 42px rgba(18,55,52,.28);text-align:center}@media(max-width:650px){.gawain-2 .game{width:100%;height:calc(100vh - 92px);padding:22px 14px 16px;border-radius:30px}.gawain-2 .back{width:230px;min-height:58px;font-size:1rem}.gawain-2 .task:has(#listen){width:100%}.gawain-2 .pairs{gap:12px}.gawain-2 .pairs .word,.gawain-2 .pairs .word:nth-child(2){height:170px}.gawain-2 .pairs .word img{height:100px}.gawain-2 .answers{flex-direction:column;align-items:center}.gawain-2 .answer{width:min(300px,100%)}.gawain-2 .read,.gawain-2 .listen{min-height:64px}}</style>
 </head>
@@ -241,39 +241,8 @@ document.addEventListener('click', async function(event){
   .gawain-2 .complete{width:min(520px,calc(100% - 24px));margin:auto;padding:clamp(28px,5vw,46px) clamp(22px,6vw,58px);border:2px solid #d7e7dc;border-radius:26px;background:#fffdf5;box-shadow:0 18px 42px rgba(18,55,52,.28);text-align:center}
   @media(max-width:650px){.gawain-2 .game{width:100%;height:calc(100vh - 92px);padding:22px 14px 16px;border-radius:30px}.gawain-2 .back{width:230px;min-height:58px;font-size:1rem}.gawain-2 #game:has(#listen){width:100%}.gawain-2 .pairs{gap:12px}.gawain-2 .pairs .word,.gawain-2 .pairs .word:nth-child(2){height:170px}.gawain-2 .pairs .word img{height:100px}.gawain-2 .answers{flex-direction:column;align-items:center}.gawain-2 .answer{width:min(300px,100%)}.gawain-2 .read,.gawain-2 .listen{min-height:64px}}
 </style>
-<script type="text/plain" data-activity-bootstrap="lesson-3-gawain-2">
-(function(){
-  const game=document.getElementById('game');
-  if(!game)return;
-  const ttsUrl="{% url 'reading_read_aloud_api' %}";
-  let audio=null,sequence=0,lastStatus='';
-  const csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
-  const speak=async text=>{
-    const id=++sequence;
-    if(audio){audio.pause();audio=null}
-    const indicator=game.querySelector('.audio-cue');
-    indicator?.classList.add('active-audio');
-    try{
-      const response=await fetch(ttsUrl,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',mode:'word'})});
-      const data=await response.json();
-      if(id!==sequence||!response.ok||!data.success||!data.audio_content)return;
-      audio=new Audio('data:'+(data.mime_type||'audio/mpeg')+';base64,'+data.audio_content);
-      await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=reject;audio.play().catch(reject)});
-    }catch(error){console.error('Lesson 3 Gawain 2 feedback TTS failed',error)}
-    finally{if(id===sequence){audio=null;indicator?.classList.remove('active-audio')}}
-  };
-  const statusNarration=()=>{
-    const status=game.querySelector('#status');
-    if(!status||status.textContent===lastStatus)return;
-    lastStatus=status.textContent;
-    if(/^Hindi pa\./i.test(status.textContent))speak('Hindi ito ang tamang sagot. Subukan natin muli.');
-  };
-  new MutationObserver(statusNarration).observe(game,{subtree:true,childList:true,characterData:true});
-})();
-</script>
 <script type="text/plain" data-activity-bootstrap="lesson-3-gawain-2">document.addEventListener('click',function(e){const b=e.target.closest('.answer');if(!b)return;setTimeout(function(){const s=document.getElementById('status');if(s&&s.textContent.trim()==='')s.textContent='Subukan muli.'},0)},true);</script>
-<script type="text/plain" data-activity-bootstrap="lesson-3-gawain-2">document.addEventListener('click',function(e){const b=e.target.closest('.answer');if(!b)return;const before=document.querySelector('.progress')?.textContent;setTimeout(function(){if(before===document.querySelector('.progress')?.textContent){const s=document.getElementById('status');if(s){s.textContent='Subukan muli.';s.classList.add('warning')}}},80)},true);</script>
-<script type="text/plain" data-activity-bootstrap="lesson-3-gawain-2">(function(){const p=document.querySelector('.progress');if(!p)return;let saved=0;const url="{{ lesson_3_progress_url }}",csrf=document.cookie.match(/csrftoken=([^;]+)/)?.[1]||'';function save(done,n){fetch(url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf},body:JSON.stringify({activity_key:'lesson-3-gawain-2',current_index:n,completed_items:n,correct_items:n,total_items:6,activity_completed:done,state:{}})}).catch(console.error)}window.addEventListener("lesson-start-ready",function(){setInterval(function(){const n=Number((p.textContent.match(/\d+/)||[0])[0]);if(n>saved){saved=n;save(n>=6,n)}if(document.querySelector('.complete'))save(true,6)},250)},{once:true})})();</script>
+<script type="text/plain" data-activity-bootstrap="lesson-3-gawain-2">(function(){const p=document.querySelector('.progress');if(!p)return;let saved=Math.max(0,Number(localStorage.getItem('pabasa:lesson-3-gawain-2:progress')||0));const url="{{ lesson_3_progress_url }}",csrf=document.cookie.match(/csrftoken=([^;]+)/)?.[1]||'';function save(done,n){fetch(url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf},body:JSON.stringify({activity_key:'lesson-3-gawain-2',current_index:n,completed_items:n,correct_items:n,total_items:6,activity_completed:done,state:{}})}).catch(console.error)}window.addEventListener("lesson-start-ready",function(){setInterval(function(){const n=Math.max(0,Number((p.textContent.match(/\d+/)||[0])[0])-1);if(n>saved){saved=n;save(n>=6,n)}if(document.querySelector('.complete'))save(true,6)},250)},{once:true})})();</script>
 <style>
 .gawain-2{min-height:100vh;background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover fixed!important;color:#183e63}
 .gawain-2 .shell{width:min(1250px,100%);min-height:100vh}
@@ -303,4 +272,17 @@ body.gawain-2:has(#game .complete) .lesson-start-backdrop{display:none!important
 .gawain-2 #game.game:has(.complete) .complete p{margin:18px 0 28px;color:#183e63;font:700 clamp(1.1rem,2vw,1.25rem)/1.4 Fredoka,Nunito,"Segoe UI",sans-serif}
 .gawain-2 #game.game:has(.complete) .complete-done{display:inline-flex;align-items:center;justify-content:center;min-height:0;margin:0;padding:15px 26px;border:0;border-radius:999px;background:#299e9a;color:#fff;font:900 clamp(1.05rem,1.8vw,1.25rem)/1.2 Fredoka,Nunito,"Segoe UI",sans-serif;box-shadow:0 5px 0 #187b7a}
 @media(max-width:520px){.gawain-2 #game.game:has(.complete) .complete{width:min(100%,calc(100vw - 32px));padding:32px 22px 30px;border-radius:26px}.gawain-2 #game.game:has(.complete) .complete-done{width:100%;padding-inline:18px}}
+</style>
+<style>
+.gawain-2 #read.read.is-recording{
+  animation:lesson3Gawain2ReadHeartbeat 1.3s ease-in-out infinite;
+  transform-origin:center;
+}
+@keyframes lesson3Gawain2ReadHeartbeat{
+  0%,100%{transform:scale(1);box-shadow:0 0 0 5px rgba(244,200,93,.3),0 7px 0 #187b7a,0 0 18px rgba(244,200,93,.5)}
+  50%{transform:scale(1.018);box-shadow:0 0 0 8px rgba(244,200,93,.25),0 7px 0 #187b7a,0 0 28px rgba(244,200,93,.85)}
+}
+@media (prefers-reduced-motion:reduce){
+  .gawain-2 #read.read.is-recording{animation:none}
+}
 </style>
