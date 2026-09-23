@@ -256,6 +256,8 @@
     } catch (error) { busy = false; button.disabled = false; window.alert(error.message || 'Could not reset the activity. Try again.'); }
   }
 
+  document.getElementById('prescribed-l27a1-audio-title')?.replaceChildren(document.createTextNode('Audio Settings'));
+  document.getElementById('prescribed-l27a1-audio-test')?.replaceChildren(document.createElement('i'), document.createTextNode(' Audio Settings'));
   window.PrescribedControls?.init({prefix:'prescribed-l27a1',adapter:window.PrescribedLesson27Activity});
   window.PrescribedLesson27Activity.setMuted(isMuted);
   document.getElementById('prescribed-l27a1-help-btn')?.addEventListener('click', () => window.PrescribedLesson27Activity.cancelSpeechAttempt());

@@ -13,6 +13,7 @@
 <main id="l22g3-app"></main>
 {% csrf_token %}
 {{ workbook_payload|json_script:'workbook-payload' }}
+{% include 'pabasa_app/session8_11_prescribed_controls.html' with prefix='prescribed-session-target' help_text='Basahin muna ang salita, pagkatapos hanapin ito sa grid.' %}
 <script src="{% static 'pabasa_app/js/prescribed_l22_g3_word_search.js' %}" defer></script>
 </body>
 </html>

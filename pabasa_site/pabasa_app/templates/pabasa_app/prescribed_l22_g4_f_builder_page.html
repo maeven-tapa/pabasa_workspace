@@ -12,6 +12,7 @@
 {% csrf_token %}
 <main id="l22g4-app"></main>
 {{ workbook_payload|json_script:'workbook-payload' }}
+{% include 'pabasa_app/session8_11_prescribed_controls.html' with prefix='prescribed-session-target' help_text='Piliin ang mga pantig upang mabuo ang salita. Basahin ito kapag hiniling.' %}
 <script src="{% static 'pabasa_app/js/prescribed_l22_g4_f_builder.js' %}"></script>
 </body>
 </html>

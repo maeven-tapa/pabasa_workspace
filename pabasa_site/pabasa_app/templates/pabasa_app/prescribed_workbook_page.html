@@ -31,6 +31,7 @@
   <section id="wb-content"></section><section id="wb-action" aria-label="Activity controls"></section>
 </main>
 {{ workbook_payload|json_script:'workbook-payload' }}
+{% include 'pabasa_app/session8_11_prescribed_controls.html' with prefix='prescribed-session-target' help_text='Follow the instructions on the activity page. Use the microphone when the activity asks you to speak.' %}
 <script src="{% static 'pabasa_app/js/template_google_tts.js' %}"></script>
 <script src="{% static 'pabasa_app/js/prescribed_workbook.js' %}"></script>
 </body></html>
