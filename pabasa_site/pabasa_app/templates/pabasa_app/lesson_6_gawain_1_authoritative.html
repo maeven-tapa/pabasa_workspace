@@ -51,7 +51,7 @@ body,.back,.head h1,#app>h1,.eyebrow,.instruction,.wordbox,.status,.choice,.acti
 <body class="lesson-6-responsive">
   <div class="page"><a class="back" href="{% url 'assessment' %}">← Bumalik</a><main class="card" id="app"></main></div>
   {{ lesson_6_data|json_script:"lesson-six-data" }}
-  <script>
+  <script type="text/plain" data-activity-bootstrap="lesson-6-gawain-1">
     const d=JSON.parse(document.getElementById('lesson-six-data').textContent),items=d.items,total=items.length,p=d.progress,base="{% static 'pabasa_app/images/letrang_m_s_a/' %}",url="{{ lesson_6_progress_url }}",readAloudUrl="{% url 'reading_read_aloud_api' %}",csrf=()=>document.cookie.match(/csrftoken=([^;]+)/)?.[1]||'';
     let i=Math.min(total,Number(p.current_index)||0),score=Number(p.correct_items)||0,phase='identify',tries=0,listens=0,answers=p.answers||[],busy=false,narrationVersion=0,narrationAudio=null;
     const app=document.getElementById('app'),identifyInstruction='Tukuyin ang pangalan ng larawan!',classifyInstruction='Ilagay ang tamang pantig sa patlang. Pindutin ito o hilahin.';

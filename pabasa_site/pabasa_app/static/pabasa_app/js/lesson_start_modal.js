@@ -29,6 +29,10 @@
     if (document.body.classList.contains('gawain-2') || path.includes('lesson-3-gawain-2')) target = ['lesson-3-g2-start', 'SESSION 1 · LESSON 3 · GAWAIN 2'];
     else if (document.body.classList.contains('lesson-3-responsive') || path.includes('lesson-3-gawain-1')) target = ['lesson-3-g1-start', 'SESSION 1 · LESSON 3 · GAWAIN 1'];
     else if (document.querySelector('.salitang-speech-debug') || path.includes('lesson2-gawain1')) target = ['lesson-2-g1-start', 'SESSION 1 · LESSON 2 · GAWAIN 1'];
+    else if (document.body.classList.contains('lesson-4-responsive') || path.includes('lesson-4/gawain-1')) target = ['lesson-4-g1-start', 'SESSION 2 · LESSON 4 · GAWAIN 1'];
+    else if (path.includes('session-2-lesson-4-gawain-2')) target = ['session-2-lesson-4-g2-start', 'SESSION 2 · LESSON 4 · GAWAIN 2'];
+    else if (path.includes('lesson-5/gawain-1')) target = ['lesson-5-g1-start', 'SESSION 2 · LESSON 5 · GAWAIN 1'];
+    else if (path.includes('lesson-6/gawain-1')) target = ['lesson-6-g1-start', 'SESSION 2 · LESSON 6 · GAWAIN 1'];
     if (!target) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
