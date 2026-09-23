@@ -13,6 +13,15 @@
   let stream = null;
   let audio = null;
   let audioUrl = null;
+  let isPaused = false;
+  let isMuted = false;
+  let activeRecorder = null;
+  let recordingTimer = null;
+  let activeSpeechButton = null;
+  let generation = 0;
+  const debugState = {status:'Ready', transcript:'No transcript yet.', expected:'—', normalized:'—', result:'—', mic:'Inactive · Unmuted', recorder:'inactive', vad:'Not available', error:'—', raw:['Activity ready']};
+  const publishDebug = (patch = {}, line) => { Object.assign(debugState, patch); if (line) debugState.raw = [...debugState.raw, line].slice(-6); window.dispatchEvent(new CustomEvent('prescribed-l27a1-debug-state', {detail:{...debugState, raw:[...debugState.raw]}})); };
+  window.PrescribedLesson27Debug = {getState:() => ({...debugState, raw:[...debugState.raw]}), reset:() => {Object.assign(debugState,{status:'Ready',transcript:'No transcript yet.',expected:'—',normalized:'—',result:'—',mic:`Inactive · ${isMuted?'Muted':'Unmuted'}`,recorder:'inactive',vad:'Not available',error:'—',raw:['Activity reset']});publishDebug();}};
   const RETRY_FEEDBACK = "Hmm, let's try that again.";
   const READ_CORRECT_FEEDBACK = "That's right, now let's read the next verse.";
   const RHYME_INSTRUCTION_FEEDBACK = "That's right, now choose the rhyming words.";
@@ -70,10 +79,11 @@
     }
     return response.json();
   }
-  async function save(payload) {
+  async function save(payload, isCurrent = () => true) {
     const response = await fetch(data.progress_url, {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify(payload)});
     const result = await responseJson(response, 'Saving progress');
     if (!response.ok || !result.success) throw new Error(result.error || 'Could not save progress.');
+    if (!isCurrent()) return {...result, stale: true};
     state = {...result.progress.state};
     return result;
   }
@@ -108,6 +118,7 @@
       return `<div class="lesson27-verse ${status}">${words}</div>`;
     }).join('');
     const activeVerse = item.lines[state.verse_index]?.text || '';
+    publishDebug({expected:activeVerse || '—', status:isPaused ? 'Paused' : 'Ready'});
     let controls = '';
     if (state.phase === 'reading') {
       const canListen = Boolean(state.help_visible || state.attempts >= 3);
@@ -123,7 +134,8 @@
     app.querySelectorAll('.lesson27-word:not(:disabled)').forEach(button => button.addEventListener('click', () => selectWord(button)));
   }
   async function playAudio(text) {
-    if (busy || !text) return;
+    if (busy || isPaused || !text) return;
+    const attempt = generation;
     busy = true;
     const buttons = [...app.querySelectorAll('button')];
     const buttonStates = buttons.map(button => ({button, disabled:button.disabled}));
@@ -135,9 +147,11 @@
         audio = new Audio(`${localAudioBase}${filename.split('/').map(encodeURIComponent).join('/')}`);
         await new Promise((resolve, reject) => {
           audio.addEventListener('ended', resolve, {once:true});
+          audio.addEventListener('pause', resolve, {once:true});
           audio.addEventListener('error', () => reject(new Error('Audio playback failed. Try again.')), {once:true});
           audio.play().catch(reject);
         });
+        if (attempt !== generation || isPaused) return;
       }
     } finally {
       busy = false;
@@ -148,21 +162,27 @@
     }
   }
   async function recordVerse(target) {
-    if (busy) return;
+    if (busy || isPaused) return;
+    if (isMuted) { render('Please unmute your microphone before reading.', 'bad'); publishDebug({status:'Muted',error:'Microphone is muted.'},'Reading blocked while muted'); return; }
+    const attempt = generation;
     busy = true;
     const button = document.getElementById('record-verse');
+    activeSpeechButton = button;
     button?.classList.add('is-busy');
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { busy = false; return; }
     button.textContent = 'Listening…';
     try {
       stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
-      const recorder = new MediaRecorder(stream), chunks = [];
+      stream.getAudioTracks().forEach(track => { track.enabled = !isMuted; });
+      activeRecorder = new MediaRecorder(stream); const recorder = activeRecorder, chunks = [];
+      publishDebug({status:'Recording', transcript:'No transcript yet.', expected:target, mic:`Active · ${isMuted?'Muted':'Unmuted'}`, recorder:recorder.state, error:'—'},'Recording started');
       recorder.ondataavailable = event => { if (event.data?.size) chunks.push(event.data); };
-      const stopped = new Promise((resolve, reject) => { recorder.onerror = () => reject(new Error('Could not record your voice. Try again.')); recorder.onstop = () => resolve(new Blob(chunks,{type:recorder.mimeType || 'audio/webm'})); recorder.start(); window.setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, 4500); });
-      const blob = await stopped; stopStream();
+      const stopped = new Promise((resolve, reject) => { recorder.onerror = () => reject(new Error('Could not record your voice. Try again.')); recorder.onstop = () => { if (activeRecorder === recorder) activeRecorder = null; if (recordingTimer) { window.clearTimeout(recordingTimer); recordingTimer = null; } resolve(new Blob(chunks,{type:recorder.mimeType || 'audio/webm'})); }; recorder.start(); recordingTimer = window.setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, 4500); });
+      const blob = await stopped; stopStream(); publishDebug({recorder:'inactive'},'Recording completed'); if (attempt !== generation || isPaused) return;
       const form = new FormData(); form.append('audio',blob,'lesson27-rhyming-verse.webm'); form.append('target_text',target); form.append('language','English'); form.append('mode','reading');
       const response = await fetch(data.transcribe_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form});
       const result = await responseJson(response, 'Speech recognition');
+      if (attempt !== generation || isPaused) return;
       if (!response.ok || !result.success) throw new Error(result.error || 'Speech recognition failed. Try again.');
       const heardText = result.raw_transcript || result.transcript;
       const expectedText = canonicalTranscript(target);
@@ -176,13 +196,16 @@
       const isPlayfulBatVerse = expectedTokens.includes('dance') && expectedTokens.includes('playful') && expectedTokens.includes('bat');
       const playfulBatHeard = spokenTokens.includes('bat') && (spokenTokens.includes('dance') || spokenTokens.includes('playful'));
       const correct = Boolean(expected && (spoken.includes(expected) || (isPlayfulBatVerse && playfulBatHeard)));
-      await save({action:'verse_read',item_index:state.item_index,verse_index:state.verse_index,success:correct});
+      publishDebug({status:'Processing',transcript:String(heardText || 'No transcript returned.'),normalized:spoken,result:correct?'Match':'Not Match'},`Transcription received: ${heardText || '(empty)'}`);
+      if (attempt !== generation || isPaused) return;
+      await save({action:'verse_read',item_index:state.item_index,verse_index:state.verse_index,success:correct}, () => attempt === generation && !isPaused);
+      if (attempt !== generation || isPaused) return;
       busy = false;
       const correctFeedback = state.phase === 'rhymes' ? RHYME_INSTRUCTION_FEEDBACK : READ_CORRECT_FEEDBACK;
       render(correct ? correctFeedback : `I heard “${heardText || 'unclear speech'}”. ${RETRY_FEEDBACK}`, correct ? 'good' : 'bad');
       await playAudio(correct ? correctFeedback : RETRY_FEEDBACK);
-    } catch (error) { stopStream(); render(error.message || 'Could not recognize your speech. Try again.','bad'); }
-    finally { button?.classList.remove('is-busy'); busy = false; }
+    } catch (error) { stopStream(); if (attempt === generation && !isPaused) { publishDebug({status:'Error',error:error.message || 'Recording/transcription error'},`Error: ${error.message || 'Recording/transcription error'}`); render(error.message || 'Could not recognize your speech. Try again.','bad'); } }
+    finally { button?.classList.remove('is-busy'); if (activeSpeechButton === button) activeSpeechButton = null; busy = false; }
   }
   async function selectWord(button) {
     if (busy || button.classList.contains('selected')) return;
@@ -209,7 +232,19 @@
     } catch (error) { render(error.message || 'Could not save your selection. Try again.','bad'); }
     finally { busy = false; }
   }
-  function stopStream() { stream?.getTracks().forEach(track => track.stop()); stream = null; }
+  function stopStream() { if (recordingTimer) { window.clearTimeout(recordingTimer); recordingTimer = null; } stream?.getTracks().forEach(track => track.stop()); stream = null; publishDebug({mic:`Inactive · ${isMuted?'Muted':'Unmuted'}`,recorder:'inactive'}); }
+  function cancelSpeechAttempt() { generation += 1; if (recordingTimer) { window.clearTimeout(recordingTimer); recordingTimer = null; } if (activeRecorder?.state === 'recording' || activeRecorder?.state === 'paused') { try { activeRecorder.stop(); } catch (_) {} } activeRecorder = null; activeSpeechButton?.classList.remove('is-busy'); if (activeSpeechButton?.isConnected) activeSpeechButton.textContent = '🎙️ Read the verse'; activeSpeechButton = null; stopStream(); publishDebug({status:isPaused?'Paused':'Ready',recorder:'inactive',mic:`Inactive · ${isMuted?'Muted':'Unmuted'}`},'Recording cancelled'); }
+  window.PrescribedLesson27Activity = {
+    pause() { if (isPaused) return; isPaused = true; cancelSpeechAttempt(); audio?.pause(); busy = false; publishDebug({status:'Paused'},'Activity paused'); },
+    resume() { isPaused = false; publishDebug({status:'Ready',recorder:'inactive',mic:`Inactive · ${isMuted?'Muted':'Unmuted'}`},'Activity resumed'); },
+    setMuted(value) { isMuted = Boolean(value); stream?.getAudioTracks().forEach(track => { track.enabled = !isMuted; }); const button=document.getElementById('prescribed-l27a1-mic-toggle'); button?.setAttribute('aria-pressed',String(isMuted)); button?.setAttribute('aria-label',isMuted?'Unmute microphone':'Mute microphone'); button?.setAttribute('title',isMuted?'Unmute microphone':'Mute microphone'); button?.classList.toggle('is-muted',isMuted); if(button)button.innerHTML=`<i class="bi ${isMuted?'bi-mic-mute-fill':'bi-mic-fill'}" aria-hidden="true"></i>`; publishDebug({mic:`${stream?'Active':'Inactive'} · ${isMuted?'Muted':'Unmuted'}`,status:isMuted?'Muted':(isPaused?'Paused':'Ready')},isMuted?'Microphone muted':'Microphone unmuted'); },
+    async restart() { isPaused = true; cancelSpeechAttempt(); audio?.pause(); busy = false; window.PrescribedLesson27Debug.reset(); await resetAndExit({preventDefault(){},currentTarget:{disabled:false}}); },
+    cleanup() { isPaused = true; cancelSpeechAttempt(); audio?.pause(); audio = null; busy = false; },
+    cancelSpeechAttempt,
+    bindDebug() { const panel=document.getElementById('prescribed-l27a1-debug-panel'), toggle=document.getElementById('prescribed-l27a1-debug-toggle'), keys=['status','transcript','expected','normalized','result','mic','recorder','vad','error','raw']; const render=s=>{if(!s)return; panel.hidden=!toggle.checked; panel.setAttribute('aria-hidden',String(!toggle.checked)); keys.forEach(k=>{const el=document.getElementById(`prescribed-l27a1-debug-${k}`);if(el&&s[k]!==undefined)el.textContent=Array.isArray(s[k])?s[k].join('\n'):s[k]})}; toggle.checked=localStorage.getItem('pabasaShowSpeechDebugPanel')==='true'; toggle.addEventListener('change',()=>{localStorage.setItem('pabasaShowSpeechDebugPanel',String(toggle.checked));render(window.PrescribedLesson27Debug.getState())}); window.addEventListener('prescribed-l27a1-debug-state',e=>render(e.detail)); render(window.PrescribedLesson27Debug.getState()); },
+    bindAudioTest() { const select=document.getElementById('prescribed-l27a1-device-select'), status=document.getElementById('prescribed-l27a1-settings-status'), fill=document.getElementById('prescribed-l27a1-level-fill'), test=document.getElementById('prescribed-l27a1-test-toggle'); let testStream=null, ctx=null, analyser=null, source=null, frame=0, active=false; const stop=()=>{active=false;if(frame)cancelAnimationFrame(frame);source?.disconnect();analyser?.disconnect();ctx?.close();source=analyser=ctx=null;testStream?.getTracks().forEach(t=>t.stop());testStream=null;if(fill)fill.style.width='0%';if(test)test.innerHTML='<i class="bi bi-mic-fill"></i> Start Test'}; const meter=()=>{if(!analyser)return;const values=new Uint8Array(analyser.fftSize);analyser.getByteTimeDomainData(values);let sum=0;for(const value of values){const n=(value-128)/128;sum+=n*n}fill.style.width=`${Math.min(100,Math.sqrt(sum/values.length)*260)}%`;frame=requestAnimationFrame(meter)}; const start=async()=>{try{const c=select.value?{audio:{deviceId:{exact:select.value}}}:{audio:true};testStream=await navigator.mediaDevices.getUserMedia(c);ctx=new AudioContext();analyser=ctx.createAnalyser();analyser.fftSize=512;source=ctx.createMediaStreamSource(testStream);source.connect(analyser);active=true;status.innerHTML='<strong>Microphone Status:</strong> Access granted. Testing live input.';test.innerHTML='<i class="bi bi-stop-fill"></i> Stop Test';meter()}catch(_){stop();status.innerHTML='<strong>Microphone Status:</strong> Access denied or unavailable.'}}; test?.addEventListener('click',()=>active?stop():start());select?.addEventListener('change',()=>{if(active){stop();start()}});document.getElementById('prescribed-l27a1-audio-close')?.addEventListener('click',stop);document.getElementById('prescribed-l27a1-audio-settings-modal')?.addEventListener('click',e=>{if(e.target===e.currentTarget)stop()});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('prescribed-l27a1-audio-settings-modal').hidden)stop()}); if(navigator.mediaDevices?.enumerateDevices)navigator.mediaDevices.enumerateDevices().then(ds=>{select.replaceChildren(new Option('Default microphone',''));ds.filter(d=>d.kind==='audioinput').forEach(d=>select.add(new Option(d.label||`Microphone ${select.options.length}`,d.deviceId)))}).catch(()=>{}); window.addEventListener('pagehide',stop); },
+    isPaused:() => isPaused,
+  };
   async function resetAndExit(event) {
     event.preventDefault(); if (busy) return;
     const button = event.currentTarget; busy = true; button.disabled = true;
@@ -221,6 +256,9 @@
     } catch (error) { busy = false; button.disabled = false; window.alert(error.message || 'Could not reset the activity. Try again.'); }
   }
 
+  window.PrescribedControls?.init({prefix:'prescribed-l27a1',adapter:window.PrescribedLesson27Activity});
+  window.PrescribedLesson27Activity.setMuted(isMuted);
+  document.getElementById('prescribed-l27a1-help-btn')?.addEventListener('click', () => window.PrescribedLesson27Activity.cancelSpeechAttempt());
   document.getElementById('lesson27-later-button')?.addEventListener('click', resetAndExit);
   document.getElementById('lesson27-start-button')?.addEventListener('click', () => {
     window.setTimeout(() => playAudio('Rhyming Verses. Read each verse, then select the words that rhyme with at.').catch(error => render(error.message || 'Could not play the instructions. Try again.','bad')), 0);
