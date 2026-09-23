@@ -20,6 +20,15 @@
     if (!backdrop) return;
     backdrop.remove();
     document.body.classList.remove('lesson-start-open');
+    // The activity bootstrap finishes asynchronously and emits a second
+    // lesson-start-ready event.  Prime media playback during this real user
+    // gesture so prescribed narration started by that later event is not
+    // rejected by browser autoplay policy.
+    if (document.body.classList.contains('gawain-2') || location.pathname.toLowerCase().includes('lesson-3-gawain-2')) {
+      const unlock = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAESsAAABAAgAZGF0YQAAAAA=');
+      unlock.volume = 0;
+      unlock.play().catch(() => {});
+    }
     window.__lessonStartReady = true;
     window.dispatchEvent(new Event('lesson-start-ready'));
   }

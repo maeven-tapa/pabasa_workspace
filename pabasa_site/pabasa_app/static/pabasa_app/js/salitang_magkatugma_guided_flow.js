@@ -24,6 +24,7 @@
   async function speak(text, audioUrl) {
     const id = ++runId;
     if (audio) { audio.pause(); audio = null; }
+    audioUrl = audioUrl || window.salitangSharedNarrationAudio?.[text] || window.salitangOtherNarrationAudio?.[text] || '';
     if (!audioUrl) {
       const response = await fetch(window.salitangTtsUrl, {
         method: 'POST', credentials: 'same-origin',

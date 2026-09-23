@@ -19,6 +19,14 @@
     let cueBusy = false;
     let pairIntroPending = true;
     const phase2Instruction = 'Magkatunog ba ang dalawang larawan na ito? Pindutin ang nawawastong sagot.';
+    const narrationText = {
+      intro: 'Pangalanan ang dalawang larawan. Sabihin ang mga salita at pakinggan ang iyong sarili.',
+      reading: 'Basahin ito.',
+      next: 'Magaling! Susunod na larawan.',
+      final: 'Magaling!',
+      incorrectReading: 'Hindi ito ang tamang sagot. Subukan natin muli.',
+      incorrectRhyming: 'Hindi pa ito tama. Subukan muli.'
+    };
     const wordAudioFiles = {
       lola: 'lola.mp3', bola: 'bola.mp3', walis: 'walis.mp3', tama: 'tama.mp3',
       dahon: 'dahon.mp3', kahon: 'kahon.mp3', sigaw: 'sigaw.mp3', lugaw: 'lugaw.mp3',
@@ -37,18 +45,23 @@
       audioUrl = null;
     }
 
-    async function speak(text) {
+    async function speakPrescribed(narrationKey) {
       stopAudio();
-      const response = await fetch(config.readAloudUrl, {
-        method: 'POST', credentials: 'same-origin',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrf()},
-        body: new URLSearchParams({target_text: text, language: 'Filipino', mode: 'word'})
-      });
-      const data = await response.json();
-      if (!response.ok || !data.success || !data.audio_content) throw new Error(data.error || 'TTS unavailable');
-      audioUrl = URL.createObjectURL(new Blob([Uint8Array.from(atob(data.audio_content), char => char.charCodeAt(0))], {type: data.mime_type || 'audio/mpeg'}));
-      audio = new Audio(audioUrl);
-      await new Promise((resolve, reject) => { audio.onended = resolve; audio.onerror = reject; audio.play().catch(reject); });
+      const narrationAudioUrl = config.prescribedNarrationAudio?.[narrationKey];
+      if (!narrationAudioUrl) {
+        console.error('[Lesson 3 Gawain 2] Missing prescribed narration:', narrationKey);
+        return;
+      }
+      audio = new Audio(narrationAudioUrl);
+      try {
+        await new Promise((resolve, reject) => {
+          audio.onended = resolve;
+          audio.onerror = () => reject(new Error(`Prescribed narration failed to load: ${narrationKey}`));
+          audio.play().catch(reject);
+        });
+      } catch (error) {
+        console.error('[Lesson 3 Gawain 2] Prescribed narration playback failed:', narrationKey, error);
+      }
     }
 
     async function speakWord(word) {
@@ -70,11 +83,11 @@
       cue?.classList.add('active-audio');
       setNarrationLock(true);
       try {
-        if (shouldNarrateInstruction) await speak(instruction.textContent.trim());
+        if (shouldNarrateInstruction) await speakPrescribed('intro');
         if (currentGeneration === generation) {
           game.querySelectorAll('.word')[wordIndex]?.classList.add('active');
           pairIntroPending = false;
-          await speak('Basahin ito.');
+          await speakPrescribed('basahinIto');
         }
       } catch (error) { console.error('Lesson 3 Gawain 2 TTS failed', error); }
       cue?.classList.remove('active-audio');
@@ -102,7 +115,7 @@
       const pair = pairs[pairIndex];
       const words = [pair.a, pair.b];
       const inactive = !answerPhase && pairIntroPending;
-      const instructionText = answerPhase ? phase2Instruction : 'Pangalanan ang dalawang larawan. Sabihin ang mga salita at pakinggan ang iyong sarili.';
+      const instructionText = answerPhase ? phase2Instruction : narrationText.intro;
       game.innerHTML = `<header class="header"><div class="brand"><h1>Salitang Magkatugma</h1><p>Lesson 3 · Gawain 2</p></div><div class="progress">Pares ${pairIndex + 1} / ${pairs.length}<div class="segments">${pairs.map((_, index) => `<i class="${index < pairIndex ? 'done ' : ''}${index === pairIndex ? 'active' : ''}"></i>`).join('')}</div></div></header><div class="instruction">${instructionText}</div><div class="pairs">${words.map((word, index) => `<div class="word ${!inactive && !answerPhase && index === wordIndex ? 'active' : ''}"><img src="${imageBase}${word.toLowerCase()}.png" alt="${word}"><strong>${word}</strong></div>`).join('')}</div><div id="status" class="status">${message || (answerPhase ? '' : `Sabihin ang pangalan ng larawan.`)}</div>${answerPhase ? '<div class="answers"><button class="answer" data-v="yes" disabled>✓<small>MAGKATUGMA</small></button><button class="answer" data-v="no" disabled>✕<small>HINDI MAGKATUGMA</small></button></div>' : '<button id="read" class="read" disabled>🎙 Sabihin ngayon</button><button id="listen" class="listen" hidden>🔊 Pakinggan</button>'}`;
       if (answerPhase) {
         game.querySelectorAll('.answer').forEach(button => { if (button.firstChild && button.firstChild.nodeType === Node.TEXT_NODE) button.firstChild.remove(); });
@@ -110,7 +123,7 @@
         buttons.forEach(button => button.onclick = () => answer(button.dataset.v));
         cueBusy = true;
         setNarrationLock(true);
-        speak(message ? (game.querySelector('#status')?.textContent.trim() || '') : instructionText).catch(error => console.error('Lesson 3 Gawain 2 Phase 2 TTS failed', error)).finally(() => {
+        speakPrescribed(message ? 'incorrectRhyming' : 'rhymingQuestion').catch(error => console.error('Lesson 3 Gawain 2 prescribed narration failed', error)).finally(() => {
           if (pairIndex < pairs.length && answerPhase) { cueBusy = false; setNarrationLock(false); buttons.forEach(button => { button.disabled = false; }); }
         });
       }
@@ -139,14 +152,14 @@
         const result = await (await fetch(config.transcribeUrl, {method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrf()}, body: form})).json();
         if (currentGeneration !== generation) return;
         if (result.success && normalize(result.transcript).includes(normalize(word))) {
-          if (wordIndex === 0) { game.querySelector('#status').textContent = 'Magaling! Susunod na larawan.'; setNarrationLock(true); try { await speak('Magaling! Susunod na larawan.'); } finally { setNarrationLock(false); } wordIndex = 1; pairIntroPending = false; render(); }
+          if (wordIndex === 0) { game.querySelector('#status').textContent = narrationText.next; setNarrationLock(true); try { await speakPrescribed('nextPicture'); } finally { setNarrationLock(false); } wordIndex = 1; pairIntroPending = false; render(); }
           else {
             const successStatus = game.querySelector('#status');
-            if (successStatus) successStatus.textContent = 'Magaling!';
+            if (successStatus) successStatus.textContent = narrationText.final;
             cueBusy = true;
             setNarrationLock(true);
             try {
-              await speak('Magaling!');
+              await speakPrescribed('correctReading');
             } catch (error) {
               console.error('Lesson 3 Gawain 2 Part 1 completion TTS failed', error);
             } finally {
@@ -157,8 +170,14 @@
             }
           }
         } else {
-          readAttempts[wordIndex] += 1; status.textContent = 'Hindi ito ang tamang sagot. Subukan natin muli.'; status.classList.add('warning'); read.disabled = false; read.textContent = '🎙 Sabihin ngayon';
-          setNarrationLock(true); try { await speak('Hindi ito ang tamang sagot. Subukan natin muli.'); } catch (error) { console.error('Lesson 3 Gawain 2 retry TTS failed', error); } finally { setNarrationLock(false); }
+          readAttempts[wordIndex] += 1;
+          status.textContent = narrationText.incorrectReading;
+          status.classList.add('warning');
+          setNarrationLock(true);
+          try { await speakPrescribed('incorrectReading'); }
+          catch (error) { console.error('Lesson 3 Gawain 2 incorrect-reading narration failed', error); }
+          finally { setNarrationLock(false); }
+          read.disabled = false; read.textContent = '🎙 Sabihin ngayon';
           if (readAttempts[wordIndex] >= 3) document.getElementById('listen').hidden = false;
         }
       } catch (error) { if (currentGeneration === generation) { status.textContent = 'Hindi nakuha ang iyong boses. Subukan muli.'; read.disabled = false; read.textContent = '🎙 Sabihin ngayon'; } }
@@ -179,7 +198,7 @@
         cueBusy = true;
         setNarrationLock(true);
         try {
-          await speak('Magaling!');
+          await speakPrescribed('correctAnswer');
         } catch (error) {
           console.error('Lesson 3 Gawain 2 correct-answer TTS failed', error);
         } finally {
@@ -197,7 +216,7 @@
         }
       } else {
         answerAttempts += 1;
-        render('Hindi pa ito tama. Subukan muli.');
+        render(narrationText.incorrectRhyming);
         if (answerAttempts >= 3) answerAttempts = 0;
       }
     }

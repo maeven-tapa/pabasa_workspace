@@ -2,7 +2,8 @@
 <!doctype html>
 <html lang="fil">
 <head>
-  <script>window.__lessonStartProgress={activityKey:'lesson-3-gawain-2',progress:{{ lesson_3_progress|default:"null"|safe }},totalItems:6,progressUrl:'{{ lesson_3_progress_url }}',storageKeys:['pabasa:lesson-3-gawain-2:progress']};</script><script src="/static/pabasa_app/js/deferred_activity_bootstrap.js?v=1"></script><script>window.deferActivityBootstrap('lesson-3-gawain-2');</script><script src="{% static 'pabasa_app/js/lesson_start_modal.js' %}?v=5"></script>
+  <script>window.__lessonStartProgress={activityKey:'lesson-3-gawain-2',progress:{{ lesson_3_progress|default:"null"|safe }},totalItems:6,progressUrl:'{{ lesson_3_progress_url }}',storageKeys:['pabasa:lesson-3-gawain-2:progress']};</script><script>window.__session1SharedNarrationAudio={'Basahin ito.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/basahin_ito.mp3' %}','Magaling! Susunod na larawan.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/magaling_susunod_na_larawan.mp3' %}','Hindi pa ito tama. Subukan muli.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/hindi_pa_ito_tama_subukan_muli.mp3' %}','Magkatunog ba ang dalawang larawan na ito? Pindutin ang nawawastong sagot.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/magkatunog_ba_ang_dalawang_larawan.mp3' %}','Piliin ang tamang kamay.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/piliin_ang_tamang_kamay.mp3' %} };</script><script src="/static/pabasa_app/js/deferred_activity_bootstrap.js?v=1"></script><script>window.deferActivityBootstrap('lesson-3-gawain-2');</script><script src="{% static 'pabasa_app/js/lesson_start_modal.js' %}?v=7"></script>
+  <script>window.__lesson3PrescribedNarrationAudio={intro:"{% static 'pabasa_app/prescribed/audio/SESSION 1/OTHERS/pangalanan_ang_dalawang_larawan.mp3' %}",basahinIto:"{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/basahin_ito.mp3' %}",correctReading:"{% static 'pabasa_app/prescribed/audio/SESSION 1/OTHERS/magaling.mp3' %}",nextPicture:"{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/magaling_susunod_na_larawan.mp3' %}",incorrectReading:"{% static 'pabasa_app/prescribed/audio/SESSION 1/OTHERS/hindi_ito_ang_tamang_sagot_subukan_muli.mp3' %}",rhymingQuestion:"{% static 'pabasa_app/prescribed/audio/SESSION 1/OTHERS/magkatunog_ba_ang_dalawang_larawan_na_ito.mp3' %}",incorrectRhyming:"{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/hindi_pa_ito_tama_subukan_muli.mp3' %}",correctAnswer:"{% static 'pabasa_app/prescribed/audio/SESSION 1/OTHERS/magaling.mp3' %}"};</script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,6 +15,13 @@
   <style>.gawain-2 .pairs .word::before{content:none!important;display:none!important}.gawain-2 .pairs .word.active::before{content:'BASAHIN ITO'!important;display:block!important;position:absolute;top:-18px;left:50%;z-index:3;transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:#ffc928;color:#5b3b00;font-size:.72rem;font-weight:900;letter-spacing:.06em;white-space:nowrap;box-shadow:0 3px 8px #b77b1b55}.gawain-2:not(:has(.answers)) .status{font-size:1rem!important}.gawain-2:not(:has(.answers)) .status::after{content:none!important}</style>
   <style>.gawain-2:not(:has(.answers)) .status.warning{font-size:1rem!important;color:#92400e;background:#fef3c7;border-radius:12px;padding:7px 12px}.gawain-2:not(:has(.answers)) .status.warning::after{content:none!important}</style>
   <style>.gawain-2{height:100dvh;min-height:0;overflow:hidden;padding:16px clamp(16px,4vw,42px) 22px;background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover fixed}.gawain-2 .app{height:100dvh;padding:0;display:block;position:relative}.gawain-2 .nav{position:absolute;top:0;left:0;z-index:3;width:min(1250px,100%);margin:0 auto}.gawain-2 .back{width:280px;min-height:64px;border-radius:999px;background:#fff;color:#183e63;font:900 1.2rem/1.15 Nunito,"Segoe UI",sans-serif;box-shadow:0 8px 17px #145ca744}.gawain-2 .game{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(1250px,100%);height:calc(100vh - 110px);max-height:none;min-height:0;margin:31px 0 0;padding:clamp(24px,3.3vh,42px) clamp(20px,6vw,80px) 20px;border:2px solid #ffffffaa;border-radius:42px;background:#ffffff63;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 18px 45px #1e5b7a35;overflow:hidden}.gawain-2 .header{width:min(980px,100%);margin:0 auto;align-items:center;padding:8px 12px;border-radius:18px;background:rgba(255,253,244,.82);box-shadow:0 8px 18px rgba(37,28,22,.12)}.gawain-2 .brand h1{font-family:Coiny,Nunito,"Segoe UI",sans-serif;font-size:clamp(1.35rem,3vw,2rem);font-weight:400;line-height:1;color:#176078}.gawain-2 .brand p{margin:4px 0;color:#65777b;font:800 .8rem Nunito,"Segoe UI",sans-serif}.gawain-2 .progress{color:#526e75;font:900 .82rem Nunito,"Segoe UI",sans-serif}.gawain-2 .instruction{width:min(760px,100%);margin:18px auto 14px;padding:12px 18px;border:1px solid #dbe5e8;border-radius:16px;background:rgba(255,255,255,.94);box-shadow:0 6px 14px rgba(37,28,22,.1);font:800 1rem/1.35 Nunito,"Segoe UI",sans-serif}.gawain-2 .task:has(#listen){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:stretch;justify-content:initial;gap:0;width:min(760px,100%);height:100%;min-height:0}.gawain-2 .task:has(#listen)>:is(.header,.instruction,.pairs,.status){grid-column:1/-1}.gawain-2 .pairs{width:min(760px,100%);max-width:none;min-height:0;gap:14px;margin:auto}.gawain-2 .pairs .word,.gawain-2 .pairs .word:nth-child(2){width:100%;height:clamp(170px,28vh,240px);min-height:0;padding:12px;border:3px solid #d4ebe1;border-radius:20px;background:#fffdf5;box-shadow:0 10px 20px #0001;transform:none}.gawain-2 .pairs .word.active{background:#ffe9a7;border:5px solid #e6a33a;box-shadow:0 0 0 4px #fff4c7,0 10px 20px #0001}.gawain-2 .pairs .word img{height:clamp(90px,17vh,135px);max-width:80%;object-fit:contain}.gawain-2 .status{margin:10px auto 8px;color:#302a32;font:900 1rem Nunito,"Segoe UI",sans-serif}.gawain-2 .read,.gawain-2 .listen{width:100%;min-width:0;min-height:76px;margin:0;border-radius:999px;font:900 clamp(1rem,1.8vw,1.35rem) Nunito,"Segoe UI",sans-serif}.gawain-2 .read{background:#299e9a;box-shadow:0 7px 0 #187b7a,0 10px 20px #187b7a40}.gawain-2 .listen{background:#fffffff0;color:#187b7a;border:4px solid #94d9d6;box-shadow:0 5px 0 #b7d6dc,0 8px 16px #187b7a20}.gawain-2 .answers{gap:14px;margin:18px auto 0}.gawain-2 .answer{min-width:210px;min-height:92px;border-radius:16px;font:900 clamp(1.8rem,4vw,2.7rem) Nunito,"Segoe UI",sans-serif}.gawain-2 .complete{width:min(520px,calc(100% - 24px));margin:auto;padding:clamp(28px,5vw,46px) clamp(22px,6vw,58px);border:2px solid #d7e7dc;border-radius:26px;background:#fffdf5;box-shadow:0 18px 42px rgba(18,55,52,.28);text-align:center}@media(max-width:650px){.gawain-2 .game{width:100%;height:calc(100vh - 92px);padding:22px 14px 16px;border-radius:30px}.gawain-2 .back{width:230px;min-height:58px;font-size:1rem}.gawain-2 .task:has(#listen){width:100%}.gawain-2 .pairs{gap:12px}.gawain-2 .pairs .word,.gawain-2 .pairs .word:nth-child(2){height:170px}.gawain-2 .pairs .word img{height:100px}.gawain-2 .answers{flex-direction:column;align-items:center}.gawain-2 .answer{width:min(300px,100%)}.gawain-2 .read,.gawain-2 .listen{min-height:64px}}</style>
+  <script>
+    window.__session1OtherNarrationAudio = {
+      'Pangalanan ang dalawang larawan. Sabihin ang mga salita at pakinggan ang iyong sarili.': "{% static 'pabasa_app/prescribed/audio/SESSION 1/OTHERS/pangalanan_ang_dalawang_larawan.mp3' %}",
+      'Magaling!': "{% static 'pabasa_app/prescribed/audio/SESSION 1/OTHERS/magaling.mp3' %}",
+      'Hindi ito ang tamang sagot. Subukan natin muli.': "{% static 'pabasa_app/prescribed/audio/SESSION 1/OTHERS/hindi_ito_ang_tamang_sagot_subukan_muli.mp3' %}"
+    };
+  </script>
 </head>
 <style>.gawain-2 .game{background:#ffffff9e!important}</style>
 <style>
@@ -69,7 +77,7 @@
     <nav class="nav"><a class="back" href="{% url 'assessment' %}">← Bumalik sa<br>Aking Aralin</a></nav>
     <section id="game" class="game"></section>
   </main>
-  <script type="text/plain" data-activity-bootstrap="lesson-3-gawain-2" src="{% static 'pabasa_app/js/lesson3_gawain_2_sequence.js' %}?v=20260919-1"></script>
+  <script type="text/plain" data-activity-bootstrap="lesson-3-gawain-2" src="{% static 'pabasa_app/js/lesson3_gawain_2_sequence.js' %}?v=20260923-prescribed-narration-2"></script>
   <script type="text/plain" data-activity-bootstrap="lesson-3-gawain-2">
     const savedLesson3Progress = {{ lesson_3_progress|safe }};
     if (savedLesson3Progress) localStorage.setItem('pabasa:lesson-3-gawain-2:progress', String(savedLesson3Progress.activity_completed?6:(window.__lessonStartResumeIndex??savedLesson3Progress.current_index)));
@@ -84,7 +92,7 @@
       progressUrl: "{{ lesson_3_progress_url }}",
       initialProgress: {{ lesson_3_progress|default:'null'|safe }},
       transcribeUrl: "{% url 'reading_transcribe_api' %}",
-      readAloudUrl: "{% url 'reading_read_aloud_api' %}",
+      prescribedNarrationAudio: window.__lesson3PrescribedNarrationAudio,
       exitUrl: "{% url 'assessment' %}"
     });
   </script>
@@ -188,32 +196,6 @@
 </style>
 </body>
 </html>
-<!-- duplicate legacy Gawain 2 handlers intentionally disabled; the shared activity script above owns the flow.
-document.addEventListener('click', async function(event){
-  const button=event.target.closest('#read');
-  if(!button||button.dataset.ttsUnlocked==='1'||button.dataset.ttsPlaying==='1')return;
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  button.dataset.ttsPlaying='1';
-  const indicator=document.querySelector('.audio-cue');
-  indicator?.classList.add('active-audio');
-  try{
-    const response=await fetch("{% url 'reading_read_aloud_api' %}",{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||''},body:new URLSearchParams({target_text:'Sabihin ito.',language:'Filipino',mode:'word'})});
-    const data=await response.json();
-    if(!response.ok||!data.success||!data.audio_content)throw new Error(data.error||'TTS unavailable');
-    const audio=new Audio('data:'+(data.mime_type||'audio/mpeg')+';base64,'+data.audio_content);
-    await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=reject;audio.play().catch(reject)});
-  }catch(error){console.error('Lesson 3 Gawain 2 instruction audio failed',error)}
-  finally{
-    indicator?.classList.remove('active-audio');
-    button.dataset.ttsPlaying='0';
-    button.dataset.ttsUnlocked='1';
-    button.click();
-    setTimeout(()=>button.removeAttribute('data-tts-unlocked'),0);
-  }
-},true);
-</script>
--->
 <style>
   .gawain-2{height:100dvh;min-height:0;overflow:hidden;padding:16px clamp(16px,4vw,42px) 22px;background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover fixed}
   .gawain-2 .app{height:100dvh;padding:0;display:block;position:relative}
