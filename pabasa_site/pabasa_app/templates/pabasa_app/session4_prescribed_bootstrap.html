@@ -1,0 +1,152 @@
+{% load static %}
+<script src="{% static 'pabasa_app/js/prescribed_controls.js' %}"></script>
+<script src="{% static 'pabasa_app/js/session4_prescribed_controls.js' %}"></script>
+<script>
+(() => {
+  const prefix = '{{ prefix }}';
+  const speech = {{ speech|yesno:'true,false' }};
+  const data = JSON.parse(document.getElementById('{{ data_id }}')?.textContent || '{}');
+  let isMuted = false;
+  const streams = new Set();
+  const recorders = new Set();
+  const test = { stream: null, context: null, analyser: null, raf: 0 };
+
+  const stopActivityAudio = () => {
+    document.querySelectorAll('audio').forEach(audio => { audio.pause(); audio.currentTime = 0; });
+    window.speechSynthesis?.cancel();
+  };
+  const cancelActivitySpeech = () => {
+    recorders.forEach(recorder => {
+      try { if (recorder.state !== 'inactive') recorder.stop(); } catch (_) {}
+    });
+    streams.forEach(stream => stream.getTracks().forEach(track => track.stop()));
+    recorders.clear();
+    streams.clear();
+    stopActivityAudio();
+  };
+
+  if (speech && navigator.mediaDevices?.getUserMedia) {
+    const originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+    navigator.mediaDevices.getUserMedia = constraints => originalGetUserMedia(constraints).then(stream => {
+      streams.add(stream);
+      stream.getTracks().forEach(track => track.addEventListener('ended', () => streams.delete(stream), { once: true }));
+      stream.getAudioTracks().forEach(track => { track.enabled = !isMuted; });
+      return stream;
+    });
+  }
+
+  const stopTest = () => {
+    test.stream?.getTracks().forEach(track => track.stop());
+    test.stream = null;
+    test.context?.close();
+    test.context = null;
+    cancelAnimationFrame(test.raf);
+    test.raf = 0;
+    document.getElementById(`${prefix}-settings-status`)?.replaceChildren(Object.assign(document.createElement('strong'), { textContent: 'Microphone Status:' }), document.createTextNode(' Inactive'));
+    const level = document.getElementById(`${prefix}-level-fill`);
+    if (level) level.style.width = '0%';
+    const button = document.getElementById(`${prefix}-test-toggle`);
+    if (button) button.innerHTML = '<i class="bi bi-mic-fill" aria-hidden="true"></i> Start Test';
+  };
+
+  const startTest = async () => {
+    stopTest();
+    const select = document.getElementById(`${prefix}-device-select`);
+    const deviceId = select?.value;
+    try {
+      test.stream = await navigator.mediaDevices.getUserMedia({ audio: deviceId ? { deviceId: { exact: deviceId } } : true });
+      const status = document.getElementById(`${prefix}-settings-status`);
+      if (status) status.innerHTML = '<strong>Microphone Status:</strong> Access granted.';
+      test.context = new AudioContext();
+      test.analyser = test.context.createAnalyser();
+      test.analyser.fftSize = 512;
+      test.context.createMediaStreamSource(test.stream).connect(test.analyser);
+      const values = new Uint8Array(test.analyser.fftSize);
+      const level = document.getElementById(`${prefix}-level-fill`);
+      const track = level?.parentElement;
+      const tick = () => {
+        test.analyser.getByteTimeDomainData(values);
+        let sum = 0;
+        for (const value of values) { const sample = (value - 128) / 128; sum += sample * sample; }
+        const amount = Math.min(100, Math.round(Math.sqrt(sum / values.length) * 260));
+        if (level) level.style.width = `${amount}%`;
+        track?.setAttribute('aria-valuenow', String(amount));
+        test.raf = requestAnimationFrame(tick);
+      };
+      tick();
+      const button = document.getElementById(`${prefix}-test-toggle`);
+      if (button) button.innerHTML = '<i class="bi bi-stop-fill" aria-hidden="true"></i> Stop Test';
+    } catch (_) {
+      stopTest();
+      const status = document.getElementById(`${prefix}-settings-status`);
+      if (status) status.innerHTML = '<strong>Microphone Status:</strong> Access denied or microphone unavailable.';
+    }
+  };
+
+  const syncMic = () => {
+    const mic = document.getElementById(`${prefix}-mic-toggle`);
+    if (!mic) return;
+    mic.setAttribute('aria-pressed', String(isMuted));
+    mic.setAttribute('aria-label', isMuted ? 'I-unmute ang mikropono' : 'I-mute ang mikropono');
+    mic.title = isMuted ? 'I-unmute ang mikropono' : 'I-mute ang mikropono';
+    mic.classList.toggle('is-muted', isMuted);
+    const icon = mic.querySelector('i');
+    if (icon) icon.className = isMuted ? 'bi bi-mic-mute-fill' : 'bi bi-mic-fill';
+    document.getElementById(`${prefix}-debug-mic`)?.replaceChildren(document.createTextNode(`Inactive · ${isMuted ? 'Muted' : 'Unmuted'}`));
+  };
+
+  const adapter = {
+    pause() { cancelActivitySpeech(); },
+    resume() {},
+    async restart() {
+      cancelActivitySpeech();
+      stopTest();
+      if (data.progress_url) {
+        await fetch(data.progress_url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' }, body: JSON.stringify({ reset: true, state: { current_index: 0, completed_items: 0, phase: 'initial' } }) });
+      }
+      window.location.reload();
+    },
+    cleanup() { cancelActivitySpeech(); stopTest(); },
+    stopAudioTest() { stopTest(); },
+    help() { cancelActivitySpeech(); },
+    getMuted: () => isMuted,
+    setMuted(value) {
+      isMuted = Boolean(value);
+      streams.forEach(stream => stream.getAudioTracks().forEach(track => { track.enabled = !isMuted; }));
+      syncMic();
+    },
+    bindAudioTest({ q }) {
+      const button = q('-test-toggle');
+      if (!button) return;
+      button.onclick = () => button.textContent === 'Stop Test' ? stopTest() : startTest();
+      navigator.mediaDevices?.enumerateDevices().then(devices => {
+        const select = q('-device-select');
+        if (select) select.innerHTML = '<option value="">Default microphone</option>' + devices.filter(device => device.kind === 'audioinput').map(device => `<option value="${device.deviceId}">${device.label || 'Microphone'}</option>`).join('');
+      }).catch(() => {});
+    },
+    bindDebug({ q }) {
+      const toggle = q('-debug-toggle');
+      const panel = q('-debug-panel');
+      if (!toggle || !panel) return;
+      const setVisible = (visible, persist) => {
+        const enabled = Boolean(visible);
+        panel.toggleAttribute('hidden', !enabled);
+        panel.setAttribute('aria-hidden', String(!enabled));
+        toggle.checked = enabled;
+        if (persist) {
+          try { localStorage.setItem('pabasaShowSpeechDebugPanel', String(enabled)); } catch (_) {}
+        }
+      };
+      let saved = false;
+      try { saved = localStorage.getItem('pabasaShowSpeechDebugPanel') === 'true'; } catch (_) {}
+      setVisible(saved, false);
+      toggle.addEventListener('change', () => setVisible(toggle.checked, true));
+    }
+  };
+  syncMic();
+
+  const initializeControls = () => window.Session4PrescribedControls?.init({ prefix, adapter, speech });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializeControls, { once: true });
+  else initializeControls();
+})();
+</script>
