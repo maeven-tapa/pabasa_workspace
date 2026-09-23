@@ -34,7 +34,7 @@
       const result = await response.json().catch(() => ({}));
       if (run !== audioRun) throw Object.assign(Error('Audio interrupted.'), {cancelled:true});
       if (!response.ok || !result.success || !result.audio_content) throw Error(result.error || 'Hindi available ang Filipino audio.');
-      if (result.tts_language !== 'fil-PH' || result.voice_name !== 'fil-PH-Wavenet-A') throw Error('Hindi available ang tamang Filipino voice.');
+      if (result.tts_language !== 'fil-PH' || (!result.local_audio && result.voice_name !== 'fil-PH-Wavenet-A')) throw Error('Hindi available ang tamang Filipino voice.');
       audio = new Audio(`data:${result.mime_type || 'audio/mpeg'};base64,${result.audio_content}`);
       await audio.play();
       await new Promise((resolve, reject) => { audio.onended = resolve; audio.onerror = () => reject(Error('Hindi ma-play ang Filipino audio.')); });

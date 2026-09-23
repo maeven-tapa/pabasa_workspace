@@ -20491,6 +20491,7 @@ def reading_transcribe_api(request):
 
 _LOCAL_PRESCRIBED_AUDIO_PATHS = {
     'aral-l22-g1-c-syllable-builder': ('SESSION_8', 'LESSON_22', 'GAWAIN_1'),
+    'aral-l22-g3-c-word-search': ('SESSION_8', 'LESSON_22', 'GAWAIN_3'),
     **{f'lesson-29-gawain-{index}': ('SESSION_13', 'LESSON_29', f'GAWAIN_{index}') for index in (1, 2, 3)},
     **{f'lesson-30-gawain-{index}': ('SESSION_14', 'LESSON_30', f'GAWAIN_{index}') for index in (1, 2, 3)},
     **{f'lesson-31-gawain-{index}': ('SESSION_15', 'LESSON_31', f'GAWAIN_{index}') for index in (1, 2, 3, 4)},
@@ -20509,6 +20510,21 @@ _LOCAL_PRESCRIBED_AUDIO_ALIASES = {
         'Subukan muli._TTS.mp3',
     ('aral-l22-g1-c-syllable-builder', 'tama'):
         'Tama!_TTS.mp3',
+    ('aral-l22-g3-c-word-search', 'hanapinatkulayangpaboritongkulayangsumusunodnasalitasaibaba'):
+        'Hanapin at kulayan ng paboritong kulay ang sumusunod na salita sa ibaba_TTS.mp3',
+    ('aral-l22-g3-c-word-search', 'subukanmuli'):
+        'Subukan muli._TTS.mp3',
+    ('aral-l22-g3-c-word-search', 'nahanapmonaangsalitangito'):
+        'Nahanap mo na ang salitang ito._TTS.mp3',
+    ('aral-l22-g3-c-word-search', 'magalingnahanapmoanglahatngsalita'):
+        'Magaling! Nahanap mo ang lahat ng salita!_TTS.mp3',
+    **{(
+        'aral-l22-g3-c-word-search',
+        re.sub(r'[^a-z0-9]+', '', f'tama! nahanap mo ang {word}.'.lower()),
+    ): f'Tama! Nahanap mo ang {word}._TTS.mp3' for word in (
+        'Carla', 'Cagayan', 'cactus', 'Cardo', 'computer',
+        'Celeste', 'cabinet', 'Cebu', 'camera',
+    )},
     ('lesson-29-gawain-3', 'greatjobyoutracedandsaid everyletter'.replace(' ', '')):
         'Great job! You completed Trace and Say..mp3',
     ('lesson-29-gawain-2', 'greatjobyouspottedallthewords'):
