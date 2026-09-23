@@ -2027,6 +2027,23 @@ class StudentActivityProgress(models.Model):
 
 
 
+class StudentActivityRecordingSubmission(models.Model):
+    STATUS_CHOICES = [('submitted', 'Submitted'), ('retry', 'Retry Requested'), ('checked', 'Checked')]
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="activity_recording_submissions")
+    activity_key = models.CharField(max_length=100)
+    audio_file = models.FileField(upload_to="activity_recordings/%Y/%m/%d/")
+    duration_seconds = models.PositiveIntegerField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')
+    checked_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='checked_activity_recordings')
+    checked_at = models.DateTimeField(null=True, blank=True)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "student_activity_recording_submissions"
+        constraints = [models.UniqueConstraint(fields=("student", "activity_key"), name="unique_student_activity_recording")]
+
+
 class LiveAssessmentSession(models.Model):
     STATUS_CHOICES = [
         ('waiting', 'Waiting'),

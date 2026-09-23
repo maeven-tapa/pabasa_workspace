@@ -11137,7 +11137,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             .filter(assessment => visibleAssessmentIds.has(String(assessment.id)))
             .filter(assessment => {
                 const assessmentId = rawRecordId(assessment.id);
-                return /^\d+$/.test(assessmentId) && Number(assessmentId) > 0;
+                return assessment.review_activity_key === 'lesson-1-gawain-1' || (/^\d+$/.test(assessmentId) && Number(assessmentId) > 0);
             })
             .slice()
             .sort((a, b) => {
@@ -11187,6 +11187,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         </div>
                         ${assessment.review_retell_recordings ? `<button type="button" class="course-assessment-export-btn retell-recordings-btn" data-material-id="${escapeHtml(exportMaterialId)}"><i class="bi bi-mic"></i>Recordings</button>` : ''}
                         ${assessment.review_responses ? `<button type="button" class="course-assessment-export-btn story-response-review-btn" data-material-id="${escapeHtml(exportMaterialId)}"><i class="bi bi-mic"></i>Recordings</button>` : ''}
+                        ${assessment.review_activity_key === 'lesson-1-gawain-1' ? `<button type="button" class="course-assessment-export-btn lesson1-recordings-btn"><i class="bi bi-mic"></i>View Recordings</button>` : ''}
                         ${canExport ? `
                             <a class="course-assessment-export-btn"
                                href="/material/export-results/?material_id=${encodeURIComponent(exportMaterialId)}"
@@ -11211,6 +11212,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 ? `<div class="course-assessment-overview-list">${assessmentExportCards}</div>`
                 : ''}
         `;
+    }
+
+    async function openLesson1Recordings() {
+        let modal = document.getElementById('lesson1RecordingsModal');
+        if (!modal) { document.body.insertAdjacentHTML('beforeend', '<div class="modal fade" id="lesson1RecordingsModal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Lesson 1 Gawain 1 Recordings</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="lesson1RecordingsBody"></div></div></div></div>'); modal = document.getElementById('lesson1RecordingsModal'); }
+        const body = document.getElementById('lesson1RecordingsBody'); body.innerHTML = '<div class="text-muted">Loading recordings...</div>'; bootstrap.Modal.getOrCreateInstance(modal).show();
+        const response = await fetch('{% url "teacher_lesson_1_gawain_1_recordings" %}', {credentials:'same-origin'}); const data = await response.json();
+        if (!response.ok || !data.success) { body.innerHTML = `<div class="text-danger">${escapeHtml(data.error || 'Unable to load recordings.')}</div>`; return; }
+        body.innerHTML = (data.submissions || []).map(row => `<div class="story-response-review-row"><div class="story-response-review-header"><strong class="story-response-student-name">${escapeHtml(row.student_name)}</strong><span class="story-response-status-badge">${escapeHtml(row.status)}</span></div><p class="small text-muted">${new Date(row.submitted_at).toLocaleString()}</p><audio class="w-100" controls preload="none" src="${escapeHtml(row.recording_url)}"></audio><div class="d-flex gap-2 mt-2"><button type="button" class="btn btn-outline-secondary lesson1-review-action" data-id="${row.id}" data-action="retry" ${row.can_retry ? '' : 'disabled'}>Retry</button><button type="button" class="btn btn-primary lesson1-review-action" data-id="${row.id}" data-action="checked" ${row.can_check ? '' : 'disabled'}>Mark as Checked</button></div></div>`).join('') || '<div class="text-muted">No recordings yet.</div>';
     }
 
     async function openStoryResponseReview(materialId) {
@@ -11296,6 +11306,20 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         if (reviewButton) {
             event.preventDefault();
             await openStoryResponseReview(reviewButton.dataset.materialId);
+            return;
+        }
+        const lesson1Button = event.target.closest('.lesson1-recordings-btn');
+        if (lesson1Button) { event.preventDefault(); await openLesson1Recordings(); return; }
+        const lesson1Action = event.target.closest('.lesson1-review-action');
+        if (lesson1Action) {
+            lesson1Action.disabled = true;
+            const token = document.querySelector('[name=csrfmiddlewaretoken]')?.value || await ensureCsrfToken();
+            const response = await fetch('{% url "teacher_lesson_1_gawain_1_review_action" %}', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':token}, body:JSON.stringify({submission_id: lesson1Action.dataset.id, action: lesson1Action.dataset.action})});
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || !result.success) { lesson1Action.disabled = false; showToast(result.error || 'Review action failed', 'error'); return; }
+            const row = lesson1Action.closest('.story-response-review-row'); row?.querySelector('.story-response-status-badge')?.replaceChildren(document.createTextNode(result.status));
+            row?.querySelectorAll('.lesson1-review-action').forEach(button => { button.disabled = true; });
+            showToast('Recording review updated', 'success');
             return;
         }
         const retellButton = event.target.closest('.retell-recordings-btn');

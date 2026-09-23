@@ -64,7 +64,7 @@ from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_
 from django.db import transaction
 import re
 import traceback
-from .models import User, School, Section, Enrollment, AccountStatusHistory, Assessment, AssessmentRequest, Material, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride, ClassCrlaFinalization, StudentActivityProgress
+from .models import User, School, Section, Enrollment, AccountStatusHistory, Assessment, AssessmentRequest, Material, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride, ClassCrlaFinalization, StudentActivityProgress, StudentActivityRecordingSubmission
 from .system_clock import invalidate_override_cache, now as system_now, real_now, today as system_today
 from .models import PracticeDebugSettings
 from .section_configuration import ensure_salawag_grade_two_sections
@@ -18107,9 +18107,14 @@ def lesson_1_gawain_1_page(request):
     progress = StudentActivityProgress.objects.filter(
         student_id=request.session.get('user_id'), activity_key='lesson-1-gawain-1'
     ).first()
+    submission = StudentActivityRecordingSubmission.objects.filter(
+        student_id=request.session.get('user_id'), activity_key='lesson-1-gawain-1'
+    ).first()
     context = _dashboard_context(request)
     context['lesson_1_data'] = {
         'progress_url': reverse('lesson_3_activity_progress'),
+        'submission_url': reverse('lesson_1_gawain_1_submit'),
+        'submitted': bool(submission and submission.status != 'retry'),
         'progress': {
             'current_index': progress.current_index if progress else 0,
             'completed_items': progress.completed_items if progress else 0,
@@ -18123,6 +18128,99 @@ def lesson_1_gawain_1_page(request):
     response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     response['Pragma'] = 'no-cache'
     return response
+
+
+@login_required(role='student')
+@csrf_protect
+@require_http_methods(['POST'])
+def lesson_1_gawain_1_submit(request):
+    student = User.objects.filter(pk=request.session.get('user_id'), role='student', is_archived=False).first()
+    audio = request.FILES.get('audio')
+    if not student or not audio:
+        return JsonResponse({'success': False, 'error': 'A recording is required.'}, status=400)
+    existing = StudentActivityRecordingSubmission.objects.filter(student=student, activity_key='lesson-1-gawain-1').first()
+    if existing and existing.status != 'retry':
+        return JsonResponse({'success': True, 'already_submitted': True, 'submission_id': existing.id})
+    try:
+        duration = max(0, int(request.POST.get('duration_seconds') or 0))
+    except (TypeError, ValueError):
+        duration = None
+    with transaction.atomic():
+        if existing:
+            submission = existing
+            submission.audio_file = audio
+            submission.duration_seconds = duration or None
+            submission.status = 'submitted'
+            submission.checked_by = None
+            submission.checked_at = None
+            submission.save(update_fields=['audio_file', 'duration_seconds', 'status', 'checked_by', 'checked_at', 'updated_at'])
+        else:
+            submission = StudentActivityRecordingSubmission.objects.create(
+                student=student, activity_key='lesson-1-gawain-1', audio_file=audio, duration_seconds=duration or None,
+            )
+        StudentActivityProgress.objects.update_or_create(
+            student=student, activity_key='lesson-1-gawain-1',
+            defaults={'current_index': 1, 'completed_items': 1, 'correct_items': 0, 'total_items': 1,
+                      'activity_completed': submission.status == 'checked', 'state': {'submitted': True, 'submission_id': submission.id, 'status': submission.status}},
+        )
+    return JsonResponse({'success': True, 'submission_id': submission.id})
+
+
+@login_required(role='teacher')
+@require_http_methods(['GET'])
+def teacher_lesson_1_gawain_1_recordings(request):
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    student_ids = {entry.get('student_id') for section in Section.objects.filter(teacher=teacher, is_active=True) for entry in section.get_enrolled_students(active_only=True) if entry.get('student_id')} if teacher else set()
+    rows = StudentActivityRecordingSubmission.objects.filter(activity_key='lesson-1-gawain-1', student_id__in=student_ids).select_related('student').order_by('-submitted_at')
+    return JsonResponse({'success': True, 'submissions': [
+        {'id': row.id, 'student_id': row.student_id,
+         'student_name': f'{row.student.first_name} {row.student.last_name}'.strip() or row.student.custom_id,
+         'submitted_at': row.submitted_at.isoformat(),
+         'recording_url': reverse('teacher_lesson_1_gawain_1_audio', args=[row.id]), 'status': row.status,
+         'can_check': row.status == 'submitted', 'can_retry': row.status != 'retry'}
+        for row in rows
+    ]})
+
+
+@login_required(role='teacher')
+@require_http_methods(['GET'])
+def teacher_lesson_1_gawain_1_audio(request, submission_id):
+    submission = StudentActivityRecordingSubmission.objects.filter(pk=submission_id, activity_key='lesson-1-gawain-1').first()
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    allowed = {entry.get('student_id') for section in Section.objects.filter(teacher=teacher, is_active=True) for entry in section.get_enrolled_students(active_only=True) if entry.get('student_id')} if teacher else set()
+    if not submission or submission.student_id not in allowed or not submission.audio_file:
+        return HttpResponseForbidden('Recording unavailable.')
+    response = FileResponse(submission.audio_file.open('rb'), content_type=mimetypes.guess_type(submission.audio_file.name)[0] or 'audio/webm')
+    response['Content-Disposition'] = 'inline'
+    return response
+
+
+@login_required(role='teacher')
+@csrf_protect
+@require_http_methods(['POST'])
+def teacher_lesson_1_gawain_1_review_action(request):
+    payload = json.loads(request.body or '{}')
+    submission = StudentActivityRecordingSubmission.objects.filter(pk=payload.get('submission_id'), activity_key='lesson-1-gawain-1').first()
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    allowed = {entry.get('student_id') for section in Section.objects.filter(teacher=teacher, is_active=True) for entry in section.get_enrolled_students(active_only=True) if entry.get('student_id')} if teacher else set()
+    if not submission or submission.student_id not in allowed:
+        return JsonResponse({'success': False, 'error': 'Recording not found.'}, status=404)
+    action = str(payload.get('action') or '').strip().lower()
+    if action == 'retry':
+        if submission.status == 'retry':
+            return JsonResponse({'success': True, 'status': 'retry'})
+        submission.status = 'retry'
+        submission.save(update_fields=['status', 'updated_at'])
+        StudentActivityProgress.objects.filter(student=submission.student, activity_key='lesson-1-gawain-1').update(activity_completed=False, state={'submitted': False, 'retry_requested': True, 'submission_id': submission.id})
+    elif action == 'checked':
+        if submission.status == 'checked':
+            return JsonResponse({'success': True, 'status': 'checked'})
+        submission.status = 'checked'; submission.checked_by_id = request.session.get('user_id'); submission.checked_at = system_now()
+        submission.save(update_fields=['status', 'checked_by', 'checked_at', 'updated_at'])
+        StudentActivityProgress.objects.update_or_create(student=submission.student, activity_key='lesson-1-gawain-1', defaults={'current_index': 1, 'completed_items': 1, 'correct_items': 0, 'total_items': 1, 'activity_completed': True, 'state': {'submitted': True, 'checked': True, 'submission_id': submission.id}})
+    else:
+        return JsonResponse({'success': False, 'error': 'Invalid review action.'}, status=400)
+    return JsonResponse({'success': True, 'status': submission.status})
 
 
 @login_required(role='student')
@@ -26751,6 +26849,12 @@ def get_teacher_assessments_api(request):
         except Exception:
             logger.exception('Failed to include material-based assessments in teacher assessments API')
 
+        if course or class_section:
+            sections = [class_section] if class_section else list(course.sections.filter(is_active=True))
+            student_ids = {entry.get('student_id') for section in sections for entry in section.get_enrolled_students(active_only=True) if entry.get('student_id')}
+            recording_count = StudentActivityRecordingSubmission.objects.filter(activity_key='lesson-1-gawain-1', student_id__in=student_ids).count()
+            if recording_count:
+                assessment_list.append({'id': 'prescribed-lesson-1-gawain-1', 'raw_id': 'prescribed-lesson-1-gawain-1', 'material_id': None, 'code': 'lesson-1-gawain-1', 'title': 'Lesson 1 Gawain 1', 'assessment_type': 'recording', 'source_type': 'prescribed', 'template_title': 'Alpabetong Pilipino', 'status': 'active', 'is_active': True, 'attempt_count': recording_count, 'review_activity_key': 'lesson-1-gawain-1', 'review_responses': False, 'review_retell_recordings': False})
         return JsonResponse({'success': True, 'assessments': assessment_list})
     except Exception as e:
         logger.exception('Unhandled error in get_teacher_assessments_api')

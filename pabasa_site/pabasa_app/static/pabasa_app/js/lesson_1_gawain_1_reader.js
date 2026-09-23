@@ -66,7 +66,7 @@
     chunkSequence: 0, chunks: [], pendingRequests: [], requestRunning: false,
     activeRequestController: null, requestTimer: null, retryTimers: new Set(),
     mimeType: '', currentSegment: null, transcripts: new Map(), finalizedSequences: new Set(),
-    transcriptionFailed: null,
+    transcriptionFailed: null, recordingParts: [], recordingUrl: '', recordingBlob: null,
     welcomeModal: null, welcomeAudio: null, welcomeAudioUrl: null,
     songPanelNarration: null, songPanelNarrationFinished: false,
     youtubeOpened: false, youtubePageHidden: false, youtubeReturned: false,
@@ -205,6 +205,10 @@
       }
       .lesson-one-page .song-panel h2 { font-size: clamp(1.35rem, 2.5vw, 2.1rem); }
       .lesson-one-page .song-panel p { font-size: clamp(.9rem, 1.5vw, 1.05rem); }
+      .lesson-one-page .review-audio { display: block; margin: 18px auto 0; }
+      .lesson-one-page .review-actions { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; margin-top: 18px; }
+      .lesson-one-page .review-actions .sing-again,
+      .lesson-one-page .review-actions .sing-done { margin: 0; }
       .lesson-one-page .youtube-link,
       .lesson-one-page .sing-done,
       .lesson-one-page .sing-stop,
@@ -454,11 +458,10 @@
   }
 
   function enqueue(blob, sequence) {
-    state.chunks.push({ blob, sequence, retries: 0 });
     console.log('[Lesson1] segment enqueued', {
       sequence, size: blob.size, type: blob.type,
     });
-    drainQueue();
+    // Lesson 1 Gawain 1 stores the segment locally for review; it is not transcribed.
   }
 
   function diagnoseBlobDuration(blob, segment) {
@@ -538,6 +541,7 @@
     }
     segment.sequence = state.chunkSequence++;
     segment.enqueued = true;
+    state.recordingParts.push(blob);
     state.finalizedSequences.add(segment.sequence);
     console.log('[Lesson1] segment finalized', {
       sequence: segment.sequence,
@@ -652,6 +656,7 @@
     }, CHUNK_MS);
   }
 
+  /* Legacy chunk transcription/evaluation helpers are disabled for this activity.
   function retryChunk(item) {
     console.warn('[Lesson1] segment retried', {
       sequence: item.sequence, retry: item.retries + 1, size: item.blob.size,
@@ -731,6 +736,7 @@
     }
   }
 
+  */
   function flushRecorder() {
     return stopSegment(state.currentSegment, 'finalization');
   }
@@ -812,7 +818,10 @@
     });
   }
 
+  /* Legacy transcription/scoring completion is intentionally unreachable for this recording activity. */
   function maybeFinish() {
+    return;
+    /*
     if (!state.finalizing || state.requestRunning || state.pendingRequests.length ||
         state.chunks.length || state.retryTimers.size) return;
     if (state.failedChunk || state.transcriptionFailed || !state.finalizedSequences.size ||
@@ -843,13 +852,14 @@
       state.finalizing = false;
       showRetry('Hindi na-save ang resulta. Subukan muli.');
     });
+    */
   }
 
   async function finalize() {
     if (state.finalizing || state.cancelled) return;
     state.finalizing = true;
     state.panel.classList.remove('is-recording');
-    state.panel.innerHTML = '<p class="song-kicker">Sinusuri ang iyong pag-awit…</p><p class="song-note">Sandali lamang. Inihahanda ang iyong resulta.</p><button id="stopSing" class="sing-stop" type="button" disabled>Hinahanda ang resulta…</button>';
+    state.panel.innerHTML = '<p class="song-kicker">Inaayos ang iyong recording…</p><p class="song-note">Sandali lamang.</p><button id="stopSing" class="sing-stop" type="button" disabled>Inaayos ang recording…</button>';
     clearTimers();
     try {
       await flushRecorder();
@@ -861,14 +871,36 @@
       return;
     }
     stopTracks();
-    drainQueue();
-    maybeFinish();
+    cleanup();
+    state.finalizing = false;
+    if (!state.recordingParts.length) { showRetry('Walang na-record na audio. Subukan muli.'); return; }
+    state.recordingBlob = new Blob(state.recordingParts, { type: state.recordingParts[0].type || 'audio/webm' });
+    if (state.recordingUrl) URL.revokeObjectURL(state.recordingUrl);
+    state.recordingUrl = URL.createObjectURL(state.recordingBlob);
+    state.panel.innerHTML = '<p class="song-kicker">Pakinggan muna</p><h2>Na-record na ang iyong pag-awit.</h2><audio class="review-audio" controls preload="metadata" src="' + state.recordingUrl + '" style="width:100%;max-width:300px"></audio><div class="review-actions"><button id="retrySing" class="sing-again" type="button">ULITIN ANG PAG-RECORD</button><button id="submitSing" class="sing-done" type="button">ISUMITE ANG PAG-AWIT</button></div><p class="song-note" data-submit-error hidden></p>';
+    state.panel.querySelector('audio').onerror = () => { const error = state.panel.querySelector('[data-submit-error]'); error.hidden = false; error.textContent = 'Hindi mabuksan ang recording. Maaari kang mag-record muli.'; };
+    state.panel.querySelector('#retrySing').onclick = () => { URL.revokeObjectURL(state.recordingUrl); state.recordingUrl = ''; state.recordingBlob = null; reference(state.panel); };
+    state.panel.querySelector('#submitSing').onclick = submitRecording;
+  }
+
+  async function submitRecording() {
+    const button = state.panel.querySelector('#submitSing');
+    const error = state.panel.querySelector('[data-submit-error]');
+    if (!state.recordingBlob || button.disabled) return;
+    button.disabled = true;
+    const form = new FormData(); form.append('audio', state.recordingBlob, 'lesson-1-gawain-1.webm');
+    try {
+      const response = await fetch(data().submission_url, { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRFToken': csrf() }, body: form });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) throw new Error(result.error || 'Hindi naisumite ang recording.');
+      state.panel.innerHTML = '<p class="song-kicker">Tapos na</p><h2>Naipasa na ang iyong pag-awit.</h2><p class="song-note">Makikinig ang iyong guro sa iyong recording.</p>';
+    } catch (submissionError) { button.disabled = false; error.hidden = false; error.textContent = 'Hindi naisumite ang recording. Subukan muli.'; }
   }
 
   async function startRecording() {
     state.attempt += 1;
     state.cancelled = false; state.finalizing = false; state.failedChunk = null;
-    state.chunkSequence = 0; state.chunks = []; state.pendingRequests = []; state.transcripts = new Map();
+    state.chunkSequence = 0; state.chunks = []; state.pendingRequests = []; state.transcripts = new Map(); state.recordingParts = [];
     state.finalizedSequences = new Set(); state.transcriptionFailed = null;
     state.panel.innerHTML = '<p class="song-kicker">● Nagre-record...</p><p class="song-note">Umawit ayon sa awit. Maaari mong tapusin kapag handa ka na.</p><button id="stopSing" class="sing-stop" type="button">TAPUSIN ANG PAG-AWIT</button>';
     state.panel.classList.add('is-recording');
@@ -883,6 +915,21 @@
       state.panel.innerHTML = '<p class="song-result">' + (error.message || 'Hindi nakuha ang iyong boses.') + '</p><button id="retrySing" class="sing-again" type="button">Subukan muli</button>';
       state.panel.querySelector('#retrySing').onclick = () => reference(state.panel);
     }
+  }
+
+  function showPersistedActivityState(panel) {
+    const payload = data();
+    const progress = payload.progress || {};
+    if (progress.activity_completed) {
+      panel.innerHTML = '<p class="song-kicker">Tapos na</p><h2>Naipasa na ang iyong pag-awit.</h2><p class="song-note">Nasuri na ito ng iyong guro.</p>';
+      document.getElementById('completion')?.classList.add('show');
+      return true;
+    }
+    if (payload.submitted) {
+      panel.innerHTML = '<p class="song-kicker">Naghihintay ng pagsusuri</p><h2>Naipasa na ang iyong pag-awit.</h2><p class="song-note">Hihintayin ang pagsusuri ng iyong guro.</p>';
+      return true;
+    }
+    return false;
   }
 
   function reference(panel) {
@@ -916,8 +963,10 @@
     const panel = renderPanel();
     if (!panel) return;
     state.attempt = Number(saved().singing_attempts || 0);
-    reference(panel);
-    showWelcomeModal();
+    if (!showPersistedActivityState(panel)) {
+      reference(panel);
+      showWelcomeModal();
+    }
     document.getElementById('done')?.addEventListener('click', () => {
       window.location.href = document.querySelector('.back')?.href || '/';
     });
