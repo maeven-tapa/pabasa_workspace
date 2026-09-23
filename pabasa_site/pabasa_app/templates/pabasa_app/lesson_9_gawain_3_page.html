@@ -49,6 +49,7 @@
     const narrationUrl='{% url "reading_read_aloud_api" %}';
     const csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
     let instructionNarrated=false,manualListening=false;
+    const wordAudioFiles={mi:'mi.mp3',si:'si.mp3',is:'is.mp3',mo:'mo.mp3',me:'me.mp3',se:'se.mp3',miso:'miso.mp3',mais:'mais.mp3',amo:'amo.mp3',siso:'siso.mp3','Si Ami':'si_ami.mp3','Si Mimi':'si_mimi.mp3','Ang aso':'ang_aso.mp3','Ang aso ay isasama.':'ang_aso_ay_isasama.mp3','Si Mimi ay sasama sa ama.':'si_mimi_ay_sasama_sa_ama.mp3'},wordAudioBase='/static/pabasa_app/prescribed/audio/SESSION%203/LESSON%209/GAWAIN%203/';
     const audioFor=async text=>{
       const response=await fetch(narrationUrl,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',mode:'reading',prescribed_activity_key:'lesson-9-gawain-3'})});
       const data=await response.json();
@@ -72,7 +73,9 @@
         const word=app.querySelector('.item')?.textContent?.trim();
         if(!word)return;
         manualListening=true;listen.disabled=true;
-        try{await audioFor(word)}catch(error){console.error('Lesson 9 Gawain 3 word narration failed',error)}
+        const audioFile=wordAudioFiles[word];
+        if(!audioFile){listen.disabled=false;return}
+        try{const audio=new Audio(wordAudioBase+audioFile);await audio.play();await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=reject})}catch(error){console.error('Lesson 9 Gawain 3 word narration failed',error)}
         finally{manualListening=false;listen.disabled=false}
       };
     };
