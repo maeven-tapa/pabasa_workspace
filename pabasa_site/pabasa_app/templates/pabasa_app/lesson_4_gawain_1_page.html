@@ -394,4 +394,80 @@ setTimeout(function(){
   }
   window.addEventListener('lesson-start-ready', startLesson4Gawain1, { once: true });
 }());
+</script>
+<script>
+(function () {
+  const prescribed = {
+    'Tingnan ang mga larawan sa bilog.': 'tingnan_ang_mga_larawan_sa_bilog.mp3',
+    'Isa-isa nating pangalanan ang mga ito.': 'isa_isa_nating_pangalanan_ang_mga_ito.mp3',
+    'Magsimula na tayo!': 'magsimula_na_tayo.mp3',
+    'Pangalanan ang larawan.': 'pangalanan_ang_larawan.mp3',
+    'Pangalanan ang larawan': 'pangalanan_ang_larawan.mp3',
+    'Sabihin ang salita nang malinaw.': 'sabihin_ang_salita_nang_malinaw.mp3',
+    'Sabihin ang salita nang malinaw': 'sabihin_ang_salita_nang_malinaw.mp3',
+    'Nagsisimula ba ang salitang ito sa tunog /m/ tulad ng Mm?': 'nagsisimula_ba_sa_tunog_m.mp3',
+    'Nagsisimula ba ang salitang ito sa tunog /m/?': 'nagsisimula_ba_sa_tunog_m.mp3',
+    'Nagsisimula ba ang salitang ito sa tunog em?': 'nagsisimula_ba_sa_tunog_m.mp3',
+    'Piliin ang Oo o Hindi.': 'piliin_ang_oo_o_hindi.mp3',
+    'Hindi pa ito tama. Subukan muli': 'hindi_pa_ito_tama_subukan_muli.mp3',
+    'Hindi pa ito tama. Subukan muli.': 'hindi_pa_ito_tama_subukan_muli.mp3',
+    'Subukan muli': 'subukan_muli.mp3',
+    'Magaling!': 'magaling.mp3',
+  };
+  const base = '/static/pabasa_app/prescribed/audio/SESSION%202/LESSON%204/GAWAIN%201/OTHERS/';
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = async function (input, init) {
+    const url = typeof input === 'string' ? input : input?.url || '';
+    const target = init?.body instanceof FormData ? init.body.get('target_text') : '';
+    const filename = prescribed[String(target || '').trim()];
+    if (!filename || !url.includes('/api/reading/read-aloud/')) return originalFetch(input, init);
+    const response = await originalFetch(base + filename, { credentials: 'same-origin', cache: 'no-store' });
+    if (!response.ok) return response;
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    let binary = '';
+    for (let index = 0; index < bytes.length; index += 0x8000) {
+      binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+    }
+    return new Response(JSON.stringify({ success: true, mime_type: 'audio/mpeg', audio_content: btoa(binary) }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+}());
 </script><script>window.__lessonStartProgress={activityKey:'lesson-4-gawain-1',progress:JSON.parse(document.getElementById('lesson-four-data').textContent||'{}').progress||null,totalItems:6,progressUrl:'{% url "lesson_4_activity_progress" %}',storageKeys:[]};</script><script src="{% static 'pabasa_app/js/lesson_start_modal.js' %}?v=6"></script>
+<script>
+(function () {
+  const files = {
+    'Tingnan ang mga larawan sa bilog.': 'tingnan_ang_mga_larawan_sa_bilog.mp3',
+    'Isa-isa nating pangalanan ang mga ito.': 'isa_isa_nating_pangalanan_ang_mga_ito.mp3',
+    'Magsimula na tayo!': 'magsimula_na_tayo.mp3',
+    'Pangalanan ang larawan.': 'pangalanan_ang_larawan.mp3',
+    'Pangalanan ang larawan': 'pangalanan_ang_larawan.mp3',
+    'Sabihin ang salita nang malinaw.': 'sabihin_ang_salita_nang_malinaw.mp3',
+    'Sabihin ang salita nang malinaw': 'sabihin_ang_salita_nang_malinaw.mp3',
+    'Nagsisimula ba ang salitang ito sa tunog /m/ tulad ng Mm?': 'nagsisimula_ba_sa_tunog_m.mp3',
+    'Nagsisimula ba ang salitang ito sa tunog /m/?': 'nagsisimula_ba_sa_tunog_m.mp3',
+    'Nagsisimula ba ang salitang ito sa tunog em?': 'nagsisimula_ba_sa_tunog_m.mp3',
+    'Piliin ang Oo o Hindi.': 'piliin_ang_oo_o_hindi.mp3',
+    'Hindi pa ito tama. Subukan muli': 'hindi_pa_ito_tama_subukan_muli.mp3',
+    'Hindi pa ito tama. Subukan muli.': 'hindi_pa_ito_tama_subukan_muli.mp3',
+    'Subukan muli': 'subukan_muli.mp3',
+    'Magaling!': 'magaling.mp3',
+  };
+  const base = '/static/pabasa_app/prescribed/audio/SESSION%202/LESSON%204/GAWAIN%201/OTHERS/';
+  const previousFetch = window.fetch.bind(window);
+  window.fetch = async function (input, init) {
+    const url = typeof input === 'string' ? input : input?.url || '';
+    const body = init?.body;
+    const target = body instanceof FormData ? String(body.get('target_text') || '').trim() : '';
+    const filename = files[target];
+    if (!filename || !url.includes('/api/reading/read-aloud/')) return previousFetch(input, init);
+    const audioResponse = await previousFetch(base + filename, { credentials: 'same-origin', cache: 'no-store' });
+    if (!audioResponse.ok) return audioResponse;
+    const bytes = new Uint8Array(await audioResponse.arrayBuffer());
+    let binary = '';
+    for (let offset = 0; offset < bytes.length; offset += 0x8000) binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+    return new Response(JSON.stringify({ success: true, mime_type: 'audio/mpeg', audio_content: btoa(binary) }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  };
+}());
+</script>
