@@ -27,7 +27,7 @@ const pairs=[['aso','laso'],['bundok','sandok'],['tatay','nanay'],['bola','lola'
 .pair .connector::before{background:radial-gradient(circle,#167985 0 3px,transparent 4px) left center/10px 10px repeat-x;border-top:2px dashed #4b9aa0;content:"";height:10px;left:0;position:absolute;right:0;top:50%;transform:translateY(-50%)}
 .pair .connector::after{background:#fff;border:1px solid #c8dfe1;border-radius:999px;box-shadow:0 3px 8px rgba(15,23,42,.08);color:#176078;content:"Magkatugma?";font-size:.72rem;font-weight:900;padding:6px 9px;position:relative;white-space:nowrap;z-index:1}
 @media(max-width:600px){.pair .connector{width:clamp(54px,15vw,82px)}.pair .connector::after{font-size:.58rem;padding:5px 6px}}
-</style>
+</style>{% include 'pabasa_app/session1_prescribed_controls.html' with prefix='prescribed-s1l2g1' help_text='Basahin nang malinaw ang salita. Pakinggan ito at piliin ang kamay na may tamang sagot.' %}
 <script type="text/plain" data-activity-bootstrap="lesson-2-gawain-1">
 (function () {
   function updateAnswerEmojis() {
@@ -223,6 +223,12 @@ body{display:grid;place-items:center;padding:16px}
     const response = await originalFetch.apply(this, args);
     if (String(args[0]).includes('reading_transcribe_api')) {
       const data = await response.clone().json();
+      if (Object.prototype.hasOwnProperty.call(data, 'transcript')) {
+        // The activity's existing exactMatch decision must consume the
+        // endpoint's processed transcript, not provider-only raw artifacts.
+        data.raw_transcript = data.transcript;
+        return new Response(JSON.stringify(data), {status: response.status, headers: {'Content-Type': 'application/json'}});
+      }
       if (!Object.prototype.hasOwnProperty.call(data, 'raw_transcript')) {
         data.success = false;
         return new Response(JSON.stringify(data), {status: response.status, headers: {'Content-Type': 'application/json'}});

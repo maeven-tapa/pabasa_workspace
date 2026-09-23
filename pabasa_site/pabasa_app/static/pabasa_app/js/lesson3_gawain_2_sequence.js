@@ -150,8 +150,12 @@
         recorder.start(); setTimeout(() => recorder.state === 'recording' && recorder.stop(), 3500);
         const form = new FormData(); form.append('audio', await done, 'rhyme.webm'); form.append('target_text', word); form.append('language', 'Filipino'); form.append('mode', 'reading');
         const result = await (await fetch(config.transcribeUrl, {method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrf()}, body: form})).json();
+        const normalizedTranscript = normalize(result.transcript);
+        const normalizedExpected = normalize(word);
+        const actualCorrect = Boolean(result.success && normalizedTranscript.includes(normalizedExpected));
         if (currentGeneration !== generation) return;
-        if (result.success && normalize(result.transcript).includes(normalize(word))) {
+        window.__session1SpeechDebugReport?.({transcript: result.transcript || '', normalized: normalizedTranscript, result: actualCorrect ? 'Correct' : 'Incorrect'});
+        if (actualCorrect) {
           if (wordIndex === 0) { game.querySelector('#status').textContent = narrationText.next; setNarrationLock(true); try { await speakPrescribed('nextPicture'); } finally { setNarrationLock(false); } wordIndex = 1; pairIntroPending = false; render(); }
           else {
             const successStatus = game.querySelector('#status');
