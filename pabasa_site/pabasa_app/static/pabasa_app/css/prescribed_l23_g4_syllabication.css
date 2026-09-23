@@ -1,0 +1,102 @@
+/* Lesson 23 · Gawain 4 only: standard prescribed activity presentation. */
+.wb-page.wb-l23-g4-syllabication {
+  --l23-g4-ink: #183e63;
+  --l23-g4-teal: #299e9a;
+  --l23-g4-teal-dark: #187b7a;
+  --l23-g4-gold: #e7af45;
+  --l23-g4-line: #cce7e8;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 9% 8%, rgba(255, 255, 255, .76) 0 11rem, transparent 28rem),
+    radial-gradient(circle at 92% 86%, rgba(254, 221, 145, .43) 0 12rem, transparent 28rem),
+    url("../prescribed/PRESCRIBED-BG.jpg") center / cover fixed,
+    linear-gradient(135deg, #d9f1ef, #eaf7fb);
+  color: var(--l23-g4-ink);
+}
+
+.wb-page.wb-l23-g4-syllabication .wb-shell {
+  width: min(1120px, 100%);
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  align-content: center;
+  gap: clamp(10px, 1.6vh, 18px);
+  padding: clamp(14px, 3vh, 30px) clamp(16px, 4vw, 48px);
+}
+
+.wb-page.wb-l23-g4-syllabication .wb-shell > header {
+  margin: 0;
+  padding: clamp(20px, 3vh, 32px) clamp(20px, 5vw, 58px) clamp(18px, 2.4vh, 26px);
+  border: 2px solid rgba(255, 255, 255, .72);
+  border-radius: clamp(28px, 4vw, 42px);
+  background: rgba(255, 255, 255, .61);
+  box-shadow: 0 18px 45px rgba(30, 91, 122, .20);
+  backdrop-filter: blur(12px);
+  text-align: center;
+  overflow: visible;
+}
+.wb-page.wb-l23-g4-syllabication .wb-shell > header::after { display: none; }
+.wb-page.wb-l23-g4-syllabication .wb-shell #wb-back {
+  display: inline-flex;
+  min-height: 48px;
+  padding: 10px 20px;
+  border: 2px solid rgba(255, 255, 255, .88);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 6px 15px rgba(24, 62, 99, .14);
+  color: var(--l23-g4-ink);
+  font-size: clamp(.95rem, 1.6vw, 1.08rem);
+  line-height: 1.1;
+}
+.wb-page.wb-l23-g4-syllabication .wb-shell #wb-back:hover { color: var(--l23-g4-teal-dark); transform: translateY(-1px); }
+.wb-page.wb-l23-g4-syllabication .wb-shell #wb-back::before { color: var(--l23-g4-teal); font-size: 1.45em; }
+.wb-page.wb-l23-g4-syllabication .wb-shell header > p:first-of-type { margin: 14px 0 5px; color: var(--l23-g4-teal-dark); font-size: clamp(.78rem, 1.35vw, 1rem); letter-spacing: .08em; }
+.wb-page.wb-l23-g4-syllabication .wb-shell h1 { margin: 0; color: var(--l23-g4-ink); font-size: clamp(2rem, 4.2vw, 3.55rem); font-weight: 900; line-height: 1.08; letter-spacing: -.035em; }
+.wb-page.wb-l23-g4-syllabication .wb-instruction { max-width: 780px; margin: 10px auto 0; color: #365a72; font-size: clamp(1rem, 1.7vw, 1.2rem); font-weight: 800; line-height: 1.42; }
+.wb-page.wb-l23-g4-syllabication #wb-status { min-height: 0; margin: 0; font-size: .95rem; }
+.wb-page.wb-l23-g4-syllabication #wb-progress { margin: 0 auto; padding: 9px 20px; border: 2px solid rgba(255, 255, 255, .9); background: rgba(255, 255, 255, .88); box-shadow: 0 7px 16px rgba(24, 62, 99, .12); color: var(--l23-g4-teal-dark); font-size: clamp(.95rem, 1.5vw, 1.1rem); }
+.wb-page.wb-l23-g4-syllabication #wb-content { align-self: center; min-width: 0; }
+.wb-page.wb-l23-g4-syllabication .wb-instruction-banner { align-items: center; margin: 0 0 clamp(12px, 2vh, 18px); padding: clamp(13px, 2vh, 18px) clamp(16px, 3vw, 24px); border: 2px solid rgba(255, 255, 255, .78); border-radius: 24px; background: rgba(255, 255, 255, .84); box-shadow: 0 10px 25px rgba(24, 62, 99, .10); color: #315a72; font-size: clamp(.98rem, 1.6vw, 1.12rem); }
+.wb-page.wb-l23-g4-syllabication .wb-instruction-banner button,
+.wb-page.wb-l23-g4-syllabication .wb-shell button { border-radius: 999px; font-weight: 900; }
+.wb-page.wb-l23-g4-syllabication .wb-instruction-banner button { min-height: 46px; border: 3px solid #a7dcda; background: #fff; color: var(--l23-g4-teal-dark); box-shadow: 0 4px 0 #b7d6dc; }
+.wb-page.wb-l23-g4-syllabication .wb-j-syllables { width: min(930px, 100%); margin: 0 auto; padding: clamp(20px, 3.2vh, 34px) clamp(16px, 4vw, 44px) clamp(18px, 2.6vh, 28px); border: 2px solid rgba(255, 255, 255, .78); border-radius: clamp(28px, 4vw, 40px); background: rgba(255, 255, 255, .75); box-shadow: 0 18px 45px rgba(24, 62, 99, .16); backdrop-filter: blur(12px); }
+.wb-page.wb-l23-g4-syllabication .wb-j-syllables h2 { margin: 0 0 clamp(14px, 2vh, 22px); color: var(--l23-g4-ink); font-size: clamp(1.35rem, 2.5vw, 2rem); line-height: 1.15; }
+.wb-page.wb-l23-g4-syllabication .wb-syllable-rows { gap: clamp(9px, 1.5vh, 15px); }
+.wb-page.wb-l23-g4-syllabication .wb-syllable-row { grid-template-columns: minmax(0, 1fr) auto minmax(200px, 1fr); min-height: clamp(66px, 9vh, 84px); padding: 12px 16px; border: 3px solid var(--l23-g4-line); border-radius: 22px; background: rgba(255, 255, 255, .96); box-shadow: 0 7px 0 rgba(153, 205, 210, .55), 0 12px 20px rgba(24, 62, 99, .08); color: var(--l23-g4-ink); font-size: clamp(1.15rem, 2.2vw, 1.55rem); }
+.wb-page.wb-l23-g4-syllabication .wb-syllable-row.is-current { border-color: var(--l23-g4-gold); background: #fff6d9; box-shadow: inset 0 0 0 3px #ffe39a, 0 7px 0 #e6b84f, 0 12px 20px rgba(24, 62, 99, .12); transform: translateY(-2px); }
+.wb-page.wb-l23-g4-syllabication .wb-syllable-row.is-done { border-color: #87c9a7; background: #dff4ee; box-shadow: 0 6px 0 #9fd0b5, 0 10px 18px rgba(24, 62, 99, .08); color: #276c50; }
+.wb-page.wb-l23-g4-syllabication .wb-syllable-row input { min-height: 48px; padding: 8px 12px; border: 3px solid #9fcfd0; border-radius: 14px; background: #fff; color: var(--l23-g4-ink); font-size: inherit; font-weight: 900; text-align: center; }
+.wb-page.wb-l23-g4-syllabication .wb-syllable-row input:focus { border-color: var(--l23-g4-teal); outline: 4px solid rgba(41, 158, 154, .2); }
+.wb-page.wb-l23-g4-syllabication .wb-j-feedback { min-height: 28px; margin: clamp(15px, 2vh, 22px) 0 0; color: #26784e; font-size: clamp(1rem, 1.6vw, 1.15rem); }
+.wb-page.wb-l23-g4-syllabication #wb-action { display: flex; justify-content: center; flex-wrap: wrap; gap: 14px; padding: 0 0 6px; }
+.wb-page.wb-l23-g4-syllabication #wb-action button { min-width: min(330px, 100%); min-height: 62px; padding: 13px 24px; border: 0; background: #299e9a; box-shadow: 0 7px 0 #187b7a, 0 12px 22px rgba(24, 123, 122, .24); color: #fff; font-size: clamp(1rem, 1.8vw, 1.25rem); }
+.wb-page.wb-l23-g4-syllabication #wb-action button:hover:not(:disabled),
+.wb-page.wb-l23-g4-syllabication .wb-instruction-banner button:hover:not(:disabled) { transform: translateY(-2px); }
+.wb-page.wb-l23-g4-syllabication #wb-action button:disabled { box-shadow: none; }
+@media (max-height: 720px) and (min-width: 701px) {
+  .wb-page.wb-l23-g4-syllabication .wb-shell { gap: 8px; padding-top: 10px; padding-bottom: 10px; }
+  .wb-page.wb-l23-g4-syllabication .wb-shell > header { padding-top: 16px; padding-bottom: 15px; }
+  .wb-page.wb-l23-g4-syllabication .wb-shell header > p:first-of-type { margin-top: 8px; }
+  .wb-page.wb-l23-g4-syllabication .wb-syllable-row { min-height: 58px; }
+  .wb-page.wb-l23-g4-syllabication #wb-action button { min-height: 54px; }
+}
+@media (max-width: 700px) {
+  .wb-page.wb-l23-g4-syllabication { background-attachment: scroll; }
+  .wb-page.wb-l23-g4-syllabication .wb-shell { display: block; padding: 14px 12px 28px; }
+  .wb-page.wb-l23-g4-syllabication .wb-shell > header { padding: 20px 15px 18px; }
+  .wb-page.wb-l23-g4-syllabication .wb-shell #wb-back { min-height: 46px; padding: 9px 16px; }
+  .wb-page.wb-l23-g4-syllabication #wb-status { margin-top: 10px; }
+  .wb-page.wb-l23-g4-syllabication #wb-progress { margin: 10px auto 14px; }
+  .wb-page.wb-l23-g4-syllabication .wb-instruction-banner { align-items: stretch; flex-direction: column; }
+  .wb-page.wb-l23-g4-syllabication .wb-instruction-banner button { width: 100%; }
+  .wb-page.wb-l23-g4-syllabication .wb-j-syllables { padding: 20px 13px 18px; }
+  .wb-page.wb-l23-g4-syllabication .wb-syllable-row { grid-template-columns: minmax(0, 1fr) auto minmax(120px, 1fr); gap: 8px; min-height: 68px; padding: 12px 10px; border-radius: 18px; font-size: clamp(1rem, 4.5vw, 1.35rem); }
+  .wb-page.wb-l23-g4-syllabication .wb-syllable-row input { min-height: 44px; padding-inline: 6px; }
+  .wb-page.wb-l23-g4-syllabication #wb-action { display: grid; grid-template-columns: 1fr; }
+  .wb-page.wb-l23-g4-syllabication #wb-action button { width: 100%; min-width: 0; }
+}
+@media (max-width: 380px) {
+  .wb-page.wb-l23-g4-syllabication .wb-syllable-row { grid-template-columns: minmax(0, 1fr) auto minmax(100px, 1fr); padding-inline: 7px; font-size: .95rem; }
+}
