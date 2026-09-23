@@ -202,6 +202,10 @@
       }
     }
 
-    render();
+    window.addEventListener('lesson-start-ready', () => {
+      if (pairIndex < pairs.length && !answerPhase) activateAndCue();
+    }, { once: true });
+    if (window.__lessonStartReady) render();
+    else window.addEventListener('lesson-start-ready', () => render(), { once: true });
   };
 }());
