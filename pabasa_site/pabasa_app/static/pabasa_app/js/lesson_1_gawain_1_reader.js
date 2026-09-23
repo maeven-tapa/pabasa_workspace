@@ -69,7 +69,7 @@
     transcriptionFailed: null, recordingParts: [], recordingUrl: '', recordingBlob: null,
     welcomeModal: null, welcomeAudio: null, welcomeAudioUrl: null,
     songPanelNarration: null, songPanelNarrationFinished: false,
-    youtubeOpened: false, youtubePageHidden: false, youtubeReturned: false,
+    youtubeOpened: false, youtubePageHidden: false, youtubeReturned: false, statusPollTimer: null,
   };
 
   const data = () => JSON.parse(document.getElementById('lesson-one-data')?.textContent || '{}');
@@ -917,8 +917,7 @@
     }
   }
 
-  function showPersistedActivityState(panel) {
-    const payload = data();
+  function showPersistedActivityState(panel, payload = data()) {
     const progress = payload.progress || {};
     if (progress.activity_completed) {
       panel.innerHTML = '<p class="song-kicker">Tapos na</p><h2>Naipasa na ang iyong pag-awit.</h2><p class="song-note">Nasuri na ito ng iyong guro.</p>';
@@ -930,6 +929,31 @@
       return true;
     }
     return false;
+  }
+
+  async function pollCompletionStatus() {
+    if (!state.statusPollTimer || state.recorder?.state === 'recording' || state.finalizing) return;
+    try {
+      const response = await fetch(window.location.href, { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'text/html' } });
+      if (!response.ok) return;
+      const html = await response.text();
+      const documentCopy = new DOMParser().parseFromString(html, 'text/html');
+      const payload = JSON.parse(documentCopy.getElementById('lesson-one-data')?.textContent || '{}');
+      if (payload.progress?.activity_completed) {
+        clearInterval(state.statusPollTimer);
+        state.statusPollTimer = null;
+        clearWelcomeAudio();
+        cleanup();
+        showPersistedActivityState(state.panel, payload);
+      }
+    } catch (_) {
+      // A temporary status-request failure is non-disruptive; the next poll retries.
+    }
+  }
+
+  function startCompletionStatusPolling() {
+    if (state.statusPollTimer) return;
+    state.statusPollTimer = setInterval(pollCompletionStatus, 4000);
   }
 
   function reference(panel) {
@@ -963,15 +987,19 @@
     const panel = renderPanel();
     if (!panel) return;
     state.attempt = Number(saved().singing_attempts || 0);
-    if (!showPersistedActivityState(panel)) {
+    const persisted = showPersistedActivityState(panel);
+    if (!persisted) {
       reference(panel);
       showWelcomeModal();
     }
+    if (!data().progress?.activity_completed) startCompletionStatusPolling();
     document.getElementById('done')?.addEventListener('click', () => {
       window.location.href = document.querySelector('.back')?.href || '/';
     });
     window.addEventListener('beforeunload', () => {
       clearWelcomeAudio();
+      if (state.statusPollTimer) clearInterval(state.statusPollTimer);
+      state.statusPollTimer = null;
       cleanup();
     }, { once: true });
     document.addEventListener('visibilitychange', () => {
