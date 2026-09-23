@@ -14,6 +14,10 @@
   let activeAudio = null;
   let audioUrl = null;
   let started = false;
+  let isPaused = false, isMuted = false, activeRecorder = null, activeRecordingTimer = null, activeSpeechButton = null, activeSpeechIdleLabel = '', generation = 0;
+  const debugState = {status:'Ready', transcript:'No transcript yet.', expected:'—', normalized:'—', result:'—', mic:'Inactive · Unmuted', recorder:'inactive', vad:'Not available', error:'—', raw:['Waiting for speech...']};
+  const publishDebug = (patch = {}, line) => { Object.assign(debugState, patch); if (line) debugState.raw = [...debugState.raw, line].slice(-6); window.dispatchEvent(new CustomEvent('prescribed-l26a2-debug-state', {detail:{...debugState, raw:[...debugState.raw]}})); };
+  window.PrescribedLesson26Debug = {getState:() => ({...debugState, raw:[...debugState.raw]}), reset:() => {debugState.transcript='No transcript yet.';debugState.expected='—';debugState.normalized='—';debugState.result='—';debugState.error='—';debugState.recorder='inactive';debugState.mic='Inactive · Unmuted';debugState.raw=['Waiting for speech...'];publishDebug({status:'Ready'},'Activity reset');}};
   const RETRY_FEEDBACK = "Hmm, let's try that again.";
   const CHOICE_CORRECT_FEEDBACK = "That's right, now let's read the next word.";
   const SENTENCE_CORRECT_FEEDBACK = "That's right, now let's choose the words.";
@@ -85,6 +89,7 @@
   }
   function renderChoices(message = '', kind = '') {
     const word = data.choices[state.choice_index] || '';
+    publishDebug({expected:word || '—',status:isPaused?'Paused':'Ready'});
     const canListen = Boolean(state.choice_help || state.choice_attempts >= 3);
     const body = `<div class="lesson26-content"><div class="label">Read the word aloud</div><div class="word">${escapeHtml(word || 'Great job!')}</div>${word ? `<div class="actions"><button class="button" id="read" type="button">🎙️ Read the word</button><button class="button secondary" id="listen" type="button" ${canListen ? '' : 'disabled'}>🔊 Listen</button></div>` : ''}<div class="word-bank">${data.choices.map((choice, i) => `<span class="word-chip ${i < state.choice_index ? 'word-chip-done' : ''} ${i === state.choice_index ? 'word-chip-active' : ''}">${escapeHtml(choice)}</span>`).join('')}</div></div>`;
     shell('Fill in the Blanks', 'Read the words, then fill in the blanks.', body);
@@ -97,32 +102,37 @@
     try { await playTts(text); } catch (error) { console.error('Lesson 26 Activity 2 feedback audio failed', error); }
   }
   async function recordWord(word, index) {
-    if (busy) return;
+    if (busy || isPaused) return;
     busy = true;
     const status = document.getElementById('status');
     const button = document.getElementById('read');
+    activeSpeechButton = button;
+    activeSpeechIdleLabel = '🎙️ Read the word';
     button?.classList.add('is-busy');
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
       if (status) status.textContent = 'Microphone recording is not available in this browser.'; button?.classList.remove('is-busy'); busy = false; return;
     }
     button.textContent = 'Listening…'; if (status) status.textContent = 'Listening…';
     try {
-      stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
-      const recorder = new MediaRecorder(stream), chunks = [];
+      const attempt = generation; stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); stream.getAudioTracks().forEach(track => { track.enabled = !isMuted; });
+      activeRecorder = new MediaRecorder(stream); const recorder = activeRecorder, chunks = [];
+      publishDebug({status:'Recording', expected:word, mic:`Active · ${isMuted?'Muted':'Unmuted'}`, recorder:recorder.state}, 'Recording started');
       recorder.ondataavailable = event => { if (event.data?.size) chunks.push(event.data); };
       const stopped = new Promise((resolve, reject) => {
         recorder.onerror = () => reject(new Error('Could not record your voice. Try again.'));
-        recorder.onstop = () => resolve(new Blob(chunks, {type:recorder.mimeType || 'audio/webm'}));
-        recorder.start(); window.setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, 3000);
+        recorder.onstop = () => { if (activeRecordingTimer) { window.clearTimeout(activeRecordingTimer); activeRecordingTimer = null; } resolve(new Blob(chunks, {type:recorder.mimeType || 'audio/webm'})); };
+        recorder.start(); activeRecordingTimer = window.setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, 3000);
       });
-      const audio = await stopped; stopStream();
+      const audio = await stopped; activeRecorder = null; stopStream(); if (attempt !== generation || isPaused) return;
       const form = new FormData(); form.append('audio', audio, 'lesson26-activity2-word.webm'); form.append('target_text', word); form.append('language', 'English'); form.append('mode', 'reading');
       const response = await fetch(data.transcribe_url, {method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form});
       const result = await response.json();
+      if (attempt !== generation || isPaused) return;
       if (!response.ok || !result.success) throw new Error(result.error || 'Speech recognition failed. Try again.');
-      const transcript = String(result.raw_transcript || result.transcript || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').match(/[a-z]+/g) || [];
+      const rawTranscript = String(result.raw_transcript || result.transcript || ''); const transcript = rawTranscript.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').match(/[a-z]+/g) || [];
       const target = normalize(word), accepted = ({mat:['mat','math'],hat:['hat','hot'],wore:['wore','war'],bat:['bat','butt'],loved:['loved','love']})[target] || [target];
       const correct = transcript.some(token => accepted.includes(normalize(token)));
+      publishDebug({status:'Processing', transcript:rawTranscript || 'No transcript returned.', normalized:transcript.join(' '), result:correct?'Match':'Not Match', recorder:'inactive'}, `Transcript: ${rawTranscript || '(empty)'}`);
       const saved = await save({action:'choice_read',choice_index:index,success:correct});
       if (saved.progress?.state) state = {...saved.progress.state};
       if (state.phase === 'sentence') {
@@ -136,7 +146,7 @@
         if (!correct) await announce(RETRY_FEEDBACK);
       }
     } catch (error) { stopStream(); renderChoices(error.message || 'Could not recognize your speech. Try again.', 'bad'); }
-    finally { button?.classList.remove('is-busy'); busy = false; }
+    finally { button?.classList.remove('is-busy'); if (activeSpeechButton === button) { activeSpeechButton = null; activeSpeechIdleLabel = ''; } busy = false; }
   }
   function sentenceText(item, blanks = true) {
     let blankIndex = 0;
@@ -157,6 +167,7 @@
   function renderSentence(message = '', kind = '') {
     const item = data.items[state.current_item];
     if (!item) { state.phase = 'complete'; render(); return; }
+    publishDebug({expected:sentenceText(item, false),status:isPaused?'Paused':'Ready'});
     let blankIndex = 0;
     const sentence = item.parts.map((part, index) => {
       if (index >= item.blank_count) return part;
@@ -229,24 +240,29 @@
     finally { busy = false; }
   }
   async function readSentence() {
-    if (busy) return;
+    if (busy || isPaused) return;
     busy = true;
     const item = data.items[state.current_item], target = sentenceText(item, false);
     const button = document.getElementById('read-sentence'), status = document.getElementById('status');
+    activeSpeechButton = button;
+    activeSpeechIdleLabel = '🎙️ Read the sentence';
     button?.classList.add('is-busy');
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { if (status) status.textContent = 'Microphone recording is not available in this browser.'; button?.classList.remove('is-busy'); busy = false; return; }
     button.textContent = 'Listening…';
     try {
-      stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
-      const recorder = new MediaRecorder(stream), chunks = [];
+      const attempt = generation; stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); stream.getAudioTracks().forEach(track => { track.enabled = !isMuted; });
+      activeRecorder = new MediaRecorder(stream); const recorder = activeRecorder, chunks = [];
+      publishDebug({status:'Recording', expected:target, mic:`Active · ${isMuted?'Muted':'Unmuted'}`, recorder:recorder.state}, 'Recording started');
       recorder.ondataavailable = event => { if (event.data?.size) chunks.push(event.data); };
-      const stopped = new Promise((resolve, reject) => { recorder.onerror = () => reject(new Error('Could not record your voice.')); recorder.onstop = () => resolve(new Blob(chunks,{type:recorder.mimeType || 'audio/webm'})); recorder.start(); window.setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, 4500); });
-      const audio = await stopped; stopStream();
+      const stopped = new Promise((resolve, reject) => { recorder.onerror = () => reject(new Error('Could not record your voice.')); recorder.onstop = () => { if (activeRecordingTimer) { window.clearTimeout(activeRecordingTimer); activeRecordingTimer = null; } resolve(new Blob(chunks,{type:recorder.mimeType || 'audio/webm'})); }; recorder.start(); activeRecordingTimer = window.setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, 4500); });
+      const audio = await stopped; activeRecorder = null; stopStream(); if (attempt !== generation || isPaused) return;
       const form = new FormData(); form.append('audio',audio,'lesson26-activity2-sentence.webm'); form.append('target_text',target); form.append('language','English'); form.append('mode','reading');
       const response = await fetch(data.transcribe_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form}), result = await response.json();
+      if (attempt !== generation || isPaused) return;
       if (!response.ok || !result.success) throw new Error(result.error || 'Speech recognition failed. Try again.');
       const spokenText = String(result.raw_transcript || result.transcript || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\bhot\b/g, 'hat');
       const transcript = normalize(spokenText), correct = sentenceReadMatches(target, spokenText);
+      publishDebug({status:'Processing', transcript:result.raw_transcript || result.transcript || 'No transcript returned.', normalized:transcript, result:correct?'Match':'Not Match', recorder:'inactive'}, `Transcript: ${result.raw_transcript || result.transcript || '(empty)'}`);
       await save({action:'sentence_reading',success:correct});
       if (correct && state.phase === 'complete') {
         const completed = await fetch(data.completion_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'});
@@ -268,7 +284,7 @@
       }
       if (correct && state.phase !== 'complete') { started = true; await playSentence(); }
     } catch (error) { stopStream(); renderSentence(error.message || 'Could not recognize your speech. Try again.','bad'); }
-    finally { button?.classList.remove('is-busy'); busy = false; }
+    finally { button?.classList.remove('is-busy'); if (activeSpeechButton === button) { activeSpeechButton = null; activeSpeechIdleLabel = ''; } busy = false; }
   }
   function sentenceReadMatches(target, transcript) {
     const expectedWords = String(target || '').toLowerCase().match(/[a-z]+/g) || [];
@@ -283,7 +299,27 @@
     }
     return matched >= Math.max(1, Math.ceil(expectedWords.length * 0.75));
   }
-  function stopStream() { stream?.getTracks().forEach(track => track.stop()); stream = null; }
+  function stopStream() { stream?.getTracks().forEach(track => track.stop()); stream = null; publishDebug({mic:`Inactive · ${isMuted?'Muted':'Unmuted'}`,recorder:'inactive'}); }
+  function resetSpeechInteraction() {
+    if (activeRecordingTimer) { window.clearTimeout(activeRecordingTimer); activeRecordingTimer = null; }
+    activeSpeechButton?.classList.remove('is-busy');
+    if (activeSpeechButton?.isConnected && activeSpeechIdleLabel) activeSpeechButton.textContent = activeSpeechIdleLabel;
+    activeSpeechButton = null;
+    activeSpeechIdleLabel = '';
+    if (activeRecorder?.state === 'recording' || activeRecorder?.state === 'paused') {
+      try { activeRecorder.stop(); } catch (_) { /* The recorder cleanup remains idempotent. */ }
+    }
+    activeRecorder = null;
+    stopStream();
+  }
+  window.PrescribedLesson26Activity = {
+    pause() { isPaused = true; generation += 1; activeAudio?.pause(); resetSpeechInteraction(); publishDebug({status:'Paused',mic:`Inactive · ${isMuted?'Muted':'Unmuted'}`,recorder:'inactive'},'Activity paused'); },
+    resume() { isPaused = false; publishDebug({status:'Ready'},'Activity resumed'); },
+    setMuted(value) { isMuted = Boolean(value); stream?.getAudioTracks().forEach(track => { track.enabled = !isMuted; }); publishDebug({mic:`${stream?'Active':'Inactive'} · ${isMuted?'Muted':'Unmuted'}`,status:isMuted?'Muted':(isPaused?'Paused':'Ready')}, isMuted?'Microphone muted':'Microphone unmuted'); },
+    async restart() { generation += 1; isPaused = true; busy = false; resetSpeechInteraction(); activeAudio?.pause(); await resetAndExit({preventDefault(){},currentTarget:{disabled:false}}); },
+    cleanup() { generation += 1; resetSpeechInteraction(); activeAudio?.pause(); activeAudio = null; },
+    isPaused:() => isPaused,
+  };
   async function resetAndExit(event) {
     event.preventDefault(); if (busy) return;
     const button = event.currentTarget; busy = true; button.disabled = true;

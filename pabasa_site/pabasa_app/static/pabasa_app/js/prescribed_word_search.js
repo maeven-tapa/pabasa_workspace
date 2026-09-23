@@ -31,6 +31,11 @@
   let vadFrame = null;
   let vadContext = null;
   let cancelVADMonitor = null;
+  const debugState = {status: 'Ready', transcript: 'No transcript yet.', expected: '—', normalized: '—', result: '—', mic: 'Inactive · Unmuted', recorder: 'inactive', vad: 'waiting', error: '—', raw: 'Waiting for speech...'};
+  function publishDebug(patch = {}, log = '') { Object.assign(debugState, patch); if (log) debugState.raw = [debugState.raw === 'Waiting for speech...' ? '' : debugState.raw, log].filter(Boolean).slice(-6).join('\n'); window.dispatchEvent(new CustomEvent('prescribed-l26a1-debug-state', {detail: {...debugState}})); }
+  window.PrescribedLesson26Debug = {getState: () => ({...debugState}), reset: () => { Object.assign(debugState, {status: 'Ready', transcript: 'No transcript yet.', expected: '—', normalized: '—', result: '—', mic: `Inactive · ${prescribedMicMuted ? 'Muted' : 'Unmuted'}`, recorder: 'inactive', vad: 'waiting', error: '—', raw: 'Waiting for speech...'}); publishDebug(); }};
+  let isActivityPaused = false;
+  let pausedAudio = null;
   const VAD_CALIBRATION_MS = 800;
   const VAD_SILENCE_MS = 1000;
   const VAD_MAX_RECORDING_MS = 6000;
@@ -42,12 +47,45 @@
   const GRID_CORRECT_FEEDBACK = "That's right, now let's read the next word.";
   const COMPLETION_FEEDBACK = 'Great job! You completed the Word Search.';
 
+  function pauseActivity() {
+    if (isActivityPaused) return;
+    isActivityPaused = true;
+    if (activeRecorder?.state === 'recording') activeRecorder.pause();
+    if (activeAudio && !activeAudio.paused) { pausedAudio = activeAudio; activeAudio.pause(); }
+    publishDebug({status: 'Paused', recorder: activeRecorder?.state || 'inactive'});
+    window.dispatchEvent(new CustomEvent('prescribed-l26a1-activity-paused'));
+  }
+
+  function resumeActivity() {
+    if (!isActivityPaused) return;
+    isActivityPaused = false;
+    if (activeRecorder?.state === 'paused') activeRecorder.resume();
+    if (pausedAudio) { pausedAudio.play().catch(() => {}); pausedAudio = null; }
+    publishDebug({status: activeStream ? 'Listening' : 'Ready', recorder: activeRecorder?.state || 'inactive'});
+    window.dispatchEvent(new CustomEvent('prescribed-l26a1-activity-resumed'));
+  }
+
+  function cleanupActivity() {
+    isActivityPaused = true;
+    pausedAudio = null;
+    activeAudio?.pause();
+    stopStream();
+  }
+
+  async function resetActivity() {
+    cleanupActivity();
+    const response = await fetch(data.progress_url, {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf()}, body: JSON.stringify({reset: true})});
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.error || 'Could not restart this activity.');
+    window.location.reload();
+  }
+
+  window.PrescribedLesson26Activity = {pause: pauseActivity, resume: resumeActivity, cleanup: cleanupActivity, restart: resetActivity, isPaused: () => isActivityPaused};
+
   window.addEventListener('prescribed-l26a1-mic-state', event => {
     prescribedMicMuted = Boolean(event.detail?.muted);
-    if (prescribedMicMuted) {
-      recordingCancelled = true;
-      stopStream();
-    }
+    activeStream?.getAudioTracks().forEach(track => { track.enabled = !prescribedMicMuted; });
+    publishDebug({mic: `${activeStream ? 'Active' : 'Inactive'} · ${prescribedMicMuted ? 'Muted' : 'Unmuted'}`, status: prescribedMicMuted ? 'Muted' : (activeStream ? 'Listening' : debugState.status)}, prescribedMicMuted ? 'Microphone muted' : 'Microphone unmuted');
   });
   window.addEventListener('prescribed-l26a1-device-state', event => {
     selectedMicDeviceId = String(event.detail?.deviceId || '');
@@ -104,6 +142,7 @@
       return;
     }
     const targetWord = words[currentIndex];
+    publishDebug({expected: targetWord});
     const hasReadCorrectly = Boolean(reading[String(currentIndex)]);
     const readAttempts = Number(attempts[String(currentIndex)] || 0);
     const canListen = hasReadCorrectly || readAttempts >= 3;
@@ -214,12 +253,13 @@
   }
 
   async function readAloud(textToSpeak) {
-    if (busy) return;
+    if (busy || isActivityPaused) return;
     busy = true;
     const buttons = [...app.querySelectorAll('#read, #listen-instructions')];
     const buttonStates = buttons.map(button => ({button, disabled: button.disabled}));
     buttons.forEach(button => { button.disabled = true; button.classList.add('is-busy'); });
     const played = await playReadAloud(textToSpeak);
+    if (isActivityPaused) return;
     buttonStates.forEach(({button, disabled}) => {
       if (button.isConnected) { button.disabled = disabled; button.classList.remove('is-busy'); }
     });
@@ -228,13 +268,14 @@
   }
 
   async function readWord() {
-    if (busy || currentIndex >= words.length) return;
+    if (busy || isActivityPaused || currentIndex >= words.length) return;
     if (prescribedMicMuted) {
       render('Microphone is muted. Turn it on and try again.', 'bad');
       return;
     }
     const wordIndex = currentIndex;
     const targetWord = words[wordIndex];
+    publishDebug({expected: targetWord, error: '—', result: '—'});
     const button = app.querySelector('#read');
     busy = true;
     button.classList.add('is-busy');
@@ -245,8 +286,10 @@
       const audioConstraints = {echoCancellation: true, noiseSuppression: false, autoGainControl: true};
       if (selectedMicDeviceId) audioConstraints.deviceId = {exact: selectedMicDeviceId};
       activeStream = await navigator.mediaDevices.getUserMedia({audio: audioConstraints});
+      activeStream.getAudioTracks().forEach(track => { track.enabled = !prescribedMicMuted; });
       const recorder = new MediaRecorder(activeStream);
       activeRecorder = recorder;
+      publishDebug({status: prescribedMicMuted ? 'Muted' : 'Recording', mic: `Active · ${prescribedMicMuted ? 'Muted' : 'Unmuted'}`, recorder: recorder.state, vad: 'waiting', error: '—'}, 'Recording started');
       recordingCancelled = false;
       const chunks = [];
       recorder.ondataavailable = event => { if (event.data?.size) chunks.push(event.data); };
@@ -257,6 +300,7 @@
           resolve(new Blob(chunks, {type: recorder.mimeType || 'audio/webm'}));
         };
         recorder.start();
+        publishDebug({status: prescribedMicMuted ? 'Muted' : 'Recording', recorder: recorder.state});
       });
       const vadResult = monitorVAD(activeStream, recorder).catch(error => {
           if (recorder.state === 'recording') {
@@ -265,6 +309,8 @@
           throw error;
         });
       const [audio, vad] = await Promise.all([recording, vadResult]);
+      publishDebug({recorder: 'inactive', vad: vad.reason === 'silence' ? 'silence detected' : vad.reason === 'maximum-duration' ? 'max duration reached' : vad.speechDetected ? 'speech detected' : 'waiting'}, `Recording stopped (${vad.reason || 'complete'})`);
+      if (isActivityPaused) return;
       if (recordingCancelled || !vad.speechDetected || !audio.size) {
         throw new Error('No speech detected. Please try again.');
       }
@@ -275,10 +321,12 @@
       form.append('target_text', targetWord);
       form.append('language', 'English');
       form.append('mode', 'reading');
+      publishDebug({status: 'Processing'}, 'Processing started');
       const response = await fetch(data.transcribe_url, {
         method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrf()}, body: form,
       });
       const result = await response.json();
+      if (isActivityPaused) return;
       if (!response.ok || !result.success) throw new Error(result.error || 'Speech recognition failed. Please try again.');
 
       const target = normalizedWord(targetWord);
@@ -290,6 +338,7 @@
       // word token and reject substring lookalikes such as “matter” for “mat”.
       const acceptedWords = ({mat:['mat','math'],hat:['hat','hot'],wore:['wore','war'],bat:['bat','butt'],loved:['loved','love']})[target] || [target];
       const saidTarget = heardWords.some(token => acceptedWords.includes(normalizedWord(token)));
+      publishDebug({status: saidTarget ? 'Completed' : 'Error', transcript, normalized: normalizedWord(transcript), result: saidTarget ? 'Match' : 'Not Match', error: '—'}, `Transcript: ${transcript || '(empty)'} | Expected: ${targetWord} | Result: ${saidTarget ? 'Match' : 'Not Match'}`);
       const saved = await save({word_index: wordIndex, reading_result: saidTarget});
       reading = saved.progress?.state?.reading || reading;
       attempts = saved.progress?.state?.attempts || attempts;
@@ -297,6 +346,7 @@
       await playReadAloud(saidTarget ? READING_CORRECT_FEEDBACK : RETRY_FEEDBACK);
     } catch (error) {
       stopStream();
+      publishDebug({status: 'Error', error: error.message || 'Recording/transcription error'}, `Error: ${error.message || 'Recording/transcription error'}`);
       render(error.message || 'Could not recognize your speech. Please try again.', 'bad');
     } finally {
       if (button?.isConnected) button.classList.remove('is-busy');
@@ -312,6 +362,7 @@
     }
     activeStream?.getTracks().forEach(track => track.stop());
     activeStream = null;
+    publishDebug({mic: `Inactive · ${prescribedMicMuted ? 'Muted' : 'Unmuted'}`, recorder: 'inactive'});
   }
 
   function stopVAD() {
@@ -357,6 +408,7 @@
           try { recorder.requestData(); } catch (_) { /* The stop event still finalizes the blob. */ }
           try { recorder.stop(); } catch (error) { reject(error); return; }
         }
+        publishDebug({vad: speechDetected ? (reason === 'silence' ? 'silence detected' : reason === 'maximum-duration' ? 'max duration reached' : 'speech detected') : 'waiting'});
         if (vadContext) {
           vadContext.close().catch(() => {});
           vadContext = null;
@@ -376,8 +428,10 @@
         analyser.fftSize = 1024;
         source.connect(analyser);
         const samples = new Uint8Array(analyser.fftSize);
-        const tick = () => {
-          if (settled || recorder.state !== 'recording') return;
+      const tick = () => {
+          if (settled) return;
+          if (isActivityPaused) { vadFrame = window.requestAnimationFrame(tick); return; }
+          if (recorder.state !== 'recording') return;
           const now = Date.now();
           if (vadContext?.state === 'suspended') {
             vadFrame = window.requestAnimationFrame(tick);
@@ -400,6 +454,7 @@
           if (speechFrameCount >= VAD_MIN_SPEECH_FRAMES) {
             speechDetected = true;
             lastHeardAt = now;
+            publishDebug({vad: 'speech detected'});
           }
           if ((speechDetected && now - lastHeardAt >= VAD_SILENCE_MS) || elapsed >= VAD_MAX_RECORDING_MS) {
             finish(speechDetected ? 'silence' : 'maximum-duration');
@@ -416,7 +471,7 @@
   }
 
   async function selectCell(button) {
-    if (busy) return;
+    if (busy || isActivityPaused) return;
     const point = [Number(button.dataset.row), Number(button.dataset.column)];
     if (selectedCell === null) {
       selectedCell = point;
@@ -433,6 +488,7 @@
       return null;
     });
     if (!result) { busy = false; return; }
+    if (isActivityPaused) { busy = false; return; }
     if (!result.accepted) {
       render('', 'bad');
       await playReadAloud(RETRY_FEEDBACK);
@@ -469,6 +525,8 @@
   }
 
   window.addEventListener('pagehide', stopStream);
+  window.addEventListener('prescribed-l26a1-activity-paused', () => publishDebug({status: 'Paused'}));
+  window.addEventListener('prescribed-l26a1-activity-resumed', () => publishDebug({status: activeStream ? 'Listening' : 'Ready'}));
   async function resetAndExit(event) {
     event.preventDefault();
     const button = event.currentTarget;
