@@ -13717,7 +13717,7 @@ def prescribed_activity_page(request, activity_key):
             'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
             'title': activity['title'], 'instruction': activity['instruction'],
             'items': [{'id': item['id'], 'before': item['before'], 'after': item['after'],
-                       'word_length': len(item['answer']), 'tts_word': item['answer'], 'image_url': static(item['image_path'])}
+                       'answer': item['answer'], 'word_length': len(item['answer']), 'tts_word': item['answer'], 'image_url': static(item['image_path'])}
                       for item in activity['items']],
             'recognition_hints': ' '.join(item['answer'] for item in activity['items']),
             'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),

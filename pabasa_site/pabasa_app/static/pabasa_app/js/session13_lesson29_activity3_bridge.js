@@ -1,0 +1,53 @@
+(() => {
+  'use strict';
+  const prefix = 'prescribed-s13l29g3';
+  const root = document.querySelector('[data-session13-controls]');
+  if (!root || root.dataset.prefix !== prefix) return;
+  const devices = navigator.mediaDevices;
+  if (!devices?.getUserMedia || devices.getUserMedia.__session13L29A3) return;
+  let muted = false;
+  const streams = new Set();
+  const original = devices.getUserMedia.bind(devices);
+  const wrapped = async constraints => {
+    if (muted) throw new DOMException('Microphone is muted.', 'NotAllowedError');
+    const stream = await original(constraints);
+    streams.add(stream);
+    stream.getTracks().forEach(track => { track.enabled = !muted; });
+    return stream;
+  };
+  wrapped.__session13L29A3 = true;
+  devices.getUserMedia = wrapped;
+  const stop = () => { streams.forEach(stream => stream.getTracks().forEach(track => track.stop())); streams.clear(); };
+  const debugField = key => document.getElementById(`${prefix}-debug-${key}`);
+  const setDebug = (key, value) => { const field = debugField(key); if (field && field.textContent !== String(value)) field.textContent = String(value); };
+  const refreshDebug = () => {
+    const app = document.getElementById('app');
+    if (!app) return;
+    const letter = app.querySelector('.letter');
+    const recording = app.querySelector('#read.is-busy');
+    const tracing = app.querySelector('#submit');
+    setDebug('expected', letter?.textContent.trim() || 'Not available');
+    setDebug('status', recording ? 'Listening' : tracing ? 'Tracing' : 'Ready');
+    setDebug('mic', `${streams.size ? 'Active' : 'Inactive'} · ${muted ? 'Muted' : 'Unmuted'}`);
+    setDebug('recorder', recording ? 'Recording' : 'Inactive');
+    setDebug('vad', 'waiting');
+    setDebug('transcript', 'No transcript yet.');
+    setDebug('normalized', '—');
+    setDebug('result', '—');
+    setDebug('error', '—');
+    setDebug('raw', recording ? 'Listening for speech...' : tracing ? 'Ready for tracing.' : 'Waiting for speech...');
+  };
+  window.addEventListener(`session13-${prefix}-debug`, event => {
+    const state = event.detail || {};
+    Object.entries(state).forEach(([key, value]) => setDebug(key, value));
+  });
+  refreshDebug();
+  window.addEventListener('load', refreshDebug, {once:true});
+  const app = document.getElementById('app');
+  const appObserver = app && window.MutationObserver ? new MutationObserver(refreshDebug) : null;
+  appObserver?.observe(app, {childList:true, subtree:true});
+  window.addEventListener(`session13-${prefix}-mute`, event => { muted = Boolean(event.detail?.muted); streams.forEach(stream => stream.getTracks().forEach(track => { track.enabled = !muted; })); refreshDebug(); });
+  window.addEventListener(`session13-${prefix}-pause`, stop);
+  window.addEventListener(`session13-${prefix}-cleanup`, stop);
+  window.addEventListener('pagehide', () => { appObserver?.disconnect(); stop(); }, {once:true});
+})();
