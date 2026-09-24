@@ -13548,6 +13548,14 @@ def prescribed_activity_page(request, activity_key):
             'activity_key': activity_key, 'session_key': 'session-3',
             'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
             'title': activity['title'], 'instruction': activity['instruction'],
+            'narration_audio': {
+                'Ee-drag ang parisukat sa MALAKING O at ee-drag ang bilog sa maliit na o.': static(
+                    'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4A/ee_drag_ang_parisukat_sa_malaking_o_at_ee_drag_ang_bilog_sa_maliit_na_o.mp3'
+                ),
+                'May mali. Tingnan muli ang mga titik. Ikahon ang MALAKING O at bilugan ang maliit na o.': static(
+                    'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4A/may_mali_tingnan_muli_ang_mga_titik_ikahon_ang_malaking_o_at_bilugan_ang_maliit_na_o.mp3'
+                ),
+            },
             'cells': activity['cells'], 'answer_mapping': activity['answer_mapping'],
             'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
             'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
