@@ -244,15 +244,15 @@
     if(busy||!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){setJFeedback('Hindi magamit ang mikropono. Subukan muli.',true);return;}
     busy=true;lock();let stream=null,recorder=null,timer=null,requestId=Number(state.index||0),requestActivity=a.activity_key;
     try{
-      setJFeedback('Nakikinig...');stream=activeStream=await navigator.mediaDevices.getUserMedia({audio:true});
+      if(!jReading)setJFeedback('Nakikinig...');stream=activeStream=await navigator.mediaDevices.getUserMedia({audio:true});
       const chunks=[];recorder=activeRecorder=new MediaRecorder(stream);
       const audioDone=new Promise((resolve,reject)=>{recorder.ondataavailable=e=>e.data.size&&chunks.push(e.data);recorder.onerror=()=>reject(new Error('May problema sa recording.'));recorder.onstop=()=>resolve(new Blob(chunks,{type:recorder.mimeType||'audio/webm'}));});
       recorder.start();timer=setTimeout(()=>{if(recorder?.state==='recording')recorder.stop();},3500);
       const stop=button('Tapusin ang Pagbasa',()=>{if(recorder?.state==='recording')recorder.stop();},true);stop.setAttribute('aria-label','Tapusin ang pagbasa');
-      action.replaceChildren(stop);setJFeedback('Nakikinig...');
+      action.replaceChildren(stop);
       const audio=await audioDone;clearTimeout(timer);stream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
       if(requestActivity!==a.activity_key||requestId!==Number(state.index||0))return;
-      setJFeedback('Sinusuri...');const form=new FormData();form.append('audio',audio,'reading.webm');
+      setJFeedback('Sinusuri...');if(jReading)await playPrescribedAudio('Sinusuri...',true);const form=new FormData();form.append('audio',audio,'reading.webm');
       await send({action:'reading_attempt'},form,false);render();
     }catch(e){
       clearTimeout(timer);stream?.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
