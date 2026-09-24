@@ -126,7 +126,7 @@ L22_G4_ACCEPTED_SPEECH = {
 # from the requested box is Niño.
 L23_G1_WORDS = ('Niño',)
 L23_G1_ACCEPTED_SPEECH = {
-    'ni': {'ni'}, 'la': {'la'}, 'ñg': {'ng', 'eng', 'ing'},
+    'ni': {'ni'}, 'la': {'la'}, 'ña': {'ña', 'na'},
     'cas': {'cas', 'kas', 'kass'}, 'bi': {'bi', 'bee'}, 'da': {'da'},
     'el': {'el', 'ell'}, 'ño': {'no', 'nyo'}, 'ñan': {'nan', 'nyan'},
     'cen': {'cen', 'sen'}, 'ta': {'ta'}, 'ñe': {'ne', 'nye'},
@@ -363,7 +363,7 @@ add('aral-l22-g6-f-word-reading', 41, 22, '6', 'Mga salitang may letrang Ff',
 
 
 add('aral-l23-g1-n-syllable-builder', 41, 23, '1', 'Big Box: Ñ', BOX, 'builder',
-    [['Ni', 'La', 'ñg'], ['Cas', 'Bi', 'da'], ['El', 'ño', 'ñan'], ['Cen', 'ta', 'ñe']],
+    [['Ni', 'La', 'ña'], ['Cas', 'Bi', 'da'], ['El', 'ño', 'ñan'], ['Cen', 'ta', 'ñe']],
     bigbox_cells=[
         [['item-1'], ['item-2'], ['item-3']],
         [['item-4'], ['item-5'], ['item-6']],

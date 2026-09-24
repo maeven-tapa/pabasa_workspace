@@ -11,11 +11,11 @@ class Lesson23Gawain1Tests(SimpleTestCase):
         activity = get_activity('aral-l23-g1-n-syllable-builder')
         self.assertEqual(activity['instruction'], 'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salita mula rito.')
         self.assertEqual(activity['rows'], [
-            ['Ni', 'La', 'ñg'], ['Cas', 'Bi', 'da'],
+            ['Ni', 'La', 'ña'], ['Cas', 'Bi', 'da'],
             ['El', 'ño', 'ñan'], ['Cen', 'ta', 'ñe'],
         ])
         self.assertEqual([item['text'] for item in activity['items']], [
-            'Ni', 'La', 'ñg', 'Cas', 'Bi', 'da', 'El', 'ño', 'ñan', 'Cen', 'ta', 'ñe',
+            'Ni', 'La', 'ña', 'Cas', 'Bi', 'da', 'El', 'ño', 'ñan', 'Cen', 'ta', 'ñe',
         ])
 
     def test_reading_is_sequential_and_only_real_errors_consume_attempts(self):
@@ -53,6 +53,6 @@ class Lesson23Gawain1Tests(SimpleTestCase):
 
     def test_ntilde_pronunciation_is_scoped_to_current_target(self):
         self.assertTrue(l23_g1_pronunciation_match('ño', 'nyo'))
-        self.assertTrue(l23_g1_pronunciation_match('ñg', 'ng'))
+        self.assertTrue(l23_g1_pronunciation_match('ña', 'na'))
         self.assertFalse(l23_g1_pronunciation_match('ño', 'ni'))
         self.assertFalse(l23_g1_pronunciation_match('La', 'ño'))
