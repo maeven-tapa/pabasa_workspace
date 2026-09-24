@@ -13519,6 +13519,14 @@ def prescribed_activity_page(request, activity_key):
         context = _dashboard_context(request)
         context['handwriting_activity_data'] = {
             'activity_key': activity_key, 'title': activity['title'], 'instruction': activity['instruction'],
+            'narration_audio': {
+                'Magsanay magsulat ng letrang o. Isulat nang tatlong beses ang letrang o.': static(
+                    'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4/magsanay_magsulat_ng_letrang_o_isulat_nang_tatlong_beses_ang_letrang_o.mp3'
+                ),
+                'Subukan ulit! Isulat nang malinaw ang letrang Oo.': static(
+                    'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4/subukan_ulit_isulat_nang_malinaw_ang_letrang_oo.mp3'
+                ),
+            },
             'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
             'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
             'progress': {'current_index': progress.current_index if progress else 0, 'completed_items': progress.completed_items if progress else 0, 'activity_completed': progress.activity_completed if progress else False, 'state': raw_state},
