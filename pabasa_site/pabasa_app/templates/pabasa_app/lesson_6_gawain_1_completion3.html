@@ -2,4 +2,13 @@
 <style>#app:has(> #finish){display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}#app:has(> #finish)>h1{margin:0}#app:has(> #finish)>#finish{flex:none}</style>
 <style>.page{box-sizing:border-box}.card{height:calc(100dvh - 78px);max-height:720px}@media(max-width:650px){.card{height:calc(100dvh - 58px)}}</style>
 
-<script>window.__lessonStartProgress={activityKey:'lesson-6-gawain-1',progress:JSON.parse(document.getElementById('lesson-six-data').textContent||'{}').progress||null,totalItems:5,progressUrl:'{{ lesson_6_progress_url }}',storageKeys:[]};</script><script src="{% static 'pabasa_app/js/deferred_activity_bootstrap.js' %}?v=1"></script><script>window.deferActivityBootstrap('lesson-6-gawain-1');</script><script src="{% static 'pabasa_app/js/lesson_start_modal.js' %}?v=6"></script>
+<script>
+// Passive real-UI preview only; the deferred activity bootstrap remains inert.
+(function renderLessonStartPreview(){
+  const d=JSON.parse(document.getElementById('lesson-six-data').textContent||'{}'), items=d.items||[], i=Math.min(items.length,Number(d.progress?.current_index)||0), item=items[i];
+  if(!item)return;
+  const base="{% static 'pabasa_app/images/letrang_m_s_a/' %}";
+  document.getElementById('app').innerHTML='<div class="head"><div><div class="eyebrow">LESSON 6 · GAWAIN 1</div><h1>Letrang Mm, Ss, at Aa</h1></div><b>'+(i+1)+' / '+items.length+'</b></div><p class="instruction instruction--identify">Tukuyin ang pangalan ng larawan!</p><section class="focus"><div class="picture"><img src="'+base+item.image+'" alt="'+item.word+'"></div><div><div class="wordbox"><span class="read-label red-label">Ano ang nasa larawan</span></div><div class="status">Basahin ang larawan.</div><div class="actions"><button class="action" type="button" disabled>Basahin ngayon</button><button class="action" type="button" disabled>Pakinggan</button></div></div></section>';
+}());
+</script>
+<script>window.__lessonStartProgress={activityKey:'lesson-6-gawain-1',activityTitle:'Letrang Mm, Ss, at Aa',progress:JSON.parse(document.getElementById('lesson-six-data').textContent||'{}').progress||null,totalItems:5,progressUrl:'{{ lesson_6_progress_url }}',storageKeys:[]};</script><script src="{% static 'pabasa_app/js/deferred_activity_bootstrap.js' %}?v=1"></script><script>window.deferActivityBootstrap('lesson-6-gawain-1');</script><script src="{% static 'pabasa_app/js/lesson_start_modal.js' %}?v=6"></script>

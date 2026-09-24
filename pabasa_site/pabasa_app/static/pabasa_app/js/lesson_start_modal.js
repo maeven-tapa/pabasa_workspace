@@ -65,7 +65,7 @@
     else if (document.body.classList.contains('lesson-3-responsive') || path.includes('lesson-3-gawain-1')) target = ['lesson-3-g1-start', 'SESSION 1 · LESSON 3 · GAWAIN 1'];
     else if (document.querySelector('.salitang-speech-debug') || path.includes('lesson2-gawain1')) target = ['lesson-2-g1-start', 'SESSION 1 · LESSON 2 · GAWAIN 1'];
     else if (document.body.classList.contains('lesson-4-responsive') || path.includes('lesson-4/gawain-1')) target = ['lesson-4-g1-start', 'SESSION 2 · LESSON 4 · GAWAIN 1'];
-    else if (path.includes('session-2-lesson-4-gawain-2')) target = ['session-2-lesson-4-g2-start', 'SESSION 2 · LESSON 4 · GAWAIN 2'];
+    else if (path.includes('session-2-lesson-4-gawain-2') || path.includes('lesson4-gawain2')) target = ['session-2-lesson-4-g2-start', 'SESSION 2 · LESSON 4 · GAWAIN 2'];
     else if (path.includes('lesson-5/gawain-1')) target = ['lesson-5-g1-start', 'SESSION 2 · LESSON 5 · GAWAIN 1'];
     else if (path.includes('lesson-6/gawain-1')) target = ['lesson-6-g1-start', 'SESSION 2 · LESSON 6 · GAWAIN 1'];
     else if (window.__lessonStartProgress?.sessionKey === 'session-3') target = ['session-3-start', 'SESSION 3 · LESSON ' + (window.__lessonStartProgress.lessonNumber || '') + ' · GAWAIN ' + (window.__lessonStartProgress.gawainNumber || '')];
@@ -86,8 +86,13 @@
     backdrop.setAttribute('role', 'dialog');
     backdrop.setAttribute('aria-modal', 'true');
     const isResume = saved?.state === 'resume';
-    const modalLabel = label;
-    const title = window.__lessonStartProgress.activityTitle || (isResume ? 'May nasimulan ka nang gawain. Gusto mo bang ipagpatuloy ang iyong nasimulan?' : 'Salitang Magkatugma');
+    const metadata = window.__lessonStartProgress || {};
+    const session2Path = path.match(/(?:session-2-)?lesson-?(\d+)(?:\/|-)?gawain-?([\w-]+)/);
+    const derivedLabel = session2Path
+      ? `SESSION 2 · LESSON ${session2Path[1]} · GAWAIN ${session2Path[2].toUpperCase()}`
+      : null;
+    const modalLabel = metadata.activityLabel || derivedLabel || label;
+    const title = metadata.activityTitle || document.title || (isResume ? 'May nasimulan ka nang gawain. Gusto mo bang ipagpatuloy ang iyong nasimulan?' : 'Salitang Magkatugma');
     const startLabel = isResume ? 'IPAGPATULOY' : 'SIMULAN';
     const laterLabel = isResume ? 'SIMULAN ULIT' : 'MAMAYA NA LANG';
     backdrop.innerHTML = `<div class="lesson-start-modal lesson-13-start-modal"><p class="lesson-start-label lesson-13-start-label">${modalLabel}</p><h2 class="lesson-start-title lesson-13-start-title">${title}</h2><div class="lesson-start-actions lesson-13-start-actions"><button type="button" data-start>${startLabel}</button><button type="button" data-later>${laterLabel}</button></div></div>`;

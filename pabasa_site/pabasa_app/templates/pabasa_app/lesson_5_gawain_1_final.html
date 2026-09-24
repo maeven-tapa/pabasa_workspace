@@ -32,6 +32,15 @@ body{color:#183e63;font-family:Fredoka,"Segoe UI",sans-serif;background:url("{% 
 <div class="page"><main class="card"><a class="back" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a><div id="app"></div></main></div>
 {{ lesson_5_data|json_script:"lesson-five-data" }}
 <script>
+// Passive real-UI preview only; activity startup remains gated below.
+(function renderLessonStartPreview(){
+  const d=JSON.parse(document.getElementById('lesson-five-data').textContent||'{}'), items=d.items||[], i=Math.min(items.length,Number(d.progress?.current_index)||0), item=items[i];
+  if(!item)return;
+  const base="{% static 'pabasa_app/images/letrang_a/' %}";
+  document.getElementById('app').innerHTML='<h1>Letrang Aa</h1><p class="instruction">Tukuyin ang pangalan ng larawang nasa ibaba.</p><div class="grid">'+items.map(x=>'<div class="tile"><img src="'+base+x.image+'" alt="'+x.word+'"></div>').join('')+'</div>';
+}());
+</script>
+<script>
 window.addEventListener('lesson-start-ready', function startLesson5Gawain1() {
 const data=JSON.parse(document.getElementById('lesson-five-data').textContent),items=data.items,total=items.length,progress=data.progress,base="{% static 'pabasa_app/images/letrang_a/' %}",wordAudioBase="{% static 'pabasa_app/prescribed/audio/SESSION 2/LESSON 5/GAWAIN 1/' %}",wordAudioFiles={apa:'apa.mp3',aso:'aso.mp3',mesa:'mesa.mp3',sabon:'sabon.mp3',medalya:'medalya.mp3',anim:'anim.mp3',araw:'araw.mp3',pamaypay:'pamaypay.mp3',avocado:'avocado.mp3'},progressUrl="{{ lesson_5_progress_url }}",transcribeUrl="{% url 'reading_transcribe_api' %}",readAloudUrl="{% url 'reading_read_aloud_api' %}",csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
 let i=Math.min(total,Number(progress.current_index)||0),score=Number(progress.correct_items)||0,phase=progress.activity_completed?'complete':'preview',tries=0,answers=progress.answers||[],busy=false,narrationToken=0;
@@ -69,7 +78,7 @@ async function record(){if(busy)return;const button=document.getElementById('ide
 async function readAloud(){if(busy)return;const button=document.getElementById('aloud'),item=items[i],audioFile=wordAudioFiles[norm(item.word)];busy=true;setButtons(true);button.textContent='Pakinggan...';try{if(!audioFile)throw Error('Missing prescribed word audio');const audio=new Audio(wordAudioBase+audioFile);await audio.play();await new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;audio.onended=null;audio.onerror=null;resolve()};audio.onended=finish;audio.onerror=finish})}catch(error){console.warn('Prescribed word audio unavailable:',error)}button.textContent='Pakinggan';busy=false;if(phase==='identify')setButtons(false)}
 render();
 }, { once: true });
-</script><script>window.__lessonStartProgress={activityKey:'lesson-5-gawain-1',progress:JSON.parse(document.getElementById('lesson-five-data').textContent||'{}').progress||null,totalItems:9,progressUrl:'{{ lesson_5_progress_url }}',storageKeys:[]};</script><script src="{% static 'pabasa_app/js/lesson_start_modal.js' %}?v=6"></script>
+</script><script>window.__lessonStartProgress={activityKey:'lesson-5-gawain-1',activityTitle:'Letrang Aa',progress:JSON.parse(document.getElementById('lesson-five-data').textContent||'{}').progress||null,totalItems:9,progressUrl:'{{ lesson_5_progress_url }}',storageKeys:[]};</script><script src="{% static 'pabasa_app/js/lesson_start_modal.js' %}?v=6"></script>
 <style>#identify.action.is-recording{background:#2CA4A2!important;color:#fff!important;opacity:1!important;filter:none!important;cursor:wait!important;animation:session2Lesson5ReadHeartbeat 1.3s ease-in-out infinite!important;transform-origin:center;box-shadow:0 0 0 5px #f4c85d4d,0 6px #147B83,0 0 18px #f4c85d80!important}@keyframes session2Lesson5ReadHeartbeat{0%,100%{transform:scale(1);box-shadow:0 0 0 5px #f4c85d4d,0 6px #147B83,0 0 18px #f4c85d80}50%{transform:scale(1.018);box-shadow:0 0 0 8px #f4c85d00,0 6px #147B83,0 0 28px #f4c85db3}}@media(prefers-reduced-motion:reduce){#identify.action.is-recording{animation:none!important}}</style></body>
 {% include 'pabasa_app/session4_prescribed_controls.html' with prefix='prescribed-s2l5g1' help_text='Tingnan ang larawan at tukuyin kung nagsisimula ito sa tunog /a/.' %}
 <script>(function(){const e=document.getElementById('lesson-five-data');if(!e)return;const d=JSON.parse(e.textContent||'{}');d.progress_url='{% url "lesson_5_activity_progress" %}';e.textContent=JSON.stringify(d)})();</script>

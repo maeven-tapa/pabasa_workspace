@@ -378,7 +378,8 @@ setTimeout(function(){
     };
 })();
 </script>
-<script>
+ <script>window.__lessonStartProgress.activityLabel='SESSION 2 · LESSON 4 · GAWAIN 1';window.__lessonStartProgress.activityTitle='Letrang Mm';</script>
+ <script>
 (function () {
   let started = false;
   function startLesson4Gawain1() {
@@ -469,6 +470,17 @@ setTimeout(function(){
     for (let offset = 0; offset < bytes.length; offset += 0x8000) binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
     return new Response(JSON.stringify({ success: true, mime_type: 'audio/mpeg', audio_content: btoa(binary) }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   };
+}());
+</script>
+<script>
+(function(){
+  const source=[...document.querySelectorAll('script[type="text/plain"][data-lesson4-g1-bootstrap]')].find(node=>node.textContent.includes('const d=JSON.parse(document.getElementById(\'lesson-four-data\')'));
+  if(!source)return;
+  const script=document.createElement('script');
+  script.text=source.textContent
+    .replace('started=index>0||p.activity_completed','started=false')
+    .replace(';render()})();',';render();window.addEventListener("lesson-start-ready",()=>{started=index>0||p.activity_completed;render()},{once:true})})();');
+  source.replaceWith(script);
 }());
 </script>
 {% include 'pabasa_app/session4_prescribed_controls.html' with prefix='prescribed-s2l4g1' help_text='Basahin ang pangalan ng larawan, pagkatapos piliin ang tamang sagot.' %}
