@@ -22,13 +22,14 @@
     const normalHint='Isulat ang Oo sa bawat hanay.';
     const retryMessage='Subukan ulit! Isulat nang malinaw ang letrang Oo.';
     const retryNarration='Subukan ulit! Isulat nang malinaw ang letrang Oo.';
+    const prerecordedNarration=data.narration_audio||{};
     const csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
     let index=Math.max(0,Math.min(3,Number(data.progress?.current_index)||0));
     let busy=false;
     let instructionPlayedFor=-1;
     const rows=[[],[],[]];
 
-    const speak=text=>fetch('{% url "reading_read_aloud_api" %}',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,prescribed_activity_key:'lesson7-gawain4'})}).then(response=>response.ok?response.json():null).then(result=>new Promise(resolve=>{if(!result?.success||!result.audio_content){resolve();return}const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);audio.onended=resolve;audio.onerror=resolve;audio.play().catch(resolve)})).catch(()=>{});
+    const speak=text=>new Promise(resolve=>{const source=prerecordedNarration[text];if(!source){resolve();return}const audio=new Audio(source);audio.onended=resolve;audio.onerror=resolve;audio.play().catch(resolve)});
     const controls=()=>[app.querySelector('#clear'),app.querySelector('#next')].filter(Boolean);
     const setControlsDisabled=disabled=>controls().forEach(button=>{button.disabled=disabled});
     const setHint=text=>{const hint=app.querySelector('#hint');if(hint)hint.textContent=text};
