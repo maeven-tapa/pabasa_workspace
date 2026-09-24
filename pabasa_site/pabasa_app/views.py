@@ -13376,6 +13376,31 @@ def prescribed_activity_page(request, activity_key):
                 },
             })
         if activity_key == 'aral-l22-g6-f-word-reading':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_22/GAWAIN_6/'
+            audio_files = {
+                'instruction': 'Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Ff._TTS.mp3',
+                'words': {
+                    'Faith': 'Faith_TTS.mp3', 'Felipe': 'Felipe_TTS.mp3', 'Felix': 'Felix__TTS.mp3',
+                    'Ferrer': 'Ferrer_TTS.mp3', 'Filipiniana': 'Filipiniana_TTS.mp3',
+                    'Filipino': 'Filipino_TTS.mp3', 'Fina': 'Fina_TTS.mp3',
+                    'freezer': 'freezer_TTS.mp3', 'fries': 'fries_TTS.mp3',
+                },
+                'feedback': {
+                    'Handa ka na?': 'Handa ka na_TTS.mp3',
+                    'Hindi ko malinaw na narinig. Subukan muli.': 'Hindi ko malinaw na narinig. Subukan muli_TTS.mp3',
+                    'Hindi pa kailangan ang pag-ulit.': 'Hindi pa kailangan ang pag-ulit._TTS.mp3',
+                    'Magaling!': 'Magaling!_TTS.mp3',
+                    'Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.': 'Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa_TTS.mp3',
+                    'Pakinggan ang tamang pagbigkas, pagkatapos ay subukan mong basahin.': 'Pakinggan ang tamang pagbigkas, pagkatapos ay subukan mong basahin._TTS.mp3',
+                    'Subukan muli.': 'Subukan muli._TTS.mp3',
+                    'Tama!': 'Tama!_TTS.mp3',
+                },
+            }
+            local_audio = {
+                'instruction': static(audio_root + audio_files['instruction']),
+                'words': {text: static(audio_root + filename) for text, filename in audio_files['words'].items()},
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+            }
             return render(request, 'pabasa_app/prescribed_l22_g2_reading_page.html', {
                 'workbook_payload': {
                     'activity': get_activity(activity_key), 'state': state, 'preview': preview,
@@ -13383,6 +13408,7 @@ def prescribed_activity_page(request, activity_key):
                     'read_aloud_url': reverse('reading_read_aloud_api'),
                     'back_url': reverse('assessment'), 'next_url': next_url,
                     'next_label': PRESCRIBED_ACTIVITIES.get(next_key, {}).get('title', 'susunod na gawain'),
+                    'local_audio': local_audio,
                 },
             })
         if activity_key == 'aral-l23-g2-n-word-reading':
