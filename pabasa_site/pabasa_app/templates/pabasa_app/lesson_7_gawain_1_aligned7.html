@@ -1,4 +1,12 @@
-{% load static %}{% include "pabasa_app/lesson_7_gawain_1_aligned6.html" %}<script>
+{% load static %}{% include 'pabasa_app/session3_lesson_start_bootstrap.html' %}{% include "pabasa_app/lesson_7_gawain_1_aligned6.html" %}<script>
+document.addEventListener('DOMContentLoaded',function(){
+  const app=document.getElementById('app');
+  if(!app||typeof render!=='function')return;
+  render();
+  app.inert=true;
+  app.innerHTML=app.innerHTML;
+  window.addEventListener('lesson-start-ready',function(){app.inert=false},{once:true});
+});
 window.__prescribedNarrationAudio = {
   'tingnan ang mga larawan sa bilog': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 1/OTHERS/tingnan_ang_mga_larawan_sa_bilog.mp3' %}",
   'isa-isa nating pangalanan ang mga ito': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 1/OTHERS/isa_isa_nating_pangalanan_ang_mga_ito.mp3' %}",
@@ -28,7 +36,7 @@ document.addEventListener('DOMContentLoaded',function(){
   const app=document.getElementById('app');
   if(!app)return;
   const csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
-  const speak=text=>fetch('{% url "reading_read_aloud_api" %}',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',mode:'reading',prescribed_activity_key:'lesson-7-gawain-1'})}).then(r=>r.ok?r.json():null).then(result=>new Promise(resolve=>{if(!result?.success||!result.audio_content){resolve();return}const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);audio.onended=resolve;audio.onerror=resolve;audio.play().catch(resolve)})).catch(error=>console.error('Lesson 7 Gawain 1 intro narration failed',error));
+  const speak=text=>{if(!window.__lessonStartReady)return Promise.resolve();return fetch('{% url "reading_read_aloud_api" %}',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',mode:'reading',prescribed_activity_key:'lesson-7-gawain-1'})}).then(r=>r.ok?r.json():null).then(result=>new Promise(resolve=>{if(!result?.success||!result.audio_content){resolve();return}const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);audio.onended=resolve;audio.onerror=resolve;audio.play().catch(resolve)})).catch(error=>console.error('Lesson 7 Gawain 1 intro narration failed',error));};
   const setup=()=>{
     const intro=app.querySelector('.lesson7-overview'),button=app.querySelector('#lesson7Start');
     if(!intro||!button||intro.dataset.narrationBound)return;
@@ -43,8 +51,8 @@ document.addEventListener('DOMContentLoaded',function(){
     button.classList.remove('is-ready');
     (async()=>{await speak(first);await speak(second);await speak(start);button.disabled=false;button.setAttribute('aria-disabled','false');button.classList.add('is-ready')})().catch(()=>{button.disabled=false;button.setAttribute('aria-disabled','false');button.classList.add('is-ready')});
   };
-  setup();
-new MutationObserver(setup).observe(app,{childList:true,subtree:true});
+  __runWhenLessonStarted(setup);
+new MutationObserver(()=>{if(window.__lessonStartReady)setup()}).observe(app,{childList:true,subtree:true});
 });
 </script>
 {% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g1' help_text='Tingnan ang larawan, basahin ang salita, at piliin ang tamang sagot.' %}

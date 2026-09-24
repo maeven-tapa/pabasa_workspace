@@ -1,0 +1,53 @@
+{% load static %}
+<script>
+(() => {
+  if (window.__session3LessonStartBootstrap) return;
+  window.__session3LessonStartBootstrap = true;
+  const dataScript = [...document.scripts].reverse().find(script => {
+    if (script.type !== 'application/json') return false;
+    try { const data = JSON.parse(script.textContent || '{}'); return data && data.activity_key && data.progress_url; }
+    catch (error) { return false; }
+  });
+  let data = {};
+  try { data = JSON.parse(dataScript?.textContent || '{}'); } catch (error) {}
+  const path = location.pathname.toLowerCase();
+  const fallbackKey = path.includes('lesson-9-gawain-3') ? 'lesson9-gawain3' : path.includes('lesson-9-gawain-2') ? 'lesson9-gawain2' : path.includes('lesson-9-gawain-1') ? 'lesson9-gawain1' : path.includes('lesson-8') ? 'lesson8-gawain1' : path.includes('lesson-7') ? 'lesson7-gawain1' : 'session3-activity';
+  const session3Metadata = {
+    'lesson7-gawain1': {lesson: 7, gawain: 1, title: 'Letrang Ii'},
+    'lesson7-gawain2a': {lesson: 7, gawain: '2A', title: 'Gawain 2A: Letrang Ii'},
+    'lesson7-gawain2b': {lesson: 7, gawain: '2B', title: 'Gawain 2B: Letrang Ii'},
+    'lesson7-gawain2c': {lesson: 7, gawain: '2C', title: 'GAWAIN 2: Letrang Ii'},
+    'lesson7-gawain3': {lesson: 7, gawain: 3, title: 'Gawain 3: Letrang Oo'},
+    'lesson7-gawain4': {lesson: 7, gawain: 4, title: 'GAWAIN 4: Letrang Oo'},
+    'lesson7-gawain4a': {lesson: 7, gawain: '4A', title: 'GAWAIN 4A: Letrang Oo'},
+    'lesson7-gawain4b': {lesson: 7, gawain: '4B', title: 'GAWAIN 4B: Letrang Ii at Oo'},
+    'lesson8-gawain1': {lesson: 8, gawain: 1, title: 'GAWAIN 1: Letrang Ee'},
+    'lesson8-gawain1a': {lesson: 8, gawain: '1A', title: 'GAWAIN 1A: Letrang Ee'},
+    'lesson9-gawain1': {lesson: 9, gawain: 1, title: 'GAWAIN 1: Letrang Ii, Oo, Ee'},
+    'lesson9-gawain2': {lesson: 9, gawain: 2, title: 'GAWAIN 2: Letrang Ii, Oo, Ee'},
+    'lesson9-gawain3': {lesson: 9, gawain: 3, title: 'GAWAIN 3: Letrang Ii, Oo, Ee'}
+  };
+  const compactPathKey = path.match(/lesson(7|8|9)-gawain([1234][ab]?)/)?.[0] || '';
+  const metadata = session3Metadata[data.activity_key || compactPathKey || fallbackKey] || {};
+  window.__lessonStartProgress = { activityKey: data.activity_key || compactPathKey || fallbackKey, sessionKey: 'session-3', lessonNumber: data.lesson_number || metadata.lesson || (path.includes('lesson-9') ? 9 : path.includes('lesson-8') ? 8 : 7), gawainNumber: data.gawain_number || metadata.gawain || 1, activityTitle: data.title || metadata.title || '', progress: data.progress || null, totalItems: Number(data.total_items) || (Array.isArray(data.items) ? data.items.length : 0), progressUrl: data.progress_url || '', storageKeys: [] };
+  window.__runWhenLessonStarted = function (callback) {
+    if (window.__lessonStartReady) { callback(); return; }
+    window.addEventListener('lesson-start-ready', callback, { once: true });
+  };
+  if (!data.activity_key) {
+    document.addEventListener('DOMContentLoaded', () => {
+      const lateScript = [...document.scripts].find(script => {
+        if (script.type !== 'application/json') return false;
+        try { const value = JSON.parse(script.textContent || '{}'); return value && value.activity_key && value.progress_url; }
+        catch (error) { return false; }
+      });
+      if (!lateScript) return;
+      try {
+        const value = JSON.parse(lateScript.textContent || '{}');
+        Object.assign(window.__lessonStartProgress, { activityKey: value.activity_key, lessonNumber: value.lesson_number || window.__lessonStartProgress.lessonNumber, gawainNumber: value.gawain_number || window.__lessonStartProgress.gawainNumber, progress: value.progress || null, totalItems: Number(value.total_items) || (Array.isArray(value.items) ? value.items.length : window.__lessonStartProgress.totalItems), progressUrl: value.progress_url });
+      } catch (error) {}
+    }, { once: true });
+  }
+})();
+</script>
+<script src="{% static 'pabasa_app/js/lesson_start_modal.js' %}?v=20260924-3"></script>

@@ -188,6 +188,7 @@ document.addEventListener('DOMContentLoaded', function () {
   };
 
   const narrateStatus = () => {
+    if (!window.__lessonStartReady) return;
     const progressLabel = app.querySelector('.head>b')?.textContent.trim();
     if (!app.dataset.lesson7IntroComplete && progressLabel && !progressLabel.startsWith('1 /')) {
       app.dataset.lesson7IntroComplete = '1';
@@ -231,6 +232,7 @@ document.addEventListener('DOMContentLoaded', function () {
   };
 
   const sync = () => {
+    if (!window.__lessonStartReady) return;
     syncReadControls();
     startItemTransition();
     const status = app.querySelector('#status');

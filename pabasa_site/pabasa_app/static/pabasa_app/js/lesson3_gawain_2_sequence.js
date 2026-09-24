@@ -73,7 +73,7 @@
     }
 
     async function activateAndCue() {
-      if (pairIndex >= pairs.length || answerPhase || cueBusy) return;
+      if (!window.__lessonStartReady || pairIndex >= pairs.length || answerPhase || cueBusy) return;
       cueBusy = true;
       const currentGeneration = generation;
       const instruction = game.querySelector('.instruction');
@@ -225,10 +225,15 @@
       }
     }
 
-    window.addEventListener('lesson-start-ready', () => {
+    // Render the real activity beneath the existing lesson-start modal, but
+    // keep its first cue and all gameplay behind the established release event.
+    render();
+    if (window.__lessonStartReady) {
       if (pairIndex < pairs.length && !answerPhase) activateAndCue();
-    }, { once: true });
-    if (window.__lessonStartReady) render();
-    else window.addEventListener('lesson-start-ready', () => render(), { once: true });
+    } else {
+      window.addEventListener('lesson-start-ready', () => {
+        if (pairIndex < pairs.length && !answerPhase) activateAndCue();
+      }, { once: true });
+    }
   };
 }());

@@ -174,6 +174,7 @@ document.addEventListener('DOMContentLoaded', function () {
   };
 
   const sync = () => {
+    if (!window.__lessonStartReady) return;
     const reading = app.querySelector('.reading');
     if (reading) {
       bindReading(reading);

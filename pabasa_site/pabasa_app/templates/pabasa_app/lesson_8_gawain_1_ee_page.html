@@ -20,6 +20,34 @@
   </main>
   {{ handwriting_activity_data|json_script:"handwriting-data" }}
   <script>
+  (() => {
+    const app = document.getElementById('app');
+    const originalPlay = window.playPrescribedReadAloud;
+    if (originalPlay) {
+      window.playPrescribedReadAloud = (...args) => window.__lessonStartReady ? originalPlay(...args) : Promise.resolve();
+      window.addEventListener('lesson-start-ready', () => { window.playPrescribedReadAloud = originalPlay; }, { once: true });
+    }
+    let runWhenStarted;
+    Object.defineProperty(window, '__runWhenLessonStarted', {
+      configurable: true,
+      get: () => runWhenStarted,
+      set: callback => {
+        runWhenStarted = handler => {
+          if (!window.__lessonStartReady) {
+            handler();
+            if (app) app.inert = true;
+          }
+          callback(() => {
+            if (app) app.inert = false;
+            handler();
+          });
+        };
+      }
+    });
+  })();
+  </script>
+  {% include 'pabasa_app/session3_lesson_start_bootstrap.html' %}
+  <script>
   (()=>{
     const data=JSON.parse(document.getElementById('handwriting-data').textContent||'{}'),app=document.getElementById('app'),csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
     const instructionText='Magsanay magsulat ng Letrang Ee. Isulat nang tatlong beses ang Letrang Ee.';
@@ -61,7 +89,7 @@
     const save=async()=>{const response=await fetch(data.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({current_index:index+1,completed_items:index+1,state:{activity_key:data.activity_key,completed_areas:index+1}})});if(!response.ok)throw Error('progress')};
     const submitCurrent=async()=>{if(busy)return;const canvas=app.querySelector('canvas');if(!canvas||!validEe(canvas)){await retry();return}busy=true;setControlsDisabled(true);try{await save();if(index<2){index+=1;render();return}const completion=await fetch(data.completion_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'});if(!completion.ok)throw Error('completion');index=3;render()}catch(error){await retry()}finally{busy=false;if(index<3&&!narrationBusy)setControlsDisabled(false)}};
     function render(){if(index>=3){app.innerHTML='<div class="done"><div><h1>Magaling!</h1><p>Natapos mo ang GAWAIN 1: Letrang Ee.</p></div></div>';return}const row='<div class="row"><span class="model"><b>E</b><i>e</i></span><canvas aria-label="Hanay '+(index+1)+'"></canvas></div>';app.innerHTML='<p class="eyebrow">SESSION 3 · LESSON 8 · GAWAIN 1</p><h1>GAWAIN 1: Letrang Ee</h1><p class="instruction">'+instructionText+'</p><p class="progress">Hanay '+(index+1)+' ng 3</p><div class="sheet">'+row+'</div><p class="hint" id="hint">'+normalHint+'</p><div class="actions"><button class="button clear" id="clear" type="button">Burahin</button><button class="button" id="next" type="button">'+(index===2?'Tapusin':'Susunod')+'</button></div>';const canvas=app.querySelector('canvas');bindCanvas(canvas);app.querySelector('#clear').onclick=()=>{if(busy)return;rows[index]=[];canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);setHint(normalHint)};app.querySelector('#next').onclick=submitCurrent;narrateInstruction()}
-    render();
+    __runWhenLessonStarted(() => { instructionPlayedFor=-1; render(); });
   })();
   </script>
 {% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l8g1' help_text='Magsanay sumulat ng letrang Ee.' %}</body>

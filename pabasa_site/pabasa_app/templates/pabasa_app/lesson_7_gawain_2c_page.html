@@ -24,7 +24,7 @@
 </head>
 <body>
   <main class="page"><a class="back" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a><section id="app" class="card"></section></main>
-  {{ handwriting_activity_data|json_script:"handwriting-data" }}
+  {{ handwriting_activity_data|json_script:"handwriting-data" }}{% include 'pabasa_app/session3_lesson_start_bootstrap.html' %}
   <script>
     window.__prescribedNarrationAudio = {
       'magsanay magsulat ng letrang ay isulat nang tatlong beses ang letrang ay': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2C/magsanay_magsulat_ng_letrang_ay_isulat_nang_tatlong_beses_ang_letrang_ay.mp3' %}",
@@ -47,6 +47,7 @@
     const rows = [[], [], []];
     const normalizeNarration = value => String(value || '').trim().replace(/[?!.,]+/g, '').replace(/\s+/g, ' ').toLocaleLowerCase();
     const speak = text => {
+      if (!window.__lessonStartReady) return Promise.resolve();
       const mappedAudio = window.__prescribedNarrationAudio?.[normalizeNarration(text)] || Object.entries(window.__prescribedNarrationAudio || {}).find(([phrase]) => normalizeNarration(phrase) === normalizeNarration(text))?.[1];
       if (mappedAudio) {
         window.__lesson7Gawain2cAudio?.pause();
@@ -103,8 +104,13 @@
       app.querySelector('#clear').onclick = () => {rows[index] = []; const canvas = app.querySelector('canvas[data-row="' + index + '"]'); canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); setHint()};
       app.querySelector('#next').onclick = submitCurrent;
     }
-    render();
-    speak(narrationText);
+    document.addEventListener('DOMContentLoaded', () => {
+      render();
+      app.inert = true;
+      app.innerHTML = app.innerHTML;
+      window.addEventListener('lesson-start-ready', () => { app.inert = false; }, {once: true});
+    });
+    __runWhenLessonStarted(() => { render(); speak(narrationText); });
   })();
   </script>
 {% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g2c' help_text='Isulat ang letrang Ii sa mga kahon.' %}</body>

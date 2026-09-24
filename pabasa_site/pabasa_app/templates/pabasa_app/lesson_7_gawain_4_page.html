@@ -12,7 +12,7 @@
     <a class="back" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a>
     <section id="app" class="card"></section>
   </main>
-  {{ handwriting_activity_data|json_script:"handwriting-data" }}
+  {{ handwriting_activity_data|json_script:"handwriting-data" }}{% include 'pabasa_app/session3_lesson_start_bootstrap.html' %}
   <script>
   (() => {
     const data=JSON.parse(document.getElementById('handwriting-data').textContent||'{}');
@@ -85,9 +85,15 @@
       bindCanvas(canvas);
       app.querySelector('#clear').onclick=()=>{if(busy)return;rows[index]=[];canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);setHint()};
       app.querySelector('#next').onclick=submitCurrent;
-      narrateInstruction();
+      if(window.__lessonStartReady)narrateInstruction();
     }
-    render();
+    document.addEventListener('DOMContentLoaded', () => {
+      render();
+      app.inert = true;
+      app.innerHTML = app.innerHTML;
+      window.addEventListener('lesson-start-ready', () => { app.inert = false; }, {once: true});
+    });
+    __runWhenLessonStarted(() => render());
   })();
   </script>
 {% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g4' help_text='Magsanay sumulat ng letrang Oo.' %}</body>

@@ -55,7 +55,7 @@
     </section>
   </main>
   {{ shape_stamp_activity_data|json_script:"shape-stamp-data" }}
-  <script>
+  {% include 'pabasa_app/session3_lesson_start_bootstrap.html' %}<script>
     (()=>{
       const d=JSON.parse(document.getElementById('shape-stamp-data').textContent),app=document.getElementById('app'),csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
       let s={placements:{...(d.progress?.state?.placements||{})},state_version:0},feedback=null,busy=false;
@@ -77,7 +77,7 @@
         const playNarration=async text=>{setNarrationLocked(true);try{const source=prerecordedNarration[text];if(!source)return;const audio=new Audio(source);narrationAudio=audio;await new Promise((resolve)=>{audio.onended=resolve;audio.onerror=resolve;audio.play().catch(resolve)});if(narrationAudio===audio)narrationAudio=null}catch(error){}finally{setNarrationLocked(false)}};
         if(!window.lesson7Gawain4aNarrated){window.lesson7Gawain4aNarrated=true;playNarration(instructionText)}
       }
-      render();
+      __runWhenLessonStarted(()=>render());
     })();
   </script>
 {% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g4a' help_text='I-drag ang tamang hugis sa bawat titik.' %}</body>

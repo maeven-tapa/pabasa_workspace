@@ -8,4 +8,43 @@ window.__prescribedNarrationAudio = {
   'Hindi tugma ang larawan sa pantig. Subukan muli!': '{% static "pabasa_app/prescribed/audio/SESSION 3/LESSON 9/GAWAIN 2/OTHERS/hindi_tugma_ang_larawan_sa_pantig_subukan_muli.mp3" %}'
 };
 </script>
+<script>
+(() => {
+  let runWhenStarted;
+  Object.defineProperty(window, '__runWhenLessonStarted', {
+    configurable: true,
+    get: () => runWhenStarted,
+    set: callback => {
+      runWhenStarted = handler => {
+        if (!window.__lessonStartReady) handler();
+        callback(handler);
+      };
+    }
+  });
+})();
+</script>
 <script src="{% static 'pabasa_app/js/prescribed_narration_resolver.js' %}?v=20260924-14"></script>
+<script>
+(() => {
+  if (window.__lessonStartReady) return;
+  const originalFetch = window.fetch;
+  const blockPreStart = event => {
+    if (!window.__lessonStartReady && event.target.closest('#app')) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  };
+  window.fetch = function (input, init) {
+    const url = typeof input === 'string' ? input : input?.url || '';
+    if (!window.__lessonStartReady && String(url).includes('/api/reading/read-aloud/')) {
+      return Promise.reject(new Error('Lesson has not started'));
+    }
+    return originalFetch.apply(this, arguments);
+  };
+  document.addEventListener('click', blockPreStart, true);
+  window.addEventListener('lesson-start-ready', () => {
+    window.fetch = originalFetch;
+    document.removeEventListener('click', blockPreStart, true);
+  }, { once: true });
+})();
+</script>

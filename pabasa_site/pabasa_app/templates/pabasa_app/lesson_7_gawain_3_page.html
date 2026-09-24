@@ -30,7 +30,7 @@
     <a href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a>
     <section id="app" class="card"></section>
   </main>
-  {{ lesson7_gawain3_data|json_script:"activity-data" }}
+  {{ lesson7_gawain3_data|json_script:"activity-data" }}{% include 'pabasa_app/session3_lesson_start_bootstrap.html' %}
   <script>
     window.__prescribedNarrationAudio = {
       'tukuyin ang larawan': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 3/OTHERS/tukuyin_ang_larawan.mp3' %}",
@@ -86,7 +86,7 @@
         read.onclick=startRead;
         listenButton.onclick=listen;
         if(!Recognition){read.disabled=true;listenButton.disabled=true}
-        if(!introPlayed)narrateIntro();
+        if(window.__lessonStartReady&&!introPlayed)narrateIntro();
         return
       }
       const t=d.targets[s.current_target],sel=s.selections[s.current_target],instructionText='Saan sa mga larawang ito ang nagsisimula sa tunog '+String(t.letter).toLowerCase()+'?';
@@ -94,9 +94,15 @@
       const next=document.getElementById('next');
       document.querySelectorAll('.choice').forEach(button=>button.onclick=()=>{s.selections[s.current_target]=+button.dataset.i;render()});
       next.onclick=async()=>{if(audioBusy)return;const answer=t.answer;if(s.selections[s.current_target]!==answer){delete s.selections[s.current_target];app.querySelectorAll('.choice').forEach(choice=>choice.classList.remove('selected'));setStatus(PART2_WRONG);await narratePart2(PART2_WRONG,next);return}setStatus(CORRECT);await narratePart2(CORRECT,next);s.correct_count++;if(s.current_target===4){await save();const response=await fetch(d.completion_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'});if(response.ok){d.progress.activity_completed=true;render()}return}s.current_target++;await save();render()};
-      narratePart2Instruction(next,s.current_target,instructionText);
+      if(window.__lessonStartReady)narratePart2Instruction(next,s.current_target,instructionText);
     }
-    render();
+    document.addEventListener('DOMContentLoaded', () => {
+      render();
+      app.inert = true;
+      app.innerHTML = app.innerHTML;
+      window.addEventListener('lesson-start-ready', () => { app.inert = false; }, {once: true});
+    });
+    __runWhenLessonStarted(() => render());
   })();
   </script>
 {% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g3' help_text='Basahin ang salita at ikahon ang tamang larawan.' %}</body>

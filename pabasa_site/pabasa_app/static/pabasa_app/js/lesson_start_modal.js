@@ -38,9 +38,17 @@
     const progress = config.progress;
     if (progress.activity_completed === true) return { config, progress, state: 'completed' };
     const state = progress.state && typeof progress.state === 'object' ? progress.state : {};
+    const freshPhases = new Set(['', 'initial', 'say', 'oral', 'read', 'preview', 'ready']);
+    const hasStateProgress = Object.entries(state).some(([key, value]) => {
+      if (key === 'phase') return !freshPhases.has(String(value || '').toLowerCase());
+      if (Array.isArray(value)) return value.some(item => item !== null && item !== undefined && item !== '');
+      if (typeof value === 'number') return value > 0;
+      if (typeof value === 'boolean') return value;
+      return false;
+    });
     const hasSavedProgress = Number(progress.current_index) > 0
       || Number(progress.completed_items) > 0
-      || ![undefined, null, '', 'initial', 'say'].includes(state.phase);
+      || hasStateProgress;
     if (hasSavedProgress) return { config, progress, state: 'resume' };
     return { config, progress, state: 'fresh' };
   }
@@ -60,6 +68,7 @@
     else if (path.includes('session-2-lesson-4-gawain-2')) target = ['session-2-lesson-4-g2-start', 'SESSION 2 · LESSON 4 · GAWAIN 2'];
     else if (path.includes('lesson-5/gawain-1')) target = ['lesson-5-g1-start', 'SESSION 2 · LESSON 5 · GAWAIN 1'];
     else if (path.includes('lesson-6/gawain-1')) target = ['lesson-6-g1-start', 'SESSION 2 · LESSON 6 · GAWAIN 1'];
+    else if (window.__lessonStartProgress?.sessionKey === 'session-3') target = ['session-3-start', 'SESSION 3 · LESSON ' + (window.__lessonStartProgress.lessonNumber || '') + ' · GAWAIN ' + (window.__lessonStartProgress.gawainNumber || '')];
     if (!target) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
@@ -77,8 +86,8 @@
     backdrop.setAttribute('role', 'dialog');
     backdrop.setAttribute('aria-modal', 'true');
     const isResume = saved?.state === 'resume';
-    const modalLabel = isResume ? 'MAY NA-SAVE KANG PROGRESO!' : label;
-    const title = isResume ? 'May nasimulan ka nang gawain. Gusto mo bang ipagpatuloy ang iyong nasimulan?' : 'Salitang Magkatugma';
+    const modalLabel = label;
+    const title = window.__lessonStartProgress.activityTitle || (isResume ? 'May nasimulan ka nang gawain. Gusto mo bang ipagpatuloy ang iyong nasimulan?' : 'Salitang Magkatugma');
     const startLabel = isResume ? 'IPAGPATULOY' : 'SIMULAN';
     const laterLabel = isResume ? 'SIMULAN ULIT' : 'MAMAYA NA LANG';
     backdrop.innerHTML = `<div class="lesson-start-modal lesson-13-start-modal"><p class="lesson-start-label lesson-13-start-label">${modalLabel}</p><h2 class="lesson-start-title lesson-13-start-title">${title}</h2><div class="lesson-start-actions lesson-13-start-actions"><button type="button" data-start>${startLabel}</button><button type="button" data-later>${laterLabel}</button></div></div>`;

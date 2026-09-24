@@ -2,7 +2,7 @@
 <!doctype html>
 <html lang="fil">
 <head>
-  <script>window.__lessonStartProgress={activityKey:'lesson-3-gawain-2',progress:{{ lesson_3_progress|default:"null"|safe }},totalItems:6,progressUrl:'{{ lesson_3_progress_url }}',storageKeys:['pabasa:lesson-3-gawain-2:progress']};</script><script>window.__session1SharedNarrationAudio={'Basahin ito.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/basahin_ito.mp3' %}','Magaling! Susunod na larawan.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/magaling_susunod_na_larawan.mp3' %}','Hindi pa ito tama. Subukan muli.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/hindi_pa_ito_tama_subukan_muli.mp3' %}','Magkatunog ba ang dalawang larawan na ito? Pindutin ang nawawastong sagot.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/magkatunog_ba_ang_dalawang_larawan.mp3' %}','Piliin ang tamang kamay.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/piliin_ang_tamang_kamay.mp3' %} };</script><script src="/static/pabasa_app/js/deferred_activity_bootstrap.js?v=1"></script><script>window.deferActivityBootstrap('lesson-3-gawain-2');</script><script src="{% static 'pabasa_app/js/lesson_start_modal.js' %}?v=7"></script>
+  <script>window.__lessonStartProgress={activityKey:'lesson-3-gawain-2',progress:{{ lesson_3_progress|default:"null"|safe }},totalItems:6,progressUrl:'{{ lesson_3_progress_url }}',storageKeys:['pabasa:lesson-3-gawain-2:progress']};</script><script>window.__session1SharedNarrationAudio={'Basahin ito.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/basahin_ito.mp3' %}','Magaling! Susunod na larawan.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/magaling_susunod_na_larawan.mp3' %}','Hindi pa ito tama. Subukan muli.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/hindi_pa_ito_tama_subukan_muli.mp3' %}','Magkatunog ba ang dalawang larawan na ito? Pindutin ang nawawastong sagot.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/magkatunog_ba_ang_dalawang_larawan.mp3' %}','Piliin ang tamang kamay.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/piliin_ang_tamang_kamay.mp3' %} };</script><script src="{% static 'pabasa_app/js/lesson_start_modal.js' %}?v=7"></script>
   <script>window.__lesson3PrescribedNarrationAudio={intro:"{% static 'pabasa_app/prescribed/audio/SESSION 1/OTHERS/pangalanan_ang_dalawang_larawan.mp3' %}",basahinIto:"{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/basahin_ito.mp3' %}",correctReading:"{% static 'pabasa_app/prescribed/audio/SESSION 1/OTHERS/magaling.mp3' %}",nextPicture:"{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/magaling_susunod_na_larawan.mp3' %}",incorrectReading:"{% static 'pabasa_app/prescribed/audio/SESSION 1/OTHERS/hindi_ito_ang_tamang_sagot_subukan_muli.mp3' %}",rhymingQuestion:"{% static 'pabasa_app/prescribed/audio/SESSION 1/OTHERS/magkatunog_ba_ang_dalawang_larawan_na_ito.mp3' %}",incorrectRhyming:"{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/hindi_pa_ito_tama_subukan_muli.mp3' %}",correctAnswer:"{% static 'pabasa_app/prescribed/audio/SESSION 1/OTHERS/magaling.mp3' %}"};</script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -78,14 +78,14 @@
     <nav class="nav"><a class="back" href="{% url 'assessment' %}">← Bumalik sa<br>Aking Aralin</a></nav>
     <section id="game" class="game"></section>
   </main>
-  <script type="text/plain" data-activity-bootstrap="lesson-3-gawain-2" src="{% static 'pabasa_app/js/lesson3_gawain_2_sequence.js' %}?v=20260923-prescribed-narration-2"></script>
-  <script type="text/plain" data-activity-bootstrap="lesson-3-gawain-2">
+  <script data-activity-bootstrap="lesson-3-gawain-2" src="{% static 'pabasa_app/js/lesson3_gawain_2_sequence.js' %}?v=20260924-lesson-start-ui"></script>
+  <script data-activity-bootstrap="lesson-3-gawain-2">
     const savedLesson3Progress = {{ lesson_3_progress|safe }};
     if (savedLesson3Progress) localStorage.setItem('pabasa:lesson-3-gawain-2:progress', String(savedLesson3Progress.activity_completed?6:(window.__lessonStartResumeIndex??savedLesson3Progress.current_index)));
     const lesson3ProgressUrl = "{{ lesson_3_progress_url }}";const originalSetItem=localStorage.setItem.bind(localStorage);localStorage.setItem=(key,value)=>{originalSetItem(key,value);if(key.includes('lesson-3-gawain-')){fetch(lesson3ProgressUrl,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':document.cookie.match(/csrftoken=([^;]+)/)?.[1]||''},body:JSON.stringify({activity_key:key.includes('gawain-1')?'lesson-3-gawain-1':'lesson-3-gawain-2',current_index:Number(value),completed_items:Number(value),correct_items:Number(value),total_items:6,activity_completed:false})}).catch(error=>console.error('Lesson 3 progress save failed',error))}};
     new MutationObserver(() => { const card = document.querySelector('.complete'); if (!card || card.querySelector('.complete-done')) return; const button = document.createElement('button'); button.className = 'complete-done'; button.type = 'button'; button.textContent = 'BALIK SA AKING ARALIN'; card.append(button); button.onclick = async () => { button.disabled = true; button.textContent = 'Saving...'; try { const response = await fetch(lesson3ProgressUrl, {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':document.cookie.match(/csrftoken=([^;]+)/)?.[1]||''}, body:JSON.stringify({activity_key:'lesson-3-gawain-2', current_index:6, completed_items:6, correct_items:6, total_items:6, activity_completed:true})}); const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.error || 'save failed'); location.href = "{% url 'assessment' %}"; } catch (error) { console.error('Lesson 3 Gawain 2 completion save failed', error); button.disabled = false; button.textContent = 'BALIK SA AKING ARALIN'; let errorText = card.querySelector('.complete-error'); if (!errorText) { errorText = document.createElement('p'); errorText.className = 'complete-error'; card.append(errorText); } errorText.textContent = 'Hindi na-save ang progress. Subukan muli.'; } }; }).observe(document.getElementById('game'), {childList:true, subtree:true});
   </script>
-  <script type="text/plain" data-activity-bootstrap="lesson-3-gawain-2">
+  <script data-activity-bootstrap="lesson-3-gawain-2">
     mountLesson3RhymeActivity({
       pairs: {{ lesson_3_gawain_2_pairs_json|safe }},
       imageBase: "{% static 'pabasa_app/images/salitang_magkatugma/lesson_3_gawain_2/' %}",
@@ -97,7 +97,7 @@
       exitUrl: "{% url 'assessment' %}"
     });
   </script>
-  <script type="text/plain" data-activity-bootstrap="lesson-3-gawain-2">
+  <script data-activity-bootstrap="lesson-3-gawain-2">
     (() => {
       const phase2Instruction = 'Magkatunog ba ang dalawang larawan na ito? Pindutin ang nawawastong sagot.';
       const syncPhase2Instruction = () => {
@@ -110,7 +110,7 @@
       window.addEventListener("lesson-start-ready", function(){ syncPhase2Instruction(); window.setInterval(syncPhase2Instruction, 100); }, {once:true});
     })();
   </script>
-  <script type="text/plain" data-activity-bootstrap="lesson-3-gawain-2">
+  <script data-activity-bootstrap="lesson-3-gawain-2">
     window.addEventListener('lesson-start-ready',function(){
       const game=document.getElementById('game');
       if(!game)return;
@@ -142,7 +142,7 @@
   <style>
     .gawain-2 button.narration-disabled{opacity:.5!important;filter:grayscale(.65);cursor:not-allowed!important;pointer-events:none!important;box-shadow:none!important}
   </style>
-  <script type="text/plain" data-activity-bootstrap="lesson-3-gawain-2">
+  <script data-activity-bootstrap="lesson-3-gawain-2">
     window.addEventListener('lesson-start-ready',function(){
       const game=document.getElementById('game');
       if(!game)return;

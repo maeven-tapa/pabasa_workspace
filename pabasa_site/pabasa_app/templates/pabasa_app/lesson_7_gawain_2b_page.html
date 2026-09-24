@@ -27,7 +27,7 @@ window.__prescribedNarrationAudio = {
     <a href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a>
     <section id="app" class="card"></section>
   </main>
-  {{ lesson7_gawain2b_data|json_script:"activity-data" }}
+  {{ lesson7_gawain2b_data|json_script:"activity-data" }}{% include 'pabasa_app/session3_lesson_start_bootstrap.html' %}
   <script>
   (()=>{
     const d=JSON.parse(document.getElementById('activity-data').textContent),app=document.getElementById('app'),csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
@@ -35,7 +35,7 @@ window.__prescribedNarrationAudio = {
     let s=Object.assign({current_reading_item:0,oral_reading_completed:false,completed_reading_items:[],read_attempts:0,listen_attempts:0,selections:[],correct_count:0,state_version:0},d.progress?.state||{}),audioBusy=false,introPlayed=false,part2InstructionPlayed=false;
     const WRONG='Hindi iyon ang tamang pangalan ng larawan. Subukan muli magsalita.',CORRECT='Magaling!',INTRO_TITLE='Tukuyin ang larawan',INTRO_INSTRUCTION='Tingnan ang larawang nasa kahon. Ano ito?',PART2_INSTRUCTION='Pindutin ang larawang nagsisimula sa titik I para bilugan.',PART2_WRONG='May kulang o maling sagot. Tingnan muli ang mga larawan at subukan ulit.';
     const save=()=>fetch(d.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({state:{...s,state_version:++s.state_version}})});
-    const requestAudio=text=>fetch('/api/reading/read-aloud/',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',mode:'reading',prescribed_activity_key:'lesson7-gawain2b'})}).then(response=>response.ok?response.json():null).then(result=>new Promise(resolve=>{if(!result?.success||!result.audio_content){resolve();return}const audio=new Audio(`data:${result.mime_type||'audio/mpeg'};base64,${result.audio_content}`);audio.onended=resolve;audio.onerror=resolve;audio.play().catch(resolve)})).catch(error=>console.error('Lesson 7 Gawain 2B narration failed',error));
+    const requestAudio=text=>{if(!window.__lessonStartReady)return Promise.resolve();return fetch('/api/reading/read-aloud/',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',mode:'reading',prescribed_activity_key:'lesson7-gawain2b'})}).then(response=>response.ok?response.json():null).then(result=>new Promise(resolve=>{if(!result?.success||!result.audio_content){resolve();return}const audio=new Audio(`data:${result.mime_type||'audio/mpeg'};base64,${result.audio_content}`);audio.onended=resolve;audio.onerror=resolve;audio.play().catch(resolve)})).catch(error=>console.error('Lesson 7 Gawain 2B narration failed',error));};
     const readingButtons=()=>[...app.querySelectorAll('.reading-actions button')];
     const setReadingButtonsDisabled=disabled=>readingButtons().forEach(button=>{button.disabled=disabled});
     const part2Controls=()=>[...app.querySelectorAll('.grid .choice'),app.querySelector('#submit')].filter(Boolean);
@@ -56,15 +56,16 @@ window.__prescribedNarrationAudio = {
         const startRead=()=>{if(audioBusy||read.disabled)return;if(!R){renderReadingStatus('Hindi available ang speech check sa browser na ito.');return}setReadingButtonsDisabled(true);read.textContent='Nakikinig...';let r=new R();r.lang='fil-PH';r.continuous=false;r.interimResults=false;r.onresult=async e=>{read.textContent='Pinoproseso...';let ok=String(e.results[0][0].transcript).toLowerCase().includes(it.word.toLowerCase());if(ok){await narrateFeedback(CORRECT);s.completed_reading_items=[...(s.completed_reading_items||[]),i];s.current_reading_item=i+1;s.read_attempts=0;s.listen_attempts=0;if(i===5)s.oral_reading_completed=true;else introPlayed=false;await save();render()}else{s.read_attempts=(s.read_attempts||0)+1;await narrateFeedback(WRONG);await save();resetRead()}};r.onerror=async()=>{renderReadingStatus('Hindi narinig. Subukan muli.');await save();resetRead()};r.start()};
         read.onclick=startRead;
         if(!R){read.disabled=true;listenButton.disabled=true}
-        if(!introPlayed)narrateIntro();
+        if(window.__lessonStartReady&&!introPlayed)narrateIntro();
         return
       }
       app.innerHTML='<h1>Gawain 2B: Letrang Ii</h1><p>'+PART2_INSTRUCTION+'</p><div class="grid">'+d.items.map((x,i)=>'<button class="choice '+(s.selections.includes(i)?'selected':'')+'" data-i="'+i+'"><img src="'+x.image_url+'" alt="Larawan"></button>').join('')+'</div><p id="status">Piliin ang mga larawan, pagkatapos ay isumite.</p><button class="button" id="submit">ISUMITE</button>';
-      if(!part2InstructionPlayed){part2InstructionPlayed=true;narratePart2(PART2_INSTRUCTION)}
+      if(window.__lessonStartReady&&!part2InstructionPlayed){part2InstructionPlayed=true;narratePart2(PART2_INSTRUCTION)}
       document.querySelectorAll('.choice').forEach(b=>b.onclick=async()=>{let i=+b.dataset.i;s.selections=s.selections.includes(i)?s.selections.filter(x=>x!==i):[...s.selections,i];await save();render()});
       document.getElementById('submit').onclick=async()=>{let want=d.items.map((x,i)=>x.target?i:null).filter(x=>x!==null).sort(),got=[...s.selections].sort(),ok=want.length===got.length&&want.every((x,i)=>x===got[i]);s.correct_count=ok?6:0;await save();if(ok){let r=await fetch(d.completion_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'});if(r.ok){d.progress.activity_completed=true;render();return}}s.selections=s.selections.filter(x=>want.includes(x));document.querySelectorAll('.choice').forEach(b=>{if(!s.selections.includes(+b.dataset.i))b.classList.remove('selected')});await save();document.getElementById('status').textContent=PART2_WRONG;await narratePart2(PART2_WRONG)};
     }
-    render();
+    document.addEventListener('DOMContentLoaded',()=>{render();app.inert=true;app.innerHTML=app.innerHTML;window.addEventListener('lesson-start-ready',()=>{app.inert=false},{once:true})});
+    __runWhenLessonStarted(() => render());
   })();
   </script>
 {% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g2b' help_text='Basahin ang salita at bilugan ang larawang nagsisimula sa Ii.' %}</body>
