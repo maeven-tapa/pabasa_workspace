@@ -13404,12 +13404,32 @@ def prescribed_activity_page(request, activity_key):
                 },
             })
         if activity_key == 'aral-l22-g5-f-word-search':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_22/GAWAIN_5/'
+            audio_files = {
+                'instruction': 'Hanapin at bilugan sa loob ng Big Box ang mga salita sa ibaba.”_TTS.mp3',
+                'feedback': {
+                    'Hindi available ang audio. Subukan muli.': 'Hindi available ang audio. Subukan muli._TTS.mp3',
+                    'Hindi na-save ang gawain.': 'Hindi na-save ang gawain._TTS.mp3',
+                    'Magaling! Nahanap mo ang lahat ng salita!': 'Magaling! Nahanap mo ang lahat ng salita!_TTS.mp3',
+                    'Subukan muli.': 'Subukan muli._TTS.mp3',
+                    'Tama! Nahanap mo ang Felix.': 'Tama! Nahanap mo ang Felix._TTS.mp3',
+                    'Tama! Nahanap mo ang Filipino.': 'Tama! Nahanap mo ang Filipino._TTS.mp3',
+                    'Tama! Nahanap mo ang Fina.': 'Tama! Nahanap mo ang Fina_TTS.mp3',
+                    'Tama! Nahanap mo ang freezer.': 'Tama! Nahanap mo ang freezer._TTS.mp3',
+                    'Tama! Nahanap mo ang fries.': 'Tama! Nahanap mo ang fries._TTS.mp3',
+                },
+            }
+            local_audio = {
+                'instruction': static(audio_root + audio_files['instruction']),
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+            }
             return render(request, 'pabasa_app/prescribed_l22_g5_f_word_search_page.html', {
                 'workbook_payload': {
                     'activity': get_activity(activity_key), 'state': state, 'preview': preview,
                     'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
                     'read_aloud_url': reverse('reading_read_aloud_api'), 'back_url': reverse('assessment'),
                     'next_url': next_url,
+                    'local_audio': local_audio,
                 },
             })
         if activity_key == 'aral-l23-g5-j-word-search':

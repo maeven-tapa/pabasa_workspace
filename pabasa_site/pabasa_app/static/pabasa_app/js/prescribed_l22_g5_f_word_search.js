@@ -3,6 +3,7 @@
   const data = JSON.parse(document.getElementById('workbook-payload').textContent || '{}');
   const activity = data.activity, app = document.getElementById('l22g5-app');
   const instruction = 'Hanapin at bilugan sa loob ng Big Box ang mga salita sa ibaba.';
+  const localAudio = data.local_audio || {}, localFeedback = localAudio.feedback || {};
   const paths = {Fina:[[0,3],[0,4],[0,5],[0,6]],fries:[[2,1],[2,2],[2,3],[2,4],[2,5]],Filipino:[[3,0],[3,1],[3,2],[3,3],[3,4],[3,5],[3,6],[3,7]],freezer:[[4,0],[4,1],[4,2],[4,3],[4,4],[4,5],[4,6]],Felix:[[5,3],[5,4],[5,5],[5,6],[5,7]]};
   let state = {...(data.state || {})}, phase = 'READY', active = null, busy = false, audio = null, audioBusy = false;
   const words = activity.items.map(item => item.text), found = () => state.found_words && typeof state.found_words === 'object' ? state.found_words : {};
@@ -11,11 +12,23 @@
   const pathBetween = (start, end) => start && end && start[0] === end[0] && end[1] >= start[1] ? Array.from({length:end[1]-start[1]+1},(_,i)=>[start[0],start[1]+i]) : [];
   const paint = path => document.querySelectorAll('.cell').forEach(cell => cell.classList.toggle('selected', path.some(([r,c]) => r === +cell.dataset.row && c === +cell.dataset.col)));
   const setFeedback = (text, error=false) => { const node=document.getElementById('feedback'); if(node){node.textContent=text||'';node.className=`feedback${error?' error':''}`;} };
+  const mappedAudio = text => localFeedback[text] || (text === instruction ? localAudio.instruction : null);
+  const playMappedAudio = source => new Promise((resolve,reject)=>{
+    if(!source){reject(Error('Hindi available ang nakatalagang audio.'));return;}
+    if(audio){audio.pause();audio=null;}
+    const current = new Audio(source); audio = current; let settled = false;
+    const finish = error => {if(settled)return;settled=true;if(audio===current)audio=null;error?reject(error):resolve();};
+    current.onended = () => finish(); current.onerror = () => finish(Error('Hindi ma-play ang nakatalagang audio.'));
+    current.play().catch(finish);
+  });
   async function speak(text){
     if (audioBusy || data.preview || !text) return;
-    audioBusy = true; const form = new FormData(); if(text===instruction){form.append('target_text', instruction);}else{form.append('target_text', text);} form.append('language','Filipino'); form.append('mode','reading'); form.append('prescribed_activity_key', activity.activity_key);
-    try { const r=await fetch(data.read_aloud_url,{method:'POST',credentials:'same-origin',headers:{'Accept':'application/json','X-CSRFToken':csrf()},body:form}); const j=await r.json(); if(!r.ok||!j.success||!j.audio_content) throw Error('Hindi available ang audio. Subukan muli.'); audio=new Audio(`data:${j.mime_type||'audio/mpeg'};base64,${j.audio_content}`); await audio.play(); await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=reject;}); }
-    catch(e){setFeedback(e.message||'Hindi available ang audio. Subukan muli.',true);} finally {audio?.pause();audio=null;audioBusy=false;}
+    audioBusy = true; const source = mappedAudio(text);
+    try {
+      if(source){await playMappedAudio(source);return;}
+      const form = new FormData(); form.append('target_text', text); form.append('language','Filipino'); form.append('mode','reading'); form.append('prescribed_activity_key', activity.activity_key);
+      const r=await fetch(data.read_aloud_url,{method:'POST',credentials:'same-origin',headers:{'Accept':'application/json','X-CSRFToken':csrf()},body:form}); const j=await r.json(); if(!r.ok||!j.success||!j.audio_content) throw Error('Hindi available ang audio. Subukan muli.'); audio=new Audio(`data:${j.mime_type||'audio/mpeg'};base64,${j.audio_content}`); await audio.play(); await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=reject;});
+    } catch(e){const message=e.message||'Hindi available ang audio. Subukan muli.';setFeedback(message,true);const unavailable=localFeedback['Hindi available ang audio. Subukan muli.'];if(unavailable&&source!==unavailable){try{await playMappedAudio(unavailable);}catch(_){}}} finally {audio?.pause();audio=null;audioBusy=false;}
   }
   async function playInstruction(){return speak(instruction);}
   async function send(event){
