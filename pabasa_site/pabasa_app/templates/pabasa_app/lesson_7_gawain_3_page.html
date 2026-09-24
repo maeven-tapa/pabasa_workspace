@@ -32,6 +32,21 @@
   </main>
   {{ lesson7_gawain3_data|json_script:"activity-data" }}
   <script>
+    window.__prescribedNarrationAudio = {
+      'tukuyin ang larawan': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 3/OTHERS/tukuyin_ang_larawan.mp3' %}",
+      'tingnan ang larawang nasa kahon ano ito': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 3/OTHERS/tingnan_ang_larawang_nasa_kahon_ano_ito.mp3' %}",
+      'magaling': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 3/OTHERS/magaling.mp3' %}",
+      'hindi iyon ang tamang pangalan ng larawan subukan muli magsalita': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 3/OTHERS/hindi_iyon_ang_tamang_pangalan_ng_larawan_subukan_muli_magsalita.mp3' %}",
+      'saan sa mga larawang ito ang nagsisimula sa tunog o': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 3/OTHERS/saan_sa_mga_larawang_ito_ang_nagsisimula_sa_tunog_o.mp3' %}",
+      'saan sa mga larawang ito ang nagsisimula sa tunog i': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 3/OTHERS/saan_sa_mga_larawang_ito_ang_nagsisimula_sa_tunog_i.mp3' %}",
+      'saan sa mga larawang ito ang nagsisimula sa tunog m': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 3/OTHERS/saan_sa_mga_larawang_ito_ang_nagsisimula_sa_tunog_m.mp3' %}",
+      'saan sa mga larawang ito ang nagsisimula sa tunog s': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 3/OTHERS/saan_sa_mga_larawang_ito_ang_nagsisimula_sa_tunog_s.mp3' %}",
+      'saan sa mga larawang ito ang nagsisimula sa tunog a': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 3/OTHERS/saan_sa_mga_larawang_ito_ang_nagsisimula_sa_tunog_a.mp3' %}",
+      'hindi iyon ang tamang larawan pumili muna at subukan ulit': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 3/OTHERS/hindi_iyon_ang_tamang_larawan_pumili_muna_at_subukan_ulit.mp3' %}"
+    };
+  </script>
+  <script src="{% static 'pabasa_app/js/prescribed_narration_resolver.js' %}?v=20260924-9"></script>
+  <script>
   (() => {
     const d=JSON.parse(document.getElementById('activity-data').textContent);
     const app=document.getElementById('app');
@@ -48,7 +63,8 @@
     let part2NarratedTarget=-1;
 
     const save=()=>fetch(d.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({state:{...s,state_version:++s.state_version}})});
-    const requestAudio=text=>fetch('/api/reading/read-aloud/',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',mode:'reading',prescribed_activity_key:'lesson7-gawain3'})}).then(response=>response.ok?response.json():null).then(result=>new Promise(resolve=>{if(!result?.success||!result.audio_content){resolve();return}const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);audio.onended=resolve;audio.onerror=resolve;audio.play().catch(resolve)})).catch(error=>console.error('Lesson 7 Gawain 3 narration failed',error));
+    const normalizeNarration=text=>String(text||'').trim().replace(/[?!.,]+/g,'').replace(/\s+/g,' ').toLocaleLowerCase();
+    const requestAudio=text=>{const mapped=window.__prescribedNarrationAudio?.[normalizeNarration(text)]||Object.entries(window.__prescribedNarrationAudio||{}).find(([phrase])=>normalizeNarration(phrase)===normalizeNarration(text))?.[1];if(mapped){window.__lesson7Gawain3Audio?.pause();const audio=new Audio(mapped);window.__lesson7Gawain3Audio=audio;return new Promise(resolve=>{let settled=false;const finish=()=>{if(settled)return;settled=true;if(window.__lesson7Gawain3Audio===audio)window.__lesson7Gawain3Audio=null;resolve()};audio.onended=finish;audio.onerror=finish;audio.play().catch(finish)})}return fetch('/api/reading/read-aloud/',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',mode:'reading',prescribed_activity_key:'lesson7-gawain3'})}).then(response=>response.ok?response.json():null).then(result=>new Promise(resolve=>{if(!result?.success||!result.audio_content){resolve();return}const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);audio.onended=resolve;audio.onerror=resolve;audio.play().catch(resolve)})).catch(error=>console.error('Lesson 7 Gawain 3 narration failed',error))};
     const readingButtons=()=>[...app.querySelectorAll('.reading-actions button')];
     const setReadingButtonsDisabled=disabled=>readingButtons().forEach(button=>{button.disabled=disabled});
     const setStatus=text=>{const status=document.getElementById('status');if(status)status.textContent=text};
