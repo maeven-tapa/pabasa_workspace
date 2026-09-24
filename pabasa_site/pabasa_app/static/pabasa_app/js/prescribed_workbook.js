@@ -95,7 +95,8 @@
     document.getElementById('wb-back').hidden=preview;
     action.replaceChildren();
     if(state.completed){
-      content.innerHTML=`<div class="wb-focus"><h2>${cBuilder?'Magaling! Natapos mo ang Gawain 1.':fil?'Natapos mo ang gawain!':'Activity complete!'}</h2>${cBuilder?`<p>Nabuo mo na: ${esc((state.found_words||[]).join(', '))}</p>`:a.review_required?'<p>Your written work is saved for teacher review.</p>':''}</div>`;
+      const completionWord=a.activity_key==='aral-l23-g1-n-syllable-builder'?'Niño':(state.found_words||[]).join(', ');
+      content.innerHTML=`<div class="wb-focus"><h2>${cBuilder?'Magaling! Natapos mo ang Gawain 1.':fil?'Natapos mo ang gawain!':'Activity complete!'}</h2>${cBuilder?`<p>${a.activity_key==='aral-l23-g1-n-syllable-builder'?`Magaling! Nabuo mo ang salitang ${completionWord}`:`Nabuo mo na: ${esc(completionWord)}`}</p>`:a.review_required?'<p>Your written work is saved for teacher review.</p>':''}</div>`;
       if(cBuilder)button('Susunod',()=>{if(data.next_url)location.href=data.next_url;},true).disabled=!data.next_url;
       if((prescribedWordReading||jSyllables||pictureReading)&&data.next_url)button('Susunod',()=>{location.href=data.next_url;},true);
       return;
