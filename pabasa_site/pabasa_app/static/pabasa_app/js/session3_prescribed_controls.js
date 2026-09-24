@@ -36,8 +36,13 @@
     const OriginalRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (OriginalRecognition && !OriginalRecognition.__session3Wrapped) {
       const WrappedRecognition = new Proxy(OriginalRecognition, { construct(target, args, newTarget) {
-        const recognition = Reflect.construct(target, args, newTarget);
-        const observed = new Proxy(recognition, { set(targetObject, property, value) {
+        const recognition = Reflect.construct(target, args, target);
+        const observed = new Proxy(recognition, {
+          get(targetObject, property) {
+            const value = Reflect.get(targetObject, property, targetObject);
+            return typeof value === 'function' ? value.bind(targetObject) : value;
+          },
+          set(targetObject, property, value) {
           if (property === 'onresult' && typeof value === 'function') {
             const handler = value;
             value = function(event) {
@@ -60,8 +65,9 @@
           return Reflect.set(targetObject, property, value);
         }});
         recognitions.add(observed);
-        observed.addEventListener?.('start', () => { debug({status:'Listening', expected:expected(), recorder:'Not available'}, 'Speech recognition started'); });
-        observed.addEventListener?.('end', () => { recognitions.delete(observed); debug({status:'Ready', recorder:'Not available'}, 'Speech recognition ended'); });
+        const addRecognitionListener = recognition.addEventListener?.bind(recognition);
+        addRecognitionListener?.('start', () => { debug({status:'Listening', expected:expected(), recorder:'Not available'}, 'Speech recognition started'); });
+        addRecognitionListener?.('end', () => { recognitions.delete(observed); debug({status:'Ready', recorder:'Not available'}, 'Speech recognition ended'); });
         return observed;
       }});
       WrappedRecognition.__session3Wrapped = true;

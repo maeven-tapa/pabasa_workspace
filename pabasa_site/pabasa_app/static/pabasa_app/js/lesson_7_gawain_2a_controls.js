@@ -2,7 +2,9 @@ document.addEventListener('DOMContentLoaded', function () {
   const app = document.getElementById('app');
   if (!app) return;
 
-  let introPlayed = false;
+  let introKey = '';
+  let introPlaying = false;
+  let narrationToken = 0;
   let readStarted = false;
   let readingBeforeRead = null;
   let feedbackBusy = false;
@@ -18,7 +20,8 @@ document.addEventListener('DOMContentLoaded', function () {
     bahay: 'bahay.mp3', bola: 'bola.mp3', suklay: 'suklay.mp3'
   };
   const wordAudioBase = '/static/pabasa_app/prescribed/audio/SESSION%203/LESSON%207/GAWAIN%202A/';
-  const requestAudio = text => fetch('/api/reading/read-aloud/', {
+  let narrationQueue = Promise.resolve();
+  const playAudio = text => fetch('/api/reading/read-aloud/', {
     method: 'POST',
     credentials: 'same-origin',
     headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'X-CSRFToken': csrf()},
@@ -26,10 +29,18 @@ document.addEventListener('DOMContentLoaded', function () {
   }).then(response => response.ok ? response.json() : null).then(result => new Promise(resolve => {
     if (!result?.success || !result.audio_content) { resolve(); return; }
     const audio = new Audio(`data:${result.mime_type || 'audio/mpeg'};base64,${result.audio_content}`);
-    audio.onended = resolve;
-    audio.onerror = resolve;
-    audio.play().catch(resolve);
-  })).catch(error => console.error('Lesson 7 Gawain 2A narration failed', error));
+    let settled = false;
+    const finish = () => { if (settled) return; settled = true; audio.onended = null; audio.onerror = null; audio.onabort = null; resolve(); };
+    audio.onended = finish;
+    audio.onerror = finish;
+    audio.onabort = finish;
+    Promise.resolve(audio.play()).catch(finish);
+  }));
+  const requestAudio = text => {
+    const next = narrationQueue.then(() => playAudio(text));
+    narrationQueue = next.catch(error => console.error('Lesson 7 Gawain 2A narration failed', error));
+    return next.catch(error => console.error('Lesson 7 Gawain 2A narration failed', error));
+  };
   const buttons = () => [...app.querySelectorAll('.lesson7-g2a-reading-actions button')];
   const setButtonsDisabled = disabled => buttons().forEach(button => { button.disabled = disabled; });
   const part2Canvases = () => [...app.querySelectorAll('.grid canvas.canvas')];
@@ -66,7 +77,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!grid) return;
     const instruction = app.querySelector('.instruction');
     if (instruction && instruction.textContent.trim() !== part2Instruction) instruction.textContent = part2Instruction;
-    if (!part2InstructionPlayed && !part2InstructionBusy) narratePart2(part2Instruction, 'instruction');
+    if (!part2InstructionPlayed && !part2InstructionBusy && !feedbackBusy) narratePart2(part2Instruction, 'instruction');
     const status = app.querySelector('#status');
     if (status && status.textContent.trim() === part2InvalidFeedback && !part2FeedbackBusy) narratePart2(part2InvalidFeedback, 'feedback');
   };
@@ -114,14 +125,22 @@ document.addEventListener('DOMContentLoaded', function () {
       read.dataset.g2aBound = '1';
       read.addEventListener('click', () => { readStarted = true; readingBeforeRead = reading; }, true);
     }
-    if (!introPlayed) {
-      introPlayed = true;
+    const itemKey = reading.querySelector('img')?.getAttribute('alt') || reading;
+    const isCompletedReadingTransition = readStarted && reading !== readingBeforeRead;
+    if (introKey !== itemKey && !feedbackBusy && !isCompletedReadingTransition) {
+      introKey = itemKey;
+      const token = ++narrationToken;
+      introPlaying = true;
       setButtonsDisabled(true);
       (async () => {
         await requestAudio('Tukuyin ang larawan');
+        if (token !== narrationToken || reading !== app.querySelector('.reading')) return;
         await requestAudio('Tingnan ang larawang nasa ibaba. Ano ito?');
+      })().catch(() => {}).finally(() => {
+        if (token !== narrationToken || reading !== app.querySelector('.reading')) return;
+        introPlaying = false;
         setButtonsDisabled(false);
-      })().catch(() => setButtonsDisabled(false));
+      });
     }
     if (!feedbackBusy && readStarted && reading !== readingBeforeRead) {
       const status = reading.querySelector('#status');
@@ -149,7 +168,8 @@ document.addEventListener('DOMContentLoaded', function () {
       if (status.isConnected && status.dataset.g2aFeedback === text && restoreText) status.textContent = restoreText;
       if (status.isConnected) delete status.dataset.g2aFeedback;
       feedbackBusy = false;
-      setButtonsDisabled(false);
+      if (!introPlaying) setButtonsDisabled(false);
+      sync();
     });
   };
 
