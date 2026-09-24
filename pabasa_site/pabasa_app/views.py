@@ -13505,6 +13505,52 @@ def prescribed_activity_page(request, activity_key):
                     'local_audio': local_audio,
                 },
             })
+        if activity_key == 'aral-l23-g1-n-syllable-builder':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_23/GAWAIN_1/'
+            audio_files = {
+                'instruction': 'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salita mula rito._TTS.mp3',
+                'syllables': {
+                    'Ni': 'Ni_TTS.mp3', 'La': 'La_TTS.mp3', 'ña': 'ña_TTS.mp3',
+                    'Cas': 'Cas_TTS.mp3', 'Bi': 'Bi_TTS.mp3', 'da': 'da_TTS.mp3',
+                    'El': 'El.mp3', 'ño': 'ño_TTS.mp3', 'ñan': 'ñan_TTS.mp3',
+                    'Cen': 'Cen.mp3', 'ta': 'ta_TTS.mp3', 'ñe': 'ñe_TTS.mp3',
+                },
+                'feedback': {
+                    'Basahin muna ang lahat ng nasa Big Box.': 'Basahin muna ang lahat ng nasa Big Box._TTS.mp3',
+                    'Bumuo muna ng lahat ng wastong salita.': 'Bumuo muna ng lahat ng wastong salita_TTS.mp3',
+                    'Bumuo ng ibang salita.': 'Bumuo ng ibang salita._TTS.mp3',
+                    'Hindi available ang mikropono sa browser na ito.': 'Hindi available ang mikropono sa browser na ito._TTS.mp3',
+                    'Hindi ko malinaw na narinig. Subukan muli.': 'Hindi ko malinaw na narinig. Subukan muli._TTS.mp3',
+                    'Hindi mabasa ang recording.': 'Hindi mabasa ang recording_TTS.mp3',
+                    'Hindi magamit ang mikropono. Subukan muli.': 'Hindi magamit ang mikropono. Subukan muli._TTS.mp3',
+                    'Hindi nakuha ang iyong boses. Subukan muli.': 'Hindi nakuha ang iyong boses. Subukan muli_TTS.mp3',
+                    'Hindi tumugon ang mikropono.': 'Hindi tumugon ang mikropono._TTS.mp3',
+                    'Magaling! Nabasa mo nang tama ang lahat ng pantig.': 'Magaling! Nabasa mo nang tama ang lahat ng pantig._TTS.mp3',
+                    'Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.': 'Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa._TTS.mp3',
+                    'Pakinggan muna ang tamang pagbigkas.': 'Pakinggan muna ang tamang pagbigkas._TTS.mp3',
+                    'Subukan muli.': 'Subukan muli._TTS.mp3',
+                    'Tama!': 'Tama!_TTS.mp3',
+                    'Walang nakuha sa recording. Subukan muli.': 'Walang nakuha sa recording. Subukan muli._TTS.mp3',
+                },
+                'completion': {
+                    'Magaling! Nabuo mo ang salitang Niño': 'Magaling! Nabuo mo ang salitang Niño_TTS.mp3',
+                    'Magaling! Natapos mo ang Gawain 1.': 'Magaling! Natapos mo ang Gawain 1._TTS.mp3',
+                },
+            }
+            local_audio = {
+                'instruction': static(audio_root + audio_files['instruction']),
+                'syllables': {text: static(audio_root + filename) for text, filename in audio_files['syllables'].items()},
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+                'completion': {text: static(audio_root + filename) for text, filename in audio_files['completion'].items()},
+            }
+            return render(request, 'pabasa_app/prescribed_workbook_page.html', {
+                'workbook_payload': {
+                    'activity': get_activity(activity_key), 'state': state, 'preview': preview,
+                    'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+                    'read_aloud_url': reverse('reading_read_aloud_api'), 'next_url': next_url,
+                    'local_audio': local_audio,
+                },
+            })
         return render(request, 'pabasa_app/prescribed_workbook_page.html', {
             'workbook_payload': {
                 'activity': get_activity(activity_key), 'state': state, 'preview': preview,
