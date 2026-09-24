@@ -11,9 +11,6 @@
   #app .instruction{margin:12px auto 16px;color:#315b74;font-size:clamp(1.05rem,2vw,1.45rem);line-height:1.3;font-weight:800}
   @media(max-width:520px){.lesson9-g2-eyebrow{padding:8px 16px}.lesson9-g2-title{font-size:clamp(1.7rem,8vw,2.35rem)}#app .instruction{font-size:1rem}}
 </style>
-<script>
-  document.addEventListener('DOMContentLoaded',()=>{const app=document.getElementById('app');if(!app)return;const update=()=>{app.querySelectorAll('.task').forEach(task=>{let eyebrow=task.querySelector(':scope>.lesson9-g2-eyebrow'),title=task.querySelector(':scope>.lesson9-g2-title');if(!eyebrow){eyebrow=document.createElement('p');eyebrow.className='lesson9-g2-eyebrow';task.prepend(eyebrow)}if(!title){title=document.createElement('h1');title.className='lesson9-g2-title';eyebrow.after(title)}eyebrow.textContent='SESSION 3 · LESSON 9 · GAWAIN 2';title.textContent='Gawain 2: Letrang Ii, Oo, Ee'})};update();new MutationObserver(update).observe(app,{childList:true,subtree:true})});
-</script>
 <style>@font-face{font-family:Fredoka;src:url("{% static 'pabasa_app/font/fredoka-one.one-regular.ttf' %}") format('truetype');font-display:swap}</style>
 <style>
   #app.card{height:calc(100vh - 110px);max-height:calc(100vh - 110px);overflow:auto}

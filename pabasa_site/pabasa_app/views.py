@@ -13747,7 +13747,7 @@ def prescribed_activity_page(request, activity_key):
         rows = [{**row, 'items': [{'word': word, 'target': target, 'image_url': static(f"pabasa_app/images/letrang_i_o_e/{word}.png")} for word, target in row['items']]} for row in activity['rows']]
         oral_items = [item for row in rows for item in row['items']]
         context['lesson9_gawain2_data'] = {'activity_key': activity_key, 'session_key': 'session-3', 'title': activity['title'], 'instruction': activity['instruction'], 'rows': rows, 'oral_items': oral_items, 'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}), 'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}), 'progress': {'state': raw_state, 'activity_completed': progress.activity_completed if progress else False}}
-        return render(request, 'pabasa_app/lesson_9_gawain_2_page.html', context)
+        return render(request, 'pabasa_app/lesson_9_gawain_2_active_page.html', context)
     if activity_key == 'lesson9-gawain3':
         context = _dashboard_context(request)
         context['lesson9_gawain3_data'] = {
