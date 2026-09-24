@@ -13423,12 +13423,40 @@ def prescribed_activity_page(request, activity_key):
                 },
             })
         if activity_key == 'aral-l22-g4-f-syllable-builder':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_22/GAWAIN_4/'
+            audio_files = {
+                'instruction': 'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng salita mula rito._TTS.mp3',
+                'locked_instruction': 'Basahin muna ang lahat ng nasa Big Box_TTS.mp3',
+                'syllables': {
+                    'free': 'free_TTS.mp3', 'fries': 'fries_TTS.mp3', 'Fi': 'Fi_TTS.mp3',
+                    'Fe': 'Fe_TTS.mp3', 'na': 'na_TTS.mp3', 'li': 'li_TTS.mp3',
+                    'lix': 'lix_TTS.mp3', 'zer': 'zer_TTS.mp3', 'pe': 'pe_TTS.mp3',
+                },
+                'feedback': {
+                    'Tama!': 'Tama!_TTS.mp3',
+                    'Subukan muli.': 'Subukan muli._TTS.mp3',
+                    'Hindi ko malinaw na narinig. Subukan muli.': 'Hindi ko malinaw na narinig. Subukan muli_TTS.mp3',
+                    'Pakinggan muli, pagkatapos ay subukan mong basahin.': 'Pakinggan muli, pagkatapos ay subukan mong basahin._TTS.mp3',
+                    'Handa ka na?': 'Handa ka na_TTS.mp3',
+                    'Nabuo mo na ang salitang ito.': 'Nabuo mo na ang salitang ito._TTS.mp3',
+                    'Gumamit ng mga pantig sa Big Box.': 'Gumamit ng mga pantig sa Big Box_TTS.mp3',
+                    'Hindi pa kailangan ang pag-ulit.': 'Hindi pa kailangan ang pag-ulit._TTS.mp3',
+                    'Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.': 'Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa_TTS.mp3',
+                },
+            }
+            local_audio = {
+                'instruction': static(audio_root + audio_files['instruction']),
+                'locked_instruction': static(audio_root + audio_files['locked_instruction']),
+                'syllables': {text: static(audio_root + filename) for text, filename in audio_files['syllables'].items()},
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+            }
             return render(request, 'pabasa_app/prescribed_l22_g4_f_builder_page.html', {
                 'workbook_payload': {
                     'activity': get_activity(activity_key), 'state': state, 'preview': preview,
                     'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
                     'read_aloud_url': reverse('reading_read_aloud_api'), 'back_url': reverse('assessment'),
                     'next_url': next_url,
+                    'local_audio': local_audio,
                 },
             })
         return render(request, 'pabasa_app/prescribed_workbook_page.html', {
