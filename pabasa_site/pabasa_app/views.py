@@ -13763,7 +13763,7 @@ def prescribed_activity_page(request, activity_key):
                 'state': raw_state,
             },
         }
-        return render(request, 'pabasa_app/lesson_9_gawain_3_page.html', context)
+        return render(request, 'pabasa_app/lesson_9_gawain_3_active_page.html', context)
     if activity_key == 'lesson9-gawain1':
         context = _dashboard_context(request)
         context['lesson9_gawain1_data'] = {
