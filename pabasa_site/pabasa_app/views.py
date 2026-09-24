@@ -13551,6 +13551,46 @@ def prescribed_activity_page(request, activity_key):
                     'local_audio': local_audio,
                 },
             })
+        if activity_key == 'aral-l23-g3-j-word-reading':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_23/GAWAIN_3/'
+            audio_files = {
+                'instruction': 'Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Jj_TTS.mp3',
+                'words': {
+                    'Jacket': 'Jacket_TTS.mp3', 'Jennifer': 'Jennifer_TTS.mp3',
+                    'jam': 'jam_TTS.mp3', 'Jeffrey': 'Jeffrey_TTS.mp3',
+                    'pajama': 'pajama_TTS.mp3', 'Jojo': 'Jojo_TTS.mp3',
+                    'Jonathan': 'Jonathan”_TTS.mp3',
+                },
+                'feedback': {
+                    'Handa ka na?': 'Handa ka na_TTS.mp3',
+                    'Hindi available ang audio.': 'Hindi available ang audio_TTS.mp3',
+                    'Hindi available ang panuto.': 'Hindi available ang panuto._TTS.mp3',
+                    'Hindi ko malinaw na narinig. Subukan muli.': 'Hindi ko malinaw na narinig. Subukan muli._TTS.mp3',
+                    'Hindi nakuha ang iyong boses. Subukan muli.': 'Hindi nakuha ang iyong boses. Subukan muli._TTS.mp3',
+                    'Hindi pinayagan ang mikropono.': 'Hindi pinayagan ang mikropono_TTS.mp3',
+                    'May problema sa recording.': 'May problema sa recording._TTS.mp3',
+                    'Hindi na-save. Subukan muli.': '“Hindi na-save. Subukan muli.”_TTS.mp3',
+                    'Subukan Muli.': 'Subukan muli._TTS.mp3',
+                },
+                'completion': {
+                    'Mahusay!': 'Mahusay!_TTS.mp3',
+                    'Natapos mo ang gawain!': 'Natapos mo ang gawain!_TTS.mp3',
+                },
+            }
+            local_audio = {
+                'instruction': static(audio_root + audio_files['instruction']),
+                'words': {text: static(audio_root + filename) for text, filename in audio_files['words'].items()},
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+                'completion': {text: static(audio_root + filename) for text, filename in audio_files['completion'].items()},
+            }
+            return render(request, 'pabasa_app/prescribed_workbook_page.html', {
+                'workbook_payload': {
+                    'activity': get_activity(activity_key), 'state': state, 'preview': preview,
+                    'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+                    'read_aloud_url': reverse('reading_read_aloud_api'), 'next_url': next_url,
+                    'local_audio': local_audio,
+                },
+            })
         return render(request, 'pabasa_app/prescribed_workbook_page.html', {
             'workbook_payload': {
                 'activity': get_activity(activity_key), 'state': state, 'preview': preview,
