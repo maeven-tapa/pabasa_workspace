@@ -26,6 +26,14 @@
   <main class="page"><a class="back" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a><section id="app" class="card"></section></main>
   {{ handwriting_activity_data|json_script:"handwriting-data" }}
   <script>
+    window.__prescribedNarrationAudio = {
+      'magsanay magsulat ng letrang ay isulat nang tatlong beses ang letrang ay': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2C/magsanay_magsulat_ng_letrang_ay_isulat_nang_tatlong_beses_ang_letrang_ay.mp3' %}",
+      'subukan ulit isulat nang malinaw ang letrang ay': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2C/subukan_ulit_isulat_nang_malinaw_ang_letrang_ay.mp3' %}",
+      'magaling': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2C/magaling.mp3' %}"
+    };
+  </script>
+  <script src="{% static 'pabasa_app/js/prescribed_narration_resolver.js' %}?v=20260924-8"></script>
+  <script>
   (() => {
     const data = JSON.parse(document.getElementById('handwriting-data').textContent || '{}');
     const app = document.getElementById('app');
@@ -37,7 +45,23 @@
     let index = Math.max(0, Math.min(3, Number(data.progress?.current_index) || 0));
     let busy = false;
     const rows = [[], [], []];
-    const speak = text => fetch('{% url "reading_read_aloud_api" %}', {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,prescribed_activity_key:'lesson7-gawain2c'})}).then(r => r.ok ? r.json() : null).then(result => {if (result?.success && result.audio_content) new Audio('data:' + (result.mime_type || 'audio/mpeg') + ';base64,' + result.audio_content).play().catch(() => {})}).catch(() => {});
+    const normalizeNarration = value => String(value || '').trim().replace(/[?!.,]+/g, '').replace(/\s+/g, ' ').toLocaleLowerCase();
+    const speak = text => {
+      const mappedAudio = window.__prescribedNarrationAudio?.[normalizeNarration(text)] || Object.entries(window.__prescribedNarrationAudio || {}).find(([phrase]) => normalizeNarration(phrase) === normalizeNarration(text))?.[1];
+      if (mappedAudio) {
+        window.__lesson7Gawain2cAudio?.pause();
+        const audio = new Audio(mappedAudio);
+        window.__lesson7Gawain2cAudio = audio;
+        const clear = () => {
+          if (window.__lesson7Gawain2cAudio === audio) window.__lesson7Gawain2cAudio = null;
+        };
+        audio.addEventListener('ended', clear, {once: true});
+        audio.addEventListener('error', clear, {once: true});
+        audio.play().catch(clear);
+        return Promise.resolve();
+      }
+      return fetch('{% url "reading_read_aloud_api" %}', {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,prescribed_activity_key:'lesson7-gawain2c'})}).then(r => r.ok ? r.json() : null).then(result => {if (result?.success && result.audio_content) new Audio('data:' + (result.mime_type || 'audio/mpeg') + ';base64,' + result.audio_content).play().catch(() => {})}).catch(() => {});
+    };
     const setHint = (text = normalHint) => {const hint = app.querySelector('.hint'); if (hint) hint.textContent = text};
     const retry = () => {setHint(retryMessage); speak(retryMessage.replace('letrang Ii', 'letrang ay'))};
     const point = (event, canvas) => {const rect = canvas.getBoundingClientRect(); return {x:(event.clientX - rect.left) / rect.width, y:(event.clientY - rect.top) / rect.height}};
@@ -66,7 +90,7 @@
         if (index < 2) {index += 1; render(); return}
         const completion = await fetch(data.completion_url, {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'});
         if (!completion.ok || !(await completion.json().catch(() => null))?.success) {retry(); return}
-        index = 3; render();
+        index = 3; render(); speak('Magaling!');
       } catch (error) {retry()}
       finally {busy = false; if (index < 3) {app.querySelector('#next').disabled = false; app.querySelector('#clear').disabled = false}}
     }
