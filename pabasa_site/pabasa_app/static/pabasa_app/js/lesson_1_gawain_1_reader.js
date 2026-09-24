@@ -118,6 +118,10 @@
       .lesson-one-welcome-actions button:disabled { opacity: .45; cursor: wait; }
       .lesson-one-welcome-retry { margin-top: 14px; background: #627b84; }
       .lesson-one-welcome-status { min-height: 1.5em; font-size: .9rem; }
+      .lesson-one-awaiting-card { width: 100%; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--lesson-one-ink); text-align: center; box-shadow: none; }
+      .lesson-one-awaiting-card h2 { margin: 0 0 14px; font-size: clamp(1.35rem, 3vw, 2rem); }
+      .lesson-one-awaiting-card p { margin: 10px 0; color: #627b84; font-weight: 700; line-height: 1.45; }
+      .lesson-one-awaiting-card .awaiting-support { color: #187b7a; }
       @font-face {
         font-family: LessonOneFredoka;
         src: url('/static/pabasa_app/font/fredoka-one.one-regular.ttf') format('truetype');
@@ -894,7 +898,7 @@
       const response = await fetch(data().submission_url, { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRFToken': csrf() }, body: form });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result.success) throw new Error(result.error || 'Hindi naisumite ang recording.');
-      state.panel.innerHTML = '<p class="song-kicker">Tapos na</p><h2>Naipasa na ang iyong pag-awit.</h2><p class="song-note">Makikinig ang iyong guro sa iyong recording.</p>';
+      showPersistedActivityState(state.panel, { submission_status: 'submitted', progress: { activity_completed: false } });
     } catch (submissionError) { button.disabled = false; error.hidden = false; error.textContent = 'Hindi naisumite ang recording. Subukan muli.'; }
   }
 
@@ -920,17 +924,18 @@
 
   function showPersistedActivityState(panel, payload = data()) {
     const progress = payload.progress || {};
-    if (progress.activity_completed) {
+    const submissionStatus = payload.submission_status;
+    if (submissionStatus === 'checked' || progress.activity_completed) {
       state.awaitingTeacherCheck = false;
       state.retryTransitionConsumed = true;
       panel.innerHTML = '<p class="song-kicker">Tapos na</p><h2>Naipasa na ang iyong pag-awit.</h2><p class="song-note">Nasuri na ito ng iyong guro.</p>';
       document.getElementById('completion')?.classList.add('show');
       return true;
     }
-    if (payload.submitted) {
+    if (submissionStatus === 'submitted' || payload.submitted) {
       state.awaitingTeacherCheck = true;
       state.retryTransitionConsumed = false;
-      panel.innerHTML = '<p class="song-kicker">Naghihintay ng pagsusuri</p><h2>Naipasa na ang iyong pag-awit.</h2><p class="song-note">Hihintayin ang pagsusuri ng iyong guro.</p>';
+      panel.innerHTML = '<div class="lesson-one-awaiting-card" role="status" aria-live="polite"><h2>Naghihintay sa guro</h2><p>Naipasa na ang recording mo.</p><p class="awaiting-support">Maghintay muna.</p></div>';
       return true;
     }
     state.awaitingTeacherCheck = false;
@@ -959,7 +964,7 @@
         awaitingTeacherCheck: state.awaitingTeacherCheck,
         retryTransitionConsumed: state.retryTransitionConsumed,
       });
-      if (payload.progress?.activity_completed) {
+      if (payload.submission_status === 'checked' || payload.progress?.activity_completed) {
         clearInterval(state.statusPollTimer);
         state.statusPollTimer = null;
         clearWelcomeAudio();
@@ -1042,7 +1047,7 @@
       reference(panel);
       showWelcomeModal();
     }
-    if (!data().progress?.activity_completed) startCompletionStatusPolling();
+    if (data().submission_status !== 'checked' && !data().progress?.activity_completed) startCompletionStatusPolling();
     document.getElementById('done')?.addEventListener('click', () => {
       window.location.href = document.querySelector('.back')?.href || '/';
     });

@@ -18325,12 +18325,14 @@ def lesson_1_gawain_1_page(request):
     context['lesson_1_data'] = {
         'progress_url': reverse('lesson_3_activity_progress'),
         'submission_url': reverse('lesson_1_gawain_1_submit'),
-        'submitted': bool(submission and submission.status != 'retry'),
+        'submission_status': submission.status if submission else None,
+        'submission_id': submission.id if submission else None,
+        'submitted': bool(submission and submission.status == 'submitted'),
         'progress': {
             'current_index': progress.current_index if progress else 0,
             'completed_items': progress.completed_items if progress else 0,
             'total_items': progress.total_items if progress else 28,
-            'activity_completed': progress.activity_completed if progress else False,
+            'activity_completed': bool(submission and submission.status == 'checked'),
             'state': progress.state if progress and isinstance(progress.state, dict) else {},
         },
     }
