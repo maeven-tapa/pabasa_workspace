@@ -13565,7 +13565,14 @@ def prescribed_activity_page(request, activity_key):
         }
         return render(request, 'pabasa_app/prescribed_shape_stamp_page.html', context)
     if activity_key == 'lesson7-gawain4b':
-        context = _dashboard_context(request); context['shape_read_activity_data'] = {'activity_key': activity_key, 'title': activity['title'], 'instruction': activity['instruction'], 'items': [{'word': x['word'], 'answer': x['answer'], 'image_url': static(x['image_path'])} for x in activity['items']], 'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}), 'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}), 'progress': {'activity_completed': progress.activity_completed if progress else False, 'state': raw_state}}
+        context = _dashboard_context(request); context['shape_read_activity_data'] = {'activity_key': activity_key, 'title': activity['title'], 'instruction': activity['instruction'], 'items': [{'word': x['word'], 'answer': x['answer'], 'image_url': static(x['image_path'])} for x in activity['items']], 'narration_audio': {
+            'Tingnan ang larawang nasa kahon. Ano ito?': static('pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4B/OTHERS/tingnan_ang_larawang_nasa_kahon_ano_ito.mp3'),
+            'Magaling!': static('pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4B/OTHERS/magaling.mp3'),
+            'Hindi iyon ang tamang pangalan ng larawan. Subukan muli magsalita.': static('pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4B/OTHERS/hindi_iyon_ang_tamang_pangalan_ng_larawan_subukan_muli_magsalita.mp3'),
+            'May mali. Tingnan muli ang mga larawan at subukan ulit.': static('pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4B/OTHERS/may_mali_tingnan_muli_ang_mga_larawan_at_subukan_ulit.mp3'),
+            'Hindi narinig. Subukan muli.': static('pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4B/OTHERS/hindi_narinig_subukan_muli.mp3'),
+            'ee-type ang i kung ang larawan ay nagsisimula sa titik /i/. ee-type ang o kung ang larawan ay nagsisimula sa titik /o/.': static('pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4B/OTHERS/ee_type_ang_i_kung_ang_larawan_ay_nagsisimula_sa_titik_i_ee_type_ang_o_kung_ang_larawan_ay_nagsisimula_sa_titik_o.mp3'),
+        }, 'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}), 'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}), 'progress': {'activity_completed': progress.activity_completed if progress else False, 'state': raw_state}}
         return render(request, 'pabasa_app/prescribed_shape_read_page.html', context)
     if activity_key == 'lesson7-gawain2a':
         context = _dashboard_context(request)

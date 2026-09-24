@@ -42,6 +42,11 @@
     <section id="app" class="card"></section>
   </main>
   {{ shape_read_activity_data|json_script:"shape-read-data" }}
+  {% if shape_read_activity_data.activity_key == 'lesson7-gawain4b' %}
+    {{ shape_read_activity_data.narration_audio|json_script:"gawain4b-narration-audio" }}
+    <script>window.__prescribedNarrationAudio=JSON.parse(document.getElementById('gawain4b-narration-audio').textContent||'{}');</script>
+    <script src="{% static 'pabasa_app/js/prescribed_narration_resolver.js' %}?v=20260924-10"></script>
+  {% endif %}
   <script>
     (()=>{
       const d=JSON.parse(document.getElementById('shape-read-data').textContent),app=document.getElementById('app'),csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
@@ -64,5 +69,10 @@
       render()
     })();
   </script>
+  {% if shape_read_activity_data.activity_key == 'lesson7-gawain4b' %}
+    <script>
+      (()=>{const feedback='Hindi narinig. Subukan muli.';let announced='';const announce=()=>{const status=document.getElementById('status'),text=status?.textContent?.trim()||'';if(text===feedback&&text!==announced){announced=text;window.playPrescribedNarration?.(text)}else if(text!==feedback)announced=''};new MutationObserver(announce).observe(document.getElementById('app'),{subtree:true,childList:true,characterData:true});})();
+    </script>
+  {% endif %}
 {% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g4b' help_text='Basahin ang salita at ilagay ang tamang sagot.' %}</body>
 </html>
