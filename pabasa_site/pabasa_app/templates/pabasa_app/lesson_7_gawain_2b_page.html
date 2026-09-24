@@ -1,4 +1,19 @@
 {% load static %}
+<script>
+window.__prescribedNarrationAudio = {
+  'tukuyin ang larawan': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2B/OTHERS/tukuyin_ang_larawan.mp3' %}",
+  'pindutin ang larawang nagsisimula sa titik i para bilugan': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2B/OTHERS/pindutin_ang_larawang_nagsisimula_sa_titik_i_para_bilugan.mp3' %}",
+  'may kulang o maling sagot. tingnan muli ang mga larawan at subukan ulit': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2B/OTHERS/may_kulang_o_maling_sagot_tingnan_muli_ang_mga_larawan_at_subukan_ulit.mp3' %}",
+  'hindi narinig. subukan muli': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2B/OTHERS/hindi_narinig_subukan_muli.mp3' %}",
+  'tingnan ang larawang nasa kahon. ano ito': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2B/OTHERS/tingnan_ang_larawang_nasa_kahon_ano_ito.mp3' %}",
+  'hindi iyon ang tamang pangalan ng larawan. subukan muli magsalita': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2B/OTHERS/hindi_iyon_ang_tamang_pangalan_ng_larawan_subukan_muli_magsalita.mp3' %}",
+  'magaling': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2B/OTHERS/magaling.mp3' %}",
+  'i-click ang mga larawang nagsisimula sa titik ee': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2B/OTHERS/i_click_ang_mga_larawang_nagsisimula_sa_titik_ee.mp3' %}",
+  'may mali. tingnan muli ang mga larawan at subukan ulit': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2B/OTHERS/may_mali_tingnan_muli_ang_mga_larawan_at_subukan_ulit.mp3' %}",
+  'bigkasin ang mga larawang nilagyan ng ekis': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2B/OTHERS/bigkasin_ang_mga_larawang_nilagyan_ng_ekis.mp3' %}",
+};
+</script>
+<script src="{% static 'pabasa_app/js/prescribed_narration_resolver.js' %}?v=20260924-5"></script>
 <!doctype html>
 <html lang="fil">
 <head>
@@ -25,7 +40,7 @@
     const setReadingButtonsDisabled=disabled=>readingButtons().forEach(button=>{button.disabled=disabled});
     const part2Controls=()=>[...app.querySelectorAll('.grid .choice'),app.querySelector('#submit')].filter(Boolean);
     const setPart2ControlsDisabled=disabled=>part2Controls().forEach(control=>{control.disabled=disabled;control.classList.toggle('is-disabled',disabled)});
-    const renderReadingStatus=text=>{const status=document.getElementById('status');if(status)status.textContent=text};
+    const renderReadingStatus=text=>{const status=document.getElementById('status');if(status)status.textContent=text;if(text==='Hindi narinig. Subukan muli.')requestAudio(text)};
     const narrateFeedback=async text=>{audioBusy=true;setReadingButtonsDisabled(true);renderReadingStatus(text);await requestAudio(text);audioBusy=false;setReadingButtonsDisabled(false)};
     const narrateIntro=async()=>{if(introPlayed)return;introPlayed=true;audioBusy=true;setReadingButtonsDisabled(true);await requestAudio(INTRO_TITLE);await requestAudio(INTRO_INSTRUCTION);audioBusy=false;setReadingButtonsDisabled(false)};
     const narratePart2=async text=>{audioBusy=true;setPart2ControlsDisabled(true);await requestAudio(text);audioBusy=false;setPart2ControlsDisabled(false)};
