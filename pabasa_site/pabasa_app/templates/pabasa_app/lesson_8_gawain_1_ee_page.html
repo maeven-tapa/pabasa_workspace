@@ -11,6 +11,7 @@
     .lesson8-gawain1-page .model b{font-size:clamp(3.2rem,6.5vh,4.5rem);transform:none}
     .lesson8-gawain1-page .model i{margin-top:0;font-size:clamp(2.7rem,5.4vh,3.8rem)}
   </style>
+  <script src="{% static 'pabasa_app/js/prescribed_read_aloud_resolver.js' %}?v=20260924-1"></script>
 </head>
 <body class="lesson8-gawain1-page">
   <main class="page">
@@ -28,7 +29,12 @@
     const retryNarration='Subukan ulit! Isulat nang malinaw ang letrang E.';
     let index=Math.max(0,Math.min(3,Number(data.progress?.current_index)||0)),busy=false,narrationBusy=false,instructionPlayedFor=-1;
     const rows=[[],[],[]];
-    const speak=text=>fetch('{% url "reading_read_aloud_api" %}',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',prescribed_activity_key:data.activity_key})}).then(response=>response.ok?response.json():null).then(result=>new Promise(resolve=>{if(!result?.success||!result.audio_content){resolve();return}const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);audio.onended=resolve;audio.onerror=resolve;audio.play().catch(resolve)})).catch(()=>{});
+    const prescribedNarration={
+      'Magsanay magsulat ng letrang E. Isulat nang tatlong beses ang letrang E.':encodeURI("{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 8/GAWAIN 1/magsanay_magsulat_ng_letrang_e_isulat_nang_tatlong_beses_ang_letrang_e (2).mp3' %}"),
+      'Subukan ulit! Isulat nang malinaw ang letrang E.':"{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 8/GAWAIN 1/subukan_ulit_isulat_nang_malinaw_ang_letrang_e.mp3' %}"
+    };
+    const speakWithApi=text=>fetch('{% url "reading_read_aloud_api" %}',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',prescribed_activity_key:data.activity_key})}).then(response=>response.ok?response.json():null).then(result=>new Promise(resolve=>{if(!result?.success||!result.audio_content){resolve();return}const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);audio.onended=resolve;audio.onerror=resolve;audio.play().catch(resolve)})).catch(()=>{});
+    const speak=text=>window.playPrescribedReadAloud(text,speakWithApi,prescribedNarration);
     const controls=()=>[app.querySelector('#clear'),app.querySelector('#next')].filter(Boolean);
     const setControlsDisabled=disabled=>controls().forEach(control=>{control.disabled=disabled});
     const setHint=text=>{const hint=app.querySelector('#hint');if(hint)hint.textContent=text};
