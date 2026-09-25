@@ -8,6 +8,7 @@ from .prescribed_workbook import (
     get_activity,
     initial_l24_g3_repeat_state,
     l24_g3_repeat_pronunciation_match,
+    normalize_l24_g3_repeat_state,
 )
 
 
@@ -36,12 +37,26 @@ class Lesson24Bahagi1Gawain3WorkbookTests(SimpleTestCase):
             apply_event(activity, state, {'action': 'reading'}, True)
         apply_event(activity, state, {'action': 'model_listened'})
         apply_event(activity, state, {'action': 'reading'}, True)
-        apply_event(activity, state, {'action': 'answer', 'answer': None})
         self.assertEqual(state['index'], 1)
+        self.assertTrue(state['oral']['item-1']['passed'])
+        self.assertEqual(state['oral']['item-1']['phase'], 'passed')
         with self.assertRaises(ValueError):
             apply_event(activity, state, {'action': 'reading'}, True)
         apply_event(activity, state, {'action': 'model_listened'})
         self.assertEqual(state['oral']['item-2']['phase'], 'read')
+
+    def test_successful_readings_advance_the_complete_sequence(self):
+        activity = get_activity(self.activity_key)
+        state = initial_l24_g3_repeat_state()
+        for index, item in enumerate(activity['items']):
+            apply_event(activity, state, {'action': 'model_listened'})
+            apply_event(activity, state, {'action': 'reading', 'transcript': item['text']}, True)
+            self.assertEqual(state['index'], index + 1)
+            self.assertTrue(state['oral'][item['id']]['passed'])
+            self.assertEqual(state['last_transcript'], '')
+            if index < len(activity['items']) - 1:
+                self.assertEqual(state['last_feedback'], '')
+        self.assertTrue(state['completed'])
 
     def test_three_wrong_attempts_preserve_retry_flow(self):
         activity = get_activity(self.activity_key)
@@ -52,15 +67,51 @@ class Lesson24Bahagi1Gawain3WorkbookTests(SimpleTestCase):
         self.assertEqual(state['oral']['item-1']['attempts'], 3)
         self.assertEqual(state['oral']['item-1']['phase'], 'listen')
 
+    def test_resume_normalizes_to_first_unfinished_word(self):
+        state = initial_l24_g3_repeat_state()
+        state['oral']['item-1'] = {'passed': True, 'attempts': 0, 'listens': 0, 'phase': 'read'}
+        normalize_l24_g3_repeat_state(state)
+        self.assertEqual(state['index'], 1)
+        self.assertEqual(state['oral']['item-1']['phase'], 'passed')
+        self.assertEqual(state['oral']['item-2']['phase'], 'model')
+
+    def test_success_reconciles_a_stale_index_from_completed_words(self):
+        activity = get_activity(self.activity_key)
+        state = initial_l24_g3_repeat_state()
+        for item in activity['items'][:3]:
+            state['oral'][item['id']] = {'passed': True, 'attempts': 0, 'listens': 0, 'phase': 'passed'}
+        state['index'] = 2
+        apply_event(activity, state, {'action': 'model_listened'})
+        self.assertEqual(state['index'], 3)
+        self.assertEqual(state['oral']['item-4']['phase'], 'read')
+
+    def test_final_word_enters_persisted_completion_and_restart_clears_only_this_activity(self):
+        activity = get_activity(self.activity_key)
+        state = initial_l24_g3_repeat_state()
+        for item in activity['items']:
+            apply_event(activity, state, {'action': 'model_listened'})
+            apply_event(activity, state, {'action': 'reading', 'transcript': item['text']}, True)
+        self.assertTrue(state['completed'])
+        self.assertEqual(state['index'], 4)
+        self.assertEqual(state['last_feedback'], 'Magaling! Natapos mo ang Gawain 3!')
+        apply_event(activity, state, {'action': 'restart'})
+        self.assertFalse(state['completed'])
+        self.assertEqual(state['index'], 0)
+        self.assertEqual(state['oral'], {})
+        self.assertEqual(state['last_transcript'], '')
+
     def test_renderer_uses_prescribed_tts_stt_and_no_browser_tts(self):
         js = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_l24_g3_repeat.js').read_text(encoding='utf-8')
         css = (Path(__file__).parent / 'static/pabasa_app/css/prescribed_l24_g3_repeat.css').read_text(encoding='utf-8')
         template = (Path(__file__).parent / 'templates/pabasa_app/prescribed_workbook_page.html').read_text(encoding='utf-8')
         dedicated_template = (Path(__file__).parent / 'templates/pabasa_app/prescribed_l24_g3_repeat_page.html').read_text(encoding='utf-8')
-        for expected in ('Pakinggan', 'Ulitin', 'model_listened', 'prescribed_activity_key', 'reading', 'session_key'):
+        for expected in ('Pakinggan', 'Ulitin', 'model_listened', 'prescribed_activity_key', 'reading', 'session_key',
+                         'mappedAudio', 'playInitialInstruction', 'void playInitialInstruction()', 'COMPLETION_MESSAGE',
+                         'confirmRestart', 'reset-confirm', 'reset-cancel'):
             self.assertIn(expected, js)
         self.assertNotIn('speechSynthesis', js)
         self.assertNotIn('SpeechSynthesisUtterance', js)
+        self.assertNotIn('window.confirm', js)
         self.assertIn("prescribed_l24_g3_repeat.js", template)
         self.assertIn("prescribed_l24_g3_repeat.js", dedicated_template)
         self.assertIn("prescribed_l24_g3_repeat.css", dedicated_template)

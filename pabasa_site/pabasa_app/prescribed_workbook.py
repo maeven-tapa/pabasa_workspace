@@ -1864,6 +1864,12 @@ def apply_event(activity, state, event, verified_reading=None):
         return _apply_l22_g5_word_search(state, event)
     if activity['activity_key'] == 'aral-l23-g5-j-word-search':
         return _apply_l23_g5_word_search(state, event)
+    if activity['activity_key'] == 'aral-l24-g3-x-repeat':
+        normalize_l24_g3_repeat_state(state)
+        if event.get('action') == 'restart':
+            state.clear()
+            state.update(initial_l24_g3_repeat_state())
+            return state
     # Keep the legacy generic state shape usable by older workbook tests and
     # imported draft states; persisted learner progress uses reading_index and
     # therefore always takes the complete specialized flow below.
@@ -1910,7 +1916,12 @@ def apply_event(activity, state, event, verified_reading=None):
         if verified_reading:
             oral['passed'] = True
             if activity['activity_key'] == 'aral-l24-g3-x-repeat':
-                state['last_feedback'] = 'Tama!'
+                oral['phase'] = 'passed'
+                state['answers'][item['id']] = None
+                state['index'] = min(len(items), index + 1)
+                state['last_transcript'] = ''
+                state['completed'] = state['index'] >= len(items)
+                state['last_feedback'] = 'Magaling! Natapos mo ang Gawain 3!' if state['completed'] else ''
         else:
             oral['attempts'] += 1
             if activity['activity_key'] == 'aral-l24-g3-x-repeat':
@@ -1982,6 +1993,8 @@ def apply_event(activity, state, event, verified_reading=None):
         state['draft'] = {}
     else:
         raise ValueError('Unknown action.')
+    if activity['activity_key'] == 'aral-l24-g3-x-repeat':
+        normalize_l24_g3_repeat_state(state)
     return state
 
 

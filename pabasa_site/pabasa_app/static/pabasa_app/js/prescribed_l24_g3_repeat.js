@@ -12,6 +12,10 @@
   let stream = null;
   let requestId = 0;
   let audioRun = 0;
+  let instructionAutoPlayed = false;
+  let dialog = state.completed ? 'completion' : '';
+  let completionAudioStarted = false;
+  const COMPLETION_MESSAGE = 'Magaling! Natapos mo ang Gawain 3!';
 
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -109,6 +113,26 @@
     const listenRequired = phase === 'model';
     const recovery = phase === 'listen';
     const recoveryReady = recovery && Number(currentState.listens || 0) >= 3;
+    const dialogMarkup = dialog === 'completion' ? `<div class="l24g3-repeat-dialog-backdrop" role="presentation">
+      <section class="l24g3-repeat-dialog" role="dialog" aria-modal="true" aria-labelledby="l24g3-completion-title">
+        <div class="l24g3-repeat-dialog-icon" aria-hidden="true">✓</div>
+        <h2 id="l24g3-completion-title">${COMPLETION_MESSAGE}</h2>
+        <p>Handa ka na ba sa susunod na gawain?</p>
+        <div class="l24g3-repeat-dialog-actions">
+          <a class="l24g3-repeat-primary" href="${next}">Magpatuloy sa Susunod na Gawain</a>
+          <a class="l24g3-repeat-secondary" href="${back}">Bumalik sa Aking Aralin</a>
+        </div>
+      </section>
+    </div>` : dialog === 'reset' ? `<div class="l24g3-repeat-dialog-backdrop" role="presentation">
+      <section class="l24g3-repeat-dialog" role="dialog" aria-modal="true" aria-labelledby="l24g3-reset-title">
+        <h2 id="l24g3-reset-title">Sigurado ka bang gusto mong ulitin mula sa simula?</h2>
+        <p>Magsisimula muli ang iyong progreso sa Gawain 3.</p>
+        <div class="l24g3-repeat-dialog-actions">
+          <button class="l24g3-repeat-primary" id="reset-confirm" type="button" ${controlsLocked ? 'disabled' : ''}>Oo, Ulitin Mula sa Simula</button>
+          <button class="l24g3-repeat-secondary" id="reset-cancel" type="button" ${controlsLocked ? 'disabled' : ''}>Hindi, Bumalik</button>
+        </div>
+      </section>
+    </div>` : '';
     root.innerHTML = `<div class="l24g3-repeat-shell">
       <a class="l24g3-repeat-back" href="${back}">← <span>Aking Aralin</span></a>
       <section class="l24g3-repeat-card">
@@ -119,7 +143,7 @@
           <button class="l24g3-repeat-replay" id="instruction" type="button" ${controlsLocked ? 'disabled' : ''}>🔊 Pakinggan Muli</button>
           <div class="l24g3-repeat-progress"><span>Nabasa: ${completed()} / ${items.length}</span><i><b style="width:${items.length ? completed() / items.length * 100 : 0}%"></b></i></div>
         </header>
-        ${finished ? `<section class="l24g3-repeat-complete"><h2>Magaling!</h2><p>Natapos mo ang Gawain 3.</p><div><a class="l24g3-repeat-primary" href="${next}">Susunod</a><a class="l24g3-repeat-secondary" href="${back}">Bumalik sa Aking Aralin</a></div></section>` : `<div class="l24g3-repeat-layout">
+        ${finished ? `<section class="l24g3-repeat-complete"><h2>${COMPLETION_MESSAGE}</h2><p>Natapos na ang lahat ng salita.</p></section>` : `<div class="l24g3-repeat-layout">
           <section class="l24g3-repeat-word-panel"><h2>MGA SALITA</h2><ul>${list()}</ul></section>
           <section class="l24g3-repeat-reading-panel">
             <h2>PAKINGGAN AT ULITIN</h2><p class="l24g3-repeat-label">Salitang Pakikinggan at Uulitin</p><strong class="l24g3-repeat-target">${esc(target())}</strong>
@@ -135,7 +159,7 @@
             <button class="l24g3-repeat-reset" id="restart" type="button" ${controlsLocked ? 'disabled' : ''}>Ulitin Mula sa Simula</button>
           </section>
         </div>`}
-      </section></div>`;
+      </section>${dialogMarkup}</div>`;
     document.getElementById('instruction')?.addEventListener('click', playInstruction);
     if (!finished) {
       document.getElementById('listen')?.addEventListener('click', listen);
@@ -143,12 +167,27 @@
       document.getElementById('retry')?.addEventListener('click', retry);
       document.getElementById('restart')?.addEventListener('click', restart);
     }
+    document.getElementById('reset-confirm')?.addEventListener('click', confirmRestart);
+    document.getElementById('reset-cancel')?.addEventListener('click', cancelRestart);
+  }
+  async function announceCompletion() {
+    if (completionAudioStarted || !state.completed) return;
+    completionAudioStarted = true;
+    try { await speak(COMPLETION_MESSAGE); } catch (_) { /* Completion UI remains available if audio is unavailable. */ }
   }
   async function playInstruction() {
     if (busy) return;
     busy = true; render('Nilo-load ang audio…');
     try { await speak(activity.instruction || ''); render(); }
     catch (error) { render(error.message || 'Hindi available ang panuto.', 'bad'); }
+    finally { busy = false; render(); }
+  }
+  async function playInitialInstruction() {
+    if (instructionAutoPlayed || data.preview || busy || state.completed) return;
+    instructionAutoPlayed = true;
+    busy = true; render('Nilo-load ang audio…');
+    try { await speak(activity.instruction || ''); }
+    catch (_) { /* Keep the activity usable when autoplay is blocked. */ }
     finally { busy = false; render(); }
   }
   async function listen() {
@@ -186,14 +225,16 @@
       form.append('action', 'reading');
       form.append('item_index', String(current()));
       form.append('revision', String(state.revision || 0));
+      const submittedIndex = current();
       const result = await request({action: 'reading'}, form);
-      if (result.state?.oral?.[items[current()]?.id]?.passed) {
-        await request({action: 'answer', answer: null});
-        if (current() >= items.length) {
-          await request({action: 'finish'});
-          await playMappedFeedback('Magaling! Natapos mo ang Gawain 3.');
+      if (mine !== requestId) return;
+      if (result.state?.oral?.[items[submittedIndex]?.id]?.passed) {
+        if (state.completed || current() >= items.length) {
+          dialog = 'completion';
+          render();
+          await announceCompletion();
         } else await playMappedFeedback('Tama!');
-        render('Tama!');
+        if (!state.completed) render('Tama!');
       } else {
         const feedback = result.state?.last_feedback || 'Subukan muli.';
         await playMappedFeedback(feedback);
@@ -209,13 +250,34 @@
     catch (error) { render(error.message || 'Pakinggan muna ang tamang pagbigkas.', 'bad'); }
     finally { busy = false; render(); }
   }
-  async function restart() {
-    if (busy || !window.confirm('Sigurado ka bang gusto mong magsimula muli? Mawawala ang kasalukuyang progreso sa Gawain 3.')) return;
+  function restart() {
+    if (busy || state.completed || dialog) return;
+    dialog = 'reset';
+    render();
+  }
+  function cancelRestart() {
+    if (busy || dialog !== 'reset') return;
+    dialog = '';
+    render();
+  }
+  async function confirmRestart() {
+    if (busy || dialog !== 'reset') return;
     busy = true;
-    try { await request({action: 'restart'}); render(); }
-    catch (error) { render(error.message || 'Hindi na-reset ang gawain.', 'bad'); }
-    finally { busy = false; render(); }
+    requestId += 1;
+    stream?.getTracks().forEach(track => track.stop()); stream = null;
+    stopAudio();
+    render('Nire-reset ang gawain…');
+    try {
+      await request({action: 'restart'});
+      dialog = '';
+      completionAudioStarted = false;
+      render();
+    } catch (error) {
+      render(error.message || 'Hindi na-reset ang gawain.', 'bad');
+    } finally { busy = false; render(); }
   }
   window.addEventListener('pagehide', () => { requestId += 1; stream?.getTracks().forEach(track => track.stop()); stopAudio(); });
   render();
+  if (state.completed) void announceCompletion();
+  void playInitialInstruction();
 })();
