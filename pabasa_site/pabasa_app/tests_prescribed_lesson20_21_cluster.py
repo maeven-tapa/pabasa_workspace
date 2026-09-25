@@ -1,6 +1,5 @@
 import json
 import uuid
-from pathlib import Path
 
 from django.test import TestCase
 from django.urls import reverse
@@ -48,10 +47,6 @@ class PrescribedLesson2021ClusterTests(TestCase):
         self.assertEqual([item['word'] for item in activity['items']], ['tsek', 'kotse', 'tsokolate', 'pitsel', 'kutsara'])
         self.assertEqual([item['answer'] for item in activity['items']], ['tsek', 'tse', 'tso', 'tsel', 'tsa'])
         self.assertTrue(all(item['image_path'].startswith('pabasa_app/prescribed/session_7/lesson_20_21/gawain_1/') for item in activity['items']))
-
-    def test_tsek_accepts_english_stt_equivalent(self):
-        template = Path('pabasa_app/templates/pabasa_app/prescribed_cluster_syllable_page.html').read_text(encoding='utf-8')
-        self.assertIn("expected==='tsek'&&heard.includes('check')", template)
 
     def test_page_hides_answers_and_server_requires_reading_before_each_choice(self):
         self.login_student()

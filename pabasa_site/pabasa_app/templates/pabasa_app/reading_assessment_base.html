@@ -770,6 +770,20 @@
             line-height: 1.2;
         }
 
+        /* Part 1 items are presented directly in the assessment surface.
+           Keep the story/paragraph reading treatment scoped to paragraph
+           content and prevent a card treatment from leaking into Word,
+           Rhyme, or Sentence readers. */
+        .reader-word .reading-word,
+        .reader-sentence .reading-word,
+        .reader-phrase .reading-word {
+            background: transparent !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+        }
+
         /* Vowels are short, isolated sounds, so make them especially prominent. */
         .content-vowel .reading-word {
             font-size: clamp(4rem, 14vw, 8rem);

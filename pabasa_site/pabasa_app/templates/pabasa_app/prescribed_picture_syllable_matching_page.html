@@ -96,7 +96,7 @@
           try{
             oralStatus='⏳ Pinoproseso…';renderOral('Pinoproseso ang iyong pagbasa…','good');const form=new FormData();form.append('audio',basahinAudio,'oral-reading.webm');form.append('target_text',items[oralIndex].label);form.append('language','Filipino');form.append('mode','reading');
             const response=await fetch('{% url "reading_transcribe_api" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form});
-            const result=await response.json();if(!response.ok||!result.success||!norm(result.transcript).includes(norm(items[oralIndex].label)))throw Error('Hindi pa malinaw ang pagbasa.');
+            const result=await response.json();if(!response.ok||!result.success||result.complete!==true)throw Error('Hindi pa malinaw ang pagbasa.');
             if(requestedIndex!==oralIndex)return;
             sttAttempts[String(oralIndex)]=0;ttsPlays[String(oralIndex)]=0;oralIndex++;phase=oralIndex===items.length?'matching':'oral_reading';restoreOral();await save();oralStatus='';await playMappedAudio(gawain5Audio.readingCorrect);if(phase==='matching'){render();return}renderOral('Magaling! Basahin ang susunod na salita.','good');
           }catch(error){oralStatus='';readingAttempts=Math.min(3,readingAttempts+1);sttAttempts[String(oralIndex)]=readingAttempts;if(readingAttempts>=3)oralMode='aloud';try{await save()}catch(_){}const feedback=readingAttempts>=3?'Makinig muna sa salita nang hanggang tatlong beses.':`Subukan muli. May ${3-readingAttempts} pagkakataon pa.`;renderOral(feedback,'error')}finally{busy=false;const action=app.querySelector('#oral-action');if(action)action.disabled=false}

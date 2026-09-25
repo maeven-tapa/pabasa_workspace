@@ -124,7 +124,7 @@
         stopOral(); oralStatus = '⏳ Pinoproseso…'; renderOral('Pinoproseso ang iyong pagbasa…', 'good');
         const form = new FormData(); form.append('audio', recording, 'lesson16-gawain3-reading.webm'); form.append('target_text', item.read_word); form.append('language', 'Filipino'); form.append('mode', 'reading');
         const response = await fetch(data.transcribe_url, {method:'POST', credentials:'same-origin', headers:{'X-CSRFToken':csrf()}, body:form}), result = await response.json().catch(() => ({}));
-        if (!response.ok || !result.success || !String(result.transcript || '').toLowerCase().includes(item.read_word.toLowerCase())) throw Error('Hindi pa. Subukan muli.');
+        if (!response.ok || !result.success || result.complete !== true) throw Error('Hindi pa. Subukan muli.');
         sttAttempts[String(oralIndex)] = 0; ttsPlays[String(oralIndex)] = 0;
         oralIndex += 1; phase = oralIndex >= items.length ? 'matching' : 'oral_reading'; restoreOralAttempts();
         await save(); oralStatus = ''; await narrateFeedback('Tama ang pagbasa!', 'readingCorrect');

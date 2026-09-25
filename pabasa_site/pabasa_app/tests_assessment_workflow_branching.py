@@ -13,6 +13,8 @@ from pabasa_app.views import (
     _crla_grade2_part1_level,
     _crla_grade2_part2_profile,
     _is_finalized_grade_level_crla_result,
+    _build_live_assessment_action_url,
+    _live_recovery_reader_stage,
     _reader_assessment_state,
     persist_student_end_assessment_state,
     _sync_assessment_workflow_state,
@@ -423,6 +425,98 @@ class AssessmentWorkflowBranchingTests(TestCase):
             loader.index('} else if (stageMap[persistedNextStage]) {'),
         )
         self.assertIn('next_stage: "",', source)
+
+    def test_story_recovery_stage_wins_over_completed_part1_branch(self):
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        loader = source.split("function loadItems()", 1)[1].split("if (!isOfficialAssessmentLaunch)", 1)[0]
+
+        for stage in (
+            "transition_to_story",
+            "story_selection",
+            "story_ready",
+            "story_reading",
+            "story_comprehension",
+            "learner_experience",
+        ):
+            self.assertIn(f'"{stage}"', loader)
+        self.assertIn('persistedStage === "transition_to_story"', loader)
+        self.assertIn('activeStage = "story";', loader)
+        self.assertIn('const workflowStage = isStoryWorkflowRecovery ? persistedStage : activeStage;', loader)
+        self.assertIn('const storyRecoveryStages = [', loader)
+        self.assertIn('if (activeStage === "story") {', loader)
+        self.assertIn('if (workflowStage === "story_reading")', loader)
+        self.assertIn('if (workflowStage === "story_comprehension")', loader)
+        self.assertLess(
+            loader.index('if (isLiveRecoveryLaunch && isStoryWorkflowRecovery) {'),
+            loader.index('} else if (isLiveRecoveryLaunch && stageMap[recoveredBranch]) {'),
+        )
+
+    def test_live_save_flush_is_acknowledged_after_ordered_student_publish(self):
+        reader = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        views = (Path(__file__).parent / "views.py").read_text(encoding="utf-8")
+        self.assertIn('let liveStatePublishQueue = Promise.resolve();', reader)
+        self.assertIn("participationStatus === 'save_requested'", reader)
+        self.assertIn('await studentEndStateWriteQueue;', reader)
+        self.assertLess(
+            reader.index('await studentEndStateWriteQueue;'),
+            reader.index('save_acknowledged: true'),
+        )
+        self.assertIn('save_acknowledged: true', reader)
+        self.assertIn("if data.get('save_acknowledged') is True:", views)
+        self.assertIn("current_state.get('participation_status') != 'save_requested'", views)
+
+    def test_live_sentence_recovery_still_uses_active_part1_branch(self):
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        loader = source.split("function loadItems()", 1)[1].split("if (!isOfficialAssessmentLaunch)", 1)[0]
+
+        # Story-specific precedence is narrow; the existing branch fallback
+        # remains present for active Word/Rhyme/Sentence recovery.
+        self.assertIn('stageMap[recoveredBranch]', loader)
+        self.assertIn('const isActiveReaderStage = ["words", "rhymes", "sentences"].includes(persistedStage);', loader)
+
+    def test_live_recovery_route_keeps_story_workflow_out_of_part1_branch_override(self):
+        story_stages = (
+            "transition_to_story",
+            "story_selection",
+            "story_ready",
+            "story_reading",
+            "story_comprehension",
+            "learner_experience",
+        )
+        for stage in story_stages:
+            with self.subTest(stage=stage):
+                self.assertEqual(
+                    _live_recovery_reader_stage({"stage": stage, "branch": "sentences"}),
+                    "story",
+                )
+
+    def test_live_recovery_route_keeps_active_part1_stages(self):
+        for stage in ("words", "rhymes", "sentences"):
+            with self.subTest(stage=stage):
+                self.assertEqual(
+                    _live_recovery_reader_stage({"stage": stage, "branch": stage}),
+                    stage,
+                )
+
+    def test_live_recovery_action_url_maps_part1_and_story_stages_to_existing_routes(self):
+        material = SimpleNamespace(id=1)
+        expected_routes = {
+            "words": "/dashboard/assessment/reading_ui/word/",
+            "rhymes": "/dashboard/assessment/reading_ui/word/",
+            "sentences": "/dashboard/assessment/reading_ui/sentence/",
+            "story": "/dashboard/assessment/reading_ui/para/",
+            "story_selection": "/dashboard/assessment/reading_ui/para/",
+            "story_ready": "/dashboard/assessment/reading_ui/para/",
+            "story_reading": "/dashboard/assessment/reading_ui/para/",
+            "story_comprehension": "/dashboard/assessment/reading_ui/para/",
+        }
+        for stage, expected_route in expected_routes.items():
+            with self.subTest(stage=stage):
+                url = _build_live_assessment_action_url(
+                    material, "session-1", "2026-09-25T00:00:00+00:00",
+                    10, recovery=True, stage=stage,
+                )
+                self.assertTrue(url.startswith(expected_route))
 
     def test_story_choices_accept_official_passage_text_field(self):
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")

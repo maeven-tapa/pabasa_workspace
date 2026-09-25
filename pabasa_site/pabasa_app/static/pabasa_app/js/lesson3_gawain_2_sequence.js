@@ -151,8 +151,7 @@
         const form = new FormData(); form.append('audio', await done, 'rhyme.webm'); form.append('target_text', word); form.append('language', 'Filipino'); form.append('mode', 'reading');
         const result = await (await fetch(config.transcribeUrl, {method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrf()}, body: form})).json();
         const normalizedTranscript = normalize(result.transcript);
-        const normalizedExpected = normalize(word);
-        const actualCorrect = Boolean(result.success && normalizedTranscript.includes(normalizedExpected));
+        const actualCorrect = Boolean(result.success && result.complete === true);
         if (currentGeneration !== generation) return;
         window.__session1SpeechDebugReport?.({transcript: result.transcript || '', normalized: normalizedTranscript, result: actualCorrect ? 'Correct' : 'Incorrect'});
         if (actualCorrect) {

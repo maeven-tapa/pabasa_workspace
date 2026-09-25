@@ -67,7 +67,7 @@ if(mine!==request)return;b.textContent='Pinoproseso...';
 const f=new FormData();f.append('audio',blob,'session7-lesson19-gawain2.webm');f.append('target_text',items[n].word);f.append('language','Filipino');f.append('mode','reading');
 const r=await fetch(d.transcribe_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:f}),j=await r.json().catch(()=>({}));
 if(mine!==request)return;
-if(r.ok&&j.success&&norm(j.transcript).includes(norm(items[n].word))){s.completed_oral_reads=[...new Set([...s.completed_oral_reads,n])];s.stt_attempts[key(n)]=0;s.tts_plays[key(n)]=0;s.phase='written_answer';await save();render('Tama ang pagbasa! Isulat naman ang pantig.','good')}else throw Error('Hindi pa. Subukan muli.')}catch(e){if(mine===request){if(!window.Basahin.isCaptureError(e)){s.stt_attempts[key(n)]=Math.min(3,(s.stt_attempts[key(n)]||0)+1);}
+if(r.ok&&j.success&&j.complete===true){s.completed_oral_reads=[...new Set([...s.completed_oral_reads,n])];s.stt_attempts[key(n)]=0;s.tts_plays[key(n)]=0;s.phase='written_answer';await save();render('Tama ang pagbasa! Isulat naman ang pantig.','good')}else throw Error('Hindi pa. Subukan muli.')}catch(e){if(mine===request){if(!window.Basahin.isCaptureError(e)){s.stt_attempts[key(n)]=Math.min(3,(s.stt_attempts[key(n)]||0)+1);}
 try{await save()}catch(_){}render(s.stt_attempts[key(n)]>=3?'Pakinggan muna ang salita.':e.message||'Hindi nakuha ang boses. Subukan muli.','bad')}}finally{stop();busy=false}}async function listen(n){if(busy)return;busy=true;
 const mine=++request,b=app.querySelector('#oral');
 try{b.disabled=true;b.textContent='Nilo-load...';
