@@ -105,9 +105,14 @@ def _attempt_sort_key(attempt):
     return completed or datetime.min.replace(tzinfo=timezone.get_default_timezone())
 
 
-def _latest_attempts(assessment):
+def _latest_attempts(assessment, section_id=None, crla_term=None, crla_phase=None):
     # Share the dashboard's authoritative final-result selection exactly.
-    return latest_completed_official_crla_results(source_assessment=assessment)
+    return latest_completed_official_crla_results(
+        source_assessment=assessment,
+        section_id=section_id,
+        crla_term=crla_term,
+        crla_phase=crla_phase,
+    )
 
 
 def _valid_section_teacher(section):
@@ -527,6 +532,13 @@ def _student_values(student, attempt, state, assessment):
 
     words_per_minute = _number(part2_source.get("wpm")) if has_part2 else None
 
+    persisted_observation_level = str(score_data.get("observation_level") or "").strip()
+    observation_level = (
+        persisted_observation_level
+        if persisted_observation_level in {"Level 1", "Level 2", "Level 3", "Level 4"}
+        else _observation_level(profile)
+    )
+
     return {
         # LRN is an official learner identifier. Never substitute an internal
         # database/user/custom ID when the learner has no stored LRN.
@@ -548,13 +560,25 @@ def _student_values(student, attempt, state, assessment):
         "correct_words_percentage": (percent / 100) if percent is not None else None,
         "comprehension_score": correct_answers,
         "learner_experience_rating": learner_rating,
-        "observation_level": _observation_level(profile),
+        "observation_level": observation_level,
         "reading_profile": profile or None,
         "remarks": _reading_profile_remark(profile),
     }
 
 
-def export_crla_excel(assessment_id, section_id=None):
+def canonical_crla_result_values(student, attempt):
+    """Return the canonical official CRLA row values for a finalized attempt."""
+    if not student or not attempt:
+        return None
+    return _student_values(
+        student,
+        attempt,
+        _attempt_end_state(student, attempt),
+        getattr(attempt, "source_assessment", None) or attempt,
+    )
+
+
+def export_crla_excel(assessment_id, section_id=None, crla_term=None, crla_phase=None):
     """Return an in-memory CRLA workbook for a root assessment.
 
     The returned ``BytesIO`` is positioned at byte zero and has a ``name``
@@ -580,7 +604,9 @@ def export_crla_excel(assessment_id, section_id=None):
     workbook.calculation.fullCalcOnLoad = True
     workbook.calculation.forceFullCalc = True
 
-    latest_attempts = _latest_attempts(assessment)
+    latest_attempts = _latest_attempts(
+        assessment, section_id=section_id, crla_term=crla_term, crla_phase=crla_phase,
+    )
     if section_id is not None:
         # The shared official material has one root assessment.  Keep the
         # established workbook generator, but scope its existing result set to

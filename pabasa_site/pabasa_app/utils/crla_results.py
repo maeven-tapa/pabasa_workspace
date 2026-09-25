@@ -50,13 +50,21 @@ def official_crla_result_queryset():
     ).select_related("student", "teacher", "section", "section__teacher", "material", "source_assessment", "source_assessment__material").distinct()
 
 
-def latest_completed_official_crla_results(student_ids=None, source_assessment=None):
+def latest_completed_official_crla_results(
+    student_ids=None, source_assessment=None, section_id=None, crla_term=None, crla_phase=None,
+):
     """Latest valid official CRLA result per student, deterministically."""
     results = official_crla_result_queryset()
     if student_ids is not None:
         results = results.filter(student_id__in=student_ids)
     if source_assessment is not None:
         results = results.filter(source_assessment=source_assessment)
+    if section_id is not None:
+        results = results.filter(enrollment__section_id=section_id)
+    if crla_term is not None:
+        results = results.filter(official_term=crla_term)
+    if crla_phase is not None:
+        results = results.filter(system_assessment_phase=crla_phase)
 
     latest = {}
     for result in results.order_by("student_id", "-completed_at", "-updated_at", "-id"):

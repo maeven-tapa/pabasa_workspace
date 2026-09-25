@@ -349,7 +349,7 @@
     }
 
     .chart-empty-state {
-        align-items: center;
+        align-items: start;
         color: var(--dash-muted);
         display: none;
         font-family: "Nunito", "Segoe UI", sans-serif;
@@ -462,9 +462,9 @@
         border: 1px solid rgba(255, 255, 255, 0.92) !important;
         border-radius: 18px;
         display: grid;
-        gap: 0.95rem;
+        gap: 0.8rem;
         grid-template-columns: auto minmax(0, 1fr);
-        padding: 0.95rem;
+        padding: 0.75rem;
         box-shadow: 0 12px 28px rgba(15, 23, 42, 0.1);
     }
 
@@ -494,10 +494,11 @@
         justify-content: center;
         width: 46px;
     }
+    .student-card-row > .student-avatar { align-self: start; margin-top: .1rem; }
 
     .student-row-main {
         display: grid;
-        gap: 0.6rem;
+        gap: 0.42rem;
         min-width: 0;
     }
 
@@ -519,7 +520,7 @@
 
     .student-identity {
         display: grid;
-        gap: 0.18rem;
+        gap: 0.1rem;
         min-width: 0;
     }
 
@@ -559,6 +560,34 @@
         overflow-wrap: anywhere;
     }
 
+    .student-crla-details { border-top: 1px solid rgba(31,111,139,.14); margin-top: .5rem; padding-top: .55rem; }
+    .student-crla-title { color: var(--dash-primary-deep); font-size: .78rem; font-weight: 900; letter-spacing: .07em; margin: 0 0 .55rem; text-transform: uppercase; }
+    .student-crla-layout { display: grid; gap: .65rem; grid-template-columns: minmax(0,1fr) minmax(0,1.35fr); }
+    .student-crla-info, .student-crla-panel { background: rgba(239,248,252,.42); border: 1px solid rgba(31,111,139,.12); border-radius: 10px; min-width: 0; padding: .7rem .8rem; }
+    .student-crla-info { grid-column: 1 / -1; }
+    .student-crla-panel h4, .student-crla-info h4 { color: var(--dash-primary-deep); font-size: .78rem; font-weight: 900; margin: 0; }
+    .student-crla-subtitle { color: var(--dash-muted); font-size: .7rem; margin: .12rem 0 .5rem; }
+    .student-crla-part1 .student-crla-subtitle { border-bottom: 1px solid rgba(31,111,139,.1); margin-bottom: .5rem; padding-bottom: .45rem; }
+    .student-crla-subsection { border-top: 1px solid rgba(31,111,139,.1); margin-top: .65rem; padding-top: .5rem; }
+    .student-crla-subsection h5 { color: var(--dash-text); font-size: .7rem; font-weight: 900; margin: 0 0 .25rem; }
+    .student-crla-field { align-items: baseline; display: grid; font-size: .76rem; gap: .55rem; grid-template-columns: minmax(0,1fr) minmax(0,1.25fr); padding: .16rem 0; }
+    .student-crla-field span { color: var(--dash-muted); min-width: 0; }
+    .student-crla-field strong { color: var(--dash-text); min-width: 0; overflow-wrap: anywhere; text-align: right; }
+    .student-crla-field strong .student-crla-profile-grade { color: #15803d; }
+    .student-crla-field strong .student-crla-profile-transitioning { color: #1d4ed8; }
+    .student-crla-field strong .student-crla-profile-developing { color: #c2410c; }
+    .student-crla-field strong .student-crla-profile-high { color: #c2410c; }
+    .student-crla-field strong .student-crla-profile-low { color: #b42318; }
+    .student-crla-profile-badge { border-radius: 999px; display: inline-block; font-size: .8rem; font-weight: 800; line-height: 1.2; max-width: 100%; padding: .38rem .72rem; text-align: center; }
+    .student-crla-profile-grade { background-color: #dcfce7; color: #15803d; }
+    .student-crla-profile-transitioning { background-color: #dbeafe; color: #1d4ed8; }
+    .student-crla-profile-developing { background-color: #ffedd5; color: #c2410c; }
+    .student-crla-profile-high { background-color: #ffe4e6; color: #c2410c; }
+    .student-crla-profile-low { background-color: #fee2e2; color: #b91c1c; }
+    .student-crla-final { grid-column: 1 / -1; }
+    .student-crla-observation-level { background: #fff; border: 1px solid rgba(31,111,139,.25); border-radius: 6px; color: var(--dash-text); font: inherit; font-weight: 800; max-width: 8.5rem; padding: .16rem .35rem; text-align: right; }
+    @media (max-width:767px) { .student-crla-layout { grid-template-columns: 1fr; } .student-crla-info, .student-crla-final { grid-column: auto; } }
+
     .student-aral-action {
         align-self: stretch;
         min-height: 58px;
@@ -585,9 +614,10 @@
         border-radius: 999px;
         background: rgba(22, 95, 143, 0.1);
         color: var(--dash-primary-deep);
-        font-size: 0.68rem;
+        font-size: 0.8rem;
         font-weight: 800;
-        padding: 0.24rem 0.55rem;
+        line-height: 1.2;
+        padding: 0.38rem 0.72rem;
         white-space: nowrap;
     }
 
@@ -2140,6 +2170,55 @@ function formatStudentGradeLevel(student) {
     ).trim() || 'N/A';
 }
 
+function formatCrlaResultValue(value, kind = '') {
+    if (value === null || value === undefined || value === '') return '—';
+    if (kind === 'date') return String(value).slice(0, 10) || '—';
+    if (kind === 'percent') {
+        const number = Number(value);
+        return Number.isFinite(number) ? `${number * 100}%` : '—';
+    }
+    return String(value);
+}
+
+function renderCrlaResultDetails(result, student = {}) {
+    if (!result) return '';
+    const field = (label, key, kind = '') =>
+        `<div class="student-crla-field"><span>${label}</span><strong>${escapeStudentDirectoryHtml(formatCrlaResultValue(result[key], kind))}</strong></div>`;
+    const readingTime = result.reading_minutes == null && result.reading_seconds == null
+        ? '—' : `${formatCrlaResultValue(result.reading_minutes)}m ${formatCrlaResultValue(result.reading_seconds)}s`;
+    const observationLevel = escapeStudentDirectoryHtml(result.observation_level || '');
+    const readingProfile = String(result.reading_profile || '').trim();
+    const profileClass = {
+        'reading at grade level': 'student-crla-profile-grade',
+        'reader at grade level': 'student-crla-profile-grade',
+        'transitioning reader': 'student-crla-profile-transitioning',
+        'developing reader': 'student-crla-profile-developing',
+        'high emerging reader': 'student-crla-profile-high',
+        'low emerging reader': 'student-crla-profile-low',
+    }[readingProfile.toLowerCase()] || '';
+    const readingProfileDisplay = profileClass
+        ? `<span class="student-crla-profile-badge ${profileClass}">${escapeStudentDirectoryHtml(readingProfile)}</span>`
+        : escapeStudentDirectoryHtml(formatCrlaResultValue(readingProfile));
+    const observationControl = `<select class="student-crla-observation-level" aria-label="Observation Level" data-student-id="${escapeStudentDirectoryHtml(student.id || '')}" data-observation-level="${observationLevel}">${observationLevel ? '' : '<option value="" selected>—</option>'}<option value="Level 1" ${observationLevel === 'Level 1' ? 'selected' : ''}>Level 1</option><option value="Level 2" ${observationLevel === 'Level 2' ? 'selected' : ''}>Level 2</option><option value="Level 3" ${observationLevel === 'Level 3' ? 'selected' : ''}>Level 3</option><option value="Level 4" ${observationLevel === 'Level 4' ? 'selected' : ''}>Level 4</option></select>`;
+    return `<section class="student-crla-details" aria-label="CRLA result">
+        <h3 class="student-crla-title">CRLA Result</h3>
+        <div class="student-crla-layout">
+            <section class="student-crla-info"><h4>Assessment Information</h4>${field('Date of Assessment', 'assessment_date', 'date')}</section>
+            <section class="student-crla-panel student-crla-part1">
+                <h4>Assessment Part 1</h4><p class="student-crla-subtitle">Word Recognition and Sentence Reading</p>
+                ${field('Task 1 Words', 'task_1_score')}${field('Task 2L / Rhymes', 'task_2l_score')}${field('Task 2H / Sentences', 'task_2h_score')}${field('Total Score', 'part_1_total')}${field('Part 1 Reading Level', 'part_1_reading_level')}
+            </section>
+            <section class="student-crla-panel">
+                <h4>Assessment Part 2</h4><p class="student-crla-subtitle">Reading Fluency and Comprehension</p>
+                <div class="student-crla-subsection">${field('Story Number', 'story_number')}${field('Miscues', 'miscues')}${field('Words Read', 'total_words_read')}<div class="student-crla-field"><span>Reading Time</span><strong>${escapeStudentDirectoryHtml(readingTime)}</strong></div>${field('WPM', 'words_per_minute')}${field('% Correct Words', 'correct_words_percentage', 'percent')}${field('Comprehension Score', 'comprehension_score')}</div>
+            </section>
+            <section class="student-crla-panel student-crla-final">
+                <h4>Final Result</h4>${field('Learner Experience', 'learner_experience_rating')}<div class="student-crla-field"><span>Observation Level</span><strong>${observationControl}</strong></div><div class="student-crla-field"><span>Reading Profile</span><strong>${readingProfileDisplay}</strong></div>${field('Remarks', 'remarks')}
+            </section>
+        </div>
+    </section>`;
+}
+
 function setStudentExportState(students) {
     window.filteredStudentDirectoryRows = Array.isArray(students) ? students.slice() : [];
     const exportBtn = document.getElementById('exportStudentsBtn');
@@ -2287,8 +2366,6 @@ function renderStudentDirectory(sourceStudents) {
 
     const cards = pageStudents.map(student => {
         const name = student.name || `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unnamed Student';
-        const accuracy = formatStudentMetric(student.accuracy, '%');
-        const wpm = formatStudentMetric(student.wpm);
         const hasExitedAral = student.aral_exited === true;
         const levelText = hasExitedAral ? 'Reading At Grade Level' : resolveStudentReadingLevel(student);
         student.level = levelText;
@@ -2305,13 +2382,17 @@ function renderStudentDirectory(sourceStudents) {
         // therefore completed; only the explicit Pending level is awaiting.
         const levelIndication = levelText === 'Pending'
             ? levelIndications.Pending
-            : 'Assessment completed';
+            : '';
         const levelClass = getReadingLevelChipClass(levelText);
         const aralLevels = new Set(['Low Emerging Reader', 'High Emerging Reader', 'Developing Reader', 'Transitioning Reader']);
         const aralIndicatorHtml = aralLevels.has(levelText) && student.aral_status === 'active' && !hasExitedAral
             ? '<span class="student-aral-indicator">ARAL Program</span>'
             : hasExitedAral ? '<span class="student-aral-indicator">Exited from ARAL Program</span>' : '';
-        const levelBadgeHtml = `<div class="d-flex flex-column align-items-end gap-1"><span class="badge rounded-pill level-chip ${levelClass}">${escapeStudentDirectoryHtml(levelText)}</span>${aralIndicatorHtml}<span class="small text-secondary" style="max-width: 240px; text-align: right;">${escapeStudentDirectoryHtml(levelIndication)}</span></div>`;
+        const levelIndicationHtml = levelIndication
+            ? `<span class="small text-secondary" style="max-width: 240px; text-align: right;">${escapeStudentDirectoryHtml(levelIndication)}</span>`
+            : '';
+        const completedLevelBadgeHtml = student.crla_result ? '' : `<span class="badge rounded-pill level-chip ${levelClass}">${escapeStudentDirectoryHtml(levelText)}</span>`;
+        const levelBadgeHtml = `<div class="d-flex flex-column align-items-end gap-1">${completedLevelBadgeHtml}${aralIndicatorHtml}${levelIndicationHtml}</div>`;
         const moveToAral = levelText === 'Readers at Grade Level';
         const aralActionHtml = moveToAral && !hasExitedAral
             ? `<button type="button" class="student-aral-action" data-student-id="${student.id || ''}" data-student-name="${escapeStudentDirectoryHtml(name)}" data-aral-action="move">Move to ARAL Program</button>`
@@ -2328,17 +2409,50 @@ function renderStudentDirectory(sourceStudents) {
                         </div>
                         ${levelBadgeHtml}
                     </div>
-                    <div class="student-meta">
-                        <div class="student-meta-box"><span>Accuracy</span><strong>${escapeStudentDirectoryHtml(accuracy)}</strong></div>
-                        <div class="student-meta-box"><span>WPM</span><strong>${escapeStudentDirectoryHtml(wpm)}</strong></div>
-                        ${aralActionHtml}
-                    </div>
+                    ${aralActionHtml ? `<div class="student-meta">${aralActionHtml}</div>` : ''}
+                    ${renderCrlaResultDetails(student.crla_result, student)}
                 </div>
             </article>
         `;
     }).join('');
 
     emptyState.insertAdjacentHTML('beforebegin', cards);
+
+    directory.querySelectorAll('.student-crla-observation-level').forEach(select => {
+        select.addEventListener('change', async () => {
+            const previous = select.dataset.observationLevel || select.value;
+            const assessmentPeriod = document.getElementById('assessmentPeriodFilterWrap');
+            const payload = {
+                student_id: select.dataset.studentId,
+                section_id: studentDirectorySectionId,
+                term: assessmentPeriod?.dataset.value || '1',
+                assessment: assessmentPeriod?.dataset.assessment || 'pretest',
+                observation_level: select.value,
+            };
+            select.disabled = true;
+            try {
+                const response = await fetch('/dashboard/teacher/student-crla-observation-level/', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify(payload),
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.error || 'Unable to save Observation Level.');
+                select.dataset.observationLevel = data.observation_level;
+                select.title = 'Observation Level saved';
+            } catch (error) {
+                select.value = previous;
+                select.title = error.message || 'Unable to save Observation Level.';
+            } finally {
+                select.disabled = false;
+            }
+        });
+    });
 
     if (pagination) {
         pagination.innerHTML = '<button type="button" data-directory-page="prev" aria-label="Previous page">‹</button>'

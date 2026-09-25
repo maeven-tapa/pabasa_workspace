@@ -136,7 +136,7 @@ from .scoring import (
     performance_interpretation,
 )
 from .management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
-from .utils.crla_export import export_crla_excel
+from .utils.crla_export import canonical_crla_result_values, export_crla_excel
 from .utils.crla_results import (
     VALID_CRLA_CLASSIFICATIONS,
     latest_completed_official_crla_results,
@@ -2183,20 +2183,35 @@ def _crla_attempt_phase_and_term(attempt, completed_on=None):
 CRLA_DASHBOARD_CLASSIFICATIONS = VALID_CRLA_CLASSIFICATIONS
 
 
-def _latest_completed_official_crla_results(student_ids, crla_term=None, crla_phase=None):
-    """Latest finalized official CRLA row per student, used by every dashboard."""
+def _latest_completed_official_crla_results(student_ids, section=None, crla_term=None, crla_phase=None):
+    """Latest finalized official CRLA row per student within the requested scope."""
     if not student_ids:
         return {}
-    candidates = latest_completed_official_crla_results(student_ids=student_ids)
+    candidates = official_crla_result_queryset().filter(student_id__in=student_ids).order_by(
+        "student_id", "-completed_at", "-updated_at", "-id",
+    )
     latest = {}
-    for student_id, result in candidates.items():
+    for result in candidates:
+        result_student_id = str(result.student_id)
+        if result_student_id in latest:
+            continue
+        if section is not None:
+            result_enrollment = getattr(result, "enrollment", None)
+            result_section_id = getattr(result_enrollment, "section_id", None) or getattr(result, "section_id", None)
+            if result_section_id != section.id:
+                continue
         if crla_term or crla_phase:
             is_official, phase, term = _crla_attempt_phase_and_term(
                 result, completed_on=timezone.localtime(result.completed_at).date()
             )
             if not is_official or (crla_phase and phase != crla_phase) or (crla_term and term != crla_term):
                 continue
-        latest.setdefault(str(student_id), result)
+        canonical = canonical_crla_classification(result.crla_classification or result.classification)
+        if not canonical:
+            continue
+        result.crla_classification = canonical
+        result.classification = canonical
+        latest[result_student_id] = result
     return latest
 
 
@@ -2296,7 +2311,7 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
     user_ids = [sdata['id'] for sdata in student_map.values()]
     users = User.objects.filter(id__in=user_ids).in_bulk()
     official_crla_results = _latest_completed_official_crla_results(
-        user_ids, crla_term=crla_term, crla_phase=crla_phase,
+        user_ids, section=section, crla_term=crla_term, crla_phase=crla_phase,
     )
     now = system_now()
     thirty_days_ago = now - timedelta(days=30)
@@ -2557,6 +2572,8 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
         if latest_score is None:
             latest_score = latest.get('wpm')
 
+        crla_result = canonical_crla_result_values(user, official_result) if official_result else None
+
         sdata.update({
             'name': f"{user.first_name} {user.last_name}".strip() or sdata.get('name', ''),
             'email': user.email or sdata.get('email', ''),
@@ -2598,6 +2615,7 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
             'latest_score': latest_score,
             'last_active_at': last_active.isoformat() if last_active else None,
             'improvement_30d': round(improvement, 1),
+            'crla_result': crla_result,
         })
 
         level_counts[reading_level if official_result else 'Pending'] += 1
@@ -27560,7 +27578,12 @@ def export_crla_assessment(request, assessment_id):
         return HttpResponseForbidden("You do not have access to this assessment.")
 
     try:
-        scoresheet = export_crla_excel(root_assessment.id, section_id=finalization.section_id)
+        scoresheet = export_crla_excel(
+            root_assessment.id,
+            section_id=finalization.section_id,
+            crla_term=finalization.material.official_term,
+            crla_phase=finalization.material.system_assessment_phase,
+        )
     except (FileNotFoundError, ValueError) as exc:
         logger.warning("Unable to export CRLA workbook for assessment %s: %s", assessment_id, exc)
         return HttpResponse(str(exc), status=400)
@@ -32082,6 +32105,53 @@ def get_teacher_students_api(request):
     except Exception as e:
         logger.error(f"Error in get_teacher_students_api: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def update_teacher_crla_observation_level(request):
+    """Update only the teacher-entered Observation Level for one selected result."""
+    allowed = {"Level 1", "Level 2", "Level 3", "Level 4"}
+    try:
+        payload = json.loads(request.body or '{}')
+        student_id = int(payload.get('student_id'))
+        section_id = int(payload.get('section_id'))
+        term = int(payload.get('term'))
+        phase = str(payload.get('assessment') or '').strip().lower()
+        observation_level = str(payload.get('observation_level') or '').strip()
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({'success': False, 'error': 'A valid student, section, assessment period, and observation level are required.'}, status=400)
+
+    if term not in {1, 2, 3} or phase not in {'pretest', 'midtest', 'posttest'}:
+        return JsonResponse({'success': False, 'error': 'Invalid assessment period.'}, status=400)
+    if observation_level not in allowed:
+        return JsonResponse({'success': False, 'error': 'Observation Level must be Level 1, Level 2, Level 3, or Level 4.'}, status=400)
+
+    teacher = User.objects.filter(id=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    section = Section.objects.filter(pk=section_id, teacher=teacher, is_active=True).first() if teacher else None
+    if not section:
+        return JsonResponse({'success': False, 'error': 'You are not authorized for this section.'}, status=403)
+    if not Enrollment.objects.filter(
+        section=section, student_id=student_id, status='active', is_active=True,
+        student__role='student', student__is_archived=False,
+    ).exists():
+        return JsonResponse({'success': False, 'error': 'The student is not enrolled in this section.'}, status=403)
+
+    selected_result = _latest_completed_official_crla_results(
+        [student_id], section=section, crla_term=term, crla_phase=phase,
+    ).get(str(student_id))
+    if not selected_result:
+        return JsonResponse({'success': False, 'error': 'No finalized CRLA result exists for the selected assessment period.'}, status=404)
+    result_enrollment = getattr(selected_result, 'enrollment', None)
+    if not result_enrollment or result_enrollment.section_id != section.id:
+        return JsonResponse({'success': False, 'error': 'The selected CRLA result does not belong to this section.'}, status=403)
+
+    score_data = dict(selected_result.crla_score_data or {}) if isinstance(selected_result.crla_score_data, dict) else {}
+    score_data['observation_level'] = observation_level
+    selected_result.crla_score_data = score_data
+    selected_result.save(update_fields=['crla_score_data', 'updated_at'])
+    return JsonResponse({'success': True, 'observation_level': observation_level})
 
 
 # =================================================================================

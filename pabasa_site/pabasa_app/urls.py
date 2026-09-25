@@ -231,6 +231,7 @@ urlpatterns = [
     path('dashboard/teacher/overview/', views.get_teacher_overview, name='get_teacher_overview'),
     # API: authoritative teacher student list (used by frontend JS)
     path('dashboard/teacher/students-api/', views.get_teacher_students_api, name='get_teacher_students_api'),
+    path('dashboard/teacher/student-crla-observation-level/', views.update_teacher_crla_observation_level, name='update_teacher_crla_observation_level'),
     # Courses API for teachers
     path('dashboard/teacher/courses/', views.get_teacher_courses_api, name='get_teacher_courses_api'),
     path('dashboard/teacher/assessments/', views.get_teacher_assessments_api, name='get_teacher_assessments_api'),
