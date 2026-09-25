@@ -10724,7 +10724,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
     function getMaterialStudentAccessBadge(material) {
         const enabled = getMaterialStudentAccessState(material);
-        return `<span class="material-access-pill ${enabled ? 'access-available' : 'access-locked'}">${enabled ? 'ðŸŸ¢ Available' : 'ðŸ”’ Locked'}</span>`;
+        return `<span class="material-access-pill ${enabled ? 'access-available' : 'access-locked'}">${enabled ? '<i class="bi bi-check-circle-fill" aria-hidden="true"></i> Available' : '<i class="bi bi-lock-fill" aria-hidden="true"></i> Locked'}</span>`;
     }
 
     function getMaterialStudentAccessToggle(material) {
@@ -10760,7 +10760,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             card.querySelectorAll('.material-access-pill').forEach(badge => {
                 badge.classList.remove('access-available', 'access-locked', 'access-hidden');
                 badge.classList.add(enabled ? 'access-available' : 'access-locked');
-                badge.textContent = enabled ? 'ðŸŸ¢ Available' : 'ðŸ”’ Locked';
+                badge.innerHTML = enabled ? '<i class="bi bi-check-circle-fill" aria-hidden="true"></i> Available' : '<i class="bi bi-lock-fill" aria-hidden="true"></i> Locked';
             });
 
             card.querySelectorAll('[data-material-action="student-access"], [data-action="student-access"]').forEach(button => {
@@ -23411,11 +23411,11 @@ if (key.startsWith('lesson-7-') || ['lesson7-gawain2c', 'lesson7-gawain4', 'less
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'prescribed-session-folder__button';
-        button.innerHTML = `<span class="prescribed-session-folder__icon" aria-hidden="true">ðŸ“</span><span><strong>Session ${number}</strong><small>${members.length} ${members.length === 1 ? 'activity' : 'activities'}</small></span>`;
+        button.innerHTML = `<span class="prescribed-session-folder__icon" aria-hidden="true"><i class="bi bi-folder-fill"></i></span><span><strong>Session ${number}</strong><small>${members.length} ${members.length === 1 ? 'activity' : 'activities'}</small></span>`;
         const modal = document.createElement('div');
         modal.className = 'prescribed-session-modal';
         modal.hidden = true;
-        modal.innerHTML = `<div class="prescribed-session-modal__dialog" role="dialog" aria-modal="true" aria-label="Session ${number} activities"><div class="prescribed-session-modal__header"><strong>📁 Session ${number} <small>— ${members.length} activities</small></strong><button type="button" class="prescribed-session-modal__close" aria-label="Close">×</button></div><div class="prescribed-session-modal__list"></div></div>`;
+        modal.innerHTML = `<div class="prescribed-session-modal__dialog" role="dialog" aria-modal="true" aria-label="Session ${number} activities"><div class="prescribed-session-modal__header"><strong><i class="bi bi-folder-fill" aria-hidden="true"></i> Session ${number} <small>&mdash; ${members.length} activities</small></strong><button type="button" class="prescribed-session-modal__close" aria-label="Close">&times;</button></div><div class="prescribed-session-modal__list"></div></div>`;
         const list = modal.querySelector('.prescribed-session-modal__list');
         members.forEach(member => list.append(member));
         button.addEventListener('click', () => { modal.hidden = false; document.body.style.overflow = 'hidden'; });
