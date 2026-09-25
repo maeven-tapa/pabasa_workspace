@@ -21385,7 +21385,9 @@ def _live_recovery_reader_stage(recovery_state):
     stage = str(normalized.get('stage') or '').strip().lower()
     if stage in {'transition_to_rhymes', 'transition_to_sentence'}:
         stage = str(normalized.get('next_stage') or '').strip().lower()
-    if stage in {'story', 'story_selection', 'story_ready', 'story_reading', 'story_comprehension'}:
+    if stage == 'transition_to_story':
+        return 'story'
+    if stage in {'story', 'story_selection', 'story_ready', 'story_reading', 'story_comprehension', 'learner_experience'}:
         return 'story'
     return stage if stage in {'words', 'rhymes', 'sentences'} else ''
 
@@ -24440,10 +24442,11 @@ def live_assessment_session_state(request, session_id):
     recovery_payload = student_state.get('recovery_state')
     active_reader_stages = {'words', 'rhymes', 'sentences'}
     if isinstance(recovery_payload, dict):
+        persisted_stage = str(recovery_payload.get('stage') or '').strip().lower()
         persisted_branch = str(
             recovery_payload.get('branch') or student_state.get('crla_stage') or ''
         ).strip().lower()
-        if persisted_branch in active_reader_stages:
+        if persisted_stage in active_reader_stages and persisted_branch in active_reader_stages:
             recovery_stage = persisted_branch
     has_pending_recovery = recovery_stage in {'words', 'rhymes', 'sentences', 'story'}
     student_completed = (
@@ -24621,6 +24624,8 @@ def live_assessment_student_state_update(request, session_id):
                 state_values['final_score'] = None
         if 'connection_status' in data:
             state_values['connection_status'] = str(data.get('connection_status') or '').strip() or 'connected'
+        if data.get('save_acknowledged') is True:
+            state_values['save_acknowledged'] = True
         if isinstance(data.get('recovery_state'), dict):
             # This is temporary workflow data (branch/item/answers), never an
             # official assessment result. It is server-authoritative on a
@@ -24648,6 +24653,12 @@ def live_assessment_student_state_update(request, session_id):
         if not _live_student_update_is_allowed(current, user_id):
             return None
         _update_live_student_state(current, user_id, state_values)
+        if state_values.get('save_acknowledged') is True:
+            saved_state = (current.student_states or {}).get(str(user_id), {})
+            if saved_state.get('participation_status') == 'save_requested':
+                saved_state['participation_status'] = 'saved'
+                saved_state['connection_status'] = 'disconnected'
+                current.student_states[str(user_id)] = saved_state
         return set()
 
     session, mutation_error = _mutate_live_session_state(session_id, apply_student_update)
@@ -24920,7 +24931,7 @@ def live_assessment_session_action(request, session_id):
                     target_student_ids.append(student_id)
 
         if not target_student_ids:
-            return JsonResponse({'success': False, 'error': 'No active students were provided to close and save'}, status=400)
+            return JsonResponse({'success': False, 'error': 'No active students were provided to save and exit'}, status=400)
 
         def apply_close_and_save(current):
             if current.status not in ['started', 'paused']:
@@ -24948,13 +24959,14 @@ def live_assessment_session_action(request, session_id):
                 if is_completed:
                     continue
 
-                # recovery_state is intentionally preserved in place.  The
-                # participation marker is separate from CRLA stage/branch data.
-                if current_state.get('participation_status') != 'saved':
-                    current_state['participation_status'] = 'saved'
+                # Request one final student-side snapshot before marking the
+                # participant saved. The reader acknowledges only after its
+                # latest runtime state has been published.
+                if current_state.get('participation_status') != 'save_requested':
+                    current_state['participation_status'] = 'save_requested'
                     changed = True
-                if current_state.get('connection_status') != 'disconnected':
-                    current_state['connection_status'] = 'disconnected'
+                if current_state.get('connection_status') != 'connected':
+                    current_state['connection_status'] = 'connected'
                     changed = True
                 states[student_key] = current_state
                 saved_student_ids.append(student_id)
@@ -24971,7 +24983,7 @@ def live_assessment_session_action(request, session_id):
 
         session, mutation_error = _mutate_live_session_state(session.id, apply_close_and_save)
         if not session:
-            return JsonResponse({'success': False, 'error': mutation_error or 'Unable to close and save live progress'}, status=409)
+            return JsonResponse({'success': False, 'error': mutation_error or 'Unable to save and exit live progress'}, status=409)
     elif action in ['pause', 'interrupt']:
         if session.status != 'started':
             # Recovery detection may race with a previous unload/pause. It is

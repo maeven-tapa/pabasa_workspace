@@ -336,6 +336,7 @@
         let liveSessionEnded = false;
         let liveCompletionRefreshIssued = false;
         let liveSessionRedirectingToWaitingRoom = false;
+        let liveSaveFlushInFlight = false;
         let liveSessionEndRedirectTimer = null;
         let liveSessionEndRedirecting = false;
         let liveSessionHeartbeatTimer = null;
@@ -2570,10 +2571,24 @@
                 });
                 let activeStage = "words";
                 const isActiveReaderStage = ["words", "rhymes", "sentences"].includes(persistedStage);
-                // Recovery is a direct restore. The stored branch/index must
-                // win over URL targets, next_stage, and every normal branch
-                // selection fallback.
-                if (isLiveRecoveryLaunch && stageMap[recoveredBranch]) {
+                const storyRecoveryStages = [
+                    "transition_to_story",
+                    "story_selection",
+                    "story_ready",
+                    "story_reading",
+                    "story_comprehension",
+                    "learner_experience",
+                ];
+                const isStoryWorkflowRecovery = storyRecoveryStages.includes(persistedStage)
+                    || persistedStage === "transition_to_story";
+                // A Story Reading workflow stage is more specific than the
+                // completed Part 1 branch that led to it. Preserve the
+                // existing branch-first behavior for genuinely active Part 1
+                // recovery, but do not let branch="sentences" override a
+                // pending or active Story Reading state.
+                if (isLiveRecoveryLaunch && isStoryWorkflowRecovery) {
+                    activeStage = "story";
+                } else if (isLiveRecoveryLaunch && stageMap[recoveredBranch]) {
                     activeStage = recoveredBranch;
                 } else if (isLiveRecoveryLaunch && stageMap[persistedStage]) {
                     activeStage = persistedStage;
@@ -2594,6 +2609,7 @@
                     activeStage = persistedStage;
                 }
                 currentAssessmentBranch = activeStage;
+                const workflowStage = isStoryWorkflowRecovery ? persistedStage : activeStage;
                 if (isLiveRecoveryLaunch) {
                     console.warn('LIVE_CRLA_RESUME_DEBUG reader_recovery_active_stage', {
                         activeStage,
@@ -2675,11 +2691,11 @@
                         currentSelectedStory = restoredStory;
                         const persistedSegmentIndex = Number.parseInt(persistedEndState.story_segment_index, 10);
                         currentStorySegmentIndex = Number.isFinite(persistedSegmentIndex) ? Math.max(0, persistedSegmentIndex) : 0;
-                        if (persistedStage === "story_comprehension") {
+                        if (workflowStage === "story_comprehension") {
                             renderCRLAComprehensionState(restoredStory.title, persistedEndState);
                             return;
                         }
-                        if (persistedStage === "story_reading") {
+                        if (workflowStage === "story_reading") {
                             currentStoryState = "story_reading";
                             currentAssessmentUiMode = "story";
                             setCurrentItemMode("paragraph");
@@ -2701,8 +2717,13 @@
                             animateCurrentItem();
                             return;
                         }
-                        if (persistedStage === "learner_experience") {
+                        if (workflowStage === "learner_experience") {
                             renderLearnerExperienceState();
+                            return;
+                        }
+                        if (workflowStage === "story_selection") {
+                            currentSelectedStory = null;
+                            renderStorySelection();
                             return;
                         }
                         updateStudentEndState({
@@ -2712,6 +2733,7 @@
                             story_segment_index: currentStorySegmentIndex,
                         });
                         renderStoryReadyState(restoredStory);
+                        return;
                     } else {
                         currentSelectedStory = null;
                         renderStorySelection();
@@ -6159,7 +6181,7 @@
             }
         }
 
-        async function publishLiveSessionState(updateValues = {}) {
+        async function publishLiveSessionStateNow(updateValues = {}) {
             if (!liveSessionId || !isCurrentLiveAssessment()) return null;
             if (!Object.keys(updateValues).length) return null;
             try {
@@ -6343,6 +6365,18 @@
                 console.warn('PABASA: Live session state update failed', error);
                 return null;
             }
+        }
+
+        // Keep live recovery writes ordered.  Item transitions and heartbeat
+        // updates can otherwise overlap, allowing an older snapshot to reach
+        // the server after a newer one and move recovery backwards.
+        let liveStatePublishQueue = Promise.resolve();
+        function publishLiveSessionState(updateValues = {}) {
+            const operation = liveStatePublishQueue.then(() => (
+                publishLiveSessionStateNow(updateValues)
+            ));
+            liveStatePublishQueue = operation.catch(() => null);
+            return operation;
         }
 
         function stopLiveSessionHeartbeat() {
@@ -6534,6 +6568,34 @@
                 || {};
             const participationStatus = String(viewerStudentState.participation_status || '').toLowerCase();
             const studentStatus = String(viewerStudentState.status || '').toLowerCase();
+            if (
+                participationStatus === 'save_requested'
+                && !liveSaveFlushInFlight
+                && !['completed', 'skipped'].includes(studentStatus)
+            ) {
+                liveSaveFlushInFlight = true;
+                try {
+                    // Story selection persists its ready-state snapshot through
+                    // the existing end-state queue. Do not acknowledge the
+                    // teacher's save until that write has completed, otherwise
+                    // the live recovery snapshot can contain story_ready with
+                    // stale or missing selected-story fields.
+                    await studentEndStateWriteQueue;
+                    await publishLiveSessionState({
+                        status: 'reading',
+                        items_completed: Math.max(0, currentIndex),
+                        items_total: Math.max(1, items.length),
+                        progress: items.length ? Math.min(1, currentIndex / items.length) : 0,
+                        elapsed_seconds: Math.round(getAssessmentElapsedSeconds()),
+                        current_item: items[currentIndex] || '',
+                        connection_status: 'connected',
+                        save_acknowledged: true,
+                    });
+                } finally {
+                    liveSaveFlushInFlight = false;
+                }
+                return;
+            }
             const shouldRedirectToWaitingRoom = (
                 !liveSessionRedirectingToWaitingRoom
                 && ['started', 'paused'].includes(String(state.status).toLowerCase())

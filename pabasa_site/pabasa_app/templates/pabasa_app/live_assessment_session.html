@@ -823,7 +823,7 @@
                         <button id="resumeBtn" class="btn btn-outline-primary btn-lg flex-fill">▶ Resume</button>
                     </div>
                     <button id="endBtn" class="btn btn-outline-danger btn-lg">⏹ End Session</button>
-                    <button id="closeAndSaveBtn" class="btn btn-outline-primary btn-lg d-none">Close &amp; Save</button>
+                    <button id="closeAndSaveBtn" class="btn btn-outline-primary btn-lg d-none">Save &amp; Exit</button>
                 </div>
                 <div class="small text-muted mb-2">Status: <span id="controlStatus">{{ live_session.status|title }}</span></div>
                 <div class="small text-muted mb-2">Last sync: <span id="lastUpdated">—</span></div>
@@ -1716,7 +1716,7 @@
     document.getElementById('resumeBtn').addEventListener('click', () => sendAction('resume'));
     document.getElementById('closeAndSaveBtn').addEventListener('click', async () => {
         const confirmed = await showConfirm(
-            'Close & Save',
+            'Save & Exit',
             'The student\'s current Live CRLA progress will be saved, the student will leave the active reader, and the assessment can be resumed later.'
         );
         if (!confirmed) return;
