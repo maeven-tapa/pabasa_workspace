@@ -1,7 +1,45 @@
-{% load static %}{% include 'pabasa_app/session3_lesson_start_bootstrap.html' %}{% include "pabasa_app/lesson_7_gawain_1_aligned6.html" %}<script>
+{% load static %}{% include 'pabasa_app/session3_lesson_start_bootstrap.html' %}<script>
+(() => {
+  const originalRunWhenStarted = window.__runWhenLessonStarted;
+  window.__runWhenLessonStarted = callback => {
+    // Preserve the intro's own startup/setup callback; guard only the legacy
+    // page callback that renders the first item immediately.
+    if (!String(callback).includes('render')) return originalRunWhenStarted(callback);
+    return originalRunWhenStarted(() => {
+    const progress = window.__lessonStartProgress?.progress || {};
+    const state = progress.state || {};
+    const fresh = !progress.activity_completed
+      && Number(progress.current_index || 0) === 0
+      && Number(progress.completed_items || 0) === 0
+      && !(Array.isArray(state.circled) && state.circled.length);
+    if (fresh && document.querySelector('.lesson7-overview')) return;
+    callback();
+    });
+  };
+})();
+</script>{% include "pabasa_app/lesson_7_gawain_1_aligned6.html" %}<script>
+(() => {
+  const data = JSON.parse(document.getElementById('lesson-seven-data')?.textContent || '{}');
+  window.__lessonStartProgress = {
+    activityKey: 'lesson-7-gawain-1', sessionKey: 'session-3',
+    lessonNumber: 7, gawainNumber: 1, activityTitle: 'Letrang Ii',
+    progress: data.progress || null, totalItems: Number(data.items?.length) || 8,
+    progressUrl: '{{ lesson_7_progress_url }}', storageKeys: []
+  };
+})();
+</script><script>
 document.addEventListener('DOMContentLoaded',function(){
   const app=document.getElementById('app');
   if(!app||typeof render!=='function')return;
+  const progress=window.__lessonStartProgress?.progress||{};
+  const state=progress.state||{};
+  const fresh=!progress.activity_completed
+    && Number(progress.current_index||0)===0
+    && Number(progress.completed_items||0)===0
+    && !(Array.isArray(state.circled)&&state.circled.length);
+  app.dataset.lesson7Fresh=fresh?'true':'false';
+  window.__lesson7FreshIntro=fresh;
+  if(!fresh)app.dataset.lesson7Started='active';
   render();
   app.inert=true;
   app.innerHTML=app.innerHTML;

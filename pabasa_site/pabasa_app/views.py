@@ -18860,7 +18860,7 @@ def lesson_3_activity_progress(request):
         existing_progress = StudentActivityProgress.objects.filter(
             student_id=request.session.get('user_id'), activity_key=key,
         ).first()
-        if reset and key in {'lesson-1-gawain-1', 'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2', 'lesson-4-gawain-1', 'lesson-5-gawain-1', 'lesson-6-gawain-1'}:
+        if reset and key in {'lesson-1-gawain-1', 'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2', 'lesson-4-gawain-1', 'lesson-5-gawain-1', 'lesson-6-gawain-1', 'lesson-7-gawain-1'}:
             progress, _ = StudentActivityProgress.objects.update_or_create(
                 student_id=request.session.get('user_id'), activity_key=key,
                 defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
