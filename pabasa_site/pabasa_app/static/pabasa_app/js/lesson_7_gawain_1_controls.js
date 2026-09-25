@@ -116,7 +116,6 @@ document.addEventListener('DOMContentLoaded', function () {
         audio.onerror = resolve;
         audio.play().catch(resolve);
       });
-      if (listens >= 3) listen.hidden = true;
     } catch (error) {
       console.error('Lesson 7 Gawain 1 word narration failed', error);
     } finally {
