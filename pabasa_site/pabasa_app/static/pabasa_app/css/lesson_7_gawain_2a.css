@@ -48,3 +48,6 @@ body .card .done-message{grid-area:message!important;align-self:start!important;
 @media(max-width:480px){body .card .done{grid-template-columns:1fr!important;grid-template-areas:"badge" "title" "message"!important;row-gap:8px!important}.card .done h1,.card .done-message{text-align:center!important}}
 @keyframes lesson7G2aDoneIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
 @media(max-width:480px){body .card:has(.done){padding:70px 10px 18px!important}body .card .done{padding:26px 18px!important;border-radius:28px!important}body .card .done a{width:100%!important;font-size:.9rem!important}}
+body .lesson7-g2a-reading-actions #read.recording,body .lesson7-g2a-reading-actions #read.is-listening{background:#d8903d!important;box-shadow:0 0 0 8px #f6c54a66,0 0 30px #f6c54acc,0 6px 0 #187b7a!important;animation:lesson7G2aListenPulse 1.6s ease-in-out infinite!important;opacity:1!important;filter:none!important;transform-origin:center}
+@keyframes lesson7G2aListenPulse{0%,100%{scale:1}50%{scale:1.035}}
+@media(prefers-reduced-motion:reduce){body .lesson7-g2a-reading-actions #read.recording,body .lesson7-g2a-reading-actions #read.is-listening{animation:none!important}}
