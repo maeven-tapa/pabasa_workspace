@@ -11,6 +11,7 @@
   const qReading = a.activity_key === 'aral-l23-g7-q-word-reading';
   const prescribedWordReading = jReading || qReading;
   const jSyllables = a.activity_key === 'aral-l23-g4-j-syllabication';
+  const l24G2 = a.activity_key === 'aral-l24-g2-v-word-reading';
   const pictureReading = a.activity_key === 'aral-l24-g4-x-pictures';
   const l23G1 = a.activity_key === 'aral-l23-g1-n-syllable-builder';
   const l23G3 = a.activity_key === 'aral-l23-g3-j-word-reading';
@@ -46,7 +47,11 @@
     'Hindi available ang panuto.', 'Isulat muna ang sagot.', 'Mahusay!',
     'Subukan muli.', 'Natapos mo ang gawain!',
   ]);
-  let state = data.state, busy = false, selected = [], builder = [], words = [];
+  let state = data.state || {}, busy = false, selected = [], builder = [], words = [];
+  if (l24G2) {
+    if (!state.draft || typeof state.draft !== 'object') state.draft = {builder: [], words: []};
+    if (!state.oral || typeof state.oral !== 'object') state.oral = {};
+  }
   let activeRecorder = null, activeStream = null, activeReadAloud = null, audioController = null;
   let audioRun = 0, instructionSpoken = false, pendingSpeech = '';
   const instructionText = a.instruction;

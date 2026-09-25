@@ -61,4 +61,5 @@ class Lesson24Gawain2WorkbookTests(SimpleTestCase):
         reading = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_l22_g2_reading.js').read_text(encoding='utf-8')
         self.assertIn('activity.instruction', intro)
         self.assertIn("a.activity_key!=='aral-l24-g2-v-word-reading'", reading)
-        self.assertIn('canonicalInstruction=a.instruction||instructionText', reading)
+        self.assertIn('canonicalInstruction=instructionText', reading)
+        self.assertIn('${esc(canonicalInstruction)}', reading)

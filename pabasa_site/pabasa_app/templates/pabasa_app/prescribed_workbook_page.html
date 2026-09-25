@@ -28,7 +28,7 @@
   <h1>{{ workbook_payload.activity.title }}</h1><p class="wb-instruction">{{ workbook_payload.activity.instruction }}</p></header>
   {% endif %}
   <p id="wb-status" role="status" aria-live="polite"></p><div id="wb-progress"></div>
-  {% if workbook_payload.activity.specialized_builder %}<div id="wb-progress-track" aria-hidden="true"><span id="wb-progress-fill"></span></div>{% endif %}
+  {% if workbook_payload.activity.specialized_builder or workbook_payload.activity.activity_key == 'aral-l24-g2-v-word-reading' %}<div id="wb-progress-track" aria-hidden="true"><span id="wb-progress-fill"></span></div>{% endif %}
   {% if workbook_payload.activity.activity_key == 'aral-l24-g1-v-syllable-builder' %}<div class="wb-l24-g1-stage">{% endif %}
   <section id="wb-content"></section><section id="wb-action" aria-label="Activity controls"></section>
   {% if workbook_payload.activity.activity_key == 'aral-l24-g1-v-syllable-builder' %}</div>{% endif %}
@@ -36,5 +36,5 @@
 {{ workbook_payload|json_script:'workbook-payload' }}
 {% include 'pabasa_app/session8_11_prescribed_controls.html' with prefix='prescribed-session-target' help_text='Follow the instructions on the activity page. Use the microphone when the activity asks you to speak.' %}
 <script src="{% static 'pabasa_app/js/template_google_tts.js' %}"></script>
-{% if workbook_payload.activity.activity_key == 'aral-l24-g3-x-word-reading' %}<script src="{% static 'pabasa_app/js/prescribed_l24_g3_word_reading.js' %}"></script>{% else %}<script src="{% static 'pabasa_app/js/prescribed_workbook.js' %}"></script>{% endif %}
+{% if workbook_payload.activity.activity_key == 'aral-l24-g2-v-word-reading' %}<script src="{% static 'pabasa_app/js/prescribed_l24_g2_reading.js' %}"></script>{% elif workbook_payload.activity.activity_key == 'aral-l24-g3-x-word-reading' %}<script src="{% static 'pabasa_app/js/prescribed_l24_g3_word_reading.js' %}"></script>{% else %}<script src="{% static 'pabasa_app/js/prescribed_workbook.js' %}"></script>{% endif %}
 </body></html>
