@@ -75,6 +75,11 @@ L24_G3_X_ACCEPTED_SPEECH = {
     'mixer': {'mixer'}, 'felix': {'felix'},
 }
 
+L24_G3_REPEAT_X_ACCEPTED_SPEECH = {
+    'alex': {'alex'}, 'felix': {'felix'},
+    'x-factor': {'x-factor', 'x factor', 'xfactor'}, 'fixer': {'fixer'},
+}
+
 # Lesson 22 Gawain 2 keeps the workbook spelling as the canonical display
 # value while allowing only explicit Filipino STT spellings for pronunciation.
 L22_G2_ACCEPTED_SPEECH = {
@@ -276,6 +281,15 @@ def l24_g3_pronunciation_match(canonical_word, transcript):
     canonical = normalize_l24_g2_speech(canonical_word)
     heard = normalize_l24_g2_speech(transcript)
     accepted = {normalize_l24_g2_speech(item) for item in L24_G3_X_ACCEPTED_SPEECH.get(canonical, {canonical})}
+    return bool(heard and heard in accepted)
+
+
+def l24_g3_repeat_pronunciation_match(canonical_word, transcript):
+    canonical = normalize_l24_g2_speech(canonical_word)
+    heard = normalize_l24_g2_speech(transcript)
+    accepted = {normalize_l24_g2_speech(item) for item in L24_G3_REPEAT_X_ACCEPTED_SPEECH.get(
+        str(canonical_word).casefold(), {canonical}
+    )}
     return bool(heard and heard in accepted)
 
 
@@ -561,6 +575,52 @@ def initial_l24_g3_state():
         'last_feedback': '', 'last_transcript': '',
         'completed': False, 'revision': 0,
     }
+
+
+def initial_l24_g3_repeat_state():
+    """State for the Session 8 listen-then-repeat word sequence."""
+    return {
+        'index': 0, 'oral': {}, 'answers': {}, 'draft': {},
+        'last_feedback': '', 'last_transcript': '',
+        'completed': False, 'revision': 0,
+    }
+
+
+def normalize_l24_g3_repeat_state(state):
+    """Upgrade legacy generic state without losing valid oral progress."""
+    if not isinstance(state, dict):
+        state = initial_l24_g3_repeat_state()
+    state.setdefault('oral', {})
+    if not isinstance(state['oral'], dict):
+        state['oral'] = {}
+    state.setdefault('answers', {})
+    state.setdefault('draft', {})
+    state.setdefault('last_feedback', '')
+    state.setdefault('last_transcript', '')
+    state['revision'] = max(0, int(state.get('revision', 0) or 0))
+    items = ACTIVITIES['aral-l24-g3-x-repeat']['items']
+    for item in items:
+        saved = state['oral'].get(item['id'])
+        if not isinstance(saved, dict):
+            saved = {}
+        saved.setdefault('passed', False)
+        saved.setdefault('attempts', 0)
+        saved.setdefault('listens', 0)
+        saved.setdefault('phase', 'model')
+        if saved['passed']:
+            saved['phase'] = 'passed'
+        elif saved['phase'] not in {'model', 'read', 'listen'}:
+            saved['phase'] = 'model'
+        saved['attempts'] = max(0, min(3, int(saved.get('attempts', 0) or 0)))
+        saved['listens'] = max(0, int(saved.get('listens', 0) or 0))
+        state['oral'][item['id']] = saved
+    passed = [index for index, item in enumerate(items) if state['oral'][item['id']].get('passed')]
+    next_index = 0
+    while next_index in passed:
+        next_index += 1
+    state['index'] = next_index
+    state['completed'] = next_index >= len(items)
+    return state
 
 
 def initial_l24_g4_state():
@@ -1845,10 +1905,16 @@ def apply_event(activity, state, event, verified_reading=None):
             raise ValueError('Reading is not available in this phase.')
         if verified_reading is None:
             raise ValueError('A verified recording is required.')
+        if activity['activity_key'] == 'aral-l24-g3-x-repeat':
+            state['last_transcript'] = str(event.get('transcript') or '').strip()
         if verified_reading:
             oral['passed'] = True
+            if activity['activity_key'] == 'aral-l24-g3-x-repeat':
+                state['last_feedback'] = 'Tama!'
         else:
             oral['attempts'] += 1
+            if activity['activity_key'] == 'aral-l24-g3-x-repeat':
+                state['last_feedback'] = 'Subukan muli.'
             if oral['attempts'] == 3:
                 oral.update(phase='listen', listens=0)
     elif action == 'model_listened':

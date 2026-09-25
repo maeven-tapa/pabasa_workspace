@@ -36,5 +36,5 @@
 {{ workbook_payload|json_script:'workbook-payload' }}
 {% include 'pabasa_app/session8_11_prescribed_controls.html' with prefix='prescribed-session-target' help_text='Follow the instructions on the activity page. Use the microphone when the activity asks you to speak.' %}
 <script src="{% static 'pabasa_app/js/template_google_tts.js' %}"></script>
-{% if workbook_payload.activity.activity_key == 'aral-l24-g2-v-word-reading' %}<script src="{% static 'pabasa_app/js/prescribed_l24_g2_reading.js' %}"></script>{% elif workbook_payload.activity.activity_key == 'aral-l24-g3-x-word-reading' %}<script src="{% static 'pabasa_app/js/prescribed_l24_g3_word_reading.js' %}"></script>{% else %}<script src="{% static 'pabasa_app/js/prescribed_workbook.js' %}"></script>{% endif %}
+{% if workbook_payload.activity.activity_key == 'aral-l24-g2-v-word-reading' %}<script src="{% static 'pabasa_app/js/prescribed_l24_g2_reading.js' %}"></script>{% elif workbook_payload.activity.activity_key == 'aral-l24-g3-x-repeat' %}<script src="{% static 'pabasa_app/js/prescribed_l24_g3_repeat.js' %}"></script>{% elif workbook_payload.activity.activity_key == 'aral-l24-g3-x-word-reading' %}<script src="{% static 'pabasa_app/js/prescribed_l24_g3_word_reading.js' %}"></script>{% else %}<script src="{% static 'pabasa_app/js/prescribed_workbook.js' %}"></script>{% endif %}
 </body></html>

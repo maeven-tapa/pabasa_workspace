@@ -13342,7 +13342,8 @@ def prescribed_activity_page(request, activity_key):
                                            initial_l22_g3_state, initial_l22_g5_state, initial_l23_g5_state, normalize_l22_c_state,
                                           normalize_l22_g2_state, normalize_l22_g6_state, normalize_l22_g3_state, normalize_l22_g5_state,
                                           normalize_l22_g4_state, initial_l23_g1_state, normalize_l23_g1_state, initial_l24_g1_state, normalize_l24_g1_state, initial_l24_g2_state, normalize_l24_g2_state, initial_l23_g6_state, normalize_l23_g6_state,
-                                          initial_l23_g2_state, normalize_l23_g2_state, initial_l24_g3_state, normalize_l24_g3_state)
+                                          initial_l23_g2_state, normalize_l23_g2_state, initial_l24_g3_state, normalize_l24_g3_state,
+                                          initial_l24_g3_repeat_state, normalize_l24_g3_repeat_state)
         from .prescribed_workbook import initial_l23_g3_state, normalize_l23_g3_state, initial_l23_g4_state, normalize_l23_g4_state, normalize_l23_g5_state, initial_l23_g7_state, normalize_l23_g7_state
 
         preview = request.GET.get('preview') == '1'
@@ -13361,6 +13362,7 @@ def prescribed_activity_page(request, activity_key):
         state = progress.state if progress and isinstance(progress.state, dict) else (
             initial_l22_g2_state() if activity_key == 'aral-l22-g2-c-word-reading' else
             initial_l24_g2_state() if activity_key == 'aral-l24-g2-v-word-reading' else
+            initial_l24_g3_repeat_state() if activity_key == 'aral-l24-g3-x-repeat' else
             initial_l24_g3_state() if activity_key == 'aral-l24-g3-x-word-reading' else
             initial_l22_g6_state() if activity_key == 'aral-l22-g6-f-word-reading' else
             initial_l22_g4_state() if activity_key == 'aral-l22-g4-f-syllable-builder' else
@@ -13379,6 +13381,8 @@ def prescribed_activity_page(request, activity_key):
             state = normalize_l22_g2_state(state)
         elif activity_key == 'aral-l24-g2-v-word-reading':
             state = normalize_l24_g2_state(state)
+        elif activity_key == 'aral-l24-g3-x-repeat':
+            state = normalize_l24_g3_repeat_state(state)
         elif activity_key == 'aral-l24-g3-x-word-reading':
             state = normalize_l24_g3_state(state)
         elif activity_key == 'aral-l22-g6-f-word-reading':
@@ -13425,6 +13429,16 @@ def prescribed_activity_page(request, activity_key):
              'aral-l24-g6-z-word-search': 'aral-l24-g7-z-word-reading',
          }.get(activity_key, '')
         next_url = reverse('prescribed_activity_page', kwargs={'activity_key': next_key}) if next_key in PRESCRIBED_ACTIVITIES else ''
+        if activity_key == 'aral-l24-g3-x-repeat':
+            return render(request, 'pabasa_app/prescribed_l24_g3_repeat_page.html', {
+                'workbook_payload': {
+                    'activity': get_activity(activity_key), 'state': state, 'preview': preview,
+                    'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+                    'read_aloud_url': reverse('reading_read_aloud_api'),
+                    'back_url': reverse('assessment'), 'next_url': next_url,
+                    'local_audio': {},
+                },
+            })
         if activity_key == 'aral-l22-g2-c-word-reading':
             audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_22/GAWAIN_2/'
             audio_files = {
@@ -16967,12 +16981,13 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
     from copy import deepcopy
     from .prescribed_workbook import (
         apply_event, get_activity, initial_l22_g2_state, initial_l22_g6_state, initial_l22_g3_state, initial_l22_g4_state, initial_l22_g5_state, initial_l23_g5_state, initial_state,
-        l22_g2_pronunciation_match, l22_g6_pronunciation_match, l24_g2_pronunciation_match, l24_g3_pronunciation_match, normalize_l22_c_state, normalize_l22_g2_state, normalize_l22_g6_state,
+        l22_g2_pronunciation_match, l22_g6_pronunciation_match, l24_g2_pronunciation_match, l24_g3_pronunciation_match, l24_g3_repeat_pronunciation_match, normalize_l22_c_state, normalize_l22_g2_state, normalize_l22_g6_state,
         normalize_l22_g3_state, normalize_l22_g4_state, normalize_l22_g5_state, l22_g4_pronunciation_match,
         initial_l23_g1_state, normalize_l23_g1_state, l23_g1_pronunciation_match, initial_l24_g1_state, normalize_l24_g1_state, l24_g1_pronunciation_match, initial_l24_g2_state, normalize_l24_g2_state, initial_l24_g4_state, normalize_l24_g4_state, l24_g4_pronunciation_match, initial_l23_g6_state, normalize_l23_g6_state, l23_g6_pronunciation_match,
         initial_l23_g2_state, normalize_l23_g2_state, l23_g2_pronunciation_match,
         initial_l23_g3_state, normalize_l23_g3_state, l23_g3_pronunciation_match, initial_l23_g7_state, normalize_l23_g7_state, l23_g7_pronunciation_match,
         initial_l23_g4_state, normalize_l23_g4_state, normalize_l23_g5_state,
+        initial_l24_g3_repeat_state, normalize_l24_g3_repeat_state,
     )
 
     workbook = get_activity(activity_key)
@@ -16984,6 +16999,7 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
         state = deepcopy(row.state if row and isinstance(row.state, dict) else (
             initial_l22_g2_state() if activity_key == 'aral-l22-g2-c-word-reading' else
             initial_l24_g2_state() if activity_key == 'aral-l24-g2-v-word-reading' else
+            initial_l24_g3_repeat_state() if activity_key == 'aral-l24-g3-x-repeat' else
             initial_l24_g4_state() if activity_key == 'aral-l24-g4-x-pictures' else
             initial_l22_g6_state() if activity_key == 'aral-l22-g6-f-word-reading' else
             initial_l22_g4_state() if activity_key == 'aral-l22-g4-f-syllable-builder' else
@@ -17003,6 +17019,8 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             state = normalize_l22_g2_state(state)
         elif activity_key == 'aral-l24-g2-v-word-reading':
             state = normalize_l24_g2_state(state)
+        elif activity_key == 'aral-l24-g3-x-repeat':
+            state = normalize_l24_g3_repeat_state(state)
         elif activity_key == 'aral-l24-g4-x-pictures':
             state = normalize_l24_g4_state(state)
         elif activity_key == 'aral-l22-g6-f-word-reading':
@@ -17133,6 +17151,12 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
                 result['complete'] = l24_g3_pronunciation_match(
                     workbook['items'][item_index]['text'], event['transcript']
                 )
+            elif activity_key == 'aral-l24-g3-x-repeat' and event.get('action') == 'reading':
+                event = dict(event)
+                event['transcript'] = str(result.get('raw_transcript') or result.get('transcript') or '').strip()
+                result['complete'] = l24_g3_repeat_pronunciation_match(
+                    workbook['items'][item_index]['text'], event['transcript']
+                )
             elif activity_key == 'aral-l24-g4-x-pictures' and event.get('action') in {'reading', 'reading_attempt'}:
                 event = dict(event)
                 event['item_index'] = item_index
@@ -17176,6 +17200,9 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
                 transcript = str(result.get('raw_transcript') or result.get('transcript') or '').strip()
                 verified = None if not transcript else bool(result.get('complete'))
             elif activity_key == 'aral-l24-g3-x-word-reading' and event.get('action') == 'reading_attempt':
+                transcript = str(result.get('raw_transcript') or result.get('transcript') or '').strip()
+                verified = None if not transcript else bool(result.get('complete'))
+            elif activity_key == 'aral-l24-g3-x-repeat' and event.get('action') == 'reading':
                 transcript = str(result.get('raw_transcript') or result.get('transcript') or '').strip()
                 verified = None if not transcript else bool(result.get('complete'))
             elif activity_key == 'aral-l24-g4-x-pictures' and event.get('action') in {'reading', 'reading_attempt'}:
