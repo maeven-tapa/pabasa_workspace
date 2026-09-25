@@ -118,6 +118,23 @@
 <style>
   #app > .done{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
 </style>
+<script>
+  document.addEventListener('DOMContentLoaded',()=>{
+    const app=document.getElementById('app');
+    if(!app)return;
+    const controls=()=>app.querySelectorAll('#read,#listen');
+    const setBusy=value=>controls().forEach(button=>{button.disabled=value||button.dataset.activityBusy==='true';button.setAttribute('aria-disabled',String(value))});
+    let active=0;
+    const NativeAudio=window.Audio;
+    window.Audio=function(...args){
+      const audio=new NativeAudio(...args),finish=()=>{if(!active)return;active=Math.max(0,active-1);if(!active)setBusy(false)};
+      active+=1;setBusy(true);audio.addEventListener('ended',finish,{once:true});audio.addEventListener('error',finish,{once:true});
+      const play=audio.play.bind(audio);audio.play=(...playArgs)=>play(...playArgs).catch(error=>{finish();throw error});
+      return audio;
+    };
+    window.Audio.prototype=NativeAudio.prototype;
+  });
+</script>
 <style>
   #app.card{height:calc(100vh - 110px);min-height:0}
   #app .task{height:100%;min-height:0;justify-content:flex-start}
