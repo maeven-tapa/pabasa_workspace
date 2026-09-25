@@ -19683,6 +19683,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     if (isSoundDetectiveTemplate(activeTemplateActivity?.templateTitle)) {
                         Object.assign(contentPayload, values.content, {activity_type:'sound_detective',language:values.language,template_title:'Sound Detective',template_lesson:'Phonological Awareness',template_type:'Sound Detective',template_source:'template'});
                     }
+                    if (isPhraseReadingTemplate(activeTemplateActivity?.templateTitle)) {
+                        contentPayload.activity_type = 'phrase_reading';
+                    }
                     if (isPictureWordMatchingTemplate(activeTemplateActivity?.templateTitle)) {
                         contentPayload.activity_type = 'picture_word_matching';
                         const mode = activeTemplateActivity?.pictureWordMatching?.mode === 'custom' ? 'custom' : 'prescribed';
