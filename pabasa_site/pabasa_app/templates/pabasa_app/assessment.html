@@ -1880,7 +1880,8 @@ document.addEventListener('DOMContentLoaded',function(){
     #sessionGrid.session-folder-mode { display: grid; }
     #sessionGrid.session-folder-mode > .session-one-activity { display: none; }
     #sessionGrid.session-folder-mode > .session-folder-column { display: block; }
-    #sessionGrid.session-grouping-pending { visibility: hidden; }
+    /* Legacy activity tiles are direct grid children; final Session folders are columns. */
+    #sessionGrid > .pabasa-session-card { visibility: hidden; }
     .session-folder-column .assessment-week-folder { min-height: 150px; }
     .week-activities-modal.aking-aralin-session-modal .assessment-week-cards {
         grid-template-columns: repeat(2, minmax(0, 1fr));
