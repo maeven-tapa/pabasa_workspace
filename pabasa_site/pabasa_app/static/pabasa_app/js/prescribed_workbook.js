@@ -36,6 +36,11 @@
     'Hindi pinayagan ang mikropono.', 'May problema sa recording.', 'Hindi na-save. Subukan muli.',
     'Subukan Muli.', 'Mahusay!', 'Natapos mo ang gawain!',
   ]);
+  const G7_FEEDBACK_TEXT = new Set([
+    'Hindi ko malinaw na narinig. Subukan muli.', 'Subukan Muli.', 'Mahusay!',
+    'Natapos mo ang gawain!', 'Hindi pinayagan ang mikropono.',
+    'Hindi nakuha ang iyong boses. Subukan muli.',
+  ]);
   const G4_MAPPED_TEXT = new Set([
     'Pantigin ang sumusunod na salita.', 'Hindi na-save. Subukan muli.',
     'Hindi available ang panuto.', 'Isulat muna ang sagot.', 'Mahusay!',
@@ -264,9 +269,10 @@
       setJFeedback('Sinusuri...');if(jReading)await playPrescribedAudio('Sinusuri...',true);const form=new FormData();form.append('audio',audio,'reading.webm');
       await send({action:'reading_attempt'},form,false);render();
       if(l23G3){if(state.completed){await playPrescribedAudio('Mahusay!',true);await playPrescribedAudio('Natapos mo ang gawain!',true);}else if(G3_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}
+      if(qReading&&G7_FEEDBACK_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);
     }catch(e){
       clearTimeout(timer);stream?.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
-      const denied=e?.name==='NotAllowedError'||e?.name==='SecurityError';const text=denied?'Hindi pinayagan ang mikropono.':e.message||'Hindi nakuha ang iyong boses. Subukan muli.';setJFeedback(text,true);if(l23G3&&G3_MAPPED_TEXT.has(text))await playPrescribedAudio(text,true).catch(()=>{});
+      const denied=e?.name==='NotAllowedError'||e?.name==='SecurityError';const text=denied?'Hindi pinayagan ang mikropono.':e.message||'Hindi nakuha ang iyong boses. Subukan muli.';setJFeedback(text,true);if(l23G3&&G3_MAPPED_TEXT.has(text))await playPrescribedAudio(text,true).catch(()=>{});if(qReading&&G7_FEEDBACK_TEXT.has(text))await playPrescribedAudio(text,true).catch(()=>{});
     }finally{busy=false;lock();}
   }
   function draft(value){state.draft={...state.draft,...value};if(specializedBuilder&&Object.prototype.hasOwnProperty.call(value,'builder')){state.last_feedback='';const feedback=content.querySelector('.wb-builder-feedback');if(feedback)feedback.textContent='';}const snapshot=structuredClone(state.draft);send({action:'draft',draft:snapshot}).catch(e=>message(e.message,true));}
