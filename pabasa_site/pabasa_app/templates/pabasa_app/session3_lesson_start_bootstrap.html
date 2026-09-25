@@ -51,3 +51,25 @@
 })();
 </script>
 <script src="{% static 'pabasa_app/js/lesson_start_modal.js' %}?v=20260924-3"></script>
+<style>
+#session-3-start .lesson-start-modal{width:min(500px,calc(100vw - 40px));padding:34px 34px 30px}
+#session-3-start .lesson-start-label{margin-bottom:16px;color:#277f82;font-size:1.05rem;line-height:1.2;letter-spacing:.04em}
+#session-3-start .lesson-start-title{margin:0 auto 26px;max-width:430px;color:#183e63;font-size:clamp(1.65rem,3.2vw,2.2rem);line-height:1.2}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const targetKeys = new Set([
+    'lesson-7-gawain-1', 'lesson7-gawain2a', 'lesson7-gawain2b', 'lesson7-gawain2c',
+    'lesson7-gawain3', 'lesson7-gawain4', 'lesson7-gawain4a', 'lesson7-gawain4b',
+    'lesson8-gawain1', 'lesson8-gawain1a', 'lesson9-gawain1', 'lesson9-gawain2',
+    'lesson9-gawain3'
+  ]);
+  if (!targetKeys.has(window.__lessonStartProgress?.activityKey)) return;
+  const backdrop = document.getElementById('session-3-start');
+  if (!backdrop || backdrop.dataset.resume !== 'true') return;
+  const label = backdrop.querySelector('.lesson-start-label');
+  const message = backdrop.querySelector('.lesson-start-title');
+  if (label) label.textContent = 'MAY NA-SAVE KANG PROGRESO!';
+  if (message) message.textContent = 'May nasimulan ka nang gawain. Gusto mo bang ipagpatuloy ang iyong nasimulan?';
+});
+</script>
