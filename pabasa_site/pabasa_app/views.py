@@ -69,7 +69,11 @@ from .system_clock import invalidate_override_cache, now as system_now, real_now
 from .models import PracticeDebugSettings
 from .section_configuration import ensure_salawag_grade_two_sections
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
-from .student_session_lock import claim_student_session, release_student_session
+from .student_session_lock import (
+    claim_student_session, release_student_session, is_learning_page,
+    student_session_is_active, student_session_status,
+)
+from .system_clock import real_now as session_now
 from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
 from .reading_stt import (
     ReadingMatcher,
@@ -5152,7 +5156,7 @@ def logout_user(request):
 
 @require_http_methods(['POST'])
 def student_session_heartbeat(request):
-    """Refresh only the authenticated student's login lease.
+    """Report idle time separately from device presence and learning activity.
 
     This deliberately has no interaction with LiveAssessmentSession or its
     recovery_state; an expired device login can be replaced without losing
@@ -5162,12 +5166,30 @@ def student_session_heartbeat(request):
         return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
     user_id = request.session.get('user_id')
     session_key = request.session.session_key
-    updated = User.objects.filter(
-        id=user_id, role='student', active_session_key=session_key,
-    ).update(last_activity=system_now())
-    if not updated:
-        return JsonResponse({'success': False, 'error': 'This student session is no longer valid.'}, status=401)
-    return JsonResponse({'success': True})
+    with transaction.atomic():
+        user = User.objects.select_for_update().filter(id=user_id, role='student').first()
+        now = session_now()
+        if not student_session_is_active(user, session_key, now):
+            return JsonResponse({'success': False, 'error': 'Your session has ended. Please sign in again.'}, status=401)
+        was_learning = user.active_session_learning
+        if 'page' in request.POST:
+            try:
+                pages = json.loads(request.POST.get('learning_pages', '[]'))
+            except (ValueError, TypeError):
+                pages = []
+            if not isinstance(pages, list):
+                pages = []
+            user.active_session_learning = is_learning_page(request.POST['page']) or any(
+                is_learning_page(path) for path in pages[:20] if isinstance(path, str)
+            )
+        # Reading/listening/writing counts as activity without mouse input.
+        # Passive notification polling and ordinary heartbeats do not.
+        if request.POST.get('activity') == '1' or user.active_session_learning or was_learning:
+            user.last_activity = now
+        user.active_session_last_seen = now
+        user.save(update_fields=['last_activity', 'active_session_last_seen', 'active_session_learning'])
+        result = student_session_status(user, now)
+    return JsonResponse(result)
 
 def _check_auth(request):
     """Check if user is authenticated"""

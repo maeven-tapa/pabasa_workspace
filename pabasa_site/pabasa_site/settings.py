@@ -138,6 +138,10 @@ USE_I18N = True
 
 USE_TZ = True
 
+# Student idle expiry is separate from the short single-device presence lease.
+STUDENT_SESSION_IDLE_SECONDS = 30 * 60
+STUDENT_SESSION_WARNING_SECONDS = 2 * 60
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/

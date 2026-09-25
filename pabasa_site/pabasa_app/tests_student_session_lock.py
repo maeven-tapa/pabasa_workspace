@@ -4,9 +4,13 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
+from unittest.mock import patch
 
 from .models import User
-from .student_session_lock import STUDENT_SESSION_IDLE_TIMEOUT
+from .student_session_lock import (
+    STUDENT_SESSION_IDLE_TIMEOUT, STUDENT_SESSION_LEASE_TIMEOUT,
+    claim_student_session, student_session_is_active, is_learning_page,
+)
 
 
 class StudentSessionLockTests(TestCase):
@@ -89,3 +93,88 @@ class StudentSessionLockTests(TestCase):
         self.student.save(update_fields=['last_activity'])
         replacement = self.client_class()
         self.assertEqual(self.login(replacement).status_code, 200)
+
+    def test_device_lease_gap_does_not_expire_current_login(self):
+        self.login(self.client)
+        self.student.refresh_from_db()
+        self.student.last_activity = timezone.now() - timedelta(minutes=5)
+        self.student.active_session_last_seen = self.student.last_activity
+        self.student.save()
+        self.assertTrue(student_session_is_active(self.student, self.client.session.session_key))
+
+    def test_disconnected_device_can_still_be_replaced(self):
+        self.login(self.client)
+        User.objects.filter(pk=self.student.pk).update(
+            active_session_last_seen=timezone.now() - STUDENT_SESSION_LEASE_TIMEOUT - timedelta(seconds=1),
+        )
+        self.assertEqual(self.login(self.client_class()).status_code, 200)
+        self.assertEqual(self.client.post(reverse('student_session_heartbeat')).status_code, 401)
+
+    def test_learning_login_survives_long_reading_without_requests(self):
+        self.login(self.client)
+        User.objects.filter(pk=self.student.pk).update(
+            active_session_learning=True, last_activity=timezone.now() - timedelta(hours=2),
+        )
+        self.student.refresh_from_db()
+        self.assertTrue(student_session_is_active(self.student, self.client.session.session_key))
+        response = self.client.post(reverse('student_session_heartbeat'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['protected'])
+
+    def test_idle_timeout_returns_json_and_releases_only_current_claim(self):
+        self.login(self.client)
+        User.objects.filter(pk=self.student.pk).update(last_activity=timezone.now() - STUDENT_SESSION_IDLE_TIMEOUT)
+        response = self.client.post(reverse('student_session_heartbeat'))
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()['code'], 'idle_timeout')
+        self.student.refresh_from_db()
+        self.assertIsNone(self.student.active_session_key)
+
+    def test_passive_heartbeat_does_not_extend_idle_deadline(self):
+        self.login(self.client)
+        previous = timezone.now() - timedelta(minutes=29)
+        User.objects.filter(pk=self.student.pk).update(last_activity=previous)
+        response = self.client.post(reverse('student_session_heartbeat'))
+        self.assertEqual(response.status_code, 200)
+        self.assertLess(response.json()['remaining_seconds'], 61)
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.last_activity, previous)
+
+    def test_stay_signed_in_renews_before_expiry(self):
+        self.login(self.client)
+        User.objects.filter(pk=self.student.pk).update(last_activity=timezone.now() - timedelta(minutes=29))
+        response = self.client.post(reverse('student_session_heartbeat'), {'activity': '1'})
+        self.assertEqual(response.status_code, 200)
+        self.assertGreater(response.json()['remaining_seconds'], 1790)
+
+    def test_expired_login_cannot_be_revived_by_activity_or_learning_claim(self):
+        self.login(self.client)
+        User.objects.filter(pk=self.student.pk).update(last_activity=timezone.now() - timedelta(minutes=31))
+        response = self.client.post(reverse('student_session_heartbeat'), {
+            'activity': '1', 'page': reverse('practice_word_page'),
+        })
+        self.assertEqual(response.status_code, 401)
+
+    def test_learning_protection_never_bypasses_device_ownership(self):
+        self.login(self.client)
+        User.objects.filter(pk=self.student.pk).update(active_session_learning=True, active_session_key='another-device')
+        response = self.client.post(reverse('student_session_heartbeat'), {'page': reverse('practice_word_page')})
+        self.assertEqual(response.status_code, 401)
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.active_session_key, 'another-device')
+
+    def test_learning_routes_are_resolved_not_arbitrary_prefixes(self):
+        for name in ('practice_word_page', 'practice_sentence_page', 'practice_para_page', 'reading_word_page', 'reading_sentence_page'):
+            self.assertTrue(is_learning_page(reverse(name)), name)
+        self.assertTrue(is_learning_page(reverse('prescribed_activity_page', args=['lesson27-gawain1'])))
+        self.assertFalse(is_learning_page('/dashboard/assessment/not-a-real-page/'))
+        self.assertFalse(is_learning_page(reverse('dashboard')))
+        self.assertFalse(is_learning_page(reverse('assessment')))
+        self.assertFalse(is_learning_page(reverse('practice_results')))
+
+    def test_session_expiry_uses_real_time_not_admin_debug_clock(self):
+        self.login(self.client)
+        self.student.refresh_from_db()
+        with patch('pabasa_app.system_clock.now', return_value=timezone.now() + timedelta(days=30)):
+            self.assertTrue(student_session_is_active(self.student, self.client.session.session_key))
+            self.assertTrue(claim_student_session(self.student.pk, self.client.session.session_key))

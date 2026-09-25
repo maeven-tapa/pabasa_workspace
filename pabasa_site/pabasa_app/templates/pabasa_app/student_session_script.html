@@ -1,0 +1,4 @@
+{% load static %}
+{{ student_session_config|json_script:"student-session-config" }}
+<link rel="stylesheet" href="{% static 'pabasa_app/css/student_session.css' %}?v=1">
+<script src="{% static 'pabasa_app/js/student_session.js' %}?v=1" defer></script>
