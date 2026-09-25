@@ -6,6 +6,16 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>GAWAIN 4: Letrang Oo | PABASA</title>
   <link rel="stylesheet" href="{% static 'pabasa_app/css/lesson_7_gawain_4.css' %}?v=20260918-2">
+  <style>
+    body:has(.done) .back{display:none!important}
+    .card:has(.done){display:grid!important;place-items:center!important;min-height:0!important;height:auto!important;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;padding:0!important;overflow:visible!important}
+    .card:has(.done) .done{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:18px!important;width:min(540px,92vw)!important;height:auto!important;min-height:0!important;margin:auto!important;padding:40px 38px!important;border:0!important;border-radius:32px!important;background:#fff!important;color:#183e63!important;box-shadow:0 14px 30px rgba(30,91,122,.16)!important;overflow:visible!important}
+    .card:has(.done) .done:before,.card:has(.done) .done:after,.card:has(.done) .done h1:after,.card:has(.done) .done p:after{content:none!important;display:none!important}
+    .card:has(.done) .done h1{font-size:clamp(1.6rem,3vw,1.9rem)!important;line-height:1.15!important;color:#183e63!important}
+    .card:has(.done) .done p{font-size:1.15rem!important;line-height:1.35!important;color:#183e63!important}
+    .card:has(.done) .done a,.card:has(.done) .done .button{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:330px!important;min-height:58px!important;padding:14px 28px!important;border-radius:999px!important;background:#299e9a!important;color:#fff!important;text-decoration:none!important;box-shadow:0 7px #187b7a!important;pointer-events:auto!important;position:relative!important;z-index:3!important}
+    body:has(.done) #session-3-start{display:none!important;pointer-events:none!important}
+  </style>
 </head>
 <body>
   <main class="page">
@@ -78,7 +88,7 @@
     }
 
     function render(){
-      if(index>=3){app.innerHTML='<div class="done"><div><h1>Magaling!</h1><p>Natapos mo ang GAWAIN 4: Letrang Oo.</p></div></div>';return}
+      if(index>=3){app.innerHTML='<div class="done"><h1>Tapos na ang gawain! 🎉</h1><p>Mahusay! Nakumpleto mo na ang aktibidad.</p><a class="button" href="{% url "assessment" %}">BALIK SA AKING ARALIN</a></div>';app.inert=false;return}
       const row='<div class="row"><span class="model"><b>O</b><i>o</i></span><canvas aria-label="Hanay '+(index+1)+'"></canvas></div>';
       app.innerHTML='<p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 4</p><h1>GAWAIN 4: Letrang Oo</h1><p class="instruction">'+instructionText+'</p><p class="progress">Hanay '+(index+1)+' ng 3</p><div class="sheet">'+row+'</div><p class="hint" id="hint">'+normalHint+'</p><div class="actions"><button class="button clear" id="clear" type="button">Burahin</button><button class="button" id="next" type="button">'+(index===2?'Tapusin':'Susunod')+'</button></div>';
       const canvas=app.querySelector('canvas');
@@ -98,3 +108,16 @@
   </script>
 {% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g4' help_text='Magsanay sumulat ng letrang Oo.' %}</body>
 </html>
+<style>.done,.done-card,.complete{display:grid;place-items:center;width:min(100%,540px);margin:auto;padding:42px 38px;border-radius:32px;background:#fff;color:#183e63;text-align:center;box-shadow:0 14px 30px #1e5b7a25;overflow:visible}.done h1,.done p,.done a,.done-card h1,.done-card p,.done-card a,.complete h1,.complete p,.complete a{font-size:0}.done h1:after,.done-card h1:after,.complete h1:after{content:'Tapos na ang gawain! 🎉';font-size:2rem}.done p:after,.done-card p:after,.complete p:after{content:'Mahusay! Nakumpleto mo na ang aktibidad.';font-size:1.15rem}.done a,.done-card a,.complete a{display:inline-flex;padding:14px 24px;border-radius:999px;background:#299e9a;color:#fff;text-decoration:none;box-shadow:0 7px #187b7a}.done a:after,.done-card a:after,.complete a:after{content:'BALIK SA AKING ARALIN';font-size:1.15rem}.done .button,.complete .done{font-size:0}.done .button:after,.complete .done:after{content:'BALIK SA AKING ARALIN';font-size:1.15rem}</style>
+<style>.card:has(.done) .done,.card:has(.done) .done-card,.card:has(.complete) .complete{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:18px!important;grid-template-columns:1fr!important;width:min(540px,92vw)!important;min-height:0!important;margin:auto!important;padding:40px 38px!important;border-radius:32px!important;background:#fff!important;color:#183e63!important;text-align:center!important;box-shadow:0 14px 30px rgba(30,91,122,.16)!important;overflow:visible!important}.card:has(.done) .done h1,.card:has(.done) .done-card h1,.card:has(.complete) .complete h1{max-width:100%!important;font-size:clamp(1.6rem,3vw,1.9rem)!important;line-height:1.15!important;white-space:normal!important}.card:has(.done) .done p,.card:has(.done) .done-card p,.card:has(.complete) .complete p{max-width:100%!important;margin:0!important;font-size:1.15rem!important;line-height:1.35!important}.card:has(.done) .done a,.card:has(.done) .done-card a,.card:has(.complete) .complete a,.card:has(.done) .done .button{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:330px!important;min-height:58px!important;padding:14px 28px!important;border-radius:999px!important;background:#299e9a!important;color:#fff!important;text-decoration:none!important;box-shadow:0 7px #187b7a!important;pointer-events:auto!important;position:relative!important;z-index:2!important}@media(max-width:620px){.card:has(.done) .done,.card:has(.done) .done-card,.card:has(.complete) .complete{width:min(540px,92vw)!important;padding:34px 24px!important}.card:has(.done) .done a,.card:has(.done) .done-card a,.card:has(.complete) .complete a,.card:has(.done) .done .button{width:100%!important;min-width:0!important}}</style>
+<style>
+  body:has(.done) > main > a{display:none!important}
+  .card:has(.done){background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;padding:0!important;overflow:visible!important;display:grid!important;place-items:center!important}
+  .card:has(.done) .done{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:18px!important;width:min(540px,92vw)!important;padding:40px 38px!important;border-radius:32px!important;background:#fff!important;color:#183e63!important;box-shadow:0 14px 30px rgba(30,91,122,.16)!important;overflow:visible!important;pointer-events:auto!important}
+  .card:has(.done) .done:before,.card:has(.done) .done:after,.card:has(.done) .done h1:after,.card:has(.done) .done p:after{content:none!important;display:none!important}
+  .card:has(.done) .done h1{font-size:clamp(1.6rem,3vw,1.9rem)!important;line-height:1.15!important;color:#183e63!important}
+  .card:has(.done) .done p{font-size:1.15rem!important;line-height:1.35!important;color:#183e63!important}
+  .card:has(.done) .done a,.card:has(.done) .done .button{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:330px!important;min-height:58px!important;padding:14px 28px!important;border-radius:999px!important;background:#299e9a!important;color:#fff!important;text-decoration:none!important;box-shadow:0 7px #187b7a!important;pointer-events:auto!important;position:relative!important;z-index:3!important}
+  body:has(.done) #session-3-start{display:none!important;pointer-events:none!important}
+</style>
+<script>window.addEventListener('load',()=>{const app=document.getElementById('app');if(app?.querySelector('.done'))app.inert=false})</script>

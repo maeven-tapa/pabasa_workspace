@@ -21,6 +21,15 @@ window.__prescribedNarrationAudio = {
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Gawain 2B: Letrang Ii</title>
   <link rel="stylesheet" href="{% static 'pabasa_app/css/lesson_7_gawain_2b.css' %}?v=20260918-6">
+  <style>.card:has(.done){display:grid;place-items:center}.done{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;width:min(540px,92vw);margin:auto;padding:42px 38px;border-radius:32px;background:#fff;color:#183e63;text-align:center;box-shadow:0 14px 30px #1e5b7a25}.done h1{margin:0;font-size:2rem;color:#183e63}.done p{margin:0;font-size:1.15rem;color:#183e63}.done a{display:inline-flex;align-items:center;justify-content:center;min-height:58px;padding:14px 24px;border-radius:999px;background:#299e9a;color:#fff;font-size:1.15rem;text-decoration:none;box-shadow:0 7px #187b7a}</style>
+  <style>
+    .card:has(.done){background:transparent;overflow:visible}
+    .card:has(.done) .done{width:min(560px,92vw);min-height:0;padding:40px 42px 38px;background:#fff;border:0;border-radius:32px;gap:18px;box-shadow:0 14px 30px rgba(30,91,122,.16)}
+    .card:has(.done) .done h1{max-width:100%;font-size:clamp(1.6rem,3vw,1.9rem);line-height:1.15;white-space:normal}
+    .card:has(.done) .done p{font-size:1.15rem;line-height:1.35}
+    .card:has(.done) .done a{min-width:330px;min-height:58px;padding:14px 28px;font-size:1.15rem}
+    @media(max-width:620px){.card:has(.done) .done{width:min(540px,92vw);padding:34px 24px}.card:has(.done) .done a{min-width:0;width:100%}}
+  </style>
 </head>
 <body>
   <main class="page">
@@ -45,7 +54,7 @@ window.__prescribedNarrationAudio = {
     const narrateIntro=async()=>{if(introPlayed)return;introPlayed=true;audioBusy=true;setReadingButtonsDisabled(true);await requestAudio(INTRO_TITLE);await requestAudio(INTRO_INSTRUCTION);audioBusy=false;setReadingButtonsDisabled(false)};
     const narratePart2=async text=>{audioBusy=true;setPart2ControlsDisabled(true);await requestAudio(text);audioBusy=false;setPart2ControlsDisabled(false)};
     function render(){
-      if(d.progress?.activity_completed){app.innerHTML='<div class="done"><div class="done-badge" aria-hidden="true">✓</div><h1>Magaling!</h1><p>Natapos mo ang Gawain 2B.</p></div>';return}
+      if(d.progress?.activity_completed){app.innerHTML='<div class="done"><h1>Tapos na ang gawain! 🎉</h1><p>Mahusay! Nakumpleto mo na ang aktibidad.</p><a href="{% url "assessment" %}">BALIK SA AKING ARALIN</a></div>';app.inert=false;return}
       if(!s.oral_reading_completed){
         let i=s.current_reading_item||0,it=d.items[i];
         app.innerHTML='<h1>Tukuyin ang larawan</h1><p>Tingnan ang larawang nasa kahon. Ano ito?</p><img src="'+it.image_url+'" alt="Larawan: '+it.word+'"><p id="status">Larawan '+(i+1)+' sa 6</p><div class="reading-actions"><button class="button" id="read">Sabihin ang salita</button><button class="button secondary" id="listen">Pakinggan</button></div>';
@@ -70,3 +79,6 @@ window.__prescribedNarrationAudio = {
   </script>
 {% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g2b' help_text='Basahin ang salita at bilugan ang larawang nagsisimula sa Ii.' %}</body>
 </html>
+<style>.done,.done-card,.complete{display:grid;place-items:center;width:min(100%,540px);margin:auto;padding:42px 38px;border-radius:32px;background:#fff;color:#183e63;text-align:center;box-shadow:0 14px 30px #1e5b7a25;overflow:visible}.done h1,.done p,.done a,.done-card h1,.done-card p,.done-card a,.complete h1,.complete p,.complete a{font-size:0}.done h1:after,.done-card h1:after,.complete h1:after{content:'Tapos na ang gawain! 🎉';font-size:2rem}.done p:after,.done-card p:after,.complete p:after{content:'Mahusay! Nakumpleto mo na ang aktibidad.';font-size:1.15rem}.done a,.done-card a,.complete a{display:inline-flex;padding:14px 24px;border-radius:999px;background:#299e9a;color:#fff;text-decoration:none;box-shadow:0 7px #187b7a}.done a:after,.done-card a:after,.complete a:after{content:'BALIK SA AKING ARALIN';font-size:1.15rem}.done .button,.complete .done{font-size:0}.done .button:after,.complete .done:after{content:'BALIK SA AKING ARALIN';font-size:1.15rem}</style>
+<script>document.querySelectorAll('style').forEach(style=>{if(style.textContent.includes('.done,.done-card,.complete'))style.remove()})</script>
+<script>document.addEventListener('DOMContentLoaded',()=>{const app=document.getElementById('app');if(app?.querySelector('.done')){app.inert=false;document.querySelector('a[href*="assessment"]')?.style.setProperty('display','none','important')}})</script>

@@ -94,3 +94,16 @@ new MutationObserver(()=>{if(window.__lessonStartReady)setup()}).observe(app,{ch
 });
 </script>
 {% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g1' help_text='Tingnan ang larawan, basahin ang salita, at piliin ang tamang sagot.' %}
+<style>
+  .lesson7-completion{inset:0!important;padding:0!important;background:transparent!important}
+  .lesson7-completion-card{width:min(540px,92vw)!important;padding:42px 38px 40px!important;border-radius:32px!important;background:#fff!important;box-shadow:0 14px 30px #1e5b7a25!important}
+  .lesson7-completion-stars,.lesson7-completion-score{display:none!important}
+  .lesson7-completion-card h1,.lesson7-completion-card p,.lesson7-completion-card .done{font-size:0!important}
+  .lesson7-completion-card h1:after{content:'Tapos na ang gawain! 🎉';font-size:2rem}
+  .lesson7-completion-card p:after{content:'Mahusay! Nakumpleto mo na ang aktibidad.';font-size:1.15rem}
+  .lesson7-completion-card .done{display:inline-flex!important;align-items:center;justify-content:center;width:100%!important;min-height:58px;padding:14px 24px;margin:20px auto 0!important;border-radius:999px;background:#299e9a;color:#fff;box-shadow:0 7px #187b7a}
+  .lesson7-completion-card .done:after{content:'BALIK SA AKING ARALIN';font-size:1.15rem}
+  body:has(.lesson7-completion)>.page>a{display:none}
+  body:has(.lesson7-completion) a[href*="assessment"]{display:none!important}
+</style>
+<style>.done,.done-card,.complete{display:grid;place-items:center;width:min(100%,540px);margin:auto;padding:42px 38px;border-radius:32px;background:#fff;color:#183e63;text-align:center;box-shadow:0 14px 30px #1e5b7a25;overflow:visible}.done h1,.done p,.done a,.done-card h1,.done-card p,.done-card a,.complete h1,.complete p,.complete a{font-size:0}.done h1:after,.done-card h1:after,.complete h1:after{content:'Tapos na ang gawain! 🎉';font-size:2rem}.done p:after,.done-card p:after,.complete p:after{content:'Mahusay! Nakumpleto mo na ang aktibidad.';font-size:1.15rem}.done a,.done-card a,.complete a{display:inline-flex;padding:14px 24px;border-radius:999px;background:#299e9a;color:#fff;text-decoration:none;box-shadow:0 7px #187b7a}.done a:after,.done-card a:after,.complete a:after{content:'BALIK SA AKING ARALIN';font-size:1.15rem}.done .button,.complete .done{font-size:0}.done .button:after,.complete .done:after{content:'BALIK SA AKING ARALIN';font-size:1.15rem}</style>
