@@ -4,3 +4,142 @@
 .wb-l24-g1-page #wb-back{display:inline-flex;padding:9px 17px;border-radius:999px;background:#fff;box-shadow:0 5px 14px #1f56661a}
 .wb-l24-g1-page .wb-lesson-header{margin-bottom:18px}.wb-l24-g1-page #wb-progress{font-size:16px}
 @media(max-width:600px){.wb-l24-g1-page .wb-shell{padding-inline:14px}.wb-l24-g1-page .wb-lesson-header{padding:19px}}
+
+/* Lesson 24 Bahagi 1 Gawain 1: target-only reference-led stage treatment. */
+.wb-l24-g1-page{--l24-ink:#183e63;--l24-teal:#299e9a;--l24-teal-dark:#187b7a;--l24-gold:#e7af45;min-height:100svh;height:100svh;overflow:hidden;background:linear-gradient(145deg,#e7f8f7 0%,#f8fbff 58%,#fff4df 100%);font-family:Nunito,system-ui,sans-serif}
+.wb-l24-g1-page .wb-shell{display:flex;flex-direction:column;width:min(1240px,calc(100% - clamp(20px,5vw,72px)));height:calc(100svh - clamp(18px,4vh,42px));min-height:0;margin:clamp(9px,2vh,21px) auto;padding:clamp(14px,2.5vh,28px) clamp(18px,4vw,58px) clamp(12px,2vh,22px);border:2px solid #ffffffc7;border-radius:clamp(26px,3vw,40px);background:#ffffffb5;box-shadow:0 18px 45px #1e5b7a2e;backdrop-filter:blur(10px);overflow:hidden}
+.wb-l24-g1-page .wb-lesson-header{display:block;flex:0 0 auto;margin:0 0 clamp(6px,1vh,12px);padding:0;text-align:center;background:transparent;border:0;border-radius:0;box-shadow:none;overflow:visible}
+.wb-l24-g1-page .wb-lesson-header:after,.wb-l24-g1-page .wb-lesson-art{display:none}
+.wb-l24-g1-page .wb-lesson-copy{display:flex;flex-direction:column;align-items:center;min-width:0}
+.wb-l24-g1-page #wb-back{align-self:flex-start;margin:0 0 clamp(8px,1.5vh,16px);padding:9px 20px;border:2px solid #c8e7ec;border-radius:999px;background:#fff;color:#22648b;font-size:clamp(.95rem,1.35vw,1.15rem);font-weight:900;box-shadow:0 5px 12px #1f648b24;transition:transform .16s,box-shadow .16s}
+.wb-l24-g1-page #wb-back:hover{transform:translateY(-2px);box-shadow:0 8px 16px #1f648b30}
+.wb-l24-g1-page .wb-lesson-label{width:max-content;max-width:100%;margin:0 auto clamp(6px,1vh,12px)!important;padding:7px 20px;border-radius:999px;background:#277f82;color:#fff!important;font-size:clamp(.76rem,1.15vw,.98rem)!important;font-weight:900!important;letter-spacing:.06em;text-transform:uppercase}
+.wb-l24-g1-page .wb-lesson-header h1{margin:0;color:var(--l24-ink);font-size:clamp(2rem,4.1vw,3.65rem);line-height:1.05;letter-spacing:-.035em;text-align:center}
+.wb-l24-g1-page .wb-instruction{max-width:980px;margin:7px auto 0!important;color:#496c85!important;font-size:clamp(1.15rem,1.8vw,1.55rem);font-weight:800;line-height:1.28;text-align:center}
+.wb-l24-g1-page .wb-lesson-header~#wb-status{display:none}
+.wb-l24-g1-page #wb-progress{flex:0 0 auto;margin:0 auto clamp(5px,1vh,10px);padding:4px 16px;border:0;background:#ffffffe8;color:#3a6a89;font-size:clamp(1rem,1.35vw,1.2rem);box-shadow:0 6px 15px #1f566619}
+.wb-l24-g1-page #wb-progress-track{flex:0 0 auto;width:min(360px,65%);height:9px;margin:0 auto clamp(7px,1.3vh,14px);border:0;background:#dcecec;box-shadow:none}
+.wb-l24-g1-page #wb-progress-fill{background:linear-gradient(90deg,#f4c866,#299e9a)}
+.wb-l24-g1-page #wb-content{display:flex;flex:1 1 auto;min-height:0;overflow:hidden}
+.wb-l24-g1-page .wb-l22-builder{display:grid;flex:1 1 auto;min-height:0;grid-template-columns:minmax(0,1.45fr) minmax(250px,.82fr);grid-template-rows:auto minmax(0,1fr) auto;gap:clamp(8px,1.2vh,14px) clamp(12px,1.6vw,20px);overflow:hidden}
+.wb-l24-g1-page .wb-l22-banner{grid-column:1/-1;min-height:0;margin:0;padding:clamp(8px,1.2vh,13px) clamp(12px,2vw,22px);border:2px solid #f0d38d;border-radius:999px;background:#fffaf0;color:var(--l24-ink);font-size:clamp(1rem,1.45vw,1.25rem);line-height:1.2;box-shadow:0 7px 16px #dcae321a}
+.wb-l24-g1-page #wb-l22-instruction-replay{min-height:42px;padding:7px 15px;border:3px solid #94d9d6;border-radius:999px;background:#fff;color:var(--l24-teal-dark);font-size:clamp(.88rem,1.15vw,1rem);font-weight:900;box-shadow:0 4px 0 #b7d6dc}
+.wb-l24-g1-page .wb-l22-builder .wb-bigbox,.wb-l24-g1-page .wb-l22-builder .wb-reading-panel,.wb-l24-g1-page .wb-l22-builder .wb-word-panel{min-height:0;padding:clamp(13px,1.6vh,21px) clamp(15px,2vw,27px);border:2px solid #cce9f1;border-radius:clamp(22px,2.2vw,30px);background:#ffffffe8;box-shadow:0 12px 25px #1e5b7a1c;overflow:hidden}
+.wb-l24-g1-page .wb-l22-builder h2{margin:0 0 clamp(5px,1vh,11px);color:var(--l24-teal-dark);font-size:clamp(1.3rem,2vw,1.8rem);line-height:1.1;text-align:center}
+.wb-l24-g1-page .wb-box-help{margin:0 0 clamp(5px,1vh,12px);color:#55727e;font-size:clamp(.82rem,1.1vw,1rem);line-height:1.2;text-align:center}
+.wb-l24-g1-page .wb-bigbox{display:flex;flex-direction:column}
+.wb-l24-g1-page .wb-bigbox-grid{display:grid;grid-template-rows:repeat(4,minmax(0,1fr));flex:1 1 auto;min-height:0;gap:0;margin:0;padding:0;border:4px solid #94d9d6;border-radius:clamp(18px,2vw,26px);background:#ffffffe8;overflow:visible}
+.wb-l24-g1-page .wb-bigbox-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));min-height:0;gap:0}
+.wb-l24-g1-page .wb-bigbox-row:not(:last-child){border-bottom:2px solid #94d9d6}
+.wb-l24-g1-page .wb-bigbox-cell{display:flex;min-width:0;min-height:0;gap:0;grid-auto-rows:1fr}
+.wb-l24-g1-page .wb-bigbox-cell:not(:last-child){border-right:2px solid #94d9d6}
+.wb-l24-g1-page .wb-l22-builder .wb-bigbox-tile{width:100%;height:100%;min-height:0;padding:2px 6px;border:0;border-radius:0;background:#fff;color:var(--l24-ink);font-family:Nunito,system-ui,sans-serif;font-size:clamp(1.35rem,2.8vw,2.35rem);font-weight:950;line-height:1.05;box-shadow:none}
+.wb-l24-g1-page .wb-l22-builder .wb-bigbox-tile.is-active{border:0;background:#fff4bd;box-shadow:inset 0 0 0 4px var(--l24-gold);color:var(--l24-ink)}
+.wb-l24-g1-page .wb-l22-builder .wb-bigbox-tile.is-complete{border:0;background:#e8f5ea;color:#32735a}
+.wb-l24-g1-page .wb-reading-panel{display:flex;flex-direction:column;align-items:stretch}
+.wb-l24-g1-page .wb-phase-status{min-height:clamp(28px,4vh,44px);margin:0!important;color:var(--l24-ink)!important;font-size:clamp(1.25rem,2.3vw,2rem);line-height:1.1;font-weight:950;text-align:center}
+.wb-l24-g1-page .wb-phase-status.wb-feedback-error{color:#ae4032!important}
+.wb-l24-g1-page .wb-reading-target-label{margin:4px 0 0!important;color:#55727e!important;font-size:.8rem!important;font-weight:900;text-align:center;text-transform:uppercase;letter-spacing:.08em}
+.wb-l24-g1-page .wb-reading-target{display:block;margin:0 0 5px;color:var(--l24-ink);font-size:clamp(2.1rem,4.2vw,3.7rem);line-height:1.03;text-align:center}
+.wb-l24-g1-page .wb-reading-attempts{margin:3px 0 8px!important;color:#a45d00!important;font-size:clamp(.95rem,1.45vw,1.2rem)!important;font-weight:950;text-align:center}
+.wb-l24-g1-page .wb-transcript{display:grid;gap:3px;min-height:clamp(48px,7vh,76px);margin:0 0 8px;padding:8px;border:2px solid #d6e8f2;border-radius:14px;background:#f6fbfe;text-align:center}
+.wb-l24-g1-page .wb-transcript span{color:#557b91;font-size:.72rem;font-weight:900;letter-spacing:.12em}.wb-l24-g1-page .wb-transcript strong{overflow-wrap:anywhere;color:#16465d;font-size:clamp(1rem,1.7vw,1.35rem);line-height:1.1}
+.wb-l24-g1-page #wb-l22-reading-action{display:grid;gap:9px;margin:8px 0 10px}.wb-l24-g1-page #wb-l22-reading-action button{width:100%;min-height:clamp(50px,7vh,66px);border:0;border-radius:999px;background:linear-gradient(135deg,#2ea9f4,#1d86df);color:#fff;font-size:clamp(1rem,1.5vw,1.3rem);font-weight:950;box-shadow:0 6px 0 #126bb5,0 10px 18px #1481db2e}.wb-l24-g1-page #wb-l22-reading-action button.wb-secondary{background:#fff;border:2px solid #2b93db;color:#16618b;box-shadow:0 4px 0 #b9dbe8}
+.wb-l24-g1-page .wb-reading-tip{margin:auto 0 0!important;padding:10px;border-radius:14px;background:#eef6fc;color:#456a87!important;font-size:clamp(.78rem,1.1vw,.95rem);line-height:1.25}
+.wb-l24-g1-page .wb-word-panel{grid-column:1/-1}.wb-l24-g1-page .wb-word-panel.is-locked{background:#ffffffe8}.wb-l24-g1-page .wb-selected-parts{min-height:clamp(40px,6vh,62px);padding:6px 9px;border:2px dashed #afd0d7;border-radius:14px}.wb-l24-g1-page .wb-selected-part{min-width:38px;min-height:34px;padding:4px 9px;background:#fff1c2;border:1px solid #e9c462;border-radius:10px;color:var(--l24-ink);font-size:clamp(1rem,1.4vw,1.25rem);font-weight:900}.wb-l24-g1-page .wb-builder-feedback{min-height:22px;font-size:clamp(.95rem,1.4vw,1.2rem);line-height:1.15}.wb-l24-g1-page #wb-action{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:10px;margin:clamp(7px,1.2vh,14px) 0 0}.wb-l24-g1-page #wb-action button{min-width:180px;min-height:clamp(46px,6vh,60px);padding:9px 20px;border:0;border-radius:999px;background:var(--l24-teal);color:#fff;font-size:clamp(1rem,1.45vw,1.25rem);font-weight:950;box-shadow:0 5px 0 var(--l24-teal-dark)}.wb-l24-g1-page #wb-action button.wb-secondary{background:#fff;color:var(--l24-teal-dark);border:2px solid #94d9d6;box-shadow:0 4px 0 #b7d6dc}
+@media(max-width:820px){.wb-l24-g1-page .wb-shell{width:calc(100% - 24px);padding-inline:18px}.wb-l24-g1-page .wb-l22-builder{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr) auto auto}.wb-l24-g1-page .wb-reading-panel{order:3;max-width:680px;width:100%;margin-inline:auto}.wb-l24-g1-page .wb-bigbox{order:2}.wb-l24-g1-page .wb-l22-banner{order:1}.wb-l24-g1-page .wb-word-panel{order:4}.wb-l24-g1-page .wb-bigbox-grid{max-width:680px;width:100%;margin-inline:auto}}
+@media(max-width:520px){.wb-l24-g1-page{padding:6px}.wb-l24-g1-page .wb-shell{width:calc(100% - 8px);height:calc(100svh - 12px);margin:6px auto;padding:10px 10px 12px;border-radius:24px}.wb-l24-g1-page #wb-back{align-self:stretch;justify-content:center;margin-bottom:10px}.wb-l24-g1-page .wb-lesson-label{padding:6px 12px;font-size:.7rem!important}.wb-l24-g1-page .wb-lesson-header h1{font-size:clamp(1.7rem,8.5vw,2.4rem)}.wb-l24-g1-page .wb-instruction{font-size:clamp(.95rem,4.3vw,1.15rem)}.wb-l24-g1-page .wb-l22-builder{gap:8px}.wb-l24-g1-page .wb-l22-builder .wb-bigbox,.wb-l24-g1-page .wb-l22-builder .wb-reading-panel,.wb-l24-g1-page .wb-l22-builder .wb-word-panel{padding:10px 9px;border-radius:19px}.wb-l24-g1-page .wb-l22-builder h2{font-size:1.2rem}.wb-l24-g1-page .wb-bigbox-grid{border-width:3px;border-radius:17px}.wb-l24-g1-page .wb-bigbox-row:not(:last-child),.wb-l24-g1-page .wb-bigbox-cell:not(:last-child){border-width:1px}.wb-l24-g1-page .wb-l22-builder .wb-bigbox-tile{font-size:clamp(1.2rem,6.5vw,1.7rem)}.wb-l24-g1-page .wb-reading-target{font-size:2.4rem}.wb-l24-g1-page #wb-action{margin-inline:0}.wb-l24-g1-page #wb-action button{width:100%;min-width:0}}
+@media(max-height:700px){.wb-l24-g1-page .wb-shell{padding-top:10px;padding-bottom:10px}.wb-l24-g1-page #wb-back{margin-bottom:7px;padding-block:7px}.wb-l24-g1-page .wb-lesson-label{margin-bottom:5px!important;padding-block:5px}.wb-l24-g1-page .wb-instruction{margin-top:4px!important;font-size:clamp(1rem,1.5vw,1.2rem)}.wb-l24-g1-page #wb-progress{margin-bottom:3px}.wb-l24-g1-page #wb-progress-track{height:7px;margin-bottom:5px}.wb-l24-g1-page .wb-l22-builder{gap:6px 12px}.wb-l24-g1-page .wb-l22-builder .wb-bigbox,.wb-l24-g1-page .wb-l22-builder .wb-reading-panel,.wb-l24-g1-page .wb-l22-builder .wb-word-panel{padding:9px 12px}.wb-l24-g1-page .wb-l22-builder h2{font-size:1.2rem}.wb-l24-g1-page .wb-reading-target{font-size:clamp(1.8rem,3.7vw,3rem)}.wb-l24-g1-page #wb-l22-reading-action{margin-block:4px}.wb-l24-g1-page #wb-l22-reading-action button{min-height:44px}.wb-l24-g1-page #wb-action{margin-top:5px}.wb-l24-g1-page #wb-action button{min-height:42px}}
+
+/* Layout correction: give the instruction rail its own track and let the
+   interactive Big Box/Basahin/word area use the remaining card width. */
+.wb-l24-g1-page #wb-content{display:block;overflow:visible}
+.wb-l24-g1-page .wb-l22-builder{grid-template-columns:minmax(215px,24%) minmax(0,1.55fr) minmax(245px,.9fr);grid-template-rows:minmax(0,1fr) auto;gap:clamp(10px,1.4vw,18px);overflow:visible}
+.wb-l24-g1-page .wb-l22-banner{grid-column:1;grid-row:1 / span 2;align-self:stretch;display:flex;flex-direction:column;justify-content:center;align-items:stretch;gap:clamp(12px,2vh,22px);width:auto;min-width:0;margin:0;padding:clamp(16px,2vw,28px);border-radius:26px;font-size:clamp(1rem,1.35vw,1.25rem);text-align:center}
+.wb-l24-g1-page .wb-l22-banner>span{display:block;overflow-wrap:anywhere}
+.wb-l24-g1-page #wb-l22-instruction-replay{align-self:center;width:min(100%,210px)}
+.wb-l24-g1-page .wb-l22-builder .wb-bigbox{grid-column:2;grid-row:1;overflow:visible}
+.wb-l24-g1-page .wb-l22-builder .wb-reading-panel{grid-column:3;grid-row:1;overflow:visible}
+.wb-l24-g1-page .wb-l22-builder .wb-word-panel{grid-column:2 / 4;grid-row:2;overflow:visible}
+.wb-l24-g1-page .wb-bigbox-grid{width:100%;min-width:0}
+.wb-l24-g1-page .wb-bigbox-cell{min-width:0;overflow:visible}
+.wb-l24-g1-page .wb-l22-builder .wb-bigbox-tile{min-width:0;overflow-wrap:anywhere;white-space:normal;word-break:normal;font-size:clamp(1.35rem,2.15vw,2.15rem)}
+.wb-l24-g1-page .wb-reading-panel{min-width:0}
+.wb-l24-g1-page .wb-reading-target{white-space:normal;overflow-wrap:anywhere}
+.wb-l24-g1-page #wb-l22-reading-action{flex:0 0 auto}
+.wb-l24-g1-page .wb-reading-tip{overflow-wrap:anywhere}
+.wb-l24-g1-page .wb-locked-note{justify-content:center;min-width:0;text-align:center;white-space:normal;overflow-wrap:anywhere}
+@media(max-width:900px){.wb-l24-g1-page .wb-l22-builder{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto auto}.wb-l24-g1-page .wb-l22-banner,.wb-l24-g1-page .wb-l22-builder .wb-bigbox,.wb-l24-g1-page .wb-l22-builder .wb-reading-panel,.wb-l24-g1-page .wb-l22-builder .wb-word-panel{grid-column:1;grid-row:auto}.wb-l24-g1-page .wb-l22-banner{align-self:auto;min-height:0;flex-direction:row;justify-content:center;align-items:center;padding:12px 18px}.wb-l24-g1-page .wb-l22-banner>span{flex:1 1 260px}.wb-l24-g1-page #wb-l22-instruction-replay{flex:0 0 auto;width:auto}.wb-l24-g1-page .wb-l22-builder .wb-bigbox,.wb-l24-g1-page .wb-l22-builder .wb-reading-panel{max-width:none;width:100%;margin:0}.wb-l24-g1-page .wb-bigbox-grid{max-width:none}}
+@media(max-width:520px){.wb-l24-g1-page .wb-l22-banner{flex-direction:column;gap:8px;padding:10px 12px}.wb-l24-g1-page #wb-l22-instruction-replay{width:min(100%,220px)}.wb-l24-g1-page .wb-l22-builder .wb-bigbox-tile{font-size:clamp(1.2rem,6vw,1.7rem)}}
+
+/* Final viewport correction: compact reference-style header/bar, with the
+   widened Big Box and Basahin interaction sharing one efficient row. */
+.wb-l24-g1-page{background:url('../prescribed/PRESCRIBED-BG.jpg') center/cover no-repeat}
+.wb-l24-g1-page .wb-shell{width:min(1250px,calc(100% - clamp(22px,5vw,64px)));height:calc(100svh - clamp(18px,4vh,34px));margin:clamp(9px,2vh,17px) auto;padding:clamp(10px,1.8vh,18px) clamp(18px,4vw,64px) clamp(9px,1.4vh,14px);border-radius:42px;overflow:visible}
+.wb-l24-g1-page .wb-lesson-header{margin:0 0 clamp(3px,.7vh,7px);padding:0}
+.wb-l24-g1-page #wb-back{margin-bottom:clamp(5px,1vh,10px);padding:8px 18px;min-height:0}
+.wb-l24-g1-page .wb-lesson-label{margin-bottom:clamp(3px,.6vh,7px)!important;padding:6px 18px}
+.wb-l24-g1-page .wb-lesson-header h1{font-size:clamp(1.9rem,3.6vw,3.25rem);line-height:1.03}
+.wb-l24-g1-page .wb-instruction{margin:4px auto 0!important;font-size:clamp(1rem,1.55vw,1.3rem);line-height:1.2}
+.wb-l24-g1-page #wb-progress{margin:2px auto 4px;padding:2px 13px;font-size:clamp(.9rem,1.2vw,1.05rem)}
+.wb-l24-g1-page #wb-progress-track{height:7px;margin:0 auto 6px}
+.wb-l24-g1-page #wb-content{display:block;flex:1 1 auto;min-height:0;overflow:visible}
+.wb-l24-g1-page .wb-l22-builder{grid-template-columns:minmax(0,1.55fr) minmax(260px,.85fr);grid-template-rows:auto minmax(0,1fr) auto;gap:clamp(7px,1vh,11px) clamp(10px,1.5vw,18px);overflow:visible}
+.wb-l24-g1-page .wb-l22-banner{grid-column:1/-1;grid-row:1;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:clamp(10px,1.6vw,22px);min-height:0;margin:0;padding:clamp(8px,1.2vh,12px) clamp(13px,1.8vw,22px);border-radius:999px;font-size:clamp(.92rem,1.25vw,1.12rem);line-height:1.2;text-align:left}
+.wb-l24-g1-page .wb-l22-banner>span{display:flex;align-items:center;min-width:0;flex:1 1 auto;overflow-wrap:normal}
+.wb-l24-g1-page .wb-l22-banner .wb-speaker-icon{flex:0 0 auto;margin-right:7px}
+.wb-l24-g1-page #wb-l22-instruction-replay{flex:0 0 auto;align-self:center;width:auto;min-height:38px;padding:6px 14px;font-size:clamp(.8rem,1vw,.95rem)}
+.wb-l24-g1-page .wb-l22-builder .wb-bigbox{grid-column:1;grid-row:2;padding:clamp(10px,1.2vh,16px) clamp(13px,1.6vw,22px);overflow:visible}
+.wb-l24-g1-page .wb-l22-builder .wb-reading-panel{grid-column:2;grid-row:2;padding:clamp(10px,1.2vh,16px) clamp(14px,1.6vw,22px);overflow:visible}
+.wb-l24-g1-page .wb-l22-builder .wb-word-panel{grid-column:1/-1;grid-row:3;padding:clamp(8px,1vh,13px) clamp(13px,1.6vw,22px);overflow:visible}
+.wb-l24-g1-page .wb-l22-builder h2{margin-bottom:clamp(3px,.6vh,7px);font-size:clamp(1.15rem,1.8vw,1.55rem)}
+.wb-l24-g1-page .wb-box-help{margin:0 0 clamp(4px,.7vh,8px);font-size:clamp(.75rem,1vw,.9rem)}
+.wb-l24-g1-page .wb-bigbox-grid{flex:1 1 auto;grid-template-rows:repeat(4,minmax(0,1fr));min-height:0}
+.wb-l24-g1-page .wb-bigbox-cell{min-height:0}
+.wb-l24-g1-page .wb-l22-builder .wb-bigbox-tile{font-size:clamp(1.35rem,2.25vw,2.15rem)}
+.wb-l24-g1-page .wb-phase-status{min-height:clamp(24px,3.4vh,36px);font-size:clamp(1.15rem,1.9vw,1.7rem)}
+.wb-l24-g1-page .wb-reading-target-label{margin:2px 0 0!important;font-size:.68rem!important}
+.wb-l24-g1-page .wb-reading-target{margin-bottom:2px;font-size:clamp(1.9rem,3.5vw,3rem)}
+.wb-l24-g1-page .wb-reading-attempts{margin:2px 0 4px!important;font-size:clamp(.85rem,1.15vw,1rem)!important}
+.wb-l24-g1-page .wb-transcript{min-height:clamp(34px,5vh,54px);margin-bottom:4px;padding:5px 7px}
+.wb-l24-g1-page .wb-transcript span{font-size:.6rem}.wb-l24-g1-page .wb-transcript strong{font-size:clamp(.85rem,1.35vw,1.1rem)}
+.wb-l24-g1-page #wb-l22-reading-action{gap:6px;margin:5px 0 6px}.wb-l24-g1-page #wb-l22-reading-action button{min-height:clamp(42px,5.5vh,56px);padding:6px 9px;font-size:clamp(.86rem,1.25vw,1.08rem)}
+.wb-l24-g1-page .wb-reading-tip{padding:7px 8px;font-size:clamp(.68rem,.9vw,.82rem)}
+.wb-l24-g1-page .wb-locked-note{min-height:0;padding:7px 12px;font-size:clamp(.9rem,1.2vw,1.08rem)}
+.wb-l24-g1-page .wb-selected-parts{min-height:34px;padding:4px 7px}.wb-l24-g1-page .wb-selected-part{min-height:27px;padding:3px 7px;font-size:clamp(.85rem,1.1vw,1rem)}
+.wb-l24-g1-page .wb-builder-feedback{min-height:16px;font-size:clamp(.82rem,1.1vw,1rem)}
+.wb-l24-g1-page #wb-action{flex:0 0 auto;min-height:0;margin:clamp(4px,.8vh,8px) 0 0;gap:7px}
+.wb-l24-g1-page #wb-action button{min-height:clamp(36px,5vh,48px);padding:6px 16px;font-size:clamp(.82rem,1.1vw,1rem)}
+@media(max-width:900px){.wb-l24-g1-page .wb-shell{height:auto;min-height:calc(100svh - 18px);overflow:visible}.wb-l24-g1-page .wb-l22-builder{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto auto}.wb-l24-g1-page .wb-l22-banner,.wb-l24-g1-page .wb-l22-builder .wb-bigbox,.wb-l24-g1-page .wb-l22-builder .wb-reading-panel,.wb-l24-g1-page .wb-l22-builder .wb-word-panel{grid-column:1;grid-row:auto}.wb-l24-g1-page .wb-l22-banner{flex-direction:row}.wb-l24-g1-page .wb-l22-builder .wb-bigbox,.wb-l24-g1-page .wb-l22-builder .wb-reading-panel{max-width:none;width:100%;margin:0}}
+@media(max-width:520px){.wb-l24-g1-page{padding:6px}.wb-l24-g1-page .wb-shell{width:calc(100% - 8px);min-height:calc(100svh - 12px);margin:6px auto;padding:9px 10px 11px;border-radius:26px}.wb-l24-g1-page #wb-back{align-self:stretch;justify-content:center;margin-bottom:8px}.wb-l24-g1-page .wb-lesson-label{padding:5px 12px;font-size:.68rem!important}.wb-l24-g1-page .wb-lesson-header h1{font-size:clamp(1.6rem,8vw,2.25rem)}.wb-l24-g1-page .wb-instruction{font-size:clamp(.9rem,4vw,1.08rem)}.wb-l24-g1-page .wb-l22-banner{flex-direction:column;gap:7px;border-radius:18px;padding:8px 10px;text-align:center}.wb-l24-g1-page .wb-l22-banner>span{justify-content:center;text-align:center}.wb-l24-g1-page #wb-l22-instruction-replay{width:min(100%,220px)}.wb-l24-g1-page .wb-l22-builder .wb-bigbox,.wb-l24-g1-page .wb-l22-builder .wb-reading-panel,.wb-l24-g1-page .wb-l22-builder .wb-word-panel{padding:9px 10px;border-radius:20px}.wb-l24-g1-page .wb-l22-builder .wb-bigbox-tile{font-size:clamp(1.15rem,5.8vw,1.6rem)}}
+@media(max-height:700px) and (min-width:901px){.wb-l24-g1-page .wb-shell{padding-top:8px;padding-bottom:8px}.wb-l24-g1-page #wb-back{margin-bottom:4px;padding-block:6px}.wb-l24-g1-page .wb-lesson-label{margin-bottom:3px!important;padding-block:4px}.wb-l24-g1-page .wb-lesson-header h1{font-size:clamp(1.75rem,3.2vw,2.8rem)}.wb-l24-g1-page .wb-instruction{font-size:clamp(.9rem,1.25vw,1.08rem)}.wb-l24-g1-page .wb-l22-banner{padding-block:6px}.wb-l24-g1-page .wb-l22-builder .wb-bigbox,.wb-l24-g1-page .wb-l22-builder .wb-reading-panel{padding-block:8px}.wb-l24-g1-page #wb-action{margin-top:3px}}
+
+/* Safety correction: keep the content grid inside the flex item's measured
+   space so the reading controls cannot spill into the footer controls. */
+.wb-l24-g1-page #wb-content{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;height:100%;overflow:visible}
+.wb-l24-g1-page .wb-l22-builder{height:100%;min-height:0;flex:1 1 auto}
+.wb-l24-g1-page .wb-l22-builder .wb-reading-panel{min-height:0;height:auto}
+.wb-l24-g1-page #wb-l22-reading-action{min-width:0;min-height:0;flex:0 0 auto}
+.wb-l24-g1-page #wb-l22-reading-action button{display:flex;align-items:center;justify-content:center;min-width:0;width:100%;height:auto;line-height:1.15;white-space:normal;overflow:visible;text-align:center}
+.wb-l24-g1-page #wb-action{position:static;display:flex;flex:0 0 auto;align-items:center;justify-content:center;min-height:0;width:100%;padding-top:clamp(3px,.6vh,7px);clear:both}
+.wb-l24-g1-page #wb-action button{position:static;display:inline-flex;align-items:center;justify-content:center;min-width:min(220px,100%);width:auto;height:auto;line-height:1.15;white-space:normal;overflow:visible;text-align:center}
+@media(max-width:900px){.wb-l24-g1-page{height:auto;min-height:100svh;overflow-x:hidden;overflow-y:auto}.wb-l24-g1-page .wb-shell{height:auto;min-height:calc(100svh - 18px)}.wb-l24-g1-page #wb-content{height:auto;flex:0 0 auto}.wb-l24-g1-page .wb-l22-builder{height:auto;flex:0 0 auto}.wb-l24-g1-page .wb-l22-builder .wb-bigbox,.wb-l24-g1-page .wb-l22-builder .wb-reading-panel{height:auto;min-height:0}.wb-l24-g1-page #wb-action{padding-bottom:4px}}
+@media(max-height:700px) and (min-width:901px){.wb-l24-g1-page{height:auto;min-height:100svh;overflow-x:hidden;overflow-y:auto}.wb-l24-g1-page .wb-shell{height:auto;min-height:calc(100svh - 18px)}.wb-l24-g1-page #wb-content{height:auto;flex:0 0 auto}.wb-l24-g1-page .wb-l22-builder{height:auto;flex:0 0 auto}.wb-l24-g1-page #wb-action{padding-bottom:5px}}
+
+/* Lesson 22 Big Box composition, scoped to Lesson 24 Gawain 1. The existing
+   controller still owns every panel and control; this stage only supplies
+   the reference layout's two-column geometry. */
+.wb-l24-g1-page .wb-l24-g1-stage{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(320px,.92fr);grid-template-rows:auto minmax(0,1fr) auto auto;gap:clamp(8px,1.2vh,14px) clamp(12px,1.5vw,20px);flex:1 1 auto;min-height:0;width:100%;align-items:stretch}
+.wb-l24-g1-page .wb-l24-g1-stage #wb-content{display:contents}
+.wb-l24-g1-page .wb-l24-g1-stage .wb-l22-banner{grid-column:1/-1;grid-row:1;min-width:0}
+.wb-l24-g1-page .wb-l24-g1-stage .wb-bigbox{grid-column:1;grid-row:2 / span 2;min-width:0;min-height:0;height:auto;overflow:visible}
+.wb-l24-g1-page .wb-l24-g1-stage .wb-reading-panel{grid-column:2;grid-row:2;min-width:0;min-height:0;height:auto;overflow:visible}
+.wb-l24-g1-page .wb-l24-g1-stage .wb-word-panel{grid-column:2;grid-row:3;min-width:0;min-height:0;height:auto;overflow:visible}
+.wb-l24-g1-page .wb-l24-g1-stage #wb-action{grid-column:2;grid-row:4;min-width:0;width:auto;margin:0;min-height:0;padding:0;align-self:end;justify-self:stretch}
+.wb-l24-g1-page .wb-l24-g1-stage #wb-action button{width:auto;min-width:min(220px,100%);margin:0}
+.wb-l24-g1-page .wb-l24-g1-stage .wb-bigbox-grid{min-height:0;flex:1 1 auto}
+.wb-l24-g1-page .wb-l24-g1-stage #wb-l22-reading-action{margin-top:clamp(5px,.8vh,9px);margin-bottom:clamp(5px,.8vh,9px)}
+.wb-l24-g1-page .wb-l24-g1-stage #wb-l22-reading-action button{min-height:clamp(46px,6vh,62px);padding-inline:12px}
+.wb-l24-g1-page .wb-l24-g1-stage .wb-reading-tip{margin-top:auto!important}
+.wb-l24-g1-page .wb-l24-g1-stage .wb-word-panel .wb-locked-note{margin:0}
+@media(max-width:900px){.wb-l24-g1-page .wb-l24-g1-stage{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto auto auto;gap:clamp(8px,1.2vh,12px);flex:0 0 auto;min-height:0}.wb-l24-g1-page .wb-l24-g1-stage .wb-l22-banner,.wb-l24-g1-page .wb-l24-g1-stage .wb-bigbox,.wb-l24-g1-page .wb-l24-g1-stage .wb-reading-panel,.wb-l24-g1-page .wb-l24-g1-stage .wb-word-panel,.wb-l24-g1-page .wb-l24-g1-stage #wb-action{grid-column:1;grid-row:auto}.wb-l24-g1-page .wb-l24-g1-stage .wb-bigbox,.wb-l24-g1-page .wb-l24-g1-stage .wb-reading-panel{height:auto;max-width:none}}
