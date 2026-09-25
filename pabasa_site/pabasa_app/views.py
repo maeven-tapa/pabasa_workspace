@@ -13609,6 +13609,29 @@ def prescribed_activity_page(request, activity_key):
                 },
             })
         if activity_key == 'aral-l23-g5-j-word-search':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_23/GAWAIN_5/'
+            audio_files = {
+                'instruction': 'Hanapin at bilugan sa loob ng Big Box ang sumusunod na mga salita._TTS.mp3',
+                'success': {
+                    'jacket': 'Tama! Nahanap mo ang jacket._TTS.mp3',
+                    'pajama': 'Tama! Nahanap mo ang pajama._TTS.mp3',
+                    'jam': 'Tama! Nahanap mo ang jam_TTS.mp3',
+                    'Jonathan': 'Tama! Nahanap mo ang Jonathan._TTS.mp3',
+                    'Jennifer': 'Tama! Nahanap mo ang Jennifer.”_TTS.mp3',
+                },
+                'feedback': {
+                    'Nahanap mo na ito.': 'Nahanap mo na ito._TTS.mp3',
+                    'Subukan Muli.': 'Subukan muli._TTS.mp3',
+                    'Hindi na-save ang gawain.': 'Hindi na-save ang gawain_TTS.mp3',
+                },
+                'completion': 'Magaling! Nahanap mo ang lahat ng salita!_TTS.mp3',
+            }
+            local_audio = {
+                'instruction': static(audio_root + audio_files['instruction']),
+                'success': {word: static(audio_root + filename) for word, filename in audio_files['success'].items()},
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+                'completion': static(audio_root + audio_files['completion']),
+            }
             return render(request, 'pabasa_app/prescribed_l23_g5_j_word_search_page.html', {
                 'workbook_payload': {
                     'activity': get_activity(activity_key), 'state': state, 'preview': preview,
@@ -13616,6 +13639,7 @@ def prescribed_activity_page(request, activity_key):
                     'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
                     'read_aloud_url': reverse('reading_read_aloud_api'), 'back_url': reverse('assessment'),
                     'next_url': next_url,
+                    'local_audio': local_audio,
                 },
             })
         if activity_key == 'aral-l22-g4-f-syllable-builder':
