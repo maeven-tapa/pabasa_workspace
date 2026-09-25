@@ -9,6 +9,26 @@ from .prescribed_workbook import (ACTIVITIES, L22_G3_C_WORD_PATHS, L22_G5_F_WORD
 
 
 class PrescribedWorkbookDataTests(unittest.TestCase):
+    def test_lesson24_has_two_explicit_bahagi_groups_and_unique_display_numbers(self):
+        expected = [
+            ('aral-l24-g1-v-syllable-builder', 'l24-bahagi1', 'Bahagi 1', '1'),
+            ('aral-l24-g2-v-word-reading', 'l24-bahagi1', 'Bahagi 1', '2'),
+            ('aral-l24-g3-x-repeat', 'l24-bahagi1', 'Bahagi 1', '3'),
+            ('aral-l24-g4-x-pictures', 'l24-bahagi2', 'Bahagi 2', '2'),
+            ('aral-l24-g3-x-word-reading', 'l24-bahagi2', 'Bahagi 2', '3'),
+            ('aral-l24-g4-x-syllable-builder', 'l24-bahagi2', 'Bahagi 2', '4'),
+            ('aral-l24-g5-z-syllabication', 'l24-bahagi2', 'Bahagi 2', '5'),
+            ('aral-l24-g6-z-word-search', 'l24-bahagi2', 'Bahagi 2', '6'),
+            ('aral-l24-g7-z-word-reading', 'l24-bahagi2', 'Bahagi 2', '7'),
+        ]
+        actual = [(key, ACTIVITIES[key]['section_key'], ACTIVITIES[key]['section_label'],
+                   ACTIVITIES[key]['display_gawain_number']) for key, *_ in expected]
+        self.assertEqual(actual, expected)
+        self.assertEqual(len(expected), len({key for key, *_ in expected}))
+        self.assertEqual(len(expected), len({(section, number) for _, section, _, number in expected}))
+        self.assertTrue(all(ACTIVITIES[key]['section_display_label'].endswith(f'Gawain {number}')
+                            for key, _, _, number in expected))
+
     def test_scope_counts_and_source_quirks(self):
         self.assertEqual(len(ACTIVITIES), 24)
         self.assertEqual([sum(a['session'] == s for a in ACTIVITIES.values()) for s in (8,9)], [22,2])

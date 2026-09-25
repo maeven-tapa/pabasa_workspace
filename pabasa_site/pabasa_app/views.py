@@ -11964,6 +11964,11 @@ def assessment(request):
                 'session_number': activity['session_number'],
                 'lesson_number': activity['lesson_number'],
                 'gawain_number': activity['gawain_number'],
+                'section_key': activity.get('section_key'),
+                'section_label': activity.get('section_label'),
+                'section_order': activity.get('section_order'),
+                'display_gawain_number': activity.get('display_gawain_number', activity['gawain_number']),
+                'section_display_label': activity.get('section_display_label'),
                 'title': activity.get('display_title', activity['title']),
                 'card_label': activity.get('card_label', ''),
                 'activity_title': activity['title'],
@@ -13370,7 +13375,11 @@ def prescribed_activity_page(request, activity_key):
              'aral-l24-g1-v-syllable-builder': 'aral-l24-g2-v-word-reading',
              'aral-l24-g2-v-word-reading': 'aral-l24-g3-x-repeat',
              'aral-l24-g3-x-repeat': 'aral-l24-g4-x-pictures',
-             'aral-l24-g4-x-pictures': 'aral-l24-g5-z-syllabication',
+             'aral-l24-g4-x-pictures': 'aral-l24-g3-x-word-reading',
+             'aral-l24-g3-x-word-reading': 'aral-l24-g4-x-syllable-builder',
+             'aral-l24-g4-x-syllable-builder': 'aral-l24-g5-z-syllabication',
+             'aral-l24-g5-z-syllabication': 'aral-l24-g6-z-word-search',
+             'aral-l24-g6-z-word-search': 'aral-l24-g7-z-word-reading',
          }.get(activity_key, '')
         next_url = reverse('prescribed_activity_page', kwargs={'activity_key': next_key}) if next_key in PRESCRIBED_ACTIVITIES else ''
         if activity_key == 'aral-l22-g2-c-word-reading':

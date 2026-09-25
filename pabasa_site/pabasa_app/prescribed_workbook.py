@@ -302,6 +302,13 @@ def l22_g4_pronunciation_match(canonical_word, transcript):
 def add(key, page, lesson, number, title, instruction, kind, rows, **config):
     session = 8 if page <= 47 else 9 if page <= 49 else 10 if page <= 51 else 11
     label = f'Lesson {lesson}: Gawain {number}' if lesson else f'Session {session}: Activity {number}'
+    section_key = config.pop('section_key', None)
+    section_label = config.pop('section_label', None)
+    section_order = config.pop('section_order', None)
+    display_gawain_number = config.pop('display_gawain_number', number)
+    section_display_label = config.pop('section_display_label', None)
+    if section_label and lesson:
+        section_display_label = section_display_label or f'Lesson {lesson} — {section_label}: Gawain {display_gawain_number}'
     item_ids = config.pop('item_ids', None)
     reading_words = config.pop('reading_words', None)
     oral_flow = config.pop('oral_flow', kind not in {'drawing', 'fill'})
@@ -313,6 +320,8 @@ def add(key, page, lesson, number, title, instruction, kind, rows, **config):
     ACTIVITIES[key] = dict(
         activity_key=key, session=session, session_key=f'session-{session}', lesson=lesson, activity_number=number,
         display_label=label, title=title, instruction=instruction,
+        section_key=section_key, section_label=section_label, section_order=section_order,
+        display_gawain_number=display_gawain_number, section_display_label=section_display_label,
         printed_page=page, pdf_page=page + 3, interaction_type=kind,
         language='Filipino' if session == 8 else 'English', rows=rows, items=items,
         template_title='ARAL Workbook', template_type='ARAL Workbook',
@@ -413,37 +422,45 @@ add('aral-l24-g1-v-syllable-builder', 44, 24, '1', 'Big Box: V',
         [['r3c1'], ['r3c2'], ['r3c3']],
         [['r4c1'], ['r4c2'], ['r4c3']],
     ], review_required=True, specialized_builder=True, progress_total=12,
-    canonical_answer_source='Not found in available authoritative workbook/project sources.')
+    canonical_answer_source='Not found in available authoritative workbook/project sources.',
+    section_key='l24-bahagi1', section_label='Bahagi 1', section_order=1, display_gawain_number='1')
 add('aral-l24-g2-v-word-reading', 44, 24, '2', 'Mga salitang may letrang Vv',
     'Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Vv.', 'reading',
-    [['Vina','vanilla'], ['Vilma','vila'], ['Victor','vinta'], ['Victoria','van'], ['Valdez','visa'], ['Valle','violin'], ['Visayas','volleybal']], column_headers=['V','v'], reading_words=L24_G2_V_WORDS)
+    [['Vina','vanilla'], ['Vilma','vila'], ['Victor','vinta'], ['Victoria','van'], ['Valdez','visa'], ['Valle','violin'], ['Visayas','volleybal']], column_headers=['V','v'], reading_words=L24_G2_V_WORDS,
+    section_key='l24-bahagi1', section_label='Bahagi 1', section_order=1, display_gawain_number='2')
 add('aral-l24-g3-x-repeat', 45, 24, '3', 'Pakinggan at ulitin: X',
     'Pakinggang mabuti ang mga salitang bibigkasin ng guro pagkatapos ay ulitin ito.', 'reading',
-    [['Alex'], ['Felix'], ['x-factor'], ['fixer']], model_first=True)
+    [['Alex'], ['Felix'], ['x-factor'], ['fixer']], model_first=True,
+    section_key='l24-bahagi1', section_label='Bahagi 1', section_order=1, display_gawain_number='3')
 add('aral-l24-g4-x-pictures', 45, 24, '4', 'Kilalanin at Basahin',
     'Kilalanin ang bawat larawan at subuking basahin ito kasabay ng guro.', 'reading',
     [['x-ray','fax machine','fox']],
-    images={f'item-{i+1}':f'/static/pabasa_app/images/aral_workbook/{name}.png' for i,name in enumerate(['x-ray','fax-machine','fox'])})
+    images={f'item-{i+1}':f'/static/pabasa_app/images/aral_workbook/{name}.png' for i,name in enumerate(['x-ray','fax-machine','fox'])},
+    section_key='l24-bahagi2', section_label='Bahagi 2', section_order=2, display_gawain_number='2')
 add('aral-l24-g3-x-word-reading', 45, 24, '3', 'Mga salitang may letrang Xx',
     'Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Xx.', 'reading',
     [['Alex','Xylophone'], ['Alexis','Saxophone'], ['Alexander',''], ['Dixon',''], ['mixer',''], ['Felix','']],
-    column_headers=['/X/= ks','/X/=s'])
+    column_headers=['/X/= ks','/X/=s'], section_key='l24-bahagi2', section_label='Bahagi 2', section_order=2, display_gawain_number='3')
 add('aral-l24-g4-x-syllable-builder', 46, 24, '4', 'Big Box: X', BOX, 'builder',
-    [['A','Fe','xe'], ['xy','phone','sax'], ['rox','lex','o'], ['lix','lo','phone']], review_required=True)
+    [['A','Fe','xe'], ['xy','phone','sax'], ['rox','lex','o'], ['lix','lo','phone']], review_required=True,
+    section_key='l24-bahagi2', section_label='Bahagi 2', section_order=2, display_gawain_number='4')
 add('aral-l24-g5-z-syllabication', 46, 24, '5', 'Pantigin ang mga salita: Z',
     'Pantigin ang sumusunod na salitang may letrang Zz. Ginawa ang unang bilang para sa iyo.', 'syllables',
     [['Zandra'], ['Gomez'], ['Zamora'], ['zipper'], ['Zarate'], ['Legazpi'], ['Zoren'], ['zebra'], ['Mendoza']],
     worked_example='1. zigzag = zig•zag', item_labels=[f'{i}.' for i in range(2,11)],
-    syllable_answers=['Zan-dra', 'Go-mez', 'Za-mo-ra', 'zip-per', 'Za-ra-te', 'Le-gaz-pi', 'Zo-ren', 'ze-bra', 'Men-do-za'])
+    syllable_answers=['Zan-dra', 'Go-mez', 'Za-mo-ra', 'zip-per', 'Za-ra-te', 'Le-gaz-pi', 'Zo-ren', 'ze-bra', 'Men-do-za'],
+    section_key='l24-bahagi2', section_label='Bahagi 2', section_order=2, display_gawain_number='5')
 add('aral-l24-g6-z-word-search', 47, 24, '6', 'Hanapin ang mga salita: Z',
     'Panuto: Hanapin at bilugan sa loob ng Big Box ang sumusunod na mga salita.', 'search',
     [['zipper'], ['zoo'], ['zebra'], ['zigzag'], ['Perez'], ['Rizal'], ['Zamora'], ['Zam'], ['Zoren'], ['Zeny']],
-    grid=['ZAMORATYZ','AAKLTYZSI','MNZIPPERG','BZOOP EBIZ'.replace(' ',''),'AER TERRJA'.replace(' ',''),'LNEYRTAHG','EYNKEDBKL','SMRIZALUK'], mark_style='circle')
+    grid=['ZAMORATYZ','AAKLTYZSI','MNZIPPERG','BZOOP EBIZ'.replace(' ',''),'AER TERRJA'.replace(' ',''),'LNEYRTAHG','EYNKEDBKL','SMRIZALUK'], mark_style='circle',
+    section_key='l24-bahagi2', section_label='Bahagi 2', section_order=2, display_gawain_number='6')
 add('aral-l24-g7-z-word-reading', 47, 24, '7', 'Mga salitang may letrang Zz',
     'Basahin ang mga salita sa ibaba na may hiram na letrang Zz.', 'reading',
     [['zigzag','Gomez','Zoren'], ['Zandra','Zarate','Legazpi'], ['Zamora','Zaragosa','Zabala'],
      ['Zandro','Zapote','Zambales'], ['Lazaro','Zonrox','Gonzales'], ['Perez','Lopez','Mendoza'],
-     ['Rizal','Luzon','Hernandez'], ['Dizon','Zeny','']], visible_activity_label='GAWAIN 7')
+    ['Rizal','Luzon','Hernandez'], ['Dizon','Zeny','']], visible_activity_label='GAWAIN 7',
+    section_key='l24-bahagi2', section_label='Bahagi 2', section_order=2, display_gawain_number='7')
 
 add('aral-s9-a1-family-drawing', 48, None, '1', 'My family',
     'Draw a picture of your family. Under your drawing, write the sentence “This is my family.”',

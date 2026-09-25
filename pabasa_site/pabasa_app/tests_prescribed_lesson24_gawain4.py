@@ -53,5 +53,6 @@ class Lesson24Gawain4WorkbookTests(SimpleTestCase):
         for expected in ('wb-picture-reading', 'wb-picture-image', 'wb-picture-word', 'wb-picture-feedback', 'Pakinggan', 'Basahin'):
             self.assertIn(expected, js)
         self.assertIn('wb-l24-g4-pictures-page', css)
-        self.assertIn('SESSION 8 · LESSON 24 · GAWAIN 4', template)
+        self.assertIn('section_display_label', template)
+        self.assertIn('aral-l24-g4-x-pictures', template)
         self.assertNotIn('overflow:hidden', css)
