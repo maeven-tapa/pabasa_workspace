@@ -83,9 +83,11 @@ test('adaptive background threshold rejects steady room noise', () => {
   assert.equal(vad.takeSpeech(), false);
 });
 
-test('speech clip ends at 2400 ms and releases owned microphone and meter', async () => {
+test('speech starts recording after VAD, then gets a full 2400 ms clip', async () => {
   const e = environment(); const promise = e.api.capture(); let resolved = false;
   promise.then(() => { resolved = true; });
+  await e.clock.tick(831); assert.equal(e.recordings.length, 0);
+  await e.clock.tick(1); assert.equal(e.recordings[0].startedAt, 832);
   await e.clock.tick(2399); assert.equal(resolved, false);
   await e.clock.tick(1); const blob = await promise;
   assert.ok(blob.size); assert.equal(blob.type, 'audio/webm;codecs=opus');
@@ -94,12 +96,14 @@ test('speech clip ends at 2400 ms and releases owned microphone and meter', asyn
   assert.equal(e.contexts[0].closed, 1); assert.equal(e.timers.size, 0);
 });
 
-test('silent clips are discarded; later speech gets its own decodable container', async () => {
+test('waiting in silence creates no recorder; later speech starts a decodable clip', async () => {
   const e = environment({level: t => t < 3000 ? 0 : 0.15}); const promise = e.api.capture();
-  await e.clock.tick(4800); const blob = await promise;
-  assert.equal(e.recordings.length, 2);
+  await e.clock.tick(2999); assert.equal(e.recordings.length, 0);
+  await e.clock.tick(3000); const blob = await promise;
+  assert.equal(e.recordings.length, 1);
+  assert.ok(e.recordings[0].startedAt >= 3000);
   assert.equal(await blob.text(), 'independent-container');
-  assert.ok(e.states.some(s => s.state === 'silence'));
+  assert.ok(e.states.some(s => s.state === 'waiting'));
 });
 
 test('silence times out without transcribing or scoring', async () => {
@@ -107,7 +111,7 @@ test('silence times out without transcribing or scoring', async () => {
   const reader = e.api.create({getFields: () => ({target_text: 'bata'}), onResult: () => results++, onError: e => errors.push(e)});
   const promise = reader.start(); await e.clock.tick(12000); await promise;
   assert.equal(results, 0); assert.equal(errors[0].name, 'NoSpeechError');
-  assert.equal(e.recordings.length, 5); assert.equal(e.streams[0].getTracks()[0].stops, 1);
+  assert.equal(e.recordings.length, 0); assert.equal(e.streams[0].getTracks()[0].stops, 1);
   reader.destroy();
 });
 
@@ -133,7 +137,7 @@ test('continuous controller prevents double start, advances fields and stops on 
   const reader = e.api.create({getFields: () => ({current_syllable_index: cursor}),
     transcribe: async (blob, fields) => { requests++; assert.equal(fields.current_syllable_index, cursor); return {complete: requests === 2, current_syllable_index: cursor + 1}; },
     onResult: result => { cursor = result.current_syllable_index; }});
-  const promise = reader.start(); await reader.start(); await e.clock.tick(4800); await promise;
+  const promise = reader.start(); await reader.start(); await e.clock.tick(5800); await promise;
   assert.equal(requests, 2); assert.equal(cursor, 2); assert.equal(e.streams.length, 1);
   assert.equal(e.streams[0].getTracks()[0].stops, 1); reader.destroy();
 });
@@ -141,7 +145,7 @@ test('continuous controller prevents double start, advances fields and stops on 
 test('stop during STT ignores the late response and never restarts recording', async () => {
   const e = environment(); let finish, results = 0;
   const reader = e.api.create({getFields: () => ({}), transcribe: () => new Promise(resolve => { finish = resolve; }), onResult: () => results++});
-  const promise = reader.start(); await e.clock.tick(2400); reader.stop(); finish({complete: false}); await promise;
+  const promise = reader.start(); await e.clock.tick(3300); reader.stop(); finish({complete: false}); await promise;
   assert.equal(results, 0); assert.equal(e.recordings.length, 1); assert.equal(e.timers.size, 0); reader.destroy();
 });
 
@@ -173,7 +177,7 @@ test('one sentence attempt carries cursor/context and joins clip transcripts', a
     },
     onProgress: () => updates++,
   });
-  await e.clock.tick(4800); const result = await promise;
+  await e.clock.tick(5800); const result = await promise;
   assert.equal(requests, 2); assert.equal(updates, 2);
   assert.equal(result.transcript, 'Uubo si Bibo'); assert.equal(result.complete, true);
   assert.equal(e.streams[0].getTracks()[0].stops, 1);
@@ -184,7 +188,7 @@ test('a real mismatch finishes one attempt without recording endlessly', async (
   const promise = e.api.read({target_text: 'bata'}, {
     transcribe: async () => ({success: true, transcript: 'aso', current_syllable_index: 0, complete: false}),
   });
-  await e.clock.tick(2400); const result = await promise;
+  await e.clock.tick(3300); const result = await promise;
   assert.equal(result.complete, false); assert.equal(e.recordings.length, 1);
 });
 
@@ -193,7 +197,7 @@ test('empty provider transcript does not become a wrong reading result', async (
   const promise = e.api.read({target_text: 'bata'}, {
     transcribe: async () => ({success: true, transcript: '', complete: false}),
   }).catch(error => error);
-  await e.clock.tick(2400);
+  await e.clock.tick(3300);
   assert.equal((await promise).name, 'NoSpeechError');
 });
 
@@ -202,7 +206,7 @@ test('cancelling a multi-clip attempt rejects and discards late STT', async () =
   const promise = e.api.read({target_text: 'bata'}, {
     transcribe: () => new Promise(resolve => { finish = resolve; }),
   }).catch(error => error);
-  await e.clock.tick(2400); e.api.cancelAll(); finish({success: true, transcript: 'bata', complete: true});
+  await e.clock.tick(3300); e.api.cancelAll(); finish({success: true, transcript: 'bata', complete: true});
   assert.equal((await promise).name, 'AbortError'); assert.equal(e.recordings.length, 1);
 });
 
@@ -245,4 +249,32 @@ test('stop restores the button immediately while permission remains unanswered',
   assert.equal(button.disabled, false); assert.equal(e.recordings.length, 0);
   const stream = e.makeStream(); grant(stream); await flush();
   assert.equal(stream.getTracks()[0].stops, 1); reader.destroy();
+});
+
+test('abort while waiting for speech never starts recording and releases the microphone', async () => {
+  const e = environment({level: () => 0}), controller = new AbortController();
+  const promise = e.api.capture({signal: controller.signal}).catch(error => error);
+  await e.clock.tick(2000); controller.abort();
+  assert.equal((await promise).name, 'AbortError');
+  assert.equal(e.recordings.length, 0); assert.equal(e.timers.size, 0);
+  assert.equal(e.streams[0].getTracks()[0].stops, 1);
+});
+
+test('each continuous clip waits for fresh speech after an STT response', async () => {
+  const e = environment({level: t => (t >= 800 && t < 1500) || t >= 7000 ? 0.15 : 0});
+  let requests = 0;
+  const reader = e.api.create({getFields: () => ({}), transcribe: async () => ({complete: ++requests === 2})});
+  const promise = reader.start();
+  await e.clock.tick(6900);
+  assert.equal(requests, 1); assert.equal(e.recordings.length, 1);
+  await e.clock.tick(2700); await promise;
+  assert.equal(requests, 2); assert.ok(e.recordings[1].startedAt >= 7000);
+  reader.destroy();
+});
+
+test('steady room noise never starts recording', async () => {
+  const e = environment({level: () => 0.025});
+  const promise = e.api.capture().catch(error => error);
+  await e.clock.tick(12000);
+  assert.equal((await promise).name, 'NoSpeechError'); assert.equal(e.recordings.length, 0);
 });

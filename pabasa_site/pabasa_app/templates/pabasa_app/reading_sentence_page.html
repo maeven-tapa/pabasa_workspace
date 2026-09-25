@@ -10,4 +10,4 @@
 {% block content_class %}content-sentence{% endblock %}
 {% block watermark %}sent{% endblock %}
 {% block initial_text %}Loading materials...{% endblock %}
-{% block script %}<script src="{% static 'pabasa_app/js/assessment_reader.js' %}?v={% now 'U' %}"></script>{% endblock %}
+{% block script %}{% include "pabasa_app/speech_debug_script.html" %}<script src="{% static 'pabasa_app/js/assessment_reader.js' %}?v={% now 'U' %}"></script>{% endblock %}

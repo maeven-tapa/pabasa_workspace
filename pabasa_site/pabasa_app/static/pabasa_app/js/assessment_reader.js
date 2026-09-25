@@ -4261,18 +4261,7 @@
                     resetSyllableStitching();
                 }
                 if (data.transcript) {
-                    const fallbackNote = data.stt_fallback_reason ? ` | Fallback: ${data.stt_fallback_reason}` : "";
-                    const languageNote = data.language_code ? ` | Language: ${data.language_code}` : "";
-                    const rawNote = data.raw_transcript && data.raw_transcript !== data.transcript
-                        ? ` | Raw: ${data.raw_transcript}`
-                        : "";
-                    const stitchingNote = data.syllable_stitching_applied
-                        ? ` | TASS: ${data.syllable_stitched_transcript}`
-                        : (data.syllable_context ? ` | TASS Context: ${data.syllable_context}` : "");
-                    const syllableCountNote = Number(data.target_syllable_count || 0) > 0
-                        ? ` | Syllables: ${Number(data.syllable_context_count || 0)}/${Number(data.target_syllable_count)}`
-                        : "";
-                    appendRawMicInput(`Model: ${sttModelLabel(data.stt_model)}${languageNote}${fallbackNote} | Words: ${data.transcript}${rawNote}${stitchingNote}${syllableCountNote}`);
+                    appendRawMicInput(window.SpeechDebug.format(data));
                 }
                 handleSpeechResult(data, context);
             } catch (error) {
@@ -4315,12 +4304,6 @@
             if (type.includes("ogg")) return "ogg";
             if (type.includes("wav")) return "wav";
             return "webm";
-        }
-
-        function sttModelLabel(model) {
-            if (model === "chirp_3") return "Chirp 3";
-            if (model === "stt_v1") return "STT v1";
-            return model || "Google STT";
         }
 
         function handleSpeechResult(data, context = currentSpeechContext()) {

@@ -37,7 +37,7 @@ const root = path.resolve(__dirname, '../pabasa_site/pabasa_app');
       window.Basahin.bindActivity(button, async () => {
         window.attempts++;
         button.disabled = true;
-        window.BasahinButton.setState(button, 'listening');
+        window.BasahinButton.setState(button, 'waiting');
         await new Promise(resolve => { window.finishAttempt = resolve; });
         button.disabled = false;
         window.BasahinButton.setState(button, 'idle');
@@ -46,6 +46,12 @@ const root = path.resolve(__dirname, '../pabasa_site/pabasa_app');
     await page.locator('#read').click();
     await page.evaluate(() => document.getElementById('read').dispatchEvent(new MouseEvent('click', {bubbles: true})));
     assert.equal(await page.evaluate(() => window.attempts), 1);
+    assert.equal(await page.locator('#read').textContent(), 'Magsalita...');
+    assert.equal(await page.locator('#read').evaluate(button => getComputedStyle(button).animationName), 'none');
+    await page.evaluate(() => window.BasahinButton.setState(document.getElementById('read'), 'listening'));
+    // Merely saying "listening" must not trigger a pulse without VAD evidence.
+    assert.equal(await page.locator('#read').evaluate(button => getComputedStyle(button).animationName), 'none');
+    await page.evaluate(() => window.BasahinButton.setSpeech(document.getElementById('read'), true));
     const listening = await page.locator('#read').evaluate(button => ({
       text: button.textContent, animation: getComputedStyle(button).animationName,
       background: getComputedStyle(button).backgroundColor, busy: button.getAttribute('aria-busy'),
@@ -54,6 +60,9 @@ const root = path.resolve(__dirname, '../pabasa_site/pabasa_app');
     assert.equal(listening.animation, 'basahin-listening');
     assert.equal(listening.background, 'rgb(41, 158, 154)');
     assert.equal(listening.busy, 'true');
+    await page.emulateMedia({reducedMotion: 'reduce'});
+    assert.equal(await page.locator('#read').evaluate(button => getComputedStyle(button).animationName), 'none');
+    await page.emulateMedia({reducedMotion: 'no-preference'});
     await page.evaluate(() => window.BasahinButton.setState(document.getElementById('read'), 'processing'));
     assert.equal(await page.locator('#read i').evaluate(icon => getComputedStyle(icon).animationName), 'basahin-spin');
     await page.emulateMedia({reducedMotion: 'reduce'});
@@ -80,34 +89,72 @@ const root = path.resolve(__dirname, '../pabasa_site/pabasa_app');
     assert.ok((await page.locator('#read').boundingBox()).width <= 303);
     await page.evaluate(() => { document.getElementById('read').hidden = true; });
     assert.equal(await page.locator('#read').isVisible(), false);
-    // Real Chromium MediaRecorder + RMS analyser with synthetic audio.
+    // Exercise read -> create -> capture with a real RMS analyser and recorder.
+    // A synthetic tone stands in for voice; there is no live Google request.
     const clip = await page.evaluate(async () => {
       const context = new AudioContext(), tone = context.createOscillator(), gain = context.createGain();
       const output = context.createMediaStreamDestination();
       gain.gain.value = 0;
       tone.connect(gain).connect(output); tone.start();
-      gain.gain.setValueAtTime(0.2, context.currentTime + 0.9);
+      gain.gain.setValueAtTime(0.2, context.currentTime + 1.6);
+      gain.gain.setValueAtTime(0, context.currentTime + 2.3);
       const started = performance.now();
-      const audio = await window.Basahin.capture({stream: output.stream});
-      const elapsed = performance.now() - started;
-      const decoded = await context.decodeAudioData(await audio.arrayBuffer());
-      tone.stop(); await context.close();
-      return {size: audio.size, elapsed, duration: decoded.duration};
+      const button = document.getElementById('read'); button.hidden = false;
+      const nativeRecorder = window.MediaRecorder, getUserMedia = navigator.mediaDevices.getUserMedia;
+      let recordings = 0, recorder, recordingStarted, decoded, size;
+      window.MediaRecorder = class extends nativeRecorder {
+        constructor(...args) { super(...args); recordings++; recorder = this; }
+        start(...args) { recordingStarted = performance.now(); return super.start(...args); }
+      };
+      navigator.mediaDevices.getUserMedia = async () => output.stream;
+      const snapshot = () => ({recordings, state: button.dataset.basahinState,
+        animation: getComputedStyle(button).animationName, recorderState: recorder?.state});
+      const waitUntil = async condition => {
+        const deadline = performance.now() + 5000;
+        while (!condition()) {
+          if (performance.now() > deadline) throw new Error('Speech state did not change in time.');
+          await new Promise(resolve => setTimeout(resolve, 20));
+        }
+      };
+      try {
+        const reading = window.Basahin.read({target_text: 'bata'}, {button, transcribe: async audio => {
+          size = audio.size; decoded = await context.decodeAudioData(await audio.arrayBuffer());
+          return {success: true, complete: true, transcript: 'bata'};
+        }});
+        await waitUntil(() => button.dataset.basahinState === 'waiting');
+        const waiting = snapshot();
+        await waitUntil(() => button.dataset.basahinSpeaking === 'true');
+        const speaking = snapshot();
+        await waitUntil(() => button.dataset.basahinSpeaking === 'false');
+        const quiet = snapshot();
+        await reading;
+        return {size, elapsed: performance.now() - started, recordingDelay: recordingStarted - started,
+          duration: decoded.duration, waiting, speaking, quiet, final: snapshot()};
+      } finally {
+        window.MediaRecorder = nativeRecorder; navigator.mediaDevices.getUserMedia = getUserMedia;
+        tone.stop(); await context.close();
+      }
     });
-    assert.ok(clip.size > 0); assert.ok(clip.elapsed >= 2300 && clip.elapsed < 4500);
+    assert.equal(clip.waiting.recordings, 0); assert.equal(clip.waiting.animation, 'none');
+    assert.equal(clip.speaking.recordings, 1); assert.equal(clip.speaking.animation, 'basahin-listening');
+    assert.equal(clip.quiet.animation, 'none'); assert.equal(clip.quiet.recorderState, 'recording');
+    assert.equal(clip.final.animation, 'none'); assert.equal(clip.final.state, 'idle');
+    assert.ok(clip.size > 0); assert.ok(clip.recordingDelay >= 1500);
+    assert.ok(clip.elapsed >= 3900 && clip.elapsed < 6000);
     assert.ok(clip.duration > 2 && clip.duration < 3);
     assert.deepEqual(errors, []);
     if (process.env.BASAHIN_SCREENSHOT) {
       await page.setViewportSize({width: 1000, height: 720});
       await page.evaluate(() => {
-        document.querySelector('main').innerHTML = '<h1>Basahin</h1>' + ['idle','listening','processing'].map(state => `<button data-basahin-button id="${state}"></button>`).join('');
-        for (const state of ['idle','listening','processing']) {
+        document.querySelector('main').innerHTML = '<h1>Basahin</h1>' + ['idle','waiting','listening','processing'].map(state => `<button data-basahin-button id="${state}"></button>`).join('');
+        for (const state of ['idle','waiting','listening','processing']) {
           const button = document.getElementById(state);
           window.BasahinButton.setState(button, state); button.disabled = state !== 'idle';
+          window.BasahinButton.setSpeech(button, state === 'listening');
         }
       });
       await page.screenshot({path: process.env.BASAHIN_SCREENSHOT});
     }
-    console.log('PASS: shared click dispatch, states, animations, reduced motion, re-rendering, mobile layout, hidden buttons and real 2.4-second recording.');
+    console.log('PASS: shared clicks, VAD-gated recording and pulse, quiet pauses, reduced motion, re-rendering, mobile layout and real 2.4-second recording.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -61,7 +61,7 @@
     }
   }
 
-  /** Return one independently decodable speech clip; discard silent clips.
+  /** Wait for voice activity, then record one independently decodable clip.
    * Capture releases tracks by default, including a supplied stream. Use
    * keepStream for a controller that reuses its stream across several clips.
    * No network, scoring, attempt counting, or DOM replacement happens here.
@@ -79,9 +79,15 @@
     let stream, context, source, analyser, recorder, frame, timer;
     let ended = false, captured = false;
     const owned = !suppliedStream || !options.keepStream;
-    const setState = (state, detail) => { onState?.(state, detail); emit(state, detail); };
+    let visualState;
+    const setState = (state, detail) => {
+      if (visualState === state) return;
+      visualState = state;
+      window.BasahinButton?.setState(options.button, state);
+      onState?.(state, detail); emit(state, detail);
+    };
     try {
-      window.BasahinButton?.setState(options.button, 'listening');
+      setState('calibrating');
       stream = suppliedStream || await openMicrophone({audio: {
         echoCancellation: true, noiseSuppression: false, autoGainControl: true,
         ...(options.deviceId ? {deviceId: {exact: options.deviceId}} : {}),
@@ -96,19 +102,9 @@
       source.connect(analyser);
       const samples = new Uint8Array(analyser.fftSize), vad = options.vad || createVad();
       const started = options.startedAt ?? performance.now();
-      const meter = () => {
-        if (ended) return;
-        analyser.getByteTimeDomainData(samples);
-        let sum = 0;
-        for (const sample of samples) sum += ((sample - 128) / 128) ** 2;
-        const level = vad.sample(Math.sqrt(sum / samples.length), performance.now() - started);
-        onState?.('listening', level);
-        emit('level', level);
-        frame = window.requestAnimationFrame(meter);
-      };
-      meter();
+      vad.takeSpeech();
       const audio = await new Promise((resolve, reject) => {
-        let silentChunks = 0, settled = false;
+        let settled = false, lastSpeechAt = -Infinity;
         const finish = (error, blob) => {
           if (settled) return;
           settled = true;
@@ -120,7 +116,8 @@
         controller.signal.addEventListener('abort', abort, {once: true});
         stream.getTracks().forEach(track => track.addEventListener('ended', abort, {once: true}));
         const recordChunk = () => {
-          if (settled) return;
+          if (settled || recorder) return;
+          window.clearTimeout(timer);
           try {
             const type = mimeType(), chunks = [];
             recorder = new window.MediaRecorder(stream, type ? {mimeType: type} : undefined);
@@ -130,11 +127,8 @@
               window.clearTimeout(timer);
               if (settled) return;
               const blob = new Blob(chunks, {type: recorder.mimeType || type || 'audio/webm'});
-              if (vad.takeSpeech() && blob.size) return finish(null, blob);
-              silentChunks += 1;
-              setState('silence', {silentChunks});
-              if (silentChunks >= (options.maxSilentChunks ?? 5)) return finish(noSpeechError());
-              recordChunk();
+              vad.takeSpeech();
+              finish(blob.size ? null : noSpeechError(), blob);
             };
             onRecorder?.(recorder);
             recorder.start();
@@ -142,7 +136,35 @@
             timer = window.setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, CHUNK_MS);
           } catch (error) { finish(error); }
         };
-        if (controller.signal.aborted) abort(); else recordChunk();
+        const meter = () => {
+          if (ended || settled) return;
+          try {
+            analyser.getByteTimeDomainData(samples);
+            let sum = 0;
+            for (const sample of samples) sum += ((sample - 128) / 128) ** 2;
+            const now = performance.now();
+            const level = vad.sample(Math.sqrt(sum / samples.length), now - started);
+            if (level.speaking) {
+              lastSpeechAt = now;
+              recordChunk();
+            }
+            if (!recorder) setState(level.calibrating ? 'calibrating' : 'waiting');
+            // CRLA holds its hearing indicator briefly between syllables.
+            window.BasahinButton?.setSpeech(options.button, Boolean(recorder && now - lastSpeechAt < 240));
+            onState?.('level', level); emit('level', level);
+            if (!settled) frame = window.requestAnimationFrame(meter);
+          } catch (error) { finish(error); }
+        };
+        if (controller.signal.aborted) abort();
+        else {
+          // Keep the microphone meter open, but create no recorder in silence.
+          const waitMs = options.maxWaitMs ?? CHUNK_MS * (options.maxSilentChunks ?? 5);
+          timer = window.setTimeout(() => {
+            setState('silence', {waitMs});
+            finish(noSpeechError());
+          }, waitMs);
+          meter();
+        }
       });
       captured = true;
       return audio;
@@ -199,12 +221,14 @@
    */
   function create(options) {
     const {button, getFields, onResult, onError, onState} = options;
+    const visualButton = options.visualButton || button;
     let current = null, destroyed = false;
     function state(name) {
+      window.BasahinButton?.setState(visualButton, name);
       if (button) {
-        window.BasahinButton?.setState(button, name);
         const label = button.querySelector('[data-basahin-label]') || button;
-        label.textContent = name === 'idle' ? 'Basahin' : name === 'processing' ? 'Sinusuri...' : 'Nakikinig...';
+        const text = {idle: 'Basahin', calibrating: 'Sandali...', waiting: 'Magsalita...', processing: 'Sinusuri...', listening: 'Nakikinig...'}[name];
+        if (label.textContent !== text) label.textContent = text;
         button.disabled = name !== 'idle';
         button.setAttribute('aria-busy', String(name !== 'idle'));
       }
@@ -215,7 +239,7 @@
       const controller = new AbortController();
       let stream;
       current = controller;
-      state('listening');
+      state('calibrating');
       try {
         stream = await openMicrophone({audio: {
           echoCancellation: true, noiseSuppression: false, autoGainControl: true,
@@ -225,14 +249,19 @@
         const vad = createVad(), startedAt = performance.now();
         for (let count = 0; count < (options.maxChunks ?? 25); count += 1) {
           const fields = {...getFields()};
-          const blob = await capture({stream, keepStream: true, signal: controller.signal, vad, startedAt, onState: options.onVad});
+          const blob = await capture({stream, button: visualButton, keepStream: true, signal: controller.signal, vad, startedAt,
+            onState: (name, detail) => {
+              options.onVad?.(name, detail);
+              if (['calibrating', 'waiting', 'listening'].includes(name)) state(name);
+            },
+          });
           if (controller.signal.aborted) return;
           state('processing');
           const result = await (options.transcribe || transcribe)(blob, fields, {signal: controller.signal, url: options.url});
           if (controller.signal.aborted || current !== controller) return;
           const done = await onResult?.(result);
           if (controller.signal.aborted || (done ?? result.complete) || options.continuous === false) return;
-          state('listening');
+          state('waiting');
         }
         throw new Error('Natapos ang oras ng pagbasa. Pindutin ang Basahin upang magpatuloy.');
       } catch (error) {
@@ -261,8 +290,7 @@
     let finalResult, failure;
     const nextFields = {...fields}, transcripts = [], rawTranscripts = [];
     const reader = create({
-      ...options, button: undefined, continuous: true,
-      onState: state => { window.BasahinButton?.setState(options.button, state); options.onState?.(state); },
+      ...options, button: undefined, visualButton: options.button, continuous: true,
       getFields: () => nextFields,
       onError: error => { failure = error; },
       onResult(result) {
