@@ -52,7 +52,27 @@ addEventListener('pagehide',stop);go()})();
 <style>.card:has(#picture[hidden]) .instruction{transform:translateY(18px)}</style>
 <style>.card:has(#picture[hidden]) .instruction{transform:translateY(36px)}</style>
 <style>.card:has(#picture[hidden]) .instruction{transform:translateY(54px)}</style>
+<style>
+body:has(#picture[hidden]) .back,body:has(#picture[hidden]) .lesson-start-backdrop{display:none!important}body:has(#picture[hidden]) .card{display:grid;place-items:center;align-content:center;background:transparent!important;box-shadow:none!important}body:has(#picture[hidden]) .instruction{width:min(540px,calc(100vw - 48px));min-height:0!important;margin:0!important;padding:42px 38px 40px!important;border:2px solid #ffffffc7!important;border-radius:32px!important;background:#fffffff2!important;color:#183e63!important;font-size:0!important;line-height:1.2;box-shadow:0 22px 60px #173f6340!important}body:has(#picture[hidden]) .instruction::before{content:'Tapos na ang gawain! 🎉';display:block;font:900 clamp(1.75rem,3vw,2rem)/1.2 Fredoka,Nunito,"Segoe UI",sans-serif}body:has(#picture[hidden]) .actions a{display:inline-flex!important;align-items:center;justify-content:center;width:min(100%,540px);min-height:0;padding:15px 26px;background:#299e9a!important;color:#fff!important;border:0;border-radius:999px;box-shadow:0 5px 0 #187b7a;font:900 clamp(1.05rem,1.8vw,1.25rem)/1.2 Fredoka,Nunito,"Segoe UI",sans-serif;text-decoration:none}body:has(#picture[hidden]) .actions a{font-size:0}body:has(#picture[hidden]) .actions a::after{content:'BALIK SA AKING ARALIN';font:inherit} 
+</style>
 {% include 'pabasa_app/session4_prescribed_controls.html' with prefix='prescribed-s2l4g2' help_text='Tingnan ang larawan, sabihin ang pangalan nito, at piliin ang unang tunog.' %}
+<style>body:has(#picture[hidden]) .instruction::after{content:'Mahusay! Nakumpleto mo na ang aktibidad.';display:block;margin-top:18px;font:700 clamp(1.1rem,2vw,1.25rem)/1.4 Fredoka,Nunito,"Segoe UI",sans-serif}</style>
+<style>
+body:has(#picture[hidden]) .activity-topbar,body:has(#picture[hidden]) .head{display:none!important}
+body:has(#picture[hidden]) .actions{display:flex!important;justify-content:center!important;width:min(100%,540px)!important;min-height:0!important}
+body:has(#picture[hidden]) .focus{gap:18px!important}
+body:has(#picture[hidden]) .instruction{transform:none!important}
+body:has(#picture[hidden]) .actions a{font-size:0!important;line-height:0!important;position:relative;z-index:2}
+body:has(#picture[hidden]) .actions a::after{font-size:clamp(1.05rem,1.8vw,1.25rem)!important;line-height:1.2!important}
+body:has(#picture[hidden]) .page{place-items:center!important}
+body:has(#picture[hidden]) .card{width:min(540px,calc(100vw - 48px))!important;min-height:0!important;height:auto!important;padding:42px 38px 40px!important;border:2px solid #ffffffc7!important;border-radius:32px!important;background:#fffffff2!important;box-shadow:0 22px 60px #173f6340!important;gap:18px!important}
+body:has(#picture[hidden]) .instruction{width:100%!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+body:has(#picture[hidden]) .focus{width:100%!important;gap:0!important}
+body:has(#picture[hidden]) .actions{margin-top:0!important}
+body:has(#picture[hidden]) .card{overflow:visible!important}
+body:has(#picture[hidden]) .card{padding-bottom:58px!important}
+body:has(#picture[hidden]) .actions a{height:auto!important;min-height:64px!important;margin-bottom:8px!important;overflow:visible!important}
+</style>
 {% include 'pabasa_app/session4_prescribed_bootstrap.html' with prefix='prescribed-s2l4g2' speech=True data_id='activity-data' %}
 <script src="{% static 'pabasa_app/js/session2_prescribed_debug.js' %}?v=1"></script>
 <script>document.addEventListener('DOMContentLoaded',function(){const b=document.getElementById('session-2-lesson-4-g2-start');if(!b||b.dataset.resume!=='true')return;b.querySelector('.lesson-start-label').textContent='MAY NA-SAVE KANG PROGRESO!';b.querySelector('.lesson-start-title').textContent='May nasimulan ka nang gawain. Gusto mo bang ipagpatuloy ang iyong nasimulan?'});</script><style>#session-2-lesson-4-g2-start .lesson-start-modal{width:min(500px,calc(100vw - 40px));padding:34px 34px 30px}#session-2-lesson-4-g2-start .lesson-start-label{margin-bottom:16px;color:#277f82;font-size:1.05rem;line-height:1.2;letter-spacing:.04em}#session-2-lesson-4-g2-start .lesson-start-title{margin:0 auto 26px;max-width:430px;color:#183e63;font-size:clamp(1.65rem,3.2vw,2.2rem);line-height:1.2}</style>
