@@ -84,4 +84,4 @@ try{const r=await fetch(d.completion_url,{method:'POST',credentials:'same-origin
 if(!r.ok||!j.success)throw Error(j.error||'Hindi na-save ang pagtatapos.');d.progress.activity_completed=true;
 render()}catch(e){s.phase='feedback';render(e.message,'bad');
 const retry=document.createElement('button');retry.className='button';retry.textContent='SUBUKANG MULI';retry.onclick=finish;app.querySelector('.status')?.after(retry)}finally{busy=false}}addEventListener('pagehide',stop);
-render()})();</script></body></html>
+render()})();</script>{% include 'pabasa_app/session8_11_prescribed_controls.html' with prefix='prescribed-s7-l19-g2' help_text='Basahin ang salita, pagkatapos isulat ang nawawalang pantig. Maaari kang mag-pause o magbukas ng Audio Settings anumang oras.' %}</body></html>

@@ -25,6 +25,7 @@
     const spokenWordMatches=(target,transcript)=>{const expected=normalize(target),heard=normalize(transcript);return heard.includes(expected)||(expected==='tsek'&&heard.includes('check'))};
     const itemKey=index=>String(index);
     let state=Object.assign({phase:'intro',current_item_index:0,completed_oral_reads:[],stt_attempts:{},tts_plays:{},correct_answers:[],selected_answers:{},state_version:0},d.progress?.state||{}),busy=false,requestId=0,stream=null,audio=null;
+    const debugEvent=detail=>window.dispatchEvent(new CustomEvent('prescribed-s7-l20-21-g1-debug',{detail}));
     const stopMedia=()=>{stream?.getTracks().forEach(track=>track.stop());stream=null;if(audio){audio.pause();audio=null}};
     async function playReadAloud(text){
       if(!text)return;
@@ -74,14 +75,18 @@
       try{
         if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw Error('Hindi available ang mikropono.');
         button.disabled=true;button.textContent='Nagbabasa...';
+        debugEvent({status:'Listening',recorder:'Recording',expected:items[index].word,message:`Recording start · item ${index+1}`});
         stream=await window.Basahin.openMicrophone({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
         const chunks=[];const mimeType=recordingMimeType();const blob = await window.Basahin.capture({button:document.querySelector('[data-basahin-button]'),stream: stream});
         stopMedia();if(!blob.size)throw Error('Walang narinig na boses. Subukan muli.');if(mine!==requestId)return;
         button.textContent='Pinoproseso...';const form=new FormData();form.append('audio',blob,'session7-lesson20-21.webm');form.append('target_text',items[index].word);form.append('language','Filipino');form.append('mode','reading');
+        debugEvent({status:'Processing',recorder:'Stopping',message:'Recording stop'});
         const response=await fetch(d.transcribe_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form}),data=await response.json().catch(()=>({}));
         if(mine!==requestId)return;
-        if(response.ok&&data.success&&spokenWordMatches(items[index].word,data.transcript)){state.completed_oral_reads=[...new Set([...state.completed_oral_reads,index])];state.stt_attempts[itemKey(index)]=0;state.tts_plays[itemKey(index)]=0;state.phase='syllable_selection';await save();const message='Tama ang pagbasa! Piliin ang pantig na may klaster.';render(message,'good');playReadAloud(message).catch(()=>{})}else throw Error('Hindi pa. Subukan muli.');
-      }catch(error){if(mine===requestId){if(!window.Basahin.isCaptureError(error)){state.stt_attempts[itemKey(index)]=Math.min(3,(state.stt_attempts[itemKey(index)]||0)+1);}try{await save()}catch(_){}const message=(state.stt_attempts[itemKey(index)]||0)>=3?'Pakinggan muna ang salita.':error.message||'Hindi nakuha ang boses. Subukan muli.';render(message,'bad');playReadAloud(message).catch(()=>{})}}finally{stopMedia();busy=false}
+        const transcript=String(data.transcript||''),normalized=normalize(transcript),correct=Boolean(response.ok&&data.success&&spokenWordMatches(items[index].word,transcript));
+        debugEvent({status:'STT complete',transcript,normalized,result:correct?'Correct':'Incorrect',error:correct?'Not available':(data.error||'Reading did not match'),message:`STT response · ${correct?'accepted':'rejected'}`});
+        if(correct){state.completed_oral_reads=[...new Set([...state.completed_oral_reads,index])];state.stt_attempts[itemKey(index)]=0;state.tts_plays[itemKey(index)]=0;state.phase='syllable_selection';await save();const message='Tama ang pagbasa! Piliin ang pantig na may klaster.';render(message,'good');playReadAloud(message).catch(()=>{})}else throw Error('Hindi pa. Subukan muli.');
+      }catch(error){debugEvent({status:'Error',error:error.message||'Speech attempt failed',message:'Reading error'});if(mine===requestId){if(!window.Basahin.isCaptureError(error)){state.stt_attempts[itemKey(index)]=Math.min(3,(state.stt_attempts[itemKey(index)]||0)+1);}try{await save()}catch(_){}const message=(state.stt_attempts[itemKey(index)]||0)>=3?'Pakinggan muna ang salita.':error.message||'Hindi nakuha ang boses. Subukan muli.';render(message,'bad');playReadAloud(message).catch(()=>{})}}finally{stopMedia();busy=false}
     }
     async function listen(index){
       if(busy)return;busy=true;const mine=++requestId,button=app.querySelector('#oral');
@@ -95,8 +100,11 @@
     }
     async function answer(value){if(busy)return;busy=true;try{const data=await save({candidate_answer:value});if(data.accepted){state.phase='feedback';render();playReadAloud('Tama! Magaling ang iyong sagot.').catch(()=>{})}else{const message='Subukan muli. Bilugan ang pantig na may klaster.';render(message,'bad');playReadAloud(message).catch(()=>{})}}catch(error){render(error.message,'bad')}finally{busy=false}}
     async function finish(){if(busy)return;busy=true;state.phase='completion';try{const response=await fetch(d.completion_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'}),data=await response.json().catch(()=>({}));if(!response.ok||!data.success)throw Error(data.error||'Hindi na-save ang pagtatapos. Subukan muli.');d.progress.activity_completed=true;render();playReadAloud('Magaling! Natapos mo ang Lesson 20 at 21: Gawain 1.').catch(()=>{})}catch(error){state.phase='feedback';render(error.message,'bad');const retry=document.createElement('button');retry.className='button';retry.textContent='SUBUKANG MULI';retry.onclick=finish;app.querySelector('.status')?.after(retry)}finally{busy=false}}
-    addEventListener('pagehide',stopMedia);render();
+    addEventListener('prescribed-session-paused',()=>{requestId++;busy=false;stopMedia()});
+    addEventListener('pagehide',()=>{requestId++;busy=false;stopMedia()});render();
   })();
   </script>
+{% include 'pabasa_app/session8_11_prescribed_controls.html' with prefix='prescribed-s7-l20-21-g1' help_text='Basahin ang salita, pagkatapos bilugan ang pantig na may klaster. Maaari kang mag-pause o magbukas ng Audio Settings anumang oras.' %}
+<script>(()=>{const prefix='prescribed-s7-l20-21-g1',q=s=>document.getElementById(`${prefix}-debug-${s}`),history=[];addEventListener(`${prefix}-debug`,event=>{const d=event.detail||{};Object.entries(d).forEach(([key,value])=>{const field=q(key);if(field&&value!==undefined)field.textContent=String(value)});if(d.message){history.push(d.message);while(history.length>6)history.shift();const raw=q('raw');if(raw)raw.textContent=history.join('\n')}})})();</script>
 </body>
 </html>
