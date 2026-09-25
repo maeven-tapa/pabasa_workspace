@@ -6,3 +6,24 @@ if (window.__lessonStartProgress?.activityKey === 'lesson9-gawain2') {
   window.__lessonStartProgress.gawainNumber = 2;
 }
 </script>
+<script>
+(() => {
+  const app = document.getElementById('app');
+  if (!app) return;
+  const standardizeHeader = () => {
+    const task = app.querySelector('.task');
+    const instruction = task?.querySelector('.instruction');
+    if (!task || !instruction || task.querySelector('.lesson9-g2-eyebrow')) return;
+    const eyebrow = document.createElement('p');
+    eyebrow.className = 'lesson9-g2-eyebrow';
+    eyebrow.textContent = 'SESSION 3 · LESSON 9 · GAWAIN 2';
+    const title = document.createElement('h1');
+    title.className = 'lesson9-g2-title';
+    title.textContent = 'GAWAIN 2: Letrang Ii, Oo, Ee';
+    task.insertBefore(eyebrow, instruction);
+    task.insertBefore(title, instruction);
+  };
+  new MutationObserver(standardizeHeader).observe(app, {childList: true, subtree: true});
+  standardizeHeader();
+})();
+</script>
