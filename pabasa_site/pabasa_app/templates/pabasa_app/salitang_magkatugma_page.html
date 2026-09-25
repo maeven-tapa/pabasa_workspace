@@ -56,6 +56,10 @@ const pairs=[['aso','laso'],['bundok','sandok'],['tatay','nanay'],['bola','lola'
 @media(max-width:700px){#listen{min-width:0;flex:1;padding-inline:8px}}
 </style>
 <style>
+body:has(.completion-card) .completion-card{display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box}
+body:has(.completion-card) .completion-card a{text-decoration:none!important}
+</style>
+<style>
 .pair .connector{background:radial-gradient(circle at 3px 50%,#167985 0 3px,transparent 3.5px),radial-gradient(circle at calc(100% - 3px) 50%,#167985 0 3px,transparent 3.5px);height:34px;width:clamp(82px,11vw,116px)}
 .pair .connector::before{background:none;border-top:2px dashed #4b9aa0;height:0;left:4px;right:4px;top:50%;transform:none}
 .pair .connector::after{border:1px solid #c8dfe1;border-radius:999px;box-shadow:0 2px 6px rgba(15,23,42,.07);font-size:.68rem;padding:5px 8px}
