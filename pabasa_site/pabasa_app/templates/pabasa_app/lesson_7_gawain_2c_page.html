@@ -46,6 +46,8 @@
     let busy = false;
     const rows = [[], [], []];
     const normalizeNarration = value => String(value || '').trim().replace(/[?!.,]+/g, '').replace(/\s+/g, ' ').toLocaleLowerCase();
+    const controls = () => [app.querySelector('#clear'), app.querySelector('#next')].filter(Boolean);
+    const setControlsDisabled = disabled => controls().forEach(button => { button.disabled = disabled; });
     const speak = text => {
       if (!window.__lessonStartReady) return Promise.resolve();
       const mappedAudio = window.__prescribedNarrationAudio?.[normalizeNarration(text)] || Object.entries(window.__prescribedNarrationAudio || {}).find(([phrase]) => normalizeNarration(phrase) === normalizeNarration(text))?.[1];
@@ -58,13 +60,18 @@
         };
         audio.addEventListener('ended', clear, {once: true});
         audio.addEventListener('error', clear, {once: true});
-        audio.play().catch(clear);
-        return Promise.resolve();
+        return new Promise(resolve => {
+          const finish = () => { clear(); resolve(); };
+          audio.addEventListener('ended', finish, {once: true});
+          audio.addEventListener('error', finish, {once: true});
+          audio.play().catch(finish);
+        });
       }
-      return fetch('{% url "reading_read_aloud_api" %}', {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,prescribed_activity_key:'lesson7-gawain2c'})}).then(r => r.ok ? r.json() : null).then(result => {if (result?.success && result.audio_content) new Audio('data:' + (result.mime_type || 'audio/mpeg') + ';base64,' + result.audio_content).play().catch(() => {})}).catch(() => {});
+      return fetch('{% url "reading_read_aloud_api" %}', {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,prescribed_activity_key:'lesson7-gawain2c'})}).then(r => r.ok ? r.json() : null).then(result => new Promise(resolve => {if (!result?.success || !result.audio_content) {resolve(); return} const audio = new Audio('data:' + (result.mime_type || 'audio/mpeg') + ';base64,' + result.audio_content), finish = () => resolve(); audio.addEventListener('ended', finish, {once:true}); audio.addEventListener('error', finish, {once:true}); audio.play().catch(finish)})).catch(() => {});
     };
     const setHint = (text = normalHint) => {const hint = app.querySelector('.hint'); if (hint) hint.textContent = text};
-    const retry = () => {setHint(retryMessage); speak(retryMessage.replace('letrang Ii', 'letrang ay'))};
+    const narrate = async text => {busy = true; setControlsDisabled(true); try {await speak(text)} finally {busy = false; setControlsDisabled(false)}};
+    const retry = async () => {setHint(retryMessage); await narrate(retryMessage.replace('letrang Ii', 'letrang ay'))};
     const point = (event, canvas) => {const rect = canvas.getBoundingClientRect(); return {x:(event.clientX - rect.left) / rect.width, y:(event.clientY - rect.top) / rect.height}};
 
     function bindCanvas(canvas, row) {
@@ -82,17 +89,17 @@
     async function submitCurrent() {
       if (busy) return;
       const strokes = rows[index];
-      if (!strokes.some(stroke => stroke.length >= 2)) {retry(); return}
+      if (!strokes.some(stroke => stroke.length >= 2)) {await retry(); return}
       busy = true; app.querySelector('#next').disabled = true; app.querySelector('#clear').disabled = true;
       try {
         const response = await fetch(data.progress_url, {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({row_index:index,strokes})});
         const result = await response.json().catch(() => null);
-        if (!response.ok || !result?.success) {retry(); return}
+        if (!response.ok || !result?.success) {await retry(); return}
         if (index < 2) {index += 1; render(); return}
         const completion = await fetch(data.completion_url, {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'});
-        if (!completion.ok || !(await completion.json().catch(() => null))?.success) {retry(); return}
+        if (!completion.ok || !(await completion.json().catch(() => null))?.success) {await retry(); return}
         index = 3; render(); speak('Magaling!');
-      } catch (error) {retry()}
+      } catch (error) {await retry()}
       finally {busy = false; if (index < 3) {app.querySelector('#next').disabled = false; app.querySelector('#clear').disabled = false}}
     }
 
@@ -110,10 +117,16 @@
       app.innerHTML = app.innerHTML;
       window.addEventListener('lesson-start-ready', () => { app.inert = false; }, {once: true});
     });
-    __runWhenLessonStarted(() => { render(); speak(narrationText); });
+    __runWhenLessonStarted(() => { render(); narrate(narrationText); });
   })();
   </script>
 {% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g2c' help_text='Isulat ang letrang Ii sa mga kahon.' %}</body>
+<style>
+  #app.card:not(:has(.done))>.sheet{width:min(850px,100%);margin:8px auto;box-shadow:0 10px 22px #2d69731f}
+  #app.card:not(:has(.done))>.sheet .canvas-wrap{height:clamp(58px,9vh,82px);margin:7px 0;border-radius:12px}
+  #app.card:not(:has(.done))>.sheet .canvas-wrap:first-child{margin-top:0}
+  #app.card:not(:has(.done))>.sheet .canvas-wrap:last-child{margin-bottom:0}
+</style>
 </html>
 <style>.done,.done-card,.complete{display:grid;place-items:center;width:min(100%,540px);margin:auto;padding:42px 38px;border-radius:32px;background:#fff;color:#183e63;text-align:center;box-shadow:0 14px 30px #1e5b7a25;overflow:visible}.done h1,.done p,.done a,.done-card h1,.done-card p,.done-card a,.complete h1,.complete p,.complete a{font-size:0}.done h1:after,.done-card h1:after,.complete h1:after{content:'Tapos na ang gawain! 🎉';font-size:2rem}.done p:after,.done-card p:after,.complete p:after{content:'Mahusay! Nakumpleto mo na ang aktibidad.';font-size:1.15rem}.done a,.done-card a,.complete a{display:inline-flex;padding:14px 24px;border-radius:999px;background:#299e9a;color:#fff;text-decoration:none;box-shadow:0 7px #187b7a}.done a:after,.done-card a:after,.complete a:after{content:'BALIK SA AKING ARALIN';font-size:1.15rem}.done .button,.complete .done{font-size:0}.done .button:after,.complete .done:after{content:'BALIK SA AKING ARALIN';font-size:1.15rem}</style>
 <style>.card:has(.done) .done,.card:has(.done) .done-card,.card:has(.complete) .complete{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:18px!important;grid-template-columns:1fr!important;width:min(540px,92vw)!important;min-height:0!important;margin:auto!important;padding:40px 38px!important;border-radius:32px!important;background:#fff!important;color:#183e63!important;text-align:center!important;box-shadow:0 14px 30px rgba(30,91,122,.16)!important;overflow:visible!important}.card:has(.done) .done h1,.card:has(.done) .done-card h1,.card:has(.complete) .complete h1{max-width:100%!important;font-size:clamp(1.6rem,3vw,1.9rem)!important;line-height:1.15!important;white-space:normal!important}.card:has(.done) .done p,.card:has(.done) .done-card p,.card:has(.complete) .complete p{max-width:100%!important;margin:0!important;font-size:1.15rem!important;line-height:1.35!important}.card:has(.done) .done a,.card:has(.done) .done-card a,.card:has(.complete) .complete a,.card:has(.done) .done .button{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:330px!important;min-height:58px!important;padding:14px 28px!important;border-radius:999px!important;background:#299e9a!important;color:#fff!important;text-decoration:none!important;box-shadow:0 7px #187b7a!important;pointer-events:auto!important;position:relative!important;z-index:2!important}@media(max-width:620px){.card:has(.done) .done,.card:has(.done) .done-card,.card:has(.complete) .complete{width:min(540px,92vw)!important;padding:34px 24px!important}.card:has(.done) .done a,.card:has(.done) .done-card a,.card:has(.complete) .complete a,.card:has(.done) .done .button{width:100%!important;min-width:0!important}}</style>
