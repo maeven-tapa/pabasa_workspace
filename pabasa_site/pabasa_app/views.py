@@ -13302,7 +13302,7 @@ def prescribed_activity_page(request, activity_key):
                                            initial_l22_g3_state, initial_l22_g5_state, initial_l23_g5_state, normalize_l22_c_state,
                                           normalize_l22_g2_state, normalize_l22_g6_state, normalize_l22_g3_state, normalize_l22_g5_state,
                                           normalize_l22_g4_state, initial_l23_g1_state, normalize_l23_g1_state, initial_l24_g1_state, normalize_l24_g1_state, initial_l24_g2_state, normalize_l24_g2_state, initial_l23_g6_state, normalize_l23_g6_state,
-                                          initial_l23_g2_state, normalize_l23_g2_state)
+                                          initial_l23_g2_state, normalize_l23_g2_state, initial_l24_g3_state, normalize_l24_g3_state)
         from .prescribed_workbook import initial_l23_g3_state, normalize_l23_g3_state, initial_l23_g4_state, normalize_l23_g4_state, normalize_l23_g5_state, initial_l23_g7_state, normalize_l23_g7_state
 
         preview = request.GET.get('preview') == '1'
@@ -13321,6 +13321,7 @@ def prescribed_activity_page(request, activity_key):
         state = progress.state if progress and isinstance(progress.state, dict) else (
             initial_l22_g2_state() if activity_key == 'aral-l22-g2-c-word-reading' else
             initial_l24_g2_state() if activity_key == 'aral-l24-g2-v-word-reading' else
+            initial_l24_g3_state() if activity_key == 'aral-l24-g3-x-word-reading' else
             initial_l22_g6_state() if activity_key == 'aral-l22-g6-f-word-reading' else
             initial_l22_g4_state() if activity_key == 'aral-l22-g4-f-syllable-builder' else
             initial_l22_g3_state() if activity_key == 'aral-l22-g3-c-word-search' else
@@ -13338,6 +13339,8 @@ def prescribed_activity_page(request, activity_key):
             state = normalize_l22_g2_state(state)
         elif activity_key == 'aral-l24-g2-v-word-reading':
             state = normalize_l24_g2_state(state)
+        elif activity_key == 'aral-l24-g3-x-word-reading':
+            state = normalize_l24_g3_state(state)
         elif activity_key == 'aral-l22-g6-f-word-reading':
             state = normalize_l22_g6_state(state)
         elif activity_key == 'aral-l22-g3-c-word-search':
@@ -13457,6 +13460,42 @@ def prescribed_activity_page(request, activity_key):
                 },
             })
         if activity_key == 'aral-l23-g2-n-word-reading':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_23/GAWAIN_2/'
+            audio_files = {
+                'instruction': 'Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Ññ_TTS.mp3',
+                'words': {
+                    'Penafrancia España': 'Penafrancia España_TTS.mp3',
+                    'Los Baños': 'Los Baños_TTS.mp3',
+                    'Biñan Cendaña': 'Biñan Cendaña_TTS.mp3',
+                    'Castañeda Orduña': 'Castañeda Orduña_TTS.mp3',
+                    'Niño': 'Niño_TTS.mp3', 'Niña': 'Niña_TTS.mp3',
+                },
+                'feedback': {
+                    'Tama!': 'Tama!_TTS.mp3',
+                    'Subukan muli.': 'Subukan muli._TTS.mp3',
+                    'Hindi ko malinaw na narinig. Subukan muli.': 'Hindi ko malinaw na narinig. Subukan muli._TTS.mp3',
+                    'Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.': 'Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa._TTS.mp3',
+                    'Pakinggan ang tamang pagbigkas, pagkatapos ay subukan mong basahin.': 'Pakinggan ang tamang pagbigkas, pagkatapos ay subukan mong basahin._TTS.mp3',
+                    'Subukan mong basahin ang salita.': 'Subukan mong basahin ang salita.”_TTS.mp3',
+                    'Hindi available ang Filipino audio.': 'Hindi available ang Filipino audio._TTS.mp3',
+                    'Hindi ma-play ang audio.': 'Hindi ma-play ang audio._TTS.mp3',
+                    'Hindi maitala ang boses.': 'Hindi maitala ang boses._TTS.mp3',
+                    'Hindi na-save ang iyong gawain.': 'Hindi na-save ang iyong gawain._TTS.mp3',
+                    'Hindi nakuha ang iyong boses. Subukan muli.': 'Hindi nakuha ang iyong boses. Subukan muli_TTS.mp3',
+                    'Hindi available ang mikropono sa browser na ito.': 'Hindi available ang mikropono sa browser na ito._TTS.mp3',
+                    'Sigurado ka bang gusto mong magsimula muli? Mawawala ang kasalukuyang progreso sa Gawain 2.': 'Sigurado ka bang gusto mong magsimula muli Mawawala ang kasalukuyang progreso sa Gawain 2_TTS.mp3',
+                },
+                'completion': {
+                    'Magaling! Natapos mo ang Gawain 2.': 'Magaling! Natapos mo ang Gawain 2_TTS.mp3',
+                    'Natapos mo ang Gawain 2.': 'Natapos mo ang Gawain 2._TTS.mp3',
+                },
+            }
+            local_audio = {
+                'instruction': static(audio_root + audio_files['instruction']),
+                'words': {text: static(audio_root + filename) for text, filename in audio_files['words'].items()},
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+                'completion': {text: static(audio_root + filename) for text, filename in audio_files['completion'].items()},
+            }
             return render(request, 'pabasa_app/prescribed_l23_g2_reading_page.html', {
                 'workbook_payload': {
                     'activity': get_activity(activity_key), 'state': state, 'preview': preview,
@@ -13464,6 +13503,7 @@ def prescribed_activity_page(request, activity_key):
                     'read_aloud_url': reverse('reading_read_aloud_api'), 'back_url': reverse('assessment'),
                     'next_url': next_url,
                     'next_label': PRESCRIBED_ACTIVITIES.get(next_key, {}).get('title', 'susunod na gawain'),
+                    'local_audio': local_audio,
                 },
             })
         if activity_key == 'aral-l22-g3-c-word-search':
@@ -16864,7 +16904,7 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
     from copy import deepcopy
     from .prescribed_workbook import (
         apply_event, get_activity, initial_l22_g2_state, initial_l22_g6_state, initial_l22_g3_state, initial_l22_g4_state, initial_l22_g5_state, initial_l23_g5_state, initial_state,
-        l22_g2_pronunciation_match, l22_g6_pronunciation_match, l24_g2_pronunciation_match, normalize_l22_c_state, normalize_l22_g2_state, normalize_l22_g6_state,
+        l22_g2_pronunciation_match, l22_g6_pronunciation_match, l24_g2_pronunciation_match, l24_g3_pronunciation_match, normalize_l22_c_state, normalize_l22_g2_state, normalize_l22_g6_state,
         normalize_l22_g3_state, normalize_l22_g4_state, normalize_l22_g5_state, l22_g4_pronunciation_match,
         initial_l23_g1_state, normalize_l23_g1_state, l23_g1_pronunciation_match, initial_l24_g1_state, normalize_l24_g1_state, l24_g1_pronunciation_match, initial_l24_g2_state, normalize_l24_g2_state, initial_l24_g4_state, normalize_l24_g4_state, l24_g4_pronunciation_match, initial_l23_g6_state, normalize_l23_g6_state, l23_g6_pronunciation_match,
         initial_l23_g2_state, normalize_l23_g2_state, l23_g2_pronunciation_match,
@@ -17024,6 +17064,12 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
                 result['complete'] = l24_g2_pronunciation_match(
                     workbook['items'][item_index]['text'], event['transcript']
                 )
+            elif activity_key == 'aral-l24-g3-x-word-reading' and event.get('action') == 'reading_attempt':
+                event = dict(event)
+                event['transcript'] = str(result.get('raw_transcript') or result.get('transcript') or '').strip()
+                result['complete'] = l24_g3_pronunciation_match(
+                    workbook['items'][item_index]['text'], event['transcript']
+                )
             elif activity_key == 'aral-l24-g4-x-pictures' and event.get('action') in {'reading', 'reading_attempt'}:
                 event = dict(event)
                 event['item_index'] = item_index
@@ -17064,6 +17110,9 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
                 transcript = str(result.get('raw_transcript') or result.get('transcript') or '').strip()
                 verified = None if not transcript else bool(result.get('complete'))
             elif activity_key == 'aral-l24-g2-v-word-reading' and event.get('action') == 'reading_attempt':
+                transcript = str(result.get('raw_transcript') or result.get('transcript') or '').strip()
+                verified = None if not transcript else bool(result.get('complete'))
+            elif activity_key == 'aral-l24-g3-x-word-reading' and event.get('action') == 'reading_attempt':
                 transcript = str(result.get('raw_transcript') or result.get('transcript') or '').strip()
                 verified = None if not transcript else bool(result.get('complete'))
             elif activity_key == 'aral-l24-g4-x-pictures' and event.get('action') in {'reading', 'reading_attempt'}:
@@ -17114,6 +17163,8 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
         if activity_key == 'aral-l22-g2-c-word-reading':
             correct = len(updated.get('completed_words') or [])
         elif activity_key == 'aral-l24-g2-v-word-reading':
+            correct = len(updated.get('completed_words') or [])
+        elif activity_key == 'aral-l24-g3-x-word-reading':
             correct = len(updated.get('completed_words') or [])
         elif activity_key == 'aral-l24-g4-x-pictures':
             correct = len(updated.get('completed_words') or [])
