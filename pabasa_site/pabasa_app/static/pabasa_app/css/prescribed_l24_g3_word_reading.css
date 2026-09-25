@@ -3,3 +3,96 @@
 .wb-l24-g3-word-page .wb-shell header,.wb-l24-g3-word-page .wb-focus{background:#ffffffd9;border-color:#c8e0e5;border-radius:28px}
 .wb-l24-g3-word-page #wb-back{display:inline-flex;padding:9px 17px;border-radius:999px;background:#fff;box-shadow:0 5px 14px #1f56661a}
 .wb-l24-g3-word-page .wb-table{font-size:clamp(21px,3vw,34px)}.wb-l24-g3-word-page .wb-table td{padding:18px 12px;font-weight:900}
+
+/* Bahagi 2 standard activity presentation: scoped to L24 Gawain 3. */
+.wb-l24-g3-word-page{min-height:100svh;overflow-x:hidden;padding:clamp(10px,2vh,22px) 0}
+.wb-l24-g3-word-page .wb-shell{width:min(1240px,calc(100% - clamp(20px,5vw,72px)));min-height:calc(100svh - 2 * clamp(10px,2vh,22px));padding:clamp(16px,3vh,34px) clamp(16px,4vw,58px) clamp(18px,3vh,32px)}
+.wb-l24-g3-word-page .wb-shell header{padding:clamp(18px,3vh,34px) clamp(20px,4vw,52px);border-radius:34px;background:#ffffffe8;box-shadow:0 18px 44px #1f56661c}
+.wb-l24-g3-word-page .wb-instruction{font-size:clamp(1.15rem,2vw,1.55rem);line-height:1.4}
+.wb-l24-g3-word-page #wb-back{display:inline-flex;align-items:center;min-height:52px;padding:10px 20px;background:#fff;border:2px solid #94d9d6;box-shadow:0 6px 14px #1f56661a}
+.wb-l24-g3-word-page .wb-table{width:100%;max-width:none;margin:clamp(12px,2vh,22px) auto;font-size:clamp(1.35rem,3vw,2.2rem);box-shadow:0 16px 32px #1f56661a}
+.wb-l24-g3-word-page .wb-table td,.wb-l24-g3-word-page .wb-table th{padding:clamp(13px,2vh,22px) clamp(10px,2vw,24px)}
+.wb-l24-g3-word-page #wb-action button{min-width:min(280px,80vw);min-height:58px;border-radius:999px;font-size:clamp(1.05rem,1.7vw,1.35rem);font-weight:900}
+@media(max-width:600px){.wb-l24-g3-word-page .wb-shell{width:calc(100% - 18px);padding:12px 10px 18px}.wb-l24-g3-word-page .wb-shell header{padding:18px 14px;border-radius:25px}.wb-l24-g3-word-page .wb-instruction{font-size:1.08rem}.wb-l24-g3-word-page .wb-table{font-size:1.05rem}.wb-l24-g3-word-page .wb-table td,.wb-l24-g3-word-page .wb-table th{padding:10px 6px}}
+
+/* Viewport-budgeted standard presentation, isolated to Lesson 24 Bahagi 2 Gawain 3. */
+.wb-l24-g3-word-page{min-height:100svh;overflow-x:hidden;padding:clamp(8px,1.5vh,18px) 0}
+.wb-l24-g3-word-page .wb-shell{display:flex;flex-direction:column;width:min(1280px,calc(100% - clamp(18px,4vw,64px)));height:calc(100svh - 2 * clamp(8px,1.5vh,18px));min-height:0;margin:0 auto;padding:clamp(12px,2vh,24px) clamp(16px,4vw,58px) clamp(12px,2vh,22px)}
+.wb-l24-g3-word-page .wb-shell header{flex:0 0 auto;margin-bottom:clamp(8px,1.5vh,16px);padding:clamp(14px,2.2vh,24px) clamp(18px,3vw,42px)}
+.wb-l24-g3-word-page .wb-shell header p{margin:4px 0}
+.wb-l24-g3-word-page .wb-instruction{font-size:clamp(1.08rem,1.8vw,1.45rem);line-height:1.3}
+.wb-l24-g3-word-page #wb-status{flex:0 0 auto;min-height:clamp(24px,3vh,34px);margin:0 0 4px;font-size:clamp(1rem,1.7vw,1.3rem);line-height:1.3}
+.wb-l24-g3-word-page #wb-progress{flex:0 0 auto;margin:clamp(4px,1vh,10px) auto clamp(6px,1.2vh,12px);padding:7px 18px;font-size:clamp(.95rem,1.4vw,1.15rem)}
+.wb-l24-g3-word-page #wb-content{display:flex;flex:1 1 auto;flex-direction:column;min-height:0;gap:clamp(6px,1vh,12px)}
+.wb-l24-g3-word-page #wb-content .wb-table{flex:1 1 auto;width:100%;height:100%;max-width:none;margin:0;table-layout:fixed;font-size:clamp(1.35rem,2.8vw,2.15rem);line-height:1.12}
+.wb-l24-g3-word-page #wb-content .wb-table td,.wb-l24-g3-word-page #wb-content .wb-table th{padding:clamp(8px,1.4vh,16px) clamp(8px,1.6vw,20px);overflow-wrap:anywhere}
+.wb-l24-g3-word-page #wb-content .wb-table th{font-size:clamp(1.05rem,1.8vw,1.35rem)}
+.wb-l24-g3-word-page #wb-content .wb-reading-focus{display:flex;flex:1 1 auto;min-height:0;flex-direction:column;align-items:center;justify-content:center;margin:0;padding:clamp(14px,2vh,28px)}
+.wb-l24-g3-word-page #wb-content .wb-reading-focus strong{font-size:clamp(2.5rem,6vw,5rem);text-align:center;overflow-wrap:anywhere}
+.wb-l24-g3-word-page #wb-action{display:flex;flex:0 0 auto;justify-content:center;align-items:center;flex-wrap:wrap;gap:clamp(8px,1.2vw,14px);margin-top:clamp(6px,1vh,12px)}
+.wb-l24-g3-word-page #wb-action button{min-width:min(280px,46%);min-height:clamp(54px,7vh,68px);border-radius:999px;font-size:clamp(1rem,1.6vw,1.3rem)}
+@media(max-height:800px){.wb-l24-g3-word-page .wb-shell{padding-top:10px;padding-bottom:12px}.wb-l24-g3-word-page .wb-shell header{padding-block:12px}.wb-l24-g3-word-page #wb-progress{margin-block:3px 6px}.wb-l24-g3-word-page #wb-content .wb-table td,.wb-l24-g3-word-page #wb-content .wb-table th{padding-block:7px}.wb-l24-g3-word-page #wb-action{margin-top:5px}}
+@media(max-height:700px){.wb-l24-g3-word-page .wb-shell header{margin-bottom:6px;padding-block:8px}.wb-l24-g3-word-page .wb-shell h1{font-size:clamp(1.8rem,3.8vw,2.8rem)}.wb-l24-g3-word-page .wb-instruction{font-size:clamp(1rem,1.7vw,1.25rem)}.wb-l24-g3-word-page #wb-content .wb-table{font-size:clamp(1.2rem,2.5vw,1.8rem)}.wb-l24-g3-word-page #wb-content .wb-table td,.wb-l24-g3-word-page #wb-content .wb-table th{padding-block:5px}.wb-l24-g3-word-page #wb-action button{min-height:50px}}
+@media(max-width:600px){.wb-l24-g3-word-page .wb-shell{width:calc(100% - 12px);height:calc(100svh - 12px);padding:10px 9px 12px}.wb-l24-g3-word-page .wb-shell header{padding:14px 12px}.wb-l24-g3-word-page #wb-content .wb-table{font-size:clamp(1rem,4.5vw,1.35rem)}.wb-l24-g3-word-page #wb-content .wb-table td,.wb-l24-g3-word-page #wb-content .wb-table th{padding:7px 5px}.wb-l24-g3-word-page #wb-action button{min-width:0;flex:1 1 0}}
+
+/* Final containment guard: preserve the viewport budget while allowing a
+   short viewport to scroll the complete interaction instead of clipping it. */
+.wb-l24-g3-word-page .wb-shell{overflow-x:hidden;overflow-y:auto;scrollbar-gutter:stable;border:1px solid #ffffffaa;border-radius:36px;background:#ffffff2e;box-shadow:0 18px 45px #1e5b7a35}
+.wb-l24-g3-word-page{background:radial-gradient(ellipse at 14% 13%,#ffffffb8 0 3%,transparent 11%),radial-gradient(ellipse at 86% 20%,#ffffff99 0 2.5%,transparent 10%),linear-gradient(180deg,#8ed7ed 0%,#c9eff2 52%,#f6e3c1 100%)}
+.wb-l24-g3-word-page #wb-content{overflow:visible}
+.wb-l24-g3-word-page #wb-content .wb-table{height:auto;min-height:0;flex:1 1 auto}
+.wb-l24-g3-word-page #wb-action{position:relative;z-index:1;padding-inline:2px}
+.wb-l24-g3-word-page #wb-action button{max-width:100%;white-space:normal}
+@media(max-height:560px){
+  .wb-l24-g3-word-page .wb-shell{height:auto;min-height:calc(100svh - 16px)}
+  .wb-l24-g3-word-page #wb-content .wb-table{flex:0 0 auto}
+}
+
+/* Target-only Lesson 22-style grouped reading layout. */
+.wb-l24-g3-word-page .wb-shell{width:100%;max-width:none;height:auto;min-height:100svh;margin:0;padding:0;background:transparent;box-shadow:none;border:0;overflow:visible}
+.wb-l24-g3-word-page .l24g3-shell{position:relative;width:min(1220px,calc(100% - 56px));min-height:100svh;margin:auto;padding:28px 0 34px;color:#183e63}
+.wb-l24-g3-word-page .l24g3-card{padding:72px 30px 26px;border:2px solid #ffffffaa;border-radius:42px;background:#ffffff63;backdrop-filter:blur(10px);box-shadow:0 18px 45px #1e5b7a35}
+.wb-l24-g3-word-page .l24g3-back{position:absolute;top:44px;left:22px;z-index:2;display:inline-flex;align-items:center;gap:10px;min-height:56px;padding:12px 24px;border-radius:999px;background:#fff;color:#183e63;font-size:1.15rem;font-weight:900;text-decoration:none;box-shadow:0 8px 17px #145ca744}
+.wb-l24-g3-word-page .l24g3-header{text-align:center}.wb-l24-g3-word-page .l24g3-eyebrow{width:max-content;max-width:100%;margin:0 auto 14px;padding:9px 24px;border-radius:999px;background:#277f82;color:#fff;font-size:clamp(.8rem,1.1vw,1rem);font-weight:900;letter-spacing:.03em}
+.wb-l24-g3-word-page .l24g3-header h1{margin:0;color:#183e63;font-size:clamp(2rem,4vw,3.55rem);line-height:1.08}.wb-l24-g3-word-page .l24g3-instruction{margin:8px auto 12px;font-size:clamp(1rem,1.7vw,1.35rem);font-weight:900;line-height:1.3}
+.wb-l24-g3-word-page .l24g3-replay{min-height:48px;padding:9px 20px;border:3px solid #94d9d6;border-radius:999px;background:#fff;color:#187b7a;font-weight:900;box-shadow:0 5px 0 #b7d6dc}.wb-l24-g3-word-page .l24g3-progress{display:flex;align-items:center;justify-content:center;gap:12px;margin:12px auto 16px;color:#277f82;font-weight:900}.wb-l24-g3-word-page .l24g3-progress i{display:block;width:min(360px,35vw);height:10px;border-radius:999px;background:#ffffffaa;overflow:hidden}.wb-l24-g3-word-page .l24g3-progress b{display:block;height:100%;border-radius:inherit;background:#299e9a}
+.wb-l24-g3-word-page .l24g3-layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(300px,1fr);gap:18px;align-items:stretch}.wb-l24-g3-word-page .l24g3-word-panel,.wb-l24-g3-word-page .l24g3-reading-panel{min-width:0;border:3px solid #94d9d6;border-radius:30px;background:#fffffff0;box-shadow:0 10px 22px #1e5b7a18}.wb-l24-g3-word-page .l24g3-word-panel{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);padding:22px 0}.wb-l24-g3-word-page .l24g3-word-column{min-width:0;padding:0 24px}.wb-l24-g3-word-page .l24g3-word-column+.l24g3-word-column{border-left:1px solid #c8e0e5}.wb-l24-g3-word-page .l24g3-word-column h2,.wb-l24-g3-word-page .l24g3-reading-panel h2{margin:0 0 10px;color:#187b7a;text-align:center;font-size:clamp(1.25rem,2vw,1.8rem);font-weight:900}.wb-l24-g3-word-page .l24g3-word{display:flex;align-items:center;min-height:52px;margin:2px 0;padding:7px 14px;border:2px solid transparent;border-radius:15px;color:#466477;font-size:clamp(1.2rem,2.1vw,1.65rem);font-weight:900}.wb-l24-g3-word-page .l24g3-word.current{background:#fff1bd;border-color:#f4b942;color:#183e63}.wb-l24-g3-word-page .l24g3-word.done{background:#dff3ea;color:#32735a}.wb-l24-g3-word-page .l24g3-reading-panel{display:flex;flex-direction:column;align-items:stretch;padding:24px 22px 20px;text-align:center}.wb-l24-g3-word-page .l24g3-label{margin:0;color:#5d7883;font-weight:900}.wb-l24-g3-word-page .l24g3-target{display:block;margin:12px 0;color:#183e63;font-size:clamp(2.25rem,4.2vw,4rem);line-height:1.1;overflow-wrap:anywhere}.wb-l24-g3-word-page .l24g3-attempts{margin:0;color:#a96b0b;font-weight:900}.wb-l24-g3-word-page .l24g3-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin:20px 0 12px}.wb-l24-g3-word-page .l24g3-primary,.wb-l24-g3-word-page .l24g3-secondary{display:inline-flex;align-items:center;justify-content:center;min-height:56px;padding:12px 22px;border-radius:999px;font:inherit;font-weight:900;text-decoration:none;cursor:pointer}.wb-l24-g3-word-page .l24g3-primary{border:0;background:#299e9a;color:#fff;box-shadow:0 5px 0 #187b7a}.wb-l24-g3-word-page .l24g3-secondary{border:3px solid #94d9d6;background:#fff;color:#187b7a}.wb-l24-g3-word-page .l24g3-heard{margin:0 0 12px;padding:12px;border-radius:17px;background:#eff8f7;color:#5d7883}.wb-l24-g3-word-page .l24g3-heard span{display:block;font-size:.8rem;font-weight:900}.wb-l24-g3-word-page .l24g3-heard strong{display:block;min-height:26px;color:#183e63;font-size:1.2rem}.wb-l24g3-feedback{min-height:26px;margin:0 0 14px;color:#347b62;font-weight:900}.wb-l24-g3-word-page .l24g3-feedback.bad{color:#b23636}.wb-l24-g3-word-page .l24g3-reset{margin-top:auto;min-height:48px;border:2px solid #e7a2a2;border-radius:999px;background:#fff;color:#b23636;font:inherit;font-weight:900}.wb-l24-g3-word-page .l24g3-complete{padding:44px 24px;border:3px solid #94d9d6;border-radius:30px;background:#fffffff0;text-align:center}.wb-l24-g3-word-page .l24g3-complete h2{margin:0 0 10px;font-size:2rem}.wb-l24-g3-word-page .l24g3-complete p{font-weight:900}.wb-l24-g3-word-page .l24g3-complete>div{display:flex;justify-content:center;flex-wrap:wrap;gap:12px}
+@media(max-width:850px){.wb-l24-g3-word-page .l24g3-shell{width:calc(100% - 20px);padding-top:18px}.wb-l24-g3-word-page .l24g3-card{padding:74px 14px 18px;border-radius:30px}.wb-l24-g3-word-page .l24g3-layout{grid-template-columns:1fr}.wb-l24-g3-word-page .l24g3-word-panel{min-height:0}.wb-l24-g3-word-page .l24g3-reading-panel{min-height:390px}}
+@media(max-width:520px){.wb-l24-g3-word-page .l24g3-back{left:12px;top:28px;min-height:48px;padding:9px 16px;font-size:1rem}.wb-l24-g3-word-page .l24g3-card{padding:66px 9px 14px}.wb-l24-g3-word-page .l24g3-eyebrow{padding-inline:12px;font-size:.72rem}.wb-l24-g3-word-page .l24g3-word-column{padding:0 9px}.wb-l24-g3-word-page .l24g3-word{min-height:44px;padding:6px 8px;font-size:1rem}.wb-l24-g3-word-page .l24g3-word-panel{padding-block:14px}.wb-l24-g3-word-page .l24g3-reading-panel{padding:20px 14px}.wb-l24-g3-word-page .l24g3-progress{font-size:.9rem}.wb-l24-g3-word-page .l24g3-progress i{width:34vw}}
+
+/* Desktop viewport fit and badge contrast for this activity only. */
+.wb-l24-g3-word-page{height:100svh;min-height:0;padding:0;overflow:hidden}
+.wb-l24-g3-word-page .wb-shell{height:100%;min-height:0}
+.wb-l24-g3-word-page .l24g3-shell{display:flex;align-items:center;justify-content:center;width:min(1220px,calc(100% - 56px));height:100%;min-height:0;padding:16px 0}
+.wb-l24-g3-word-page .l24g3-card{display:flex;flex-direction:column;width:100%;max-height:calc(100svh - 32px);padding:58px 24px 18px}
+.wb-l24-g3-word-page .l24g3-eyebrow{color:#fff!important;opacity:1!important;text-shadow:none;white-space:nowrap}
+.wb-l24-g3-word-page .l24g3-header{flex:0 0 auto}
+.wb-l24-g3-word-page .l24g3-header h1{margin:0}
+.wb-l24-g3-word-page .l24g3-instruction{margin:6px auto 10px}
+.wb-l24-g3-word-page .l24g3-progress{margin:9px auto 12px}
+.wb-l24-g3-word-page .l24g3-layout{flex:1 1 auto;min-height:0}
+.wb-l24-g3-word-page .l24g3-word-panel,.wb-l24-g3-word-page .l24g3-reading-panel{height:100%;min-height:0}
+.wb-l24-g3-word-page .l24g3-word-panel{padding-block:16px}
+.wb-l24-g3-word-page .l24g3-word-column{padding-inline:20px}
+.wb-l24-g3-word-page .l24g3-word{min-height:44px}
+.wb-l24-g3-word-page .l24g3-reading-panel{padding:18px 20px 14px}
+.wb-l24-g3-word-page .l24g3-target{margin:8px 0}
+.wb-l24-g3-word-page .l24g3-actions{margin:14px 0 9px}
+.wb-l24-g3-word-page .l24g3-heard{margin-bottom:8px;padding:9px}
+.wb-l24-g3-word-page .l24g3-feedback{min-height:22px;margin-bottom:8px}
+@media(max-width:850px){.wb-l24-g3-word-page{height:auto;min-height:100svh;overflow:auto}.wb-l24-g3-word-page .l24g3-shell{height:auto;min-height:100svh;padding:18px 0}.wb-l24-g3-word-page .l24g3-card{max-height:none}}
+
+/* Final alignment-only correction for L24 Gawain 3. */
+.wb-l24-g3-word-page .l24g3-header{display:flex;flex-direction:column;align-items:center;text-align:center}
+.wb-l24-g3-word-page .l24g3-header h1,.wb-l24-g3-word-page .l24g3-instruction{width:100%;text-align:center}
+.wb-l24-g3-word-page .l24g3-eyebrow,.wb-l24-g3-word-page .l24g3-replay,.wb-l24-g3-word-page .l24g3-progress,.wb-l24-g3-word-page .l24g3-layout{margin-inline:auto}
+
+/* Reuse the established Lesson 22 Gawain 4 sky/cloud viewport background. */
+.wb-l24-g3-word-page{background:url('../prescribed/PRESCRIBED-BG.jpg') center/cover no-repeat}
+
+/* Progress-row-only correction: keep the label and existing bar centered as one component. */
+.wb-l24-g3-word-page .l24g3-progress{width:max-content;max-width:calc(100% - 24px);gap:16px;margin:8px auto 4px;white-space:nowrap}
+.wb-l24-g3-word-page .l24g3-progress i{flex:0 0 auto;width:320px;height:10px;background:#dbeaf0;box-shadow:inset 0 0 0 1px #b9d5df}
+@media(min-width:1200px) and (max-width:1439px){.wb-l24-g3-word-page .l24g3-progress i{width:clamp(260px,24vw,320px)}}
+@media(min-width:1024px) and (max-width:1199px){.wb-l24-g3-word-page .l24g3-progress i{width:clamp(220px,24vw,280px)}}
+@media(max-width:1023px){.wb-l24-g3-word-page .l24g3-progress i{width:min(320px,calc(100vw - 32px))}}
