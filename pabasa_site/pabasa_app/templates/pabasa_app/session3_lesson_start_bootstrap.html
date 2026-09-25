@@ -48,6 +48,22 @@
       } catch (error) {}
     }, { once: true });
   }
+  if (window.__lessonStartProgress.activityKey === 'lesson8-gawain1a') {
+    const progress = window.__lessonStartProgress.progress;
+    const state = progress?.state;
+    if (progress && state && typeof state === 'object') {
+      const hasActivityProgress = state.phase === 'selection' || state.phase === 'final'
+        || Number(state.current_reading_item) > 0
+        || (Array.isArray(state.completed_reading_items) && state.completed_reading_items.length > 0)
+        || (Array.isArray(state.selections) && state.selections.length > 0)
+        || (Array.isArray(state.final_reading_items) && state.final_reading_items.length > 0);
+      if (!hasActivityProgress) {
+        progress.state = {...state, final_targets: []};
+        progress.current_index = 0;
+        progress.completed_items = 0;
+      }
+    }
+  }
 })();
 </script>
 <script src="{% static 'pabasa_app/js/lesson_start_modal.js' %}?v=20260924-3"></script>
