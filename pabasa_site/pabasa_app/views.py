@@ -25342,7 +25342,47 @@ def students(request):
     section = _teacher_current_sections(teacher).order_by('class_name', 'id').first()
     live_crla_material = None
     assessment_week_students = []
+    aral_students = []
+    aral_exit_students = []
+    aral_term_options = [
+        {'value': value, 'label': label}
+        for value, label in SchoolCalendar.TERM_CHOICES
+        if value in (1, 2, 3)
+    ]
+    requested_aral_term = request.GET.get('aral_term')
+    try:
+        requested_aral_term = int(requested_aral_term)
+    except (TypeError, ValueError):
+        requested_aral_term = None
+    selected_aral_term = None
     if section:
+        section_calendar = getattr(section, 'school_calendar', None)
+        current_aral_term = _calendar_current_term(section_calendar) if section_calendar else None
+        calendar_default_term = current_aral_term or getattr(section_calendar, 'current_term', None)
+        selected_aral_term = (
+            requested_aral_term if requested_aral_term in (1, 2, 3)
+            else calendar_default_term if calendar_default_term in (1, 2, 3)
+            else 1
+        )
+        roster_payload, _, _ = _teacher_student_roster_payload(
+            teacher,
+            section=section,
+            crla_term=selected_aral_term,
+        )
+        term_students = [
+            student for student in roster_payload
+            if student.get('has_completed_assessment')
+            and student.get('assessment_type') == 'crla'
+        ]
+        aral_students = [student for student in term_students if student.get('aral_status') == 'active']
+        aral_exit_students = []
+        for student in aral_students:
+            if not student.get('aral_exited'):
+                continue
+            name_parts = [part for part in str(student.get('name') or '').split() if part]
+            student['initials'] = ''.join(part[0] for part in name_parts[:2]).upper()
+            student['section_display'] = section.class_name
+            aral_exit_students.append(student)
         enrollments = _current_section_enrollments(section)
         student_ids = enrollments.values_list('student_id', flat=True)
         roster_students = User.objects.filter(
@@ -25393,6 +25433,15 @@ def students(request):
         ),
         'assessment_week_students': assessment_week_students,
         'live_crla_material': live_crla_material,
+        'aral_student_count': len(aral_students),
+        'aral_exit_students': aral_exit_students,
+        'aral_term_options': aral_term_options,
+        'selected_aral_term': selected_aral_term,
+        'selected_aral_term_label': next(
+            (option['label'] for option in aral_term_options if option['value'] == selected_aral_term),
+            'Selected term',
+        ),
+        'aral_story_performance_data': [],
     }))
 
 def student_detail(request):

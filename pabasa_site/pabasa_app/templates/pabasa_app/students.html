@@ -33,6 +33,67 @@
     .student-assessment-request-card p { margin:.25rem 0 0; color:#58676f; font-size:.88rem; }
     @media (max-width:575.98px) { .student-assessment-request-card { align-items:flex-start; flex-direction:column; } }
 
+    .aral-exit-readiness-card { display:grid; grid-template-columns:minmax(0, 1.95fr) minmax(18rem, 1fr); margin:0 0 1.15rem; overflow:hidden; border:1px solid rgba(16,70,110,.13); border-radius:20px; background:#fff; box-shadow:0 14px 32px rgba(15,78,100,.09); }
+    .aral-performance-panel, .aral-ready-panel { min-width:0; padding:1.35rem 1.45rem; }
+    .aral-performance-panel { border-right:1px solid #e3edf2; }
+    .aral-card-eyebrow { margin:0 0 .3rem; color:#2b87b5; font-size:.7rem; font-weight:900; letter-spacing:.1em; text-transform:uppercase; }
+    .aral-heading-row { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+    .aral-term-control { display:flex; align-items:center; gap:.45rem; flex:0 0 auto; }
+    .aral-term-control label { margin:0; color:#6d818d; font-size:.72rem; font-weight:800; }
+    .aral-term-control select { width:auto; min-width:6.3rem; padding:.35rem 2rem .35rem .6rem; border-color:#d6e5ec; border-radius:9px; color:#31566b; font-size:.75rem; font-weight:800; }
+    .aral-term-control select:focus { border-color:#2ea8e5; box-shadow:0 0 0 .2rem rgba(46,168,229,.18); }
+    .aral-card-heading { margin:0; color:#10466e; font-size:1.18rem; font-weight:900; }
+    .aral-section-label { display:inline-flex; margin-top:.42rem; padding:.28rem .62rem; border-radius:999px; background:#eaf7fd; color:#17658f; font-size:.78rem; font-weight:800; }
+    .aral-card-description { max-width:58ch; margin:.62rem 0 0; color:#667985; font-size:.84rem; line-height:1.45; }
+    .aral-chart-wrap { margin-top:1.25rem; padding:1rem 1rem .85rem; border:1px solid #e7eff3; border-radius:15px; background:#fbfdfe; }
+    .aral-empty-state { display:flex; min-height:12.5rem; flex-direction:column; align-items:center; justify-content:center; padding:1.25rem; color:#718590; text-align:center; }
+    .aral-empty-state strong { color:#31566b; font-size:.9rem; font-weight:900; }
+    .aral-empty-state span { max-width:34ch; margin-top:.35rem; font-size:.76rem; line-height:1.45; }
+    .aral-chart-note { margin:0 0 .8rem; color:#8a9ba5; font-size:.72rem; font-weight:700; }
+    .aral-chart { display:grid; grid-template-columns:1.4rem minmax(0,1fr); gap:.65rem; min-height:12.5rem; }
+    .aral-chart-axis { display:flex; flex-direction:column; justify-content:space-between; padding:0 0 1.7rem; color:#92a1a9; font-size:.65rem; text-align:right; }
+    .aral-chart-plot { position:relative; display:flex; align-items:flex-end; justify-content:space-around; gap:.5rem; min-width:0; padding:0 .2rem 1.7rem; background:repeating-linear-gradient(to bottom, transparent 0, transparent calc(25% - 1px), #e9f0f3 calc(25% - 1px), #e9f0f3 25%); }
+    .aral-bar-group { display:flex; align-items:flex-end; justify-content:center; gap:.18rem; width:23%; height:100%; }
+    .aral-bar { width:clamp(.42rem, 2.2vw, .9rem); min-height:.45rem; border-radius:5px 5px 2px 2px; background:#2ea8e5; }
+    .aral-bar--secondary { background:#9bd8ee; }
+    .aral-bar-label { position:absolute; bottom:.05rem; width:23%; color:#527080; font-size:.66rem; font-weight:800; text-align:center; }
+    .aral-chart-label-1 { left:0; } .aral-chart-label-2 { left:25.7%; } .aral-chart-label-3 { left:51.4%; } .aral-chart-label-4 { right:0; }
+    .aral-chart-legend { display:flex; flex-wrap:wrap; gap:.75rem 1rem; margin-top:.65rem; color:#6e818c; font-size:.7rem; font-weight:700; }
+    .aral-legend-item::before { display:inline-block; width:.55rem; height:.55rem; margin-right:.32rem; border-radius:2px; background:#2ea8e5; content:""; vertical-align:-.03rem; }
+    .aral-legend-item--secondary::before { background:#9bd8ee; }
+    .aral-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.65rem; margin-top:1rem; }
+    .aral-summary-item { padding:.65rem .72rem; border:1px solid #e7eff3; border-radius:12px; background:#fff; }
+    .aral-summary-label { display:block; color:#7b8d97; font-size:.68rem; font-weight:700; line-height:1.25; }
+    .aral-summary-value { display:block; margin-top:.18rem; color:#10466e; font-size:1.25rem; font-weight:900; }
+    .aral-benchmark-note { margin:.9rem 0 0; color:#8998a0; font-size:.7rem; }
+    .aral-ready-panel { display:flex; flex-direction:column; }
+    .aral-ready-list { display:grid; gap:.35rem; margin:1rem 0; }
+    .aral-student-row { display:grid; grid-template-columns:2.25rem minmax(0,1fr) auto; align-items:center; gap:.65rem; padding:.6rem .35rem; border-bottom:1px solid #edf2f4; }
+    .aral-student-avatar { display:grid; place-items:center; width:2.25rem; height:2.25rem; border-radius:50%; background:#eaf7fd; color:#17658f; font-size:.72rem; font-weight:900; }
+    .aral-student-name { display:block; color:#24465c; font-size:.8rem; font-weight:900; }
+    .aral-student-meta { display:block; margin-top:.1rem; color:#82939c; font-size:.68rem; }
+    .aral-student-status { display:flex; align-items:center; gap:.28rem; color:#7e8f98; font-size:.64rem; font-weight:800; white-space:nowrap; }
+    .aral-student-status::before { width:.42rem; height:.42rem; border-radius:50%; background:#b8c5cb; content:""; }
+    .aral-student-chevron { color:#2b87b5; font-size:1rem; }
+    .aral-view-all { display:inline-flex; align-items:center; gap:.35rem; margin-top:auto; padding-top:.85rem; border-top:1px solid #e7eff3; color:#17658f; font-size:.76rem; font-weight:900; text-decoration:none; }
+    .aral-view-all { border-left:0; border-right:0; border-bottom:0; background:transparent; cursor:pointer; font:inherit; text-align:left; }
+    .aral-view-all:focus-visible, .aral-student-row:focus-visible { outline:3px solid rgba(46,168,229,.35); outline-offset:3px; }
+    .aral-exit-modal .modal-content { overflow:hidden; border:0; border-radius:20px; box-shadow:0 24px 70px rgba(15,45,69,.24); }
+    .aral-exit-modal .modal-header { padding:1.15rem 1.35rem; border:0; background:linear-gradient(135deg,#10466e,#2ea8e5); color:#fff; }
+    .aral-exit-modal .modal-title { font-size:1.1rem; font-weight:900; }
+    .aral-exit-modal .modal-context { margin:.2rem 0 0; color:rgba(255,255,255,.82); font-size:.78rem; }
+    .aral-exit-modal .btn-close { filter:brightness(0) invert(1); opacity:.86; }
+    .aral-exit-modal .modal-body { max-height:min(60vh, 30rem); overflow-y:auto; padding:1rem 1.35rem; background:#f7fbfd; }
+    .aral-exit-modal .modal-footer { justify-content:space-between; padding:.85rem 1.35rem; border-top:1px solid #e6eef2; background:#fff; }
+    .aral-exit-modal .aral-modal-count { margin:0; color:#718590; font-size:.78rem; font-weight:800; }
+    .aral-modal-list { display:grid; gap:.5rem; }
+    .aral-modal-student { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.8rem .85rem; border:1px solid #e1edf2; border-radius:13px; background:#fff; }
+    .aral-modal-student-name { color:#24465c; font-size:.86rem; font-weight:900; }
+    .aral-modal-student-status { color:#2d7650; font-size:.72rem; font-weight:900; white-space:nowrap; }
+    @media (max-width:767.98px) { .aral-exit-readiness-card { grid-template-columns:1fr; }.aral-performance-panel { border-right:0; border-bottom:1px solid #e3edf2; }.aral-ready-panel { min-height:0; } }
+    @media (max-width:480px) { .aral-heading-row { align-items:flex-start; flex-direction:column; gap:.55rem; }.aral-term-control { align-self:stretch; justify-content:space-between; }.aral-term-control select { flex:1 1 auto; } }
+    @media (max-width:480px) { .aral-performance-panel, .aral-ready-panel { padding:1.1rem; }.aral-summary { grid-template-columns:1fr; }.aral-chart-wrap { padding-inline:.65rem; } }
+
     .assessment-week-card { overflow:hidden; margin-top:1rem; border:1px solid rgba(15,45,69,.12); border-radius:20px; background:#fff; box-shadow:0 12px 28px rgba(15,45,69,.08); }
     .assessment-week-card .card-header { margin:0; padding:1.2rem 1.25rem 1.1rem; border:0; background:transparent; }
     .assessment-week-header { display:flex; align-items:flex-start; justify-content:space-between; gap:1.25rem; }
@@ -1274,6 +1335,50 @@
     <div><h2 id="studentAssessmentRequestTitle">Student Requests to Take Assessment</h2><p id="studentAssessmentRequestCount">0 requests</p></div>
     <button class="btn btn-primary btn-sm" type="button" id="viewStudentAssessmentRequests">View</button>
 </section>
+<section class="aral-exit-readiness-card" aria-labelledby="aralStoryPerformanceTitle">
+    <div class="aral-performance-panel">
+        <p class="aral-card-eyebrow">ARAL Program</p>
+        <div class="aral-heading-row"><h2 class="aral-card-heading" id="aralStoryPerformanceTitle">Story Performance</h2><form class="aral-term-control" method="get"><label for="aralTermSelect">Term</label><select id="aralTermSelect" name="aral_term" onchange="this.form.submit()" aria-describedby="aralStoryPerformanceTitle">{% for option in aral_term_options %}<option value="{{ option.value }}"{% if option.value == selected_aral_term %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></form></div>
+        <span class="aral-section-label">{% if assessment_week_section %}{{ assessment_week_section.grade_level }} · {{ assessment_week_section.section|default:assessment_week_section.class_name }}{% else %}Assigned section not available{% endif %}</span>
+        <p class="aral-card-description">Performance across key story-based ARAL exit indicators.</p>
+        <div class="aral-chart-wrap">
+            {% if aral_story_performance_data %}<p class="aral-chart-note" id="aralChartDescription">Story-based performance for the assigned ARAL section.</p>
+            <div class="aral-chart" role="img" aria-labelledby="aralStoryPerformanceTitle aralChartDescription" aria-describedby="aralChartDescription">
+                <div class="aral-chart-axis" aria-hidden="true"><span>100</span><span>75</span><span>50</span><span>25</span><span>0</span></div>
+                <div class="aral-chart-plot" aria-hidden="true">
+                    {% for indicator in aral_story_performance_data %}<div class="aral-bar-group">{% for bar in indicator.bars %}<span class="aral-bar{% if bar.secondary %} aral-bar--secondary{% endif %}" style="height:{{ bar.height }}%"></span>{% endfor %}</div>{% endfor %}
+                    {% for indicator in aral_story_performance_data %}<span class="aral-bar-label" style="left:{{ indicator.left }}%">{{ indicator.label }}</span>{% endfor %}
+                </div>
+            </div>
+            {% if aral_story_performance_legend %}<div class="aral-chart-legend">{% for legend in aral_story_performance_legend %}<span class="aral-legend-item{% if legend.secondary %} aral-legend-item--secondary{% endif %}">{{ legend.label }}</span>{% endfor %}</div>{% endif %}
+            {% else %}<div class="aral-empty-state" role="status"><strong>No story performance data yet</strong><span>Performance will appear here once story-based ARAL assessment results are recorded for {{ selected_aral_term_label }}.</span></div>{% endif %}
+        </div>
+        <div class="aral-summary" aria-label="Story performance summary">
+            <div class="aral-summary-item"><span class="aral-summary-label">ARAL Students</span><strong class="aral-summary-value">{% if aral_student_count %}{{ aral_student_count }}{% else %}—{% endif %}</strong></div>
+            <div class="aral-summary-item"><span class="aral-summary-label">Meeting All Indicators</span><strong class="aral-summary-value">—</strong></div>
+            <div class="aral-summary-item"><span class="aral-summary-label">Needs Review</span><strong class="aral-summary-value">—</strong></div>
+        </div>
+        <p class="aral-benchmark-note">Future benchmark reference · exit criteria not yet defined.</p>
+    </div>
+    <div class="aral-ready-panel" aria-labelledby="aralReadyTitle">
+        <h2 class="aral-card-heading" id="aralReadyTitle">Students Ready for Exit</h2>
+        <span class="aral-section-label">{{ selected_aral_term_label }}</span>
+        <p class="aral-card-description">Students showing strong performance across the story-based indicators.</p>
+        {% if aral_exit_students %}<div class="aral-ready-list" aria-label="Students ready for exit">
+            {% for student in aral_exit_students %}<div class="aral-student-row" tabindex="0"><span class="aral-student-avatar" aria-hidden="true">{{ student.initials }}</span><span><span class="aral-student-name">{{ student.name }}</span><span class="aral-student-meta">{{ student.section_display }}</span></span><span class="aral-student-status">Ready</span><span class="aral-student-chevron" aria-hidden="true">›</span></div>{% endfor %}
+        </div>{% else %}<div class="aral-empty-state" role="status"><strong>{% if aral_student_count %}No exit recommendations yet{% else %}No ARAL students enrolled yet{% endif %}</strong><span>{% if aral_student_count %}Exit recommendations will appear here once the required performance data and criteria are available.{% else %}ARAL students assigned to this section will appear here once enrollment is recorded.{% endif %}</span></div>{% endif %}
+        <button class="aral-view-all" type="button" data-bs-toggle="modal" data-bs-target="#aralExitStudentsModal" aria-label="View all students ready for exit">View All Students Ready for Exit <span aria-hidden="true">→</span></button>
+    </div>
+</section>
+<div class="modal fade aral-exit-modal" id="aralExitStudentsModal" tabindex="-1" aria-labelledby="aralExitStudentsModalTitle" aria-describedby="aralExitStudentsModalContext">
+    <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
+        <div class="modal-header"><div><h2 class="modal-title" id="aralExitStudentsModalTitle">Students Ready for Exit</h2><p class="modal-context" id="aralExitStudentsModalContext">{% if assessment_week_section %}{{ assessment_week_section.grade_level }} · {{ assessment_week_section.section|default:assessment_week_section.class_name }} · {% endif %}{{ selected_aral_term_label }}</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+        <div class="modal-body">
+            {% if aral_exit_students %}<div class="aral-modal-list" role="list">{% for student in aral_exit_students %}<div class="aral-modal-student" role="listitem"><span class="aral-modal-student-name">{{ student.name }}</span><span class="aral-modal-student-status">Ready for Exit</span></div>{% endfor %}</div>{% elif aral_student_count %}<div class="aral-empty-state" role="status"><strong>No students ready for exit yet</strong><span>Students will appear here once the required ARAL performance data and exit criteria are available.</span></div>{% else %}<div class="aral-empty-state" role="status"><strong>No student data available for this term yet</strong><span>Student performance will appear here once ARAL activities for this term have been completed.</span></div>{% endif %}
+        </div>
+        <div class="modal-footer">{% if aral_exit_students %}<p class="aral-modal-count">{{ aral_exit_students|length }} student{{ aral_exit_students|length|pluralize }}</p>{% else %}<span aria-hidden="true"></span>{% endif %}<button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button></div>
+    </div></div>
+</div>
 <div class="modal fade" id="studentAssessmentRequestsModal" tabindex="-1" aria-labelledby="studentAssessmentRequestsModalTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
         <div class="modal-header"><span class="assessment-request-modal-icon" aria-hidden="true"><i class="bi bi-clipboard2-check-fill"></i></span><div><h2 class="modal-title" id="studentAssessmentRequestsModalTitle">Student Requests to Take Assessment</h2><small>Review requests from your students</small></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
