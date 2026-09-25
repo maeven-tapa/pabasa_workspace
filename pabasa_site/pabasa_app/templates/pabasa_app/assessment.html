@@ -917,7 +917,13 @@
 
 <style>#subjectGrid{display:block}.pabasa-preview-subject{display:block}.pabasa-track-intro{color:#647883;font-weight:700}.pabasa-template-folder-grid{display:none}</style>
 <style>
-    .pabasa-preview-subject { background: transparent; border: 0; border-radius: 0; padding: 0; }
+    .pabasa-preview-subject {
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 0;
+    }
     /* Let the assessment page grow naturally so the document owns the main scroll. */
     .assessment-dock { align-content: start; min-width: 0; overflow: visible; padding-bottom: 5rem; }
     .pabasa-track-tabs { display: flex; justify-content: center; margin-inline: auto; width: fit-content; }
@@ -925,7 +931,8 @@
     .pabasa-task-badge { font-size: .8rem; height: 27px; line-height: 27px; width: 27px; }
     .assessment-dock .pabasa-preview-subject { flex: 0 0 auto; height: auto; min-height: 0; overflow: visible; }
     .assessment-dock #coreTrackPanel, .assessment-dock #sessionGrid, .assessment-dock .subject-grid { min-width: 0; overflow: visible; }
-    .assessment-dock #sessionGrid { padding-bottom: 2rem; }
+    .assessment-dock #coreTrackPanel { padding-inline: .5rem; }
+    .assessment-dock #sessionGrid { margin-top: .5rem; padding-bottom: 2rem; }
     .pabasa-preview-subject::before { display: none; }
     @media (min-width: 992px) {
         body:has(.assessment-dock) .dashboard-main,
