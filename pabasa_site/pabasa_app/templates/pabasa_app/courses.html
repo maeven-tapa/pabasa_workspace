@@ -19684,6 +19684,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         Object.assign(contentPayload, values.content, {activity_type:'sound_detective',language:values.language,template_title:'Sound Detective',template_lesson:'Phonological Awareness',template_type:'Sound Detective',template_source:'template'});
                     }
                     if (isPictureWordMatchingTemplate(activeTemplateActivity?.templateTitle)) {
+                        contentPayload.activity_type = 'picture_word_matching';
                         const mode = activeTemplateActivity?.pictureWordMatching?.mode === 'custom' ? 'custom' : 'prescribed';
                         if (mode === 'custom') {
                             const selectedItems = getPictureWordCustomSelection();
