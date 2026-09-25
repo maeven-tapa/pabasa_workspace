@@ -627,6 +627,7 @@
 
     .section-information-students .student-table {
         min-width: 0;
+        table-layout: auto;
     }
 
     .student-table th,
@@ -636,29 +637,38 @@
         vertical-align: middle;
     }
 
-    .drop-student-btn {
+    .section-information-students .student-table .drop-student-btn {
         white-space: nowrap;
+        margin: 0;
     }
 
+    .section-information-students .student-table th:nth-child(1),
+    .section-information-students .student-table td:nth-child(1),
+    .section-information-students .student-table th:nth-child(2),
+    .section-information-students .student-table td:nth-child(2),
+    .section-information-students .student-table th:nth-child(4),
+    .section-information-students .student-table td:nth-child(4),
     .section-information-students .student-table th:nth-child(5),
-    .section-information-students .student-table td:nth-child(5) {
-        min-width: 14rem;
+    .section-information-students .student-table td:nth-child(5),
+    .section-information-students .student-table th:nth-child(6),
+    .section-information-students .student-table td:nth-child(6) {
+        white-space: nowrap;
     }
 
     .section-information-students .student-table th:nth-child(6),
     .section-information-students .student-table td:nth-child(6) {
-        min-width: 9.5rem;
+        width: 1%;
     }
 
     .year-end-outcome-group {
-        display: grid;
-        justify-items: start;
-        gap: 0.55rem;
-        min-width: 13.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        min-width: 0;
     }
 
     .year-end-outcome-status {
-        min-height: 1.9rem;
+        min-height: 0;
     }
 
     .year-end-outcome-form {
@@ -755,6 +765,42 @@
     .status-chip {
         background: rgba(15, 23, 42, 0.05);
         color: #334155;
+    }
+
+    .section-information-students .student-pabasa-id .pabasa-badge {
+        background: transparent;
+        color: var(--primary);
+        padding: 0;
+        border-radius: 0;
+        letter-spacing: 0.01em;
+    }
+
+    .section-information-students .student-table th,
+    .section-information-students .student-table td {
+        padding: 0.62rem 0.75rem;
+    }
+
+    .section-information-students .student-table .pabasa-badge,
+    .section-information-students .student-table .status-chip {
+        border-radius: 4px;
+        font-size: 0.78rem;
+        line-height: 1.2;
+        padding: 0.2rem 0.42rem;
+        white-space: nowrap;
+    }
+
+    .section-information-students .student-table .student-pabasa-id .pabasa-badge {
+        padding: 0;
+        border-radius: 0;
+    }
+
+    .section-information-students .student-name-cell strong {
+        white-space: nowrap;
+    }
+
+    .section-information-students .student-reading-level .status-chip,
+    .section-information-students .student-year-end-outcome .status-chip {
+        border: 1px solid rgba(15, 23, 42, 0.08);
     }
 
     .student-table .text-center {
@@ -1274,11 +1320,11 @@
                     <tbody>
                         {% for student in students_table %}
                         <tr data-student-key="{{ student.pabasa_id|default_if_none:'' }}" data-student-name="{{ student.name|default_if_none:'' }}" data-search="{{ student.name|default_if_none:'' }} {{ student.pabasa_id|default_if_none:'' }} {{ student.email|default_if_none:'' }}" data-sort-name="{{ student.name|default_if_none:'' }}" data-sort-pabasa="{{ student.pabasa_id|default_if_none:'' }}" data-sort-reading="{{ student.reading_level|default:'Pending' }}" data-sort-joined="{{ student.joined_at|default_if_none:'' }}" data-sort-outcome="{{ student.outcome_label|default:'Not Finalized' }}">
-                            <td><strong>{{ student.name }}</strong></td>
-                            <td><span class="pabasa-badge">{{ student.pabasa_id }}</span></td>
+                            <td class="student-name-cell"><strong>{{ student.name }}</strong></td>
+                            <td class="student-pabasa-id"><span class="pabasa-badge">{{ student.pabasa_id }}</span></td>
                             <td>{{ student.email }}</td>
-                            <td><span class="status-chip reading-level-chip" data-reading-level="{{ student.reading_level|default:'Pending' }}">{{ student.reading_level|default:'Pending' }}</span></td>
-                            <td>
+                            <td class="student-reading-level"><span class="status-chip reading-level-chip" data-reading-level="{{ student.reading_level|default:'Pending' }}">{{ student.reading_level|default:'Pending' }}</span></td>
+                            <td class="student-year-end-outcome">
                                 <div class="year-end-outcome-group{% if finalization_open and student.can_finalize %} is-finalization-open{% endif %}">
                                     {% if not finalization_open or not student.can_finalize %}<div class="year-end-outcome-status">
                                         {% if student.enrollment.student.is_archived %}<span class="status-chip"><i class="bi bi-archive me-1"></i>Archived</span>
@@ -1290,7 +1336,7 @@
                                     {% if finalization_open and student.enrollment.status == 'completed' and student.enrollment.finalized_by_id == request.session.user_id and not student.enrollment.student.is_archived %}<form method="post" action="{% url 'teacher_correct_student_outcome' %}" class="year-end-outcome-form" data-finalize-form="true" data-correction-form="true">{% csrf_token %}<input type="hidden" name="student_id" value="{{ student.enrollment.student_id }}"><input type="hidden" name="section_id" value="{{ section.id }}"><select name="outcome" class="form-select form-select-sm" required><option value="">Correct to…</option><option value="promoted">Promoted</option><option value="retained">Retained</option></select><button class="btn btn-sm btn-outline-warning" type="submit"><i class="bi bi-arrow-counterclockwise me-1"></i>Correct</button></form>{% endif %}
                                 </div>
                             </td>
-                            <td><button type="button" class="btn btn-sm btn-outline-danger drop-student-btn" data-bs-toggle="modal" data-bs-target="#dropStudentModal" data-student-id="{{ student.id }}" data-student-name="{{ student.name }}"><i class="bi bi-person-dash me-1"></i>Drop Student</button></td>
+                            <td class="student-actions"><button type="button" class="btn btn-sm btn-outline-danger drop-student-btn" data-bs-toggle="modal" data-bs-target="#dropStudentModal" data-student-id="{{ student.id }}" data-student-name="{{ student.name }}"><i class="bi bi-person-dash me-1"></i>Drop Student</button></td>
                         </tr>
                         {% empty %}
                         <tr>
