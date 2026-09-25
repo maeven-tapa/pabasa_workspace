@@ -50,7 +50,7 @@ class Lesson24Gawain4WorkbookTests(SimpleTestCase):
         js = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_workbook.js').read_text(encoding='utf-8')
         css = (Path(__file__).parent / 'static/pabasa_app/css/prescribed_l24_g4_pictures.css').read_text(encoding='utf-8')
         template = (Path(__file__).parent / 'templates/pabasa_app/prescribed_workbook_page.html').read_text(encoding='utf-8')
-        for expected in ('wb-picture-reading', 'wb-picture-image', 'wb-picture-word', 'wb-picture-feedback', 'Pakinggan', 'Basahin ang Salita'):
+        for expected in ('wb-picture-reading', 'wb-picture-image', 'wb-picture-word', 'wb-picture-feedback', 'Pakinggan', 'Basahin'):
             self.assertIn(expected, js)
         self.assertIn('wb-l24-g4-pictures-page', css)
         self.assertIn('SESSION 8 · LESSON 24 · GAWAIN 4', template)

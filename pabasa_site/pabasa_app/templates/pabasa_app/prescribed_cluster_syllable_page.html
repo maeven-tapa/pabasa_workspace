@@ -1,7 +1,7 @@
 {% load static %}
 <!doctype html>
 <html lang="fil">
-<head>
+<head>{% include 'pabasa_app/basahin_script.html' %}
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Lesson 20 at 21: Gawain 1</title>
@@ -59,8 +59,8 @@
       if(!item){finish();return}
       if(state.phase==='oral_reading'){
         const recovery=(state.stt_attempts[itemKey(index)]||0)>=3;
-        app.innerHTML=header()+`<p class="hint">Salita ${index+1} sa ${total}</p>${picture(item)}<p class="hint">${recovery?'Pakinggan muna ang salita.':'Basahin nang malakas ang salitang nasa larawan.'}</p><button class="button ${recovery?'gold':''}" id="oral" type="button">${recovery?'Pakinggan / Read Aloud':'Basahin ngayon'}</button><p class="status ${kind}">${esc(message)}</p>`;
-        app.querySelector('#oral').onclick=()=>recovery?listen(index):read(index);return;
+        app.innerHTML=header()+`<p class="hint">Salita ${index+1} sa ${total}</p>${picture(item)}<p class="hint">${recovery?'Pakinggan muna ang salita.':'Basahin nang malakas ang salitang nasa larawan.'}</p><button data-basahin-button class="button ${recovery?'gold':''}" id="oral" type="button">${recovery?'Pakinggan / Read Aloud':window.BasahinButton.LABEL}</button><p class="status ${kind}">${esc(message)}</p>`;
+        window.Basahin.bindActivity(app.querySelector('#oral'),()=>recovery?listen(index):read(index));return;
       }
       let selected='';
       app.innerHTML=header()+`<p class="hint">Salita ${index+1} sa ${total}</p>${picture(item)}<p class="hint">Bilugan ang pantig na may klaster.</p><div class="chips">${item.choices.map(choice=>`<button class="chip" data-choice="${esc(choice)}" type="button">${esc(choice)}</button>`).join('')}</div><button class="button" id="check" disabled>SURIIN</button><p class="status ${kind}">${esc(message)}</p>`;
@@ -74,14 +74,14 @@
       try{
         if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw Error('Hindi available ang mikropono.');
         button.disabled=true;button.textContent='Nagbabasa...';
-        stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
-        const chunks=[],mimeType=recordingMimeType(),blob=await new Promise((resolve,reject)=>{const recorder=new MediaRecorder(stream,mimeType?{mimeType}:undefined);recorder.addEventListener('dataavailable',event=>{if(event.data?.size)chunks.push(event.data)});recorder.addEventListener('error',()=>reject(Error('Hindi naitala ang boses.')),{once:true});recorder.addEventListener('stop',()=>resolve(new Blob(chunks,{type:recorder.mimeType||mimeType||'audio/webm'})),{once:true});recorder.start();setTimeout(()=>{if(recorder.state==='recording')recorder.stop()},3500)});
+        stream=await window.Basahin.openMicrophone({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+        const chunks=[];const mimeType=recordingMimeType();const blob = await window.Basahin.capture({button:document.querySelector('[data-basahin-button]'),stream: stream});
         stopMedia();if(!blob.size)throw Error('Walang narinig na boses. Subukan muli.');if(mine!==requestId)return;
         button.textContent='Pinoproseso...';const form=new FormData();form.append('audio',blob,'session7-lesson20-21.webm');form.append('target_text',items[index].word);form.append('language','Filipino');form.append('mode','reading');
         const response=await fetch(d.transcribe_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form}),data=await response.json().catch(()=>({}));
         if(mine!==requestId)return;
         if(response.ok&&data.success&&spokenWordMatches(items[index].word,data.transcript)){state.completed_oral_reads=[...new Set([...state.completed_oral_reads,index])];state.stt_attempts[itemKey(index)]=0;state.tts_plays[itemKey(index)]=0;state.phase='syllable_selection';await save();const message='Tama ang pagbasa! Piliin ang pantig na may klaster.';render(message,'good');playReadAloud(message).catch(()=>{})}else throw Error('Hindi pa. Subukan muli.');
-      }catch(error){if(mine===requestId){state.stt_attempts[itemKey(index)]=Math.min(3,(state.stt_attempts[itemKey(index)]||0)+1);try{await save()}catch(_){}const message=(state.stt_attempts[itemKey(index)]||0)>=3?'Pakinggan muna ang salita.':error.message||'Hindi nakuha ang boses. Subukan muli.';render(message,'bad');playReadAloud(message).catch(()=>{})}}finally{stopMedia();busy=false}
+      }catch(error){if(mine===requestId){if(!window.Basahin.isCaptureError(error)){state.stt_attempts[itemKey(index)]=Math.min(3,(state.stt_attempts[itemKey(index)]||0)+1);}try{await save()}catch(_){}const message=(state.stt_attempts[itemKey(index)]||0)>=3?'Pakinggan muna ang salita.':error.message||'Hindi nakuha ang boses. Subukan muli.';render(message,'bad');playReadAloud(message).catch(()=>{})}}finally{stopMedia();busy=false}
     }
     async function listen(index){
       if(busy)return;busy=true;const mine=++requestId,button=app.querySelector('#oral');

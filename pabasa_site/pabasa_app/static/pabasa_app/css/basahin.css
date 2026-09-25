@@ -1,0 +1,109 @@
+/* Shared Basahin button. Layout containers remain owned by each activity. */
+@font-face {
+  font-family: BasahinFredoka;
+  src: url('../font/fredoka-one.one-regular.ttf') format('truetype');
+  font-display: swap;
+}
+:root body button[data-basahin-button] {
+  --basahin-teal: #299e9a;
+  --basahin-shadow: #187b7a;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 14px !important;
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: min(280px, 100%);
+  min-height: 64px;
+  padding: 14px 24px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--basahin-teal) !important;
+  color: #fff !important;
+  font: 400 clamp(1.1rem, 1.8vw, 1.45rem)/1.25 BasahinFredoka, Nunito, 'Segoe UI', sans-serif !important;
+  box-shadow: 0 7px 0 var(--basahin-shadow), 0 10px 20px #187b7a40 !important;
+  cursor: pointer;
+  transition: transform .16s ease, filter .16s ease, box-shadow .16s ease !important;
+  animation: none !important;
+  transform-origin: center;
+}
+:root body button[data-basahin-button]::before,
+:root body button[data-basahin-button]::after { content: none !important; }
+:root body button[data-basahin-button]:not(:disabled):hover {
+  filter: brightness(1.06) !important;
+  transform: translateY(-2px) !important;
+}
+:root body button[data-basahin-button]:focus-visible {
+  outline: 3px solid #f4c85d !important;
+  outline-offset: 4px !important;
+}
+:root body button[data-basahin-button]:not(:disabled):active {
+  transform: translateY(3px) !important;
+  box-shadow: 0 2px 0 var(--basahin-shadow) !important;
+}
+:root body button[data-basahin-button]:disabled:not([data-basahin-state='listening']):not([data-basahin-state='processing']) {
+  background: #b5c5c7 !important;
+  color: #edf3f4 !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  filter: none !important;
+  opacity: 1 !important;
+}
+:root body button[data-basahin-button][data-basahin-state='listening'],
+:root body button[data-basahin-button][data-basahin-state='processing'] {
+  background: var(--basahin-teal) !important;
+  color: #fff !important;
+  box-shadow: 0 7px 0 var(--basahin-shadow), 0 10px 20px #187b7a40 !important;
+  cursor: wait !important;
+}
+:root body button[data-basahin-button][data-basahin-state='listening'] {
+  animation: basahin-listening 1.3s ease-in-out infinite !important;
+}
+:root body button[data-basahin-button] [data-basahin-label] {
+  display: inline-block;
+  animation: none !important;
+}
+:root body button[data-basahin-button] [data-basahin-icon] {
+  display: inline-block !important;
+  width: 1.25em !important;
+  height: 1.25em !important;
+  flex: 0 0 1.25em;
+  font-size: inherit !important;
+  animation: none !important;
+}
+:root body button[data-basahin-button] [data-basahin-icon]::before {
+  content: '' !important;
+  display: block !important;
+  width: 100%;
+  height: 100%;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='9' y='2' width='6' height='12' rx='3'/%3E%3Cpath d='M5 10v2a7 7 0 0 0 6 6.93V21H8v2h8v-2h-3v-2.07A7 7 0 0 0 19 12v-2h-2v2a5 5 0 0 1-10 0v-2z'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+:root body button[data-basahin-button][data-basahin-state='processing'] [data-basahin-icon] {
+  box-sizing: border-box;
+  border: 2px solid #ffffff73;
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: basahin-spin .8s linear infinite !important;
+}
+:root body button[data-basahin-button][data-basahin-state='processing'] [data-basahin-icon]::before { content: none !important; }
+:root body button[data-basahin-button][data-basahin-state='model'] [data-basahin-icon]::before {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 9v6h4l5 4V5L7 9zm12-2v2a4 4 0 0 1 0 6v2a6 6 0 0 0 0-10zm3-3v2a8 8 0 0 1 0 12v2a10 10 0 0 0 0-16z'/%3E%3C/svg%3E");
+}
+:root body button[data-basahin-button][hidden] { display: none !important; }
+@keyframes basahin-listening {
+  0%, 100% { scale: 1; filter: drop-shadow(0 0 3px #f4c85d66); }
+  50% { scale: 1.018; filter: drop-shadow(0 0 12px #f4c85ddd); }
+}
+@keyframes basahin-spin { to { transform: rotate(360deg); } }
+@media (max-width: 480px) {
+  :root body button[data-basahin-button] { min-width: 0; width: 100%; min-height: 58px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root body button[data-basahin-button][data-basahin-state],
+  :root body button[data-basahin-button][data-basahin-state] [data-basahin-icon] {
+    animation: none !important;
+    transition: none !important;
+  }
+}

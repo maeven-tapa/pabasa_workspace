@@ -1,7 +1,7 @@
 {% load static %}
 <!doctype html>
 <html lang="fil">
-<head>
+<head>{% include 'pabasa_app/basahin_script.html' %}
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Lesson 17 at 18: Gawain 5 | PABASA</title>
@@ -79,9 +79,9 @@
     const stopOral=()=>{stream?.getTracks().forEach(track=>track.stop());stream=null};
     function renderOral(message='',kind=''){
       const item=items[oralIndex];
-      const actionLabel=oralMode==='aloud'?'🔊 Pakinggan muna':oralStatus||'🎙 Basahin ngayon';
-      app.innerHTML=`<p class="eyebrow">Session 6 · Lesson 17 at 18 · Gawain 5</p><h1>${esc(d.title)}</h1><p class="instruction">Basahin muna nang malakas ang salitang nasa larawan.</p><p class="meta">Pagbasa muna · ${oralIndex+1} / ${items.length}</p><div class="track"><i style="width:${(oralIndex+1)/items.length*100}%"></i></div><section class="oral-card"><img class="oral-image" src="${esc(item.image_url)}" alt="${esc(item.alt_text)}"><p class="oral-word">${esc(item.label)}</p><button class="button" id="oral-action" type="button" ${busy?'disabled':''}>${esc(actionLabel)}</button><p class="oral-status ${esc(kind)}">${esc(message||'Basahin ang salita, pagkatapos pindutin ang button.')}</p></section>`;
-      app.querySelector('#oral-action').onclick=oralMode==='aloud'?listenCurrentWord:readCurrentWord;
+      const actionLabel=oralMode==='aloud'?'🔊 Pakinggan muna':oralStatus||window.BasahinButton.LABEL;
+      app.innerHTML=`<p class="eyebrow">Session 6 · Lesson 17 at 18 · Gawain 5</p><h1>${esc(d.title)}</h1><p class="instruction">Basahin muna nang malakas ang salitang nasa larawan.</p><p class="meta">Pagbasa muna · ${oralIndex+1} / ${items.length}</p><div class="track"><i style="width:${(oralIndex+1)/items.length*100}%"></i></div><section class="oral-card"><img class="oral-image" src="${esc(item.image_url)}" alt="${esc(item.alt_text)}"><p class="oral-word">${esc(item.label)}</p><button data-basahin-button class="button" id="oral-action" type="button" ${busy?'disabled':''}>${esc(actionLabel)}</button><p class="oral-status ${esc(kind)}">${esc(message||'Basahin ang salita, pagkatapos pindutin ang button.')}</p></section>`;
+      window.Basahin.bindActivity(app.querySelector('#oral-action'),oralMode==='aloud'?listenCurrentWord:readCurrentWord);
       announceOralItem();
     }
     async function readCurrentWord(){
@@ -89,21 +89,19 @@
       if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){readingAttempts=Math.min(3,readingAttempts+1);sttAttempts[String(oralIndex)]=readingAttempts;oralMode=readingAttempts>=3?'aloud':'read';try{await save()}catch(_){}renderOral(oralMode==='aloud'?'Pakinggan muna ang salita.':`Hindi available ang mikropono. May ${3-readingAttempts} pagkakataon pa.`,'error');return}
       busy=true;oralStatus='🎙 Nakikinig…';const requestedIndex=oralIndex;
       try{
-        stream=await navigator.mediaDevices.getUserMedia({audio:true});
-        const recorder=new MediaRecorder(stream),chunks=[];
-        recorder.ondataavailable=event=>chunks.push(event.data);
-        recorder.onstop=async()=>{
+        stream=await window.Basahin.openMicrophone({audio:true});
+        renderOral('Nakikinig... basahin ang salita.','');
+        const basahinAudio=await window.Basahin.capture({button:document.querySelector('[data-basahin-button]'),stream});
           stopOral();
           try{
-            oralStatus='⏳ Pinoproseso…';renderOral('Pinoproseso ang iyong pagbasa…','good');const form=new FormData();form.append('audio',new Blob(chunks,{type:recorder.mimeType||'audio/webm'}),'oral-reading.webm');form.append('target_text',items[oralIndex].label);form.append('language','Filipino');form.append('mode','reading');
+            oralStatus='⏳ Pinoproseso…';renderOral('Pinoproseso ang iyong pagbasa…','good');const form=new FormData();form.append('audio',basahinAudio,'oral-reading.webm');form.append('target_text',items[oralIndex].label);form.append('language','Filipino');form.append('mode','reading');
             const response=await fetch('{% url "reading_transcribe_api" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form});
             const result=await response.json();if(!response.ok||!result.success||!norm(result.transcript).includes(norm(items[oralIndex].label)))throw Error('Hindi pa malinaw ang pagbasa.');
             if(requestedIndex!==oralIndex)return;
             sttAttempts[String(oralIndex)]=0;ttsPlays[String(oralIndex)]=0;oralIndex++;phase=oralIndex===items.length?'matching':'oral_reading';restoreOral();await save();oralStatus='';await playMappedAudio(gawain5Audio.readingCorrect);if(phase==='matching'){render();return}renderOral('Magaling! Basahin ang susunod na salita.','good');
           }catch(error){oralStatus='';readingAttempts=Math.min(3,readingAttempts+1);sttAttempts[String(oralIndex)]=readingAttempts;if(readingAttempts>=3)oralMode='aloud';try{await save()}catch(_){}const feedback=readingAttempts>=3?'Makinig muna sa salita nang hanggang tatlong beses.':`Subukan muli. May ${3-readingAttempts} pagkakataon pa.`;renderOral(feedback,'error')}finally{busy=false;const action=app.querySelector('#oral-action');if(action)action.disabled=false}
-        };
-        recorder.start();setTimeout(()=>{if(recorder.state!=='inactive')recorder.stop()},3500);renderOral('Nakikinig… basahin ang salita.','');
-      }catch(error){stopOral();oralStatus='';readingAttempts=Math.min(3,readingAttempts+1);sttAttempts[String(oralIndex)]=readingAttempts;oralMode=readingAttempts>=3?'aloud':'read';try{await save()}catch(_){}const feedback=oralMode==='aloud'?'Pakinggan muna ang salita.':`Pahintulutan ang mikropono. May ${3-readingAttempts} pagkakataon pa.`;renderOral(feedback,'error');busy=false}
+
+      }catch(error){stopOral();oralStatus='';if(!window.Basahin.isCaptureError(error)){readingAttempts=Math.min(3,readingAttempts+1);}if(!window.Basahin.isCaptureError(error)){sttAttempts[String(oralIndex)]=readingAttempts;}oralMode=readingAttempts>=3?'aloud':'read';try{await save()}catch(_){}const feedback=oralMode==='aloud'?'Pakinggan muna ang salita.':`Pahintulutan ang mikropono. May ${3-readingAttempts} pagkakataon pa.`;renderOral(feedback,'error');busy=false}
     }
     async function listenCurrentWord(){
       if(busy)return;busy=true;const requestedIndex=oralIndex;try{
