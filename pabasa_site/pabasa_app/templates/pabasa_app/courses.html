@@ -19689,6 +19689,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     if (isSentenceReadingTemplate(activeTemplateActivity?.templateTitle)) {
                         contentPayload.activity_type = 'sentence_reading';
                     }
+                    if (isStoryReadingTemplate(activeTemplateActivity?.templateTitle)) {
+                        contentPayload.activity_type = 'story_reading';
+                    }
                     if (isPictureWordMatchingTemplate(activeTemplateActivity?.templateTitle)) {
                         contentPayload.activity_type = 'picture_word_matching';
                         const mode = activeTemplateActivity?.pictureWordMatching?.mode === 'custom' ? 'custom' : 'prescribed';
