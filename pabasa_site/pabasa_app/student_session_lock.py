@@ -9,10 +9,11 @@ from .models import User
 from .system_clock import real_now as session_now
 
 
-# Device presence and user inactivity are different clocks. A temporarily
-# disconnected browser keeps its login unless a new device claims the account.
-STUDENT_SESSION_LEASE_TIMEOUT = timedelta(minutes=2)
+# Let an active learning screen recover from a short disconnection. The tab
+# heartbeats every 30 seconds; a device is replaceable after the normal idle
+# window, even if it was left on an assessment page.
 STUDENT_SESSION_IDLE_TIMEOUT = timedelta(seconds=settings.STUDENT_SESSION_IDLE_SECONDS)
+STUDENT_SESSION_LEASE_TIMEOUT = STUDENT_SESSION_IDLE_TIMEOUT
 
 
 def is_learning_page(path):
@@ -23,8 +24,10 @@ def is_learning_page(path):
         return False
     return bool(
         path.startswith('/dashboard/assessment/') and match.url_name != 'assessment'
+        or path.startswith('/dashboard/practice/') and match.url_name != 'practice_results'
         or match.url_name in {
             'practice_word_page', 'practice_sentence_page', 'practice_para_page',
+            'practice', 'practice_mark_tutorial_seen', 'practice_game_progression',
             'live_assessment_session', 'live_assessment_session_control',
             'live_assessment_waiting_room',
         }
@@ -33,8 +36,12 @@ def is_learning_page(path):
 
 def student_session_timed_out(user, now=None):
     now = now or session_now()
-    return bool(user and not user.active_session_learning and user.last_activity
-                and user.last_activity <= now - STUDENT_SESSION_IDLE_TIMEOUT)
+    if not user:
+        return False
+    if user.active_session_learning:
+        last_seen = user.active_session_last_seen or user.last_activity
+        return bool(last_seen and last_seen <= now - STUDENT_SESSION_LEASE_TIMEOUT)
+    return bool(user.last_activity and user.last_activity <= now - STUDENT_SESSION_IDLE_TIMEOUT)
 
 
 def student_session_status(user, now=None):
@@ -78,9 +85,12 @@ def claim_student_session(user_id, session_key):
 
 
 def student_session_is_active(user, session_key, now=None):
+    now = now or session_now()
+    last_seen = (user.active_session_last_seen or user.last_activity) if user else None
     return bool(
         user and session_key and user.active_session_key == session_key and
-        not student_session_timed_out(user, now)
+        not student_session_timed_out(user, now) and last_seen and
+        last_seen > now - STUDENT_SESSION_LEASE_TIMEOUT
     )
 
 

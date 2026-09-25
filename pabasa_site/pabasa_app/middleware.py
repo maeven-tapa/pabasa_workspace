@@ -53,7 +53,9 @@ class StudentSessionLockMiddleware:
                     release_student_session(user.id, key)
                 request.session.flush()
                 accept = request.META.get("HTTP_ACCEPT", "") or ""
-                if request.path.startswith('/api/') or request.META.get("HTTP_X_REQUESTED_WITH") == "XMLHttpRequest" or 'application/json' in accept:
+                if (request.method != 'GET' or request.path.startswith('/api/')
+                        or request.META.get("HTTP_X_REQUESTED_WITH") == "XMLHttpRequest"
+                        or 'application/json' in accept):
                     return JsonResponse({"success": False, "code": reason, "error": "Your session has ended. Please sign in again."}, status=401)
                 return redirect("auth")
             # Polling proves presence, not user interaction. Device ownership

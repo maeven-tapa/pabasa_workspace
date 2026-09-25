@@ -4,7 +4,7 @@
   const configNode = document.getElementById('student-session-config');
   if (!configNode || window.PabasaStudentSession) return;
   const config = JSON.parse(configNode.textContent);
-  const tabId = window.crypto.randomUUID();
+  const tabId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const storageKey = `pabasa-session-tabs:${config.channel}`;
   let deadline = performance.now() + config.remaining_seconds * 1000;
   let protectedSession = config.protected, pendingActivity = false;
@@ -19,7 +19,7 @@
     try {
       const now = Date.now(), tabs = JSON.parse(localStorage.getItem(storageKey) || '{}');
       for (const [id, tab] of Object.entries(tabs)) {
-        if (!tab || Math.abs(now - tab.seen) > 90000) delete tabs[id];
+        if (!tab || Math.abs(now - tab.seen) > 5 * 60 * 1000) delete tabs[id];
       }
       if (remove) delete tabs[tabId];
       else tabs[tabId] = {seen: now, path: config.learning_page ? location.pathname : ''};
