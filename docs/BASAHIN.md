@@ -121,6 +121,14 @@ The thresholds follow the CRLA reader's volume detector. Volume gating distingui
 
 ## Existing integration and verification
 
+### English sessions 9–15
+
+English reading activities share the same Basahin button styling, volume detector and 2.4-second capture. Mark buttons with `data-basahin-language="English"` for **Read**, **Please wait...**, **Speak now...**, **Listening...** and **Checking...** labels. Send `language: 'English'` to `read()`; the server selects `en-PH`, English phrase hints and its configured `GOOGLE_STT_MODEL` (default `chirp_3`), with the existing provider fallback. Filipino requests retain their separate STT configuration.
+
+Words use `mode: 'reading'`. Full sentences, Story Time lines and Rhyming Verses use `mode: 'sentence'`, preserving backend progress across clips and saving one activity attempt. Oral missing-word answers use `continuous: false` and retain their activity-specific server grader. Trace and Say retains its voiced participation step through `capture({button})`; it does not grade a transcript. Session 9 drawing activities and listening/selection-only activities do not acquire reading buttons.
+
+`node tools/test_basahin_english_routes.cjs` verifies the English language/mode routing and cancellation of 16 reading paths (requires `acorn`, or `BASAHIN_ACORN_PATH`). `node tools/test_basahin_english_browser.cjs` checks the actual verse activity across two synthetic audio clips, including the English request fields and one saved completion (requires `playwright-core`, or `BASAHIN_PLAYWRIGHT_PATH`). Neither test calls live Google STT.
+
 Reading activities using `/api/reading/transcribe/` grade with `result.success && result.complete === true`. Do not compare or search the transcript again in JavaScript: the backend owns word matching, sound aliases and syllable reconstruction. Keep transcripts for display and saved diagnostics. Exact rhyme activities send `salitang_magkatugma_exact=1`; strict syllable exercises retain their specific backend verdict. The Session 7 Lesson 20–21 cluster activity sends its `prescribed_activity_key` so its scoped `check`/`tsek` pronunciation allowance is evaluated on the server.
 
 Session templates that used **Basahin Ngayon** and the workbook's **Basahin ang Salita** now display **Basahin**. Their speech capture uses this module while preserving the existing per-activity server graders. Sentence attempts use `read()` so the 2.4-second clip boundary does not end a full sentence prematurely. Teacher-managed reading buttons also use the shorter label; they retain their existing non-STT behavior. The separate CRLA assessment reader and long-form recording screens retain their existing workflows.

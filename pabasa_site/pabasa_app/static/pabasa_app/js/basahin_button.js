@@ -5,6 +5,8 @@
   const LABEL = 'Basahin';
   const selector = 'button[data-basahin-button]';
   const labels = {idle: LABEL, calibrating: 'Sandali...', waiting: 'Magsalita...', listening: 'Nakikinig...', processing: 'Sinusuri...'};
+  const englishLabels = {idle: 'Read', calibrating: 'Please wait...', waiting: 'Speak now...', listening: 'Listening...', processing: 'Checking...'};
+  const labelsFor = button => /^en|english/i.test(button?.dataset.basahinLanguage || '') ? englishLabels : labels;
   const activities = new WeakMap(), running = new WeakSet();
 
   // One click handler for every Basahin button, including buttons re-rendered by
@@ -35,8 +37,8 @@
   }
 
   function stateFromText(text) {
-    if (/sandali/i.test(text)) return 'calibrating';
-    if (/magsalita/i.test(text)) return 'waiting';
+    if (/sandali|please wait/i.test(text)) return 'calibrating';
+    if (/magsalita|speak now/i.test(text)) return 'waiting';
     if (/nakikinig|nagbabasa|recording|listening/i.test(text)) return 'listening';
     if (/sinusuri|pinoproseso|processing|checking/i.test(text)) return 'processing';
     if (/pakinggan|read aloud/i.test(text)) return 'model';
@@ -70,7 +72,7 @@
       button.replaceChildren(icon, label);
     }
     // Some activities reuse their reading button for the teacher's model audio.
-    const text = labels[state] || source.replace(/^[^\p{L}]+/u, '') || 'Pakinggan';
+    const text = labelsFor(button)[state] || source.replace(/^[^\p{L}]+/u, '') || 'Pakinggan';
     if (label.textContent !== text) label.textContent = text;
     return button;
   }
@@ -98,7 +100,7 @@
     }).observe(document.body, {subtree: true, childList: true, characterData: true});
   }
   document.addEventListener('click', handleClick);
-  window.BasahinButton = Object.freeze({LABEL, decorate, setState: decorate, setSpeech, mount, bindActivity, getActivity, unbindActivity});
+  window.BasahinButton = Object.freeze({LABEL, labelsFor, decorate, setState: decorate, setSpeech, mount, bindActivity, getActivity, unbindActivity});
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once: true});
   else start();
 })();

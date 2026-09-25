@@ -2,6 +2,8 @@
 <!doctype html>
 <html lang="en">
 <head>
+{% include "pabasa_app/basahin_script.html" %}
+
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Say and Circle!</title>
@@ -26,7 +28,7 @@
     </div>
   </div>
   {{ prescribed_activity_data|json_script:"prescribed-activity-data" }}
-  <script src="{% static 'pabasa_app/js/prescribed_lesson26_31_ui.js' %}?v=lesson26-31-ui-3" defer></script><script src="{% static 'pabasa_app/js/prescribed_say_circle_lesson31_activity4.js' %}?v=lesson31-a4-ui-2-resume2-startover" defer></script>
+  <script src="{% static 'pabasa_app/js/prescribed_lesson26_31_ui.js' %}?v=lesson26-31-ui-3" defer></script><script src="{% static 'pabasa_app/js/prescribed_say_circle_lesson31_activity4.js' %}?v=20260926-basahin-english" defer></script>
 </body>
 </html>
 {% include 'pabasa_app/session15_prescribed_controls.html' with prefix='lesson31a4' help_title='Say and Circle Help' %}

@@ -1,6 +1,8 @@
 {% load static %}<!doctype html>
 <html lang="en">
 <head>
+{% include "pabasa_app/basahin_script.html" %}
+
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Word Search | PABASA</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -85,7 +87,7 @@
   <div class="prescribed-l26a1-modal" id="prescribed-l26a1-pause-modal" role="dialog" aria-modal="true" aria-labelledby="prescribed-l26a1-pause-title" hidden><section class="prescribed-l26a1-modal-card"><div class="prescribed-l26a1-modal-head"><h2 id="prescribed-l26a1-pause-title"><i class="bi bi-pause-circle-fill" aria-hidden="true"></i> Activity Paused</h2></div><p>Take a break. Your progress is saved.</p><div class="prescribed-l26a1-pause-actions"><button class="primary" id="prescribed-l26a1-resume" type="button"><i class="bi bi-play-fill" aria-hidden="true"></i> Resume</button><button class="secondary" id="prescribed-l26a1-restart" type="button"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Restart</button><button class="secondary" id="prescribed-l26a1-back" type="button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to My Lessons</button><button class="secondary" id="prescribed-l26a1-audio-test" type="button"><i class="bi bi-mic-fill" aria-hidden="true"></i> Audio Testing</button></div></section></div>
   <div class="prescribed-l26a1-modal" id="prescribed-l26a1-restart-modal" role="dialog" aria-modal="true" aria-labelledby="prescribed-l26a1-restart-title" hidden><section class="prescribed-l26a1-modal-card"><div class="prescribed-l26a1-modal-head"><h2 id="prescribed-l26a1-restart-title"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Restart Activity?</h2></div><p>Are you sure you want to restart? Your current progress will be reset.</p><div class="prescribed-l26a1-pause-actions"><button class="primary" id="prescribed-l26a1-restart-yes" type="button"><i class="bi bi-check-lg" aria-hidden="true"></i> Yes, Restart</button><button class="secondary" id="prescribed-l26a1-restart-no" type="button"><i class="bi bi-arrow-left" aria-hidden="true"></i> No, Go Back</button></div></section></div>
   {{ prescribed_activity_data|json_script:"prescribed-activity-data" }}
-  <script src="{% static 'pabasa_app/js/prescribed_lesson26_31_ui.js' %}?v=lesson26-31-ui-3" defer></script><script src="{% static 'pabasa_app/js/prescribed_word_search.js' %}?v=lesson26-ui-15-vad" defer></script><script src="{% static 'pabasa_app/js/prescribed_lesson26_activity1_tools.js' %}?v=2" defer></script>
+  <script src="{% static 'pabasa_app/js/prescribed_lesson26_31_ui.js' %}?v=lesson26-31-ui-3" defer></script><script src="{% static 'pabasa_app/js/prescribed_word_search.js' %}?v=20260926-basahin-english" defer></script><script src="{% static 'pabasa_app/js/prescribed_lesson26_activity1_tools.js' %}?v=2" defer></script>
   <script>(()=>{const modal=document.getElementById('lesson26-start'),stage=document.getElementById('lesson26-stage'),start=document.getElementById('lesson26-start-button');start.addEventListener('click',()=>{modal.hidden=true;stage.classList.remove('is-waiting')});start.focus()})();</script>
 </body>
 </html>

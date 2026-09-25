@@ -142,6 +142,18 @@ const root = path.resolve(__dirname, '../pabasa_site/pabasa_app');
     assert.ok(clip.size > 0); assert.ok(clip.recordingDelay >= 1500);
     assert.ok(clip.elapsed >= 3900 && clip.elapsed < 6000);
     assert.ok(clip.duration > 2 && clip.duration < 3);
+    const englishLabels = await page.evaluate(() => {
+      const button = document.createElement('button');
+      button.dataset.basahinLanguage = 'English';
+      document.body.append(button);
+      const labels = ['idle','calibrating','waiting','listening','processing'].map(state => {
+        window.BasahinButton.setState(button, state);
+        return button.textContent;
+      });
+      button.remove();
+      return labels;
+    });
+    assert.deepEqual(englishLabels, ['Read','Please wait...','Speak now...','Listening...','Checking...']);
     assert.deepEqual(errors, []);
     if (process.env.BASAHIN_SCREENSHOT) {
       await page.setViewportSize({width: 1000, height: 720});

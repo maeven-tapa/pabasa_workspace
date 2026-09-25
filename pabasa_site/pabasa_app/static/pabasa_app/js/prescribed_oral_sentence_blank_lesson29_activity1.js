@@ -20,8 +20,8 @@
     hydrate();
     if (state.phase === 'complete' || state.current_item >= data.items.length) { window.PrescribedLessonUi.showCompletion(app); post(data.completion_url, {}).catch(() => {}); return; }
     const item = data.items[state.current_item], hint = String(state.hint || ''), blank = hint + '_'.repeat(Math.max(0, item.word_length - hint.length));
-    app.innerHTML = `<div class="eyebrow">SESSION 13 · LESSON 29 · ACTIVITY 1</div><h1 class="title">Fill in the Blank</h1><p class="instruction">Say the missing word to complete each sentence.</p><div class="content"><div class="item"><div class="sentence lead">${esc(item.before)}</div><img class="picture" src="${esc(item.image_url)}" alt="Picture clue"><div class="sentence tail"><span class="blank">${esc(blank)}</span>${esc(item.after)}</div></div><p class="status ${kind}" id="status">${esc(message || (hint ? 'Use the letter hint and say the missing word.' : 'Read the sentence, then say the missing word.'))}</p><div class="actions"><button class="button" id="read" type="button">🎙️ Say the missing word</button><button class="button secondary" id="listen" type="button">🔊 Listen</button></div></div>${steps()}`;
-    document.getElementById('read').onclick = record;
+    app.innerHTML = `<div class="eyebrow">SESSION 13 · LESSON 29 · ACTIVITY 1</div><h1 class="title">Fill in the Blank</h1><p class="instruction">Say the missing word to complete each sentence.</p><div class="content"><div class="item"><div class="sentence lead">${esc(item.before)}</div><img class="picture" src="${esc(item.image_url)}" alt="Picture clue"><div class="sentence tail"><span class="blank">${esc(blank)}</span>${esc(item.after)}</div></div><p class="status ${kind}" id="status">${esc(message || (hint ? 'Use the letter hint and say the missing word.' : 'Read the sentence, then say the missing word.'))}</p><div class="actions"><button data-basahin-button data-basahin-language="English" class="button" id="read" type="button">Read</button><button class="button secondary" id="listen" type="button">🔊 Listen</button></div></div>${steps()}`;
+    window.Basahin.bindActivity(document.getElementById('read'), record);
     document.getElementById('listen').onclick = () => play(item.tts_word || state.help_word || hint).catch(error => render(error.message, 'bad'));
     setButtonState('ready');
     emitDebug({status:paused ? 'Paused' : 'Ready', expected:item.answer || item.tts_word || '—', mic:'Inactive · Unmuted', recorder:'inactive', vad:'waiting'});
@@ -38,28 +38,17 @@
     const attemptGeneration = generation;
     busy = true; speechAttemptActive = true; setButtonState('recording'); emitDebug({status:'Listening', expected:data.items[state.current_item]?.answer || data.items[state.current_item]?.tts_word || '—', mic:'Active · Unmuted', recorder:'Recording', vad:'waiting', error:'—', raw:'Listening for speech...'});
     try {
-      stream = await navigator.mediaDevices.getUserMedia({audio:true});
-      stream.getTracks().forEach(track => { track.enabled = !muted; });
-      if (attemptGeneration !== generation || paused) throw Error('Recording cancelled.');
-      recorder = new MediaRecorder(stream); const chunks = [];
-      recorder.ondataavailable = event => event.data.size && chunks.push(event.data);
-      const blob = await new Promise((resolve, reject) => { recorder.onerror = () => reject(Error('Could not record your voice.')); recorder.onstop = () => resolve(new Blob(chunks, {type:recorder.mimeType || 'audio/webm'})); recorder.start(); recorderTimer = setTimeout(() => recorder?.state === 'recording' && recorder.stop(), 3000); });
-      if (attemptGeneration !== generation || paused) throw Error('Recording cancelled.');
-      emitDebug({status:'Processing', recorder:'inactive', raw:'Processing the recording...'}); stop();
-      const form = new FormData(); form.append('audio', blob, 'lesson29-activity1.webm'); form.append('target_text', data.recognition_hints); form.append('language', 'English'); form.append('mode', 'reading');
-      const response = await fetch(data.transcribe_url, {method:'POST', credentials:'same-origin', headers:{'X-CSRFToken':csrf()}, body:form}), result = await response.json();
-      if (attemptGeneration !== generation || paused) throw Error('Recording cancelled.');
-      if (!response.ok || !result.success) throw Error(result.error || 'Speech recognition failed.');
+      const result = await window.Basahin.read({target_text:data.recognition_hints, language:'English', mode:'reading'}, {button:document.getElementById('read'), url:data.transcribe_url, continuous:false}); if (attemptGeneration !== generation || paused) return;
       const heard = String(result.raw_transcript || result.transcript || ''), saved = await post(data.progress_url, {action:'answer', item_index:state.current_item, heard});
       emitDebug({status:'Ready', transcript:heard || 'No transcript yet.', normalized:normalizeTranscript(heard) || '—', result:saved.accepted ? 'Correct' : 'Try again', mic:'Inactive · Unmuted', recorder:'inactive', vad:'waiting', error:'—', raw:`Transcript: ${heard || 'No transcript yet.'} · Result: ${saved.accepted ? 'Correct' : 'Try again'}`});
       const correct = Boolean(saved.accepted), feedback = state.phase === 'complete' ? COMPLETION_FEEDBACK : (correct ? CORRECT_FEEDBACK : RETRY_FEEDBACK);
       busy = false; render(correct ? 'Correct!' : `I heard “${heard}”. Try again.`, correct ? 'good' : 'bad');
       await play(feedback);
-    } catch (error) { stop(); busy = false; emitDebug({status:'Error', mic:'Inactive · Unmuted', recorder:'inactive', vad:'waiting', error:error.message || 'Recording failed.', raw:`Error: ${error.message || 'Recording failed.'}`}); render(error.message || 'I could not hear you. Try again.', 'bad'); }
+    } catch (error) { if (error?.name === 'AbortError') return;  stop(); busy = false; emitDebug({status:'Error', mic:'Inactive · Unmuted', recorder:'inactive', vad:'waiting', error:error.message || 'Recording failed.', raw:`Error: ${error.message || 'Recording failed.'}`}); render(error.message || 'I could not hear you. Try again.', 'bad'); }
     finally { speechAttemptActive = false; busy = false; if (document.getElementById('read')) setButtonState('ready'); }
   }
-  function stop() { if (recorder?.state === 'recording') { try { recorder.stop(); } catch (_) {} } if (recorderTimer) clearTimeout(recorderTimer); recorderTimer = null; recorder = null; stream?.getTracks().forEach(track => track.stop()); stream = null; }
-  function cancelSpeechAttempt() { generation += 1; if (recorderTimer) { clearTimeout(recorderTimer); recorderTimer = null; } const activeRecorder = recorder; recorder = null; if (activeRecorder && activeRecorder.state !== 'inactive') { try { activeRecorder.stop(); } catch (_) {} } stop(); speechAttemptActive = false; busy = false; document.getElementById('read')?.classList.remove('is-busy'); emitDebug({status:paused ? 'Paused' : (muted ? 'Muted' : 'Ready'), mic:`Inactive · ${muted ? 'Muted' : 'Unmuted'}`, recorder:'inactive'}, 'Speech attempt cancelled'); }
+  function stop() { window.Basahin?.cancelAll();  if (recorder?.state === 'recording') { try { recorder.stop(); } catch (_) {} } if (recorderTimer) clearTimeout(recorderTimer); recorderTimer = null; recorder = null; stream?.getTracks().forEach(track => track.stop()); stream = null; }
+  function cancelSpeechAttempt() { window.Basahin?.cancelAll();  generation += 1; if (recorderTimer) { clearTimeout(recorderTimer); recorderTimer = null; } const activeRecorder = recorder; recorder = null; if (activeRecorder && activeRecorder.state !== 'inactive') { try { activeRecorder.stop(); } catch (_) {} } stop(); speechAttemptActive = false; busy = false; document.getElementById('read')?.classList.remove('is-busy'); emitDebug({status:paused ? 'Paused' : (muted ? 'Muted' : 'Ready'), mic:`Inactive · ${muted ? 'Muted' : 'Unmuted'}`, recorder:'inactive'}, 'Speech attempt cancelled'); }
   async function reset(event) { event.preventDefault(); if (busy) return; busy = true; try { await post(data.progress_url, {reset:true}); window.location.reload(); } catch (error) { busy = false; alert(error.message); } }
 
   document.getElementById('lesson29a1-later').onclick = reset;

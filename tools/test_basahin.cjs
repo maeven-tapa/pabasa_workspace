@@ -278,3 +278,30 @@ test('steady room noise never starts recording', async () => {
   await e.clock.tick(12000);
   assert.equal((await promise).name, 'NoSpeechError'); assert.equal(e.recordings.length, 0);
 });
+
+test('English sentence clips retain language, mode and reading cursor', async () => {
+  const e = environment(), requests = [];
+  const promise = e.api.read({target_text: 'The cat sat.', language: 'English', mode: 'sentence'}, {
+    transcribe: async (blob, fields) => {
+      requests.push({...fields});
+      return {success: true, transcript: requests.length === 1 ? 'The cat' : 'sat',
+        current_syllable_index: requests.length === 1 ? 2 : 3, complete: requests.length === 2};
+    },
+  });
+  await e.clock.tick(9000);
+  const result = await promise;
+  assert.equal(result.complete, true); assert.equal(result.transcript, 'The cat sat');
+  assert.equal(requests.length, 2);
+  assert.ok(requests.every(fields => fields.language === 'English' && fields.mode === 'sentence'));
+  assert.equal(requests[1].current_syllable_index, 2);
+});
+
+test('open-ended missing-word recognition ends after one voiced response', async () => {
+  const e = environment(); let requests = 0;
+  const promise = e.api.read({target_text: 'cat dog', language: 'English', mode: 'reading'}, {
+    continuous: false,
+    transcribe: async () => { requests++; return {success: true, transcript: 'cat', current_syllable_index: 1, complete: false}; },
+  });
+  await e.clock.tick(4000);
+  assert.equal((await promise).transcript, 'cat'); assert.equal(requests, 1);
+});

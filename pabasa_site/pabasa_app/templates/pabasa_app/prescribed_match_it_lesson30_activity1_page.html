@@ -2,6 +2,8 @@
 <!doctype html>
 <html lang="en">
 <head>
+{% include "pabasa_app/basahin_script.html" %}
+
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Match It! | PABASA</title>
@@ -44,6 +46,6 @@
   </main>
   <div class="backdrop" id="lesson30a1-start"><div class="modal"><p class="start-label">SESSION 14 · LESSON 30 · ACTIVITY 1</p><h2>MATCH IT!</h2><p>Read the word aloud first. Then choose the matching picture.</p><div class="start-actions"><button class="start" id="lesson30a1-go">START</button><button class="later" id="lesson30a1-later">NOT NOW</button></div></div></div>
   {{ prescribed_activity_data|json_script:"prescribed-activity-data" }}{% include 'pabasa_app/lesson30_prescribed_controls.html' with prefix='lesson30a1' help_text='Read the word aloud, then choose the matching picture.' %}
-  <script src="{% static 'pabasa_app/js/prescribed_lesson26_31_ui.js' %}?v=lesson26-31-ui-3" defer></script><script src="{% static 'pabasa_app/js/prescribed_match_it_lesson30_activity1.js' %}?v=lesson30a1-11-l28-cancel" defer></script>
+  <script src="{% static 'pabasa_app/js/prescribed_lesson26_31_ui.js' %}?v=lesson26-31-ui-3" defer></script><script src="{% static 'pabasa_app/js/prescribed_match_it_lesson30_activity1.js' %}?v=20260926-basahin-english" defer></script>
 </body>
 </html>

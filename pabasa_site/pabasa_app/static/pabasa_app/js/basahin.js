@@ -227,7 +227,7 @@
       window.BasahinButton?.setState(visualButton, name);
       if (button) {
         const label = button.querySelector('[data-basahin-label]') || button;
-        const text = {idle: 'Basahin', calibrating: 'Sandali...', waiting: 'Magsalita...', processing: 'Sinusuri...', listening: 'Nakikinig...'}[name];
+        const text = (window.BasahinButton?.labelsFor?.(button) || {idle: 'Basahin', calibrating: 'Sandali...', waiting: 'Magsalita...', processing: 'Sinusuri...', listening: 'Nakikinig...'})[name];
         if (label.textContent !== text) label.textContent = text;
         button.disabled = name !== 'idle';
         button.setAttribute('aria-busy', String(name !== 'idle'));
@@ -287,6 +287,7 @@
   // server's cursor/stitching context forward; never submit partial clips as
   // separate activity attempts. A real mismatch finishes the attempt.
   async function read(fields, options = {}) {
+    if (options.button && fields.language) options.button.dataset.basahinLanguage = fields.language;
     let finalResult, failure;
     const nextFields = {...fields}, transcripts = [], rawTranscripts = [];
     const reader = create({
@@ -304,7 +305,7 @@
         nextFields.syllable_context = result.syllable_context || '';
         if (result.word_results && nextFields.crla_sentence_word_scoring) nextFields.sentence_word_results = result.word_results;
         options.onProgress?.(result);
-        if (result.complete || (!progressed && !stitching)) {
+        if (options.continuous === false || result.complete || (!progressed && !stitching)) {
           finalResult = {...result, transcript: transcripts.join(' '), raw_transcript: rawTranscripts.join(' ')};
           return true;
         }
@@ -316,7 +317,13 @@
     try {
       if (options.signal?.aborted) throw abortError();
       await reader.start();
-      if (failure) throw failure;
+      if (failure) {
+        if (/^en|english/i.test(fields.language || '')) {
+          if (failure.name === 'NoSpeechError') failure.message = 'No speech detected. Press Read to try again.';
+          if (failure.name === 'TimeoutError') failure.message = 'Speech processing timed out. Press Read to try again.';
+        }
+        throw failure;
+      }
       if (!finalResult || options.signal?.aborted) throw abortError();
       return finalResult;
     } finally {

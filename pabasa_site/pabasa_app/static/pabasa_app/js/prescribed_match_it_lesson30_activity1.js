@@ -61,8 +61,8 @@
       emitDebug({status:paused?'Paused':'Ready',expected:target,mic:`Inactive · ${muted?'Muted':'Unmuted'}`,recorder:'inactive',vad:'waiting',raw:'Reading passed. Choose the matching picture.'});
       return;
     }
-    app.innerHTML=`<div class="eyebrow">SESSION 14 · LESSON 30 · ACTIVITY 1</div><h1 class="title">Match It!</h1><p class="instruction">Read the word aloud first. Then choose the matching picture.</p><div class="word">${esc(target)}</div><p class="status ${kind}">${esc(message||'Read the word aloud.')}</p><div class="actions"><button class="button" id="read">🎙️ Read the word</button><button class="button secondary" id="listen" ${Number(s.stt_attempts?.[target]||0)<3?'disabled':''}>🔊 Listen</button></div>${steps()}`;
-    app.querySelector('#read').onclick=()=>read(target);
+    app.innerHTML=`<div class="eyebrow">SESSION 14 · LESSON 30 · ACTIVITY 1</div><h1 class="title">Match It!</h1><p class="instruction">Read the word aloud first. Then choose the matching picture.</p><div class="word">${esc(target)}</div><p class="status ${kind}">${esc(message||'Read the word aloud.')}</p><div class="actions"><button data-basahin-button data-basahin-language="English" class="button" id="read">Read</button><button class="button secondary" id="listen" ${Number(s.stt_attempts?.[target]||0)<3?'disabled':''}>🔊 Listen</button></div>${steps()}`;
+    window.Basahin.bindActivity(app.querySelector('#read'), ()=>read(target));
     app.querySelector('#listen')?.addEventListener('click',()=>play(target).then(()=>{render('Now read the word aloud.');announce('Now read the word aloud.')} ).catch(e=>render(e.message,'bad')));
     emitDebug({status:paused?'Paused':'Ready',transcript:'No transcript yet.',expected:target,normalized:'—',result:'—',mic:`Inactive · ${muted?'Muted':'Unmuted'}`,recorder:'inactive',vad:'waiting',error:'—',raw:'Waiting for speech...'});
   }
@@ -96,19 +96,7 @@
     if(listenButton){listenButton.disabled=true;listenButton.classList.add('is-busy')}
     try{
       if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw Error('Microphone recording is not available in this browser.');
-      stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); stream.getTracks().forEach(track=>{track.enabled=!muted}); emitDebug({mic:`Active · ${muted?'Muted':'Unmuted'}`,recorder:'inactive',raw:'Microphone access granted.'});
-      if(attemptGeneration!==generation||paused)throw Error('Recording cancelled.');
-      recorder=new MediaRecorder(stream);const chunks=[];emitDebug({mic:`Active · ${muted?'Muted':'Unmuted'}`,recorder:'recording',raw:'Recording started.'});
-      recorder.ondataavailable=e=>e.data.size&&chunks.push(e.data);
-      const blob=await new Promise((ok,bad)=>{recorder.onerror=()=>bad(Error('Could not record your voice.'));recorder.onstop=()=>ok(new Blob(chunks,{type:recorder.mimeType||'audio/webm'}));recorder.start();recordTimer=setTimeout(()=>recorder?.state==='recording'&&recorder.stop(),3500)});
-      stop();
-      if(attemptGeneration!==generation||paused)throw Error('Recording cancelled.');
-      emitDebug({status:'Processing',recorder:'inactive',raw:'Processing the recording...'});
-      const form=new FormData();form.append('audio',blob,'lesson30-match-it.webm');form.append('target_text',target);form.append('language','English');form.append('mode','reading');
-      const r=await fetch(d.transcribe_url,{method:'POST',credentials:'same-origin',headers:headers(),body:form});
-      const j=await jsonResponse(r);
-      if(attemptGeneration!==generation||paused)throw Error('Recording cancelled.');
-      const heard=String(j.raw_transcript||j.transcript||''),ok=Boolean(r.ok&&j.success&&norm(heard).includes(norm(target)));
+      const j = await window.Basahin.read({target_text:target, language:'English', mode:'reading'}, {button:document.getElementById('read'), url:d.transcribe_url}); if(attemptGeneration!==generation||paused)return; const heard=String(j.raw_transcript||j.transcript||''),ok=Boolean(j.success&&j.complete===true);
       emitDebug({status:ok?'Correct':'Try again',transcript:heard||'No transcript yet.',normalized:norm(heard)||'—',result:ok?'Correct':'Try again',mic:`Inactive · ${muted?'Muted':'Unmuted'}`,recorder:'inactive',vad:'waiting',error:'—',raw:`Transcript: ${heard||'No transcript yet.'} · Result: ${ok?'Correct':'Try again'}`});
       if(!ok){
         s.stt_attempts[target]=Math.min(3,Number(s.stt_attempts[target]||0)+1);
@@ -121,7 +109,7 @@
       await save();
       render('Correct! Now choose the matching picture.','good');
       announce('Correct! Now choose the matching picture.');
-    }catch(e){
+    }catch(e){ if (e?.name === 'AbortError') return;
       stop();
       if(e.message==='Recording cancelled.')return;
       emitDebug({status:'Error',mic:`Inactive · ${muted?'Muted':'Unmuted'}`,recorder:'inactive',vad:'waiting',error:e.message||'Recording failed.',raw:`Error: ${e.message||'Recording failed.'}`});
@@ -156,8 +144,8 @@
       d.progress.activity_completed=true;
     }catch(e){console.error(e)}
   }
-  function stop(){if(recorder?.state==='recording'){try{recorder.stop()}catch(_){}}if(recordTimer)clearTimeout(recordTimer);recordTimer=null;recorder=null;stream?.getTracks().forEach(t=>t.stop());stream=null}
-  function cancelSpeechAttempt(){generation++;if(recordTimer){clearTimeout(recordTimer);recordTimer=null}const activeRecorder=recorder;recorder=null;if(activeRecorder&&activeRecorder.state!=='inactive'){try{activeRecorder.stop()}catch(_){}}stop();recordingAttemptActive=false;busy=false;setBusyButton('read',false);document.getElementById('listen')?.classList.remove('is-busy');emitDebug({status:paused?'Paused':'Ready',recorder:'inactive'},'Speech attempt cancelled')}
+  function stop(){ window.Basahin?.cancelAll(); if(recorder?.state==='recording'){try{recorder.stop()}catch(_){}}if(recordTimer)clearTimeout(recordTimer);recordTimer=null;recorder=null;stream?.getTracks().forEach(t=>t.stop());stream=null}
+  function cancelSpeechAttempt(){ window.Basahin?.cancelAll(); generation++;if(recordTimer){clearTimeout(recordTimer);recordTimer=null}const activeRecorder=recorder;recorder=null;if(activeRecorder&&activeRecorder.state!=='inactive'){try{activeRecorder.stop()}catch(_){}}stop();recordingAttemptActive=false;busy=false;setBusyButton('read',false);document.getElementById('listen')?.classList.remove('is-busy');emitDebug({status:paused?'Paused':'Ready',recorder:'inactive'},'Speech attempt cancelled')}
   function cancel(){cancelSpeechAttempt();audio?.pause();audio=null}
   async function leave(e){e.preventDefault();if(busy)return;busy=true;try{await reset();window.location.reload()}catch(x){busy=false;alert(x.message)}}
 

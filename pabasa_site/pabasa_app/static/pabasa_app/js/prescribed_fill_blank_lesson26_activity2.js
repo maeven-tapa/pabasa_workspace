@@ -91,9 +91,9 @@
     const word = data.choices[state.choice_index] || '';
     publishDebug({expected:word || '—',status:isPaused?'Paused':'Ready'});
     const canListen = Boolean(state.choice_help || state.choice_attempts >= 3);
-    const body = `<div class="lesson26-content"><div class="label">Read the word aloud</div><div class="word">${escapeHtml(word || 'Great job!')}</div>${word ? `<div class="actions"><button class="button" id="read" type="button">🎙️ Read the word</button><button class="button secondary" id="listen" type="button" ${canListen ? '' : 'disabled'}>🔊 Listen</button></div>` : ''}<div class="word-bank">${data.choices.map((choice, i) => `<span class="word-chip ${i < state.choice_index ? 'word-chip-done' : ''} ${i === state.choice_index ? 'word-chip-active' : ''}">${escapeHtml(choice)}</span>`).join('')}</div></div>`;
+    const body = `<div class="lesson26-content"><div class="label">Read the word aloud</div><div class="word">${escapeHtml(word || 'Great job!')}</div>${word ? `<div class="actions"><button data-basahin-button data-basahin-language="English" class="button" id="read" type="button">Read</button><button class="button secondary" id="listen" type="button" ${canListen ? '' : 'disabled'}>🔊 Listen</button></div>` : ''}<div class="word-bank">${data.choices.map((choice, i) => `<span class="word-chip ${i < state.choice_index ? 'word-chip-done' : ''} ${i === state.choice_index ? 'word-chip-active' : ''}">${escapeHtml(choice)}</span>`).join('')}</div></div>`;
     shell('Fill in the Blanks', 'Read the words, then fill in the blanks.', body);
-    document.getElementById('read')?.addEventListener('click', () => recordWord(word, state.choice_index));
+    window.Basahin.bindActivity(document.getElementById('read'), () => recordWord(word, state.choice_index));
     document.getElementById('listen')?.addEventListener('click', () => playTts(word).catch(error => renderChoices(error.message || 'Could not play the word. Try again.','bad')));
   }
 
@@ -114,24 +114,9 @@
     }
     button.textContent = 'Listening…'; if (status) status.textContent = 'Listening…';
     try {
-      const attempt = generation; stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); stream.getAudioTracks().forEach(track => { track.enabled = !isMuted; });
-      activeRecorder = new MediaRecorder(stream); const recorder = activeRecorder, chunks = [];
-      publishDebug({status:'Recording', expected:word, mic:`Active · ${isMuted?'Muted':'Unmuted'}`, recorder:recorder.state}, 'Recording started');
-      recorder.ondataavailable = event => { if (event.data?.size) chunks.push(event.data); };
-      const stopped = new Promise((resolve, reject) => {
-        recorder.onerror = () => reject(new Error('Could not record your voice. Try again.'));
-        recorder.onstop = () => { if (activeRecordingTimer) { window.clearTimeout(activeRecordingTimer); activeRecordingTimer = null; } resolve(new Blob(chunks, {type:recorder.mimeType || 'audio/webm'})); };
-        recorder.start(); activeRecordingTimer = window.setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, 3000);
-      });
-      const audio = await stopped; activeRecorder = null; stopStream(); if (attempt !== generation || isPaused) return;
-      const form = new FormData(); form.append('audio', audio, 'lesson26-activity2-word.webm'); form.append('target_text', word); form.append('language', 'English'); form.append('mode', 'reading');
-      const response = await fetch(data.transcribe_url, {method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form});
-      const result = await response.json();
-      if (attempt !== generation || isPaused) return;
-      if (!response.ok || !result.success) throw new Error(result.error || 'Speech recognition failed. Try again.');
+      const attempt = generation; const result = await window.Basahin.read({target_text:word, language:'English', mode:'reading'}, {button:button, url:data.transcribe_url}); if (attempt !== generation || isPaused) return;
       const rawTranscript = String(result.raw_transcript || result.transcript || ''); const transcript = rawTranscript.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').match(/[a-z]+/g) || [];
-      const target = normalize(word), accepted = ({mat:['mat','math'],hat:['hat','hot'],wore:['wore','war'],bat:['bat','butt'],loved:['loved','love']})[target] || [target];
-      const correct = transcript.some(token => accepted.includes(normalize(token)));
+      const correct = result.complete === true;
       publishDebug({status:'Processing', transcript:rawTranscript || 'No transcript returned.', normalized:transcript.join(' '), result:correct?'Match':'Not Match', recorder:'inactive'}, `Transcript: ${rawTranscript || '(empty)'}`);
       const saved = await save({action:'choice_read',choice_index:index,success:correct});
       if (saved.progress?.state) state = {...saved.progress.state};
@@ -145,7 +130,7 @@
         renderChoices(correct ? 'Correct! Read the next word.' : transcript.length ? `I heard “${result.raw_transcript || result.transcript}”. Try “${word}” again.` : `I could not hear “${word}” clearly. Try again.`, correct ? 'good' : 'bad');
         if (!correct) await announce(RETRY_FEEDBACK);
       }
-    } catch (error) { stopStream(); renderChoices(error.message || 'Could not recognize your speech. Try again.', 'bad'); }
+    } catch (error) { if (error?.name === 'AbortError') return;  stopStream(); renderChoices(error.message || 'Could not recognize your speech. Try again.', 'bad'); }
     finally { button?.classList.remove('is-busy'); if (activeSpeechButton === button) { activeSpeechButton = null; activeSpeechIdleLabel = ''; } busy = false; }
   }
   function sentenceText(item, blanks = true) {
@@ -176,10 +161,10 @@
     }).join('');
     const remaining = data.choices.filter(word => !Object.values(state.placements).includes(word));
     const sentenceComplete = Object.keys(state.placements).length === item.blank_count;
-    const body = `<div class="lesson26-content"><p class="prompt">Listen to the sentence, then fill in each blank.</p><div class="actions"><button class="button secondary" id="listen" type="button">🔊 Listen to the sentence</button></div><div class="sentence">${sentence}</div><div class="word-bank">${remaining.map(word => `<button type="button" draggable="true" class="word-chip" data-word="${escapeHtml(word)}">${escapeHtml(word)}</button>`).join('')}</div>${sentenceComplete ? '<div class="actions"><button class="button" id="read-sentence" type="button">🎙️ Read the sentence</button></div>' : ''}</div>`;
+    const body = `<div class="lesson26-content"><p class="prompt">Listen to the sentence, then fill in each blank.</p><div class="actions"><button class="button secondary" id="listen" type="button">🔊 Listen to the sentence</button></div><div class="sentence">${sentence}</div><div class="word-bank">${remaining.map(word => `<button type="button" draggable="true" class="word-chip" data-word="${escapeHtml(word)}">${escapeHtml(word)}</button>`).join('')}</div>${sentenceComplete ? '<div class="actions"><button data-basahin-button data-basahin-language="English" class="button" id="read-sentence" type="button">Read</button></div>' : ''}</div>`;
     shell('Fill in the Blanks', 'Find the correct words and complete the sentence.', body);
     document.getElementById('listen').addEventListener('click', () => playSentence());
-    document.getElementById('read-sentence')?.addEventListener('click', readSentence);
+    window.Basahin.bindActivity(document.getElementById('read-sentence'), readSentence);
     app.querySelectorAll('[data-word]').forEach(button => {
       button.addEventListener('dragstart', event => event.dataTransfer.setData('text/plain', button.dataset.word));
       button.addEventListener('click', () => { selectedWord = button.dataset.word; app.querySelectorAll('[data-word]').forEach(el => el.classList.toggle('word-chip-active', el === button)); });
@@ -250,18 +235,9 @@
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { if (status) status.textContent = 'Microphone recording is not available in this browser.'; button?.classList.remove('is-busy'); busy = false; return; }
     button.textContent = 'Listening…';
     try {
-      const attempt = generation; stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); stream.getAudioTracks().forEach(track => { track.enabled = !isMuted; });
-      activeRecorder = new MediaRecorder(stream); const recorder = activeRecorder, chunks = [];
-      publishDebug({status:'Recording', expected:target, mic:`Active · ${isMuted?'Muted':'Unmuted'}`, recorder:recorder.state}, 'Recording started');
-      recorder.ondataavailable = event => { if (event.data?.size) chunks.push(event.data); };
-      const stopped = new Promise((resolve, reject) => { recorder.onerror = () => reject(new Error('Could not record your voice.')); recorder.onstop = () => { if (activeRecordingTimer) { window.clearTimeout(activeRecordingTimer); activeRecordingTimer = null; } resolve(new Blob(chunks,{type:recorder.mimeType || 'audio/webm'})); }; recorder.start(); activeRecordingTimer = window.setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, 4500); });
-      const audio = await stopped; activeRecorder = null; stopStream(); if (attempt !== generation || isPaused) return;
-      const form = new FormData(); form.append('audio',audio,'lesson26-activity2-sentence.webm'); form.append('target_text',target); form.append('language','English'); form.append('mode','reading');
-      const response = await fetch(data.transcribe_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form}), result = await response.json();
-      if (attempt !== generation || isPaused) return;
-      if (!response.ok || !result.success) throw new Error(result.error || 'Speech recognition failed. Try again.');
+      const attempt = generation; const result = await window.Basahin.read({target_text:target, language:'English', mode:'sentence'}, {button:button, url:data.transcribe_url}); if (attempt !== generation || isPaused) return;
       const spokenText = String(result.raw_transcript || result.transcript || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\bhot\b/g, 'hat');
-      const transcript = normalize(spokenText), correct = sentenceReadMatches(target, spokenText);
+      const transcript = normalize(spokenText), correct = result.complete === true;
       publishDebug({status:'Processing', transcript:result.raw_transcript || result.transcript || 'No transcript returned.', normalized:transcript, result:correct?'Match':'Not Match', recorder:'inactive'}, `Transcript: ${result.raw_transcript || result.transcript || '(empty)'}`);
       await save({action:'sentence_reading',success:correct});
       if (correct && state.phase === 'complete') {
@@ -283,24 +259,12 @@
         await announce(RETRY_FEEDBACK);
       }
       if (correct && state.phase !== 'complete') { started = true; await playSentence(); }
-    } catch (error) { stopStream(); renderSentence(error.message || 'Could not recognize your speech. Try again.','bad'); }
+    } catch (error) { if (error?.name === 'AbortError') return;  stopStream(); renderSentence(error.message || 'Could not recognize your speech. Try again.','bad'); }
     finally { button?.classList.remove('is-busy'); if (activeSpeechButton === button) { activeSpeechButton = null; activeSpeechIdleLabel = ''; } busy = false; }
   }
-  function sentenceReadMatches(target, transcript) {
-    const expectedWords = String(target || '').toLowerCase().match(/[a-z]+/g) || [];
-    const spokenWords = String(transcript || '').toLowerCase().match(/[a-z]+/g) || [];
-    if (!expectedWords.length || !spokenWords.length) return false;
-    let spokenIndex = 0, matched = 0;
-    for (const expected of expectedWords) {
-      const found = spokenWords.slice(spokenIndex).findIndex(word => word === expected || (expected === 'hat' && ['hot', 'had'].includes(word)));
-      if (found < 0) continue;
-      matched += 1;
-      spokenIndex += found + 1;
-    }
-    return matched >= Math.max(1, Math.ceil(expectedWords.length * 0.75));
-  }
-  function stopStream() { stream?.getTracks().forEach(track => track.stop()); stream = null; publishDebug({mic:`Inactive · ${isMuted?'Muted':'Unmuted'}`,recorder:'inactive'}); }
-  function resetSpeechInteraction() {
+
+  function stopStream() { window.Basahin?.cancelAll();  stream?.getTracks().forEach(track => track.stop()); stream = null; publishDebug({mic:`Inactive · ${isMuted?'Muted':'Unmuted'}`,recorder:'inactive'}); }
+  function resetSpeechInteraction() { window.Basahin?.cancelAll();
     if (activeRecordingTimer) { window.clearTimeout(activeRecordingTimer); activeRecordingTimer = null; }
     activeSpeechButton?.classList.remove('is-busy');
     if (activeSpeechButton?.isConnected && activeSpeechIdleLabel) activeSpeechButton.textContent = activeSpeechIdleLabel;

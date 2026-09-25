@@ -7,7 +7,6 @@
   const csrf = () => (document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] || '';
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
-  const canonicalTranscript = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\bdanced\b/g, 'dance').replace(/\bjump\b/g, 'jumped').replace(/\bhot\b/g, 'hat').replace(/\bmath\b/g, 'mat').replace(/\bwar\b/g, 'wore').replace(/\bbutt\b/g, 'bat').replace(/\bbath\b/g, 'bat').replace(/\bbut\b/g, 'bat').replace(/\bquiet\b/g, 'quite').replace(/\blaugh\b/g, 'laughed').replace(/\blove\b/g, 'loved');
   let state = {phase:'reading', item_index:0, verse_index:0, attempts:0, help_visible:false, selected:[], completed_items:0, ...(data.progress?.state || {})};
   let busy = false;
   let stream = null;
@@ -122,12 +121,12 @@
     let controls = '';
     if (state.phase === 'reading') {
       const canListen = Boolean(state.help_visible || state.attempts >= 3);
-      controls = `<p class="lesson27-prompt">Read verse ${state.verse_index + 1} of ${item.lines.length} aloud.</p><div class="lesson27-actions"><button class="lesson27-button" id="record-verse" type="button">🎙️ Read the verse</button><button class="lesson27-button secondary" id="listen-verse" type="button" ${canListen ? '' : 'disabled'}>🔊 Listen</button></div>`;
+      controls = `<p class="lesson27-prompt">Read verse ${state.verse_index + 1} of ${item.lines.length} aloud.</p><div class="lesson27-actions"><button data-basahin-button data-basahin-language="English" class="lesson27-button" id="record-verse" type="button">Read</button><button class="lesson27-button secondary" id="listen-verse" type="button" ${canListen ? '' : 'disabled'}>🔊 Listen</button></div>`;
     } else {
       controls = `<p class="lesson27-prompt">Click all the words that rhyme with “at.”</p><div class="lesson27-actions"><button class="lesson27-button secondary" id="listen-rhyme-directions" type="button">🔊 Listen to directions</button><button class="lesson27-button" id="listen-poem" type="button">🔊 Listen to the poem</button></div>`;
     }
     frame(`<div class="lesson27-content"><h2 class="lesson27-poem-title">${esc(item.title)}</h2><div class="lesson27-verses">${lines}</div>${controls}</div>`);
-    document.getElementById('record-verse')?.addEventListener('click', () => recordVerse(activeVerse));
+    window.Basahin.bindActivity(document.getElementById('record-verse'), () => recordVerse(activeVerse));
     document.getElementById('listen-verse')?.addEventListener('click', () => playAudio(activeVerse).catch(error => render(error.message, 'bad')));
     document.getElementById('listen-rhyme-directions')?.addEventListener('click', () => playAudio('Click all the words that rhyme with at.').catch(error => render(error.message, 'bad')));
     document.getElementById('listen-poem')?.addEventListener('click', () => playAudio(item.lines.map(line => line.text).join(' ')).catch(error => render(error.message, 'bad')));
@@ -172,30 +171,10 @@
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { busy = false; return; }
     button.textContent = 'Listening…';
     try {
-      stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
-      stream.getAudioTracks().forEach(track => { track.enabled = !isMuted; });
-      activeRecorder = new MediaRecorder(stream); const recorder = activeRecorder, chunks = [];
-      publishDebug({status:'Recording', transcript:'No transcript yet.', expected:target, mic:`Active · ${isMuted?'Muted':'Unmuted'}`, recorder:recorder.state, error:'—'},'Recording started');
-      recorder.ondataavailable = event => { if (event.data?.size) chunks.push(event.data); };
-      const stopped = new Promise((resolve, reject) => { recorder.onerror = () => reject(new Error('Could not record your voice. Try again.')); recorder.onstop = () => { if (activeRecorder === recorder) activeRecorder = null; if (recordingTimer) { window.clearTimeout(recordingTimer); recordingTimer = null; } resolve(new Blob(chunks,{type:recorder.mimeType || 'audio/webm'})); }; recorder.start(); recordingTimer = window.setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, 4500); });
-      const blob = await stopped; stopStream(); publishDebug({recorder:'inactive'},'Recording completed'); if (attempt !== generation || isPaused) return;
-      const form = new FormData(); form.append('audio',blob,'lesson27-rhyming-verse.webm'); form.append('target_text',target); form.append('language','English'); form.append('mode','reading');
-      const response = await fetch(data.transcribe_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form});
-      const result = await responseJson(response, 'Speech recognition');
-      if (attempt !== generation || isPaused) return;
-      if (!response.ok || !result.success) throw new Error(result.error || 'Speech recognition failed. Try again.');
+      const result = await window.Basahin.read({target_text:target, language:'English', mode:'sentence'}, {button:button, url:data.transcribe_url}); if (attempt !== generation || isPaused) return;
       const heardText = result.raw_transcript || result.transcript;
-      const expectedText = canonicalTranscript(target);
-      const expectedHasHeLl = /\bhe(?:['’]?)ll\b/.test(expectedText);
-      const spokenText = canonicalTranscript(heardText);
-      const acceptedSpokenText = expectedHasHeLl ? spokenText.replace(/\bhill\b/g, "he'll") : spokenText;
-      const spoken = normalize(acceptedSpokenText);
-      const expected = normalize(expectedText);
-      const spokenTokens = acceptedSpokenText.match(/[a-z]+/g) || [];
-      const expectedTokens = expectedText.match(/[a-z]+/g) || [];
-      const isPlayfulBatVerse = expectedTokens.includes('dance') && expectedTokens.includes('playful') && expectedTokens.includes('bat');
-      const playfulBatHeard = spokenTokens.includes('bat') && (spokenTokens.includes('dance') || spokenTokens.includes('playful'));
-      const correct = Boolean(expected && (spoken.includes(expected) || (isPlayfulBatVerse && playfulBatHeard)));
+      const spoken = normalize(heardText);
+      const correct = result.complete === true;
       publishDebug({status:'Processing',transcript:String(heardText || 'No transcript returned.'),normalized:spoken,result:correct?'Match':'Not Match'},`Transcription received: ${heardText || '(empty)'}`);
       if (attempt !== generation || isPaused) return;
       await save({action:'verse_read',item_index:state.item_index,verse_index:state.verse_index,success:correct}, () => attempt === generation && !isPaused);
@@ -204,7 +183,7 @@
       const correctFeedback = state.phase === 'rhymes' ? RHYME_INSTRUCTION_FEEDBACK : READ_CORRECT_FEEDBACK;
       render(correct ? correctFeedback : `I heard “${heardText || 'unclear speech'}”. ${RETRY_FEEDBACK}`, correct ? 'good' : 'bad');
       await playAudio(correct ? correctFeedback : RETRY_FEEDBACK);
-    } catch (error) { stopStream(); if (attempt === generation && !isPaused) { publishDebug({status:'Error',error:error.message || 'Recording/transcription error'},`Error: ${error.message || 'Recording/transcription error'}`); render(error.message || 'Could not recognize your speech. Try again.','bad'); } }
+    } catch (error) { if (error?.name === 'AbortError') return;  stopStream(); if (attempt === generation && !isPaused) { publishDebug({status:'Error',error:error.message || 'Recording/transcription error'},`Error: ${error.message || 'Recording/transcription error'}`); render(error.message || 'Could not recognize your speech. Try again.','bad'); } }
     finally { button?.classList.remove('is-busy'); if (activeSpeechButton === button) activeSpeechButton = null; busy = false; }
   }
   async function selectWord(button) {
@@ -232,8 +211,8 @@
     } catch (error) { render(error.message || 'Could not save your selection. Try again.','bad'); }
     finally { busy = false; }
   }
-  function stopStream() { if (recordingTimer) { window.clearTimeout(recordingTimer); recordingTimer = null; } stream?.getTracks().forEach(track => track.stop()); stream = null; publishDebug({mic:`Inactive · ${isMuted?'Muted':'Unmuted'}`,recorder:'inactive'}); }
-  function cancelSpeechAttempt() { generation += 1; if (recordingTimer) { window.clearTimeout(recordingTimer); recordingTimer = null; } if (activeRecorder?.state === 'recording' || activeRecorder?.state === 'paused') { try { activeRecorder.stop(); } catch (_) {} } activeRecorder = null; activeSpeechButton?.classList.remove('is-busy'); if (activeSpeechButton?.isConnected) activeSpeechButton.textContent = '🎙️ Read the verse'; activeSpeechButton = null; stopStream(); publishDebug({status:isPaused?'Paused':'Ready',recorder:'inactive',mic:`Inactive · ${isMuted?'Muted':'Unmuted'}`},'Recording cancelled'); }
+  function stopStream() { window.Basahin?.cancelAll();  if (recordingTimer) { window.clearTimeout(recordingTimer); recordingTimer = null; } stream?.getTracks().forEach(track => track.stop()); stream = null; publishDebug({mic:`Inactive · ${isMuted?'Muted':'Unmuted'}`,recorder:'inactive'}); }
+  function cancelSpeechAttempt() { window.Basahin?.cancelAll();  generation += 1; if (recordingTimer) { window.clearTimeout(recordingTimer); recordingTimer = null; } if (activeRecorder?.state === 'recording' || activeRecorder?.state === 'paused') { try { activeRecorder.stop(); } catch (_) {} } activeRecorder = null; activeSpeechButton?.classList.remove('is-busy'); if (activeSpeechButton?.isConnected) activeSpeechButton.textContent = '🎙️ Read the verse'; activeSpeechButton = null; stopStream(); publishDebug({status:isPaused?'Paused':'Ready',recorder:'inactive',mic:`Inactive · ${isMuted?'Muted':'Unmuted'}`},'Recording cancelled'); }
   window.PrescribedLesson27Activity = {
     pause() { if (isPaused) return; isPaused = true; cancelSpeechAttempt(); audio?.pause(); busy = false; publishDebug({status:'Paused'},'Activity paused'); },
     resume() { isPaused = false; publishDebug({status:'Ready',recorder:'inactive',mic:`Inactive · ${isMuted?'Muted':'Unmuted'}`},'Activity resumed'); },
