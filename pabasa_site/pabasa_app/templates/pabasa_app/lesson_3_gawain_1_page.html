@@ -1868,6 +1868,21 @@ body.lesson-3-responsive,
 <style>
 </style>
 <script>window.__lessonStartProgress={activityKey:'lesson-3-gawain-1',progress:{{ lesson_3_progress|default:"null"|safe }},totalItems:6,progressUrl:'{{ lesson_3_progress_url }}',storageKeys:['pabasa:lesson-3-gawain-1:progress']};</script><script>window.__session1SharedNarrationAudio={"Basahin ito.":"{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/basahin_ito.mp3' %}","Magaling! Susunod na larawan.":"{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/magaling_susunod_na_larawan.mp3' %}","Hindi pa ito tama. Subukan muli.":"{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/hindi_pa_ito_tama_subukan_muli.mp3' %}","Magkatunog ba ang dalawang larawan na ito? Pindutin ang nawawastong sagot.":"{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/magkatunog_ba_ang_dalawang_larawan.mp3' %}","Piliin ang tamang kamay.":"{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/piliin_ang_tamang_kamay.mp3' %}"};</script><script>window.lesson3SharedNarrationAudio=window.__session1SharedNarrationAudio;</script><script src="/static/pabasa_app/js/deferred_activity_bootstrap.js?v=1"></script><script>window.deferActivityBootstrap('lesson-3-gawain-1');</script><script src="/static/pabasa_app/js/lesson_start_modal.js?v=5"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const backdrop = document.getElementById('lesson-3-g1-start');
+  if (!backdrop || backdrop.dataset.resume !== 'true') return;
+  const label = backdrop.querySelector('.lesson-start-label');
+  const title = backdrop.querySelector('.lesson-start-title');
+  if (label) label.textContent = 'MAY NA-SAVE KANG PROGRESO!';
+  if (title) title.textContent = 'May nasimulan ka nang gawain. Gusto mo bang ipagpatuloy ang iyong nasimulan?';
+});
+</script>
+<style>
+#lesson-3-g1-start .lesson-start-modal{width:min(500px,calc(100vw - 40px));padding:34px 34px 30px}
+#lesson-3-g1-start .lesson-start-label{margin-bottom:16px;color:#277f82;font-size:1.05rem;line-height:1.2;letter-spacing:.04em}
+#lesson-3-g1-start .lesson-start-title{margin:0 auto 26px;max-width:430px;color:#183e63;font-size:clamp(1.65rem,3.2vw,2.2rem);line-height:1.2}
+</style>
 <style>
 body.lesson-3-responsive:has(#game .complete) .nav,
 body.lesson-3-responsive:has(#game .complete) .lesson-start-backdrop{display:none!important}
