@@ -126,7 +126,7 @@
   }
   async function perform(event,form=null){if(busy)return;busy=true;lock();try{await send(event,form);render();if(l23G1){if(state.completed){await playPrescribedAudio('Magaling! Natapos mo ang Gawain 1.',true);await playPrescribedAudio('Magaling! Nabuo mo ang salitang Niño',true);}else if(G1_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}}catch(e){const text=e.message||'Hindi na-save. Subukan muli.';message(text,true);if(l23G1&&G1_MAPPED_TEXT.has(text))playPrescribedAudio(text,true).catch(()=>{});}finally{busy=false;lock();}}
   function lock(){action.querySelectorAll('button').forEach(b=>b.disabled=busy||preview);}
-  function button(text,fn,primary=false){const b=document.createElement('button');b.type='button';b.textContent=text;b.className=primary?'wb-primary':'';b.onclick=fn;action.appendChild(b);return b;}
+  function button(text,fn,primary=false){const b=document.createElement('button');b.type='button';b.textContent=text;b.className=primary?'wb-primary':'';if([record,recordJ,recordPictureReading,startCReading].includes(fn)){b.id='wb-basahin';window.Basahin.bindActivity(b,fn);}else b.onclick=fn;action.appendChild(b);return b;}
   function table(){let n=0;return `<table class="wb-table">${a.column_headers?'<thead><tr>'+a.column_headers.map(h=>`<th>${esc(h)}</th>`).join('')+'</tr></thead>':''}<tbody>${a.rows.map(row=>'<tr>'+row.map(text=>{const i=text?a.items[n++]:null;return `<td class="${!preview&&i?(n-1===state.index?'wb-current':n-1<state.index?'wb-done':''):''}">${i&&a.images?.[i.id]?`<img src="${esc(a.images[i.id])}" alt="${esc(text)}"><br>`:''}${esc(i?(a.cell_display?.[i.id]||text):'')}</td>`;}).join('')+'</tr>').join('')}</tbody></table>`;}
   function render(){
     selected=[];builder=state.draft.builder||[];words=state.draft.words||[];
@@ -193,7 +193,7 @@
     if(current<a.items.length){
       const word=a.items[current];
       const card=document.createElement('div');card.className='wb-j-controls';
-      const read=button('Basahin',recordJ,true);read.setAttribute('aria-label',`Basahin ang salitang ${word.text}`);
+      const read=button(window.BasahinButton.LABEL,recordJ,true);read.setAttribute('aria-label',`Basahin ang salitang ${word.text}`);
       const help=button('Pakinggan ang Tamang Pagbigkas',()=>playPrescribedAudio(word.text).catch(e=>{const text=e.message||'Hindi available ang audio.';setJFeedback(text,true);if(l23G3&&G3_MAPPED_TEXT.has(text))playPrescribedAudio(text,true).catch(()=>{});}),false);help.setAttribute('aria-label',`Pakinggan ang tamang pagbigkas ng ${word.text}`);
       card.append(read,help);action.appendChild(card);
     }
@@ -213,7 +213,7 @@
     if(preview||state.completed)return;
     const listen=button('🔊 Pakinggan',()=>playPrescribedAudio(target.text).catch(e=>setPictureFeedback(e.message||'Hindi available ang audio.',true)),false);
     listen.setAttribute('aria-label',`Pakinggan ang ${target.text}`);
-    const read=button('🎙 Basahin ang Salita',recordPictureReading,true);
+    const read=button(window.BasahinButton.LABEL,recordPictureReading,true);
     read.setAttribute('aria-label',`Basahin ang salitang ${target.text}`);
     const controls=document.createElement('div');controls.className='wb-picture-controls';controls.append(read,listen);action.appendChild(controls);
     lock();
@@ -223,12 +223,8 @@
     busy=true;lock();let stream=null,recorder=null,timer=null,requestIndex=Number(state.index||0),requestRevision=Number(state.revision||0);
     try{
       setPictureFeedback('🎙️ Nakikinig... Basahin ang salita.');
-      stream=activeStream=await navigator.mediaDevices.getUserMedia({audio:true});
-      const chunks=[];recorder=activeRecorder=new MediaRecorder(stream);
-      const audioDone=new Promise((resolve,reject)=>{recorder.ondataavailable=e=>e.data.size&&chunks.push(e.data);recorder.onerror=()=>reject(new Error('May problema sa recording.'));recorder.onstop=()=>resolve(new Blob(chunks,{type:recorder.mimeType||'audio/webm'}));});
-      recorder.start();timer=setTimeout(()=>{if(recorder?.state==='recording')recorder.stop();},3500);
-      const stop=button('Tapusin ang Pagbasa',()=>{if(recorder?.state==='recording')recorder.stop();},true);stop.setAttribute('aria-label','Tapusin ang pagbasa');action.replaceChildren(stop);
-      const audio=await audioDone;clearTimeout(timer);stream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
+      stream=activeStream=await window.Basahin.openMicrophone({audio:true});
+      const audio=await window.Basahin.capture({button:document.getElementById('wb-basahin'),stream,onRecorder:value=>{recorder=activeRecorder=value;}});stream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
       if(requestIndex!==Number(state.index||0)||requestRevision!==Number(state.revision||0))return;
       setPictureFeedback('Pinoproseso ang iyong pagbasa...');
       const form=new FormData();form.append('audio',audio,'reading.webm');
@@ -256,13 +252,8 @@
     try{
       if(!jReading)setJFeedback('Nakikinig...');
       if(l23G3){await send({action:'reading_started'},null,false);await playPrescribedAudio('Handa ka na?',true);}
-      stream=activeStream=await navigator.mediaDevices.getUserMedia({audio:true});
-      const chunks=[];recorder=activeRecorder=new MediaRecorder(stream);
-      const audioDone=new Promise((resolve,reject)=>{recorder.ondataavailable=e=>e.data.size&&chunks.push(e.data);recorder.onerror=()=>reject(new Error('May problema sa recording.'));recorder.onstop=()=>resolve(new Blob(chunks,{type:recorder.mimeType||'audio/webm'}));});
-      recorder.start();timer=setTimeout(()=>{if(recorder?.state==='recording')recorder.stop();},3500);
-      const stop=button('Tapusin ang Pagbasa',()=>{if(recorder?.state==='recording')recorder.stop();},true);stop.setAttribute('aria-label','Tapusin ang pagbasa');
-      action.replaceChildren(stop);
-      const audio=await audioDone;clearTimeout(timer);stream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
+      stream=activeStream=await window.Basahin.openMicrophone({audio:true});
+      const audio=await window.Basahin.capture({button:document.getElementById('wb-basahin'),stream,onRecorder:value=>{recorder=activeRecorder=value;}});stream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
       if(!audio.size)throw Error('Hindi nakuha ang iyong boses. Subukan muli.');
       if(requestActivity!==a.activity_key||requestId!==Number(state.index||0))return;
       setJFeedback('Sinusuri...');if(jReading)await playPrescribedAudio('Sinusuri...',true);const form=new FormData();form.append('audio',audio,'reading.webm');
@@ -326,13 +317,9 @@
     try{
       await send({action:'reading_started'},null,false);
       if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw new Error('Hindi available ang mikropono sa browser na ito.');
-      activeStream=await Promise.race([navigator.mediaDevices.getUserMedia({audio:true}),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Hindi tumugon ang mikropono.')),8000))]);
-      recorder=activeRecorder=new MediaRecorder(activeStream);
-      const audioDone=new Promise((resolve,reject)=>{recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};recorder.onerror=()=>reject(new Error('Hindi mabasa ang recording.'));recorder.onstop=()=>resolve(new Blob(chunks,{type:recorder.mimeType||'audio/webm'}));});
-      recorder.start();message('Nakikinig...');
-      action.replaceChildren();const stop=button('Tapusin ang Pagbasa',()=>recorder.state==='recording'&&recorder.stop(),true);stop.disabled=false;const readingAction=document.getElementById('wb-l22-reading-action');if(readingAction)readingAction.appendChild(stop);
-      readTimer=setTimeout(()=>{if(recorder.state==='recording')recorder.stop();},3500);
-      const audio=await audioDone;clearTimeout(readTimer);activeStream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
+      activeStream=await window.Basahin.openMicrophone({audio:true},{timeoutMs:8000});
+      message('Nakikinig...');
+      const audio=await window.Basahin.capture({button:document.getElementById('wb-basahin'),stream:activeStream,onRecorder:value=>{recorder=activeRecorder=value;}});activeStream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
       if(!audio.size)throw new Error('Walang nakuha sa recording. Subukan muli.');
       if(requestActivity!==a.activity_key||requestIndex!==Number(state.index||0))return;
       const form=new FormData();form.append('audio',audio,'reading.webm');message('Sinusuri ang iyong pagbasa...');
@@ -410,8 +397,9 @@
   async function record(){
     if(busy)return;busy=true;lock();let stream;
     try{
-      stream=await navigator.mediaDevices.getUserMedia({audio:true});const chunks=[];const recorder=new MediaRecorder(stream);
-      const audio=await new Promise((resolve,reject)=>{recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};recorder.onerror=reject;recorder.onstop=()=>resolve(new Blob(chunks,{type:recorder.mimeType}));recorder.start();message(fil?'Nagbabasa…':'Recording…');const stop=button(fil?'Tapos nang basahin':'Done reading',()=>recorder.stop());stop.disabled=false;const timer=setTimeout(()=>{if(recorder.state==='recording')recorder.stop();},60000);recorder.addEventListener('stop',()=>{clearTimeout(timer);stop.remove();});});
+      stream=await window.Basahin.openMicrophone({audio:true});
+      message(fil?'Nakikinig...':'Listening...');
+      const audio=await window.Basahin.capture({button:document.getElementById('wb-basahin'),stream});
       stream.getTracks().forEach(t=>t.stop());message(fil?'Pinakikinggan ang iyong pagbasa…':'Checking your reading…');const form=new FormData();form.append('audio',audio,'reading.webm');await send(null,form);render();
     }catch(e){message(e.message||'Microphone unavailable. Please try again.',true);}finally{stream?.getTracks().forEach(t=>t.stop());busy=false;lock();}
   }

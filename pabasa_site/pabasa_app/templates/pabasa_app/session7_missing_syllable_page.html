@@ -1,5 +1,5 @@
 {% load static %}
-<!doctype html><html lang="fil"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lesson 19: Gawain 2 | PABASA</title><style>@font-face{font-family:Fredoka;src:url("{% static 'pabasa_app/font/fredoka-one.one-regular.ttf' %}") format('truetype');font-display:swap}:root{--ink:#183e63;--teal:#299e9a;--teal-dark:#187b7a;--accent:#e7af45;--good:#26784e;--bad:#b33b2f;--line:#94d9d6}
+<!doctype html><html lang="fil"><head>{% include 'pabasa_app/basahin_script.html' %}<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lesson 19: Gawain 2 | PABASA</title><style>@font-face{font-family:Fredoka;src:url("{% static 'pabasa_app/font/fredoka-one.one-regular.ttf' %}") format('truetype');font-display:swap}:root{--ink:#183e63;--teal:#299e9a;--teal-dark:#187b7a;--accent:#e7af45;--good:#26784e;--bad:#b33b2f;--line:#94d9d6}
 *{box-sizing:border-box}
 html,body{height:100%;overflow:hidden}
 body{margin:0;color:var(--ink);font-family:Fredoka,Nunito,"Segoe UI",sans-serif;background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover no-repeat}
@@ -56,19 +56,18 @@ return}if(s.phase==='feedback'){const previous=items[s.written_answers.length-1]
 try{await save();
 render()}catch(e){render(e.message,'bad')}};
 return}if(!item)return finish();
-if(s.phase==='oral_reading'){const recovery=(s.stt_attempts[key(n)]||0)>=3;app.innerHTML=head()+`<p class="hint">Larawan ${n+1} sa ${total}</p>${picture(item)}<div class="word">${esc(item.word)}</div><p class="hint">${recovery?'Pakinggan muna ang salita.':'Basahin nang malakas ang buong salita.'}</p><button class="button ${recovery?'gold':''}" id="oral" type="button">${recovery?'🔊 Pakinggan muna':'🎙 Basahin ngayon'}</button><p class="status ${kind}">${esc(message)}</p>`;
-const oral=app.querySelector('#oral');oral.onclick=()=>recovery?listen(n):read(n);
+if(s.phase==='oral_reading'){const recovery=(s.stt_attempts[key(n)]||0)>=3;app.innerHTML=head()+`<p class="hint">Larawan ${n+1} sa ${total}</p>${picture(item)}<div class="word">${esc(item.word)}</div><p class="hint">${recovery?'Pakinggan muna ang salita.':'Basahin nang malakas ang buong salita.'}</p><button data-basahin-button class="button ${recovery?'gold':''}" id="oral" type="button">${recovery?'🔊 Pakinggan muna':window.BasahinButton.LABEL}</button><p class="status ${kind}">${esc(message)}</p>`;
+const oral=app.querySelector('#oral');window.Basahin.bindActivity(oral,()=>recovery?listen(n):read(n));
 return}app.innerHTML=head()+`<p class="hint">Larawan ${n+1} sa ${total}</p>${picture(item)}<p class="hint">Isulat ang nawawalang pantig.</p><div class="partial">${displayStem(item.stem)}</div><form id="answerForm"><label class="hint" for="answer">Iyong sagot</label><br><input id="answer" class="answer" maxlength="${item.blank_length}" autocomplete="off" inputmode="text" aria-label="Nawawalang pantig"><br><button class="button" id="check" type="submit" disabled>SURIIN</button></form><p class="status ${kind}">${esc(message)}</p>`;
 const input=app.querySelector('#answer'),check=app.querySelector('#check');input.oninput=()=>check.disabled=!input.value.trim();app.querySelector('#answerForm').onsubmit=e=>{e.preventDefault();answer(input.value)};input.focus()}async function read(n){if(busy)return;busy=true;
 const mine=++request,b=app.querySelector('#oral');
-try{if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw Error('Hindi available ang mikropono.');b.disabled=true;b.textContent='Nagbabasa...';stream=await navigator.mediaDevices.getUserMedia({audio:true});
-const parts=[],rec=new MediaRecorder(stream);rec.ondataavailable=e=>e.data.size&&parts.push(e.data);
-const blob=await new Promise(ok=>{rec.onstop=()=>ok(new Blob(parts,{type:rec.mimeType||'audio/webm'}));rec.start();setTimeout(()=>rec.state==='recording'&&rec.stop(),3500)});stop();
+try{if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw Error('Hindi available ang mikropono.');b.disabled=true;b.textContent='Nagbabasa...';stream=await window.Basahin.openMicrophone({audio:true});
+let parts=[],rec=null;const blob = await window.Basahin.capture({button:document.querySelector('[data-basahin-button]'),stream: stream, onRecorder: value => { rec = value; }});stop();
 if(mine!==request)return;b.textContent='Pinoproseso...';
 const f=new FormData();f.append('audio',blob,'session7-lesson19-gawain2.webm');f.append('target_text',items[n].word);f.append('language','Filipino');f.append('mode','reading');
 const r=await fetch(d.transcribe_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:f}),j=await r.json().catch(()=>({}));
 if(mine!==request)return;
-if(r.ok&&j.success&&norm(j.transcript).includes(norm(items[n].word))){s.completed_oral_reads=[...new Set([...s.completed_oral_reads,n])];s.stt_attempts[key(n)]=0;s.tts_plays[key(n)]=0;s.phase='written_answer';await save();render('Tama ang pagbasa! Isulat naman ang pantig.','good')}else throw Error('Hindi pa. Subukan muli.')}catch(e){if(mine===request){s.stt_attempts[key(n)]=Math.min(3,(s.stt_attempts[key(n)]||0)+1);
+if(r.ok&&j.success&&norm(j.transcript).includes(norm(items[n].word))){s.completed_oral_reads=[...new Set([...s.completed_oral_reads,n])];s.stt_attempts[key(n)]=0;s.tts_plays[key(n)]=0;s.phase='written_answer';await save();render('Tama ang pagbasa! Isulat naman ang pantig.','good')}else throw Error('Hindi pa. Subukan muli.')}catch(e){if(mine===request){if(!window.Basahin.isCaptureError(e)){s.stt_attempts[key(n)]=Math.min(3,(s.stt_attempts[key(n)]||0)+1);}
 try{await save()}catch(_){}render(s.stt_attempts[key(n)]>=3?'Pakinggan muna ang salita.':e.message||'Hindi nakuha ang boses. Subukan muli.','bad')}}finally{stop();busy=false}}async function listen(n){if(busy)return;busy=true;
 const mine=++request,b=app.querySelector('#oral');
 try{b.disabled=true;b.textContent='Nilo-load...';

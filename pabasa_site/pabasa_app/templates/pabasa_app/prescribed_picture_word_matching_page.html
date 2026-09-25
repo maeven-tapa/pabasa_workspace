@@ -1,7 +1,7 @@
 {% load static %}
 <!doctype html>
 <html lang="fil">
-<head>
+<head>{% include 'pabasa_app/basahin_script.html' %}
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Pag-uugnay ng Salita at Larawan | PABASA</title>
   <style>
@@ -107,9 +107,9 @@
     const announceMatching = () => { if (announcedMatching) return; announcedMatching = true; if (isLesson16Gawain3) { void playMappedAudio(lesson16Gawain3Audio.matchingStart); return; } void playPrescribedReadAloud(data.instruction).catch(error => { const status = app.querySelector('.hint'); if (status) status.textContent = error.message || 'Hindi available ang Filipino audio.'; }); };
     function renderOral(message = '', kind = '') {
       const item = items[oralIndex];
-      const actionLabel = oralMode === 'aloud' ? '🔊 Pakinggan muna' : oralStatus || '🎙 Basahin ngayon';
-      app.innerHTML = heading() + `<p class="hint">Basahin nang malakas ang salita bago magpatuloy sa pagkakabit. Salita ${oralIndex + 1} sa ${items.length}.</p><img class="oral-image" src="${escape(item.image_url)}" alt="${escape(item.alt_text || item.placeholder_label)}"><div class="oral-word">${escape(item.read_word)}</div><button class="button ${oralMode === 'aloud' ? 'gold' : ''}" id="oral-action" type="button" ${busy ? 'disabled' : ''}>${escape(actionLabel)}</button><p class="oral-status ${kind}">${escape(message)}</p>`;
-      app.querySelector('#oral-action').onclick = oralMode === 'aloud' ? listenCurrentWord : readCurrentWord;
+      const actionLabel = oralMode === 'aloud' ? '🔊 Pakinggan muna' : oralStatus || window.BasahinButton.LABEL;
+      app.innerHTML = heading() + `<p class="hint">Basahin nang malakas ang salita bago magpatuloy sa pagkakabit. Salita ${oralIndex + 1} sa ${items.length}.</p><img class="oral-image" src="${escape(item.image_url)}" alt="${escape(item.alt_text || item.placeholder_label)}"><div class="oral-word">${escape(item.read_word)}</div><button data-basahin-button class="button ${oralMode === 'aloud' ? 'gold' : ''}" id="oral-action" type="button" ${busy ? 'disabled' : ''}>${escape(actionLabel)}</button><p class="oral-status ${kind}">${escape(message)}</p>`;
+      window.Basahin.bindActivity(app.querySelector('#oral-action'),oralMode === 'aloud' ? listenCurrentWord : readCurrentWord);
       announceOralItem();
     }
     async function readCurrentWord() {
@@ -119,10 +119,8 @@
       busy = true; oralStatus = '🎙 Nakikinig…'; renderOral('Nakikinig sa iyong pagbasa…', 'good');
       try {
         button.disabled = true; button.textContent = 'Nagbabasa...';
-        stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
-        const parts = [], recorder = new MediaRecorder(stream);
-        recorder.ondataavailable = event => event.data?.size && parts.push(event.data);
-        const recording = await new Promise((resolve, reject) => { recorder.onerror = () => reject(Error('Hindi naitala ang boses.')); recorder.onstop = () => resolve(new Blob(parts, {type:recorder.mimeType || 'audio/webm'})); recorder.start(); setTimeout(() => recorder.state === 'recording' && recorder.stop(), 3500); });
+        stream = await window.Basahin.openMicrophone({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+        let parts = [], recorder = null;const recording = await window.Basahin.capture({button:document.querySelector('[data-basahin-button]'),stream: stream, onRecorder: value => { recorder = value; }});
         stopOral(); oralStatus = '⏳ Pinoproseso…'; renderOral('Pinoproseso ang iyong pagbasa…', 'good');
         const form = new FormData(); form.append('audio', recording, 'lesson16-gawain3-reading.webm'); form.append('target_text', item.read_word); form.append('language', 'Filipino'); form.append('mode', 'reading');
         const response = await fetch(data.transcribe_url, {method:'POST', credentials:'same-origin', headers:{'X-CSRFToken':csrf()}, body:form}), result = await response.json().catch(() => ({}));
@@ -132,7 +130,7 @@
         await save(); oralStatus = ''; await narrateFeedback('Tama ang pagbasa!', 'readingCorrect');
         if (phase === 'matching') render(); else renderOral('Tama ang pagbasa!', 'good');
       } catch (error) {
-        oralStatus = ''; readingAttempts = Math.min(3, readingAttempts + 1); sttAttempts[String(oralIndex)] = readingAttempts; if (readingAttempts >= 3) oralMode = 'aloud'; await save().catch(() => {});
+        oralStatus = ''; if(!window.Basahin.isCaptureError(error)){readingAttempts = Math.min(3, readingAttempts + 1);} if(!window.Basahin.isCaptureError(error)){sttAttempts[String(oralIndex)] = readingAttempts;} if (readingAttempts >= 3) oralMode = 'aloud'; await save().catch(() => {});
         const feedback = oralMode === 'aloud' ? 'Pakinggan muna ang salita.' : error.message || 'Hindi nakuha ang boses. Subukan muli.'; renderOral(feedback, 'error'); await narrateFeedback(feedback, 'readingRetry');
       } finally {
         stopOral();

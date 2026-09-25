@@ -1,6 +1,6 @@
 {% load static %}
 <!doctype html><html lang="{% if workbook_payload.activity.language == 'English' %}en{% else %}fil{% endif %}">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<head>{% include 'pabasa_app/basahin_script.html' %}<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{ workbook_payload.activity.display_label }} | PABASA</title>
 <link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_workbook.css' %}">
 	{% if workbook_payload.activity.specialized_builder or workbook_payload.activity.activity_key == 'aral-l22-g1-c-syllable-builder' %}<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_l22_c_builder.css' %}">{% endif %}
