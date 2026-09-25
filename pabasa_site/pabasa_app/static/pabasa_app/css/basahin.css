@@ -41,7 +41,7 @@
   transform: translateY(3px) !important;
   box-shadow: 0 2px 0 var(--basahin-shadow) !important;
 }
-:root body button[data-basahin-button]:disabled:not([data-basahin-state='listening']):not([data-basahin-state='processing']) {
+:root body button[data-basahin-button]:disabled:is([data-basahin-state='idle'], [data-basahin-state='model']) {
   background: #b5c5c7 !important;
   color: #edf3f4 !important;
   box-shadow: none !important;
@@ -50,6 +50,8 @@
   filter: none !important;
   opacity: 1 !important;
 }
+:root body button[data-basahin-button][data-basahin-state='calibrating'],
+:root body button[data-basahin-button][data-basahin-state='waiting'],
 :root body button[data-basahin-button][data-basahin-state='listening'],
 :root body button[data-basahin-button][data-basahin-state='processing'] {
   background: var(--basahin-teal) !important;
@@ -57,7 +59,7 @@
   box-shadow: 0 7px 0 var(--basahin-shadow), 0 10px 20px #187b7a40 !important;
   cursor: wait !important;
 }
-:root body button[data-basahin-button][data-basahin-state='listening'] {
+:root body button[data-basahin-button][data-basahin-state='listening'][data-basahin-speaking='true'] {
   animation: basahin-listening 1.3s ease-in-out infinite !important;
 }
 :root body button[data-basahin-button] [data-basahin-label] {
@@ -101,7 +103,7 @@
   :root body button[data-basahin-button] { min-width: 0; width: 100%; min-height: 58px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  :root body button[data-basahin-button][data-basahin-state],
+  :root body button[data-basahin-button][data-basahin-state][data-basahin-speaking],
   :root body button[data-basahin-button][data-basahin-state] [data-basahin-icon] {
     animation: none !important;
     transition: none !important;

@@ -233,7 +233,7 @@
     </main>
     {% csrf_token %}
     <script src="{% static 'pabasa_app/js/reading_level_utils.js' %}?v={% now 'U' %}"></script>
-    <script src="{% static 'pabasa_app/js/assessment_reader.js' %}?v={% now 'U' %}"></script>
+    {% include "pabasa_app/speech_debug_script.html" %}<script src="{% static 'pabasa_app/js/assessment_reader.js' %}?v={% now 'U' %}"></script>
     <script src="{% static 'pabasa_app/js/phrase_reading.js' %}?v={% now 'U' %}"></script>
 </body>
 </html>

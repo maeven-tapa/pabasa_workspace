@@ -4,7 +4,7 @@
   if (window.BasahinButton) return;
   const LABEL = 'Basahin';
   const selector = 'button[data-basahin-button]';
-  const labels = {idle: LABEL, listening: 'Nakikinig...', processing: 'Sinusuri...'};
+  const labels = {idle: LABEL, calibrating: 'Sandali...', waiting: 'Magsalita...', listening: 'Nakikinig...', processing: 'Sinusuri...'};
   const activities = new WeakMap(), running = new WeakSet();
 
   // One click handler for every Basahin button, including buttons re-rendered by
@@ -35,10 +35,18 @@
   }
 
   function stateFromText(text) {
+    if (/sandali/i.test(text)) return 'calibrating';
+    if (/magsalita/i.test(text)) return 'waiting';
     if (/nakikinig|nagbabasa|recording|listening/i.test(text)) return 'listening';
     if (/sinusuri|pinoproseso|processing|checking/i.test(text)) return 'processing';
     if (/pakinggan|read aloud/i.test(text)) return 'model';
     return 'idle';
+  }
+
+  function setSpeech(button, speaking) {
+    if (!button) return;
+    const value = String(Boolean(speaking));
+    if (button.dataset.basahinSpeaking !== value) button.dataset.basahinSpeaking = value;
   }
 
   function decorate(button, state) {
@@ -47,7 +55,8 @@
     state = state || stateFromText(source);
     if (!button.hasAttribute('data-basahin-button')) button.setAttribute('data-basahin-button', '');
     if (button.dataset.basahinState !== state) button.dataset.basahinState = state;
-    const busy = String(state === 'listening' || state === 'processing');
+    if (state !== 'listening') setSpeech(button, false);
+    const busy = String(['calibrating', 'waiting', 'listening', 'processing'].includes(state));
     if (button.getAttribute('aria-busy') !== busy) button.setAttribute('aria-busy', busy);
     let label = button.querySelector('[data-basahin-label]');
     let icon = button.querySelector('[data-basahin-icon]');
@@ -89,7 +98,7 @@
     }).observe(document.body, {subtree: true, childList: true, characterData: true});
   }
   document.addEventListener('click', handleClick);
-  window.BasahinButton = Object.freeze({LABEL, decorate, setState: decorate, mount, bindActivity, getActivity, unbindActivity});
+  window.BasahinButton = Object.freeze({LABEL, decorate, setState: decorate, setSpeech, mount, bindActivity, getActivity, unbindActivity});
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once: true});
   else start();
 })();

@@ -1,6 +1,6 @@
 # Basahin: shared STT capture and button
 
-`pabasa_app/static/pabasa_app/js/basahin.js` exposes `window.Basahin` for session activities and new reading screens. The idle label is **Basahin**. Each independently decodable audio clip lasts **2.4 seconds**. The module does not decide lesson scores, listening unlocks, or activity completion.
+`pabasa_app/static/pabasa_app/js/basahin.js` exposes `window.Basahin` for session activities and new reading screens. The idle label is **Basahin**. Recording starts only after the volume-based VAD detects speech; each independently decodable clip then lasts **2.4 seconds**. The module does not decide lesson scores, listening unlocks, or activity completion.
 
 ## Add a new reading screen
 
@@ -52,7 +52,7 @@ const reader = Basahin.create({
 // reader.destroy();
 ```
 
-The button changes to `Nakikinig...` during capture and `Sinusuri...` during STT, then returns to `Basahin`. It is disabled while busy. Recording pauses while the request is processed. `getFields()` is called for every clip; keep the server cursor and stitching context in your screen's state. Reset them when changing the target. `onResult` may return `true` to stop, `false` to continue, or nothing to use `result.complete`. `continuous: false` stops after one result. The default limit is 25 voiced clips per start; `maxChunks` can override it. `deviceId` selects a microphone.
+The button shows `Sandali...` while preparing/calibrating, then `Magsalita...` while waiting for speech. It changes to `Nakikinig...` when recording starts and `Sinusuri...` during STT, then returns to `Basahin`. It is disabled while busy. Waiting does not pulse or create a MediaRecorder. During a clip, the pulse follows detected speech with CRLA's 240 ms hold between syllables; the clip continues to its 2.4-second boundary even if speech pauses. Recording pauses while the request is processed, and each new clip waits for speech again. `getFields()` is called for every clip; keep the server cursor and stitching context in your screen's state. Reset them when changing the target. `onResult` may return `true` to stop, `false` to continue, or nothing to use `result.complete`. `continuous: false` stops after one result. The default limit is 25 voiced clips per start; `maxChunks` can override it. `deviceId` selects a microphone.
 
 ## Existing activity workflows
 
@@ -68,7 +68,7 @@ Basahin.bindActivity(button, async () => {
 
 `bindActivity` replaces any old `onclick` registration and stores one callback per button. Rebinding replaces the callback rather than adding another listener. The single shared click handler guards disabled buttons and duplicate clicks. `getActivity(button)` retrieves the registered callback when an existing activity needs to wrap its workflow. New screens should use `create()` above; it registers with this same dispatcher automatically.
 
-`data-basahin-button` marks both template buttons and buttons created by JavaScript. The shared presentation controller preserves the button element, focus and registered workflow while restoring its icon/label after legacy text updates. `window.BasahinButton.LABEL` is the idle label source. `BasahinButton.setState(button, 'idle' | 'listening' | 'processing')` updates the presentation without changing activity locks. Pass `{button}` to `capture()` or `read()` to update these states automatically. When an activity reuses a button for model audio, its `Pakinggan` action and label remain distinct.
+`data-basahin-button` marks both template buttons and buttons created by JavaScript. The shared presentation controller preserves the button element, focus and registered workflow while restoring its icon/label after legacy text updates. `window.BasahinButton.LABEL` is the idle label source. `BasahinButton.setState(button, 'idle' | 'calibrating' | 'waiting' | 'listening' | 'processing')` updates the presentation without changing activity locks. The VAD controls the separate `data-basahin-speaking` flag; merely setting a listening label does not start a pulse. Pass `{button}` to `capture()` or `read()` to update these states automatically. When an activity reuses a button for model audio, its `Pakinggan` action and label remain distinct.
 
 Do not add per-screen reading `onclick` handlers, MediaRecorder loops, idle labels, pulse keyframes, or spinner CSS. Keep lesson-specific instructions, scoring, retry limits, and progress callbacks in the activity.
 
@@ -111,11 +111,11 @@ const audio = await Basahin.capture();
 - RMS volume is measured from 1,024 time-domain samples on animation frames.
 - The first 800 ms calibrates the background floor. Quiet samples continue adapting it with 0.94/0.06 smoothing.
 - Speech threshold: `max(0.014, backgroundFloor * 3.2 + 0.004)`.
-- Three above-threshold frames establish speech; quiet frames reduce that evidence. Evidence resets between clips, so speech cannot mark a later silent clip as voiced.
-- Silent clips are discarded before STT. Five consecutive silent clips (12 seconds) end capture with `NoSpeechError`; no reading attempt should be counted.
+- Three above-threshold frames establish speech and start the recorder. Quiet frames reduce that evidence. Evidence resets between clips, so previous speech cannot start a new recording during silence.
+- While waiting, only the microphone analyser runs. No audio clip is recorded or sent to STT. Twelve seconds without detected speech ends capture with `NoSpeechError`; no reading attempt should be counted. `capture({maxWaitMs})` can change this limit; the older `maxSilentChunks` option maps to that many 2.4-second waiting intervals.
 - Every clip starts a new MediaRecorder so each upload has its own decodable container. This is chunked capture, not a streaming provider connection.
 - `cancelAll()` cancels shared captures/controllers. Page exit and the common session controls call it. New custom controls must also call `reader.stop()` or `Basahin.cancelAll()` before changing reading state.
-- `basahin:state` events expose `level`, `listening` and `silence` details for debugging/meters. `onVad(state, detail)` provides the controller's capture updates.
+- `basahin:state` events expose `calibrating`, `waiting`, `listening`, `level` and silence-timeout details for debugging/meters. `onVad(state, detail)` provides the controller's capture updates.
 
 The thresholds follow the CRLA reader's volume detector. Volume gating distinguishes quiet audio from sufficiently loud audio; it cannot identify whether a loud sound is speech. Browser microphone access requires HTTPS or localhost and user permission.
 
@@ -137,4 +137,4 @@ The browser check uses installed Chrome and `playwright-core` (or its absolute m
 node tools/test_basahin_button_browser.cjs
 ```
 
-It verifies click dispatch, visual states, reduced motion, dynamic buttons, mobile sizing and real browser recording with synthetic audio. Physical microphone and live Google STT quality still require manual testing.
+It verifies click dispatch, speech-gated recording/pulsing, quiet pauses, reduced motion, dynamic buttons, mobile sizing and real browser recording with synthetic audio. Physical microphone and live Google STT quality still require manual testing.
