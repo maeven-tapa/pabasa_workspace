@@ -5624,6 +5624,20 @@
                 story_selection: buildCrlaStageUrl("story_selection", branchState),
             };
             const nextStageUrl = nextStageUrlMap[branchState.next_stage] || "";
+            if (
+                !isMyMaterials
+                && persistedBranchState
+                && branchState.stage === "transition_to_story"
+                && branchState.next_stage === "story_selection"
+                && nextStageUrl
+            ) {
+                traceEndSession('showCompletion.directStoryTransition', {
+                    destination: nextStageUrl,
+                    next_stage: branchState.next_stage,
+                });
+                window.location.assign(nextStageUrl);
+                return;
+            }
             const summary = document.getElementById("completionSummary") || document.querySelector(".completion-summary");
             const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
             if (summary) {
