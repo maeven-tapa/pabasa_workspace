@@ -182,7 +182,7 @@
         const form = new FormData(); form.append('audio', audio, 'prescribed-reading.webm'); form.append('target_text', item.word); form.append('language', 'Filipino'); form.append('mode', 'reading');
         const response = await fetch('{% url "reading_transcribe_api" %}', {method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrf()}, body: form});
         const result = await response.json();
-        if (result.success && normalize(result.transcript).includes(normalize(item.word))) { phase = 'written'; oralMode = 'read'; readingAttempts = 0; aloudAttempts = 0; writtenAttempts = 0; narrate('Tama! Magaling ang iyong pagbasa. Piliin ang nawawalang pantig.', `reading-correct-${index}`, 'readingSuccess'); await save(); render(); return; }
+        if (result.success && result.complete === true) { phase = 'written'; oralMode = 'read'; readingAttempts = 0; aloudAttempts = 0; writtenAttempts = 0; narrate('Tama! Magaling ang iyong pagbasa. Piliin ang nawawalang pantig.', `reading-correct-${index}`, 'readingSuccess'); await save(); render(); return; }
         readingAttempts++;
         if (readingAttempts >= 3) oralMode = 'aloud';
         narrate(readingAttempts >= 3 ? 'Pakinggan muna ang salita bago muling magbasa.' : 'Hindi pa. Subukan muli.', `reading-feedback-${index}-${readingAttempts}`, readingAttempts >= 3 ? 'listenFirst' : 'tryAgain');

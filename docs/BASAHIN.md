@@ -121,6 +121,8 @@ The thresholds follow the CRLA reader's volume detector. Volume gating distingui
 
 ## Existing integration and verification
 
+Reading activities using `/api/reading/transcribe/` grade with `result.success && result.complete === true`. Do not compare or search the transcript again in JavaScript: the backend owns word matching, sound aliases and syllable reconstruction. Keep transcripts for display and saved diagnostics. Exact rhyme activities send `salitang_magkatugma_exact=1`; strict syllable exercises retain their specific backend verdict. The Session 7 Lesson 20–21 cluster activity sends its `prescribed_activity_key` so its scoped `check`/`tsek` pronunciation allowance is evaluated on the server.
+
 Session templates that used **Basahin Ngayon** and the workbook's **Basahin ang Salita** now display **Basahin**. Their speech capture uses this module while preserving the existing per-activity server graders. Sentence attempts use `read()` so the 2.4-second clip boundary does not end a full sentence prematurely. Teacher-managed reading buttons also use the shorter label; they retain their existing non-STT behavior. The separate CRLA assessment reader and long-form recording screens retain their existing workflows.
 
 Run the deterministic microphone, VAD, transport and lifecycle checks with:
@@ -138,3 +140,5 @@ node tools/test_basahin_button_browser.cjs
 ```
 
 It verifies click dispatch, speech-gated recording/pulsing, quiet pauses, reduced motion, dynamic buttons, mobile sizing and real browser recording with synthetic audio. Physical microphone and live Google STT quality still require manual testing.
+
+`node tools/test_basahin_grading_browser.cjs` exercises actual lesson scripts with conflicting transcript/verdict fixtures to verify saved matches and advancement follow the backend. From `pabasa_site`, run `python manage.py test pabasa_app.tests_basahin_reading_verdict` for word boundaries, segmented speech, sentence progress, exact rhymes and the scoped cluster pronunciation allowance.

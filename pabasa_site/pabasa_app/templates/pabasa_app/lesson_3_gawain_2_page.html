@@ -97,7 +97,7 @@ body.gawain-2:has(#game .complete) #game .complete-done{text-decoration:none!imp
     <nav class="nav"><a class="back" href="{% url 'assessment' %}">← Bumalik sa<br>Aking Aralin</a></nav>
     <section id="game" class="game"></section>
   </main>
-  <script data-activity-bootstrap="lesson-3-gawain-2" src="{% static 'pabasa_app/js/lesson3_gawain_2_sequence.js' %}?v=20260924-lesson-start-ui"></script>
+  <script data-activity-bootstrap="lesson-3-gawain-2" src="{% static 'pabasa_app/js/lesson3_gawain_2_sequence.js' %}?v=20260925-backend-verdict"></script>
   <script data-activity-bootstrap="lesson-3-gawain-2">
     const savedLesson3Progress = {{ lesson_3_progress|safe }};
     if (savedLesson3Progress) localStorage.setItem('pabasa:lesson-3-gawain-2:progress', String(savedLesson3Progress.activity_completed?6:(window.__lessonStartResumeIndex??savedLesson3Progress.current_index)));

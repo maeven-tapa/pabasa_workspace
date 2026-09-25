@@ -22,7 +22,6 @@
     const csrf=()=>((document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)||[])[1]||'');
     const esc=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
     const normalize=value=>String(value||'').toLocaleLowerCase('fil-PH').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]/g,'');
-    const spokenWordMatches=(target,transcript)=>{const expected=normalize(target),heard=normalize(transcript);return heard.includes(expected)||(expected==='tsek'&&heard.includes('check'))};
     const itemKey=index=>String(index);
     let state=Object.assign({phase:'intro',current_item_index:0,completed_oral_reads:[],stt_attempts:{},tts_plays:{},correct_answers:[],selected_answers:{},state_version:0},d.progress?.state||{}),busy=false,requestId=0,stream=null,audio=null;
     const debugEvent=detail=>window.dispatchEvent(new CustomEvent('prescribed-s7-l20-21-g1-debug',{detail}));
@@ -79,11 +78,11 @@
         stream=await window.Basahin.openMicrophone({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
         const chunks=[];const mimeType=recordingMimeType();const blob = await window.Basahin.capture({button:document.querySelector('[data-basahin-button]'),stream: stream});
         stopMedia();if(!blob.size)throw Error('Walang narinig na boses. Subukan muli.');if(mine!==requestId)return;
-        button.textContent='Pinoproseso...';const form=new FormData();form.append('audio',blob,'session7-lesson20-21.webm');form.append('target_text',items[index].word);form.append('language','Filipino');form.append('mode','reading');
+        button.textContent='Pinoproseso...';const form=new FormData();form.append('audio',blob,'session7-lesson20-21.webm');form.append('target_text',items[index].word);form.append('language','Filipino');form.append('mode','reading');form.append('prescribed_activity_key',d.activity_key);
         debugEvent({status:'Processing',recorder:'Stopping',message:'Recording stop'});
         const response=await fetch(d.transcribe_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form}),data=await response.json().catch(()=>({}));
         if(mine!==requestId)return;
-        const transcript=String(data.transcript||''),normalized=normalize(transcript),correct=Boolean(response.ok&&data.success&&spokenWordMatches(items[index].word,transcript));
+        const transcript=String(data.transcript||''),normalized=normalize(transcript),correct=Boolean(response.ok&&data.success&&data.complete===true);
         debugEvent({status:'STT complete',transcript,normalized,result:correct?'Correct':'Incorrect',error:correct?'Not available':(data.error||'Reading did not match'),message:`STT response · ${correct?'accepted':'rejected'}`});
         if(correct){state.completed_oral_reads=[...new Set([...state.completed_oral_reads,index])];state.stt_attempts[itemKey(index)]=0;state.tts_plays[itemKey(index)]=0;state.phase='syllable_selection';await save();const message='Tama ang pagbasa! Piliin ang pantig na may klaster.';render(message,'good');playReadAloud(message).catch(()=>{})}else throw Error('Hindi pa. Subukan muli.');
       }catch(error){debugEvent({status:'Error',error:error.message||'Speech attempt failed',message:'Reading error'});if(mine===requestId){if(!window.Basahin.isCaptureError(error)){state.stt_attempts[itemKey(index)]=Math.min(3,(state.stt_attempts[itemKey(index)]||0)+1);}try{await save()}catch(_){}const message=(state.stt_attempts[itemKey(index)]||0)>=3?'Pakinggan muna ang salita.':error.message||'Hindi nakuha ang boses. Subukan muli.';render(message,'bad');playReadAloud(message).catch(()=>{})}}finally{stopMedia();busy=false}

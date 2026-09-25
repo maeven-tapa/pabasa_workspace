@@ -53,7 +53,7 @@
       const finalTranscript = String(data.transcript ?? '');
       const heard = norm(rawTranscript);
       const expected = norm(expectedWord);
-      const isCorrect = heard === expected;
+      const isCorrect = Boolean(response.ok && data.success && data.complete === true);
       window.salitangSpeechDebugLog?.({
         attempt_number: currentAttemptId,
         current_pair: currentPairIndex + 1,

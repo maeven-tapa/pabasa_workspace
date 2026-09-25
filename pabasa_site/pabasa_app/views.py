@@ -15158,9 +15158,8 @@ def prescribed_activity_progress(request, activity_key):
             accepted = False
             if action == 'oral':
                 if phase != 'say': raise ValueError('Piliin muna ang unang tunog.')
-                heard = re.sub(r'[^a-z]', '', unicodedata.normalize('NFD', str(data.get('heard') or '').lower()))
-                target = re.sub(r'[^a-z]', '', unicodedata.normalize('NFD', item['word'].lower()))
-                accepted = bool(heard and (heard == target or target in heard))
+                heard = str(data.get('heard') or '')
+                accepted = analyze_reading(item['word'], 0, heard, 'fil-PH')['complete']
                 oral_attempts = 0 if accepted else min(3, oral_attempts + 1)
                 phase = 'identify' if accepted else 'say'
             elif action == 'choose':
@@ -20692,11 +20691,22 @@ def reading_transcribe_api(request):
         if not isinstance(activity_syllables, list):
             activity_syllables = []
         is_clap_phase2 = request.POST.get('phase2_strict') == '1'
+        matching_transcript = transcript
+        # This cluster lesson accepts Google's English spelling of "tsek".
+        # Keep the allowance scoped to the activity and preserve the raw speech.
+        if (
+            request.POST.get('prescribed_activity_key') == 'session-7-lesson-20-21-gawain-1'
+            and language_code.lower() == 'fil-ph'
+            and mode == 'reading'
+            and ReadingMatcher.normalize_word(target_text) == 'tsek'
+            and ReadingMatcher.normalize_spoken_words(transcript) == ['check']
+        ):
+            matching_transcript = 'tsek'
         analysis_transcript, next_syllable_context, stitching_applied = target_aware_syllable_stitching(
             target_text,
             current_syllable_index,
             syllable_context,
-            transcript,
+            matching_transcript,
             language_code,
             allow_non_filipino=is_clap_phase2 and mode == "word",
         )
