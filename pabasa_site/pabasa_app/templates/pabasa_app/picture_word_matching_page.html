@@ -157,6 +157,7 @@
         el('progressNodes').innerHTML = items.map((item,index) => `<span class="progress-node ${index < matched ? 'is-complete' : index === matched ? 'is-current' : ''} ${index === newlyCompletedIndex ? 'just-completed' : ''}" style="--node-color:${pairColors[index % pairColors.length]}"></span>`).join('');
         lastMatchedCount = matched;
         const activeItem = items.find(item => !answers.has(item._id)) || items[items.length - 1];
+        selectedId = activeItem?._id || null;
         const activeItems = activeItem ? [activeItem] : [];
         const wordChoices = activeItem
             ? [activeItem._answer, ...shuffledWords.filter(word => word !== activeItem._answer).slice(0, 4)]
