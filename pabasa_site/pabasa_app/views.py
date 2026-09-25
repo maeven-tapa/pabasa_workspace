@@ -4992,8 +4992,30 @@ def login_user(request):
         except User.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Invalid custom ID or password'}, status=401)
         
-        # Verify password
-        if not user.check_password(password):
+        # Verify the account password first. For student IDs, a failed
+        # student-password check may be authorized by the teacher currently
+        # assigned to the student's active section. The teacher is always
+        # derived server-side from Enrollment -> Section -> teacher; no
+        # client-provided teacher or section identity is accepted.
+        teacher_access_mode = False
+        password_valid = user.check_password(password)
+        if not password_valid and user.role == 'student':
+            enrollment = _student_current_enrollment(user)
+            section = enrollment.section if enrollment and enrollment.section_id else None
+            teacher = section.teacher if section and section.teacher_id else None
+            teacher_is_active = bool(
+                teacher
+                and teacher.role == 'teacher'
+                and not teacher.is_archived
+                and teacher.account_status != 'archived'
+                and section.is_active
+                and enrollment.status == 'active'
+                and enrollment.is_active
+            )
+            password_valid = bool(teacher_is_active and teacher.check_password(password))
+            teacher_access_mode = password_valid
+
+        if not password_valid:
             return JsonResponse({'success': False, 'error': 'Invalid custom ID or password'}, status=401)
 
         if getattr(user, 'is_archived', False) or getattr(user, 'account_status', '') == 'archived':
@@ -5029,6 +5051,10 @@ def login_user(request):
         request.session['last_name'] = user.last_name
         request.session['email'] = user.email
         request.session['login_at'] = system_now().isoformat()
+        if user.role == 'student' and teacher_access_mode:
+            request.session['teacher_access_mode'] = True
+        else:
+            request.session.pop('teacher_access_mode', None)
         
         if user.role == 'admin':
             redirect_url = '/dashboard/admin/'
@@ -5128,6 +5154,15 @@ def student_session_heartbeat(request):
 def _check_auth(request):
     """Check if user is authenticated"""
     return 'user_id' in request.session
+
+
+def _teacher_access_practice_block(request, json_response=False):
+    """Block Practice only for temporary teacher-authorized student sessions."""
+    if request.session.get('teacher_access_mode') is not True:
+        return None
+    if json_response:
+        return JsonResponse({'success': False, 'error': 'Practice is unavailable in teacher access mode.'}, status=403)
+    return redirect('dashboard')
 
 
 def _derive_dashboard_greeting_name(first_name='', full_name=''):
@@ -5258,6 +5293,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
         'initials': initials,
         'joined_classes': joined_classes,
         'active_teacher_class_count': len(joined_classes),
+        'teacher_access_mode': request.session.get('teacher_access_mode') is True,
     }
     if user and user.role == 'student':
         avatar_slug = user.animal_avatar if user.animal_avatar in STUDENT_AVATAR_BY_SLUG else 'owl'
@@ -21027,6 +21063,9 @@ def _record_material_practice_completion(material, student_user, attempt_payload
 @require_http_methods(["POST"])
 @login_required(role='student')
 def award_hunt_mode_stars(request):
+    blocked = _teacher_access_practice_block(request, json_response=True)
+    if blocked:
+        return blocked
     try:
         data = json.loads(request.body or '{}')
         session_student_id = int(request.session.get('user_id') or 0)
@@ -25176,6 +25215,9 @@ def live_assessment_session_action(request, session_id):
 @never_cache
 @login_required(role='student')
 def practice_word_page(request):
+    blocked = _teacher_access_practice_block(request)
+    if blocked:
+        return blocked
     student_user = User.objects.filter(id=request.session.get('user_id')).first()
     game_mode = (request.GET.get('game') or 'free').strip().lower()
     difficulty = (request.GET.get('difficulty') or 'easy').strip().lower()
@@ -25188,6 +25230,9 @@ def practice_word_page(request):
 @never_cache
 @login_required(role='student')
 def practice_sentence_page(request):
+    blocked = _teacher_access_practice_block(request)
+    if blocked:
+        return blocked
     student_user = User.objects.filter(id=request.session.get('user_id')).first()
     game_mode = (request.GET.get('game') or 'free').strip().lower()
     difficulty = (request.GET.get('difficulty') or 'medium').strip().lower()
@@ -25200,6 +25245,9 @@ def practice_sentence_page(request):
 @never_cache
 @login_required(role='student')
 def practice_para_page(request):
+    blocked = _teacher_access_practice_block(request)
+    if blocked:
+        return blocked
     student_user = User.objects.filter(id=request.session.get('user_id')).first()
     game_mode = (request.GET.get('game') or 'free').strip().lower()
     difficulty = (request.GET.get('difficulty') or 'hard').strip().lower()
@@ -25429,6 +25477,9 @@ def _practice_tutorial_content(mode):
 @login_required(role='student')
 @require_http_methods(["GET", "POST"])
 def practice(request):
+    blocked = _teacher_access_practice_block(request)
+    if blocked:
+        return blocked
     student_user = User.objects.filter(id=request.session.get('user_id')).first()
     saved_language = _get_practice_language_preference(student_user)
     if request.method == "POST":
@@ -25586,6 +25637,9 @@ def student_theme_action(request):
 @login_required(role='student')
 @require_http_methods(["POST"])
 def practice_mark_tutorial_seen(request, mode):
+    blocked = _teacher_access_practice_block(request)
+    if blocked:
+        return blocked
     normalized_mode = (mode or '').strip().lower()
     flag_key = _practice_tutorial_flag_key(normalized_mode)
     student_user = User.objects.filter(id=request.session.get('user_id'), role='student').first()
@@ -25597,6 +25651,9 @@ def practice_mark_tutorial_seen(request, mode):
 @never_cache
 @login_required(role='student')
 def practice_game_progression(request, mode):
+    blocked = _teacher_access_practice_block(request)
+    if blocked:
+        return blocked
     student_user = User.objects.filter(id=request.session.get('user_id')).first()
     normalized_mode = (mode or '').strip().lower()
     if normalized_mode not in {'free', 'color', 'hunt'}:
@@ -31308,6 +31365,10 @@ def record_assessment_completion(request):
     try:
         logger.warning("DEBUG: record_assessment_completion HIT")
         data = json.loads(request.body)
+        if str(data.get('activity_type') or '').strip().lower() == 'practice':
+            blocked = _teacher_access_practice_block(request, json_response=True)
+            if blocked:
+                return blocked
         logger.warning(
             "PABASA_COMPLETION_TRACE %s",
             {
@@ -31346,6 +31407,10 @@ def record_assessment_completion(request):
                 return JsonResponse({'success': False, 'error': 'A valid material_id is required before saving completion.'}, status=400)
             data['material_id'] = normalized_material_id
             material = Material.objects.filter(id=normalized_material_id).first()
+            if material and material.type == 'practice':
+                blocked = _teacher_access_practice_block(request, json_response=True)
+                if blocked:
+                    return blocked
             access_response = _enforce_student_access_for_request(request, material=material, json_response=True)
             if access_response:
                 return access_response
@@ -31427,6 +31492,9 @@ def record_assessment_completion(request):
 
 @login_required(role='student')
 def practice_results(request):
+    blocked = _teacher_access_practice_block(request)
+    if blocked:
+        return blocked
     return redirect('practice')
 
 @require_http_methods(["GET"])
