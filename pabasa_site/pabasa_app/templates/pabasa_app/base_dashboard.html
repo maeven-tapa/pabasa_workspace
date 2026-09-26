@@ -2950,7 +2950,8 @@
             right: 0;
             bottom: 0;
             left: var(--sidebar-width);
-            z-index: 99999;
+            /* Keep the navigation chrome visible while the next dashboard tab loads. */
+            z-index: 1029;
             display: grid;
             place-items: center;
             background: #ffffff;

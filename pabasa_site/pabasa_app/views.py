@@ -5273,6 +5273,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
     user_role = user.role if user else request.session.get('user_role', 'student')
     effective_role = nav_role or user_role
     student_sections = []
+    student_session_progress = []
 
     if user and user.role == 'student':
         perf_mark('student_branch_start')
@@ -5300,6 +5301,33 @@ def _dashboard_context(request, nav_role=None, extra=None):
                 'code': cls.class_code,
                 'name': cls.class_name,
                 'student_count': _section_student_count(cls),
+            })
+        activity_values = list(PRESCRIBED_ACTIVITIES.values())
+        activity_keys = [item.get('activity_key') for item in activity_values if item.get('activity_key')]
+        activity_rows = {
+            row.activity_key: row
+            for row in StudentActivityProgress.objects.filter(
+                student=student_user,
+                activity_key__in=activity_keys,
+            )
+        }
+        for session_number in range(1, 16):
+            session_activities = [
+                item for item in activity_values
+                if int(item.get('session_number') or 0) == session_number
+            ]
+            total = len(session_activities)
+            completed = 0
+            for activity in session_activities:
+                row = activity_rows.get(activity.get('activity_key'))
+                item_total = max(1, int(activity.get('total_items') or len(activity.get('items') or []) or 1))
+                if row and (row.activity_completed or int(row.completed_items or 0) >= item_total):
+                    completed += 1
+            student_session_progress.append({
+                'session': session_number,
+                'total': total,
+                'completed': completed,
+                'percent': round((completed / total) * 100) if total else 0,
             })
         perf_log('joined_classes_built', 'joined_classes_start', {
             'joined_classes_count': len(joined_classes),
@@ -5334,6 +5362,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
         'joined_classes': joined_classes,
         'active_teacher_class_count': len(joined_classes),
         'teacher_access_mode': request.session.get('teacher_access_mode') is True,
+        'student_session_progress': student_session_progress,
     }
     if user and user.role == 'student':
         avatar_slug = user.animal_avatar if user.animal_avatar in STUDENT_AVATAR_BY_SLUG else 'owl'

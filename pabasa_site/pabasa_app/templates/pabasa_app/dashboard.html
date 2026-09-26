@@ -2475,6 +2475,7 @@
         color: #080f3e;
         font-size: clamp(1.08rem, 1.6vw, 1.42rem);
         line-height: 1.15;
+        max-width: 11rem;
         margin: 0;
     }
 
@@ -2624,6 +2625,12 @@
         padding: 0.9rem;
     }
 
+    .my-classes-section .class-card-activity .aral-week-card {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        text-align: center;
+    }
+
     .aral-week-icon {
         align-items: center;
         background: rgba(43, 163, 249, 0.12);
@@ -2636,7 +2643,7 @@
         width: 3rem;
     }
 
-    .aral-week-copy { display: grid; gap: 0.15rem; min-width: 0; }
+    .aral-week-copy { display: grid; gap: 0.15rem; min-width: 0; text-align: center; }
     .aral-week-copy strong { color: #080f3e; font-family: "Nunito", "Segoe UI", sans-serif; font-size: 1rem; font-weight: 900; }
     .aral-week-copy span { color: #65728d; font-family: "Quattrocento Sans", "Segoe UI", sans-serif; font-size: 0.83rem; line-height: 1.3; }
     .my-classes-section .aral-week-card .class-card-actions { grid-column: 1 / -1; margin-top: 0; padding-top: 0.2rem; }
@@ -2691,6 +2698,40 @@
     .student-dashboard .achievements-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
+
+    .my-classes-section .class-card-summary h3 {
+        font-size: 1.75rem !important;
+        line-height: 1.15;
+        width: 10rem;
+        max-width: 10rem;
+    }
+
+    .my-reading-journey[data-reading-journey] { grid-template-rows: max-content max-content max-content; gap: .6rem; }
+    .session-progress-summary { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; min-height: 0; height: auto; margin: 0; padding: 0; align-self: start; color: #60728c; font-size: .82rem; font-weight: 800; }
+    .session-progress-summary strong { color: #102b61; font-size: .95rem; }
+    .session-progress-visual { margin: 0 -.2rem; overflow: hidden; }
+    .session-progress-path { display: block; width: 100%; height: auto; min-height: 8.5rem; filter: drop-shadow(0 4px 5px rgba(64, 91, 126, .24)); }
+    .session-progress-line { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .session-progress-line-base { stroke: rgba(220, 239, 248, .8); stroke-width: 22; filter: drop-shadow(0 2px 3px rgba(44, 91, 125, .16)); }
+    .session-progress-line-fill { stroke: url(#session-progress-gradient); stroke-width: 15; stroke-dasharray: 1; stroke-dashoffset: 1; filter: drop-shadow(0 2px 3px rgba(0, 112, 190, .28)); transition: stroke-dashoffset .6s ease; }
+    .session-progress-line-gloss { stroke: rgba(255, 255, 255, .62); stroke-width: 3; pointer-events: none; }
+    .session-progress-point { fill: #fff; stroke: #a9d2e8; stroke-width: 8; transition: fill .2s, stroke .2s; }
+    .session-progress-point.is-partial { fill: #fff; stroke: #f2b632; }
+    .session-progress-point.is-complete { fill: #fff; stroke: #0879cf; }
+    .session-progress-number { fill: #55708b; font: 800 18px Nunito, sans-serif; text-anchor: middle; }
+    .session-progress-number.is-complete { fill: #55708b; }
+    .session-progress-legend { display: flex; justify-content: center; gap: 1rem; margin-top: -.2rem; color: #60728c; font-size: .72rem; font-weight: 800; }
+    .session-progress-legend span { display: inline-flex; align-items: center; gap: .35rem; }
+    .session-progress-legend i { width: .65rem; height: .65rem; border: 2px solid #aebdca; border-radius: 50%; background: #fff; }
+    .session-progress-legend i.is-complete { border-color: #0879cf; background: #1fb6ff; }
+    .session-progress-legend i.is-ongoing { border-color: #f2b632; background: #f8c33d; }
+    .session-progress-flag { pointer-events: none; filter: drop-shadow(0 2px 2px rgba(46, 76, 108, .25)); transition: transform .6s ease; }
+    .session-progress-flag line { stroke: #55708b; stroke-width: 3; stroke-linecap: round; }
+    .session-progress-flag path { fill: #f2b632; stroke: #d69514; stroke-width: 1.5; }
+    body.dark-theme .session-progress-summary strong { color: #f1f5f9; }
+    body.dark-theme .session-progress-line-base { stroke: #42566b; }
+    body.dark-theme .session-progress-point { fill: #1e293b; }
+    @media (max-width: 520px) { .session-progress-path { min-height: 7rem; } .session-progress-number { font-size: 15px; } }
 
     @media (max-width: 767.98px) {
         .my-classes-section .class-list > .class-card {
@@ -2818,36 +2859,96 @@
                 </div>
             </article>
 
-            <!-- My Reading Journey -->
+            <!-- Session Progress -->
             <div class="my-reading-journey" data-reading-journey>
                 <h3 class="section-title">
-                    <span>My Reading Journey</span>
+                    <span>My Session Journey</span>
                 </h3>
-
-                <div class="progress-item">
-                    <div class="progress-label">
-                        <span>Reading Progress</span>
-                        <span class="progress-value" data-reading-percent>0%</span>
-                    </div>
-                    <div class="progress-bar-container" data-progress="0">
-                        <div class="progress-bar-fill" data-reading-progress-fill style="width: 0%;"></div>
-                    </div>
+                <div class="session-progress-summary">
+                    <span>Prescribed activity sessions</span>
+                    <strong><span data-session-completed-count>0</span> / 15 complete</strong>
                 </div>
-
-                <div class="stats-container">
-                    <div class="stat-item">
-                        <div class="stat-item-value" data-assessments-completed>0</div>
-                        <div class="stat-item-label">Assessments</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-item-value" data-reading-days>0</div>
-                        <div class="stat-item-label">Reading Days</div>
-                    </div>
+                <div class="session-progress-visual">
+                    <svg class="session-progress-path" viewBox="0 0 1000 240" role="img" aria-label="Progress across 15 prescribed activity sessions">
+                        <defs>
+                            <linearGradient id="session-progress-gradient" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stop-color="#67ddff"></stop>
+                                <stop offset="42%" stop-color="#19b7f2"></stop>
+                                <stop offset="100%" stop-color="#0876d1"></stop>
+                            </linearGradient>
+                        </defs>
+                        <path class="session-progress-line session-progress-line-base" d="M30 40 H900 Q960 40 960 80 Q960 120 900 120 H100 Q40 120 40 160 Q40 200 100 200 H900"></path>
+                        <path class="session-progress-line session-progress-line-fill" data-session-progress-fill d="M30 40 H900 Q960 40 960 80 Q960 120 900 120 H100 Q40 120 40 160 Q40 200 100 200 H900"></path>
+                        <path class="session-progress-line session-progress-line-gloss" d="M30 40 H900 Q960 40 960 80 Q960 120 900 120 H100 Q40 120 40 160 Q40 200 100 200 H900"></path>
+                        <g data-session-progress-points></g>
+                        <g class="session-progress-flag" data-session-progress-flag aria-label="Current progress">
+                            <line x1="0" y1="0" x2="0" y2="-27"></line>
+                            <path d="M0 -27 L23 -21 L0 -15 Z"></path>
+                        </g>
+                    </svg>
                 </div>
+                <div class="session-progress-legend"><span><i class="is-complete"></i>Complete</span><span><i class="is-ongoing"></i>Ongoing</span><span><i></i>Not complete</span></div>
             </div>
         </div>
     </div>
 </section>
+
+{{ student_session_progress|default:"[]"|json_script:"student-session-progress" }}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const dataNode = document.getElementById('student-session-progress');
+        const pointsGroup = document.querySelector('[data-session-progress-points]');
+        const fillPath = document.querySelector('[data-session-progress-fill]');
+        const flag = document.querySelector('[data-session-progress-flag]');
+        if (!dataNode || !pointsGroup || !fillPath) return;
+        let sessions = [];
+        try { sessions = JSON.parse(dataNode.textContent || '[]') || []; } catch (_) { sessions = []; }
+        const coordinates = [
+            [100, 40], [300, 40], [500, 40], [700, 40], [900, 40],
+            [900, 120], [700, 120], [500, 120], [300, 120], [100, 120],
+            [100, 200], [300, 200], [500, 200], [700, 200], [900, 200],
+        ];
+        const totalActivities = sessions.reduce((sum, session) => sum + (Number(session.total) || 0), 0);
+        const completedActivities = sessions.reduce((sum, session) => sum + (Number(session.completed) || 0), 0);
+        const overallPercent = totalActivities ? Math.round((completedActivities / totalActivities) * 100) : 0;
+        const completedCount = sessions.filter(session => Number(session.total) > 0 && Number(session.completed) >= Number(session.total)).length;
+        const countNode = document.querySelector('[data-session-completed-count]');
+        if (countNode) countNode.textContent = completedCount;
+        if (typeof fillPath.getTotalLength === 'function') {
+            const length = fillPath.getTotalLength();
+            fillPath.style.strokeDasharray = `${length}`;
+            fillPath.style.strokeDashoffset = `${length * (1 - overallPercent / 100)}`;
+            if (flag && typeof fillPath.getPointAtLength === 'function') {
+                const point = fillPath.getPointAtLength(length * (overallPercent / 100));
+                flag.setAttribute('transform', `translate(${point.x} ${point.y})`);
+            }
+        }
+        pointsGroup.replaceChildren();
+        sessions.slice(0, 15).forEach((session, index) => {
+            const [x, y] = coordinates[index];
+            const total = Number(session.total) || 0;
+            const completed = Number(session.completed) || 0;
+            const point = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            point.setAttribute('cx', x);
+            point.setAttribute('cy', y);
+            point.setAttribute('r', '15');
+            point.classList.add('session-progress-point');
+            if (total > 0 && completed >= total) point.classList.add('is-complete');
+            else if (completed > 0) point.classList.add('is-partial');
+            const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+            title.textContent = `Session ${session.session}: ${completed} of ${total} activities complete`;
+            point.appendChild(title);
+            pointsGroup.appendChild(point);
+            const number = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            number.setAttribute('x', x);
+            number.setAttribute('y', y + 6);
+            number.classList.add('session-progress-number');
+            if (total > 0 && completed >= total) number.classList.add('is-complete');
+            number.textContent = session.session;
+            pointsGroup.appendChild(number);
+        });
+    });
+</script>
 
 {% comment %}Legacy class-code membership dialogs removed from rendered UI.
 <!-- Loading Modal -->
