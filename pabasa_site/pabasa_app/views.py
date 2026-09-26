@@ -12416,7 +12416,11 @@ def story_call_page(request):
     content = questions_material.content_json if questions_material and isinstance(questions_material.content_json, dict) else {}
     # The teacher 5W editor publishes its rows under content.items. Keep this
     # response contract small and predictable for the Story Call frontend.
-    questions = content.get('items') if isinstance(content.get('items'), list) else []
+    raw_questions = content.get('items') if isinstance(content.get('items'), list) else []
+    questions = [
+        item for item in raw_questions
+        if isinstance(item, dict) and str(item.get('question') or '').strip()
+    ][:5]
     question_language = str((questions_material.language if questions_material else '') or content.get('language') or 'English').strip()
     print('STORY CALL ITEMS:', questions)
     story_call_questions_json = [
@@ -12424,14 +12428,14 @@ def story_call_page(request):
                 'question': str(item.get('question') or '').strip(),
                 'language': question_language,
             } if isinstance(item, dict) else {'question': '', 'language': question_language}
-            for item in questions[:5]
+            for item in questions
         ]
     print('STORY CALL QUESTIONS:', story_call_questions_json)
     context.update({
         'story_call_questions_json': story_call_questions_json,
         'story_call_story_title': story_material.title if story_material else '',
         'story_call_material_id': questions_material.id if questions_material else '',
-        'story_call_completion': ({'completed': True, 'earned': int((completed_result.correct_items or completed_result.score or completed_result.total_score or 0)), 'total': int(completed_result.total_practice_items or len(questions[:5]) or 5)} if questions_material and (completed_result := questions_material.assessment_results.filter(student_id=request.session.get('user_id'), attempt_status='completed').order_by('-completed_at', '-id').first()) else {'completed': False}),
+        'story_call_completion': ({'completed': True, 'earned': int(completed_result.correct_items or completed_result.score or completed_result.total_score or 0), 'total': len(questions)} if questions_material and (completed_result := questions_material.assessment_results.filter(student_id=request.session.get('user_id'), attempt_status='completed').order_by('-completed_at', '-id').first()) else {'completed': False}),
     })
     return render(request, 'pabasa_app/story_call_page.html', context)
 
@@ -12448,8 +12452,17 @@ def story_call_complete_api(request):
         payload = json.loads(request.body or '{}')
         material_id = int(payload.get('material_id'))
         answers = payload.get('answers') if isinstance(payload.get('answers'), list) else []
+        raw_duration = payload.get('duration_seconds')
     except (TypeError, ValueError, json.JSONDecodeError):
         return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+    duration_seconds = None
+    if raw_duration not in (None, '') and not isinstance(raw_duration, bool):
+        try:
+            duration_value = float(raw_duration)
+            if math.isfinite(duration_value) and duration_value >= 0 and duration_value.is_integer():
+                duration_seconds = int(duration_value)
+        except (TypeError, ValueError, OverflowError):
+            duration_seconds = None
     material = Material.objects.filter(pk=material_id, status='published', is_active=True).first()
     content = material.content_json if material and isinstance(material.content_json, dict) else {}
     if not material or content.get('template_title') != "5W's Story Questions":
@@ -12461,7 +12474,11 @@ def story_call_complete_api(request):
     existing = material.assessment_results.filter(student=student, attempt_status='completed').order_by('-completed_at', '-id').first()
     if existing:
         score = int(existing.correct_items or existing.score or existing.total_score or 0)
-        total = int(existing.total_practice_items or len(content.get('items') or []) or 5)
+        questions = [
+            item for item in (content.get('items') or [])
+            if isinstance(item, dict) and str(item.get('question') or '').strip()
+        ][:5]
+        total = len(questions)
         return JsonResponse({'success': True, 'completed': True, 'earned': score, 'total': total})
     questions = [item for item in (content.get('items') or []) if isinstance(item, dict) and str(item.get('question') or '').strip()][:5]
     total = len(questions)
@@ -12481,6 +12498,7 @@ def story_call_complete_api(request):
         total_practice_items=total,
         transcript=' | '.join(str(answer or '').strip() for answer in answers[:total]),
         speech_recognition_used=True,
+        duration_seconds=duration_seconds,
         crla_score_data={'activity': 'story_call', 'question_results': results, 'total': total},
     )
     return JsonResponse({'success': True, 'completed': True, 'earned': earned, 'total': total})
@@ -28103,6 +28121,14 @@ def get_teacher_assessment_api(request, assessment_id):
                 'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
             })
 
+        linked_material = getattr(assessment, 'material', None)
+        linked_content = getattr(linked_material, 'content_json', None) or {}
+        activity_type = str(
+            linked_content.get('activity_type')
+            or linked_content.get('activity_variant')
+            or ''
+        ).strip()
+
         attempts = assessment.get_attempts()
         student_ids = {
             att.get('student_id')
@@ -28140,6 +28166,8 @@ def get_teacher_assessment_api(request, assessment_id):
                 'total_score': _attempt_value(att, 'total_score', 'score'),
                 'crla_classification': _attempt_value(att, 'crla_classification', 'classification'),
             })
+            if activity_type:
+                enriched_attempt['activity_type'] = activity_type
             enriched_attempts.append(enriched_attempt)
 
         def _attempt_timestamp(attempt):
@@ -28188,6 +28216,8 @@ def get_teacher_assessment_api(request, assessment_id):
             'materials': mats,
             'attempts': enriched_attempts,
         }
+        if activity_type:
+            payload['activity_type'] = activity_type
         return JsonResponse({'success': True, 'assessment': payload})
     except Exception as e:
         logger.exception('Error in get_teacher_assessment_api')
@@ -28219,6 +28249,11 @@ def get_teacher_material_attempts_api(request):
             return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
 
         content_json = material.content_json or {}
+        activity_type = str(
+            content_json.get('activity_type')
+            or content_json.get('activity_variant')
+            or ''
+        ).strip()
         if content_json.get('activity_type') == 'story_reading':
             total_sentences = len(_story_reading_sentences(material))
             progress_rows = StoryReadingProgress.objects.filter(
@@ -28285,6 +28320,8 @@ def get_teacher_material_attempts_api(request):
                 'total_score': a.total_score,
                 'crla_classification': a.crla_classification,
             })
+            if activity_type:
+                att['activity_type'] = activity_type
             enriched.append(att)
 
         payload = {
@@ -28294,6 +28331,8 @@ def get_teacher_material_attempts_api(request):
             'materials': [],
             'attempts': enriched,
         }
+        if activity_type:
+            payload['activity_type'] = activity_type
         return JsonResponse({'success': True, 'assessment': payload})
     except Exception as e:
         logger.exception('Error in get_teacher_material_attempts_api')
@@ -29259,7 +29298,10 @@ def get_class_materials(request):
         )
         # Prescribed workbook activities are served from their stable catalog
         # routes.  A legacy Material copy would create a second class card.
-        materials_qs = materials_qs.exclude(content_json__activity_type='prescribed_workbook')
+        materials_qs = materials_qs.filter(
+            Q(content_json__activity_type__isnull=True)
+            | ~Q(content_json__activity_type='prescribed_workbook')
+        )
         assessment_week_enabled = bool(
             request_user.role == 'student' and _expire_assessment_week_if_needed(section)
         )

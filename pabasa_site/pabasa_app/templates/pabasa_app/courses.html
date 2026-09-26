@@ -14290,7 +14290,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 tasks.push({
                     title: material.title || 'Untitled assessment',
                     assessmentId,
-                    activityType: material.content_json?.activity_type || material.activity_type || material.type || '',
+                    activityType: material.content_json?.activity_type
+                        || material.content_json?.activity_variant
+                        || material.activity_type
+                        || material.type
+                        || '',
                     activityLabel: resolveProgressActivityLabel(material),
                 });
             };
@@ -14411,16 +14415,20 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const completedAt = attempt?.completed_at || attempt?.completedAt || '';
                     const timeSpent = attempt ? latestAttemptValue(attempt, 'time_spent', 'duration_seconds', 'duration') : null;
                     const score = attempt ? latestAttemptValue(attempt, 'score', 'final_score', 'total_score') : null;
-                    const isStoryReading = attempt?.activity_type === 'story_reading';
-                    const correctSentences = attempt?.correct_sentences;
-                    const totalSentences = attempt?.total_sentences;
-                    const storyScoreIsValid = isStoryReading
-                        && correctSentences !== undefined && correctSentences !== null && correctSentences !== ''
-                        && totalSentences !== undefined && totalSentences !== null && totalSentences !== ''
-                        && Number.isFinite(Number(correctSentences)) && Number.isFinite(Number(totalSentences))
-                        && Number(totalSentences) > 0;
-                    const displayedScore = isStoryReading
-                        ? (storyScoreIsValid ? `${escapeHtml(correctSentences)}/${escapeHtml(totalSentences)}` : '—')
+                    const activityType = String(attempt?.activity_type || task.activityType || '').trim().toLowerCase();
+                    const isStoryReading = activityType === 'story_reading';
+                    const isFiveWStoryQuestions = activityType === 'five_w_story_questions';
+                    const rawNumerator = isStoryReading ? attempt?.correct_sentences : attempt?.correct_items;
+                    const rawDenominator = isStoryReading
+                        ? attempt?.total_sentences
+                        : (attempt?.items_completed ?? attempt?.crla_score_data?.total);
+                    const rawScoreIsValid = (isStoryReading || isFiveWStoryQuestions)
+                        && rawNumerator !== undefined && rawNumerator !== null && rawNumerator !== ''
+                        && rawDenominator !== undefined && rawDenominator !== null && rawDenominator !== ''
+                        && Number.isFinite(Number(rawNumerator)) && Number.isFinite(Number(rawDenominator))
+                        && Number(rawNumerator) >= 0 && Number(rawDenominator) > 0;
+                    const displayedScore = rawScoreIsValid
+                        ? `${escapeHtml(rawNumerator)}/${escapeHtml(rawDenominator)}`
                         : formatAttemptMetric(score, '%');
                     const scoreValue = displayedScore;
                     const typeLabel = task.activityLabel || 'Reading Activity';

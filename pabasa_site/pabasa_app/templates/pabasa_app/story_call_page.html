@@ -162,6 +162,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const evaluated = Array(questions.length).fill(false);
     let evaluating = false;
     let advanceTimer = null;
+    let activityStartedAt = null;
     const introModal = document.getElementById('storyIntroModal');
     const introContinue = document.getElementById('storyIntroContinue');
     let isMuted = true;
@@ -314,7 +315,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 const response = await fetch('/api/story-call/complete/', {
                     method: 'POST', credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
-                    body: JSON.stringify({ material_id: materialId, answers: answers })
+                    body: JSON.stringify({
+                        material_id: materialId,
+                        answers: answers,
+                        duration_seconds: activityStartedAt === null
+                            ? null
+                            : Math.max(0, Math.floor((Date.now() - activityStartedAt) / 1000))
+                    })
                 });
                 const result = await response.json();
                 if (!response.ok || !result.success) throw new Error(result.error || 'Could not save completion.');
@@ -336,6 +343,7 @@ document.addEventListener('DOMContentLoaded', function () {
     startReading?.addEventListener('click', () => { if (savedCompletion.completed || evaluated[index] || evaluating) return; if (isReading) { recognition?.stop(); isReading = false; updateReadingButton(); return; } const Speech = window.SpeechRecognition || window.webkitSpeechRecognition; if (!Speech) return alert('Speech recognition is unavailable in this browser.'); const current = index; recognition = new Speech(); recognition.lang = (questions[current]?.language || 'English').toLowerCase().startsWith('fil') ? 'fil-PH' : 'en-US'; recognition.onresult = event => { if (current !== index || evaluated[current]) return; answers[current] = event.results[0][0].transcript.trim(); evaluateAnswer(current, answers[current]); }; recognition.onend = () => { isReading = false; updateReadingButton(); }; isReading = true; updateReadingButton(); recognition.start(); });
     introContinue?.addEventListener('click', () => {
         if (introModal) introModal.hidden = true;
+        if (!savedCompletion.completed && activityStartedAt === null) activityStartedAt = Date.now();
     });
     updateReadAloudToggle();
     updateReadingButton();
