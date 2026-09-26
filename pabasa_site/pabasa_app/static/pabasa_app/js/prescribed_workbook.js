@@ -5,6 +5,7 @@
   const a = data.activity, preview = data.preview;
   const qBuilder = a.activity_key === 'aral-l23-g6-q-syllable-builder';
   const l24Builder = a.activity_key === 'aral-l24-g1-v-syllable-builder';
+  const l24G4Builder = a.activity_key === 'aral-l24-g4-x-syllable-builder';
   const cBuilder = (Boolean(a.specialized_builder) && !qBuilder) || a.activity_key === 'aral-l22-g1-c-syllable-builder';
   const specializedBuilder = cBuilder || qBuilder;
   const jReading = a.activity_key === 'aral-l23-g3-j-word-reading';
@@ -146,14 +147,14 @@
   function render(){
     selected=[];builder=state.draft.builder||[];words=state.draft.words||[];
     const totalProgress=cBuilder?a.items.length:(a.progress_total||a.items.length), progressValue=state.completed?totalProgress:Math.min(totalProgress, qBuilder?Number(state.index||0):cBuilder?Number(state.index||0):Number(state.index||0));
-    document.getElementById('wb-progress').textContent=preview?'Preview':(cBuilder?`Nabasa: ${Math.min(a.items.length,Number(state.index||0))} / ${a.items.length}`:(a.activity_key==='aral-l23-g1-n-syllable-builder'||l24Builder?`Nabasa: ${Math.min(12,Number(state.index||0))} / 12`:`${progressValue} / ${totalProgress}`));
+    document.getElementById('wb-progress').textContent=preview?'Preview':(cBuilder||l24G4Builder?`Nabasa: ${Math.min(a.items.length,Number(state.index||0))} / ${a.items.length}`:(a.activity_key==='aral-l23-g1-n-syllable-builder'||l24Builder?`Nabasa: ${Math.min(12,Number(state.index||0))} / 12`:`${progressValue} / ${totalProgress}`));
     const progressFill=document.getElementById('wb-progress-fill');if(progressFill)progressFill.style.width=`${preview?0:Math.max(0,Math.min(100,progressValue/totalProgress*100))}%`;
     document.getElementById('wb-back').hidden=preview;
     action.replaceChildren();
     if(state.completed){
       const completionWord=a.activity_key==='aral-l23-g1-n-syllable-builder'?'Niño':(state.found_words||[]).join(', ');
-      content.innerHTML=`<div class="wb-focus"><h2>${cBuilder?'Magaling! Natapos mo ang Gawain 1.':fil?'Natapos mo ang gawain!':'Activity complete!'}</h2>${cBuilder?`<p>${a.activity_key==='aral-l23-g1-n-syllable-builder'?`Magaling! Nabuo mo ang salitang ${completionWord}`:`Nabuo mo na: ${esc(completionWord)}`}</p>`:a.review_required?'<p>Your written work is saved for teacher review.</p>':''}</div>`;
-      if(cBuilder)button('Susunod',()=>{if(data.next_url)location.href=data.next_url;},true).disabled=!data.next_url;
+      content.innerHTML=`<div class="wb-focus"><h2>${cBuilder?'Magaling! Natapos mo ang Gawain 1.':l24G4Builder?'Magaling! Natapos mo ang Gawain 4.':fil?'Natapos mo ang gawain!':'Activity complete!'}</h2>${cBuilder?`<p>${a.activity_key==='aral-l23-g1-n-syllable-builder'?`Magaling! Nabuo mo ang salitang ${completionWord}`:`Nabuo mo na: ${esc(completionWord)}`}</p>`:a.review_required&&!l24G4Builder?'<p>Your written work is saved for teacher review.</p>':''}</div>`;
+      if(cBuilder||l24G4Builder){button('Susunod',()=>{if(data.next_url)location.href=data.next_url;},true).disabled=!data.next_url;if(l24G4Builder)button('Ulitin Mula sa Simula',()=>{if(window.confirm('Ulitin ang Gawain 4 mula sa simula?'))perform({action:'restart'});});}
       if((prescribedWordReading||jSyllables||pictureReading)&&data.next_url)button('Susunod',()=>{location.href=data.next_url;},true);
       return;
     }
@@ -374,16 +375,25 @@
     document.getElementById('wb-color').oninput=e=>{content.style.setProperty('--mark',e.target.value);draft({color:e.target.value});};
   }
   function renderBuilder(){
-    const box=document.createElement('div');box.className='wb-builder';box.innerHTML=`<p>${fil?'Pumili ng mga pantig upang bumuo ng salita.':'Choose syllables to build a word.'}</p><div class="wb-syllable-tiles">${a.items.map(i=>`<button type="button" data-part="${i.id}">${esc(i.text)}</button>`).join('')}</div><div id="wb-building" class="wb-building">${fil?'Pipiliin mong salita ay lalabas dito.':'Your word will appear here.'}</div><div class="wb-tools"><button type="button" id="wb-add">${fil?'Idagdag':'Add word'}</button><button type="button" id="wb-clear">${fil?'Burahin':'Clear'}</button></div><div id="wb-words" class="wb-builder-words"></div>`;content.appendChild(box);
+    const box=document.createElement('div');box.className=`wb-builder${l24G4Builder?' wb-l24-g4-builder':''}`;
+    if(l24G4Builder){
+      box.innerHTML=`<div class="wb-builder-workspace"><section class="wb-builder-box" aria-labelledby="wb-big-box-title"><h2 id="wb-big-box-title">BIG BOX</h2><p class="wb-builder-help">Pumili ng mga pantig upang bumuo ng salita.</p><div class="wb-big-box-grid" role="grid" aria-label="Big Box na may 12 pantig">${a.items.map((i,n)=>`<button type="button" class="wb-big-box-cell" data-part="${i.id}" data-cell-index="${n}" role="gridcell">${esc(i.text)}</button>`).join('')}</div></section><section class="wb-builder-panel" aria-labelledby="wb-build-title"><h2 id="wb-build-title">BUMUO NG SALITA</h2><p class="wb-builder-help">Napiling mga pantig</p><div id="wb-building" class="wb-building" aria-live="polite"></div><p class="wb-builder-help">Nabuong salita</p><div id="wb-words" class="wb-builder-words" aria-live="polite"></div><div class="wb-tools"><button type="button" id="wb-add">Idagdag ang salita</button><button type="button" id="wb-clear">Burahin</button></div></section></div>`;
+    }else{
+      box.innerHTML=`<p>${fil?'Pumili ng mga pantig upang bumuo ng salita.':'Choose syllables to build a word.'}</p><div class="wb-syllable-tiles">${a.items.map(i=>`<button type="button" data-part="${i.id}">${esc(i.text)}</button>`).join('')}</div><div id="wb-building" class="wb-building">${fil?'Pipiliin mong salita ay lalabas dito.':'Your word will appear here.'}</div><div class="wb-tools"><button type="button" id="wb-add">${fil?'Idagdag':'Add word'}</button><button type="button" id="wb-clear">${fil?'Burahin':'Clear'}</button></div><div id="wb-words" class="wb-builder-words"></div>`;
+    }
+    content.appendChild(box);
     const wordText=parts=>parts.map(id=>a.items.find(i=>i.id===id)?.text||'').join('');
-    const paint=()=>{box.querySelector('#wb-building').textContent=builder.length?wordText(builder):(fil?'Pipiliin mong salita ay lalabas dito.':'Your word will appear here.');box.querySelector('#wb-words').textContent=words.map(wordText).join(', ');};
-    box.querySelectorAll('[data-part]').forEach(b=>{b.disabled=preview||!oral().passed;b.onclick=()=>{builder.push(b.dataset.part);b.classList.add('is-picked');paint();draft({builder,words});};});
+    const paint=()=>{const building=box.querySelector('#wb-building');const built=box.querySelector('#wb-words');if(l24G4Builder){building.innerHTML=builder.length?builder.map((id,index)=>`<button type="button" class="wb-selected-part" data-remove-index="${index}" aria-label="Alisin ang ${esc(wordText([id]))}">${esc(wordText([id]))}<span aria-hidden="true">×</span></button>`).join(''):'<span class="wb-empty-state">Pumili muna ng mga pantig.</span>';built.innerHTML=words.length?words.map(word=>`<span class="wb-built-word">${esc(wordText(word))}</span>`).join(''):'<span class="wb-empty-state">Wala pang nabuong salita.</span>';box.querySelectorAll('[data-part]').forEach(b=>b.classList.toggle('is-picked',builder.includes(b.dataset.part)));box.querySelectorAll('[data-remove-index]').forEach(b=>b.onclick=()=>{builder.splice(Number(b.dataset.removeIndex),1);paint();draft({builder,words});});}else{building.textContent=builder.length?wordText(builder):(fil?'Pipiliin mong salita ay lalabas dito.':'Your word will appear here.');built.textContent=words.map(wordText).join(', ');}};
+    box.querySelectorAll('[data-part]').forEach(b=>{b.disabled=preview||!oral().passed;b.onclick=()=>{builder.push(b.dataset.part);paint();draft({builder,words});};});
     box.querySelector('#wb-add').disabled=preview||!oral().passed;box.querySelector('#wb-clear').disabled=preview||!oral().passed;
-    box.querySelector('#wb-add').onclick=()=>{if(builder.length){words.push([...builder]);builder=[];box.querySelectorAll('[data-part]').forEach(b=>b.classList.remove('is-picked'));paint();draft({builder,words});}};
+    box.querySelector('#wb-add').onclick=()=>{if(builder.length){words.push([...builder]);builder=[];paint();draft({builder,words});}};
     box.querySelector('#wb-clear').onclick=()=>{builder=[];box.querySelectorAll('[data-part]').forEach(b=>b.classList.remove('is-picked'));paint();draft({builder,words});};paint();
-    if(!preview)button(fil?'Isumite ang mga salita':'Submit words',()=>perform({action:'answer',answer:words}),true);
-    else box.querySelectorAll('button').forEach(b=>b.disabled=true);
+    if(!preview){
+      button(fil?'Isumite ang mga salita':'Submit words',()=>perform({action:'answer',answer:words}),true);
+      if(l24G4Builder&&Number(state.index||0)>0)button('Ulitin Mula sa Simula',()=>{if(window.confirm('Ulitin ang Gawain 4 mula sa simula?'))perform({action:'restart'});});
+    }else box.querySelectorAll('button').forEach(b=>b.disabled=true);
   }
+  document.getElementById('wb-instruction-replay')?.addEventListener('click',()=>{if(!busy&&!activeStream)playPrescribedAudio(instructionText).catch(e=>message(e.message||'Hindi available ang panuto.',true));});
   function written(prompt){content.innerHTML+=`<div class="wb-focus"><p>${esc(prompt)}</p><label for="wb-written">${fil?'Sagot':'Answer'}</label><textarea id="wb-written" ${preview||a.oral_flow&&!oral().passed?'disabled':''}>${esc(preview?'':state.draft.text||'')}</textarea></div>`;document.getElementById('wb-written').oninput=e=>draft({text:e.target.value});}
   function renderSyllables(){
     if(a.worked_example)content.innerHTML+=`<p>${esc(a.worked_example)}</p>`;

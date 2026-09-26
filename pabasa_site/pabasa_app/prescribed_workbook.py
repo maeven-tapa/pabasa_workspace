@@ -1870,6 +1870,8 @@ def apply_event(activity, state, event, verified_reading=None):
             state.clear()
             state.update(initial_l24_g3_repeat_state())
             return state
+    if activity['activity_key'] == 'aral-l24-g4-x-syllable-builder' and event.get('action') == 'restart':
+        state.clear(); state.update(initial_state()); return state
     # Keep the legacy generic state shape usable by older workbook tests and
     # imported draft states; persisted learner progress uses reading_index and
     # therefore always takes the complete specialized flow below.
@@ -1991,6 +1993,8 @@ def apply_event(activity, state, event, verified_reading=None):
         state['answers'][item['id']] = answer
         state['index'] += 1
         state['draft'] = {}
+        if activity['activity_key'] == 'aral-l24-g4-x-syllable-builder' and state['index'] >= len(items):
+            state['completed'] = True
     else:
         raise ValueError('Unknown action.')
     if activity['activity_key'] == 'aral-l24-g3-x-repeat':
