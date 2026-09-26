@@ -28,6 +28,21 @@ const pairs=[['aso','laso'],['bundok','sandok'],['tatay','nanay'],['bola','lola'
 .pair .connector::after{background:#fff;border:1px solid #c8dfe1;border-radius:999px;box-shadow:0 3px 8px rgba(15,23,42,.08);color:#176078;content:"Magkatugma?";font-size:.72rem;font-weight:900;padding:6px 9px;position:relative;white-space:nowrap;z-index:1}
 @media(max-width:600px){.pair .connector{width:clamp(54px,15vw,82px)}.pair .connector::after{font-size:.58rem;padding:5px 6px}}
 </style>{% include 'pabasa_app/session1_prescribed_controls.html' with prefix='prescribed-s1l2g1' help_text='Basahin nang malinaw ang salita. Pakinggan ito at piliin ang kamay na may tamang sagot.' %}
+<style>
+.head{display:block;padding:14px 0 6px;background:transparent;border:0;border-radius:0;box-shadow:none;text-align:center}.activity-title{display:block;text-align:center}.activity-title .eyebrow{margin:18px 0 5px;color:#277f82;font-size:clamp(.72rem,1.25vw,.95rem);font-weight:1000;letter-spacing:.08em;line-height:1.15;text-transform:uppercase}.activity-title h1{margin:0;color:#183e63;font-family:Fredoka,Arial,sans-serif;font-size:clamp(2rem,4.5vw,3.55rem);line-height:1.05;font-weight:900;letter-spacing:.01em}.head .back{position:absolute;left:clamp(12px,3vw,34px);top:clamp(12px,2vw,24px)}.head .progress{position:absolute;right:clamp(12px,3vw,34px);top:clamp(12px,2vw,24px)}@media(max-width:600px){.head{padding-top:8px}.activity-title .eyebrow{font-size:.64rem}.activity-title h1{font-size:clamp(1.75rem,8vw,2.5rem)}.head .back,.head .progress{position:static;display:none}}
+</style>
+<style>
+/* Keep the activity inside the viewport; let the stage size itself instead
+   of turning the inner activity card into a second scroll container. */
+html,body{height:100%;overflow:hidden!important}
+.app{height:100dvh!important;min-height:0!important;overflow:hidden!important}
+.stage{min-height:0!important;overflow:hidden!important;padding:0!important;display:flex!important;align-items:flex-start!important;justify-content:center!important}
+.card{height:auto!important;max-height:100%!important;min-height:0!important;overflow:visible!important;padding:8px 0 12px!important;gap:clamp(8px,1.5vh,15px)!important}
+.pair{max-height:clamp(150px,31vh,260px)}
+.word{min-height:clamp(135px,25vh,220px)}
+.word img{height:clamp(76px,15vh,135px)}
+@media(max-width:700px){html,body{overflow:hidden!important}.app{height:100dvh!important;padding:10px 12px 14px!important}.stage{overflow:hidden!important}.card{width:100%!important;padding:4px 0 8px!important}.pair{max-height:clamp(130px,28vh,210px)}.word{min-height:clamp(120px,22vh,175px)}.word img{height:clamp(65px,13vh,100px)}}
+</style>
 <script type="text/plain" data-activity-bootstrap="lesson-2-gawain-1">
 (function () {
   function updateAnswerEmojis() {
@@ -57,6 +72,13 @@ const pairs=[['aso','laso'],['bundok','sandok'],['tatay','nanay'],['bola','lola'
 </style>
 <script type="text/plain" data-activity-bootstrap="lesson-2-gawain-1">
 (function () {
+  const title = document.querySelector('.head > strong');
+  if (title) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'activity-title';
+    wrapper.innerHTML = '<p class="eyebrow">SESSION 1 · LESSON 2 · GAWAIN 1</p><h1>Salitang Magkatugma</h1>';
+    title.replaceWith(wrapper);
+  }
   const stage = document.getElementById('stage');
   if (!stage) return;
   let retrySequence = 0;
@@ -301,4 +323,7 @@ body:has(.completion-card) .completion-card h1{margin:0;color:#183e63;font:900 c
 body:has(.completion-card) .completion-card p{margin:18px 0 28px;color:#183e63;font:700 clamp(1.1rem,2vw,1.25rem)/1.4 Fredoka,Arial,sans-serif}
 body:has(.completion-card) .completion-card a{display:inline-flex!important;align-items:center;justify-content:center;min-height:0;padding:15px 26px;border:0;border-radius:999px;background:#299e9a;color:#fff;text-decoration:none;font:900 clamp(1.05rem,1.8vw,1.25rem)/1.2 Fredoka,Arial,sans-serif;box-shadow:0 5px 0 #187b7a}
 @media(max-width:520px){body:has(.completion-card) .completion-card{width:min(100%,calc(100vw - 32px));padding:32px 22px 30px;border-radius:26px}body:has(.completion-card) .completion-card a{width:100%;padding-inline:18px}}
+</style>
+<style>
+.head{display:block!important;min-height:0!important;padding:74px 0 10px!important;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;text-align:center}.activity-title{display:block;text-align:center}.activity-title .eyebrow{display:inline-flex;align-items:center;justify-content:center;width:max-content;max-width:calc(100% - 32px);margin:0 auto 10px;padding:9px 24px;border-radius:999px;background:#277f82;color:#fff;font-size:clamp(.82rem,1.4vw,1.05rem);font-weight:1000;letter-spacing:.02em;line-height:1.15;text-transform:uppercase;box-shadow:0 7px 16px #277f8244}.activity-title h1{margin:0;color:#183e63;font-family:Fredoka,Arial,sans-serif;font-size:clamp(2.2rem,4.5vw,3.6rem);line-height:1.02;font-weight:900;letter-spacing:.01em}.head .back{position:absolute;left:clamp(12px,3vw,34px);top:clamp(12px,2vw,24px);z-index:5}.head .progress{position:absolute;right:clamp(12px,3vw,34px);top:clamp(12px,2vw,24px);z-index:5}@media(max-width:600px){.head{padding:62px 0 8px!important}.activity-title .eyebrow{padding:8px 16px;font-size:.68rem}.activity-title h1{font-size:clamp(1.8rem,8vw,2.7rem)}}
 </style>

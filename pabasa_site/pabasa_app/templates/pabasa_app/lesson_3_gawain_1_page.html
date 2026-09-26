@@ -58,6 +58,9 @@ body:has(.complete)::after { display: none !important; }
   stopOnCompletion();
 })();
 </script>
+<style>
+.lesson-3-responsive .brand p.eyebrow{font-size:clamp(.95rem,1.5vw,1.15rem);font-weight:900;letter-spacing:.02em;margin:0 0 5px;color:#277f82}.lesson-3-responsive .brand h1{font-size:clamp(1rem,2.1vw,1.45rem)}
+</style>
 <script type="text/plain" data-activity-bootstrap="lesson-3-gawain-1">
 // The legacy recorder references `status` as a bare global. Bind it to the
 // live activity status element so its wrong-answer branch can reach feedback.
@@ -1897,3 +1900,15 @@ body.lesson-3-responsive:has(#game .complete) .lesson-start-backdrop{display:non
 .lesson-3-responsive #game:has(.complete) .complete-done{display:inline-flex;align-items:center;justify-content:center;min-height:0;margin:0;padding:15px 26px;border:0;border-radius:999px;background:#299e9a;color:#fff;font:900 clamp(1.05rem,1.8vw,1.25rem)/1.2 Fredoka,Nunito,"Segoe UI",sans-serif;box-shadow:0 5px 0 #187b7a}
 @media(max-width:520px){.lesson-3-responsive #game:has(.complete) .complete{width:min(100%,calc(100vw - 32px));padding:32px 22px 30px;border-radius:26px}.lesson-3-responsive #game:has(.complete) .complete-done{width:100%;padding-inline:18px}}
 </style>
+<script>
+(function(){
+  function placeEyebrowFirst(){
+    document.querySelectorAll('.brand').forEach(function(brand){
+      var title=brand.querySelector('h1'), label=brand.querySelector('p');
+      if(title&&label&&title.nextElementSibling===label){brand.insertBefore(label,title);label.classList.add('eyebrow');}
+    });
+  }
+  var game=document.getElementById('game');
+  if(game){new MutationObserver(placeEyebrowFirst).observe(game,{childList:true,subtree:true});placeEyebrowFirst();}
+}());
+</script>
