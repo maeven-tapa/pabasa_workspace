@@ -16,7 +16,8 @@
   const pictureReading = a.activity_key === 'aral-l24-g4-x-pictures';
   const l23G1 = a.activity_key === 'aral-l23-g1-n-syllable-builder';
   const l23G3 = a.activity_key === 'aral-l23-g3-j-word-reading';
-  const localAudio = (l23G1 || l23G3 || jSyllables) ? (data.local_audio || {}) : {};
+  const qG6 = qBuilder;
+  const localAudio = (l23G1 || l23G3 || jSyllables || qG6) ? (data.local_audio || {}) : {};
   const G1_MAPPED_TEXT = new Set([
     'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salita mula rito.',
     'Ni', 'La', 'ña', 'Cas', 'Bi', 'da', 'El', 'ño', 'ñan', 'Cen', 'ta', 'ñe',
@@ -47,6 +48,17 @@
     'Pantigin ang sumusunod na salita.', 'Hindi na-save. Subukan muli.',
     'Hindi available ang panuto.', 'Isulat muna ang sagot.', 'Mahusay!',
     'Subukan muli.', 'Natapos mo ang gawain!',
+  ]);
+  const G6_MAPPED_TEXT = new Set([
+    'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salitang.',
+    'Que', 'que', 'En', 'Qui', 'tos', 'no', 'A', 'Quin', 'An', 'ta', 'ja', 'na', 'to', 'ri', 'zon', 'ti',
+    'Basahin muna ang lahat ng pantig.', 'Canonical word-building answer key could not be verified from the available workbook/project sources.',
+    'Handa ka na?', 'Hindi available ang mikropono sa browser na ito.', 'Hindi ko malinaw na narinig. Subukan muli.',
+    'Hindi mabasa ang recording.', 'Hindi magamit ang mikropono. Subukan muli.', 'Hindi na-save. Subukan muli.',
+    'Hindi nakuha ang iyong boses. Subukan muli.', 'Hindi tumugon ang mikropono.', 'Hindi wastong mga pantig.',
+    'Magaling! Nabasa mo nang tama ang lahat ng pantig.', 'Natapos na ang pagbasa.',
+    'Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.', 'Pakinggan muna ang tamang pagbigkas.',
+    'Subukan muli. Hindi pa matiyak ang salitang ito.', 'Subukan muli.', 'Tama!', 'Walang nakuha sa recording. Subukan muli.',
   ]);
   let state = data.state || {}, busy = false, selected = [], builder = [], words = [];
   if (l24G2) {
@@ -81,8 +93,8 @@
     if(!text || (busy&&!allowBusy) || activeStream)return;
     stopReadAloud();
     const run=audioRun, controller=new AbortController();audioController=controller;
-    const mapped = (l23G1 && G1_MAPPED_TEXT.has(text)) || (l23G3 && G3_MAPPED_TEXT.has(text)) || (jSyllables && G4_MAPPED_TEXT.has(text));
-    const localUrl=(l23G1 || l23G3 || jSyllables) ? localAudioUrl(text) : null;
+    const mapped = (l23G1 && G1_MAPPED_TEXT.has(text)) || (l23G3 && G3_MAPPED_TEXT.has(text)) || (jSyllables && G4_MAPPED_TEXT.has(text)) || (qG6 && G6_MAPPED_TEXT.has(text));
+    const localUrl=(l23G1 || l23G3 || jSyllables || qG6) ? localAudioUrl(text) : null;
     if(mapped){
       if(!localUrl){if(audioController===controller)audioController=null;throw Error(jSyllables&&text===instructionText?'Hindi available ang panuto.':'Hindi available ang audio.');}
       try{
@@ -140,7 +152,7 @@
     };
     const pending=queue.then(operation);queue=pending.catch(()=>{});return pending;
   }
-  async function perform(event,form=null){if(busy)return;busy=true;lock();try{await send(event,form);render();if(l23G1){if(state.completed){await playPrescribedAudio('Magaling! Natapos mo ang Gawain 1.',true);await playPrescribedAudio('Magaling! Nabuo mo ang salitang Niño',true);}else if(G1_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}if(jSyllables){if(state.completed)await playPrescribedAudio('Natapos mo ang gawain!',true);else if(G4_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}}catch(e){const text=e.message||'Hindi na-save. Subukan muli.';message(text,true);if((l23G1&&G1_MAPPED_TEXT.has(text))||(jSyllables&&G4_MAPPED_TEXT.has(text)))playPrescribedAudio(text,true).catch(()=>{});}finally{busy=false;lock();}}
+  async function perform(event,form=null){if(busy)return;busy=true;lock();try{await send(event,form);render();if(l23G1){if(state.completed){await playPrescribedAudio('Magaling! Natapos mo ang Gawain 1.',true);await playPrescribedAudio('Magaling! Nabuo mo ang salitang Niño',true);}else if(G1_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}if(jSyllables){if(state.completed)await playPrescribedAudio('Natapos mo ang gawain!',true);else if(G4_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}if(qG6&&G6_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}catch(e){const text=e.message||'Hindi na-save. Subukan muli.';message(text,true);if((l23G1&&G1_MAPPED_TEXT.has(text))||(jSyllables&&G4_MAPPED_TEXT.has(text))||(qG6&&G6_MAPPED_TEXT.has(text)))playPrescribedAudio(text,true).catch(()=>{});}finally{busy=false;lock();}}
   function lock(){action.querySelectorAll('button').forEach(b=>b.disabled=busy||preview);}
   function button(text,fn,primary=false){const b=document.createElement('button');b.type='button';b.textContent=text;b.className=primary?'wb-primary':'';if([record,recordJ,recordPictureReading,startCReading].includes(fn)){b.id='wb-basahin';window.Basahin.bindActivity(b,fn);}else b.onclick=fn;action.appendChild(b);return b;}
   function table(){let n=0;return `<table class="wb-table">${a.column_headers?'<thead><tr>'+a.column_headers.map(h=>`<th>${esc(h)}</th>`).join('')+'</tr></thead>':''}<tbody>${a.rows.map(row=>'<tr>'+row.map(text=>{const i=text?a.items[n++]:null;return `<td class="${!preview&&i?(n-1===state.index?'wb-current':n-1<state.index?'wb-done':''):''}">${i&&a.images?.[i.id]?`<img src="${esc(a.images[i.id])}" alt="${esc(text)}"><br>`:''}${esc(i?(a.cell_display?.[i.id]||text):'')}</td>`;}).join('')+'</tr>').join('')}</tbody></table>`;}

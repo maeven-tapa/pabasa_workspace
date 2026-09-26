@@ -13656,6 +13656,54 @@ def prescribed_activity_page(request, activity_key):
                     'local_audio': local_audio,
                 },
             })
+        if activity_key == 'aral-l23-g6-q-syllable-builder':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_23/GAWAIN_6/'
+            audio_files = {
+                'instruction': 'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salita._TTS.mp3',
+                'syllables': {
+                    'Que': 'Que_TTS.mp3', 'que': 'Que_TTS.mp3', 'En': 'En_TTS.mp3', 'Qui': 'Qui_TTS.mp3',
+                    'tos': 'tos_TTS.mp3', 'no': 'no_TTS.mp3', 'A': 'A_TTS.mp3', 'Quin': 'Quin_TTS.mp3',
+                    'An': 'An_TTS.mp3', 'ta': 'ta_TTS.mp3', 'ja': 'ja_TTS.mp3', 'na': 'na_TTS.mp3',
+                    'to': 'to_TTS.mp3', 'ri': 'ri_TTS.mp3', 'zon': 'zon_TTS.mp3', 'ti': 'ti_TTS.mp3',
+                },
+                'feedback': {
+                    'Basahin muna ang lahat ng pantig.': 'Basahin muna ang lahat ng pantig._TTS.mp3',
+                    'Canonical word-building answer key could not be verified from the available workbook/project sources.': 'Canonical word-building answer key could not be verified from the available workbookproject sources._TTS.mp3',
+                    'Handa ka na?': 'Handa ka na_TTS.mp3',
+                    'Hindi available ang mikropono sa browser na ito.': 'Hindi available ang mikropono sa browser na ito._TTS.mp3',
+                    'Hindi ko malinaw na narinig. Subukan muli.': 'Hindi ko malinaw na narinig. Subukan muli_TTS.mp3',
+                    'Hindi mabasa ang recording.': 'Hindi mabasa ang recording._TTS.mp3',
+                    'Hindi magamit ang mikropono. Subukan muli.': 'Hindi magamit ang mikropono. Subukan muli._TTS.mp3',
+                    'Hindi na-save. Subukan muli.': 'Hindi na-save. Subukan muli._TTS.mp3',
+                    'Hindi nakuha ang iyong boses. Subukan muli.': 'Hindi nakuha ang iyong boses. Subukan muli._TTS.mp3',
+                    'Hindi tumugon ang mikropono.': 'Hindi tumugon ang mikropono_TTS.mp3',
+                    'Hindi wastong mga pantig.': 'Hindi wastong mga pantig_TTS.mp3',
+                    'Natapos na ang pagbasa.': 'Natapos na ang pagbasa._TTS.mp3',
+                    'Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.': 'Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa_TTS.mp3',
+                    'Pakinggan muna ang tamang pagbigkas.': 'Pakinggan muna ang tamang pagbigkas_TTS.mp3',
+                    'Subukan muli. Hindi pa matiyak ang salitang ito.': 'Subukan muli. Hindi pa matiyak ang salitang ito._TTS.mp3',
+                    'Subukan muli.': 'Subukan muli._TTS.mp3',
+                    'Tama!': 'Tama_TTS.mp3',
+                    'Walang nakuha sa recording. Subukan muli.': 'Walang nakuha sa recording. Subukan muli._TTS.mp3',
+                },
+                'completion': {
+                    'Magaling! Nabasa mo nang tama ang lahat ng pantig.': 'Magaling! Nabasa mo nang tama ang lahat ng pantig_TTS.mp3',
+                },
+            }
+            local_audio = {
+                'instruction': static(audio_root + audio_files['instruction']),
+                'syllables': {text: static(audio_root + filename) for text, filename in audio_files['syllables'].items()},
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+                'completion': {text: static(audio_root + filename) for text, filename in audio_files['completion'].items()},
+            }
+            return render(request, 'pabasa_app/prescribed_workbook_page.html', {
+                'workbook_payload': {
+                    'activity': get_activity(activity_key), 'state': state, 'preview': preview,
+                    'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+                    'read_aloud_url': reverse('reading_read_aloud_api'), 'back_url': reverse('assessment'),
+                    'next_url': next_url, 'local_audio': local_audio,
+                },
+            })
         if activity_key == 'aral-l22-g4-f-syllable-builder':
             audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_22/GAWAIN_4/'
             audio_files = {
