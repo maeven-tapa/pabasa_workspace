@@ -1771,6 +1771,15 @@
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .material-source-toggle.active-other::before {
         left: calc(((100% - 0.7rem) / 3) * 2 + 0.35rem);
     }
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .material-source-toggle::before {
+        width: calc((100% - 6px) / 2);
+    }
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .material-source-toggle.active-supplementary::before {
+        left: 3px;
+    }
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .material-source-toggle.active-other::before {
+        left: calc((100% - 6px) / 2 + 3px);
+    }
 
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .material-source-option {
         align-items: center;
@@ -8525,6 +8534,15 @@ body.dark-theme .template-builder-panel :is(.form-control,.form-select), body.da
 #addMaterialModal .material-source-toggle.active-other::before {
     left: calc(((100% - 0.7rem) / 3) * 2 + 0.35rem);
 }
+#addMaterialModal .material-source-toggle::before {
+    width: calc((100% - 6px) / 2);
+}
+#addMaterialModal .material-source-toggle.active-supplementary::before {
+    left: 3px;
+}
+#addMaterialModal .material-source-toggle.active-other::before {
+    left: calc((100% - 6px) / 2 + 3px);
+}
 #addMaterialModal .material-source-toggle button {
     flex: 1 1 0;
     position: relative;
@@ -9336,9 +9354,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <div class="fw-semibold">Reading Material Source</div>
                                         <div class="small text-muted" id="materialSourceSubtitle">Choose a source for your reading material.</div>
                                 <div class="d-flex justify-content-center mt-2">
-                                    <div class="material-source-toggle active-prescribed" id="addMaterialModeToggle" role="group" aria-label="Material source toggle">
-                                        <button type="button" class="material-source-option active" id="materialModePrescribed" data-mode="prescribed">Prescribed</button>
-                                        <button type="button" class="material-source-option" id="materialModeSupplementary" data-mode="supplementary">Supplementary</button>
+                                    <div class="material-source-toggle active-supplementary" id="addMaterialModeToggle" role="group" aria-label="Material source toggle">
+                                        <button type="button" class="material-source-option active" id="materialModeSupplementary" data-mode="supplementary">Supplementary</button>
                                         <button type="button" class="material-source-option" id="materialModeOther" data-mode="other">Others</button>
                                     </div>
                                 </div>
@@ -20437,7 +20454,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 if (window.__templateEditStateRestored && window.__addMaterialDefaultMode === 'supplementary') {
                     return;
                 }
-                const initialMode = window.__addMaterialDefaultMode || 'prescribed';
+                const initialMode = window.__addMaterialDefaultMode || 'supplementary';
                 setAddMaterialMode(initialMode);
                 window.__addMaterialDefaultMode = initialMode;
                 syncMaterialLanguageSelection();
@@ -20849,7 +20866,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
 
         function attachOtherMaterialHandlers() {
-            materialModePrescribedBtn?.addEventListener('click', () => setAddMaterialMode('prescribed'));
             materialModeSupplementaryBtn?.addEventListener('click', () => setAddMaterialMode('supplementary'));
             materialModeOtherBtn?.addEventListener('click', () => setAddMaterialMode('other'));
             templateActivityGrid?.addEventListener('click', function(event) {
