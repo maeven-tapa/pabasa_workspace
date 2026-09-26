@@ -40,7 +40,7 @@ window.__prescribedNarrationAudio = {
   <script>
   (()=>{
     const d=JSON.parse(document.getElementById('activity-data').textContent),app=document.getElementById('app'),csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
-    const wordAudioFiles={ilog:'ilog.mp3',ipis:'ipis.mp3',ibon:'ibon.mp3',atis:'atis.mp3',mais:'mais.mp3',mangga:'mangga.mp3'},wordAudioBase='/static/pabasa_app/prescribed/audio/SESSION%203/LESSON%207/GAWAIN%202B/';
+    const wordAudioFiles={ilog:'ilog.mp3',ipis:'ipis.mp3',ibon:'ibon.mp3',atis:'atis (2).mp3',mais:'mais.mp3',mangga:'mangga (2).mp3'},wordAudioBase='/static/pabasa_app/prescribed/audio/SESSION%203/LESSON%207/GAWAIN%202B/';
     let s=Object.assign({current_reading_item:0,oral_reading_completed:false,completed_reading_items:[],read_attempts:0,listen_attempts:0,selections:[],correct_count:0,state_version:0},d.progress?.state||{}),audioBusy=false,introPlayed=false,part2InstructionPlayed=false;
     const WRONG='Hindi iyon ang tamang pangalan ng larawan. Subukan muli magsalita.',CORRECT='Magaling!',INTRO_TITLE='Tukuyin ang larawan',INTRO_INSTRUCTION='Tingnan ang larawang nasa kahon. Ano ito?',PART2_INSTRUCTION='Pindutin ang larawang nagsisimula sa titik I para bilugan.',PART2_WRONG='May kulang o maling sagot. Tingnan muli ang mga larawan at subukan ulit.';
     const save=()=>fetch(d.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({state:{...s,state_version:++s.state_version}})});
