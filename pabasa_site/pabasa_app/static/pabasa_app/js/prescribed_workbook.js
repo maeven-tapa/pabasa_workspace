@@ -157,10 +157,10 @@
   function button(text,fn,primary=false){const b=document.createElement('button');b.type='button';b.textContent=text;b.className=primary?'wb-primary':'';if([record,recordJ,recordPictureReading,startCReading].includes(fn)){b.id='wb-basahin';window.Basahin.bindActivity(b,fn);}else b.onclick=fn;action.appendChild(b);return b;}
   function table(){let n=0;return `<table class="wb-table">${a.column_headers?'<thead><tr>'+a.column_headers.map(h=>`<th>${esc(h)}</th>`).join('')+'</tr></thead>':''}<tbody>${a.rows.map(row=>'<tr>'+row.map(text=>{const i=text?a.items[n++]:null;return `<td class="${!preview&&i?(n-1===state.index?'wb-current':n-1<state.index?'wb-done':''):''}">${i&&a.images?.[i.id]?`<img src="${esc(a.images[i.id])}" alt="${esc(text)}"><br>`:''}${esc(i?(a.cell_display?.[i.id]||text):'')}</td>`;}).join('')+'</tr>').join('')}</tbody></table>`;}
   function render(){
-    selected=[];builder=state.draft.builder||[];words=state.draft.words||[];
+    selected=[];builder=state.draft?.builder||[];words=state.draft?.words||[];
     const totalProgress=cBuilder?a.items.length:(a.progress_total||a.items.length), progressValue=state.completed?totalProgress:Math.min(totalProgress, qBuilder?Number(state.index||0):cBuilder?Number(state.index||0):Number(state.index||0));
-    document.getElementById('wb-progress').textContent=preview?'Preview':(cBuilder||l24G4Builder?`Nabasa: ${Math.min(a.items.length,Number(state.index||0))} / ${a.items.length}`:(a.activity_key==='aral-l23-g1-n-syllable-builder'||l24Builder?`Nabasa: ${Math.min(12,Number(state.index||0))} / 12`:`${progressValue} / ${totalProgress}`));
-    const progressFill=document.getElementById('wb-progress-fill');if(progressFill)progressFill.style.width=`${preview?0:Math.max(0,Math.min(100,progressValue/totalProgress*100))}%`;
+    document.getElementById('wb-progress').textContent=preview?'Preview':(l24G4Builder?`Nabuo: ${Number(state.built_words?.length||0)} salita`:cBuilder?`Nabasa: ${Math.min(a.items.length,Number(state.index||0))} / ${a.items.length}`:(a.activity_key==='aral-l23-g1-n-syllable-builder'||l24Builder?`Nabasa: ${Math.min(12,Number(state.index||0))} / 12`:`${progressValue} / ${totalProgress}`));
+    const progressFill=document.getElementById('wb-progress-fill');if(progressFill)progressFill.style.width=l24G4Builder?(state.completed?'100%':'0%'):`${preview?0:Math.max(0,Math.min(100,progressValue/totalProgress*100))}%`;
     document.getElementById('wb-back').hidden=preview;
     action.replaceChildren();
     if(state.completed){
@@ -174,6 +174,7 @@
     if(pictureReading){renderPictureReading();return;}
     if(jSyllables){renderJSyllables();return;}
     if(specializedBuilder&&!preview){renderCBuilder();lock();return;}
+    if(l24G4Builder&&!preview){renderBuilder();lock();return;}
     if(state.index>=a.items.length&&!preview){content.innerHTML='<div class="wb-focus">'+(fil?'Na-save ang lahat ng bahagi ng gawain.':'All required parts are saved.')+'</div>';button(fil?'Tapusin ang gawain':'Finish activity',()=>perform({action:'finish'}),true);return;}
     const kind=a.interaction_type;
     content.innerHTML=preview?'<p class="wb-preview-note">Preview · '+(fil?'Walang sagot na napili.':'No answers selected.')+'</p>':'';
@@ -395,13 +396,17 @@
     }
     content.appendChild(box);
     const wordText=parts=>parts.map(id=>a.items.find(i=>i.id===id)?.text||'').join('');
-    const paint=()=>{const building=box.querySelector('#wb-building');const built=box.querySelector('#wb-words');if(l24G4Builder){building.innerHTML=builder.length?builder.map((id,index)=>`<button type="button" class="wb-selected-part" data-remove-index="${index}" aria-label="Alisin ang ${esc(wordText([id]))}">${esc(wordText([id]))}<span aria-hidden="true">×</span></button>`).join(''):'<span class="wb-empty-state">Pumili muna ng mga pantig.</span>';built.innerHTML=words.length?words.map(word=>`<span class="wb-built-word">${esc(wordText(word))}</span>`).join(''):'<span class="wb-empty-state">Wala pang nabuong salita.</span>';box.querySelectorAll('[data-part]').forEach(b=>b.classList.toggle('is-picked',builder.includes(b.dataset.part)));box.querySelectorAll('[data-remove-index]').forEach(b=>b.onclick=()=>{builder.splice(Number(b.dataset.removeIndex),1);paint();draft({builder,words});});}else{building.textContent=builder.length?wordText(builder):(fil?'Pipiliin mong salita ay lalabas dito.':'Your word will appear here.');built.textContent=words.map(wordText).join(', ');}};
-    box.querySelectorAll('[data-part]').forEach(b=>{b.disabled=preview||!oral().passed;b.onclick=()=>{builder.push(b.dataset.part);paint();draft({builder,words});};});
-    box.querySelector('#wb-add').disabled=preview||!oral().passed;box.querySelector('#wb-clear').disabled=preview||!oral().passed;
+    const paint=()=>{const building=box.querySelector('#wb-building');const built=box.querySelector('#wb-words');if(l24G4Builder){const displayedWords=[...(state.built_words||[]),...words];building.innerHTML=builder.length?builder.map((id,index)=>`<button type="button" class="wb-selected-part" data-remove-index="${index}" aria-label="Alisin ang ${esc(wordText([id]))}">${esc(wordText([id]))}<span aria-hidden="true">×</span></button>`).join(''):'<span class="wb-empty-state">Pumili muna ng mga pantig.</span>';built.innerHTML=displayedWords.length?displayedWords.map(word=>`<span class="wb-built-word">${esc(wordText(word))}</span>`).join(''):'<span class="wb-empty-state">Wala pang nabuong salita.</span>';box.querySelectorAll('[data-part]').forEach(b=>b.classList.toggle('is-picked',builder.includes(b.dataset.part)));box.querySelectorAll('[data-remove-index]').forEach(b=>b.onclick=()=>{builder.splice(Number(b.dataset.removeIndex),1);paint();draft({builder,words});});}else{building.textContent=builder.length?wordText(builder):(fil?'Pipiliin mong salita ay lalabas dito.':'Your word will appear here.');built.textContent=words.map(wordText).join(', ');}};
+     box.querySelectorAll('[data-part]').forEach(b=>{b.disabled=preview||(!l24G4Builder&&!oral().passed);b.onclick=()=>{builder.push(b.dataset.part);paint();draft({builder,words});};});
+     box.querySelector('#wb-add').disabled=preview||(!l24G4Builder&&!oral().passed);box.querySelector('#wb-clear').disabled=preview||(!l24G4Builder&&!oral().passed);
     box.querySelector('#wb-add').onclick=()=>{if(builder.length){words.push([...builder]);builder=[];paint();draft({builder,words});}};
     box.querySelector('#wb-clear').onclick=()=>{builder=[];box.querySelectorAll('[data-part]').forEach(b=>b.classList.remove('is-picked'));paint();draft({builder,words});};paint();
     if(!preview){
-      button(fil?'Isumite ang mga salita':'Submit words',()=>perform({action:'answer',answer:words}),true);
+      if(l24G4Builder){
+        button('Isumite ang mga salita',()=>perform({action:'build_words',words}),true).disabled=!words.length;
+        button('Tapusin ang Gawain',()=>perform({action:'finish'}),false).disabled=!(state.built_words||[]).length;
+        if(!instructionSpoken)speakInstruction();
+      }else button(fil?'Isumite ang mga salita':'Submit words',()=>perform({action:'answer',answer:words}),true);
       if(l24G4Builder&&Number(state.index||0)>0)button('Ulitin Mula sa Simula',()=>{if(window.confirm('Ulitin ang Gawain 4 mula sa simula?'))perform({action:'restart'});});
     }else box.querySelectorAll('button').forEach(b=>b.disabled=true);
   }

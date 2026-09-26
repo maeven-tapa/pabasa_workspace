@@ -69,6 +69,12 @@ L24_G4_X_ACCEPTED_SPEECH = {
     'fox': {'fox'},
 }
 
+# The workbook provides the X Big Box pieces, but no authoritative completed
+# word list is present in the available project sources. Keep construction
+# open-ended until the canonical answer key is supplied; cell IDs remain the
+# validation boundary so duplicate text such as "phone" stays distinct.
+L24_G4_X_CANONICAL_WORDS = ()
+
 L24_G3_X_ACCEPTED_SPEECH = {
     'alex': {'alex'}, 'xylophone': {'xylophone'}, 'alexis': {'alexis'},
     'saxophone': {'saxophone'}, 'alexander': {'alexander'}, 'dixon': {'dixon'},
@@ -470,6 +476,7 @@ add('aral-l24-g3-x-word-reading', 45, 24, '3', 'Mga salitang may letrang Xx',
     column_headers=['/X/= ks','/X/=s'], section_key='l24-bahagi2', section_label='Bahagi 2', section_order=2, display_gawain_number='3')
 add('aral-l24-g4-x-syllable-builder', 46, 24, '4', 'Big Box: X', BOX, 'builder',
     [['A','Fe','xe'], ['xy','phone','sax'], ['rox','lex','o'], ['lix','lo','phone']], review_required=True,
+    oral_flow=False, canonical_answer_source='Not found in available authoritative workbook/project sources.',
     section_key='l24-bahagi2', section_label='Bahagi 2', section_order=2, display_gawain_number='4')
 add('aral-l24-g5-z-syllabication', 46, 24, '5', 'Pantigin ang mga salita: Z',
     'Pantigin ang sumusunod na salitang may letrang Zz. Ginawa ang unang bilang para sa iyo.', 'syllables',
@@ -630,6 +637,41 @@ def initial_l24_g4_state():
         'last_feedback': '', 'last_transcript': '',
         'completed': False, 'revision': 0,
     }
+
+
+def initial_l24_g4_builder_state():
+    return {
+        'index': 0, 'built_words': [],
+        'draft': {'builder': [], 'words': []},
+        'last_feedback': '', 'completed': False, 'revision': 0,
+    }
+
+
+def normalize_l24_g4_builder_state(state):
+    """Keep Gawain 4 as a cell-ID word builder, not a reading sequence."""
+    if not isinstance(state, dict):
+        state = initial_l24_g4_builder_state()
+    allowed = {item['id'] for item in ACTIVITIES['aral-l24-g4-x-syllable-builder']['items']}
+    draft = state.get('draft') if isinstance(state.get('draft'), dict) else {}
+    builder = draft.get('builder') if isinstance(draft.get('builder'), list) else []
+    words = draft.get('words') if isinstance(draft.get('words'), list) else []
+    builder = [str(part) for part in builder if str(part) in allowed][:15]
+    words = [
+        [str(part) for part in word if str(part) in allowed][:15]
+        for word in words if isinstance(word, list)
+    ][:30]
+    built = state.get('built_words') if isinstance(state.get('built_words'), list) else []
+    built = [
+        [str(part) for part in word if str(part) in allowed][:15]
+        for word in built if isinstance(word, list)
+    ][:30]
+    state['built_words'] = [word for word in built if word]
+    state['draft'] = {'builder': builder, 'words': words}
+    state['index'] = len(state['built_words'])
+    state['last_feedback'] = str(state.get('last_feedback') or '')
+    state['completed'] = bool(state.get('completed'))
+    state['revision'] = max(0, int(state.get('revision', 0) or 0))
+    return state
 
 
 def initial_l23_g2_state():
@@ -1848,6 +1890,8 @@ def apply_event(activity, state, event, verified_reading=None):
         return _apply_l24_g2_reading(state, event, verified_reading)
     if activity['activity_key'] == 'aral-l24-g3-x-word-reading':
         return _apply_l24_g3_reading(state, event, verified_reading)
+    if activity['activity_key'] == 'aral-l24-g4-x-syllable-builder':
+        return _apply_l24_g4_builder(state, event)
     if activity['activity_key'] == 'aral-l24-g4-x-pictures':
         return _apply_l24_g4_reading(state, event, verified_reading)
     if activity['activity_key'] == 'aral-l23-g2-n-word-reading':
@@ -2000,6 +2044,57 @@ def apply_event(activity, state, event, verified_reading=None):
     if activity['activity_key'] == 'aral-l24-g3-x-repeat':
         normalize_l24_g3_repeat_state(state)
     return state
+
+
+def _apply_l24_g4_builder(state, event):
+    """Persist open-ended Big Box construction until its answer key exists."""
+    normalize_l24_g4_builder_state(state)
+    action = event.get('action')
+    if action == 'restart':
+        state.clear()
+        state.update(initial_l24_g4_builder_state())
+        return state
+    if state['completed']:
+        return state
+    allowed = {item['id'] for item in ACTIVITIES['aral-l24-g4-x-syllable-builder']['items']}
+    if action == 'draft':
+        draft = event.get('draft')
+        if not isinstance(draft, dict) or len(json.dumps(draft)) > 350000:
+            raise ValueError('Hindi na-save ang iyong sagot. Subukan muli.')
+        builder = draft.get('builder', [])
+        words = draft.get('words', [])
+        if (not isinstance(builder, list) or len(builder) > 15
+                or any(str(part) not in allowed for part in builder)):
+            raise ValueError('Gumamit ng mga pantig sa Big Box.')
+        if (not isinstance(words, list) or len(words) > 30
+                or any(not isinstance(word, list) or not 1 <= len(word) <= 15
+                       or any(str(part) not in allowed for part in word) for word in words)):
+            raise ValueError('Hindi wastong nabuong salita.')
+        state['draft'] = {
+            'builder': [str(part) for part in builder],
+            'words': [[str(part) for part in word] for word in words],
+        }
+        return state
+    if action == 'build_words':
+        words = event.get('words')
+        if (not isinstance(words, list) or not words or len(words) > 30
+                or any(not isinstance(word, list) or not 1 <= len(word) <= 15
+                       or any(str(part) not in allowed for part in word) for word in words)):
+            raise ValueError('Gumamit ng mga pantig sa Big Box.')
+        state['built_words'].extend([[str(part) for part in word] for word in words])
+        state['built_words'] = state['built_words'][:30]
+        state['index'] = len(state['built_words'])
+        state['draft'] = {'builder': [], 'words': []}
+        state['last_feedback'] = 'Tama!'
+        return state
+    if action == 'finish':
+        if not state['built_words']:
+            raise ValueError('Bumuo muna ng kahit isang wastong salita.')
+        state['completed'] = True
+        state['index'] = len(state['built_words'])
+        state['last_feedback'] = 'Magaling! Natapos mo ang Gawain 4.'
+        return state
+    raise ValueError('Unknown action.')
 
 
 def _apply_l22_c_builder(state, event, verified_reading):
