@@ -28208,7 +28208,7 @@ def get_teacher_assessment_api(request, assessment_id):
                 for submission in StoryResponseSubmission.objects.filter(
                     material=linked_material,
                     student_id__in=student_ids,
-                ).only('id', 'student_id', 'grade')
+                ).only('id', 'student_id', 'audio_file', 'duration_seconds', 'status', 'grade')
             }
         for att in attempts:
             if not isinstance(att, dict):
@@ -28235,6 +28235,10 @@ def get_teacher_assessment_api(request, assessment_id):
                 submission = retell_submissions.get(att.get('student_id'))
                 enriched_attempt['retell_grade'] = submission.grade if submission else None
                 enriched_attempt['story_response_submission_id'] = submission.id if submission else None
+                enriched_attempt['recording_available'] = bool(submission and submission.audio_file)
+                enriched_attempt['recording_url'] = reverse('teacher_retell_recording', args=[submission.id]) if submission and submission.audio_file else None
+                enriched_attempt['recording_duration_seconds'] = submission.duration_seconds if submission else None
+                enriched_attempt['retell_status'] = submission.status if submission else None
             enriched_attempts.append(enriched_attempt)
 
         def _attempt_timestamp(attempt):
@@ -28376,7 +28380,7 @@ def get_teacher_material_attempts_api(request):
                 submission.student_id: submission
                 for submission in StoryResponseSubmission.objects.filter(
                     material=material,
-                ).only('id', 'student_id', 'grade')
+                ).only('id', 'student_id', 'audio_file', 'duration_seconds', 'status', 'grade')
             }
         for a in attempts_qs:
             att = a._serialize_attempt()
@@ -28401,6 +28405,10 @@ def get_teacher_material_attempts_api(request):
                 submission = retell_submissions.get(a.student_id)
                 att['retell_grade'] = submission.grade if submission else None
                 att['story_response_submission_id'] = submission.id if submission else None
+                att['recording_available'] = bool(submission and submission.audio_file)
+                att['recording_url'] = reverse('teacher_retell_recording', args=[submission.id]) if submission and submission.audio_file else None
+                att['recording_duration_seconds'] = submission.duration_seconds if submission else None
+                att['retell_status'] = submission.status if submission else None
             enriched.append(att)
 
         payload = {

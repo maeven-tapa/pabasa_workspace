@@ -10426,6 +10426,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     body.dark-theme #studentProgressModal .student-progress-stat-value, body.dark-theme #courseInlineDialogHost .student-progress-stat-value { color: #dbe7ef; }
     body.dark-theme #studentProgressModal .student-progress-score, body.dark-theme #courseInlineDialogHost .student-progress-score { color: #8bd3ee; }
     body.dark-theme #studentProgressModal .student-progress-empty, body.dark-theme #studentProgressModal .student-progress-loading, body.dark-theme #courseInlineDialogHost .student-progress-empty, body.dark-theme #courseInlineDialogHost .student-progress-loading { border-color: rgba(148, 163, 184, .24); }
+    #studentProgressModal .student-progress-recording, #courseInlineDialogHost .student-progress-recording { margin-top: .85rem; padding-top: .75rem; border-top: 1px solid rgba(30,55,70,.09); }
+    #studentProgressModal .student-progress-recording-toggle, #courseInlineDialogHost .student-progress-recording-toggle { padding: 0; border: 0; background: transparent; color: var(--dash-primary,#1f6f8b); font: inherit; font-size: .78rem; font-weight: 850; cursor: pointer; }
+    #studentProgressModal .student-progress-recording-panel, #courseInlineDialogHost .student-progress-recording-panel { margin-top: .65rem; }
+    #studentProgressModal .student-progress-audio-controls, #courseInlineDialogHost .student-progress-audio-controls { display: flex; align-items: center; gap: .55rem; }
+    #studentProgressModal .student-progress-retell-play, #courseInlineDialogHost .student-progress-retell-play { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; color: #fff; background: #2483a4; flex: 0 0 auto; }
+    #studentProgressModal .student-progress-retell-progress, #courseInlineDialogHost .student-progress-retell-progress { width: 100%; accent-color: #2483a4; }
+    #studentProgressModal .student-progress-retell-time, #courseInlineDialogHost .student-progress-retell-time { min-width: 75px; color: #526274; font-size: .72rem; white-space: nowrap; }
+    #studentProgressModal .student-progress-recording-unavailable, #courseInlineDialogHost .student-progress-recording-unavailable { color: #71808a; font-size: .78rem; }
     @media (max-width: 767.98px) { #studentProgressModal .student-progress-toolbar, #courseInlineDialogHost .student-progress-toolbar { align-items: stretch; flex-direction: column; flex-wrap: wrap; } #studentProgressModal .student-progress-search-wrap, #courseInlineDialogHost .student-progress-search-wrap { flex-basis: auto; max-width: none; width: 100%; } #studentProgressModal .student-progress-sort-wrap, #courseInlineDialogHost .student-progress-sort-wrap { flex-basis: auto; width: 100%; } #studentProgressModal .student-progress-card, #courseInlineDialogHost .student-progress-card { padding: .9rem; } #studentProgressModal .student-progress-card-header, #courseInlineDialogHost .student-progress-card-header { gap: .7rem; } #studentProgressModal .student-progress-stats, #courseInlineDialogHost .student-progress-stats { grid-template-columns: 1fr; gap: .65rem; } }
 </style>
 <!-- Modal for Student Reading Progress -->
@@ -11221,7 +11229,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 </div>
                             ` : ''}
                         </div>
-                        ${assessment.review_retell_recordings ? `<button type="button" class="course-assessment-export-btn retell-recordings-btn" data-material-id="${escapeHtml(exportMaterialId)}"><i class="bi bi-mic"></i>Recordings</button>` : ''}
                         ${assessment.review_responses ? `<button type="button" class="course-assessment-export-btn story-response-review-btn" data-material-id="${escapeHtml(exportMaterialId)}"><i class="bi bi-mic"></i>Recordings</button>` : ''}
                         ${assessment.review_activity_key === 'lesson-1-gawain-1' ? `<button type="button" class="course-assessment-export-btn lesson1-recordings-btn"><i class="bi bi-mic"></i>View Recordings</button>` : ''}
                         ${canExport ? `
@@ -14236,6 +14243,26 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         setupCourseReadingsHandlers();
     });
 
+    const expandedRetellRecordingIds = new Set();
+    const studentProgressRetellGrades = new Map();
+    let activeStudentProgressAudio = null;
+    const stopStudentProgressAudio = () => {
+        if (activeStudentProgressAudio) {
+            activeStudentProgressAudio.pause();
+            activeStudentProgressAudio.currentTime = 0;
+            activeStudentProgressAudio = null;
+        }
+        document.querySelectorAll('.student-progress-retell-play').forEach(button => {
+            button.innerHTML = '<i class="bi bi-play-fill"></i>';
+            button.setAttribute('aria-label', 'Play recording');
+        });
+    };
+    const formatStudentProgressAudioTime = value => {
+        const seconds = Number(value);
+        if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+        return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+    };
+
     // Existing course student-progress actions use this delegated click event.
     document.addEventListener('click', function(e) {
         function progressStudentMatches(attempt, studentId, studentName) {
@@ -14330,6 +14357,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.show();
+            if (!modalEl.dataset.studentProgressAudioBound) {
+                modalEl.dataset.studentProgressAudioBound = 'true';
+                modalEl.addEventListener('hidden.bs.modal', stopStudentProgressAudio);
+            }
 
             const tasks = courseProgressTasks(course);
             if (tasks.length === 0) {
@@ -14431,9 +14462,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const displayedScore = rawScoreIsValid
                         ? `${escapeHtml(rawNumerator)}/${escapeHtml(rawDenominator)}`
                         : formatAttemptMetric(score, '%');
-                    const retellGrade = attempt?.retell_grade;
-                    const retellGradeValue = retellGrade === undefined || retellGrade === null || retellGrade === '' ? '' : String(retellGrade);
                     const retellSubmissionId = attempt?.story_response_submission_id;
+                    const retellGrade = retellSubmissionId && studentProgressRetellGrades.has(String(retellSubmissionId))
+                        ? studentProgressRetellGrades.get(String(retellSubmissionId))
+                        : attempt?.retell_grade;
+                    const retellGradeValue = retellGrade === undefined || retellGrade === null || retellGrade === '' ? '' : String(retellGrade);
+                    const retellRecordingKey = String(retellSubmissionId || `${task.assessmentId || task.title}-${studentId}`);
+                    const retellRecordingAvailable = isRetellStory && attempt?.recording_available && attempt?.recording_url;
+                    const retellRecordingExpanded = expandedRetellRecordingIds.has(retellRecordingKey);
                     const scoreValue = isRetellStory
                         ? `<select class="student-progress-retell-score form-select form-select-sm" data-submission-id="${escapeHtml(retellSubmissionId || '')}" data-previous-value="${escapeHtml(retellGradeValue)}" ${retellSubmissionId ? '' : 'disabled'} aria-label="Retell teacher score"><option value="" ${retellGradeValue === '' ? 'selected' : ''}>Not scored</option>${[0, 1, 2, 3, 4, 5].map(value => `<option value="${value}" ${retellGradeValue === String(value) ? 'selected' : ''}>${value}</option>`).join('')}</select>`
                         : displayedScore;
@@ -14452,6 +14488,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <div class="student-progress-stat"><span class="student-progress-stat-label">Time Spent</span><span class="student-progress-stat-value">${timeSpent !== undefined && timeSpent !== null && timeSpent !== '' ? escapeHtml(formatCourseReportDuration(timeSpent)) : '—'}</span></div>
                                 <div class="student-progress-stat"><span class="student-progress-stat-label">Score</span><span class="student-progress-stat-value student-progress-score">${scoreValue}</span></div>
                             </div>
+                            ${isRetellStory ? `<div class="student-progress-recording" data-recording-key="${escapeHtml(retellRecordingKey)}">
+                                <button type="button" class="student-progress-recording-toggle" aria-expanded="${retellRecordingExpanded ? 'true' : 'false'}">Review Recording <span aria-hidden="true">${retellRecordingExpanded ? '▾' : '▸'}</span></button>
+                                <div class="student-progress-recording-panel" ${retellRecordingExpanded ? '' : 'hidden'}>
+                                    ${retellRecordingAvailable ? `<div class="student-progress-audio-controls"><button type="button" class="student-progress-retell-play" data-url="${escapeHtml(attempt.recording_url)}" aria-label="Play recording"><i class="bi bi-play-fill"></i></button><input class="student-progress-retell-progress" type="range" min="0" max="0" value="0" step="0.1" aria-label="Recording progress"><span class="student-progress-retell-time">0:00 / ${escapeHtml(formatStudentProgressAudioTime(attempt.recording_duration_seconds))}</span></div>` : '<span class="student-progress-recording-unavailable">Recording unavailable</span>'}
+                                </div>
+                            </div>` : ''}
                         </article>
                     `;
                 });
@@ -14493,6 +14535,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const data = await response.json();
             if (!response.ok || !data.success) throw new Error(data.error || 'Score could not be saved.');
             select.dataset.previousValue = selectedValue;
+            studentProgressRetellGrades.set(String(select.dataset.submissionId), selectedValue === '' ? null : Number(selectedValue));
             showToast('Retell score saved', 'success');
         } catch (error) {
             select.value = previousValue;
@@ -14500,6 +14543,48 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         } finally {
             select.disabled = false;
         }
+    });
+
+    document.addEventListener('click', function(event) {
+        const toggle = event.target.closest('.student-progress-recording-toggle');
+        if (toggle) {
+            const recording = toggle.closest('.student-progress-recording');
+            const key = recording?.dataset.recordingKey;
+            if (!recording || !key) return;
+            const panel = recording.querySelector('.student-progress-recording-panel');
+            const expanded = !panel.hidden;
+            panel.hidden = expanded;
+            toggle.setAttribute('aria-expanded', String(!expanded));
+            toggle.querySelector('span').textContent = expanded ? '▸' : '▾';
+            if (expanded) expandedRetellRecordingIds.delete(key); else expandedRetellRecordingIds.add(key);
+            return;
+        }
+        const button = event.target.closest('.student-progress-retell-play');
+        if (!button) return;
+        const controls = button.closest('.student-progress-audio-controls');
+        const progress = controls?.querySelector('.student-progress-retell-progress');
+        const time = controls?.querySelector('.student-progress-retell-time');
+        if (!controls || !progress || !time) return;
+        if (activeStudentProgressAudio && activeStudentProgressAudio.src === new URL(button.dataset.url, window.location.href).href) {
+            if (activeStudentProgressAudio.paused) activeStudentProgressAudio.play(); else activeStudentProgressAudio.pause();
+            return;
+        }
+        stopStudentProgressAudio();
+        const audio = new Audio(button.dataset.url);
+        activeStudentProgressAudio = audio;
+        audio.addEventListener('loadedmetadata', () => { progress.max = audio.duration || 0; time.textContent = `${formatStudentProgressAudioTime(audio.currentTime)} / ${formatStudentProgressAudioTime(audio.duration)}`; });
+        audio.addEventListener('timeupdate', () => { progress.value = audio.currentTime; time.textContent = `${formatStudentProgressAudioTime(audio.currentTime)} / ${formatStudentProgressAudioTime(audio.duration)}`; });
+        audio.addEventListener('play', () => { button.innerHTML = '<i class="bi bi-pause-fill"></i>'; button.setAttribute('aria-label', 'Pause recording'); });
+        audio.addEventListener('pause', () => { if (!audio.ended) { button.innerHTML = '<i class="bi bi-play-fill"></i>'; button.setAttribute('aria-label', 'Play recording'); } });
+        audio.addEventListener('ended', () => { button.innerHTML = '<i class="bi bi-play-fill"></i>'; button.setAttribute('aria-label', 'Play recording'); progress.value = 0; });
+        audio.addEventListener('error', () => { time.textContent = 'Unavailable'; button.disabled = true; });
+        audio.play().catch(error => { console.error('Student Progress Retell playback failed', { url: button.dataset.url, error }); time.textContent = 'Unavailable'; button.disabled = true; });
+    });
+
+    document.addEventListener('input', function(event) {
+        const progress = event.target.closest('.student-progress-retell-progress');
+        if (!progress || !activeStudentProgressAudio) return;
+        activeStudentProgressAudio.currentTime = Number(progress.value) || 0;
     });
     
     // Toast notification function
