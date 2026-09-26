@@ -100,38 +100,48 @@ Configure the Google Cloud project, location, and model in `pabasa_site/pabasa_s
 
 Browser recording requires microphone permission and a secure context, such as HTTPS or localhost.
 
-### Optional Microsoft Azure speech recognition
+### Optional Knowlez speech recognition
 
 In a prescribed lesson or session activity, open **Audio Settings** and turn on
-**Use Microsoft Azure for speech recognition**. The selection is remembered in
+**Use Knowlez STT for speech recognition**. The selection is remembered in
 this browser across prescribed activities. Turning it off restores Google STT.
-Read-aloud voices and prerecorded audio are unchanged. Azure errors are shown to
+Read-aloud voices and prerecorded audio are unchanged. Provider errors are shown to
 the learner; the app does not silently switch providers.
 
-Configure the server before enabling Azure:
+The service shown in the subscription documentation is Knowlez, not Microsoft's
+direct Azure Speech API. Existing saved Azure selections use this corrected
+integration. The existing secret name is retained for compatibility:
 
 | Setting | Value |
 | --- | --- |
-| `AZURE_SPEECH_KEY` | Key 1 or Key 2 from your **Azure Speech resource**, stored as a Google Cloud Secret Manager secret. This is an Azure key, not a Google API key. |
-| `AZURE_SPEECH_REGION` | Hardcoded to `southeastasia` in Django settings. Use a key from an Azure Speech resource in that region. No region environment variable is needed. |
+| `AZURE_SPEECH_KEY` | Your **Knowlez STT API key**, stored as a Google Cloud Secret Manager secret. |
 
 For Google Cloud Run:
 
 1. In Google Cloud Console → **Secret Manager**, create a secret named exactly
-   **`AZURE_SPEECH_KEY`** and paste your Azure Speech resource key as its value.
+   **`AZURE_SPEECH_KEY`** and paste your Knowlez STT API key as its value.
 2. Grant the Cloud Run service account **Secret Manager Secret Accessor** on that secret.
 3. Edit the Cloud Run service → **Variables & Secrets** → reference the secret as
    an environment variable named **`AZURE_SPEECH_KEY`**. Select a specific secret version.
-4. Deploy the new revision. The app uses the hardcoded **`southeastasia`** region.
+4. Deploy the new revision. No Azure region is required. When rotating the key,
+   update the secret version mapping and deploy again.
 
 Creating the secret alone does not connect it to the app: the Cloud Run environment
 variable mapping is required. For local development, set **`AZURE_SPEECH_KEY`**
 in the root `.env` file (never commit the key). Credentials stay on the server.
 
-The integration uses Azure's fast transcription REST API (`2025-10-15`) for browser
-recordings, including WebM, with Filipino (`fil-PH`) and English (`en-PH`) locales.
-See [Azure fast transcription requirements](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/fast-transcription-create)
+The integration calls `https://api-stt.knowlez.com/v1/stt/transcribe` using an
+`X-API-Key` header and JSON containing `audio_base64`, `filename`, and the
+ISO-639-1 language hint `tl` or `en`. HTTP 201 is accepted as success. The client
+validates the returned `text` string; empty or invalid results are not invented as
+correct reading. Credentials are sent only from the server to Knowlez.
+See the [Knowlez interactive API documentation](https://api-stt.knowlez.com/docs)
 and [Cloud Run secret configuration](https://docs.cloud.google.com/run/docs/configuring/services/secrets).
+
+Shared reading capture buffers the beginning of speech and submits after 1.8 seconds
+of silence, instead of cutting off at 2.4 seconds. Silence-only and cancelled audio
+are discarded. A 60-second total recording limit reports a capture error rather
+than submitting a truncated clip for grading.
 
 ### Email
 

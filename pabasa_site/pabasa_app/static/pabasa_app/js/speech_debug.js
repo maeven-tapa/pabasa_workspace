@@ -5,7 +5,7 @@
     const histories = new WeakMap();
     const format = data => {
       if (!data?.transcript) return '';
-      const model = {chirp_3: 'Chirp 3', stt_v1: 'STT v1', azure_fast: 'Microsoft Azure STT'}[data.stt_model] || data.stt_model || 'Google STT';
+      const model = {chirp_3: 'Chirp 3', stt_v1: 'STT v1', knowlez_stt: 'Knowlez STT'}[data.stt_model] || data.stt_model || 'Google STT';
       const language = data.language_code ? ` | Language: ${data.language_code}` : '';
       const fallback = data.stt_fallback_reason ? ` | Fallback: ${data.stt_fallback_reason}` : '';
       const raw = data.raw_transcript && data.raw_transcript !== data.transcript ? ` | Raw: ${data.raw_transcript}` : '';

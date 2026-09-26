@@ -7,12 +7,12 @@
   }
   const storageKey = 'pabasa.prescribed.stt-provider';
   let provider = 'google';
-  try { if (localStorage.getItem(storageKey) === 'azure') provider = 'azure'; } catch (_) {}
+  try { if (['azure', 'knowlez'].includes(localStorage.getItem(storageKey))) provider = 'knowlez'; } catch (_) {}
 
   const sync = () => document.querySelectorAll('[data-prescribed-stt]').forEach(panel => {
-    panel.querySelector('[data-prescribed-stt-toggle]').checked = provider === 'azure';
-    panel.querySelector('[data-prescribed-stt-status]').textContent = provider === 'azure'
-      ? 'Microsoft Azure speech recognition is selected.'
+    panel.querySelector('[data-prescribed-stt-toggle]').checked = provider === 'knowlez';
+    panel.querySelector('[data-prescribed-stt-status]').textContent = provider === 'knowlez'
+      ? 'Knowlez speech recognition is selected.'
       : 'Google speech recognition is selected.';
   });
   function init() {
@@ -21,7 +21,7 @@
       toggle.dataset.sttBound = 'true';
       toggle.addEventListener('change', () => {
         window.Basahin?.cancelAll?.();
-        provider = toggle.checked ? 'azure' : 'google';
+        provider = toggle.checked ? 'knowlez' : 'google';
         try { localStorage.setItem(storageKey, provider); } catch (_) {}
         sync();
       });

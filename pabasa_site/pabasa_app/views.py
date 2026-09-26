@@ -75,7 +75,7 @@ from .student_session_lock import (
 )
 from .system_clock import real_now as session_now
 from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
-from .azure_stt import AzureSpeechError, transcribe_azure_audio, uses_azure_stt
+from .knowlez_stt import KnowlezSpeechError, transcribe_knowlez_audio, uses_knowlez_stt
 from .reading_stt import (
     ReadingMatcher,
     align_story_transcript,
@@ -20864,14 +20864,14 @@ def lesson_1_gawain_1_transcribe_api(request):
     if not audio or not target_text:
         return JsonResponse({'success': False, 'error': 'Audio is required.'}, status=400)
 
-    if uses_azure_stt(request):
+    if uses_knowlez_stt(request):
         try:
-            transcript, model_used, _ = transcribe_azure_audio(audio, 'fil-PH')
+            transcript, model_used, _ = transcribe_knowlez_audio(audio, 'fil-PH')
             return JsonResponse({
                 'success': True, 'raw_transcript': transcript, 'transcript': transcript,
-                'stt_model': model_used, 'stt_provider': 'azure', 'language_code': 'fil-PH',
+                'stt_model': model_used, 'stt_provider': 'knowlez', 'language_code': 'fil-PH',
             })
-        except AzureSpeechError as exc:
+        except KnowlezSpeechError as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=exc.status)
 
     ffmpeg = _lesson1_ffmpeg_binary()
@@ -20951,13 +20951,13 @@ def reading_transcribe_api(request):
         stt_model = ''
     credentials_file = str(getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', '') or '')
 
-    azure_selected = uses_azure_stt(request)
-    if not azure_selected and not api_key and stt_model != 'chirp_3':
+    knowlez_selected = uses_knowlez_stt(request)
+    if not knowlez_selected and not api_key and stt_model != 'chirp_3':
         return JsonResponse({'success': False, 'error': 'Google Speech is not configured.'}, status=503)
 
     try:
-        if azure_selected:
-            transcript, model_used, fallback_reason = transcribe_azure_audio(audio, language_code)
+        if knowlez_selected:
+            transcript, model_used, fallback_reason = transcribe_knowlez_audio(audio, language_code)
         else:
             transcript, model_used, fallback_reason = transcribe_audio_bytes_with_model(
                 audio.read(),
@@ -20973,7 +20973,7 @@ def reading_transcribe_api(request):
         logger.warning(
             "FREE_MODE_STT_DIAGNOSTIC provider=%s model=%s language=%s "
             "provider_transcript=%r provider_raw_result=unavailable fallback=%r",
-            'Microsoft Azure' if azure_selected else 'Google Speech',
+            'Knowlez' if knowlez_selected else 'Google Speech',
             model_used,
             language_code,
             transcript,
@@ -21130,7 +21130,7 @@ def reading_transcribe_api(request):
         analysis.update({
             'success': True,
             'language_code': language_code,
-            'stt_provider': 'azure' if azure_selected else 'google',
+            'stt_provider': 'knowlez' if knowlez_selected else 'google',
             'stt_model': model_used,
             'stt_fallback_reason': fallback_reason,
         })
@@ -21140,7 +21140,7 @@ def reading_transcribe_api(request):
             analysis.get('transcript'),
         )
         return JsonResponse(analysis)
-    except AzureSpeechError as exc:
+    except KnowlezSpeechError as exc:
         return JsonResponse({'success': False, 'error': str(exc)}, status=exc.status)
     except Exception as exc:
         logger.exception('Reading transcription failed')

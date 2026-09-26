@@ -36,7 +36,7 @@ function environment({saved = null, blockedStorage = false} = {}) {
   return {window, calls, first, addPanel, load, storage, cancellations: () => cancellations};
 }
 
-test('toggle routes recordings to Azure, preserves request data, and switches back', async () => {
+test('toggle routes recordings to Knowlez, preserves request data, and switches back', async () => {
   const env = environment();
   const body = new FormData(); body.append('audio', new Blob(['audio']));
   const signal = new AbortController().signal;
@@ -44,13 +44,13 @@ test('toggle routes recordings to Azure, preserves request data, and switches ba
   await env.window.fetch('/api/reading/transcribe/', options);
   assert.equal(env.calls.at(-1).options.headers.get('X-Pabasa-STT-Provider'), 'google');
   env.first.change(true);
-  assert.match(env.first.status.textContent, /Microsoft Azure/);
-  assert.equal(env.storage.get('pabasa.prescribed.stt-provider'), 'azure');
+  assert.match(env.first.status.textContent, /Knowlez/);
+  assert.equal(env.storage.get('pabasa.prescribed.stt-provider'), 'knowlez');
   for (const url of ['/api/reading/transcribe/', '/api/reading/lesson-1-gawain-1/transcribe/',
     '/api/dashboard/assessment/activity/prescribed/aral-l22-g1-c-syllable-builder/progress/']) {
     await env.window.fetch(url, options);
     const sent = env.calls.at(-1).options;
-    assert.equal(sent.headers.get('X-Pabasa-STT-Provider'), 'azure');
+    assert.equal(sent.headers.get('X-Pabasa-STT-Provider'), 'knowlez');
     assert.equal(sent.headers.get('X-CSRFToken'), 'csrf');
     assert.equal(sent.body, body);
     assert.equal(sent.signal, signal);
@@ -64,7 +64,7 @@ test('toggle routes recordings to Azure, preserves request data, and switches ba
 });
 
 test('read-aloud, other activities, external requests, and non-recording saves are untouched', async () => {
-  const env = environment({saved: 'azure'});
+  const env = environment({saved: 'knowlez'});
   const options = {method: 'POST', body: new FormData(), headers: {'X-CSRFToken': 'csrf'}};
   for (const url of ['/api/reading/read-aloud/', '/api/template-activities/read-aloud/',
     '/api/dashboard/assessment/activity/word-decoding/transcribe/',
@@ -78,7 +78,7 @@ test('read-aloud, other activities, external requests, and non-recording saves a
 });
 
 test('saved preferences, repeated includes, and blocked storage work', () => {
-  const env = environment({saved: 'azure'});
+  const env = environment({saved: 'knowlez'});
   assert.equal(env.first.toggle.checked, true);
   const second = env.addPanel(); env.load(); env.load();
   assert.equal(second.toggle.checked, true);
@@ -88,15 +88,21 @@ test('saved preferences, repeated includes, and blocked storage work', () => {
   const blocked = environment({blockedStorage: true});
   blocked.first.change(true);
   assert.equal(blocked.first.toggle.checked, true);
-  assert.match(blocked.first.status.textContent, /Microsoft Azure/);
+  assert.match(blocked.first.status.textContent, /Knowlez/);
 });
 
 test('Request objects preserve existing headers and method', async () => {
-  const env = environment({saved: 'azure'});
+  const env = environment({saved: 'knowlez'});
   const request = new Request('https://pabasa.test/api/reading/transcribe/',
     {method: 'POST', headers: {'X-CSRFToken': 'csrf'}, body: 'audio'});
   await env.window.fetch(request);
   assert.equal(env.calls[0].input, request);
   assert.equal(env.calls[0].options.headers.get('X-CSRFToken'), 'csrf');
-  assert.equal(env.calls[0].options.headers.get('X-Pabasa-STT-Provider'), 'azure');
+  assert.equal(env.calls[0].options.headers.get('X-Pabasa-STT-Provider'), 'knowlez');
+});
+
+test('legacy Azure preference selects the corrected Knowlez API', () => {
+  const env = environment({saved: 'azure'});
+  assert.equal(env.first.toggle.checked, true);
+  assert.match(env.first.status.textContent, /Knowlez/);
 });
