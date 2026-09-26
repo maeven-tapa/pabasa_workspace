@@ -6677,6 +6677,31 @@ document.addEventListener('DOMContentLoaded',()=>{
         display: block;
         margin: .6rem 0 .55rem;
     }
+    .story-response-rubric {
+        background: #f7fafb;
+        border: 1px solid #d7e1e4;
+        border-radius: 10px;
+        color: var(--dash-muted);
+        font-size: .72rem;
+        line-height: 1.35;
+        margin: .55rem 0 .65rem;
+        padding: .55rem .7rem;
+    }
+    .story-response-rubric-title {
+        color: var(--dash-ink);
+        font-size: .68rem;
+        font-weight: 800;
+        letter-spacing: .04em;
+        margin-bottom: .2rem;
+        text-transform: uppercase;
+    }
+    .story-response-rubric-list {
+        display: grid;
+        gap: .12rem;
+        list-style: none;
+        margin: 0;
+        padding-left: 0;
+    }
     .story-response-score-row {
         align-items: center;
         display: flex;
@@ -11235,7 +11260,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const response = await fetch(`/api/teacher/story-response/review/?material_id=${encodeURIComponent(materialId)}`, { credentials: 'same-origin' });
         const data = await response.json();
         if (!response.ok || !data.success) { body.innerHTML = `<div class="text-danger">${escapeHtml(data.error || 'Unable to load responses.')}</div>`; return; }
-        body.innerHTML = data.submissions.map(row => `<div class="story-response-review-row"><div class="story-response-review-header"><strong class="story-response-student-name">${escapeHtml(row.student_name)}</strong><span class="story-response-status-badge ${row.grade_locked ? 'is-graded' : ''}">${escapeHtml(row.status)}</span></div>${row.story_title ? `<div class="story-response-story">Story · ${escapeHtml(row.story_title)}</div>` : ''}${row.prompt ? `<div class="story-response-prompt"><span class="story-response-prompt-label">Prompt</span><span class="story-response-prompt-text"> ${escapeHtml(row.prompt)}</span></div>` : ''}${row.response_text ? `<div class="story-response-prompt"><span class="story-response-prompt-label">Answer</span><span class="story-response-prompt-text"> ${escapeHtml(row.response_text)}</span></div>` : ''}${row.recording_url ? `<audio class="w-100" controls preload="none" src="${escapeHtml(row.recording_url)}"></audio><div class="story-response-score-row"><label class="story-response-score-label" for="story-response-score-${row.id}">Score</label><select id="story-response-score-${row.id}" class="story-response-grade" data-submission-id="${row.id}" ${row.grade_locked ? 'disabled' : ''}>${[0,1,2,3,4,5].map(value => `<option value="${value}" ${Number(row.grade) === value ? 'selected' : ''}>${value}</option>`).join('')}</select><span class="story-response-score-out-of">/ 5</span><button type="button" class="story-response-save-grade" data-submission-id="${row.id}" ${row.grade_locked ? 'disabled' : ''}>${row.grade_locked ? 'Score Submitted' : 'Submit Score'}</button>${row.grade !== null && row.grade !== undefined ? `<strong class="story-response-saved-score">Saved ${escapeHtml(row.grade)}/5</strong>` : ''}</div>` : ''}</div>`).join('') || '<div class="text-muted">No enrolled students found.</div>';
+        body.innerHTML = data.submissions.map(row => `<div class="story-response-review-row"><div class="story-response-review-header"><strong class="story-response-student-name">${escapeHtml(row.student_name)}</strong><span class="story-response-status-badge ${row.grade_locked ? 'is-graded' : ''}">${escapeHtml(row.status)}</span></div>${row.story_title ? `<div class="story-response-story">Story · ${escapeHtml(row.story_title)}</div>` : ''}${row.prompt ? `<div class="story-response-prompt"><span class="story-response-prompt-label">Prompt</span><span class="story-response-prompt-text"> ${escapeHtml(row.prompt)}</span></div>` : ''}${row.response_text ? `<div class="story-response-prompt"><span class="story-response-prompt-label">Answer</span><span class="story-response-prompt-text"> ${escapeHtml(row.response_text)}</span></div>` : ''}${row.recording_url ? `<audio class="w-100" controls preload="none" src="${escapeHtml(row.recording_url)}"></audio><div class="story-response-rubric"><div class="story-response-rubric-title">Scoring Rubric</div><ol class="story-response-rubric-list"><li><strong>0</strong> - Poor</li><li><strong>1</strong> - Fair/Beginning</li><li><strong>2</strong> - Basic/Approaching</li><li><strong>3</strong> - Proficient</li><li><strong>4</strong> - Mastery</li><li><strong>5</strong> - Ready</li></ol></div><div class="story-response-score-row"><label class="story-response-score-label" for="story-response-score-${row.id}">Score</label><select id="story-response-score-${row.id}" class="story-response-grade" data-submission-id="${row.id}" ${row.grade_locked ? 'disabled' : ''}>${[0,1,2,3,4,5].map(value => `<option value="${value}" ${Number(row.grade) === value ? 'selected' : ''}>${value}</option>`).join('')}</select><span class="story-response-score-out-of">/ 5</span><button type="button" class="story-response-save-grade" data-submission-id="${row.id}" ${row.grade_locked ? 'disabled' : ''}>${row.grade_locked ? 'Score Submitted' : 'Submit Score'}</button>${row.grade !== null && row.grade !== undefined ? `<strong class="story-response-saved-score">Saved ${escapeHtml(row.grade)}/5</strong>` : ''}</div>` : ''}</div>`).join('') || '<div class="text-muted">No enrolled students found.</div>';
     }
 
     async function openRetellRecordings(materialId) {
