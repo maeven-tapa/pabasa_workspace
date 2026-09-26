@@ -256,6 +256,29 @@ L23_G5_J_WORD_PATHS = {
     'Jennifer': [[4, 0], [4, 1], [4, 2], [4, 3], [4, 4], [4, 5], [4, 6], [4, 7]],
 }
 
+# Lesson 24 Gawain 6 is the Zz word-search Big Box on workbook page 47.
+# These ordered paths are derived from the fixed workbook grid; selections
+# are validated against the path, not just the letters.
+L24_G6_Z_WORD_PATHS = {
+    'zipper': [[2, 2], [2, 3], [2, 4], [2, 5], [2, 6], [2, 7]],
+    'zoo': [[3, 1], [3, 2], [3, 3]],
+    'zebra': [[1, 6], [2, 6], [3, 6], [4, 6], [5, 6]],
+    'zigzag': [[0, 8], [1, 8], [2, 8], [3, 8], [4, 8], [5, 8]],
+    'Perez': [[3, 4], [4, 4], [5, 4], [6, 4], [7, 4]],
+    'Rizal': [[7, 2], [7, 3], [7, 4], [7, 5], [7, 6]],
+    'Zamora': [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5]],
+    'Zam': [[0, 0], [1, 0], [2, 0]],
+    'Zoren': [[2, 2], [3, 2], [4, 2], [5, 2], [6, 2]],
+    'Zeny': [[3, 1], [4, 1], [5, 1], [6, 1]],
+}
+L24_G6_Z_ALTERNATIVE_PATHS = {
+    'Zam': [[[0, 0], [0, 1], [0, 2]], [[0, 0], [1, 0], [2, 0]]],
+}
+
+
+def l24_g6_valid_paths(word):
+    return L24_G6_Z_ALTERNATIVE_PATHS.get(word, [L24_G6_Z_WORD_PATHS[word]])
+
 
 def normalize_l22_g2_speech(value):
     """Normalize one STT result without changing the workbook word."""
@@ -902,6 +925,10 @@ def initial_l23_g5_state():
     return {'found_words': {}, 'last_feedback': '', 'completed': False, 'revision': 0}
 
 
+def initial_l24_g6_state():
+    return {'found_words': {}, 'last_feedback': '', 'completed': False, 'revision': 0}
+
+
 def normalize_l23_g1_state(state):
     if not isinstance(state, dict):
         state = initial_l23_g1_state()
@@ -1169,6 +1196,28 @@ def normalize_l23_g5_state(state):
     return state
 
 
+def normalize_l24_g6_state(state):
+    """Restore only unique, canonical Lesson 24 Gawain 6 selections."""
+    if not isinstance(state, dict):
+        state = initial_l24_g6_state()
+    found = state.get('found_words') if isinstance(state.get('found_words'), dict) else {}
+    clean = {}
+    for word, entry in found.items():
+        if word not in L24_G6_Z_WORD_PATHS or not isinstance(entry, dict):
+            continue
+        if entry.get('path') not in l24_g6_valid_paths(word):
+            continue
+        color = str(entry.get('color') or '')
+        if not re.fullmatch(r'#[0-9a-fA-F]{6}', color):
+            color = '#b6e6c3'
+        clean[word] = {'path': entry['path'], 'color': color}
+    state['found_words'] = clean
+    state['completed'] = len(clean) == len(L24_G6_Z_WORD_PATHS)
+    state['last_feedback'] = str(state.get('last_feedback') or '')
+    state['revision'] = max(0, int(state.get('revision', 0) or 0))
+    return state
+
+
 def normalize_l22_g4_state(state):
     """Normalize Gawain 4 without restoring transient microphone state."""
     if not isinstance(state, dict):
@@ -1338,6 +1387,35 @@ def _apply_l23_g5_word_search(state, event):
     state['found_words'][word] = {'path': L23_G5_J_WORD_PATHS[word], 'color': color}
     state['last_feedback'] = 'Mahusay!'
     if len(state['found_words']) == len(L23_G5_J_WORD_PATHS):
+        state['completed'] = True
+        state['last_feedback'] = 'Magaling! Nahanap mo ang lahat ng salita!'
+    return state
+
+
+def _apply_l24_g6_word_search(state, event):
+    normalize_l24_g6_state(state)
+    if event.get('action') == 'restart':
+        state.clear()
+        state.update(initial_l24_g6_state())
+        return state
+    if state['completed']:
+        return state
+    if event.get('action') != 'select_word':
+        raise ValueError('Unknown action.')
+    word = str(event.get('word') or '')
+    path = event.get('path')
+    if word not in L24_G6_Z_WORD_PATHS or path not in l24_g6_valid_paths(word):
+        state['last_feedback'] = 'Subukan muli.'
+        return state
+    if word in state['found_words']:
+        state['last_feedback'] = 'Nahanap mo na ang salitang ito.'
+        return state
+    color = str(event.get('color') or '')
+    if not re.fullmatch(r'#[0-9a-fA-F]{6}', color):
+        color = '#b6e6c3'
+    state['found_words'][word] = {'path': path, 'color': color}
+    state['last_feedback'] = f'Tama! Nahanap mo ang {word}.'
+    if len(state['found_words']) == len(L24_G6_Z_WORD_PATHS):
         state['completed'] = True
         state['last_feedback'] = 'Magaling! Nahanap mo ang lahat ng salita!'
     return state
@@ -1941,6 +2019,8 @@ def apply_event(activity, state, event, verified_reading=None):
         return _apply_l22_g5_word_search(state, event)
     if activity['activity_key'] == 'aral-l23-g5-j-word-search':
         return _apply_l23_g5_word_search(state, event)
+    if activity['activity_key'] == 'aral-l24-g6-z-word-search':
+        return _apply_l24_g6_word_search(state, event)
     if activity['activity_key'] == 'aral-l24-g3-x-repeat':
         normalize_l24_g3_repeat_state(state)
         if event.get('action') == 'restart':
