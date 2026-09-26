@@ -13,12 +13,13 @@
   const prescribedWordReading = jReading || qReading;
   const jSyllables = a.activity_key === 'aral-l23-g4-j-syllabication';
   const g5Syllables = a.activity_key === 'aral-l24-g5-z-syllabication';
+  const g6Search = a.activity_key === 'aral-l24-g6-z-word-search';
   const l24G2 = a.activity_key === 'aral-l24-g2-v-word-reading';
   const pictureReading = a.activity_key === 'aral-l24-g4-x-pictures';
   const l23G1 = a.activity_key === 'aral-l23-g1-n-syllable-builder';
   const l23G3 = a.activity_key === 'aral-l23-g3-j-word-reading';
   const qG6 = qBuilder;
-  const localAudio = (l23G1 || l23G3 || jSyllables || qG6) ? (data.local_audio || {}) : {};
+  const localAudio = (l23G1 || l23G3 || jSyllables || qG6 || g6Search) ? (data.local_audio || {}) : {};
   const G1_MAPPED_TEXT = new Set([
     'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salita mula rito.',
     'Ni', 'La', 'ña', 'Cas', 'Bi', 'da', 'El', 'ño', 'ñan', 'Cen', 'ta', 'ñe',
@@ -78,7 +79,7 @@
   const item = () => a.items[state.index];
   const oral = () => state.oral[item()?.id] || {passed:false,attempts:0,listens:0,phase:a.model_first?'model':'read'};
   const message = (text, error=false) => {
-    status.textContent=text;status.className=error?'wb-error':'wb-save';status.hidden=specializedBuilder||prescribedWordReading||jSyllables||g5Syllables;
+    status.textContent=text;status.className=error?'wb-error':'wb-save';status.hidden=specializedBuilder||prescribedWordReading||jSyllables||g5Syllables||g6Search;
     if(specializedBuilder){const primary=content.querySelector('.wb-phase-status');if(primary){primary.textContent=text;primary.classList.toggle('wb-feedback-error',error);}}
   };
   const stopReadAloud = () => {
@@ -94,8 +95,8 @@
     if(!text || (busy&&!allowBusy) || activeStream)return;
     stopReadAloud();
     const run=audioRun, controller=new AbortController();audioController=controller;
-    const mapped = (l23G1 && G1_MAPPED_TEXT.has(text)) || (l23G3 && G3_MAPPED_TEXT.has(text)) || (jSyllables && G4_MAPPED_TEXT.has(text)) || (qG6 && G6_MAPPED_TEXT.has(text));
-    const localUrl=(l23G1 || l23G3 || jSyllables || qG6) ? localAudioUrl(text) : null;
+    const localUrl=(l23G1 || l23G3 || jSyllables || qG6 || g6Search) ? localAudioUrl(text) : null;
+    const mapped = (l23G1 && G1_MAPPED_TEXT.has(text)) || (l23G3 && G3_MAPPED_TEXT.has(text)) || (jSyllables && G4_MAPPED_TEXT.has(text)) || (qG6 && G6_MAPPED_TEXT.has(text)) || (g6Search && Boolean(localUrl));
     if(mapped){
       if(!localUrl){if(audioController===controller)audioController=null;throw Error(jSyllables&&text===instructionText?'Hindi available ang panuto.':'Hindi available ang audio.');}
       try{
@@ -157,16 +158,29 @@
   function lock(){action.querySelectorAll('button').forEach(b=>b.disabled=busy||preview);}
   function button(text,fn,primary=false){const b=document.createElement('button');b.type='button';b.textContent=text;b.className=primary?'wb-primary':'';if([record,recordJ,recordPictureReading,startCReading].includes(fn)){b.id='wb-basahin';window.Basahin.bindActivity(b,fn);}else b.onclick=fn;action.appendChild(b);return b;}
   function table(){let n=0;return `<table class="wb-table">${a.column_headers?'<thead><tr>'+a.column_headers.map(h=>`<th>${esc(h)}</th>`).join('')+'</tr></thead>':''}<tbody>${a.rows.map(row=>'<tr>'+row.map(text=>{const i=text?a.items[n++]:null;return `<td class="${!preview&&i?(n-1===state.index?'wb-current':n-1<state.index?'wb-done':''):''}">${i&&a.images?.[i.id]?`<img src="${esc(a.images[i.id])}" alt="${esc(text)}"><br>`:''}${esc(i?(a.cell_display?.[i.id]||text):'')}</td>`;}).join('')+'</tr>').join('')}</tbody></table>`;}
+  function requestG6Restart(){
+    if(document.getElementById('wb-g6-reset-modal'))return;
+    document.body.insertAdjacentHTML('beforeend','<div class="wb-g6-reset-modal" id="wb-g6-reset-modal" role="dialog" aria-modal="true" aria-labelledby="wb-g6-reset-title"><div class="wb-g6-reset-card"><h2 id="wb-g6-reset-title">Ulitin ang Gawain 6?</h2><p>Mawawala ang kasalukuyang progreso.</p><div class="wb-g6-completion-actions"><button type="button" class="wb-g6-completion-primary" id="wb-g6-reset-yes">Oo, Magsimula Muli</button><button type="button" class="wb-g6-completion-secondary" id="wb-g6-reset-no">Hindi</button></div></div></div>');
+    const modal=document.getElementById('wb-g6-reset-modal');
+    document.getElementById('wb-g6-reset-no').onclick=()=>modal.remove();
+    document.getElementById('wb-g6-reset-yes').onclick=()=>{modal.remove();perform({action:'restart'});};
+    modal.onclick=event=>{if(event.target===modal)modal.remove();};
+  }
   function render(){
     selected=[];builder=state.draft?.builder||[];words=state.draft?.words||[];
-    const totalProgress=cBuilder?a.items.length:(a.progress_total||a.items.length), progressValue=state.completed?totalProgress:Math.min(totalProgress, qBuilder?Number(state.index||0):cBuilder?Number(state.index||0):Number(state.index||0));
-    document.getElementById('wb-progress').textContent=preview?'Preview':(l24G4Builder?`Nabuo: ${Number(state.built_words?.length||0)} salita`:g5Syllables?`Nasagot: ${Math.min(a.items.length,Number(state.index||0))} / ${a.items.length}`:cBuilder?`Nabasa: ${Math.min(a.items.length,Number(state.index||0))} / ${a.items.length}`:(a.activity_key==='aral-l23-g1-n-syllable-builder'||l24Builder?`Nabasa: ${Math.min(12,Number(state.index||0))} / 12`:`${progressValue} / ${totalProgress}`));
+    const totalProgress=cBuilder?a.items.length:(a.progress_total||a.items.length), progressValue=state.completed?totalProgress:Math.min(totalProgress, g6Search?Object.keys(state.found_words||{}).length:qBuilder?Number(state.index||0):cBuilder?Number(state.index||0):Number(state.index||0));
+    document.getElementById('wb-progress').textContent=preview?'Preview':(g6Search?`Nahanap: ${Object.keys(state.found_words||{}).length} / ${a.items.length}`:l24G4Builder?`Nabuo: ${Number(state.built_words?.length||0)} salita`:g5Syllables?`Nasagot: ${Math.min(a.items.length,Number(state.index||0))} / ${a.items.length}`:cBuilder?`Nabasa: ${Math.min(a.items.length,Number(state.index||0))} / ${a.items.length}`:(a.activity_key==='aral-l23-g1-n-syllable-builder'||l24Builder?`Nabasa: ${Math.min(12,Number(state.index||0))} / 12`:`${progressValue} / ${totalProgress}`));
     const progressFill=document.getElementById('wb-progress-fill');if(progressFill)progressFill.style.width=l24G4Builder?(state.completed?'100%':'0%'):`${preview?0:Math.max(0,Math.min(100,progressValue/totalProgress*100))}%`;
     document.getElementById('wb-back').hidden=preview;
     action.replaceChildren();
     if(state.completed){
       const completionWord=a.activity_key==='aral-l23-g1-n-syllable-builder'?'Niño':(state.found_words||[]).join(', ');
-      content.innerHTML=`<div class="wb-focus"><h2>${cBuilder?'Magaling! Natapos mo ang Gawain 1.':l24G4Builder?'Magaling! Natapos mo ang Gawain 4.':g5Syllables?'Magaling! Natapos mo ang Gawain 5!':fil?'Natapos mo ang gawain!':'Activity complete!'}</h2>${cBuilder?`<p>${a.activity_key==='aral-l23-g1-n-syllable-builder'?`Magaling! Nabuo mo ang salitang ${completionWord}`:`Nabuo mo na: ${esc(completionWord)}`}</p>`:g5Syllables?'<p>Natapos mo ang lahat ng siyam na salitang kailangang pantigin.</p>':a.review_required&&!l24G4Builder?'<p>Your written work is saved for teacher review.</p>':''}</div>`;
+      if(g6Search){
+        content.innerHTML=`<div class="wb-g6-completion-modal" role="dialog" aria-modal="true" aria-labelledby="wb-g6-completion-title"><div class="wb-g6-completion-card"><p class="wb-g6-completion-kicker">GAWAIN 6 · BIG BOX</p><h2 id="wb-g6-completion-title">Magaling! Natapos mo ang Gawain 6!</h2><p>Nahanap mo ang lahat ng sampung salita sa Big Box.</p><div class="wb-g6-completion-actions">${data.next_url?`<a class="wb-g6-completion-primary" href="${esc(data.next_url)}">Susunod na Gawain</a>`:''}<a class="wb-g6-completion-secondary" href="${esc(document.getElementById('wb-back')?.href||'#')}">Bumalik sa Aking Aralin</a><button type="button" class="wb-g6-completion-secondary" id="wb-g6-complete-reset">Ulitin Mula sa Simula</button></div></div></div>`;
+        document.getElementById('wb-g6-complete-reset')?.addEventListener('click',requestG6Restart);
+        return;
+      }
+      content.innerHTML=`<div class="wb-focus"><h2>${cBuilder?'Magaling! Natapos mo ang Gawain 1.':l24G4Builder?'Magaling! Natapos mo ang Gawain 4.':g5Syllables?'Magaling! Natapos mo ang Gawain 5!':g6Search?'Magaling! Natapos mo ang Gawain 6!':fil?'Natapos mo ang gawain!':'Activity complete!'}</h2>${cBuilder?`<p>${a.activity_key==='aral-l23-g1-n-syllable-builder'?`Magaling! Nabuo mo ang salitang ${completionWord}`:`Nabuo mo na: ${esc(completionWord)}`}</p>`:g5Syllables?'<p>Natapos mo ang lahat ng siyam na salitang kailangang pantigin.</p>':g6Search?'<p>Nahanap mo ang lahat ng sampung salita sa Big Box.</p>':a.review_required&&!l24G4Builder?'<p>Your written work is saved for teacher review.</p>':''}</div>`;
       if(cBuilder||l24G4Builder){button('Susunod',()=>{if(data.next_url)location.href=data.next_url;},true).disabled=!data.next_url;if(l24G4Builder)button('Ulitin Mula sa Simula',()=>{if(window.confirm('Ulitin ang Gawain 4 mula sa simula?'))perform({action:'restart'});});}
       if((prescribedWordReading||jSyllables||g5Syllables||pictureReading)&&data.next_url)button('Susunod',()=>{location.href=data.next_url;},true);
       if(g5Syllables)button('Ulitin Mula sa Simula',()=>{if(window.confirm('Ulitin ang Gawain 5 mula sa simula? Mawawala ang kasalukuyang progreso.'))perform({action:'restart'});});
@@ -176,6 +190,7 @@
     if(pictureReading){renderPictureReading();return;}
     if(jSyllables){renderJSyllables();return;}
     if(g5Syllables){renderL24G5Syllables();return;}
+    if(g6Search){renderL24G6WordSearch();return;}
     if(specializedBuilder&&!preview){renderCBuilder();lock();return;}
     if(l24G4Builder&&!preview){renderBuilder();lock();return;}
     if(state.index>=a.items.length&&!preview){content.innerHTML='<div class="wb-focus">'+(fil?'Na-save ang lahat ng bahagi ng gawain.':'All required parts are saved.')+'</div>';button(fil?'Tapusin ang gawain':'Finish activity',()=>perform({action:'finish'}),true);return;}
@@ -437,6 +452,44 @@
     if(preview){action.innerHTML='';return;}
     if(currentItem)button('Suriin ang Sagot',()=>perform({action:'answer',item_index:current,answer:{text:document.getElementById('wb-written').value}}),true);
     lock();
+  }
+  function renderL24G6WordSearch(){
+    const found=state.found_words||{}, grid=a.grid||[], targetItems=a.items||[];
+    const cellKey=([row,col])=>`${row}:${col}`;
+    const foundCells=new Map();
+    Object.values(found).forEach(entry=>(entry.path||[]).forEach(path=>foundCells.set(cellKey(path),entry.color||'#b6e6c3')));
+    const wordsMarkup=targetItems.map((item,index)=>{
+      const done=Boolean(found[item.text]);
+      return `<li class="wb-g6-word ${done?'is-done':''}"><span class="wb-g6-number">${esc(a.item_labels?.[index]||`${index+1}.`)}</span><span>${esc(item.text)}</span>${done?'<span class="wb-g6-check" aria-label="Nahanap">✓</span>':''}</li>`;
+    }).join('');
+    const cells=grid.map((row,rowIndex)=>Array.from(row).map((letter,colIndex)=>{
+      const color=foundCells.get(`${rowIndex}:${colIndex}`);
+      const selected=selected.some(point=>point[0]===rowIndex&&point[1]===colIndex);
+      return `<button type="button" class="wb-g6-cell ${color?'is-found':''} ${selected?'is-selected':''}" data-row="${rowIndex}" data-col="${colIndex}" role="gridcell" aria-label="Hanay ${rowIndex+1}, kolum ${colIndex+1}: ${esc(letter)}" ${preview?'disabled':''} ${color?`style="--wb-g6-mark:${esc(color)}"`:''}>${esc(letter)}</button>`;
+    }).join('')).join('');
+    content.innerHTML=`<section class="wb-g6-workspace"><aside class="wb-g6-list-panel"><div class="wb-g6-panel-heading"><h2>MGA HAHANAPIN</h2><span>${Object.keys(found).length} / ${targetItems.length}</span></div><p class="wb-g6-help">Hanapin at bilugan ang bawat salita sa Big Box.</p><ol class="wb-g6-word-list">${wordsMarkup}</ol><p id="wb-g6-feedback" class="wb-g6-feedback ${state.last_feedback==='Subukan muli.'?'is-error':''}" role="status" aria-live="polite">${esc(state.last_feedback||'Pumili ng unang letra, pagkatapos ng huling letra.')}</p><button type="button" class="wb-g6-reset" id="wb-g6-reset">Ulitin Mula sa Simula</button></aside><section class="wb-g6-box-panel"><div class="wb-g6-panel-heading"><h2>BIG BOX</h2><span>8 × 9</span></div><p class="wb-g6-help">Pindutin ang unang letra at ang huling letra ng salita.</p><div class="wb-g6-grid" style="--cols:${grid[0]?.length||9}" role="grid" aria-label="Big Box na may 8 hanay at 9 kolum">${cells}</div><p class="wb-g6-feedback wb-g6-grid-feedback" aria-hidden="true">&nbsp;</p></section></section>`;
+    const linePath=(start,end)=>{
+      const rowDelta=end[0]-start[0], colDelta=end[1]-start[1], steps=Math.max(Math.abs(rowDelta),Math.abs(colDelta));
+      if(!steps || (rowDelta!==0&&colDelta!==0&&Math.abs(rowDelta)!==Math.abs(colDelta)))return [start,end];
+      const rowStep=rowDelta===0?0:rowDelta/steps, colStep=colDelta===0?0:colDelta/steps;
+      return Array.from({length:steps+1},(_,index)=>[start[0]+rowStep*index,start[1]+colStep*index]);
+    };
+    const wordForPath=path=>{
+      const text=path.map(([row,col])=>grid[row]?.[col]||'').join('').toLowerCase();
+      return targetItems.find(item=>String(item.text).toLowerCase()===text)?.text||'';
+    };
+    const paintSelection=()=>content.querySelectorAll('.wb-g6-cell').forEach(cell=>cell.classList.toggle('is-selected',selected.some(point=>point[0]===Number(cell.dataset.row)&&point[1]===Number(cell.dataset.col))));
+    content.querySelectorAll('.wb-g6-cell').forEach(cell=>cell.onclick=()=>{
+      if(busy||preview)return;
+      const point=[Number(cell.dataset.row),Number(cell.dataset.col)];
+      if(!selected.length){selected=[point];paintSelection();return;}
+      const path=linePath(selected[0],point), word=wordForPath(path);
+      selected=[];paintSelection();
+      perform({action:'select_word',word,path,color:'#b6e6c3'});
+    });
+    document.getElementById('wb-g6-reset')?.addEventListener('click',requestG6Restart);
+    if(!preview&&!instructionSpoken)speakInstruction();
+    if(preview)content.querySelectorAll('button').forEach(button=>button.disabled=true);
   }
   function renderFill(){
     content.innerHTML+=`<p>( ${a.options.map(esc).join(', ')} )</p><table class="wb-table"><tr>${a.options.map(x=>`<td>${esc(x)}</td>`).join('')}</tr></table>`;

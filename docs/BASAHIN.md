@@ -1,6 +1,6 @@
 # Basahin: shared STT capture and button
 
-`pabasa_app/static/pabasa_app/js/basahin.js` exposes `window.Basahin` for session activities and new reading screens. The idle label is **Basahin**. Recording starts only after the volume-based VAD detects speech; each independently decodable clip then lasts **2.4 seconds**. The module does not decide lesson scores, listening unlocks, or activity completion.
+`pabasa_app/static/pabasa_app/js/basahin.js` exposes `window.Basahin` for session activities and new reading screens. The idle label is **Basahin**. Audio is buffered immediately to preserve the first sound. Each independently decodable clip is submitted only after detected speech followed by **1.8 seconds of silence**, instead of a fixed 2.4-second cutoff. The module does not decide lesson scores, listening unlocks, or activity completion.
 
 ## Add a new reading screen
 
@@ -52,7 +52,7 @@ const reader = Basahin.create({
 // reader.destroy();
 ```
 
-The button shows `Sandali...` while preparing/calibrating, then `Magsalita...` while waiting for speech. It changes to `Nakikinig...` when recording starts and `Sinusuri...` during STT, then returns to `Basahin`. It is disabled while busy. Waiting does not pulse or create a MediaRecorder. During a clip, the pulse follows detected speech with CRLA's 240 ms hold between syllables; the clip continues to its 2.4-second boundary even if speech pauses. Recording pauses while the request is processed, and each new clip waits for speech again. `getFields()` is called for every clip; keep the server cursor and stitching context in your screen's state. Reset them when changing the target. `onResult` may return `true` to stop, `false` to continue, or nothing to use `result.complete`. `continuous: false` stops after one result. The default limit is 25 voiced clips per start; `maxChunks` can override it. `deviceId` selects a microphone.
+The button shows `Sandali...` while preparing/calibrating, then `Magsalita...` while waiting for speech. It changes to `Nakikinig...` when speech is detected and `Sinusuri...` during STT, then returns to `Basahin`. It is disabled while busy. Waiting does not pulse; buffered silence is discarded if no speech is detected. During a clip, the pulse follows detected speech with CRLA's 240 ms hold between syllables. Ongoing speech keeps recording open; short pauses between syllables do not submit a clip. Recording pauses while the request is processed, and each new clip waits for speech again. `getFields()` is called for every clip; keep the server cursor and stitching context in your screen's state. Reset them when changing the target. `onResult` may return `true` to stop, `false` to continue, or nothing to use `result.complete`. `continuous: false` stops after one result. The default limit is 25 voiced clips per start; `maxChunks` can override it. `deviceId` selects a microphone.
 
 ## Existing activity workflows
 
@@ -109,10 +109,11 @@ const audio = await Basahin.capture();
 ## Volume-based VAD and lifecycle
 
 - RMS volume is measured from 1,024 time-domain samples on animation frames.
-- The first 800 ms calibrates the background floor. Quiet samples continue adapting it with 0.94/0.06 smoothing.
+- The first 800 ms calibrates the background floor from quiet samples with 0.94/0.06 smoothing. Clear early speech can trigger detection during calibration and does not become the noise floor.
 - Speech threshold: `max(0.014, backgroundFloor * 3.2 + 0.004)`.
-- Three above-threshold frames establish speech and start the recorder. Quiet frames reduce that evidence. Evidence resets between clips, so previous speech cannot start a new recording during silence.
-- While waiting, only the microphone analyser runs. No audio clip is recorded or sent to STT. Twelve seconds without detected speech ends capture with `NoSpeechError`; no reading attempt should be counted. `capture({maxWaitMs})` can change this limit; the older `maxSilentChunks` option maps to that many 2.4-second waiting intervals.
+- Three above-threshold frames establish speech. The recorder already buffers the leading sound, but no upload occurs before speech is detected. Quiet frames reduce evidence, which resets between clips.
+- Waiting audio stays local. Twelve seconds without detected speech ends capture with `NoSpeechError` and discards the buffer; no reading attempt should be counted. `capture({maxWaitMs})` can change this limit; the older `maxSilentChunks` option maps to 2.4-second waiting intervals.
+- A voiced recording ends after 1.8 seconds of silence (`silenceMs`). A 60-second total recording limit (`maxRecordingMs`) discards unfinished audio with `CaptureLimitError`, rather than uploading and grading a truncated utterance. Both options work with `capture`, `create`, and `read`. Cancellation also discards the buffer.
 - Every clip starts a new MediaRecorder so each upload has its own decodable container. This is chunked capture, not a streaming provider connection.
 - `cancelAll()` cancels shared captures/controllers. Page exit and the common session controls call it. New custom controls must also call `reader.stop()` or `Basahin.cancelAll()` before changing reading state.
 - `basahin:state` events expose `calibrating`, `waiting`, `listening`, `level` and silence-timeout details for debugging/meters. `onVad(state, detail)` provides the controller's capture updates.
@@ -123,7 +124,7 @@ The thresholds follow the CRLA reader's volume detector. Volume gating distingui
 
 ### English sessions 9–15
 
-English reading activities share the same Basahin button styling, volume detector and 2.4-second capture. Mark buttons with `data-basahin-language="English"` for **Read**, **Please wait...**, **Speak now...**, **Listening...** and **Checking...** labels. Send `language: 'English'` to `read()`; the server selects `en-PH`, English phrase hints and its configured `GOOGLE_STT_MODEL` (default `chirp_3`), with the existing provider fallback. Filipino requests retain their separate STT configuration.
+English reading activities share the same Basahin button styling, volume detector and pause-based capture. Mark buttons with `data-basahin-language="English"` for **Read**, **Please wait...**, **Speak now...**, **Listening...** and **Checking...** labels. Send `language: 'English'` to `read()`. The default Google route uses `en-PH` and its configured `GOOGLE_STT_MODEL`; the optional Knowlez route maps the locale to `en`. Filipino requests use `fil-PH` for Google and `tl` for Knowlez.
 
 Words use `mode: 'reading'`. Full sentences, Story Time lines and Rhyming Verses use `mode: 'sentence'`, preserving backend progress across clips and saving one activity attempt. Oral missing-word answers use `continuous: false` and retain their activity-specific server grader. Trace and Say retains its voiced participation step through `capture({button})`; it does not grade a transcript. Session 9 drawing activities and listening/selection-only activities do not acquire reading buttons.
 
@@ -131,7 +132,7 @@ Words use `mode: 'reading'`. Full sentences, Story Time lines and Rhyming Verses
 
 Reading activities using `/api/reading/transcribe/` grade with `result.success && result.complete === true`. Do not compare or search the transcript again in JavaScript: the backend owns word matching, sound aliases and syllable reconstruction. Keep transcripts for display and saved diagnostics. Exact rhyme activities send `salitang_magkatugma_exact=1`; strict syllable exercises retain their specific backend verdict. The Session 7 Lesson 20–21 cluster activity sends its `prescribed_activity_key` so its scoped `check`/`tsek` pronunciation allowance is evaluated on the server.
 
-Session templates that used **Basahin Ngayon** and the workbook's **Basahin ang Salita** now display **Basahin**. Their speech capture uses this module while preserving the existing per-activity server graders. Sentence attempts use `read()` so the 2.4-second clip boundary does not end a full sentence prematurely. Teacher-managed reading buttons also use the shorter label; they retain their existing non-STT behavior. The separate CRLA assessment reader and long-form recording screens retain their existing workflows.
+Session templates that used **Basahin Ngayon** and the workbook's **Basahin ang Salita** now display **Basahin**. Their speech capture uses this module while preserving the existing per-activity server graders. Sentence attempts use `read()` to carry progress across voiced recordings separated by pauses. Teacher-managed reading buttons also use the shorter label; they retain their existing non-STT behavior. The separate CRLA assessment reader and long-form recording screens retain their existing workflows.
 
 Run the deterministic microphone, VAD, transport and lifecycle checks with:
 

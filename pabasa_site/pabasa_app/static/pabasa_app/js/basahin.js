@@ -4,6 +4,8 @@
   if (window.Basahin) return;
 
   const CHUNK_MS = 2400;
+  const SILENCE_MS = 1800;
+  const MAX_RECORDING_MS = 60000;
   const activeCaptures = new Set();
   const readers = new Set();
   const abortError = () => new DOMException('Reading cancelled.', 'AbortError');
@@ -17,10 +19,12 @@
     return {
       sample(rms, elapsedMs) {
         const calibrating = elapsedMs < 800;
-        if (!initialized) { floor = rms; initialized = true; }
-        else if (calibrating || rms < floor * 1.8) floor = floor * 0.94 + rms * 0.06;
+        if (!initialized) { floor = Math.min(rms, 0.025); initialized = true; }
+        // Speech during warm-up must not become the background noise floor.
+        else if ((calibrating && rms <= 0.025) || rms < floor * 1.8) floor = floor * 0.94 + rms * 0.06;
         const threshold = Math.max(0.014, floor * 3.2 + 0.004);
-        frames = !calibrating && rms > threshold ? Math.min(3, frames + 1) : Math.max(0, frames - 1);
+        // A clear voice may start during warm-up; quiet room noise still calibrates.
+        frames = rms > threshold && (!calibrating || rms > 0.06) ? Math.min(3, frames + 1) : Math.max(0, frames - 1);
         if (frames >= 3) heard = true;
         return {rms, threshold, calibrating, speaking: frames >= 3, heard};
       },
@@ -61,7 +65,7 @@
     }
   }
 
-  /** Wait for voice activity, then record one independently decodable clip.
+  /** Buffer audio immediately, then finish one voiced clip after a quiet pause.
    * Capture releases tracks by default, including a supplied stream. Use
    * keepStream for a controller that reuses its stream across several clips.
    * No network, scoring, attempt counting, or DOM replacement happens here.
@@ -104,7 +108,8 @@
       const started = options.startedAt ?? performance.now();
       vad.takeSpeech();
       const audio = await new Promise((resolve, reject) => {
-        let settled = false, lastSpeechAt = -Infinity;
+        let settled = false, speechStarted = false, lastSpeechAt = -Infinity, recordingStartedAt;
+        const silenceMs = options.silenceMs ?? SILENCE_MS;
         const finish = (error, blob) => {
           if (settled) return;
           settled = true;
@@ -117,7 +122,6 @@
         stream.getTracks().forEach(track => track.addEventListener('ended', abort, {once: true}));
         const recordChunk = () => {
           if (settled || recorder) return;
-          window.clearTimeout(timer);
           try {
             const type = mimeType(), chunks = [];
             recorder = new window.MediaRecorder(stream, type ? {mimeType: type} : undefined);
@@ -128,12 +132,11 @@
               if (settled) return;
               const blob = new Blob(chunks, {type: recorder.mimeType || type || 'audio/webm'});
               vad.takeSpeech();
-              finish(blob.size ? null : noSpeechError(), blob);
+              finish(speechStarted && blob.size ? null : noSpeechError(), blob);
             };
             onRecorder?.(recorder);
+            recordingStartedAt = performance.now();
             recorder.start();
-            setState('listening');
-            timer = window.setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, CHUNK_MS);
           } catch (error) { finish(error); }
         };
         const meter = () => {
@@ -146,9 +149,19 @@
             const level = vad.sample(Math.sqrt(sum / samples.length), now - started);
             if (level.speaking) {
               lastSpeechAt = now;
-              recordChunk();
+              if (!speechStarted) {
+                speechStarted = true;
+                window.clearTimeout(timer);
+                // Never grade an unfinished utterance when the safety limit is hit.
+                timer = window.setTimeout(() => finish(Object.assign(
+                  new Error('Recording reached the time limit. Please read a shorter section and try again.'),
+                  {name: 'CaptureLimitError'}
+                )), Math.max(0, (options.maxRecordingMs ?? MAX_RECORDING_MS) - (now - recordingStartedAt)));
+                setState('listening');
+              }
             }
-            if (!recorder) setState(level.calibrating ? 'calibrating' : 'waiting');
+            if (!speechStarted) setState(level.calibrating ? 'calibrating' : 'waiting');
+            if (speechStarted && now - lastSpeechAt >= silenceMs && recorder?.state === 'recording') recorder.stop();
             // CRLA holds its hearing indicator briefly between syllables.
             window.BasahinButton?.setSpeech(options.button, Boolean(recorder && now - lastSpeechAt < 240));
             onState?.('level', level); emit('level', level);
@@ -157,12 +170,13 @@
         };
         if (controller.signal.aborted) abort();
         else {
-          // Keep the microphone meter open, but create no recorder in silence.
+          // Buffer the leading sound too; silence-only audio is discarded locally.
           const waitMs = options.maxWaitMs ?? CHUNK_MS * (options.maxSilentChunks ?? 5);
           timer = window.setTimeout(() => {
             setState('silence', {waitMs});
             finish(noSpeechError());
           }, waitMs);
+          recordChunk();
           meter();
         }
       });
@@ -250,6 +264,7 @@
         for (let count = 0; count < (options.maxChunks ?? 25); count += 1) {
           const fields = {...getFields()};
           const blob = await capture({stream, button: visualButton, keepStream: true, signal: controller.signal, vad, startedAt,
+            silenceMs: options.silenceMs, maxRecordingMs: options.maxRecordingMs,
             onState: (name, detail) => {
               options.onVad?.(name, detail);
               if (['calibrating', 'waiting', 'listening'].includes(name)) state(name);
@@ -337,5 +352,5 @@
   const isCaptureError = error => Boolean(error?.basahinCapture || ['AbortError', 'NoSpeechError'].includes(error?.name));
   const bindActivity = (button, action) => window.BasahinButton.bindActivity(button, action);
   const getActivity = button => window.BasahinButton.getActivity(button);
-  window.Basahin = Object.freeze({CHUNK_MS, createVad, openMicrophone, capture, transcribe, create, read, cancelAll, isCaptureError, bindActivity, getActivity});
+  window.Basahin = Object.freeze({CHUNK_MS, SILENCE_MS, MAX_RECORDING_MS, createVad, openMicrophone, capture, transcribe, create, read, cancelAll, isCaptureError, bindActivity, getActivity});
 })();

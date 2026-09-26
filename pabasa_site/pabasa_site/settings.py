@@ -176,6 +176,8 @@ GOOGLE_STT_LOCATION = 'us'
 # Chirp 3 is used through Speech-to-Text V2 Recognize for short reading clips.
 GOOGLE_STT_MODEL = 'chirp_3'
 GOOGLE_STT_CREDENTIALS_FILE = BASE_DIR / 'google-stt-service-account.json'
+# Knowlez STT key, injected by Cloud Run. Keep the existing secret name.
+AZURE_SPEECH_KEY = os.environ.get('AZURE_SPEECH_KEY', '').strip()
 PABASA_OVERRIDE_SECURITY_CODE = os.environ.get('PABASA_OVERRIDE_SECURITY_CODE', '')
 
 CACHES = {

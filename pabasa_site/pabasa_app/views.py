@@ -75,6 +75,7 @@ from .student_session_lock import (
 )
 from .system_clock import real_now as session_now
 from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
+from .knowlez_stt import KnowlezSpeechError, transcribe_knowlez_audio, uses_knowlez_stt
 from .reading_stt import (
     ReadingMatcher,
     align_story_transcript,
@@ -13392,7 +13393,8 @@ def prescribed_activity_page(request, activity_key):
                                           initial_l23_g2_state, normalize_l23_g2_state, initial_l24_g3_state, normalize_l24_g3_state,
                                            initial_l24_g3_repeat_state, normalize_l24_g3_repeat_state,
                                            initial_l24_g4_builder_state, normalize_l24_g4_builder_state,
-                                           initial_l24_g5_syllabication_state, normalize_l24_g5_syllabication_state)
+                                           initial_l24_g5_syllabication_state, normalize_l24_g5_syllabication_state,
+                                           initial_l24_g6_state, normalize_l24_g6_state)
         from .prescribed_workbook import initial_l23_g3_state, normalize_l23_g3_state, initial_l23_g4_state, normalize_l23_g4_state, normalize_l23_g5_state, initial_l23_g7_state, normalize_l23_g7_state
 
         preview = request.GET.get('preview') == '1'
@@ -13415,6 +13417,7 @@ def prescribed_activity_page(request, activity_key):
              initial_l24_g3_state() if activity_key == 'aral-l24-g3-x-word-reading' else
              initial_l24_g4_builder_state() if activity_key == 'aral-l24-g4-x-syllable-builder' else
              initial_l24_g5_syllabication_state() if activity_key == 'aral-l24-g5-z-syllabication' else
+             initial_l24_g6_state() if activity_key == 'aral-l24-g6-z-word-search' else
             initial_l22_g6_state() if activity_key == 'aral-l22-g6-f-word-reading' else
             initial_l22_g4_state() if activity_key == 'aral-l22-g4-f-syllable-builder' else
             initial_l22_g3_state() if activity_key == 'aral-l22-g3-c-word-search' else
@@ -13440,6 +13443,8 @@ def prescribed_activity_page(request, activity_key):
             state = normalize_l24_g4_builder_state(state)
         elif activity_key == 'aral-l24-g5-z-syllabication':
             state = normalize_l24_g5_syllabication_state(state)
+        elif activity_key == 'aral-l24-g6-z-word-search':
+            state = normalize_l24_g6_state(state)
         elif activity_key == 'aral-l22-g6-f-word-reading':
             state = normalize_l22_g6_state(state)
         elif activity_key == 'aral-l22-g3-c-word-search':
@@ -17124,6 +17129,7 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
         initial_l24_g3_repeat_state, normalize_l24_g3_repeat_state,
         initial_l24_g4_builder_state, normalize_l24_g4_builder_state,
         initial_l24_g5_syllabication_state, normalize_l24_g5_syllabication_state,
+        initial_l24_g6_state, normalize_l24_g6_state,
     )
 
     workbook = get_activity(activity_key)
@@ -17138,6 +17144,7 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
              initial_l24_g3_repeat_state() if activity_key == 'aral-l24-g3-x-repeat' else
              initial_l24_g4_builder_state() if activity_key == 'aral-l24-g4-x-syllable-builder' else
              initial_l24_g5_syllabication_state() if activity_key == 'aral-l24-g5-z-syllabication' else
+             initial_l24_g6_state() if activity_key == 'aral-l24-g6-z-word-search' else
              initial_l24_g4_state() if activity_key == 'aral-l24-g4-x-pictures' else
             initial_l22_g6_state() if activity_key == 'aral-l22-g6-f-word-reading' else
             initial_l22_g4_state() if activity_key == 'aral-l22-g4-f-syllable-builder' else
@@ -17163,6 +17170,8 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             state = normalize_l24_g4_builder_state(state)
         elif activity_key == 'aral-l24-g5-z-syllabication':
             state = normalize_l24_g5_syllabication_state(state)
+        elif activity_key == 'aral-l24-g6-z-word-search':
+            state = normalize_l24_g6_state(state)
         elif activity_key == 'aral-l24-g4-x-pictures':
             state = normalize_l24_g4_state(state)
         elif activity_key == 'aral-l22-g6-f-word-reading':
@@ -17400,6 +17409,8 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             index = total if updated.get('completed') else min(int(updated.get('index', 0)), len(workbook['items']))
         elif activity_key == 'aral-l23-g5-j-word-search':
             index = min(len(updated.get('found_words') or {}), total)
+        elif activity_key == 'aral-l24-g6-z-word-search':
+            index = min(len(updated.get('found_words') or {}), total)
         oral = updated.get('oral') if isinstance(updated.get('oral'), dict) else {}
         correct = sum(bool(value.get('passed')) for value in oral.values() if isinstance(value, dict))
         if activity_key == 'aral-l22-g2-c-word-reading':
@@ -17427,6 +17438,8 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
         elif activity_key == 'aral-l23-g2-n-word-reading':
             correct = len(updated.get('completed_words') or [])
         elif activity_key == 'aral-l23-g5-j-word-search':
+            correct = len(updated.get('found_words') or {})
+        elif activity_key == 'aral-l24-g6-z-word-search':
             correct = len(updated.get('found_words') or {})
         elif activity_key == 'aral-l23-g3-j-word-reading':
             correct = len(updated.get('completed_words') or [])
@@ -20851,6 +20864,16 @@ def lesson_1_gawain_1_transcribe_api(request):
     if not audio or not target_text:
         return JsonResponse({'success': False, 'error': 'Audio is required.'}, status=400)
 
+    if uses_knowlez_stt(request):
+        try:
+            transcript, model_used, _ = transcribe_knowlez_audio(audio, 'fil-PH')
+            return JsonResponse({
+                'success': True, 'raw_transcript': transcript, 'transcript': transcript,
+                'stt_model': model_used, 'stt_provider': 'knowlez', 'language_code': 'fil-PH',
+            })
+        except KnowlezSpeechError as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=exc.status)
+
     ffmpeg = _lesson1_ffmpeg_binary()
     if not ffmpeg:
         logger.error('Lesson 1 transcription requires FFmpeg; FFMPEG_BINARY was not found.')
@@ -20928,24 +20951,29 @@ def reading_transcribe_api(request):
         stt_model = ''
     credentials_file = str(getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', '') or '')
 
-    if not api_key and stt_model != 'chirp_3':
+    knowlez_selected = uses_knowlez_stt(request)
+    if not knowlez_selected and not api_key and stt_model != 'chirp_3':
         return JsonResponse({'success': False, 'error': 'Google Speech is not configured.'}, status=503)
 
     try:
-        transcript, model_used, fallback_reason = transcribe_audio_bytes_with_model(
-            audio.read(),
-            api_key,
-            language_code=language_code,
-            phrase_hints=phrase_hints,
-            model=stt_model,
-            project_id=project_id,
-            location=location,
-            mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
-            credentials_file=credentials_file,
-        )
+        if knowlez_selected:
+            transcript, model_used, fallback_reason = transcribe_knowlez_audio(audio, language_code)
+        else:
+            transcript, model_used, fallback_reason = transcribe_audio_bytes_with_model(
+                audio.read(),
+                api_key,
+                language_code=language_code,
+                phrase_hints=phrase_hints,
+                model=stt_model,
+                project_id=project_id,
+                location=location,
+                mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
+                credentials_file=credentials_file,
+            )
         logger.warning(
-            "FREE_MODE_STT_DIAGNOSTIC provider=Google Speech model=%s language=%s "
+            "FREE_MODE_STT_DIAGNOSTIC provider=%s model=%s language=%s "
             "provider_transcript=%r provider_raw_result=unavailable fallback=%r",
+            'Knowlez' if knowlez_selected else 'Google Speech',
             model_used,
             language_code,
             transcript,
@@ -21102,6 +21130,7 @@ def reading_transcribe_api(request):
         analysis.update({
             'success': True,
             'language_code': language_code,
+            'stt_provider': 'knowlez' if knowlez_selected else 'google',
             'stt_model': model_used,
             'stt_fallback_reason': fallback_reason,
         })
@@ -21111,6 +21140,8 @@ def reading_transcribe_api(request):
             analysis.get('transcript'),
         )
         return JsonResponse(analysis)
+    except KnowlezSpeechError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=exc.status)
     except Exception as exc:
         logger.exception('Reading transcription failed')
         return JsonResponse({'success': False, 'error': str(exc)}, status=502)
