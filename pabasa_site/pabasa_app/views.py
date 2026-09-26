@@ -21162,7 +21162,7 @@ _LOCAL_PRESCRIBED_AUDIO_ALIASES = {
         'Basahin_ang_mga_pantig_mula_sa_Bid_box_TTS.mp3',
     **{('aral-l22-g1-c-syllable-builder', word): f'{word}_TTS.mp3'
        for word in ('bi', 'bu', 'ca', 'cac', 'car', 'ce', 'com', 'do', 'ga', 'les', 'net', 'pu', 'te', 'ter', 'tus', 'yan')},
-    **{('lesson-17-18-gawain-8', word): f'salitang_babasahin_{word}_tts.mp3'
+    **{('lesson-17-18-gawain-8', word): f'{word}_tts.mp3'
        for word in ('palaka', 'peluka', 'palaro', 'palara', 'resibo', 'resita', 'pilay', 'palay', 'bareta', 'balita')},
     **{('lesson-17-18-gawain-7', word): f'{word}_tts.mp3'
        for word in ('riles', 'puso', 'robot', 'payong', 'pitaka')},
