@@ -647,6 +647,37 @@ def initial_l24_g4_builder_state():
     }
 
 
+def initial_l24_g5_syllabication_state():
+    return {
+        'index': 0, 'answers': {}, 'draft': {'text': ''},
+        'last_feedback': '', 'completed': False, 'revision': 0,
+    }
+
+
+def normalize_l24_g5_syllabication_state(state):
+    """Keep the worked example outside the learner's nine required answers."""
+    if not isinstance(state, dict):
+        state = initial_l24_g5_syllabication_state()
+    activity = ACTIVITIES['aral-l24-g5-z-syllabication']
+    total = len(activity['items'])
+    answers = state.get('answers') if isinstance(state.get('answers'), dict) else {}
+    valid_ids = {item['id'] for item in activity['items']}
+    state['answers'] = {
+        str(key): str(value)[:500]
+        for key, value in answers.items()
+        if str(key) in valid_ids and str(value).strip()
+    }
+    state['index'] = max(0, min(total, int(state.get('index', 0) or 0)))
+    while state['index'] < total and activity['items'][state['index']]['id'] in state['answers']:
+        state['index'] += 1
+    draft = state.get('draft') if isinstance(state.get('draft'), dict) else {}
+    state['draft'] = {'text': str(draft.get('text') or '')[:500]}
+    state['last_feedback'] = str(state.get('last_feedback') or '')
+    state['revision'] = max(0, int(state.get('revision', 0) or 0))
+    state['completed'] = state['index'] >= total
+    return state
+
+
 def normalize_l24_g4_builder_state(state):
     """Keep Gawain 4 as a cell-ID word builder, not a reading sequence."""
     if not isinstance(state, dict):
@@ -1892,6 +1923,8 @@ def apply_event(activity, state, event, verified_reading=None):
         return _apply_l24_g3_reading(state, event, verified_reading)
     if activity['activity_key'] == 'aral-l24-g4-x-syllable-builder':
         return _apply_l24_g4_builder(state, event)
+    if activity['activity_key'] == 'aral-l24-g5-z-syllabication':
+        return _apply_l24_g5_syllabication(state, event)
     if activity['activity_key'] == 'aral-l24-g4-x-pictures':
         return _apply_l24_g4_reading(state, event, verified_reading)
     if activity['activity_key'] == 'aral-l23-g2-n-word-reading':
@@ -2095,6 +2128,47 @@ def _apply_l24_g4_builder(state, event):
         state['last_feedback'] = 'Magaling! Natapos mo ang Gawain 4.'
         return state
     raise ValueError('Unknown action.')
+
+
+def _apply_l24_g5_syllabication(state, event):
+    normalize_l24_g5_syllabication_state(state)
+    action = event.get('action')
+    if action == 'restart':
+        state.clear()
+        state.update(initial_l24_g5_syllabication_state())
+        return state
+    if state['completed']:
+        return state
+    activity = ACTIVITIES['aral-l24-g5-z-syllabication']
+    if action == 'draft':
+        draft = event.get('draft') if isinstance(event.get('draft'), dict) else {}
+        state['draft'] = {'text': str(draft.get('text') or '')[:500]}
+        return state
+    if action != 'answer':
+        raise ValueError('Unknown action.')
+    index = state['index']
+    if event.get('item_index') is not None and int(event.get('item_index')) != index:
+        raise ValueError('Ito ay hindi na ang kasalukuyang salita.')
+    item = activity['items'][index]
+    answer = event.get('answer') if isinstance(event.get('answer'), dict) else {}
+    text = str(answer.get('text') or '').strip()[:500]
+    if not text:
+        raise ValueError('Isulat muna ang sagot.')
+    state['draft'] = {'text': text}
+    expected = activity['syllable_answers'][index]
+    compact = re.sub(r'[\s•.\-·]+', '', text).casefold()
+    expected_compact = re.sub(r'[\s•.\-·]+', '', expected).casefold()
+    if compact != expected_compact:
+        state['last_feedback'] = 'Subukan muli.'
+        return state
+    state['answers'][item['id']] = text
+    state['index'] = min(len(activity['items']), index + 1)
+    state['draft'] = {'text': ''}
+    state['last_feedback'] = 'Mahusay!'
+    state['completed'] = state['index'] >= len(activity['items'])
+    if state['completed']:
+        state['last_feedback'] = 'Magaling! Natapos mo ang Gawain 5!'
+    return state
 
 
 def _apply_l22_c_builder(state, event, verified_reading):

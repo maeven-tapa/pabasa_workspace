@@ -12,6 +12,7 @@
   const qReading = a.activity_key === 'aral-l23-g7-q-word-reading';
   const prescribedWordReading = jReading || qReading;
   const jSyllables = a.activity_key === 'aral-l23-g4-j-syllabication';
+  const g5Syllables = a.activity_key === 'aral-l24-g5-z-syllabication';
   const l24G2 = a.activity_key === 'aral-l24-g2-v-word-reading';
   const pictureReading = a.activity_key === 'aral-l24-g4-x-pictures';
   const l23G1 = a.activity_key === 'aral-l23-g1-n-syllable-builder';
@@ -77,7 +78,7 @@
   const item = () => a.items[state.index];
   const oral = () => state.oral[item()?.id] || {passed:false,attempts:0,listens:0,phase:a.model_first?'model':'read'};
   const message = (text, error=false) => {
-    status.textContent=text;status.className=error?'wb-error':'wb-save';status.hidden=specializedBuilder||prescribedWordReading||jSyllables;
+    status.textContent=text;status.className=error?'wb-error':'wb-save';status.hidden=specializedBuilder||prescribedWordReading||jSyllables||g5Syllables;
     if(specializedBuilder){const primary=content.querySelector('.wb-phase-status');if(primary){primary.textContent=text;primary.classList.toggle('wb-feedback-error',error);}}
   };
   const stopReadAloud = () => {
@@ -159,20 +160,22 @@
   function render(){
     selected=[];builder=state.draft?.builder||[];words=state.draft?.words||[];
     const totalProgress=cBuilder?a.items.length:(a.progress_total||a.items.length), progressValue=state.completed?totalProgress:Math.min(totalProgress, qBuilder?Number(state.index||0):cBuilder?Number(state.index||0):Number(state.index||0));
-    document.getElementById('wb-progress').textContent=preview?'Preview':(l24G4Builder?`Nabuo: ${Number(state.built_words?.length||0)} salita`:cBuilder?`Nabasa: ${Math.min(a.items.length,Number(state.index||0))} / ${a.items.length}`:(a.activity_key==='aral-l23-g1-n-syllable-builder'||l24Builder?`Nabasa: ${Math.min(12,Number(state.index||0))} / 12`:`${progressValue} / ${totalProgress}`));
+    document.getElementById('wb-progress').textContent=preview?'Preview':(l24G4Builder?`Nabuo: ${Number(state.built_words?.length||0)} salita`:g5Syllables?`Nasagot: ${Math.min(a.items.length,Number(state.index||0))} / ${a.items.length}`:cBuilder?`Nabasa: ${Math.min(a.items.length,Number(state.index||0))} / ${a.items.length}`:(a.activity_key==='aral-l23-g1-n-syllable-builder'||l24Builder?`Nabasa: ${Math.min(12,Number(state.index||0))} / 12`:`${progressValue} / ${totalProgress}`));
     const progressFill=document.getElementById('wb-progress-fill');if(progressFill)progressFill.style.width=l24G4Builder?(state.completed?'100%':'0%'):`${preview?0:Math.max(0,Math.min(100,progressValue/totalProgress*100))}%`;
     document.getElementById('wb-back').hidden=preview;
     action.replaceChildren();
     if(state.completed){
       const completionWord=a.activity_key==='aral-l23-g1-n-syllable-builder'?'Niño':(state.found_words||[]).join(', ');
-      content.innerHTML=`<div class="wb-focus"><h2>${cBuilder?'Magaling! Natapos mo ang Gawain 1.':l24G4Builder?'Magaling! Natapos mo ang Gawain 4.':fil?'Natapos mo ang gawain!':'Activity complete!'}</h2>${cBuilder?`<p>${a.activity_key==='aral-l23-g1-n-syllable-builder'?`Magaling! Nabuo mo ang salitang ${completionWord}`:`Nabuo mo na: ${esc(completionWord)}`}</p>`:a.review_required&&!l24G4Builder?'<p>Your written work is saved for teacher review.</p>':''}</div>`;
+      content.innerHTML=`<div class="wb-focus"><h2>${cBuilder?'Magaling! Natapos mo ang Gawain 1.':l24G4Builder?'Magaling! Natapos mo ang Gawain 4.':g5Syllables?'Magaling! Natapos mo ang Gawain 5!':fil?'Natapos mo ang gawain!':'Activity complete!'}</h2>${cBuilder?`<p>${a.activity_key==='aral-l23-g1-n-syllable-builder'?`Magaling! Nabuo mo ang salitang ${completionWord}`:`Nabuo mo na: ${esc(completionWord)}`}</p>`:g5Syllables?'<p>Natapos mo ang lahat ng siyam na salitang kailangang pantigin.</p>':a.review_required&&!l24G4Builder?'<p>Your written work is saved for teacher review.</p>':''}</div>`;
       if(cBuilder||l24G4Builder){button('Susunod',()=>{if(data.next_url)location.href=data.next_url;},true).disabled=!data.next_url;if(l24G4Builder)button('Ulitin Mula sa Simula',()=>{if(window.confirm('Ulitin ang Gawain 4 mula sa simula?'))perform({action:'restart'});});}
-      if((prescribedWordReading||jSyllables||pictureReading)&&data.next_url)button('Susunod',()=>{location.href=data.next_url;},true);
+      if((prescribedWordReading||jSyllables||g5Syllables||pictureReading)&&data.next_url)button('Susunod',()=>{location.href=data.next_url;},true);
+      if(g5Syllables)button('Ulitin Mula sa Simula',()=>{if(window.confirm('Ulitin ang Gawain 5 mula sa simula? Mawawala ang kasalukuyang progreso.'))perform({action:'restart'});});
       return;
     }
     if(prescribedWordReading){renderJReading();return;}
     if(pictureReading){renderPictureReading();return;}
     if(jSyllables){renderJSyllables();return;}
+    if(g5Syllables){renderL24G5Syllables();return;}
     if(specializedBuilder&&!preview){renderCBuilder();lock();return;}
     if(l24G4Builder&&!preview){renderBuilder();lock();return;}
     if(state.index>=a.items.length&&!preview){content.innerHTML='<div class="wb-focus">'+(fil?'Na-save ang lahat ng bahagi ng gawain.':'All required parts are saved.')+'</div>';button(fil?'Tapusin ang gawain':'Finish activity',()=>perform({action:'finish'}),true);return;}
@@ -417,6 +420,23 @@
     if(preview){content.innerHTML+=a.items.map((it,n)=>`<p>${esc(a.item_labels?.[n]||`${n+1}.`)} ${esc(it.text)} = ________________</p>`).join('');}
     else {const it=item();const n=state.index;content.innerHTML+=`<div class="wb-focus wb-syllable-focus"><p>${esc(a.item_labels?.[n]||`${n+1}.`)} ${esc(it.text)} = ________________</p></div>`;}
     if(!preview)written(item().text+' = __________');
+  }
+  function renderL24G5Syllables(){
+    const current=Number(state.index||0), answers=state.answers||{};
+    const currentItem=a.items[current];
+    const list=a.items.map((it,n)=>{
+      const done=Boolean(answers[it.id]), active=n===current;
+      return `<li class="wb-g5-word ${done?'is-done':''} ${active?'is-current':''}" ${active?'aria-current="step"':''}><span class="wb-g5-number">${esc(a.item_labels?.[n]||`${n+2}.`)}</span><span class="wb-g5-word-text">${esc(it.text)}</span>${done?'<span class="wb-g5-check" aria-label="Nasagutan">✓</span>':''}</li>`;
+    }).join('');
+    const feedback=state.last_feedback||'';
+    content.innerHTML=`<section class="wb-g5-workspace"><article class="wb-g5-list-panel"><div class="wb-g5-panel-heading"><span class="wb-g5-kicker">MGA SALITA</span><span class="wb-g5-count">${current}/${a.items.length}</span></div><div class="wb-g5-example"><span>HALIMBAWA</span><strong>1. zigzag = zig•zag</strong></div><ol class="wb-g5-word-list">${list}</ol></article><article class="wb-g5-task-panel"><div class="wb-g5-panel-heading"><span class="wb-g5-kicker">PANTIGIN</span><span class="wb-g5-task-label">Salitang Papantigin</span></div><div class="wb-g5-current-word">${currentItem?esc(currentItem.text):'—'}</div><p class="wb-g5-help">Hatiin ang salita sa mga pantig gamit ang <strong>-</strong> o <strong>•</strong>.</p><label class="wb-g5-answer-label" for="wb-written">Isulat ang sagot</label><input id="wb-written" type="text" inputmode="text" autocomplete="off" placeholder="Halimbawa: Zan-dra" value="${esc(state.draft?.text||'')}" ${preview?'disabled':''}><p class="wb-g5-feedback ${feedback==='Subukan muli.'?'is-error':''}" role="status" aria-live="polite">${esc(feedback)}</p><button type="button" class="wb-g5-reset" id="wb-g5-reset">Ulitin Mula sa Simula</button></article></section>`;
+    const input=document.getElementById('wb-written');
+    if(input&&!preview)input.oninput=()=>draft({text:input.value});
+    document.getElementById('wb-g5-reset')?.addEventListener('click',()=>{if(window.confirm('Ulitin ang Gawain 5 mula sa simula? Mawawala ang kasalukuyang progreso.'))perform({action:'restart'});});
+    if(!preview)speakInstruction();
+    if(preview){action.innerHTML='';return;}
+    if(currentItem)button('Suriin ang Sagot',()=>perform({action:'answer',item_index:current,answer:{text:document.getElementById('wb-written').value}}),true);
+    lock();
   }
   function renderFill(){
     content.innerHTML+=`<p>( ${a.options.map(esc).join(', ')} )</p><table class="wb-table"><tr>${a.options.map(x=>`<td>${esc(x)}</td>`).join('')}</tr></table>`;

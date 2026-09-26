@@ -11,6 +11,8 @@ from .prescribed_workbook import (
     initial_l24_g4_builder_state,
     normalize_l24_g4_builder_state,
     l24_g4_pronunciation_match,
+    initial_l24_g5_syllabication_state,
+    normalize_l24_g5_syllabication_state,
 )
 
 
@@ -92,4 +94,54 @@ class Lesson24Gawain4WorkbookTests(SimpleTestCase):
         self.assertIn('wb-l24-g4-pictures-page', css)
         self.assertIn('section_display_label', template)
         self.assertIn('aral-l24-g4-x-pictures', template)
+        self.assertNotIn('overflow:hidden', css)
+
+
+class Lesson24Gawain5SyllabicationTests(SimpleTestCase):
+    def test_worked_example_and_exact_student_content(self):
+        activity = get_activity('aral-l24-g5-z-syllabication')
+        self.assertEqual(activity['interaction_type'], 'syllables')
+        self.assertEqual(activity['instruction'], 'Pantigin ang sumusunod na salitang may letrang Zz. Ginawa ang unang bilang para sa iyo.')
+        self.assertEqual(activity['worked_example'], '1. zigzag = zig•zag')
+        self.assertEqual([item['text'] for item in activity['items']], [
+            'Zandra', 'Gomez', 'Zamora', 'zipper', 'Zarate',
+            'Legazpi', 'Zoren', 'zebra', 'Mendoza',
+        ])
+        self.assertEqual(activity['syllable_answers'], [
+            'Zan-dra', 'Go-mez', 'Za-mo-ra', 'zip-per', 'Za-ra-te',
+            'Le-gaz-pi', 'Zo-ren', 'ze-bra', 'Men-do-za',
+        ])
+
+    def test_example_is_not_interactive_and_progress_starts_at_zandra(self):
+        activity = get_activity('aral-l24-g5-z-syllabication')
+        state = initial_l24_g5_syllabication_state()
+        self.assertEqual(state['index'], 0)
+        self.assertEqual(state['answers'], {})
+        self.assertEqual(activity['item_labels'][0], '2.')
+        self.assertNotIn('zigzag', [item['text'] for item in activity['items']])
+
+    def test_answer_progress_persistence_completion_and_reset(self):
+        activity = get_activity('aral-l24-g5-z-syllabication')
+        state = initial_l24_g5_syllabication_state()
+        apply_event(activity, state, {'action': 'answer', 'item_index': 0, 'answer': {'text': 'wrong'} })
+        self.assertEqual(state['index'], 0)
+        self.assertEqual(state['last_feedback'], 'Subukan muli.')
+        for index, answer in enumerate(activity['syllable_answers']):
+            apply_event(activity, state, {'action': 'answer', 'item_index': index, 'answer': {'text': answer}})
+            restored = normalize_l24_g5_syllabication_state(state)
+            self.assertEqual(restored['index'], index + 1)
+        self.assertTrue(state['completed'])
+        self.assertEqual(len(state['answers']), 9)
+        apply_event(activity, state, {'action': 'restart'})
+        self.assertEqual(state, initial_l24_g5_syllabication_state())
+
+    def test_dedicated_renderer_and_scoped_ui(self):
+        root = Path(__file__).parent
+        js = (root / 'static/pabasa_app/js/prescribed_workbook.js').read_text(encoding='utf-8')
+        css = (root / 'static/pabasa_app/css/prescribed_l24_g5_syllabication.css').read_text(encoding='utf-8')
+        template = (root / 'templates/pabasa_app/prescribed_workbook_page.html').read_text(encoding='utf-8')
+        self.assertIn("renderL24G5Syllables()", js)
+        self.assertIn('wb-g5-workspace', js)
+        self.assertIn('PRESCRIBED-BG.jpg', css)
+        self.assertIn('wb-progress-track', template)
         self.assertNotIn('overflow:hidden', css)
