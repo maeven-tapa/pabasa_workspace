@@ -21152,6 +21152,7 @@ _LOCAL_PRESCRIBED_AUDIO_PATHS = {
     'aral-l22-g3-c-word-search': ('SESSION_8', 'LESSON_22', 'GAWAIN_3'),
     'lesson-17-18-gawain-7': ('SESSION_6', 'LESSON_17_18', 'GAWAIN_7'),
     'lesson-17-18-gawain-8': ('SESSION_6', 'LESSON_17_18', 'GAWAIN_8'),
+    'lesson-17-18-gawain-9': ('SESSION_6', 'LESSON_17_18', 'GAWAIN_9'),
     **{f'lesson-29-gawain-{index}': ('SESSION_13', 'LESSON_29', f'GAWAIN_{index}') for index in (1, 2, 3)},
     **{f'lesson-30-gawain-{index}': ('SESSION_14', 'LESSON_30', f'GAWAIN_{index}') for index in (1, 2, 3)},
     **{f'lesson-31-gawain-{index}': ('SESSION_15', 'LESSON_31', f'GAWAIN_{index}') for index in (1, 2, 3, 4)},
@@ -21211,6 +21212,32 @@ _LOCAL_PRESCRIBED_AUDIO_ALIASES = {
         'tama_nakabit_na_ang_pares_tts.mp3',
     ('lesson-17-18-gawain-7', 'magalingnataposmoanglesson17at18gawain7'):
         'mahusay_ang_ginawa_mo_ngayon_natapos_aralin_tts.mp3',
+    **{
+        ('lesson-17-18-gawain-9', f'larawan{index}sa5basahinnangmalakasangngalannglarawan'): filename
+        for index, filename in enumerate((
+            'unang_larawan_pana_tts.mp3', 'ikalawang_larawan_pisara_tts.mp3',
+            'ikatlong_larawan_palaka_tts.mp3', 'ika_apat_na_larawan_pito_tts.mp3',
+            'ikalimang_larawan_regalo_tts.mp3',
+        ), 1)
+    },
+    ('lesson-17-18-gawain-9', 'hindipasubukanmuli'):
+        'hindi_pa_tama_tts.mp3',
+    ('lesson-17-18-gawain-9', 'subukanmuli'):
+        'hindi_pa_tama_tts.mp3',
+    ('lesson-17-18-gawain-9', 'pakingganmunaangsalita'):
+        'pakinggan_ang_salita_bago_basahin_tts.mp3',
+    ('lesson-17-18-gawain-9', 'pakingganmuliangsalita'):
+        'pakinggan_ang_salita_bago_basahin_tts.mp3',
+    ('lesson-17-18-gawain-9', 'subukanmongbasahinangsalita'):
+        'subukan_mong_basahin_salita_tts.mp3',
+    ('lesson-17-18-gawain-9', 'tamaangpagbasaisulatnamanangsalita'):
+        'tama_pagbasa_isulat_salita_tts.mp3',
+    ('lesson-17-18-gawain-9', 'tamamagalingangiyongsagot'):
+        'tama_magaling_ang_iyong_sagot_tts.mp3',
+    ('lesson-17-18-gawain-9', 'magalingnataposmoanggawain'):
+        'mahusay_ang_ginawa_mo_ngayon_natapos_aralin_tts.mp3',
+    **{('lesson-17-18-gawain-9', word): f'{word}_tts.mp3'
+       for word in ('pana', 'pisara', 'palaka', 'pito', 'regalo')},
     ('aral-l22-g1-c-syllable-builder', 'handakana'):
         'Handa ka na_TTS.mp3',
     ('aral-l22-g1-c-syllable-builder', 'magalingnabasamonanangtamangmgapantig'):

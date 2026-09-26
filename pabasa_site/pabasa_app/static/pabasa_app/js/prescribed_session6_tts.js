@@ -1,4 +1,66 @@
 /* Google Filipino narration for Session 6, Lesson 17 at 18, Gawain 6–8. */
+window.PrescribedSession6Gawain9Audio = (() => {
+  const root = '/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_9/';
+  const prompts = [
+    'unang_larawan_pana_tts.mp3', 'ikalawang_larawan_pisara_tts.mp3',
+    'ikatlong_larawan_palaka_tts.mp3', 'ika_apat_na_larawan_pito_tts.mp3',
+    'ikalimang_larawan_regalo_tts.mp3',
+  ];
+  const words = {
+    pana: 'pana_tts.mp3', pisara: 'pisara_tts.mp3', palaka: 'palaka_tts.mp3',
+    pito: 'pito_tts.mp3', regalo: 'regalo_tts.mp3',
+  };
+  const feedback = {
+    'Hindi pa. Subukan muli.': 'hindi_pa_tama_tts.mp3',
+    'Subukan muli.': 'hindi_pa_tama_tts.mp3',
+    'Pakinggan muna ang salita.': 'pakinggan_ang_salita_bago_basahin_tts.mp3',
+    'Pakinggan muli ang salita.': 'pakinggan_ang_salita_bago_basahin_tts.mp3',
+    'Subukan mong basahin ang salita.': 'subukan_mong_basahin_salita_tts.mp3',
+    'Tama ang pagbasa! Isulat naman ang salita.': 'tama_pagbasa_isulat_salita_tts.mp3',
+    'Tama! Magaling ang iyong sagot.': 'tama_magaling_ang_iyong_sagot_tts.mp3',
+    'Magaling! Natapos mo ang gawain.': 'mahusay_ang_ginawa_mo_ngayon_natapos_aralin_tts.mp3',
+  };
+  let active = null;
+  const play = async (filename) => {
+    if (!filename) return;
+    active?.pause();
+    const player = new Audio(root + filename);
+    active = player;
+    await player.play();
+    await new Promise((resolve) => {
+      player.onended = resolve;
+      player.onerror = resolve;
+    });
+    if (active === player) active = null;
+  };
+  const fileFor = (message) => {
+    const prompt = String(message || '').match(/^Larawan\s+(\d+)\s+sa\s+5\./);
+    if (prompt) return prompts[Number(prompt[1]) - 1];
+    if (words[String(message || '').trim()]) return words[String(message || '').trim()];
+    return feedback[message];
+  };
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = async (input, init = {}) => {
+    const body = init.body;
+    const canReadFields = body && typeof body.get === 'function';
+    const activityKey = canReadFields ? body.get('prescribed_activity_key') : '';
+    const targetText = canReadFields ? (body.get('text') || body.get('target_text')) : '';
+    const requestPath = new URL(input, window.location.href).pathname;
+    if (activityKey === 'lesson-17-18-gawain-9' && requestPath.endsWith('/api/reading/read-aloud/')) {
+      const filename = fileFor(targetText);
+      if (filename) {
+        const asset = await nativeFetch(root + filename);
+        const bytes = new Uint8Array(await asset.arrayBuffer());
+        let binary = '';
+        for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+        return new Response(JSON.stringify({success: true, audio_content: btoa(binary), mime_type: 'audio/mpeg', tts_language: 'fil-PH', voice_name: 'fil-PH-Wavenet-A'}), {headers: {'Content-Type': 'application/json'}});
+      }
+    }
+    return nativeFetch(input, init);
+  };
+  return { play, prompt: (index) => play(prompts[index]), word: (value) => play(words[value]), feedback: (message) => play(feedback[message]) };
+})();
+
 (() => {
   'use strict';
 
@@ -11,6 +73,7 @@
     try { activity = JSON.parse(dataNode.textContent || '{}'); } catch (_) { return; }
     const supported = new Set([
       'lesson-17-18-gawain-6', 'lesson-17-18-gawain-7', 'lesson-17-18-gawain-8',
+      'lesson-17-18-gawain-9',
     ]);
     if (!supported.has(activity.activity_key)) return;
 
@@ -18,6 +81,8 @@
     const text = (selector) => app.querySelector(selector)?.textContent.trim() || '';
     const isGawain7 = activity.activity_key === 'lesson-17-18-gawain-7';
     const isGawain8 = activity.activity_key === 'lesson-17-18-gawain-8';
+    const isGawain9 = activity.activity_key === 'lesson-17-18-gawain-9';
+    if (isGawain9) return;
     const gawain7Root = '/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_7/';
     const gawain8Root = '/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_8/';
     const gawain7PromptParts = [
