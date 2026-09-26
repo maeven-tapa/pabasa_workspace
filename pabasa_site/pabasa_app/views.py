@@ -21006,6 +21006,7 @@ def reading_transcribe_api(request):
 _LOCAL_PRESCRIBED_AUDIO_PATHS = {
     'aral-l22-g1-c-syllable-builder': ('SESSION_8', 'LESSON_22', 'GAWAIN_1'),
     'aral-l22-g3-c-word-search': ('SESSION_8', 'LESSON_22', 'GAWAIN_3'),
+    'lesson-17-18-gawain-7': ('SESSION_6', 'LESSON_17_18', 'GAWAIN_7'),
     'lesson-17-18-gawain-8': ('SESSION_6', 'LESSON_17_18', 'GAWAIN_8'),
     **{f'lesson-29-gawain-{index}': ('SESSION_13', 'LESSON_29', f'GAWAIN_{index}') for index in (1, 2, 3)},
     **{f'lesson-30-gawain-{index}': ('SESSION_14', 'LESSON_30', f'GAWAIN_{index}') for index in (1, 2, 3)},
@@ -21019,6 +21020,53 @@ _LOCAL_PRESCRIBED_AUDIO_ALIASES = {
        for word in ('bi', 'bu', 'ca', 'cac', 'car', 'ce', 'com', 'do', 'ga', 'les', 'net', 'pu', 'te', 'ter', 'tus', 'yan')},
     **{('lesson-17-18-gawain-8', word): f'salitang_babasahin_{word}_tts.mp3'
        for word in ('palaka', 'peluka', 'palaro', 'palara', 'resibo', 'resita', 'pilay', 'palay', 'bareta', 'balita')},
+    **{('lesson-17-18-gawain-7', word): f'{word}_tts.mp3'
+       for word in ('riles', 'puso', 'robot', 'payong', 'pitaka')},
+    **{
+        (
+            'lesson-17-18-gawain-7',
+            re.sub(
+                r'[^a-z0-9]+', '',
+                f'Basahin muna ang mga ngalan. Pagkatapos, ikabit ang bawat larawan sa tamang ngalan nito. '
+                f'Salita {index} sa 5 Basahin nang malakas ang salita. Ang salitang babasahin ay {word}.'.lower(),
+            ),
+        ): f'basahin_{word}.mp3'
+        for index, word in enumerate(('riles', 'puso', 'robot', 'payong', 'pitaka'), 1)
+    },
+    **{
+        ('lesson-17-18-gawain-7', f'salita{index}sa5'): filename
+        for index, filename in enumerate((
+            'unang_salita_sa_lima.mp3', 'ikalawang_salita_sa_lima.mp3',
+            'ikatlong_salita_sa_lima.mp3', 'ika_apat_na_salita_sa_lima.mp3',
+            'ikalimang_salita_sa_lima.mp3',
+        ), 1)
+    },
+    (
+        'lesson-17-18-gawain-7',
+        re.sub(
+            r'[^a-z0-9]+', '',
+            'Basahin muna ang mga ngalan. Pagkatapos, ikabit ang bawat larawan sa tamang ngalan nito. '
+            'Piliin ang larawan, pagkatapos ay ang tamang ngalan nito.'.lower(),
+        ),
+    ): 'ngayon_ikabit_ang_bawat_larawan_sa_tamang_ngalan_tts.mp3',
+    ('lesson-17-18-gawain-7', 'basahinmunaangmgangalanpagkataposikabitangbawatlarawansatamangngalannito'):
+        'basahin_muna_ang_mga_ngalan_tts.mp3',
+    ('lesson-17-18-gawain-7', 'tamaangpagbasa'):
+        'magaling_tama_ang_nabasa_mo_tts.mp3',
+    ('lesson-17-18-gawain-7', 'hindipasubukanmuli'):
+        'hindi_pa_tama_tts.mp3',
+    ('lesson-17-18-gawain-7', 'pakingganmunaangsalita'):
+        'pakinggan_muna_ang_salita_tts.mp3',
+    ('lesson-17-18-gawain-7', 'subukanmongbasahinangsalita'):
+        'subukan_mong_basahin_salita_tts.mp3',
+    ('lesson-17-18-gawain-7', 'pakingganmuliangsalita'):
+        'pakinggan_muna_ang_salita_tts.mp3',
+    ('lesson-17-18-gawain-7', 'subukanmuli'):
+        'hindi_pa_tama_tts.mp3',
+    ('lesson-17-18-gawain-7', 'tamanakabitnaangpares'):
+        'tama_nakabit_na_ang_pares_tts.mp3',
+    ('lesson-17-18-gawain-7', 'magalingnataposmoanglesson17at18gawain7'):
+        'mahusay_ang_ginawa_mo_ngayon_natapos_aralin_tts.mp3',
     ('aral-l22-g1-c-syllable-builder', 'handakana'):
         'Handa ka na_TTS.mp3',
     ('aral-l22-g1-c-syllable-builder', 'magalingnabasamonanangtamangmgapantig'):
@@ -21124,7 +21172,7 @@ def reading_read_aloud_api(request):
                 'mime_type': 'audio/mpeg',
                 'language_code': language_code,
                 'tts_language': language_code,
-                'voice_name': '',
+                'voice_name': 'fil-PH-Wavenet-A',
                 'local_audio': True,
             })
         if local_audio_key in _LOCAL_PRESCRIBED_AUDIO_PATHS:

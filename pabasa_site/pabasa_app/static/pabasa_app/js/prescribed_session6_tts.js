@@ -18,7 +18,15 @@
     const text = (selector) => app.querySelector(selector)?.textContent.trim() || '';
     const isGawain7 = activity.activity_key === 'lesson-17-18-gawain-7';
     const isGawain8 = activity.activity_key === 'lesson-17-18-gawain-8';
+    const gawain7Root = '/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_7/';
     const gawain8Root = '/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_8/';
+    const gawain7PromptParts = [
+      ['basahin_muna_ang_mga_ngalan_tts.mp3', 'unang_salita_sa_lima.mp3', 'basahin_riles.mp3'],
+      ['basahin_muna_ang_mga_ngalan_tts.mp3', 'ikalawang_salita_sa_lima.mp3', 'basahin_puso.mp3'],
+      ['basahin_muna_ang_mga_ngalan_tts.mp3', 'ikatlong_salita_sa_lima.mp3', 'basahin_robot.mp3'],
+      ['basahin_muna_ang_mga_ngalan_tts.mp3', 'ika_apat_na_salita_sa_lima.mp3', 'basahin_payong.mp3'],
+      ['basahin_muna_ang_mga_ngalan_tts.mp3', 'ikalimang_salita_sa_lima.mp3', 'basahin_pitaka.mp3'],
+    ];
     const gawain8Words = {
       palaka: 'salitang_babasahin_palaka_tts.mp3', peluka: 'salitang_babasahin_peluka_tts.mp3',
       palaro: 'salitang_babasahin_palaro_tts.mp3', palara: 'salitang_babasahin_palara_tts.mp3',
@@ -93,10 +101,10 @@
       if (audio === player) audio = null;
     };
 
-    const playFile = async (filename) => {
+    const playFile = async (filename, root = gawain8Root) => {
       if (!filename) return;
       audio?.pause();
-      const player = new Audio(gawain8Root + filename);
+      const player = new Audio(root + filename);
       audio = player;
       await player.play();
       await new Promise((resolve) => {
@@ -113,9 +121,10 @@
       }).catch((error) => showError(error.message || 'Hindi available ang Filipino audio.'));
     };
 
-    const enqueueFiles = (filenames) => {
+    const enqueueFiles = (filenames, delay = 0, root = gawain8Root) => {
       queue = queue.then(async () => {
-        for (const filename of filenames) await playFile(filename);
+        if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+        for (const filename of filenames) await playFile(filename, root);
       }).catch((error) => showError(error.message || 'Hindi available ang Filipino audio.'));
     };
 
@@ -153,6 +162,22 @@
       const feedbackChanged = Boolean(feedback && feedback !== lastFeedback);
       if (feedbackChanged) lastFeedback = feedback;
       if (stepChanged) lastStep = step.key;
+
+      if (isGawain7) {
+        // The activity page already announces Gawain 7 feedback through the
+        // read-aloud endpoint. Its local aliases cover those lines; this
+        // mapping supplies only the ordered prompt clips and matching prompt.
+        if (stepChanged && step) {
+          const oralMatch = text('.hint').match(/Salita (\d+) sa 5/);
+          if (oralMatch && app.querySelector('#oral')) {
+            const prompt = gawain7PromptParts[Number(oralMatch[1]) - 1];
+            if (prompt) enqueueFiles(prompt, 3000, gawain7Root);
+          } else if (app.querySelector('.board')) {
+            enqueueFiles(['ngayon_ikabit_ang_bawat_larawan_sa_tamang_ngalan_tts.mp3'], 3000, gawain7Root);
+          }
+        }
+        return;
+      }
 
       if (isGawain8) {
         if (feedbackChanged) {
