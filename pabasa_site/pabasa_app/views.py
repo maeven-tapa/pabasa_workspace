@@ -20958,6 +20958,7 @@ def reading_transcribe_api(request):
 _LOCAL_PRESCRIBED_AUDIO_PATHS = {
     'aral-l22-g1-c-syllable-builder': ('SESSION_8', 'LESSON_22', 'GAWAIN_1'),
     'aral-l22-g3-c-word-search': ('SESSION_8', 'LESSON_22', 'GAWAIN_3'),
+    'lesson-17-18-gawain-8': ('SESSION_6', 'LESSON_17_18', 'GAWAIN_8'),
     **{f'lesson-29-gawain-{index}': ('SESSION_13', 'LESSON_29', f'GAWAIN_{index}') for index in (1, 2, 3)},
     **{f'lesson-30-gawain-{index}': ('SESSION_14', 'LESSON_30', f'GAWAIN_{index}') for index in (1, 2, 3)},
     **{f'lesson-31-gawain-{index}': ('SESSION_15', 'LESSON_31', f'GAWAIN_{index}') for index in (1, 2, 3, 4)},
@@ -20968,6 +20969,8 @@ _LOCAL_PRESCRIBED_AUDIO_ALIASES = {
         'Basahin_ang_mga_pantig_mula_sa_Bid_box_TTS.mp3',
     **{('aral-l22-g1-c-syllable-builder', word): f'{word}_TTS.mp3'
        for word in ('bi', 'bu', 'ca', 'cac', 'car', 'ce', 'com', 'do', 'ga', 'les', 'net', 'pu', 'te', 'ter', 'tus', 'yan')},
+    **{('lesson-17-18-gawain-8', word): f'salitang_babasahin_{word}_tts.mp3'
+       for word in ('palaka', 'peluka', 'palaro', 'palara', 'resibo', 'resita', 'pilay', 'palay', 'bareta', 'balita')},
     ('aral-l22-g1-c-syllable-builder', 'handakana'):
         'Handa ka na_TTS.mp3',
     ('aral-l22-g1-c-syllable-builder', 'magalingnabasamonanangtamangmgapantig'):

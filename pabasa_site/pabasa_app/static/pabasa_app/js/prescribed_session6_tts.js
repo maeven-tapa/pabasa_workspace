@@ -17,6 +17,32 @@
     const csrf = () => (document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] || '';
     const text = (selector) => app.querySelector(selector)?.textContent.trim() || '';
     const isGawain7 = activity.activity_key === 'lesson-17-18-gawain-7';
+    const isGawain8 = activity.activity_key === 'lesson-17-18-gawain-8';
+    const gawain8Root = '/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_8/';
+    const gawain8Words = {
+      palaka: 'salitang_babasahin_palaka_tts.mp3', peluka: 'salitang_babasahin_peluka_tts.mp3',
+      palaro: 'salitang_babasahin_palaro_tts.mp3', palara: 'salitang_babasahin_palara_tts.mp3',
+      resibo: 'salitang_babasahin_resibo_tts.mp3', resita: 'salitang_babasahin_resita_tts.mp3',
+      pilay: 'salitang_babasahin_pilay_tts.mp3', palay: 'salitang_babasahin_palay_tts.mp3',
+      bareta: 'salitang_babasahin_bareta_tts.mp3', balita: 'salitang_babasahin_balita_tts.mp3',
+    };
+    const gawain8Groups = [
+      'unang_pangkat_sa_lima.mp3', 'ikalawang_pangkat_sa_lima.mp3',
+      'ikatlong_pangkat_sa_lima.mp3', 'ika_apat_na_pangkat_sa_lima.mp3',
+      'ikalimang_pangkat_sa_lima.mp3',
+    ];
+    const gawain8WordNumbers = [
+      'unang_salit_sa_tatlo.mp3', 'ikalawang_salita_sa_tatlo.mp3',
+      'ikatlong_salita_sa_tatlo.mp3',
+    ];
+    const gawain8Feedback = {
+      'Tama ang pagbasa!': 'magaling_tama_ang_nabasa_mo_tts.mp3',
+      'Hindi pa. Subukan muli.': 'hindi_pa_tama_tts.mp3',
+      'Pakinggan muna ang salita.': 'pakinggan_muna_ang_salita_tts.mp3',
+      'Subukan mong basahin ang salita.': 'subukan_mong_basahin_salita_tts.mp3',
+      'Subukan muli.': 'hindi_pa_tama_tts.mp3',
+      'Tama! Bilog ang salitang naiiba.': 'tama_nabilugan_mo_ang_salitang_naiiba_tts.mp3',
+    };
     let audio = null;
     let lastStep = '';
     let lastFeedback = '';
@@ -67,10 +93,29 @@
       if (audio === player) audio = null;
     };
 
+    const playFile = async (filename) => {
+      if (!filename) return;
+      audio?.pause();
+      const player = new Audio(gawain8Root + filename);
+      audio = player;
+      await player.play();
+      await new Promise((resolve) => {
+        player.onended = resolve;
+        player.onerror = () => resolve();
+      });
+      if (audio === player) audio = null;
+    };
+
     const enqueue = (message, delay = 0) => {
       queue = queue.then(async () => {
         if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
         await play(message);
+      }).catch((error) => showError(error.message || 'Hindi available ang Filipino audio.'));
+    };
+
+    const enqueueFiles = (filenames) => {
+      queue = queue.then(async () => {
+        for (const filename of filenames) await playFile(filename);
       }).catch((error) => showError(error.message || 'Hindi available ang Filipino audio.'));
     };
 
@@ -80,7 +125,7 @@
       if (app.querySelector('#oral')) {
         const word = text('.word.active') || text('.word');
         return {
-          key: `oral:${word}`,
+          key: `${isGawain8 ? text('.hint') : 'oral'}:${word}`,
           message: [instruction, ...hints, word && `Ang salitang babasahin ay ${word}.`].filter(Boolean).join(' '),
         };
       }
@@ -108,6 +153,30 @@
       const feedbackChanged = Boolean(feedback && feedback !== lastFeedback);
       if (feedbackChanged) lastFeedback = feedback;
       if (stepChanged) lastStep = step.key;
+
+      if (isGawain8) {
+        if (feedbackChanged) {
+          const feedbackFile = gawain8Feedback[feedback]
+            || (feedback === 'Pakinggan muli ang salita.' ? gawain8Feedback['Pakinggan muna ang salita.'] : '');
+          if (feedbackFile) enqueueFiles([feedbackFile]);
+        }
+        if (stepChanged && step) {
+          const hints = [...app.querySelectorAll('.hint')].map((node) => node.textContent.trim());
+          const oralMatch = hints[0]?.match(/Pangkat (\d+) sa 5 · Salita (\d+) sa 3/);
+          if (oralMatch && app.querySelector('#oral')) {
+            const groupIndex = Number(oralMatch[1]) - 1;
+            const wordIndex = Number(oralMatch[2]) - 1;
+            const word = text('.word.active') || text('.word');
+            enqueueFiles([
+              'basahin_bilugan_naiiba_sa_pangkat_tts.mp3',
+              gawain8Groups[groupIndex], gawain8WordNumbers[wordIndex], gawain8Words[word],
+            ]);
+          } else if (app.querySelector('[data-answer]')) {
+            enqueueFiles(['basahin_bilugan_naiiba_sa_pangkat_tts.mp3']);
+          }
+        }
+        return;
+      }
 
       // Gawain 7 already narrates its own feedback in its existing activity flow.
       if (feedbackChanged && !isGawain7) enqueue(feedback);
