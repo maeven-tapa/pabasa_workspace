@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
       const audioFilename = {
         aso: 'aso.mp3',
-        'ilang-ilang': 'ilang-ilang.mp3',
+        'ilang-ilang': 'ilang-ilang (2).mp3',
         ilaw: 'ilaw.mp3',
         ilong: 'ilong.mp3',
         ipis: 'ipis.mp3',
