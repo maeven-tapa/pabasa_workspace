@@ -40,6 +40,17 @@
     if (id === runId) audio = null;
   }
 
+  // Expose an explicit retry entry point for the answer handler. This avoids
+  // relying solely on MutationObserver timing when the learner clicks the
+  // same incorrect answer repeatedly.
+  window.salitangRetryFeedback = function () {
+    const status = stage.querySelector('#status');
+    if (!status) return;
+    status.dataset.feedbackNarrationKey = `retry-explicit-${Date.now()}-${Math.random()}`;
+    feedbackNarrationKey = '';
+    sync();
+  };
+
   async function sync() {
     const status = stage.querySelector('#status');
     if (status?.classList.contains('warning')) {
@@ -147,6 +158,12 @@
     setTimeout(() => { scheduled = false; sync(); }, 0);
   }).observe(stage, {childList: true, subtree: true, characterData: true});
   document.addEventListener('click', async event => {
+    const wrongAnswer = event.target.closest('.hand[data-a="left"]');
+    if (wrongAnswer) {
+      const status = stage.querySelector('#status');
+      if (status) status.dataset.feedbackNarrationKey = `retry-${Date.now()}-${Math.random()}`;
+      return;
+    }
     const listen = event.target.closest('#listen');
     if (!listen) return;
     event.preventDefault();

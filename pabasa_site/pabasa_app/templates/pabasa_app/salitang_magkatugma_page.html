@@ -55,6 +55,25 @@ const pairs=[['aso','laso'],['bundok','sandok'],['tatay','nanay'],['bola','lola'
 .card:has(#read) .status.warning,.card:has(#read) .status.correct{visibility:visible}
 @media(max-width:700px){#listen{min-width:0;flex:1;padding-inline:8px}}
 </style>
+<script type="text/plain" data-activity-bootstrap="lesson-2-gawain-1">
+(function () {
+  const stage = document.getElementById('stage');
+  if (!stage) return;
+  let retrySequence = 0;
+  document.addEventListener('click', function (event) {
+    const wrong = event.target.closest('#answers .hand[data-a="left"]');
+    if (!wrong) return;
+    const status = stage.querySelector('#status');
+    if (status) status.dataset.feedbackNarrationKey = `retry-${++retrySequence}`;
+    if (typeof window.salitangRetryFeedback === 'function') {
+      window.salitangRetryFeedback();
+    } else {
+      const retryAudio = window.salitangSharedNarrationAudio?.['Hindi pa ito tama. Subukan muli.'];
+      if (retryAudio) { window.__salitangRetryAudio?.pause(); window.__salitangRetryAudio = new Audio(retryAudio); window.__salitangRetryAudio.play().catch(() => {}); }
+    }
+  }, true);
+}());
+</script>
 <style>
 body:has(.completion-card) .completion-card{display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box}
 body:has(.completion-card) .completion-card a{text-decoration:none!important}
