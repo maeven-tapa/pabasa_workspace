@@ -4,15 +4,45 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
     const data = JSON.parse(document.getElementById('story-reading-data')?.textContent || '{}');
     const FILIPINO = /filipino|tagalog|fil\b/i.test(String(data.language || ''));
     const L = FILIPINO ? {
-        activity:'Pagbasa ng Kuwento', back:'Bumalik sa mga Aktibidad', listen:'Makinig sa Kuwento', listening:'Nakikinig...', loading:'Naglo-load...', stop:'Itigil ang Pakikinig', readWithMe:'Magbasa Kasama Ko', reading:'Nagbabasa...', next:'Susunod', finish:'Tapos na', page:'Pahina', of:'ng', retry:'Ulitin', pause:'I-pause', play:'I-play', complete:'Tapos na ang Aktibidad', score:'Iyong Iskor', great:'Mahusay!', keep:'Ipagpatuloy ang pagsasanay! 🎉', saved:'Na-save ang iyong progreso sa pagbasa.', saving:'Sine-save ang iyong progreso sa pagbasa…', saveError:'Hindi na-save ang progreso. Subukang muli bago magpatuloy.', proceed:"Magpatuloy sa mga Tanong na 5W", backAssessment:'Bumalik sa Pahina ng Reading Assessment', close:'Isara ang iskor'
+        activity:'Pagbasa ng Kuwento', back:'Bumalik sa mga Aktibidad', listen:'Makinig sa Kuwento', listening:'Nakikinig...', loading:'Naglo-load...', stop:'Itigil ang Pakikinig', readWithMe:'Magbasa Kasama Ko', reading:'Nagbabasa...', next:'Susunod', finish:'Tapos na', page:'Pahina', of:'ng', retry:'Ulitin', skip:'Laktawan', pause:'I-pause', play:'I-play', complete:'Tapos na ang Aktibidad', score:'Iyong Iskor', great:'Mahusay!', keep:'Ipagpatuloy ang pagsasanay! 🎉', saved:'Na-save ang iyong progreso sa pagbasa.', saving:'Sine-save ang iyong progreso sa pagbasa…', saveError:'Hindi na-save ang progreso. Subukang muli bago magpatuloy.', proceed:"Magpatuloy sa mga Tanong na 5W", backAssessment:'Bumalik sa Pahina ng Reading Assessment', close:'Isara ang iskor'
     } : {
-        activity:'Story Reading', back:'Back to Activities', listen:'Listen to Story', listening:'Listening...', loading:'Loading...', stop:'Stop Listening', readWithMe:'Read With Me', reading:'Reading...', next:'Next', finish:'Finish', page:'Page', of:'of', retry:'Retry', pause:'Pause', play:'Play', complete:'Activity Complete', score:'Your Score', great:'Great job!', keep:'Keep it up! You\'re doing amazing! 🎉', saved:'Your reading progress has been saved.', saving:'Saving your reading progress…', saveError:'We could not save your reading progress. Please try again before continuing.', proceed:"Proceed to 5W's Questions", backAssessment:'Back on Reading Assessment Page', close:'Close score'
+        activity:'Story Reading', back:'Back to Activities', listen:'Listen to Story', listening:'Listening...', loading:'Loading...', stop:'Stop Listening', readWithMe:'Read With Me', reading:'Reading...', next:'Next', finish:'Finish', page:'Page', of:'of', retry:'Retry', skip:'Skip', pause:'Pause', play:'Play', complete:'Activity Complete', score:'Your Score', great:'Great job!', keep:'Keep it up! You\'re doing amazing! 🎉', saved:'Your reading progress has been saved.', saving:'Saving your reading progress…', saveError:'We could not save your reading progress. Please try again before continuing.', proceed:"Proceed to 5W's Questions", backAssessment:'Back on Reading Assessment Page', close:'Close score'
     };
     document.querySelector('.back-link span')?.replaceChildren(L.back);
     const metaSpans = document.querySelectorAll('.video-meta p > span');
     if (metaSpans.length > 1) metaSpans[1].textContent = L.activity;
     document.querySelector('.read-with-me')?.replaceChildren('▣ ', L.readWithMe, ' ›');
     const app = document.getElementById('storyPlayerApp');
+    const activeReadingStyle = document.createElement('style');
+    activeReadingStyle.textContent = `
+        @keyframes storyReadingActivePulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 4px 10px rgba(20,125,169,.28); }
+            50% { transform: scale(1.035); box-shadow: 0 0 0 7px rgba(20,125,169,.16), 0 10px 22px rgba(20,125,169,.42); }
+        }
+        #playButton.read-with-me.is-active {
+            background: #147DA9;
+            color: #fff;
+            animation: storyReadingActivePulse 1.35s ease-in-out infinite;
+        }
+        #playButton.read-with-me,
+        #playButton.read-with-me.is-active {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center;
+        }
+        /* The page stylesheet pins the final span to the right. Basahin
+           uses that span for its changing state label, so unpin it here. */
+        #playButton.read-with-me > span:last-child {
+            position: static !important;
+            right: auto !important;
+            transform: none !important;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #playButton.read-with-me.is-active { animation: none; }
+        }
+    `;
+    document.head.appendChild(activeReadingStyle);
     const image = document.getElementById('sceneImage');
     const subtitle = document.getElementById('storySubtitle');
     const progress = document.getElementById('storyTimeline');
@@ -26,8 +56,24 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
     const muteButton = document.getElementById('muteButton');
     const listenButton = muteButton;
     const oralButton = playButton;
+    previousButton.replaceChildren(document.createTextNode(L.skip));
+    previousButton.setAttribute('aria-label', L.skip);
     const status = document.getElementById('readingStatus');
     const progressText = document.getElementById('storyProgressText');
+    // Story Reading is intentionally linear. The timeline remains visible as
+    // progress feedback, but it must not become a seeking control.
+    if (progress) {
+        progress.disabled = true;
+        progress.setAttribute('aria-disabled', 'true');
+        progress.addEventListener('input', event => {
+            event.preventDefault();
+            render();
+        });
+        progress.addEventListener('change', event => {
+            event.preventDefault();
+            render();
+        });
+    }
     const scenes = String(data.text || '').split(/\n\s*\n/).map(text => text.trim()).filter(Boolean);
     const images = Array.isArray(data.images) ? data.images : [];
     const storyKey = data.story_key || (String(data.language).toLowerCase() === 'filipino' ? 'filipino-set-1' : data.title || 'story');
@@ -50,6 +96,9 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
     let requestSerial = 0;
     let oralSessionSerial = 0;
     let activeOralSession = 0;
+    let storyBasahinController = null;
+    let storyBasahinSyllableContext = '';
+    let storyBasahinLoader = null;
     let requestController = null;
     const debugAudio = (message, details = {}) => console.debug(`[Story Reading] ${message}`, {session: activeOralSession, ...details});
     const escapeHtml = value => String(value || '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
@@ -233,13 +282,123 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
     function updateFullscreenButton() {
         return;
     }
+
+    function loadStoryScript(url) {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = url;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+    async function ensureStoryBasahin() {
+        if (window.Basahin?.read) return true;
+        if (!storyBasahinLoader) {
+            storyBasahinLoader = loadStoryScript('/static/pabasa_app/js/basahin_button.js?v=story-reading-shared-1')
+                .then(() => loadStoryScript('/static/pabasa_app/js/basahin.js?v=story-reading-shared-1'));
+        }
+        await storyBasahinLoader;
+        return Boolean(window.Basahin?.read);
+    }
+
+    // Reuse the shared CRLA/STT controller without changing its source or
+    // the official CRLA reader. Story Reading owns only the segment state.
+    function stopOral(quiet = false) {
+        debugAudio('Reading stop requested', { scene: state.scene, sharedController: Boolean(storyBasahinController) });
+        storyBasahinController?.abort();
+        storyBasahinController = null;
+        state.oral = false;
+        state.context += 1;
+        state.playing = false;
+        cancelAnimationFrame(frame);
+        oralButton.textContent = L.readWithMe;
+        oralButton.setAttribute('aria-pressed', 'false');
+        oralButton.classList.remove('is-active');
+        setStatus(quiet ? '' : 'Reading paused. Press Read With Me to continue.');
+        render();
+    }
+
+    async function startOral() {
+        if (state.completed || state.oral) { if (state.oral) stopOral(); return; }
+        try {
+            if (!await ensureStoryBasahin()) throw new Error('Speech reading is unavailable in this browser.');
+        } catch (error) {
+            setStatus(error.message || 'Speech reading is unavailable in this browser.');
+            return;
+        }
+        stopTts();
+        const contextVersion = ++state.context;
+        const sceneAtStart = state.scene;
+        const textAtStart = scenes[sceneAtStart - 1] || '';
+        state.playing = false;
+        cancelAnimationFrame(frame);
+        state.oral = true;
+        oralSessionSerial += 1;
+        activeOralSession = oralSessionSerial;
+        oralButton.classList.add('is-active');
+        setStatus('Listening... Read the subtitle aloud.', true);
+        render();
+        const controller = new AbortController();
+        storyBasahinController = controller;
+        try {
+            const result = await window.Basahin.read({
+                target_text: textAtStart,
+                current_syllable_index: state.readingCursor,
+                syllable_context: storyBasahinSyllableContext,
+                mode: 'paragraph',
+                language: data.language || '',
+            }, {
+                button: oralButton,
+                signal: controller.signal,
+                continuous: true,
+                onProgress: progressResult => {
+                    if (!state.oral || state.context !== contextVersion || state.scene !== sceneAtStart) return;
+                    if (progressResult.syllable_context) storyBasahinSyllableContext = String(progressResult.syllable_context);
+                    const nextCursor = Number(progressResult.current_word_index ?? progressResult.current_syllable_index ?? progressResult.correct_word_count ?? 0);
+                    if (Number.isFinite(nextCursor)) state.readingCursor = Math.max(state.readingCursor, nextCursor);
+                    highlight(state.readingCursor);
+                },
+            });
+            if (controller.signal.aborted || state.context !== contextVersion || state.scene !== sceneAtStart) return;
+            if (result?.complete) {
+                state.correctSentences = Math.min(totalSentences, state.correctSentences + 1);
+                state.readingScore = state.correctSentences;
+                state.oral = false;
+                state.context += 1;
+                oralButton.classList.remove('is-active');
+                persist();
+                if (state.scene >= scenes.length) {
+                    state.time = totalDuration;
+                    render();
+                    setStatus('Story ready to finish. Press End Activity to complete.');
+                } else {
+                    const nextTime = state.scene * sceneDuration + .02;
+                    state.time = nextTime;
+                    state.readingCursor = 0;
+                    storyBasahinSyllableContext = '';
+                    render();
+                    setStatus('Scene ready. Press Read With Me to continue.');
+                }
+            }
+        } catch (error) {
+            if (error?.name !== 'AbortError' && state.context === contextVersion) {
+                setStatus(error.message || 'Speech processing had trouble. Keep reading and try again.');
+            }
+        } finally {
+            if (storyBasahinController === controller) storyBasahinController = null;
+            if (state.context === contextVersion && state.oral) {
+                state.oral = false;
+                oralButton.classList.remove('is-active');
+                render();
+            }
+        }
+    }
+
     async function listenOneSegment() {
         if (ttsAudio) { stopTts(); return; }
         if (state.oral || state.scene > scenes.length) return;
-        const segmentStart = Math.min(totalDuration, Math.max(0, (state.scene - 1) * sceneDuration));
-        const segmentEnd = Math.min(totalDuration, state.scene * sceneDuration);
-        state.time = segmentStart;
-        render();
         const controller = new AbortController();
         ttsController = controller;
         listenButton.textContent = L.loading;
@@ -254,24 +413,10 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
             ttsUrl = URL.createObjectURL(base64ToBlob(result.audio_content, result.mime_type || 'audio/mpeg'));
             ttsAudio = new Audio(ttsUrl);
             ttsAudio.muted = state.muted;
-            const stopAtNextMarker = () => {
-                if (!ttsAudio || !Number.isFinite(ttsAudio.duration)) return;
-                const progressRatio = Math.min(1, ttsAudio.currentTime / ttsAudio.duration);
-                state.time = segmentStart + (segmentEnd - segmentStart) * progressRatio;
-                render();
-                if (state.time >= segmentEnd) {
-                    ttsAudio.pause();
-                    ttsAudio.currentTime = ttsAudio.duration;
-                    ttsAudio.onended?.();
-                }
-            };
-            ttsAudio.ontimeupdate = stopAtNextMarker;
             ttsAudio.onended = () => {
-                state.time = segmentEnd;
-                if (ttsAudio) ttsAudio.ontimeupdate = null;
+                // Listening repeats only the currently visible segment. Do
+                // not move the flipbook cursor to the next segment.
                 stopTts();
-                render();
-                persist();
             };
             listenButton.textContent = '🔊 Listening...';
             listenButton.setAttribute('aria-pressed', 'true');
@@ -313,7 +458,8 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
             }).catch(() => { proceedButton.disabled = true; });
     }
     function endActivity() { finishCompletion(); }
-    progress.oninput = event => seek(event.target.value); previousButton.onclick = restartStory; listenButton.onclick = listenOneSegment; oralButton.onclick = () => { if (state.time >= totalDuration) endActivity(); else startOral(); }; document.querySelectorAll('.scene-marker').forEach(marker => marker.onclick = () => seek(marker.dataset.time));
+    function skipStory() { if (state.oral) stopOral(true); stopTts(); endActivity(); }
+    previousButton.onclick = skipStory; listenButton.onclick = listenOneSegment; oralButton.onclick = () => { if (state.time >= totalDuration) endActivity(); else startOral(); }; document.querySelectorAll('.scene-marker').forEach(marker => { marker.setAttribute('aria-disabled', 'true'); marker.style.pointerEvents = 'none'; });
     window.addEventListener('beforeunload', () => { persist(); stopOral(true); stopTts(); });
     restoreState(); mountLiveShell(); render(); if (state.completed) showCompletionModal();
 })();
