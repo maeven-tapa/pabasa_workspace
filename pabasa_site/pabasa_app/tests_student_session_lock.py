@@ -167,11 +167,14 @@ class StudentSessionLockTests(TestCase):
         for name in ('practice_word_page', 'practice_sentence_page', 'practice_para_page', 'reading_word_page', 'reading_sentence_page'):
             self.assertTrue(is_learning_page(reverse(name)), name)
         self.assertTrue(is_learning_page(reverse('prescribed_activity_page', args=['lesson27-gawain1'])))
+        self.assertTrue(is_learning_page(reverse('assessment')))
+        self.assertTrue(is_learning_page(reverse('session_4_gawain_1_page')))
+        self.assertTrue(is_learning_page(reverse('courses')))
+        self.assertTrue(is_learning_page(reverse('course_student_view')))
         self.assertTrue(is_learning_page(reverse('practice')))
         self.assertTrue(is_learning_page(reverse('practice_game_progression', args=['word'])))
         self.assertFalse(is_learning_page('/dashboard/assessment/not-a-real-page/'))
         self.assertFalse(is_learning_page(reverse('dashboard')))
-        self.assertFalse(is_learning_page(reverse('assessment')))
         self.assertFalse(is_learning_page(reverse('practice_results')))
 
     def test_session_expiry_uses_real_time_not_admin_debug_clock(self):

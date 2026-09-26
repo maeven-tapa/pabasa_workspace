@@ -23,11 +23,12 @@ def is_learning_page(path):
     except (Resolver404, ValueError):
         return False
     return bool(
-        path.startswith('/dashboard/assessment/') and match.url_name != 'assessment'
+        path.startswith('/dashboard/assessment/')
         or path.startswith('/dashboard/practice/') and match.url_name != 'practice_results'
         or match.url_name in {
             'practice_word_page', 'practice_sentence_page', 'practice_para_page',
             'practice', 'practice_mark_tutorial_seen', 'practice_game_progression',
+            'assessment', 'courses', 'course_student_view', 'prescribed_activity_page',
             'live_assessment_session', 'live_assessment_session_control',
             'live_assessment_waiting_room',
         }
