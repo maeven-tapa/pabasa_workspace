@@ -1030,6 +1030,8 @@
   }
 
   function init() {
+    const eyebrow = document.querySelector('.eyebrow');
+    if (eyebrow) eyebrow.textContent = 'SESSION 1 · LESSON 1 · GAWAIN 1';
     const shell = document.querySelector('.shell');
     const backLink = document.querySelector('.back');
     if (shell && backLink) shell.prepend(backLink);

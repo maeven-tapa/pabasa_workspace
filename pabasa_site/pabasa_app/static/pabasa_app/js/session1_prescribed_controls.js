@@ -3,6 +3,10 @@
   const root = document.querySelector('[data-session1-controls]');
   if (!root || !window.PrescribedControls) return;
   const prefix = root.dataset.prefix;
+  if (prefix === 'prescribed-s1l1g1') {
+    const eyebrow = document.querySelector('.eyebrow');
+    if (eyebrow) eyebrow.textContent = eyebrow.textContent.replace(/\s*(?:Â·|·)\s*SING-ALONG\s*$/i, '');
+  }
   window.__session1ControlsInitialized ||= {};
   if (!prefix || window.__session1ControlsInitialized[prefix]) return;
   let muted = false, paused = false, requestingTest = false, testStream = null, testContext = null, analyser = null, frame = 0, generation = 0;

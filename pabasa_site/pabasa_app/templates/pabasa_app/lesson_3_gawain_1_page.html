@@ -1905,7 +1905,7 @@ body.lesson-3-responsive:has(#game .complete) .lesson-start-backdrop{display:non
   function placeEyebrowFirst(){
     document.querySelectorAll('.brand').forEach(function(brand){
       var title=brand.querySelector('h1'), label=brand.querySelector('p');
-      if(title&&label&&title.nextElementSibling===label){brand.insertBefore(label,title);label.classList.add('eyebrow');}
+      if(title&&label&&title.nextElementSibling===label){brand.insertBefore(label,title);label.classList.add('eyebrow');label.textContent='SESSION 1 · LESSON 3 · GAWAIN 1';}
     });
   }
   var game=document.getElementById('game');
