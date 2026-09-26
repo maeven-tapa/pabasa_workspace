@@ -14741,7 +14741,7 @@ def prescribed_activity_page(request, activity_key):
             'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
             'display_title': activity['display_title'], 'title': activity['title'],
             'instruction': activity['instruction'],
-            'items': [{'id': item['id'], 'read_aloud': item.get('read_aloud', item['answer']),
+            'items': [{'id': item['id'], 'answer': item['answer'], 'read_aloud': item.get('read_aloud', item['answer']),
                        'alt_text': item['alt_text'], 'letter_count': item['letter_count'],
                        'image_url': static(item['image_path'])} for item in activity['items']],
             'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
@@ -14952,6 +14952,25 @@ def prescribed_activity_progress(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity_key in {
+        'lesson-16-gawain-1', 'lesson-16-gawain-2', 'lesson-16-gawain-3',
+        'session-6-lesson-16-gawain-4', 'lesson-17-18-gawain-5',
+        'lesson-17-18-gawain-6', 'lesson-17-18-gawain-7',
+        'lesson-17-18-gawain-8', 'lesson-17-18-gawain-9',
+    }:
+        try:
+            reset_payload = json.loads(request.body or '{}')
+        except json.JSONDecodeError:
+            reset_payload = {}
+        if isinstance(reset_payload, dict) and reset_payload.get('reset') is True:
+            StudentActivityProgress.objects.filter(
+                student=student, activity_key=activity_key,
+            ).delete()
+            return JsonResponse({'success': True, 'progress': {
+                'current_index': 0, 'completed_items': 0, 'correct_items': 0,
+                'total_items': int(activity.get('total_items') or len(activity.get('items') or [])),
+                'activity_completed': False, 'state': {},
+            }})
     if activity_key == 'lesson-14-gawain-1':
         try:
             data = json.loads(request.body or '{}')
@@ -16905,6 +16924,18 @@ def prescribed_activity_progress(request, activity_key):
                 if accepted:
                     matches[target] = word
             completed = len(matches)
+            if data.get('validate_only') is True:
+                saved_matches = _normalized_prescribed_matches(activity, existing_state.get('matches') or {})
+                return JsonResponse({'success': True, 'accepted': accepted, 'progress': {
+                    'current_index': existing.current_index if existing else 0,
+                    'completed_items': existing.completed_items if existing else len(saved_matches),
+                    'correct_items': existing.correct_items if existing else len(saved_matches),
+                    'total_items': len(activity['items']),
+                    'activity_completed': existing.activity_completed if existing else False,
+                    'matches': saved_matches,
+                    'state': (_normalized_oral_matching_state(activity, existing_state)
+                              if oral_before_matching else _normalized_prescribed_match_state(existing_state)),
+                }})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
 

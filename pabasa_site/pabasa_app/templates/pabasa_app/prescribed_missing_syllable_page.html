@@ -41,7 +41,7 @@
     let aloudAttempts = Math.min(3, Math.max(0, Number(restored.aloud_attempts) || 0));
     let writtenAttempts = Math.min(3, Math.max(0, Number(restored.written_attempts) || 0));
     let stateVersion = Math.max(0, Number(restored.state_version) || 0);
-    let requestVersion = 0, busy = false, startedAt = Date.now(), activeNarration = null, narratedKey = '', narrationQueue = Promise.resolve();
+    let requestVersion = 0, attemptVersion = 0, activeAttemptController = null, activeRecordingButton = null, activeRecordingLabel = '', busy = false, startedAt = Date.now(), activeNarration = null, narratedKey = '', narrationQueue = Promise.resolve();
     const isLesson16Gawain = ['lesson-16-gawain-1', 'lesson-16-gawain-2'].includes(data.activity_key);
     const isLesson16Gawain1 = data.activity_key === 'lesson-16-gawain-1';
     const isLesson16Gawain2 = data.activity_key === 'lesson-16-gawain-2';
@@ -98,15 +98,15 @@
     const picture = item => `<img class="image" src="${escape(item.image_url)}" alt="Larawan ng ${escape(item.word)}">`;
     const resetOral = () => { phase = 'oral'; oralMode = 'read'; readingAttempts = 0; aloudAttempts = 0; writtenAttempts = 0; };
 
-    async function request(url, body) {
-      const response = await fetch(url, {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf()}, body: JSON.stringify(body)});
+    async function request(url, body, signal) {
+      const response = await fetch(url, {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf()}, body: JSON.stringify(body), ...(signal ? {signal} : {})});
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result.success) throw Error(result.error || 'Hindi na-save ang iyong sagot.');
       return result;
     }
-    async function save(extra = {}) {
+    async function save(extra = {}, signal) {
       const sequence = ++requestVersion;
-      const result = await request(data.progress_url, {material_id: data.material_id, current_index: index, answers, state: state(), ...extra});
+      const result = await request(data.progress_url, {material_id: data.material_id, current_index: index, answers, state: state(), ...extra}, signal);
       if (sequence === requestVersion && result.progress?.state) {
         stateVersion = Math.max(stateVersion, Number(result.progress.state.state_version) || 0);
       }
@@ -151,8 +151,10 @@
       const item = items[index];
       if (phase === 'oral') {
         const listen = oralMode === 'aloud';
-        app.innerHTML = heading() + picture(item) + `<p class="oral">Basahin nang malakas: <strong>${escape(item.word)}</strong>.</p><p class="hint">${listen ? 'Pakinggan ang salita nang tatlong beses bago muling magbasa.' : 'May tatlong pagkakataon kang basahin ang salita.'}</p><button class="button ${listen ? 'gold' : ''}" id="oralAction" type="button">${listen ? '🔊 Pakinggan' : '🎙 Simulan ang Pagbasa'}</button><p class="hint" id="oralStatus"></p>`;
-        document.getElementById('oralAction').onclick = listen ? () => readAloud(item) : () => readWord(item);
+        app.innerHTML = heading() + picture(item) + `<p class="oral">Basahin nang malakas: <strong data-expected-text="${escape(item.word)}">${escape(item.word)}</strong>.</p><p class="hint">${listen ? 'Pakinggan ang salita nang tatlong beses bago muling magbasa.' : 'May tatlong pagkakataon kang basahin ang salita.'}</p><button class="button ${listen ? 'gold' : ''}" id="oralAction" type="button">${listen ? '🔊 Pakinggan' : '🎙 Simulan ang Pagbasa'}</button><p class="hint" id="oralStatus"></p>`;
+        const oralAction = document.getElementById('oralAction');
+        oralAction.dataset.defaultLabel = oralAction.textContent;
+        oralAction.onclick = listen ? () => readAloud(item) : () => readWord(item);
         if (hasMappedLesson16Audio && readingAttempts === 0 && aloudAttempts === 0) {
           narrate('', `missing-syllable-prompt-${index}`, mappedLesson16ItemAudio[index]?.prompt);
         }
@@ -167,28 +169,44 @@
       if (data.interaction === 'choice') app.querySelectorAll('[data-answer]').forEach(button => { button.onclick = () => submit(button.dataset.answer); });
       else { const form = document.getElementById('writeForm'), input = document.getElementById('answerInput'); input.focus(); form.onsubmit = event => { event.preventDefault(); submit(input.value); }; }
     }
+    function restoreRecordingButton() {
+      const button = document.getElementById('oralAction') || activeRecordingButton;
+      if (!button) return;
+      button.disabled = false;
+      button.textContent = activeRecordingLabel || button.dataset.defaultLabel || 'Simulan ang Pagbasa';
+      activeRecordingButton = null;
+      activeRecordingLabel = '';
+    }
     async function readWord(item) {
       if (busy) return;
+      const attempt = ++attemptVersion;
+      const controller = new AbortController();
+      activeAttemptController = controller;
       const status = document.getElementById('oralStatus'), button = document.getElementById('oralAction');
+      activeRecordingButton = button;
+      activeRecordingLabel = button?.textContent || '';
       if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { status.textContent = 'Hindi available ang mikropono sa browser na ito.'; return; }
       busy = true; button.disabled = true; button.textContent = 'Nakikinig…'; let stream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({audio: true});
+        if (attempt !== attemptVersion || controller.signal.aborted) return;
         const chunks = [], recorder = new MediaRecorder(stream);
         recorder.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
         const finished = new Promise(resolve => { recorder.onstop = () => resolve(new Blob(chunks, {type: recorder.mimeType || 'audio/webm'})); });
         recorder.start(); setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, 3500);
         const audio = await finished; stream.getTracks().forEach(track => track.stop()); button.textContent = 'Sinusuri…';
+        if (attempt !== attemptVersion || controller.signal.aborted) return;
         const form = new FormData(); form.append('audio', audio, 'prescribed-reading.webm'); form.append('target_text', item.word); form.append('language', 'Filipino'); form.append('mode', 'reading');
-        const response = await fetch('{% url "reading_transcribe_api" %}', {method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrf()}, body: form});
+        const response = await fetch('{% url "reading_transcribe_api" %}', {method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrf()}, body: form, signal: controller.signal});
         const result = await response.json();
-        if (result.success && result.complete === true) { phase = 'written'; oralMode = 'read'; readingAttempts = 0; aloudAttempts = 0; writtenAttempts = 0; narrate('Tama! Magaling ang iyong pagbasa. Piliin ang nawawalang pantig.', `reading-correct-${index}`, 'readingSuccess'); await save(); render(); return; }
+        if (attempt !== attemptVersion || controller.signal.aborted) return;
+        if (result.success && normalize(result.transcript).includes(normalize(item.word))) { if (attempt !== attemptVersion || controller.signal.aborted) return; phase = 'written'; oralMode = 'read'; readingAttempts = 0; aloudAttempts = 0; writtenAttempts = 0; narrate('Tama! Magaling ang iyong pagbasa. Piliin ang nawawalang pantig.', `reading-correct-${index}`, 'readingSuccess'); await save({}, controller.signal); if (attempt !== attemptVersion || controller.signal.aborted) return; render(); return; }
         readingAttempts++;
         if (readingAttempts >= 3) oralMode = 'aloud';
         narrate(readingAttempts >= 3 ? 'Pakinggan muna ang salita bago muling magbasa.' : 'Hindi pa. Subukan muli.', `reading-feedback-${index}-${readingAttempts}`, readingAttempts >= 3 ? 'listenFirst' : 'tryAgain');
-        await save(); render();
+        await save({}, controller.signal); if (attempt !== attemptVersion || controller.signal.aborted) return; render();
       } catch (error) { button.disabled = false; button.textContent = '🎙 Subukang Muli'; status.textContent = 'Hindi nakuha ang iyong boses. Subukan muli.'; }
-      finally { if (stream) stream.getTracks().forEach(track => track.stop()); busy = false; }
+      finally { if (stream) stream.getTracks().forEach(track => track.stop()); if (activeAttemptController === controller) activeAttemptController = null; if (attempt !== attemptVersion || controller.signal.aborted) restoreRecordingButton(); else if (activeRecordingButton === button) { button.disabled = false; activeRecordingButton = null; activeRecordingLabel = ''; } busy = false; }
     }
     async function readAloud(item) {
       if (busy) return;
@@ -215,8 +233,23 @@
       catch (error) { app.innerHTML = heading() + `<p class="error">${escape(error.message)}</p><button class="button" id="retry" type="button">Subukang muli</button>`; document.getElementById('retry').onclick = () => { busy = false; complete(); }; }
     }
     function showDone(result) { const correct = Number(result?.correct_items ?? data.progress?.correct_items ?? 0); app.innerHTML = `<div class="complete"><div class="star">⭐</div><h1>Magaling!</h1><p class="instruction">Natapos mo ang Lesson ${data.lesson_number}: Gawain ${data.gawain_number}.</p><div class="score">Puntos: ${correct} / ${items.length}</div><a class="button" href="{% url 'assessment' %}">Balik sa Aking Aralin</a></div>`; busy = false; }
+    function stopMappedAudio() {
+      if (activeNarration) {
+        activeNarration.onended = null;
+        activeNarration.onerror = null;
+        activeNarration.pause();
+        activeNarration = null;
+      }
+      // A canceled Audio promise never fires onended/onerror after pause().
+      // Reset the serial queue so later TTS is not left waiting forever.
+      narrationQueue = Promise.resolve();
+      narratedKey = '';
+    }
+    addEventListener('session6-prescribed-cancel', () => { requestVersion += 1; attemptVersion += 1; activeAttemptController?.abort(); activeAttemptController = null; restoreRecordingButton(); busy = false; stopMappedAudio(); });
+    const session6Render = render; render = (...args) => { const result = session6Render(...args); window.dispatchEvent(new CustomEvent('session6-prescribed-render')); return result; };
     render();
   })();
   </script>
+  {% include "pabasa_app/includes/session6_prescribed_controls.html" %}
 </body>
 </html>
