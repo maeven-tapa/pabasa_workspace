@@ -177,6 +177,28 @@
             font: 700 0.82rem/1.3 Nunito, "Segoe UI", sans-serif;
         }
 
+        .retell-completed-state {
+            margin: 1rem auto 0;
+            padding: 1rem 1.1rem;
+            border: 1px solid rgba(73, 163, 106, 0.24);
+            border-radius: 1.25rem;
+            background: #f7fff8;
+            color: #29416d;
+            text-align: center;
+        }
+
+        .retell-completed-icon { color: #49a36a; font-size: 2rem; }
+        .retell-completed-state h3 { margin: 0.25rem 0 0.35rem; font: 800 1.2rem/1.2 Nunito, "Segoe UI", sans-serif; }
+        .retell-completed-state p { margin: 0.25rem 0; color: #59545a; font: 700 0.86rem/1.35 Nunito, "Segoe UI", sans-serif; }
+        .retell-completion-score { margin: 0.75rem 0; }
+        .retell-completion-label, .retell-completion-meta span { display: block; color: #7b7880; font: 800 0.68rem/1.2 Nunito, "Segoe UI", sans-serif; letter-spacing: 0.08em; text-transform: uppercase; }
+        .retell-completion-score strong { display: block; margin-top: 0.15rem; color: #20365f; font: 900 1.8rem/1 Nunito, "Segoe UI", sans-serif; }
+        .retell-completion-status { margin: 0.6rem 0; padding: 0.55rem 0.7rem; border-radius: 0.8rem; background: #fff0d0; color: #76541d; font: 800 0.86rem/1.3 Nunito, "Segoe UI", sans-serif; }
+        .retell-completion-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; margin-top: 0.8rem; }
+        .retell-completion-meta > div { padding: 0.55rem; border-radius: 0.8rem; background: rgba(255, 255, 255, 0.82); }
+        .retell-completion-meta strong { display: block; margin-top: 0.2rem; color: #29416d; font: 800 0.82rem/1.25 Nunito, "Segoe UI", sans-serif; }
+        .retell-completion-note { color: #34784d !important; }
+
         .tip-box {
             display: flex;
             align-items: center;
@@ -255,6 +277,18 @@
         #cancelRecordAgain { background: #fff; color: #29416d; }
         #confirmRecordAgain { border-color: #e94448; background: #e94448; color: #fff; }
         .success-modal .confirm-icon { color: #49a36a; }
+        .retell-result-modal { position: relative; }
+        .retell-result-close { position: absolute; top: 0.7rem; right: 0.85rem; width: 2rem; height: 2rem; border: 0; border-radius: 50%; background: transparent; color: #7b7880; cursor: pointer; font: 700 1.5rem/1 Nunito, "Segoe UI", sans-serif; }
+        .retell-result-close:hover { background: #f8eee1; color: #29416d; }
+        .retell-result-modal h2 { margin-top: 0.55rem; }
+        .retell-result-score { margin: 0.9rem 0; }
+        .retell-result-score span, .retell-result-meta span { display: block; color: #7b7880; font: 800 0.68rem/1.2 Nunito, "Segoe UI", sans-serif; letter-spacing: 0.08em; text-transform: uppercase; }
+        .retell-result-score strong { display: block; margin-top: 0.2rem; color: #20365f; font: 900 1.9rem/1 Nunito, "Segoe UI", sans-serif; }
+        .retell-result-status { margin: 0.7rem 0; padding: 0.6rem 0.75rem; border-radius: 0.8rem; background: #fff0d0; color: #76541d; font: 800 0.88rem/1.3 Nunito, "Segoe UI", sans-serif; }
+        .retell-result-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; margin: 0.85rem 0; }
+        .retell-result-meta > div { padding: 0.6rem; border-radius: 0.8rem; background: #fff8ed; }
+        .retell-result-meta strong { display: block; margin-top: 0.2rem; color: #29416d; font: 800 0.82rem/1.25 Nunito, "Segoe UI", sans-serif; }
+        .retell-result-note { color: #34784d !important; }
 
         @media (max-width: 800px) {
             .retell-card {
@@ -300,7 +334,7 @@
         <nav class="retell-nav" aria-label="Retell activity navigation">
             <button class="nav-button" id="finishButton" type="button" disabled><span>Finish</span><i class="bi bi-arrow-right" aria-hidden="true"></i></button>
         </nav>
-        <audio id="recordingPreview" controls hidden></audio>
+    <audio id="recordingPreview" controls hidden></audio>
     </main>
     <div class="modal-backdrop" id="recordAgainModal" role="presentation" hidden>
         <section class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="recordAgainTitle">
@@ -321,6 +355,26 @@
             <div class="confirm-actions"><button id="successOk" type="button">OK</button></div>
         </section>
     </div>
+    <div class="modal-backdrop" id="retellResultModal" role="presentation" hidden>
+        <section class="confirm-modal success-modal retell-result-modal" role="dialog" aria-modal="true" aria-labelledby="retellResultTitle">
+            <button class="retell-result-close" id="retellResultClose" type="button" aria-label="Close result">&times;</button>
+            <div class="confirm-icon" aria-hidden="true"><i class="bi bi-check-circle-fill"></i></div>
+            <h2 id="retellResultTitle">Activity Completed</h2>
+            <p id="retellResultMessage">Your retelling has been sent to your teacher.</p>
+            <div class="retell-result-score" id="retellResultScore" hidden>
+                <span>Your Score</span>
+                <strong id="retellResultScoreValue"></strong>
+            </div>
+            <div class="retell-result-status" id="retellResultStatus" hidden></div>
+            <div class="retell-result-meta">
+                <div><span>Submitted</span><strong id="retellResultSubmitted">—</strong></div>
+                <div><span>Time Spent</span><strong id="retellResultDuration">—</strong></div>
+            </div>
+            <p class="retell-result-note" id="retellResultNote" hidden>Teacher has graded your retelling.</p>
+            <div class="confirm-actions"><button id="retellResultOk" type="button">OK</button></div>
+        </section>
+    </div>
+    {{ retell_completion_json|json_script:"retell_completion_json" }}
     <script>
         (() => {
             const recordButton = document.getElementById('recordButton');
@@ -333,6 +387,42 @@
             const confirmRecordAgain = document.getElementById('confirmRecordAgain');
             const successModal = document.getElementById('successModal');
             const successOk = document.getElementById('successOk');
+            const retellResultModal = document.getElementById('retellResultModal');
+            const retellResultClose = document.getElementById('retellResultClose');
+            const retellResultOk = document.getElementById('retellResultOk');
+            const resultTitle = document.getElementById('retellResultTitle');
+            const resultMessage = document.getElementById('retellResultMessage');
+            const resultScore = document.getElementById('retellResultScore');
+            const resultScoreValue = document.getElementById('retellResultScoreValue');
+            const resultStatus = document.getElementById('retellResultStatus');
+            const resultSubmitted = document.getElementById('retellResultSubmitted');
+            const resultDuration = document.getElementById('retellResultDuration');
+            const resultNote = document.getElementById('retellResultNote');
+            let persistedCompleted = false;
+            try {
+                const payload = JSON.parse(document.getElementById('retell_completion_json')?.textContent || '{}');
+                persistedCompleted = payload.completed === true;
+                if (persistedCompleted) {
+                    const hasGrade = payload.grade !== null && payload.grade !== undefined && payload.grade !== '';
+                    const submittedAt = payload.submitted_at || payload.completed_at;
+                    resultTitle.textContent = hasGrade ? 'Activity Completed' : 'Recording Submitted';
+                    resultMessage.textContent = hasGrade ? 'Your retelling has been reviewed by your teacher.' : 'Your retelling has been sent to your teacher.';
+                    resultSubmitted.textContent = submittedAt ? new Date(submittedAt).toLocaleString() : '—';
+                    if (payload.duration_seconds !== null && payload.duration_seconds !== undefined && Number.isFinite(Number(payload.duration_seconds))) {
+                        const seconds = Math.max(0, Number(payload.duration_seconds));
+                        resultDuration.textContent = `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${String(Math.floor(seconds) % 60).padStart(2, '0')}`;
+                    }
+                    if (hasGrade) {
+                        resultScore.hidden = false;
+                        resultScoreValue.textContent = `${payload.grade} / 5`;
+                        resultNote.hidden = false;
+                    } else {
+                        resultStatus.hidden = false;
+                        resultStatus.textContent = 'Waiting for teacher to grade';
+                    }
+                    retellResultModal.hidden = false;
+                }
+            } catch (error) { persistedCompleted = false; }
             let recorder;
             let stream;
             let chunks = [];
@@ -424,12 +514,16 @@
             }
 
             recordButton.addEventListener('click', () => {
+                if (persistedCompleted) return;
                 if (recorder?.state === 'recording') return toggleRecording();
                 if (recordingUrl) return openRecordAgainModal();
                 return toggleRecording();
             });
             cancelRecordAgain.addEventListener('click', closeRecordAgainModal);
-            confirmRecordAgain.addEventListener('click', () => { closeRecordAgainModal(); resetRecording(); });
+            confirmRecordAgain.addEventListener('click', () => {
+                closeRecordAgainModal();
+                resetRecording();
+            });
             recordAgainModal.addEventListener('click', (event) => { if (event.target === recordAgainModal) closeRecordAgainModal(); });
             async function submitRecording() {
                 if (!recordingUrl || submitting) return;
@@ -456,6 +550,22 @@
             }
             finishButton.addEventListener('click', submitRecording);
             successOk.addEventListener('click', () => { window.location.href = '{% url "assessment" %}'; });
+            if (persistedCompleted) {
+                recordButton.hidden = true;
+                recordLabel.hidden = true;
+                recordStatus.hidden = true;
+                finishButton.disabled = true;
+                finishButton.hidden = true;
+            }
+            const closeRetellResult = () => {
+                retellResultModal.hidden = true;
+                retellResultClose.blur();
+            };
+            retellResultClose.addEventListener('click', closeRetellResult);
+            retellResultOk.addEventListener('click', () => { window.location.href = '{% url "assessment" %}'; });
+            retellResultModal.addEventListener('click', (event) => {
+                if (event.target === retellResultModal) closeRetellResult();
+            });
         })();
     </script>
 </body>

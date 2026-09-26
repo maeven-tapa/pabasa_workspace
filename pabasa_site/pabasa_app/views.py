@@ -20054,6 +20054,42 @@ def reading_para_page(request):
     custom_material = context.get('custom_material_launch_data') or {}
     content_json = custom_material.get('content_json') if isinstance(custom_material, dict) else {}
     if isinstance(content_json, dict) and content_json.get('activity_type') == 'retell_story':
+        _, retell_material_id = _parse_prefixed_id(
+            custom_material.get('raw_id')
+            or custom_material.get('id')
+            or request.GET.get('id')
+            or request.GET.get('material_id')
+        )
+        material = Material.objects.filter(pk=retell_material_id).first() if retell_material_id else None
+        student = User.objects.filter(
+            id=request.session.get('user_id'), role='student', is_archived=False,
+        ).first()
+        completed_result = None
+        submission = None
+        if student:
+            completed_result = material.assessment_results.filter(
+                student=student,
+                attempt_status='completed',
+                completed_at__isnull=False,
+            ).order_by('-completed_at', '-created_at', '-id').first()
+            submission = StoryResponseSubmission.objects.filter(
+                student=student, material=material,
+            ).only(
+                'id', 'audio_file', 'duration_seconds', 'submitted_at',
+                'grade', 'status', 'graded_at',
+            ).first()
+        context['retell_completion_json'] = {
+            'completed': bool(completed_result),
+            'completed_at': completed_result.completed_at.isoformat() if completed_result else '',
+            'submitted_at': submission.submitted_at.isoformat() if submission and submission.submitted_at else '',
+            'duration_seconds': completed_result.duration_seconds if completed_result else (submission.duration_seconds if submission else None),
+            'attempt_number': completed_result.attempt_number if completed_result else None,
+            'has_recording': bool(submission and submission.audio_file),
+            'grade': submission.grade if submission else None,
+            'status': submission.status if submission else '',
+            'graded_at': submission.graded_at.isoformat() if submission and submission.graded_at else '',
+            'submission_id': submission.id if submission else None,
+        }
         return render(request, 'pabasa_app/retell_story_background_page.html', context)
     context['student_end_assessment_state_json'] = json.dumps(
         (_get_user_state(User.objects.filter(id=request.session.get('user_id')).first()).get('student_end_assessment_state') or {}),
@@ -28135,7 +28171,11 @@ def get_teacher_assessment_api(request, assessment_id):
                 'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
             })
 
-        linked_material = getattr(assessment, 'material', None)
+        linked_material = (
+            getattr(assessment, 'material', None)
+            or assessment.materials.first()
+            or Material.objects.filter(assessment_id=assessment.id).first()
+        )
         linked_content = getattr(linked_material, 'content_json', None) or {}
         activity_type = str(
             linked_content.get('activity_type')
@@ -28161,6 +28201,15 @@ def get_teacher_assessment_api(request, assessment_id):
             return default
 
         enriched_attempts = []
+        retell_submissions = {}
+        if activity_type == 'retell_story' and linked_material:
+            retell_submissions = {
+                submission.student_id: submission
+                for submission in StoryResponseSubmission.objects.filter(
+                    material=linked_material,
+                    student_id__in=student_ids,
+                ).only('id', 'student_id', 'grade')
+            }
         for att in attempts:
             if not isinstance(att, dict):
                 continue
@@ -28182,6 +28231,10 @@ def get_teacher_assessment_api(request, assessment_id):
             })
             if activity_type:
                 enriched_attempt['activity_type'] = activity_type
+            if activity_type == 'retell_story':
+                submission = retell_submissions.get(att.get('student_id'))
+                enriched_attempt['retell_grade'] = submission.grade if submission else None
+                enriched_attempt['story_response_submission_id'] = submission.id if submission else None
             enriched_attempts.append(enriched_attempt)
 
         def _attempt_timestamp(attempt):
@@ -28317,6 +28370,14 @@ def get_teacher_material_attempts_api(request):
         students_by_id = {s.id: s for s in User.objects.filter(id__in=[a.student_id for a in attempts_qs if a.student_id])}
 
         enriched = []
+        retell_submissions = {}
+        if activity_type == 'retell_story':
+            retell_submissions = {
+                submission.student_id: submission
+                for submission in StoryResponseSubmission.objects.filter(
+                    material=material,
+                ).only('id', 'student_id', 'grade')
+            }
         for a in attempts_qs:
             att = a._serialize_attempt()
             student = students_by_id.get(a.student_id)
@@ -28336,6 +28397,10 @@ def get_teacher_material_attempts_api(request):
             })
             if activity_type:
                 att['activity_type'] = activity_type
+            if activity_type == 'retell_story':
+                submission = retell_submissions.get(a.student_id)
+                att['retell_grade'] = submission.grade if submission else None
+                att['story_response_submission_id'] = submission.id if submission else None
             enriched.append(att)
 
         payload = {
@@ -34063,6 +34128,15 @@ def story_response_submit(request):
     access_response = _enforce_student_access_for_request(request, material=material)
     if access_response:
         return access_response
+    if is_retell_story and material.assessment_results.filter(
+        student=user,
+        attempt_status='completed',
+        completed_at__isnull=False,
+    ).exists():
+        return JsonResponse(
+            {'success': False, 'error': 'This Retell the Story activity has already been completed.'},
+            status=409,
+        )
     if not is_retell_story and StoryResponseSubmission.objects.filter(student=user, material=material).exists():
         return JsonResponse({'success': False, 'error': 'This Story Response activity is already completed.'}, status=409)
     
@@ -34162,7 +34236,8 @@ def teacher_story_response_review(request):
     _, material_id = _parse_prefixed_id(request.GET.get('material_id'))
     material = Material.objects.filter(pk=material_id).first() if material_id else None
     teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
-    if not material or not _is_story_response_material(material):
+    is_retell_story = _is_retell_story_material(material)
+    if not material or (not _is_story_response_material(material) and not is_retell_story):
         return JsonResponse({'success': False, 'error': 'Response to Story activity not found.'}, status=404)
     if not teacher or not _teacher_can_access_material(teacher, material):
         return JsonResponse({'success': False, 'error': 'Access denied.'}, status=403)
@@ -34196,19 +34271,27 @@ def teacher_story_response_grade(request):
         payload = json.loads(request.body or '{}')
         submission = StoryResponseSubmission.objects.select_related('material').get(pk=payload.get('submission_id'))
         teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+        is_retell_story = _is_retell_story_material(submission.material)
         if not teacher or not _teacher_can_access_material(teacher, submission.material):
             return JsonResponse({'success': False, 'error': 'Access denied.'}, status=403)
-        if submission.grade is not None:
+        if submission.grade is not None and not is_retell_story:
             return JsonResponse({'success': False, 'error': 'This Story Response score is already locked.'}, status=409)
-        grade = int(payload.get('grade'))
-        if grade < 0 or grade > 5:
-            raise ValueError
+        raw_grade = payload.get('grade')
+        if is_retell_story and raw_grade in (None, ''):
+            grade = None
+        else:
+            if isinstance(raw_grade, bool) or (isinstance(raw_grade, float) and not raw_grade.is_integer()):
+                raise ValueError
+            grade_text = str(raw_grade).strip()
+            if not re.fullmatch(r'[0-5]', grade_text):
+                raise ValueError
+            grade = int(grade_text)
     except (TypeError, ValueError, StoryResponseSubmission.DoesNotExist):
         return JsonResponse({'success': False, 'error': 'A valid submission and grade from 0 to 5 are required.'}, status=400)
     submission.grade = grade
-    submission.status = 'graded'
-    submission.graded_by = teacher
-    submission.graded_at = system_now()
+    submission.status = 'graded' if grade is not None else 'pending'
+    submission.graded_by = teacher if grade is not None else None
+    submission.graded_at = system_now() if grade is not None else None
     submission.save(update_fields=['grade', 'status', 'graded_by', 'graded_at', 'updated_at'])
     return JsonResponse({'success': True, 'submission': _story_response_review_payload(submission)})
 

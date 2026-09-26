@@ -14418,6 +14418,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const activityType = String(attempt?.activity_type || task.activityType || '').trim().toLowerCase();
                     const isStoryReading = activityType === 'story_reading';
                     const isFiveWStoryQuestions = activityType === 'five_w_story_questions';
+                    const isRetellStory = activityType === 'retell_story';
                     const rawNumerator = isStoryReading ? attempt?.correct_sentences : attempt?.correct_items;
                     const rawDenominator = isStoryReading
                         ? attempt?.total_sentences
@@ -14430,7 +14431,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const displayedScore = rawScoreIsValid
                         ? `${escapeHtml(rawNumerator)}/${escapeHtml(rawDenominator)}`
                         : formatAttemptMetric(score, '%');
-                    const scoreValue = displayedScore;
+                    const retellGrade = attempt?.retell_grade;
+                    const retellGradeValue = retellGrade === undefined || retellGrade === null || retellGrade === '' ? '' : String(retellGrade);
+                    const retellSubmissionId = attempt?.story_response_submission_id;
+                    const scoreValue = isRetellStory
+                        ? `<select class="student-progress-retell-score form-select form-select-sm" data-submission-id="${escapeHtml(retellSubmissionId || '')}" data-previous-value="${escapeHtml(retellGradeValue)}" ${retellSubmissionId ? '' : 'disabled'} aria-label="Retell teacher score"><option value="" ${retellGradeValue === '' ? 'selected' : ''}>Not scored</option>${[0, 1, 2, 3, 4, 5].map(value => `<option value="${value}" ${retellGradeValue === String(value) ? 'selected' : ''}>${value}</option>`).join('')}</select>`
+                        : displayedScore;
                     const typeLabel = task.activityLabel || 'Reading Activity';
                     return `
                         <article class="student-progress-card">
@@ -14468,6 +14474,31 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const name = btn.dataset.studentName;
             const courseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
             openStudentProgressModal(id, name, courseId);
+        }
+    });
+
+    document.addEventListener('change', async function(event) {
+        const select = event.target.closest('.student-progress-retell-score');
+        if (!select || !select.dataset.submissionId) return;
+        const previousValue = select.dataset.previousValue ?? '';
+        const selectedValue = select.value;
+        select.disabled = true;
+        try {
+            const response = await fetch('/api/teacher/story-response/grade/', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': await ensureCsrfToken() },
+                body: JSON.stringify({ submission_id: select.dataset.submissionId, grade: selectedValue })
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) throw new Error(data.error || 'Score could not be saved.');
+            select.dataset.previousValue = selectedValue;
+            showToast('Retell score saved', 'success');
+        } catch (error) {
+            select.value = previousValue;
+            showToast(error.message || 'Score could not be saved.', 'error');
+        } finally {
+            select.disabled = false;
         }
     });
     
