@@ -100,6 +100,39 @@ Configure the Google Cloud project, location, and model in `pabasa_site/pabasa_s
 
 Browser recording requires microphone permission and a secure context, such as HTTPS or localhost.
 
+### Optional Microsoft Azure speech recognition
+
+In a prescribed lesson or session activity, open **Audio Settings** and turn on
+**Use Microsoft Azure for speech recognition**. The selection is remembered in
+this browser across prescribed activities. Turning it off restores Google STT.
+Read-aloud voices and prerecorded audio are unchanged. Azure errors are shown to
+the learner; the app does not silently switch providers.
+
+Configure the server before enabling Azure:
+
+| Setting | Value |
+| --- | --- |
+| `AZURE_SPEECH_KEY` | Key 1 or Key 2 from your **Azure Speech resource**, stored as a Google Cloud Secret Manager secret. This is an Azure key, not a Google API key. |
+| `AZURE_SPEECH_REGION` | Hardcoded to `southeastasia` in Django settings. Use a key from an Azure Speech resource in that region. No region environment variable is needed. |
+
+For Google Cloud Run:
+
+1. In Google Cloud Console → **Secret Manager**, create a secret named exactly
+   **`AZURE_SPEECH_KEY`** and paste your Azure Speech resource key as its value.
+2. Grant the Cloud Run service account **Secret Manager Secret Accessor** on that secret.
+3. Edit the Cloud Run service → **Variables & Secrets** → reference the secret as
+   an environment variable named **`AZURE_SPEECH_KEY`**. Select a specific secret version.
+4. Deploy the new revision. The app uses the hardcoded **`southeastasia`** region.
+
+Creating the secret alone does not connect it to the app: the Cloud Run environment
+variable mapping is required. For local development, set **`AZURE_SPEECH_KEY`**
+in the root `.env` file (never commit the key). Credentials stay on the server.
+
+The integration uses Azure's fast transcription REST API (`2025-10-15`) for browser
+recordings, including WebM, with Filipino (`fil-PH`) and English (`en-PH`) locales.
+See [Azure fast transcription requirements](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/fast-transcription-create)
+and [Cloud Run secret configuration](https://docs.cloud.google.com/run/docs/configuring/services/secrets).
+
 ### Email
 
 The current settings use Gmail SMTP on port **587** with STARTTLS. Set `EMAIL_HOST_PASSWORD` to the configured sender's Gmail App Password. To use your own sender, update `EMAIL_HOST_USER` and `DEFAULT_FROM_EMAIL` in the Django settings as well.

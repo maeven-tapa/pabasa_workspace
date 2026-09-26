@@ -1,0 +1,7 @@
+.prescribed-stt-settings{margin:0 0 18px;padding:14px;border:1px solid #94d9d6;border-radius:12px;background:#f5faf9;color:#183e63;text-align:left;font:400 .9rem/1.45 "Segoe UI",sans-serif}
+.prescribed-stt-settings .prescribed-stt-label{display:flex;align-items:flex-start;gap:10px;margin:0;font-weight:700;cursor:pointer}
+.prescribed-stt-label input{flex:none;width:18px;height:18px;margin:2px 0 0;accent-color:#187b7a}
+.prescribed-stt-settings p{margin:8px 0 0;font-size:.85rem;line-height:1.4}
+.prescribed-stt-status{color:#187b7a;font-weight:600}
+.prescribed-stt-help{color:#466879}
+[role="dialog"]>section:has([data-prescribed-stt]){max-height:calc(100dvh - 40px);overflow-y:auto}
