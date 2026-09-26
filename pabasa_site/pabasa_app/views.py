@@ -28173,6 +28173,42 @@ def get_teacher_material_attempts_api(request):
         if not _teacher_can_access_material(teacher_user, material):
             return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
 
+        content_json = material.content_json or {}
+        if content_json.get('activity_type') == 'story_reading':
+            total_sentences = len(_story_reading_sentences(material))
+            progress_rows = StoryReadingProgress.objects.filter(
+                material=material,
+            ).select_related('student').order_by('created_at', 'id')
+            enriched = []
+            for progress in progress_rows:
+                student = progress.student
+                student_name = ''
+                if student:
+                    student_name = f"{student.first_name} {student.last_name}".strip() or student.custom_id or student.email or f"Student {student.id}"
+                enriched.append({
+                    'student_id': progress.student_id,
+                    'student_name': student_name,
+                    'student_email': getattr(student, 'email', '') if student else '',
+                    'activity_type': 'story_reading',
+                    'status': 'completed' if progress.completed else 'in_progress',
+                    'completed': progress.completed,
+                    'completed_at': progress.completed_at.isoformat() if progress.completed_at else None,
+                    'duration_seconds': progress.duration_seconds,
+                    'progress_percent': progress.progress_percent,
+                    'correct_sentences': progress.correct_sentences,
+                    'total_sentences': total_sentences,
+                    'reading_score': progress.reading_score,
+                    'total_score': progress.reading_score,
+                })
+            return JsonResponse({'success': True, 'assessment': {
+                'id': f'material-{material.id}',
+                'code': material.code,
+                'title': material.title,
+                'materials': [],
+                'attempts': enriched,
+                'activity_type': 'story_reading',
+            }})
+
         if _is_story_response_material(material):
             submissions = StoryResponseSubmission.objects.filter(material=material).select_related('student', 'story_material').order_by('submitted_at')
             enriched = []

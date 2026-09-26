@@ -10420,12 +10420,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     <table class="table table-hover align-middle mb-0">
                         <thead>
                             <tr id="studentProgressTableHead">
-                                <th>Reading Activity (Title)</th><th>Status</th><th>Date Completed</th><th>Time Spent</th><th>Progress</th>
+                                <th>Reading Activity (Title)</th><th>Status</th><th>Date Completed</th><th>Time Spent</th><th>Progress</th><th>Score</th>
                             </tr>
                         </thead>
                         <tbody id="studentProgressTableBody">
                             <tr>
-                                <td colspan="5" class="text-center text-muted py-4">Select a student to view progress.</td>
+                                <td colspan="6" class="text-center text-muted py-4">Select a student to view progress.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -14310,20 +14310,24 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
             if (titleEl) titleEl.textContent = `${studentName || 'Student'} Progress`;
             if (subtextEl) subtextEl.textContent = `${course.title || 'Course'} reading activities`;
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Loading progress...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Loading progress...</td></tr>`;
 
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.show();
 
             const tasks = courseProgressTasks(course);
             if (tasks.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">No reading activities assigned yet.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">No reading activities assigned yet.</td></tr>`;
                 return;
             }
 
             const assessmentDetails = await fetchAssessmentProgressDetails(tasks.map(task => task.assessmentId));
             const activityRows = tasks.flatMap(task => {
-                const detail = task.assessmentId ? assessmentDetails[String(rawRecordId(task.assessmentId))] : null;
+                const taskKey = String(task.assessmentId || '');
+                const rawKey = String(rawRecordId(task.assessmentId));
+                const detail = task.assessmentId
+                    ? (assessmentDetails[taskKey] ?? assessmentDetails[rawKey])
+                    : null;
                 // support both new Assessment rows (array of attempt dicts) and legacy Material-based attempts
                 let allAttempts = [];
                 if (detail) {
@@ -14345,9 +14349,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     });
                 return [{ task, attempt: filteredAttempts[filteredAttempts.length - 1] || null }];
             });
-            const hasScore = activityRows.some(({ attempt }) => attempt && latestAttemptValue(attempt, 'score', 'final_score', 'total_score') !== undefined && latestAttemptValue(attempt, 'score', 'final_score', 'total_score') !== null && latestAttemptValue(attempt, 'score', 'final_score', 'total_score') !== '');
             const head = document.getElementById('studentProgressTableHead');
-            if (head) head.innerHTML = `<th>Reading Activity (Title)</th><th>Status</th><th>Date Completed</th><th>Time Spent</th><th>Progress</th>${hasScore ? '<th>Score</th>' : ''}`;
+            if (head) head.innerHTML = '<th>Reading Activity (Title)</th><th>Status</th><th>Date Completed</th><th>Time Spent</th><th>Progress</th><th>Score</th>';
             const searchInput = document.getElementById('studentProgressSearch');
             const renderRows = () => {
                 const query = String(searchInput?.value || '').trim().toLowerCase();
@@ -14359,7 +14362,18 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const progressValue = attempt ? latestAttemptValue(attempt, 'progress_percent', 'completion_percentage', 'progress') : null;
                     const progress = progressValue !== undefined && progressValue !== null && progressValue !== '' ? `${Math.round(Number(progressValue))}%` : (status.label === 'Completed' ? '100%' : '0%');
                     const score = attempt ? latestAttemptValue(attempt, 'score', 'final_score', 'total_score') : null;
-                    const scoreCell = hasScore ? `<td>${formatAttemptMetric(score, '%')}</td>` : '';
+                    const isStoryReading = attempt?.activity_type === 'story_reading';
+                    const correctSentences = attempt?.correct_sentences;
+                    const totalSentences = attempt?.total_sentences;
+                    const storyScoreIsValid = isStoryReading
+                        && correctSentences !== undefined && correctSentences !== null && correctSentences !== ''
+                        && totalSentences !== undefined && totalSentences !== null && totalSentences !== ''
+                        && Number.isFinite(Number(correctSentences)) && Number.isFinite(Number(totalSentences))
+                        && Number(totalSentences) > 0;
+                    const displayedScore = isStoryReading
+                        ? (storyScoreIsValid ? `${escapeHtml(correctSentences)}/${escapeHtml(totalSentences)}` : '—')
+                        : formatAttemptMetric(score, '%');
+                    const scoreCell = `<td>${displayedScore}</td>`;
                     return `
                         <tr>
                             <td><strong>${escapeHtml(task.title)}</strong></td>
@@ -14371,7 +14385,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         </tr>
                     `;
                 });
-                tbody.innerHTML = rows.length ? rows.join('') : `<tr><td colspan="${hasScore ? 6 : 5}" class="text-center text-muted py-4">No reading activities match your search.</td></tr>`;
+                tbody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="6" class="text-center text-muted py-4">No reading activities match your search.</td></tr>';
             };
             if (searchInput && !searchInput.dataset.bound) {
                 searchInput.dataset.bound = 'true';
