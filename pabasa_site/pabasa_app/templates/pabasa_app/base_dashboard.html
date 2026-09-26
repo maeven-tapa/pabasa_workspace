@@ -3634,6 +3634,12 @@
                 bottom: 104px;
             }
         }
+
+        /* Keep the teacher navigation on the Section and ARAL Program blue
+           palette across every teacher route. */
+        body.teacher-dashboard-body .dashboard-sidebar {
+            background: linear-gradient(145deg, #13507a 0%, #10466e 70%, #0b3552 100%) !important;
+        }
     </style>
 </head>
 <body class="dashboard-body dashboard-preloading{% if nav_role == 'teacher' %} teacher-dashboard-body{% endif %}" data-student-theme="{% if nav_role == 'student' %}{{ student_theme_slug|default:'sky' }}{% endif %}">

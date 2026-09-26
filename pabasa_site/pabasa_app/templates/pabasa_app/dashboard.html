@@ -2239,8 +2239,8 @@
         flex: 1 1 auto;
     }
 
-    /* Responsive adjustments */
-    @media (max-width: 991.98px) {
+    /* Stack the dashboard before the sidebar leaves too little room for cards. */
+    @media (max-width: 1199.98px) {
         .student-dashboard {
             align-content: start;
             min-height: auto;
@@ -2421,6 +2421,7 @@
     }
 
     .my-classes-section .class-list {
+        container-type: inline-size;
         gap: 1rem;
     }
 
@@ -2431,7 +2432,7 @@
         cursor: default;
         display: grid;
         gap: 1rem;
-        grid-template-columns: minmax(12.5rem, 0.9fr) minmax(16rem, 1.6fr);
+        grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.6fr);
         overflow: visible;
         padding: 0;
     }
@@ -2667,11 +2668,38 @@
     body.dark-theme .class-card-activity { background: rgba(15, 51, 74, 0.62); }
     body.dark-theme .class-card-activity .aral-week-card { background: rgba(15, 51, 74, 0.46); }
 
+    /* Respond to the card's actual width, including sidebar and display scaling. */
+    @container (max-width: 34rem) {
+        .my-classes-section .class-list > .class-card {
+            grid-template-columns: minmax(0, 1fr);
+        }
+    }
+
+    .my-classes-section,
+    .my-classes-section .class-list,
+    .my-classes-section .class-list > .class-card {
+        min-width: 0;
+    }
+
+    .class-card-activity-head { flex-wrap: wrap; }
+    .class-card-activity-copy { flex-basis: 8rem; overflow-wrap: anywhere; }
+    .class-card-summary h3 { overflow-wrap: anywhere; }
+    .class-card-summary .reading-level-badge { white-space: normal; overflow-wrap: anywhere; }
+
+    /* Six badges stay balanced in two complete rows after the sidebar and
+       display scaling apply. */
+    .student-dashboard .achievements-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
     @media (max-width: 767.98px) {
         .my-classes-section .class-list > .class-card {
-            gap: 0;
-            grid-template-columns: 1fr;
+            grid-template-columns: minmax(0, 1fr);
         }
+
+        .student-studio-copy { padding-right: 4.5rem; }
+        .student-studio-bird { max-width: 4.5rem; }
+        .student-expanded-toolbar { grid-template-columns: minmax(0, 1fr); gap: 0.75rem; }
 
         .class-card-activity { padding: 1rem; }
         .class-card-activity-state { font-size: 0.7rem; padding: 0.42rem 0.6rem; }
