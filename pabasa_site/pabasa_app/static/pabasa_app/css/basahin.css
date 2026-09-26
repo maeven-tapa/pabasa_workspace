@@ -27,6 +27,69 @@
   animation: none !important;
   transform-origin: center;
 }
+/* Shared teacher-model button for Session 10–15 English activities. Its
+   activity remains responsible for availability and playback. */
+:root body button[data-pakinggan-button] {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 14px !important;
+  box-sizing: border-box;
+  max-width: 100%;
+  border: 3px solid #94d9d6 !important;
+  border-radius: 999px !important;
+  background: #fffffff0 !important;
+  color: #187b7a !important;
+  font: 400 clamp(1.1rem, 1.8vw, 1.45rem)/1.25 BasahinFredoka, Nunito, 'Segoe UI', sans-serif !important;
+  box-shadow: 0 6px 0 #b7d6dc, 0 10px 20px #187b7a20 !important;
+  cursor: pointer;
+  transition: transform .16s ease, filter .16s ease, box-shadow .16s ease !important;
+}
+:root body button[data-pakinggan-button]:not(:disabled):hover {
+  background: #f4fffe !important;
+  filter: brightness(1.04) !important;
+  transform: translateY(-2px) !important;
+}
+:root body button[data-pakinggan-button]:focus-visible {
+  outline: 3px solid #f4c85d !important;
+  outline-offset: 4px !important;
+}
+:root body button[data-pakinggan-button]:not(:disabled):active {
+  transform: translateY(3px) !important;
+  box-shadow: 0 2px 0 #b7d6dc !important;
+}
+:root body button[data-pakinggan-button]:disabled {
+  background: #b5c5c7 !important;
+  border-color: transparent !important;
+  color: #edf3f4 !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  filter: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+:root body button[data-pakinggan-button] [data-pakinggan-icon] {
+  display: inline-block;
+  flex: 0 0 1.25em;
+  width: 1.25em;
+  height: 1.25em;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 9v6h4l5 4V5L7 9zm12-2v2a4 4 0 0 1 0 6v2a6 6 0 0 0 0-10zm3-3v2a8 8 0 0 1 0 12v2a10 10 0 0 0 0-16z'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+/* Audio playback adds .is-busy in several activity scripts. It must not
+   animate either member of the paired Read/Listen control. */
+:root body button[data-pakinggan-button].is-busy,
+:root body button[data-basahin-button][data-pakinggan-pair][data-basahin-state='idle'].is-busy {
+  animation: none !important;
+}
+/* The learner Read button takes the measured size of its paired Listen
+   button, preserving each activity's existing responsive layout. */
+:root body button[data-basahin-button][data-pakinggan-pair] {
+  width: var(--pakinggan-paired-width) !important;
+  min-width: 0 !important;
+  min-height: var(--pakinggan-paired-height) !important;
+  flex: 0 0 var(--pakinggan-paired-width);
+}
 :root body button[data-basahin-button]::before,
 :root body button[data-basahin-button]::after { content: none !important; }
 :root body button[data-basahin-button]:not(:disabled):hover {
@@ -101,6 +164,7 @@
 @keyframes basahin-spin { to { transform: rotate(360deg); } }
 @media (max-width: 480px) {
   :root body button[data-basahin-button] { min-width: 0; width: 100%; min-height: 58px; }
+  :root body button[data-basahin-button][data-pakinggan-pair] { flex-basis: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   :root body button[data-basahin-button][data-basahin-state][data-basahin-speaking],
