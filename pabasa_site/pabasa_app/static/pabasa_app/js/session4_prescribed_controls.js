@@ -4,7 +4,8 @@
   const debugPreference = 'pabasaShowSpeechDebugPanel';
 
   function init({ prefix, adapter, speech = false }) {
-    if (!window.PrescribedControls || document.documentElement.dataset[`${prefix}ControlsReady`]) return;
+    const readyKey = `${prefix.replace(/-([a-z0-9])/g, (_, character) => character.toUpperCase())}ControlsReady`;
+    if (!window.PrescribedControls || document.documentElement.dataset[readyKey]) return;
     const q = suffix => document.getElementById(`${prefix}${suffix}`);
     const debug = {
       panel: q('-debug-panel'),
@@ -45,7 +46,7 @@
     } catch (_) {
       return;
     }
-    document.documentElement.dataset[`${prefix}ControlsReady`] = '1';
+    document.documentElement.dataset[readyKey] = '1';
     const help = q('-help-btn');
     help?.addEventListener('click', () => adapter.help?.(), { capture: true });
     const audioClose = q('-audio-close');
