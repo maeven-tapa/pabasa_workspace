@@ -5,12 +5,12 @@
   if (!node || !app) return;
   const refinement = document.createElement('link');
   refinement.rel = 'stylesheet';
-  refinement.href = '/static/pabasa_app/css/lesson29_activity2_refinement.css?v=lesson29-a2-ui-5';
+  refinement.href = '/static/pabasa_app/css/lesson29_activity2_refinement.css?v=lesson29-a2-ui-7';
   document.head.appendChild(refinement);
   const data = JSON.parse(node.textContent || '{}');
   const csrf = () => ((document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] || '');
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-  let state = {...(data.progress?.state || {})}, busy = false, paused = false, audioUrl = null, audio = null, completionAnnounced = false;
+  let state = {...(data.progress?.state || {})}, busy = false, paused = false, audioUrl = null, audio = null, completionAnnounced = false, transientWrongWord = '';
   const emitDebug = detail => window.dispatchEvent(new CustomEvent('session13-prescribed-s13l29g2-debug', {detail}));
   function hydrate() { state.current_item = Number(state.current_item || 0); state.selected_words ||= []; state.phase ||= 'spotting'; }
   async function post(url, body) { const response = await fetch(url, {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':csrf()}, body:JSON.stringify(body)}), result = await response.json(); if (!response.ok || !result.success) throw Error(result.error || 'Could not save your progress.'); if (result.progress?.state) state = {...result.progress.state}; hydrate(); return result; }
@@ -19,7 +19,7 @@
     hydrate();
     if (state.phase === 'complete' || state.current_item >= data.words.length) { window.PrescribedLessonUi.showCompletion(app); post(data.completion_url, {}).catch(() => {}); if (!completionAnnounced) { completionAnnounced = true; play('Great job! You spotted all the words.').catch(() => {}); } return; }
     const selected = new Set(state.selected_words);
-    app.innerHTML = `<div class="eyebrow">SESSION 13 · LESSON 29 · ACTIVITY 2</div><h1 class="title">Spot the Word</h1><p class="instruction">Listen to the word, then encircle it.</p><div class="grid">${data.words.map(word => `<button class="word ${selected.has(word) ? 'correct' : state.wrong_word === word ? 'wrong' : ''}" data-word="${esc(word)}" ${selected.has(word) || busy ? 'disabled' : ''}>${esc(word)}</button>`).join('')}</div><p class="status ${kind}">${esc(message || 'Listen carefully, then choose the word you heard.')}</p><button class="button" id="listen" ${busy ? 'disabled' : ''}>🔊 Listen</button>${steps()}`;
+    app.innerHTML = `<div class="eyebrow">SESSION 13 · LESSON 29 · ACTIVITY 2</div><h1 class="title">Spot the Word</h1><p class="instruction">Listen to the word, then encircle it.</p><div class="grid">${data.words.map(word => `<button class="word ${selected.has(word) ? 'correct' : transientWrongWord === word ? 'wrong' : ''}" data-word="${esc(word)}" ${selected.has(word) || busy ? 'disabled' : ''}>${esc(word)}</button>`).join('')}</div><p class="status ${kind}">${esc(message || 'Listen carefully, then choose the word you heard.')}</p><button class="button" id="listen" ${busy ? 'disabled' : ''}>🔊 Listen</button>${steps()}`;
     app.querySelectorAll('[data-word]').forEach(button => { button.onclick = () => choose(button.dataset.word); });
     document.getElementById('listen').onclick = () => play(state.target_word).catch(error => render(error.message, 'bad'));
     emitDebug({status:paused ? 'Paused' : 'Ready', expected:state.target_word || '—', mic:'Inactive · Unmuted', recorder:'inactive', vad:'waiting'});
@@ -39,12 +39,15 @@
   async function choose(word) {
     if (busy || paused) return;
     busy = true; let message = '', kind = '', nextTarget = '', feedback = '', accepted = false;
-    try { const result = await post(data.progress_url, {action:'choose', item_index:state.current_item, word}); accepted = Boolean(result.accepted); message = accepted ? 'Correct' : 'Try again'; feedback = accepted ? 'Correct.' : 'Try again.'; kind = accepted ? 'good' : 'bad'; nextTarget = accepted && state.phase !== 'complete' ? state.target_word : ''; }
+    try { const result = await post(data.progress_url, {action:'choose', item_index:state.current_item, word}); accepted = Boolean(result.accepted); transientWrongWord = accepted ? '' : String(result.wrong_word || word); message = accepted ? 'Correct' : 'Try again'; feedback = accepted ? 'Correct.' : 'Try again.'; kind = accepted ? 'good' : 'bad'; nextTarget = accepted && state.phase !== 'complete' ? state.target_word : ''; }
     catch (error) { message = error.message; kind = 'bad'; }
     finally { busy = false; }
     emitDebug({status:accepted ? 'Correct' : 'Try again', raw:feedback || 'Waiting for selection.'});
     render(message, kind);
-    if (feedback) await play(feedback).catch(() => {});
+    if (feedback) {
+      await play(feedback).catch(() => {});
+      if (!accepted) { transientWrongWord = ''; render(); }
+    }
     if (nextTarget) await play(nextTarget).catch(error => render(error.message, 'bad'));
   }
   async function reset(event) { event.preventDefault(); if (busy) return; busy = true; try { await post(data.progress_url, {reset:true}); window.location.reload(); } catch (error) { busy = false; alert(error.message); } }

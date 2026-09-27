@@ -47,7 +47,7 @@ class PrescribedLesson30MatchItTests(TestCase):
         activity = prescribed_activity(self.activity_key)
         self.assertEqual((activity['session_number'], activity['lesson_number'], activity['gawain_number']), (14, 30, 1))
         self.assertEqual(activity['word_bank'], ['pet', 'mat', 'pat', 'little', 'happy'])
-        self.assertEqual([item['word'] for item in activity['items']], ['mat', 'happy', 'pet', 'little', 'pat'])
+        self.assertEqual([item['word'] for item in activity['items']], ['mat', 'happy', 'pet', 'pat', 'little'])
         response = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': self.activity_key}))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'pabasa_app/prescribed_sequential_picture_match_page.html')

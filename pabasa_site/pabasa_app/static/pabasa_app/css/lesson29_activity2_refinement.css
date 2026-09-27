@@ -10,8 +10,8 @@ html body .eyebrow{margin:-8px auto 16px;padding:10px 30px;font-size:clamp(.85re
 html body .title{font-size:clamp(2.05rem,3.8vw,3.35rem)}
 html body .instruction{margin:14px auto;font-size:clamp(1rem,1.5vw,1.25rem)}
 html body .grid{width:max-content;grid-template-columns:repeat(3,clamp(76px,8vw,112px));gap:clamp(8px,1.2vw,14px);margin:14px auto;padding:clamp(10px,1.5vw,16px);border-radius:24px;box-shadow:0 10px 24px #173f6325}
-html body .word{width:100%;aspect-ratio:1;border:3px solid #7e9da2;border-radius:50%;transition:transform .16s,filter .16s,box-shadow .16s,background .16s}
-html body .word:hover:not(:disabled){transform:translateY(-2px) scale(1.04);background:#f4d26d;box-shadow:0 6px 12px #173f6330}
+html body .word{width:100%;aspect-ratio:1;border:3px solid transparent;border-radius:50%;background:transparent;color:var(--ink);opacity:1;transition:transform .16s,filter .16s,box-shadow .16s,background .16s,border-color .16s}
+html body .word:hover:not(:disabled){transform:translateY(-2px) scale(1.04);border-color:#efb947;background:#f4d26d;box-shadow:0 6px 12px #173f6330}
 html body .word:active:not(:disabled){transform:translateY(2px) scale(.98);box-shadow:none}
 html body .word:focus-visible{outline:4px solid #f5d47c;outline-offset:4px}
 html body .word.correct{border-color:var(--good);box-shadow:0 0 0 4px #53ae8340}
