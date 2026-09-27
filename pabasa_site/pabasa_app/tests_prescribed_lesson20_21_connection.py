@@ -67,3 +67,31 @@ class PrescribedLesson2021ConnectionTests(TestCase):
         self.assertEqual((progress.completed_items, progress.correct_items, progress.total_items), (1, 1, 4))
         self.assertEqual(progress.state['connected_answers'], {'tsokolate': 'tsokolate'})
         self.assertEqual(self.client.post(self.complete_url, data='{}', content_type='application/json').status_code, 400)
+
+    def test_restart_returns_activity_to_intro_and_clears_saved_progress(self):
+        self.post({'state': {'phase': 'connection', 'completed_oral_reads': [0]}})
+        state = {
+            'phase': 'connection',
+            'completed_oral_reads': [0],
+            'connected_answers': {'tsokolate': 'tsokolate'},
+            'selected_answer': 'tsokolate',
+            'state_version': 2,
+        }
+        self.post({'candidate_answer': 'tsokolate', 'state': state})
+        progress = StudentActivityProgress.objects.get(student=self.student, activity_key=self.key)
+        progress.activity_completed = True
+        progress.save(update_fields=['activity_completed', 'updated_at'])
+
+        restarted = self.post({'reset': True})
+
+        self.assertEqual(restarted.status_code, 200)
+        payload = restarted.json()['progress']
+        self.assertEqual(payload['completed_items'], 0)
+        self.assertFalse(payload['activity_completed'])
+        self.assertEqual(payload['state']['phase'], 'intro')
+        self.assertEqual(payload['state']['current_item_index'], 0)
+        self.assertEqual(payload['state']['connected_answers'], {})
+        progress = StudentActivityProgress.objects.get(student=self.student, activity_key=self.key)
+        self.assertEqual(progress.current_index, 0)
+        self.assertEqual(progress.completed_items, 0)
+        self.assertFalse(progress.activity_completed)
