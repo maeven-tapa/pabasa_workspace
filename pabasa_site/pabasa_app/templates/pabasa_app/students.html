@@ -53,8 +53,15 @@
     .aral-chart { display:grid; grid-template-columns:1.4rem minmax(0,1fr); gap:.65rem; min-height:12.5rem; }
     .aral-chart-axis { display:flex; flex-direction:column; justify-content:space-between; padding:0 0 1.7rem; color:#92a1a9; font-size:.65rem; text-align:right; }
     .aral-chart-plot { position:relative; display:flex; align-items:flex-end; justify-content:space-around; gap:.5rem; min-width:0; padding:0 .2rem 1.7rem; background:repeating-linear-gradient(to bottom, transparent 0, transparent calc(25% - 1px), #e9f0f3 calc(25% - 1px), #e9f0f3 25%); }
-    .aral-bar-group { display:flex; align-items:flex-end; justify-content:center; gap:.18rem; width:23%; height:100%; }
+    .aral-bar-group { position:relative; display:flex; align-items:flex-end; justify-content:center; gap:.18rem; width:23%; height:100%; }
     .aral-bar { width:clamp(.42rem, 2.2vw, .9rem); min-height:.45rem; border-radius:5px 5px 2px 2px; background:#2ea8e5; }
+    .aral-bar-value { position:absolute; bottom:calc(100% + .2rem); color:#527080; font-size:.68rem; font-weight:800; white-space:nowrap; }
+    .aral-chart-tooltip { position:absolute; z-index:10; bottom:calc(100% + 1.55rem); left:50%; display:flex; width:max-content; max-width:11rem; flex-direction:column; gap:.12rem; padding:.5rem .62rem; border-radius:7px; background:#24465c; box-shadow:0 7px 18px rgba(15,45,69,.18); color:#fff; opacity:0; pointer-events:none; text-align:left; transform:translate(-50%, .2rem); transition:opacity .15s ease, transform .15s ease; visibility:hidden; }
+    .aral-chart-tooltip-category { font-size:.68rem; font-weight:700; line-height:1.2; }
+    .aral-chart-tooltip-percentage { font-size:.84rem; font-weight:900; line-height:1.2; }
+    .aral-chart-tooltip-count { font-size:.68rem; font-weight:600; line-height:1.2; white-space:nowrap; }
+    .aral-bar-group:hover .aral-chart-tooltip, .aral-bar-group:focus-visible .aral-chart-tooltip { opacity:1; transform:translate(-50%, 0); visibility:visible; }
+    .aral-bar-group:focus-visible { outline:2px solid #2ea8e5; outline-offset:2px; }
     .aral-bar--secondary { background:#9bd8ee; }
     .aral-bar-label { position:absolute; bottom:.05rem; width:23%; color:#527080; font-size:.66rem; font-weight:800; text-align:center; }
     .aral-chart-label-1 { left:0; } .aral-chart-label-2 { left:25.7%; } .aral-chart-label-3 { left:51.4%; } .aral-chart-label-4 { right:0; }
@@ -1404,7 +1411,7 @@
             <div class="aral-chart" role="img" aria-labelledby="aralStoryPerformanceTitle aralChartDescription" aria-describedby="aralChartDescription">
                 <div class="aral-chart-axis" aria-hidden="true"><span>100</span><span>75</span><span>50</span><span>25</span><span>0</span></div>
                 <div class="aral-chart-plot" aria-hidden="true">
-                    {% for indicator in aral_story_performance_data %}<div class="aral-bar-group">{% for bar in indicator.bars %}<span class="aral-bar{% if bar.secondary %} aral-bar--secondary{% endif %}" style="height:{{ bar.height }}%"></span>{% endfor %}</div>{% endfor %}
+                    {% for indicator in aral_story_performance_data %}<div class="aral-bar-group" tabindex="0" aria-label="{{ indicator.label }}: {% if indicator.percentage is not None %}{{ indicator.percentage }}% meet benchmark, {{ indicator.tooltip_count }}{% else %}{{ indicator.tooltip_count }}{% endif %}">{% for bar in indicator.bars %}<span class="aral-bar{% if bar.secondary %} aral-bar--secondary{% endif %}" style="height:{{ bar.height }}%"></span>{% endfor %}<span class="aral-bar-value">{% if indicator.percentage is not None %}{{ indicator.percentage }}%{% else %}—{% endif %}</span><span class="aral-chart-tooltip" aria-hidden="true"><span class="aral-chart-tooltip-category">{{ indicator.label }}</span>{% if indicator.percentage is not None %}<span class="aral-chart-tooltip-percentage">{{ indicator.percentage }}% meet benchmark</span>{% endif %}<span class="aral-chart-tooltip-count">{{ indicator.tooltip_count }}</span></span></div>{% endfor %}
                     {% for indicator in aral_story_performance_data %}<span class="aral-bar-label" style="left:{{ indicator.left }}%">{{ indicator.label }}</span>{% endfor %}
                 </div>
             </div>

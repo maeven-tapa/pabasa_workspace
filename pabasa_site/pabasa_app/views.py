@@ -25969,8 +25969,17 @@ def _collect_supplementary_student_results(section, selected_term):
 def _supplementary_chart_data(student_results):
     data = []
     for index, (key, label) in enumerate(SUPPLEMENTARY_SCORE_KEYS):
-        bars = [{'height': (row['scores'][key] / 5.0) * 100, 'secondary': False} for row in student_results if row['scores'][key] is not None]
-        data.append({'label': label, 'left': index * 25.7, 'bars': bars})
+        scores = [row['scores'][key] for row in student_results if row['scores'][key] is not None]
+        meeting_benchmark = sum(score >= 3 for score in scores)
+        qualifying_count = len(scores)
+        percentage = round((meeting_benchmark / qualifying_count) * 100) if qualifying_count else None
+        data.append({
+            'label': label,
+            'left': index * 25.7,
+            'bars': [{'height': percentage, 'secondary': False}] if percentage is not None else [],
+            'percentage': percentage,
+            'tooltip_count': f'{meeting_benchmark} of {qualifying_count} students' if percentage is not None else 'No qualifying results',
+        })
     return data if any(indicator['bars'] for indicator in data) else []
 
 
