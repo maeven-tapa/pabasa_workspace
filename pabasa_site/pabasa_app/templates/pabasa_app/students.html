@@ -63,7 +63,15 @@
     .aral-legend-item--secondary::before { background:#9bd8ee; }
     .aral-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.65rem; margin-top:1rem; }
     .aral-summary-item { padding:.65rem .72rem; border:1px solid #e7eff3; border-radius:12px; background:#fff; }
-    .aral-summary-label { display:block; color:#7b8d97; font-size:.68rem; font-weight:700; line-height:1.25; }
+    .aral-summary-label { display:flex; align-items:center; gap:.28rem; color:#7b8d97; font-size:.68rem; font-weight:700; line-height:1.25; }
+    .aral-summary-help { position:relative; display:inline-grid; place-items:center; width:.9rem; height:.9rem; flex:0 0 .9rem; border:1px solid #a7bac4; border-radius:50%; color:#78909c; cursor:help; font-size:.58rem; font-weight:900; line-height:1; }
+    .aral-summary-help::after { position:absolute; z-index:20; bottom:calc(100% + .45rem); left:50%; width:clamp(12rem, 28vw, 16rem); padding:.48rem .58rem; border-radius:7px; background:#24465c; box-shadow:0 7px 18px rgba(15,45,69,.18); color:#fff; content:attr(data-tooltip); font-size:.68rem; font-weight:600; line-height:1.35; opacity:0; pointer-events:none; text-align:left; transform:translate(-50%, .2rem); transition:opacity .15s ease, transform .15s ease; visibility:hidden; }
+    .aral-summary-help:hover::after, .aral-summary-help:focus-visible::after { opacity:1; transform:translate(-50%, 0); visibility:visible; }
+    .aral-summary-help:focus-visible { outline:2px solid #2ea8e5; outline-offset:2px; }
+    .aral-summary-item:first-child .aral-summary-help::after { left:0; transform:translate(0, .2rem); }
+    .aral-summary-item:first-child .aral-summary-help:hover::after, .aral-summary-item:first-child .aral-summary-help:focus-visible::after { transform:translate(0, 0); }
+    .aral-summary-item:last-child .aral-summary-help::after { right:0; left:auto; transform:translate(0, .2rem); }
+    .aral-summary-item:last-child .aral-summary-help:hover::after, .aral-summary-item:last-child .aral-summary-help:focus-visible::after { transform:translate(0, 0); }
     .aral-summary-value { display:block; margin-top:.18rem; color:#10466e; font-size:1.25rem; font-weight:900; }
     .aral-benchmark-note { margin:.9rem 0 0; color:#8998a0; font-size:.7rem; }
     .aral-ready-panel { display:flex; flex-direction:column; }
@@ -87,8 +95,19 @@
     .aral-exit-modal .modal-footer { justify-content:space-between; padding:.85rem 1.35rem; border-top:1px solid #e6eef2; background:#fff; }
     .aral-exit-modal .aral-modal-count { margin:0; color:#718590; font-size:.78rem; font-weight:800; }
     .aral-modal-list { display:grid; gap:.5rem; }
-    .aral-modal-student { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.8rem .85rem; border:1px solid #e1edf2; border-radius:13px; background:#fff; }
+    .aral-modal-student { display:grid; gap:.55rem; padding:.8rem .85rem; border:1px solid #e1edf2; border-radius:13px; background:#fff; }
     .aral-modal-student-name { color:#24465c; font-size:.86rem; font-weight:900; }
+    .aral-modal-student-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+    .aral-modal-scores { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.25rem .8rem; margin:0; color:#5f7683; font-size:.74rem; }
+    .aral-modal-score { display:flex; justify-content:space-between; gap:.5rem; }
+    .aral-modal-score dt, .aral-modal-score dd { margin:0; }
+    .aral-modal-score dd { color:#10466e; font-weight:900; }
+    .aral-modal-total { padding-top:.3rem; border-top:1px solid #edf2f4; color:#24465c; font-weight:900; }
+    .aral-modal-criteria { margin:0; color:#526d7c; font-size:.74rem; font-weight:800; }
+    .aral-history-summary { margin-top:1rem; padding-top:1rem; border-top:1px solid #e7eff3; }
+    .aral-history-heading { margin:0; color:#24465c; font-size:.9rem; font-weight:900; }
+    .aral-history-count { margin:.35rem 0 0; color:#718590; font-size:.76rem; }
+    .aral-history-summary .aral-view-all { margin-top:.7rem; }
     .aral-modal-student-status { color:#2d7650; font-size:.72rem; font-weight:900; white-space:nowrap; }
     .teacher-aral-action-dialog { max-width:28rem; }
     .teacher-aral-action-modal { overflow:hidden; border:0; border-radius:18px; box-shadow:0 20px 55px rgba(15,45,69,.2); }
@@ -1392,32 +1411,46 @@
                 </div>
             </div>
             {% if aral_story_performance_legend %}<div class="aral-chart-legend">{% for legend in aral_story_performance_legend %}<span class="aral-legend-item{% if legend.secondary %} aral-legend-item--secondary{% endif %}">{{ legend.label }}</span>{% endfor %}</div>{% endif %}
-            {% else %}<div class="aral-empty-state" role="status"><strong>No story performance data yet</strong><span>Performance will appear here once story-based ARAL assessment results are recorded for {{ selected_aral_term_label }}.</span></div>{% endif %}
+            {% else %}<div class="aral-empty-state" role="status"><strong>No story performance data yet</strong><span>Performance will appear here once Supplementary Materials results are recorded for this term.</span></div>{% endif %}
         </div>
         <div class="aral-summary" aria-label="Story performance summary">
-            <div class="aral-summary-item"><span class="aral-summary-label">ARAL Students</span><strong class="aral-summary-value">{% if aral_student_count %}{{ aral_student_count }}{% else %}—{% endif %}</strong></div>
-            <div class="aral-summary-item"><span class="aral-summary-label">Meeting All Indicators</span><strong class="aral-summary-value">—</strong></div>
-            <div class="aral-summary-item"><span class="aral-summary-label">Needs Review</span><strong class="aral-summary-value">—</strong></div>
+            <div class="aral-summary-item"><span class="aral-summary-label">ARAL Students <span class="aral-summary-help" tabindex="0" role="img" aria-label="Students enrolled in the assigned ARAL section for the selected term." data-tooltip="Students enrolled in the assigned ARAL section for the selected term.">i</span></span><strong class="aral-summary-value">{% if aral_student_count %}{{ aral_student_count }}{% else %}—{% endif %}</strong></div>
+            <div class="aral-summary-item"><span class="aral-summary-label">Meeting All Indicators <span class="aral-summary-help" tabindex="0" role="img" aria-label="Students whose four Supplementary Materials scores are each at least 3/5." data-tooltip="Students whose four Supplementary Materials scores are each at least 3/5.">i</span></span><strong class="aral-summary-value">{% if aral_meeting_all_indicators_count %}{{ aral_meeting_all_indicators_count }}{% else %}—{% endif %}</strong></div>
+            <div class="aral-summary-item"><span class="aral-summary-label">Needs Review <span class="aral-summary-help" tabindex="0" role="img" aria-label="Students with Supplementary Materials results who do not yet meet all exit criteria." data-tooltip="Students with Supplementary Materials results who do not yet meet all exit criteria.">i</span></span><strong class="aral-summary-value">{% if aral_needs_review_count %}{{ aral_needs_review_count }}{% else %}—{% endif %}</strong></div>
         </div>
-        <p class="aral-benchmark-note">Future benchmark reference · exit criteria not yet defined.</p>
+        <p class="aral-benchmark-note">Exit when all four areas are at least 3/5 and the total score is at least 12/20.</p>
     </div>
     <div class="aral-ready-panel" aria-labelledby="aralReadyTitle">
         <h2 class="aral-card-heading" id="aralReadyTitle">Students Ready for Exit</h2>
         <span class="aral-section-label">{{ selected_aral_term_label }}</span>
-        <p class="aral-card-description">Students showing strong performance across the story-based indicators.</p>
+        <p class="aral-card-description">Students meeting the Story Performance exit criteria.</p>
         {% if aral_exit_students %}<div class="aral-ready-list" aria-label="Students ready for exit">
             {% for student in aral_exit_students %}<div class="aral-student-row"><span class="aral-student-avatar" aria-hidden="true">{{ student.initials }}</span><span><span class="aral-student-name">{{ student.name }}</span><span class="aral-student-meta">{{ student.section_display }}</span></span><button type="button" class="student-aral-action aral-ready-exit-action" data-student-id="{{ student.id }}" data-student-name="{{ student.name|escape }}" data-aral-action="exit">Exit ARAL Program</button></div>{% endfor %}
-        </div>{% else %}<div class="aral-empty-state" role="status"><strong>{% if aral_student_count %}No exit recommendations yet{% else %}No ARAL students enrolled yet{% endif %}</strong><span>{% if aral_student_count %}Exit recommendations will appear here once the required performance data and criteria are available.{% else %}ARAL students assigned to this section will appear here once enrollment is recorded.{% endif %}</span></div>{% endif %}
+        </div>{% else %}<div class="aral-empty-state" role="status"><strong>{% if aral_enrolled_student_count %}No students ready for exit yet{% else %}No ARAL students enrolled yet{% endif %}</strong><span>{% if aral_enrolled_student_count %}Exit recommendations will appear here once the required performance data and criteria are available.{% else %}ARAL students assigned to this section will appear here once enrollment is recorded.{% endif %}</span></div>{% endif %}
         <button class="aral-view-all" type="button" data-bs-toggle="modal" data-bs-target="#aralExitStudentsModal" aria-label="View all students ready for exit">View All Students Ready for Exit <span aria-hidden="true">→</span></button>
+        <div class="aral-history-summary" aria-labelledby="aralHistoryTitle">
+            <h3 class="aral-history-heading" id="aralHistoryTitle">ARAL Exit History</h3>
+            <p class="aral-history-count">{{ aral_exit_history|length }} student{{ aral_exit_history|length|pluralize }} have exited ARAL.</p>
+            <button class="aral-view-all" type="button" data-bs-toggle="modal" data-bs-target="#aralExitHistoryModal" aria-label="View ARAL exit history">View Exit History <span aria-hidden="true">→</span></button>
+        </div>
     </div>
 </section>
 <div class="modal fade aral-exit-modal" id="aralExitStudentsModal" tabindex="-1" aria-labelledby="aralExitStudentsModalTitle" aria-describedby="aralExitStudentsModalContext">
     <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
         <div class="modal-header"><div><h2 class="modal-title" id="aralExitStudentsModalTitle">Students Ready for Exit</h2><p class="modal-context" id="aralExitStudentsModalContext">{% if assessment_week_section %}{{ assessment_week_section.grade_level }} · {{ assessment_week_section.section|default:assessment_week_section.class_name }} · {% endif %}{{ selected_aral_term_label }}</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
         <div class="modal-body">
-            {% if aral_exit_students %}<div class="aral-modal-list" role="list">{% for student in aral_exit_students %}<div class="aral-modal-student" role="listitem"><span class="aral-modal-student-name">{{ student.name }}</span><button type="button" class="student-aral-action aral-ready-exit-action" data-student-id="{{ student.id }}" data-student-name="{{ student.name|escape }}" data-aral-action="exit">Exit ARAL Program</button></div>{% endfor %}</div>{% elif aral_student_count %}<div class="aral-empty-state" role="status"><strong>No students ready for exit yet</strong><span>Students will appear here once the required ARAL performance data and exit criteria are available.</span></div>{% else %}<div class="aral-empty-state" role="status"><strong>No student data available for this term yet</strong><span>Student performance will appear here once ARAL activities for this term have been completed.</span></div>{% endif %}
+            {% if aral_exit_students %}<div class="aral-modal-list" role="list">{% for student in aral_exit_students %}<div class="aral-modal-student" role="listitem"><div class="aral-modal-student-header"><span class="aral-modal-student-name">{{ student.name }}</span><button type="button" class="student-aral-action aral-ready-exit-action" data-student-id="{{ student.id }}" data-student-name="{{ student.name|escape }}" data-aral-action="exit">Exit ARAL Program</button></div><dl class="aral-modal-scores"><div class="aral-modal-score"><dt>Story Reading</dt><dd>{{ student.scores.story_reading|floatformat:'-1' }}/5</dd></div><div class="aral-modal-score"><dt>5W Questions</dt><dd>{{ student.scores.five_w_questions|floatformat:'-1' }}/5</dd></div><div class="aral-modal-score"><dt>Story Response</dt><dd>{{ student.scores.story_response|floatformat:'-1' }}/5</dd></div><div class="aral-modal-score"><dt>Story Retelling</dt><dd>{{ student.scores.story_retelling|floatformat:'-1' }}/5</dd></div><div class="aral-modal-score aral-modal-total"><dt>Total</dt><dd>{{ student.total_score|floatformat:'-1' }}/20</dd></div></dl></div>{% endfor %}</div>{% else %}<div class="aral-empty-state" role="status"><strong>No students ready for exit yet</strong><span>Students will appear here once the required performance data and exit criteria are available.</span></div>{% endif %}
         </div>
-        <div class="modal-footer">{% if aral_exit_students %}<p class="aral-modal-count">{{ aral_exit_students|length }} student{{ aral_exit_students|length|pluralize }}</p>{% else %}<span aria-hidden="true"></span>{% endif %}<button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button></div>
+        <div class="modal-footer"><div>{% if aral_exit_students %}<p class="aral-modal-count">{{ aral_exit_students|length }} student{{ aral_exit_students|length|pluralize }}</p>{% endif %}<p class="aral-modal-criteria">Exit when all four areas are at least 3/5 and the total score is at least 12/20.</p></div><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button></div>
+    </div></div>
+</div>
+<div class="modal fade aral-exit-modal" id="aralExitHistoryModal" tabindex="-1" aria-labelledby="aralExitHistoryModalTitle" aria-describedby="aralExitHistoryModalContext">
+    <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
+        <div class="modal-header"><div><h2 class="modal-title" id="aralExitHistoryModalTitle">ARAL Exit History</h2><p class="modal-context" id="aralExitHistoryModalContext">{% if assessment_week_section %}{{ assessment_week_section.grade_level }} · {{ assessment_week_section.section|default:assessment_week_section.class_name }} · {% endif %}{{ selected_aral_term_label }}</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+        <div class="modal-body">
+            {% if aral_exit_history %}<div class="aral-modal-list" role="list">{% for student in aral_exit_history %}<div class="aral-modal-student" role="listitem"><div class="aral-modal-student-header"><span class="aral-modal-student-name">{{ student.student_name }}</span><span class="aral-modal-student-status">{{ student.status }}</span></div><dl class="aral-modal-scores"><div class="aral-modal-score"><dt>Section</dt><dd>{{ student.section_display }}</dd></div><div class="aral-modal-score"><dt>Term</dt><dd>{{ student.term_label }}</dd></div><div class="aral-modal-score"><dt>Exit Date</dt><dd>{{ student.exit_date }}</dd></div></dl></div>{% endfor %}</div>{% else %}<div class="aral-empty-state" role="status"><strong>No students have exited ARAL yet</strong><span>Completed ARAL exits will appear here for tracking.</span></div>{% endif %}
+        </div>
+        <div class="modal-footer"><span aria-hidden="true"></span><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button></div>
     </div></div>
 </div>
 <div class="modal fade" id="studentAssessmentRequestsModal" tabindex="-1" aria-labelledby="studentAssessmentRequestsModalTitle" aria-hidden="true">

@@ -25828,6 +25828,116 @@ def course_teacher_view(request):
 def course_student_view(request):
     return render(request, 'pabasa_app/course_student_view.html', _dashboard_context(request))
 
+SUPPLEMENTARY_SCORE_KEYS = (
+    ('story_reading', 'Story Reading'),
+    ('five_w_questions', '5W Questions'),
+    ('story_response', 'Story Response'),
+    ('story_retelling', 'Story Retelling'),
+)
+
+
+def _supplementary_term_for_date(school_calendar, value, term_blocks=None):
+    if not school_calendar or not value:
+        return None
+    if hasattr(value, 'tzinfo') and value.tzinfo is not None:
+        result_date = timezone.localtime(value).date()
+    else:
+        result_date = value.date() if hasattr(value, 'date') else value
+    for term, block in (term_blocks if term_blocks is not None else _calendar_term_blocks(school_calendar)).items():
+        opening = block.get('opening')
+        closing = block.get('closing')
+        if opening and closing and opening.start_date <= result_date <= closing.end_date:
+            return term
+    return None
+
+
+def _clamp_supplementary_score(value):
+    if value in (None, ''):
+        return None
+    try:
+        return max(0.0, min(5.0, float(value)))
+    except (TypeError, ValueError):
+        return None
+
+
+def _supplementary_material_ids(section):
+    if not section:
+        return set()
+    return set(Material.objects.filter(Q(section=section) | Q(assigned_sections=section), is_active=True).values_list('id', flat=True))
+
+
+def _collect_supplementary_student_results(section, selected_term):
+    if not section or selected_term not in (1, 2, 3):
+        return []
+    enrollments = list(_current_section_enrollments(section).select_related('student', 'school_calendar'))
+    student_ids = [enrollment.student_id for enrollment in enrollments]
+    if not student_ids:
+        return []
+    material_ids = _supplementary_material_ids(section)
+    if not material_ids:
+        return []
+    term_blocks = _calendar_term_blocks(getattr(section, 'school_calendar', None))
+    rows = {
+        student_id: {
+            'student_id': student_id,
+            'student_name': '',
+            'section': section.class_name,
+            'term': selected_term,
+            'scores': {key: None for key, _label in SUPPLEMENTARY_SCORE_KEYS},
+        }
+        for student_id in student_ids
+    }
+
+    def in_term(enrollment, timestamp):
+        if not enrollment or not enrollment.school_calendar_id:
+            return False
+        return _supplementary_term_for_date(enrollment.school_calendar, timestamp, term_blocks) == selected_term
+
+    progress_rows = StoryReadingProgress.objects.filter(student_id__in=student_ids, material_id__in=material_ids, completed=True, completed_at__isnull=False).select_related('material', 'enrollment').order_by('-completed_at', '-id')
+    for progress in progress_rows:
+        if progress.student_id not in rows or not in_term(progress.enrollment, progress.completed_at):
+            continue
+        if rows[progress.student_id]['scores']['story_reading'] is None:
+            rows[progress.student_id]['scores']['story_reading'] = _clamp_supplementary_score(progress.reading_score)
+
+    five_w_rows = Assessment.objects.filter(student_id__in=student_ids, material_id__in=material_ids, attempt_status='completed', completed_at__isnull=False, is_active=True).select_related('material', 'enrollment').order_by('-completed_at', '-id')
+    for attempt in five_w_rows:
+        content = attempt.material.content_json if isinstance(attempt.material.content_json, dict) else {}
+        if content.get('template_title') != "5W's Story Questions" and content.get('activity_variant') != 'five_w_story_questions':
+            continue
+        if attempt.student_id in rows and rows[attempt.student_id]['scores']['five_w_questions'] is None and in_term(attempt.enrollment, attempt.completed_at):
+            rows[attempt.student_id]['scores']['five_w_questions'] = _clamp_supplementary_score(attempt.total_score)
+
+    submissions = StoryResponseSubmission.objects.filter(student_id__in=student_ids, material_id__in=material_ids, status='graded', grade__isnull=False).select_related('material', 'enrollment').order_by('-submitted_at', '-id')
+    for submission in submissions:
+        content = submission.material.content_json if isinstance(submission.material.content_json, dict) else {}
+        activity_type = content.get('activity_type') or content.get('activity_variant')
+        key = 'story_retelling' if activity_type == 'retell_story' else 'story_response' if activity_type == 'story_response' else None
+        if key and submission.student_id in rows and rows[submission.student_id]['scores'][key] is None and in_term(submission.enrollment, submission.submitted_at):
+            rows[submission.student_id]['scores'][key] = _clamp_supplementary_score(submission.grade)
+
+    students_by_id = User.objects.filter(id__in=student_ids).in_bulk()
+    normalized = []
+    for student_id, row in rows.items():
+        student = students_by_id.get(student_id)
+        row['student_name'] = _display_user_name(student) if student else str(student_id)
+        available = [score for score in row['scores'].values() if score is not None]
+        row['total_score'] = sum(available) if len(available) == 4 else None
+        row['max_score'] = 20
+        row['ready_for_exit'] = bool(len(available) == 4 and all(score >= 3 for score in row['scores'].values()) and row['total_score'] >= 12)
+        if available:
+            normalized.append(row)
+    return normalized
+
+
+def _supplementary_chart_data(student_results):
+    data = []
+    for index, (key, label) in enumerate(SUPPLEMENTARY_SCORE_KEYS):
+        bars = [{'height': (row['scores'][key] / 5.0) * 100, 'secondary': False} for row in student_results if row['scores'][key] is not None]
+        data.append({'label': label, 'left': index * 25.7, 'bars': bars})
+    return data if any(indicator['bars'] for indicator in data) else []
+
+
 def students(request):
     teacher = User.objects.filter(
         id=request.session.get('user_id'), role='teacher', is_archived=False,
@@ -25837,6 +25947,10 @@ def students(request):
     assessment_week_students = []
     aral_students = []
     aral_exit_students = []
+    aral_exit_history = []
+    aral_enrolled_student_count = 0
+    aral_meeting_all_indicators_count = 0
+    aral_needs_review_count = 0
     aral_term_options = [
         {'value': value, 'label': label}
         for value, label in SchoolCalendar.TERM_CHOICES
@@ -25857,31 +25971,73 @@ def students(request):
             else calendar_default_term if calendar_default_term in (1, 2, 3)
             else 1
         )
-        roster_payload, _, _ = _teacher_student_roster_payload(
-            teacher,
-            section=section,
-            crla_term=selected_aral_term,
+        supplementary_students = _collect_supplementary_student_results(section, selected_aral_term)
+        aral_students = supplementary_students
+        exited_student_ids = {
+            student.id
+            for student in User.objects.filter(
+                id__in=[row.get('student_id') for row in supplementary_students],
+                role='student',
+            ).only('id', 'preference')
+            if bool((_get_user_state(student) or {}).get('aral_exit_override'))
+        }
+        aral_meeting_all_indicators_count = sum(
+            1 for student in aral_students
+            if all(
+                score is not None and score >= 3
+                for score in student.get('scores', {}).values()
+            )
         )
-        term_students = [
-            student for student in roster_payload
-            if student.get('has_completed_assessment')
-            and student.get('assessment_type') == 'crla'
-        ]
-        aral_students = [student for student in term_students if student.get('aral_status') == 'active']
+        aral_needs_review_count = sum(
+            1 for student in aral_students
+            if not student.get('ready_for_exit')
+        )
         aral_exit_students = []
-        for student in aral_students:
-            if not student.get('aral_exited'):
+        for student in supplementary_students:
+            if not student.get('ready_for_exit') or student.get('student_id') in exited_student_ids:
                 continue
-            name_parts = [part for part in str(student.get('name') or '').split() if part]
+            name_parts = [part for part in str(student.get('student_name') or '').split() if part]
             student['initials'] = ''.join(part[0] for part in name_parts[:2]).upper()
+            student['name'] = student['student_name']
             student['section_display'] = section.class_name
+            student['id'] = student['student_id']
             aral_exit_students.append(student)
         enrollments = _current_section_enrollments(section)
         student_ids = enrollments.values_list('student_id', flat=True)
         roster_students = User.objects.filter(
             id__in=student_ids, role='student', is_archived=False,
         ).order_by('last_name', 'first_name', 'id')
+        aral_enrolled_student_count = roster_students.count()
         roster_by_id = {student.id: student for student in roster_students}
+        exit_logs = {}
+        for log in ActivityLog.objects.filter(
+            event_type='enrollment',
+            metadata__action='exit_aral_program',
+            metadata__student_id__in=[student.id for student in roster_students],
+        ).order_by('-created_at', '-id'):
+            student_id = (log.metadata or {}).get('student_id')
+            if student_id not in exit_logs:
+                exit_logs[student_id] = log
+        for enrolled_student in roster_students:
+            state = _get_user_state(enrolled_student)
+            if not state.get('aral_exit_override'):
+                continue
+            exit_scope = state.get('aral_exit_scope') if isinstance(state.get('aral_exit_scope'), dict) else {}
+            exit_term = exit_scope.get('term')
+            if exit_term in (1, 2, 3) and exit_term != selected_aral_term:
+                continue
+            exit_log = exit_logs.get(enrolled_student.id)
+            exit_date = 'Exit date unavailable'
+            if exit_log and exit_log.created_at:
+                exit_date = timezone.localtime(exit_log.created_at).strftime('%B %d, %Y').replace(' 0', ' ')
+            aral_exit_history.append({
+                'student_id': enrolled_student.id,
+                'student_name': _display_user_name(enrolled_student),
+                'section_display': section.class_name,
+                'term_label': f'Term {exit_term}' if exit_term in (1, 2, 3) else 'Term not recorded',
+                'status': 'ARAL Exited',
+                'exit_date': exit_date,
+            })
         assessment_week_students = [
             {
                 'id': student.id,
@@ -25927,14 +26083,18 @@ def students(request):
         'assessment_week_students': assessment_week_students,
         'live_crla_material': live_crla_material,
         'aral_student_count': len(aral_students),
+        'aral_enrolled_student_count': aral_enrolled_student_count,
+        'aral_meeting_all_indicators_count': aral_meeting_all_indicators_count,
+        'aral_needs_review_count': aral_needs_review_count,
         'aral_exit_students': aral_exit_students,
+        'aral_exit_history': aral_exit_history,
         'aral_term_options': aral_term_options,
         'selected_aral_term': selected_aral_term,
         'selected_aral_term_label': next(
             (option['label'] for option in aral_term_options if option['value'] == selected_aral_term),
             'Selected term',
         ),
-        'aral_story_performance_data': [],
+        'aral_story_performance_data': _supplementary_chart_data(aral_students),
     }))
 
 def student_detail(request):
