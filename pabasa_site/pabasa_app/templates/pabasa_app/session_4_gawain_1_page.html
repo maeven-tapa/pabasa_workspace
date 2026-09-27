@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded',()=>{const instructionUrl="{% stati
     actions.update();document.getElementById('listen').onclick=()=>window.__session4PlayInstructionForNewItem?.();
     if(phase!=='recording'&&phase!=='processing')window.Basahin.bindActivity(document.getElementById('speak'),read);
   };
-  const save=()=>post(data.progress_url,{activity_key:data.activity_key,state:{current_index:index,completed_items:results.length,correct_items:results.reduce((sum,item)=>sum+item.score,0),results,phase:'check'}});
+  const NO_SPEECH_FEEDBACK=['/static/pabasa_app/prescribed/audio/all/hindi_ko_masyadong_narinig_subukan_mo_muli.mp3','/static/pabasa_app/prescribed/audio/all/pwede_mo_bang_ulitin_lakasan_nang_kaunti_at_subukan_ulit.mp3'];const isNoSpeechLikeError=error=>error?.name==='CaptureLimitError'||error?.name==='NoSpeechError';const playRandomNoSpeechFeedback=()=>new Promise(resolve=>{const audio=new Audio(NO_SPEECH_FEEDBACK[Math.floor(Math.random()*NO_SPEECH_FEEDBACK.length)]),finish=()=>{audio.onended=audio.onerror=null;resolve()};audio.onended=finish;audio.onerror=finish;audio.play().catch(finish)});const save=()=>post(data.progress_url,{activity_key:data.activity_key,state:{current_index:index,completed_items:results.length,correct_items:results.reduce((sum,item)=>sum+item.score,0),results,phase:'check'}});
   const finish=async()=>{if(completionStarted)return;completionStarted=true;await save();await post(data.completion_url,{activity_key:data.activity_key,state:{current_index:items.length,completed_items:items.length,correct_items:results.reduce((sum,item)=>sum+item.score,0),results,phase:'complete'}});window.showCompletion?.()};
   async function read(){
     if(busy||completionStarted)return;
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded',()=>{const instructionUrl="{% stati
         console.log('[S4G1 correct transition]',{beforeIndex,afterIndex:index,score,busy,phase:currentPhase});
         await progressSave;await finish();
       }
-    }catch(error){if(token!==attempt||localController.signal.aborted)return;console.error('[Session 4 Gawain 1 STT]',error);busy=false;render('initial');}
+    }catch(error){if(token!==attempt||localController.signal.aborted)return;console.error('[Session 4 Gawain 1 STT]',error);if(isNoSpeechLikeError(error)){await playRandomNoSpeechFeedback();return;}busy=false;render('initial');}
     finally{if(controller===localController)controller=null;if(token===attempt){actions.speechBusy=false;actions.update();}}
   }
   document.addEventListener('click',event=>{if(event.target.closest('#speak')&&app.contains(event.target)){event.preventDefault();event.stopImmediatePropagation();if(!actions.speechBusy&&!actions.listenAudioBusy&&!actions.instructionAudioBusy)read();}},true);
