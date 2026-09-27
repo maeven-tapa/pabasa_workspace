@@ -62,6 +62,18 @@
     .aral-chart-tooltip-count { font-size:.68rem; font-weight:600; line-height:1.2; white-space:nowrap; }
     .aral-bar-group:hover .aral-chart-tooltip, .aral-bar-group:focus-visible .aral-chart-tooltip { opacity:1; transform:translate(-50%, 0); visibility:visible; }
     .aral-bar-group:focus-visible { outline:2px solid #2ea8e5; outline-offset:2px; }
+    .aral-modal-performance-summary { display:flex; flex-direction:column; gap:.18rem; margin-bottom:1rem; }
+    .aral-modal-performance-summary strong { color:#10466e; font-size:1.15rem; }
+    .aral-modal-performance-summary span { color:#6e818c; font-size:.78rem; font-weight:700; }
+    .aral-modal-table-wrap { max-height:13rem; overflow-y:auto; }
+    .aral-modal-performance-table { width:100%; border-collapse:collapse; font-size:.82rem; }
+    .aral-modal-performance-table th, .aral-modal-performance-table td { padding:.62rem .55rem; border-bottom:1px solid #e7eff3; text-align:left; }
+    .aral-modal-performance-table th { position:sticky; top:0; z-index:1; color:#6e818c; background:#f7fbfd; font-size:.7rem; text-transform:uppercase; letter-spacing:.03em; }
+    .aral-performance-status { display:inline-block; border-radius:999px; padding:.2rem .45rem; font-size:.7rem; font-weight:800; white-space:nowrap; }
+    .aral-performance-status--met { background:#e6f6ee; color:#24744a; }
+    .aral-performance-status--needs { background:#fff1ed; color:#a34c3d; }
+    .aral-bar-group[role="button"] { cursor:pointer; }
+    .aral-bar-group[role="button"]:hover .aral-bar { background:#168dcc; }
     .aral-bar--secondary { background:#9bd8ee; }
     .aral-bar-label { position:absolute; bottom:.05rem; width:23%; color:#527080; font-size:.66rem; font-weight:800; text-align:center; }
     .aral-chart-label-1 { left:0; } .aral-chart-label-2 { left:25.7%; } .aral-chart-label-3 { left:51.4%; } .aral-chart-label-4 { right:0; }
@@ -95,6 +107,8 @@
     .aral-panel-action:hover { border-color:rgba(16,70,110,.38); background:#e1f2f9; color:#0b3c5e; }
     .aral-panel-action:focus-visible, .aral-student-row:focus-visible { outline:3px solid rgba(46,168,229,.35); outline-offset:2px; }
     .aral-exit-modal .modal-content { overflow:hidden; border:0; border-radius:20px; box-shadow:0 24px 70px rgba(15,45,69,.24); }
+    #aralStoryPerformanceModal.show { position:fixed !important; inset:0 !important; display:flex !important; align-items:center; justify-content:center; width:auto !important; height:100%; padding-right:0 !important; }
+    #aralStoryPerformanceModal .modal-dialog { position:relative; flex:0 1 800px; width:100%; max-width:800px; margin:0 !important; left:auto; right:auto; }
     .aral-exit-modal .modal-header { padding:1.15rem 1.35rem; border:0; background:linear-gradient(135deg,#10466e,#2ea8e5); color:#fff; }
     .aral-exit-modal .modal-title { font-size:1.1rem; font-weight:900; }
     .aral-exit-modal .modal-context { margin:.2rem 0 0; color:rgba(255,255,255,.82); font-size:.78rem; }
@@ -1410,8 +1424,8 @@
             {% if aral_story_performance_data %}<p class="aral-chart-note" id="aralChartDescription">Story-based performance for the assigned ARAL section.</p>
             <div class="aral-chart" role="img" aria-labelledby="aralStoryPerformanceTitle aralChartDescription" aria-describedby="aralChartDescription">
                 <div class="aral-chart-axis" aria-hidden="true"><span>100</span><span>75</span><span>50</span><span>25</span><span>0</span></div>
-                <div class="aral-chart-plot" aria-hidden="true">
-                    {% for indicator in aral_story_performance_data %}<div class="aral-bar-group" tabindex="0" aria-label="{{ indicator.label }}: {% if indicator.percentage is not None %}{{ indicator.percentage }}% meet benchmark, {{ indicator.tooltip_count }}{% else %}{{ indicator.tooltip_count }}{% endif %}">{% for bar in indicator.bars %}<span class="aral-bar{% if bar.secondary %} aral-bar--secondary{% endif %}" style="height:{{ bar.height }}%"></span>{% endfor %}<span class="aral-bar-value">{% if indicator.percentage is not None %}{{ indicator.percentage }}%{% else %}—{% endif %}</span><span class="aral-chart-tooltip" aria-hidden="true"><span class="aral-chart-tooltip-category">{{ indicator.label }}</span>{% if indicator.percentage is not None %}<span class="aral-chart-tooltip-percentage">{{ indicator.percentage }}% meet benchmark</span>{% endif %}<span class="aral-chart-tooltip-count">{{ indicator.tooltip_count }}</span></span></div>{% endfor %}
+                <div class="aral-chart-plot">
+                    {% for indicator in aral_story_performance_data %}<div class="aral-bar-group" role="button" tabindex="0" data-performance-index="{{ forloop.counter0 }}" aria-label="{{ indicator.label }}: {% if indicator.percentage is not None %}{{ indicator.percentage }}% meet benchmark, {{ indicator.tooltip_count }}{% else %}{{ indicator.tooltip_count }}{% endif %}">{% for bar in indicator.bars %}<span class="aral-bar{% if bar.secondary %} aral-bar--secondary{% endif %}" style="height:{{ bar.height }}%"></span>{% endfor %}<span class="aral-bar-value">{% if indicator.percentage is not None %}{{ indicator.percentage }}%{% else %}—{% endif %}</span><span class="aral-chart-tooltip" aria-hidden="true"><span class="aral-chart-tooltip-category">{{ indicator.label }}</span>{% if indicator.percentage is not None %}<span class="aral-chart-tooltip-percentage">{{ indicator.percentage }}% meet benchmark</span>{% endif %}<span class="aral-chart-tooltip-count">{{ indicator.tooltip_count }}</span><span class="aral-chart-tooltip-count">Click to view students</span></span></div>{% endfor %}
                     {% for indicator in aral_story_performance_data %}<span class="aral-bar-label" style="left:{{ indicator.left }}%">{{ indicator.label }}</span>{% endfor %}
                 </div>
             </div>
@@ -1438,6 +1452,13 @@
         </div>
     </div>
 </section>
+<div class="modal fade aral-exit-modal" id="aralStoryPerformanceModal" tabindex="-1" aria-labelledby="aralStoryPerformanceModalTitle">
+    <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
+        <div class="modal-header"><div><h2 class="modal-title" id="aralStoryPerformanceModalTitle">Story Performance</h2><p class="modal-context" id="aralStoryPerformanceModalContext">{{ selected_aral_term_label }}</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+        <div class="modal-body" id="aralStoryPerformanceModalBody"></div>
+    </div></div>
+</div>
+{{ aral_story_performance_data|json_script:"aralStoryPerformanceData" }}
 <div class="modal fade aral-exit-modal" id="aralExitStudentsModal" tabindex="-1" aria-labelledby="aralExitStudentsModalTitle" aria-describedby="aralExitStudentsModalContext">
     <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
         <div class="modal-header"><div><h2 class="modal-title" id="aralExitStudentsModalTitle">Students Ready for Exit</h2><p class="modal-context" id="aralExitStudentsModalContext">{% if assessment_week_section %}{{ assessment_week_section.grade_level }} · {{ assessment_week_section.section|default:assessment_week_section.class_name }} · {% endif %}{{ selected_aral_term_label }}</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
@@ -2859,6 +2880,84 @@ document.addEventListener("DOMContentLoaded", function() {
     document.addEventListener("populateDropdowns", function () {
         populateClassDropdown();
     });
+
+    const storyPerformanceDataElement = document.getElementById('aralStoryPerformanceData');
+    const storyPerformanceModal = document.getElementById('aralStoryPerformanceModal');
+    const storyPerformanceModalTitle = document.getElementById('aralStoryPerformanceModalTitle');
+    const storyPerformanceModalBody = document.getElementById('aralStoryPerformanceModalBody');
+    if (storyPerformanceDataElement && storyPerformanceModal && storyPerformanceModalTitle && storyPerformanceModalBody) {
+        document.body.appendChild(storyPerformanceModal);
+        const storyPerformanceData = JSON.parse(storyPerformanceDataElement.textContent || '[]');
+        const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[character]));
+        const renderStoryPerformanceDetails = index => {
+            const indicator = storyPerformanceData[index];
+            if (!indicator) return;
+            storyPerformanceModalTitle.textContent = indicator.label;
+            const students = indicator.students || [];
+            let summary = '<div class="aral-empty-state" role="status"><strong>No qualifying student data</strong><span>No Supplementary Materials result is available for this area and term.</span></div>';
+            if (indicator.percentage !== null && indicator.percentage !== undefined && students.length) {
+                const rows = students.map(student => {
+                    const statusClass = student.meets_benchmark ? 'aral-performance-status--met' : 'aral-performance-status--needs';
+                    const statusText = student.meets_benchmark ? 'Meets benchmark' : 'Needs review';
+                    return '<tr><td>' + escapeHtml(student.name) + '</td><td>' + student.score + '/5</td><td><span class="aral-performance-status ' + statusClass + '">' + statusText + '</span></td></tr>';
+                }).join('');
+                summary = '<div class="aral-modal-performance-summary"><strong>' + indicator.percentage + '% meet benchmark</strong><span>' + escapeHtml(indicator.tooltip_count) + '</span></div><div class="aral-modal-table-wrap"><table class="aral-modal-performance-table"><thead><tr><th scope="col">Student</th><th scope="col">Score</th><th scope="col">Status</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+            }
+            storyPerformanceModalBody.innerHTML = summary;
+        };
+        // TEMPORARY DIAGNOSTICS: remove this function and its call after modal positioning is identified.
+        const diagnoseStoryPerformanceModalPosition = () => {
+            window.requestAnimationFrame(() => {
+                const overlayRect = storyPerformanceModal.getBoundingClientRect();
+                const dialog = storyPerformanceModal.querySelector('.modal-dialog');
+                const dialogRect = dialog ? dialog.getBoundingClientRect() : null;
+                const dialogStyles = dialog ? window.getComputedStyle(dialog) : null;
+                const viewportCenterX = window.innerWidth / 2;
+                const modalCenterX = dialogRect ? dialogRect.left + (dialogRect.width / 2) : null;
+                console.groupCollapsed('[TEMP] Story Performance modal positioning');
+                console.log('window.innerWidth', window.innerWidth);
+                console.log('window.innerHeight', window.innerHeight);
+                console.log('devicePixelRatio', window.devicePixelRatio);
+                console.log('document.documentElement.clientWidth', document.documentElement.clientWidth);
+                console.log('document.documentElement.clientHeight', document.documentElement.clientHeight);
+                console.log('overlay.getBoundingClientRect()', overlayRect);
+                console.log('modal/dialog.getBoundingClientRect()', dialogRect);
+                console.log('computed position', dialogStyles?.position);
+                console.log('computed display', window.getComputedStyle(storyPerformanceModal).display);
+                console.log('computed left/right/top/bottom', {
+                    left: dialogStyles?.left,
+                    right: dialogStyles?.right,
+                    top: dialogStyles?.top,
+                    bottom: dialogStyles?.bottom,
+                });
+                console.log('computed width/max-width', {
+                    width: dialogStyles?.width,
+                    maxWidth: dialogStyles?.maxWidth,
+                });
+                console.log('computed margin', dialogStyles?.margin);
+                console.log('computed transform', dialogStyles?.transform);
+                console.log('viewportCenterX', viewportCenterX);
+                console.log('modalCenterX', modalCenterX);
+                console.log('horizontalDifference', modalCenterX === null ? null : modalCenterX - viewportCenterX);
+                console.log('actual modal DOM parent', storyPerformanceModal.parentElement);
+                console.groupEnd();
+            });
+        };
+        storyPerformanceModal.addEventListener('shown.bs.modal', diagnoseStoryPerformanceModalPosition, { once: true });
+        document.querySelectorAll('.aral-bar-group[data-performance-index]').forEach(bar => {
+            bar.setAttribute('data-bs-toggle', 'modal');
+            bar.setAttribute('data-bs-target', '#aralStoryPerformanceModal');
+            const openDetails = () => {
+                if (storyPerformanceModal.parentElement !== document.body) document.body.appendChild(storyPerformanceModal);
+                renderStoryPerformanceDetails(Number(bar.dataset.performanceIndex));
+                if (window.bootstrap?.Modal) bootstrap.Modal.getOrCreateInstance(storyPerformanceModal).show();
+            };
+            bar.addEventListener('click', openDetails);
+            bar.addEventListener('keydown', event => {
+                if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openDetails(); }
+            });
+        });
+    }
 
     // Refresh data when Add Student Form is submitted
     const addStudentForm = document.getElementById("addStudentForm");

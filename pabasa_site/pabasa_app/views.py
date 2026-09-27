@@ -25979,6 +25979,16 @@ def _supplementary_chart_data(student_results):
             'bars': [{'height': percentage, 'secondary': False}] if percentage is not None else [],
             'percentage': percentage,
             'tooltip_count': f'{meeting_benchmark} of {qualifying_count} students' if percentage is not None else 'No qualifying results',
+            'students': [
+                {
+                    'name': row['student_name'],
+                    'score': score,
+                    'meets_benchmark': score >= 3,
+                }
+                for row in student_results
+                for score in [row['scores'][key]]
+                if score is not None
+            ],
         })
     return data if any(indicator['bars'] for indicator in data) else []
 
