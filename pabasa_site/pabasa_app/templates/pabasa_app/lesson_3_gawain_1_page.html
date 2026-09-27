@@ -1331,6 +1331,12 @@ body.lesson-3-responsive,
   filter: grayscale(.35) !important;
   cursor: wait !important;
 }
+#game.part2-narrating .answers,
+#game.part1-instruction .lesson3-read-actions,
+#game.part1-transition .lesson3-read-actions,
+#game.part1-feedback .lesson3-read-actions {
+  pointer-events: none !important;
+}
 </style>
 <script type="text/plain" data-activity-bootstrap="lesson-3-gawain-1">
 (function () {
@@ -1380,6 +1386,16 @@ body.lesson-3-responsive,
   function setAnswersDisabled(disabled) {
     answers().forEach(button => { if (button.disabled !== disabled) button.disabled = disabled; });
   }
+
+  // Keep the narration lock authoritative even if a render observer briefly
+  // restores the native disabled property while the prompt is playing.
+  game.addEventListener('click', event => {
+    if (!game.classList.contains('part2-narrating')) return;
+    const button = event.target.closest('button');
+    if (!button || !game.contains(button)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, true);
   function setInstruction(text) {
     const instruction = game.querySelector('.instruction');
     if (instruction && instruction.textContent !== text) instruction.textContent = text;

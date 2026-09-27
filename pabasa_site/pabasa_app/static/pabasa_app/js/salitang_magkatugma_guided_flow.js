@@ -56,9 +56,7 @@
     if (status?.classList.contains('warning')) {
       const feedback = 'Hindi pa ito tama. Subukan muli.';
       const rawFeedback = status.textContent.trim();
-      const feedbackKey = rawFeedback === feedback
-        ? status.dataset.feedbackNarrationKey || feedback
-        : rawFeedback;
+      const feedbackKey = status.dataset.feedbackNarrationKey || rawFeedback;
       status.dataset.feedbackNarrationKey = feedbackKey;
       if (status.textContent !== feedback) status.textContent = feedback;
       const answers = stage.querySelector('#answers:not([hidden])');
@@ -158,12 +156,6 @@
     setTimeout(() => { scheduled = false; sync(); }, 0);
   }).observe(stage, {childList: true, subtree: true, characterData: true});
   document.addEventListener('click', async event => {
-    const wrongAnswer = event.target.closest('.hand[data-a="left"]');
-    if (wrongAnswer) {
-      const status = stage.querySelector('#status');
-      if (status) status.dataset.feedbackNarrationKey = `retry-${Date.now()}-${Math.random()}`;
-      return;
-    }
     const listen = event.target.closest('#listen');
     if (!listen) return;
     event.preventDefault();

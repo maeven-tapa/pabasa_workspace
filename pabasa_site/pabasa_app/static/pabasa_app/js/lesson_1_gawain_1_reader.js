@@ -847,7 +847,7 @@
       state.finalizing = false;
       if (result.passed) {
         state.panel.innerHTML = '<p class="song-kicker">Mahusay!</p><h2>Natapos ang pag-awit.</h2><p class="song-result">Nakita ang ' + result.matched + ' sa ' + result.total + ' target.</p>';
-        document.getElementById('completion')?.classList.add('show');
+        showCompletionCard();
       } else {
         state.panel.innerHTML = '<p class="song-kicker">Handa na ang resulta.</p><p class="song-result">Nakita ang ' + result.matched + ' sa ' + result.total + ' target.</p><p class="song-note">Subukan muli ang pag-awit upang makumpleto ang gawain.</p><button id="retrySing" class="sing-again" type="button">Ulitin ang Pag-record</button>';
         state.panel.querySelector('#retrySing').onclick = () => reference(state.panel);
@@ -929,7 +929,7 @@
       state.awaitingTeacherCheck = false;
       state.retryTransitionConsumed = true;
       panel.innerHTML = '<p class="song-kicker">Tapos na</p><h2>Naipasa na ang iyong pag-awit.</h2><p class="song-note">Nasuri na ito ng iyong guro.</p>';
-      document.getElementById('completion')?.classList.add('show');
+      showCompletionCard();
       return true;
     }
     if (submissionStatus === 'submitted' || payload.submitted) {
@@ -940,6 +940,16 @@
     }
     state.awaitingTeacherCheck = false;
     return false;
+  }
+
+  function showCompletionCard() {
+    const completion = document.getElementById('completion');
+    if (!completion) return;
+    completion.querySelector('h2').textContent = 'Tapos na ang gawain! 🎉';
+    completion.querySelector('.completion-card > p:not(.save-error)').textContent = 'Mahusay! Nakumpleto mo na ang aktibidad.';
+    completion.querySelector('#done').textContent = 'BALIK SA AKING ARALIN';
+    document.querySelector('.page')?.classList.add('is-complete');
+    completion.classList.add('show');
   }
 
   async function pollCompletionStatus() {
@@ -1040,6 +1050,9 @@
     const layoutStyle = document.createElement('style');
     layoutStyle.textContent = '@media (min-width:761px) { .page { height:100dvh; overflow:hidden; } .shell { height:calc(100dvh - 70px); padding:7px; gap:3px 14px; overflow:hidden; grid-template-rows:auto auto auto minmax(0,1fr); } .shell > .back { grid-column:1/-1; grid-row:1; justify-self:start; margin:0; } .title { font-size:clamp(1.1rem,2.2vh,1.55rem); } .song-panel,.board { grid-row:4; min-height:0; } .song-panel { padding:9px; } .song-panel h2 { font-size:clamp(.9rem,2vh,1.2rem); } .song-panel p { font-size:clamp(.6rem,1.1vh,.7rem); } .lesson-one-page .youtube-link,.lesson-one-page .sing-done { width:fit-content; min-height:42px; max-width:240px; margin-top:8px; padding:8px 12px; font-family:inherit; font-size:.75rem; font-weight:1000; line-height:1.15; } .lesson-one-page .sing-stop,.lesson-one-page .sing-again { width:fit-content; max-width:190px; margin-top:6px; padding:6px 9px; font-family:inherit; font-size:.56rem; font-weight:1000; line-height:1.1; } .board { height:auto; gap:6px; padding:3px 1px; overflow:auto; } .tile { min-height:76px; padding:6px 4px; border-radius:12px; } .tile-letter { font-size:clamp(1.15rem,2.2vw,1.7rem); } .tile img { width:min(78%,54px); height:50px; margin:1px auto 0; } }';
     document.head.appendChild(layoutStyle);
+    const completionStyle = document.createElement('style');
+    completionStyle.textContent = '.page.is-complete{visibility:hidden}.completion{z-index:1000}.completion .check{display:none}.completion-card{width:min(540px,calc(100vw - 40px));padding:34px 30px 30px}.completion h2{margin:0;color:#164b62;font-size:clamp(1.75rem,4vw,2rem);font-weight:900;line-height:1.2}.completion p:not(.save-error){margin:14px 0 24px;color:#164b62;font-size:clamp(1.1rem,2.2vw,1.2rem);font-weight:900}.done{padding:14px 28px;border-radius:999px;background:#218b8b;color:#fff;font-size:1.05rem;font-weight:900;text-decoration:none;box-shadow:0 5px 0 #176d6d}.done:hover{background:#197878}.done:focus-visible{outline:3px solid #f2c45c;outline-offset:3px}';
+    document.head.appendChild(completionStyle);
     renderBoard();
     const panel = renderPanel();
     if (!panel) return;

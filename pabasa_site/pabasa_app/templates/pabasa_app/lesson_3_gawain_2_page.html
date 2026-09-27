@@ -263,6 +263,7 @@ body.gawain-2:has(#game .complete) #game .complete-done{text-decoration:none!imp
 .gawain-2 .answer{border-radius:18px;box-shadow:0 6px 0 #187b7a}
 .gawain-2 .complete{border:2px solid #ffffffaa;border-radius:32px;background:#ffffffc9;box-shadow:0 18px 42px #12373445}
 .gawain-2 #game.game:has(.complete){position:fixed!important;inset:0!important;z-index:2;display:grid!important;place-items:center!important;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;margin:0!important;padding:24px!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;transform:none!important}
+.gawain-2 #game.game:has(.complete){backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 .gawain-2 #game.game:has(.complete) .complete{width:min(560px,100%);margin:0;padding:clamp(32px,5vw,54px) clamp(24px,6vw,64px);text-align:center}
 @media(max-width:650px){.gawain-2 #game.game{width:calc(100% - 24px)!important;height:calc(100vh - 150px)!important;max-height:calc(100vh - 150px)!important;margin-top:23px!important;border-radius:30px!important;padding:22px 14px 16px!important}.gawain-2 .back{width:230px;min-height:58px;font-size:1rem}.gawain-2 .read,.gawain-2 .listen{min-height:62px}}
 </style>
@@ -273,6 +274,19 @@ body.gawain-2:has(#game .complete) .lesson-start-backdrop{display:none!important
 .gawain-2 #game.game:has(.complete) .complete h2{margin:0;color:#183e63;font:900 clamp(1.75rem,3vw,2rem)/1.2 Fredoka,Nunito,"Segoe UI",sans-serif}
 .gawain-2 #game.game:has(.complete) .complete p{margin:18px 0 28px;color:#183e63;font:700 clamp(1.1rem,2vw,1.25rem)/1.4 Fredoka,Nunito,"Segoe UI",sans-serif}
 .gawain-2 #game.game:has(.complete) .complete-done{display:inline-flex;align-items:center;justify-content:center;min-height:0;margin:0;padding:15px 26px;border:0;border-radius:999px;background:#299e9a;color:#fff;font:900 clamp(1.05rem,1.8vw,1.25rem)/1.2 Fredoka,Nunito,"Segoe UI",sans-serif;box-shadow:0 5px 0 #187b7a}
+.gawain-2 #game.game:has(.complete) .complete h2{font-size:1.75rem}
+.gawain-2 #game.game:has(.complete) .complete p{font-size:1rem}
+.gawain-2 #game.game:has(.complete) .complete-done{font-size:1rem}
+body.gawain-2:has(#game .complete),
+body.gawain-2:has(#game .complete) #game,
+body.gawain-2:has(#game .complete) #game .complete,
+body.gawain-2:has(#game .complete) #game .complete * {
+  font-family: Lesson3Fredoka, Nunito, "Segoe UI", sans-serif !important;
+}
+body.gawain-2:has(#game .complete)::before {
+  filter: none !important;
+  transform: none !important;
+}
 @media(max-width:520px){.gawain-2 #game.game:has(.complete) .complete{width:min(100%,calc(100vw - 32px));padding:32px 22px 30px;border-radius:26px}.gawain-2 #game.game:has(.complete) .complete-done{width:100%;padding-inline:18px}}
 </style>
 <style>
