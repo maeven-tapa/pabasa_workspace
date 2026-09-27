@@ -932,6 +932,12 @@
     .crla-finalize-btn { background:#f59e0b; border:1px solid #d97706; box-shadow:0 8px 18px rgba(217,119,6,.14); color:#fff; }
     .crla-finalize-btn:hover:not(:disabled) { background:#d97706; color:#fff; }
     .crla-finalize-btn:disabled { cursor:not-allowed; opacity:.55; }
+    .crla-finalize-tooltip { display:inline-flex; position:relative; }
+    .crla-finalize-tooltip::after { background:#172033; border-radius:8px; bottom:calc(100% + 9px); color:#fff; content:attr(data-tooltip); font-size:.78rem; font-weight:600; left:50%; line-height:1.35; opacity:0; padding:.55rem .7rem; pointer-events:none; position:absolute; transform:translate(-50%, 4px); transition:opacity .15s ease, transform .15s ease; white-space:normal; width:270px; z-index:20; }
+    .crla-finalize-tooltip:hover::after, .crla-finalize-tooltip:focus-within::after { opacity:1; transform:translate(-50%, 0); }
+    .crla-export-tooltip { display:inline-flex; position:relative; }
+    .crla-export-tooltip::after { background:#172033; border-radius:8px; bottom:calc(100% + 9px); color:#fff; content:attr(data-tooltip); font-size:.78rem; font-weight:600; left:50%; line-height:1.35; opacity:0; padding:.55rem .7rem; pointer-events:none; position:absolute; transform:translate(-50%, 4px); transition:opacity .15s ease, transform .15s ease; white-space:normal; width:270px; z-index:20; }
+    .crla-export-tooltip:hover::after, .crla-export-tooltip:focus-within::after { opacity:1; transform:translate(-50%, 0); }
     .crla-finalization-actions .student-export-btn { background:rgba(239,248,252,.95); border:1px solid rgba(22,95,143,.24); border-radius:12px; box-shadow:0 8px 18px rgba(15,23,42,.05); color:var(--dash-primary-deep); margin-left:0; padding:.5rem 1rem; }
     .crla-finalization-actions .student-export-btn:hover:not([aria-disabled="true"]) { background:rgba(226,242,248,.98); border-color:rgba(22,95,143,.38); color:var(--dash-primary-deep); transform:translateY(-1px); }
     .crla-finalization-actions .student-export-btn i { color:var(--dash-primary); font-size:.95rem; line-height:1; }
@@ -1731,12 +1737,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 <div class="crla-finalization-actions">
                     <span class="small fw-semibold text-secondary" id="crlaFinalizationStatus">CRLA Assessment: Open</span>
                     <div class="crla-finalization-buttons">
-                    <button class="btn btn-sm crla-finalize-btn" type="button" id="finalizeCrlaBtn" disabled>
+                    <span class="crla-finalize-tooltip" id="crlaFinalizeTooltip" tabindex="0" role="img" aria-label="Finalization availability notice" data-tooltip="Finalization becomes available after every enrolled student has completed the assessment or has been officially dropped.">
+                    <button class="btn btn-sm crla-finalize-btn" type="button" id="finalizeCrlaBtn" disabled aria-label="Finalize CRLA Assessment. Finalization becomes available after every enrolled student has completed the assessment or has been officially dropped.">
                         <i class="bi bi-lock-fill" aria-hidden="true"></i><span>Finalize CRLA Assessment</span>
                     </button>
+                    </span>
+                    <span class="crla-export-tooltip" id="crlaExportTooltip" tabindex="0" role="img" aria-label="Export availability notice" data-tooltip="Export becomes available after the CRLA assessment has been finalized.">
                     <a class="btn btn-sm student-export-btn" id="exportStudentsBtn" href="#" aria-disabled="true" tabindex="-1">
                         <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i><span>Export CRLA Result</span>
                     </a>
+                    </span>
                     </div>
                 </div>
             </div>
@@ -2279,27 +2289,51 @@ function renderCrlaResultDetails(result, student = {}) {
 function setStudentExportState(students) {
     window.filteredStudentDirectoryRows = Array.isArray(students) ? students.slice() : [];
     const exportBtn = document.getElementById('exportStudentsBtn');
+    const exportTooltip = document.getElementById('crlaExportTooltip');
     if (exportBtn) {
         const state = currentCrlaFinalization || {};
         const assessmentId = state.assessment_id;
         const canExport = Boolean(state.finalized && assessmentId && state.material_id && state.section_id);
+        const exportNotice = canExport
+            ? 'Export the finalized CRLA result for this class.'
+            : 'Export becomes available after the CRLA assessment has been finalized.';
         exportBtn.href = canExport ? `/assessment/${encodeURIComponent(assessmentId)}/export-crla/?source=student-directory&section_id=${encodeURIComponent(state.section_id)}&material_id=${encodeURIComponent(state.material_id)}` : '#';
         exportBtn.setAttribute('aria-disabled', canExport ? 'false' : 'true');
         exportBtn.tabIndex = canExport ? 0 : -1;
+        exportBtn.setAttribute('aria-label', `Export CRLA Result. ${exportNotice}`);
+        if (exportTooltip) {
+            exportTooltip.dataset.tooltip = exportNotice;
+            exportTooltip.setAttribute('aria-label', exportNotice);
+        }
     }
 }
 
 function updateCrlaFinalizationUi(state) {
     currentCrlaFinalization = state || null;
     const button = document.getElementById('finalizeCrlaBtn');
+    const tooltip = document.getElementById('crlaFinalizeTooltip');
     const status = document.getElementById('crlaFinalizationStatus');
     const finalized = Boolean(state?.finalized);
     const ready = Boolean(state?.material_id && state?.section_id);
     const finalizeReady = Boolean(state?.finalize_ready);
+    let availabilityNotice = 'Finalization becomes available after every enrolled student has completed the assessment or has been officially dropped.';
+    if (finalized) {
+        availabilityNotice = 'This CRLA assessment has already been finalized for the class.';
+    } else if (!state?.material_id || !state?.section_id) {
+        availabilityNotice = 'Finalization becomes available when an official CRLA assessment and section are selected.';
+    } else if (Number(state?.unresolved_count) > 0) {
+        availabilityNotice = `${state.unresolved_count} enrolled student${Number(state.unresolved_count) === 1 ? '' : 's'} still need to complete the assessment or be officially dropped.`;
+    }
     if (status) status.textContent = finalized ? 'CRLA Assessment: Finalized' : 'CRLA Assessment: Open';
     if (button) {
         button.disabled = finalized || !ready || !finalizeReady;
         button.hidden = finalized;
+        button.setAttribute('aria-label', `Finalize CRLA Assessment. ${availabilityNotice}`);
+    }
+    if (tooltip) {
+        tooltip.dataset.tooltip = availabilityNotice;
+        tooltip.setAttribute('aria-label', availabilityNotice);
+        tooltip.hidden = finalized;
     }
     setStudentExportState(latestStudentDirectoryStudents);
 }
@@ -2533,6 +2567,12 @@ function bindStudentDirectoryFilters() {
     const levelFilterMenu = document.getElementById('readingLevelFilterMenu');
     const levelFilterValue = document.getElementById('readingLevelFilterValue');
     const levelOptions = Array.from(document.querySelectorAll('#readingLevelFilterMenu .student-filter-option'));
+    exportBtn?.addEventListener('click', function (event) {
+        if (this.getAttribute('aria-disabled') === 'true') {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+        }
+    });
     document.querySelectorAll('.directory-select').forEach(wrap => {
         const trigger = wrap.querySelector('.student-filter-trigger');
         const value = wrap.querySelector('.student-filter-value');
