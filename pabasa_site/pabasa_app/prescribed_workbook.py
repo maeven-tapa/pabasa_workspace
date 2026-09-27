@@ -175,6 +175,15 @@ L23_G3_J_ACCEPTED_SPEECH = {word.casefold(): {word.casefold()} for word in L23_G
 L23_G7_Q_WORDS = ('Quisumbing', 'Quennie', 'Enriquez', 'Quintana', 'Quintos')
 L23_G7_Q_ACCEPTED_SPEECH = {word.casefold(): {word.casefold()} for word in L23_G7_Q_WORDS}
 
+# Lesson 24 Gawain 7 preserves the workbook's three visual columns while
+# reading column one, then column two, then column three.
+L24_G7_Z_WORDS = (
+    'zigzag', 'Zandra', 'Zamora', 'Zandro', 'Lazaro', 'Perez', 'Rizal', 'Dizon',
+    'Gomez', 'Zarate', 'Zaragosa', 'Zapote', 'Zonrox', 'Lopez', 'Luzon', 'Zeny',
+    'Zoren', 'Legazpi', 'Zabala', 'Zambales', 'Gonzales', 'Mendoza', 'Hernandez',
+)
+L24_G7_Z_ACCEPTED_SPEECH = {word.casefold(): {word.casefold()} for word in L24_G7_Z_WORDS}
+
 # Lesson 23 Gawain 6 has no verified answer key in the available workbook
 # project sources.  Keep the reading matcher deliberately narrow until the
 # canonical word paths are supplied; never fabricate target words here.
@@ -213,6 +222,12 @@ def l23_g7_pronunciation_match(canonical_word, transcript):
     canonical = normalize_l23_g3_speech(canonical_word)
     heard = normalize_l23_g3_speech(transcript)
     return bool(heard and heard in L23_G7_Q_ACCEPTED_SPEECH.get(canonical, {canonical}))
+
+
+def l24_g7_pronunciation_match(canonical_word, transcript):
+    canonical = normalize_l23_g3_speech(canonical_word)
+    heard = normalize_l23_g3_speech(transcript)
+    return bool(heard and heard in L24_G7_Z_ACCEPTED_SPEECH.get(canonical, {canonical}))
 
 
 L23_G4_SYLLABLE_ANSWERS = ('jack-et', 'pa-ja-ma', 'Jo-na-than', 'jam', 'Jo-se-li-to')
@@ -516,7 +531,8 @@ add('aral-l24-g7-z-word-reading', 47, 24, '7', 'Mga salitang may letrang Zz',
     'Basahin ang mga salita sa ibaba na may hiram na letrang Zz.', 'reading',
     [['zigzag','Gomez','Zoren'], ['Zandra','Zarate','Legazpi'], ['Zamora','Zaragosa','Zabala'],
      ['Zandro','Zapote','Zambales'], ['Lazaro','Zonrox','Gonzales'], ['Perez','Lopez','Mendoza'],
-    ['Rizal','Luzon','Hernandez'], ['Dizon','Zeny','']], visible_activity_label='GAWAIN 7',
+     ['Rizal','Luzon','Hernandez'], ['Dizon','Zeny','']], visible_activity_label='GAWAIN 7',
+    reading_words=list(L24_G7_Z_WORDS),
     section_key='l24-bahagi2', section_label='Bahagi 2', section_order=2, display_gawain_number='7')
 
 add('aral-s9-a1-family-drawing', 48, None, '1', 'My family',
@@ -929,6 +945,15 @@ def initial_l24_g6_state():
     return {'found_words': {}, 'last_feedback': '', 'completed': False, 'revision': 0}
 
 
+def initial_l24_g7_state():
+    return {
+        'index': 0, 'sequence_index': 0, 'completed_words': [],
+        'reading_attempts': 0, 'reading_phase': 'read',
+        'last_feedback': '', 'last_transcript': '',
+        'completed': False, 'revision': 0,
+    }
+
+
 def normalize_l23_g1_state(state):
     if not isinstance(state, dict):
         state = initial_l23_g1_state()
@@ -1214,6 +1239,29 @@ def normalize_l24_g6_state(state):
     state['found_words'] = clean
     state['completed'] = len(clean) == len(L24_G6_Z_WORD_PATHS)
     state['last_feedback'] = str(state.get('last_feedback') or '')
+    state['revision'] = max(0, int(state.get('revision', 0) or 0))
+    return state
+
+
+def normalize_l24_g7_state(state):
+    if not isinstance(state, dict):
+        state = initial_l24_g7_state()
+    total = len(L24_G7_Z_WORDS)
+    completed = state.get('completed_words') if isinstance(state.get('completed_words'), list) else []
+    completed = sorted({int(i) for i in completed if str(i).isdigit() and 0 <= int(i) < total})
+    expected = list(range(len(completed)))
+    state['completed_words'] = completed if completed == expected else expected
+    state['sequence_index'] = len(state['completed_words'])
+    state['index'] = state['sequence_index']
+    state['reading_attempts'] = max(0, min(3, int(state.get('reading_attempts', 0) or 0)))
+    state['reading_phase'] = state.get('reading_phase') if state.get('reading_phase') in {'read', 'help', 'complete'} else 'read'
+    state['last_feedback'] = str(state.get('last_feedback') or '')
+    state['last_transcript'] = str(state.get('last_transcript') or '')
+    state['completed'] = bool(state.get('completed')) or len(completed) == total
+    if state['completed']:
+        state['sequence_index'] = state['index'] = total
+        state['completed_words'] = list(range(total))
+        state['reading_phase'] = 'complete'
     state['revision'] = max(0, int(state.get('revision', 0) or 0))
     return state
 
@@ -1702,6 +1750,54 @@ def _apply_l24_g3_reading(state, event, verified_reading):
     raise ValueError('Unknown action.')
 
 
+def _apply_l24_g7_reading(state, event, verified_reading):
+    normalize_l24_g7_state(state)
+    total = len(L24_G7_Z_WORDS)
+    action = event.get('action')
+    if action == 'restart':
+        state.clear(); state.update(initial_l24_g7_state()); return state
+    if state['completed']:
+        return state
+    if action == 'reading_started':
+        state['reading_phase'] = 'read'; state['last_feedback'] = ''; return state
+    if action == 'read_aloud':
+        if state['reading_phase'] != 'help':
+            raise ValueError('Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.')
+        state['last_feedback'] = ''
+        return state
+    if action == 'retry_reading':
+        if state['reading_phase'] != 'help':
+            raise ValueError('Hindi pa kailangan ang pag-ulit.')
+        state.update(reading_phase='read', reading_attempts=0, last_feedback='', last_transcript='')
+        return state
+    if action != 'reading_attempt':
+        raise ValueError('Unknown action.')
+    if state['reading_phase'] != 'read':
+        raise ValueError('Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.')
+    index = state['sequence_index']
+    if event.get('item_index') is not None and int(event['item_index']) != index:
+        return state
+    state['last_transcript'] = str(event.get('transcript') or '').strip()
+    if verified_reading is None:
+        state['last_feedback'] = 'Hindi ko malinaw na narinig. Subukan muli.'
+        return state
+    if verified_reading:
+        if index not in state['completed_words']:
+            state['completed_words'].append(index)
+            state['completed_words'].sort()
+        state['sequence_index'] = state['index'] = min(total, index + 1)
+        state['reading_attempts'] = 0
+        state['completed'] = state['sequence_index'] >= total
+        state['reading_phase'] = 'complete' if state['completed'] else 'read'
+        state['last_feedback'] = 'Magaling! Natapos mo ang Gawain 7.' if state['completed'] else 'Tama!'
+    else:
+        state['reading_attempts'] = min(3, state['reading_attempts'] + 1)
+        state['last_feedback'] = 'Subukan muli.'
+        if state['reading_attempts'] >= 3:
+            state['reading_phase'] = 'help'
+    return state
+
+
 def normalize_l24_g4_state(state):
     total = len(L24_G4_X_WORDS)
     completed = state.get('completed_words') if isinstance(state.get('completed_words'), list) else []
@@ -2021,6 +2117,8 @@ def apply_event(activity, state, event, verified_reading=None):
         return _apply_l23_g5_word_search(state, event)
     if activity['activity_key'] == 'aral-l24-g6-z-word-search':
         return _apply_l24_g6_word_search(state, event)
+    if activity['activity_key'] == 'aral-l24-g7-z-word-reading':
+        return _apply_l24_g7_reading(state, event, verified_reading)
     if activity['activity_key'] == 'aral-l24-g3-x-repeat':
         normalize_l24_g3_repeat_state(state)
         if event.get('action') == 'restart':
