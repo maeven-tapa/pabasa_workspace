@@ -73,6 +73,8 @@
   let activeRecorder = null, activeStream = null, activeReadAloud = null, audioController = null;
   let audioRun = 0, instructionSpoken = false, pendingSpeech = '';
   const instructionText = a.instruction;
+  const session9Activity = s9Family || s9Helping;
+  let activityStarted = !session9Activity || preview || Boolean(state.completed), instructionPlayback = false;
   const content = document.getElementById('wb-content'), action = document.getElementById('wb-action');
   const status = document.getElementById('wb-status');
   const fil = a.language === 'Filipino';
@@ -112,12 +114,14 @@
       }
       return;
     }
-    const form=new FormData();form.append('target_text',text);form.append('language','Filipino');form.append('mode','reading');form.append('prescribed_activity_key',a.activity_key);
+    const spokenLanguage=fil?'Filipino':'English',expectedTtsLanguage=fil?'fil-PH':'en-PH';
+    const form=new FormData();form.append('target_text',text);form.append('language',spokenLanguage);form.append('mode','reading');form.append('prescribed_activity_key',a.activity_key);form.append('prescribed_session_key',a.session_key||'');
     try{
       const response=await fetch(data.read_aloud_url,{method:'POST',credentials:'same-origin',headers:{'Accept':'application/json','X-CSRFToken':token()},body:form,signal:controller.signal});
       const result=await responseJson(response,'Hindi available ang Filipino audio. Subukan muli.');
       if(!response.ok||!result.success||!result.audio_content)throw Error(result.error||'Hindi available ang Filipino audio.');
-      if(!result.local_audio&&(result.tts_language!=='fil-PH'||result.voice_name!=='fil-PH-Wavenet-A'))throw Error('Hindi available ang tamang Filipino voice.');
+      if(fil&&!result.local_audio&&(result.tts_language !== 'fil-PH' || result.voice_name !== 'fil-PH-Wavenet-A'))throw Error('Hindi available ang tamang Filipino voice.');
+      if(!fil&&!result.local_audio&&result.tts_language!==expectedTtsLanguage)throw Error('The correct English voice is unavailable.');
       if(run!==audioRun||(busy&&!allowBusy)||activeStream)return;
       const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);activeReadAloud=audio;
       await audio.play();
@@ -126,6 +130,27 @@
       if(audioController===controller)audioController=null;
       if(activeReadAloud&&run===audioRun){activeReadAloud.pause();activeReadAloud=null;}
     }
+  }
+  async function replayInstruction(button){
+    if(instructionPlayback||busy||activeStream)return;
+    instructionPlayback=true;button.disabled=true;button.classList.add('is-busy');
+    try{await playPrescribedAudio(instructionText,true);}catch(e){if(e?.name!=='AbortError')message(e.message||'Hindi available ang panuto.',true);}
+    finally{instructionPlayback=false;if(button.isConnected){button.disabled=false;button.classList.remove('is-busy');}}
+  }
+  function initializeSession9Entry(){
+    const modal=document.getElementById('wb-s9-start'),stage=document.querySelector('.wb-s9-activity-stage');
+    if(!session9Activity||preview||state.completed||!modal)return;
+    stage?.classList.add('is-waiting');
+    const start=document.getElementById('wb-s9-start-button'),later=document.getElementById('wb-s9-later-button'),modalStatus=document.getElementById('wb-s9-start-status');
+    const showError=error=>{if(modalStatus)modalStatus.textContent=error?.name==='AbortError'?'':(error?.message||'The instruction audio is unavailable. You may try again.');};
+    instructionSpoken=true;
+    playPrescribedAudio(instructionText,true).catch(showError);
+    start?.addEventListener('click',()=>{
+      if(start.disabled)return;start.disabled=true;later.disabled=true;stopReadAloud();activityStarted=true;modal.hidden=true;stage?.classList.remove('is-waiting');render();
+    });
+    later?.addEventListener('click',()=>{
+      if(later.disabled)return;start.disabled=true;later.disabled=true;stopReadAloud();modal.hidden=true;window.location.href=document.getElementById('wb-back')?.href||'/dashboard/assessment/';
+    });
   }
   async function responseJson(response, fallback) {
     const contentType = response.headers.get('content-type') || '';
@@ -600,12 +625,12 @@
       content.querySelectorAll('[data-size]').forEach(button=>button.onclick=()=>{size=button.dataset.size;setActive();save();});
       document.getElementById('wb-written').oninput=event=>draft({strokes,text:event.target.value,tool,color,size});
       content.querySelectorAll('[data-example]').forEach(button=>button.onclick=()=>{const input=document.getElementById('wb-written');input.value=button.dataset.example;input.dispatchEvent(new Event('input',{bubbles:true}));input.focus();});
-      document.getElementById('wb-instruction-replay')?.addEventListener('click',()=>{if(!busy&&!activeStream)playPrescribedAudio(instructionText).catch(e=>message(e.message||'Hindi available ang panuto.',true));});
-      if(!preview)speakInstruction();redraw();setActive();window.addEventListener('resize',redraw,{once:true});
+      const replay=document.getElementById('wb-instruction-replay');replay?.addEventListener('click',()=>replayInstruction(replay));
+      if(!preview&&activityStarted)speakInstruction();redraw();setActive();window.addEventListener('resize',redraw,{once:true});
       return;
     }else if(s9Family){
       document.getElementById('wb-written').oninput=e=>draft({text:e.target.value});
-      document.getElementById('wb-instruction-replay')?.addEventListener('click',()=>{if(!busy&&!activeStream)playPrescribedAudio(instructionText).catch(e=>message(e.message||'Hindi available ang panuto.',true));});
+      const replay=document.getElementById('wb-instruction-replay');replay?.addEventListener('click',()=>replayInstruction(replay));
     }
     const canvas=document.getElementById('wb-canvas'),ctx=canvas.getContext('2d');let strokes=structuredClone(state.draft.strokes||[]),stroke=null;
     const redraw=()=>{ctx.clearRect(0,0,900,500);for(const s of strokes){ctx.strokeStyle=s.color;ctx.lineWidth=5;ctx.lineCap='round';ctx.beginPath();s.points.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p));ctx.stroke();}};
@@ -629,5 +654,7 @@
     await window.PabasaTemplateTts.speak({text:item().text,profile:'word',onEnd:async()=>{try{await send({action:oral().phase==='model'?'model_listened':'listened'});render();}catch(e){message(e.message,true);}finally{busy=false;lock();}},onError:e=>{message(e.message,true);busy=false;lock();}});
   }
   window.addEventListener('beforeunload',e=>{activeRecorder?.stop();activeStream?.getTracks().forEach(t=>t.stop());stopReadAloud();if(!specializedBuilder&&busy){e.preventDefault();e.returnValue='';}});
+  window.addEventListener('pagehide',stopReadAloud);
   render();
+  initializeSession9Entry();
 })();

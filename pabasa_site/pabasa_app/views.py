@@ -21436,7 +21436,9 @@ def reading_read_aloud_api(request):
     tts_profile = (request.POST.get('tts_profile') or '').strip().lower()
     prescribed_key = (request.POST.get('prescribed_activity_key') or '').strip()
     lesson_tts_key = (request.POST.get('lesson_tts_key') or '').strip()
-    language_code = 'fil-PH' if prescribed_key and prescribed_activity(prescribed_key) else language_code_for(language, mode)
+    prescribed_definition = prescribed_activity(prescribed_key) if prescribed_key else None
+    prescribed_language = 'English' if prescribed_definition and prescribed_definition.get('session_number') == 9 else language
+    language_code = 'fil-PH' if prescribed_definition and prescribed_language != 'English' else language_code_for(prescribed_language, mode)
     api_key = getattr(settings, 'GOOGLE_STT_API_KEY', '').strip()
     credentials_file = getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', None)
 
@@ -21452,7 +21454,7 @@ def reading_read_aloud_api(request):
                 'mime_type': 'audio/mpeg',
                 'language_code': language_code,
                 'tts_language': language_code,
-                'voice_name': 'fil-PH-Wavenet-A',
+                'voice_name': 'fil-PH-Wavenet-A' if language_code == 'fil-PH' else '',
                 'local_audio': True,
             })
         if local_audio_key in _LOCAL_PRESCRIBED_AUDIO_PATHS:
@@ -21462,7 +21464,7 @@ def reading_read_aloud_api(request):
             }, status=404)
         # Hunt uses the same clear female Assessment voice at a slower teaching
         # pace so young readers can hear each sound. Assessment keeps its defaults.
-        tts_options = ({'voice_gender': 'FEMALE'} if prescribed_key and prescribed_activity(prescribed_key)
+        tts_options = ({'voice_gender': 'FEMALE'} if prescribed_definition
                        else {'voice_gender': 'MALE'} if lesson_tts_key in {
                            'lesson-26-gawain-1', 'lesson-26-gawain-2', 'lesson-27-gawain-1',
                            'lesson-28-gawain-1', 'lesson-28-gawain-2',
@@ -21486,8 +21488,8 @@ def reading_read_aloud_api(request):
             'audio_content': audio_content,
             'mime_type': 'audio/mpeg',
             'language_code': language_code,
-            'tts_language': 'fil-PH' if prescribed_key and prescribed_activity(prescribed_key) else language_code,
-            'voice_name': 'fil-PH-Wavenet-A' if prescribed_key and prescribed_activity(prescribed_key) else '',
+            'tts_language': language_code,
+            'voice_name': 'fil-PH-Wavenet-A' if language_code == 'fil-PH' else '',
         })
     except Exception as exc:
         logger.exception('Read aloud synthesis failed')

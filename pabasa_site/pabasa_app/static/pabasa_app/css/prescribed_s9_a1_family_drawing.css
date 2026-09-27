@@ -32,6 +32,19 @@
 .wb-s9-writing-panel textarea{display:block;width:100%;min-height:58px;border-color:#7fc8c8;border-radius:14px;font:700 1rem/1.35 Nunito,'Segoe UI',sans-serif;resize:vertical}
 .wb-s9-family-page #wb-action{display:flex;justify-content:center;margin-top:0}
 .wb-s9-family-page #wb-action button{min-width:210px;border-radius:999px}
+.wb-s9-activity-stage.is-waiting{filter:blur(2px);opacity:.62;pointer-events:none}
+.wb-s9-start-backdrop{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:20px;background:#e7f7f7c9;backdrop-filter:blur(3px)}
+.wb-s9-start-backdrop[hidden]{display:none}
+.wb-s9-start-modal{width:min(560px,calc(100vw - 36px));padding:32px 30px;border-radius:30px;background:#fffffff3;text-align:center;box-shadow:0 22px 60px #173f6325}
+.wb-s9-start-modal h2{margin:10px 0;color:#183e63;font-size:clamp(1.8rem,4vw,2.6rem)}
+.wb-s9-start-modal>p:not(.wb-s9-start-label):not(.wb-s9-start-status){color:#587382;font:700 1.05rem/1.45 Nunito,'Segoe UI',sans-serif}
+.wb-s9-start-label{color:#187b7a!important;font:900 .78rem Nunito,'Segoe UI',sans-serif;letter-spacing:.08em}
+.wb-s9-start-status{min-height:1.4em;margin:10px 0;color:#b33b43;font:700 .88rem Nunito,'Segoe UI',sans-serif}
+.wb-s9-start-actions{display:grid;gap:12px;margin-top:18px}
+.wb-s9-start-actions button{min-height:54px;border-radius:999px;font:900 1rem Nunito,'Segoe UI',sans-serif;cursor:pointer}
+.wb-s9-start-button{border:0;background:#299e9a;color:#fff;box-shadow:0 5px 0 #187b7a}
+.wb-s9-later-button{border:3px solid #8ed8d4;background:#fff;color:#187b7a;box-shadow:0 4px 0 #b7d6dc}
+.wb-s9-start-actions button:disabled{opacity:.65;cursor:wait}
 @media(max-width:1439px) and (min-width:1200px){.wb-s9-family-page #wb-progress-track{width:clamp(260px,24vw,320px)}}
 @media(max-width:1199px) and (min-width:1024px){.wb-s9-family-page #wb-progress-track{width:clamp(220px,24vw,280px)}}
 @media(max-height:700px) and (min-width:1024px){.wb-s9-family-page .wb-shell{padding-top:5px;padding-bottom:7px}.wb-s9-family-page .wb-shell header{padding-top:6px;padding-bottom:8px}.wb-s9-activity-stage{padding:8px;gap:6px}.wb-s9-family-page .wb-s9-family-workspace{gap:6px}.wb-s9-family-page .wb-s9-drawing-panel,.wb-s9-family-page .wb-s9-writing-panel{padding:7px 12px}.wb-s9-family-page .wb-s9-writing-panel textarea{min-height:44px}}

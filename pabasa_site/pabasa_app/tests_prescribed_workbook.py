@@ -675,3 +675,39 @@ class PrescribedWorkbookFlowTests(TestCase):
         self.assertContains(response, 'prescribed_s9_a2_helping_drawing.css')
         self.assertContains(response, 'wb-s9-helping-page')
         self.assertContains(response, 'wb-progress-track')
+
+    def test_session9_drawing_activities_use_exact_instruction_start_modal_and_shared_read_aloud(self):
+        expected = {
+            'aral-s9-a1-family-drawing': 'Draw a picture of your family. Under your drawing, write the sentence “This is my family.”',
+            'aral-s9-a2-helping-drawing': 'Draw and color a situation at home where you helped someone. Under your drawing, write the courteous word you used: “Please” / “Sorry” / “Thank you” / “You’re welcome.”',
+        }
+        source = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_workbook.js').read_text(encoding='utf-8')
+        self.assertNotIn('speechSynthesis', source)
+        for key, instruction in expected.items():
+            with self.subTest(activity_key=key):
+                response = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': key}))
+                self.assertEqual(response.context['workbook_payload']['activity']['session_key'], 'session-9')
+                self.assertEqual(response.context['workbook_payload']['activity']['instruction'], instruction)
+                self.assertContains(response, 'id="wb-s9-start"')
+                self.assertContains(response, 'id="wb-s9-start-button"')
+                self.assertContains(response, 'MAYBE LATER')
+                self.assertContains(response, instruction)
+                self.assertContains(response, 'id="wb-instruction-replay"')
+
+    @patch('pabasa_app.views.synthesize_read_aloud_audio', return_value='encoded-audio')
+    def test_session9_instruction_read_aloud_uses_english_google_voice_path(self, synthesize):
+        self.session_student(self.student)
+        for key in ('aral-s9-a1-family-drawing', 'aral-s9-a2-helping-drawing'):
+            with self.subTest(activity_key=key):
+                instruction = get_activity(key)['instruction']
+                response = self.client.post(reverse('reading_read_aloud_api'), {
+                    'target_text': instruction,
+                    'language': 'English',
+                    'mode': 'reading',
+                    'prescribed_activity_key': key,
+                    'prescribed_session_key': 'session-9',
+                })
+                self.assertEqual(response.status_code, 200, response.content)
+                self.assertEqual(response.json()['tts_language'], 'en-PH')
+                self.assertEqual(response.json()['voice_name'], '')
+                self.assertEqual(synthesize.call_args.args[2], 'en-PH')
