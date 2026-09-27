@@ -3496,6 +3496,7 @@
             const isProcessing = Boolean(isRecording && (isSendingChunk || pendingAudioChunk));
             const isListening = Boolean(isRecording && !isMuted && recognitionActive && !isProcessing);
             const isStarting = Boolean(isRecording && !isMuted && !recognitionActive && !isProcessing);
+            const hasDetectedSpeech = Boolean(isListening && shell?.classList.contains("is-hearing"));
             let label = "Start Reading";
             let icon = "bi-mic-fill";
 
@@ -3503,7 +3504,7 @@
                 label = "Processing...";
                 icon = "bi-hourglass-split";
             } else if (isListening) {
-                label = "Listening...";
+                label = hasDetectedSpeech ? "Speech detected..." : "Waiting for speech...";
             } else if (isStarting) {
                 label = "Starting microphone...";
             }
@@ -3683,7 +3684,12 @@
                 audioAnalyser.fftSize = 1024;
                 source.connect(audioAnalyser);
                 const samples = new Uint8Array(audioAnalyser.fftSize);
+                // Phrase and sentence activities reuse Story Reading's shared
+                // adaptive VAD when it is loaded. Other assessment consumers
+                // retain the existing meter fallback.
+                const sharedVad = window.Basahin?.createVad?.();
                 const meterStartedAt = Date.now();
+                let phraseHearingState = false;
                 const tick = () => {
                     if (!audioAnalyser || !isRecording || isMuted) {
                         shell?.classList.remove("is-hearing");
@@ -3698,23 +3704,28 @@
                     const rms = Math.sqrt(sum / samples.length);
                     const now = Date.now();
                     const isCalibrating = now - meterStartedAt < 800;
-                    if (!ambientNoiseFloor) {
-                        ambientNoiseFloor = rms;
-                    } else if (isCalibrating || rms < ambientNoiseFloor * 1.8) {
-                        ambientNoiseFloor = (ambientNoiseFloor * 0.94) + (rms * 0.06);
-                    }
+                    const sharedLevel = sharedVad?.sample(rms, now - meterStartedAt);
+                    if (!sharedVad) {
+                        if (!ambientNoiseFloor) {
+                            ambientNoiseFloor = rms;
+                        } else if (isCalibrating || rms < ambientNoiseFloor * 1.8) {
+                            ambientNoiseFloor = (ambientNoiseFloor * 0.94) + (rms * 0.06);
+                        }
 
-                    const activeSpeechThreshold = Math.max(
-                        speechLevelThreshold,
-                        (ambientNoiseFloor * speechNoiseMultiplier) + 0.004
-                    );
-                    if (!isCalibrating && rms > activeSpeechThreshold) {
-                        speechFrameCount += 1;
+                        const activeSpeechThreshold = Math.max(
+                            speechLevelThreshold,
+                            (ambientNoiseFloor * speechNoiseMultiplier) + 0.004
+                        );
+                        if (!isCalibrating && rms > activeSpeechThreshold) {
+                            speechFrameCount += 1;
+                        } else {
+                            speechFrameCount = Math.max(0, speechFrameCount - 1);
+                        }
                     } else {
-                        speechFrameCount = Math.max(0, speechFrameCount - 1);
+                        speechFrameCount = sharedLevel.speaking ? 3 : 0;
                     }
 
-                    if (speechFrameCount >= 3) {
+                    if (sharedLevel?.speaking || speechFrameCount >= 3) {
                         const wasWaitingForSpeechResponse = hasHeardSinceLastChunk;
                         lastHeardAt = now;
                         hasHeardSinceLastChunk = true;
@@ -3723,7 +3734,12 @@
                             updateSpeechProcessingControls();
                         }
                     }
-                    shell?.classList.toggle("is-hearing", now - lastHeardAt < 240);
+                    const isHearing = now - lastHeardAt < 240;
+                    shell?.classList.toggle("is-hearing", isHearing);
+                    if (isHearing !== phraseHearingState) {
+                        phraseHearingState = isHearing;
+                        syncPhraseMicrophoneButton();
+                    }
                     renderOfficialCrlaStatus();
                     audioMeterFrame = window.requestAnimationFrame(tick);
                 };
@@ -3764,7 +3780,7 @@
         }
 
         function updateAssessmentNavigationButtons() {
-            const speechResponsePending = isSpeechResponsePending();
+            const speechResponsePending = isSpeechResponsePending() && !isSentenceBot;
             // Story Skip must not inherit `hasHeardSinceLastChunk` as a
             // permanent pending flag. That flag only says a chunk contained
             // speech; the request itself is authoritative for processing.
@@ -7430,6 +7446,24 @@
         });
 
         nextBtn?.addEventListener("click", async () => {
+            if (isSentenceBot) {
+                const restoringSentenceBot = Boolean(window.__PABASA_SENTENCE_BOT_RESTORING__);
+                if (isAdvancingItem || isReviewMode) return;
+                isAdvancingItem = true;
+                itemResultVersion += 1;
+                pendingAudioChunk = null;
+                if (!restoringSentenceBot) {
+                    isRecording = false;
+                    stopSpeechRecognition();
+                }
+                if (currentIndex < items.length - 1) {
+                    transitionToItem(currentIndex + 1, "Next sentence.", "Keep reading clearly.");
+                } else {
+                    showCompletion(true);
+                }
+                if (restoringSentenceBot) window.__PABASA_SENTENCE_BOT_RESTORING__ = false;
+                return;
+            }
             if (currentStoryState === "story_reading" && currentSelectedStory) {
                 if (currentPageIndex < getCurrentPageCount() - 1) {
                     const skippedSegmentWords = readableWordCount(getCurrentDisplayText());

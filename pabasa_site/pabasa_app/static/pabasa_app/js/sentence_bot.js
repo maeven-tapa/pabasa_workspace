@@ -11,7 +11,36 @@
     const language = /filipino|tagalog|fil\b/i.test(String(material.language || material.content_json?.language || "")) ? "FILIPINO" : "ENGLISH";
     const sourceItems = Array.isArray(material.items) ? material.items : [];
     const totalFromData = sourceItems.length || String(material.content || "").split(/\r?\n/).filter(line => line.trim()).length || 1;
-    const state = { index: 0, total: totalFromData, learned: 0, mode: "idle", successTimer: null };
+    const resumeKey = `pabasa_sentence_bot_resume:${material.raw_id || material.id || window.location.pathname}`;
+    let savedResume = null;
+    try {
+        savedResume = JSON.parse(window.localStorage.getItem(resumeKey) || "null");
+    } catch (error) {
+        savedResume = null;
+    }
+    const state = {
+        index: Math.min(totalFromData - 1, Math.max(0, Number(savedResume?.index) || 0)),
+        total: totalFromData,
+        learned: Math.min(totalFromData, Math.max(0, Number(savedResume?.learned) || 0)),
+        mode: "idle",
+        successTimer: null,
+    };
+    const resumeTargetIndex = state.index;
+    function persistResume() {
+        if (persistedCompletion.completed) return;
+        try {
+            window.localStorage.setItem(resumeKey, JSON.stringify({
+                index: state.index,
+                learned: state.learned,
+                total: state.total,
+            }));
+        } catch (error) {
+            // Resume support is best-effort when browser storage is unavailable.
+        }
+    }
+    if (persistedCompletion.completed) {
+        try { window.localStorage.removeItem(resumeKey); } catch (error) {}
+    }
     if (!persistedCompletion.completed) {
         const originalFetch = window.fetch.bind(window);
         let retryRequiresFreshSentence = false;
@@ -157,16 +186,17 @@
         if (learned) learned.textContent = `${state.learned} / ${state.total} ${I18N.learned}`;
         if (training) training.textContent = `${I18N.training} ${pad(Math.min(state.index + 1, state.total))} / ${pad(state.total)}`;
         updateAdvanceButton();
+        persistResume();
     }
     function setMode(mode, copy) {
         state.mode = mode; root.dataset.botState = mode;
-        const robotMode = mode === "processing" ? "listening" : mode;
+        const robotMode = ["waiting", "processing"].includes(mode) ? "listening" : mode;
         if (robot) { robot.src = `${assetRoot}robot_${robotMode}.png`; robot.alt = `Friendly Sentence Bot is ${mode === "idle" ? "ready" : mode}`; }
         if (message) message.innerHTML = `<span class="sentence-bot-message-dot" aria-hidden="true"></span><span>${copy}</span>`;
-        if (systemStatus) systemStatus.textContent = mode === "listening" ? I18N.listening : mode === "processing" ? I18N.checking : mode === "success" ? I18N.learnedStatus : mode === "retry" ? I18N.retry : I18N.ready;
-        if (voiceGuide) voiceGuide.querySelector("span").textContent = mode === "retry" ? I18N.guideRetry : mode === "processing" ? I18N.guideChecking : mode === "listening" ? I18N.guideListening : mode === "success" ? I18N.guideSuccess : I18N.readySentence;
-        if (resultFeedback) resultFeedback.querySelector("b").textContent = mode === "retry" ? I18N.sameRetry : mode === "processing" ? I18N.checkingReading : mode === "listening" ? I18N.active : mode === "success" ? I18N.sentenceLearned : I18N.resultReady;
-        if (startButton) startButton.innerHTML = mode === "listening" ? `<i class="bi bi-soundwave"></i> ${I18N.listening}` : mode === "processing" ? `<i class="bi bi-cpu"></i> ${I18N.checking}...` : `<i class="bi bi-mic-fill"></i> ${I18N.teach}`;
+        if (systemStatus) systemStatus.textContent = ["listening", "waiting"].includes(mode) ? I18N.listening : mode === "processing" ? I18N.checking : mode === "success" ? I18N.learnedStatus : mode === "retry" ? I18N.retry : I18N.ready;
+        if (voiceGuide) voiceGuide.querySelector("span").textContent = mode === "retry" ? I18N.guideRetry : mode === "processing" ? I18N.guideChecking : ["listening", "waiting"].includes(mode) ? I18N.guideListening : mode === "success" ? I18N.guideSuccess : I18N.readySentence;
+        if (resultFeedback) resultFeedback.querySelector("b").textContent = mode === "retry" ? I18N.sameRetry : mode === "processing" ? I18N.checkingReading : ["listening", "waiting"].includes(mode) ? I18N.active : mode === "success" ? I18N.sentenceLearned : I18N.resultReady;
+        if (startButton) startButton.innerHTML = ["listening", "waiting"].includes(mode) ? `<i class="bi bi-soundwave"></i> ${mode === "waiting" ? (I18N.waiting || (I18N.language === "FILIPINO" ? "HINIHINTAY ANG BOSES" : "WAITING FOR SPEECH")) : I18N.listening}` : mode === "processing" ? `<i class="bi bi-cpu"></i> ${I18N.checking}...` : `<i class="bi bi-mic-fill"></i> ${I18N.teach}`;
     }
     function settleToIdle() { if (!root.classList.contains("is-complete")) setMode("idle", I18N.readyLearn); }
     startButton?.setAttribute("aria-label", I18N.teach);
@@ -197,7 +227,7 @@
         state.total = nextTotal;
         renderChips();
         if (itemChanged && !root.classList.contains("is-complete")) {
-            setMode(root.classList.contains("is-recording") ? "listening" : "idle",
+            setMode(root.classList.contains("is-recording") ? (root.classList.contains("is-hearing") ? "listening" : "waiting") : "idle",
                 root.classList.contains("is-recording") ? I18N.guideListening : I18N.readyLearn);
         }
     }
@@ -216,7 +246,7 @@
         } else if (startButton?.dataset.speechProcessingState) {
             setMode("processing", I18N.checkingReading);
         } else if (root.classList.contains("is-recording")) {
-            setMode("listening", I18N.guideListening);
+            setMode(root.classList.contains("is-hearing") ? "listening" : "waiting", I18N.guideListening);
         }
     }
 
@@ -264,6 +294,21 @@
     if (speechStatus) new MutationObserver(syncStatusFromEngine).observe(speechStatus, { childList: true, characterData: true, subtree: true });
     if (startButton) new MutationObserver(syncStatusFromEngine).observe(startButton, { attributes: true, attributeFilter: ["data-speech-processing-state", "disabled"] });
     if (counter) new MutationObserver(syncItemFromEngine).observe(counter, { childList: true, characterData: true, subtree: true });
+
+    if (!persistedCompletion.completed && resumeTargetIndex > 0) {
+        window.setTimeout(() => {
+            const nextButton = document.getElementById("nextBtn");
+            let remaining = resumeTargetIndex;
+            const restoreNext = () => {
+                if (!nextButton || remaining <= 0) return;
+                window.__PABASA_SENTENCE_BOT_RESTORING__ = true;
+                nextButton.click();
+                remaining -= 1;
+                window.setTimeout(restoreNext, 0);
+            };
+            restoreNext();
+        }, 0);
+    }
 
     if (persistedCompletion.completed) {
         state.total = Math.max(1, Number(persistedCompletion.total_sentences) || state.total);

@@ -61,7 +61,7 @@
       const setText = (selector, value) => { const element = document.querySelector(selector); if (element && value) element.textContent = value; };
       setText('.phrase-back-link span', I18N.back); setText('.phrase-eyebrow', I18N.eyebrow); setText('.phrase-heading-group h1', I18N.title);
       setText('.phrase-progress > span', I18N.progress); setText('#phraseBoardTitle', I18N.boardTitle); setText('.phrase-board-copy p', I18N.boardCopy);
-      setText('#phraseMessageClose', I18N.close); setText('#readingWord', I18N.loading); setText('#readingHelperText', I18N.helper);
+      document.querySelector('#phraseMessageClose')?.setAttribute('aria-label', I18N.close); setText('#readingWord', I18N.loading); setText('#readingHelperText', I18N.helper);
       setText('.phrase-mic-label', I18N.start); setText('#btnReadAloud', I18N.aloud); setText('#btnStopReading', I18N.finishReading);
       setText('#speechStatus', I18N.ready); setText('#speechTranscript', I18N.transcript); setText('#rawMicInput', I18N.waiting);
       setText('.completion-kicker', I18N.allCollected); setText('#completionTitle', I18N.complete); setText('#completionMessage', I18N.completeMessage);
@@ -230,6 +230,8 @@
         
         if (this.completedPhrases.has(index)) {
           envelope.classList.add('is-complete');
+          envelope.disabled = true;
+          envelope.setAttribute('aria-label', `Message ${index + 1}, already completed`);
         }
         
         // Build envelope HTML structure
@@ -259,6 +261,7 @@
       if (!Number.isInteger(index) || index < 0 || index >= this.phrases.length) {
         return;
       }
+      if (this.completedPhrases.has(index)) return;
 
       this.currentPhraseIndex = index;
       this.currentPhrase = this.phrases[index];
@@ -358,6 +361,8 @@
       const envelope = document.getElementById(`envelope-${index}`);
       if (envelope) {
         envelope.classList.add('is-complete');
+        envelope.disabled = true;
+        envelope.setAttribute('aria-label', `Message ${index + 1}, already completed`);
         if (!envelope.querySelector('.phrase-envelope-check')) {
           const check = document.createElement('span');
           check.className = 'phrase-envelope-check';
