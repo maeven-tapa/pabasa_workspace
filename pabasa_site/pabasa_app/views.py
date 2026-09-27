@@ -17466,7 +17466,19 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
                 return response
             if activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
                 event = dict(event)
-                event['transcript'] = str(result.get('transcript') or result.get('raw_transcript') or '').strip()
+                raw_transcript = str(result.get('raw_transcript') or result.get('transcript') or '').strip()
+                event['transcript'] = raw_transcript
+                logger.info(
+                    'L22_G1_STT expected=%r raw_transcript=%r index=%s attempt=%s accepted=%s',
+                    request.POST.get('l22_c_syllable'), raw_transcript, item_index,
+                    state.get('reading_attempts', 0), result.get('complete'),
+                )
+                result['complete'] = l22_c_pronunciation_match(
+                    request.POST.get('l22_c_syllable'),
+                    request.POST.get('target_text'),
+                    raw_transcript,
+                    request.POST.get('l22_c_sound'),
+                )
             elif activity_key == 'aral-l23-g1-n-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
                 event = dict(event)
                 event['transcript'] = str(result.get('raw_transcript') or result.get('transcript') or '').strip()

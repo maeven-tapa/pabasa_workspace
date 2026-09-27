@@ -477,6 +477,8 @@ class PrescribedWorkbookFlowTests(TestCase):
         self.session_student(self.student)
         page = self.client.get(activity_url)
         self.assertEqual(page.status_code, 200)
+        self.assertContains(page, 'wb-l22-g1-start')
+        self.assertContains(page, 'MAMAYA NA LANG')
         self.assertNotIn('material_id', page.context['workbook_payload'])
         state = page.context['workbook_payload']['state']
         response = self.client.post(progress_url, json.dumps({'action': 'reading_started', 'revision': state['revision']}), content_type='application/json')
@@ -608,7 +610,7 @@ class PrescribedWorkbookFlowTests(TestCase):
             self.assertEqual(request.POST['l22_c_pronunciation'], '1')
             self.assertEqual(request.POST['l22_c_syllable'], 'cac')
             self.assertEqual(request.POST['l22_c_sound'], 'hard')
-            return JsonResponse({'success': True, 'transcript': 'kak', 'complete': True})
+            return JsonResponse({'success': True, 'transcript': 'cactus', 'raw_transcript': 'kak', 'complete': False})
 
         with patch('pabasa_app.views.reading_transcribe_api', side_effect=inspect_reading_request):
             response = self.client.post(progress_url, {
