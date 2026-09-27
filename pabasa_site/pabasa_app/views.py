@@ -15756,6 +15756,22 @@ def prescribed_activity_progress(request, activity_key):
         try:
             data = json.loads(request.body or '{}')
             existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            if data.get('reset') is True:
+                # Restart must clear both the durable progress row and the
+                # completion flag.  This has to happen before the normal
+                # stale-state guard below, otherwise an empty reset payload
+                # is treated as an older state and the activity resumes.
+                state = _normalized_starting_syllable_state(activity, {})
+                progress, _ = StudentActivityProgress.objects.update_or_create(
+                    student=student, activity_key=activity_key,
+                    defaults={'current_index': 0, 'completed_items': 0,
+                              'correct_items': 0, 'total_items': len(activity['items']),
+                              'activity_completed': False, 'state': state},
+                )
+                return JsonResponse({'success': True, 'progress': {
+                    'state': state, 'completed_items': 0, 'correct_items': 0,
+                    'total_items': len(activity['items']), 'activity_completed': False,
+                }})
             old = _normalized_starting_syllable_state(activity, existing.state if existing else {})
             incoming = _normalized_starting_syllable_state(activity, data.get('state'))
             if (existing and existing.activity_completed) or incoming['state_version'] < old['state_version']:
