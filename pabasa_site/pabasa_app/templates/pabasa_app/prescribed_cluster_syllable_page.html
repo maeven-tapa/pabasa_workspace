@@ -23,19 +23,25 @@
     const esc=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
     const normalize=value=>String(value||'').toLocaleLowerCase('fil-PH').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]/g,'');
     const itemKey=index=>String(index);
-    let state=Object.assign({phase:'intro',current_item_index:0,completed_oral_reads:[],stt_attempts:{},tts_plays:{},correct_answers:[],selected_answers:{},state_version:0},d.progress?.state||{}),busy=false,requestId=0,stream=null,audio=null;
+    let state=Object.assign({phase:'intro',current_item_index:0,completed_oral_reads:[],stt_attempts:{},tts_plays:{},correct_answers:[],selected_answers:{},state_version:0},d.progress?.state||{}),busy=false,requestId=0,stream=null,audio=null,narrationAudio=null,narrationRequest=0,lastPromptedWord='';
     const debugEvent=detail=>window.dispatchEvent(new CustomEvent('prescribed-s7-l20-21-g1-debug',{detail}));
     const stopMedia=()=>{stream?.getTracks().forEach(track=>track.stop());stream=null;if(audio){audio.pause();audio=null}};
-    async function playReadAloud(text){
-      if(!text)return;
-      try{
-        const response=await fetch(d.read_aloud_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',mode:'word',prescribed_activity_key:d.activity_key})}),data=await response.json().catch(()=>({}));
-        if(!response.ok||!data.success||data.tts_language!=='fil-PH'||data.voice_name!=='fil-PH-Wavenet-A'||!data.audio_content)throw Error(data.error||'Hindi available ang Filipino audio.');
-        const url=URL.createObjectURL(new Blob([Uint8Array.from(atob(data.audio_content),character=>character.charCodeAt(0))],{type:data.mime_type||'audio/mpeg'}));
-        const spoken=new Audio(url);
-        try{await spoken.play();await new Promise((resolve,reject)=>{spoken.onended=resolve;spoken.onerror=()=>reject(Error('Hindi ma-play ang audio.'))})}finally{URL.revokeObjectURL(url)}
-      }catch(error){const status=app.querySelector('.status');if(status)status.textContent=error.message||'Hindi available ang Filipino audio.'}
-    }
+    const localAudioRoot="{% static 'pabasa_app/prescribed/audio/SESSION_7/LESSON_20_21/GAWAIN_1/' %}";
+    const localAudioFiles={
+      instruction:'intro_basahin_piliin_ang_pantig_klaster_tts.mp3',
+      readingSuccess:'tama_pagbasa_ngayon_piliin_klaster_tts.mp3',
+      correct:'tama_magaling_ang_iyong_sagot_tts.mp3',
+      retry:'hindi_pa_tama_tts.mp3',
+      listenPrompt:'pakinggan_muna_ang_salita_tts.mp3',
+      subTry:'subukan_mong_basahin_salita_tts.mp3',
+      completion:'mahusay_ang_ginawa_mo_ngayon_natapos_aralin_tts.mp3',
+      wordPrompts:{tsek:'basahin_tsek_tts.mp3',kotse:'basahin_kotse_tts.mp3',tsokolate:'basahin_tsokolate_tts.mp3',pitsel:'basahin_pitsel_tts.mp3',kutsara:'basahin_kutsara_tts.mp3'},
+      words:{tsek:'tsek_tts.mp3',kotse:'kotse_tts.mp3',tsokolate:'tsokolate_tts.mp3',pitsel:'pitsel_tts.mp3',kutsara:'kutsara_tts.mp3'}
+    };
+    const localAudioFile=text=>{const key=String(text||'').trim();if(key===d.instruction)return localAudioFiles.instruction;if(key==='Tama ang pagbasa! Piliin ang pantig na may klaster.')return localAudioFiles.readingSuccess;if(key==='Tama! Magaling ang iyong sagot.')return localAudioFiles.correct;if(key==='Hindi pa. Subukan muli.'||key==='Subukan muli. Bilugan ang pantig na may klaster.')return localAudioFiles.retry;if(key==='Pakinggan muna ang salita.')return localAudioFiles.listenPrompt;if(key==='Subukan mong basahin ang salita.')return localAudioFiles.subTry;if(key==='Magaling! Natapos mo ang Lesson 20 at 21: Gawain 1.')return localAudioFiles.completion;return localAudioFiles.words[key.toLocaleLowerCase('fil-PH')]||''};
+    const playLocalAudio=async file=>{if(!file)return false;if(narrationAudio){narrationAudio.pause();narrationAudio.currentTime=0;narrationAudio=null}const mine=++narrationRequest,spoken=new Audio(localAudioRoot+file);narrationAudio=spoken;try{await spoken.play();await new Promise((resolve,reject)=>{spoken.onended=resolve;spoken.onerror=()=>reject(Error('Hindi ma-play ang audio.'))});return mine===narrationRequest}catch(error){if(mine===narrationRequest){const status=app.querySelector('.status');if(status)status.textContent=error.message||'Hindi available ang Filipino audio.';return false}return false}finally{if(narrationAudio===spoken)narrationAudio=null}};
+    const playWordPrompt=async index=>{const word=String(items[index]?.word||'').toLocaleLowerCase('fil-PH');return playLocalAudio(localAudioFiles.wordPrompts[word])};
+    async function playReadAloud(text){return playLocalAudio(localAudioFile(text))}
     const current=()=>Number(state.current_item_index)||0,total=items.length;
     const header=()=>`<p class="eyebrow">SESSION 7 · LESSON 20 AT 21 · GAWAIN 1</p><h1>${esc(d.display_title)}</h1><h2>${esc(d.title)}</h2><p class="instruction">${esc(d.instruction)}</p><div class="track" aria-label="${state.correct_answers.length} sa ${total} natapos"><i style="width:${total?state.correct_answers.length/total*100:0}%"></i></div>`;
     const picture=item=>`<div class="picture"><img src="${esc(item.image_url)}" alt="${esc(item.alt_text)}"></div>`;
@@ -49,17 +55,19 @@
       const index=current(),item=items[index];
       if(state.phase==='intro'){
         app.innerHTML=header()+`<p class="hint">Pagmasdan ang mga larawan. Basahin ang salita bago bilugan ang pantig na may klaster.</p><div class="preview">${items.map(value=>`<figure><img src="${esc(value.image_url)}" alt="${esc(value.alt_text)}"><figcaption>${esc(value.word)}</figcaption></figure>`).join('')}</div><button class="button" id="start" type="button">SIMULAN</button><p class="status ${kind}">${esc(message)}</p>`;
-        app.querySelector('#start').onclick=async()=>{state.phase='oral_reading';try{await save();render();playReadAloud(d.instruction).catch(()=>{})}catch(error){render(error.message,'bad')}};return;
+        app.querySelector('#start').onclick=async()=>{state.phase='oral_reading';try{lastPromptedWord=String(items[current()]?.word||'').toLocaleLowerCase('fil-PH');render();const intro=playReadAloud(d.instruction);const saved=save();await intro;await saved;await playWordPrompt(current())}catch(error){render(error.message,'bad')}};return;
       }
       if(state.phase==='feedback'){
         const previous=items[state.correct_answers.length-1];
         app.innerHTML=header()+picture(previous)+`<p class="status good">Tama! Magaling ang iyong sagot.</p><button class="chip locked" disabled>${esc(state.correct_answers.at(-1))}</button><br><button class="button" id="next">${state.correct_answers.length===total?'TAPUSIN':'SUSUNOD'}</button>`;
-        app.querySelector('#next').onclick=async()=>{if(state.correct_answers.length===total)return finish();state.current_item_index=state.correct_answers.length;state.phase='oral_reading';try{await save();render()}catch(error){render(error.message,'bad')}};return;
+        app.querySelector('#next').onclick=async()=>{if(state.correct_answers.length===total)return finish();state.current_item_index=state.correct_answers.length;state.phase='oral_reading';try{render();await save()}catch(error){render(error.message,'bad')}};return;
       }
       if(!item){finish();return}
       if(state.phase==='oral_reading'){
         const recovery=(state.stt_attempts[itemKey(index)]||0)>=3;
         app.innerHTML=header()+`<p class="hint">Salita ${index+1} sa ${total}</p>${picture(item)}<p class="hint">${recovery?'Pakinggan muna ang salita.':'Basahin nang malakas ang salitang nasa larawan.'}</p><button data-basahin-button class="button ${recovery?'gold':''}" id="oral" type="button">${recovery?'Pakinggan / Read Aloud':window.BasahinButton.LABEL}</button><p class="status ${kind}">${esc(message)}</p>`;
+        const word=String(item.word||'').toLocaleLowerCase('fil-PH');
+        if(word!==lastPromptedWord){lastPromptedWord=word;playWordPrompt(index).catch(()=>{})}
         window.Basahin.bindActivity(app.querySelector('#oral'),()=>recovery?listen(index):read(index));return;
       }
       let selected='';
@@ -85,15 +93,15 @@
         const transcript=String(data.transcript||''),normalized=normalize(transcript),correct=Boolean(response.ok&&data.success&&data.complete===true);
         debugEvent({status:'STT complete',transcript,normalized,result:correct?'Correct':'Incorrect',error:correct?'Not available':(data.error||'Reading did not match'),message:`STT response · ${correct?'accepted':'rejected'}`});
         if(correct){state.completed_oral_reads=[...new Set([...state.completed_oral_reads,index])];state.stt_attempts[itemKey(index)]=0;state.tts_plays[itemKey(index)]=0;state.phase='syllable_selection';await save();const message='Tama ang pagbasa! Piliin ang pantig na may klaster.';render(message,'good');playReadAloud(message).catch(()=>{})}else throw Error('Hindi pa. Subukan muli.');
-      }catch(error){debugEvent({status:'Error',error:error.message||'Speech attempt failed',message:'Reading error'});if(mine===requestId){if(!window.Basahin.isCaptureError(error)){state.stt_attempts[itemKey(index)]=Math.min(3,(state.stt_attempts[itemKey(index)]||0)+1);}try{await save()}catch(_){}const message=(state.stt_attempts[itemKey(index)]||0)>=3?'Pakinggan muna ang salita.':error.message||'Hindi nakuha ang boses. Subukan muli.';render(message,'bad');playReadAloud(message).catch(()=>{})}}finally{stopMedia();busy=false}
+      }catch(error){debugEvent({status:'Error',error:error.message||'Speech attempt failed',message:'Reading error'});if(mine===requestId){if(!window.Basahin.isCaptureError(error)){state.stt_attempts[itemKey(index)]=Math.min(3,(state.stt_attempts[itemKey(index)]||0)+1);}try{await save()}catch(_){}const message=(state.stt_attempts[itemKey(index)]||0)>=3?'Pakinggan muna ang salita.':error.message||'Hindi nakuha ang boses. Subukan muli.';render(message,'bad');playReadAloud(message).catch(()=>{})}}finally{stopMedia();busy=false;if(button?.isConnected&&state.phase==='oral_reading'){window.BasahinButton?.setState(button,'idle');button.disabled=false}}
     }
     async function listen(index){
       if(busy)return;busy=true;const mine=++requestId,button=app.querySelector('#oral');
       try{
-        button.disabled=true;button.textContent='Nilo-load...';const form=new URLSearchParams({target_text:items[index].word,language:'Filipino',mode:'word',prescribed_activity_key:d.activity_key});
-        const response=await fetch(d.read_aloud_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':csrf()},body:form}),data=await response.json().catch(()=>({}));
-        if(mine!==requestId)return;if(!response.ok||!data.success||data.tts_language!=='fil-PH'||data.voice_name!=='fil-PH-Wavenet-A')throw Error(data.error||'Hindi available ang Filipino audio.');
-        button.textContent='Pinakikinggan...';audio=new Audio(URL.createObjectURL(new Blob([Uint8Array.from(atob(data.audio_content),character=>character.charCodeAt(0))],{type:data.mime_type||'audio/mpeg'})));await audio.play();await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=()=>reject(Error('Hindi ma-play ang audio.'))});
+        button.disabled=true;button.textContent='Nilo-load...';
+        const word=String(items[index].word||'').toLocaleLowerCase('fil-PH');
+        audio=new Audio(localAudioRoot+localAudioFiles.words[word]);
+        button.textContent='Pinakikinggan...';await audio.play();await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=()=>reject(Error('Hindi ma-play ang audio.'))});
         if(mine!==requestId)return;state.tts_plays[itemKey(index)]=Math.min(3,(state.tts_plays[itemKey(index)]||0)+1);if(state.tts_plays[itemKey(index)]===3){state.stt_attempts[itemKey(index)]=0;state.tts_plays[itemKey(index)]=0}state.phase='oral_reading';await save();const message='Subukan mong basahin ang salita.';render(message);playReadAloud(message).catch(()=>{});
       }catch(error){if(mine===requestId){const message=error.message||'Hindi available ang audio. Subukan muli.';render(message,'bad');playReadAloud(message).catch(()=>{})}}finally{busy=false}
     }

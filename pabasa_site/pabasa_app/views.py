@@ -15677,6 +15677,23 @@ def prescribed_activity_progress(request, activity_key):
         try:
             data = json.loads(request.body or '{}')
             existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            if data.get('reset') is True:
+                # Restart must be handled before stale-state protection so
+                # the control button returns to the workbook introduction,
+                # including the worked-example row at displayed index 0.
+                state = _normalized_session7_cluster_syllabification_state(activity, {})
+                progress, _ = StudentActivityProgress.objects.update_or_create(
+                    student=student, activity_key=activity_key,
+                    defaults={'current_index': 0, 'completed_items': 0,
+                              'correct_items': 0,
+                              'total_items': len([item for item in activity['items'] if not item.get('worked_example')]),
+                              'activity_completed': False, 'state': state},
+                )
+                return JsonResponse({'success': True, 'progress': {
+                    'state': state, 'completed_items': 0, 'correct_items': 0,
+                    'total_items': len([item for item in activity['items'] if not item.get('worked_example')]),
+                    'activity_completed': False,
+                }})
             old = _normalized_session7_cluster_syllabification_state(activity, existing.state if existing else {})
             incoming = _normalized_session7_cluster_syllabification_state(activity, data.get('state'))
             scored = [item for item in activity['items'] if not item.get('worked_example')]
