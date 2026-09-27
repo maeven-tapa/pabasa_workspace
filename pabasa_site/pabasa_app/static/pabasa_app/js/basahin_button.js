@@ -6,6 +6,11 @@
   const selector = 'button[data-basahin-button]';
   const englishReaderSelector = 'button[data-basahin-button][data-basahin-language="English"]';
   const pakingganSelector = 'button[data-pakinggan-button]';
+  // A Read button's temporary "Listening..." label is not a Listen control.
+  const isPakingganControl = button =>
+    button?.matches?.('button') &&
+    !button.matches(selector) &&
+    /listen|pakinggan/i.test(button.textContent);
   // Sessions 10–15 are Lessons 26–31. Keep the shared Listen presentation
   // limited to those activities until it is deliberately rolled out further.
   const isSession10To15Activity = () => /\/lesson-(?:26|27|28|29|30|31)-gawain-/i.test(window.location.pathname);
@@ -57,7 +62,7 @@
   }
 
   function decoratePakinggan(button) {
-    if (!button) return;
+    if (!button || button.matches(selector)) return;
     const source = button.textContent.trim();
     button.setAttribute('data-pakinggan-button', '');
     button.dataset.pakingganState = button.classList.contains('is-busy') ? 'playing' : 'ready';
@@ -102,16 +107,16 @@
     root.querySelectorAll?.(englishReaderSelector).forEach(button => readers.push(button));
     readers.forEach(read => {
       const listen = [...(read.parentElement?.children || [])]
-        .find(button => button !== read && button.matches?.('button') && /listen|pakinggan/i.test(button.textContent));
+        .find(button => button !== read && isPakingganControl(button));
       if (listen) pairWithPakinggan(read, listen);
     });
     // Some activity phases show a Listen control before, or without, the Read
     // control. Mark those too so their playing state never inherits a local
     // pulse animation.
     const controls = [];
-    if (root.matches?.('button') && /listen|pakinggan/i.test(root.textContent)) controls.push(root);
+    if (isPakingganControl(root)) controls.push(root);
     root.querySelectorAll?.('button').forEach(button => {
-      if (/listen|pakinggan/i.test(button.textContent)) controls.push(button);
+      if (isPakingganControl(button)) controls.push(button);
     });
     controls.forEach(decoratePakinggan);
     if (root.matches?.(pakingganSelector)) decoratePakinggan(root);
