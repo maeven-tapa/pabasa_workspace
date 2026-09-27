@@ -44,9 +44,10 @@ class StudentSessionLockMiddleware:
 
     def __call__(self, request):
         user = None
+        session_key = request.session.session_key
         if request.session.get("user_role") == "student":
             user = User.objects.filter(id=request.session.get("user_id"), role="student").first()
-            key = request.session.session_key
+            key = session_key
             if not student_session_is_active(user, key):
                 reason = 'idle_timeout' if user and key == user.active_session_key and student_session_timed_out(user) else 'session_replaced'
                 if user and key == user.active_session_key:
@@ -61,6 +62,18 @@ class StudentSessionLockMiddleware:
             # Polling proves presence, not user interaction. Device ownership
             # and idle validity are checked above, before any refresh.
             User.objects.filter(pk=user.pk, active_session_key=key).update(active_session_last_seen=session_now())
+        elif session_key:
+            # A re-authentication redirect can arrive with a session whose
+            # payload was cleared or invalidated before the middleware could
+            # identify its user. Release only the matching student's stale
+            # claim, using the server-side session key as the ownership proof.
+            User.objects.filter(
+                role="student", active_session_key=session_key,
+            ).update(
+                active_session_key=None, active_session_created_at=None,
+                last_activity=None, active_session_last_seen=None,
+                active_session_learning=False,
+            )
         response = self.get_response(request)
         if (not user or request.session.get('user_role') != 'student' or response.streaming
                 or response.status_code != 200 or 'text/html' not in response.get('Content-Type', '')

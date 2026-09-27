@@ -139,7 +139,11 @@ USE_I18N = True
 USE_TZ = True
 
 # Student idle expiry is separate from the short single-device presence lease.
+# A closed/crashed browser stops its 30-second heartbeat; after this lease,
+# another login may reclaim the account without waiting for the 30-minute idle
+# warning window used by ordinary dashboard sessions.
 STUDENT_SESSION_IDLE_SECONDS = 30 * 60
+STUDENT_SESSION_LEASE_SECONDS = 10 * 60
 STUDENT_SESSION_WARNING_SECONDS = 2 * 60
 
 

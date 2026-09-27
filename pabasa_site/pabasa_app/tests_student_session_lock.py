@@ -86,6 +86,55 @@ class StudentSessionLockTests(TestCase):
         replacement = self.client_class()
         self.assertEqual(self.login(replacement).status_code, 200)
 
+    def test_cleared_auth_session_no_longer_blocks_login(self):
+        self.assertEqual(self.login(self.client).status_code, 200)
+        active_key = self.client.session.session_key
+        session = Session.objects.get(session_key=active_key)
+        session.session_data = self.client.session.encode({})
+        session.save(update_fields=['session_data'])
+
+        replacement = self.client_class()
+        response = self.login(replacement)
+
+        self.assertEqual(response.status_code, 200)
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.active_session_key, replacement.session.session_key)
+
+    def test_reauthentication_after_server_session_is_invalidated_succeeds(self):
+        self.assertEqual(self.login(self.client).status_code, 200)
+        active_key = self.client.session.session_key
+        self.client.session.flush()
+
+        response = self.login(self.client)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotEqual(self.client.session.session_key, active_key)
+        self.assertEqual(self.client.get(reverse('dashboard')).status_code, 200)
+
+    def test_reauthentication_logout_flow_releases_current_claim(self):
+        self.assertEqual(self.login(self.client).status_code, 200)
+        active_key = self.client.session.session_key
+
+        response = self.client.get(reverse('logout') + '?next=' + reverse('auth'))
+
+        self.assertRedirects(response, reverse('auth'))
+        self.student.refresh_from_db()
+        self.assertIsNone(self.student.active_session_key)
+        self.assertEqual(self.login(self.client).status_code, 200)
+        self.assertNotEqual(self.client.session.session_key, active_key)
+
+    def test_auth_page_cleans_matching_orphaned_session_claim(self):
+        self.assertEqual(self.login(self.client).status_code, 200)
+        active_key = self.client.session.session_key
+        session = Session.objects.get(session_key=active_key)
+        session.session_data = self.client.session.encode({})
+        session.save(update_fields=['session_data'])
+
+        self.assertEqual(self.client.get(reverse('auth')).status_code, 200)
+        self.student.refresh_from_db()
+        self.assertIsNone(self.student.active_session_key)
+        self.assertEqual(self.login(self.client).status_code, 200)
+
     def test_idle_server_activity_no_longer_blocks_login(self):
         self.assertEqual(self.login(self.client).status_code, 200)
         self.student.refresh_from_db()
@@ -109,6 +158,44 @@ class StudentSessionLockTests(TestCase):
         )
         self.assertEqual(self.login(self.client_class()).status_code, 200)
         self.assertEqual(self.client.post(reverse('student_session_heartbeat')).status_code, 401)
+
+    def test_fresh_learning_presence_still_blocks_second_login(self):
+        self.login(self.client)
+        User.objects.filter(pk=self.student.pk).update(
+            active_session_learning=True,
+            last_activity=timezone.now() - STUDENT_SESSION_IDLE_TIMEOUT,
+            active_session_last_seen=timezone.now(),
+        )
+        replacement = self.client_class()
+        response = self.login(replacement)
+        self.assertEqual(response.status_code, 409)
+
+    def test_heartbeat_refreshes_presence_timestamp(self):
+        self.login(self.client)
+        old_seen = timezone.now() - timedelta(minutes=1)
+        User.objects.filter(pk=self.student.pk).update(active_session_last_seen=old_seen)
+        response = self.client.post(reverse('student_session_heartbeat'))
+        self.assertEqual(response.status_code, 200)
+        self.student.refresh_from_db()
+        self.assertGreater(self.student.active_session_last_seen, old_seen)
+
+    def test_delayed_heartbeat_from_replaced_session_cannot_refresh_new_owner(self):
+        self.login(self.client)
+        User.objects.filter(pk=self.student.pk).update(
+            active_session_last_seen=timezone.now() - STUDENT_SESSION_LEASE_TIMEOUT - timedelta(seconds=1),
+        )
+        replacement = self.client_class()
+        self.assertEqual(self.login(replacement).status_code, 200)
+        self.student.refresh_from_db()
+        replacement_key = self.student.active_session_key
+        replacement_seen = self.student.active_session_last_seen
+
+        response = self.client.post(reverse('student_session_heartbeat'))
+
+        self.assertEqual(response.status_code, 401)
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.active_session_key, replacement_key)
+        self.assertEqual(self.student.active_session_last_seen, replacement_seen)
 
     def test_learning_login_survives_long_reading_without_requests(self):
         self.login(self.client)

@@ -32,6 +32,8 @@
 .wb-l24-g4-pictures-page .wb-instruction-banner{flex:0 0 auto;margin:0;padding:clamp(8px,1.2vh,14px) clamp(12px,2vw,22px);gap:clamp(8px,1.5vw,16px);font-size:clamp(1rem,1.55vw,1.3rem);line-height:1.2}
 .wb-l24-g4-pictures-page .wb-picture-reading{flex:1 1 auto;min-height:0;margin:0;padding:clamp(8px,1.4vh,18px) clamp(14px,2.5vw,34px)}
 .wb-l24-g4-pictures-page .wb-picture-image{height:clamp(118px,25vh,250px);margin-bottom:clamp(2px,0.7vh,8px)}
+/* The workbook X-ray PNG contains a 4px clipped text artifact at its top edge. */
+.wb-l24-g4-pictures-page .wb-picture-image[src*="/aral_workbook/x-ray.png"]{clip-path:inset(4px 0 0)}
 .wb-l24-g4-pictures-page .wb-picture-reading h2{margin-bottom:clamp(3px,.6vh,8px)}
 .wb-l24-g4-pictures-page .wb-picture-feedback{margin:clamp(3px,.7vh,8px) 0;min-height:clamp(24px,3.5vh,40px)}
 .wb-l24-g4-pictures-page #wb-action{margin-top:clamp(3px,.7vh,8px)}

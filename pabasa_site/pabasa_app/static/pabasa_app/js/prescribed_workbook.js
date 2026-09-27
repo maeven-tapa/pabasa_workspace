@@ -15,6 +15,7 @@
   const g5Syllables = a.activity_key === 'aral-l24-g5-z-syllabication';
   const g6Search = a.activity_key === 'aral-l24-g6-z-word-search';
   const g7Reading = a.activity_key === 'aral-l24-g7-z-word-reading';
+  const s9Family = a.activity_key === 'aral-s9-a1-family-drawing';
   const l24G2 = a.activity_key === 'aral-l24-g2-v-word-reading';
   const pictureReading = a.activity_key === 'aral-l24-g4-x-pictures';
   const l23G1 = a.activity_key === 'aral-l23-g1-n-syllable-builder';
@@ -265,7 +266,7 @@
     else if(kind==='search'){button(fil?'Piliin ang salita':'Select word',()=>perform({action:'answer',answer:selected}),true);}
     else if(kind==='syllables'){button(fil?'Isumite':'Submit',()=>perform({action:'answer',answer:{text:document.getElementById('wb-written').value}}),true);}
     else if(kind==='fill'){button('Submit',()=>perform({action:'answer',answer:{blanks:[...content.querySelectorAll('[data-blank]')].map(s=>s.value)}}),true);}
-    else if(kind==='drawing'){button('Submit drawing and writing',()=>perform({action:'answer',answer:{text:document.getElementById('wb-written').value,strokes:state.draft.strokes||[]}}),true);}
+    else if(kind==='drawing'){button(s9Family?'Complete Activity':'Submit drawing and writing',()=>perform({action:'answer',answer:{text:document.getElementById('wb-written').value,strokes:state.draft.strokes||[]}}),true);}
     lock();
   }
   function instructionBanner(){
@@ -548,8 +549,16 @@
     content.querySelectorAll('[data-blank]').forEach(select=>select.onchange=()=>draft({blanks:[...content.querySelectorAll('[data-blank]')].map(s=>s.value)}));
   }
   function renderDrawing(){
-    content.innerHTML+='<div class="wb-drawing-card"><div class="wb-tools"><label>Color <input type="color" id="wb-pen" value="#24576b"></label><button type="button" id="wb-undo">Undo stroke</button></div><canvas id="wb-canvas" width="900" height="500" aria-label="Draw your picture"></canvas></div>';
-    written('Write under your drawing.');
+    if(s9Family){
+      content.innerHTML+=`<section class="wb-s9-family-workspace"><div class="wb-s9-drawing-panel"><div class="wb-s9-section-heading"><h2>DRAW YOUR FAMILY</h2></div><div class="wb-tools"><label for="wb-pen">Color</label><input type="color" id="wb-pen" value="#24576b"><button type="button" id="wb-undo">Undo stroke</button></div><canvas id="wb-canvas" width="900" height="500" aria-label="Draw your picture of your family"></canvas></div><div class="wb-s9-writing-panel"><div class="wb-s9-section-heading"><h2>WRITE THE SENTENCE</h2></div><p class="wb-s9-sentence">This is my family.</p><label for="wb-written">Your sentence</label><textarea id="wb-written" aria-label="Write This is my family" ${preview?'disabled':''}>${esc(preview?'':state.draft.text||'')}</textarea></div></section>`;
+    }else{
+      content.innerHTML+='<div class="wb-drawing-card"><div class="wb-tools"><label>Color <input type="color" id="wb-pen" value="#24576b"></label><button type="button" id="wb-undo">Undo stroke</button></div><canvas id="wb-canvas" width="900" height="500" aria-label="Draw your picture"></canvas></div>';
+      written('Write under your drawing.');
+    }
+    if(s9Family){
+      document.getElementById('wb-written').oninput=e=>draft({text:e.target.value});
+      document.getElementById('wb-instruction-replay')?.addEventListener('click',()=>{if(!busy&&!activeStream)playPrescribedAudio(instructionText).catch(e=>message(e.message||'Hindi available ang panuto.',true));});
+    }
     const canvas=document.getElementById('wb-canvas'),ctx=canvas.getContext('2d');let strokes=structuredClone(state.draft.strokes||[]),stroke=null;
     const redraw=()=>{ctx.clearRect(0,0,900,500);for(const s of strokes){ctx.strokeStyle=s.color;ctx.lineWidth=5;ctx.lineCap='round';ctx.beginPath();s.points.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p));ctx.stroke();}};
     const point=e=>{const r=canvas.getBoundingClientRect();return [Math.max(0,Math.min(900,(e.clientX-r.left)*900/r.width)),Math.max(0,Math.min(500,(e.clientY-r.top)*500/r.height))];};

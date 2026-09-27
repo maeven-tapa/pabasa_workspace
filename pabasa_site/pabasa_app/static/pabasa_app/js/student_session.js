@@ -50,7 +50,7 @@
     });
     signOut.addEventListener('click', () => {
       learningPages(true);
-      location.assign(ended ? config.login_url : config.logout_url);
+      location.assign(ended ? `${config.logout_url}?next=${encodeURIComponent(config.login_url)}` : config.logout_url);
     });
     dialog.addEventListener('cancel', event => event.preventDefault());
   }

@@ -10,10 +10,11 @@ from .system_clock import real_now as session_now
 
 
 # Let an active learning screen recover from a short disconnection. The tab
-# heartbeats every 30 seconds; a device is replaceable after the normal idle
-# window, even if it was left on an assessment page.
+# heartbeats every 30 seconds; an abandoned device is replaceable after the
+# dedicated presence lease, while ordinary non-learning sessions retain the
+# longer idle window.
 STUDENT_SESSION_IDLE_TIMEOUT = timedelta(seconds=settings.STUDENT_SESSION_IDLE_SECONDS)
-STUDENT_SESSION_LEASE_TIMEOUT = STUDENT_SESSION_IDLE_TIMEOUT
+STUDENT_SESSION_LEASE_TIMEOUT = timedelta(seconds=settings.STUDENT_SESSION_LEASE_SECONDS)
 
 
 def is_learning_page(path):
@@ -57,6 +58,26 @@ def student_session_status(user, now=None):
     }
 
 
+def _active_session_is_usable(user, session_key, now=None):
+    """Confirm the recorded key still points to this student's auth session."""
+    if not user or not session_key:
+        return False
+    now = now or session_now()
+    session = Session.objects.filter(
+        session_key=session_key, expire_date__gt=now,
+    ).first()
+    if not session:
+        return False
+    try:
+        data = session.get_decoded()
+    except (TypeError, ValueError, UnicodeDecodeError):
+        return False
+    return (
+        str(data.get('user_id', '')) == str(user.pk)
+        and data.get('user_role') == 'student'
+    )
+
+
 def claim_student_session(user_id, session_key):
     """Atomically claim a student session, returning False if another is active."""
     now = session_now()
@@ -64,9 +85,7 @@ def claim_student_session(user_id, session_key):
         user = User.objects.select_for_update().get(pk=user_id, role='student')
         active_key = user.active_session_key
         same_session = active_key == session_key
-        session_exists = bool(active_key and Session.objects.filter(
-            session_key=active_key, expire_date__gt=now
-        ).exists())
+        session_exists = _active_session_is_usable(user, active_key, now)
         stale = bool(
             active_key and (
                 not (user.active_session_last_seen or user.last_activity) or
@@ -90,6 +109,7 @@ def student_session_is_active(user, session_key, now=None):
     last_seen = (user.active_session_last_seen or user.last_activity) if user else None
     return bool(
         user and session_key and user.active_session_key == session_key and
+        _active_session_is_usable(user, session_key, now) and
         not student_session_timed_out(user, now) and last_seen and
         last_seen > now - STUDENT_SESSION_LEASE_TIMEOUT
     )

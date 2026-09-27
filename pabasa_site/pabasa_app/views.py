@@ -5152,6 +5152,11 @@ def logout_user(request):
     if request.session.get('user_role') == 'student':
         release_student_session(request.session.get('user_id'), request.session.session_key)
     request.session.flush()
+    # Re-authentication uses the normal logout lifecycle, but returns to the
+    # login page instead of leaving the student at the home page. Only this
+    # exact internal destination is accepted; ordinary logout remains home.
+    if request.GET.get('next') == reverse('auth'):
+        return redirect('auth')
     return redirect('home')
 
 

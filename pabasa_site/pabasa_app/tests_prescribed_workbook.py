@@ -23,6 +23,13 @@ from .reading_stt import l22_c_pronunciation_match
 
 
 class WorkbookStateTests(SimpleTestCase):
+    def test_session9_activity1_keeps_instruction_and_required_family_sentence(self):
+        activity = get_activity('aral-s9-a1-family-drawing')
+        self.assertEqual(activity['instruction'], 'Draw a picture of your family. Under your drawing, write the sentence “This is my family.”')
+        self.assertEqual(activity['interaction_type'], 'drawing')
+        self.assertEqual(activity['expected_writing'], ['This is my family.'])
+        self.assertTrue(activity['review_required'])
+
     def test_lesson23_gawain7_keeps_exact_q_words_and_instruction(self):
         reading = get_activity('aral-l23-g7-q-word-reading')
         self.assertEqual(reading['instruction'], 'Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Qq.')
@@ -623,3 +630,13 @@ class PrescribedWorkbookFlowTests(TestCase):
                 response = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': key}))
                 self.assertEqual(response.status_code, 200, response.content)
                 self.assertEqual(response.context['workbook_payload']['activity']['session'], expected_session)
+
+    def test_session9_activity1_renders_draw_then_write_interface(self):
+        response = self.client.get(reverse('prescribed_activity_page', kwargs={
+            'activity_key': 'aral-s9-a1-family-drawing',
+        }))
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertContains(response, 'Draw a picture of your family. Under your drawing, write the sentence')
+        self.assertContains(response, 'prescribed_s9_a1_family_drawing.css')
+        self.assertContains(response, 'wb-s9-family-page')
+        self.assertContains(response, 'wb-progress-track')
