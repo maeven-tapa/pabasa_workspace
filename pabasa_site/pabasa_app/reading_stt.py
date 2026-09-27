@@ -212,29 +212,64 @@ def language_code_for(language="", mode=""):
     return "en-PH"
 
 
-def l22_c_pronunciation_match(expected_syllable, target_word, transcript, c_sound):
-    """Judge one Lesson 22 Cc tile without requiring literal STT text.
+L22_C_SYLLABLE_ALIASES = {
+    # These are exact STT spellings for an isolated pantig, not fuzzy matches.
+    'cac': {'cac', 'kak'},
+    'ce': {'ce', 'se'},
+    'ca': {'ca', 'ka'},
+    'bu': {'bu'},
+    'com': {'com', 'kom'},
+    'pu': {'pu'},
+    'ga': {'ga'},
+    'tus': {'tus'},
+    'ter': {'ter'},
+    'yan': {'yan'},
+    'car': {'car', 'kar'},
+    'do': {'do'},
+    'bi': {'bi'},
+    'net': {'net'},
+    'te': {'te'},
+    'les': {'les'},
+}
 
-    The workbook tile is intentionally kept separate from the whole-word STT
-    context.  This narrow matcher accepts the expected C sound's common STT
-    spelling (for example ``cac``/``kak`` or ``Ce``/``se``), while leaving all
-    other reading activities on the shared matcher.
+# The English context is deliberately used as an STT hint for the C sound.
+# Google can therefore return the complete hinted word for the first pantig;
+# allow only the context word paired with that exact pantig.
+L22_C_CONTEXT_ALIASES = {
+    ('cac', 'cactus'): {'cactus'},
+    ('ce', 'cebu'): {'cebu'},
+    ('ca', 'cagayan'): {'cagayan'},
+    ('com', 'computer'): {'computer'},
+    ('car', 'cardo'): {'cardo'},
+    ('ca', 'cabinet'): {'cabinet'},
+    ('ce', 'celeste'): {'celeste'},
+}
+
+
+def l22_c_pronunciation_match(expected_syllable, target_word, transcript, c_sound):
+    """Match one indexed Lesson 22 Cc pantig with strict STT aliases.
+
+    The displayed pantig remains authoritative.  Only exact normalized
+    one-token results are accepted, plus an explicitly paired context-word
+    result when English STT has expanded the first Cc pantig to its hint.
+    This intentionally avoids the shared homophone/CV heuristics so another
+    Big Box item or an unrelated word cannot advance the current item.
     """
-    matcher = ReadingMatcher(target_word or expected_syllable, 0, "en-PH")
-    expected = matcher.normalize_word(expected_syllable)
-    heard_words = matcher.normalize_spoken_words(transcript)
-    if not expected or not heard_words:
+    expected = ReadingMatcher.normalize_word(expected_syllable)
+    target = ReadingMatcher.normalize_word(target_word)
+    heard_words = ReadingMatcher.normalize_spoken_words(transcript)
+    if not expected or len(heard_words) != 1:
         return False
 
-    variants = {expected}
+    accepted = set(L22_C_SYLLABLE_ALIASES.get(expected, {expected}))
     if expected.startswith('c'):
         sound = str(c_sound or '').strip().lower()
         if sound == 'hard':
-            variants.add(expected.replace('c', 'k'))
+            accepted.add(expected.replace('c', 'k'))
         elif sound == 'soft':
-            variants.add('s' + expected[1:])
-
-    return any(word in variants or matcher.words_match(word, expected) for word in heard_words)
+            accepted.add('s' + expected[1:])
+    accepted.update(L22_C_CONTEXT_ALIASES.get((expected, target), ()))
+    return heard_words[0] in accepted
 
 
 def phrase_hints_for(language="", mode=""):

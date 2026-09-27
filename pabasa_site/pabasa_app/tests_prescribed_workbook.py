@@ -200,6 +200,43 @@ class WorkbookStateTests(SimpleTestCase):
         self.assertFalse(l22_c_pronunciation_match('Ce', 'Celeste', 'ke', 'soft'))
         self.assertFalse(l22_c_pronunciation_match('cac', 'cactus', 'tat', 'hard'))
 
+    def test_lesson22_gawain1_accepts_strict_pantig_aliases_for_all_big_box_targets(self):
+        targets = (
+            ('cac', 'cactus', 'kak'), ('ce', 'Cebu', 'se'), ('ca', 'Cagayan', 'ka'),
+            ('bu', 'Cebu', ''), ('com', 'computer', 'kom'), ('pu', 'computer', ''),
+            ('ga', 'Cagayan', ''), ('tus', 'cactus', ''), ('ter', 'computer', ''),
+            ('yan', 'Cagayan', ''), ('Car', 'Cardo', 'kar'), ('do', 'Cardo', ''),
+            ('bi', 'cabinet', ''), ('ca', 'cabinet', 'ka'), ('net', 'cabinet', ''),
+            ('te', 'Celeste', ''), ('Ce', 'Celeste', 'se'), ('les', 'Celeste', ''),
+        )
+        for expected, context, alias in targets:
+            transcript = alias or expected
+            self.assertTrue(
+                l22_c_pronunciation_match(expected, context, transcript, 'hard' if expected.lower().startswith(('ca', 'car', 'com')) else 'soft'),
+                (expected, context, transcript),
+            )
+
+    def test_lesson22_gawain1_context_aliases_are_target_scoped_and_strict(self):
+        self.assertTrue(l22_c_pronunciation_match('cac', 'cactus', 'cactus', 'hard'))
+        self.assertFalse(l22_c_pronunciation_match('tus', 'cactus', 'cactus', 'hard'))
+        self.assertFalse(l22_c_pronunciation_match('cac', 'cactus', 'ca', 'hard'))
+        self.assertFalse(l22_c_pronunciation_match('cac', 'cactus', 'unrelated word', 'hard'))
+        self.assertFalse(l22_c_pronunciation_match('ca', 'Cagayan', 'cactus', 'hard'))
+        self.assertTrue(l22_c_pronunciation_match('Ce', 'Celeste', '  se!  ', 'soft'))
+
+    def test_lesson22_gawain1_duplicate_ca_entries_advance_by_index(self):
+        activity = get_activity('aral-l22-g1-c-syllable-builder')
+        state = initial_state()
+        apply_event(activity, state, {'action': 'reading_started'})
+        for index, item in enumerate(activity['items']):
+            apply_event(activity, state, {
+                'action': 'reading_syllable_attempt',
+                'transcript': item['text'],
+            }, True)
+            self.assertEqual(state['index'], index + 1)
+        self.assertEqual(activity['items'][2]['text'], activity['items'][13]['text'])
+        self.assertTrue(state['read_aloud_completed'])
+
     def test_exact_scope_and_searches(self):
         self.assertEqual(len(ACTIVITIES), len(set(ACTIVITIES)))
         for a in ACTIVITIES.values():
