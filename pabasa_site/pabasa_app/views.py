@@ -15578,6 +15578,20 @@ def prescribed_activity_progress(request, activity_key):
         try:
             data = json.loads(request.body or '{}')
             existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            if data.get('reset') is True:
+                # Restart must be handled before stale-state protection so
+                # the control button always returns to the activity intro.
+                state = _normalized_session7_oral_cluster_word_circle_state(activity, {'phase': 'intro'})
+                progress, _ = StudentActivityProgress.objects.update_or_create(
+                    student=student, activity_key=activity_key,
+                    defaults={'current_index': 0, 'completed_items': 0,
+                              'correct_items': 0, 'total_items': len(activity['items']),
+                              'activity_completed': False, 'state': state},
+                )
+                return JsonResponse({'success': True, 'progress': {
+                    'state': state, 'completed_items': 0, 'correct_items': 0,
+                    'total_items': len(activity['items']), 'activity_completed': False,
+                }})
             old = _normalized_session7_oral_cluster_word_circle_state(activity, existing.state if existing else {})
             incoming = _normalized_session7_oral_cluster_word_circle_state(activity, data.get('state'))
             total, current = len(activity['items']), len(old['selected_words'])
@@ -15629,7 +15643,7 @@ def prescribed_activity_progress(request, activity_key):
             if data.get('reset') is True:
                 # Restart must be handled before stale-state protection so
                 # the control button always returns to the activity intro.
-                state = _normalized_session7_oral_circle_word_state(activity, {})
+                state = _normalized_session7_oral_circle_word_state(activity, {'phase': 'intro'})
                 progress, _ = StudentActivityProgress.objects.update_or_create(
                     student=student, activity_key=activity_key,
                     defaults={'current_index': 0, 'completed_items': 0,
@@ -15683,7 +15697,7 @@ def prescribed_activity_progress(request, activity_key):
             if data.get('reset') is True:
                 # Restart must be handled before stale-state protection so
                 # the control button always returns to the activity intro.
-                state = _normalized_session7_letter_ordering_state(activity, {})
+                state = _normalized_session7_letter_ordering_state(activity, {'phase': 'intro'})
                 progress, _ = StudentActivityProgress.objects.update_or_create(
                     student=student, activity_key=activity_key,
                     defaults={'current_index': 0, 'completed_items': 0,
@@ -15778,7 +15792,7 @@ def prescribed_activity_progress(request, activity_key):
                 # Restart must be handled before stale-state protection so
                 # the control button returns to the workbook introduction,
                 # including the worked-example row at displayed index 0.
-                state = _normalized_session7_cluster_syllabification_state(activity, {})
+                state = _normalized_session7_cluster_syllabification_state(activity, {'phase': 'intro'})
                 progress, _ = StudentActivityProgress.objects.update_or_create(
                     student=student, activity_key=activity_key,
                     defaults={'current_index': 0, 'completed_items': 0,
@@ -15837,7 +15851,7 @@ def prescribed_activity_progress(request, activity_key):
                 # Restart must be handled before stale-state protection so
                 # the control button always returns this activity to its
                 # introduction, including after completion.
-                state = _normalized_session7_picture_word_connection_state(activity, {})
+                state = _normalized_session7_picture_word_connection_state(activity, {'phase': 'intro'})
                 scored = [item for item in activity['items'] if not item.get('worked_example')]
                 progress, _ = StudentActivityProgress.objects.update_or_create(
                     student=student, activity_key=activity_key,
@@ -15897,7 +15911,7 @@ def prescribed_activity_progress(request, activity_key):
             if data.get('reset') is True:
                 # Handle the control-button restart before stale-state
                 # protection so the activity always returns to its intro.
-                state = _normalized_session7_missing_syllable_state(activity, {})
+                state = _normalized_session7_missing_syllable_state(activity, {'phase': 'intro'})
                 progress, _ = StudentActivityProgress.objects.update_or_create(
                     student=student, activity_key=activity_key,
                     defaults={'current_index': 0, 'completed_items': 0,
@@ -15943,7 +15957,7 @@ def prescribed_activity_progress(request, activity_key):
                 # completion flag.  This has to happen before the normal
                 # stale-state guard below, otherwise an empty reset payload
                 # is treated as an older state and the activity resumes.
-                state = _normalized_starting_syllable_state(activity, {})
+                state = _normalized_starting_syllable_state(activity, {'phase': 'intro'})
                 progress, _ = StudentActivityProgress.objects.update_or_create(
                     student=student, activity_key=activity_key,
                     defaults={'current_index': 0, 'completed_items': 0,

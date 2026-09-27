@@ -113,6 +113,31 @@ class PrescribedLesson2021Gawain4Tests(TestCase):
         self.assertTrue(saved.activity_completed)
         self.assertEqual((saved.completed_items, saved.correct_items, saved.total_items), (5, 5, 5))
 
+    def test_restart_returns_activity_to_intro_and_clears_row_progress(self):
+        self.login_student()
+        progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': self.key})
+        progressed = self.client.post(progress_url, data=json.dumps({
+            'state': {'phase': 'oral_reading', 'orally_completed_words': {'0': [0]}, 'state_version': 1},
+        }), content_type='application/json')
+        self.assertEqual(progressed.status_code, 200)
+        self.assertEqual(progressed.json()['progress']['state']['phase'], 'oral_reading')
+
+        restarted = self.client.post(progress_url, data=json.dumps({'reset': True}), content_type='application/json')
+
+        self.assertEqual(restarted.status_code, 200)
+        payload = restarted.json()['progress']
+        self.assertFalse(payload['activity_completed'])
+        self.assertEqual(payload['completed_items'], 0)
+        self.assertEqual(payload['state']['phase'], 'intro')
+        self.assertEqual(payload['state']['current_row_index'], 0)
+        self.assertEqual(payload['state']['current_reading_index'], 0)
+        self.assertEqual(payload['state']['orally_completed_words'], {'0': [], '1': [], '2': [], '3': [], '4': []})
+        self.assertEqual(payload['state']['selected_words'], [])
+        saved = StudentActivityProgress.objects.get(student=self.student, activity_key=self.key)
+        self.assertFalse(saved.activity_completed)
+        self.assertEqual(saved.current_index, 0)
+        self.assertEqual(saved.completed_items, 0)
+
     def test_teacher_catalog_and_assessment_card_use_the_registered_label(self):
         self.login_teacher()
         teacher_page = self.client.get(reverse('course_teacher_view'))
