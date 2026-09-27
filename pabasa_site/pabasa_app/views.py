@@ -13400,7 +13400,7 @@ def prescribed_activity_page(request, activity_key):
                                            initial_l24_g4_builder_state, normalize_l24_g4_builder_state,
                                            initial_l24_g5_syllabication_state, normalize_l24_g5_syllabication_state,
                                           initial_l24_g6_state, normalize_l24_g6_state, initial_l24_g7_state,
-                                          normalize_l24_g7_state)
+                                          normalize_l24_g7_state, initial_s9_a2_state, normalize_s9_a2_state)
         from .prescribed_workbook import initial_l23_g3_state, normalize_l23_g3_state, initial_l23_g4_state, normalize_l23_g4_state, normalize_l23_g5_state, initial_l23_g7_state, normalize_l23_g7_state
 
         preview = request.GET.get('preview') == '1'
@@ -13425,6 +13425,7 @@ def prescribed_activity_page(request, activity_key):
              initial_l24_g5_syllabication_state() if activity_key == 'aral-l24-g5-z-syllabication' else
              initial_l24_g6_state() if activity_key == 'aral-l24-g6-z-word-search' else
              initial_l24_g7_state() if activity_key == 'aral-l24-g7-z-word-reading' else
+             initial_s9_a2_state() if activity_key == 'aral-s9-a2-helping-drawing' else
             initial_l22_g6_state() if activity_key == 'aral-l22-g6-f-word-reading' else
             initial_l22_g4_state() if activity_key == 'aral-l22-g4-f-syllable-builder' else
             initial_l22_g3_state() if activity_key == 'aral-l22-g3-c-word-search' else
@@ -13454,6 +13455,8 @@ def prescribed_activity_page(request, activity_key):
             state = normalize_l24_g6_state(state)
         elif activity_key == 'aral-l24-g7-z-word-reading':
             state = normalize_l24_g7_state(state)
+        elif activity_key == 'aral-s9-a2-helping-drawing':
+            state = normalize_s9_a2_state(state)
         elif activity_key == 'aral-l22-g6-f-word-reading':
             state = normalize_l22_g6_state(state)
         elif activity_key == 'aral-l22-g3-c-word-search':
@@ -17215,6 +17218,7 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
         initial_l24_g4_builder_state, normalize_l24_g4_builder_state,
         initial_l24_g5_syllabication_state, normalize_l24_g5_syllabication_state,
         initial_l24_g6_state, normalize_l24_g6_state, initial_l24_g7_state, normalize_l24_g7_state,
+        initial_s9_a2_state, normalize_s9_a2_state,
     )
 
     workbook = get_activity(activity_key)
@@ -17232,6 +17236,7 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
              initial_l24_g6_state() if activity_key == 'aral-l24-g6-z-word-search' else
              initial_l24_g7_state() if activity_key == 'aral-l24-g7-z-word-reading' else
              initial_l24_g4_state() if activity_key == 'aral-l24-g4-x-pictures' else
+            initial_s9_a2_state() if activity_key == 'aral-s9-a2-helping-drawing' else
             initial_l22_g6_state() if activity_key == 'aral-l22-g6-f-word-reading' else
             initial_l22_g4_state() if activity_key == 'aral-l22-g4-f-syllable-builder' else
             initial_l22_g3_state() if activity_key == 'aral-l22-g3-c-word-search' else
@@ -17262,6 +17267,8 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             state = normalize_l24_g7_state(state)
         elif activity_key == 'aral-l24-g4-x-pictures':
             state = normalize_l24_g4_state(state)
+        elif activity_key == 'aral-s9-a2-helping-drawing':
+            state = normalize_s9_a2_state(state)
         elif activity_key == 'aral-l22-g6-f-word-reading':
             state = normalize_l22_g6_state(state)
         elif activity_key == 'aral-l22-g3-c-word-search':

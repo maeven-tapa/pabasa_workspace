@@ -1,0 +1,50 @@
+@font-face{font-family:Fredoka;src:url('../font/fredoka-one.one-regular.ttf') format('truetype');font-display:swap}
+.wb-s9-helping-page{height:100dvh;min-height:100dvh;background:url('../prescribed/PRESCRIBED-BG.jpg') center/cover fixed no-repeat;color:#183e63;font-family:Fredoka,Nunito,'Segoe UI',sans-serif}
+.wb-s9-helping-page .wb-shell{display:grid;grid-template-rows:auto 0 auto minmax(0,1fr);gap:0;width:min(1320px,94vw);height:100dvh;min-height:0;margin:0 auto;padding:clamp(8px,1.5vh,16px) clamp(14px,2vw,28px) clamp(8px,1.5vh,16px)}
+.wb-s9-helping-page .wb-shell header{min-height:0;margin:0 0 clamp(5px,1vh,10px);padding:clamp(8px,1.2vh,14px) clamp(20px,2.5vw,32px) clamp(9px,1.4vh,15px);background:#ffffffed;border:2px solid #fff;border-radius:28px;text-align:center;box-shadow:0 14px 30px #164f5530}
+.wb-s9-helping-page .wb-shell header:after{right:-34px;top:-54px;width:170px;height:170px;background:#f8cf70;opacity:.28}
+.wb-s9-helping-page .wb-shell #wb-back{display:inline-flex;position:relative;z-index:2;margin-bottom:2px}
+.wb-s9-helping-page .wb-shell header>p:first-of-type{margin:1px auto 3px;color:#187b7a;text-align:center}
+.wb-s9-helping-page .wb-shell h1{margin:0;color:#183e63;text-align:center}
+.wb-s9-helping-page .wb-instruction{max-width:1080px;margin:3px auto 6px!important;color:#587382;text-align:center;font-size:clamp(15px,1.35vw,19px)}
+.wb-s9-helping-page .wb-l24-g5-replay{display:inline-flex;margin:0 auto;align-items:center;justify-content:center;min-height:38px;padding:7px 16px}
+.wb-s9-helping-page #wb-status{height:0;min-height:0;margin:0;line-height:0;overflow:visible;text-align:center;position:relative;z-index:2}
+.wb-s9-helping-page #wb-progress-row{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:16px;margin:0 auto clamp(5px,1vh,9px);width:100%;max-width:100%}
+.wb-s9-helping-page #wb-progress{margin:0;padding:0;min-width:0;background:transparent;border:0;box-shadow:none;color:#187b7a;line-height:1;white-space:nowrap}
+.wb-s9-helping-page #wb-progress-track{width:190px;height:8px;border-radius:999px;background:#d5e5e9;box-shadow:inset 0 1px 2px #7ba6af55;overflow:hidden}
+.wb-s9-helping-page #wb-progress-fill{display:block;height:100%;border-radius:inherit;background:#299e9a;transition:width .25s ease}
+.wb-s9-helping-page .wb-s9-activity-stage{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:clamp(6px,1vh,10px);min-height:0;margin:0;padding:clamp(8px,1.2vh,13px);border:2px solid #8ed8d4;border-radius:28px;background:#ffffffee;box-shadow:0 14px 30px #164f5530}
+.wb-s9-helping-page #wb-content{min-height:0;height:100%;margin:0}
+.wb-s9-helping-page #wb-action{display:flex;justify-content:center;min-height:0;margin-top:0}
+.wb-s9-helping-page #wb-action button{min-width:210px;border-radius:999px}
+.wb-s9-a2-workspace{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:clamp(6px,1vh,10px);height:100%;min-height:0}
+.wb-s9-a2-drawing-panel,.wb-s9-a2-response{min-height:0;padding:clamp(8px,1vh,13px) clamp(12px,1.6vw,20px);border:1px solid #d1e7e8;border-radius:20px;background:linear-gradient(145deg,#fff,#f4fbfa)}
+.wb-s9-a2-drawing-panel{display:grid;grid-template-rows:auto auto minmax(0,1fr)}
+.wb-s9-a2-section-heading{display:flex;align-items:baseline;justify-content:center;gap:12px;margin:0 0 clamp(4px,.6vh,7px);text-align:center}
+.wb-s9-a2-section-heading h2{margin:0;color:#187b7a;font-size:clamp(1rem,1.6vw,1.25rem);letter-spacing:.05em}
+.wb-s9-a2-section-heading span{color:#587382;font:700 .82rem Nunito,'Segoe UI',sans-serif}
+.wb-s9-a2-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 clamp(5px,.8vh,9px);font:800 .78rem Nunito,'Segoe UI',sans-serif}
+.wb-s9-a2-tool-group,.wb-s9-a2-palette,.wb-s9-a2-sizes{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.wb-s9-helping-page .wb-s9-a2-toolbar button{min-height:32px;padding:4px 10px;border-radius:11px;font-size:.78rem}
+.wb-s9-a2-toolbar .is-active{background:#dff5ef;border-color:#299e9a;color:#146e70;box-shadow:inset 0 0 0 2px #8ed8d4}
+.wb-s9-a2-color{width:25px;min-width:25px!important;height:25px;min-height:25px!important;padding:0!important;border-radius:50%!important;background:var(--swatch)!important;border:3px solid #fff!important;box-shadow:0 0 0 1px #9fc8d0}
+.wb-s9-a2-color.is-active{box-shadow:0 0 0 3px #f2bd3e}
+.wb-s9-a2-size{min-width:30px!important;padding:3px 8px!important}
+.wb-s9-a2-drawing-panel canvas{display:block;width:100%;height:100%;min-height:0;aspect-ratio:auto;border:3px dashed #7fc8c8;border-radius:18px;box-shadow:inset 0 0 0 8px #f3fbfa;background:#fff;touch-action:none;cursor:crosshair}
+.wb-s9-a2-response{display:grid;grid-template-columns:auto minmax(220px,1fr);align-items:center;gap:8px 14px}
+.wb-s9-a2-response label{color:#416879;font:900 .82rem Nunito,'Segoe UI',sans-serif}
+.wb-s9-a2-response input{width:100%;min-height:42px;border-color:#7fc8c8;border-radius:13px;font:700 1rem/1.35 Nunito,'Segoe UI',sans-serif}
+.wb-s9-a2-response p{grid-column:1/-1;margin:0;color:#587382;text-align:center;font:700 .78rem Nunito,'Segoe UI',sans-serif}
+.wb-s9-a2-example{min-height:0!important;padding:0 3px!important;border:0!important;background:transparent!important;color:#187b7a!important;font:800 inherit!important;box-shadow:none!important}
+.wb-s9-a2-completion{display:flex;height:100%;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center;background:#fff;border:2px solid #8ed8d4;border-radius:22px}
+.wb-s9-a2-completion h2{margin:6px 0;color:#183e63;font-size:clamp(1.5rem,3vw,2.3rem)}
+.wb-s9-a2-completion p{margin:4px 0;color:#587382}
+.wb-s9-a2-kicker{color:#187b7a!important;font:900 .78rem Nunito,'Segoe UI',sans-serif;letter-spacing:.08em}
+.wb-s9-a2-completion-actions,.wb-s9-a2-modal-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:20px}
+.wb-s9-a2-completion-actions a,.wb-s9-a2-completion-actions button,.wb-s9-a2-modal-actions button{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:8px 16px;border:2px solid #afd0d7;border-radius:999px;background:#fff;color:#183e63;text-decoration:none;font:800 .85rem Nunito,'Segoe UI',sans-serif}
+.wb-s9-a2-modal{position:fixed;inset:0;z-index:30;display:grid;place-items:center;padding:20px;background:#183e6366}
+.wb-s9-a2-modal-card{width:min(440px,calc(100vw - 32px));padding:25px;text-align:center;background:#fff;border:2px solid #8ed8d4;border-radius:22px;box-shadow:0 20px 50px #183e6340}
+.wb-s9-a2-modal-card h2{margin:0;color:#183e63;font-size:1.35rem}.wb-s9-a2-modal-card p{color:#587382}
+@media(max-height:700px) and (min-width:1024px){.wb-s9-helping-page .wb-shell{padding-top:4px;padding-bottom:5px}.wb-s9-helping-page .wb-shell header{padding-top:5px;padding-bottom:7px}.wb-s9-helping-page .wb-s9-activity-stage{padding:7px;gap:5px}.wb-s9-a2-workspace{gap:5px}.wb-s9-a2-drawing-panel,.wb-s9-a2-response{padding:6px 11px}.wb-s9-a2-response input{min-height:36px}}
+@media(max-width:1023px){.wb-s9-helping-page{height:auto;min-height:100dvh}.wb-s9-helping-page .wb-shell{display:block;width:100%;height:auto;min-height:100dvh;padding-left:12px;padding-right:12px}.wb-s9-helping-page #wb-progress-row{width:100%}.wb-s9-helping-page .wb-s9-activity-stage{height:auto;padding:12px}.wb-s9-helping-page #wb-content{height:auto}.wb-s9-a2-workspace{height:auto;gap:12px}.wb-s9-a2-drawing-panel{display:block}.wb-s9-a2-drawing-panel canvas{height:auto;min-height:220px;aspect-ratio:1200/525}.wb-s9-a2-toolbar{justify-content:center}.wb-s9-a2-response{display:block}.wb-s9-a2-response label{display:block;margin-bottom:5px}.wb-s9-a2-response p{margin-top:7px}.wb-s9-helping-page #wb-action{margin-bottom:4px}}
+@media(max-width:600px){.wb-s9-helping-page .wb-shell header{padding:10px 16px 12px}.wb-s9-helping-page .wb-instruction{font-size:16px}.wb-s9-a2-section-heading{display:block}.wb-s9-a2-section-heading span{display:block;margin-top:3px}.wb-s9-a2-toolbar{gap:7px}.wb-s9-a2-tool-group,.wb-s9-a2-palette,.wb-s9-a2-sizes{justify-content:center;width:100%}.wb-s9-a2-drawing-panel canvas{min-height:180px}.wb-s9-a2-response input{min-height:40px}}

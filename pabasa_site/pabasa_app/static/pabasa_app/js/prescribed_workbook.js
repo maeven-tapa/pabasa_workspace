@@ -16,6 +16,7 @@
   const g6Search = a.activity_key === 'aral-l24-g6-z-word-search';
   const g7Reading = a.activity_key === 'aral-l24-g7-z-word-reading';
   const s9Family = a.activity_key === 'aral-s9-a1-family-drawing';
+  const s9Helping = a.activity_key === 'aral-s9-a2-helping-drawing';
   const l24G2 = a.activity_key === 'aral-l24-g2-v-word-reading';
   const pictureReading = a.activity_key === 'aral-l24-g4-x-pictures';
   const l23G1 = a.activity_key === 'aral-l23-g1-n-syllable-builder';
@@ -176,6 +177,22 @@
     document.getElementById('wb-g7-reset-yes').onclick=()=>{modal.remove();perform({action:'restart'});};
     modal.onclick=event=>{if(event.target===modal)modal.remove();};
   }
+  function requestS9A2Restart(){
+    if(document.getElementById('wb-s9-a2-reset-modal'))return;
+    document.body.insertAdjacentHTML('beforeend','<div class="wb-s9-a2-modal" id="wb-s9-a2-reset-modal" role="dialog" aria-modal="true" aria-labelledby="wb-s9-a2-reset-title"><div class="wb-s9-a2-modal-card"><h2 id="wb-s9-a2-reset-title">Ulitin ang Activity 2?</h2><p>Mabubura ang iyong drawing at magalang na salita.</p><div class="wb-s9-a2-modal-actions"><button type="button" id="wb-s9-a2-reset-no">Hindi</button><button type="button" class="wb-primary" id="wb-s9-a2-reset-yes">Oo, Burahin</button></div></div></div>');
+    const modal=document.getElementById('wb-s9-a2-reset-modal');
+    document.getElementById('wb-s9-a2-reset-no').onclick=()=>modal.remove();
+    document.getElementById('wb-s9-a2-reset-yes').onclick=()=>{modal.remove();perform({action:'restart'});};
+    modal.onclick=event=>{if(event.target===modal)modal.remove();};
+  }
+  function requestS9A2Clear(clear){
+    if(document.getElementById('wb-s9-a2-clear-modal'))return;
+    document.body.insertAdjacentHTML('beforeend','<div class="wb-s9-a2-modal" id="wb-s9-a2-clear-modal" role="dialog" aria-modal="true" aria-labelledby="wb-s9-a2-clear-title"><div class="wb-s9-a2-modal-card"><h2 id="wb-s9-a2-clear-title">Burahin ang buong drawing?</h2><p>Mananatili ang iyong magalang na salita.</p><div class="wb-s9-a2-modal-actions"><button type="button" id="wb-s9-a2-clear-no">Hindi</button><button type="button" class="wb-primary" id="wb-s9-a2-clear-yes">Oo, Burahin</button></div></div></div>');
+    const modal=document.getElementById('wb-s9-a2-clear-modal');
+    document.getElementById('wb-s9-a2-clear-no').onclick=()=>modal.remove();
+    document.getElementById('wb-s9-a2-clear-yes').onclick=()=>{modal.remove();clear();};
+    modal.onclick=event=>{if(event.target===modal)modal.remove();};
+  }
   function setG7Feedback(text,error=false){const el=document.getElementById('wb-g7-feedback');if(el){el.textContent=text;el.classList.toggle('is-error',error);}}
   function lockG7(){content.querySelectorAll('.wb-g7-panel button').forEach(b=>b.disabled=busy||preview);}
   function renderL24G7WordReading(){
@@ -228,6 +245,11 @@
         document.getElementById('wb-g7-complete-reset')?.addEventListener('click',requestG7Restart);
         return;
       }
+      if(s9Helping){
+        content.innerHTML=`<div class="wb-s9-a2-completion" role="dialog" aria-modal="true" aria-labelledby="wb-s9-a2-completion-title"><p class="wb-s9-a2-kicker">SESSION 9 · ACTIVITY 2</p><h2 id="wb-s9-a2-completion-title">Magaling! Natapos mo ang Activity 2!</h2><p>Nai-save ang iyong drawing at magalang na salita.</p><div class="wb-s9-a2-completion-actions">${data.next_url?`<a class="wb-primary" href="${esc(data.next_url)}">Susunod na Gawain</a>`:''}<a href="${esc(document.getElementById('wb-back')?.href||'#')}">Bumalik sa Aking Aralin</a><button type="button" id="wb-s9-a2-complete-reset">Ulitin Mula sa Simula</button></div></div>`;
+        document.getElementById('wb-s9-a2-complete-reset')?.addEventListener('click',requestS9A2Restart);
+        return;
+      }
       content.innerHTML=`<div class="wb-focus"><h2>${cBuilder?'Magaling! Natapos mo ang Gawain 1.':l24G4Builder?'Magaling! Natapos mo ang Gawain 4.':g5Syllables?'Magaling! Natapos mo ang Gawain 5!':g6Search?'Magaling! Natapos mo ang Gawain 6!':fil?'Natapos mo ang gawain!':'Activity complete!'}</h2>${cBuilder?`<p>${a.activity_key==='aral-l23-g1-n-syllable-builder'?`Magaling! Nabuo mo ang salitang ${completionWord}`:`Nabuo mo na: ${esc(completionWord)}`}</p>`:g5Syllables?'<p>Natapos mo ang lahat ng siyam na salitang kailangang pantigin.</p>':g6Search?'<p>Nahanap mo ang lahat ng sampung salita sa Big Box.</p>':a.review_required&&!l24G4Builder?'<p>Your written work is saved for teacher review.</p>':''}</div>`;
       if(cBuilder||l24G4Builder){button('Susunod',()=>{if(data.next_url)location.href=data.next_url;},true).disabled=!data.next_url;if(l24G4Builder)button('Ulitin Mula sa Simula',()=>{if(window.confirm('Ulitin ang Gawain 4 mula sa simula?'))perform({action:'restart'});});}
       if((prescribedWordReading||jSyllables||g5Syllables||pictureReading)&&data.next_url)button('Susunod',()=>{location.href=data.next_url;},true);
@@ -266,7 +288,7 @@
     else if(kind==='search'){button(fil?'Piliin ang salita':'Select word',()=>perform({action:'answer',answer:selected}),true);}
     else if(kind==='syllables'){button(fil?'Isumite':'Submit',()=>perform({action:'answer',answer:{text:document.getElementById('wb-written').value}}),true);}
     else if(kind==='fill'){button('Submit',()=>perform({action:'answer',answer:{blanks:[...content.querySelectorAll('[data-blank]')].map(s=>s.value)}}),true);}
-    else if(kind==='drawing'){button(s9Family?'Complete Activity':'Submit drawing and writing',()=>perform({action:'answer',answer:{text:document.getElementById('wb-written').value,strokes:state.draft.strokes||[]}}),true);}
+    else if(kind==='drawing'){button(s9Family?'Complete Activity':s9Helping?'✓ Tapusin':'Submit drawing and writing',()=>perform({action:'answer',answer:{text:document.getElementById('wb-written').value,strokes:state.draft.strokes||[]}}),true);}
     lock();
   }
   function instructionBanner(){
@@ -549,13 +571,39 @@
     content.querySelectorAll('[data-blank]').forEach(select=>select.onchange=()=>draft({blanks:[...content.querySelectorAll('[data-blank]')].map(s=>s.value)}));
   }
   function renderDrawing(){
-    if(s9Family){
+    if(s9Helping){
+      content.innerHTML+=`<section class="wb-s9-a2-workspace"><div class="wb-s9-a2-drawing-panel"><div class="wb-s9-a2-section-heading"><h2>GUMUHIT AT MAGKULAY</h2><span>Gumuhit ng sitwasyon sa bahay kung saan tumulong ka.</span></div><div class="wb-s9-a2-toolbar" role="toolbar" aria-label="Mga kagamitan sa pagguhit"><div class="wb-s9-a2-tool-group"><button type="button" class="wb-s9-a2-tool is-active" data-tool="draw">✏ Gumuhit</button><button type="button" class="wb-s9-a2-tool" data-tool="eraser">🧽 Pambura</button><button type="button" id="wb-s9-a2-undo" aria-label="Undo">↶ Undo</button><button type="button" id="wb-s9-a2-redo" aria-label="Redo">↷ Redo</button><button type="button" id="wb-s9-a2-clear">🗑 Burahin</button></div><div class="wb-s9-a2-palette" aria-label="Mga kulay">${[['#183e63','Itim'],['#df4b4b','Pula'],['#ed9e2f','Kahel'],['#f4ca43','Dilaw'],['#49a66b','Berde'],['#438fd0','Asul'],['#8d62bd','Lila'],['#9b6b45','Kayumanggi']].map(([color,label])=>`<button type="button" class="wb-s9-a2-color ${color===((state.draft||{}).color||'#183e63')?'is-active':''}" data-color="${color}" aria-label="${label}" style="--swatch:${color}"></button>`).join('')}</div><div class="wb-s9-a2-sizes" aria-label="Laki ng brush"><span>Brush:</span>${[['small','S'],['medium','M'],['large','L']].map(([size,label])=>`<button type="button" class="wb-s9-a2-size ${(state.draft||{}).size===size?'is-active':''}" data-size="${size}">${label}</button>`).join('')}</div></div><canvas id="wb-canvas" width="1200" height="525" aria-label="Malaking drawing area para sa sitwasyon sa bahay"></canvas></div><div class="wb-s9-a2-response"><label for="wb-written">Magalang na salitang ginamit ko:</label><input id="wb-written" type="text" maxlength="160" autocomplete="off" aria-label="Magalang na salitang ginamit ko" value="${esc(state.draft?.text||'')}" ${preview?'disabled':''}><p>Halimbawa: <button type="button" class="wb-s9-a2-example" data-example="Please">Please</button> · <button type="button" class="wb-s9-a2-example" data-example="Sorry">Sorry</button> · <button type="button" class="wb-s9-a2-example" data-example="Thank you">Thank you</button> · <button type="button" class="wb-s9-a2-example" data-example="You're welcome.">You're welcome.</button></p></div></section>`;
+    }else if(s9Family){
       content.innerHTML+=`<section class="wb-s9-family-workspace"><div class="wb-s9-drawing-panel"><div class="wb-s9-section-heading"><h2>DRAW YOUR FAMILY</h2></div><div class="wb-tools"><label for="wb-pen">Color</label><input type="color" id="wb-pen" value="#24576b"><button type="button" id="wb-undo">Undo stroke</button></div><canvas id="wb-canvas" width="900" height="500" aria-label="Draw your picture of your family"></canvas></div><div class="wb-s9-writing-panel"><div class="wb-s9-section-heading"><h2>WRITE THE SENTENCE</h2></div><p class="wb-s9-sentence">This is my family.</p><label for="wb-written">Your sentence</label><textarea id="wb-written" aria-label="Write This is my family" ${preview?'disabled':''}>${esc(preview?'':state.draft.text||'')}</textarea></div></section>`;
     }else{
       content.innerHTML+='<div class="wb-drawing-card"><div class="wb-tools"><label>Color <input type="color" id="wb-pen" value="#24576b"></label><button type="button" id="wb-undo">Undo stroke</button></div><canvas id="wb-canvas" width="900" height="500" aria-label="Draw your picture"></canvas></div>';
       written('Write under your drawing.');
     }
-    if(s9Family){
+    if(s9Helping){
+      const canvas=document.getElementById('wb-canvas'),ctx=canvas.getContext('2d'),width=1200,height=525;
+      let strokes=structuredClone(state.draft?.strokes||[]),redoStack=[],stroke=null,erasing=false;
+      let tool=state.draft?.tool==='eraser'?'eraser':'draw',color=state.draft?.color||'#183e63',size=state.draft?.size||'medium';
+      const brush={small:4,medium:8,large:14}, eraser={small:22,medium:34,large:50};
+      const redraw=()=>{ctx.clearRect(0,0,width,height);for(const current of strokes){ctx.strokeStyle=current.color;ctx.lineWidth=current.width||8;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();current.points.forEach((point,index)=>index?ctx.lineTo(...point):ctx.moveTo(...point));ctx.stroke();}};
+      const point=e=>{const rect=canvas.getBoundingClientRect();return [Math.max(0,Math.min(width,(e.clientX-rect.left)*width/rect.width)),Math.max(0,Math.min(height,(e.clientY-rect.top)*height/rect.height))];};
+      const save=()=>draft({strokes,text:document.getElementById('wb-written').value,tool,color,size});
+      const setActive=()=>{content.querySelectorAll('[data-tool]').forEach(button=>button.classList.toggle('is-active',button.dataset.tool===tool));content.querySelectorAll('[data-color]').forEach(button=>button.classList.toggle('is-active',button.dataset.color===color));content.querySelectorAll('[data-size]').forEach(button=>button.classList.toggle('is-active',button.dataset.size===size));document.getElementById('wb-s9-a2-undo').disabled=!strokes.length;document.getElementById('wb-s9-a2-redo').disabled=!redoStack.length;};
+      const eraseAt=target=>{const radius=eraser[size];const kept=strokes.filter(current=>!current.points.some(([x,y])=>Math.hypot(x-target[0],y-target[1])<=radius));if(kept.length!==strokes.length){redoStack=[];strokes=kept;redraw();setActive();save();}};
+      canvas.onpointerdown=e=>{if(preview||busy)return;canvas.setPointerCapture(e.pointerId);const target=point(e);if(tool==='eraser'){erasing=true;eraseAt(target);return;}stroke={color,width:brush[size],points:[target]};strokes.push(stroke);redoStack=[];};
+      canvas.onpointermove=e=>{if(erasing){eraseAt(point(e));return;}if(!stroke)return;stroke.points.push(point(e));if(stroke.points.length<3000)redraw();};
+      const end=()=>{erasing=false;if(stroke){if(stroke.points.length===1)stroke.points.push([...stroke.points[0]]);stroke=null;redraw();setActive();save();}};canvas.onpointerup=end;canvas.onpointercancel=end;
+      document.getElementById('wb-s9-a2-undo').onclick=()=>{if(strokes.length){redoStack.push(strokes.pop());redraw();setActive();save();}};
+      document.getElementById('wb-s9-a2-redo').onclick=()=>{if(redoStack.length){strokes.push(redoStack.pop());redraw();setActive();save();}};
+      document.getElementById('wb-s9-a2-clear').onclick=()=>requestS9A2Clear(()=>{strokes=[];redoStack=[];redraw();setActive();save();});
+      content.querySelectorAll('[data-tool]').forEach(button=>button.onclick=()=>{tool=button.dataset.tool;setActive();save();});
+      content.querySelectorAll('[data-color]').forEach(button=>button.onclick=()=>{color=button.dataset.color;tool='draw';setActive();save();});
+      content.querySelectorAll('[data-size]').forEach(button=>button.onclick=()=>{size=button.dataset.size;setActive();save();});
+      document.getElementById('wb-written').oninput=event=>draft({strokes,text:event.target.value,tool,color,size});
+      content.querySelectorAll('[data-example]').forEach(button=>button.onclick=()=>{const input=document.getElementById('wb-written');input.value=button.dataset.example;input.dispatchEvent(new Event('input',{bubbles:true}));input.focus();});
+      document.getElementById('wb-instruction-replay')?.addEventListener('click',()=>{if(!busy&&!activeStream)playPrescribedAudio(instructionText).catch(e=>message(e.message||'Hindi available ang panuto.',true));});
+      if(!preview)speakInstruction();redraw();setActive();window.addEventListener('resize',redraw,{once:true});
+      return;
+    }else if(s9Family){
       document.getElementById('wb-written').oninput=e=>draft({text:e.target.value});
       document.getElementById('wb-instruction-replay')?.addEventListener('click',()=>{if(!busy&&!activeStream)playPrescribedAudio(instructionText).catch(e=>message(e.message||'Hindi available ang panuto.',true));});
     }

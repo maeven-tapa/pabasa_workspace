@@ -567,6 +567,101 @@ def initial_state():
     return dict(index=0, oral={}, answers={}, draft={}, completed=False, revision=0)
 
 
+def initial_s9_a2_state():
+    return {
+        'index': 0, 'answers': {},
+        'draft': {'strokes': [], 'text': '', 'tool': 'draw', 'color': '#183e63', 'size': 'medium'},
+        'last_feedback': '', 'completed': False, 'revision': 0,
+    }
+
+
+def _s9_a2_strokes(value):
+    if not isinstance(value, list) or len(value) > 1000:
+        raise ValueError('Gumuhit muna sa kahon.')
+    strokes = []
+    for stroke in value:
+        if (not isinstance(stroke, dict)
+                or not re.fullmatch(r'#[0-9a-fA-F]{6}', str(stroke.get('color')))
+                or not isinstance(stroke.get('points'), list)
+                or not 2 <= len(stroke['points']) <= 3000
+                or type(stroke.get('width', 8)) not in (int, float)
+                or not 2 <= float(stroke.get('width', 8)) <= 40
+                or any(not isinstance(point, list) or len(point) != 2
+                       or any(type(number) not in (int, float) for number in point)
+                       or not 0 <= point[0] <= 1200 or not 0 <= point[1] <= 525
+                       for point in stroke['points'])):
+            raise ValueError('Hindi wastong drawing. Subukan muli.')
+        strokes.append({'color': str(stroke['color']), 'width': float(stroke.get('width', 8)), 'points': [[float(point[0]), float(point[1])] for point in stroke['points']]})
+    return strokes
+
+
+def normalize_s9_a2_state(state):
+    if not isinstance(state, dict):
+        state = initial_s9_a2_state()
+    draft = state.get('draft') if isinstance(state.get('draft'), dict) else {}
+    try:
+        strokes = _s9_a2_strokes(draft.get('strokes', []))
+    except ValueError:
+        strokes = []
+    state['draft'] = {
+        'strokes': strokes,
+        'text': str(draft.get('text') or '')[:160],
+        'tool': draft.get('tool') if draft.get('tool') in {'draw', 'eraser'} else 'draw',
+        'color': draft.get('color') if re.fullmatch(r'#[0-9a-fA-F]{6}', str(draft.get('color'))) else '#183e63',
+        'size': draft.get('size') if draft.get('size') in {'small', 'medium', 'large'} else 'medium',
+    }
+    state.setdefault('answers', {})
+    state.setdefault('last_feedback', '')
+    state['index'] = 1 if state.get('completed') else 0
+    state['completed'] = bool(state.get('completed'))
+    state['revision'] = max(0, int(state.get('revision', 0) or 0))
+    return state
+
+
+def _apply_s9_a2_drawing(state, event):
+    normalize_s9_a2_state(state)
+    action = event.get('action')
+    if action == 'restart':
+        state.clear(); state.update(initial_s9_a2_state()); return state
+    if state['completed']:
+        return state
+    if action == 'draft':
+        draft = event.get('draft')
+        if not isinstance(draft, dict) or len(json.dumps(draft)) > 350000:
+            raise ValueError('Hindi na-save ang iyong gawain. Subukan muli.')
+        strokes = _s9_a2_strokes(draft.get('strokes', []))
+        color = str(draft.get('color') or '#183e63')
+        if not re.fullmatch(r'#[0-9a-fA-F]{6}', color):
+            color = '#183e63'
+        state['draft'] = {
+            'strokes': strokes, 'text': str(draft.get('text') or '')[:160],
+            'tool': draft.get('tool') if draft.get('tool') in {'draw', 'eraser'} else 'draw',
+            'color': color, 'size': draft.get('size') if draft.get('size') in {'small', 'medium', 'large'} else 'medium',
+        }
+        return state
+    if action != 'answer':
+        raise ValueError('Unknown action.')
+    answer = event.get('answer')
+    if not isinstance(answer, dict) or len(json.dumps(answer)) > 350000:
+        raise ValueError('Hindi wastong sagot.')
+    strokes = _s9_a2_strokes(answer.get('strokes'))
+    if not strokes:
+        raise ValueError('Gumuhit muna sa kahon.')
+    text = str(answer.get('text') or '').strip()
+    if not text:
+        raise ValueError('Isulat muna ang magalang na salitang ginamit mo.')
+    normalize = lambda value: re.sub(r'[.\s]+$', '', value.strip()).replace('’', "'").casefold()
+    if normalize(text) not in {normalize(value) for value in ACTIVITIES['aral-s9-a2-helping-drawing']['expected_writing']}:
+        raise ValueError('Gumamit ng Please, Sorry, Thank you, o You’re welcome.')
+    answer = {'strokes': strokes, 'text': text}
+    state['answers']['item-1'] = answer
+    state['draft'] = {'strokes': [], 'text': '', 'tool': 'draw', 'color': '#183e63', 'size': 'medium'}
+    state['index'] = 1
+    state['completed'] = True
+    state['last_feedback'] = 'Magaling! Natapos mo ang Activity 2!'
+    return state
+
+
 def initial_l23_g1_state():
     return {
         'index': 0, 'read_aloud_started': False, 'read_aloud_completed': False,
@@ -2085,6 +2180,8 @@ def _apply_l24_g1_builder(state, event, verified_reading):
 
 def apply_event(activity, state, event, verified_reading=None):
     """Advance only the current item's required phases; never trust client scores."""
+    if activity['activity_key'] == 'aral-s9-a2-helping-drawing':
+        return _apply_s9_a2_drawing(state, event)
     if activity['activity_key'] in {'aral-l22-g6-f-word-reading', 'aral-l23-g2-n-word-reading'} and event.get('action') == 'reading':
         event = dict(event, action='reading_attempt')
     if activity['activity_key'] == 'aral-l22-g2-c-word-reading':

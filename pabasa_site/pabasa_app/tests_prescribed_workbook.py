@@ -14,7 +14,7 @@ from .prescribed_workbook import (
     ACTIVITIES, L22_G2_C_WORDS, L22_G3_C_WORD_PATHS, L22_G5_F_WORD_PATHS, apply_event, get_activity,
     initial_l22_g2_state, initial_l22_g3_state, initial_l22_g5_state,
     initial_state, l22_g2_pronunciation_match, normalize_l22_g2_speech,
-    normalize_l22_c_state, search_paths,
+    normalize_l22_c_state, search_paths, initial_s9_a2_state,
     L23_G3_J_WORDS, L23_G4_SYLLABLE_ANSWERS, L23_G7_Q_WORDS, initial_l23_g3_state,
     initial_l23_g4_state, initial_l23_g7_state, l23_g3_pronunciation_match,
     l23_g7_pronunciation_match, normalize_l23_g4_syllables,
@@ -23,6 +23,31 @@ from .reading_stt import l22_c_pronunciation_match
 
 
 class WorkbookStateTests(SimpleTestCase):
+    def test_session9_activity2_keeps_workbook_instruction_and_requires_drawing_and_courteous_word(self):
+        activity = get_activity('aral-s9-a2-helping-drawing')
+        self.assertEqual(activity['interaction_type'], 'drawing')
+        self.assertIn('Draw and color a situation at home where you helped someone.', activity['instruction'])
+        self.assertEqual(activity['expected_writing'], ['Please', 'Sorry', 'Thank you', 'You’re welcome.'])
+        state = initial_s9_a2_state()
+        with self.assertRaisesMessage(ValueError, 'Gumuhit muna'):
+            apply_event(activity, state, {'action': 'answer', 'answer': {'strokes': [], 'text': 'Thank you'}})
+        stroke = {'color': '#df4b4b', 'points': [[0, 0], [1200, 525]]}
+        with self.assertRaisesMessage(ValueError, 'Isulat muna'):
+            apply_event(activity, state, {'action': 'answer', 'answer': {'strokes': [stroke], 'text': ''}})
+        apply_event(activity, state, {'action': 'draft', 'draft': {'strokes': [stroke], 'text': 'Thank you', 'tool': 'draw', 'color': '#df4b4b', 'size': 'large'}})
+        self.assertFalse(state['completed'])
+        apply_event(activity, state, {'action': 'answer', 'answer': {'strokes': [stroke], 'text': 'Thank you'}})
+        self.assertTrue(state['completed'])
+        self.assertEqual(state['answers']['item-1']['text'], 'Thank you')
+
+    def test_session9_activity2_restart_clears_saved_work(self):
+        activity = get_activity('aral-s9-a2-helping-drawing')
+        state = initial_s9_a2_state()
+        stroke = {'color': '#183e63', 'points': [[10, 10], [20, 20]]}
+        apply_event(activity, state, {'action': 'answer', 'answer': {'strokes': [stroke], 'text': 'Please'}})
+        apply_event(activity, state, {'action': 'restart'})
+        self.assertEqual(state, initial_s9_a2_state())
+
     def test_session9_activity1_keeps_instruction_and_required_family_sentence(self):
         activity = get_activity('aral-s9-a1-family-drawing')
         self.assertEqual(activity['instruction'], 'Draw a picture of your family. Under your drawing, write the sentence “This is my family.”')
@@ -625,6 +650,7 @@ class PrescribedWorkbookFlowTests(TestCase):
         for key, expected_session in (
             ('aral-l22-g1-c-syllable-builder', 8),
             ('aral-s9-a1-family-drawing', 9),
+            ('aral-s9-a2-helping-drawing', 9),
         ):
             with self.subTest(activity_key=key):
                 response = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': key}))
@@ -639,4 +665,13 @@ class PrescribedWorkbookFlowTests(TestCase):
         self.assertContains(response, 'Draw a picture of your family. Under your drawing, write the sentence')
         self.assertContains(response, 'prescribed_s9_a1_family_drawing.css')
         self.assertContains(response, 'wb-s9-family-page')
+
+    def test_session9_activity2_renders_large_coloring_interface(self):
+        response = self.client.get(reverse('prescribed_activity_page', kwargs={
+            'activity_key': 'aral-s9-a2-helping-drawing',
+        }))
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertContains(response, 'Draw and color a situation at home where you helped someone.')
+        self.assertContains(response, 'prescribed_s9_a2_helping_drawing.css')
+        self.assertContains(response, 'wb-s9-helping-page')
         self.assertContains(response, 'wb-progress-track')
