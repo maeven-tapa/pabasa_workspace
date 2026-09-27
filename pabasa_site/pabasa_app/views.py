@@ -15311,6 +15311,7 @@ def prescribed_activity_progress(request, activity_key):
             total = len(activity['items'])
             current_index = max(0, min(total - 1, int(incoming.get('current_index', old.get('current_index', 0))))) if total else 0
             completed_items = max(0, min(total, int(incoming.get('completed_items', old.get('completed_items', 0)))))
+            correct_items = max(0, min(completed_items, int(incoming.get('correct_items', old.get('correct_items', 0)))))
             if existing and existing.activity_completed:
                 return JsonResponse({'success': True, 'progress': {
                     'current_index': existing.current_index, 'completed_items': existing.completed_items,
@@ -15327,7 +15328,7 @@ def prescribed_activity_progress(request, activity_key):
             progress, _ = StudentActivityProgress.objects.update_or_create(
                 student=student, activity_key=activity_key,
                 defaults={'current_index': current_index, 'completed_items': completed_items,
-                          'correct_items': completed_items, 'total_items': total,
+                          'correct_items': correct_items, 'total_items': total,
                           'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'progress': {
                 'current_index': progress.current_index, 'completed_items': progress.completed_items,
@@ -17620,12 +17621,13 @@ def prescribed_activity_complete(request, activity_key):
         completed_items = int(existing.completed_items if existing else state.get('completed_items', 0) or 0)
         if completed_items < total:
             return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang lahat ng letra.'}, status=400)
-        state = dict(state, phase='complete', completed_items=total, state_version=1_000_000_000)
+        correct_items = max(0, min(total, int(existing.correct_items if existing else state.get('correct_items', 0) or 0)))
+        state = dict(state, phase='complete', completed_items=total, correct_items=correct_items, state_version=1_000_000_000)
         StudentActivityProgress.objects.update_or_create(
             student=student, activity_key=activity_key,
-            defaults={'current_index': total, 'completed_items': total, 'correct_items': total,
+            defaults={'current_index': total, 'completed_items': total, 'correct_items': correct_items,
                       'total_items': total, 'activity_completed': True, 'state': state})
-        return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
+        return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': correct_items, 'accuracy': round(correct_items / total * 100, 2) if total else 0.0}})
     if activity_key == 'lesson-14-gawain-3':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
