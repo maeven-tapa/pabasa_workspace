@@ -115,6 +115,28 @@ from .prescribed_activity_catalog import (
     active_prescribed_activities,
     prescribed_activity,
 )
+
+# These activities use the original standalone activity flow. Keep this map
+# separate from PRESCRIBED_ACTIVITIES so the dashboard can include their
+# already-saved progress without changing prescribed-activity routing or
+# navigation.
+LEGACY_SESSION_PROGRESS_ACTIVITIES = (
+    {'activity_key': 'lesson-1-gawain-1', 'session_number': 1},
+    {'activity_key': 'lesson-2-gawain-1', 'session_number': 1},
+    {'activity_key': 'lesson-3-gawain-1', 'session_number': 1},
+    {'activity_key': 'lesson-3-gawain-2', 'session_number': 1},
+    {'activity_key': 'lesson-4-gawain-1', 'session_number': 2},
+    {'activity_key': 'lesson-5-gawain-1', 'session_number': 2},
+    {'activity_key': 'lesson-6-gawain-1', 'session_number': 2},
+    {'activity_key': 'lesson-7-gawain-1', 'session_number': 3},
+)
+
+# The Session 2 Gawain 2 activity was later moved into the prescribed catalog
+# under a canonical key. Keep the old progress key readable without counting
+# the same activity twice in the dashboard.
+LEGACY_SESSION_PROGRESS_ALIASES = {
+    'session-2-lesson-4-gawain-2': 'lesson-4-gawain-2',
+}
 from .handwriting_validation import is_recognizable_ii, normalize_strokes
 from .reader_classification import classify_student_account
 from .scoring import (
@@ -5308,13 +5330,24 @@ def _dashboard_context(request, nav_role=None, extra=None):
                 'name': cls.class_name,
                 'student_count': _section_student_count(cls),
             })
-        activity_values = list(PRESCRIBED_ACTIVITIES.values())
+        # Build a dashboard-only compatibility view. Catalog entries remain
+        # authoritative when a key is ever present in both collections.
+        activity_by_key = {
+            item.get('activity_key'): item
+            for item in PRESCRIBED_ACTIVITIES.values()
+            if item.get('activity_key')
+        }
+        for legacy_activity in LEGACY_SESSION_PROGRESS_ACTIVITIES:
+            activity_by_key.setdefault(legacy_activity['activity_key'], legacy_activity)
+        activity_values = list(activity_by_key.values())
+        legacy_activity_keys = {item['activity_key'] for item in LEGACY_SESSION_PROGRESS_ACTIVITIES}
         activity_keys = [item.get('activity_key') for item in activity_values if item.get('activity_key')]
+        progress_lookup_keys = set(activity_keys) | set(LEGACY_SESSION_PROGRESS_ALIASES.values())
         activity_rows = {
             row.activity_key: row
             for row in StudentActivityProgress.objects.filter(
                 student=student_user,
-                activity_key__in=activity_keys,
+                activity_key__in=progress_lookup_keys,
             )
         }
         for session_number in range(1, 16):
@@ -5325,9 +5358,27 @@ def _dashboard_context(request, nav_role=None, extra=None):
             total = len(session_activities)
             completed = 0
             for activity in session_activities:
-                row = activity_rows.get(activity.get('activity_key'))
-                item_total = max(1, int(activity.get('total_items') or len(activity.get('items') or []) or 1))
-                if row and (row.activity_completed or int(row.completed_items or 0) >= item_total):
+                activity_key = activity.get('activity_key')
+                row = activity_rows.get(activity_key)
+                if row is None:
+                    row = activity_rows.get(LEGACY_SESSION_PROGRESS_ALIASES.get(activity_key))
+                is_legacy = activity_key in legacy_activity_keys
+                if is_legacy:
+                    # Legacy activities persist their authoritative item count
+                    # with each student's progress row. Lesson 1 is teacher-
+                    # checked, so submission alone must not mark it complete.
+                    item_total = max(1, int(row.total_items or 1)) if row else 1
+                    is_complete = bool(row and (
+                        row.activity_completed
+                        or (activity_key != 'lesson-1-gawain-1'
+                            and int(row.completed_items or 0) >= item_total)
+                    ))
+                else:
+                    item_total = max(1, int(activity.get('total_items') or len(activity.get('items') or []) or 1))
+                    is_complete = bool(row and (
+                        row.activity_completed or int(row.completed_items or 0) >= item_total
+                    ))
+                if is_complete:
                     completed += 1
             student_session_progress.append({
                 'session': session_number,
