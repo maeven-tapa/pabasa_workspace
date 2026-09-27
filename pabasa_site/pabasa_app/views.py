@@ -14344,6 +14344,26 @@ def prescribed_activity_page(request, activity_key):
     if activity['interaction'] == 'session7_oral_cluster_syllabification':
         state = _normalized_session7_cluster_syllabification_state(activity, raw_state)
         scored_items = [item for item in activity['items'] if not item.get('worked_example')]
+        audio_root = 'pabasa_app/prescribed/audio/SESSION_7/LESSON_20_21/GAWAIN_2/'
+        audio_files = {
+            'intro': 'intro_pantigin_ang_sumusunod_tts.mp3',
+            'prompts': {item['word']: f"basahin_{item['word']}_tts.mp3" for item in scored_items},
+            'words': {item['word']: f"{item['word']}_tts.mp3" for item in scored_items},
+            'feedback': {
+                'wrong': 'hindi_pa_tama_tts.mp3',
+                'listen': 'pakinggan_muna_ang_salita_tts.mp3',
+                'retry': 'subukan_mong_basahin_salita_tts.mp3',
+                'read_success': 'magaling_pagbasa_ngayon_lagyan_puwang_tts.mp3',
+                'syllabification_success': 'tama_magaling_ang_pagpapantig_tts.mp3',
+                'completion': 'mahusay_ang_ginawa_mo_ngayon_natapos_aralin_tts.mp3',
+            },
+        }
+        local_audio = {
+            'intro': static(audio_root + audio_files['intro']),
+            'prompts': {word: static(audio_root + filename) for word, filename in audio_files['prompts'].items()},
+            'words': {word: static(audio_root + filename) for word, filename in audio_files['words'].items()},
+            'feedback': {name: static(audio_root + filename) for name, filename in audio_files['feedback'].items()},
+        }
         context = _dashboard_context(request)
         context['prescribed_activity_data'] = {
             'activity_key': activity_key, 'session_key': activity['session_key'],
@@ -14361,6 +14381,7 @@ def prescribed_activity_page(request, activity_key):
             'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
             'read_aloud_url': reverse('reading_read_aloud_api'),
             'transcribe_url': reverse('reading_transcribe_api'),
+            'local_audio': local_audio,
             'progress': {'completed_items': progress.completed_items if progress else 0,
                          'correct_items': progress.correct_items if progress else 0,
                          'total_items': len(scored_items),
