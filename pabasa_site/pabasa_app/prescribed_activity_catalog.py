@@ -360,8 +360,8 @@ PRESCRIBED_ACTIVITIES = {
             {'id': 'mat', 'word': 'mat', 'label': 'Mat', 'alt_text': 'A mat', 'image_path': 'pabasa_app/images/lesson_30/mat.png'},
             {'id': 'happy', 'word': 'happy', 'label': 'Happy', 'alt_text': 'A happy person', 'image_path': 'pabasa_app/images/lesson_30/happy.png'},
             {'id': 'pet', 'word': 'pet', 'label': 'Pet', 'alt_text': 'A pet dog', 'image_path': 'pabasa_app/images/lesson_30/pet.png'},
-            {'id': 'little', 'word': 'little', 'label': 'Little', 'alt_text': 'A little person', 'image_path': 'pabasa_app/images/lesson_30/little.png'},
             {'id': 'pat', 'word': 'pat', 'label': 'Pat', 'alt_text': 'A hand patting', 'image_path': 'pabasa_app/images/lesson_30/pat.png'},
+            {'id': 'little', 'word': 'little', 'label': 'Little', 'alt_text': 'A little person', 'image_path': 'pabasa_app/images/lesson_30/little.png'},
         ],
     },
     'lesson-30-gawain-2': {
