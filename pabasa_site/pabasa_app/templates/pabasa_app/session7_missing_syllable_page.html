@@ -38,14 +38,29 @@ const total=items.length,current=()=>Number(s.current_item_index)||0,stop=()=>{s
 head=()=>`<p class="eyebrow">SESSION 7 &middot; LESSON 19 &middot; GAWAIN 2</p><h1>${esc(d.display_title)}</h1><h2>${esc(d.title)}</h2><p class="instruction">${esc(d.instruction)}</p><div class="track"><i style="width:${s.correct_answer_count/total*100}%"></i></div>`,
 picture=i=>`<img class="picture" src="${esc(i.image_url)}" alt="${esc(i.alt_text)}">`,
 displayStem=stem=>esc(stem).replace(/__/g,'<span class="answer-box" aria-label="Nawawalang pantig">&nbsp;</span>');
-async function narrate(text){if(!text||!d.read_aloud_url)return;const mine=++narrationRequest,f=new FormData();narrationAudio?.pause();narrationAudio=null;f.append('text',text);f.append('language','Filipino');f.append('prescribed_activity_key',d.activity_key);try{const r=await fetch(d.read_aloud_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:f}),j=await r.json().catch(()=>({}));if(mine!==narrationRequest||!r.ok||!j.success||j.tts_language!=='fil-PH'||j.voice_name!=='fil-PH-Wavenet-A')return;narrationAudio=new Audio(URL.createObjectURL(new Blob([Uint8Array.from(atob(j.audio_content),c=>c.charCodeAt(0))],{type:j.mime_type||'audio/mpeg'})));narrationAudio.onended=()=>{if(mine===narrationRequest)narrationAudio=null};await narrationAudio.play()}catch(error){const status=app.querySelector('.status');if(status)status.textContent=error.message||'Hindi available ang Filipino audio.'}}
+const localAudioBase="{% static 'pabasa_app/prescribed/audio/SESSION_7/LESSON_19/GAWAIN_2/' %}",localAudioFiles={
+  'Basahin ang ngalan ng larawan. Pagkatapos, isulat ang nawawalang pantig.':'basahin_ngalan_isulat_nawawalang_pantig_tts.mp3',
+  'Basahin nang malakas ang buong salita.':{daan:'basahin_daan_tts.mp3',dalandan:'basahin_dalandan_tts.mp3',tahi:'basahin_tahi_tts.mp3',lila:'basahin_lila_tts.mp3',hilik:'basahin_hilik_tts.mp3'},
+  'Tama ang pagbasa! Isulat naman ang pantig.':'magaling_ang_pagbasa_pindutin_ang_tamang_letra_tts.mp3',
+  'Isulat ang nawawalang pantig.':'mahusay_ang_ginawa_mo_ngayon_tts.mp3',
+  'Subukan muli.':'hindi_pa_tama_tts.mp3',
+  'Hindi pa. Subukan muli.':'hindi_pa_tama_tts.mp3',
+  'Hindi pa tama. Subukan muli.':'hindi_pa_tama_tts.mp3',
+  'Hindi pa tama, Subukan muli.':'hindi_pa_tama_tts.mp3',
+  'Tama! Magaling ang iyong sagot.':'tama_magaling_ang_iyong_sagot_tts.mp3',
+  'Magaling! Natapos mo ang Lesson 19: Gawain 2.':'mahusay_ang_ginawa_mo_ngayon_tts.mp3',
+  'Pakinggan muna ang salita.':'pakinggan_muna_ang_salita_tts.mp3',
+  daan:'daan_tts.mp3',dalandan:'dalandan_tts.mp3',tahi:'tahi_tts.mp3',lila:'lila_tts.mp3',hilik:'hilik_tts.mp3',
+  'Subukan mong basahin ang salita.':'subukan_mong_basahin_salita_tts.mp3'
+},localAudioFor=(text,itemWord='')=>{const value=localAudioFiles[text];return typeof value==='object'?value[itemWord]||'':value||''},playLocalAudio=async(file,target)=>{if(!file)return false;narrationAudio?.pause();audio?.pause();const player=new Audio(localAudioBase+file);if(target==='word')audio=player;else narrationAudio=player;await player.play();await new Promise((resolve,reject)=>{player.onended=resolve;player.onerror=()=>reject(Error('Hindi ma-play ang audio.'))});if(target==='word')audio=null;else narrationAudio=null;return true};
+async function narrate(text){if(!text)return;const mine=++narrationRequest,n=items[current()],localFile=localAudioFor(text,n?.word||'');narrationAudio?.pause();narrationAudio=null;try{if(await playLocalAudio(localFile,'narration'))return;if(!d.read_aloud_url)return;const f=new FormData();f.append('text',text);f.append('language','Filipino');f.append('prescribed_activity_key',d.activity_key);const r=await fetch(d.read_aloud_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:f}),j=await r.json().catch(()=>({}));if(mine!==narrationRequest||!r.ok||!j.success||j.tts_language!=='fil-PH'||j.voice_name!=='fil-PH-Wavenet-A')return;narrationAudio=new Audio(URL.createObjectURL(new Blob([Uint8Array.from(atob(j.audio_content),c=>c.charCodeAt(0))],{type:j.mime_type||'audio/mpeg'})));narrationAudio.onended=()=>{if(mine===narrationRequest)narrationAudio=null};await narrationAudio.play()}catch(error){if(error?.name==='AbortError'||mine!==narrationRequest)return;const status=app.querySelector('.status');if(status)status.textContent=error.message||'Hindi available ang Filipino audio.'}}
 async function save(extra={}){const mine=++request,r=await fetch(d.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({state:{...s,state_version:(Number(s.state_version)||0)+1},...extra})}),j=await r.json().catch(()=>({}));
 if(!r.ok||!j.success)throw Error(j.error||'Hindi na-save ang progress. Subukan muli.');
 if(mine!==request)return null;s=j.progress.state;
 return j}
 function render(message='',kind='')
 {
-const narration=message||(d.progress?.activity_completed||s.phase==='completion'?'Magaling! Natapos mo ang Lesson 19: Gawain 2.':s.phase==='intro'?d.instruction:s.phase==='feedback'?'Tama! Magaling ang iyong sagot.':s.phase==='oral_reading'?'Basahin nang malakas ang buong salita.':'Isulat ang nawawalang pantig.');void narrate(narration);
+const narration=message||(d.progress?.activity_completed||s.phase==='completion'?'Magaling! Natapos mo ang Lesson 19: Gawain 2.':s.phase==='intro'?d.instruction:s.phase==='feedback'?'Tama! Magaling ang iyong sagot.':s.phase==='oral_reading'?'Basahin nang malakas ang buong salita.':'Isulat ang nawawalang pantig.');window.setTimeout(()=>void narrate(narration),0);
 if(d.progress?.activity_completed||s.phase==='completion'){
 app.innerHTML=`<div class="done"><div>⭐</div><h1>Magaling!</h1><p>Natapos mo ang Lesson 19: Gawain 2.</p><a class="button" href="{% url 'assessment' %}">Balik sa Aking Aralin</a></div>`;
 return}const n=current(),item=items[n];
@@ -72,7 +87,7 @@ try{await save()}catch(_){}render(s.stt_attempts[key(n)]>=3?'Pakinggan muna ang 
 const mine=++request,b=app.querySelector('#oral');
 try{b.disabled=true;b.textContent='Nilo-load...';
 const f=new FormData();f.append('text',items[n].word);f.append('language','Filipino');f.append('prescribed_activity_key',d.activity_key);
-const r=await fetch(d.read_aloud_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:f}),j=await r.json().catch(()=>({}));
+if(await playLocalAudio(localAudioFor(items[n].word),'word')){if(mine!==request)return;s.tts_plays[key(n)]=Math.min(3,(s.tts_plays[key(n)]||0)+1);if(s.tts_plays[key(n)]===3){s.stt_attempts[key(n)]=0;s.tts_plays[key(n)]=0}await save();render('Subukan mong basahin ang salita.');return}const r=await fetch(d.read_aloud_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:f}),j=await r.json().catch(()=>({}));
 if(mine!==request)return;
 if(!r.ok||!j.success||j.tts_language!=='fil-PH'||j.voice_name!=='fil-PH-Wavenet-A')throw Error(j.error||'Hindi available ang Filipino audio.');b.textContent='Pinakikinggan...';audio=new Audio(URL.createObjectURL(new Blob([Uint8Array.from(atob(j.audio_content),c=>c.charCodeAt(0))],{type:j.mime_type||'audio/mpeg'})));await audio.play();await new Promise((ok,bad)=>{audio.onended=ok;audio.onerror=()=>bad(Error('Hindi ma-play ang audio.'))});
 if(mine!==request)return;s.tts_plays[key(n)]=Math.min(3,(s.tts_plays[key(n)]||0)+1);
