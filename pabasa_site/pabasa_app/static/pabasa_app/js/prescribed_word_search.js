@@ -202,6 +202,7 @@
 
   const localAudioFiles = {
     'word search': 'Word Search.mp3',
+    [localAudioKey("Let's read the first word")]: "Let's read the first word..mp3",
     cat: 'Cat.mp3',
     hat: 'Hat.mp3',
     mat: 'Mat.mp3',
@@ -227,6 +228,9 @@
     }
     const audio = new Audio(`${localAudioBase}${filename.split('/').map(encodeURIComponent).join('/')}`);
     audio.preload = 'auto';
+    // The supplied transition recording is mastered louder than the existing
+    // Lesson 26 clips; attenuate only that file to keep the sequence balanced.
+    if (filename === "Let's read the first word..mp3") audio.volume = 0.5;
     activeAudio = audio;
     try {
       const finished = new Promise((resolve, reject) => {
@@ -287,6 +291,7 @@
       stopStream();
       publishDebug({status: 'Error', error: error.message || 'Recording/transcription error'}, `Error: ${error.message || 'Recording/transcription error'}`);
       render(error.message || 'Could not recognize your speech. Please try again.', 'bad');
+      await playReadAloud(RETRY_FEEDBACK);
     } finally {
       if (button?.isConnected) button.classList.remove('is-busy');
       busy = false;
@@ -382,7 +387,27 @@
   }
   document.getElementById('lesson26-later-button')?.addEventListener('click', resetAndExit);
   document.getElementById('lesson26-start-button')?.addEventListener('click', () => {
-    window.setTimeout(() => readAloud('Word Search. Find the words on the grid.'), 0);
+    window.setTimeout(async () => {
+      await readAloud('Word Search. Find the words on the grid.');
+      if (!isActivityPaused) {
+        const buttons = [...app.querySelectorAll('#read, #listen-instructions')];
+        const buttonStates = buttons.map(button => ({button, disabled: button.disabled}));
+        buttons.forEach(button => { button.disabled = true; button.classList.add('is-busy'); });
+        busy = true;
+        try {
+          await playReadAloud("Let's read the first word");
+        } finally {
+          busy = false;
+          buttonStates.forEach(({button, disabled}) => {
+            if (button.isConnected) {
+              button.disabled = disabled;
+              button.classList.remove('is-busy');
+            }
+          });
+          render();
+        }
+      }
+    }, 0);
   });
   configureStartModal();
   render();

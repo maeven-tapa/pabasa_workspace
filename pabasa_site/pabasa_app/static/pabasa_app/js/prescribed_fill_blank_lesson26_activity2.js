@@ -23,6 +23,7 @@
   const SENTENCE_CORRECT_FEEDBACK = "That's right, now let's choose the words.";
   const WORD_CORRECT_FEEDBACK = "That's right, now let's choose the next word.";
   const READ_SENTENCE_FEEDBACK = "That's right, now let's read the whole sentence.";
+  const NEXT_SENTENCE_FEEDBACK = "That's right, now let's read the next sentence.";
   const COMPLETION_FEEDBACK = 'Great job! You completed the activity.';
   const localAudioBase = '/static/pabasa_app/prescribed/audio/SESSION_10/LESSON_26/GAWAIN_2/';
 
@@ -33,6 +34,7 @@
 
   const localAudioFiles = {
     [localAudioKey('Fill in the Blanks. Read the words, then fill in the blanks.')]: 'Fill in the Blanks. Read the words, then fill in the blanks..mp3',
+    [localAudioKey("Let's read the first word")]: "Let's read the first word..mp3",
     hat: 'Hat.mp3',
     cat: 'Cat.mp3',
     rat: 'Rat.mp3',
@@ -42,6 +44,7 @@
     [localAudioKey(SENTENCE_CORRECT_FEEDBACK)]: 'That’s right, now let’s choose the words..mp3',
     [localAudioKey(WORD_CORRECT_FEEDBACK)]: 'That’s right, now let’s choose the next word..mp3',
     [localAudioKey(READ_SENTENCE_FEEDBACK)]: 'That’s right, now let’s read the whole sentence..mp3',
+    [localAudioKey(NEXT_SENTENCE_FEEDBACK)]: 'That’s right, now let’s read the next sentence..mp3',
     [localAudioKey('The furry blank on the warm blank.')]: 'The furry blank on the warm blank..mp3',
     [localAudioKey('The furry cat on the warm mat.')]: 'The furry cat on the warm mat..mp3',
     [localAudioKey('The blank fell off her head.')]: 'The blank fell off her head..mp3',
@@ -51,6 +54,12 @@
     [localAudioKey('The blank was placed on the top of the shelf.')]: 'The blank was placed on the top of the shelf..mp3',
     [localAudioKey('The hat was placed on the top of the shelf.')]: 'The hat was placed on the top of the shelf..mp3',
     [localAudioKey(COMPLETION_FEEDBACK)]: 'Great job! You completed the Fill in the Blanks..mp3',
+  };
+  const sentenceAudioByItem = {
+    'sentence-1': {blank: 'The furry blank on the warm blank..mp3', complete: 'The furry cat on the warm mat..mp3'},
+    'sentence-2': {blank: 'The blank fell off her head..mp3', complete: 'The hat fell off her head..mp3'},
+    'sentence-3': {blank: 'The blank ate the blank..mp3', complete: 'The rat ate the hat..mp3'},
+    'sentence-4': {blank: 'The blank was placed on the top of the shelf..mp3', complete: 'The hat was placed on the top of the shelf..mp3'},
   };
 
   function hydrate() {
@@ -110,7 +119,7 @@
     activeSpeechIdleLabel = '🎙️ Read the word';
     button?.classList.add('is-busy');
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
-      if (status) status.textContent = 'Microphone recording is not available in this browser.'; button?.classList.remove('is-busy'); busy = false; return;
+      if (status) status.textContent = 'Microphone recording is not available in this browser.'; button?.classList.remove('is-busy'); busy = false; await announce(RETRY_FEEDBACK); return;
     }
     button.textContent = 'Listening…'; if (status) status.textContent = 'Listening…';
     try {
@@ -130,7 +139,7 @@
         renderChoices(correct ? 'Correct! Read the next word.' : transcript.length ? `I heard “${result.raw_transcript || result.transcript}”. Try “${word}” again.` : `I could not hear “${word}” clearly. Try again.`, correct ? 'good' : 'bad');
         if (!correct) await announce(RETRY_FEEDBACK);
       }
-    } catch (error) { if (error?.name === 'AbortError') return;  stopStream(); renderChoices(error.message || 'Could not recognize your speech. Try again.', 'bad'); }
+    } catch (error) { if (error?.name === 'AbortError') return;  stopStream(); renderChoices(error.message || 'Could not recognize your speech. Try again.', 'bad'); await announce(RETRY_FEEDBACK); }
     finally { button?.classList.remove('is-busy'); if (activeSpeechButton === button) { activeSpeechButton = null; activeSpeechIdleLabel = ''; } busy = false; }
   }
   function sentenceText(item, blanks = true) {
@@ -179,24 +188,41 @@
   async function playSentence() {
     const item = data.items[state.current_item];
     if (!item) return;
-    const text = sentenceAudioText(item);
+    const sentenceComplete = Object.keys(state.placements).length >= item.blank_count;
+    const mappedAudio = sentenceAudioByItem[item.id];
+    const fallbackText = sentenceComplete ? sentenceText(item, false) : sentenceAudioText(item);
+    const fallbackFilename = localAudioFiles[localAudioKey(
+      fallbackText.replace(/\s+/g, ' ').replace(/\s+([.,!?])/g, '$1').trim()
+    )];
+    const filename = mappedAudio?.[sentenceComplete ? 'complete' : 'blank'] || fallbackFilename;
     try {
-      await playTts(text);
+      await playAudioFile(filename);
       if (!state.sentence_read) { await save({action:'sentence_read'}); renderSentence(); }
     } catch (error) { renderSentence(error.message || 'Could not play the sentence. Try again.', 'bad'); }
   }
   async function playTts(text) {
     if (busy || !text) return;
     if (text === COMPLETION_FEEDBACK && !app.querySelector('.pabasa-completion-card')) return;
+    const filename = localAudioFiles[localAudioKey(text)];
+    if (!filename) throw new Error('Could not find the audio for this activity.');
+    await playAudioFile(filename);
+  }
+  async function playAudioFile(filename) {
+    if (busy || !filename) return;
+    if (activeAudio) {
+      activeAudio.pause();
+      activeAudio.currentTime = 0;
+      activeAudio = null;
+    }
     busy = true;
     const buttons = [...app.querySelectorAll('.button')];
     const buttonStates = buttons.map(button => ({button, disabled:button.disabled}));
     buttons.forEach(button => { button.disabled = true; button.classList.add('is-busy'); });
     const status = document.getElementById('status'), previousStatus = status?.textContent; if (status) status.textContent = 'Playing audio…';
     try {
-      const filename = localAudioFiles[localAudioKey(text)];
-      if (!filename) throw new Error('Could not find the audio for this activity.');
-      activeAudio = new Audio(`${localAudioBase}${filename.split('/').map(encodeURIComponent).join('/')}`);
+      const audioVersion = filename === 'The furry cat on the warm mat..mp3' ? '?v=20260928-replaced-first-item-audio' : '';
+      activeAudio = new Audio(`${localAudioBase}${filename.split('/').map(encodeURIComponent).join('/')}${audioVersion}`);
+      if (filename === "Let's read the first word..mp3") activeAudio.volume = 0.5;
       await new Promise((resolve, reject) => {
         activeAudio.addEventListener('ended', resolve, {once:true});
         activeAudio.addEventListener('error', () => reject(new Error('Audio playback failed. Try again.')), {once:true});
@@ -232,7 +258,7 @@
     activeSpeechButton = button;
     activeSpeechIdleLabel = '🎙️ Read the sentence';
     button?.classList.add('is-busy');
-    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { if (status) status.textContent = 'Microphone recording is not available in this browser.'; button?.classList.remove('is-busy'); busy = false; return; }
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { if (status) status.textContent = 'Microphone recording is not available in this browser.'; button?.classList.remove('is-busy'); busy = false; await announce(RETRY_FEEDBACK); return; }
     button.textContent = 'Listening…';
     try {
       const attempt = generation; const result = await window.Basahin.read({target_text:target, language:'English', mode:'sentence'}, {button:button, url:data.transcribe_url}); if (attempt !== generation || isPaused) return;
@@ -252,14 +278,14 @@
           await new Promise(resolve => window.setTimeout(resolve, 0));
           await announce(COMPLETION_FEEDBACK);
         } else {
-          await announce("That's right, now let's read the next sentence.");
+          await announce(NEXT_SENTENCE_FEEDBACK);
         }
       } else {
         renderSentence(transcript ? `I heard “${result.raw_transcript || result.transcript}”. Please read the sentence again.` : 'I could not hear the sentence clearly. Try again.', 'bad');
         await announce(RETRY_FEEDBACK);
       }
       if (correct && state.phase !== 'complete') { started = true; await playSentence(); }
-    } catch (error) { if (error?.name === 'AbortError') return;  stopStream(); renderSentence(error.message || 'Could not recognize your speech. Try again.','bad'); }
+    } catch (error) { if (error?.name === 'AbortError') return;  stopStream(); renderSentence(error.message || 'Could not recognize your speech. Try again.','bad'); await announce(RETRY_FEEDBACK); }
     finally { button?.classList.remove('is-busy'); if (activeSpeechButton === button) { activeSpeechButton = null; activeSpeechIdleLabel = ''; } busy = false; }
   }
 
@@ -300,7 +326,8 @@
     window.setTimeout(async () => {
       try { await playTts('Fill in the Blanks. Read the words, then fill in the blanks.'); }
       catch (error) { state.phase === 'sentence' ? renderSentence(error.message || 'Could not play the instruction. Try again.','bad') : renderChoices(error.message || 'Could not play the instruction. Try again.','bad'); return; }
-      if (state.phase === 'sentence' && !state.sentence_read) await playSentence();
+      if (state.phase === 'choices') await playTts("Let's read the first word");
+      else if (state.phase === 'sentence' && !state.sentence_read) await playSentence();
     },0);
   });
   window.addEventListener('pagehide', () => { stopStream(); activeAudio?.pause(); if (audioUrl) URL.revokeObjectURL(audioUrl); });
