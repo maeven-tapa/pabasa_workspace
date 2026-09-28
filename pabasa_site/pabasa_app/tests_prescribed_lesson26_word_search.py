@@ -10,6 +10,7 @@ from django.utils import timezone
 from .models import School, Section, StudentActivityProgress, User
 from .prescribed_activity_catalog import prescribed_activity
 from .reading_stt import analyze_reading
+from .views import _prescribed_sentence_matches
 
 
 class PrescribedLesson26WordSearchTests(TestCase):
@@ -298,6 +299,11 @@ class PrescribedLesson26WordSearchTests(TestCase):
         self.assertIn("action:'line_read'", script)
         self.assertIn('{reset:true}', script)
         self.assertIn("language:'English'", script)
+        self.assertIn("pendingRetryAudio='Try again.'", script)
+        self.assertIn("class=\"${matched?'matched':'missed'}\"", script)
+        self.assertIn("word==='mat'&&heardWords[index]==='math'", script)
+        self.assertIn("prescribed_activity_key:'lesson-30-gawain-2'", script)
+        self.assertTrue(_prescribed_sentence_matches('The pet is on a mat.', 'The pet is on a math.'))
         self.assertNotIn('speechSynthesis', script)
 
     def test_lesson30_match_it_has_its_own_english_activity_screen_and_reset(self):

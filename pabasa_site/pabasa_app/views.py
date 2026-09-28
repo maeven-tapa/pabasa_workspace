@@ -106,6 +106,15 @@ PRESCRIBED_ENGLISH_RECOGNITION_ALIASES = {
 def _prescribed_spoken_word_matches(target, heard_words):
     target = str(target or '').lower()
     return bool(set(heard_words or ()) & ({target} | PRESCRIBED_ENGLISH_RECOGNITION_ALIASES.get(target, set())))
+
+
+def _prescribed_sentence_matches(target_text, heard_text):
+    target_words = re.findall(r'[a-z]+', str(target_text or '').lower())
+    heard_words = re.findall(r'[a-z]+', str(heard_text or '').lower())
+    return bool(target_words) and len(target_words) == len(heard_words) and all(
+        _prescribed_spoken_word_matches(target, {heard})
+        for target, heard in zip(target_words, heard_words)
+    )
 from .hunt_scoring import classify_speech
 from .syllable_blending import activity_catalog, build_activity, normalize_format
 from .clap_count_word_bank import score_displayed_words, word_bank_catalog, validate_configuration
@@ -21315,6 +21324,17 @@ def reading_transcribe_api(request):
             activity_syllables = []
         is_clap_phase2 = request.POST.get('phase2_strict') == '1'
         matching_transcript = transcript
+        # Activity 2 is sentence-based, so apply its known short-word
+        # recognition allowance across the complete line. This also returns
+        # the learner-facing spelling ("mat") instead of Google's "math".
+        if (
+            request.POST.get('prescribed_activity_key') == 'lesson-30-gawain-2'
+            and language_code.startswith('en')
+            and mode == 'sentence'
+            and _prescribed_sentence_matches(target_text, transcript)
+        ):
+            transcript = target_text
+            matching_transcript = target_text
         # This cluster lesson accepts Google's English spelling of "tsek".
         # Keep the allowance scoped to the activity and preserve the raw speech.
         if (

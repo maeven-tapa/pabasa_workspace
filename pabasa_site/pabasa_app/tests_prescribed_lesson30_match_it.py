@@ -1,12 +1,15 @@
 import json
 import uuid
+from pathlib import Path
 
+from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from .models import School, Section, StudentActivityProgress, User
 from .prescribed_activity_catalog import prescribed_activity
+from .views import _local_prescribed_audio_file
 
 
 class PrescribedLesson30MatchItTests(TestCase):
@@ -50,7 +53,7 @@ class PrescribedLesson30MatchItTests(TestCase):
         self.assertEqual([item['word'] for item in activity['items']], ['mat', 'happy', 'pet', 'pat', 'little'])
         response = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': self.activity_key}))
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'pabasa_app/prescribed_sequential_picture_match_page.html')
+        self.assertTemplateUsed(response, 'pabasa_app/prescribed_match_it_lesson30_activity1_page.html')
         self.assertEqual(response.context['prescribed_activity_data']['progress']['total_items'], 5)
 
     def test_must_read_then_match_in_order_and_retry_wrong_picture(self):
@@ -104,3 +107,15 @@ class PrescribedLesson30MatchItTests(TestCase):
         progress.refresh_from_db()
         self.assertTrue(progress.activity_completed)
         self.assertEqual(progress.total_items, 5)
+
+    def test_completion_feedback_uses_the_existing_match_it_audio(self):
+        script = Path(
+            settings.BASE_DIR,
+            'pabasa_app/static/pabasa_app/js/prescribed_match_it_lesson30_activity1.js',
+        ).read_text(encoding='utf-8')
+        self.assertIn("announce('Great job! You completed the activity.');", script)
+        audio_file = _local_prescribed_audio_file(
+            self.activity_key, 'Great job! You completed the activity.',
+        )
+        self.assertIsNotNone(audio_file)
+        self.assertEqual(audio_file.name, 'Great job! You completed Match It..mp3')

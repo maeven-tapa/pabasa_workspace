@@ -11,6 +11,8 @@ html body .instruction{margin:10px auto 6px}
 html body .story{max-width:800px;margin:14px auto;padding:18px 24px;border-radius:24px}
 html body .story h2{margin-bottom:10px}
 html body .line{margin:6px 0;padding:8px 12px}
+html body .line .matched{color:#287b4c;text-decoration:underline;text-decoration-thickness:3px}
+html body .line .missed{padding:1px 3px;border-radius:5px;background:#ffe1e3;color:#b33b43;text-decoration:underline;text-decoration-thickness:3px;text-decoration-color:#b33b43}
 html body .status{min-height:1.8em;margin:8px auto;display:none!important}
 html body .actions{gap:18px;margin:10px auto}
 html body .button{min-width:min(310px,42vw);min-height:72px;transition:transform .16s ease,filter .16s ease,box-shadow .16s ease}

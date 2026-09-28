@@ -46,12 +46,19 @@
     const i=index();
     return `<div class="progress">${words.map((_,n)=>`<span class="step ${n<i?'done':''} ${n===i&&!complete()?'active':''}">${n+1}</span>`).join('')}</div>`;
   }
+  function showCompletion(){
+    const back=document.getElementById('lesson30a1-back');
+    const href=back?.href||d.back_url||'/dashboard/assessment/';
+    back?.remove();
+    document.body.classList.add('l30a1-completion-active');
+    app.innerHTML=`<section class="l30a1-completion-card" role="dialog" aria-modal="true"><h1>Activity complete! 🎉</h1><p>Great job! You have completed the activity.</p><a class="l30a1-completion-button" href="${esc(href)}">BACK TO MY LESSONS</a></section>`;
+  }
   function announce(message){window.setTimeout(()=>play(message).catch(()=>{}),0)}
   function render(message='',kind=''){
     if(complete()){
-      window.PrescribedLessonUi.showCompletion(app);
+      showCompletion();
       finish();
-      announce('Great job! You matched every picture.');
+      announce('Great job! You completed the activity.');
       return;
     }
     const target=current();

@@ -350,7 +350,7 @@ PRESCRIBED_ACTIVITIES = {
     'lesson-30-gawain-1': {
         'activity_key': 'lesson-30-gawain-1', 'session_key': 'session-14',
         'session_number': 14, 'lesson_number': 30, 'gawain_number': 1,
-        'title': 'Match It!', 'display_title': 'Session 14 · Lesson 30 · Activity 1',
+        'title': 'Match It', 'display_title': 'Match It',
         'description': 'Read each word, then choose the matching picture.',
         'instruction': 'Read the word aloud first. Then choose the matching picture.',
         'interaction': 'oral_then_picture_word_match', 'sequence_mode': 'per_item',
@@ -367,7 +367,7 @@ PRESCRIBED_ACTIVITIES = {
     'lesson-30-gawain-2': {
         'activity_key': 'lesson-30-gawain-2', 'session_key': 'session-14',
         'session_number': 14, 'lesson_number': 30, 'gawain_number': 2,
-        'title': 'Story Time!', 'display_title': 'Session 14 · Lesson 30 · Activity 2',
+        'title': 'Story Time', 'display_title': 'Story Time',
         'instruction': 'Listen as the teacher reads the short story. Then read each line aloud.',
         'interaction': 'oral_story_line', 'total_items': 6,
         'story_title': 'Ben and the Little Pet',
@@ -383,7 +383,7 @@ PRESCRIBED_ACTIVITIES = {
     'lesson-30-gawain-3': {
         'activity_key': 'lesson-30-gawain-3', 'session_key': 'session-14',
         'session_number': 14, 'lesson_number': 30, 'gawain_number': 3,
-        'title': 'Comprehension Check', 'display_title': 'Session 14 · Lesson 30 · Activity 3',
+        'title': 'Comprehension Check', 'display_title': 'Comprehension Check',
         'instruction': 'Listen to each question. Then choose and encircle the correct answer.',
         'interaction': 'oral_comprehension_choice', 'total_items': 5,
         'questions': [

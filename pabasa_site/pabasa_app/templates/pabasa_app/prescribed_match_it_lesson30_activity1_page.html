@@ -38,6 +38,15 @@
   </style>
 <style>.button.is-busy:disabled{background:#b5c5c7!important;color:#edf3f4!important;border-color:transparent!important;box-shadow:none!important;opacity:1!important;cursor:not-allowed}</style>
 <style>.status{display:none!important}.actions{margin-top:12px!important}</style>
+<style>
+  body.l30a1-completion-active .page{width:100%;height:100dvh;margin:0;padding:0}
+  body.l30a1-completion-active .stage{position:fixed;inset:0;transform:none;width:100vw;height:100dvh;padding:24px;border:0;border-radius:0;background:transparent;backdrop-filter:none;box-shadow:none}
+  body.l30a1-completion-active #app{width:100%;height:100%;max-width:none;max-height:none;overflow:visible}
+  .l30a1-completion-card{box-sizing:border-box;width:min(550px,calc(100vw - 40px));margin:auto;padding:38px 34px 34px;border:2px solid #ffffffd9;border-radius:30px;background:#fff;box-shadow:0 22px 60px #173f6340;text-align:center}
+  .l30a1-completion-card h1{margin:0;color:#183e63;font-size:clamp(28px,3vw,32px);font-weight:900;line-height:1.2}
+  .l30a1-completion-card p{margin:18px 0 26px;color:#183e63;font-size:clamp(18px,2vw,20px);font-weight:800;line-height:1.4}
+  .l30a1-completion-button{display:inline-flex;align-items:center;justify-content:center;width:min(100%,390px);min-height:68px;padding:14px 24px;border-radius:999px;background:#299e9a;box-shadow:0 5px 0 #187b7a,0 8px 18px #187b7a26;color:#fff;font:inherit;font-size:clamp(18px,2vw,20px);font-weight:900;text-align:center;text-decoration:none}
+</style>
 </head>
 <body>
   <main class="page">
@@ -46,6 +55,6 @@
   </main>
   <div class="backdrop" id="lesson30a1-start"><div class="modal"><p class="start-label">SESSION 14 · LESSON 30 · ACTIVITY 1</p><h2>MATCH IT!</h2><p>Read the word aloud first. Then choose the matching picture.</p><div class="start-actions"><button class="start" id="lesson30a1-go">START</button><button class="later" id="lesson30a1-later">NOT NOW</button></div></div></div>
   {{ prescribed_activity_data|json_script:"prescribed-activity-data" }}{% include 'pabasa_app/lesson30_prescribed_controls.html' with prefix='lesson30a1' help_text='Read the word aloud, then choose the matching picture.' %}
-  <script src="{% static 'pabasa_app/js/prescribed_lesson26_31_ui.js' %}?v=lesson26-31-ui-3" defer></script><script src="{% static 'pabasa_app/js/prescribed_match_it_lesson30_activity1.js' %}?v=20260926-basahin-english" defer></script>
+  <script src="{% static 'pabasa_app/js/prescribed_lesson26_31_ui.js' %}?v=lesson26-31-ui-4" defer></script><script src="{% static 'pabasa_app/js/prescribed_match_it_lesson30_activity1.js' %}?v=20260928-completion-ui" defer></script>
 </body>
 </html>
