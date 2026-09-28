@@ -15388,6 +15388,105 @@ def prescribed_activity_progress(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if activity_key == 'lesson-15-gawain-3':
+        try:
+            data = json.loads(request.body or '{}')
+            total = len(activity['items'])
+            if data.get('reset') is True:
+                state = {
+                    'current_index': 0,
+                    'completed_reading_items': [],
+                    'reading_attempts': {},
+                    'transcripts': {},
+                    'reading_matches': {},
+                    'statuses': {},
+                    'state_version': 1,
+                }
+                progress, _ = StudentActivityProgress.objects.update_or_create(
+                    student=student,
+                    activity_key=activity_key,
+                    defaults={
+                        'current_index': 0,
+                        'completed_items': 0,
+                        'correct_items': 0,
+                        'total_items': total,
+                        'activity_completed': False,
+                        'state': state,
+                    },
+                )
+                progress.refresh_from_db()
+                return JsonResponse({'success': True, 'progress': {
+                    'current_index': progress.current_index,
+                    'completed_items': progress.completed_items,
+                    'correct_items': progress.correct_items,
+                    'total_items': progress.total_items,
+                    'activity_completed': progress.activity_completed,
+                    'state': progress.state,
+                }})
+            incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
+            query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            existing = query.first()
+            old = existing.state if existing and isinstance(existing.state, dict) else {}
+            if existing and existing.activity_completed:
+                return JsonResponse({'success': True, 'progress': {
+                    'current_index': existing.current_index,
+                    'completed_items': existing.completed_items,
+                    'correct_items': existing.correct_items,
+                    'total_items': existing.total_items,
+                    'activity_completed': True,
+                    'state': old,
+                }})
+
+            current_index = max(0, min(total, int(incoming.get(
+                'current_index', old.get('current_index', existing.current_index if existing else 0)
+            ))))
+            completed = incoming.get('completed_reading_items', old.get('completed_reading_items', []))
+            if not isinstance(completed, list):
+                completed = []
+            completed = sorted({
+                int(value) for value in completed
+                if str(value).isdigit() and 0 <= int(value) < total
+            })
+            try:
+                state_version = max(1, int(incoming.get('state_version', old.get('state_version', 1))))
+            except (TypeError, ValueError):
+                state_version = 1
+            state = {
+                'current_index': current_index,
+                'completed_reading_items': completed,
+                'reading_attempts': incoming.get('reading_attempts', old.get('reading_attempts', {}))
+                    if isinstance(incoming.get('reading_attempts', old.get('reading_attempts', {})), dict) else {},
+                'transcripts': incoming.get('transcripts', old.get('transcripts', {}))
+                    if isinstance(incoming.get('transcripts', old.get('transcripts', {})), dict) else {},
+                'reading_matches': incoming.get('reading_matches', old.get('reading_matches', {}))
+                    if isinstance(incoming.get('reading_matches', old.get('reading_matches', {})), dict) else {},
+                'statuses': incoming.get('statuses', old.get('statuses', {}))
+                    if isinstance(incoming.get('statuses', old.get('statuses', {})), dict) else {},
+                'state_version': state_version,
+            }
+            progress, _ = StudentActivityProgress.objects.update_or_create(
+                student=student,
+                activity_key=activity_key,
+                defaults={
+                    'current_index': current_index,
+                    'completed_items': len(completed),
+                    'correct_items': 0,
+                    'total_items': total,
+                    'activity_completed': False,
+                    'state': state,
+                },
+            )
+            progress.refresh_from_db()
+            return JsonResponse({'success': True, 'progress': {
+                'current_index': progress.current_index,
+                'completed_items': progress.completed_items,
+                'correct_items': progress.correct_items,
+                'total_items': progress.total_items,
+                'activity_completed': progress.activity_completed,
+                'state': progress.state,
+            }})
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity_key in {
         'lesson-16-gawain-1', 'lesson-16-gawain-2', 'lesson-16-gawain-3',
         'session-6-lesson-16-gawain-4', 'lesson-17-18-gawain-5',
