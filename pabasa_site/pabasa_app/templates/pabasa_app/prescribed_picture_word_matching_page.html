@@ -44,6 +44,7 @@
     const lesson16Gawain3Audio = {
       readingCorrect: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/11_feedback_reading_correct.mp3' %}",
       readingRetry: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/12_feedback_reading_retry.mp3' %}",
+      subTry: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_7/subukan_mong_basahin_salita_tts.mp3' %}",
       matchingStart: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/13_matching_start_prompt.mp3' %}",
       matchingCorrect: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/14_feedback_matching_correct.mp3' %}",
       matchingRetry: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/15_feedback_matching_retry.mp3' %}",
@@ -159,7 +160,7 @@
       const item = items[oralIndex], button = app.querySelector('#oral-action'); busy = true;
       try {
         button.disabled = true; button.textContent = 'Nilo-load...'; if (isLesson16Gawain3) await playMappedAudio(lesson16Gawain3Items[oralIndex]?.word); else await playPrescribedReadAloud(item.read_word);
-        aloudAttempts = Math.min(3, aloudAttempts + 1); ttsPlays[String(oralIndex)] = aloudAttempts; if (aloudAttempts >= 3) { readingAttempts = 0; aloudAttempts = 0; sttAttempts[String(oralIndex)] = 0; ttsPlays[String(oralIndex)] = 0; oralMode = 'read'; } await save(); renderOral('Subukan mong basahin ang salita.');
+        aloudAttempts = Math.min(3, aloudAttempts + 1); const completedListeningCycle = aloudAttempts === 3; ttsPlays[String(oralIndex)] = aloudAttempts; if (completedListeningCycle) { readingAttempts = 0; aloudAttempts = 0; sttAttempts[String(oralIndex)] = 0; ttsPlays[String(oralIndex)] = 0; oralMode = 'read'; if (isLesson16Gawain3) await playMappedAudio(lesson16Gawain3Audio.subTry); } await save(); renderOral(completedListeningCycle ? 'Subukan mong basahin ang salita.' : 'Pakinggan muli kung kailangan.');
       } catch (error) { renderOral(error.message || 'Hindi available ang Read Aloud.', 'error'); }
       finally {
         stopOral();

@@ -81,8 +81,9 @@ window.PrescribedSession6Gawain9Audio = (() => {
     const text = (selector) => app.querySelector(selector)?.textContent.trim() || '';
     const isGawain7 = activity.activity_key === 'lesson-17-18-gawain-7';
     const isGawain8 = activity.activity_key === 'lesson-17-18-gawain-8';
+    const isGawain6 = activity.activity_key === 'lesson-17-18-gawain-6';
     const isGawain9 = activity.activity_key === 'lesson-17-18-gawain-9';
-    if (isGawain9) return;
+    if (isGawain6 || isGawain9) return;
     const gawain7Root = '/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_7/';
     const gawain8Root = '/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_8/';
     const gawain7PromptParts = [
@@ -246,8 +247,7 @@ window.PrescribedSession6Gawain9Audio = (() => {
 
       if (isGawain8) {
         if (feedbackChanged) {
-          const feedbackFile = gawain8Feedback[feedback]
-            || (feedback === 'Pakinggan muli ang salita.' ? gawain8Feedback['Pakinggan muna ang salita.'] : '');
+          const feedbackFile = gawain8Feedback[feedback] || '';
           if (feedbackFile) enqueueFiles([feedbackFile]);
         }
         if (stepChanged && step) {

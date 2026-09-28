@@ -45,6 +45,7 @@
     const isLesson16Gawain = ['lesson-16-gawain-1', 'lesson-16-gawain-2'].includes(data.activity_key);
     const isLesson16Gawain1 = data.activity_key === 'lesson-16-gawain-1';
     const isLesson16Gawain2 = data.activity_key === 'lesson-16-gawain-2';
+    const shouldPlaySession6Subukan = isLesson16Gawain1 || isLesson16Gawain2;
     const lesson16Gawain1Audio = {
       readingSuccess: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/01_reading_success_choose_missing_syllable.mp3' %}",
       listenFirst: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/02_listen_first_prompt.mp3' %}",
@@ -91,6 +92,7 @@
     ];
     const hasMappedLesson16Audio = isLesson16Gawain1 || isLesson16Gawain2;
     const mappedLesson16Audio = isLesson16Gawain1 ? lesson16Gawain1Audio : isLesson16Gawain2 ? lesson16Gawain2Audio : {};
+    const session6SubukanAudio = "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_7/subukan_mong_basahin_salita_tts.mp3' %}";
     const mappedLesson16ItemAudio = isLesson16Gawain1 ? lesson16Gawain1ItemAudio : isLesson16Gawain2 ? lesson16Gawain2ItemAudio : [];
 
     const state = () => ({phase, oral_mode: oralMode, reading_attempts: readingAttempts, aloud_attempts: aloudAttempts, written_attempts: writtenAttempts, state_version: ++stateVersion});
@@ -211,8 +213,9 @@
     async function readAloud(item) {
       if (busy) return;
       busy = true; aloudAttempts++;
-      if (aloudAttempts >= 3) { oralMode = 'read'; readingAttempts = 0; aloudAttempts = 0; }
-      try { if (hasMappedLesson16Audio) await playMappedAudio(mappedLesson16ItemAudio[index]?.word); else await playPrescribedReadAloud(item.word); await save(); render(); } catch (error) { const status = app.querySelector('#oralStatus'); if (status) status.textContent = error.message; } finally { busy = false; }
+      const completedListeningCycle = aloudAttempts >= 3;
+      if (completedListeningCycle) { oralMode = 'read'; readingAttempts = 0; aloudAttempts = 0; }
+      try { if (hasMappedLesson16Audio) await playMappedAudio(mappedLesson16ItemAudio[index]?.word); else await playPrescribedReadAloud(item.word); if (completedListeningCycle && shouldPlaySession6Subukan) { await playMappedAudio(session6SubukanAudio); narratedKey = `missing-syllable-prompt-${index}`; } await save(); render(); } catch (error) { const status = app.querySelector('#oralStatus'); if (status) status.textContent = error.message; } finally { busy = false; }
     }
     async function submit(value) {
       if (busy) return;
