@@ -99,7 +99,7 @@ from .reading_stt import (
 # prescribed lessons. These are recognition allowances only; they never alter
 # the word displayed to a learner or an answer key.
 PRESCRIBED_ENGLISH_RECOGNITION_ALIASES = {
-    'mat': {'math'}, 'hat': {'hot'}, 'wore': {'war'}, 'bat': {'butt', 'bath', 'but'}, 'bee': {'be', 'b'}, 'loved': {'love'}, 'quite': {'quiet'}, 'laughed': {'laugh'},
+    'mat': {'math'}, 'mill': {'meal', 'mil', 'milt'}, 'hat': {'hot'}, 'wore': {'war'}, 'bat': {'butt', 'bath', 'but'}, 'bee': {'be', 'b'}, 'loved': {'love'}, 'quite': {'quiet'}, 'laughed': {'laugh'},
 }
 
 
@@ -16552,38 +16552,64 @@ def prescribed_activity_progress(request, activity_key):
             if activity_key == 'lesson-29-gawain-1' and data.get('reset') is True:
                 progress_query.delete()
                 return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
-            if data.get('action') != 'answer':
-                raise ValueError('Invalid activity action.')
             existing = progress_query.first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             total = len(activity['items'])
             index = max(0, min(total, int(old.get('current_item', 0))))
+            action = data.get('action')
             if index >= total or int(data.get('item_index', -1)) != index:
                 raise ValueError('This item is no longer current.')
             item = activity['items'][index]
             target = item['answer'].lower()
             heard_words = re.findall(r'[a-z]+', str(data.get('heard', '')).lower())
-            accepted = _prescribed_spoken_word_matches(target, heard_words)
             attempts = max(0, int(old.get('attempts', 0)))
             hint_length = max(0, min(len(target), int(old.get('hint_length', 0))))
             help_visible = bool(old.get('help_visible', False))
-            if accepted:
-                index += 1
-                attempts = 0
-                hint_length = 0
-                help_visible = False
+            sentence_attempts = max(0, int(old.get('sentence_attempts', 0)))
+            phase = old.get('phase', 'answering')
+            if action == 'answer':
+                if phase != 'answering':
+                    raise ValueError('Read the completed sentence before moving on.')
+                accepted = _prescribed_spoken_word_matches(target, heard_words)
+                if accepted:
+                    attempts = 0
+                    hint_length = 0
+                    help_visible = False
+                    sentence_attempts = 0
+                    phase = 'sentence_reading'
+                else:
+                    attempts += 1
+                    if hint_length < len(target) and attempts >= (hint_length + 1) * 2:
+                        hint_length += 1
+                    elif hint_length >= len(target) and attempts >= (len(target) * 2) + 2:
+                        help_visible = True
+            elif action == 'sentence_reading':
+                if phase != 'sentence_reading':
+                    raise ValueError('Say the missing word first.')
+                sentence_words = re.findall(r'[a-z]+', f"{item['before']}{item['answer']}{item['after']}".lower())
+                accepted = bool(sentence_words) and all(
+                    _prescribed_spoken_word_matches(word, heard_words)
+                    or (word == 'matt' and bool({'mat', 'math'} & set(heard_words)))
+                    for word in sentence_words
+                )
+                if accepted:
+                    index += 1
+                    attempts = 0
+                    hint_length = 0
+                    help_visible = False
+                    sentence_attempts = 0
+                    phase = 'complete' if index >= total else 'answering'
+                else:
+                    sentence_attempts += 1
             else:
-                attempts += 1
-                if hint_length < len(target) and attempts >= (hint_length + 1) * 2:
-                    hint_length += 1
-                elif hint_length >= len(target) and attempts >= (len(target) * 2) + 2:
-                    help_visible = True
+                raise ValueError('Invalid activity action.')
             finished = index >= total
             saved = {'activity_key': activity_key, 'current_item': index, 'attempts': attempts,
                      'hint_length': hint_length, 'help_visible': help_visible,
                      'hint': target[:hint_length] if not accepted else '',
                      'help_word': target if help_visible else '',
-                     'completed_items': index, 'phase': 'complete' if finished else 'answering',
+                     'sentence_attempts': sentence_attempts,
+                     'completed_items': index, 'phase': 'complete' if finished else phase,
                      'state_version': int(old.get('state_version') or 0) + 1}
             progress, _ = StudentActivityProgress.objects.update_or_create(
                 student=student, activity_key=activity_key,
@@ -21554,6 +21580,8 @@ _LOCAL_PRESCRIBED_AUDIO_ALIASES = {
     )},
     ('lesson-29-gawain-3', 'greatjobyoutracedandsaid everyletter'.replace(' ', '')):
         'Great job! You completed Trace and Say..mp3',
+    ('lesson-29-gawain-1', 'greatjobyoucompletedallthesentences'):
+        'Great job! You completed Fill in the Blank..mp3',
     ('lesson-29-gawain-2', 'greatjobyouspottedallthewords'):
         'Great job! You completed Spot the Word..mp3',
     ('lesson-29-gawain-3', 'puh'): 'P.mp3',

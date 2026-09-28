@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from .models import School, Section, StudentActivityProgress, User
 from .prescribed_activity_catalog import prescribed_activity
+from .views import _local_prescribed_audio_file
 
 
 class PrescribedLesson29OralBlankTests(TestCase):
@@ -56,7 +57,7 @@ class PrescribedLesson29OralBlankTests(TestCase):
         payload = response.context['prescribed_activity_data']
         self.assertEqual(len(payload['items']), 5)
         self.assertEqual(payload['items'][0]['before'], 'Matt is on the ')
-        self.assertNotIn('answer', str(payload))
+        self.assertEqual(payload['items'][0]['answer'], 'list')
         self.assertNotContains(response, 'Matt is on the list')
 
     def test_hints_reveal_one_letter_every_two_misses_then_offer_audio(self):
@@ -70,14 +71,68 @@ class PrescribedLesson29OralBlankTests(TestCase):
             self.assertEqual(state['help_visible'], audio, f'attempt {attempt}')
             self.assertEqual(state['help_word'], 'list' if audio else '', f'attempt {attempt}')
 
-    def test_correct_answers_advance_each_item_and_complete_activity(self):
+    def test_sentence_reading_keeps_the_current_item_until_the_full_sentence_is_read(self):
+        word_result = self.post_action(action='answer', item_index=0, heard='list')
+        self.assertTrue(word_result.json()['accepted'])
+
+        incomplete_result = self.post_action(
+            action='sentence_reading', item_index=0, heard='Matt is on list',
+        )
+        self.assertFalse(incomplete_result.json()['accepted'])
+        incomplete_state = incomplete_result.json()['progress']['state']
+        self.assertEqual(incomplete_state['phase'], 'sentence_reading')
+        self.assertEqual(incomplete_result.json()['progress']['completed_items'], 0)
+
+        complete_result = self.post_action(
+            action='sentence_reading', item_index=0, heard='Math is on the list',
+        )
+        self.assertTrue(complete_result.json()['accepted'])
+        self.assertEqual(complete_result.json()['progress']['completed_items'], 1)
+
+    def test_mill_accepts_the_common_meal_transcription(self):
+        progress = StudentActivityProgress.objects.create(
+            student=self.student,
+            activity_key='lesson-29-gawain-1',
+            current_index=3,
+            completed_items=3,
+            correct_items=3,
+            total_items=5,
+            state={'current_item': 3, 'completed_items': 3, 'phase': 'answering'},
+        )
+        response = self.post_action(action='answer', item_index=3, heard='meal')
+        self.assertTrue(response.json()['accepted'])
+        progress.refresh_from_db()
+        self.assertEqual(progress.state['phase'], 'sentence_reading')
+
+    def test_completion_feedback_uses_the_existing_local_audio_file(self):
+        audio_file = _local_prescribed_audio_file(
+            'lesson-29-gawain-1', 'Great job! You completed all the sentences.',
+        )
+        self.assertIsNotNone(audio_file)
+        self.assertEqual(audio_file.name, 'Great job! You completed Fill in the Blank..mp3')
+
+    def test_correct_word_then_sentence_reading_advances_each_item_and_completes_activity(self):
         early = self.client.post(self.complete_url, data='{}', content_type='application/json')
         self.assertEqual(early.status_code, 400)
-        for index, answer in enumerate(['list', 'last', 'stem', 'mill', 'fog']):
-            result = self.post_action(action='answer', item_index=index, heard=answer)
-            self.assertEqual(result.status_code, 200)
-            self.assertTrue(result.json()['accepted'])
-            self.assertEqual(result.json()['progress']['completed_items'], index + 1)
+        items = [
+            ('list', 'Matt is on the list.'),
+            ('last', 'The last man is Matt.'),
+            ('stem', 'The stem is green.'),
+            ('mill', 'Matt sets the grain mill.'),
+            ('fog', 'The city is covered in fog.'),
+        ]
+        for index, (answer, sentence) in enumerate(items):
+            word_result = self.post_action(action='answer', item_index=index, heard=answer)
+            self.assertEqual(word_result.status_code, 200)
+            self.assertTrue(word_result.json()['accepted'])
+            word_state = word_result.json()['progress']['state']
+            self.assertEqual(word_state['phase'], 'sentence_reading')
+            self.assertEqual(word_result.json()['progress']['completed_items'], index)
+
+            sentence_result = self.post_action(action='sentence_reading', item_index=index, heard=sentence)
+            self.assertEqual(sentence_result.status_code, 200)
+            self.assertTrue(sentence_result.json()['accepted'])
+            self.assertEqual(sentence_result.json()['progress']['completed_items'], index + 1)
         progress = StudentActivityProgress.objects.get(student=self.student, activity_key='lesson-29-gawain-1')
         self.assertTrue(progress.activity_completed)
         self.assertEqual(progress.completed_items, 5)
