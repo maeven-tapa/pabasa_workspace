@@ -6,23 +6,32 @@
     return;
   }
   const storageKey = 'pabasa.prescribed.stt-provider';
-  let provider = 'google';
-  try { if (['azure', 'knowlez'].includes(localStorage.getItem(storageKey))) provider = 'knowlez'; } catch (_) {}
+  const choices = ['google', 'chirp_2', 'chirp_3', 'knowlez'];
+  let selection = 'google';
+  try {
+    const saved = localStorage.getItem(storageKey);
+    if (saved === 'azure') selection = 'knowlez';
+    else if (choices.includes(saved)) selection = saved;
+  } catch (_) {}
+  const descriptions = {
+    google: 'Google speech recognition uses the default model for this activity.',
+    chirp_2: 'Chirp 2 is selected. Word values appear in the speech debug panel. Google does not treat these values as true confidence scores.',
+    chirp_3: 'Chirp 3 is selected. Word-level confidence is unavailable.',
+    knowlez: 'Knowlez speech recognition is selected.',
+  };
 
   const sync = () => document.querySelectorAll('[data-prescribed-stt]').forEach(panel => {
-    panel.querySelector('[data-prescribed-stt-toggle]').checked = provider === 'knowlez';
-    panel.querySelector('[data-prescribed-stt-status]').textContent = provider === 'knowlez'
-      ? 'Knowlez speech recognition is selected.'
-      : 'Google speech recognition is selected.';
+    panel.querySelector('[data-prescribed-stt-select]').value = selection;
+    panel.querySelector('[data-prescribed-stt-status]').textContent = descriptions[selection];
   });
   function init() {
-    document.querySelectorAll('[data-prescribed-stt-toggle]').forEach(toggle => {
-      if (toggle.dataset.sttBound) return;
-      toggle.dataset.sttBound = 'true';
-      toggle.addEventListener('change', () => {
+    document.querySelectorAll('[data-prescribed-stt-select]').forEach(select => {
+      if (select.dataset.sttBound) return;
+      select.dataset.sttBound = 'true';
+      select.addEventListener('change', () => {
         window.Basahin?.cancelAll?.();
-        provider = toggle.checked ? 'knowlez' : 'google';
-        try { localStorage.setItem(storageKey, provider); } catch (_) {}
+        selection = choices.includes(select.value) ? select.value : 'google';
+        try { localStorage.setItem(storageKey, selection); } catch (_) {}
         sync();
       });
     });
@@ -39,7 +48,9 @@
       && options?.body instanceof FormData && options.body.has('audio');
     if (url.origin === window.location.origin && method === 'POST' && (transcription || workbookRecording)) {
       const headers = new Headers(options?.headers || input?.headers);
-      headers.set('X-Pabasa-STT-Provider', provider);
+      headers.set('X-Pabasa-STT-Provider', selection === 'knowlez' ? 'knowlez' : 'google');
+      if (selection.startsWith('chirp_')) headers.set('X-Pabasa-STT-Model', selection);
+      else headers.delete('X-Pabasa-STT-Model');
       return originalFetch(input, {...options, headers});
     }
     return originalFetch(input, options);

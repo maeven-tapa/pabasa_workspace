@@ -77,6 +77,7 @@ from .system_clock import real_now as session_now
 from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
 from .knowlez_stt import KnowlezSpeechError, transcribe_knowlez_audio, uses_knowlez_stt
 from .reading_stt import (
+    stt_word_metadata,
     ReadingMatcher,
     align_story_transcript,
     analyze_reading,
@@ -17666,6 +17667,7 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             return JsonResponse({'success': False, 'error': 'Activity changed in another tab. Reload to resume.', 'state': state}, status=409)
 
         verified = None
+        speech_details = {}
         if event.get('action') in {'reading', 'reading_attempt', 'reading_syllable_attempt'}:
             item_index = int(state.get('reading_index', 0)) if activity_key == 'aral-l22-g4-f-syllable-builder' else int(state.get('index', 0))
             if activity_key in {'aral-l23-g3-j-word-reading', 'aral-l23-g7-q-word-reading', 'aral-l24-g7-z-word-reading'}:
@@ -17709,6 +17711,10 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             result = json.loads(response.content)
             if response.status_code != 200 or not result.get('success'):
                 return response
+            speech_details = {key: result[key] for key in (
+                'transcript', 'raw_transcript', 'language_code', 'stt_provider', 'stt_model',
+                'stt_fallback_reason', 'stt_words', 'stt_word_confidence_type',
+            ) if key in result}
             if activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
                 event = dict(event)
                 raw_transcript = str(result.get('raw_transcript') or result.get('transcript') or '').strip()
@@ -17941,7 +17947,7 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             defaults={'current_index': index, 'completed_items': index, 'correct_items': correct,
                       'total_items': total, 'activity_completed': bool(updated.get('completed')), 'state': updated},
         )
-        return JsonResponse({'success': True, 'state': updated, 'progress': {
+        return JsonResponse({'success': True, **speech_details, 'state': updated, 'progress': {
             'current_index': progress.current_index, 'completed_items': progress.completed_items,
             'correct_items': progress.correct_items, 'total_items': progress.total_items,
             'activity_completed': progress.activity_completed,
@@ -21279,6 +21285,17 @@ def word_decoding_transcribe_api(request):
         return JsonResponse({'success': False, 'error': str(exc)}, status=502)
 
 
+def _requested_chirp_model(request):
+    model = request.headers.get('X-Pabasa-STT-Model', '').strip().lower()
+    return model if model in {'chirp_2', 'chirp_3'} else ''
+
+
+def _chirp_location(model):
+    if model == 'chirp_2':
+        return getattr(settings, 'GOOGLE_STT_CHIRP2_LOCATION', 'us-central1').strip()
+    return getattr(settings, 'GOOGLE_STT_LOCATION', 'global').strip()
+
+
 def _lesson1_ffmpeg_binary():
     configured = os.environ.get('FFMPEG_BINARY', '').strip() or 'ffmpeg'
     return shutil.which(configured)
@@ -21364,6 +21381,27 @@ def lesson_1_gawain_1_transcribe_api(request):
         except KnowlezSpeechError as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=exc.status)
 
+    selected_model = _requested_chirp_model(request)
+    if selected_model:
+        words = []
+        try:
+            transcript, model_used, fallback_reason = transcribe_audio_bytes_with_model(
+                audio.read(), getattr(settings, 'GOOGLE_STT_API_KEY', '').strip(),
+                language_code='fil-PH', model=selected_model,
+                project_id=getattr(settings, 'GOOGLE_CLOUD_PROJECT_ID', '').strip(),
+                location=_chirp_location(selected_model),
+                credentials_file=str(getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', '') or ''),
+                word_details=words, allow_fallback=False,
+            )
+            return JsonResponse({
+                'success': True, 'raw_transcript': transcript, 'transcript': transcript,
+                'stt_model': model_used, 'stt_provider': 'google', 'language_code': 'fil-PH',
+                'stt_fallback_reason': fallback_reason, **stt_word_metadata(words, model_used),
+            })
+        except Exception as exc:
+            logger.exception('Lesson 1 Chirp transcription failed')
+            return JsonResponse({'success': False, 'error': str(exc)}, status=502)
+
     ffmpeg = _lesson1_ffmpeg_binary()
     if not ffmpeg:
         logger.error('Lesson 1 transcription requires FFmpeg; FFMPEG_BINARY was not found.')
@@ -21432,19 +21470,20 @@ def reading_transcribe_api(request):
     ))
     api_key = getattr(settings, 'GOOGLE_STT_API_KEY', '').strip()
     project_id = getattr(settings, 'GOOGLE_CLOUD_PROJECT_ID', '').strip()
-    location = getattr(settings, 'GOOGLE_STT_LOCATION', 'global').strip()
     stt_model = getattr(settings, 'GOOGLE_STT_MODEL', 'chirp_3').strip()
-    # Filipino CRLA speech uses the Speech-to-Text v1 configuration.  Keep
-    # Free Mode aligned with that proven path instead of accepting a Chirp 3
-    # result when the global default is enabled.
-    if language_code.lower() == 'fil-ph':
+    selected_model = _requested_chirp_model(request)
+    # Preserve the Filipino default while honoring an explicit Audio Settings choice.
+    if language_code.lower() == 'fil-ph' and not selected_model:
         stt_model = ''
+    stt_model = selected_model or stt_model
+    location = _chirp_location(stt_model)
     credentials_file = str(getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', '') or '')
 
     knowlez_selected = uses_knowlez_stt(request)
-    if not knowlez_selected and not api_key and stt_model != 'chirp_3':
+    if not knowlez_selected and not api_key and stt_model not in {'chirp_2', 'chirp_3'}:
         return JsonResponse({'success': False, 'error': 'Google Speech is not configured.'}, status=503)
 
+    words = []
     try:
         if knowlez_selected:
             transcript, model_used, fallback_reason = transcribe_knowlez_audio(audio, language_code)
@@ -21455,6 +21494,8 @@ def reading_transcribe_api(request):
                 language_code=language_code,
                 phrase_hints=phrase_hints,
                 model=stt_model,
+                word_details=words,
+                allow_fallback=not selected_model,
                 project_id=project_id,
                 location=location,
                 mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
@@ -21634,6 +21675,7 @@ def reading_transcribe_api(request):
             'stt_provider': 'knowlez' if knowlez_selected else 'google',
             'stt_model': model_used,
             'stt_fallback_reason': fallback_reason,
+            **stt_word_metadata(words, model_used),
         })
         logger.warning(
             "FREE_MODE_STT_DIAGNOSTIC final_json raw_transcript=%r transcript=%r",

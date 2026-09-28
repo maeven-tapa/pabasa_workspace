@@ -100,11 +100,29 @@ Configure the Google Cloud project, location, and model in `pabasa_site/pabasa_s
 
 Browser recording requires microphone permission and a secure context, such as HTTPS or localhost.
 
+In **Audio Settings → Speech recognition**, choose **Google (activity default)**,
+**Chirp 2**, **Chirp 3**, or **Knowlez STT**. The choice is saved in this browser
+and applies to subsequent reading assessment and prescribed activity speech requests.
+Explicit Chirp choices use Speech-to-Text V2, including Filipino recordings and
+Lesson 1. Errors are reported without silently falling back to another model.
+The activity default preserves the existing Filipino V1 route.
+
+Chirp 2 uses `GOOGLE_STT_CHIRP2_LOCATION` (environment variable, default
+`us-central1`), separately from Chirp 3's `GOOGLE_STT_LOCATION` (`us`). Configure
+a Chirp 2 region available to your project, such as `asia-southeast1`.
+Chirp 2 requests word confidence and timestamps. Responses expose `stt_words`
+with the original recognized word, `confidence`, `start_seconds`, and `end_seconds`.
+Missing confidence is `null`. Enable **Show speech debug panel** to inspect the
+returned word values. Google documents that [Chirp 2's word values are not true
+confidence scores](https://docs.cloud.google.com/speech-to-text/docs/models/chirp-2).
+The response marks them with `stt_word_confidence_type: provider_value_not_confidence`;
+they do not change reading grades. Chirp 3 does not request word confidence.
+
 ### Optional Knowlez speech recognition
 
-In a prescribed lesson or session activity, open **Audio Settings** and turn on
-**Use Knowlez STT for speech recognition**. The selection is remembered in
-this browser across prescribed activities. Turning it off restores Google STT.
+Open **Audio Settings → Speech recognition** and select **Knowlez STT**.
+The selection is remembered in this browser. Select **Google (activity default)**
+to restore the default Google STT route.
 Read-aloud voices and prerecorded audio are unchanged. Provider errors are shown to
 the learner; the app does not silently switch providers.
 

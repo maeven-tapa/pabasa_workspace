@@ -177,6 +177,8 @@ EMAIL_TIMEOUT = 15
 GOOGLE_STT_API_KEY = os.environ.get('GOOGLE_API_KEY', '')
 GOOGLE_CLOUD_PROJECT_ID = 'project-2b0d295d-ee06-40a7-927'
 GOOGLE_STT_LOCATION = 'us'
+# Chirp 2 requires a supported single region (the Chirp 3 "us" endpoint won't work).
+GOOGLE_STT_CHIRP2_LOCATION = os.environ.get('GOOGLE_STT_CHIRP2_LOCATION', 'us-central1')
 # Chirp 3 is used through Speech-to-Text V2 Recognize for short reading clips.
 GOOGLE_STT_MODEL = 'chirp_3'
 GOOGLE_STT_CREDENTIALS_FILE = BASE_DIR / 'google-stt-service-account.json'

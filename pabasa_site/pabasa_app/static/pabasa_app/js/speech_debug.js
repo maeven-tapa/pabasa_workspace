@@ -5,7 +5,7 @@
     const histories = new WeakMap();
     const format = data => {
       if (!data?.transcript) return '';
-      const model = {chirp_3: 'Chirp 3', stt_v1: 'STT v1', knowlez_stt: 'Knowlez STT'}[data.stt_model] || data.stt_model || 'Google STT';
+      const model = {chirp_2: 'Chirp 2', chirp_3: 'Chirp 3', stt_v1: 'STT v1', knowlez_stt: 'Knowlez STT'}[data.stt_model] || data.stt_model || 'Google STT';
       const language = data.language_code ? ` | Language: ${data.language_code}` : '';
       const fallback = data.stt_fallback_reason ? ` | Fallback: ${data.stt_fallback_reason}` : '';
       const raw = data.raw_transcript && data.raw_transcript !== data.transcript ? ` | Raw: ${data.raw_transcript}` : '';
@@ -14,7 +14,11 @@
         : (data.syllable_context ? ` | TASS Context: ${data.syllable_context}` : '');
       const syllables = Number(data.target_syllable_count || 0) > 0
         ? ` | Syllables: ${Number(data.syllable_context_count || 0)}/${Number(data.target_syllable_count)}` : '';
-      return `Model: ${model}${language}${fallback} | Words: ${data.transcript}${raw}${stitching}${syllables}`;
+      const wordValues = data.stt_model === 'chirp_2'
+        ? ` | Word values (not true confidence): ${(data.stt_words || []).map(word =>
+          `${word.word}: ${typeof word.confidence === 'number' ? word.confidence.toFixed(3) : 'unavailable'}`
+        ).join(', ') || 'unavailable'}` : '';
+      return `Model: ${model}${language}${fallback} | Words: ${data.transcript}${raw}${stitching}${syllables}${wordValues}`;
     };
     const publish = data => {
       const line = format(data);
@@ -35,7 +39,9 @@
       window.fetch = async (...args) => {
         const response = await fetch(...args);
         const url = String(args[0]?.url || args[0] || '');
-        if (response.ok && /\/transcribe\/(?:[?#]|$)/.test(url)) {
+        const transcription = /\/transcribe\/(?:[?#]|$)/.test(url);
+        const workbook = /\/api\/dashboard\/assessment\/activity\/prescribed\/[^/]+\/progress\/(?:[?#]|$)/.test(url);
+        if (response.ok && (transcription || workbook)) {
           response.clone().json().then(publish).catch(() => {});
         }
         return response;

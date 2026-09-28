@@ -523,6 +523,8 @@ class PrescribedWorkbookFlowTests(TestCase):
         state = response.json()['state']
         with patch('pabasa_app.views.reading_transcribe_api', return_value=JsonResponse({
             'success': True, 'transcript': 'cac', 'complete': True,
+            'stt_model': 'chirp_2', 'stt_words': [{'word': 'cac', 'confidence': 0.84}],
+            'stt_word_confidence_type': 'provider_value_not_confidence',
         })) as speech:
             response = self.client.post(progress_url, {
                 'action': 'reading_syllable_attempt', 'revision': state['revision'],
@@ -530,6 +532,9 @@ class PrescribedWorkbookFlowTests(TestCase):
             })
         self.assertEqual(response.status_code, 200, response.content)
         self.assertTrue(speech.called)
+        self.assertEqual(response.json()['stt_model'], 'chirp_2')
+        self.assertEqual(response.json()['stt_words'], [{'word': 'cac', 'confidence': 0.84}])
+        self.assertEqual(response.json()['stt_word_confidence_type'], 'provider_value_not_confidence')
         state = response.json()['state']
         self.assertEqual(state['index'], 1)
         self.assertFalse(state['read_aloud_completed'])

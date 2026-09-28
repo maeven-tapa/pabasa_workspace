@@ -143,5 +143,5 @@ class KnowlezSpeechRoutingTests(SimpleTestCase):
     def test_settings_render_without_credentials(self):
         with override_settings(AZURE_SPEECH_KEY='must-not-reach-browser'):
             html = render_to_string('pabasa_app/session1_prescribed_controls.html', {'prefix': 'lesson'})
-        self.assertIn('data-prescribed-stt-toggle', html)
+        self.assertIn('data-prescribed-stt-select', html)
         self.assertNotIn('must-not-reach-browser', html)

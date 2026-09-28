@@ -26,7 +26,7 @@ def transcribe_knowlez_audio(audio, language_code):
     if not key:
         raise KnowlezSpeechError(
             'Knowlez speech recognition is not configured. Ask your administrator '
-            'to configure it, or turn off Knowlez in Audio Settings.',
+            'to configure it, or select Google in Audio Settings.',
             status=503,
         )
     if not audio.size:

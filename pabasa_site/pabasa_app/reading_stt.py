@@ -379,12 +379,12 @@ def v1_model_for_language(model, language_code):
     requested_model = (model or "").strip()
     normalized_language = str(language_code or "").lower()
     if normalized_language == "en-ph":
-        if requested_model in {"", "chirp_3", "latest_short", "latest_long"}:
+        if requested_model in {"", "chirp_2", "chirp_3", "latest_short", "latest_long"}:
             return "command_and_search"
     if normalized_language == "fil-ph":
-        if requested_model in {"chirp_3", "latest_short", "latest_long"}:
+        if requested_model in {"chirp_2", "chirp_3", "latest_short", "latest_long"}:
             return ""
-    if requested_model == "chirp_3":
+    if requested_model in {"chirp_2", "chirp_3"}:
         return "latest_short" if normalized_language.startswith("en-") else ""
     return requested_model or ("latest_short" if normalized_language.startswith("en-") else "")
 
@@ -424,24 +424,33 @@ def transcribe_audio_bytes_with_model(
     location="global",
     mime_type="audio/webm",
     credentials_file="",
+    word_details=None,
+    allow_fallback=True,
 ):
+    if word_details is not None:
+        word_details.clear()
     fallback_reason = ""
-    if model == "chirp_3":
+    if model in {"chirp_2", "chirp_3"}:
         try:
-            transcript = transcribe_audio_bytes_v2_chirp3(
+            transcribe = transcribe_audio_bytes_v2_chirp2 if model == "chirp_2" else transcribe_audio_bytes_v2_chirp3
+            transcript = transcribe(
                 audio_bytes,
                 language_code,
                 project_id,
                 location,
                 credentials_file,
+                word_details=word_details,
             )
-            if transcript:
-                return transcript, "chirp_3", ""
+            if transcript or not allow_fallback or not api_key:
+                return transcript, model, ""
+            fallback_reason = "No speech returned by the selected Chirp model."
         except Exception as exc:
             fallback_reason = summarize_stt_error(exc)
-            if not api_key:
+            if not allow_fallback or not api_key:
                 raise
 
+    if word_details is not None:
+        word_details.clear()
     v1_model = v1_model_for_language(model, language_code)
     return transcribe_audio_bytes_v1(
         audio_bytes,
@@ -467,16 +476,45 @@ def transcribe_audio_bytes_v2_chirp3(
     location,
     credentials_file,
     timeout_seconds=12,
+    word_details=None,
+):
+    return _transcribe_audio_bytes_v2_chirp(
+        audio_bytes, language_code, project_id, location, credentials_file,
+        "chirp_3", timeout_seconds, word_details,
+    )
+
+
+def transcribe_audio_bytes_v2_chirp2(
+    audio_bytes, language_code, project_id, location, credentials_file,
+    timeout_seconds=12, word_details=None,
+):
+    return _transcribe_audio_bytes_v2_chirp(
+        audio_bytes, language_code, project_id, location, credentials_file,
+        "chirp_2", timeout_seconds, word_details,
+    )
+
+
+def stt_word_metadata(words, model):
+    """Keep provider word values separate from reading accuracy and grading."""
+    return {
+        "stt_words": words,
+        "stt_word_confidence_type": "provider_value_not_confidence" if model == "chirp_2" else "unavailable",
+    }
+
+
+def _transcribe_audio_bytes_v2_chirp(
+    audio_bytes, language_code, project_id, location, credentials_file,
+    model, timeout_seconds, word_details,
 ):
     if not project_id:
-        raise RuntimeError("Set GOOGLE_CLOUD_PROJECT_ID in settings.py to use Chirp 3.")
+        raise RuntimeError("Set GOOGLE_CLOUD_PROJECT_ID in settings.py to use Chirp.")
     try:
         from google.api_core.client_options import ClientOptions
         from google.cloud.speech_v2 import SpeechClient
         from google.cloud.speech_v2.types import cloud_speech
         from google.oauth2 import service_account
     except ImportError as exc:
-        raise RuntimeError("Install google-cloud-speech to use Chirp 3.") from exc
+        raise RuntimeError("Install google-cloud-speech to use Chirp.") from exc
 
     credentials = google_stt_credentials(service_account, credentials_file)
     client_options = None
@@ -484,10 +522,14 @@ def transcribe_audio_bytes_v2_chirp3(
         client_options = ClientOptions(api_endpoint=f"{location}-speech.googleapis.com")
     client = SpeechClient(credentials=credentials, client_options=client_options)
 
+    features = {}
+    if model == "chirp_2":
+        features = {"enable_word_confidence": True, "enable_word_time_offsets": True}
     config = cloud_speech.RecognitionConfig(
         auto_decoding_config=cloud_speech.AutoDetectDecodingConfig(),
         language_codes=[language_code],
-        model="chirp_3",
+        model=model,
+        features=cloud_speech.RecognitionFeatures(**features),
     )
     request = cloud_speech.RecognizeRequest(
         recognizer=f"projects/{project_id}/locations/{location or 'global'}/recognizers/_",
@@ -495,12 +537,24 @@ def transcribe_audio_bytes_v2_chirp3(
         content=audio_bytes,
     )
     response = client.recognize(request=request, timeout=timeout_seconds)
-    if not response.results:
-        return ""
-    alternatives = response.results[0].alternatives
-    if not alternatives:
-        return ""
-    return alternatives[0].transcript.strip()
+    transcripts = []
+    for result in response.results:
+        if not result.alternatives:
+            continue
+        alternative = result.alternatives[0]
+        transcripts.append(alternative.transcript.strip())
+        if word_details is not None:
+            for word in getattr(alternative, "words", []):
+                # Proto3 uses 0 when confidence is unset. Google also documents
+                # Chirp 2's nonzero values as not true confidence scores.
+                value = getattr(word, "confidence", 0)
+                word_details.append({
+                    "word": word.word,
+                    "confidence": float(value) if model == "chirp_2" and 0 < value <= 1 else None,
+                    "start_seconds": word.start_offset.total_seconds(),
+                    "end_seconds": word.end_offset.total_seconds(),
+                })
+    return " ".join(part for part in transcripts if part)
 
 
 def google_stt_credentials(service_account, credentials_file):

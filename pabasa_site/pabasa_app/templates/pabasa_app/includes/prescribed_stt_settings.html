@@ -1,11 +1,16 @@
 {% load static %}
-<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_stt_settings.css' %}?v=1">
+<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_stt_settings.css' %}?v=2">
 <div class="prescribed-stt-settings" data-prescribed-stt>
   <label class="prescribed-stt-label">
-    <input type="checkbox" data-prescribed-stt-toggle>
-    <span>Use Knowlez STT for speech recognition</span>
+    <span>Speech recognition</span>
+    <select class="prescribed-stt-select" data-prescribed-stt-select>
+      <option value="google">Google (activity default)</option>
+      <option value="chirp_2">Chirp 2 — word-level values</option>
+      <option value="chirp_3">Chirp 3</option>
+      <option value="knowlez">Knowlez STT</option>
+    </select>
   </label>
   <p class="prescribed-stt-status" data-prescribed-stt-status aria-live="polite">Google speech recognition is selected.</p>
-  <p class="prescribed-stt-help">Applies to your microphone in prescribed lessons and session activities. Read-aloud audio stays the same.</p>
+  <p class="prescribed-stt-help">Saved for reading assessments, prescribed lessons, and session activities. Takes effect on your next speech request. Read-aloud audio stays the same.</p>
 </div>
-<script src="{% static 'pabasa_app/js/prescribed_stt_settings.js' %}?v=2"></script>
+<script src="{% static 'pabasa_app/js/prescribed_stt_settings.js' %}?v=3"></script>
