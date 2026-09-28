@@ -74,7 +74,7 @@ window.PrescribedSession6Gawain6Audio = {
   app.addEventListener('click', (event) => {
     const button = event.target.closest('button');
     if (!button) return;
-    if (button.id === 'start') {
+    if (button.id === 'start' && !window.__session6IntroModalAudioStarted) {
       playSequence([audioMap.intro, audioMap.prompts.pusa]);
       return;
     }

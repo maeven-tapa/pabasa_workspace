@@ -222,6 +222,8 @@ window.PrescribedSession6Gawain9Audio = (() => {
     };
 
     const inspect = () => {
+      if (window.__session6IntroModalOpen || document.querySelector('.lesson-start-backdrop')) return;
+
       const feedback = text('#status');
       const step = currentStep();
       const stepChanged = Boolean(step && step.key !== lastStep);
@@ -237,7 +239,13 @@ window.PrescribedSession6Gawain9Audio = (() => {
           const oralMatch = text('.hint').match(/Salita (\d+) sa 5/);
           if (oralMatch && app.querySelector('#oral')) {
             const prompt = gawain7PromptParts[Number(oralMatch[1]) - 1];
-            if (prompt) enqueueFiles(prompt, 3000, gawain7Root);
+            if (prompt) {
+              const files = window.__session6IntroModalSkipFirstPromptIntro && oralMatch[1] === '1'
+                ? prompt.slice(1)
+                : prompt;
+              window.__session6IntroModalSkipFirstPromptIntro = false;
+              enqueueFiles(files, 3000, gawain7Root);
+            }
           } else if (app.querySelector('.board')) {
             enqueueFiles(['ngayon_ikabit_ang_bawat_larawan_sa_tamang_ngalan_tts.mp3'], 3000, gawain7Root);
           }
@@ -257,10 +265,15 @@ window.PrescribedSession6Gawain9Audio = (() => {
             const groupIndex = Number(oralMatch[1]) - 1;
             const wordIndex = Number(oralMatch[2]) - 1;
             const word = text('.word.active') || text('.word');
-            enqueueFiles([
+            let files = [
               'basahin_bilugan_naiiba_sa_pangkat_tts.mp3',
               gawain8Groups[groupIndex], gawain8WordNumbers[wordIndex], gawain8Words[word],
-            ]);
+            ];
+            if (window.__session6IntroModalSkipFirstPromptIntro && groupIndex === 0 && wordIndex === 0) {
+              files = files.slice(1);
+            }
+            window.__session6IntroModalSkipFirstPromptIntro = false;
+            enqueueFiles(files);
           } else if (app.querySelector('[data-answer]')) {
             enqueueFiles(['basahin_bilugan_naiiba_sa_pangkat_tts.mp3']);
           }
