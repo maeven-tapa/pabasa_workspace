@@ -100,7 +100,7 @@ from .reading_stt import (
 # prescribed lessons. These are recognition allowances only; they never alter
 # the word displayed to a learner or an answer key.
 PRESCRIBED_ENGLISH_RECOGNITION_ALIASES = {
-    'mat': {'math'}, 'mill': {'meal', 'mil', 'milt'}, 'hat': {'hot'}, 'wore': {'war'}, 'bat': {'butt', 'bath', 'but'}, 'bee': {'be', 'b'}, 'loved': {'love'}, 'quite': {'quiet'}, 'laughed': {'laugh'},
+    'mat': {'math'}, 'mill': {'meal', 'mil', 'milt'}, 'hat': {'hot'}, 'wore': {'war'}, 'bat': {'butt', 'bath', 'but'}, 'bee': {'be', 'b'}, 'bit': {'b', 'it', 'beet', 'beat'}, 'bin': {'been', 'bean'}, 'lip': {'leap'}, 'loved': {'love'}, 'quite': {'quiet'}, 'laughed': {'laugh'},
 }
 
 
@@ -21969,10 +21969,24 @@ _LOCAL_PRESCRIBED_AUDIO_ALIASES = {
         'Great job! You completed Story Time..mp3',
     ('lesson-31-gawain-1', 'circletherightwordreadallthreechoicesaloudoneatatimethenlookatthepictureandcirclethecorrectword'):
         'circle_right_word_intro.mp3',
+    ('lesson-31-gawain-1', 'nowencircletherightchoice'):
+        'Now, encircle the right choice..mp3',
+    ('lesson-31-gawain-1', 'hmmletstrythatagain'):
+        'Hmm, let’s try that again..mp3',
+    ('lesson-31-gawain-1', 'correctnowletsreadthenextchoices'):
+        "Correct, now let's read the next choices..mp3",
     ('lesson-31-gawain-1', 'wonderfulyoufinishedtheactivity'):
         'Great job! You completed Circle the Right Word..mp3',
     ('lesson-31-gawain-2', 'greatjobyoucompletedeverysentence'):
         'Great job! You completed Fill in the Blank..mp3',
+    ('lesson-31-gawain-2', 'nowletschoosethewordtofillintheblank'):
+        "Now, let's choose the word to fill in the blank..mp3",
+    ('lesson-31-gawain-2', 'hmmletstrythatagain'):
+        'Hmm, let’s try that again..mp3',
+    ('lesson-31-gawain-2', 'correct'):
+        'Correct.mp3',
+    ('lesson-31-gawain-2', 'correctnowletsreadthewholesentence'):
+        'Correct, now let’s read the whole sentence..mp3',
     ('lesson-31-gawain-3', 'greatjobyoucompletedeverysentence'):
         'Great job! You completed Fix the Sentence..mp3',
     ('lesson-31-gawain-4', 'greatjobyoucompletedtheactivity'):
