@@ -76,10 +76,17 @@
         answers.hidden = true;
         answers.querySelectorAll('button').forEach(button => { button.disabled = true; });
         ra[wi] += 1;
+        // The guided flow caches the last retry narration key on the status
+        // element. Clear it before publishing a new failed attempt so retry
+        // feedback is narrated on attempts 2 and 3 as well.
+        delete status.dataset.feedbackNarrationKey;
         status.textContent = `Hindi pa ito tama. Subukan muli. (${ra[wi]}/3)`;
         status.classList.add('warning');
         readButton.hidden = false;
         readButton.disabled = false;
+        readButton.classList.remove('is-recording', 'is-processing');
+        readButton.removeAttribute('aria-busy');
+        readButton.textContent = window.BasahinButton?.LABEL || 'Basahin';
         if (listenButton) listenButton.hidden = false;
         return;
       }
@@ -98,10 +105,14 @@
       }
     } catch (error) {
       if (currentAttemptId !== attemptId) return;
+      delete status.dataset.feedbackNarrationKey;
       status.textContent = 'Hindi nakuha ang iyong boses. Subukan muli.';
       status.classList.add('warning');
       readButton.hidden = false;
       readButton.disabled = false;
+      readButton.classList.remove('is-recording', 'is-processing');
+      readButton.removeAttribute('aria-busy');
+      readButton.textContent = window.BasahinButton?.LABEL || 'Basahin';
       if (listenButton) listenButton.hidden = false;
     } finally {
       stream?.getTracks().forEach(track => track.stop());
