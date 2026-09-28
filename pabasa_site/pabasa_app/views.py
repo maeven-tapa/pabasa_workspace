@@ -13571,6 +13571,44 @@ def prescribed_activity_page(request, activity_key):
                     'local_audio': {},
                 },
             })
+        if activity_key == 'aral-l24-g2-v-word-reading':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_24/BAHAGI_1/GAWAIN_2/'
+            audio_files = {
+                'words': {
+                    'Valdez': 'Valdez_TTS.mp3', 'Valle': 'Valle_TTS.mp3', 'van': 'van_TTS.mp3',
+                    'vanilla': 'vanilla_TTS.mp3', 'Victoria': 'Victoria_TTS.mp3', 'vila': 'vila_TTS.mp3',
+                    'vinta': 'vinta_TTS.mp3', 'violin': 'violin_TTS.mp3', 'visa': 'visa_TTS.mp3',
+                    'Visayas': 'Visayas_TTS.mp3', 'volleybal': 'volleybal_TTS.mp3',
+                },
+                'feedback': {
+                    'Hindi available ang audio.': 'Hindi available ang audio._TTS.mp3',
+                    'Hindi available ang mikropono.': 'Hindi available ang mikropono._TTS.mp3',
+                    'Hindi ko malinaw na narinig. Subukan muli.': 'Hindi ko malinaw na narinig. Subukan muli._TTS.mp3',
+                    'Hindi ma-play ang audio.': 'Hindi ma-play ang audio._TTS.mp3',
+                    'Hindi na-save ang iyong gawain.': 'Hindi na-save ang iyong gawain._TTS.mp3',
+                    'Hindi nakuha ang boses. Subukan muli.': 'Hindi nakuha ang boses. Subukan muli._TTS.mp3',
+                    'Hindi pa kailangan ang pag-ulit.': 'Hindi pa kailangan ang pag-ulit._TTS.mp3',
+                    'Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.': 'Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa._TTS.mp3',
+                    'Pakinggan muna ang tamang pagbigkas o pindutin ang Subukan Muli.': 'Pakinggan muna ang tamang pagbigkas o pindutin ang Subukan Muli._TTS.mp3',
+                    'Subukan muli.': 'Subukan Muli._TTS.mp3',
+                    'Subukan Muli.': 'Subukan Muli._TTS.mp3',
+                    'Tama!': 'Tama!_TTS.mp3',
+                },
+                'completion': {'Magaling! Natapos mo ang Gawain 2.': 'Magaling! Natapos mo ang Gawain 2._TTS.mp3'},
+            }
+            local_audio = {
+                'words': {text: static(audio_root + filename) for text, filename in audio_files['words'].items()},
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+                'completion': {text: static(audio_root + filename) for text, filename in audio_files['completion'].items()},
+            }
+            return render(request, 'pabasa_app/prescribed_workbook_page.html', {
+                'workbook_payload': {
+                    'activity': get_activity(activity_key), 'state': state, 'preview': preview,
+                    'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+                    'read_aloud_url': reverse('reading_read_aloud_api'), 'back_url': reverse('assessment'),
+                    'next_url': next_url, 'local_audio': local_audio,
+                },
+            })
         if activity_key == 'aral-l22-g2-c-word-reading':
             audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_22/GAWAIN_2/'
             audio_files = {
