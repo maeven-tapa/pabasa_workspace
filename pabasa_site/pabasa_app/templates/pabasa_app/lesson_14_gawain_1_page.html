@@ -13,81 +13,20 @@
   const prefix='prescribed-s5l14g1';
   const data=JSON.parse(document.getElementById('lesson14-data')?.textContent||'{}');
   const app=document.getElementById('app');
-  const nodes={
-    status:document.getElementById(prefix+'-debug-status'),
-    expected:document.getElementById(prefix+'-debug-expected'),
-    result:document.getElementById(prefix+'-debug-result'),
-    mic:document.getElementById(prefix+'-debug-mic'),
-    recorder:document.getElementById(prefix+'-debug-recorder'),
-    vad:document.getElementById(prefix+'-debug-vad'),
-    error:document.getElementById(prefix+'-debug-error'),
-    output:document.getElementById(prefix+'-debug-output')
-  };
+  const nodes={status:document.getElementById(prefix+'-debug-status'),expected:document.getElementById(prefix+'-debug-expected'),result:document.getElementById(prefix+'-debug-result'),mic:document.getElementById(prefix+'-debug-mic'),recorder:document.getElementById(prefix+'-debug-recorder'),vad:document.getElementById(prefix+'-debug-vad'),error:document.getElementById(prefix+'-debug-error'),output:document.getElementById(prefix+'-debug-output')};
   if(!app||!nodes.status)return;
-  let currentSignature='';
-  const target=()=>{
-    const active=app.querySelector('.step.active');
-    const itemIndex=Math.max(0,(Number(active?.textContent||1)||1)-1);
-    return String(data.items?.[itemIndex]?.word||'');
-  };
-  const update=changes=>Object.entries(changes).forEach(([key,value])=>{
-    if(nodes[key])nodes[key].textContent=String(value??'');
-  });
-  const reset=()=>{
-    const expected=target();
-    currentSignature=expected+'|'+(app.querySelector('.step.active')?.textContent||'');
-    update({status:'Idle',expected,result:'Waiting',mic:'Inactive',recorder:'Inactive',vad:'Quiet',error:'None',output:'Waiting for speech...'});
-  };
-  const debugResult=(result,httpStatus)=>{
-    const transcript=String(result?.raw_transcript??result?.transcript??'').trim();
-    const normalized=String(result?.normalized_transcript??'').trim();
-    const matched=Boolean(result?.complete===true);
-    update({
-      status:matched?'Correct':'Incorrect',
-      result:transcript?'Transcript: "'+transcript+'"'+(normalized&&normalized!==transcript?' | Normalized: "'+normalized+'"':'')+' | Result: '+(matched?'Correct':'Incorrect'):'Failed',
-      error:transcript?'None':'Transcription returned empty result',
-      output:'Target: '+target()+' | Transcript: '+(transcript||'(empty)')+' | Match: '+matched+(httpStatus?' | HTTP: '+httpStatus:'')+(result?.language_code?' | Language: '+result.language_code:'')
-    });
-  };
-  window.addEventListener('basahin:state',event=>{
-    const state=event.detail?.state;
-    const level=event.detail?.level;
-    if(state==='level'){
-      update({status:level?.speaking?'Recording':'Listening',mic:'Active · Unmuted',recorder:'Recording',vad:level?.speaking?'Speech detected':'Quiet',error:'None'});
-      return;
-    }
-    const map={
-      calibrating:{status:'Listening',mic:'Active · Unmuted',recorder:'Recording',vad:'Quiet'},
-      waiting:{status:'Listening',mic:'Active · Unmuted',recorder:'Recording',vad:'Quiet'},
-      listening:{status:'Recording',mic:'Active · Unmuted',recorder:'Recording',vad:'Speech detected'},
-      processing:{status:'Processing',mic:'Inactive',recorder:'Inactive',vad:'Speech ended'},
-      silence:{status:'Error',mic:'Inactive',recorder:'Inactive',vad:'Speech ended',error:'No speech detected'},
-      idle:{status:'Idle',mic:'Inactive',recorder:'Inactive',vad:'Quiet'}
-    };
-    if(map[state])update(map[state]);
-  });
+  let currentSignature='',attemptError='';
+  const currentItem=()=>{const active=app.querySelector('.step.active'),index=Math.max(0,(Number(active?.textContent||1)||1)-1);return {index,item:data.items?.[index]||{}}};
+  const target=()=>{const item=currentItem().item;return String(item.word||item.target_text||item.prompt||'')};
+  const update=changes=>Object.entries(changes).forEach(([key,value])=>{if(nodes[key])nodes[key].textContent=String(value??'')});
+  const reset=()=>{const item=currentItem();currentSignature=item.index+'|'+target();attemptError='';update({status:'Idle',expected:target(),result:'Waiting',mic:'Inactive',recorder:'Inactive',vad:'Quiet',error:'None',output:'Waiting for speech...'});const read=app.querySelector('#read');if(read&&window.BasahinButton?.setState)window.BasahinButton.setState(read,'idle')};
+  const debugResult=(result,httpStatus)=>{const transcript=String(result?.raw_transcript??result?.transcript??'').trim(),normalized=String(result?.normalized_transcript??'').trim(),matched=Boolean(result?.complete===true);attemptError=transcript?'':'Transcription returned empty result';update({status:matched?'Correct':'Incorrect',result:transcript?'Transcript: "'+transcript+'"'+(normalized&&normalized!==transcript?' | Normalized: "'+normalized+'"':'')+' | Result: '+(matched?'Correct':'Incorrect'):'Failed',error:attemptError||'None',output:'Target: '+target()+' | Transcript: '+(transcript||'(empty)')+' | Match: '+matched+(httpStatus?' | HTTP: '+httpStatus:'')+(result?.language_code?' | Language: '+result.language_code:'')})};
+  window.addEventListener('basahin:state',event=>{const state=event.detail?.state,level=event.detail?.level;if(state==='level'){attemptError='';update({status:level?.speaking?'Recording':'Listening',mic:'Active · Unmuted',recorder:'Recording',vad:level?.speaking?'Speech detected':'Quiet',error:'None'});return}const map={calibrating:{status:'Listening',mic:'Active · Unmuted',recorder:'Recording',vad:'Quiet'},waiting:{status:'Listening',mic:'Active · Unmuted',recorder:'Recording',vad:'Quiet'},listening:{status:'Recording',mic:'Active · Unmuted',recorder:'Recording',vad:'Speech detected'},processing:{status:'Processing',mic:'Inactive',recorder:'Inactive',vad:'Speech ended'},silence:{status:'Error',mic:'Inactive',recorder:'Inactive',vad:'Speech ended',error:'No speech detected'},idle:{status:'Idle',mic:'Inactive',recorder:'Inactive',vad:'Quiet'}};if(map[state]&&!(state==='idle'&&attemptError))update(map[state])});
   const nativeFetch=window.fetch.bind(window);
-  window.fetch=async(...args)=>{
-    const url=String(args[0]?.url||args[0]||'');
-    try{
-      const response=await nativeFetch(...args);
-      if(/reading_transcribe_api|\/api\/reading\/transcribe\//.test(url)){
-        if(response.ok)response.clone().json().then(result=>debugResult(result,response.status)).catch(()=>update({status:'Error',result:'Failed',error:'Invalid STT response'}));
-        else update({status:'Error',result:'Failed',error:'STT request failed: HTTP '+response.status,output:'Target: '+target()+' | HTTP: '+response.status});
-      }
-      return response;
-    }catch(error){
-      if(/reading_transcribe_api|\/api\/reading\/transcribe\//.test(url))update({status:'Error',result:'Failed',error:'Network error',output:'Target: '+target()+' | Network error'});
-      throw error;
-    }
-  };
-  document.addEventListener('click',event=>{
-    if(event.target.closest('#read'))update({status:'Listening',result:'Processing...',error:'None',expected:target(),output:'Target: '+target()+' | Recording started'});
-  },true);
-  new MutationObserver(()=>{
-    const signature=target()+'|'+(app.querySelector('.step.active')?.textContent||'');
-    if(signature!==currentSignature)reset();
-  }).observe(app,{childList:true,subtree:true,characterData:true});
+  window.fetch=async(...args)=>{const url=String(args[0]?.url||args[0]||'');try{const response=await nativeFetch(...args);if(/reading_transcribe_api|\/api\/reading\/transcribe\//.test(url)){if(response.ok)response.clone().json().then(result=>debugResult(result,response.status)).catch(()=>{attemptError='Invalid STT response';update({status:'Error',result:'Failed',error:attemptError})});else{attemptError='STT request failed: HTTP '+response.status;update({status:'Error',result:'Failed',error:attemptError,output:'Target: '+target()+' | HTTP: '+response.status})}}return response}catch(error){if(/reading_transcribe_api|\/api\/reading\/transcribe\//.test(url)){attemptError='Network error';update({status:'Error',result:'Failed',error:attemptError,output:'Target: '+target()+' | Network error'})}throw error}};
+  document.addEventListener('click',event=>{const read=event.target.closest('#read');if(read&&!read.disabled){attemptError='';update({status:'Listening',result:'Processing...',error:'None',expected:target(),output:'Target: '+target()+' | Recording started'})}},true);
+  document.addEventListener('basahin:error',event=>{const read=event.target.closest?.('#read');if(!read)return;attemptError=String(event.detail?.error?.message||'Speech capture failed');update({status:'Error',result:'Failed',error:attemptError,output:'Target: '+target()+' | Error: '+attemptError})},true);
+  new MutationObserver(()=>{const item=currentItem(),signature=item.index+'|'+target();if(signature!==currentSignature)reset()}).observe(app,{childList:true,subtree:true,characterData:true});
   reset();
 })();
 </script>
