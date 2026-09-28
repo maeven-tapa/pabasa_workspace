@@ -13562,13 +13562,56 @@ def prescribed_activity_page(request, activity_key):
          }.get(activity_key, '')
         next_url = reverse('prescribed_activity_page', kwargs={'activity_key': next_key}) if next_key in PRESCRIBED_ACTIVITIES else ''
         if activity_key == 'aral-l24-g3-x-repeat':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_24/BAHAGI_1/GAWAIN_3/'
+            audio_files = {
+                'instruction': 'Pakinggang mabuti ang mga salitang bibigkasin ng guro pagkatapos ay ulitin ito._TTS.mp3',
+                'words': {
+                    'Alex': 'Alex_TTS.mp3', 'Felix': 'Felix_TTS.mp3',
+                    'x-factor': 'x-factor_TTS.mp3', 'fixer': 'fixer_TTS.mp3',
+                },
+                'feedback': {
+                    'Hindi available ang Filipino audio.': 'Hindi available ang Filipino audio._TTS.mp3',
+                    'Hindi available ang mikropono.': 'Hindi available ang mikropono._TTS.mp3',
+                    'Hindi ma-play ang audio.': 'Hindi ma-play ang audio._TTS.mp3',
+                    'Hindi na-reset ang gawain.': 'Hindi na-reset ang gawain._TTS.mp3',
+                    'Hindi na-save ang iyong gawain.': 'Hindi na-save ang iyong gawain._TTS.mp3',
+                    'Hindi nakuha ang boses. Subukan muli.': 'Hindi nakuha ang boses. Subukan muli._TTS.mp3',
+                    'Inihahanda ang pag-ulit…': 'Inihahanda ang pag-ulit…_TTS.mp3',
+                    'Nakikinig…': 'Nakikinig…_TTS.mp3',
+                    'Natapos na ang lahat ng salita.': 'Natapos na ang lahat ng salita._TTS.mp3',
+                    'Ngayon, ulitin ang salita.': 'Ngayon, ulitin ang salita._TTS.mp3',
+                    'Nilo-load ang audio…': 'Nilo-load ang audio…_TTS.mp3',
+                    'Nire-reset ang gawain…': 'Nire-reset ang gawain…_TTS.mp3',
+                    'Pakinggan muli ang tamang pagbigkas.': 'Pakinggan muli ang tamang pagbigkas._TTS.mp3',
+                    'Pakinggan muna ang salita.': 'Pakinggan muna ang salita._TTS.mp3',
+                    'Pinakikinggan ang tamang pagbigkas…': 'Pinakikinggan ang tamang pagbigkas…_TTS.mp3',
+                    'Pindutin ang Subukan Muli kapag handa ka na.': 'Pindutin ang Subukan Muli kapag handa ka na._TTS.mp3',
+                    'Pinoproseso…': 'Pinoproseso…_TTS.mp3',
+                    'Subukan muli.': 'Subukan Muli._TTS.mp3',
+                    'Tama!': 'Tama!_TTS.mp3',
+                },
+                'completion': {
+                    'Magaling! Natapos mo ang Gawain 3!': 'Magaling! Natapos mo ang Gawain 3!_TTS.mp3',
+                },
+            }
+            mapped_states = [get_activity(activity_key).get('instruction', '')]
+            mapped_states += list(audio_files['words'])
+            mapped_states += list(audio_files['feedback'])
+            mapped_states += list(audio_files['completion'])
+            local_audio = {
+                'instruction': static(audio_root + audio_files['instruction']),
+                'words': {text: static(audio_root + filename) for text, filename in audio_files['words'].items()},
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+                'completion': {text: static(audio_root + filename) for text, filename in audio_files['completion'].items()},
+                'mapped_states': mapped_states,
+            }
             return render(request, 'pabasa_app/prescribed_l24_g3_repeat_page.html', {
                 'workbook_payload': {
                     'activity': get_activity(activity_key), 'state': state, 'preview': preview,
                     'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
                     'read_aloud_url': reverse('reading_read_aloud_api'),
                     'back_url': reverse('assessment'), 'next_url': next_url,
-                    'local_audio': {},
+                    'local_audio': local_audio,
                 },
             })
         if activity_key == 'aral-l24-g2-v-word-reading':

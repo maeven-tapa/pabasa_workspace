@@ -6,6 +6,7 @@
   if (!root) return;
   const items = activity.items || [];
   const localAudio = data.local_audio || {};
+  const mappedStateTexts = new Set(localAudio.mapped_states || []);
   let state = {...(data.state || {})};
   let busy = false;
   let audio = null;
@@ -69,6 +70,7 @@
   const speak = async text => {
     const mapped = mappedAudio(text);
     if (mapped) return playUrl(mapped);
+    if (mappedStateTexts.has(text)) throw Error('Hindi ma-play ang audio.');
     stopAudio();
     const mine = audioRun;
     const form = new FormData();
@@ -173,20 +175,20 @@
   async function announceCompletion() {
     if (completionAudioStarted || !state.completed) return;
     completionAudioStarted = true;
-    try { await speak(COMPLETION_MESSAGE); } catch (_) { /* Completion UI remains available if audio is unavailable. */ }
+    try { await speak(COMPLETION_MESSAGE); await speak('Natapos na ang lahat ng salita.'); } catch (_) { /* Completion UI remains available if audio is unavailable. */ }
   }
   async function playInstruction() {
     if (busy) return;
     busy = true; render('Nilo-load ang audio…');
-    try { await speak(activity.instruction || ''); render(); }
-    catch (error) { render(error.message || 'Hindi available ang panuto.', 'bad'); }
+    try { await speak('Nilo-load ang audio…'); await speak(activity.instruction || ''); render(); }
+    catch (error) { await playMappedFeedback('Hindi ma-play ang audio.'); render(error.message || 'Hindi ma-play ang audio.', 'bad'); }
     finally { busy = false; render(); }
   }
   async function playInitialInstruction() {
     if (instructionAutoPlayed || data.preview || busy || state.completed) return;
     instructionAutoPlayed = true;
     busy = true; render('Nilo-load ang audio…');
-    try { await speak(activity.instruction || ''); }
+    try { await speak('Nilo-load ang audio…'); await speak(activity.instruction || ''); }
     catch (_) { /* Keep the activity usable when autoplay is blocked. */ }
     finally { busy = false; render(); }
   }
@@ -194,12 +196,18 @@
     if (busy) return;
     busy = true; render('Pinakikinggan ang tamang pagbigkas…');
     try {
-      await speak(target());
       const phase = oral(current()).phase;
+      if (phase === 'listen') {
+        await speak(Number(oral(current()).listens || 0) >= 3
+          ? 'Pindutin ang Subukan Muli kapag handa ka na.'
+          : 'Pakinggan muli ang tamang pagbigkas.');
+      }
+      await speak('Pinakikinggan ang tamang pagbigkas…');
+      await speak(target());
       if (phase === 'model') await request({action: 'model_listened'});
       else if (phase === 'listen') await request({action: 'listened'});
-      render('Ngayon, ulitin ang salita.');
-    } catch (error) { render(error.message || 'Hindi available ang audio.', 'bad'); }
+      await speak('Ngayon, ulitin ang salita.'); render('Ngayon, ulitin ang salita.');
+    } catch (error) { await playMappedFeedback('Hindi ma-play ang audio.'); render(error.message || 'Hindi ma-play ang audio.', 'bad'); }
     finally { busy = false; render(); }
   }
   async function record() {
@@ -207,6 +215,7 @@
     busy = true; const mine = ++requestId;
     try {
       if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) throw Error('Hindi available ang mikropono.');
+      await speak('Nakikinig…');
       stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: true, noiseSuppression: true, autoGainControl: true}});
       render('Nakikinig…');
       const recorder = new MediaRecorder(stream), chunks = [];
@@ -220,6 +229,7 @@
       stream.getTracks().forEach(track => track.stop()); stream = null;
       if (mine !== requestId) return;
       render('Pinoproseso…');
+      await speak('Pinoproseso…');
       const form = new FormData();
       form.append('audio', blob, 'lesson24-gawain3-repeat.webm');
       form.append('action', 'reading');
@@ -240,14 +250,27 @@
         await playMappedFeedback(feedback);
         render(feedback, 'bad');
       }
-    } catch (error) { if (mine === requestId) render(error.message || 'Hindi nakuha ang iyong boses. Subukan muli.', 'bad'); }
+    } catch (error) {
+      if (mine === requestId) {
+        const feedback = mappedStateTexts.has(error.message)
+          ? error.message
+          : error.message === 'Hindi available ang mikropono.'
+            ? 'Hindi available ang mikropono.'
+            : 'Hindi nakuha ang boses. Subukan muli.';
+        await playMappedFeedback(feedback);
+        render(error.message || feedback, 'bad');
+      }
+    }
     finally { stream?.getTracks().forEach(track => track.stop()); stream = null; busy = false; render(); }
   }
   async function retry() {
     if (busy || oral(current()).phase !== 'listen') return;
     busy = true; render('Inihahanda ang pag-ulit…');
-    try { await request({action: 'retry_reading'}); render('Ngayon, ulitin ang salita.'); }
-    catch (error) { render(error.message || 'Pakinggan muna ang tamang pagbigkas.', 'bad'); }
+    try { await speak('Inihahanda ang pag-ulit…'); await request({action: 'retry_reading'}); await speak('Ngayon, ulitin ang salita.'); render('Ngayon, ulitin ang salita.'); }
+    catch (error) {
+      const feedback = mappedStateTexts.has(error.message) ? error.message : 'Pakinggan muna ang salita.';
+      await playMappedFeedback(feedback); render(error.message || feedback, 'bad');
+    }
     finally { busy = false; render(); }
   }
   function restart() {
@@ -268,12 +291,15 @@
     stopAudio();
     render('Nire-reset ang gawain…');
     try {
+      await speak('Nire-reset ang gawain…');
       await request({action: 'restart'});
       dialog = '';
       completionAudioStarted = false;
       render();
     } catch (error) {
-      render(error.message || 'Hindi na-reset ang gawain.', 'bad');
+      const feedback = mappedStateTexts.has(error.message) ? error.message : 'Hindi na-reset ang gawain.';
+      await playMappedFeedback(feedback);
+      render(error.message || feedback, 'bad');
     } finally { busy = false; render(); }
   }
   window.addEventListener('pagehide', () => { requestId += 1; stream?.getTracks().forEach(track => track.stop()); stopAudio(); });
