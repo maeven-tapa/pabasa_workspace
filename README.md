@@ -105,7 +105,8 @@ In **Audio Settings → Speech recognition**, choose **Google (activity default)
 and applies to subsequent reading assessment and prescribed activity speech requests.
 Explicit Chirp choices use Speech-to-Text V2, including Filipino recordings and
 Lesson 1. Errors are reported without silently falling back to another model.
-The activity default preserves the existing Filipino V1 route.
+The Filipino (`fil-PH`) activity default uses Chirp 3, with no phrase hints,
+boosting, or fallback to V1. Explicit model selections remain available.
 
 Chirp 2 uses `GOOGLE_STT_CHIRP2_LOCATION` (environment variable, default
 `us-central1`), separately from Chirp 3's `GOOGLE_STT_LOCATION` (`us`). Configure
