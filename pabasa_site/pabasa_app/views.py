@@ -29087,7 +29087,7 @@ def get_teacher_assessment_api(request, assessment_id):
 
         enriched_attempts = []
         retell_submissions = {}
-        if activity_type == 'retell_story' and linked_material:
+        if activity_type in {'retell_story', 'story_response'} and linked_material:
             retell_submissions = {
                 submission.student_id: submission
                 for submission in StoryResponseSubmission.objects.filter(
@@ -29116,12 +29116,13 @@ def get_teacher_assessment_api(request, assessment_id):
             })
             if activity_type:
                 enriched_attempt['activity_type'] = activity_type
-            if activity_type == 'retell_story':
+            if activity_type in {'retell_story', 'story_response'}:
                 submission = retell_submissions.get(att.get('student_id'))
                 enriched_attempt['retell_grade'] = submission.grade if submission else None
                 enriched_attempt['story_response_submission_id'] = submission.id if submission else None
                 enriched_attempt['recording_available'] = bool(submission and submission.audio_file)
-                enriched_attempt['recording_url'] = reverse('teacher_retell_recording', args=[submission.id]) if submission and submission.audio_file else None
+                recording_view = 'teacher_retell_recording' if activity_type == 'retell_story' else 'teacher_story_response_audio'
+                enriched_attempt['recording_url'] = reverse(recording_view, args=[submission.id]) if submission and submission.audio_file else None
                 enriched_attempt['recording_duration_seconds'] = submission.duration_seconds if submission else None
                 enriched_attempt['retell_status'] = submission.status if submission else None
             enriched_attempts.append(enriched_attempt)
@@ -29260,7 +29261,7 @@ def get_teacher_material_attempts_api(request):
 
         enriched = []
         retell_submissions = {}
-        if activity_type == 'retell_story':
+        if activity_type in {'retell_story', 'story_response'}:
             retell_submissions = {
                 submission.student_id: submission
                 for submission in StoryResponseSubmission.objects.filter(
@@ -29286,12 +29287,13 @@ def get_teacher_material_attempts_api(request):
             })
             if activity_type:
                 att['activity_type'] = activity_type
-            if activity_type == 'retell_story':
+            if activity_type in {'retell_story', 'story_response'}:
                 submission = retell_submissions.get(a.student_id)
                 att['retell_grade'] = submission.grade if submission else None
                 att['story_response_submission_id'] = submission.id if submission else None
                 att['recording_available'] = bool(submission and submission.audio_file)
-                att['recording_url'] = reverse('teacher_retell_recording', args=[submission.id]) if submission and submission.audio_file else None
+                recording_view = 'teacher_retell_recording' if activity_type == 'retell_story' else 'teacher_story_response_audio'
+                att['recording_url'] = reverse(recording_view, args=[submission.id]) if submission and submission.audio_file else None
                 att['recording_duration_seconds'] = submission.duration_seconds if submission else None
                 att['retell_status'] = submission.status if submission else None
             enriched.append(att)

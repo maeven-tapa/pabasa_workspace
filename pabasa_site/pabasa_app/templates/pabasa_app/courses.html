@@ -11229,7 +11229,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 </div>
                             ` : ''}
                         </div>
-                        ${assessment.review_responses ? `<button type="button" class="course-assessment-export-btn story-response-review-btn" data-material-id="${escapeHtml(exportMaterialId)}"><i class="bi bi-mic"></i>Recordings</button>` : ''}
                         ${assessment.review_activity_key === 'lesson-1-gawain-1' ? `<button type="button" class="course-assessment-export-btn lesson1-recordings-btn"><i class="bi bi-mic"></i>View Recordings</button>` : ''}
                         ${canExport ? `
                             <a class="course-assessment-export-btn"
@@ -14450,6 +14449,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const isStoryReading = activityType === 'story_reading';
                     const isFiveWStoryQuestions = activityType === 'five_w_story_questions';
                     const isRetellStory = activityType === 'retell_story';
+                    const isStoryResponse = activityType === 'story_response';
                     const rawNumerator = isStoryReading ? attempt?.correct_sentences : attempt?.correct_items;
                     const rawDenominator = isStoryReading
                         ? attempt?.total_sentences
@@ -14468,7 +14468,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         : attempt?.retell_grade;
                     const retellGradeValue = retellGrade === undefined || retellGrade === null || retellGrade === '' ? '' : String(retellGrade);
                     const retellRecordingKey = String(retellSubmissionId || `${task.assessmentId || task.title}-${studentId}`);
-                    const retellRecordingAvailable = isRetellStory && attempt?.recording_available && attempt?.recording_url;
+                    const retellRecordingAvailable = (isRetellStory || isStoryResponse) && attempt?.recording_available && attempt?.recording_url;
                     const retellRecordingExpanded = expandedRetellRecordingIds.has(retellRecordingKey);
                     const scoreValue = isRetellStory
                         ? `<select class="student-progress-retell-score form-select form-select-sm" data-submission-id="${escapeHtml(retellSubmissionId || '')}" data-previous-value="${escapeHtml(retellGradeValue)}" ${retellSubmissionId ? '' : 'disabled'} aria-label="Retell teacher score"><option value="" ${retellGradeValue === '' ? 'selected' : ''}>Not scored</option>${[0, 1, 2, 3, 4, 5].map(value => `<option value="${value}" ${retellGradeValue === String(value) ? 'selected' : ''}>${value}</option>`).join('')}</select>`
@@ -14488,7 +14488,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <div class="student-progress-stat"><span class="student-progress-stat-label">Time Spent</span><span class="student-progress-stat-value">${timeSpent !== undefined && timeSpent !== null && timeSpent !== '' ? escapeHtml(formatCourseReportDuration(timeSpent)) : '—'}</span></div>
                                 <div class="student-progress-stat"><span class="student-progress-stat-label">Score</span><span class="student-progress-stat-value student-progress-score">${scoreValue}</span></div>
                             </div>
-                            ${isRetellStory ? `<div class="student-progress-recording" data-recording-key="${escapeHtml(retellRecordingKey)}">
+                            ${(isRetellStory || isStoryResponse) ? `<div class="student-progress-recording" data-recording-key="${escapeHtml(retellRecordingKey)}">
                                 <button type="button" class="student-progress-recording-toggle" aria-expanded="${retellRecordingExpanded ? 'true' : 'false'}">Review Recording <span aria-hidden="true">${retellRecordingExpanded ? '▾' : '▸'}</span></button>
                                 <div class="student-progress-recording-panel" ${retellRecordingExpanded ? '' : 'hidden'}>
                                     ${retellRecordingAvailable ? `<div class="student-progress-audio-controls"><button type="button" class="student-progress-retell-play" data-url="${escapeHtml(attempt.recording_url)}" aria-label="Play recording"><i class="bi bi-play-fill"></i></button><input class="student-progress-retell-progress" type="range" min="0" max="0" value="0" step="0.1" aria-label="Recording progress"><span class="student-progress-retell-time">0:00 / ${escapeHtml(formatStudentProgressAudioTime(attempt.recording_duration_seconds))}</span></div>` : '<span class="student-progress-recording-unavailable">Recording unavailable</span>'}
