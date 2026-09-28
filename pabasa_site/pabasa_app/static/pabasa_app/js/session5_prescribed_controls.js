@@ -5,6 +5,7 @@
   if (!root || !window.PrescribedControls) return;
   const prefix = root.dataset.prefix;
   if (!prefix || window.__session5ControlsInitialized?.[prefix]) return;
+  const speechEnabled = root.dataset.speechControls !== 'false';
   window.__session5ControlsInitialized = window.__session5ControlsInitialized || {};
 
   const q = suffix => document.getElementById(`${prefix}${suffix}`);
@@ -292,9 +293,11 @@
     bindDebug,
   };
 
-  wrapActivityMicrophone();
-  wrapAsyncBoundaries();
-  updateMic();
+  if (speechEnabled) {
+    wrapActivityMicrophone();
+    wrapAsyncBoundaries();
+    updateMic();
+  }
   window.PrescribedControls.init({prefix, adapter});
   window.__session5ControlsInitialized[prefix] = true;
   scheduleExpectedTextRefresh();
