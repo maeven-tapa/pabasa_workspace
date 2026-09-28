@@ -62,7 +62,7 @@ class PrescribedLesson28WordIdentifyingTests(TestCase):
         ])
         self.assertNotContains(response, '<img')
 
-    def test_word_is_randomized_retried_and_progresses_after_correct_speech(self):
+    def test_word_stays_fixed_on_retry_and_progresses_after_correct_speech(self):
         started = self.post_action(action='begin', item_index=0)
         self.assertEqual(started.status_code, 200)
         target = started.json()['target_word']
@@ -71,7 +71,7 @@ class PrescribedLesson28WordIdentifyingTests(TestCase):
         wrong_word = 'sit' if target == 'sun' else 'sun'
         wrong = self.post_action(action='answer', item_index=0, heard=wrong_word)
         self.assertFalse(wrong.json()['accepted'])
-        self.assertNotEqual(wrong.json()['target_word'], target)
+        self.assertEqual(wrong.json()['target_word'], target)
 
         resumed = self.post_action(action='begin', item_index=0)
         self.assertEqual(resumed.json()['target_word'], wrong.json()['target_word'])
