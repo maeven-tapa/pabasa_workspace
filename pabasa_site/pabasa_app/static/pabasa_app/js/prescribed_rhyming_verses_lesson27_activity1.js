@@ -52,6 +52,7 @@
     [localAudioKey('Danced with a playful bat,')]: 'Danced with a playful bat,.mp3',
     [localAudioKey('They jumped on a mat,')]: 'They jumped on a mat,.mp3',
     [localAudioKey('And both got quite fat!')]: 'And both got quite fat!.mp3',
+    [localAudioKey('Pat the cat with a friendly pat,')]: 'Pat the cat with a friendly pat,.mp3',
     [localAudioKey('Upside down was the silly cat,')]: 'Upside down was the silly cat,.mp3',
     [localAudioKey('There was a loud splat on the mat,')]: 'There was a loud splat on the mat,.mp3',
     [localAudioKey('Who laughed at the splash with a gentle pat.')]: 'Who laughed at the splash with a gentle pat..mp3',
@@ -183,7 +184,16 @@
       const correctFeedback = state.phase === 'rhymes' ? RHYME_INSTRUCTION_FEEDBACK : READ_CORRECT_FEEDBACK;
       render(correct ? correctFeedback : `I heard “${heardText || 'unclear speech'}”. ${RETRY_FEEDBACK}`, correct ? 'good' : 'bad');
       await playAudio(correct ? correctFeedback : RETRY_FEEDBACK);
-    } catch (error) { if (error?.name === 'AbortError') return;  stopStream(); if (attempt === generation && !isPaused) { publishDebug({status:'Error',error:error.message || 'Recording/transcription error'},`Error: ${error.message || 'Recording/transcription error'}`); render(error.message || 'Could not recognize your speech. Try again.','bad'); } }
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+      stopStream();
+      if (attempt === generation && !isPaused) {
+        publishDebug({status:'Error',error:error.message || 'Recording/transcription error'},`Error: ${error.message || 'Recording/transcription error'}`);
+        render(error.message || 'Could not recognize your speech. Try again.','bad');
+        busy = false;
+        await playAudio(RETRY_FEEDBACK);
+      }
+    }
     finally { button?.classList.remove('is-busy'); if (activeSpeechButton === button) activeSpeechButton = null; busy = false; }
   }
   async function selectWord(button) {
