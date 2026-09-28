@@ -16646,8 +16646,6 @@ def prescribed_activity_progress(request, activity_key):
                     target = random.choice(activity['items'][index]['choices']) if index < total else None
                 else:
                     attempts += 1
-                    alternatives = [word for word in current_choices if word != target]
-                    target = random.choice(alternatives or [target])
             else:
                 raise ValueError('Invalid activity action.')
             finished = index >= total
