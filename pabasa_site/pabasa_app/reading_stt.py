@@ -427,6 +427,10 @@ def transcribe_audio_bytes_with_model(
     word_details=None,
     allow_fallback=True,
 ):
+    if str(language_code).lower() == "fil-ph":
+        model = model or "chirp_3"
+        phrase_hints = None
+        allow_fallback = False
     if word_details is not None:
         word_details.clear()
     fallback_reason = ""
@@ -626,7 +630,7 @@ def transcribe_audio_bytes_v1(
         config.update({"encoding": "LINEAR16", "sampleRateHertz": 16000})
     if model:
         config["model"] = model
-    if phrase_hints:
+    if phrase_hints and str(language_code).lower() != "fil-ph":
         config["speechContexts"] = [{"phrases": phrase_hints, "boost": 20.0}]
 
     payload = {

@@ -6,7 +6,7 @@ from django.test import RequestFactory, SimpleTestCase, override_settings
 from django.template.loader import render_to_string
 from google.cloud.speech_v2.types import cloud_speech
 
-from .reading_stt import transcribe_audio_bytes_with_model, v1_model_for_language
+from .reading_stt import transcribe_audio_bytes_with_model, transcribe_audio_bytes_v1, v1_model_for_language
 from .views import lesson_1_gawain_1_transcribe_api, reading_transcribe_api
 
 
@@ -21,7 +21,7 @@ class ChirpAdapterTests(SimpleTestCase):
 
     def transcribe(self, model='chirp_2', **kwargs):
         return transcribe_audio_bytes_with_model(
-            b'audio', 'test-key', language_code='fil-PH', model=model,
+            b'audio', 'test-key', language_code=kwargs.pop('language_code', 'fil-PH'), model=model,
             project_id='test-project', location='us-central1' if model == 'chirp_2' else 'us',
             **kwargs,
         )
@@ -61,6 +61,24 @@ class ChirpAdapterTests(SimpleTestCase):
         self.assertEqual(words, [])
 
     @patch('pabasa_app.reading_stt.transcribe_audio_bytes_v1')
+    def test_filipino_default_has_no_adaptation_or_fallback(self, v1):
+        self.client.return_value.recognize.return_value = cloud_speech.RecognizeResponse()
+        self.assertEqual(self.transcribe('', phrase_hints=['bata']), ('', 'chirp_3', ''))
+        config = self.client.return_value.recognize.call_args.kwargs['request'].config
+        self.assertEqual(config.model, 'chirp_3')
+        self.assertFalse(cloud_speech.RecognitionConfig.pb(config).HasField('adaptation'))
+        self.client.return_value.recognize.side_effect = RuntimeError('Unavailable region')
+        with self.assertRaisesRegex(RuntimeError, 'Unavailable region'):
+            self.transcribe('', phrase_hints=['bata'])
+        v1.assert_not_called()
+
+    @patch('pabasa_app.reading_stt._post_google_stt', return_value='bata')
+    def test_legacy_filipino_request_ignores_phrase_hints(self, post):
+        transcribe_audio_bytes_v1(b'audio', 'test-key', 'fil-PH', ['bata'], '', 'audio/webm')
+        payload = post.call_args.args[1]
+        self.assertNotIn('speechContexts', payload['config'])
+
+    @patch('pabasa_app.reading_stt.transcribe_audio_bytes_v1')
     def test_explicit_model_failure_and_silence_never_fall_back(self, v1):
         for model in ('chirp_2', 'chirp_3'):
             with self.subTest(model=model):
@@ -76,9 +94,10 @@ class ChirpAdapterTests(SimpleTestCase):
     def test_default_fallback_retains_reason_and_has_no_chirp_word_values(self, v1):
         self.client.return_value.recognize.side_effect = RuntimeError('Unavailable region')
         words = [{'word': 'stale', 'confidence': 1}]
-        self.assertEqual(self.transcribe(word_details=words), ('bata', 'stt_v1', 'Unavailable region'))
+        self.assertEqual(self.transcribe(language_code='en-PH', word_details=words),
+                         ('bata', 'stt_v1', 'Unavailable region'))
         self.assertEqual(words, [])
-        self.assertEqual(v1.call_args.args[4], '')
+        self.assertEqual(v1.call_args.args[4], 'command_and_search')
         self.assertEqual(v1_model_for_language('chirp_2', 'en-PH'), 'command_and_search')
 
 
@@ -129,12 +148,18 @@ class ChirpRoutingTests(SimpleTestCase):
         ffmpeg.assert_not_called()
 
     @override_settings(GOOGLE_STT_API_KEY='test-key')
-    @patch('pabasa_app.views.transcribe_audio_bytes_with_model', return_value=('bata', 'stt_v1', ''))
-    def test_unknown_model_uses_existing_filipino_default(self, transcribe):
-        response = reading_transcribe_api(self.request('arbitrary-model'))
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(transcribe.call_args.kwargs['model'], '')
-        self.assertTrue(transcribe.call_args.kwargs['allow_fallback'])
+    @patch('pabasa_app.views.transcribe_audio_bytes_with_model', return_value=('bata', 'chirp_3', ''))
+    def test_filipino_defaults_to_chirp3_without_hints_or_fallback(self, transcribe):
+        for view in (reading_transcribe_api, lesson_1_gawain_1_transcribe_api):
+            for model in ('', 'arbitrary-model'):
+                with self.subTest(view=view.__name__, model=model):
+                    response = view(self.request(model))
+                    self.assertEqual(response.status_code, 200)
+                    options = transcribe.call_args.kwargs
+                    self.assertEqual(options['model'], 'chirp_3')
+                    self.assertEqual(options['location'], 'us')
+                    self.assertFalse(options.get('phrase_hints'))
+                    self.assertFalse(options['allow_fallback'])
 
     @patch('pabasa_app.views.transcribe_audio_bytes_with_model', side_effect=RuntimeError('Chirp unavailable'))
     def test_explicit_model_error_is_reported(self, transcribe):

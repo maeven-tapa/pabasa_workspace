@@ -21411,9 +21411,6 @@ def _lesson1_google_transcribe_wav(wav_bytes, target_text):
         'enableAutomaticPunctuation': False,
         'maxAlternatives': 3,
     }
-    hints = target_phrase_hints(target_text, 'fil-PH')
-    if hints:
-        config['speechContexts'] = [{'phrases': hints, 'boost': 20.0}]
     payload = {
         'config': config,
         'audio': {'content': base64.b64encode(wav_bytes).decode('ascii')},
@@ -21480,7 +21477,7 @@ def lesson_1_gawain_1_transcribe_api(request):
         except KnowlezSpeechError as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=exc.status)
 
-    selected_model = _requested_chirp_model(request)
+    selected_model = _requested_chirp_model(request) or 'chirp_3'
     if selected_model:
         words = []
         try:
@@ -21564,16 +21561,16 @@ def reading_transcribe_api(request):
     mode = (request.POST.get('mode') or '').strip().lower()
     language = (request.POST.get('language') or '').strip()
     language_code = language_code_for(language, mode)
-    phrase_hints = list(dict.fromkeys(
+    phrase_hints = [] if language_code.lower() == 'fil-ph' else list(dict.fromkeys(
         phrase_hints_for(language, mode) + target_phrase_hints(target_text, language_code)
     ))
     api_key = getattr(settings, 'GOOGLE_STT_API_KEY', '').strip()
     project_id = getattr(settings, 'GOOGLE_CLOUD_PROJECT_ID', '').strip()
     stt_model = getattr(settings, 'GOOGLE_STT_MODEL', 'chirp_3').strip()
     selected_model = _requested_chirp_model(request)
-    # Preserve the Filipino default while honoring an explicit Audio Settings choice.
+    # Filipino defaults to Chirp 3 without phrase boosting.
     if language_code.lower() == 'fil-ph' and not selected_model:
-        stt_model = ''
+        stt_model = 'chirp_3'
     stt_model = selected_model or stt_model
     location = _chirp_location(stt_model)
     credentials_file = str(getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', '') or '')
@@ -21594,7 +21591,7 @@ def reading_transcribe_api(request):
                 phrase_hints=phrase_hints,
                 model=stt_model,
                 word_details=words,
-                allow_fallback=not selected_model,
+                allow_fallback=not selected_model and language_code.lower() != 'fil-ph',
                 project_id=project_id,
                 location=location,
                 mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
