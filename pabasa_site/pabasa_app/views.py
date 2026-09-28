@@ -13614,6 +13614,43 @@ def prescribed_activity_page(request, activity_key):
                     'local_audio': local_audio,
                 },
             })
+        if activity_key == 'aral-l24-g4-x-pictures':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_24/BAHAGI_2/GAWAIN_2/'
+            audio_files = {
+                'instruction': 'Kilalanin ang bawat larawan at subuking basahin ito kasabay ng guro._TTS.mp3',
+                'words': {
+                    'x-ray': 'x-ray_TTS.mp3', 'fax machine': 'fax machine_TTS.mp3', 'fox': 'fox_TTS.mp3',
+                },
+                'feedback': {
+                    'Basahin ang salitang nasa larawan.': 'Basahin ang salitang nasa larawan._TTS.mp3',
+                    'Hindi ko malinaw na narinig. Subukan muli.': 'Hindi ko malinaw na narinig. Subukan muli._TTS.mp3',
+                    'Hindi magamit ang mikropono. Subukan muli.': 'Hindi magamit ang mikropono. Subukan muli._TTS.mp3',
+                    'Hindi nakuha ang boses. Subukan muli.': 'Hindi nakuha ang boses. Subukan muli._TTS.mp3',
+                    'Pinoproseso ang iyong pagbasa...': 'Pinoproseso ang iyong pagbasa..._TTS.mp3',
+                    'Subukan muli.': 'Subukan Muli._TTS.mp3',
+                    'Tama! Magaling!': 'Tama! Magaling!_TTS.mp3',
+                },
+                'completion': {'Magaling! Natapos mo ang gawain.': 'Magaling! Natapos mo ang gawain._TTS.mp3'},
+            }
+            mapped_states = [get_activity(activity_key).get('instruction', '')]
+            mapped_states += list(audio_files['words'])
+            mapped_states += list(audio_files['feedback'])
+            mapped_states += list(audio_files['completion'])
+            local_audio = {
+                'instruction': static(audio_root + audio_files['instruction']),
+                'words': {text: static(audio_root + filename) for text, filename in audio_files['words'].items()},
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+                'completion': {text: static(audio_root + filename) for text, filename in audio_files['completion'].items()},
+                'mapped_states': mapped_states,
+            }
+            return render(request, 'pabasa_app/prescribed_workbook_page.html', {
+                'workbook_payload': {
+                    'activity': get_activity(activity_key), 'state': state, 'preview': preview,
+                    'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+                    'read_aloud_url': reverse('reading_read_aloud_api'), 'back_url': reverse('assessment'),
+                    'next_url': next_url, 'local_audio': local_audio,
+                },
+            })
         if activity_key == 'aral-l24-g2-v-word-reading':
             audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_24/BAHAGI_1/GAWAIN_2/'
             audio_files = {
