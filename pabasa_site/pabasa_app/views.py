@@ -103,17 +103,27 @@ PRESCRIBED_ENGLISH_RECOGNITION_ALIASES = {
     'mat': {'math'}, 'mill': {'meal', 'mil', 'milt'}, 'hat': {'hot'}, 'wore': {'war'}, 'bat': {'butt', 'bath', 'but'}, 'bee': {'be', 'b'}, 'bit': {'b', 'it', 'beet', 'beat'}, 'bin': {'been', 'bean'}, 'lip': {'leap'}, 'loved': {'love'}, 'quite': {'quiet'}, 'laughed': {'laugh'},
 }
 
+# These allowances only belong to Lesson 31 Activity 3. Keeping them scoped
+# prevents words such as “hi” and “ship” from being accepted elsewhere.
+LESSON31_ACTIVITY3_RECOGNITION_ALIASES = {
+    'i': {'eye', 'aye', 'hi'},
+    'sip': {'zip', 'ship', 'sipped', 'shipped'},
+}
 
-def _prescribed_spoken_word_matches(target, heard_words):
+
+def _prescribed_spoken_word_matches(target, heard_words, aliases=None):
     target = str(target or '').lower()
-    return bool(set(heard_words or ()) & ({target} | PRESCRIBED_ENGLISH_RECOGNITION_ALIASES.get(target, set())))
+    allowances = PRESCRIBED_ENGLISH_RECOGNITION_ALIASES.get(target, set())
+    if aliases:
+        allowances = allowances | aliases.get(target, set())
+    return bool(set(heard_words or ()) & ({target} | allowances))
 
 
-def _prescribed_sentence_matches(target_text, heard_text):
+def _prescribed_sentence_matches(target_text, heard_text, aliases=None):
     target_words = re.findall(r'[a-z]+', str(target_text or '').lower())
     heard_words = re.findall(r'[a-z]+', str(heard_text or '').lower())
     return bool(target_words) and len(target_words) == len(heard_words) and all(
-        _prescribed_spoken_word_matches(target, {heard})
+        _prescribed_spoken_word_matches(target, {heard}, aliases)
         for target, heard in zip(target_words, heard_words)
     )
 from .hunt_scoring import classify_speech
@@ -16469,7 +16479,12 @@ def prescribed_activity_progress(request, activity_key):
                     raise ValueError('Read the current word first.')
                 target = item['jumbled_words'][word_index].lower()
                 heard = set(re.findall(r'[a-z]+', str(data.get('heard', '')).lower()))
-                accepted = _prescribed_spoken_word_matches(target, heard)
+                if activity_key == 'lesson-31-gawain-3':
+                    accepted = _prescribed_spoken_word_matches(
+                        target, heard, LESSON31_ACTIVITY3_RECOGNITION_ALIASES,
+                    )
+                else:
+                    accepted = _prescribed_spoken_word_matches(target, heard)
                 if accepted:
                     word_index += 1
                     attempts = 0
@@ -16496,7 +16511,15 @@ def prescribed_activity_progress(request, activity_key):
                     raise ValueError('Arrange the sentence before reading it.')
                 heard = set(re.findall(r'[a-z]+', str(data.get('heard', '')).lower()))
                 expected = re.findall(r'[a-z]+', item['sentence'].lower())
-                accepted = all(_prescribed_spoken_word_matches(word, heard) for word in expected)
+                if activity_key == 'lesson-31-gawain-3':
+                    accepted = all(
+                        _prescribed_spoken_word_matches(
+                            word, heard, LESSON31_ACTIVITY3_RECOGNITION_ALIASES,
+                        )
+                        for word in expected
+                    )
+                else:
+                    accepted = all(_prescribed_spoken_word_matches(word, heard) for word in expected)
                 if accepted:
                     index += 1
                     word_index = attempts = 0
@@ -21676,10 +21699,16 @@ def reading_transcribe_api(request):
         # recognition allowance across the complete line. This also returns
         # the learner-facing spelling ("mat") instead of Google's "math".
         if (
-            request.POST.get('prescribed_activity_key') == 'lesson-30-gawain-2'
+            request.POST.get('prescribed_activity_key') in {
+                'lesson-30-gawain-2', 'lesson-31-gawain-3',
+            }
             and language_code.startswith('en')
             and mode == 'sentence'
-            and _prescribed_sentence_matches(target_text, transcript)
+            and _prescribed_sentence_matches(
+                target_text,
+                transcript,
+                LESSON31_ACTIVITY3_RECOGNITION_ALIASES if request.POST.get('prescribed_activity_key') == 'lesson-31-gawain-3' else None,
+            )
         ):
             transcript = target_text
             matching_transcript = target_text
@@ -21989,6 +22018,20 @@ _LOCAL_PRESCRIBED_AUDIO_ALIASES = {
         'Correct, now let’s read the whole sentence..mp3',
     ('lesson-31-gawain-3', 'greatjobyoucompletedeverysentence'):
         'Great job! You completed Fix the Sentence..mp3',
+    ('lesson-31-gawain-3', 'hmmletstrythatagain'):
+        'Hmm, let’s try that again..mp3',
+    ('lesson-31-gawain-3', 'nowletsarrangethewords'):
+        "Now, let's arrange the words..mp3",
+    ('lesson-31-gawain-3', 'thatsrightnowletsreadthewholesentence'):
+        'That’s right, now let’s read the whole sentence..mp3',
+    ('lesson-31-gawain-3', 'thatsrightnowletsreadthenextword'):
+        'That’s right, now let’s read the next word..mp3',
+    ('lesson-31-gawain-4', 'hmmletstrythatagain'):
+        'Hmm, let’s try that again..mp3',
+    ('lesson-31-gawain-4', 'nowletsreadthenextpicture'):
+        "Now, let's read the next picture..mp3",
+    ('lesson-31-gawain-4', 'nowletsboxthecorrectletter'):
+        "Now, let's box the correct letter..mp3",
     ('lesson-31-gawain-4', 'greatjobyoucompletedtheactivity'):
         'Great job! You completed Say and Circle..mp3',
 }

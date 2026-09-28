@@ -397,7 +397,7 @@ PRESCRIBED_ACTIVITIES = {
     'lesson-31-gawain-1': {
         'activity_key': 'lesson-31-gawain-1', 'session_key': 'session-15',
         'session_number': 15, 'lesson_number': 31, 'gawain_number': 1,
-        'title': 'Circle the Right Word!', 'display_title': 'Session 15 · Lesson 31 · Activity 1',
+        'title': 'Circle the Right Word!', 'display_title': 'Circle the Right Word!',
         'instruction': 'Look at the picture. Circle the correct word.',
         'interaction': 'oral_choice_picture', 'total_items': 5,
         'items': [
@@ -411,7 +411,7 @@ PRESCRIBED_ACTIVITIES = {
     'lesson-31-gawain-2': {
         'activity_key': 'lesson-31-gawain-2', 'session_key': 'session-15',
         'session_number': 15, 'lesson_number': 31, 'gawain_number': 2,
-        'title': 'Fill in the Blank', 'display_title': 'Session 15 · Lesson 31 · Activity 2',
+        'title': 'Fill in the Blank', 'display_title': 'Fill in the Blank',
         'instruction': 'Complete each sentence. Choose the correct word from the box.',
         'interaction': 'oral_drag_sentence', 'total_items': 5,
         'word_choices': ['pet', 'sit', 'sip', 'lit', 'mat'],
@@ -426,7 +426,7 @@ PRESCRIBED_ACTIVITIES = {
     'lesson-31-gawain-3': {
         'activity_key': 'lesson-31-gawain-3', 'session_key': 'session-15',
         'session_number': 15, 'lesson_number': 31, 'gawain_number': 3,
-        'title': 'Fix the Sentence!', 'display_title': 'Session 15 · Lesson 31 · Activity 3',
+        'title': 'Fix the Sentence!', 'display_title': 'FIX THE SENTENCE!',
         'instruction': 'Read each word, arrange the sentence, then read the complete sentence.',
         'interaction': 'oral_jumbled_sentence', 'total_items': 5,
         'items': [
@@ -440,7 +440,7 @@ PRESCRIBED_ACTIVITIES = {
     'lesson-31-gawain-4': {
         'activity_key': 'lesson-31-gawain-4', 'session_key': 'session-15',
         'session_number': 15, 'lesson_number': 31, 'gawain_number': 4,
-        'title': 'Say and Circle!', 'display_title': 'Session 15 · Lesson 31 · Activity 4',
+        'title': 'Say and Circle!', 'display_title': 'SAY AND CIRCLE!',
         'instruction': 'Say the name of each picture and box the beginning letter of its name.',
         'interaction': 'oral_picture_box', 'total_items': 5,
         'items': [

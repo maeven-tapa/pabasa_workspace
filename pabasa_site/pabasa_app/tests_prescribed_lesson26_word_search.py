@@ -10,7 +10,11 @@ from django.utils import timezone
 from .models import School, Section, StudentActivityProgress, User
 from .prescribed_activity_catalog import prescribed_activity
 from .reading_stt import analyze_reading
-from .views import _prescribed_sentence_matches
+from .views import (
+    LESSON31_ACTIVITY3_RECOGNITION_ALIASES,
+    _prescribed_sentence_matches,
+    _prescribed_spoken_word_matches,
+)
 
 
 class PrescribedLesson26WordSearchTests(TestCase):
@@ -86,14 +90,14 @@ class PrescribedLesson26WordSearchTests(TestCase):
             reverse('reading_read_aloud_api'),
         )
         script = Path(settings.BASE_DIR, 'pabasa_app/static/pabasa_app/js/prescribed_word_search.js').read_text(encoding='utf-8')
-        self.assertIn("form.append('language', 'English')", script)
+        self.assertIn("window.Basahin.read({target_text:targetWord, language:'English', mode:'reading'}", script)
         self.assertIn('result.raw_transcript || result.transcript', script)
         self.assertNotIn('result.complete &&', script)
-        self.assertIn('acceptedWords.includes(normalizedWord(token))', script)
+        self.assertIn('save({candidate_match: {word_index: currentIndex, start, end}})', script)
         self.assertIn('Word Search. Find the words on the grid.', script)
         self.assertIn('addEventListener(\'click\', () => readAloud(targetWord))', script)
-        self.assertIn("mat:['mat','math']", script)
-        self.assertIn('lesson26-complete-message', script)
+        self.assertIn("result.complete === true", script)
+        self.assertIn("window.PrescribedLessonUi.showCompletion(app)", script)
         self.assertIn('JSON.stringify({reset: true})', script)
 
     def test_back_reset_clears_only_this_students_lesson26_progress(self):
@@ -138,7 +142,7 @@ class PrescribedLesson26WordSearchTests(TestCase):
         self.assertEqual(response.context['prescribed_activity_data']['transcribe_url'], reverse('reading_transcribe_api'))
         script = Path(settings.BASE_DIR, 'pabasa_app/static/pabasa_app/js/prescribed_fill_blank_lesson26_activity2.js').read_text(encoding='utf-8')
         self.assertIn("playTts('Fill in the Blanks. Read the words, then fill in the blanks.')", script)
-        self.assertIn("mat:['mat','math']", script)
+        self.assertIn("result.complete === true", script)
         self.assertIn("replace(/\\bhot\\b/g, 'hat')", script)
         self.assertNotIn('speechSynthesis', script)
         self.assertIn('word-chip:hover:not(:disabled)', response.content.decode())
@@ -170,9 +174,8 @@ class PrescribedLesson26WordSearchTests(TestCase):
         self.assertIn('outline:3px solid var(--line)', template)
         script = Path(settings.BASE_DIR, 'pabasa_app/static/pabasa_app/js/prescribed_rhyming_verses_lesson27_activity1.js').read_text(encoding='utf-8')
         self.assertIn('Rhyming Verses. Read each verse', script)
-        self.assertIn("replace(/\\bhot\\b/g, 'hat')", script)
-        self.assertIn("replace(/\\bmath\\b/g, 'mat')", script)
-        self.assertIn("replace(/\\blove\\b/g, 'loved')", script)
+        self.assertIn("window.Basahin.read({target_text:target, language:'English', mode:'sentence'}", script)
+        self.assertIn("const correct = result.complete === true;", script)
         self.assertNotIn('speechSynthesis', script)
 
     def test_lesson27_back_reset_clears_only_its_saved_progress(self):
@@ -504,6 +507,39 @@ class PrescribedLesson26WordSearchTests(TestCase):
         }), content_type='application/json')
         self.assertTrue(read.json()['accepted'])
         self.assertEqual(read.json()['progress']['completed_items'], 1)
+
+    def test_lesson31_activity3_recognition_aliases_remain_activity_scoped(self):
+        self.assertFalse(_prescribed_spoken_word_matches('i', {'hi'}))
+        self.assertFalse(_prescribed_spoken_word_matches('sip', {'shipped'}))
+        self.assertTrue(_prescribed_spoken_word_matches(
+            'i', {'hi'}, LESSON31_ACTIVITY3_RECOGNITION_ALIASES,
+        ))
+        self.assertTrue(_prescribed_spoken_word_matches(
+            'sip', {'shipped'}, LESSON31_ACTIVITY3_RECOGNITION_ALIASES,
+        ))
+
+    def test_lesson31_fix_sentence_accepts_shipped_for_sip_in_a_complete_sentence(self):
+        StudentActivityProgress.objects.create(
+            student=self.student,
+            activity_key=self.lesson31_activity3_key,
+            total_items=5,
+            state={
+                'current_item': 3,
+                'word_index': 4,
+                'placements': ['I', 'sip', 'the', 'milk'],
+                'attempts': 0,
+                'phase': 'reading_sentence',
+            },
+        )
+
+        response = self.client.post(self.lesson31_activity3_progress_url, data=json.dumps({
+            'action': 'read_sentence',
+            'heard': 'I shipped the milk',
+        }), content_type='application/json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['accepted'])
+        self.assertEqual(response.json()['progress']['completed_items'], 4)
 
     def test_lesson31_say_circle_requires_picture_reading_and_rereading_after_wrong_choice(self):
         page = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': self.lesson31_activity4_key}))
