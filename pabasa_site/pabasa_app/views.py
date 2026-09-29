@@ -28918,8 +28918,29 @@ def export_crla_assessment(request, assessment_id):
     finalization = ClassCrlaFinalization.objects.select_related('section', 'material').filter(
         section_id=section_id, material_id=material_id,
     ).first()
-    if not finalization or finalization.material.assessment_id != root_assessment.id:
-        return HttpResponseForbidden('CRLA results can be exported only after this class assessment is finalized.')
+    if not finalization:
+        with transaction.atomic():
+            material = Material.objects.select_for_update().filter(pk=material_id, is_active=True).first()
+            section = Section.objects.select_for_update().filter(pk=section_id, is_active=True).first()
+            if not material or not _is_official_crla_material(material) or material.assessment_id != root_assessment.id:
+                return HttpResponseForbidden('CRLA results can be exported only for an active official CRLA assessment.')
+            if user.role != 'admin' and section and section.teacher_id != user.id:
+                return HttpResponseForbidden('You do not have access to this class CRLA export.')
+            if not section:
+                return HttpResponseForbidden('You do not have access to this class CRLA export.')
+            resolution = _crla_finalization_resolution(section, material)
+            if not resolution['finalize_ready']:
+                return HttpResponse('CRLA results cannot be exported while one or more enrolled students are Not Taken.', status=409)
+            parent_assessment = _ensure_crla_material_parent_assessment(material, user)
+            ClassCrlaFinalization.objects.get_or_create(
+                section=section, material=material,
+                defaults={'finalized_by': user, 'finalized_at': system_now()},
+            )
+        finalization = ClassCrlaFinalization.objects.select_related('section', 'material').get(
+            section_id=section_id, material_id=material_id,
+        )
+    if finalization.material.assessment_id != root_assessment.id:
+        return HttpResponseForbidden('CRLA results can be exported only for this class assessment.')
     if user.role != 'admin' and finalization.section.teacher_id != user.id:
         return HttpResponseForbidden('You do not have access to this class CRLA export.')
     has_export_access = _teacher_can_access_assessment(user, root_assessment)

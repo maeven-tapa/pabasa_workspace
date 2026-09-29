@@ -946,6 +946,8 @@
     .crla-export-tooltip:hover::after, .crla-export-tooltip:focus-within::after { opacity:1; transform:translate(-50%, 0); }
     .crla-finalization-actions .student-export-btn { background:rgba(239,248,252,.95); border:1px solid rgba(22,95,143,.24); border-radius:12px; box-shadow:0 8px 18px rgba(15,23,42,.05); color:var(--dash-primary-deep); margin-left:0; padding:.5rem 1rem; }
     .crla-finalization-actions .student-export-btn:hover:not([aria-disabled="true"]) { background:rgba(226,242,248,.98); border-color:rgba(22,95,143,.38); color:var(--dash-primary-deep); transform:translateY(-1px); }
+    .crla-finalization-actions .student-export-btn[aria-disabled="true"] { background:#e5e7eb; border-color:#cbd5e1; box-shadow:none; color:#7b8794; cursor:not-allowed; opacity:.82; pointer-events:none; }
+    .crla-finalization-actions .student-export-btn[aria-disabled="true"] i { color:#7b8794; }
     .crla-finalization-actions .student-export-btn i { color:var(--dash-primary); font-size:.95rem; line-height:1; }
     @media (max-width:767.98px) { .student-directory-controls { flex-wrap:wrap; } .student-directory-filter-group { flex:1 1 100%; flex-wrap:wrap; } .student-directory-controls .student-search-wrap { flex-basis:100%; max-width:none; } .student-directory-controls .student-filter-wrap { flex:1 1 190px; } .student-directory-controls #assessmentPeriodFilterWrap { flex:1 1 265px; max-width:none; } .crla-finalization-actions { align-items:flex-start; flex-direction:column; } .crla-finalization-buttons { justify-content:flex-start; width:100%; } }
     .student-aral-action:disabled { cursor: not-allowed; opacity: .45; }
@@ -1750,12 +1752,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 <div class="crla-finalization-actions">
                     <span class="small fw-semibold text-secondary" id="crlaFinalizationStatus">CRLA Assessment: Open</span>
                     <div class="crla-finalization-buttons">
-                    <span class="crla-finalize-tooltip" id="crlaFinalizeTooltip" tabindex="0" role="img" aria-label="Finalization availability notice" data-tooltip="Finalization becomes available after every enrolled student has completed the assessment or has been officially dropped.">
-                    <button class="btn btn-sm crla-finalize-btn" type="button" id="finalizeCrlaBtn" disabled aria-label="Finalize CRLA Assessment. Finalization becomes available after every enrolled student has completed the assessment or has been officially dropped.">
-                        <i class="bi bi-lock-fill" aria-hidden="true"></i><span>Finalize CRLA Assessment</span>
-                    </button>
-                    </span>
-                    <span class="crla-export-tooltip" id="crlaExportTooltip" tabindex="0" role="img" aria-label="Export availability notice" data-tooltip="Export becomes available after the CRLA assessment has been finalized.">
+                    <span class="crla-export-tooltip" id="crlaExportTooltip" tabindex="0" role="img" aria-label="Export availability notice" data-tooltip="Available once all students have completed the assessment or been officially dropped.">
                     <a class="btn btn-sm student-export-btn" id="exportStudentsBtn" href="#" aria-disabled="true" tabindex="-1">
                         <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i><span>Export CRLA Result</span>
                     </a>
@@ -1777,9 +1774,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <div class="modal fade" id="teacherAralActionModal" tabindex="-1" aria-labelledby="teacherAralActionTitle" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered teacher-aral-action-dialog"><div class="modal-content teacher-aral-action-modal"><div class="modal-header"><h3 class="modal-title h6" id="teacherAralActionTitle">ARAL Program</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p id="teacherAralActionCopy"></p><p class="teacher-aral-action-note" id="teacherAralActionNote" hidden>The student's ARAL status will be updated after confirmation.</p><div id="teacherAralLevelWrap"><label class="form-label" for="teacherAralLevel">Reading Level</label><select class="form-select" id="teacherAralLevel"><option value="">Choose reading level</option><option>Low Emerging Readers</option><option>High Emerging Readers</option><option>Developing Readers</option><option>Transitioning Readers</option></select></div><div id="teacherAralReasonWrap" hidden><label class="form-label" for="teacherAralReason">Reason for manual exit</label><select class="form-select" id="teacherAralReason"><option value="">Choose a reason</option><option value="Teacher Observation">Teacher Observation</option><option value="Others">Others</option></select><div id="teacherAralOtherReasonWrap" hidden><label class="form-label mt-2" for="teacherAralOtherReason">Specify reason</label><textarea class="form-control" id="teacherAralOtherReason" rows="3" maxlength="2000" style="resize:none"></textarea></div></div><div class="text-danger small mt-2" id="teacherAralActionError" hidden></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-danger btn-sm" id="teacherAralActionConfirm">Confirm</button></div></div></div>
-    </div>
-    <div class="modal fade" id="finalizeCrlaModal" tabindex="-1" aria-labelledby="finalizeCrlaTitle" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h3 class="modal-title h6" id="finalizeCrlaTitle">Finalize CRLA Assessment?</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p>This will close the CRLA assessment for the whole class/section.</p><p>Finalization is available only after every enrolled student has completed the assessment or has been officially dropped.</p><p class="mb-0"><strong>Students will no longer be able to continue or submit this CRLA assessment for this class.</strong></p><div class="text-danger small mt-2" id="finalizeCrlaError" hidden></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-danger" id="confirmFinalizeCrlaBtn">Finalize Assessment</button></div></div></div>
     </div>
     <div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -2306,10 +2300,10 @@ function setStudentExportState(students) {
     if (exportBtn) {
         const state = currentCrlaFinalization || {};
         const assessmentId = state.assessment_id;
-        const canExport = Boolean(state.finalized && assessmentId && state.material_id && state.section_id);
+        const canExport = Boolean(state.finalize_ready && assessmentId && state.material_id && state.section_id);
         const exportNotice = canExport
-            ? 'Export the finalized CRLA result for this class.'
-            : 'Export becomes available after the CRLA assessment has been finalized.';
+            ? 'Export CRLA results. The assessment will finalize automatically when all students have completed it or have been officially dropped.'
+            : 'Available once all students have completed the assessment or been officially dropped.';
         exportBtn.href = canExport ? `/assessment/${encodeURIComponent(assessmentId)}/export-crla/?source=student-directory&section_id=${encodeURIComponent(state.section_id)}&material_id=${encodeURIComponent(state.material_id)}` : '#';
         exportBtn.setAttribute('aria-disabled', canExport ? 'false' : 'true');
         exportBtn.tabIndex = canExport ? 0 : -1;
@@ -2323,31 +2317,19 @@ function setStudentExportState(students) {
 
 function updateCrlaFinalizationUi(state) {
     currentCrlaFinalization = state || null;
-    const button = document.getElementById('finalizeCrlaBtn');
-    const tooltip = document.getElementById('crlaFinalizeTooltip');
     const status = document.getElementById('crlaFinalizationStatus');
     const finalized = Boolean(state?.finalized);
     const ready = Boolean(state?.material_id && state?.section_id);
     const finalizeReady = Boolean(state?.finalize_ready);
-    let availabilityNotice = 'Finalization becomes available after every enrolled student has completed the assessment or has been officially dropped.';
+    let availabilityNotice = 'Available once all students have completed the assessment or been officially dropped.';
     if (finalized) {
-        availabilityNotice = 'This CRLA assessment has already been finalized for the class.';
+        availabilityNotice = 'This CRLA assessment is ready for export.';
     } else if (!state?.material_id || !state?.section_id) {
-        availabilityNotice = 'Finalization becomes available when an official CRLA assessment and section are selected.';
+        availabilityNotice = 'Export becomes available when an official CRLA assessment and section are selected.';
     } else if (Number(state?.unresolved_count) > 0) {
-        availabilityNotice = `${state.unresolved_count} enrolled student${Number(state.unresolved_count) === 1 ? '' : 's'} still need to complete the assessment or be officially dropped.`;
+        availabilityNotice = 'Available once all students have completed the assessment or been officially dropped.';
     }
     if (status) status.textContent = finalized ? 'CRLA Assessment: Finalized' : 'CRLA Assessment: Open';
-    if (button) {
-        button.disabled = finalized || !ready || !finalizeReady;
-        button.hidden = finalized;
-        button.setAttribute('aria-label', `Finalize CRLA Assessment. ${availabilityNotice}`);
-    }
-    if (tooltip) {
-        tooltip.dataset.tooltip = availabilityNotice;
-        tooltip.setAttribute('aria-label', availabilityNotice);
-        tooltip.hidden = finalized;
-    }
     setStudentExportState(latestStudentDirectoryStudents);
 }
 
@@ -2632,11 +2614,11 @@ function bindStudentDirectoryFilters() {
     if (exportBtn && !exportBtn.dataset.crlaExportBound) {
         exportBtn.dataset.crlaExportBound = 'true';
         exportBtn.addEventListener('click', event => {
-            if (currentCrlaFinalization?.finalized) return;
+            if (currentCrlaFinalization?.finalize_ready) return;
 
             event.preventDefault();
             window.showToast?.(
-                'CRLA Result is not available yet. Please finalize the CRLA assessment for this class first.',
+                'CRLA Result is not available yet. All students must complete the assessment or be officially dropped first.',
                 'error'
             );
         });
@@ -2790,41 +2772,7 @@ function csrfToken() {
     return match ? decodeURIComponent(match[1]) : '';
 }
 
-function bindCrlaFinalization() {
-    const button = document.getElementById('finalizeCrlaBtn');
-    const modal = document.getElementById('finalizeCrlaModal');
-    const confirm = document.getElementById('confirmFinalizeCrlaBtn');
-    const error = document.getElementById('finalizeCrlaError');
-    if (!button || !modal || !confirm) return;
-    button.addEventListener('click', () => {
-        if (!currentCrlaFinalization?.material_id || !currentCrlaFinalization?.section_id) return;
-        error.hidden = true;
-        bootstrap.Modal.getOrCreateInstance(modal).show();
-    });
-    confirm.addEventListener('click', async () => {
-        confirm.disabled = true;
-        error.hidden = true;
-        try {
-            const response = await fetch('{% url "finalize_class_crla_assessment" %}', {
-                method: 'POST', credentials: 'same-origin',
-                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken()},
-                body: JSON.stringify({section_id: currentCrlaFinalization.section_id, material_id: currentCrlaFinalization.material_id}),
-            });
-            const result = await response.json();
-            if (!response.ok || !result.success) throw new Error(result.error || 'CRLA finalization failed.');
-            bootstrap.Modal.getOrCreateInstance(modal).hide();
-            await refreshStudentOverview();
-        } catch (err) {
-            error.textContent = err.message;
-            error.hidden = false;
-        } finally {
-            confirm.disabled = false;
-        }
-    });
-}
-
 document.addEventListener('DOMContentLoaded', bindTeacherAralActions);
-document.addEventListener('DOMContentLoaded', bindCrlaFinalization);
 
 // Fetch student data from the server API.
 async function refreshStudentOverview() {
