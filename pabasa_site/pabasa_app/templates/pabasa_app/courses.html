@@ -10020,9 +10020,36 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                             <div id="templateWeeksGrid" class="template-weeks-grid"></div>
                                         </section>
 
-                                        <section class="template-builder-section template-preview-section" aria-labelledby="templatePreviewHeading">
+                                        <section class="template-builder-section" id="materialPublicationSettings" aria-labelledby="materialPublicationHeading">
                                             <div class="template-section-heading">
                                                 <span class="template-section-index">04</span>
+                                                <div><h6 id="materialPublicationHeading">Access &amp; Assignment</h6><p>Choose which students can access this material.</p></div>
+                                            </div>
+                                            <div class="p-3 rounded-4 shadow-sm" style="background: rgba(248, 250, 252, 0.5); border: 1px solid #f1f5f9;">
+                                                <label class="form-label fw-bold small text-dark mb-1">Who can access this material?</label>
+                                                <div class="d-flex flex-column gap-2">
+                                                    <label class="form-check border rounded-3 p-2 ps-5">
+                                                        <input class="form-check-input" type="radio" name="materialPublicationScope" value="whole_class" checked>
+                                                        <span class="fw-semibold">Whole Class</span><small class="d-block text-muted">All students in the assigned class can access it.</small>
+                                                    </label>
+                                                    <label class="form-check border rounded-3 p-2 ps-5">
+                                                        <input class="form-check-input" type="radio" name="materialPublicationScope" value="selected_students">
+                                                        <span class="fw-semibold">Selected Students</span><small class="d-block text-muted">Only selected students can access it.</small>
+                                                    </label>
+                                                </div>
+                                                <div id="materialSelectedStudentsPanel" class="border rounded-3 p-2 mt-2 d-none">
+                                                    <input id="materialStudentSearch" type="search" class="form-control form-control-sm mb-2" placeholder="Search students">
+                                                    <label class="form-check small mb-2"><input id="materialStudentSelectAll" class="form-check-input" type="checkbox"> <span class="form-check-label">Select All</span></label>
+                                                    <div id="materialStudentList" class="small" style="max-height: 200px; overflow-y: auto;"></div>
+                                                    <div id="materialStudentEmpty" class="text-muted small d-none">No eligible students are available.</div>
+                                                    <div class="text-muted small mt-2"><span id="materialStudentCount">0 students selected</span></div>
+                                                </div>
+                                            </div>
+                                        </section>
+
+                                        <section class="template-builder-section template-preview-section" aria-labelledby="templatePreviewHeading">
+                                            <div class="template-section-heading">
+                                                <span class="template-section-index">05</span>
                                                 <div><h6 id="templatePreviewHeading">Learning Material Preview</h6><p>A learner-facing view of the activity you are creating.</p></div>
                                             </div>
                                             <div id="templatePreviewPanel" class="template-preview-panel" aria-live="polite">
@@ -15813,6 +15840,57 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const publicationStatusSelect = document.getElementById('publicationStatus');
         const randomizeOrderCheckbox = document.getElementById('randomizeOrderToggle');
         const materialAssessmentKindInput = document.getElementById('materialAssessmentKind');
+        const publicationSettingsPanel = document.getElementById('materialPublicationSettings');
+        const materialPublicationScopeInputs = document.querySelectorAll('input[name="materialPublicationScope"]');
+        const materialSelectedStudentsPanel = document.getElementById('materialSelectedStudentsPanel');
+        const materialStudentSearch = document.getElementById('materialStudentSearch');
+        const materialStudentSelectAll = document.getElementById('materialStudentSelectAll');
+        const materialStudentList = document.getElementById('materialStudentList');
+        const materialStudentEmpty = document.getElementById('materialStudentEmpty');
+        const materialStudentCount = document.getElementById('materialStudentCount');
+        let materialEligibleStudents = [];
+        let materialSelectedStudentIds = new Set();
+        async function loadMaterialStudents() {
+            const sectionId = typeof getTeacherSectionId === 'function' ? getTeacherSectionId(currentSectionId) : currentSectionId;
+            materialEligibleStudents = [];
+            materialSelectedStudentIds.clear();
+            if (!sectionId) { renderMaterialStudents(); return; }
+            try {
+                const response = await fetch(`/dashboard/teacher/material-section-students/?section_id=${encodeURIComponent(sectionId)}`, { credentials: 'same-origin' });
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.error || 'Unable to load students.');
+                materialEligibleStudents = Array.isArray(data.students) ? data.students : [];
+            } catch (error) { console.warn('Could not load material students:', error); }
+            renderMaterialStudents();
+        }
+        function renderMaterialStudents() {
+            if (!materialStudentList) return;
+            const query = (materialStudentSearch?.value || '').trim().toLowerCase();
+            const visible = materialEligibleStudents.filter(student => `${student.name} ${student.custom_id || ''}`.toLowerCase().includes(query));
+            materialStudentList.innerHTML = visible.map(student => `<label class="form-check mb-1"><input class="form-check-input material-student-checkbox" type="checkbox" value="${student.id}" ${materialSelectedStudentIds.has(Number(student.id)) ? 'checked' : ''}><span class="form-check-label">${student.name}</span></label>`).join('');
+            materialStudentEmpty?.classList.toggle('d-none', visible.length > 0);
+            if (materialStudentCount) materialStudentCount.textContent = `${materialSelectedStudentIds.size} students selected`;
+            if (materialStudentSelectAll) materialStudentSelectAll.checked = visible.length > 0 && visible.every(student => materialSelectedStudentIds.has(Number(student.id)));
+            materialStudentList.querySelectorAll('.material-student-checkbox').forEach(input => input.addEventListener('change', () => { const id = Number(input.value); input.checked ? materialSelectedStudentIds.add(id) : materialSelectedStudentIds.delete(id); renderMaterialStudents(); }));
+        }
+        function materialPublicationSettings() {
+            return { publication_scope: document.querySelector('input[name="materialPublicationScope"]:checked')?.value || 'whole_class', selected_student_ids: Array.from(materialSelectedStudentIds) };
+        }
+        async function initializeMaterialPublicationSettings(material) {
+            const scope = material?.publication_scope || 'whole_class';
+            materialPublicationScopeInputs.forEach(input => { input.checked = input.value === scope; });
+            materialSelectedStudentsPanel?.classList.toggle('d-none', scope !== 'selected_students');
+            await loadMaterialStudents();
+            materialSelectedStudentIds = new Set((material?.selected_student_ids || []).map(Number));
+            renderMaterialStudents();
+        }
+        materialPublicationScopeInputs.forEach(input => input.addEventListener('change', () => { materialSelectedStudentsPanel?.classList.toggle('d-none', input.value !== 'selected_students' || !input.checked); if (input.checked && input.value === 'selected_students') loadMaterialStudents(); }));
+        materialStudentSearch?.addEventListener('input', renderMaterialStudents);
+        materialStudentSelectAll?.addEventListener('change', () => {
+            const query = (materialStudentSearch?.value || '').trim().toLowerCase();
+            materialEligibleStudents.filter(student => `${student.name} ${student.custom_id || ''}`.toLowerCase().includes(query)).forEach(student => materialStudentSelectAll.checked ? materialSelectedStudentIds.add(Number(student.id)) : materialSelectedStudentIds.delete(Number(student.id)));
+            renderMaterialStudents();
+        });
         const addMaterialValidationError = document.getElementById('amValidationError');
         let editingItemIndex = null;
         const scheduleFieldDiv = document.getElementById('scheduleField');
@@ -16513,6 +16591,19 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (!activeTemplateActivity && active) return;
             if (templateActivityGrid) setNodeVisibility(templateActivityGrid, !active);
             if (templateBuilderPanel) setNodeVisibility(templateBuilderPanel, active);
+            placePublicationSettings(active);
+            if (publicationSettingsPanel) setNodeVisibility(publicationSettingsPanel, active || personalWorkspaceActive);
+        }
+
+        function placePublicationSettings(templateBuilderActive) {
+            if (!publicationSettingsPanel) return;
+            if (templateBuilderActive) {
+                const previewSection = document.querySelector('.template-preview-section');
+                if (previewSection?.parentNode) previewSection.parentNode.insertBefore(publicationSettingsPanel, previewSection);
+            } else {
+                const personalSettingsSection = personalMaterialSections?.[1];
+                if (personalSettingsSection) personalSettingsSection.appendChild(publicationSettingsPanel);
+            }
         }
 
         function setCourseMaterialDropdownOpen(state, isOpen) {
@@ -18311,8 +18402,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const scheduleIndex = document.querySelector('[aria-labelledby="templateScheduleHeading"] .template-section-index');
             const previewIndex = document.querySelector('[aria-labelledby="templatePreviewHeading"] .template-section-index');
             configSection?.classList.toggle('d-none', retell);
-            if (retell) { if (scheduleIndex) scheduleIndex.textContent = '02'; if (previewIndex) previewIndex.textContent = '03'; }
-            else { if (scheduleIndex) scheduleIndex.textContent = '03'; if (previewIndex) previewIndex.textContent = '04'; }
+            if (scheduleIndex) scheduleIndex.textContent = '03';
+            if (previewIndex) previewIndex.textContent = '05';
             const titleInput = document.getElementById('templateActivityTitle');
             const titleSelect = document.getElementById('templateActivityTitleSelect');
             titleInput?.classList.toggle('d-none', retell);
@@ -19350,6 +19441,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             applyTemplateLanguageSelection(templateLanguage, templateTitle);
             window.__addMaterialDefaultMode = 'supplementary';
             setTemplateBuilderActive(true);
+            if (activeTemplateActivity?.mode !== 'edit') {
+                materialPublicationScopeInputs.forEach(input => { input.checked = input.value === 'whole_class'; });
+                materialSelectedStudentIds.clear();
+                renderMaterialStudents();
+                materialSelectedStudentsPanel?.classList.add('d-none');
+            }
             if (templateActivityTitle) {
                 if (!isLetterSoundMatchingTemplate(templateTitle) && !isLetterSoundCorrespondenceTemplate(templateTitle) && !isWordDecodingTemplate(templateTitle)) {
                     templateActivityTitle.value = isSoundDetectiveTemplate(templateTitle) ? 'Sound Detective' : (isStoryResponseTemplate(templateTitle) ? 'Story Response' : '');
@@ -19467,6 +19564,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         function beginPersonalMaterialWorkspace() {
             setAddMaterialMode('supplementary');
             personalWorkspaceActive = true;
+            placePublicationSettings(false);
+            setNodeVisibility(publicationSettingsPanel, true);
             setNodeVisibility(templateLandingPanel, false);
             setNodeVisibility(personalWorkspaceBack, true);
             addMaterialFooter?.classList.remove('d-none');
@@ -20077,6 +20176,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         source_material_id: null,
                         template_title: activeTemplateActivity?.templateTitle || '',
                         template_lesson: activeTemplateActivity?.lesson || '',
+                        ...materialPublicationSettings(),
                     };
                     const isEditMode = activeTemplateActivity?.mode === 'edit';
                     const existingMaterialId = activeTemplateActivity?.materialId;
@@ -20803,6 +20903,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (addMaterialFooter) {
                 addMaterialFooter.classList.toggle('d-none', !showSupplementary || !personalWorkspaceActive);
             }
+            if (publicationSettingsPanel && !showSupplementary) setNodeVisibility(publicationSettingsPanel, false);
             if (showSupplementary && cancelMaterialSetupBtn) {
                 cancelMaterialSetupBtn.disabled = false;
                 cancelMaterialSetupBtn.removeAttribute('aria-disabled');
@@ -21548,6 +21649,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     window._pendingSharedMaterialOrigin = false;
                     window._pendingSharedMaterialSourceId = null;
                     window.courseAttachTarget = null;
+                    initializeMaterialPublicationSettings(material);
                     new bootstrap.Modal(addMaterialModal).show();
                     return;
                 }
@@ -21611,6 +21713,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 window.courseAttachTarget = null;
 
                 // Show modal
+                initializeMaterialPublicationSettings(material);
                 new bootstrap.Modal(addMaterialModal).show();
             } catch (err) {
                 console.warn('openAddMaterialForEdit failed', err);
@@ -22306,6 +22409,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         // prevent attaching new materials during edit flows
                         window.courseAttachTarget = null;
                         window.__addMaterialDefaultMode = 'supplementary';
+                        initializeMaterialPublicationSettings(material);
                         new bootstrap.Modal(addModalEl).show();
                     }
 
@@ -22645,7 +22749,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                                 'X-CSRFToken': csrfToken,
                                                 'X-Requested-With': 'XMLHttpRequest'
                                             },
-                                            body: JSON.stringify({ material_id: editingMaterialId, title: title, reading_type: readingType, content: content, status: status, usage_type: usageType, section_id: getTeacherSectionId(currentSectionId) || null, scheduled_at: schedule || null, assigned_week: assignedWeek, language: language, randomize_order: randomizeOrder, assessment_kind: assessmentKind, source_type: sourceType })
+                                            body: JSON.stringify({ material_id: editingMaterialId, title: title, reading_type: readingType, content: content, status: status, usage_type: usageType, section_id: getTeacherSectionId(currentSectionId) || null, scheduled_at: schedule || null, assigned_week: assignedWeek, language: language, randomize_order: randomizeOrder, assessment_kind: assessmentKind, source_type: sourceType, ...materialPublicationSettings() })
                                         };
                                         apiResponse = await fetch('/dashboard/teacher/update-material/', opts);
                                         if (apiResponse.status === 403) {
@@ -22684,7 +22788,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                             randomize_order: randomizeOrder,
                                             assessment_kind: assessmentKind,
                                             source_type: sourceType,
-                                            source_material_id: window._pendingSharedMaterialSourceId || null
+                                            source_material_id: window._pendingSharedMaterialSourceId || null,
+                                            ...materialPublicationSettings()
                                         })
                                     };
 

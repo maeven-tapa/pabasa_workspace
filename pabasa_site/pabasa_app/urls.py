@@ -263,6 +263,7 @@ urlpatterns = [
     path('dashboard/student/unenroll/', views.unenroll_class, name='unenroll_class'),
     path('dashboard/teacher/extract-material/', views.extract_reading_material_file, name='extract_reading_material_file'),
     path('dashboard/teacher/add-material/', views.add_reading_material, name='add_reading_material'),
+    path('dashboard/teacher/material-section-students/', views.get_material_section_students, name='get_material_section_students'),
     path('api/class/materials/', views.get_class_materials, name='get_class_materials'),
     path(
         'dashboard/teacher/generate-class-code/',

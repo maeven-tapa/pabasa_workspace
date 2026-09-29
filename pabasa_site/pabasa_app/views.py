@@ -64,7 +64,7 @@ from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_
 from django.db import transaction
 import re
 import traceback
-from .models import User, School, Section, Enrollment, AccountStatusHistory, Assessment, AssessmentRequest, Material, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride, ClassCrlaFinalization, StudentActivityProgress, StudentActivityRecordingSubmission
+from .models import User, School, Section, Enrollment, AccountStatusHistory, Assessment, AssessmentRequest, Material, MaterialStudentAssignment, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride, ClassCrlaFinalization, StudentActivityProgress, StudentActivityRecordingSubmission
 from .system_clock import invalidate_override_cache, now as system_now, real_now, today as system_today
 from .models import PracticeDebugSettings
 from .section_configuration import ensure_salawag_grade_two_sections
@@ -30515,6 +30515,35 @@ def get_teacher_overview(request):
 
 
 @require_http_methods(["GET"])
+@login_required(role='teacher')
+def get_material_section_students(request):
+    """Return the active roster for a teacher-owned section."""
+    try:
+        section_id = int(request.GET.get('section_id'))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'A valid section_id is required.'}, status=400)
+    teacher = User.objects.filter(id=request.session.get('user_id'), role='teacher').first()
+    section = Section.objects.filter(pk=section_id, teacher=teacher, is_active=True).first() if teacher else None
+    if not section:
+        return JsonResponse({'success': False, 'error': 'Section access denied.'}, status=403)
+    enrollments = Enrollment.objects.filter(
+        section=section, status='active', is_active=True,
+        student__role='student', student__is_archived=False,
+    ).select_related('student').order_by('student__last_name', 'student__first_name', 'student_id')
+    return JsonResponse({
+        'success': True,
+        'students': [
+            {
+                'id': enrollment.student_id,
+                'name': f'{enrollment.student.first_name} {enrollment.student.last_name}'.strip() or enrollment.student.username,
+                'custom_id': enrollment.student.custom_id,
+            }
+            for enrollment in enrollments
+        ],
+    })
+
+
+@require_http_methods(["GET"])
 @login_required()
 def get_class_materials(request):
     """
@@ -30621,6 +30650,11 @@ def get_class_materials(request):
         is_requesting_student = bool(request_user and request_user.role == 'student')
         # Archived records should not appear in class/course readings, even for the owning teacher.
         materials_qs = materials_qs.filter(is_active=True).exclude(status__iexact='archived')
+        if request_user.role == 'student':
+            materials_qs = materials_qs.filter(
+                Q(publication_scope='whole_class')
+                | Q(publication_scope='selected_students', student_assignments__student=request_user)
+            ).distinct()
         assessments_qs = assessments_qs.filter(is_active=True).exclude(status__iexact='archived')
         practices_qs = practices_qs.filter(is_active=True).exclude(status__iexact='archived')
 
@@ -32056,6 +32090,54 @@ def _find_existing_shared_material(title, content, item_type, language='', sourc
     return None
 
 
+def _material_publication_scope(data, existing='whole_class'):
+    value = data.get('publication_scope', existing)
+    value = str(value or 'whole_class').strip().lower()
+    return value if value in {'whole_class', 'selected_students'} else None
+
+
+def _selected_student_ids(data):
+    raw = data.get('selected_student_ids', [])
+    if raw is None:
+        return []
+    if not isinstance(raw, list):
+        raise ValueError('selected_student_ids must be a list.')
+    ids = []
+    for value in raw:
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError):
+            raise ValueError('selected_student_ids contains an invalid student ID.')
+        if parsed <= 0 or parsed in ids:
+            raise ValueError('selected_student_ids contains an invalid or duplicate student ID.')
+        ids.append(parsed)
+    return ids
+
+
+def _validate_material_students(section, student_ids):
+    if not section:
+        raise ValueError('A section is required for selected students.')
+    eligible = set(Enrollment.objects.filter(
+        section=section, status='active', is_active=True,
+        student__role='student', student__is_archived=False,
+    ).values_list('student_id', flat=True))
+    invalid = sorted(set(student_ids) - eligible)
+    if invalid:
+        raise ValueError('Every selected student must be actively enrolled in the assigned section.')
+    return student_ids
+
+
+def _set_material_student_assignments(material, publication_scope, student_ids):
+    if publication_scope == 'whole_class':
+        MaterialStudentAssignment.objects.filter(material=material).delete()
+    else:
+        MaterialStudentAssignment.objects.filter(material=material).exclude(student_id__in=student_ids).delete()
+        MaterialStudentAssignment.objects.bulk_create(
+            [MaterialStudentAssignment(material=material, student_id=student_id) for student_id in student_ids],
+            ignore_conflicts=True,
+        )
+
+
 def _material_response_payload(material, tokens=None, section=None, is_shared_material=None, shared_owner_teacher_name=None):
     item_count = len(tokens) if tokens is not None else 1
     if tokens is None and isinstance(material.content_json, dict) and isinstance(material.content_json.get('items'), list):
@@ -32116,6 +32198,8 @@ def _material_response_payload(material, tokens=None, section=None, is_shared_ma
         'selected_set_name': str(content_json.get('activity_name') or '').strip() if isinstance(content_json, dict) else '',
         'randomize_order': bool(content_json.get('randomize_order')),
         'student_access': bool(getattr(material, 'student_access', False)),
+        'publication_scope': getattr(material, 'publication_scope', 'whole_class'),
+        'selected_student_ids': list(material.student_assignments.values_list('student_id', flat=True)),
         'assessment_kind': _assessment_kind_value(material),
     }
     return payload
@@ -32416,6 +32500,13 @@ def add_reading_material(request):
         randomize_order_raw = data.get('randomize_order')
         randomize_order = str(randomize_order_raw).strip().lower() in ('1', 'true', 'yes', 'on')
         student_access = str(data.get('student_access', False)).strip().lower() in ('1', 'true', 'yes', 'on')
+        publication_scope = _material_publication_scope(data)
+        try:
+            selected_student_ids = _selected_student_ids(data)
+        except ValueError as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+        if publication_scope is None:
+            return JsonResponse({'success': False, 'error': 'Invalid publication_scope.'}, status=400)
         template_payload = None
         content = (data.get('content') or '').strip()
         if source_type == 'template':
@@ -32573,6 +32664,14 @@ def add_reading_material(request):
                 return JsonResponse({'success': False, 'error': 'Class not found or does not belong to you.'}, status=404)
         else:
             return JsonResponse({'success': False, 'error': 'section_id is required.'}, status=400)
+        if assessment_kind == 'crla':
+            publication_scope = 'whole_class'
+            selected_student_ids = []
+        elif publication_scope == 'selected_students':
+            try:
+                _validate_material_students(section, selected_student_ids)
+            except ValueError as exc:
+                return JsonResponse({'success': False, 'error': str(exc)}, status=400)
         submitted_language = str(
             data.get('language')
             or (template_payload.get('language') if isinstance(template_payload, dict) else '')
@@ -32708,10 +32807,12 @@ def add_reading_material(request):
                 assigned_week=assigned_week,
                 assigned_weeks=assigned_weeks if assigned_weeks else ([assigned_week] if assigned_week else []),
                 student_access=student_access,
+                publication_scope=publication_scope,
                 is_active=(status in ['published', 'scheduled'])
             )
             if section is not None:
                 m.assigned_sections.add(section)
+            _set_material_student_assignments(m, publication_scope, selected_student_ids)
 
             created_ids = [m.id]
             material_payload = _material_response_payload(m, tokens=tokens, section=section)
@@ -32775,6 +32876,25 @@ def teacher_update_material(request):
             if Material.objects.filter(id=material_id).exists():
                 return JsonResponse({'success': False, 'error': 'Material access denied'}, status=403)
             return JsonResponse({'success': False, 'error': 'Material not found'}, status=404)
+
+        publication_scope = _material_publication_scope(data, getattr(material, 'publication_scope', 'whole_class'))
+        if publication_scope is None:
+            return JsonResponse({'success': False, 'error': 'Invalid publication_scope.'}, status=400)
+        try:
+            selected_student_ids = _selected_student_ids(data) if 'selected_student_ids' in data else list(material.student_assignments.values_list('student_id', flat=True))
+        except ValueError as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+        target_section = material.section
+        if data.get('section_id'):
+            _, requested_section_id = _parse_prefixed_id(data.get('section_id'))
+            target_section = Section.objects.filter(pk=requested_section_id, teacher=teacher_user, is_active=True).first() if requested_section_id else None
+            if not target_section:
+                return JsonResponse({'success': False, 'error': 'Class not found or does not belong to you.'}, status=400)
+        if publication_scope == 'selected_students':
+            try:
+                _validate_material_students(target_section, selected_student_ids)
+            except ValueError as exc:
+                return JsonResponse({'success': False, 'error': str(exc)}, status=400)
 
         material.title = data.get('title', material.title).strip()
         content = data.get('content', material.content_text).strip()
@@ -32963,7 +33083,13 @@ def teacher_update_material(request):
             # Non-fatal; proceed to save material regardless
             logger.exception('Failed to synchronize Assessment linkage for material %s', getattr(material, 'id', None))
 
-        material.save()
+        with transaction.atomic():
+            if target_section and target_section.id != material.section_id:
+                material.section = target_section
+                material.assigned_sections.set([target_section])
+            material.publication_scope = publication_scope
+            material.save()
+            _set_material_student_assignments(material, publication_scope, selected_student_ids)
         # Return updated overview so clients can sync UI immediately
         try:
             teacher_user = User.objects.filter(id=user_id).first()

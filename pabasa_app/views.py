@@ -29535,6 +29535,30 @@ def _enforce_student_access_for_request(
             )
         return None
 
+    # Teacher-created supplementary materials may additionally be published to
+    # an explicit student allow-list. Keep official/CRLA branches above intact.
+    is_supplementary = (
+        not bool(getattr(material, 'is_system_owned', False))
+        and not bool(getattr(material, 'is_official_reading', False))
+        and _assessment_kind_value(material) != 'crla'
+    )
+    if is_supplementary:
+        candidate_section_ids = set()
+        if material.section_id:
+            candidate_section_ids.add(material.section_id)
+        candidate_section_ids.update(material.assigned_sections.values_list('id', flat=True))
+        enrolled = Enrollment.objects.filter(
+            student=persisted_user,
+            section_id__in=candidate_section_ids,
+            status='active', is_active=True,
+            section__is_active=True,
+        ).exists() if candidate_section_ids else False
+        if not enrolled:
+            return _student_access_block_response(json_response=json_response)
+        if getattr(material, 'publication_scope', 'whole_class') == 'selected_students':
+            if not material.student_assignments.filter(student=persisted_user).exists():
+                return _student_access_block_response(json_response=json_response)
+
     if bool(getattr(material, 'student_access', False)):
         return None
 

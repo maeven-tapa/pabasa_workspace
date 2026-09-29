@@ -1360,6 +1360,11 @@ class Material(models.Model):
         ("crla", "CRLA Assessment"),
     ]
 
+    PUBLICATION_SCOPE_CHOICES = [
+        ("whole_class", "Whole Class"),
+        ("selected_students", "Selected Students"),
+    ]
+
     # Materials are the assignable reading content. Assessment rows store
     # student result attempts and point back here through Assessment.material.
     assessment = models.ForeignKey(Assessment, on_delete=models.CASCADE, related_name="materials", null=True, blank=True)
@@ -1400,6 +1405,11 @@ class Material(models.Model):
     )
     assigned_weeks = models.JSONField(default=list, blank=True)
     student_access = models.BooleanField(default=False)
+    publication_scope = models.CharField(
+        max_length=24,
+        choices=PUBLICATION_SCOPE_CHOICES,
+        default="whole_class",
+    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -1621,6 +1631,23 @@ class Material(models.Model):
         )
         result._apply_attempt_payload(result, attempt_data)
         return result._serialize_attempt()
+
+
+class MaterialStudentAssignment(models.Model):
+    """Persistent allow-list entry for selected-student material publication."""
+
+    material = models.ForeignKey(Material, on_delete=models.CASCADE, related_name="student_assignments")
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="material_assignments")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "material_student_assignments"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["material", "student"],
+                name="uniq_material_student_assignment",
+            ),
+        ]
 
 
 class ClassCrlaFinalization(models.Model):
