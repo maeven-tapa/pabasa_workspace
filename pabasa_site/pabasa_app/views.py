@@ -21962,7 +21962,17 @@ def reading_transcribe_api(request):
                 target_text, analysis_transcript, sentence_word_results, language_code, debug=sentence_debug,
             )
         else:
-            analysis = analyze_reading(target_text, current_syllable_index, analysis_transcript, language_code, strict_rhyme=request.POST.get('crla_rhymes') == '1')
+            pronunciation_aliases = ({'lili': {'lili', 'lily'}, 'lily': {'lili', 'lily'}}
+                                      if request.POST.get('prescribed_activity_key') == 'lesson-13-gawain-3'
+                                      and language_code.lower() == 'fil-ph' else None)
+            analysis = analyze_reading(
+                target_text,
+                current_syllable_index,
+                analysis_transcript,
+                language_code,
+                strict_rhyme=request.POST.get('crla_rhymes') == '1',
+                pronunciation_aliases=pronunciation_aliases,
+            )
         if l22_c_pronunciation:
             l22_match = l22_c_pronunciation_match(
                 request.POST.get('l22_c_syllable'),
