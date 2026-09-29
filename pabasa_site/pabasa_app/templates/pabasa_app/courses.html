@@ -10433,6 +10433,19 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     #studentProgressModal .student-progress-retell-progress, #courseInlineDialogHost .student-progress-retell-progress { width: 100%; accent-color: #2483a4; }
     #studentProgressModal .student-progress-retell-time, #courseInlineDialogHost .student-progress-retell-time { min-width: 75px; color: #526274; font-size: .72rem; white-space: nowrap; }
     #studentProgressModal .student-progress-recording-unavailable, #courseInlineDialogHost .student-progress-recording-unavailable { color: #71808a; font-size: .78rem; }
+    #studentProgressModal > .modal-dialog > .modal-content > .modal-header,
+    .course-inline-dialog-host .student-progress-modal-header { background: #fff; position: sticky; top: 0; z-index: 20; }
+    #studentProgressModal .student-progress-toolbar,
+    .course-inline-dialog-host .student-progress-toolbar { background: #fff; position: sticky; top: 0; z-index: 15; padding: .35rem 0 .75rem; }
+    #studentProgressModal .modal-body:has(#studentProgressList),
+    .course-inline-dialog-host > .modal-body:has(#studentProgressList) { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+    .course-inline-dialog-host:has(#studentProgressList) { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+    #studentProgressModal #studentProgressList,
+    .course-inline-dialog-host #studentProgressList { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+    body.dark-theme #studentProgressModal > .modal-dialog > .modal-content > .modal-header,
+    body.dark-theme .course-inline-dialog-host .student-progress-modal-header,
+    body.dark-theme #studentProgressModal .student-progress-toolbar,
+    body.dark-theme .course-inline-dialog-host .student-progress-toolbar { background: #0f172a; }
     .student-progress-source-toggle { align-items: stretch; background: #E2E8F0; border: 1px solid #CBD5E1; border-radius: 9999px; display: flex; flex: 0 1 320px; gap: 0; margin-left: auto; max-width: 320px; min-height: 42px; min-width: 300px; overflow: hidden; padding: 3px; position: relative; width: 320px; }
     .student-progress-source-toggle::before { background: linear-gradient(135deg, #CFFAFE, #BFDBFE); border-radius: 9999px; box-shadow: 0 10px 22px rgba(59,130,246,.14); content: ''; height: calc(100% - 6px); left: 3px; position: absolute; top: 3px; transition: left .2s ease, background .2s ease; width: calc((100% - 6px) / 2); }
     .student-progress-source-toggle.active-supplementary::before { left: calc((100% - 6px) / 2 + 3px); }
@@ -23779,7 +23792,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <div class="modal fade" id="studentProgressModal" tabindex="-1" aria-labelledby="studentProgressModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
         <div class="modal-content course-modal-content">
-            <div class="modal-header course-modal-header">
+            <div class="modal-header course-modal-header student-progress-modal-header">
                 <div>
                     <h5 class="modal-title" id="studentProgressModalLabel">Reading Progress</h5>
                     <small class="text-muted" id="studentProgressSubtext">Reading activity progress</small>
