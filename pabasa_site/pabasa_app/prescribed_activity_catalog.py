@@ -476,8 +476,8 @@ PRESCRIBED_ACTIVITIES = {
     },
     'lesson-13-gawain-3': {
         'activity_key': 'lesson-13-gawain-3', 'session_number': 5, 'lesson_number': 13,
-        'gawain_number': 3, 'title': 'I-decode o basahin ang mga pangungusap',
-        'instruction': 'I-decode o basahin ang mga pangungusap na nasa ibaba. Lagyan ng tsek (✓) kung tama ang pagkaka-decode o basa ng mga pangungusap.',
+        'gawain_number': 3, 'title': 'Ano ang basa sa pangungusap na ito?',
+        'instruction': 'Ano ang basa sa pangungusap na ito?',
         'competencies': ['Phonics', 'Phonological Awareness', 'Fluency'], 'interaction': 'teacher_sentence_decode_preview',
         'items': [
             {'sentence': 'Si Lili ay may laso.'}, {'sentence': 'Ang laso ay Lila.'},
