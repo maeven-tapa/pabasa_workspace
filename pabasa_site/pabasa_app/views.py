@@ -19532,6 +19532,11 @@ def lesson_1_gawain_1_page(request):
     progress = StudentActivityProgress.objects.filter(
         student_id=request.session.get('user_id'), activity_key='lesson-1-gawain-1'
     ).first()
+    if progress and (progress.activity_completed or progress.current_index >= progress.total_items):
+        if not progress.activity_completed:
+            progress.activity_completed = True
+            progress.save(update_fields=['activity_completed', 'updated_at'])
+        return redirect('assessment')
     submission = StudentActivityRecordingSubmission.objects.filter(
         student_id=request.session.get('user_id'), activity_key='lesson-1-gawain-1'
     ).first()
