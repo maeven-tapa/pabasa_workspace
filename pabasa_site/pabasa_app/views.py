@@ -13739,6 +13739,75 @@ def prescribed_activity_page(request, activity_key):
                     'next_url': next_url, 'local_audio': local_audio,
                 },
             })
+        if activity_key == 'aral-l24-g6-z-word-search':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_24/BAHAGI_2/GAWAIN_6/'
+            audio_files = {
+                'instruction': 'Panuto Hanapin at bilugan sa loob ng Big Box ang sumusunod na mga salita._TTS.mp3',
+                'words': {
+                    'zipper': 'Tama! Nahanap mo ang zipper._TTS.mp3',
+                    'zoo': 'Tama! Nahanap mo ang zoo._TTS.mp3',
+                    'zebra': 'Tama! Nahanap mo ang zebra._TTS.mp3',
+                    'zigzag': 'Tama! Nahanap mo ang zigzag._TTS.mp3',
+                    'Perez': 'Tama! Nahanap mo ang Perez._TTS.mp3',
+                    'Rizal': 'Tama! Nahanap mo ang Rizal._TTS.mp3',
+                    'Zamora': 'Tama! Nahanap mo ang Zamora._TTS.mp3',
+                    'Zam': 'Tama! Nahanap mo ang Zam._TTS.mp3',
+                    'Zoren': 'Tama! Nahanap mo ang Zoren._TTS.mp3',
+                    'Zeny': 'Tama! Nahanap mo ang Zeny._TTS.mp3',
+                },
+                'feedback': {
+                    'Nahanap mo na ang salitang ito.': 'Nahanap mo na ang salitang ito._TTS.mp3',
+                    'Subukan muli.': 'Subukan Muli._TTS.mp3',
+                },
+                'completion': {
+                    'Magaling! Nahanap mo ang lahat ng salita!': 'Magaling! Nahanap mo ang lahat ng salita!_TTS.mp3',
+                },
+            }
+            mapped_states = [get_activity(activity_key).get('instruction', '')]
+            mapped_states += list(audio_files['words'])
+            mapped_states += list(audio_files['feedback'])
+            mapped_states += list(audio_files['completion'])
+            local_audio = {
+                'instruction': static(audio_root + audio_files['instruction']),
+                'words': {text: static(audio_root + filename) for text, filename in audio_files['words'].items()},
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+                'completion': {text: static(audio_root + filename) for text, filename in audio_files['completion'].items()},
+                'mapped_states': mapped_states,
+            }
+            return render(request, 'pabasa_app/prescribed_workbook_page.html', {
+                'workbook_payload': {
+                    'activity': get_activity(activity_key), 'state': state, 'preview': preview,
+                    'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+                    'read_aloud_url': reverse('reading_read_aloud_api'), 'back_url': reverse('assessment'),
+                    'next_url': next_url, 'local_audio': local_audio,
+                },
+            })
+        if activity_key == 'aral-l24-g5-z-syllabication':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_24/BAHAGI_2/GAWAIN_5/'
+            audio_files = {
+                'feedback': {
+                    'Isulat muna ang sagot.': 'Isulat muna ang sagot._TTS.mp3',
+                    'Mahusay!': 'Mahusay!_TTS.mp3',
+                    'Subukan muli.': 'Subukan muli._TTS].mp3',
+                },
+                'completion': {
+                    'Magaling! Natapos mo ang Gawain 5!': 'Magaling! Natapos mo ang Gawain 5!_TTS.mp3',
+                },
+            }
+            mapped_states = list(audio_files['feedback']) + list(audio_files['completion'])
+            local_audio = {
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+                'completion': {text: static(audio_root + filename) for text, filename in audio_files['completion'].items()},
+                'mapped_states': mapped_states,
+            }
+            return render(request, 'pabasa_app/prescribed_workbook_page.html', {
+                'workbook_payload': {
+                    'activity': get_activity(activity_key), 'state': state, 'preview': preview,
+                    'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+                    'read_aloud_url': reverse('reading_read_aloud_api'), 'back_url': reverse('assessment'),
+                    'next_url': next_url, 'local_audio': local_audio,
+                },
+            })
         if activity_key == 'aral-l24-g4-x-syllable-builder':
             audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_24/BAHAGI_2/GAWAIN_4/'
             audio_files = {
