@@ -78,15 +78,15 @@
     .assessment-stage {
         background: rgba(255, 255, 255, 0.9);
         border: 1px solid rgba(255, 255, 255, 0.82);
-        border-radius: 32px;
+        border-radius: 22px;
         backdrop-filter: blur(10px) saturate(140%);
         -webkit-backdrop-filter: blur(10px) saturate(140%);
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.12);
+        box-shadow: 0 4px 16px 0 rgba(31, 38, 135, 0.08);
         display: grid;
         grid-template-columns: minmax(0, 1fr) 290px;
         gap: calc(1rem * var(--dash-ui-scale, 1));
         overflow: hidden;
-        padding: calc(1.5rem * var(--dash-ui-scale, 1)) calc(2rem * var(--dash-ui-scale, 1));
+        padding: 24px calc(2rem * var(--dash-ui-scale, 1));
         position: relative;
         transition: min-height 0.25s ease, grid-template-columns 0.25s ease, padding 0.25s ease;
     }
@@ -103,13 +103,25 @@
 
     .assessment-stage h2 {
         font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: clamp(1.1rem, 1.85vw, 1.55rem);
+        color: var(--dash-ink, #16465d);
+        font-size: clamp(1.5rem, 2.3vw, 1.75rem);
         font-weight: 900;
         line-height: 1.15;
-        margin: 0 0 calc(0.75rem * var(--dash-ui-scale, 1));
+        margin: 0 0 5px;
         max-width: 720px;
     }
 
+    .assessment-stage .dash-pill {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        margin: 0 0 10px!important;
+        padding: 5px 10px;
+        border: 1px solid rgba(31,111,139,.18);
+        background: rgba(255,255,255,.7);
+        border-radius: 999px;
+        box-shadow: none;
+    }
     .assessment-stage p {
         font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
         color: var(--dash-ink-soft);
@@ -895,8 +907,9 @@
     {% include "pabasa_app/partials/_student_falling_shapes.html" %}
     <div class="assessment-stage">
         <div>
-            <span class="dash-pill mb-3"><i class="bi bi-journal-bookmark-fill me-2" aria-hidden="true"></i>Aralin Mo Ngayon</span>
-            <p>Piliin ang aralin na itinalaga sa iyo ng iyong guro.</p>
+            <span class="dash-pill"><i class="bi bi-journal-bookmark-fill me-2" aria-hidden="true"></i>Aralin Mo Ngayon</span>
+            <h2>Handa Ka Na Bang Matuto?</h2>
+            <p>Narito ang aralin na inihanda ng iyong guro para sa iyo.</p>
         </div>
     </div>
     <section class="subject-card pabasa-preview-subject" aria-label="Grade 2 BALAGTAS reading tracks">
