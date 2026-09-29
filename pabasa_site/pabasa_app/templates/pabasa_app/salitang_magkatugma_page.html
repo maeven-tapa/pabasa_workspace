@@ -31,6 +31,23 @@ const pairs=[['aso','laso'],['bundok','sandok'],['tatay','nanay'],['bola','lola'
 <style>
 .head{display:block;padding:14px 0 6px;background:transparent;border:0;border-radius:0;box-shadow:none;text-align:center}.activity-title{display:block;text-align:center}.activity-title .eyebrow{margin:18px 0 5px;color:#277f82;font-size:clamp(.72rem,1.25vw,.95rem);font-weight:1000;letter-spacing:.08em;line-height:1.15;text-transform:uppercase}.activity-title h1{margin:0;color:#183e63;font-family:Fredoka,Arial,sans-serif;font-size:clamp(2rem,4.5vw,3.55rem);line-height:1.05;font-weight:900;letter-spacing:.01em}.head .back{position:absolute;left:clamp(12px,3vw,34px);top:clamp(12px,2vw,24px)}.head .progress{position:absolute;right:clamp(12px,3vw,34px);top:clamp(12px,2vw,24px)}@media(max-width:600px){.head{padding-top:8px}.activity-title .eyebrow{font-size:.64rem}.activity-title h1{font-size:clamp(1.75rem,8vw,2.5rem)}.head .back,.head .progress{position:static;display:none}}
 </style>
+<script>
+(function(){
+  function install(){
+    const stage=document.getElementById('stage');
+    if(!stage)return;
+    let saved=false;
+    const markComplete=()=>{
+      if(saved||!stage.querySelector('.completion-card')||!window.lesson2ProgressUrl)return;
+      saved=true;
+      fetch(window.lesson2ProgressUrl,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||''},body:JSON.stringify({activity_key:'lesson-2-gawain-1',current_index:5,completed_items:5,correct_items:5,total_items:5,activity_completed:true})}).catch(()=>{saved=false});
+    };
+    new MutationObserver(markComplete).observe(stage,{childList:true,subtree:true});
+    markComplete();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+</script>
 <style>
 /* Final completion override: remove the activity shell and center the card. */
 body:has(.completion-card) {
