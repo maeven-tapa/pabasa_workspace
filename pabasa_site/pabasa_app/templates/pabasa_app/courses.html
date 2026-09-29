@@ -14321,7 +14321,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 tasks.push({
                     title: material.title || 'Untitled assessment',
                     assessmentId,
-                    source_type: material.source_type || material.material_source || '',
+                    source_type: material.source_type || material.material_source || material.content_json?.source_type || material.content_json?.material_source || '',
                     is_prescribed: material.is_prescribed,
                     activityType: material.content_json?.activity_type
                         || material.content_json?.activity_variant
@@ -14348,6 +14348,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
 
         let studentProgressSourceFilter = 'prescribed';
+
+        function isPrescribedProgressTask(task) {
+            const source = String(task?.source_type || task?.material_source || '').trim().toLowerCase().replace(/[ _-]+/g, '_');
+            if (task?.is_prescribed === true || String(task?.is_prescribed).toLowerCase() === 'true') return true;
+            if (source === 'prescribed' || source === 'aral' || source === 'aral_workbook') return true;
+            return source.startsWith('prescribed_');
+        }
 
         async function openStudentProgressModal(studentId, studentName, courseId) {
             const course = findCourseById(courseId || document.getElementById('courseDetailModal')?.dataset?.courseId);
@@ -14459,8 +14466,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const renderRows = () => {
                 const query = String(searchInput?.value || '').trim().toLowerCase();
                 const visibleRows = activityRows.filter(({ task }) => {
-                    const source = String(task.source_type || task.material_source || '').trim().toLowerCase();
-                    const isPrescribed = source === 'prescribed' || task.is_prescribed === true || String(task.is_prescribed).toLowerCase() === 'true';
+                    const isPrescribed = isPrescribedProgressTask(task);
                     if (studentProgressSourceFilter === 'prescribed' ? !isPrescribed : isPrescribed) return false;
                     return `${task.title || ''} ${task.activityLabel || ''}`.toLowerCase().includes(query);
                 });
