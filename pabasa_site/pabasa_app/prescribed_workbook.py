@@ -577,7 +577,7 @@ def initial_s9_a2_state():
 
 def _s9_a2_strokes(value):
     if not isinstance(value, list) or len(value) > 1000:
-        raise ValueError('Gumuhit muna sa kahon.')
+        raise ValueError('Draw in the box first.')
     strokes = []
     for stroke in value:
         if (not isinstance(stroke, dict)
@@ -590,7 +590,7 @@ def _s9_a2_strokes(value):
                        or any(type(number) not in (int, float) for number in point)
                        or not 0 <= point[0] <= 1200 or not 0 <= point[1] <= 525
                        for point in stroke['points'])):
-            raise ValueError('Hindi wastong drawing. Subukan muli.')
+            raise ValueError('This drawing is not valid. Try again.')
         strokes.append({'color': str(stroke['color']), 'width': float(stroke.get('width', 8)), 'points': [[float(point[0]), float(point[1])] for point in stroke['points']]})
     return strokes
 
@@ -628,7 +628,7 @@ def _apply_s9_a2_drawing(state, event):
     if action == 'draft':
         draft = event.get('draft')
         if not isinstance(draft, dict) or len(json.dumps(draft)) > 350000:
-            raise ValueError('Hindi na-save ang iyong gawain. Subukan muli.')
+            raise ValueError('Could not save your work. Try again.')
         strokes = _s9_a2_strokes(draft.get('strokes', []))
         color = str(draft.get('color') or '#183e63')
         if not re.fullmatch(r'#[0-9a-fA-F]{6}', color):
@@ -643,22 +643,22 @@ def _apply_s9_a2_drawing(state, event):
         raise ValueError('Unknown action.')
     answer = event.get('answer')
     if not isinstance(answer, dict) or len(json.dumps(answer)) > 350000:
-        raise ValueError('Hindi wastong sagot.')
+        raise ValueError('Please enter an answer.')
     strokes = _s9_a2_strokes(answer.get('strokes'))
     if not strokes:
-        raise ValueError('Gumuhit muna sa kahon.')
+        raise ValueError('Draw in the box first.')
     text = str(answer.get('text') or '').strip()
     if not text:
-        raise ValueError('Isulat muna ang magalang na salitang ginamit mo.')
+        raise ValueError('Write the kind word first.')
     normalize = lambda value: re.sub(r'[.\s]+$', '', value.strip()).replace('’', "'").casefold()
     if normalize(text) not in {normalize(value) for value in ACTIVITIES['aral-s9-a2-helping-drawing']['expected_writing']}:
-        raise ValueError('Gumamit ng Please, Sorry, Thank you, o You’re welcome.')
+        raise ValueError("Use Please, Sorry, Thank you, or You're welcome.")
     answer = {'strokes': strokes, 'text': text}
     state['answers']['item-1'] = answer
     state['draft'] = {'strokes': [], 'text': '', 'tool': 'draw', 'color': '#183e63', 'size': 'medium'}
     state['index'] = 1
     state['completed'] = True
-    state['last_feedback'] = 'Magaling! Natapos mo ang Activity 2!'
+    state['last_feedback'] = 'Good job! Activity 2 is complete!'
     return state
 
 
