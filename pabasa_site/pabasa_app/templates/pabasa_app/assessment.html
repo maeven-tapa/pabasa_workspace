@@ -1841,6 +1841,7 @@ document.addEventListener('DOMContentLoaded',()=>{setTimeout(()=>{const g=docume
 {{ aral_standalone_progress|default:"{}"|json_script:"aral-standalone-progress" }}
 {{ prescribed_activity_progress|default:"{}"|json_script:"prescribed-activity-progress" }}
 {{ prescribed_activity_cards|default:"[]"|json_script:"prescribed-activity-cards" }}
+{{ unlocked_prescribed_activity_keys|default:"[]"|json_script:"unlocked-prescribed-activity-keys" }}
 <style>.lesson16-session-card .lesson16-card-visual{display:grid;height:66px;margin:auto;place-items:center;width:88px}.lesson16-session-card .lesson16-card-image{display:block;grid-area:1/1;height:66px;object-fit:contain;width:88px}.lesson16-session-card .lesson16-card-placeholder{display:none;grid-area:1/1;color:#627b84;font-size:.72rem;font-weight:800;text-align:center}.lesson16-session-card .lesson16-card-visual.is-placeholder .lesson16-card-image{display:none}.lesson16-session-card .lesson16-card-visual.is-placeholder .lesson16-card-placeholder{display:block}.lesson16-session-card .lesson16-progress{background:#dcebea;border-radius:99px;height:7px;margin:.25rem auto .8rem;overflow:hidden;width:88%}.lesson16-session-card .lesson16-progress i{display:block;background:#e6a33a;height:100%;width:var(--lesson16-complete)}</style>
 <script>
 document.addEventListener('DOMContentLoaded',function(){
@@ -1852,7 +1853,7 @@ document.addEventListener('DOMContentLoaded',function(){
   routes['lesson7-gawain4b']="{% url 'prescribed_activity_page' activity_key='lesson7-gawain4b' %}";
   const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   activities.forEach(activity=>{if(String(activity.session_key||'')==='session-3'){activity.title=String(activity.title||'').replace(/^\s*gawain\s+[A-Z0-9-]+\s*:\s*/i,'').trim();}});
-  activities.forEach(activity=>{const key=String(activity.activity_key||''),sessionKey=String(activity.session_key||''),route=activity.route_url||routes[key],progress=saved[key]||{},total=Number(progress.total_items)||Number(activity.total_items)||5,completed=Math.max(0,Math.min(total,Number(progress.completed_items)||0)),done=Boolean(progress.activity_completed)&&completed>=total;const reopenable=key==='lesson-13-gawain-4'||key==='lesson-27-gawain-1'||key==='lesson-29-gawain-1'||key==='lesson-29-gawain-2'||key==='lesson-29-gawain-3',isLesson2021=key==='session-7-lesson-20-21-gawain-1',isLesson2021Gawain4=key==='session-7-lesson-20-21-gawain-4',isSession4=sessionKey==='session-4'&&String(activity.lesson_number||'')==='10, 11, at 12';if(!route||grid.querySelector(`[data-prescribed-activity="${key}"]`))return;const card=document.createElement('article');card.className='pabasa-session-card unlocked lesson16-session-card'+(done?' completed':'');card.dataset.prescribedActivity=key;card.dataset.sessionKey=sessionKey;const image=activity.image_url?`<img class="lesson16-card-image" src="${escape(activity.image_url)}" alt="Larawan ng ${escape(activity.title)}"><span class="lesson16-card-placeholder">Larawan<br>Idagdag</span>`:'';const badge=key==='session-2-lesson-4-gawain-2'?'<span class="pabasa-session-badge">⭐</span>':'';const session4Descriptions={1:'Tunog ng mga letra',2:'Pagsamahin ang mga tunog',3:'Basahin ang salita',4:'Basahin ang pangungusap',5:'Pagsusulat ng letrang Bb at Uu'};const label=isSession4?`Lesson ${escape(activity.lesson_number)}: Gawain ${escape(activity.gawain_number)}`:(isLesson2021Gawain4?escape(activity.card_label):(isLesson2021?'Lesson '+escape(activity.lesson_number):(activity.card_label?escape(activity.card_label):'Lesson '+escape(activity.lesson_number))));const subLabel=isLesson2021Gawain4?'':(isLesson2021?'Gawain '+escape(activity.gawain_number):(activity.card_label?'':'Gawain '+escape(activity.gawain_number)));const title=isSession4?escape(session4Descriptions[Number(activity.gawain_number)]||activity.description||activity.instruction||''):(isLesson2021?escape(activity.activity_title||activity.title):escape(activity.title));card.innerHTML=`<div class="session-visual">${badge}<div class="lesson16-card-visual">${image}</div></div><div class="session-content"><h4>${label}</h4>${isSession4?'':`<p>${subLabel}</p>`}<div>${title}</div></div><div class="session-bottom"><div class="lesson16-progress"><i style="--lesson16-complete:${done?100:(completed/total)*100}%"></i></div><button type="button">${done?'✓ NATAPOS NA':(completed?'IPAGPATULOY':'SIMULAN')}</button></div>`;const imageElement=card.querySelector('.lesson16-card-image');if(imageElement)imageElement.addEventListener('error',event=>event.currentTarget.parentElement.classList.add('is-placeholder'),{once:true});if(!done||reopenable)card.onclick=()=>{location.href=route};else card.querySelector('button').disabled=true;grid.appendChild(card)});
+  activities.forEach(activity=>{const key=String(activity.activity_key||''),sessionKey=String(activity.session_key||''),route=activity.route_url||routes[key],progress=saved[key]||{},total=Number(progress.total_items)||Number(activity.total_items)||5,completed=Math.max(0,Math.min(total,Number(progress.completed_items)||0)),done=Boolean(progress.activity_completed)&&completed>=total,locked=Boolean(activity.is_locked);const reopenable=key==='lesson-13-gawain-4'||key==='lesson-27-gawain-1'||key==='lesson-29-gawain-1'||key==='lesson-29-gawain-2'||key==='lesson-29-gawain-3',isLesson2021=key==='session-7-lesson-20-21-gawain-1',isLesson2021Gawain4=key==='session-7-lesson-20-21-gawain-4',isSession4=sessionKey==='session-4'&&String(activity.lesson_number||'')==='10, 11, at 12';if(!route||grid.querySelector(`[data-prescribed-activity="${key}"]`))return;const card=document.createElement('article');card.className='pabasa-session-card '+(locked?'locked':'unlocked')+' lesson16-session-card'+(done?' completed':'');card.dataset.prescribedActivity=key;card.dataset.sessionKey=sessionKey;const image=activity.image_url?`<img class="lesson16-card-image" src="${escape(activity.image_url)}" alt="Larawan ng ${escape(activity.title)}"><span class="lesson16-card-placeholder">Larawan<br>Idagdag</span>`:'';const badge=key==='session-2-lesson-4-gawain-2'?'<span class="pabasa-session-badge">⭐</span>':'';const session4Descriptions={1:'Tunog ng mga letra',2:'Pagsamahin ang mga tunog',3:'Basahin ang salita',4:'Basahin ang pangungusap',5:'Pagsusulat ng letrang Bb at Uu'};const label=isSession4?`Lesson ${escape(activity.lesson_number)}: Gawain ${escape(activity.gawain_number)}`:(isLesson2021Gawain4?escape(activity.card_label):(isLesson2021?'Lesson '+escape(activity.lesson_number):(activity.card_label?escape(activity.card_label):'Lesson '+escape(activity.lesson_number))));const subLabel=isLesson2021Gawain4?'':(isLesson2021?'Gawain '+escape(activity.gawain_number):(activity.card_label?'':'Gawain '+escape(activity.gawain_number)));const title=isSession4?escape(session4Descriptions[Number(activity.gawain_number)]||activity.description||activity.instruction||''):(isLesson2021?escape(activity.activity_title||activity.title):escape(activity.title));card.innerHTML=`<div class="session-visual">${badge}<div class="lesson16-card-visual">${image}</div></div><div class="session-content"><h4>${label}</h4>${isSession4?'':`<p>${subLabel}</p>`}<div>${title}</div></div><div class="session-bottom"><div class="lesson16-progress"><i style="--lesson16-complete:${done?100:(completed/total)*100}%"></i></div><button type="button" ${locked?'disabled':''}>${locked?'NAKAKANDADO':(done?'✓ NATAPOS NA':(completed?'IPAGPATULOY':'SIMULAN'))}</button></div>`;const imageElement=card.querySelector('.lesson16-card-image');if(imageElement)imageElement.addEventListener('error',event=>event.currentTarget.parentElement.classList.add('is-placeholder'),{once:true});if(!locked&&(!done||reopenable))card.onclick=()=>{location.href=route};else card.querySelector('button').disabled=true;grid.appendChild(card)});
 });
 </script>
 <script>
@@ -1921,11 +1922,9 @@ document.addEventListener('DOMContentLoaded',function(){
     .week-activities-modal.aking-aralin-session-modal .pabasa-session-card img { visibility: hidden; }
     .week-activities-modal.aking-aralin-session-modal .pabasa-session-card { position: relative; cursor: pointer; }
     .week-activities-modal.aking-aralin-session-modal .pabasa-session-card::after {
-        content: 'OPEN';
         position: absolute;
         top: .45rem;
         right: .5rem;
-        background: #1f6f8b;
         border-radius: 999px;
         color: #fff;
         font-size: .62rem;
@@ -1936,6 +1935,21 @@ document.addEventListener('DOMContentLoaded',function(){
         pointer-events: none;
         transform: translateY(-2px);
         transition: opacity .15s ease, transform .15s ease;
+    }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card.unlocked::after {
+        content: 'OPEN';
+        background: #1f6f8b;
+    }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card.locked::after {
+        content: 'LOCKED';
+        background: #8b5252;
+    }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card.completed {
+        cursor: default;
+    }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card.completed::after {
+        content: 'COMPLETED';
+        background: #5d9d69;
     }
     .week-activities-modal.aking-aralin-session-modal .pabasa-session-card:hover::after,
     .week-activities-modal.aking-aralin-session-modal .pabasa-session-card:focus-within::after {
@@ -2242,6 +2256,10 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 <style>
     /* Session 4 student cards: keep all five activities visible in the modal. */
+    .pabasa-session-card.locked,
+    .pabasa-session-card.locked * {
+        cursor: not-allowed !important;
+    }
     .week-activities-modal.session-4-activities-modal .assessment-week-cards {
         gap: .45rem;
     }
@@ -2256,6 +2274,17 @@ document.addEventListener('DOMContentLoaded', function () {
         line-height: 1.2;
     }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+ const unlocked=new Set(JSON.parse(document.getElementById('unlocked-prescribed-activity-keys')?.textContent||'[]'));
+ const legacy={'Lesson 1|Gawain 1':'lesson-1-gawain-1','Lesson 2|Gawain 1':'lesson-2-gawain-1','Lesson 3|Gawain 1':'lesson-3-gawain-1','Lesson 3|Gawain 2':'lesson-3-gawain-2','Lesson 4|Gawain 1':'lesson-4-gawain-1','Lesson 4|Gawain 2':'session-2-lesson-4-gawain-2','Lesson 5|Gawain 1':'lesson-5-gawain-1','Lesson 6|Gawain 1':'lesson-6-gawain-1','Lesson 7|Gawain 1':'lesson-7-gawain-1'};
+ const key=card=>card.dataset.prescribedActivity||legacy[`${card.querySelector('.session-content h4')?.textContent.trim()||''}|${card.querySelector('.session-content p')?.textContent.trim()||''}`]||'';
+ const apply=()=>document.querySelectorAll('.pabasa-session-card').forEach(card=>{const activity=key(card);if(!activity)return;const button=card.querySelector('button');const completed=card.classList.contains('completed')||Boolean(button?.disabled&&/NATAPOS NA/.test(button.textContent||''));if(completed){card.classList.add('completed');card.dataset.activityCompleted='true';return;}delete card.dataset.activityCompleted;if(unlocked.has(activity)){card.classList.remove('locked');card.classList.add('unlocked');delete card.dataset.activityLocked;return;}card.classList.remove('unlocked');card.classList.add('locked');card.dataset.activityLocked='true';if(button){button.disabled=true;button.textContent='NAKAKANDADO';}});
+ new MutationObserver(apply).observe(document.body,{childList:true,subtree:true});[0,500,1500,3000,5000].forEach(delay=>setTimeout(apply,delay));
+ document.addEventListener('click',event=>{if(event.target.closest('.pabasa-session-card[data-activity-locked="true"],.pabasa-session-card[data-activity-completed="true"]')){event.preventDefault();event.stopImmediatePropagation();}},true);
+});
+</script>
 {% endblock %}
 <style>
 .lesson2-progress-label,.lesson3-progress-label,.lesson4-progress-label{display:none!important}

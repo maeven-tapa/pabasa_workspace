@@ -2036,6 +2036,16 @@ class ActivityLog(models.Model):
         return f"{self.get_event_type_display()}: {self.title}"
 
 
+class PrescribedActivityAccessSettings(models.Model):
+    """Global administrator control for prescribed activity availability."""
+
+    unlock_all_activities = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "prescribed_activity_access_settings"
+
+
 class StudentActivityProgress(models.Model):
     """Resumable state for standalone student activities without a Material."""
 

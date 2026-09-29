@@ -7,13 +7,15 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import School, Section, StudentActivityProgress, User
+from .models import PrescribedActivityAccessSettings, School, Section, StudentActivityProgress, User
 from .prescribed_activity_catalog import prescribed_activity
 from .reading_stt import analyze_reading
 from .views import (
     LESSON31_ACTIVITY3_RECOGNITION_ALIASES,
+    _prescribed_activity_order,
     _prescribed_sentence_matches,
     _prescribed_spoken_word_matches,
+    _unlocked_prescribed_activity_keys,
 )
 
 
@@ -21,6 +23,7 @@ class PrescribedLesson26WordSearchTests(TestCase):
     activity_key = 'lesson-26-gawain-1'
 
     def setUp(self):
+        PrescribedActivityAccessSettings.objects.update_or_create(pk=1, defaults={'unlock_all_activities': True})
         suffix = uuid.uuid4().hex.upper()
         school = School.objects.create(name=f'Lesson 26 Word Search {suffix}', code=f'L26W-{suffix}')
         teacher = User.objects.create(
@@ -565,3 +568,38 @@ class PrescribedLesson26WordSearchTests(TestCase):
         }), content_type='application/json')
         self.assertTrue(correct.json()['accepted'])
         self.assertEqual(correct.json()['progress']['completed_items'], 1)
+
+    def test_sequential_access_opens_only_the_first_activity_then_its_successor(self):
+        settings = PrescribedActivityAccessSettings.objects.get(pk=1)
+        settings.unlock_all_activities = False
+        settings.save(update_fields=['unlock_all_activities', 'updated_at'])
+
+        ordered_keys = _prescribed_activity_order()
+        self.assertEqual(_unlocked_prescribed_activity_keys(self.student), {ordered_keys[0]})
+
+        StudentActivityProgress.objects.create(
+            student=self.student,
+            activity_key=ordered_keys[0],
+            activity_completed=True,
+        )
+        self.assertEqual(
+            _unlocked_prescribed_activity_keys(self.student),
+            set(ordered_keys[:2]),
+        )
+
+    def test_locked_activities_reject_direct_progress_requests(self):
+        settings = PrescribedActivityAccessSettings.objects.get(pk=1)
+        settings.unlock_all_activities = False
+        settings.save(update_fields=['unlock_all_activities', 'updated_at'])
+
+        response = self.client.post(
+            self.progress_url,
+            data=json.dumps({'word_index': 0, 'reading_result': True}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(StudentActivityProgress.objects.filter(
+            student=self.student,
+            activity_key=self.activity_key,
+        ).exists())
