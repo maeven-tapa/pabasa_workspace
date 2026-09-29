@@ -13739,6 +13739,32 @@ def prescribed_activity_page(request, activity_key):
                     'next_url': next_url, 'local_audio': local_audio,
                 },
             })
+        if activity_key == 'aral-l24-g5-z-syllabication':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_24/BAHAGI_2/GAWAIN_5/'
+            audio_files = {
+                'feedback': {
+                    'Isulat muna ang sagot.': 'Isulat muna ang sagot._TTS.mp3',
+                    'Mahusay!': 'Mahusay!_TTS.mp3',
+                    'Subukan muli.': 'Subukan muli._TTS].mp3',
+                },
+                'completion': {
+                    'Magaling! Natapos mo ang Gawain 5!': 'Magaling! Natapos mo ang Gawain 5!_TTS.mp3',
+                },
+            }
+            mapped_states = list(audio_files['feedback']) + list(audio_files['completion'])
+            local_audio = {
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+                'completion': {text: static(audio_root + filename) for text, filename in audio_files['completion'].items()},
+                'mapped_states': mapped_states,
+            }
+            return render(request, 'pabasa_app/prescribed_workbook_page.html', {
+                'workbook_payload': {
+                    'activity': get_activity(activity_key), 'state': state, 'preview': preview,
+                    'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+                    'read_aloud_url': reverse('reading_read_aloud_api'), 'back_url': reverse('assessment'),
+                    'next_url': next_url, 'local_audio': local_audio,
+                },
+            })
         if activity_key == 'aral-l24-g4-x-syllable-builder':
             audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_24/BAHAGI_2/GAWAIN_4/'
             audio_files = {
