@@ -14502,6 +14502,32 @@ def prescribed_activity_page(request, activity_key):
                     'local_audio': local_audio,
                 },
             })
+        if activity_key == 'aral-s9-a2-helping-drawing':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_9/ACTIVITY_02/'
+            audio_files = {
+                'instruction': 'Draw and color a situation at home where you helped someone. Under your drawing, write the courteous word you used “Please”  “Sorry”  “Thank you”  “You’re welcome.”_TSS.mp3',
+                'feedback': {
+                    'Could not save your work. Try again.': 'Could not save your work. Try again._TTS.mp3',
+                    'Please enter an answer.': 'Please enter an answer._TTS.mp3',
+                    'Write the kind word first.': 'Write the kind word first._TTS.mp3',
+                    "Use Please, Sorry, Thank you, or You're welcome.": "Use Please, Sorry, Thank you, or You're welcome._TTS.mp3",
+                },
+                'completion': 'Good job! Activity 2 is complete!_TTS.mp3',
+            }
+            local_audio = {
+                'instruction': static(audio_root + audio_files['instruction']),
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+                'completion': {'Good job! Activity 2 is complete!': static(audio_root + audio_files['completion'])},
+                'mapped_states': [get_activity(activity_key)['instruction'], *audio_files['feedback'], 'Good job! Activity 2 is complete!'],
+            }
+            return render(request, 'pabasa_app/prescribed_workbook_page.html', {
+                'workbook_payload': {
+                    'activity': get_activity(activity_key), 'state': state, 'preview': preview,
+                    'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+                    'read_aloud_url': reverse('reading_read_aloud_api'), 'back_url': reverse('assessment'),
+                    'next_url': next_url, 'local_audio': local_audio,
+                },
+            })
         return render(request, 'pabasa_app/prescribed_workbook_page.html', {
             'workbook_payload': {
                 'activity': get_activity(activity_key), 'state': state, 'preview': preview,
