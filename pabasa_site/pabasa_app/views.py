@@ -13782,6 +13782,52 @@ def prescribed_activity_page(request, activity_key):
                     'next_url': next_url, 'local_audio': local_audio,
                 },
             })
+        if activity_key == 'aral-l24-g7-z-word-reading':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_24/BAHAGI_2/GAWAIN_7/'
+            audio_files = {
+                'instruction': 'Basahin ang mga salita sa ibaba na may hiram na letrang Zz._TTS.mp3',
+                'words': {
+                    'zigzag': 'zigzag_TTS.mp3', 'Zandra': 'Zandra_TTS.mp3', 'Zamora': 'Zamora_TTS.mp3',
+                    'Zandro': 'Zandro_TTS.mp3', 'Lazaro': 'Lazaro_TTS.mp3', 'Perez': 'Perez_TTS.mp3',
+                    'Rizal': 'Rizal_TTS.mp3', 'Dizon': 'Dizon_TTS.mp3', 'Gomez': 'Gomez_TTS.mp3',
+                    'Zarate': 'Zarate_TTS.mp3', 'Zaragosa': 'Zaragosa_TTS.mp3', 'Zapote': 'Zapote_TTS.mp3',
+                    'Zonrox': 'Zonrox_TTS.mp3', 'Lopez': 'Lopez_TTS.mp3', 'Luzon': 'Luzon_TTS.mp3',
+                    'Zeny': 'Zeny_TTS.mp3', 'Zoren': 'Zoren_TTS.mp3', 'Legazpi': 'Legazpi_TTS.mp3',
+                    'Zabala': 'Zabala_TTS.mp3', 'Zambales': 'Zambales_TTS.mp3', 'Gonzales': 'Gonzales_TTS.mp3',
+                    'Mendoza': 'Mendoza_TTS.mp3', 'Hernandez': 'Hernandez_TTS.mp3',
+                },
+                'feedback': {
+                    'Hindi available ang audio.': 'Hindi available ang audio._TTS.mp3',
+                    'Hindi ko malinaw na narinig. Subukan muli.': 'Hindi ko malinaw na narinig. Subukan muli._TTS.mp3',
+                    'Hindi magamit ang mikropono. Subukan muli.': 'Hindi magamit ang mikropono. Subukan muli._TTS.mp3',
+                    'Hindi pinayagan ang mikropono.': 'Hindi pinayagan ang mikropono._TTS.mp3',
+                    'Sinusuri ang iyong pagbasa...': 'Sinusuri ang iyong pagbasa..._TTS.mp3',
+                    'Subukan muli.': 'Subukan Muli._TTS.mp3',
+                    'Tama!': 'Tama!_TTS.mp3',
+                },
+                'completion': {
+                    'Magaling! Natapos mo ang Gawain 7.': 'Magaling! Natapos mo ang Gawain 7._TTS.mp3',
+                },
+            }
+            mapped_states = [get_activity(activity_key).get('instruction', '')]
+            mapped_states += list(audio_files['words'])
+            mapped_states += list(audio_files['feedback'])
+            mapped_states += list(audio_files['completion'])
+            local_audio = {
+                'instruction': static(audio_root + audio_files['instruction']),
+                'words': {text: static(audio_root + filename) for text, filename in audio_files['words'].items()},
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+                'completion': {text: static(audio_root + filename) for text, filename in audio_files['completion'].items()},
+                'mapped_states': mapped_states,
+            }
+            return render(request, 'pabasa_app/prescribed_workbook_page.html', {
+                'workbook_payload': {
+                    'activity': get_activity(activity_key), 'state': state, 'preview': preview,
+                    'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+                    'read_aloud_url': reverse('reading_read_aloud_api'), 'back_url': reverse('assessment'),
+                    'next_url': next_url, 'local_audio': local_audio,
+                },
+            })
         if activity_key == 'aral-l24-g5-z-syllabication':
             audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_24/BAHAGI_2/GAWAIN_5/'
             audio_files = {
