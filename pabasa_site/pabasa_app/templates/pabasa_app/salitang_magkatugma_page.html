@@ -5,9 +5,9 @@ const activityCompletionKey='pabasa:salitang-magkatugma:completed';
 const serverIndex=Number(window.__lessonStartResumeIndex??serverProgress?.current_index??0);
 // The uncached server snapshot is authoritative, including after a reset or
 // deletion of the progress row. Reconcile both keys before any renderer reads them.
-if(window.__lessonStartReady===true&&serverIndex>0){
+if(serverIndex>0){
   localStorage.setItem(activityProgressKey,String(serverIndex));
-}else if(window.__lessonStartReady===true){
+}else{
   localStorage.removeItem(activityProgressKey);
 }
 if(serverProgress?.activity_completed){
@@ -243,7 +243,9 @@ body:has(.completion-card) .completion-card a {
 </style>
 <style>
 .pair .word{position:relative;transition:opacity .25s,transform .25s,box-shadow .25s,border-color .25s}.pair.naming-phase .word{opacity:.62;filter:saturate(.72)}.pair.naming-phase .word.active{opacity:1;filter:none;transform:translateY(-3px) scale(1.025);border:5px solid #ffc928;box-shadow:0 0 0 7px #ffe36b,0 0 30px #ffc928cc,0 12px 26px #e09a2255;animation:salitangCuePulse 1.5s ease-in-out infinite}.pair.naming-phase .word.active::before{content:'BASAHIN ITO';position:absolute;top:-18px;left:50%;z-index:3;transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:#ffc928;color:#5b3b00;font-size:.85rem;font-weight:900;letter-spacing:.06em;white-space:nowrap;box-shadow:0 3px 8px #b77b1b55}.pair.naming-phase .word:first-child::after{content:none!important}@keyframes salitangCuePulse{50%{box-shadow:0 0 0 10px #ffe36b99,0 0 34px #ffc928dd,0 12px 28px #e09a2255}}
-.pair.phase2 .word{opacity:1;filter:none}.phase2-instruction{font-weight:900}
+.pair.phase2 .word{opacity:1;filter:none;background:linear-gradient(145deg,#fff8cf,#fff0a8);border-color:#f0b52d;box-shadow:0 0 0 5px rgba(255,228,104,.75),0 0 26px rgba(255,194,35,.55),0 12px 24px rgba(112,77,21,.2);transform:translateY(-3px)}.pair.phase2 .word.active{border-color:#e99316;box-shadow:0 0 0 7px #ffe36b,0 0 34px rgba(255,194,35,.8),0 14px 28px rgba(112,77,21,.28)}.pair.phase2 .word::before,.pair.phase2 .word.active::before{content:none!important;display:none!important}.phase2-instruction{font-weight:900}
+.card:has(#answers:not([hidden])) .pair .word{opacity:1!important;filter:none!important;background:linear-gradient(145deg,#fff8cf,#fff0a8)!important;border-color:#f0b52d!important;box-shadow:0 0 0 5px rgba(255,228,104,.75),0 0 26px rgba(255,194,35,.55),0 12px 24px rgba(112,77,21,.2)!important;transform:translateY(-3px)!important}.card:has(#answers:not([hidden])) .pair .word.active{border-color:#e99316!important;box-shadow:0 0 0 7px #ffe36b,0 0 34px rgba(255,194,35,.8),0 14px 28px rgba(112,77,21,.28)!important}.card:has(#answers:not([hidden])) .pair .word::before,.card:has(#answers:not([hidden])) .pair .word.active::before{content:none!important;display:none!important}.card:has(#answers:not([hidden])) #read,.card:has(#answers:not([hidden])) #listen{display:none!important}
+.card:has(#answers:not([hidden])) .pair .word.active{border-width:3px!important;border-color:#f0b52d!important;box-shadow:0 0 0 5px rgba(255,228,104,.75),0 0 26px rgba(255,194,35,.55),0 12px 24px rgba(112,77,21,.2)!important}
 </style>
 <script type="text/plain" data-activity-bootstrap="lesson-2-gawain-1">
 (function(){
