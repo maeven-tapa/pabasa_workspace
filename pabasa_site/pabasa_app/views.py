@@ -17668,6 +17668,15 @@ def prescribed_activity_progress(request, activity_key):
         data = json.loads(request.body or '{}'); state = data.get('state') if isinstance(data.get('state'), dict) else {}
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first(); old = existing.state if existing and isinstance(existing.state, dict) else {}
         if data.get('reset') is True:
+            recordings = list(StudentActivityRecordingSubmission.objects.filter(student=student, activity_key=activity_key, item_index__isnull=False))
+            with transaction.atomic():
+                for recording in recordings:
+                    if recording.audio_file:
+                        try:
+                            recording.audio_file.storage.delete(recording.audio_file.name)
+                        except Exception:
+                            logger.warning('Unable to remove reset Lesson 13 Gawain 1 recording: %s', recording.audio_file.name, exc_info=True)
+                StudentActivityRecordingSubmission.objects.filter(student=student, activity_key=activity_key, item_index__isnull=False).delete()
             saved = {'activity_key': activity_key, 'phase': 'initial', 'current_item': 0,
                      'reading_attempts': 0, 'aloud_attempts': 0, 'oral_satisfied': False,
                      'state_version': 0}
@@ -17687,7 +17696,9 @@ def prescribed_activity_progress(request, activity_key):
             completed = bounded_l13(data.get('completed_items', old_completed), old_completed)
             incoming_index = bounded_l13(state.get('current_item', data.get('current_index', old_index)), old_index)
             completed = max(completed, old_completed)
-            current_index = max(incoming_index, old_index, completed)
+            # current_index identifies the active item; completed is tracked separately.
+            # A recording on item 0 must not advance the resume cursor to item 1.
+            current_index = incoming_index
             saved = {'activity_key': activity_key,
                      'phase': state.get('phase', old.get('phase', 'initial')),
                      'current_item': current_index,
@@ -19855,6 +19866,52 @@ def session_4_gawain_1_recording(request):
                 submission.audio_file.storage.delete(old_name)
             except Exception:
                 logger.warning('Unable to remove replaced Session 4 Gawain 1 recording: %s', old_name, exc_info=True)
+    return JsonResponse({'success': True, 'recording_id': submission.id, 'item_index': item_index})
+
+
+@login_required(role='student')
+@csrf_protect
+@require_http_methods(['GET', 'POST'])
+def lesson_13_gawain_1_recording(request):
+    student = User.objects.filter(pk=request.session.get('user_id'), role='student', is_archived=False).first()
+    activity_key = 'lesson-13-gawain-1'
+    if not student:
+        return JsonResponse({'success': False, 'error': 'Student not found.'}, status=403)
+    if request.method == 'GET':
+        rows = StudentActivityRecordingSubmission.objects.filter(student=student, activity_key=activity_key, item_index__isnull=False).values('id', 'item_index', 'duration_seconds', 'status')
+        return JsonResponse({'success': True, 'recordings': list(rows)})
+    audio = request.FILES.get('audio')
+    if not audio:
+        return JsonResponse({'success': False, 'error': 'A recording is required.'}, status=400)
+    try:
+        item_index = int(request.POST.get('item_index'))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'A valid item is required.'}, status=400)
+    activity = prescribed_activity(activity_key)
+    if not activity or item_index < 0 or item_index >= len(activity.get('items') or []):
+        return JsonResponse({'success': False, 'error': 'Invalid activity item.'}, status=400)
+    try:
+        duration = max(0, int(request.POST.get('duration_seconds') or 0))
+    except (TypeError, ValueError):
+        duration = None
+    with transaction.atomic():
+        submission = StudentActivityRecordingSubmission.objects.select_for_update().filter(student=student, activity_key=activity_key, item_index=item_index).first()
+        old_name = submission.audio_file.name if submission and submission.audio_file else ''
+        if submission:
+            submission.audio_file = audio
+            submission.duration_seconds = duration or None
+            submission.status = 'submitted'
+            submission.checked_by = None
+            submission.checked_at = None
+            submission.save(update_fields=['audio_file', 'duration_seconds', 'status', 'checked_by', 'checked_at', 'updated_at'])
+        else:
+            submission = StudentActivityRecordingSubmission.objects.create(student=student, activity_key=activity_key, item_index=item_index, audio_file=audio, duration_seconds=duration or None)
+        new_name = submission.audio_file.name if submission.audio_file else ''
+        if old_name and old_name != new_name:
+            try:
+                submission.audio_file.storage.delete(old_name)
+            except Exception:
+                logger.warning('Unable to remove replaced Lesson 13 Gawain 1 recording: %s', old_name, exc_info=True)
     return JsonResponse({'success': True, 'recording_id': submission.id, 'item_index': item_index})
 
 

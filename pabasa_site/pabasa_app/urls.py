@@ -103,6 +103,7 @@ urlpatterns = [
     path('dashboard/assessment/activity/lesson-1-gawain-1/', views.lesson_1_gawain_1_page, name='lesson_1_gawain_1_page'),
     path('api/lesson-1-gawain-1/submit/', views.lesson_1_gawain_1_submit, name='lesson_1_gawain_1_submit'),
     path('api/session-4-gawain-1/recording/', views.session_4_gawain_1_recording, name='session_4_gawain_1_recording'),
+    path('api/lesson-13-gawain-1/recording/', views.lesson_13_gawain_1_recording, name='lesson_13_gawain_1_recording'),
     path('api/session-4-gawain-2/recording/', views.session_4_gawain_2_recording, name='session_4_gawain_2_recording'),
     path('api/teacher/lesson-1-gawain-1/recordings/', views.teacher_lesson_1_gawain_1_recordings, name='teacher_lesson_1_gawain_1_recordings'),
     path('api/teacher/lesson-1-gawain-1/audio/<int:submission_id>/', views.teacher_lesson_1_gawain_1_audio, name='teacher_lesson_1_gawain_1_audio'),
