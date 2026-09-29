@@ -82,6 +82,16 @@
     'Tama! Nahanap mo ang Zamora.', 'Tama! Nahanap mo ang Zam.', 'Tama! Nahanap mo ang Zoren.',
     'Tama! Nahanap mo ang Zeny.',
   ]);
+  const L24_G7_WORD_READING_MAPPED_TEXT = new Set([
+    'Basahin ang mga salita sa ibaba na may hiram na letrang Zz.',
+    'zigzag', 'Zandra', 'Zamora', 'Zandro', 'Lazaro', 'Perez', 'Rizal', 'Dizon', 'Gomez',
+    'Zarate', 'Zaragosa', 'Zapote', 'Zonrox', 'Lopez', 'Luzon', 'Zeny', 'Zoren', 'Legazpi',
+    'Zabala', 'Zambales', 'Gonzales', 'Mendoza', 'Hernandez',
+    'Hindi available ang audio.', 'Hindi ko malinaw na narinig. Subukan muli.',
+    'Hindi magamit ang mikropono. Subukan muli.', 'Hindi pinayagan ang mikropono.',
+    'Sinusuri ang iyong pagbasa...', 'Subukan muli.', 'Tama!',
+    'Magaling! Natapos mo ang Gawain 7.',
+  ]);
   const L24_G3_WORD_MAPPED_TEXT = new Set([
     'Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Xx.',
     'Alex', 'Alexander', 'Alexis', 'Dixon', 'Felix', 'mixer', 'Saxophone', 'Xylophone',
@@ -163,7 +173,7 @@
     stopReadAloud();
     const run=audioRun, controller=new AbortController();audioController=controller;
     const localUrl=(l23G1 || l23G3 || qReading || jSyllables || qG6 || l24Builder || g6Search || g7Reading || pictureReading || l24G3WordReading || l24G4Builder || g5Syllables) ? localAudioUrl(text) : null;
-    const mapped = (l23G1 && G1_MAPPED_TEXT.has(text)) || (l23G3 && G3_MAPPED_TEXT.has(text)) || (qReading && G7_MAPPED_TEXT.has(text)) || (jSyllables && G4_MAPPED_TEXT.has(text)) || (qG6 && G6_MAPPED_TEXT.has(text)) || (l24Builder && L24_G1_MAPPED_TEXT.has(text)) || (g6Search && L24_G6_WORD_SEARCH_MAPPED_TEXT.has(text)) || (g7Reading && Boolean(localUrl)) || (pictureReading && L24_G2_PICTURE_MAPPED_TEXT.has(text)) || (l24G3WordReading && L24_G3_WORD_MAPPED_TEXT.has(text)) || (l24G4Builder && L24_G4_BUILDER_MAPPED_TEXT.has(text)) || (g5Syllables && L24_G5_SYLLABLE_MAPPED_TEXT.has(text));
+    const mapped = (l23G1 && G1_MAPPED_TEXT.has(text)) || (l23G3 && G3_MAPPED_TEXT.has(text)) || (qReading && G7_MAPPED_TEXT.has(text)) || (jSyllables && G4_MAPPED_TEXT.has(text)) || (qG6 && G6_MAPPED_TEXT.has(text)) || (l24Builder && L24_G1_MAPPED_TEXT.has(text)) || (g6Search && L24_G6_WORD_SEARCH_MAPPED_TEXT.has(text)) || (g7Reading && L24_G7_WORD_READING_MAPPED_TEXT.has(text)) || (pictureReading && L24_G2_PICTURE_MAPPED_TEXT.has(text)) || (l24G3WordReading && L24_G3_WORD_MAPPED_TEXT.has(text)) || (l24G4Builder && L24_G4_BUILDER_MAPPED_TEXT.has(text)) || (g5Syllables && L24_G5_SYLLABLE_MAPPED_TEXT.has(text));
     if(mapped){
       if(!localUrl){if(audioController===controller)audioController=null;throw Error((jSyllables||l24Builder)&&text===instructionText?'Hindi available ang panuto.':'Hindi available ang audio.');}
       try{
@@ -304,7 +314,6 @@
     const list=columns.map((column,columnIndex)=>`<div class="wb-g7-column">${column.map((text,rowIndex)=>{const index=columnIndex*8+rowIndex;if(!text)return '<span class="wb-g7-word is-empty" aria-hidden="true"></span>';const complete=done.has(index),active=index===current&&!state.completed;return `<div class="wb-g7-word ${complete?'is-done':''} ${active?'is-current':''}" ${active?'aria-current="step"':''}><span>${complete?'✓ ':''}${esc(text)}</span></div>`;}).join('')}</div>`).join('');
     const phase=state.reading_phase||'read', attempts=Number(state.reading_attempts||0), feedback=state.last_feedback||'Handa ka na?';
     content.innerHTML=`<section class="wb-g7-workspace"><article class="wb-g7-panel wb-g7-list-panel"><div class="wb-g7-panel-heading"><h2>MGA SALITA</h2><span>${a.items.length} salita</span></div><div class="wb-g7-columns">${list}</div></article><article class="wb-g7-panel wb-g7-reading-panel"><h2>BASAHIN</h2><p class="wb-g7-subtitle">Tunog / Salitang Babasahin</p><strong class="wb-g7-current-word">${esc(target?.text||'—')}</strong><p class="wb-g7-attempts">Pagsubok: ${state.completed?0:attempts} / 3</p><div class="wb-g7-controls"><button type="button" class="wb-g7-read-button" id="wb-basahin" aria-label="Simulan ang pagbasa ng ${esc(target?.text||'salita')}">🎙 Simulan ang Pagbasa</button>${phase==='help'?`<button type="button" class="wb-g7-listen-button" id="wb-g7-listen">🔊 Pakinggan ang Tamang Pagbigkas</button><button type="button" class="wb-g7-retry-button" id="wb-g7-retry">Subukan Muli</button>`:''}</div><div class="wb-g7-transcript" aria-live="polite"><span>NARINIG KO</span><strong>${esc(state.last_transcript||'—')}</strong></div><p class="wb-g7-feedback ${state.last_feedback==='Subukan muli.'?'is-error':''}" id="wb-g7-feedback" role="status" aria-live="polite">${esc(feedback)}</p><button type="button" class="wb-g7-reset" id="wb-g7-reset">Ulitin Mula sa Simula</button></article></section>`;
-    document.getElementById('wb-instruction-replay')?.addEventListener('click',()=>{if(!busy&&!activeStream)playPrescribedAudio(instructionText).catch(e=>setG7Feedback(e.message||'Hindi available ang panuto.',true));});
     if(!preview&&!instructionSpoken){instructionSpoken=true;setTimeout(()=>playPrescribedAudio(instructionText).catch(e=>console.error('Gawain 7 instruction audio failed',e)),0);}
     const read=document.getElementById('wb-basahin');
     if(read&&!preview)window.Basahin.bindActivity(read,recordL24G7Reading);
@@ -315,7 +324,7 @@
     lockG7();
   }
   async function recordL24G7Reading(){
-    if(busy||!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){setG7Feedback('Hindi magamit ang mikropono. Subukan muli.',true);return;}
+    if(busy||!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){const text='Hindi magamit ang mikropono. Subukan muli.';setG7Feedback(text,true);if(L24_G7_WORD_READING_MAPPED_TEXT.has(text))playPrescribedAudio(text,true).catch(()=>{});return;}
     busy=true;lockG7();let stream=null,recorder=null,requestIndex=Number(state.index||0),requestRevision=Number(state.revision||0),requestActivity=a.activity_key;
     try{
       setG7Feedback('🎙️ Nakikinig... Basahin ang salita.');
@@ -323,10 +332,10 @@
       const audio=await window.Basahin.capture({button:document.getElementById('wb-basahin'),stream,onRecorder:value=>{recorder=activeRecorder=value;}});stream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
       if(!audio.size)throw Error('Hindi nakuha ang iyong boses. Subukan muli.');
       if(requestActivity!==a.activity_key||requestIndex!==Number(state.index||0)||requestRevision!==Number(state.revision||0))return;
-      setG7Feedback('Sinusuri ang iyong pagbasa...');const form=new FormData();form.append('audio',audio,'reading.webm');
+      setG7Feedback('Sinusuri ang iyong pagbasa...');await playPrescribedAudio('Sinusuri ang iyong pagbasa...',true);const form=new FormData();form.append('audio',audio,'reading.webm');
       await send({action:'reading_attempt',item_index:requestIndex},form,false);render();
       if(state.completed)await playPrescribedAudio('Magaling! Natapos mo ang Gawain 7.',true);else if(state.last_feedback)await playPrescribedAudio(state.last_feedback,true).catch(()=>{});
-    }catch(e){stream?.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;const denied=e?.name==='NotAllowedError'||e?.name==='SecurityError';setG7Feedback(denied?'Hindi pinayagan ang mikropono.':e.message||'Hindi nakuha ang iyong boses. Subukan muli.',true);
+    }catch(e){stream?.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;const denied=e?.name==='NotAllowedError'||e?.name==='SecurityError';const text=denied?'Hindi pinayagan ang mikropono.':e.message||'Hindi nakuha ang iyong boses. Subukan muli.';setG7Feedback(text,true);if(L24_G7_WORD_READING_MAPPED_TEXT.has(text))await playPrescribedAudio(text,true).catch(()=>{});
     }finally{busy=false;lockG7();}
   }
   function render(){
