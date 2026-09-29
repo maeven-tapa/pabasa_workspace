@@ -1,5 +1,5 @@
-{% load static %}<link rel="stylesheet" href="/static/pabasa_app/css/lesson_7_gawain_2a.css?v=20260918-13">
-<script src="/static/pabasa_app/js/lesson_7_gawain_2a_controls.js?v=20260924-1"></script>
+{% load static %}<script src="{% static 'pabasa_app/js/session3_visual_feedback_suppression.js' %}" data-activity-key="lesson7-gawain2a" data-feedback-messages='["Subukan muli. Sabihin ang salita nang malinaw.","Hindi narinig. Subukan muli.","May mga larawan na nagsisimula sa /i/. Isulat ang i sa tamang kahon, pagkatapos ay isumite muli.","Magaling!","Natapos mo ang Gawain 2A."]'></script><link rel="stylesheet" href="/static/pabasa_app/css/lesson_7_gawain_2a.css?v=20260918-13">
+<script src="/static/pabasa_app/js/lesson_7_gawain_2a_controls.js?v=20260924-2"></script>
 <script>
 window.__prescribedNarrationAudio = {
   'tukuyin ang larawan': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2A/OTHERS/tukuyin_ang_larawan.mp3' %}",
@@ -40,3 +40,5 @@ document.getElementById('submit').onclick=async()=>{if(busy)return;busy=true;let
   @keyframes lesson7G2AListenScale{0%,100%{scale:1}50%{scale:1.035}}
   @media(prefers-reduced-motion:reduce){#app .reading #read.is-listening{animation:none}}
 </style>
+<style>.done h1,.done .done-message{visibility:visible!important}</style>
+<script src="{% static 'pabasa_app/js/session3_visual_feedback_suppression.js' %}" data-feedback-messages='["Subukan Muli","Magaling"]'></script>

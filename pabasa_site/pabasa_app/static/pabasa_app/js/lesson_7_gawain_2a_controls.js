@@ -153,6 +153,7 @@ document.addEventListener('DOMContentLoaded', function () {
       previousReadingStatus = currentStatus;
     }
     const status = reading.querySelector('#status');
+    if (status && /^Larawan \d+/.test(status.textContent.trim())) status.style.visibility = '';
     if (status && /^Subukan muli\. Sabihin ang salita nang malinaw\.$/i.test(status.textContent.trim()) && status.dataset.g2aFeedback !== 'wrong') {
       showFeedback(status, 'Subukan Muli', '');
     }
@@ -163,6 +164,7 @@ document.addEventListener('DOMContentLoaded', function () {
     feedbackBusy = true;
     status.dataset.g2aFeedback = text;
     status.textContent = text;
+    status.style.visibility = 'hidden';
     setButtonsDisabled(true);
     requestAudio(text).finally(() => {
       if (status.isConnected && status.dataset.g2aFeedback === text && restoreText) status.textContent = restoreText;

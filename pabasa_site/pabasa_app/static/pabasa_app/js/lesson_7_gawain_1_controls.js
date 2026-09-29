@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }, true);
 
   let narratedStatus = null;
+  let feedbackNarrating = false;
   let transitionToken = 0;
   let feedbackToken = 0;
   const controls = () => [app.querySelector('#read'), app.querySelector('#aloud'), ...app.querySelectorAll('.choice')].filter(Boolean);
@@ -78,17 +79,26 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  const showFeedback = (status, text, restoreText) => {
-    if (!status || status.dataset.feedbackText === text) return;
-    status.dataset.feedbackText = text;
-    status.textContent = text;
+  const showFeedback = (status, text) => {
+    const feedbackKey = `${text}\u0000${status?.textContent.trim() || ''}`;
+    if (!status || status.dataset.feedbackNarrating === feedbackKey || status.dataset.feedbackNarrated === feedbackKey) return;
+    status.dataset.feedbackNarrating = feedbackKey;
+    feedbackNarrating = true;
     setFeedbackDisabled(true);
+    const unlockFallback = window.setTimeout(() => setFeedbackDisabled(false), 6000);
     narrateFeedback(text).finally(() => {
-      if (status.isConnected && status.dataset.feedbackText === text) {
-        if (restoreText) status.textContent = restoreText;
-        delete status.dataset.feedbackText;
+      window.clearTimeout(unlockFallback);
+      if (status.isConnected && status.dataset.feedbackNarrating === feedbackKey) {
+        status.dataset.feedbackNarrated = feedbackKey;
+        delete status.dataset.feedbackNarrating;
+      }
+      if (text === 'Magaling!' && typeof phase !== 'undefined' && phase === 'read' && typeof render === 'function') {
+        phase = 'classify';
+        render();
       }
       setFeedbackDisabled(false);
+      feedbackNarrating = false;
+      sync();
     });
   };
 
@@ -108,7 +118,7 @@ document.addEventListener('DOMContentLoaded', function () {
         isa: 'isa.mp3',
         itlog: 'itlog.mp3',
         saging: 'saging.mp3',
-      }[String(word).trim().toLowerCase()];
+      }[String(word).trim().toLowerCase().replace(/\s+/g, '-')];
       if (!audioFilename) throw new Error(`No prescribed audio found for ${word}`);
       const audio = new Audio(`/static/pabasa_app/prescribed/audio/SESSION%203/LESSON%207/GAWAIN%201/${encodeURIComponent(audioFilename)}`);
       await new Promise(resolve => {
@@ -183,11 +193,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const status = app.querySelector('#status');
     const listen = app.querySelector('#aloud');
     bindListenButton(listen);
-    if (listen && status?.textContent.trim() === 'Ano ang nasa larawan?' && narratedStatus !== status) listen.hidden = false;
+    if (listen) listen.hidden = false;
   };
 
   const narrateStatus = () => {
     if (!window.__lessonStartReady) return;
+    if (feedbackNarrating) return;
     const progressLabel = app.querySelector('.head>b')?.textContent.trim();
     if (!app.dataset.lesson7IntroComplete && progressLabel && !progressLabel.startsWith('1 /')) {
       app.dataset.lesson7IntroComplete = '1';
@@ -244,10 +255,15 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       const statusText = status.textContent.trim();
       if (/^Subukan muli\.!?(?: \(\d+\/3\))?$/i.test(statusText)) {
+        status.textContent = app.querySelector('.choices')
+          ? 'Nagsisimula ba ang larawan sa tunog I?'
+          : 'Ano ang nasa larawan?';
+        delete status.dataset.feedbackNarrated;
+        delete status.dataset.feedbackNarrating;
         showFeedback(status, 'Subukan muli!', '');
       } else if (window.__lesson7RecognitionFeedback === 'correct' && statusText !== 'Magaling!') {
         window.__lesson7RecognitionFeedback = null;
-        showFeedback(status, 'Magaling!', statusText);
+        showFeedback(status, 'Magaling!');
       }
     }
     narrateStatus();

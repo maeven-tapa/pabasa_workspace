@@ -14,9 +14,6 @@ setInterval(function(){
       }
       tries++;
       if(statusEl)statusEl.textContent='Subukan muli. ('+tries+'/3)';
-      if(tries>=3){
-        setTimeout(function(){tries=0;phase='read';render()},900);
-      }
     };
   });
 },50);
