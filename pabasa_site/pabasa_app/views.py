@@ -2359,6 +2359,70 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
 
     user_ids = [sdata['id'] for sdata in student_map.values()]
     users = User.objects.filter(id__in=user_ids).in_bulk()
+
+    # Build the summary-card metrics from the same active material and result
+    # records used by the teacher progress views.  Assignment scope is applied
+    # per student so selected-student materials do not inflate other students'
+    # totals.
+    scoped_materials = list(Material.objects.filter(
+        is_active=True,
+    ).filter(
+        Q(section__in=sections) | Q(assigned_sections__in=sections) | Q(courses__sections__in=sections)
+    ).exclude(status__iexact='archived').distinct()) if sections else []
+    material_by_id = {material.id: material for material in scoped_materials}
+    assignment_ids = {
+        material.id: set(material.student_assignments.values_list('student_id', flat=True))
+        for material in scoped_materials
+        if str(getattr(material, 'publication_scope', 'whole_class') or 'whole_class').strip().lower() == 'selected_students'
+    }
+    summary_metrics = {
+        sid: {'assigned': 0, 'completed': 0, 'last_activity': None}
+        for sid in user_ids
+    }
+    for student_id in user_ids:
+        metric = summary_metrics[student_id]
+        eligible_material_ids = [
+            material_id for material_id in material_by_id
+            if material_id not in assignment_ids or student_id in assignment_ids[material_id]
+        ]
+        metric['assigned'] = len(eligible_material_ids)
+
+    completed_results = Assessment.objects.filter(
+        material_id__in=material_by_id,
+        student_id__in=user_ids,
+        is_active=True,
+    ).order_by('-updated_at', '-completed_at', '-id')
+    seen_completed = set()
+    for result in completed_results:
+        if str(getattr(result, 'attempt_status', '') or '').strip().lower() != 'completed':
+            continue
+        student_id = result.student_id
+        material_id = result.material_id
+        eligible_ids = assignment_ids.get(material_id)
+        if eligible_ids is not None and student_id not in eligible_ids:
+            continue
+        pair = (student_id, material_id)
+        activity_time = result.completed_at or result.updated_at or result.created_at
+        if pair not in seen_completed:
+            summary_metrics[student_id]['completed'] += 1
+            seen_completed.add(pair)
+        current_last = summary_metrics[student_id]['last_activity']
+        if activity_time and (current_last is None or activity_time > current_last):
+            summary_metrics[student_id]['last_activity'] = activity_time
+
+    for progress in StudentActivityProgress.objects.filter(student_id__in=user_ids).only('student_id', 'updated_at'):
+        current_last = summary_metrics[progress.student_id]['last_activity']
+        if progress.updated_at and (current_last is None or progress.updated_at > current_last):
+            summary_metrics[progress.student_id]['last_activity'] = progress.updated_at
+
+    for submission in StoryReadingProgress.objects.filter(
+        student_id__in=user_ids, material_id__in=material_by_id,
+    ).only('student_id', 'updated_at', 'completed_at'):
+        activity_time = submission.completed_at or submission.updated_at
+        current_last = summary_metrics[submission.student_id]['last_activity']
+        if activity_time and (current_last is None or activity_time > current_last):
+            summary_metrics[submission.student_id]['last_activity'] = activity_time
+
     official_crla_results = _latest_completed_official_crla_results(
         user_ids, section=section, crla_term=crla_term, crla_phase=crla_phase,
     )
@@ -2665,6 +2729,11 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
             'last_active_at': last_active.isoformat() if last_active else None,
             'improvement_30d': round(improvement, 1),
             'crla_result': crla_result,
+            'assigned_activities': summary_metrics[user.id]['assigned'],
+            'total_assigned_activities': summary_metrics[user.id]['assigned'],
+            'completed_activities': summary_metrics[user.id]['completed'],
+            'activities_completed': summary_metrics[user.id]['completed'],
+            'last_activity_at': summary_metrics[user.id]['last_activity'].isoformat() if summary_metrics[user.id]['last_activity'] else None,
         })
 
         level_counts[reading_level if official_result else 'Pending'] += 1
