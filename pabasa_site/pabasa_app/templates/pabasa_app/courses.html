@@ -10427,7 +10427,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     body.dark-theme #studentProgressModal .student-progress-score, body.dark-theme #courseInlineDialogHost .student-progress-score { color: #8bd3ee; }
     body.dark-theme #studentProgressModal .student-progress-empty, body.dark-theme #studentProgressModal .student-progress-loading, body.dark-theme #courseInlineDialogHost .student-progress-empty, body.dark-theme #courseInlineDialogHost .student-progress-loading { border-color: rgba(148, 163, 184, .24); }
     #studentProgressModal .student-progress-recording, #courseInlineDialogHost .student-progress-recording { margin-top: .85rem; padding-top: .75rem; border-top: 1px solid rgba(30,55,70,.09); }
-    #studentProgressModal .student-progress-recording-toggle, #courseInlineDialogHost .student-progress-recording-toggle { padding: 0; border: 0; background: transparent; color: var(--dash-primary,#1f6f8b); font: inherit; font-size: .78rem; font-weight: 850; cursor: pointer; }
     #studentProgressModal .student-progress-recording-panel, #courseInlineDialogHost .student-progress-recording-panel { margin-top: .65rem; }
     #studentProgressModal .student-progress-audio-controls, #courseInlineDialogHost .student-progress-audio-controls { display: flex; align-items: center; gap: .55rem; }
     #studentProgressModal .student-progress-retell-play, #courseInlineDialogHost .student-progress-retell-play { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; color: #fff; background: #2483a4; flex: 0 0 auto; }
@@ -11277,7 +11276,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const response = await fetch(`/api/teacher/story-response/review/?material_id=${encodeURIComponent(materialId)}`, { credentials: 'same-origin' });
         const data = await response.json();
         if (!response.ok || !data.success) { body.innerHTML = `<div class="text-danger">${escapeHtml(data.error || 'Unable to load responses.')}</div>`; return; }
-        body.innerHTML = data.submissions.map(row => `<div class="story-response-review-row"><div class="story-response-review-header"><strong class="story-response-student-name">${escapeHtml(row.student_name)}</strong><span class="story-response-status-badge ${row.grade_locked ? 'is-graded' : ''}">${escapeHtml(row.status)}</span></div>${row.story_title ? `<div class="story-response-story">Story · ${escapeHtml(row.story_title)}</div>` : ''}${row.prompt ? `<div class="story-response-prompt"><span class="story-response-prompt-label">Prompt</span><span class="story-response-prompt-text"> ${escapeHtml(row.prompt)}</span></div>` : ''}${row.response_text ? `<div class="story-response-prompt"><span class="story-response-prompt-label">Answer</span><span class="story-response-prompt-text"> ${escapeHtml(row.response_text)}</span></div>` : ''}${row.recording_url ? `<audio class="w-100" controls preload="none" src="${escapeHtml(row.recording_url)}"></audio><div class="story-response-rubric"><div class="story-response-rubric-title">Scoring Rubric</div><ol class="story-response-rubric-list"><li><strong>0</strong> - Poor</li><li><strong>1</strong> - Fair/Beginning</li><li><strong>2</strong> - Basic/Approaching</li><li><strong>3</strong> - Proficient</li><li><strong>4</strong> - Mastery</li><li><strong>5</strong> - Ready</li></ol></div><div class="story-response-score-row"><label class="story-response-score-label" for="story-response-score-${row.id}">Score</label><select id="story-response-score-${row.id}" class="story-response-grade" data-submission-id="${row.id}" ${row.grade_locked ? 'disabled' : ''}>${[0,1,2,3,4,5].map(value => `<option value="${value}" ${Number(row.grade) === value ? 'selected' : ''}>${value}</option>`).join('')}</select><span class="story-response-score-out-of">/ 5</span><button type="button" class="story-response-save-grade" data-submission-id="${row.id}" ${row.grade_locked ? 'disabled' : ''}>${row.grade_locked ? 'Score Submitted' : 'Submit Score'}</button>${row.grade !== null && row.grade !== undefined ? `<strong class="story-response-saved-score">Saved ${escapeHtml(row.grade)}/5</strong>` : ''}</div>` : ''}</div>`).join('') || '<div class="text-muted">No enrolled students found.</div>';
+        body.innerHTML = data.submissions.map(row => `<div class="story-response-review-row"><div class="story-response-review-header"><strong class="story-response-student-name">${escapeHtml(row.student_name)}</strong><span class="story-response-status-badge ${row.grade_locked ? 'is-graded' : ''}">${escapeHtml(row.status)}</span></div>${row.story_title ? `<div class="story-response-story">Story · ${escapeHtml(row.story_title)}</div>` : ''}${row.prompt ? `<div class="story-response-prompt"><span class="story-response-prompt-label">Prompt</span><span class="story-response-prompt-text"> ${escapeHtml(row.prompt)}</span></div>` : ''}${row.response_text ? `<div class="story-response-prompt"><span class="story-response-prompt-label">Answer</span><span class="story-response-prompt-text"> ${escapeHtml(row.response_text)}</span></div>` : ''}${row.recording_url ? `<audio class="w-100" controls preload="none" src="${escapeHtml(row.recording_url)}"></audio><div class="story-response-rubric"><div class="story-response-rubric-title">Scoring Rubric</div><ol class="story-response-rubric-list"><li><strong>0</strong> - Poor</li><li><strong>1</strong> - Fair/Beginning</li><li><strong>2</strong> - Basic/Approaching</li><li><strong>3</strong> - Proficient</li><li><strong>4</strong> - Mastery</li><li><strong>5</strong> - Ready</li></ol></div><div class="story-response-score-row"><label class="story-response-score-label" for="story-response-score-${row.id}">Score</label><select id="story-response-score-${row.id}" class="story-response-grade" data-submission-id="${row.id}" ${row.grade_locked ? 'disabled' : ''}>${['Poor', 'Fair/Beginning', 'Basic/Approaching', 'Proficient', 'Mastery', 'Ready'].map((label, value) => `<option value="${value}" ${Number(row.grade) === value ? 'selected' : ''}>${value} - ${label}</option>`).join('')}</select><span class="story-response-score-out-of">/ 5</span><button type="button" class="story-response-save-grade" data-submission-id="${row.id}" ${row.grade_locked ? 'disabled' : ''}>${row.grade_locked ? 'Score Submitted' : 'Submit Score'}</button>${row.grade !== null && row.grade !== undefined ? `<strong class="story-response-saved-score">Saved ${escapeHtml(row.grade)}/5</strong>` : ''}</div>` : ''}</div>`).join('') || '<div class="text-muted">No enrolled students found.</div>';
     }
 
     async function openRetellRecordings(materialId) {
@@ -14242,7 +14241,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         setupCourseReadingsHandlers();
     });
 
-    const expandedRetellRecordingIds = new Set();
     const studentProgressRetellGrades = new Map();
     let activeStudentProgressAudio = null;
     const stopStudentProgressAudio = () => {
@@ -14469,9 +14467,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const retellGradeValue = retellGrade === undefined || retellGrade === null || retellGrade === '' ? '' : String(retellGrade);
                     const retellRecordingKey = String(retellSubmissionId || `${task.assessmentId || task.title}-${studentId}`);
                     const retellRecordingAvailable = (isRetellStory || isStoryResponse) && attempt?.recording_available && attempt?.recording_url;
-                    const retellRecordingExpanded = expandedRetellRecordingIds.has(retellRecordingKey);
                     const scoreValue = isRetellStory
-                        ? `<select class="student-progress-retell-score form-select form-select-sm" data-submission-id="${escapeHtml(retellSubmissionId || '')}" data-previous-value="${escapeHtml(retellGradeValue)}" ${retellSubmissionId ? '' : 'disabled'} aria-label="Retell teacher score"><option value="" ${retellGradeValue === '' ? 'selected' : ''}>Not scored</option>${[0, 1, 2, 3, 4, 5].map(value => `<option value="${value}" ${retellGradeValue === String(value) ? 'selected' : ''}>${value}</option>`).join('')}</select>`
+                        ? `<select class="student-progress-retell-score form-select form-select-sm" data-submission-id="${escapeHtml(retellSubmissionId || '')}" data-previous-value="${escapeHtml(retellGradeValue)}" ${retellSubmissionId ? '' : 'disabled'} aria-label="Retell teacher score"><option value="" ${retellGradeValue === '' ? 'selected' : ''}>Not scored</option>${['Poor', 'Fair/Beginning', 'Basic/Approaching', 'Proficient', 'Mastery', 'Ready'].map((label, value) => `<option value="${value}" ${retellGradeValue === String(value) ? 'selected' : ''}>${value} - ${label}</option>`).join('')}</select>`
                         : displayedScore;
                     const typeLabel = task.activityLabel || 'Reading Activity';
                     return `
@@ -14489,8 +14486,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <div class="student-progress-stat"><span class="student-progress-stat-label">Score</span><span class="student-progress-stat-value student-progress-score">${scoreValue}</span></div>
                             </div>
                             ${(isRetellStory || isStoryResponse) ? `<div class="student-progress-recording" data-recording-key="${escapeHtml(retellRecordingKey)}">
-                                <button type="button" class="student-progress-recording-toggle" aria-expanded="${retellRecordingExpanded ? 'true' : 'false'}">Review Recording <span aria-hidden="true">${retellRecordingExpanded ? '▾' : '▸'}</span></button>
-                                <div class="student-progress-recording-panel" ${retellRecordingExpanded ? '' : 'hidden'}>
+                                <div class="student-progress-recording-panel">
                                     ${retellRecordingAvailable ? `<div class="student-progress-audio-controls"><button type="button" class="student-progress-retell-play" data-url="${escapeHtml(attempt.recording_url)}" aria-label="Play recording"><i class="bi bi-play-fill"></i></button><input class="student-progress-retell-progress" type="range" min="0" max="0" value="0" step="0.1" aria-label="Recording progress"><span class="student-progress-retell-time">0:00 / ${escapeHtml(formatStudentProgressAudioTime(attempt.recording_duration_seconds))}</span></div>` : '<span class="student-progress-recording-unavailable">Recording unavailable</span>'}
                                 </div>
                             </div>` : ''}
@@ -14546,19 +14542,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     });
 
     document.addEventListener('click', function(event) {
-        const toggle = event.target.closest('.student-progress-recording-toggle');
-        if (toggle) {
-            const recording = toggle.closest('.student-progress-recording');
-            const key = recording?.dataset.recordingKey;
-            if (!recording || !key) return;
-            const panel = recording.querySelector('.student-progress-recording-panel');
-            const expanded = !panel.hidden;
-            panel.hidden = expanded;
-            toggle.setAttribute('aria-expanded', String(!expanded));
-            toggle.querySelector('span').textContent = expanded ? '▸' : '▾';
-            if (expanded) expandedRetellRecordingIds.delete(key); else expandedRetellRecordingIds.add(key);
-            return;
-        }
         const button = event.target.closest('.student-progress-retell-play');
         if (!button) return;
         const controls = button.closest('.student-progress-audio-controls');
