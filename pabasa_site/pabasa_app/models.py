@@ -2039,7 +2039,7 @@ class ActivityLog(models.Model):
 class PrescribedActivityAccessSettings(models.Model):
     """Global administrator control for prescribed activity availability."""
 
-    unlock_all_activities = models.BooleanField(default=False)
+    unlock_all_activities = models.BooleanField(default=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
