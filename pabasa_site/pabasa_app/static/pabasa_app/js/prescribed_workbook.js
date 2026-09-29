@@ -123,6 +123,8 @@
   let audioRun = 0, instructionSpoken = false, pendingSpeech = '';
   const instructionText = a.instruction;
   const session9Activity = s9Family || s9Helping;
+  const session9SaveError = 'Could not save your work. Try again.';
+  const session9AudioError = 'Audio is not available. Try again.';
   let activityStarted = (!session9Activity && !l22G1) || preview || Boolean(state.completed), instructionPlayback = false;
   const content = document.getElementById('wb-content'), action = document.getElementById('wb-action');
   const status = document.getElementById('wb-status');
@@ -167,14 +169,14 @@
     const form=new FormData();form.append('target_text',text);form.append('language',spokenLanguage);form.append('mode','reading');form.append('prescribed_activity_key',a.activity_key);form.append('prescribed_session_key',a.session_key||'');
     try{
       const response=await fetch(data.read_aloud_url,{method:'POST',credentials:'same-origin',headers:{'Accept':'application/json','X-CSRFToken':token()},body:form,signal:controller.signal});
-      const result=await responseJson(response,'Hindi available ang Filipino audio. Subukan muli.');
-      if(!response.ok||!result.success||!result.audio_content)throw Error(result.error||'Hindi available ang Filipino audio.');
-      if(fil&&!result.local_audio&&(result.tts_language !== 'fil-PH' || result.voice_name !== 'fil-PH-Wavenet-A'))throw Error('Hindi available ang tamang Filipino voice.');
+      const result=await responseJson(response,session9Activity?session9AudioError:'Hindi available ang Filipino audio. Subukan muli.');
+      if(!response.ok||!result.success||!result.audio_content)throw Error(result.error||(session9Activity?session9AudioError:'Hindi available ang Filipino audio.'));
+      if(fil&&!result.local_audio&&(result.tts_language !== 'fil-PH' || result.voice_name !== 'fil-PH-Wavenet-A'))throw Error(session9Activity?'The right voice is not available.':'Hindi available ang tamang Filipino voice.');
       if(!fil&&!result.local_audio&&result.tts_language!==expectedTtsLanguage)throw Error('The correct English voice is unavailable.');
       if(run!==audioRun||(busy&&!allowBusy)||activeStream)return;
       const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);activeReadAloud=audio;
       await audio.play();
-      await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=()=>reject(Error('Hindi ma-play ang Filipino audio.'));});
+      await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=()=>reject(Error(session9Activity?'Audio could not play.':'Hindi ma-play ang Filipino audio.'));});
     }finally{
       if(audioController===controller)audioController=null;
       if(activeReadAloud&&run===audioRun){activeReadAloud.pause();activeReadAloud=null;}
@@ -183,7 +185,7 @@
   async function replayInstruction(button){
     if(instructionPlayback||busy||activeStream)return;
     instructionPlayback=true;button.disabled=true;button.classList.add('is-busy');
-    try{await playPrescribedAudio(instructionText,true);}catch(e){if(e?.name!=='AbortError')message(e.message||'Hindi available ang panuto.',true);}
+    try{await playPrescribedAudio(instructionText,true);}catch(e){if(e?.name!=='AbortError')message(e.message||(session9Activity?session9AudioError:'Hindi available ang panuto.'),true);}
     finally{instructionPlayback=false;if(button.isConnected){button.disabled=false;button.classList.remove('is-busy');}}
   }
   function initializeL22Entry(){
@@ -238,12 +240,12 @@
       if(form) {form.set('revision',state.revision);if(event?.action)form.set('action',event.action);body=form;}
       else body=JSON.stringify({...event,revision:state.revision});
       const response=await fetch(endpoint,{method:'POST',credentials:'same-origin',headers:{'Accept':'application/json','X-CSRFToken':token(),...(form?{}:{'Content-Type':'application/json'})},body});
-      const result=await responseJson(response,'Hindi na-save. Subukan muli.');
-      if(!response.ok||!result.success) throw Error(result.error||'Hindi na-save. Subukan muli.');
+      const result=await responseJson(response,session9Activity?session9SaveError:'Hindi na-save. Subukan muli.');
+      if(!response.ok||!result.success) throw Error(result.error||(session9Activity?session9SaveError:'Hindi na-save. Subukan muli.'));
       const latestDraft=state.draft;
       state=result.state;
       if(event?.action==='draft')state.draft=latestDraft;
-      if(announceSaved)message(fil?'Na-save ang iyong gawain.':'Your work is saved.');
+      if(announceSaved)message(session9Activity?'Work saved.':(fil?'Na-save ang iyong gawain.':'Your work is saved.'));
     };
     const pending=queue.then(operation);queue=pending.catch(()=>{});return pending;
   }
@@ -269,7 +271,7 @@
   }
   function requestS9A2Restart(){
     if(document.getElementById('wb-s9-a2-reset-modal'))return;
-    document.body.insertAdjacentHTML('beforeend','<div class="wb-s9-a2-modal" id="wb-s9-a2-reset-modal" role="dialog" aria-modal="true" aria-labelledby="wb-s9-a2-reset-title"><div class="wb-s9-a2-modal-card"><h2 id="wb-s9-a2-reset-title">Ulitin ang Activity 2?</h2><p>Mabubura ang iyong drawing at magalang na salita.</p><div class="wb-s9-a2-modal-actions"><button type="button" id="wb-s9-a2-reset-no">Hindi</button><button type="button" class="wb-primary" id="wb-s9-a2-reset-yes">Oo, Burahin</button></div></div></div>');
+    document.body.insertAdjacentHTML('beforeend','<div class="wb-s9-a2-modal" id="wb-s9-a2-reset-modal" role="dialog" aria-modal="true" aria-labelledby="wb-s9-a2-reset-title"><div class="wb-s9-a2-modal-card"><h2 id="wb-s9-a2-reset-title">Start Activity 2 over?</h2><p>Your drawing and kind word will be erased.</p><div class="wb-s9-a2-modal-actions"><button type="button" id="wb-s9-a2-reset-no">No</button><button type="button" class="wb-primary" id="wb-s9-a2-reset-yes">Yes, erase them</button></div></div></div>');
     const modal=document.getElementById('wb-s9-a2-reset-modal');
     document.getElementById('wb-s9-a2-reset-no').onclick=()=>modal.remove();
     document.getElementById('wb-s9-a2-reset-yes').onclick=()=>{modal.remove();perform({action:'restart'});};
@@ -277,7 +279,7 @@
   }
   function requestS9A2Clear(clear){
     if(document.getElementById('wb-s9-a2-clear-modal'))return;
-    document.body.insertAdjacentHTML('beforeend','<div class="wb-s9-a2-modal" id="wb-s9-a2-clear-modal" role="dialog" aria-modal="true" aria-labelledby="wb-s9-a2-clear-title"><div class="wb-s9-a2-modal-card"><h2 id="wb-s9-a2-clear-title">Burahin ang buong drawing?</h2><p>Mananatili ang iyong magalang na salita.</p><div class="wb-s9-a2-modal-actions"><button type="button" id="wb-s9-a2-clear-no">Hindi</button><button type="button" class="wb-primary" id="wb-s9-a2-clear-yes">Oo, Burahin</button></div></div></div>');
+    document.body.insertAdjacentHTML('beforeend','<div class="wb-s9-a2-modal" id="wb-s9-a2-clear-modal" role="dialog" aria-modal="true" aria-labelledby="wb-s9-a2-clear-title"><div class="wb-s9-a2-modal-card"><h2 id="wb-s9-a2-clear-title">Erase the whole drawing?</h2><p>Your kind word will stay.</p><div class="wb-s9-a2-modal-actions"><button type="button" id="wb-s9-a2-clear-no">No</button><button type="button" class="wb-primary" id="wb-s9-a2-clear-yes">Yes, erase it</button></div></div></div>');
     const modal=document.getElementById('wb-s9-a2-clear-modal');
     document.getElementById('wb-s9-a2-clear-no').onclick=()=>modal.remove();
     document.getElementById('wb-s9-a2-clear-yes').onclick=()=>{modal.remove();clear();};
@@ -336,11 +338,11 @@
         return;
       }
       if(s9Helping){
-        content.innerHTML=`<div class="wb-s9-a2-completion" role="dialog" aria-modal="true" aria-labelledby="wb-s9-a2-completion-title"><p class="wb-s9-a2-kicker">SESSION 9 · ACTIVITY 2</p><h2 id="wb-s9-a2-completion-title">Magaling! Natapos mo ang Activity 2!</h2><p>Nai-save ang iyong drawing at magalang na salita.</p><div class="wb-s9-a2-completion-actions">${data.next_url?`<a class="wb-primary" href="${esc(data.next_url)}">Susunod na Gawain</a>`:''}<a href="${esc(document.getElementById('wb-back')?.href||'#')}">Bumalik sa Aking Aralin</a><button type="button" id="wb-s9-a2-complete-reset">Ulitin Mula sa Simula</button></div></div>`;
+        content.innerHTML=`<div class="wb-s9-a2-completion" role="dialog" aria-modal="true" aria-labelledby="wb-s9-a2-completion-title"><p class="wb-s9-a2-kicker">SESSION 9 · ACTIVITY 2</p><h2 id="wb-s9-a2-completion-title">Good job! Activity 2 is complete!</h2><p>Your drawing and kind word were saved.</p><div class="wb-s9-a2-completion-actions">${data.next_url?`<a class="wb-primary" href="${esc(data.next_url)}">Next Activity</a>`:''}<a href="${esc(document.getElementById('wb-back')?.href||'#')}">Back to My Lesson</a><button type="button" id="wb-s9-a2-complete-reset">Start Over</button></div></div>`;
         document.getElementById('wb-s9-a2-complete-reset')?.addEventListener('click',requestS9A2Restart);
         return;
       }
-      content.innerHTML=`<div class="wb-focus"><h2>${cBuilder?'Magaling! Natapos mo ang Gawain 1.':l24G4Builder?'Magaling! Natapos mo ang Gawain 4.':g5Syllables?'Magaling! Natapos mo ang Gawain 5!':g6Search?'Magaling! Natapos mo ang Gawain 6!':fil?'Natapos mo ang gawain!':'Activity complete!'}</h2>${cBuilder?`<p>${a.activity_key==='aral-l23-g1-n-syllable-builder'?`Magaling! Nabuo mo ang salitang ${completionWord}`:`Nabuo mo na: ${esc(completionWord)}`}</p>`:g5Syllables?'<p>Natapos mo ang lahat ng siyam na salitang kailangang pantigin.</p>':g6Search?'<p>Nahanap mo ang lahat ng sampung salita sa Big Box.</p>':a.review_required&&!l24G4Builder?'<p>Your written work is saved for teacher review.</p>':''}</div>`;
+      content.innerHTML=`<div class="wb-focus"><h2>${s9Family?'Good job! Activity 1 is complete!':cBuilder?'Magaling! Natapos mo ang Gawain 1.':l24G4Builder?'Magaling! Natapos mo ang Gawain 4.':g5Syllables?'Magaling! Natapos mo ang Gawain 5!':g6Search?'Magaling! Natapos mo ang Gawain 6!':fil?'Natapos mo ang gawain!':'Activity complete!'}</h2>${cBuilder?`<p>${a.activity_key==='aral-l23-g1-n-syllable-builder'?`Magaling! Nabuo mo ang salitang ${completionWord}`:`Nabuo mo na: ${esc(completionWord)}`}</p>`:s9Family?'<p>Your work was saved for the teacher.</p>':g5Syllables?'<p>Natapos mo ang lahat ng siyam na salitang kailangang pantigin.</p>':g6Search?'<p>Nahanap mo ang lahat ng sampung salita sa Big Box.</p>':a.review_required&&!l24G4Builder?'<p>Your written work is saved for teacher review.</p>':''}</div>`;
       if(cBuilder||l24G4Builder){button('Susunod',()=>{if(data.next_url)location.href=data.next_url;},true).disabled=!data.next_url;if(l24G4Builder)button('Ulitin Mula sa Simula',()=>{if(window.confirm('Ulitin ang Gawain 4 mula sa simula?'))perform({action:'restart'});});}
       if((prescribedWordReading||jSyllables||g5Syllables||pictureReading)&&data.next_url)button('Susunod',()=>{location.href=data.next_url;},true);
       if(g5Syllables)button('Ulitin Mula sa Simula',()=>{if(window.confirm('Ulitin ang Gawain 5 mula sa simula? Mawawala ang kasalukuyang progreso.'))perform({action:'restart'});});
@@ -354,7 +356,7 @@
     if(g6Search){renderL24G6WordSearch();return;}
     if(specializedBuilder&&!preview){renderCBuilder();lock();return;}
     if(l24G4Builder&&!preview){renderBuilder();lock();return;}
-    if(state.index>=a.items.length&&!preview){content.innerHTML='<div class="wb-focus">'+(fil?'Na-save ang lahat ng bahagi ng gawain.':'All required parts are saved.')+'</div>';button(fil?'Tapusin ang gawain':'Finish activity',()=>perform({action:'finish'}),true);return;}
+    if(state.index>=a.items.length&&!preview){content.innerHTML='<div class="wb-focus">'+(session9Activity?'All parts are saved.':(fil?'Na-save ang lahat ng bahagi ng gawain.':'All required parts are saved.'))+'</div>';button(fil?'Tapusin ang gawain':'Finish activity',()=>perform({action:'finish'}),true);return;}
     const kind=a.interaction_type;
     content.innerHTML=preview?'<p class="wb-preview-note">Preview · '+(fil?'Walang sagot na napili.':'No answers selected.')+'</p>':'';
     if(kind==='search')renderSearch();
@@ -481,7 +483,7 @@
       const denied=e?.name==='NotAllowedError'||e?.name==='SecurityError';const text=denied?(l24G3WordReading?'Hindi available ang mikropono.':'Hindi pinayagan ang mikropono.'):e.message||'Hindi nakuha ang iyong boses. Subukan muli.';setJFeedback(text,true);if(l23G3&&G3_MAPPED_TEXT.has(text))await playPrescribedAudio(text,true).catch(()=>{});if(qReading&&G7_FEEDBACK_TEXT.has(text))await playPrescribedAudio(text,true).catch(()=>{});if(l24G3WordReading&&L24_G3_WORD_MAPPED_TEXT.has(text))await playPrescribedAudio(text,true).catch(()=>{});
     }finally{busy=false;lock();}
   }
-  function draft(value){state.draft={...state.draft,...value};if(specializedBuilder&&Object.prototype.hasOwnProperty.call(value,'builder')){state.last_feedback='';const feedback=content.querySelector('.wb-builder-feedback');if(feedback)feedback.textContent='';}const snapshot=structuredClone(state.draft);send({action:'draft',draft:snapshot}).catch(e=>{const text=e.message||'Hindi na-save. Subukan muli.';message(text,true);if((l24Builder&&L24_G1_MAPPED_TEXT.has(text))||(l24G4Builder&&L24_G4_BUILDER_MAPPED_TEXT.has(text)))playPrescribedAudio(text,true).catch(()=>{});});}
+  function draft(value){state.draft={...state.draft,...value};if(specializedBuilder&&Object.prototype.hasOwnProperty.call(value,'builder')){state.last_feedback='';const feedback=content.querySelector('.wb-builder-feedback');if(feedback)feedback.textContent='';}const snapshot=structuredClone(state.draft);send({action:'draft',draft:snapshot}).catch(e=>{const text=e.message||(session9Activity?session9SaveError:'Hindi na-save. Subukan muli.');message(text,true);if((l24Builder&&L24_G1_MAPPED_TEXT.has(text))||(l24G4Builder&&L24_G4_BUILDER_MAPPED_TEXT.has(text)))playPrescribedAudio(text,true).catch(()=>{});});}
   function renderCBuilder(){
     const readDone=Boolean(state.read_aloud_completed), piecesById=Object.fromEntries(a.items.map(i=>[i.id,i.text]));
     let fallbackIndex=0;
