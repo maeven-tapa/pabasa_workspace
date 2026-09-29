@@ -14368,11 +14368,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 : 'Reading Activity';
         }
 
-        function courseProgressTasks(course) {
+        function courseProgressTasks(course, studentId) {
             const tasks = [];
             const seen = new Set();
             const addMaterialTask = (material) => {
                 if (!material) return;
+                if (String(material.publication_scope || 'whole_class') === 'selected_students') {
+                    const selected = Array.isArray(material.selected_student_ids) ? material.selected_student_ids.map(String) : [];
+                    if (!selected.includes(String(studentId))) return;
+                }
                 // Prefer explicit assessment_id; if absent use a material-prefixed id so we can fetch attempts for the material
                 const assessmentId = material.assessment_id || (material.id ? `material-${material.id}` : null);
                 if (!assessmentId) return;
@@ -14459,7 +14463,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 modalEl.addEventListener('hidden.bs.modal', stopStudentProgressAudio);
             }
 
-            const tasks = courseProgressTasks(course);
+            const tasks = courseProgressTasks(course, studentId);
             if (tasks.length === 0) {
                 list.innerHTML = '<div class="student-progress-empty">No reading activities assigned yet.</div>';
                 return;

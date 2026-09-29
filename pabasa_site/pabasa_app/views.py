@@ -28226,6 +28226,8 @@ def _section_course_payload(section):
             'selected_set_id': content_json.get('activity_id') or '',
             'selected_set_name': content_json.get('activity_name') or '',
             'student_access': bool(material.student_access),
+            'publication_scope': material.publication_scope or 'whole_class',
+            'selected_student_ids': list(material.student_assignments.values_list('student_id', flat=True)),
             'assessment_kind': _assessment_kind_value(material),
         }
         materials.append(material_payload)
