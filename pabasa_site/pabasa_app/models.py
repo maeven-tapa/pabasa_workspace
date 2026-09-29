@@ -2063,6 +2063,9 @@ class StudentActivityRecordingSubmission(models.Model):
     # Nullable for legacy one-record-per-activity submissions; itemized
     # activities use this to keep one current recording per item.
     item_index = models.PositiveIntegerField(null=True, blank=True)
+    # Optional stage identity for activities whose item contains multiple
+    # separately reviewable recordings (for example Session 4 Gawain 2).
+    substep = models.PositiveIntegerField(null=True, blank=True)
     audio_file = models.FileField(upload_to="activity_recordings/%Y/%m/%d/")
     duration_seconds = models.PositiveIntegerField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')
@@ -2081,8 +2084,13 @@ class StudentActivityRecordingSubmission(models.Model):
             ),
             models.UniqueConstraint(
                 fields=("student", "activity_key", "item_index"),
-                condition=models.Q(item_index__isnull=False),
+                condition=models.Q(item_index__isnull=False, substep__isnull=True),
                 name="unique_itemized_activity_recording",
+            ),
+            models.UniqueConstraint(
+                fields=("student", "activity_key", "item_index", "substep"),
+                condition=models.Q(item_index__isnull=False, substep__isnull=False),
+                name="unique_staged_activity_recording",
             ),
         ]
 

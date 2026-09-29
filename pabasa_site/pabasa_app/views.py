@@ -16042,9 +16042,25 @@ def prescribed_activity_progress(request, activity_key):
             existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             total = len(activity['items'])
+            if is_reset:
+                recordings = list(StudentActivityRecordingSubmission.objects.filter(
+                    student=student, activity_key=activity_key, item_index__isnull=False, substep__in=(0, 1),
+                ))
+                with transaction.atomic():
+                    for recording in recordings:
+                        if recording.audio_file:
+                            try:
+                                recording.audio_file.storage.delete(recording.audio_file.name)
+                            except Exception:
+                                logger.warning('Unable to remove reset Session 4 Gawain 2 recording: %s', recording.audio_file.name, exc_info=True)
+                    StudentActivityRecordingSubmission.objects.filter(
+                        student=student, activity_key=activity_key, item_index__isnull=False, substep__in=(0, 1),
+                    ).delete()
             item_index = 0 if is_reset else (max(0, min(total - 1, int(incoming.get('current_index', old.get('current_index', 0))))) if total else 0)
             substep = 0 if is_reset else max(0, min(2, int(incoming.get('current_substep', old.get('current_substep', 0)))))
             completed_items = 0 if is_reset else max(0, min(total, int(incoming.get('completed_items', old.get('completed_items', 0)))))
+            if not is_reset and substep < 2:
+                completed_items = max(0, min(total, int(old.get('completed_items', existing.completed_items if existing else 0))))
             if existing and existing.activity_completed and not is_reset:
                 return JsonResponse({'success': True, 'progress': {'current_index': existing.current_index, 'completed_items': existing.completed_items, 'correct_items': existing.correct_items, 'total_items': existing.total_items, 'activity_completed': True, 'state': old}})
             state = dict(old)
@@ -19816,6 +19832,52 @@ def session_4_gawain_1_recording(request):
     return JsonResponse({'success': True, 'recording_id': submission.id, 'item_index': item_index})
 
 
+@login_required(role='student')
+@csrf_protect
+@require_http_methods(['POST'])
+def session_4_gawain_2_recording(request):
+    student = User.objects.filter(pk=request.session.get('user_id'), role='student', is_archived=False).first()
+    audio = request.FILES.get('audio')
+    if not student or not audio:
+        return JsonResponse({'success': False, 'error': 'A recording is required.'}, status=400)
+    try:
+        item_index = int(request.POST.get('item_index'))
+        substep = int(request.POST.get('substep'))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'A valid item and stage are required.'}, status=400)
+    activity = prescribed_activity('session-4-gawain-2')
+    if not activity or item_index < 0 or item_index >= len(activity.get('items') or []) or substep not in (0, 1):
+        return JsonResponse({'success': False, 'error': 'Invalid individual-letter stage.'}, status=400)
+    try:
+        duration = max(0, int(request.POST.get('duration_seconds') or 0))
+    except (TypeError, ValueError):
+        duration = None
+    activity_key = 'session-4-gawain-2'
+    with transaction.atomic():
+        submission = StudentActivityRecordingSubmission.objects.select_for_update().filter(
+            student=student, activity_key=activity_key, item_index=item_index, substep=substep,
+        ).first()
+        old_name = submission.audio_file.name if submission and submission.audio_file else ''
+        if submission:
+            submission.audio_file = audio
+            submission.duration_seconds = duration or None
+            submission.status = 'submitted'
+            submission.checked_by = None
+            submission.checked_at = None
+            submission.save(update_fields=['audio_file', 'duration_seconds', 'status', 'checked_by', 'checked_at', 'updated_at'])
+        else:
+            submission = StudentActivityRecordingSubmission.objects.create(
+                student=student, activity_key=activity_key, item_index=item_index, substep=substep,
+                audio_file=audio, duration_seconds=duration or None,
+            )
+        if old_name and old_name != submission.audio_file.name:
+            try:
+                submission.audio_file.storage.delete(old_name)
+            except Exception:
+                logger.warning('Unable to remove replaced Session 4 Gawain 2 recording: %s', old_name, exc_info=True)
+    return JsonResponse({'success': True, 'recording_id': submission.id, 'item_index': item_index, 'substep': substep})
+
+
 @login_required(role='teacher')
 @require_http_methods(['GET'])
 def teacher_lesson_1_gawain_1_recordings(request):
@@ -20018,6 +20080,10 @@ def session_4_gawain_2_page(request):
     if progress and progress.activity_completed:
         return redirect('assessment')
     state = progress.state if progress and isinstance(progress.state, dict) else {}
+    recording_stages = list(StudentActivityRecordingSubmission.objects.filter(
+        student=_active_prescribed_student(request), activity_key='session-4-gawain-2',
+        item_index__isnull=False, substep__in=(0, 1),
+    ).values_list('item_index', 'substep'))
     if progress:
         try:
             saved_index = max(0, min(len(activity['items']) - 1, int(progress.current_index)))
@@ -20043,6 +20109,7 @@ def session_4_gawain_2_page(request):
         )),
         'test_resume_modal': False,
         'progress': {'current_index': saved_index, 'current_substep': saved_substep, 'completed_items': progress.completed_items if progress else 0, 'correct_items': progress.correct_items if progress else 0, 'total_items': activity['total_items'], 'activity_completed': progress.activity_completed if progress else False, 'state': {**state, 'current_index': saved_index, 'current_substep': saved_substep}},
+        'recordings': [{'item_index': item_index, 'substep': stage} for item_index, stage in recording_stages],
     }
     return render(request, 'pabasa_app/session_4_gawain_2_page.html', context)
 
