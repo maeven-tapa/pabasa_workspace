@@ -2060,6 +2060,9 @@ class StudentActivityRecordingSubmission(models.Model):
     STATUS_CHOICES = [('submitted', 'Submitted'), ('retry', 'Retry Requested'), ('checked', 'Checked')]
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="activity_recording_submissions")
     activity_key = models.CharField(max_length=100)
+    # Nullable for legacy one-record-per-activity submissions; itemized
+    # activities use this to keep one current recording per item.
+    item_index = models.PositiveIntegerField(null=True, blank=True)
     audio_file = models.FileField(upload_to="activity_recordings/%Y/%m/%d/")
     duration_seconds = models.PositiveIntegerField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')
@@ -2070,7 +2073,18 @@ class StudentActivityRecordingSubmission(models.Model):
 
     class Meta:
         db_table = "student_activity_recording_submissions"
-        constraints = [models.UniqueConstraint(fields=("student", "activity_key"), name="unique_student_activity_recording")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("student", "activity_key"),
+                condition=models.Q(item_index__isnull=True),
+                name="unique_student_activity_recording",
+            ),
+            models.UniqueConstraint(
+                fields=("student", "activity_key", "item_index"),
+                condition=models.Q(item_index__isnull=False),
+                name="unique_itemized_activity_recording",
+            ),
+        ]
 
 
 class LiveAssessmentSession(models.Model):

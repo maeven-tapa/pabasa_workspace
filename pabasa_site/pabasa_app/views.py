@@ -16062,6 +16062,41 @@ def prescribed_activity_progress(request, activity_key):
             existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             total = len(activity['items'])
+            if is_reset:
+                # Restarting this activity must clear only its itemized student
+                # recordings. Ordinary page loads never enter this branch.
+                recordings = list(StudentActivityRecordingSubmission.objects.filter(
+                    student=student, activity_key=activity_key, item_index__isnull=False,
+                ))
+                with transaction.atomic():
+                    for recording in recordings:
+                        if recording.audio_file:
+                            try:
+                                recording.audio_file.storage.delete(recording.audio_file.name)
+                            except Exception:
+                                logger.warning(
+                                    'Unable to remove reset Session 4 Gawain 1 recording: %s',
+                                    recording.audio_file.name,
+                                    exc_info=True,
+                                )
+                    StudentActivityRecordingSubmission.objects.filter(
+                        student=student, activity_key=activity_key, item_index__isnull=False,
+                    ).delete()
+                    state = dict(incoming)
+                    state.update({'current_index': 0, 'completed_items': 0,
+                                  'correct_items': 0, 'phase': 'initial',
+                                  'recorded_items': [],
+                                  'state_version': int(old.get('state_version') or 0) + 1})
+                    progress, _ = StudentActivityProgress.objects.update_or_create(
+                        student=student, activity_key=activity_key,
+                        defaults={'current_index': 0, 'completed_items': 0,
+                                  'correct_items': 0, 'total_items': total,
+                                  'activity_completed': False, 'state': state})
+                return JsonResponse({'success': True, 'progress': {
+                    'current_index': progress.current_index, 'completed_items': progress.completed_items,
+                    'correct_items': progress.correct_items, 'total_items': progress.total_items,
+                    'activity_completed': False, 'state': state,
+                }})
             current_index = max(0, min(total - 1, int(incoming.get('current_index', old.get('current_index', 0))))) if total else 0
             completed_items = max(0, min(total, int(incoming.get('completed_items', old.get('completed_items', 0)))))
             correct_items = max(0, min(completed_items, int(incoming.get('correct_items', old.get('correct_items', 0)))))
@@ -19734,6 +19769,51 @@ def lesson_1_gawain_1_submit(request):
                       'activity_completed': submission.status == 'checked', 'state': {'submitted': True, 'submission_id': submission.id, 'status': submission.status}},
         )
     return JsonResponse({'success': True, 'submission_id': submission.id})
+
+
+@login_required(role='student')
+@csrf_protect
+@require_http_methods(['POST'])
+def session_4_gawain_1_recording(request):
+    student = User.objects.filter(pk=request.session.get('user_id'), role='student', is_archived=False).first()
+    audio = request.FILES.get('audio')
+    if not student or not audio:
+        return JsonResponse({'success': False, 'error': 'A recording is required.'}, status=400)
+    try:
+        item_index = int(request.POST.get('item_index'))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'A valid item is required.'}, status=400)
+    activity = prescribed_activity('session-4-gawain-1')
+    if not activity or item_index < 0 or item_index >= len(activity.get('items') or []):
+        return JsonResponse({'success': False, 'error': 'Invalid activity item.'}, status=400)
+    try:
+        duration = max(0, int(request.POST.get('duration_seconds') or 0))
+    except (TypeError, ValueError):
+        duration = None
+    activity_key = 'session-4-gawain-1'
+    with transaction.atomic():
+        submission = StudentActivityRecordingSubmission.objects.select_for_update().filter(
+            student=student, activity_key=activity_key, item_index=item_index,
+        ).first()
+        old_name = submission.audio_file.name if submission and submission.audio_file else ''
+        if submission:
+            submission.audio_file = audio
+            submission.duration_seconds = duration or None
+            submission.status = 'submitted'
+            submission.checked_by = None
+            submission.checked_at = None
+            submission.save(update_fields=['audio_file', 'duration_seconds', 'status', 'checked_by', 'checked_at', 'updated_at'])
+        else:
+            submission = StudentActivityRecordingSubmission.objects.create(
+                student=student, activity_key=activity_key, item_index=item_index,
+                audio_file=audio, duration_seconds=duration or None,
+            )
+        if old_name and old_name != submission.audio_file.name:
+            try:
+                submission.audio_file.storage.delete(old_name)
+            except Exception:
+                logger.warning('Unable to remove replaced Session 4 Gawain 1 recording: %s', old_name, exc_info=True)
+    return JsonResponse({'success': True, 'recording_id': submission.id, 'item_index': item_index})
 
 
 @login_required(role='teacher')
