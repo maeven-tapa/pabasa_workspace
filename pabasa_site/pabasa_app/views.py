@@ -14411,6 +14411,26 @@ def prescribed_activity_page(request, activity_key):
                     'local_audio': local_audio,
                 },
             })
+        if activity_key == 'aral-s9-a1-family-drawing':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_9/ACTIVITY_01/'
+            audio_files = {
+                'instruction': 'Draw a picture of your family. Under your drawing, write the sentence “This is my family.”_TTS.mp3',
+                'completion': 'Good job! Activity 1 is complete!_TTS.mp3',
+            }
+            local_audio = {
+                'instruction': static(audio_root + audio_files['instruction']),
+                'feedback': {},
+                'completion': {'Good job! Activity 1 is complete!': static(audio_root + audio_files['completion'])},
+                'mapped_states': [get_activity(activity_key)['instruction'], 'Good job! Activity 1 is complete!'],
+            }
+            return render(request, 'pabasa_app/prescribed_workbook_page.html', {
+                'workbook_payload': {
+                    'activity': get_activity(activity_key), 'state': state, 'preview': preview,
+                    'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+                    'read_aloud_url': reverse('reading_read_aloud_api'), 'next_url': next_url,
+                    'local_audio': local_audio,
+                },
+            })
         return render(request, 'pabasa_app/prescribed_workbook_page.html', {
             'workbook_payload': {
                 'activity': get_activity(activity_key), 'state': state, 'preview': preview,
