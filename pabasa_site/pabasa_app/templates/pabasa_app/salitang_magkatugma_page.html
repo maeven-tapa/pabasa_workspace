@@ -116,6 +116,14 @@ html,body{height:100%;overflow:hidden!important}
 }());
 </script>
 <style>
+.feedback-text-hidden{color:transparent!important;visibility:hidden!important;text-shadow:none!important}
+.feedback-text-hidden::before,.feedback-text-hidden::after{content:none!important;display:none!important}
+.completion-card p.feedback-text-hidden{display:none!important;margin:0!important}
+</style>
+<script>
+(function(){function install(){var target=document.body;if(!target)return;var feedback=/^(?:Magaling!(?: Susunod na larawan\.)?|Magaling! Natapos mo ang gawain!.*|Hindi ito ang tamang sagot\. Subukan natin muli\.|Hindi pa ito tama\. Subukan muli\.(?: \(\d+\/3\))?|Subukan muli\.(?: \(\d+\/3\))?|Hindi nakuha ang iyong boses\. Subukan muli\.|Hindi available ang mikropono sa browser na ito\.|Mahusay! Nakumpleto mo na ang aktibidad\.)$/;function sync(){document.querySelectorAll('#stage #status,#stage .completion-card h1,#stage .completion-card p').forEach(function(el){el.classList.toggle('feedback-text-hidden',feedback.test(el.textContent.trim()));});}new MutationObserver(sync).observe(target,{childList:true,subtree:true,characterData:true});sync();}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();}());
+</script>
+<style>
 /* Picture-identification controls: equal, visible side-by-side buttons. */
  .card:has(#read){display:grid;grid-template-columns:1fr 1fr;align-items:center;justify-items:stretch}
 .card:has(#read) .activity-header-card,.card:has(#read) .pair,.card:has(#read) .status,.card:has(#read) .answers{grid-column:1/-1}

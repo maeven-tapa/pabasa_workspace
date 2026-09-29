@@ -724,3 +724,13 @@ body.gawain-2:has(#game .complete)::before {
   .gawain-2 #game.game:has(.answers) .answer{min-height:64px!important;padding:12px 8px!important;font-size:1rem!important}
 }
 </style>
+<style>
+.feedback-text-hidden{color:transparent!important;text-shadow:none!important}
+.feedback-text-hidden::before,.feedback-text-hidden::after{content:none!important;display:none!important}
+.gawain-2 #game #status:not(.feedback-text-hidden){visibility:hidden!important}
+.gawain-2 #game #read{width:88%!important;justify-self:center}
+.gawain-2 #game .lesson3-g2-actions>#read{flex:1 1 0!important;max-width:none!important;transform:scaleX(.78)!important}
+</style>
+<script>
+(function(){var root=document.getElementById('game');if(!root)return;var feedback=/^(?:Magaling!(?: Susunod na larawan\.)?|Hindi ito ang tamang sagot\. Subukan natin muli\.|Hindi pa ito tama\. Subukan muli\.|Hindi nakuha ang iyong boses\. Subukan muli\.)$/;function sync(){root.querySelectorAll('#status').forEach(function(el){el.classList.toggle('feedback-text-hidden',feedback.test(el.textContent.trim()));});}new MutationObserver(sync).observe(root,{childList:true,subtree:true,characterData:true});sync();}());
+</script>
