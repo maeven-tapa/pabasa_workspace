@@ -21,6 +21,7 @@ from django.urls import reverse
 from django.templatetags.static import static
 from django.db import DatabaseError, IntegrityError, transaction, OperationalError, connection
 from django.db.models import Count, F, Prefetch, Q
+from django.db.models.functions import Lower
 from django.utils.text import slugify
 from functools import wraps
 from urllib.parse import quote, urlencode, urlparse
@@ -190,6 +191,7 @@ from .utils.crla_results import (
     official_crla_result_queryset,
 )
 from .reading_progress_reports import build_student_reading_progress_report
+from .aral_activity_catalog import resolve_activity
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 
@@ -29268,7 +29270,12 @@ def export_material_results(request):
     if not student_ids:
         return HttpResponse("No students are enrolled for this material.", status=404)
 
-    students = list(User.objects.filter(id__in=student_ids, role='student').order_by('first_name', 'last_name', 'custom_id'))
+    students = list(User.objects.filter(id__in=student_ids, role='student').order_by(
+        Lower('last_name'),
+        Lower('first_name'),
+        Lower('custom_id'),
+        'id',
+    ))
     student_map = {student.id: student for student in students}
     results_by_student = {
         assessment.student_id: assessment for assessment in Assessment.objects.filter(
@@ -29292,9 +29299,12 @@ def export_material_results(request):
 
     ws['A1'] = 'PABASA — Student Activity Results'
     ws['A1'].font = Font(bold=True, size=14)
-    ws.merge_cells('A1:J1')
+    ws.merge_cells('A1:K1')
     ws['A2'] = f'Activity: {material.title}'
-    ws.merge_cells('A2:J2')
+    ws.merge_cells('A2:K2')
+
+    _, activity_definition = resolve_activity(material.content_json or {})
+    competency_display = ', '.join(activity_definition['competencies']) if activity_definition else ''
 
     headers = [
         'Student Name',
@@ -29303,6 +29313,7 @@ def export_material_results(request):
         'Section',
         'Activity Title',
         'Activity Type',
+        'Competency',
         'Score',
         'Percentage',
         'Status',
@@ -29347,6 +29358,7 @@ def export_material_results(request):
             getattr(student, 'section', '') or '',
             material.title,
             _material_activity_type_label(material),
+            competency_display,
             score_display,
             percent_display,
             status_display,
