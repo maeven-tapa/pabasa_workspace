@@ -12219,6 +12219,11 @@ def teacher_aral_action(request):
         return JsonResponse({'success': False, 'error': 'Teacher not found.'}, status=403)
 
     action = str(data.get('action') or '').strip().lower()
+    exit_type = str(data.get('exit_type') or '').strip().lower()
+    manual_reason = str(data.get('reason') or '').strip()
+    is_manual_exit = action == 'manual_exit' or exit_type == 'manual'
+    if action == 'manual_exit':
+        action = 'exit'
     reading_level = str(data.get('reading_level') or '').strip()
     allowed_levels = {
         'Low Emerging Readers', 'High Emerging Readers',
@@ -12280,7 +12285,29 @@ def teacher_aral_action(request):
         officially_aral_eligible = _aral_eligible_classification(
             official_result.crla_classification or official_result.classification
         )
-        if state.get('aral_manual_status') == 'ineligible' or not officially_aral_eligible:
+        if is_manual_exit and not manual_reason:
+            return JsonResponse({
+                'success': False,
+                'code': 'manual_exit_reason_required',
+                'error': 'Please provide a reason for the manual exit.',
+            }, status=400)
+        if is_manual_exit and manual_reason != 'Teacher Observation':
+            alphabetic_count = sum(1 for character in manual_reason if character.isalpha())
+            if alphabetic_count < 3:
+                return JsonResponse({
+                    'success': False,
+                    'code': 'manual_exit_reason_invalid',
+                    'error': 'Please provide a meaningful reason using words or sentences.',
+                }, status=400)
+        if is_manual_exit:
+            active_aral = state.get('aral_manual_status') == 'active' or state.get('aral_status') == 'active'
+            if state.get('aral_manual_status') == 'ineligible' or not active_aral:
+                return JsonResponse({
+                    'success': False,
+                    'code': 'student_not_active_in_aral',
+                    'error': 'This student is not currently active in the ARAL Program.',
+                }, status=409)
+        elif state.get('aral_manual_status') == 'ineligible' or not officially_aral_eligible:
             return JsonResponse({
                 'success': False,
                 'code': 'student_not_active_in_aral',
@@ -12299,6 +12326,10 @@ def teacher_aral_action(request):
                 'phase': exit_phase,
             } if exit_is_official else {},
             'current_phase': 'complete',
+            'aral_exit_type': 'manual' if is_manual_exit else 'automatic',
+            'aral_exit_reason': manual_reason if is_manual_exit else '',
+            'aral_exit_teacher_id': teacher.id,
+            'aral_exit_at': timezone.now().isoformat(),
         })
 
     _set_user_state(student, state)
@@ -12314,6 +12345,10 @@ def teacher_aral_action(request):
                 'action': 'exit_aral_program',
                 'reading_level': official_result.crla_classification or official_result.classification,
                 'assessment_id': official_result.id,
+                'exit_type': 'manual' if is_manual_exit else 'automatic',
+                'reason': manual_reason if is_manual_exit else '',
+                'term': exit_term,
+                'teacher_id': teacher.id,
             },
         )
     return JsonResponse({
@@ -26668,6 +26703,11 @@ def _collect_supplementary_student_results(section, selected_term):
     for student_id, row in rows.items():
         student = students_by_id.get(student_id)
         row['student_name'] = _display_user_name(student) if student else str(student_id)
+        row['aral_exited'] = _aral_exit_matches_scope(
+            _get_user_state(student) if student else {},
+            crla_term=selected_term,
+            crla_phase=None,
+        )
         available = [score for score in row['scores'].values() if score is not None]
         row['total_score'] = sum(available) if len(available) == 4 else None
         row['max_score'] = 20
@@ -26712,6 +26752,7 @@ def students(request):
     live_crla_material = None
     assessment_week_students = []
     aral_students = []
+    aral_review_students = []
     aral_exit_students = []
     aral_exit_history = []
     aral_enrolled_student_count = 0
@@ -26768,6 +26809,10 @@ def students(request):
             student['section_display'] = section.class_name
             student['id'] = student['student_id']
             aral_exit_students.append(student)
+        aral_review_students = [
+            student for student in aral_students
+            if not student.get('ready_for_exit') and not student.get('aral_exited')
+        ]
         enrollments = _current_section_enrollments(section)
         student_ids = enrollments.values_list('student_id', flat=True)
         roster_students = User.objects.filter(
@@ -26796,6 +26841,9 @@ def students(request):
             exit_date = 'Exit date unavailable'
             if exit_log and exit_log.created_at:
                 exit_date = timezone.localtime(exit_log.created_at).strftime('%B %d, %Y').replace(' 0', ' ')
+            exit_metadata = exit_log.metadata if exit_log and isinstance(exit_log.metadata, dict) else {}
+            exit_type = str(state.get('aral_exit_type') or exit_metadata.get('exit_type') or 'automatic').strip().lower()
+            exit_reason = str(state.get('aral_exit_reason') or exit_metadata.get('reason') or '').strip()
             aral_exit_history.append({
                 'student_id': enrolled_student.id,
                 'student_name': _display_user_name(enrolled_student),
@@ -26803,6 +26851,8 @@ def students(request):
                 'term_label': f'Term {exit_term}' if exit_term in (1, 2, 3) else 'Term not recorded',
                 'status': 'ARAL Exited',
                 'exit_date': exit_date,
+                'exit_type': 'Manual Teacher Review' if exit_type == 'manual' else 'Automatic Criteria',
+                'reason': exit_reason,
             })
         assessment_week_students = [
             {
@@ -26849,6 +26899,7 @@ def students(request):
         'assessment_week_students': assessment_week_students,
         'live_crla_material': live_crla_material,
         'aral_student_count': len(aral_students),
+        'aral_review_students': aral_review_students,
         'aral_enrolled_student_count': aral_enrolled_student_count,
         'aral_meeting_all_indicators_count': aral_meeting_all_indicators_count,
         'aral_needs_review_count': aral_needs_review_count,
