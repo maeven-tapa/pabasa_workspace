@@ -65,7 +65,7 @@ from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_
 from django.db import transaction
 import re
 import traceback
-from .models import User, School, Section, Enrollment, AccountStatusHistory, Assessment, AssessmentRequest, Material, MaterialStudentAssignment, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride, ClassCrlaFinalization, StudentActivityProgress, StudentActivityRecordingSubmission
+from .models import User, School, Section, Enrollment, AccountStatusHistory, Assessment, AssessmentRequest, Material, MaterialStudentAssignment, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride, ClassCrlaFinalization, StudentActivityProgress, StudentActivityRecordingSubmission, PrescribedActivityAccessSettings
 from .system_clock import invalidate_override_cache, now as system_now, real_now, today as system_today
 from .models import PracticeDebugSettings
 from .section_configuration import ensure_salawag_grade_two_sections
@@ -158,6 +158,53 @@ LEGACY_SESSION_PROGRESS_ACTIVITIES = (
 LEGACY_SESSION_PROGRESS_ALIASES = {
     'session-2-lesson-4-gawain-2': 'lesson-4-gawain-2',
 }
+
+
+def _prescribed_activity_order():
+    legacy_keys = [item['activity_key'] for item in LEGACY_SESSION_PROGRESS_ACTIVITIES]
+    legacy_keys.insert(legacy_keys.index('lesson-4-gawain-1') + 1, 'session-2-lesson-4-gawain-2')
+    def natural_parts(value):
+        parts = re.findall(r'\d+|[A-Za-z]+', str(value or ''))
+        return tuple((0, int(part)) if part.isdigit() else (1, part.lower()) for part in parts) or ((0, 999),)
+    catalog_keys = [activity['activity_key'] for activity in sorted(
+        active_prescribed_activities(),
+        key=lambda item: (int(item.get('session_number') or 999), natural_parts(item.get('lesson_number')), natural_parts(item.get('gawain_number'))),
+    )]
+    return list(dict.fromkeys([*legacy_keys, *catalog_keys]))
+
+
+def _prescribed_access_settings():
+    return PrescribedActivityAccessSettings.objects.get_or_create(pk=1)[0]
+
+
+def _unlocked_prescribed_activity_keys(student):
+    ordered_keys = _prescribed_activity_order()
+    if _prescribed_access_settings().unlock_all_activities:
+        return set(ordered_keys)
+    if not student:
+        return set()
+    completed = set(StudentActivityProgress.objects.filter(student=student, activity_completed=True).values_list('activity_key', flat=True))
+    unlocked = set()
+    for index, key in enumerate(ordered_keys):
+        if index == 0 or ordered_keys[index - 1] in completed:
+            unlocked.add(key)
+        else:
+            break
+    return unlocked
+
+
+def _student_can_open_prescribed_activity(student, activity_key):
+    return activity_key in _unlocked_prescribed_activity_keys(student)
+
+
+def _enforce_prescribed_activity_sequence(request, activity_key):
+    """Keep legacy prescribed routes subject to the same sequence as catalog routes."""
+    if request.session.get('user_role') != 'student':
+        return None
+    student = _active_prescribed_student(request)
+    if not student or not _student_can_open_prescribed_activity(student, activity_key):
+        return redirect('assessment')
+    return None
 from .handwriting_validation import is_recognizable_ii, normalize_strokes
 from .reader_classification import classify_student_account
 from .scoring import (
@@ -11317,6 +11364,12 @@ def admin_settings(request):
             _set_profile_dict(user, 'notification_settings', notification_settings)
             context['settings_success'] = 'Push notification preferences saved.'
 
+        elif action == 'set_prescribed_activity_access':
+            access = _prescribed_access_settings()
+            access.unlock_all_activities = request.POST.get('unlock_all_activities') == 'on'
+            access.save(update_fields=['unlock_all_activities', 'updated_at'])
+            context['settings_success'] = 'All prescribed activities are unlocked.' if access.unlock_all_activities else 'Sequential prescribed activity access is enabled.'
+
         elif action == 'save_system_time_debug':
             debug_enabled = request.POST.get('system_time_debug_enabled') == 'on'
             override, _ = SystemTimeOverride.objects.get_or_create(pk=1)
@@ -11364,6 +11417,7 @@ def admin_settings(request):
 
     system_time = timezone.localtime(system_now())
     system_time_override = SystemTimeOverride.objects.filter(pk=1).first()
+    context['prescribed_unlock_all_enabled'] = _prescribed_access_settings().unlock_all_activities
     context['notification_settings'] = notification_settings
     context['system_time_iso'] = system_time.isoformat()
     context['system_time_zone'] = timezone.get_current_timezone_name()
@@ -12164,6 +12218,8 @@ def assessment(request):
             }
             for row in progress_rows if row.activity_key in prescribed_keys
         }
+        unlocked_activity_keys = _unlocked_prescribed_activity_keys(user)
+        context['unlocked_prescribed_activity_keys'] = sorted(unlocked_activity_keys)
         def prescribed_card_image_path(activity):
             """Card artwork is optional for non-image prescribed activities."""
             if activity.get('card_image_path'):
@@ -12193,6 +12249,7 @@ def assessment(request):
                 'total_items': activity.get('total_items', len(activity.get('items', []))),
                 'image_url': static(image_path) if (image_path := (prescribed_card_image_path(activity) or _prescribed_activity_thumbnail_path(activity))) else '',
                 'route_url': reverse(activity['route_name']) if activity.get('route_name') else reverse('prescribed_activity_page', kwargs={'activity_key': activity['activity_key']}),
+                'is_locked': activity['activity_key'] not in unlocked_activity_keys,
             }
             for activity in active_prescribed_activities()
         ]
@@ -13566,6 +13623,10 @@ def prescribed_activity_page(request, activity_key):
     activity = prescribed_activity(activity_key)
     if not activity:
         return redirect('assessment')
+    if request.GET.get('preview') != '1' and request.session.get('user_role') == 'student':
+        student = _active_prescribed_student(request)
+        if not student or not _student_can_open_prescribed_activity(student, activity_key):
+            return redirect('assessment')
     if activity.get('interaction') == 'prescribed_workbook':
         from .prescribed_workbook import (get_activity, initial_state, initial_l22_g2_state, initial_l22_g6_state,
                                           initial_l22_g4_state,
@@ -15744,6 +15805,8 @@ def prescribed_activity_progress(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if not _student_can_open_prescribed_activity(student, activity_key):
+        return JsonResponse({'success': False, 'error': 'Complete the previous activity first.'}, status=403)
     if activity_key == 'lesson-15-gawain-3':
         try:
             data = json.loads(request.body or '{}')
@@ -18485,6 +18548,8 @@ def prescribed_activity_complete(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if not _student_can_open_prescribed_activity(student, activity_key):
+        return JsonResponse({'success': False, 'error': 'Complete the previous activity first.'}, status=403)
     if activity_key == 'lesson-13-gawain-2':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         total = len(activity['items'])
@@ -19724,6 +19789,9 @@ def clap_count_syllables_page(request):
 @xframe_options_sameorigin
 def salitang_magkatugma_page(request):
     """Student-facing Lesson 2 rhyme activity (client-side activity data for now)."""
+    access_response = _enforce_prescribed_activity_sequence(request, 'lesson-2-gawain-1')
+    if access_response:
+        return access_response
     context = _dashboard_context(request)
     progress = StudentActivityProgress.objects.filter(student_id=request.session.get('user_id'), activity_key='lesson-2-gawain-1').first()
     if progress and (progress.activity_completed or progress.current_index >= progress.total_items):
@@ -19743,6 +19811,9 @@ def salitang_magkatugma_page(request):
 @xframe_options_sameorigin
 def lesson_1_gawain_1_page(request):
     """Grade 2 Filipino alphabet sing-along (not a scored assessment)."""
+    access_response = _enforce_prescribed_activity_sequence(request, 'lesson-1-gawain-1')
+    if access_response:
+        return access_response
     progress = StudentActivityProgress.objects.filter(
         student_id=request.session.get('user_id'), activity_key='lesson-1-gawain-1'
     ).first()
@@ -19968,6 +20039,9 @@ def teacher_lesson_1_gawain_1_review_action(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def lesson_3_gawain_1_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'lesson-3-gawain-1')
+    if access_response:
+        return access_response
     context = _dashboard_context(request)
     progress = StudentActivityProgress.objects.filter(student_id=request.session.get('user_id'), activity_key='lesson-3-gawain-1').first()
     context['lesson_3_progress'] = json.dumps({'current_index': progress.current_index, 'completed_items': progress.completed_items, 'correct_items': progress.correct_items, 'total_items': progress.total_items, 'activity_completed': progress.activity_completed} if progress else None)
@@ -19978,6 +20052,9 @@ def lesson_3_gawain_1_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def lesson_3_gawain_2_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'lesson-3-gawain-2')
+    if access_response:
+        return access_response
     pairs = [
         {'a': 'LOLA', 'b': 'BOLA', 'yes': True}, {'a': 'WALIS', 'b': 'TAMA', 'yes': False},
         {'a': 'DAHON', 'b': 'KAHON', 'yes': True}, {'a': 'SIGAW', 'b': 'LUGAW', 'yes': True},
@@ -19996,6 +20073,9 @@ def lesson_3_gawain_2_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def lesson_4_gawain_1_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'lesson-4-gawain-1')
+    if access_response:
+        return access_response
     progress = StudentActivityProgress.objects.filter(student_id=request.session.get('user_id'), activity_key='lesson-4-gawain-1').first()
     state = progress.state if progress and isinstance(progress.state, dict) else {}
     try:
@@ -20015,6 +20095,9 @@ def lesson_4_gawain_1_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def lesson_5_gawain_1_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'lesson-5-gawain-1')
+    if access_response:
+        return access_response
     progress = StudentActivityProgress.objects.filter(student_id=request.session.get('user_id'), activity_key='lesson-5-gawain-1').first()
     state = progress.state if progress and isinstance(progress.state, dict) else {}
     words = [('Apa', True), ('Aso', True), ('Mesa', False), ('Sabon', False), ('Medalya', False), ('Anim', True), ('Araw', True), ('Pamaypay', False), ('Avocado', True)]
@@ -20027,6 +20110,9 @@ def lesson_5_gawain_1_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def lesson_6_gawain_1_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'lesson-6-gawain-1')
+    if access_response:
+        return access_response
     progress = StudentActivityProgress.objects.filter(student_id=request.session.get('user_id'), activity_key='lesson-6-gawain-1').first()
     state = progress.state if progress and isinstance(progress.state, dict) else {}
     items = [
@@ -20041,6 +20127,9 @@ def lesson_6_gawain_1_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def lesson_7_gawain_1_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'lesson-7-gawain-1')
+    if access_response:
+        return access_response
     progress = StudentActivityProgress.objects.filter(student_id=request.session.get('user_id'), activity_key='lesson-7-gawain-1').first()
     state = progress.state if progress and isinstance(progress.state, dict) else {}
     names = ['ilaw','itlog','ilong','ipis','ilang-ilang','isa','aso','saging']
@@ -20054,6 +20143,9 @@ def lesson_7_gawain_1_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def session_4_gawain_1_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'session-4-gawain-1')
+    if access_response:
+        return access_response
     # TEMPORARY TEST FLAG: remove/disable after resume-modal verification.
     TEST_RESUME_MODAL = True
     context = _dashboard_context(request)
@@ -20098,6 +20190,9 @@ def session_4_gawain_1_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def session_4_gawain_2_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'session-4-gawain-2')
+    if access_response:
+        return access_response
     context = _dashboard_context(request)
     activity = prescribed_activity('session-4-gawain-2')
     saved_index = 0
@@ -20143,6 +20238,9 @@ def session_4_gawain_2_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def session_4_gawain_3_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'session-4-gawain-3')
+    if access_response:
+        return access_response
     context = _dashboard_context(request)
     activity = prescribed_activity('session-4-gawain-3')
     activity_key = 'session-4-gawain-3'
@@ -20190,6 +20288,9 @@ def session_4_gawain_3_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def session_4_gawain_4_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'session-4-gawain-4')
+    if access_response:
+        return access_response
     context = _dashboard_context(request)
     activity_key = 'session-4-gawain-4'
     progress = StudentActivityProgress.objects.filter(student=_active_prescribed_student(request), activity_key=activity_key).first()
@@ -20230,6 +20331,9 @@ def session_4_gawain_4_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def session_4_gawain_5_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'session-4-gawain-5')
+    if access_response:
+        return access_response
     context = _dashboard_context(request)
     activity_key = 'session-4-gawain-5'
     activity = prescribed_activity(activity_key)

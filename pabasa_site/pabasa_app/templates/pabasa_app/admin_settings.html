@@ -29,6 +29,7 @@
                 <i class="bi bi-bug-fill" aria-hidden="true"></i>
                 <span>Debug System Time</span>
             </button>
+            <button class="btn btn-outline-primary btn-sm admin-system-time-debug-button" id="prescribedAccessButton" type="button" aria-expanded="false" aria-controls="prescribedAccessPanel"><i class="bi bi-unlock-fill" aria-hidden="true"></i><span>{% if prescribed_unlock_all_enabled %}Lock All Activities{% else %}Unlock All Activities{% endif %}</span></button>
         </div>
         <div class="admin-account-avatar" aria-hidden="true">
             <i class="bi bi-person-gear"></i>
@@ -65,6 +66,14 @@
             <div class="admin-settings-actions">
                 <button class="btn btn-warning" type="submit"><i class="bi bi-clock-history" aria-hidden="true"></i> Apply Debug Time</button>
             </div>
+        </form>
+    </section>
+
+    <section id="prescribedAccessPanel" class="admin-settings-card" aria-labelledby="prescribedAccessHeading" hidden>
+        <form method="post" class="d-grid gap-3">{% csrf_token %}<input type="hidden" name="settings_action" value="set_prescribed_activity_access"><input type="hidden" name="unlock_all_activities" value="{% if prescribed_unlock_all_enabled %}off{% else %}on{% endif %}">
+            <div class="admin-settings-card-header"><div class="d-flex align-items-start gap-3"><span class="admin-settings-card-icon" aria-hidden="true"><i class="bi {% if prescribed_unlock_all_enabled %}bi-unlock{% else %}bi-lock{% endif %}"></i></span><div><h3 id="prescribedAccessHeading">Prescribed Activity Access</h3><p>{% if prescribed_unlock_all_enabled %}When on, learners unlock all activities all at once.{% else %}When off, learners unlock the next activity by completing the current one.{% endif %}</p></div></div></div>
+            <div><h4 class="h6 mb-2">{% if prescribed_unlock_all_enabled %}All activities unlocked{% else %}Sequential access enabled{% endif %}</h4><p class="mb-0 text-muted">{% if prescribed_unlock_all_enabled %}Students can open every prescribed activity now.{% else %}The next activity opens only after the previous one is complete.{% endif %}</p></div>
+            <div class="admin-settings-actions"><button class="btn {% if prescribed_unlock_all_enabled %}btn-warning{% else %}btn-outline-primary{% endif %}" type="submit"><i class="bi {% if prescribed_unlock_all_enabled %}bi-unlock-fill{% else %}bi-lock-fill{% endif %}" aria-hidden="true"></i> {% if prescribed_unlock_all_enabled %}Lock All Activities{% else %}Unlock All Activities{% endif %}</button></div>
         </form>
     </section>
 
@@ -183,6 +192,10 @@
         debugPanel.hidden = !isHidden;
         debugButton.setAttribute('aria-expanded', String(isHidden));
     });
+
+    const prescribedAccessButton = document.getElementById('prescribedAccessButton');
+    const prescribedAccessPanel = document.getElementById('prescribedAccessPanel');
+    prescribedAccessButton?.addEventListener('click', () => { const open = prescribedAccessPanel.hidden; prescribedAccessPanel.hidden = !open; prescribedAccessButton.setAttribute('aria-expanded', String(open)); });
 
     const debugTimeEnabled = document.getElementById('systemTimeDebugEnabled');
     const debugTimeValue = document.getElementById('systemTimeDebugValue');
