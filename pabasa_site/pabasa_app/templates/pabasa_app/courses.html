@@ -11235,7 +11235,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 </div>
                             ` : ''}
                         </div>
-                        ${assessment.review_activity_key === 'lesson-1-gawain-1' ? `<button type="button" class="course-assessment-export-btn lesson1-recordings-btn"><i class="bi bi-mic"></i>View Recordings</button>` : ''}
                         ${canExport ? `
                             <a class="course-assessment-export-btn"
                                href="/material/export-results/?material_id=${encodeURIComponent(exportMaterialId)}"
@@ -13135,6 +13134,23 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const uniqueIds = [...new Set(assessmentIds.filter(Boolean))];
             const entries = await Promise.all(uniqueIds.map(async rawId => {
                 try {
+                    if (String(rawId) === 'prescribed-lesson-1-gawain-1') {
+                        const res = await fetch('{% url "teacher_lesson_1_gawain_1_recordings" %}', { credentials: 'same-origin' });
+                        const data = await res.json();
+                        if (res.ok && data.success) {
+                            return [String(rawId), { attempts: (data.submissions || []).map(row => ({
+                                student_id: row.student_id,
+                                student_name: row.student_name,
+                                status: row.status,
+                                completed_at: row.submitted_at,
+                                recording_available: Boolean(row.recording_url),
+                                recording_url: row.recording_url,
+                                recording_duration_seconds: row.duration_seconds,
+                                activity_type: 'lesson_1_recording',
+                            })) }];
+                        }
+                        return [String(rawId), null];
+                    }
                     if (String(rawId).startsWith('material-')) {
                         const id = String(rawId).replace(/^material-/, '');
                         const res = await fetch(`/dashboard/teacher/material-attempts/?material_id=${encodeURIComponent(id)}`, {
@@ -14344,6 +14360,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 });
             });
 
+            tasks.push({
+                title: 'Lesson 1 Gawain 1',
+                assessmentId: 'prescribed-lesson-1-gawain-1',
+                source_type: 'prescribed',
+                activityType: 'lesson_1_recording',
+                activityLabel: 'Session 1',
+            });
+
             return tasks;
         }
 
@@ -14481,6 +14505,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const isFiveWStoryQuestions = activityType === 'five_w_story_questions';
                     const isRetellStory = activityType === 'retell_story';
                     const isStoryResponse = activityType === 'story_response';
+                    const isLesson1Recording = activityType === 'lesson_1_recording';
                     const rawNumerator = isStoryReading ? attempt?.correct_sentences : attempt?.correct_items;
                     const rawDenominator = isStoryReading
                         ? attempt?.total_sentences
@@ -14499,7 +14524,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         : attempt?.retell_grade;
                     const retellGradeValue = retellGrade === undefined || retellGrade === null || retellGrade === '' ? '' : String(retellGrade);
                     const retellRecordingKey = String(retellSubmissionId || `${task.assessmentId || task.title}-${studentId}`);
-                    const retellRecordingAvailable = (isRetellStory || isStoryResponse) && attempt?.recording_available && attempt?.recording_url;
+                    const retellRecordingAvailable = (isRetellStory || isStoryResponse || isLesson1Recording) && attempt?.recording_available && attempt?.recording_url;
                     const scoreValue = isRetellStory
                         ? `<select class="student-progress-retell-score form-select form-select-sm" data-submission-id="${escapeHtml(retellSubmissionId || '')}" data-previous-value="${escapeHtml(retellGradeValue)}" ${retellSubmissionId ? '' : 'disabled'} aria-label="Retell teacher score"><option value="" ${retellGradeValue === '' ? 'selected' : ''}>Not scored</option>${['Poor', 'Fair/Beginning', 'Basic/Approaching', 'Proficient', 'Mastery', 'Ready'].map((label, value) => `<option value="${value}" ${retellGradeValue === String(value) ? 'selected' : ''}>${value} - ${label}</option>`).join('')}</select>`
                         : displayedScore;
@@ -14518,7 +14543,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <div class="student-progress-stat"><span class="student-progress-stat-label">Time Spent</span><span class="student-progress-stat-value">${timeSpent !== undefined && timeSpent !== null && timeSpent !== '' ? escapeHtml(formatCourseReportDuration(timeSpent)) : '—'}</span></div>
                                 <div class="student-progress-stat"><span class="student-progress-stat-label">Score</span><span class="student-progress-stat-value student-progress-score">${scoreValue}</span></div>
                             </div>
-                            ${(isRetellStory || isStoryResponse) ? `<div class="student-progress-recording" data-recording-key="${escapeHtml(retellRecordingKey)}">
+                            ${(isRetellStory || isStoryResponse || isLesson1Recording) ? `<div class="student-progress-recording" data-recording-key="${escapeHtml(retellRecordingKey)}">
                                 <div class="student-progress-recording-panel">
                                     ${retellRecordingAvailable ? `<div class="student-progress-audio-controls"><button type="button" class="student-progress-retell-play" data-url="${escapeHtml(attempt.recording_url)}" aria-label="Play recording"><i class="bi bi-play-fill"></i></button><input class="student-progress-retell-progress" type="range" min="0" max="0" value="0" step="0.1" aria-label="Recording progress"><span class="student-progress-retell-time">0:00 / ${escapeHtml(formatStudentProgressAudioTime(attempt.recording_duration_seconds))}</span></div>` : '<span class="student-progress-recording-unavailable">Recording unavailable</span>'}
                                 </div>
