@@ -66,7 +66,7 @@
     chunkSequence: 0, chunks: [], pendingRequests: [], requestRunning: false,
     activeRequestController: null, requestTimer: null, retryTimers: new Set(),
     mimeType: '', currentSegment: null, transcripts: new Map(), finalizedSequences: new Set(),
-    transcriptionFailed: null, recordingParts: [], recordingUrl: '', recordingBlob: null,
+    transcriptionFailed: null, recordingParts: [], recordingDurationMs: 0, recordingUrl: '', recordingBlob: null,
     welcomeModal: null, welcomeAudio: null, welcomeAudioUrl: null,
     songPanelNarration: null, songPanelNarrationFinished: false,
     youtubeOpened: false, youtubePageHidden: false, youtubeReturned: false, statusPollTimer: null,
@@ -547,6 +547,7 @@
     segment.sequence = state.chunkSequence++;
     segment.enqueued = true;
     state.recordingParts.push(blob);
+    state.recordingDurationMs += Math.max(0, duration);
     state.finalizedSequences.add(segment.sequence);
     console.log('[Lesson1] segment finalized', {
       sequence: segment.sequence,
@@ -894,6 +895,7 @@
     if (!state.recordingBlob || button.disabled) return;
     button.disabled = true;
     const form = new FormData(); form.append('audio', state.recordingBlob, 'lesson-1-gawain-1.webm');
+    form.append('duration_seconds', String(Math.max(1, Math.round(state.recordingDurationMs / 1000))));
     try {
       const response = await fetch(data().submission_url, { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRFToken': csrf() }, body: form });
       const result = await response.json().catch(() => ({}));
@@ -905,7 +907,7 @@
   async function startRecording() {
     state.attempt += 1;
     state.cancelled = false; state.finalizing = false; state.failedChunk = null;
-    state.chunkSequence = 0; state.chunks = []; state.pendingRequests = []; state.transcripts = new Map(); state.recordingParts = [];
+    state.chunkSequence = 0; state.chunks = []; state.pendingRequests = []; state.transcripts = new Map(); state.recordingParts = []; state.recordingDurationMs = 0;
     state.finalizedSequences = new Set(); state.transcriptionFailed = null;
     state.panel.innerHTML = '<p class="song-kicker">● Nagre-record...</p><p class="song-note">Umawit ayon sa awit. Maaari mong tapusin kapag handa ka na.</p><button id="stopSing" class="sing-stop" type="button">TAPUSIN ANG PAG-AWIT</button>';
     state.panel.classList.add('is-recording');

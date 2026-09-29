@@ -19469,7 +19469,8 @@ def lesson_1_gawain_1_submit(request):
             submission.status = 'submitted'
             submission.checked_by = None
             submission.checked_at = None
-            submission.save(update_fields=['audio_file', 'duration_seconds', 'status', 'checked_by', 'checked_at', 'updated_at'])
+            submission.submitted_at = system_now()
+            submission.save(update_fields=['audio_file', 'duration_seconds', 'status', 'checked_by', 'checked_at', 'submitted_at', 'updated_at'])
         else:
             submission = StudentActivityRecordingSubmission.objects.create(
                 student=student, activity_key='lesson-1-gawain-1', audio_file=audio, duration_seconds=duration or None,
@@ -19493,6 +19494,7 @@ def teacher_lesson_1_gawain_1_recordings(request):
          'student_name': f'{row.student.first_name} {row.student.last_name}'.strip() or row.student.custom_id,
          'submitted_at': row.submitted_at.isoformat(),
          'recording_url': reverse('teacher_lesson_1_gawain_1_audio', args=[row.id]), 'status': row.status,
+         'duration_seconds': row.duration_seconds,
          'can_check': row.status == 'submitted', 'can_retry': row.status == 'submitted'}
         for row in rows
     ]})
@@ -19526,15 +19528,16 @@ def teacher_lesson_1_gawain_1_review_action(request):
         if submission.status == 'checked':
             return JsonResponse({'success': False, 'error': 'A checked recording cannot be sent for retry.'}, status=409)
         submission.status = 'retry'
-        submission.save(update_fields=['status', 'updated_at'])
+        submission.submitted_at = system_now()
+        submission.save(update_fields=['status', 'submitted_at', 'updated_at'])
         StudentActivityProgress.objects.filter(student=submission.student, activity_key='lesson-1-gawain-1').update(activity_completed=False, state={'submitted': False, 'retry_requested': True, 'submission_id': submission.id})
     elif action == 'checked':
         if submission.status == 'checked':
             return JsonResponse({'success': True, 'status': 'checked'})
         if submission.status != 'submitted':
             return JsonResponse({'success': False, 'error': 'Only a submitted recording can be marked as checked.'}, status=409)
-        submission.status = 'checked'; submission.checked_by_id = request.session.get('user_id'); submission.checked_at = system_now()
-        submission.save(update_fields=['status', 'checked_by', 'checked_at', 'updated_at'])
+        submission.status = 'checked'; submission.checked_by_id = request.session.get('user_id'); submission.checked_at = system_now(); submission.submitted_at = submission.checked_at
+        submission.save(update_fields=['status', 'checked_by', 'checked_at', 'submitted_at', 'updated_at'])
         StudentActivityProgress.objects.update_or_create(student=submission.student, activity_key='lesson-1-gawain-1', defaults={'current_index': 1, 'completed_items': 1, 'correct_items': 0, 'total_items': 1, 'activity_completed': True, 'state': {'submitted': True, 'checked': True, 'submission_id': submission.id}})
     else:
         return JsonResponse({'success': False, 'error': 'Invalid review action.'}, status=400)
@@ -19874,7 +19877,7 @@ def lesson_3_activity_progress(request):
             if key == 'lesson-1-gawain-1':
                 StudentActivityRecordingSubmission.objects.filter(
                     student_id=request.session.get('user_id'), activity_key=key,
-                ).update(status='retry', checked_by=None, checked_at=None)
+                ).update(status='retry', checked_by=None, checked_at=None, submitted_at=system_now())
             return JsonResponse({'success': True, 'progress': {
                 'current_index': progress.current_index, 'completed_items': progress.completed_items,
                 'correct_items': progress.correct_items, 'total_items': progress.total_items,
