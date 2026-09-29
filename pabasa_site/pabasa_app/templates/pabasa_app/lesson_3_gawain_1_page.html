@@ -233,6 +233,20 @@ body:has(.complete)::after { display: none !important; }
 @media(max-width:650px){#game.game{max-height:none;width:100%;padding:8px}.nav{margin-bottom:4px}#game .pairs{gap:12px}}
 </style>
 <style>#game .pairs .word strong{display:none!important}</style>
+<style>
+#game.part2-narrating .pairs .word,
+#game.part2-ready .pairs .word{
+  background:linear-gradient(145deg,#fff8cf,#fff0a8)!important;
+  border:3px solid #f0b52d!important;
+  box-shadow:0 0 0 5px rgba(255,228,104,.75),0 0 26px rgba(255,194,35,.55),0 12px 24px rgba(112,77,21,.2)!important;
+  transform:translateY(-3px)!important;
+}
+#game.part2-narrating .pairs .word.active,
+#game.part2-ready .pairs .word.active{
+  border-color:#e99316!important;
+  box-shadow:0 0 0 7px #ffe36b,0 0 34px rgba(255,194,35,.8),0 14px 28px rgba(112,77,21,.28)!important;
+}
+</style>
 <style>#game .status::before{color:#302a32!important;font-weight:900}</style>
 <style>#game .status:not(.warning)::after{display:none!important}</style>
 <style>.pairs .word{position:relative}.pairs .word::before{content:'CLUE';display:block;position:absolute;left:-13px;top:25px;padding:5px 11px;border-radius:8px 8px 8px 2px;background:#d9912c;color:#fffaf0;font:.6rem Nunito,"Segoe UI",sans-serif;font-weight:900;letter-spacing:.14em;transform:rotate(-5deg);z-index:2}</style>
