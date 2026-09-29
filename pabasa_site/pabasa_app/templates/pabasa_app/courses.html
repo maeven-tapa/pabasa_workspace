@@ -10433,6 +10433,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     #studentProgressModal .student-progress-retell-progress, #courseInlineDialogHost .student-progress-retell-progress { width: 100%; accent-color: #2483a4; }
     #studentProgressModal .student-progress-retell-time, #courseInlineDialogHost .student-progress-retell-time { min-width: 75px; color: #526274; font-size: .72rem; white-space: nowrap; }
     #studentProgressModal .student-progress-recording-unavailable, #courseInlineDialogHost .student-progress-recording-unavailable { color: #71808a; font-size: .78rem; }
+    .student-progress-source-toggle { align-items: stretch; background: #E2E8F0; border: 1px solid #CBD5E1; border-radius: 9999px; display: flex; flex: 0 1 320px; gap: 0; margin-left: auto; max-width: 320px; min-height: 42px; min-width: 300px; overflow: hidden; padding: 3px; position: relative; width: 320px; }
+    .student-progress-source-toggle::before { background: linear-gradient(135deg, #CFFAFE, #BFDBFE); border-radius: 9999px; box-shadow: 0 10px 22px rgba(59,130,246,.14); content: ''; height: calc(100% - 6px); left: 3px; position: absolute; top: 3px; transition: left .2s ease, background .2s ease; width: calc((100% - 6px) / 2); }
+    .student-progress-source-toggle.active-supplementary::before { left: calc((100% - 6px) / 2 + 3px); }
+    .student-progress-source-toggle button { align-items: center; background: transparent; border: 0; border-radius: 20px; box-sizing: border-box; color: #475569; display: flex; flex: 1 1 0; font-family: "Nunito", "Segoe UI", sans-serif; font-size: .95rem; font-weight: 800; height: 42px; justify-content: center; letter-spacing: .01em; line-height: 1.2; min-width: 0; padding: 0 .6rem; position: relative; text-align: center; transition: color .2s ease, background .2s ease; white-space: nowrap; width: 50%; z-index: 1; }
+    .student-progress-source-toggle button.active { color: #0F172A; }
+    .student-progress-source-toggle button:not(.active):hover { background: rgba(15,23,42,.06); }
+    .student-progress-source-toggle button:focus-visible { outline: 2px solid rgba(59,130,246,.3); outline-offset: 2px; }
     @media (max-width: 767.98px) { #studentProgressModal .student-progress-toolbar, #courseInlineDialogHost .student-progress-toolbar { align-items: stretch; flex-direction: column; flex-wrap: wrap; } #studentProgressModal .student-progress-search-wrap, #courseInlineDialogHost .student-progress-search-wrap { flex-basis: auto; max-width: none; width: 100%; } #studentProgressModal .student-progress-sort-wrap, #courseInlineDialogHost .student-progress-sort-wrap { flex-basis: auto; width: 100%; } #studentProgressModal .student-progress-card, #courseInlineDialogHost .student-progress-card { padding: .9rem; } #studentProgressModal .student-progress-card-header, #courseInlineDialogHost .student-progress-card-header { gap: .7rem; } #studentProgressModal .student-progress-stats, #courseInlineDialogHost .student-progress-stats { grid-template-columns: 1fr; gap: .65rem; } }
 </style>
 <!-- Modal for Student Reading Progress -->
@@ -14314,6 +14321,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 tasks.push({
                     title: material.title || 'Untitled assessment',
                     assessmentId,
+                    source_type: material.source_type || material.material_source || '',
+                    is_prescribed: material.is_prescribed,
                     activityType: material.content_json?.activity_type
                         || material.content_json?.activity_variant
                         || material.activity_type
@@ -14338,6 +14347,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return tasks;
         }
 
+        let studentProgressSourceFilter = 'prescribed';
+
         async function openStudentProgressModal(studentId, studentName, courseId) {
             const course = findCourseById(courseId || document.getElementById('courseDetailModal')?.dataset?.courseId);
             if (!course) return showToast('Course not found', 'error');
@@ -14347,6 +14358,19 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const subtextEl = document.getElementById('studentProgressSubtext');
             const list = document.getElementById('studentProgressList');
             if (!modalEl || !list) return;
+
+            const sourceToggle = document.getElementById('studentProgressSourceToggle');
+            sourceToggle?.classList.toggle('active-prescribed', studentProgressSourceFilter === 'prescribed');
+            sourceToggle?.classList.toggle('active-supplementary', studentProgressSourceFilter === 'supplementary');
+            sourceToggle?.querySelectorAll('[data-student-progress-source]').forEach(button => {
+                const active = button.dataset.studentProgressSource === studentProgressSourceFilter;
+                button.classList.toggle('active', active);
+                button.setAttribute('aria-pressed', String(active));
+                button.onclick = () => {
+                    studentProgressSourceFilter = button.dataset.studentProgressSource || 'prescribed';
+                    openStudentProgressModal(studentId, studentName, courseId);
+                };
+            });
 
             if (titleEl) titleEl.textContent = `${studentName || 'Student'} Progress`;
             if (subtextEl) subtextEl.textContent = `${course.title || 'Course'} reading activities`;
@@ -14435,6 +14459,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const renderRows = () => {
                 const query = String(searchInput?.value || '').trim().toLowerCase();
                 const visibleRows = activityRows.filter(({ task }) => {
+                    const source = String(task.source_type || task.material_source || '').trim().toLowerCase();
+                    const isPrescribed = source === 'prescribed' || task.is_prescribed === true || String(task.is_prescribed).toLowerCase() === 'true';
+                    if (studentProgressSourceFilter === 'prescribed' ? !isPrescribed : isPrescribed) return false;
                     return `${task.title || ''} ${task.activityLabel || ''}`.toLowerCase().includes(query);
                 });
                 const sortedRows = sortRows(visibleRows, sortInput?.value || 'latest');
@@ -23725,6 +23752,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div>
                     <h5 class="modal-title" id="studentProgressModalLabel">Reading Progress</h5>
                     <small class="text-muted" id="studentProgressSubtext">Reading activity progress</small>
+                </div>
+                <div class="student-progress-source-toggle active-prescribed" id="studentProgressSourceToggle" role="group" aria-label="Reading material source">
+                    <button type="button" class="active" data-student-progress-source="prescribed" aria-pressed="true">Prescribed</button>
+                    <button type="button" data-student-progress-source="supplementary" aria-pressed="false">Supplementary</button>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
