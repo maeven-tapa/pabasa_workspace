@@ -2008,3 +2008,72 @@ body.lesson-3-responsive:has(#game .complete) .lesson-start-backdrop{display:non
 <script>
 (function(){var root=document.getElementById('game');if(!root)return;var feedback=/^(?:Magaling!(?: Susunod na larawan\.)?|Hindi ito ang tamang sagot\. Subukan natin muli\.|Hindi pa ito tama\. Subukan muli\.(?: \(\d+\/3\))?|Subukan muli\.(?: \(\d+\/3\))?|Hindi nakuha ang iyong boses\. Subukan muli\.|Tapos na ang gawain!.*|Mahusay! Nakumpleto mo na ang aktibidad\.)$/;function sync(){root.querySelectorAll('#status,.complete h1,.complete h2,.complete p').forEach(function(el){el.classList.toggle('feedback-text-hidden',feedback.test(el.textContent.trim()));});}new MutationObserver(sync).observe(root,{childList:true,subtree:true,characterData:true});sync();}());
 </script>
+<script>
+(function(){
+  var body=document.body;
+  var game=document.getElementById('game');
+  if(!body||!game)return;
+  var originalFallbackHidden=null;
+  var originalActionsHidden=null;
+  var originalMainListenHidden=null;
+  var modalActions=null;
+  var modalActionsParent=null;
+  var modalActionsAnchor=null;
+  var modalFallbackOriginalId=null;
+  var modalFallback=null;
+  function syncModalBackground(){
+    var fallbackListen=modalFallback||game.querySelector('#listen');
+    var actions=game.querySelector('.lesson3-read-actions');
+    var mainListen=game.querySelector('#prescribed-listen');
+    var modalOpen=body.classList.contains('lesson-start-open');
+    var read=game.querySelector('#read');
+    if(modalOpen&&!actions&&read&&fallbackListen){
+      modalActions=document.createElement('div');
+      modalActions.className='lesson3-read-actions';
+      modalActionsParent=read.parentNode;
+      modalActionsAnchor=read.nextSibling;
+      modalActionsParent.insertBefore(modalActions,read);
+      modalActions.append(read,fallbackListen);
+      modalFallbackOriginalId=fallbackListen.id;
+      modalFallback=fallbackListen;
+      fallbackListen.id='prescribed-listen';
+      fallbackListen.textContent='🔊 Pakinggan';
+      actions=modalActions;
+    }else if(!modalOpen&&modalActions&&modalActionsParent){
+      modalActionsParent.insertBefore(read,modalActions);
+      modalActionsParent.insertBefore(fallbackListen,modalActions.nextSibling);
+      if(modalFallbackOriginalId) fallbackListen.id=modalFallbackOriginalId;
+      modalActions.remove();
+      modalActions=null;
+      modalFallbackOriginalId=null;
+      modalFallback=null;
+      actions=null;
+    }
+    if(fallbackListen&&originalFallbackHidden===null) originalFallbackHidden=fallbackListen.hidden;
+    if(actions&&originalActionsHidden===null) originalActionsHidden=actions.hidden;
+    if(mainListen&&originalMainListenHidden===null) originalMainListenHidden=mainListen.hidden;
+    if(fallbackListen) fallbackListen.hidden=modalOpen?!modalActions:originalFallbackHidden;
+    if(actions) actions.hidden=modalOpen?false:originalActionsHidden;
+    if(mainListen) mainListen.hidden=modalOpen?false:originalMainListenHidden;
+  }
+  new MutationObserver(syncModalBackground).observe(body,{attributes:true,attributeFilter:['class']});
+  new MutationObserver(syncModalBackground).observe(game,{childList:true,subtree:true});
+  syncModalBackground();
+}());
+</script>
+<style>
+body.lesson-start-open.lesson-3-responsive #game .lesson3-read-actions {
+  display: flex !important;
+  width: min(680px, 100%) !important;
+  margin: 0 auto !important;
+}
+body.lesson-start-open.lesson-3-responsive #game .lesson3-read-actions > #read,
+body.lesson-start-open.lesson-3-responsive #game .lesson3-read-actions > #listen,
+body.lesson-start-open.lesson-3-responsive #game .lesson3-read-actions > #prescribed-listen {
+  flex: 1 1 330px !important;
+  width: min(330px, 100%) !important;
+  max-width: 330px !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+</style>
