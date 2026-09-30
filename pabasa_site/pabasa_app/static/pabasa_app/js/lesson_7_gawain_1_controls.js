@@ -25,6 +25,10 @@ document.addEventListener('DOMContentLoaded', function () {
   if (!app) return;
 
   app.addEventListener('click', event => {
+    if (event.target.closest('#read')) {
+      const listen = app.querySelector('#aloud');
+      if (listen) listen.disabled = true;
+    }
     if (event.target.closest('#lesson7Start')) {
       app.dataset.lesson7IntroComplete = '1';
       transitionToken += 1;
@@ -129,7 +133,8 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch (error) {
       console.error('Lesson 7 Gawain 1 word narration failed', error);
     } finally {
-      listen.disabled = false;
+      const read = app.querySelector('#read');
+      listen.disabled = ['calibrating', 'waiting', 'listening', 'processing'].includes(read?.dataset.basahinState);
     }
   };
 
@@ -195,6 +200,14 @@ document.addEventListener('DOMContentLoaded', function () {
     bindListenButton(listen);
     if (listen) listen.hidden = false;
   };
+
+  window.addEventListener('basahin:state', event => {
+    const read = app.querySelector('#read');
+    const listen = app.querySelector('#aloud');
+    const active = ['calibrating', 'waiting', 'listening', 'processing'].includes(event.detail?.state);
+    if (read) read.disabled = false;
+    if (listen) listen.disabled = active;
+  });
 
   const narrateStatus = () => {
     if (!window.__lessonStartReady) return;

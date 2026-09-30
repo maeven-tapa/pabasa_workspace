@@ -17,6 +17,7 @@ window.__prescribedNarrationAudio = {
 <!doctype html>
 <html lang="fil">
 <head>
+  {% include 'pabasa_app/basahin_script.html' %}
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Gawain 2B: Letrang Ii</title>
@@ -51,7 +52,7 @@ window.__prescribedNarrationAudio = {
     const setReadingButtonsDisabled=disabled=>readingButtons().forEach(button=>{button.disabled=disabled});
     const part2Controls=()=>[...app.querySelectorAll('.grid .choice'),app.querySelector('#submit')].filter(Boolean);
     const setPart2ControlsDisabled=disabled=>part2Controls().forEach(control=>{control.disabled=disabled;control.classList.toggle('is-disabled',disabled)});
-    const renderReadingStatus=text=>{const status=document.getElementById('status');if(status)status.textContent=text;if(text==='Hindi narinig. Subukan muli.')requestAudio(text)};
+    const renderReadingStatus=text=>{const status=document.getElementById('status');if(status){status.textContent=text;if(text===WRONG||text===CORRECT)status.style.visibility='hidden'}if(text==='Hindi narinig. Subukan muli.')requestAudio(text)};
     const narrateFeedback=async text=>{audioBusy=true;setReadingButtonsDisabled(true);renderReadingStatus(text);await requestAudio(text);audioBusy=false;setReadingButtonsDisabled(false)};
     const narrateIntro=async()=>{if(introPlayed)return;introPlayed=true;audioBusy=true;setReadingButtonsDisabled(true);await requestAudio(INTRO_TITLE);await requestAudio(INTRO_INSTRUCTION);audioBusy=false;setReadingButtonsDisabled(false)};
     const narratePart2=async text=>{audioBusy=true;setPart2ControlsDisabled(true);await requestAudio(text);audioBusy=false;setPart2ControlsDisabled(false)};
@@ -59,14 +60,27 @@ window.__prescribedNarrationAudio = {
       if(d.progress?.activity_completed){app.innerHTML='<div class="done"><h1>Tapos na ang gawain! 🎉</h1><p>Mahusay! Nakumpleto mo na ang aktibidad.</p><a href="{% url "assessment" %}">BALIK SA AKING ARALIN</a></div>';app.inert=false;return}
       if(!s.oral_reading_completed){
         let i=s.current_reading_item||0,it=d.items[i];
-        app.innerHTML='<p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 2B</p><h1>Letrang Ii</h1><p class="instruction">Tingnan ang larawang nasa kahon. Ano ito?</p><img src="'+it.image_url+'" alt="Larawan: '+it.word+'"><p id="status">Larawan '+(i+1)+' sa 6</p><div class="reading-actions"><button class="button" id="read">Sabihin ang salita</button><button class="button secondary" id="listen">Pakinggan</button></div>';
-        const read=document.getElementById('read'),listenButton=document.getElementById('listen'),R=window.SpeechRecognition||window.webkitSpeechRecognition;
+        app.innerHTML='<p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 2B</p><h1>Letrang Ii</h1><p class="instruction">Tingnan ang larawang nasa kahon. Ano ito?</p><img src="'+it.image_url+'" alt="Larawan: '+it.word+'"><p id="status">Larawan '+(i+1)+' sa 6</p><div class="reading-actions"><button class="button" id="read">Basahin</button><button class="button secondary" id="listen">Pakinggan</button></div>';
+        const read=document.getElementById('read'),listenButton=document.getElementById('listen');
         const listen=async()=>{if(audioBusy||read.disabled)return;const audioFile=wordAudioFiles[String(it.word||'').toLowerCase()];if(!audioFile)return;audioBusy=true;setReadingButtonsDisabled(true);try{const audio=new Audio(wordAudioBase+audioFile);await new Promise(resolve=>{audio.onended=resolve;audio.onerror=resolve;audio.play().catch(resolve)})}finally{audioBusy=false;setReadingButtonsDisabled(false)}};
         listenButton.onclick=listen;
-        const resetRead=()=>{if(audioBusy)return;setReadingButtonsDisabled(false);read.textContent='Sabihin ang salita';read.onclick=startRead};
-        const startRead=()=>{if(audioBusy||read.disabled)return;if(!R){renderReadingStatus('Hindi available ang speech check sa browser na ito.');return}setReadingButtonsDisabled(true);read.textContent='Nakikinig...';let r=new R();r.lang='fil-PH';r.continuous=false;r.interimResults=false;r.onresult=async e=>{read.textContent='Pinoproseso...';let ok=String(e.results[0][0].transcript).toLowerCase().includes(it.word.toLowerCase());if(ok){await narrateFeedback(CORRECT);s.completed_reading_items=[...(s.completed_reading_items||[]),i];s.current_reading_item=i+1;s.read_attempts=0;s.listen_attempts=0;if(i===5)s.oral_reading_completed=true;else introPlayed=false;await save();render()}else{s.read_attempts=(s.read_attempts||0)+1;await narrateFeedback(WRONG);await save();resetRead()}};r.onerror=async()=>{renderReadingStatus('Hindi narinig. Subukan muli.');await save();resetRead()};r.start()};
-        read.onclick=startRead;
-        if(!R){read.disabled=true;listenButton.disabled=true}
+        const record=async function(){
+          if(audioBusy)return;
+          const result=await window.Basahin.read({target_text:it.word,language:'Filipino',mode:'reading',prescribed_activity_key:'lesson7-gawain2b'}, {button:this,onVad:state=>{listenButton.disabled=state!=='idle'}});
+          listenButton.disabled=false;
+          if(!result?.success||result.complete===false){
+            s.read_attempts=(s.read_attempts||0)+1;
+            await narrateFeedback(WRONG);
+            await save();
+            return;
+          }
+          await narrateFeedback(CORRECT);
+          s.completed_reading_items=[...(s.completed_reading_items||[]),i];s.current_reading_item=i+1;s.read_attempts=0;s.listen_attempts=0;
+          if(i===5)s.oral_reading_completed=true;else introPlayed=false;
+          await save();
+          render();
+        };
+        window.Basahin.bindActivity(read,record);
         if(window.__lessonStartReady&&!introPlayed)narrateIntro();
         return
       }
@@ -75,7 +89,7 @@ window.__prescribedNarrationAudio = {
       document.querySelectorAll('.choice').forEach(b=>b.onclick=async()=>{let i=+b.dataset.i;s.selections=s.selections.includes(i)?s.selections.filter(x=>x!==i):[...s.selections,i];await save();render()});
       document.getElementById('submit').onclick=async()=>{let want=d.items.map((x,i)=>x.target?i:null).filter(x=>x!==null).sort(),got=[...s.selections].sort(),ok=want.length===got.length&&want.every((x,i)=>x===got[i]);s.correct_count=ok?6:0;await save();if(ok){let r=await fetch(d.completion_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'});if(r.ok){d.progress.activity_completed=true;render();return}}s.selections=s.selections.filter(x=>want.includes(x));document.querySelectorAll('.choice').forEach(b=>{if(!s.selections.includes(+b.dataset.i))b.classList.remove('selected')});await save();document.getElementById('status').textContent=PART2_WRONG;await narratePart2(PART2_WRONG)};
     }
-    document.addEventListener('DOMContentLoaded',()=>{render();app.inert=true;app.innerHTML=app.innerHTML;window.addEventListener('lesson-start-ready',()=>{app.inert=false},{once:true})});
+    document.addEventListener('DOMContentLoaded',()=>{render();app.inert=true;window.addEventListener('lesson-start-ready',()=>{app.inert=false},{once:true})});
     __runWhenLessonStarted(() => render());
   })();
   </script>
