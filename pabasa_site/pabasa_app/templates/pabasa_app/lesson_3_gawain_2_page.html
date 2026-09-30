@@ -718,11 +718,45 @@ body.gawain-2:has(#game .complete)::before {
 }
 </style>
 <style>
+/* Part 2 header: use the same open identity treatment as Part 1. */
+.gawain-2 #game.game:has(.answers) .header {
+  position: relative !important;
+  width: 100% !important;
+  padding: 0 12px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.gawain-2 #game.game:has(.answers) .brand {
+  width: 100% !important;
+  max-width: 100% !important;
+  text-align: center !important;
+}
+.gawain-2 #game.game:has(.answers) .brand h1 {
+  width: min(100%, calc(100% - 180px)) !important;
+  margin-inline: auto !important;
+}
+.gawain-2 #game.game:has(.answers) .progress {
+  position: absolute !important;
+  top: 4px !important;
+  right: 12px !important;
+  z-index: 2 !important;
+  margin: 0 !important;
+  transform: none !important;
+  text-align: right !important;
+}
+@media (max-width: 650px) {
+  .gawain-2 #game.game:has(.answers) .progress {
+    top: 2px !important;
+    right: 12px !important;
+  }
+}
 .feedback-text-hidden{color:transparent!important;text-shadow:none!important}
 .feedback-text-hidden::before,.feedback-text-hidden::after{content:none!important;display:none!important}
 .gawain-2 #game #status:not(.feedback-text-hidden){visibility:hidden!important}
-.gawain-2 #game #read{width:88%!important;justify-self:center}
-.gawain-2 #game .lesson3-g2-actions>#read{flex:1 1 0!important;max-width:none!important;transform:scaleX(.78)!important}
+.gawain-2 #game #read{width:min(330px,100%)!important;max-width:330px!important;justify-self:center}
+.gawain-2 #game .lesson3-g2-actions>#read{flex:1 1 0!important;max-width:330px!important}
 </style>
 <script>
 (function(){var root=document.getElementById('game');if(!root)return;var feedback=/^(?:Magaling!(?: Susunod na larawan\.)?|Hindi ito ang tamang sagot\. Subukan natin muli\.|Hindi pa ito tama\. Subukan muli\.|Hindi nakuha ang iyong boses\. Subukan muli\.)$/;function sync(){root.querySelectorAll('#status').forEach(function(el){el.classList.toggle('feedback-text-hidden',feedback.test(el.textContent.trim()));});}new MutationObserver(sync).observe(root,{childList:true,subtree:true,characterData:true});sync();}());
