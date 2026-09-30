@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
+{% if teacher_courses|length == 1 and nav_role == 'teacher' %}<script>window.PABASA_HOLD_DASHBOARD_LOADER = true;</script>{% endif %}
 <script>document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('[data-prescribed-activity="lesson-7-gawain-1"]').forEach(x=>x.dataset.prescribedActivity='lesson-7-gawain-1')});</script>
 <script>document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('[data-prescribed-activity="letrang-msa"]').forEach(x=>x.dataset.prescribedActivity='lesson-6-gawain-1');document.querySelectorAll('[data-prescribed-preview="letrang-msa"]').forEach(x=>x.dataset.prescribedPreview='lesson-6-gawain-1')});</script>
 <link rel="stylesheet" href="{% static 'pabasa_app/sound_detective.css' %}?v=20260831-7">
@@ -820,6 +821,36 @@
         max-height: 100%;
         min-height: 0;
         overflow: hidden;
+    }
+
+    .course-detail-page {
+        min-height: calc(100dvh - var(--dashboard-normalized-content-offset));
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100%;
+    }
+
+    .dashboard-page-wrap:has(#courseDetailModal.course-detail-page) {
+        margin: 0;
+        max-width: none;
+        padding: 0;
+        width: 100%;
+    }
+
+    .dashboard-page-wrap:has(#courseDetailModal.course-detail-page) > .dashboard-content-wrap {
+        padding: 0;
+    }
+
+    #courseDetailModal.course-detail-page > .course-modal-dialog,
+    #courseDetailModal.course-detail-page > .course-modal-dialog > .course-modal-content {
+        height: 100%;
+        max-height: none;
+        width: 100%;
+    }
+
+    #courseDetailModal.course-detail-page > .course-modal-dialog > .course-modal-content {
+        border-radius: 0;
+        box-shadow: none;
     }
 
     #createCourseModal .modal-title {
@@ -5226,30 +5257,8 @@
         height: 100vh !important;
     }
 
-    /* Course page has custom helper overlays up to z-index:3000. Keep every
-       Bootstrap modal above those layers so the dimming overlay never captures
-       clicks while the modal content is visible. */
-    body.modal-open .modal {
-        z-index: 4100 !important;
-        pointer-events: auto !important;
-        position: fixed !important;
-        inset: 0 !important;
-    }
-
-    body.modal-open .modal .modal-dialog,
-    body.modal-open .modal .modal-content {
-        z-index: 4110 !important;
-        position: relative;
-        pointer-events: auto !important;
-    }
-
-    body.modal-open .modal-backdrop {
-        z-index: 4000 !important;
-        pointer-events: none !important;
-        position: fixed !important;
-        inset: 0 !important;
-        width: 100vw !important;
-        height: 100vh !important;
+    #courseDetailModal.course-detail-initializing .course-modal-content {
+        visibility: hidden !important;
     }
 
     /* Course page dark mode support */
@@ -6403,6 +6412,18 @@ document.addEventListener('DOMContentLoaded',()=>{
 {% endblock %}
 
 {% block content %}
+{% if teacher_courses|length == 1 and nav_role == 'teacher' %}
+<div id="teacherCoursePageMount"></div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const mount = document.getElementById('teacherCoursePageMount');
+        const coursePage = document.getElementById('courseDetailModal');
+        if (mount && coursePage?.classList.contains('course-detail-page')) {
+            mount.appendChild(coursePage);
+        }
+    });
+</script>
+{% endif %}
 <script>
     // Global JS context variables used elsewhere
 
@@ -6603,7 +6624,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         gap: 0.3rem;
     }
 
-    .course-assessment-export-btn {
+    .dashboard-main .course-assessment-export-btn {
         align-items: center;
         background: var(--dash-primary);
         border: 1px solid var(--dash-primary);
@@ -6620,7 +6641,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
     }
 
-    .course-assessment-export-btn:hover {
+    .dashboard-main .course-assessment-export-btn:hover {
         background: var(--dash-primary-deep);
         border-color: var(--dash-primary-deep);
         box-shadow: 0 8px 18px rgba(31, 111, 139, 0.2);
@@ -7224,9 +7245,10 @@ document.addEventListener('DOMContentLoaded',()=>{
 </style>
 
 <!-- Courses backed by the teacher's canonical Section assignments -->
-<section class="courses-home mb-4">
+<section class="{% if teacher_courses|length == 1 and nav_role == 'teacher' %}d-none{% else %}courses-home mb-4{% endif %}">
     <div class="classes-grid{% if teacher_courses|length == 1 %} is-single-class{% endif %}" id="coursesGrid">
         {% if teacher_courses %}
+            {% if teacher_courses|length != 1 %}
             {% for course in teacher_courses %}
                 {% if teacher_courses|length == 1 %}
                 <article class="single-class-card" data-course-id="{{ course.id }}">
@@ -7315,6 +7337,7 @@ document.addEventListener('DOMContentLoaded',()=>{
                 </article>
                 {% endif %}
             {% endfor %}
+            {% endif %}
             <script>
                 (function(){
                     try {
@@ -7331,6 +7354,22 @@ document.addEventListener('DOMContentLoaded',()=>{
                     } catch(e) { /* ignore */ }
                 })();
             </script>
+            {% if teacher_courses|length == 1 and nav_role == 'teacher' %}
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const courses = JSON.parse(document.getElementById('teacherCoursesInitial')?.textContent || '[]');
+                    const courseId = Array.isArray(courses) && courses.length === 1 ? courses[0].id : null;
+                    if (courseId && typeof openCourseDetail === 'function') {
+                        window.showDashboardPageLoader?.();
+                        openCourseDetail(courseId).catch(error => {
+                            console.error('Unable to open assigned course', error);
+                        }).finally(() => {
+                            window.releaseDashboardPreload?.();
+                        });
+                    }
+                });
+            </script>
+            {% endif %}
         {% else %}
             <div class="empty-state">
                 <i class="bi bi-journal-bookmark"></i>
@@ -7509,9 +7548,9 @@ document.addEventListener('DOMContentLoaded',()=>{
 </div>
 
             <!-- Course Detail Modal -->
-            <div class="modal fade" id="courseDetailModal" tabindex="-1" aria-labelledby="courseDetailModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-fullscreen course-modal-dialog">
-                    <div class="modal-content course-modal-content">
+            <div class="{% if teacher_courses|length == 1 and nav_role == 'teacher' %}course-detail-page{% else %}modal fade{% endif %}" id="courseDetailModal"{% if not teacher_courses|length == 1 or nav_role != 'teacher' %} tabindex="-1" aria-labelledby="courseDetailModalLabel" aria-hidden="true"{% endif %}>
+                <div class="{% if teacher_courses|length == 1 and nav_role == 'teacher' %}course-modal-dialog{% else %}modal-dialog modal-fullscreen course-modal-dialog{% endif %}">
+                    <div class="course-modal-content">
                         <div class="modal-header course-modal-header">
                             <div class="course-modal-title-group">
                                 <div class="course-modal-icon" aria-hidden="true">
@@ -7525,7 +7564,7 @@ document.addEventListener('DOMContentLoaded',()=>{
                                     <p class="course-modal-subtitle">PABASA learning workspace · course details</p>
                                 </div>
                             </div>
-                            <button type="button" class="course-modal-close-btn" data-bs-dismiss="modal" aria-label="Close">
+                            <button type="button" class="course-modal-close-btn d-none" data-bs-dismiss="modal" aria-label="Close dialog">
                                 <i class="bi bi-x-lg"></i>
                             </button>
                         </div>
@@ -11735,6 +11774,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     async function renderCourses() {
         const grid = document.getElementById('coursesGrid');
         if (!grid) return;
+        if (teacherCourses.length === 1 && String(window.PABASA_USER_ROLE || '').toLowerCase() === 'teacher') {
+            grid.replaceChildren();
+            return;
+        }
         // If client data hasn't been loaded yet but server rendered cards exist,
         // keep the server-rendered DOM to avoid flicker/incorrect counts.
         if (!teacherCourses || teacherCourses.length === 0) {
@@ -12026,17 +12069,19 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         if (!modalEl) {
             throw new Error('Course details are unavailable on this page. Please refresh and try again.');
         }
-        if (modalEl.parentElement !== document.body) {
+        const directCoursePage = modalEl.classList.contains('course-detail-page');
+        if (!directCoursePage && modalEl.parentElement !== document.body) {
             document.body.appendChild(modalEl);
         }
-        if (!window.bootstrap?.Modal) {
+        if (!directCoursePage && !window.bootstrap?.Modal) {
             throw new Error('Course details could not be opened because the page is still loading. Please refresh and try again.');
         }
-        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        const modal = directCoursePage ? null : bootstrap.Modal.getOrCreateInstance(modalEl);
         modalEl.dataset.courseId = courseId;
+        modalEl.classList.add('course-detail-initializing');
         const titleEl = document.getElementById('courseDetailTitle');
         if (titleEl) titleEl.textContent = 'Loading course…';
-        modal.show();
+        if (!directCoursePage) modal.show();
 
         try {
             closeCourseMaterialDetail();
@@ -12044,7 +12089,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             // Bootstrap can leave an orphan backdrop that makes the page look
             // disabled. Course detail is standalone, so clear that stale state
             // before opening a fresh course modal.
-            if (!document.querySelector('.modal.show')) {
+            if (!directCoursePage && !document.querySelector('.modal.show')) {
                 document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
                 document.body.classList.remove('modal-open');
                 document.body.style.removeProperty('overflow');
@@ -12951,12 +12996,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             modalEl.dataset.courseId = course.id;
             const materialClassContext = resolveMaterialClassContext(course.id);
             if (materialClassContext.classId) currentSectionId = materialClassContext.classId;
-            try { if (typeof loadCourseOverview === 'function') loadCourseOverview(course.id); } catch (err) { console.warn('loadCourseOverview error', err); }
-            try { if (typeof loadCourseAssessments === 'function') loadCourseAssessments(course.id, course); } catch (err) { console.warn('loadCourseAssessments error', err); }
-            try { if (typeof loadCourseReports === 'function') loadCourseReports(course.id); } catch (err) { console.warn('loadCourseReports error', err); }
+            const initialCourseTasks = [];
+            try { if (typeof loadCourseOverview === 'function') initialCourseTasks.push(loadCourseOverview(course.id)); } catch (err) { console.warn('loadCourseOverview error', err); }
+            try { if (typeof loadCourseAssessments === 'function') initialCourseTasks.push(loadCourseAssessments(course.id, course)); } catch (err) { console.warn('loadCourseAssessments error', err); }
+            try { if (typeof loadCourseReports === 'function') initialCourseTasks.push(loadCourseReports(course.id)); } catch (err) { console.warn('loadCourseReports error', err); }
             try { if (typeof setupCourseUpdates === 'function') setupCourseUpdates(course.id); } catch (err) { console.warn('setupCourseUpdates error', err); }
-            try { if (typeof loadCourseReadings === 'function') loadCourseReadings(course.id); } catch (err) { console.warn('loadCourseReadings error', err); }
-                try { if (typeof loadCourseStudents === 'function') loadCourseStudents(course.id); } catch (err) { console.warn('loadCourseStudents error', err); }
+            try { if (typeof loadCourseReadings === 'function') initialCourseTasks.push(loadCourseReadings(course.id)); } catch (err) { console.warn('loadCourseReadings error', err); }
+            try { if (typeof loadCourseStudents === 'function') initialCourseTasks.push(loadCourseStudents(course.id)); } catch (err) { console.warn('loadCourseStudents error', err); }
+            await Promise.allSettled(initialCourseTasks);
+            await new Promise(resolve => window.requestAnimationFrame(resolve));
+            modalEl.classList.remove('course-detail-initializing');
 
             // attach delegated handlers for the assessments rendered in course detail
             try {
@@ -15718,6 +15767,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
             if (state.courseCloseButton) {
                 state.courseCloseButton.setAttribute('data-bs-dismiss', 'modal');
+                state.courseCloseButton.classList.add('d-none');
             }
             dispatchModalEvent(modalEl, 'hidden.bs.modal');
             return true;
@@ -15731,7 +15781,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const sidebar = document.getElementById('courseSidebar');
             const courseCloseButton = courseModal?.querySelector('.course-modal-close-btn[data-bs-dismiss="modal"]');
             const staysAsDialog = modalEl?.id === 'deleteConfirmModal';
-            if (!modalEl || modalEl === courseModal || staysAsDialog || !courseModal?.classList.contains('show') || !host || !mainContent) return false;
+            const isNativeCoursePage = courseModal?.classList.contains('course-detail-page');
+            const hasOpenCourseModal = courseModal?.classList.contains('show');
+            if (!modalEl || modalEl === courseModal || staysAsDialog || (!hasOpenCourseModal && !isNativeCoursePage) || !host || !mainContent) return false;
 
             let parentModal = null;
             if (activeInlineModal) {
@@ -15753,6 +15805,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             // Disable its Bootstrap dismiss trigger while its inline child owns
             // the close action; it is restored when the final inline child closes.
             courseCloseButton?.removeAttribute('data-bs-dismiss');
+            courseCloseButton?.classList.remove('d-none');
             inlineState.set(modalEl, { content, nodes, host, mainContent, sidebar, parentModal, suspended: false, courseCloseButton });
             activeInlineModal = modalEl;
             modalEl.classList.add('course-inline-active');
@@ -23709,7 +23762,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 document.addEventListener('DOMContentLoaded', function() {
     const courseModalEl = document.getElementById('courseDetailModal');
     if (courseModalEl) {
-        courseModalEl.addEventListener('hidden.bs.modal', function () {
+        courseModalEl.addEventListener('hidden.bs.modal', function (event) {
+            if (event.target !== courseModalEl) return;
             const form = document.getElementById('courseAddMaterialForm');
             if (form) form.style.display = 'none';
             window.courseAttachTarget = null;

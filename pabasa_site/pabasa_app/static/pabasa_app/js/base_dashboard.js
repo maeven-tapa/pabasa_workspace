@@ -284,6 +284,9 @@ var getStudentClassData = window.getStudentClassData = function() {
     }
 
     function releaseDashboardPreload() {
+        if (window.PABASA_HOLD_DASHBOARD_LOADER && !window.PABASA_COURSE_UI_READY) {
+            return;
+        }
         const elapsed = Date.now() - preloadStartedAt;
         const remaining = Math.max(0, DASHBOARD_PRELOAD_MIN_MS - elapsed);
         window.setTimeout(function () {
@@ -383,6 +386,10 @@ var getStudentClassData = window.getStudentClassData = function() {
 
     window.showDashboardPageLoader = showDashboardPageLoader;
     window.hideDashboardPageLoader = hideDashboardPageLoader;
+    window.releaseDashboardPreload = function() {
+        window.PABASA_COURSE_UI_READY = true;
+        releaseDashboardPreload();
+    };
     if (document.readyState === "complete") {
         releaseDashboardPreload();
     } else {
