@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', function () {
   const app = document.getElementById('app');
   if (!app) return;
+  const activityData = JSON.parse(document.getElementById('activity-data')?.textContent || '{}');
+  const oralState = activityData.progress?.state || {};
 
   let introKey = '';
   let introPlaying = false;
@@ -43,6 +45,41 @@ document.addEventListener('DOMContentLoaded', function () {
   };
   const buttons = () => [...app.querySelectorAll('.lesson7-g2a-reading-actions button')];
   const setButtonsDisabled = disabled => buttons().forEach(button => { button.disabled = disabled; });
+  window.lesson7G2ARecord = async function (event) {
+    const read = this;
+    const reading = read.closest('.reading');
+    readStarted = true;
+    readingBeforeRead = reading;
+    const itemIndex = Number(oralState.current_reading_item || 0);
+    const item = activityData.items?.[itemIndex];
+    if (!item) return;
+    const result = await window.Basahin.read({target_text: item.word, language: 'Filipino', mode: 'reading', prescribed_activity_key: 'lesson7-gawain2a'}, {
+      button: read,
+      onVad: state => {
+        const listen = reading?.querySelector('#listen');
+        if (listen) listen.disabled = state !== 'idle';
+      }
+    });
+    const listen = reading?.querySelector('#listen');
+    if (listen) listen.disabled = false;
+    if (!result.success || result.complete === false) {
+      const status = reading?.querySelector('#status');
+      if (status) {
+        status.textContent = 'Subukan muli. Sabihin ang salita nang malinaw.';
+        showFeedback(status, 'Subukan Muli', '');
+      }
+      return;
+    }
+    oralState.completed_reading_items = [...(oralState.completed_reading_items || []), itemIndex];
+    oralState.current_reading_item = itemIndex + 1;
+    if (itemIndex >= (activityData.items?.length || 1) - 1) {
+      oralState.oral_reading_completed = true;
+      oralState.current_phase = 'main_activity';
+    }
+    oralState.state_version = Number(oralState.state_version || 0) + 1;
+    await fetch(activityData.progress_url, {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf()}, body: JSON.stringify({state: oralState})});
+    window.lesson7G2ARender?.(oralState);
+  };
   const part2Canvases = () => [...app.querySelectorAll('.grid canvas.canvas')];
   const part2ActionButtons = () => [...app.querySelectorAll('.actions button')];
   const setPart2CanvasDisabled = disabled => part2Canvases().forEach(canvas => {
@@ -87,7 +124,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!read) return;
     const instruction = app.querySelector('.instruction');
     if (instruction && instruction.textContent !== 'Tingnan ang larawang nasa ibaba. Ano ito?') instruction.textContent = 'Tingnan ang larawang nasa ibaba. Ano ito?';
-    if (read.textContent !== 'Simulan ang pagbasa') read.textContent = 'Simulan ang pagbasa';
     let actions = reading.querySelector('.lesson7-g2a-reading-actions');
     let listen = reading.querySelector('#listen');
     if (!actions) {
@@ -120,10 +156,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         finally { listen.classList.remove('is-speaking'); setButtonsDisabled(false); }
       });
-    }
-    if (!read.dataset.g2aBound) {
-      read.dataset.g2aBound = '1';
-      read.addEventListener('click', () => { readStarted = true; readingBeforeRead = reading; }, true);
     }
     const itemKey = reading.querySelector('img')?.getAttribute('alt') || reading;
     const isCompletedReadingTransition = readStarted && reading !== readingBeforeRead;
