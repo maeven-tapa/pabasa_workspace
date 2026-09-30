@@ -758,6 +758,83 @@ body.gawain-2:has(#game .complete)::before {
 .gawain-2 #game #read{width:min(330px,100%)!important;max-width:330px!important;justify-self:center}
 .gawain-2 #game .lesson3-g2-actions>#read{flex:1 1 0!important;max-width:330px!important}
 </style>
+<style>
+/* Match Lesson 2 Gawain 1's established BASAHIN ITO marker. */
+.gawain-2 .pairs .word.active::before {
+  content: 'BASAHIN ITO' !important;
+  display: block !important;
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  z-index: 3;
+  transform: translateX(-50%);
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: #ffc928;
+  color: #5b3b00;
+  font-family: Fredoka, Arial, sans-serif !important;
+  font-size: .85rem;
+  font-weight: 900;
+  letter-spacing: .06em;
+  white-space: nowrap;
+  box-shadow: 0 3px 8px #b77b1b55;
+}
+</style>
+<style>
+/* Reuse the Lesson 2 Gawain 1 connector between the two picture cards. */
+.gawain-2 .pairs {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
+  align-items: center !important;
+  column-gap: clamp(12px, 4vw, 42px) !important;
+}
+     .gawain-2 .pairs .connector {
+       align-items: center;
+       background: radial-gradient(circle at calc(100% - 25px) 50%, #167985 0 3px, transparent 3.5px) 0 0 / 100% 100% no-repeat;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  color: transparent;
+  display: flex;
+  font-size: 0;
+  height: 36px;
+  justify-content: center;
+  margin-inline: clamp(-42px, -4vw, -16px);
+  padding: 0;
+  position: relative;
+  z-index: 1;
+  width: calc(clamp(82px, 11vw, 116px) + clamp(28px, 7vw, 72px));
+}
+     .gawain-2 .pairs .connector::before {
+       background: radial-gradient(circle at 26px 50%, #167985 0 3px, transparent 3.5px) 0 0 / 100% 100% no-repeat, repeating-linear-gradient(to right, #4b9aa0 0 4px, transparent 4px 8px) 26px 50% / calc(100% - 51px) 2px no-repeat;
+       border-top: 0;
+       content: "";
+       height: 10px;
+       left: -3px;
+       position: absolute;
+       right: -3px;
+       top: 50%;
+       transform: translateY(-50%);
+     }
+.gawain-2 .pairs .connector::after {
+  background: #fff;
+  border: 1px solid #c8dfe1;
+  border-radius: 999px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, .07);
+  color: #176078;
+  content: "Magkatugma?";
+  font-size: .68rem;
+  font-weight: 900;
+  padding: 5px 8px;
+  position: relative;
+  white-space: nowrap;
+  z-index: 1;
+}
+@media (max-width: 650px) {
+  .gawain-2 .pairs { column-gap: 6px !important; }
+  .gawain-2 .pairs .connector { margin-inline: -6px; width: calc(58px + 12px); }
+  .gawain-2 .pairs .connector::after { font-size: .58rem; padding: 5px 6px; }
+}
+</style>
 <script>
 (function(){var root=document.getElementById('game');if(!root)return;var feedback=/^(?:Magaling!(?: Susunod na larawan\.)?|Hindi ito ang tamang sagot\. Subukan natin muli\.|Hindi pa ito tama\. Subukan muli\.|Hindi nakuha ang iyong boses\. Subukan muli\.)$/;function sync(){root.querySelectorAll('#status').forEach(function(el){el.classList.toggle('feedback-text-hidden',feedback.test(el.textContent.trim()));});}new MutationObserver(sync).observe(root,{childList:true,subtree:true,characterData:true});sync();}());
 </script>

@@ -1931,6 +1931,62 @@ body.lesson-3-responsive:has(#game .complete) .lesson-start-backdrop{display:non
 .lesson-3-responsive #game:has(.complete) .complete-done{display:inline-flex;align-items:center;justify-content:center;min-height:0;margin:0;padding:15px 26px;border:0;border-radius:999px;background:#299e9a;color:#fff;font:900 clamp(1.05rem,1.8vw,1.25rem)/1.2 Fredoka,Nunito,"Segoe UI",sans-serif;box-shadow:0 5px 0 #187b7a}
 @media(max-width:520px){.lesson-3-responsive #game:has(.complete) .complete{width:min(100%,calc(100vw - 32px));padding:32px 22px 30px;border-radius:26px}.lesson-3-responsive #game:has(.complete) .complete-done{width:100%;padding-inline:18px}}
 </style>
+<style>
+/* Match Lesson 2 Gawain 1's established BASAHIN ITO marker. */
+.lesson-3-responsive .pairs .word::before {
+  content: none !important;
+  display: none !important;
+}
+.lesson-3-responsive .pairs .word:not(.active)::before {
+  content: none !important;
+  display: none !important;
+}
+.lesson-3-responsive .pairs .word.active::before {
+  content: 'BASAHIN ITO' !important;
+  display: block !important;
+  position: absolute !important;
+  top: -18px !important;
+  left: 50% !important;
+  z-index: 3 !important;
+  transform: translateX(-50%) !important;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: #ffc928 !important;
+  color: #5b3b00 !important;
+  font-size: .85rem !important;
+  font-weight: 900 !important;
+  letter-spacing: .06em;
+  white-space: nowrap;
+  box-shadow: 0 3px 8px #b77b1b55 !important;
+}
+</style>
+<style>
+/* Reuse the Lesson 2 Gawain 1 connector between the two picture cards. */
+.lesson-3-responsive .pairs { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important; align-items: center !important; }
+.lesson-3-responsive .pairs .connector { align-items: center; background: radial-gradient(circle at 3px 50%, #167985 0 3px, transparent 3.5px), radial-gradient(circle at calc(100% - 3px) 50%, #167985 0 3px, transparent 3.5px); border: 0; border-radius: 0; box-shadow: none; color: transparent; display: flex; font-size: 0; height: 36px; justify-content: center; margin-inline: clamp(-42px, -4vw, -16px); padding: 0; position: relative; width: calc(clamp(90px, 12vw, 130px) + clamp(32px, 8vw, 84px)); }
+.lesson-3-responsive .pairs .connector::before { background: none; border-top: 2px dashed #4b9aa0; content: ""; height: 0; left: 4px; position: absolute; right: 4px; top: 50%; }
+.lesson-3-responsive .pairs .connector::after { background: #fff; border: 1px solid #c8dfe1; border-radius: 999px; box-shadow: 0 2px 6px rgba(15, 23, 42, .07); color: #176078; content: "Magkatugma?"; font-size: .68rem; font-weight: 900; padding: 5px 8px; position: relative; white-space: nowrap; z-index: 1; }
+@media (max-width: 650px) { .lesson-3-responsive .pairs .connector { margin-inline: -6px; width: 70px; } .lesson-3-responsive .pairs .connector::after { font-size: .58rem; padding: 5px 6px; } }
+</style>
+<script>
+(function () {
+  var game = document.getElementById('game');
+  if (!game) return;
+  function ensureConnector() {
+    game.querySelectorAll('.pairs').forEach(function (pairs) {
+      var words = pairs.querySelectorAll(':scope > .word');
+      if (words.length === 2 && !pairs.querySelector(':scope > .connector')) {
+        var connector = document.createElement('span');
+        connector.className = 'connector';
+        connector.textContent = 'Magkatugma?';
+        words[0].after(connector);
+      }
+    });
+  }
+  new MutationObserver(ensureConnector).observe(game, {childList: true, subtree: true});
+  ensureConnector();
+}());
+</script>
 <script>
 (function(){
   function placeEyebrowFirst(){
