@@ -214,7 +214,9 @@ def language_code_for(language="", mode=""):
 
 L22_C_SYLLABLE_ALIASES = {
     # These are exact STT spellings for an isolated pantig, not fuzzy matches.
-    'cac': {'cac', 'kak'},
+    # English-biased browser STT can render the isolated /cac/ as "cock".
+    # Keep this allowance scoped to this exact Lesson 22 pantig.
+    'cac': {'cac', 'kak', 'cock'},
     'ce': {'ce', 'se'},
     'ca': {'ca', 'ka'},
     'bu': {'bu'},
