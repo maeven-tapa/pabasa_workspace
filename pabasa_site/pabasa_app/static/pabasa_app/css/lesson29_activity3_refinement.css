@@ -16,6 +16,12 @@ html body #app{width:min(100%,950px);max-height:100%}
 html body .eyebrow{margin:-8px auto 12px;padding:10px 30px;font-size:clamp(.85rem,1.4vw,1.15rem);letter-spacing:.02em}
 html body .title{font-size:clamp(2.05rem,3.8vw,3.35rem)}
 html body .instruction{margin:10px auto;font-size:clamp(1rem,1.5vw,1.25rem)}
+html body .retry-proceed-prompt{max-width:700px;margin:12px auto 14px;color:var(--ink)!important;font-size:clamp(1.15rem,1.95vw,1.55rem);font-weight:900;line-height:1.35;text-shadow:0 1px 0 #fff}
+html body .stage.is-tracing .board{position:relative;background:linear-gradient(#2b83bd,#2b83bd) 0 15%/100% 3px no-repeat,linear-gradient(#df5b62,#df5b62) 0 50%/100% 3px no-repeat,linear-gradient(#2b83bd,#2b83bd) 0 85%/100% 3px no-repeat,#fffffff0}
+html body .stage.is-tracing .trace-model{position:absolute;z-index:1;top:50%;left:50%;transform:translate(-50%,-50%);font-size:clamp(6.5rem,20vh,10rem);font-weight:900;line-height:.72;color:#398ac533;pointer-events:none}
+html body .stage.is-tracing .item-label{display:block!important;margin:4px auto 6px;color:var(--ink);font-size:clamp(1rem,1.6vw,1.25rem);font-weight:900}
+html body .stage.is-tracing .trace-count{display:flex!important}
+html body .stage.is-tracing .board canvas{position:absolute;inset:0;z-index:2;background:transparent}
 html body .item-label,html body .status{display:none!important}
 html body .letter{width:min(300px,60vw);height:clamp(120px,20vh,190px);margin:10px auto 12px;border-width:3px;border-radius:24px;font-size:clamp(5rem,11vw,8rem)}
 html body .trace-label{margin:8px auto;color:var(--muted);font-weight:900}
@@ -48,3 +54,14 @@ html body .button.is-busy{animation:lesson27ButtonPulse 1.15s ease-in-out infini
 html body .button.is-busy:disabled{background:#b5c5c7!important;color:#edf3f4!important;border-color:transparent!important;box-shadow:none!important;opacity:1!important;cursor:not-allowed}
 @keyframes lesson27ButtonPulse{0%,100%{transform:scale(1);box-shadow:0 8px 0 var(--dark),0 12px 24px #187b7a40}50%{transform:scale(1.025);box-shadow:0 0 0 9px #f5d47c55,0 8px 0 var(--dark),0 15px 28px #187b7a55}}
 html body .trace-count{display:none!important}
+/* The activity is a single-screen experience: keep decorative art from
+   creating a document-level scroll area, including on Windows browsers. */
+html,body{width:100%;height:100dvh!important;min-height:0!important;overflow:hidden!important;overscroll-behavior:none}
+html body{position:fixed;inset:0}
+html body .page{height:100dvh!important;max-height:100dvh!important;overflow:hidden}
+html body .backdrop{padding:clamp(16px,3vw,34px);overflow:hidden}
+html body .backdrop .modal{width:min(560px,calc(100vw - 32px));padding:clamp(28px,4vh,42px) clamp(24px,4vw,42px);border:3px solid #ffffffaa;border-radius:36px;background:linear-gradient(145deg,#fffffff8,#e8fbf9f5);box-shadow:0 24px 64px #173f6350}
+html body .backdrop .modal h2{font-size:clamp(2rem,4vw,3rem);color:var(--ink)}
+html body .backdrop .modal p{font-size:clamp(1rem,1.5vw,1.2rem);line-height:1.45}
+html body .backdrop .start-actions{margin-top:24px}
+@media(max-width:680px){html body .backdrop .modal{border-radius:28px;padding:28px 22px}html body .backdrop .start-actions{margin-top:18px}}
