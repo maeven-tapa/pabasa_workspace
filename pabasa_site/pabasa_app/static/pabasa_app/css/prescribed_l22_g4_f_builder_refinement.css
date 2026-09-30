@@ -1,6 +1,7 @@
 /* Lesson 22, Gawain 4: visual refinement only. Existing DOM and reading
    behavior remain unchanged. */
 @font-face{font-family:Fredoka;src:url('../font/fredoka-one.one-regular.ttf') format('truetype');font-display:swap}
+.l22g4-page .tile{position:relative}.l22g4-page .tile.active::before{content:'BASAHIN ITO';position:absolute;top:-15px;left:50%;z-index:3;transform:translateX(-50%);padding:4px 9px;border-radius:999px;background:#ffc928;color:#5b3b00;font-size:clamp(.48rem,1.1vw,.78rem);font-weight:900;letter-spacing:.04em;line-height:1;white-space:nowrap;box-shadow:0 3px 8px #b77b1b55;pointer-events:none}
 .l22g4-page{--l22-ref-ink:#183e63;--l22-ref-teal:#299e9a;--l22-ref-teal-dark:#187b7a;--l22-ref-accent:#e7af45;min-height:100vh;height:100vh;margin:0;padding:16px clamp(12px,4vw,42px) 22px;overflow:hidden;background:url('../prescribed/PRESCRIBED-BG.jpg') center/cover no-repeat;color:var(--l22-ref-ink);font-family:Fredoka,Nunito,'Segoe UI',sans-serif}
 .l22g4-page #l22g4-app{width:min(1250px,100%);height:calc(100vh - 38px);min-height:0;margin-inline:auto}
 .l22g4-page #l22g4-app>.shell{position:relative;width:100%;height:100%;min-height:0;margin:0;padding:clamp(68px,8vh,92px) clamp(14px,5vw,64px) 16px;display:flex;flex-direction:column;overflow:hidden;border:2px solid #ffffffaa;border-radius:42px;background:#ffffff63;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 18px 45px #1e5b7a35}
