@@ -10,7 +10,7 @@
 .lesson13-writing-preview{display:grid;gap:1rem;grid-template-columns:repeat(2,minmax(140px,260px));justify-content:center;margin:2rem auto;max-width:620px}.lesson13-writing-item{align-items:center;background:#fff;border:2px solid #bfdde4;border-radius:1rem;color:#176078;display:flex;flex-direction:column;font-size:4rem;font-weight:900;gap:.5rem;justify-content:center;min-height:150px;padding:1rem}.lesson13-writing-lines{background:repeating-linear-gradient(to bottom,transparent 0,transparent 34px,#2b83bd 35px,#2b83bd 37px);height:74px;width:100%}
 </style>
 <script defer>
-(()=>{document.addEventListener('DOMContentLoaded',()=>{const p=document.getElementById('prescribedActivityPicker'),s=document.getElementById('prescribed-lesson-13-activities');if(!p||!s)return;const a=JSON.parse(s.textContent||'[]').find(x=>x.activity_key==='lesson-13-gawain-4');if(!a)return;const o=document.createElement('button');o.type='button';o.className='prescribed-activity-option';o.dataset.prescribedActivity=a.activity_key;o.innerHTML=`<span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">4</span><span><strong>Lesson 13 · Gawain 4</strong><br><span class="small text-muted">${a.title}</span></span></span><span class="prescribed-activity-option__overlay">Preview</span>`;const v=document.createElement('div');v.className='prescribed-activity-preview';v.id='lesson13Gawain4Preview';v.innerHTML=`<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview">×</button><div class="small text-uppercase text-muted fw-semibold">Session 5 · Lesson 13 · Gawain 4</div><h5>${a.title}</h5><p class="mb-0 text-muted">${a.instruction}</p></div><div class="lesson13-preview"><p class="lesson13-meta">Session 5 · Lesson 13 · Gawain 4</p><h1 class="lesson13-title">${a.title}</h1><p class="lesson13-competencies"><strong>Competency:</strong> ${a.competencies.join(', ')}</p><p class="lesson13-instruction">${a.instruction}</p><div class="lesson13-writing-preview">${a.items.map(i=>`<div class="lesson13-writing-item"><span>${i.letter}</span><div class="lesson13-writing-lines" aria-hidden="true"></div></div>`).join('')}</div></div>`;p.append(o,v);o.onclick=()=>{p.querySelectorAll('[data-prescribed-activity]').forEach(x=>x.classList.toggle('is-selected',x===o));document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(x=>x.classList.remove('is-maximized'));v.classList.add('is-maximized')};v.querySelector('.prescribed-preview-close').onclick=()=>v.classList.remove('is-maximized')}});})();
+(()=>{document.addEventListener('DOMContentLoaded',()=>{const p=document.getElementById('prescribedActivityPicker'),s=document.getElementById('prescribed-lesson-13-activities');if(!p||!s)return;const a=JSON.parse(s.textContent||'[]').find(x=>x.activity_key==='lesson-13-gawain-4');if(!a)return;const o=document.createElement('button');o.type='button';o.className='prescribed-activity-option';o.dataset.prescribedActivity=a.activity_key;o.innerHTML=`<span>${a.title}</span>`;const v=document.createElement('div');v.className='prescribed-activity-preview';v.id='lesson13Gawain4Preview';v.innerHTML=`<h5>${a.title}</h5><p>${a.instruction}</p>`;p.append(o,v);o.onclick=()=>v.classList.add('is-maximized');});})();
 </script>
 <script defer>
 (()=>{document.addEventListener('DOMContentLoaded',()=>{const p=document.getElementById('prescribedActivityPicker'),s=document.getElementById('prescribed-lesson-14-activities');if(!p||!s)return;const a=JSON.parse(s.textContent||'[]').find(x=>x.activity_key==='lesson-14-gawain-3');if(!a)return;const o=document.createElement('button');o.type='button';o.className='prescribed-activity-option';o.dataset.prescribedActivity=a.activity_key;o.innerHTML=`<span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">3</span><span><strong>Lesson 14 · Gawain 3</strong><br><span class="small text-muted">${a.title}</span></span></span><span class="prescribed-activity-option__overlay">Preview</span>`;const v=document.createElement('div');v.className='prescribed-activity-preview';v.id='lesson14Gawain3Preview';const base="{% static 'pabasa_app/' %}";const image=i=>i.image_path?`<img src="${base}${i.image_path.replace(/^pabasa_app\//,'')}" alt="${i.picture}">`:'<span class="lesson14-gawain3-missing">Larawan unresolved</span>';v.innerHTML=`<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview">×</button><div class="small text-uppercase text-muted fw-semibold">Session 5 · Lesson 14 · Gawain 3</div><h5>${a.title}</h5><p class="mb-0 text-muted">${a.instruction}</p></div><div class="lesson14-gawain3-preview"><p class="lesson13-meta">Session 5 · Lesson 14 · Gawain 3</p><h1 class="lesson13-title">${a.title}</h1><p class="lesson13-instruction">${a.instruction}</p><div class="lesson14-gawain3-grid">${a.items.map(i=>`<article class="lesson14-gawain3-item ${i.unresolved?'is-unresolved':''}"><span class="lesson14-gawain3-number">${i.id}.</span><div class="lesson14-gawain3-image">${image(i)}</div><div class="lesson14-gawain3-word">${i.incomplete}</div>${i.unresolved?'<small>UNRESOLVED</small>':''}</article>`).join('')}</div></div>`;p.append(o,v);o.onclick=()=>{p.querySelectorAll('[data-prescribed-activity]').forEach(x=>x.classList.toggle('is-selected',x===o));document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(x=>x.classList.remove('is-maximized'));v.classList.add('is-maximized')};v.querySelector('.prescribed-preview-close').onclick=()=>v.classList.remove('is-maximized')});})();
@@ -10020,9 +10020,36 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                             <div id="templateWeeksGrid" class="template-weeks-grid"></div>
                                         </section>
 
-                                        <section class="template-builder-section template-preview-section" aria-labelledby="templatePreviewHeading">
+                                        <section class="template-builder-section" id="materialPublicationSettings" aria-labelledby="materialPublicationHeading">
                                             <div class="template-section-heading">
                                                 <span class="template-section-index">04</span>
+                                                <div><h6 id="materialPublicationHeading">Access &amp; Assignment</h6><p>Choose which students can access this material.</p></div>
+                                            </div>
+                                            <div class="p-3 rounded-4 shadow-sm" style="background: rgba(248, 250, 252, 0.5); border: 1px solid #f1f5f9;">
+                                                <label class="form-label fw-bold small text-dark mb-1">Who can access this material?</label>
+                                                <div class="d-flex flex-column gap-2">
+                                                    <label class="form-check border rounded-3 p-2 ps-5">
+                                                        <input class="form-check-input" type="radio" name="materialPublicationScope" value="whole_class" checked>
+                                                        <span class="fw-semibold">Whole Class</span><small class="d-block text-muted">All students in the assigned class can access it.</small>
+                                                    </label>
+                                                    <label class="form-check border rounded-3 p-2 ps-5">
+                                                        <input class="form-check-input" type="radio" name="materialPublicationScope" value="selected_students">
+                                                        <span class="fw-semibold">Selected Students</span><small class="d-block text-muted">Only selected students can access it.</small>
+                                                    </label>
+                                                </div>
+                                                <div id="materialSelectedStudentsPanel" class="border rounded-3 p-2 mt-2 d-none">
+                                                    <input id="materialStudentSearch" type="search" class="form-control form-control-sm mb-2" placeholder="Search students">
+                                                    <label class="form-check small mb-2"><input id="materialStudentSelectAll" class="form-check-input" type="checkbox"> <span class="form-check-label">Select All</span></label>
+                                                    <div id="materialStudentList" class="small" style="max-height: 200px; overflow-y: auto;"></div>
+                                                    <div id="materialStudentEmpty" class="text-muted small d-none">No eligible students are available.</div>
+                                                    <div class="text-muted small mt-2"><span id="materialStudentCount">0 students selected</span></div>
+                                                </div>
+                                            </div>
+                                        </section>
+
+                                        <section class="template-builder-section template-preview-section" aria-labelledby="templatePreviewHeading">
+                                            <div class="template-section-heading">
+                                                <span class="template-section-index">05</span>
                                                 <div><h6 id="templatePreviewHeading">Learning Material Preview</h6><p>A learner-facing view of the activity you are creating.</p></div>
                                             </div>
                                             <div id="templatePreviewPanel" class="template-preview-panel" aria-live="polite">
@@ -10415,6 +10442,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     #studentProgressModal .student-progress-stat-label, #courseInlineDialogHost .student-progress-stat-label { display: block; margin-bottom: .28rem; color: #71808a; font-size: .68rem; font-weight: 800; letter-spacing: .06em; line-height: 1.2; text-transform: uppercase; }
     #studentProgressModal .student-progress-stat-value, #courseInlineDialogHost .student-progress-stat-value { display: block; color: #304854; font-size: .88rem; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
     #studentProgressModal .student-progress-score, #courseInlineDialogHost .student-progress-score { color: var(--dash-primary, #1f6f8b); font-size: 1.05rem; font-weight: 900; white-space: nowrap; }
+    #studentProgressModal .student-progress-retell-score.is-locked, #courseInlineDialogHost .student-progress-retell-score.is-locked,
+    #studentProgressModal .student-progress-retell-score.is-locked:disabled, #courseInlineDialogHost .student-progress-retell-score.is-locked:disabled {
+        cursor: not-allowed; background: #d4d9de !important; border-color: #aeb7c0 !important; color: #4f5962 !important;
+        opacity: 1 !important; filter: grayscale(1); box-shadow: inset 0 1px 2px rgba(0,0,0,.12); font-weight: 700;
+    }
     #studentProgressModal .student-progress-empty, #studentProgressModal .student-progress-loading, #courseInlineDialogHost .student-progress-empty, #courseInlineDialogHost .student-progress-loading { padding: 2.1rem 1rem; border: 1px dashed rgba(30, 55, 70, .16); border-radius: .85rem; color: #71808a; text-align: center; }
     #studentProgressModal .student-progress-loading .spinner-border, #courseInlineDialogHost .student-progress-loading .spinner-border { vertical-align: -.12em; }
     body.dark-theme #studentProgressModal .student-progress-card, body.dark-theme #courseInlineDialogHost .student-progress-card { border-color: rgba(148, 163, 184, .2); background: rgba(15, 23, 42, .72); box-shadow: 0 4px 14px rgba(0, 0, 0, .12); }
@@ -10429,6 +10461,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     #studentProgressModal .student-progress-recording, #courseInlineDialogHost .student-progress-recording { margin-top: .85rem; padding-top: .75rem; border-top: 1px solid rgba(30,55,70,.09); }
     #studentProgressModal .student-progress-recording-panel, #courseInlineDialogHost .student-progress-recording-panel { margin-top: .65rem; }
     #studentProgressModal .student-progress-audio-controls, #courseInlineDialogHost .student-progress-audio-controls { display: flex; align-items: center; gap: .55rem; }
+    #studentProgressModal .lesson29-letter-recording, #courseInlineDialogHost .lesson29-letter-recording { display: grid; grid-template-columns: 2.15rem 2rem minmax(0, 1fr) 5rem; align-items: center; column-gap: .55rem; width: 100%; }
+    #studentProgressModal .student-progress-recording-panel:has(.lesson29-letter-recording), #courseInlineDialogHost .student-progress-recording-panel:has(.lesson29-letter-recording) { display: flex; flex-direction: column; row-gap: .4rem; }
+    #studentProgressModal .lesson29-letter-recording > .me-2, #courseInlineDialogHost .lesson29-letter-recording > .me-2 { width: 2.15rem; margin: 0 !important; white-space: nowrap; }
+    #studentProgressModal .lesson29-letter-recording .student-progress-retell-progress, #courseInlineDialogHost .lesson29-letter-recording .student-progress-retell-progress { width: 100%; min-width: 0; }
+    #studentProgressModal .lesson29-letter-recording .student-progress-retell-time, #courseInlineDialogHost .lesson29-letter-recording .student-progress-retell-time { min-width: 0; text-align: right; }
     #studentProgressModal .student-progress-retell-play, #courseInlineDialogHost .student-progress-retell-play { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; color: #fff; background: #2483a4; flex: 0 0 auto; }
     #studentProgressModal .student-progress-retell-progress, #courseInlineDialogHost .student-progress-retell-progress { width: 100%; accent-color: #2483a4; }
     #studentProgressModal .student-progress-retell-time, #courseInlineDialogHost .student-progress-retell-time { min-width: 75px; color: #526274; font-size: .72rem; white-space: nowrap; }
@@ -10507,7 +10544,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         event.preventDefault();
         const courseId = courseTrigger.dataset.openCourse;
-        if (courseId) openCourseDetail(courseId);
+        if (courseId) {
+            // Always surface failures; otherwise an exception inside the async
+            // opener makes the button look like it did nothing.
+            openCourseDetail(courseId).catch(error => {
+                console.error('Unable to open course', error);
+                if (typeof showToast === 'function') {
+                    showToast(error?.message || 'Unable to open this course.', 'error');
+                }
+            });
+        }
     });
 
     // Load teacher classes (prefer server, fallback to localStorage)
@@ -11297,7 +11343,21 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const response = await fetch(`/api/teacher/story-response/review/?material_id=${encodeURIComponent(materialId)}`, { credentials: 'same-origin' });
         const data = await response.json();
         if (!response.ok || !data.success) { body.innerHTML = `<div class="text-danger">${escapeHtml(data.error || 'Unable to load responses.')}</div>`; return; }
-        body.innerHTML = data.submissions.map(row => `<div class="story-response-review-row"><div class="story-response-review-header"><strong class="story-response-student-name">${escapeHtml(row.student_name)}</strong><span class="story-response-status-badge ${row.grade_locked ? 'is-graded' : ''}">${escapeHtml(row.status)}</span></div>${row.story_title ? `<div class="story-response-story">Story · ${escapeHtml(row.story_title)}</div>` : ''}${row.prompt ? `<div class="story-response-prompt"><span class="story-response-prompt-label">Prompt</span><span class="story-response-prompt-text"> ${escapeHtml(row.prompt)}</span></div>` : ''}${row.response_text ? `<div class="story-response-prompt"><span class="story-response-prompt-label">Answer</span><span class="story-response-prompt-text"> ${escapeHtml(row.response_text)}</span></div>` : ''}${row.recording_url ? `<audio class="w-100" controls preload="none" src="${escapeHtml(row.recording_url)}"></audio><div class="story-response-rubric"><div class="story-response-rubric-title">Scoring Rubric</div><ol class="story-response-rubric-list"><li><strong>0</strong> - Poor</li><li><strong>1</strong> - Fair/Beginning</li><li><strong>2</strong> - Basic/Approaching</li><li><strong>3</strong> - Proficient</li><li><strong>4</strong> - Mastery</li><li><strong>5</strong> - Ready</li></ol></div><div class="story-response-score-row"><label class="story-response-score-label" for="story-response-score-${row.id}">Score</label><select id="story-response-score-${row.id}" class="story-response-grade" data-submission-id="${row.id}" ${row.grade_locked ? 'disabled' : ''}>${['Poor', 'Fair/Beginning', 'Basic/Approaching', 'Proficient', 'Mastery', 'Ready'].map((label, value) => `<option value="${value}" ${Number(row.grade) === value ? 'selected' : ''}>${value} - ${label}</option>`).join('')}</select><span class="story-response-score-out-of">/ 5</span><button type="button" class="story-response-save-grade" data-submission-id="${row.id}" ${row.grade_locked ? 'disabled' : ''}>${row.grade_locked ? 'Score Submitted' : 'Submit Score'}</button>${row.grade !== null && row.grade !== undefined ? `<strong class="story-response-saved-score">Saved ${escapeHtml(row.grade)}/5</strong>` : ''}</div>` : ''}</div>`).join('') || '<div class="text-muted">No enrolled students found.</div>';
+        body.innerHTML = data.submissions.map(row => `<div class="story-response-review-row"><div class="story-response-review-header"><strong class="story-response-student-name">${escapeHtml(row.student_name)}</strong><span class="story-response-status-badge ${row.grade_locked ? 'is-graded' : ''}">${escapeHtml(row.status)}</span></div>${row.story_title ? `<div class="story-response-story">Story · ${escapeHtml(row.story_title)}</div>` : ''}${row.prompt ? `<div class="story-response-prompt"><span class="story-response-prompt-label">Prompt</span><span class="story-response-prompt-text"> ${escapeHtml(row.prompt)}</span></div>` : ''}${row.response_text ? `<div class="story-response-prompt"><span class="story-response-prompt-label">Answer</span><span class="story-response-prompt-text"> ${escapeHtml(row.response_text)}</span></div>` : ''}${row.recording_url ? `<audio class="w-100" controls preload="none" src="${escapeHtml(row.recording_url)}"></audio>` : ''}${row.id ? `<div class="story-response-rubric"><div class="story-response-rubric-title">Scoring Rubric</div><ol class="story-response-rubric-list"><li><strong>0</strong> - Poor</li><li><strong>1</strong> - Fair/Beginning</li><li><strong>2</strong> - Basic/Approaching</li><li><strong>3</strong> - Proficient</li><li><strong>4</strong> - Mastery</li><li><strong>5</strong> - Ready</li></ol></div><div class="story-response-score-row"><label class="story-response-score-label" for="story-response-score-${row.id}">Score</label><select id="story-response-score-${row.id}" class="story-response-grade" data-submission-id="${row.id}" ${(row.grade_locked || row.grade !== null && row.grade !== undefined) ? 'disabled' : ''}>${['Poor', 'Fair/Beginning', 'Basic/Approaching', 'Proficient', 'Mastery', 'Ready'].map((label, value) => `<option value="${value}" ${Number(row.grade) === value ? 'selected' : ''}>${value} - ${label}</option>`).join('')}</select><span class="story-response-score-out-of">/ 5</span><button type="button" class="story-response-save-grade" data-submission-id="${row.id}" ${(row.grade_locked || row.grade !== null && row.grade !== undefined) ? 'disabled' : ''}>${(row.grade_locked || row.grade !== null && row.grade !== undefined) ? 'Score Submitted' : 'Submit Score'}</button>${row.grade !== null && row.grade !== undefined ? `<strong class="story-response-saved-score">Saved ${escapeHtml(row.grade)}/5</strong>` : ''}</div>` : ''}</div>`).join('') || '<div class="text-muted">No enrolled students found.</div>';
+    }
+
+    function confirmManualGrade(score) {
+        return new Promise(resolve => {
+            const id = 'manualGradeConfirmModal';
+            document.getElementById(id)?.remove();
+            document.body.insertAdjacentHTML('beforeend', `<div class="modal fade" id="${id}" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Confirm Score</h5><button type="button" class="btn-close" data-confirm-cancel></button></div><div class="modal-body">You are about to give this student a score of <strong>${escapeHtml(String(score))}</strong>.<br><br>Once submitted, this score will be locked and cannot be changed.</div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-confirm-cancel>Cancel</button><button type="button" class="btn btn-primary" data-confirm-save>Confirm &amp; Save Score</button></div></div></div></div>`);
+            const modal = document.getElementById(id);
+            const finish = value => { resolve(value); bootstrap.Modal.getOrCreateInstance(modal).hide(); modal.addEventListener('hidden.bs.modal', () => modal.remove(), { once: true }); };
+            modal.querySelectorAll('[data-confirm-cancel]').forEach(button => button.addEventListener('click', () => finish(false), { once: true }));
+            modal.querySelector('[data-confirm-save]')?.addEventListener('click', () => finish(true), { once: true });
+            modal.addEventListener('hidden.bs.modal', () => { if (document.body.contains(modal)) modal.remove(); resolve(false); }, { once: true });
+            bootstrap.Modal.getOrCreateInstance(modal).show();
+        });
     }
 
     async function openRetellRecordings(materialId) {
@@ -11322,7 +11382,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const filtered = rows.filter(row => String(row.student_name || '').toLowerCase().includes(query)).sort((a, b) => { const diff = new Date(a.submitted_at) - new Date(b.submitted_at); return sort.value === 'newest' ? -diff : diff; });
             const pages = Math.max(1, Math.ceil(filtered.length / 10)); page = Math.min(page, pages);
             const visible = filtered.slice((page - 1) * 10, page * 10);
-            body.innerHTML = visible.length ? `<table class="table align-middle mb-0 retell-recordings-table"><thead><tr><th>Student</th><th>Submitted</th><th>Recording</th></tr></thead><tbody>${visible.map(row => `<tr><td class="retell-student" title="${escapeHtml(row.student_name)}">${escapeHtml(row.student_name)}</td><td>${new Date(row.submitted_at).toLocaleString()}</td><td>${row.recording_url ? `<div class="retell-recording-player"><button type="button" class="retell-player-btn" data-submission-id="${escapeHtml(row.id)}" data-url="${escapeHtml(row.recording_url)}" aria-label="Play recording"><i class="bi bi-play-fill"></i></button><span class="retell-player-time">0:00 / --:--</span><input class="retell-player-progress" type="range" min="0" max="0" value="0" step="0.1" aria-label="Recording progress"></div>` : '<span class="text-muted">Recording unavailable</span>'}</td></tr>`).join('')}</tbody></table>` : '<div class="text-muted py-4 text-center">No recordings yet.</div>';
+            body.innerHTML = visible.length ? `<table class="table align-middle mb-0 retell-recordings-table"><thead><tr><th>Student</th><th>Submitted</th><th>Recording</th><th>Score</th></tr></thead><tbody>${visible.map(row => `<tr><td class="retell-student" title="${escapeHtml(row.student_name)}">${escapeHtml(row.student_name)}</td><td>${new Date(row.submitted_at).toLocaleString()}</td><td>${row.recording_url ? `<div class="retell-recording-player"><button type="button" class="retell-player-btn" data-submission-id="${escapeHtml(row.id)}" data-url="${escapeHtml(row.recording_url)}" aria-label="Play recording"><i class="bi bi-play-fill"></i></button><span class="retell-player-time">0:00 / --:--</span><input class="retell-player-progress" type="range" min="0" max="0" value="0" step="0.1" aria-label="Recording progress"></div>` : '<span class="text-muted">Recording unavailable</span>'}</td><td><select class="story-response-grade student-progress-retell-score form-select form-select-sm${row.grade_locked ? ' is-locked' : ''}" data-submission-id="${escapeHtml(row.id)}" data-previous-value="${row.grade == null ? '' : row.grade}" ${row.grade_locked ? 'disabled title="Score is locked after submission."' : ''} aria-label="Retell teacher score"><option value="" ${row.grade == null ? 'selected' : ''}>Not scored</option>${['Poor', 'Fair/Beginning', 'Basic/Approaching', 'Proficient', 'Mastery', 'Ready'].map((label, value) => `<option value="${value}" ${String(row.grade) === String(value) ? 'selected' : ''}>${value} - ${label}</option>`).join('')}</select>${row.grade_locked ? '' : `<button type="button" class="story-response-save-grade btn btn-sm btn-primary mt-1" data-submission-id="${escapeHtml(row.id)}">Submit Score</button>`}</td></tr>`).join('')}</tbody></table>` : '<div class="text-muted py-4 text-center">No recordings yet.</div>';
             document.getElementById('retellRecordingsPagination').innerHTML = filtered.length > 10 ? `<span class="small text-muted">${(page - 1) * 10 + 1}–${Math.min(page * 10, filtered.length)} of ${filtered.length}</span><span><button class="btn btn-sm btn-outline-secondary" id="retellPrev" ${page === 1 ? 'disabled' : ''}>Previous</button> <span class="mx-2 small">${page} / ${pages}</span><button class="btn btn-sm btn-outline-secondary" id="retellNext" ${page === pages ? 'disabled' : ''}>Next</button></span>` : '';
         }
         search.oninput = () => { page = 1; render(); }; sort.onchange = () => { page = 1; render(); };
@@ -11397,10 +11457,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const saveButton = event.target.closest('.story-response-save-grade');
         if (!saveButton) return;
         const select = document.querySelector(`.story-response-grade[data-submission-id="${saveButton.dataset.submissionId}"]`);
-        const token = document.querySelector('[name=csrfmiddlewaretoken]')?.value || await ensureCsrfToken();
-        const response = await fetch('/api/teacher/story-response/grade/', { method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-CSRFToken': token}, body: JSON.stringify({submission_id: saveButton.dataset.submissionId, grade: select?.value}) });
-        const data = await response.json();
-        if (!response.ok || !data.success) { showToast(data.error || 'Grade could not be saved', 'error'); return; }
+        if (!(await confirmManualGrade(select?.value ?? ''))) return;
+        saveButton.disabled = true;
+        try {
+            const token = document.querySelector('[name=csrfmiddlewaretoken]')?.value || await ensureCsrfToken();
+            const response = await fetch('/api/teacher/story-response/grade/', { method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-CSRFToken': token}, body: JSON.stringify({submission_id: saveButton.dataset.submissionId, grade: select?.value}) });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.success) throw new Error(data.error || `Grade could not be saved (HTTP ${response.status}).`);
         const row = saveButton.closest('.story-response-review-row');
         row?.querySelector('.story-response-status-badge')?.replaceChildren(document.createTextNode('Graded'));
         row?.querySelector('.story-response-status-badge')?.classList.add('is-graded');
@@ -11413,6 +11476,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         savedScore.textContent = `${data.submission.grade}/5`;
         saveButton.parentElement?.appendChild(savedScore);
         showToast('Grade saved', 'success');
+        } catch (error) {
+            saveButton.disabled = false;
+            showToast(error.message || 'Grade could not be saved', 'error');
+        }
     });
 
     function initializeCourseAssessmentTableHandlers() {
@@ -11952,6 +12019,25 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     }
 
     async function openCourseDetail(courseId) {
+        // Open the modal before refreshing course data. A slow or failed
+        // background request should not make the Open Course button appear
+        // unresponsive.
+        const modalEl = document.getElementById('courseDetailModal');
+        if (!modalEl) {
+            throw new Error('Course details are unavailable on this page. Please refresh and try again.');
+        }
+        if (modalEl.parentElement !== document.body) {
+            document.body.appendChild(modalEl);
+        }
+        if (!window.bootstrap?.Modal) {
+            throw new Error('Course details could not be opened because the page is still loading. Please refresh and try again.');
+        }
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modalEl.dataset.courseId = courseId;
+        const titleEl = document.getElementById('courseDetailTitle');
+        if (titleEl) titleEl.textContent = 'Loading course…';
+        modal.show();
+
         try {
             closeCourseMaterialDetail();
             // Defensive reset: when a previous modal transition is interrupted,
@@ -12861,11 +12947,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 });
             }
 
-            // store current course id on modal for create flow
-            const modalEl = document.getElementById('courseDetailModal');
-            if (modalEl && modalEl.parentElement !== document.body) {
-                document.body.appendChild(modalEl);
-            }
+            // Store the current course id on the standalone modal for create flows.
             modalEl.dataset.courseId = course.id;
             const materialClassContext = resolveMaterialClassContext(course.id);
             if (materialClassContext.classId) currentSectionId = materialClassContext.classId;
@@ -13000,10 +13082,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
             // No parent modal shown — course modal is standalone to avoid nested/backdrop issues
 
-            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-            modal.show();
         } catch (e) {
             console.warn('openCourseDetail error', e);
+            if (typeof showToast === 'function') {
+                showToast(e?.message || 'Unable to load this course.', 'error');
+            }
         }
     };
 
@@ -13167,6 +13250,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 activity_type: 'lesson_1_recording',
                             })) }];
                         }
+                        return [String(rawId), null];
+                    }
+                    if (String(rawId) === 'prescribed-lesson-29-gawain-3') {
+                        const res = await fetch('{% url "teacher_lesson29_trace_say_recordings" %}', { credentials: 'same-origin' });
+                        const data = await res.json();
+                        if (res.ok && data.success) return [String(rawId), { attempts: (data.submissions || []).map(row => ({...row, activity_type: 'lesson_29_trace_say'})) }];
                         return [String(rawId), null];
                     }
                     if (String(rawId).startsWith('material-')) {
@@ -14300,6 +14389,22 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
         return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
     };
+    const hydrateStudentProgressAudioDurations = (root = document) => {
+        root.querySelectorAll('.student-progress-retell-play[data-url]').forEach(button => {
+            const controls = button.closest('.student-progress-audio-controls');
+            const progress = controls?.querySelector('.student-progress-retell-progress');
+            const time = controls?.querySelector('.student-progress-retell-time');
+            if (!controls || !progress || !time || button.dataset.durationHydrated === 'true') return;
+            button.dataset.durationHydrated = 'true';
+            const audio = new Audio(button.dataset.url);
+            audio.preload = 'metadata';
+            audio.addEventListener('loadedmetadata', () => {
+                const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+                progress.max = duration;
+                time.textContent = `0:00 / ${formatStudentProgressAudioTime(duration)}`;
+            }, { once: true });
+        });
+    };
 
     // Existing course student-progress actions use this delegated click event.
     document.addEventListener('click', function(e) {
@@ -14341,11 +14446,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 : 'Reading Activity';
         }
 
-        function courseProgressTasks(course) {
+        function courseProgressTasks(course, studentId) {
             const tasks = [];
             const seen = new Set();
             const addMaterialTask = (material) => {
                 if (!material) return;
+                if (String(material.publication_scope || 'whole_class') === 'selected_students') {
+                    const selected = Array.isArray(material.selected_student_ids) ? material.selected_student_ids.map(String) : [];
+                    if (!selected.includes(String(studentId))) return;
+                }
                 // Prefer explicit assessment_id; if absent use a material-prefixed id so we can fetch attempts for the material
                 const assessmentId = material.assessment_id || (material.id ? `material-${material.id}` : null);
                 if (!assessmentId) return;
@@ -14384,6 +14493,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 source_type: 'prescribed',
                 activityType: 'lesson_1_recording',
                 activityLabel: 'Session 1',
+            });
+            tasks.push({
+                title: 'Lesson 29 Activity 3 · Trace & Say',
+                assessmentId: 'prescribed-lesson-29-gawain-3',
+                source_type: 'prescribed',
+                activityType: 'lesson_29_trace_say',
+                activityLabel: 'Session 13',
             });
 
             return tasks;
@@ -14432,7 +14548,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 modalEl.addEventListener('hidden.bs.modal', stopStudentProgressAudio);
             }
 
-            const tasks = courseProgressTasks(course);
+            const tasks = courseProgressTasks(course, studentId);
             if (tasks.length === 0) {
                 list.innerHTML = '<div class="student-progress-empty">No reading activities assigned yet.</div>';
                 return;
@@ -14464,7 +14580,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         const bTime = Date.parse(b.completed_at || b.started_at || b.updated_at || '') || 0;
                         return aTime - bTime;
                     });
-                return [{ task, attempt: filteredAttempts[filteredAttempts.length - 1] || null }];
+                const selectedAttempt = filteredAttempts[filteredAttempts.length - 1] || null;
+                if (String(task.activityType || '').toLowerCase() === 'lesson_29_trace_say' && selectedAttempt) {
+                    selectedAttempt.recordings = filteredAttempts.slice().sort((a, b) => Number(a.item_index ?? 0) - Number(b.item_index ?? 0));
+                }
+                return [{ task, attempt: selectedAttempt }];
             });
             const searchInput = document.getElementById('studentProgressSearch');
             const sortInput = document.getElementById('studentProgressSort');
@@ -14522,6 +14642,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const isRetellStory = activityType === 'retell_story';
                     const isStoryResponse = activityType === 'story_response';
                     const isLesson1Recording = activityType === 'lesson_1_recording';
+                    const isLesson29TraceSay = activityType === 'lesson_29_trace_say';
                     const timeSpent = isLesson1Recording && attempt?.recording_duration_seconds !== undefined
                         ? attempt.recording_duration_seconds
                         : (attempt ? latestAttemptValue(attempt, 'time_spent', 'duration_seconds', 'duration') : null);
@@ -14544,11 +14665,26 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         : attempt?.retell_grade;
                     const retellGradeValue = retellGrade === undefined || retellGrade === null || retellGrade === '' ? '' : String(retellGrade);
                     const retellRecordingKey = String(retellSubmissionId || `${task.assessmentId || task.title}-${studentId}`);
-                    const retellRecordingAvailable = (isRetellStory || isStoryResponse || isLesson1Recording) && attempt?.recording_available && attempt?.recording_url;
+                    const retellRecordingAvailable = (isRetellStory || isStoryResponse || isLesson1Recording || isLesson29TraceSay) && attempt?.recording_available && attempt?.recording_url;
+                    const lesson29Recordings = isLesson29TraceSay && Array.isArray(attempt?.recordings) ? attempt.recordings : [];
+                    const lesson29RecordingHtml = lesson29Recordings
+                        .filter(recording => recording.recording_available && recording.recording_url)
+                        .map((recording, recordingIndex) => {
+                            const letterLabel = escapeHtml(recording.letter || ('Letter ' + (recordingIndex + 1)));
+                            const duration = escapeHtml(formatStudentProgressAudioTime(recording.recording_duration_seconds));
+                            return `<div class="student-progress-audio-controls lesson29-letter-recording"><span class="me-2">${letterLabel}</span><button type="button" class="student-progress-retell-play" data-url="${escapeHtml(recording.recording_url)}" aria-label="Play letter recording ${recordingIndex + 1}"><i class="bi bi-play-fill"></i></button><input class="student-progress-retell-progress" type="range" min="0" max="0" value="0" step="0.1" aria-label="Recording progress"><span class="student-progress-retell-time">0:00 / ${duration}</span></div>`;
+                        }).join('');
+                    const recordingHtml = isLesson29TraceSay
+                        ? lesson29RecordingHtml
+                        : (retellRecordingAvailable
+                            ? `<div class="student-progress-audio-controls"><button type="button" class="student-progress-retell-play" data-url="${escapeHtml(attempt.recording_url)}" aria-label="Play recording"><i class="bi bi-play-fill"></i></button><input class="student-progress-retell-progress" type="range" min="0" max="0" value="0" step="0.1" aria-label="Recording progress"><span class="student-progress-retell-time">0:00 / ${escapeHtml(formatStudentProgressAudioTime(attempt.recording_duration_seconds))}</span></div>`
+                            : '<span class="student-progress-recording-unavailable">Recording unavailable</span>');
                     const scoreValue = isLesson1Recording
                         ? (attempt?.status === 'checked' ? '1' : '-')
-                        : isRetellStory
-                        ? `<select class="student-progress-retell-score form-select form-select-sm" data-submission-id="${escapeHtml(retellSubmissionId || '')}" data-previous-value="${escapeHtml(retellGradeValue)}" ${retellSubmissionId ? '' : 'disabled'} aria-label="Retell teacher score"><option value="" ${retellGradeValue === '' ? 'selected' : ''}>Not scored</option>${['Poor', 'Fair/Beginning', 'Basic/Approaching', 'Proficient', 'Mastery', 'Ready'].map((label, value) => `<option value="${value}" ${retellGradeValue === String(value) ? 'selected' : ''}>${value} - ${label}</option>`).join('')}</select>`
+                        : isLesson29TraceSay
+                        ? (attempt?.status === 'checked' ? 'Checked' : 'Awaiting teacher')
+                        : (isRetellStory || isStoryResponse)
+                        ? `<select class="student-progress-retell-score form-select form-select-sm${(isStoryResponse || isRetellStory) && (attempt?.grade_locked || retellGradeValue !== '') ? ' is-locked' : ''}" data-submission-id="${escapeHtml(retellSubmissionId || '')}" data-previous-value="${escapeHtml(retellGradeValue)}" ${(!retellSubmissionId || ((isStoryResponse || isRetellStory) && (attempt?.grade_locked || retellGradeValue !== ''))) ? 'disabled' : ''} aria-label="Teacher score"${(isStoryResponse || isRetellStory) && (attempt?.grade_locked || retellGradeValue !== '') ? ' title="Score is locked after submission."' : ''}><option value="" ${retellGradeValue === '' ? 'selected' : ''}>Not scored</option>${['Poor', 'Fair/Beginning', 'Basic/Approaching', 'Proficient', 'Mastery', 'Ready'].map((label, value) => `<option value="${value}" ${retellGradeValue === String(value) ? 'selected' : ''}>${value} - ${label}</option>`).join('')}</select>`
                         : displayedScore;
                     const typeLabel = task.activityLabel || 'Reading Activity';
                     return `
@@ -14565,16 +14701,18 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <div class="student-progress-stat"><span class="student-progress-stat-label">Time Spent</span><span class="student-progress-stat-value">${timeSpent !== undefined && timeSpent !== null && timeSpent !== '' ? escapeHtml(formatCourseReportDuration(timeSpent)) : '—'}</span></div>
                                 <div class="student-progress-stat"><span class="student-progress-stat-label">Score</span><span class="student-progress-stat-value student-progress-score">${scoreValue}</span></div>
                             </div>
-                            ${(isRetellStory || isStoryResponse || isLesson1Recording) ? `<div class="student-progress-recording" data-recording-key="${escapeHtml(retellRecordingKey)}">
+                            ${(isRetellStory || isStoryResponse || isLesson1Recording || isLesson29TraceSay) ? `<div class="student-progress-recording" data-recording-key="${escapeHtml(retellRecordingKey)}">
                                 <div class="student-progress-recording-panel">
-                                    ${retellRecordingAvailable ? `<div class="student-progress-audio-controls"><button type="button" class="student-progress-retell-play" data-url="${escapeHtml(attempt.recording_url)}" aria-label="Play recording"><i class="bi bi-play-fill"></i></button><input class="student-progress-retell-progress" type="range" min="0" max="0" value="0" step="0.1" aria-label="Recording progress"><span class="student-progress-retell-time">0:00 / ${escapeHtml(formatStudentProgressAudioTime(attempt.recording_duration_seconds))}</span></div>` : '<span class="student-progress-recording-unavailable">Recording unavailable</span>'}
+                                    ${recordingHtml}
                                     ${isLesson1Recording && (attempt?.can_retry || attempt?.can_check) ? `<div class="d-flex gap-2 mt-2 lesson1-review-actions"><button type="button" class="btn btn-outline-secondary btn-sm student-progress-lesson1-action" data-id="${escapeHtml(attempt.submission_id || '')}" data-action="retry" ${attempt.can_retry ? '' : 'disabled'}>Retry</button><button type="button" class="btn btn-primary btn-sm student-progress-lesson1-action" data-id="${escapeHtml(attempt.submission_id || '')}" data-action="checked" ${attempt.can_check ? '' : 'disabled'}>Mark as Checked</button></div>` : ''}
+                                    ${isLesson29TraceSay && (attempt?.can_retry || attempt?.can_check) ? `<div class="d-flex gap-2 mt-2 lesson29-review-actions"><button type="button" class="btn btn-outline-secondary btn-sm student-progress-lesson29-action" data-student-id="${escapeHtml(attempt.student_id || '')}" data-action="retry" ${attempt.can_retry ? '' : 'disabled'}>Retry</button><button type="button" class="btn btn-primary btn-sm student-progress-lesson29-action" data-student-id="${escapeHtml(attempt.student_id || '')}" data-action="checked" ${attempt.can_check ? '' : 'disabled'}>Mark as Complete</button></div>` : ''}
                                 </div>
                             </div>` : ''}
                         </article>
                     `;
                 });
                 list.innerHTML = rows.length ? rows.join('') : '<div class="student-progress-empty">No reading activities found.</div>';
+                hydrateStudentProgressAudioDurations(list);
             };
             if (searchInput && !searchInput.dataset.bound) {
                 searchInput.dataset.bound = 'true';
@@ -14601,6 +14739,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         if (!select || !select.dataset.submissionId) return;
         const previousValue = select.dataset.previousValue ?? '';
         const selectedValue = select.value;
+        if (!(await confirmManualGrade(selectedValue))) {
+            select.value = previousValue;
+            return;
+        }
         select.disabled = true;
         try {
             const response = await fetch('/api/teacher/story-response/grade/', {
@@ -14613,16 +14755,36 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (!response.ok || !data.success) throw new Error(data.error || 'Score could not be saved.');
             select.dataset.previousValue = selectedValue;
             studentProgressRetellGrades.set(String(select.dataset.submissionId), selectedValue === '' ? null : Number(selectedValue));
-            showToast('Retell score saved', 'success');
+            if (data.submission?.grade_locked) {
+                select.dataset.gradeLocked = 'true';
+                select.classList.add('is-locked');
+                select.title = 'Score is locked after submission.';
+                select.disabled = true;
+            }
+            showToast('Teacher score saved', 'success');
         } catch (error) {
             select.value = previousValue;
             showToast(error.message || 'Score could not be saved.', 'error');
         } finally {
-            select.disabled = false;
+            if (select.dataset.gradeLocked !== 'true') select.disabled = false;
         }
     });
 
     document.addEventListener('click', function(event) {
+        const lesson29Action = event.target.closest('.student-progress-lesson29-action');
+        if (lesson29Action) {
+            lesson29Action.disabled = true;
+            ensureCsrfToken().then(token => fetch('{% url "teacher_lesson29_trace_say_review_action" %}', {
+                method: 'POST', credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
+                body: JSON.stringify({ student_id: lesson29Action.dataset.studentId, action: lesson29Action.dataset.action })
+            })).then(response => response.json().then(data => ({ response, data }))).then(({ response, data }) => {
+                if (!response.ok || !data.success) throw new Error(data.error || 'Review action failed.');
+                showToast(lesson29Action.dataset.action === 'checked' ? 'Activity marked complete' : 'Activity sent for retry', 'success');
+                lesson29Action.closest('.student-progress-recording')?.remove();
+            }).catch(error => showToast(error.message || 'Review action failed.', 'error'));
+            return;
+        }
         const lesson1Action = event.target.closest('.student-progress-lesson1-action');
         if (lesson1Action) {
             lesson1Action.disabled = true;
@@ -15813,6 +15975,57 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const publicationStatusSelect = document.getElementById('publicationStatus');
         const randomizeOrderCheckbox = document.getElementById('randomizeOrderToggle');
         const materialAssessmentKindInput = document.getElementById('materialAssessmentKind');
+        const publicationSettingsPanel = document.getElementById('materialPublicationSettings');
+        const materialPublicationScopeInputs = document.querySelectorAll('input[name="materialPublicationScope"]');
+        const materialSelectedStudentsPanel = document.getElementById('materialSelectedStudentsPanel');
+        const materialStudentSearch = document.getElementById('materialStudentSearch');
+        const materialStudentSelectAll = document.getElementById('materialStudentSelectAll');
+        const materialStudentList = document.getElementById('materialStudentList');
+        const materialStudentEmpty = document.getElementById('materialStudentEmpty');
+        const materialStudentCount = document.getElementById('materialStudentCount');
+        let materialEligibleStudents = [];
+        let materialSelectedStudentIds = new Set();
+        async function loadMaterialStudents() {
+            const sectionId = typeof getTeacherSectionId === 'function' ? getTeacherSectionId(currentSectionId) : currentSectionId;
+            materialEligibleStudents = [];
+            materialSelectedStudentIds.clear();
+            if (!sectionId) { renderMaterialStudents(); return; }
+            try {
+                const response = await fetch(`/dashboard/teacher/material-section-students/?section_id=${encodeURIComponent(sectionId)}`, { credentials: 'same-origin' });
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.error || 'Unable to load students.');
+                materialEligibleStudents = Array.isArray(data.students) ? data.students : [];
+            } catch (error) { console.warn('Could not load material students:', error); }
+            renderMaterialStudents();
+        }
+        function renderMaterialStudents() {
+            if (!materialStudentList) return;
+            const query = (materialStudentSearch?.value || '').trim().toLowerCase();
+            const visible = materialEligibleStudents.filter(student => `${student.name} ${student.custom_id || ''}`.toLowerCase().includes(query));
+            materialStudentList.innerHTML = visible.map(student => `<label class="form-check mb-1"><input class="form-check-input material-student-checkbox" type="checkbox" value="${student.id}" ${materialSelectedStudentIds.has(Number(student.id)) ? 'checked' : ''}><span class="form-check-label">${student.name}</span></label>`).join('');
+            materialStudentEmpty?.classList.toggle('d-none', visible.length > 0);
+            if (materialStudentCount) materialStudentCount.textContent = `${materialSelectedStudentIds.size} students selected`;
+            if (materialStudentSelectAll) materialStudentSelectAll.checked = visible.length > 0 && visible.every(student => materialSelectedStudentIds.has(Number(student.id)));
+            materialStudentList.querySelectorAll('.material-student-checkbox').forEach(input => input.addEventListener('change', () => { const id = Number(input.value); input.checked ? materialSelectedStudentIds.add(id) : materialSelectedStudentIds.delete(id); renderMaterialStudents(); }));
+        }
+        function materialPublicationSettings() {
+            return { publication_scope: document.querySelector('input[name="materialPublicationScope"]:checked')?.value || 'whole_class', selected_student_ids: Array.from(materialSelectedStudentIds) };
+        }
+        async function initializeMaterialPublicationSettings(material) {
+            const scope = material?.publication_scope || 'whole_class';
+            materialPublicationScopeInputs.forEach(input => { input.checked = input.value === scope; });
+            materialSelectedStudentsPanel?.classList.toggle('d-none', scope !== 'selected_students');
+            await loadMaterialStudents();
+            materialSelectedStudentIds = new Set((material?.selected_student_ids || []).map(Number));
+            renderMaterialStudents();
+        }
+        materialPublicationScopeInputs.forEach(input => input.addEventListener('change', () => { materialSelectedStudentsPanel?.classList.toggle('d-none', input.value !== 'selected_students' || !input.checked); if (input.checked && input.value === 'selected_students') loadMaterialStudents(); }));
+        materialStudentSearch?.addEventListener('input', renderMaterialStudents);
+        materialStudentSelectAll?.addEventListener('change', () => {
+            const query = (materialStudentSearch?.value || '').trim().toLowerCase();
+            materialEligibleStudents.filter(student => `${student.name} ${student.custom_id || ''}`.toLowerCase().includes(query)).forEach(student => materialStudentSelectAll.checked ? materialSelectedStudentIds.add(Number(student.id)) : materialSelectedStudentIds.delete(Number(student.id)));
+            renderMaterialStudents();
+        });
         const addMaterialValidationError = document.getElementById('amValidationError');
         let editingItemIndex = null;
         const scheduleFieldDiv = document.getElementById('scheduleField');
@@ -16513,6 +16726,19 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (!activeTemplateActivity && active) return;
             if (templateActivityGrid) setNodeVisibility(templateActivityGrid, !active);
             if (templateBuilderPanel) setNodeVisibility(templateBuilderPanel, active);
+            placePublicationSettings(active);
+            if (publicationSettingsPanel) setNodeVisibility(publicationSettingsPanel, active || personalWorkspaceActive);
+        }
+
+        function placePublicationSettings(templateBuilderActive) {
+            if (!publicationSettingsPanel) return;
+            if (templateBuilderActive) {
+                const previewSection = document.querySelector('.template-preview-section');
+                if (previewSection?.parentNode) previewSection.parentNode.insertBefore(publicationSettingsPanel, previewSection);
+            } else {
+                const personalSettingsSection = personalMaterialSections?.[1];
+                if (personalSettingsSection) personalSettingsSection.appendChild(publicationSettingsPanel);
+            }
         }
 
         function setCourseMaterialDropdownOpen(state, isOpen) {
@@ -18311,8 +18537,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const scheduleIndex = document.querySelector('[aria-labelledby="templateScheduleHeading"] .template-section-index');
             const previewIndex = document.querySelector('[aria-labelledby="templatePreviewHeading"] .template-section-index');
             configSection?.classList.toggle('d-none', retell);
-            if (retell) { if (scheduleIndex) scheduleIndex.textContent = '02'; if (previewIndex) previewIndex.textContent = '03'; }
-            else { if (scheduleIndex) scheduleIndex.textContent = '03'; if (previewIndex) previewIndex.textContent = '04'; }
+            if (scheduleIndex) scheduleIndex.textContent = '03';
+            if (previewIndex) previewIndex.textContent = '05';
             const titleInput = document.getElementById('templateActivityTitle');
             const titleSelect = document.getElementById('templateActivityTitleSelect');
             titleInput?.classList.toggle('d-none', retell);
@@ -19350,6 +19576,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             applyTemplateLanguageSelection(templateLanguage, templateTitle);
             window.__addMaterialDefaultMode = 'supplementary';
             setTemplateBuilderActive(true);
+            if (activeTemplateActivity?.mode !== 'edit') {
+                materialPublicationScopeInputs.forEach(input => { input.checked = input.value === 'whole_class'; });
+                materialSelectedStudentIds.clear();
+                renderMaterialStudents();
+                materialSelectedStudentsPanel?.classList.add('d-none');
+            }
             if (templateActivityTitle) {
                 if (!isLetterSoundMatchingTemplate(templateTitle) && !isLetterSoundCorrespondenceTemplate(templateTitle) && !isWordDecodingTemplate(templateTitle)) {
                     templateActivityTitle.value = isSoundDetectiveTemplate(templateTitle) ? 'Sound Detective' : (isStoryResponseTemplate(templateTitle) ? 'Story Response' : '');
@@ -19467,6 +19699,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         function beginPersonalMaterialWorkspace() {
             setAddMaterialMode('supplementary');
             personalWorkspaceActive = true;
+            placePublicationSettings(false);
+            setNodeVisibility(publicationSettingsPanel, true);
             setNodeVisibility(templateLandingPanel, false);
             setNodeVisibility(personalWorkspaceBack, true);
             addMaterialFooter?.classList.remove('d-none');
@@ -20077,6 +20311,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         source_material_id: null,
                         template_title: activeTemplateActivity?.templateTitle || '',
                         template_lesson: activeTemplateActivity?.lesson || '',
+                        ...materialPublicationSettings(),
                     };
                     const isEditMode = activeTemplateActivity?.mode === 'edit';
                     const existingMaterialId = activeTemplateActivity?.materialId;
@@ -20803,6 +21038,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (addMaterialFooter) {
                 addMaterialFooter.classList.toggle('d-none', !showSupplementary || !personalWorkspaceActive);
             }
+            if (publicationSettingsPanel && !showSupplementary) setNodeVisibility(publicationSettingsPanel, false);
             if (showSupplementary && cancelMaterialSetupBtn) {
                 cancelMaterialSetupBtn.disabled = false;
                 cancelMaterialSetupBtn.removeAttribute('aria-disabled');
@@ -21548,6 +21784,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     window._pendingSharedMaterialOrigin = false;
                     window._pendingSharedMaterialSourceId = null;
                     window.courseAttachTarget = null;
+                    initializeMaterialPublicationSettings(material);
                     new bootstrap.Modal(addMaterialModal).show();
                     return;
                 }
@@ -21611,6 +21848,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 window.courseAttachTarget = null;
 
                 // Show modal
+                initializeMaterialPublicationSettings(material);
                 new bootstrap.Modal(addMaterialModal).show();
             } catch (err) {
                 console.warn('openAddMaterialForEdit failed', err);
@@ -22306,6 +22544,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         // prevent attaching new materials during edit flows
                         window.courseAttachTarget = null;
                         window.__addMaterialDefaultMode = 'supplementary';
+                        initializeMaterialPublicationSettings(material);
                         new bootstrap.Modal(addModalEl).show();
                     }
 
@@ -22645,7 +22884,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                                 'X-CSRFToken': csrfToken,
                                                 'X-Requested-With': 'XMLHttpRequest'
                                             },
-                                            body: JSON.stringify({ material_id: editingMaterialId, title: title, reading_type: readingType, content: content, status: status, usage_type: usageType, section_id: getTeacherSectionId(currentSectionId) || null, scheduled_at: schedule || null, assigned_week: assignedWeek, language: language, randomize_order: randomizeOrder, assessment_kind: assessmentKind, source_type: sourceType })
+                                            body: JSON.stringify({ material_id: editingMaterialId, title: title, reading_type: readingType, content: content, status: status, usage_type: usageType, section_id: getTeacherSectionId(currentSectionId) || null, scheduled_at: schedule || null, assigned_week: assignedWeek, language: language, randomize_order: randomizeOrder, assessment_kind: assessmentKind, source_type: sourceType, ...materialPublicationSettings() })
                                         };
                                         apiResponse = await fetch('/dashboard/teacher/update-material/', opts);
                                         if (apiResponse.status === 403) {
@@ -22684,7 +22923,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                             randomize_order: randomizeOrder,
                                             assessment_kind: assessmentKind,
                                             source_type: sourceType,
-                                            source_material_id: window._pendingSharedMaterialSourceId || null
+                                            source_material_id: window._pendingSharedMaterialSourceId || null,
+                                            ...materialPublicationSettings()
                                         })
                                     };
 

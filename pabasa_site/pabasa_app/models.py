@@ -1360,6 +1360,11 @@ class Material(models.Model):
         ("crla", "CRLA Assessment"),
     ]
 
+    PUBLICATION_SCOPE_CHOICES = [
+        ("whole_class", "Whole Class"),
+        ("selected_students", "Selected Students"),
+    ]
+
     # Materials are the assignable reading content. Assessment rows store
     # student result attempts and point back here through Assessment.material.
     assessment = models.ForeignKey(Assessment, on_delete=models.CASCADE, related_name="materials", null=True, blank=True)
@@ -1400,6 +1405,11 @@ class Material(models.Model):
     )
     assigned_weeks = models.JSONField(default=list, blank=True)
     student_access = models.BooleanField(default=False)
+    publication_scope = models.CharField(
+        max_length=24,
+        choices=PUBLICATION_SCOPE_CHOICES,
+        default="whole_class",
+    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -1621,6 +1631,23 @@ class Material(models.Model):
         )
         result._apply_attempt_payload(result, attempt_data)
         return result._serialize_attempt()
+
+
+class MaterialStudentAssignment(models.Model):
+    """Persistent allow-list entry for selected-student material publication."""
+
+    material = models.ForeignKey(Material, on_delete=models.CASCADE, related_name="student_assignments")
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="material_assignments")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "material_student_assignments"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["material", "student"],
+                name="uniq_material_student_assignment",
+            ),
+        ]
 
 
 class ClassCrlaFinalization(models.Model):
@@ -2009,6 +2036,16 @@ class ActivityLog(models.Model):
         return f"{self.get_event_type_display()}: {self.title}"
 
 
+class PrescribedActivityAccessSettings(models.Model):
+    """Global administrator control for prescribed activity availability."""
+
+    unlock_all_activities = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "prescribed_activity_access_settings"
+
+
 class StudentActivityProgress(models.Model):
     """Resumable state for standalone student activities without a Material."""
 
@@ -2033,6 +2070,12 @@ class StudentActivityRecordingSubmission(models.Model):
     STATUS_CHOICES = [('submitted', 'Submitted'), ('retry', 'Retry Requested'), ('checked', 'Checked')]
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="activity_recording_submissions")
     activity_key = models.CharField(max_length=100)
+    # Nullable for legacy one-record-per-activity submissions; itemized
+    # activities use this to keep one current recording per item.
+    item_index = models.PositiveIntegerField(null=True, blank=True)
+    # Optional stage identity for activities whose item contains multiple
+    # separately reviewable recordings (for example Session 4 Gawain 2).
+    substep = models.PositiveIntegerField(null=True, blank=True)
     audio_file = models.FileField(upload_to="activity_recordings/%Y/%m/%d/")
     duration_seconds = models.PositiveIntegerField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')
@@ -2043,7 +2086,23 @@ class StudentActivityRecordingSubmission(models.Model):
 
     class Meta:
         db_table = "student_activity_recording_submissions"
-        constraints = [models.UniqueConstraint(fields=("student", "activity_key"), name="unique_student_activity_recording")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("student", "activity_key"),
+                condition=models.Q(item_index__isnull=True),
+                name="unique_student_activity_recording",
+            ),
+            models.UniqueConstraint(
+                fields=("student", "activity_key", "item_index"),
+                condition=models.Q(item_index__isnull=False, substep__isnull=True),
+                name="unique_itemized_activity_recording",
+            ),
+            models.UniqueConstraint(
+                fields=("student", "activity_key", "item_index", "substep"),
+                condition=models.Q(item_index__isnull=False, substep__isnull=False),
+                name="unique_staged_activity_recording",
+            ),
+        ]
 
 
 class LiveAssessmentSession(models.Model):

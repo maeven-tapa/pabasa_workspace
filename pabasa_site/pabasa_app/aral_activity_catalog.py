@@ -90,6 +90,11 @@ ACTIVITIES = OrderedDict([
         "identifiers": ("story_response",),
         "competencies": ("Oral Language", "Reading Comprehension"),
     }),
+    ("reading_practice", {
+        "name": "Reading Practice",
+        "identifiers": ("reading_practice",),
+        "competencies": ("Fluency",),
+    }),
 ])
 
 from .prescribed_workbook import ACTIVITIES as WORKBOOK_ACTIVITIES

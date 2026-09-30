@@ -86,6 +86,11 @@
     const answers = stage.querySelector('#answers:not([hidden])');
     const prompt = stage.querySelector('.prompt');
     if (answers) {
+      const pair = stage.querySelector('.pair');
+      if (pair) {
+        pair.classList.remove('naming-phase');
+        pair.classList.add('phase2');
+      }
       const read = stage.querySelector('#read');
       const listen = stage.querySelector('#listen');
       if (read) read.hidden = true;

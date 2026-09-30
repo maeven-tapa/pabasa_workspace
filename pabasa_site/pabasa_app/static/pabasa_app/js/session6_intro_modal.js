@@ -1,6 +1,69 @@
 (function () {
   'use strict';
 
+  // Session 6 has several activity renderers that create their own Audio
+  // objects. Keep one shared playback lease so an instruction, word, or
+  // feedback clip always cancels the previous clip, including an in-flight
+  // read-aloud request.
+  const audioBus = window.__session6AudioBus || (() => {
+    let generation = 0;
+    let currentPlayer = null;
+    let currentController = null;
+
+    const cancel = () => {
+      generation += 1;
+      currentController?.abort();
+      currentController = null;
+      if (currentPlayer) {
+        const player = currentPlayer;
+        currentPlayer = null;
+        player.onended = null;
+        player.onerror = null;
+        player.onpause = null;
+        player.pause();
+      }
+    };
+
+    const begin = () => {
+      cancel();
+      const leaseGeneration = generation;
+      const controller = new AbortController();
+      currentController = controller;
+      return {
+        signal: controller.signal,
+        isCurrent: () => leaseGeneration === generation,
+        play: async source => {
+          if (leaseGeneration !== generation || !source) return false;
+          const player = new Audio(source);
+          currentPlayer = player;
+          return new Promise(resolve => {
+            let settled = false;
+            const finish = () => {
+              if (settled) return;
+              settled = true;
+              player.onended = null;
+              player.onerror = null;
+              player.onpause = null;
+              if (currentPlayer === player) currentPlayer = null;
+              if (currentController === controller) currentController = null;
+              resolve(leaseGeneration === generation);
+            };
+            player.onended = finish;
+            player.onerror = finish;
+            player.onpause = finish;
+            Promise.resolve(player.play()).catch(finish);
+          });
+        },
+      };
+    };
+
+    const bus = { begin, cancel };
+    window.__session6AudioBus = bus;
+    addEventListener('session6-prescribed-cancel', cancel);
+    addEventListener('pagehide', cancel, { once: true });
+    return bus;
+  })();
+
   const activityKeys = new Set([
     'lesson-16-gawain-1',
     'lesson-16-gawain-2',
@@ -69,6 +132,16 @@
 
   const key = String(data.activity_key);
   const safeKey = key.replace(/[^a-z0-9_-]/gi, '-');
+  // These activities own their first narration on the activity page. Playing
+  // their prompt here makes the modal skip the activity intro and repeats the
+  // same narration when the first word is rendered.
+  const activityIntroAudioKeys = new Set([
+    'session-6-lesson-16-gawain-4',
+    'lesson-17-18-gawain-6',
+    'lesson-17-18-gawain-7',
+    'lesson-17-18-gawain-8',
+    'lesson-17-18-gawain-9',
+  ]);
   const openingAudio = {
     'lesson-16-gawain-1': ['/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/04_item_01_gumamela_missing_syllable_prompt.mp3'],
     'lesson-16-gawain-2': ['/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_2/04_item_01_gumamela_missing_syllable_prompt.mp3'],
@@ -86,28 +159,68 @@
     'lesson-17-18-gawain-8': ['/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_8/basahin_bilugan_naiiba_sa_pangkat_tts.mp3'],
     'lesson-17-18-gawain-9': ['/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_9/unang_larawan_pana_tts.mp3'],
   }[key] || [];
+  const modalOpeningAudio = activityIntroAudioKeys.has(key) ? [] : openingAudio;
 
-  const playOpeningAudio = () => {
-    if (!openingAudio.length) return;
+  const playOpeningAudio = async () => {
+    if (!modalOpeningAudio.length) return;
     window.__session6IntroModalAudioStarted = true;
     if (key === 'lesson-17-18-gawain-7' || key === 'lesson-17-18-gawain-8') {
       window.__session6IntroModalSkipFirstPromptIntro = true;
     }
-    let index = 0;
-    const playNext = () => {
-      const source = openingAudio[index++];
-      if (!source) {
-        window.__session6IntroModalAudioStarted = false;
-        return;
-      }
-      const player = new Audio(source);
-      player.preload = 'auto';
-      player.onended = playNext;
-      player.onerror = playNext;
-      const attempt = player.play();
-      attempt?.catch(() => playNext());
-    };
-    playNext();
+    const lease = audioBus.begin();
+    for (const source of modalOpeningAudio) {
+      if (!lease.isCurrent()) break;
+      await lease.play(source);
+    }
+    window.__session6IntroModalAudioStarted = false;
+  };
+  const playGawain9IntroAudio = async () => {
+    if (key !== 'lesson-17-18-gawain-9') return;
+    const phase = String(state.phase || 'intro').toLowerCase();
+    let source = '/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_9/intro_basahin_isulat_ngalan_larawan_tts.mp3';
+    if (hasSavedProgress && !['intro', 'initial'].includes(phase)) {
+      if (phase !== 'oral_reading') return;
+      const index = Number(state.current_item_index) || 0;
+      const item = Array.isArray(data.items) ? data.items[index] : null;
+      if (!item) return;
+      const prompts = [
+        'unang_larawan_pana_tts.mp3', 'ikalawang_larawan_pisara_tts.mp3',
+        'ikatlong_larawan_palaka_tts.mp3', 'ika_apat_na_larawan_pito_tts.mp3',
+        'ikalimang_larawan_regalo_tts.mp3',
+      ];
+      source = `/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_9/${prompts[index] || ''}`;
+    }
+    if (!source.endsWith('.mp3')) return;
+    const lease = audioBus.begin();
+    await lease.play(source);
+  };
+  const playGawain4ContinuationAudio = async () => {
+    if (!hasSavedProgress || key !== 'session-6-lesson-16-gawain-4' || state.phase !== 'oral_reading') return;
+    const index = Array.isArray(progress.answers)
+      ? progress.answers.length
+      : Number(state.current_item_index ?? state.current_index ?? 0);
+    const prompts = [
+      '02_item_01_gamot_read_prompt.mp3', '04_item_02_bunga_read_prompt.mp3',
+      '06_item_03_panga_read_prompt.mp3', '08_item_04_goma_read_prompt.mp3',
+      '10_item_05_sanga_read_prompt.mp3',
+    ];
+    const source = prompts[index];
+    if (!source) return;
+    const lease = audioBus.begin();
+    await lease.play(`/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_4/${source}`);
+  };
+  const playGawain6ContinuationAudio = async () => {
+    if (!hasSavedProgress || key !== 'lesson-17-18-gawain-6'
+      || !['oral', 'oral_reading'].includes(String(state.phase || '').toLowerCase())
+      || state.oral_mode === 'aloud') return;
+    const index = Array.isArray(progress.answers)
+      ? progress.answers.length
+      : Number(state.current_index ?? progress.current_index ?? 0);
+    const words = ['pusa', 'pako', 'paruparo', 'rosas', 'kariton'];
+    const word = words[index];
+    if (!word) return;
+    const lease = audioBus.begin();
+    await lease.play(`/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_6/babasahin_${word}_tts.mp3`);
   };
   const lesson = String(data.lesson_number ?? '').toUpperCase();
   const gawain = String(data.gawain_number ?? '').toUpperCase();
@@ -135,6 +248,10 @@
   const laterButton = backdrop.querySelector('[data-session6-later]');
 
   const close = () => {
+    // Gawain 7's activity start handler already announces its instruction;
+    // skip only the duplicate intro clip in the first prompt queue.
+    window.__session6IntroModalSkipFirstPromptIntro = !hasSavedProgress
+      && key === 'lesson-17-18-gawain-7';
     window.__session6IntroReady = true;
     window.__session6IntroModalOpen = false;
     backdrop.remove();
@@ -143,17 +260,31 @@
     window.dispatchEvent(new Event('session6-prescribed-resume'));
   };
 
-  startButton?.addEventListener('click', () => {
+  startButton?.addEventListener('click', async () => {
     if (startButton.disabled) return;
     startButton.disabled = true;
-    // Start the opening clip in this trusted click handler before the activity
-    // performs any asynchronous save/render work.
-    playOpeningAudio();
+    laterButton.disabled = true;
+    // Keep the activity modal open until every opening clip has finished. This
+    // prevents the activity renderer from starting its first prompt alongside
+    // the modal's intro MP3.
+    await playOpeningAudio();
     close();
-    // Several Session 6 renderers have their own first-screen start button.
-    // Activate it only for a brand-new activity; saved activities are already
-    // rendered at their restored phase and must continue where they stopped.
-    if (!hasSavedProgress) {
+    if (key === 'lesson-17-18-gawain-9') {
+      const activityStart = document.querySelector('#app #start');
+      if (activityStart) activityStart.disabled = true;
+      void playGawain9IntroAudio().finally(() => {
+        if (activityStart?.isConnected) activityStart.disabled = false;
+      });
+    }
+    if (key === 'session-6-lesson-16-gawain-4') {
+      void playGawain4ContinuationAudio();
+    }
+    if (key === 'lesson-17-18-gawain-6') {
+      void playGawain6ContinuationAudio();
+    }
+    // Leave the activity-owned intro screen visible. Its own start handler
+    // must control the transition into the first word prompt.
+    if (!hasSavedProgress && !activityIntroAudioKeys.has(key)) {
       const activityStart = document.querySelector('#app #start');
       if (activityStart && !activityStart.disabled) activityStart.click();
     }

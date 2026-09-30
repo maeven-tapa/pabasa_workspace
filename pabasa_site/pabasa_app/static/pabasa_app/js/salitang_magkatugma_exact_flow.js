@@ -17,20 +17,20 @@
 
     busy = true;
     readButton.disabled = true;
+    if (listenButton) listenButton.disabled = true;
     readButton.classList.add('is-recording');
     readButton.textContent = 'Nagbabasa...';
     let stream;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({audio: true});
-      const chunks = [];
-      const recorder = new MediaRecorder(stream);
-      recorder.ondataavailable = event => event.data.size && chunks.push(event.data);
-      const recordingStopped = new Promise(resolve => {
-        recorder.onstop = () => resolve(new Blob(chunks, {type: recorder.mimeType || 'audio/webm'}));
+      // Match the shared reader lifecycle: expose calibration before the
+      // microphone permission/initialization await begins.
+      window.BasahinButton?.setState(readButton, 'calibrating');
+      window.BasahinButton?.setSpeech(readButton, false);
+      stream = await window.Basahin.openMicrophone({audio: true});
+      const blob = await window.Basahin.capture({
+        button: readButton,
+        stream,
       });
-      recorder.start();
-      setTimeout(() => recorder.state === 'recording' && recorder.stop(), 3500);
-      const blob = await recordingStopped;
       const form = new FormData();
       form.append('audio', blob, 'rhyme.webm');
       form.append('target_text', expectedWord);
@@ -84,6 +84,8 @@
         status.classList.add('warning');
         readButton.hidden = false;
         readButton.disabled = false;
+        if (listenButton) listenButton.disabled = false;
+        window.BasahinButton?.setState(readButton, 'idle');
         readButton.classList.remove('is-recording', 'is-processing');
         readButton.removeAttribute('aria-busy');
         readButton.textContent = window.BasahinButton?.LABEL || 'Basahin';
@@ -110,6 +112,8 @@
       status.classList.add('warning');
       readButton.hidden = false;
       readButton.disabled = false;
+      if (listenButton) listenButton.disabled = false;
+      window.BasahinButton?.setState(readButton, 'idle');
       readButton.classList.remove('is-recording', 'is-processing');
       readButton.removeAttribute('aria-busy');
       readButton.textContent = window.BasahinButton?.LABEL || 'Basahin';

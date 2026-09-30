@@ -21,7 +21,7 @@
     window.addEventListener('lesson-start-ready', function () {
       if (started) return;
       started = true;
-      runScripts([...document.querySelectorAll(`script[data-activity-bootstrap="${name}"]`)])
+      runScripts([...document.querySelectorAll(`script[type="text/plain"][data-activity-bootstrap="${name}"]`)])
         .then(() => window.dispatchEvent(new Event('lesson-start-ready')))
         .catch(error => console.error('Activity bootstrap failed', error));
     }, { once: true });

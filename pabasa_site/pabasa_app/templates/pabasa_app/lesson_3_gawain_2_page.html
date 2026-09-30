@@ -2,6 +2,7 @@
 <!doctype html>
 <html lang="fil">
 <head>
+  {% include 'pabasa_app/basahin_script.html' %}
   <script>window.__lessonStartProgress={activityKey:'lesson-3-gawain-2',progress:{{ lesson_3_progress|default:"null"|safe }},totalItems:6,progressUrl:'{{ lesson_3_progress_url }}',storageKeys:['pabasa:lesson-3-gawain-2:progress']};</script><script>window.__session1SharedNarrationAudio={'Basahin ito.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/basahin_ito.mp3' %}','Magaling! Susunod na larawan.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/magaling_susunod_na_larawan.mp3' %}','Hindi pa ito tama. Subukan muli.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/hindi_pa_ito_tama_subukan_muli.mp3' %}','Magkatunog ba ang dalawang larawan na ito? Pindutin ang nawawastong sagot.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/magkatunog_ba_ang_dalawang_larawan.mp3' %}','Piliin ang tamang kamay.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/piliin_ang_tamang_kamay.mp3' %} };</script><script src="{% static 'pabasa_app/js/lesson_start_modal.js' %}?v=7"></script>
   <script>
   document.addEventListener('DOMContentLoaded', function () {
@@ -44,6 +45,60 @@
   .gawain-2 #game:has(#listen)>#read{grid-column:1;grid-row:5;width:100%;min-width:0}
   .gawain-2 #game:has(#listen)>#listen{grid-column:2;grid-row:5;width:100%;min-width:0}
   @media(max-width:650px){.gawain-2 #game:has(#listen){column-gap:10px}.gawain-2 #game:has(#listen)>#read,.gawain-2 #game:has(#listen)>#listen{min-height:64px;font-size:1rem;padding:12px 8px}}
+</style>
+<style>
+/* Final Part 1-aligned viewport shell: give Part 2 controls room to breathe. */
+.gawain-2 #game.game:has(.answers) {
+  width: min(1250px, calc(100vw - 32px)) !important;
+  height: calc(100dvh - 48px) !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+}
+@media (max-width:650px) {
+  .gawain-2 #game.game:has(.answers) {
+    width: calc(100vw - 24px) !important;
+    height: calc(100dvh - 28px) !important;
+  }
+}
+</style>
+<style>
+/* Part 2 uses the established Part 1 layout geometry; only its content/state differs. */
+.gawain-2 #game.game:has(.answers) {
+  height: calc(100dvh - 110px) !important;
+  max-height: calc(100dvh - 110px) !important;
+  min-height: 0 !important;
+  margin-top: 31px !important;
+  padding: clamp(24px, 3.3vh, 42px) clamp(20px, 6vw, 80px) 20px !important;
+  overflow: hidden !important;
+}
+.gawain-2 #game.game:has(.answers) .header { margin: 0 auto 12px !important; }
+.gawain-2 #game.game:has(.answers) .brand h1 { font-size: clamp(2rem, 4vw, 3.7rem) !important; line-height: 1.08 !important; }
+.gawain-2 #game.game:has(.answers) .brand .eyebrow { margin: 0 auto 12px !important; padding: 10px 30px !important; font-size: clamp(.85rem, 1.4vw, 1.05rem) !important; }
+.gawain-2 #game.game:has(.answers) .instruction { margin: 18px auto 14px !important; padding: 12px 18px !important; font-size: 1rem !important; line-height: 1.35 !important; }
+.gawain-2 #game.game:has(.answers) .pairs { width: min(900px, 100%) !important; gap: 18px !important; margin: auto !important; }
+.gawain-2 #game.game:has(.answers) .pairs .word { height: clamp(190px, 30vh, 270px) !important; padding: 12px !important; border-radius: 22px !important; }
+.gawain-2 #game.game:has(.answers) .pairs .word img { height: clamp(80px, 15vh, 125px) !important; max-width: 80% !important; }
+.gawain-2 #game.game:has(.answers) .answers { width: min(760px, 100%) !important; margin: 18px auto 0 !important; gap: 14px !important; }
+.gawain-2 #game.game:has(.answers) .answer { min-height: 68px !important; padding: 13px 22px !important; font-size: clamp(1rem, 1.8vw, 1.25rem) !important; }
+@media (max-width:650px) {
+  .gawain-2 #game.game:has(.answers) { height: calc(100dvh - 150px) !important; max-height: calc(100dvh - 150px) !important; margin-top: 23px !important; padding: 22px 14px 16px !important; }
+  .gawain-2 #game.game:has(.answers) .brand h1 { font-size: clamp(1.8rem, 8vw, 2.7rem) !important; }
+  .gawain-2 #game.game:has(.answers) .pairs .word { height: 170px !important; }
+  .gawain-2 #game.game:has(.answers) .pairs .word img { height: 100px !important; }
+  .gawain-2 #game.game:has(.answers) .answers { gap: 10px !important; }
+  .gawain-2 #game.game:has(.answers) .answer { min-height: 64px !important; padding: 12px 8px !important; font-size: 1rem !important; }
+}
+</style>
+<style>
+/* Final viewport-budget guard: keep status and controls clear of the pair cards. */
+.gawain-2 #game.game:has(#listen){width:min(1250px,calc(100vw - 32px))!important;max-width:none!important}
+.gawain-2 #game.game:has(#listen) .brand h1{font-size:clamp(1.9rem,3.2vw,3rem)!important}
+.gawain-2 #game.game:has(#listen) .pairs{flex:0 0 auto!important;margin:10px auto!important}
+.gawain-2 #game.game:has(#listen) .pairs .word{height:clamp(180px,25vh,230px)!important;min-height:0!important}
+.gawain-2 #game.game:has(#listen) .status{position:relative!important;z-index:4!important;display:block!important;min-height:32px!important;margin:8px auto 10px!important;padding:2px 8px!important;background:transparent!important;line-height:1.25!important}
+.gawain-2 #game.game:has(#listen) .lesson3-g2-actions{position:relative!important;z-index:4!important;flex:0 0 auto!important;margin:0 auto!important}
+@media(max-width:650px){.gawain-2 #game.game:has(#listen){width:calc(100vw - 24px)!important;max-width:none!important;padding:18px 14px 14px!important}.gawain-2 #game.game:has(#listen) .pairs .word{height:150px!important}}
 </style>
 <style>
 body.gawain-2:has(#game .complete) #game .complete{display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box}
@@ -193,7 +248,7 @@ body.gawain-2:has(#game .complete) #game .complete-done{text-decoration:none!imp
   .gawain-2 .pairs{width:min(760px,100%);max-width:none;min-height:0;gap:14px;margin:auto}.gawain-2 .pairs .word,.gawain-2 .pairs .word:nth-child(2){width:100%;height:clamp(150px,25vh,220px);min-height:0;padding:12px;border:3px solid #94d9d6;border-radius:22px;background:#fffdf5;box-shadow:0 10px 20px #187b7a18;transform:none}.gawain-2 .pairs .word.active{background:#ffe9a7;border:5px solid #e6a33a;box-shadow:0 0 0 4px #fff4c7,0 12px 22px #0001}.gawain-2 .pairs .word img{height:clamp(80px,15vh,125px);max-width:80%;object-fit:contain}
   .gawain-2 .status{margin:10px auto 8px;color:#302a32;font:900 1rem Nunito,"Segoe UI",sans-serif}.gawain-2 .lesson3-g2-actions{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:stretch!important;justify-content:center!important;gap:14px!important;grid-column:1/-1!important;width:min(760px,100%)!important;margin:0 auto!important}.gawain-2 .lesson3-g2-actions>#read,.gawain-2 .lesson3-g2-actions>#listen{flex:1 1 0!important;width:auto!important;min-width:0!important;margin:0!important}
   .gawain-2 .read,.gawain-2 .listen{min-height:68px;border-radius:999px;font:900 clamp(1rem,1.8vw,1.35rem) Nunito,"Segoe UI",sans-serif;transition:.16s}.gawain-2 .read{background:#299e9a;box-shadow:0 7px 0 #187b7a,0 10px 20px #187b7a40}.gawain-2 .listen{background:#fffffff0;color:#187b7a;border:3px solid #94d9d6;box-shadow:0 5px 0 #b7d6dc,0 8px 16px #187b7a20}
-  .gawain-2 #game.game:has(.answers) .answers{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;width:min(760px,100%);margin:10px auto 0!important;gap:14px!important}.gawain-2 #game.game:has(.answers) .answer{width:100%;min-width:0!important;min-height:70px!important;padding:12px 16px;border:3px solid #94d9d6;border-radius:999px;background:#299e9a;color:#fff;box-shadow:0 7px 0 #187b7a,0 10px 20px #187b7a40;font:900 clamp(.95rem,1.8vw,1.2rem)/1.1 Nunito,"Segoe UI",sans-serif}.gawain-2 #game.game:has(.answers) .answer[data-v="no"]{border-color:#d98b8b;background:#d97878;box-shadow:0 7px 0 #a95757,0 10px 20px #a9575740}.gawain-2 #game.game:has(.answers) .answer small{font:inherit;letter-spacing:.01em}
+  .gawain-2 #game.game:has(.answers) .answers{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;width:min(760px,100%);margin:10px auto 0!important;gap:14px!important}.gawain-2 #game.game:has(.answers) .answer{width:100%;min-width:0!important;min-height:70px!important;padding:12px 16px;border:3px solid #299e9a;border-radius:999px;background:#299e9a;color:#fff;box-shadow:0 7px 0 #187b7a,0 10px 20px #187b7a40;font:900 clamp(.95rem,1.8vw,1.2rem)/1.1 Nunito,"Segoe UI",sans-serif}.gawain-2 #game.game:has(.answers) .answer small{font:inherit;letter-spacing:.01em}
   @media(max-width:650px){.gawain-2{padding:12px}.gawain-2 .back{width:230px;min-height:58px;font-size:1rem}.gawain-2 #game.game,.gawain-2 #game.game:has(#listen){width:100%;height:calc(100dvh - 92px);padding:22px 14px 16px;border-radius:30px}.gawain-2 .pairs{gap:12px}.gawain-2 .pairs .word,.gawain-2 .pairs .word:nth-child(2){height:170px}.gawain-2 .pairs .word img{height:100px}.gawain-2 .lesson3-g2-actions{gap:10px!important}.gawain-2 .lesson3-g2-actions>#read,.gawain-2 .lesson3-g2-actions>#listen{min-height:64px!important;padding:12px 8px!important;font-size:1rem!important}.gawain-2 #game.game:has(.answers) .answers{gap:10px!important}.gawain-2 #game.game:has(.answers) .answer{min-height:62px!important;padding:10px 6px;font-size:clamp(.72rem,3.2vw,.95rem)}}
 </style>
 <style>
@@ -216,6 +271,240 @@ body.gawain-2:has(#game .complete) #game .complete-done{text-decoration:none!imp
 </style>
 </body>
 </html>
+<script>
+// Keep the dynamically rendered header aligned with the prescribed activity structure.
+(function () {
+  function applyActivityIdentity() {
+    document.querySelectorAll('.gawain-2 .brand').forEach(function (brand) {
+      const title = brand.querySelector('h1');
+      const eyebrow = brand.querySelector('p');
+      if (title && title.textContent !== 'Salitang Magkatugma') {
+        title.textContent = 'Salitang Magkatugma';
+      }
+      if (eyebrow) {
+        if (!eyebrow.classList.contains('eyebrow')) eyebrow.classList.add('eyebrow');
+        if (eyebrow.textContent !== 'SESSION 1 · LESSON 3 · GAWAIN 2') {
+          eyebrow.textContent = 'SESSION 1 · LESSON 3 · GAWAIN 2';
+        }
+        if (title && brand.firstElementChild !== eyebrow) {
+          brand.insertBefore(eyebrow, title);
+        }
+      }
+    });
+  }
+  const game = document.getElementById('game');
+  if (game) {
+    new MutationObserver(applyActivityIdentity).observe(game, { childList: true, subtree: true });
+    applyActivityIdentity();
+  }
+}());
+</script>
+<style>
+/* Explicit eyebrow/title styling for the dynamically mounted Gawain 2 header. */
+@font-face {
+  font-family: Fredoka;
+  src: url("{% static 'pabasa_app/font/fredoka-one.one-regular.ttf' %}") format('truetype');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+.gawain-2 #game.game .brand .eyebrow {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto 12px !important;
+  padding: 10px 30px !important;
+  border-radius: 999px !important;
+  background: #277f82 !important;
+  color: #fff !important;
+  font: 900 clamp(.85rem, 1.4vw, 1.05rem)/1.15 Fredoka, Lesson3Fredoka, Nunito, sans-serif !important;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 0 #1b6669 !important;
+}
+.gawain-2 #game.game .brand h1 {
+  color: #183e63 !important;
+  font-family: Fredoka, Lesson3Fredoka, Nunito, sans-serif !important;
+  font-size: clamp(1.7rem, 3.2vw, 3rem) !important;
+  font-weight: 900 !important;
+  line-height: 1.08 !important;
+  letter-spacing: 0 !important;
+  text-align: center !important;
+}
+@media (max-width: 650px) {
+  .gawain-2 #game.game .brand .eyebrow { padding: 8px 16px !important; font-size: .72rem !important; }
+  .gawain-2 #game.game .brand h1 { font-size: clamp(1.6rem, 7vw, 2.3rem) !important; }
+}
+</style>
+<style>
+/* Keep the start/resume modal visually clean and keep Pakinggan compact. */
+body.gawain-2.lesson-start-open .lesson3-g2-actions {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+body.gawain-2.lesson-start-open #read,
+body.gawain-2.lesson-start-open #listen {
+  visibility: visible !important;
+  opacity: .42 !important;
+  filter: saturate(.55) !important;
+  pointer-events: none !important;
+}
+body.gawain-2.lesson-start-open #listen {
+  width: min(330px, 100%) !important;
+  max-width: 330px !important;
+  margin: 0 auto !important;
+  justify-self: center !important;
+}
+body.gawain-2.lesson-start-open #game.game:has(#listen) {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 330px)) !important;
+  justify-content: center !important;
+  column-gap: 8px !important;
+}
+body.gawain-2.lesson-start-open #game.game:has(#listen) > #read {
+  grid-column: 1 !important;
+  grid-row: 5 !important;
+  width: min(330px, 100%) !important;
+  justify-self: center !important;
+}
+body.gawain-2.lesson-start-open #game.game:has(#listen) > #listen {
+  grid-column: 2 !important;
+  grid-row: 5 !important;
+}
+@media (max-width:650px) {
+  body.gawain-2.lesson-start-open #game.game:has(#listen) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    column-gap: 6px !important;
+  }
+}
+body.gawain-2.lesson-start-open .lesson3-g2-actions {
+  visibility: visible !important;
+  opacity: .42 !important;
+  filter: saturate(.55) !important;
+}
+body.gawain-2 #game.game:has(#listen) .lesson3-g2-actions > #listen {
+  width: min(330px, 100%) !important;
+  max-width: 330px !important;
+  justify-self: center !important;
+}
+</style>
+<style>
+/* Part 2 final UI: use the same compact prescribed controls as Part 1. */
+.gawain-2 #game.game:has(.answers) .pairs .word {
+  background: #ffe9a7 !important;
+  border: 4px solid #e6a33a !important;
+  border-radius: 22px !important;
+  box-shadow: 0 0 0 5px #fff4c7, 0 10px 20px rgba(230,163,58,.28) !important;
+  transform: none !important;
+}
+.gawain-2 #game.game:has(.answers) .answer {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  width: 100% !important;
+  min-height: 64px !important;
+  padding: 12px 18px !important;
+  border-radius: 999px !important;
+  font: 900 clamp(.95rem, 1.6vw, 1.15rem)/1.1 Fredoka, Lesson3Fredoka, Nunito, sans-serif !important;
+  background: #299e9a !important;
+  border: 3px solid #299e9a !important;
+  color: #fff !important;
+  box-shadow: 0 6px 0 #187b7a !important;
+  opacity: 1 !important;
+  cursor: pointer !important;
+}
+.gawain-2 #game.game:has(.answers) .answer:disabled {
+  opacity: .72 !important;
+  cursor: wait !important;
+  filter: none !important;
+}
+.gawain-2 #game.game:has(.answers) .answer small {
+  font: inherit !important;
+  letter-spacing: .01em !important;
+}
+@media (max-width:650px) {
+  .gawain-2 #game.game:has(.answers) .answer { min-height: 58px !important; padding: 10px 8px !important; font-size: .82rem !important; }
+}
+</style>
+<style>
+/* Keep Part 2 cards and answer controls in separate rows. */
+.gawain-2 #game.game:has(.answers) .pairs {
+  flex: 0 0 auto !important;
+  margin: 0 auto 18px !important;
+}
+.gawain-2 #game.game:has(.answers) .pairs .word {
+  height: clamp(165px, 24vh, 205px) !important;
+  min-height: 0 !important;
+}
+.gawain-2 #game.game:has(.answers) .answers {
+  position: relative !important;
+  z-index: 3 !important;
+  flex: 0 0 auto !important;
+  margin: 0 auto !important;
+  transform: none !important;
+}
+.gawain-2 #game.game:has(.answers) .answer {
+  transform: none !important;
+  animation: none !important;
+}
+@media (max-width:650px) {
+  .gawain-2 #game.game:has(.answers) .pairs { margin-bottom: 14px !important; }
+  .gawain-2 #game.game:has(.answers) .pairs .word { height: 150px !important; }
+}
+</style>
+<style>
+/* Part 2 viewport budget: keep the complete activity stack inside the card. */
+.gawain-2 #game.game:has(.answers) {
+  height: calc(100dvh - 70px) !important;
+  max-height: none !important;
+  min-height: 610px !important;
+  overflow: visible !important;
+}
+.gawain-2 #game.game:has(.answers) .pairs .word {
+  height: clamp(165px, 23vh, 205px) !important;
+}
+@media (max-width:650px) {
+  .gawain-2 #game.game:has(.answers) {
+    height: calc(100dvh - 42px) !important;
+    min-height: 560px !important;
+    overflow: visible !important;
+  }
+  .gawain-2 #game.game:has(.answers) .pairs .word { height: 150px !important; }
+}
+</style>
+<style>
+/* Part 2 compact balance pass: CSS only, activity logic unchanged. */
+.gawain-2 #game.game:has(.answers) {
+  height: min(650px, calc(100dvh - 48px)) !important;
+  min-height: 0 !important;
+  max-height: calc(100dvh - 48px) !important;
+  padding-top: 22px !important;
+  padding-bottom: 18px !important;
+  overflow: hidden !important;
+}
+.gawain-2 #game.game:has(.answers) .header { margin-bottom: 8px !important; }
+.gawain-2 #game.game:has(.answers) .brand h1 { font-size: clamp(1.65rem, 3.2vw, 2.75rem) !important; line-height: 1.02 !important; }
+.gawain-2 #game.game:has(.answers) .brand .eyebrow { margin-bottom: 6px !important; padding: 7px 18px !important; font-size: clamp(.68rem, 1vw, .86rem) !important; }
+.gawain-2 #game.game:has(.answers) .progress { font-size: clamp(.85rem, 1.2vw, 1rem) !important; }
+.gawain-2 #game.game:has(.answers) .segments { gap: 4px !important; margin-top: 6px !important; }
+.gawain-2 #game.game:has(.answers) .segments i { width: clamp(16px, 2vw, 22px) !important; height: 8px !important; }
+.gawain-2 #game.game:has(.answers) .instruction { margin: 8px auto 12px !important; padding: 10px 16px !important; font-size: clamp(.88rem, 1.35vw, 1rem) !important; line-height: 1.25 !important; }
+.gawain-2 #game.game:has(.answers) .pairs { width: min(820px, 100%) !important; gap: 12px !important; margin: 0 auto 12px !important; }
+.gawain-2 #game.game:has(.answers) .pairs .word { height: clamp(150px, 23vh, 190px) !important; padding: 8px !important; border-radius: 22px !important; }
+.gawain-2 #game.game:has(.answers) .pairs .word img { height: clamp(112px, 18vh, 160px) !important; max-width: 88% !important; }
+.gawain-2 #game.game:has(.answers) .answers { width: min(700px, 100%) !important; margin: 0 auto !important; gap: 10px !important; }
+.gawain-2 #game.game:has(.answers) .answer { min-height: 56px !important; padding: 9px 14px !important; font-size: clamp(.84rem, 1.35vw, 1.05rem) !important; }
+@media (max-width:650px) {
+  .gawain-2 #game.game:has(.answers) { height: calc(100dvh - 28px) !important; max-height: calc(100dvh - 28px) !important; padding: 16px 12px 12px !important; }
+  .gawain-2 #game.game:has(.answers) .brand h1 { font-size: clamp(1.5rem, 7vw, 2.2rem) !important; }
+  .gawain-2 #game.game:has(.answers) .pairs .word { height: 135px !important; }
+  .gawain-2 #game.game:has(.answers) .pairs .word img { height: 105px !important; }
+  .gawain-2 #game.game:has(.answers) .answer { min-height: 52px !important; padding: 8px 6px !important; font-size: .78rem !important; }
+}
+</style>
 <style>
   .gawain-2{height:100dvh;min-height:0;overflow:hidden;padding:16px clamp(16px,4vw,42px) 22px;background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover fixed}
   .gawain-2 .app{height:100dvh;padding:0;display:block;position:relative}
@@ -234,6 +523,8 @@ body.gawain-2:has(#game .complete) #game .complete-done{text-decoration:none!imp
   .gawain-2 .pairs .word,.gawain-2 .pairs .word:nth-child(2){width:100%;height:clamp(170px,28vh,240px);min-height:0;padding:12px;border:3px solid #d4ebe1;border-radius:20px;background:#fffdf5;box-shadow:0 10px 20px #0001;transform:none}
   .gawain-2 .pairs .word.active{background:#ffe9a7;border:5px solid #e6a33a;box-shadow:0 0 0 4px #fff4c7,0 10px 20px #0001}
   .gawain-2 .pairs .word img{height:clamp(90px,17vh,135px);max-width:80%;object-fit:contain}
+  .gawain-2 #game:has(.answers) .pairs .word{background:linear-gradient(145deg,#fff8cf,#fff0a8)!important;border-color:#f0b52d!important;box-shadow:0 0 0 5px rgba(255,228,104,.75),0 0 26px rgba(255,194,35,.55),0 12px 24px rgba(112,77,21,.2)!important;transform:translateY(-3px)!important}
+  .gawain-2 #game:has(.answers) .pairs .word.active{border-color:#e99316!important;box-shadow:0 0 0 7px #ffe36b,0 0 34px rgba(255,194,35,.8),0 14px 28px rgba(112,77,21,.28)!important}
   .gawain-2 .status{margin:10px auto 8px;color:#302a32;font:900 1rem Nunito,"Segoe UI",sans-serif}
   .gawain-2 .read,.gawain-2 .listen{width:100%;min-width:0;min-height:76px;margin:0;border-radius:999px;font:900 clamp(1rem,1.8vw,1.35rem) Nunito,"Segoe UI",sans-serif}
   .gawain-2 .read{background:#299e9a;box-shadow:0 7px 0 #187b7a,0 10px 20px #187b7a40}
@@ -290,6 +581,21 @@ body.gawain-2:has(#game .complete)::before {
 @media(max-width:520px){.gawain-2 #game.game:has(.complete) .complete{width:min(100%,calc(100vw - 32px));padding:32px 22px 30px;border-radius:26px}.gawain-2 #game.game:has(.complete) .complete-done{width:100%;padding-inline:18px}}
 </style>
 <style>
+/* Standard prescribed activity identity: eyebrow, title, card, and controls. */
+.gawain-2 #game.game:has(#listen){font-family:Fredoka,Lesson3Fredoka,Nunito,"Segoe UI",sans-serif!important}
+.gawain-2 #game.game:has(#listen) .header{font-family:inherit!important}
+.gawain-2 #game.game:has(#listen) .brand p.eyebrow{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:max-content!important;max-width:100%!important;margin:0 auto 12px!important;padding:10px 30px!important;border-radius:999px!important;background:#277f82!important;color:#fff!important;font:900 clamp(.85rem,1.4vw,1.05rem)/1.15 Fredoka,Lesson3Fredoka,Nunito,sans-serif!important;letter-spacing:.02em!important;text-transform:uppercase!important}
+.gawain-2 #game.game:has(#listen) .brand h1{margin:0!important;color:#183e63!important;font:900 clamp(2.05rem,4.2vw,3.8rem)/1.08 Fredoka,Lesson3Fredoka,Nunito,sans-serif!important;letter-spacing:0!important;text-align:center!important}
+.gawain-2 #game.game:has(#listen) .instruction{font-family:Fredoka,Lesson3Fredoka,Nunito,"Segoe UI",sans-serif!important;font-weight:700!important;color:#315b74!important}
+.gawain-2 #game.game:has(#listen) .read,.gawain-2 #game.game:has(#listen) .listen{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;min-height:70px!important;padding:13px 22px!important;border-radius:999px!important;font:900 clamp(1rem,1.8vw,1.25rem)/1.2 Fredoka,Lesson3Fredoka,Nunito,sans-serif!important;cursor:pointer!important;transition:transform .16s ease,filter .16s ease,box-shadow .16s ease!important}
+.gawain-2 #game.game:has(#listen) .read{background:#299e9a!important;color:#fff!important;border:0!important;box-shadow:0 7px 0 #187b7a,0 10px 20px #187b7a30}
+.gawain-2 #game.game:has(#listen) .listen{background:#fffffff0!important;color:#187b7a!important;border:4px solid #94d9d6!important;box-shadow:0 5px 0 #b7d6dc,0 8px 16px #187b7a20!important}
+.gawain-2 #game.game:has(#listen) .read:hover:not(:disabled),.gawain-2 #game.game:has(#listen) .listen:hover:not(:disabled){transform:translateY(-2px)!important;filter:brightness(1.04)!important}
+.gawain-2 #game.game:has(#listen) .read:active:not(:disabled),.gawain-2 #game.game:has(#listen) .listen:active:not(:disabled){transform:translateY(3px)!important}
+.gawain-2 #game.game:has(#listen) .read:disabled,.gawain-2 #game.game:has(#listen) .listen:disabled{background:#b5c5c7!important;color:#edf3f4!important;border-color:transparent!important;box-shadow:none!important;opacity:1!important;cursor:not-allowed!important;transform:none!important}
+@media(max-width:650px){.gawain-2 #game.game:has(#listen) .brand h1{font-size:clamp(1.8rem,8vw,2.7rem)!important}.gawain-2 #game.game:has(#listen) .brand p.eyebrow{padding:8px 16px!important;font-size:.72rem!important}.gawain-2 #game.game:has(#listen) .read,.gawain-2 #game.game:has(#listen) .listen{min-height:64px!important;padding:12px 8px!important;font-size:1rem!important}}
+</style>
+<style>
 .gawain-2 #read.read.is-recording{
   animation:lesson3Gawain2ReadHeartbeat 1.3s ease-in-out infinite;
   transform-origin:center;
@@ -302,3 +608,122 @@ body.gawain-2:has(#game .complete)::before {
   .gawain-2 #read.read.is-recording{animation:none}
 }
 </style>
+<style>
+/* Final Lesson 2 visual alignment for Gawain 2. Logic and DOM remain unchanged. */
+.gawain-2 #game.game:has(#listen){
+  position:absolute!important;top:50%!important;left:50%!important;transform:translate(-50%,-50%)!important;
+  width:min(1250px,calc(100vw - 32px))!important;height:calc(100dvh - 110px)!important;max-height:calc(100dvh - 110px)!important;
+  margin:31px 0 0!important;padding:clamp(24px,3.3vh,42px) clamp(20px,6vw,80px) 20px!important;
+  border:2px solid #ffffffaa!important;border-radius:42px!important;background:#ffffff63!important;
+  backdrop-filter:blur(10px)!important;-webkit-backdrop-filter:blur(10px)!important;box-shadow:0 18px 45px #1e5b7a35!important;
+}
+.gawain-2 #game.game:has(#listen) .header{display:block!important;width:100%!important;margin:0 auto 12px!important;padding:0 12px!important;background:transparent!important;border:0!important;box-shadow:none!important;text-align:center!important}
+.gawain-2 #game.game:has(#listen) .brand{width:100%!important;text-align:center!important}
+.gawain-2 #game.game:has(#listen) .brand h1{margin:0!important;color:#183e63!important;font-family:Fredoka,Nunito,"Segoe UI",sans-serif!important;font-size:clamp(2rem,4vw,3.7rem)!important;font-weight:900!important;line-height:1.08!important}
+.gawain-2 #game.game:has(#listen) .brand p.eyebrow{display:inline-flex!important;margin:0 auto 12px!important;padding:10px 30px!important;border-radius:999px!important;background:#277f82!important;color:#fff!important;font:900 clamp(.85rem,1.4vw,1.05rem)/1.15 Nunito,"Segoe UI",sans-serif!important;letter-spacing:.02em!important}
+.gawain-2 #game.game:has(#listen) .progress{position:absolute!important;top:clamp(24px,3.3vh,42px)!important;right:clamp(20px,6vw,80px)!important;margin:0!important;text-align:right!important;font:900 .9rem Nunito,"Segoe UI",sans-serif!important;color:#526e75!important}
+.gawain-2 #game.game:has(#listen) .instruction{margin:18px auto 14px!important;background:#fffffff0!important}
+.gawain-2 #game.game:has(#listen) .pairs{width:min(900px,100%)!important;gap:18px!important;margin:auto!important}
+.gawain-2 #game.game:has(#listen) .pairs .word{height:clamp(190px,30vh,270px)!important;border:3px solid #94d9d6!important;border-radius:22px!important;background:#fffdf5!important;box-shadow:0 8px 18px #187b7a18!important}
+.gawain-2 #game.game:has(#listen) .pairs .word.active{border-color:#e6a33a!important;background:#ffe9a7!important;box-shadow:0 0 0 5px #fff4c7,0 10px 20px #0001!important}
+.gawain-2 #game.game:has(#listen) .read,.gawain-2 #game.game:has(#listen) .listen{min-height:68px!important;border-radius:999px!important}
+@media(max-width:650px){
+  .gawain-2 #game.game:has(#listen){width:calc(100vw - 24px)!important;height:calc(100dvh - 150px)!important;max-height:calc(100dvh - 150px)!important;margin-top:23px!important;padding:22px 14px 16px!important;border-radius:30px!important}
+  .gawain-2 #game.game:has(#listen) .brand h1{font-size:clamp(1.8rem,8vw,2.7rem)!important}
+  .gawain-2 #game.game:has(#listen) .progress{top:22px!important;right:14px!important;font-size:.75rem!important}
+  .gawain-2 #game.game:has(#listen) .pairs .word{height:170px!important}
+}
+</style>
+<style>
+/* Authoritative no-clipping Part 2 fit. */
+.gawain-2 #game.game:has(.answers){height:calc(100dvh - 24px)!important;max-height:none!important;padding-top:18px!important;padding-bottom:14px!important;overflow:visible!important}
+.gawain-2 #game.game:has(.answers) .header{margin-bottom:6px!important}
+.gawain-2 #game.game:has(.answers) .brand h1{font-size:clamp(1.7rem,3vw,2.6rem)!important;line-height:1.02!important}
+.gawain-2 #game.game:has(.answers) .brand .eyebrow{margin-bottom:6px!important;padding:7px 18px!important;font-size:.8rem!important}
+.gawain-2 #game.game:has(.answers) .instruction{margin:8px auto 10px!important;padding:9px 14px!important;font-size:.92rem!important}
+.gawain-2 #game.game:has(.answers) .pairs{margin:0 auto 10px!important;gap:12px!important}
+.gawain-2 #game.game:has(.answers) .pairs .word{height:170px!important;padding:8px!important}
+.gawain-2 #game.game:has(.answers) .pairs .word img{height:118px!important;max-width:84%!important}
+.gawain-2 #game.game:has(.answers) .answers{margin:0 auto!important;gap:10px!important}
+.gawain-2 #game.game:has(.answers) .answer{min-height:56px!important;padding:9px 14px!important;font-size:1rem!important}
+@media(max-width:650px){.gawain-2 #game.game:has(.answers){height:calc(100dvh - 12px)!important;padding:14px 12px 10px!important}.gawain-2 #game.game:has(.answers) .brand h1{font-size:clamp(1.45rem,6.5vw,2.1rem)!important}.gawain-2 #game.game:has(.answers) .pairs .word{height:140px!important}.gawain-2 #game.game:has(.answers) .pairs .word img{height:100px!important}.gawain-2 #game.game:has(.answers) .answer{min-height:50px!important;font-size:.8rem!important}}
+</style>
+<style>
+/* Final no-clipping Part 2 fit: preserve the Part 1 rhythm within the viewport. */
+.gawain-2 #game.game:has(.answers){
+  height:calc(100dvh - 24px)!important;
+  max-height:none!important;
+  padding-top:18px!important;
+  padding-bottom:14px!important;
+  overflow:visible!important;
+}
+.gawain-2 #game.game:has(.answers) .header{margin-bottom:6px!important}
+.gawain-2 #game.game:has(.answers) .brand h1{font-size:clamp(1.7rem,3vw,2.6rem)!important;line-height:1.02!important}
+.gawain-2 #game.game:has(.answers) .brand .eyebrow{margin-bottom:6px!important;padding:7px 18px!important;font-size:.8rem!important}
+.gawain-2 #game.game:has(.answers) .instruction{margin:8px auto 10px!important;padding:9px 14px!important;font-size:.92rem!important}
+.gawain-2 #game.game:has(.answers) .pairs{margin:0 auto 10px!important;gap:12px!important}
+.gawain-2 #game.game:has(.answers) .pairs .word{height:170px!important;padding:8px!important}
+.gawain-2 #game.game:has(.answers) .pairs .word img{height:118px!important;max-width:84%!important}
+.gawain-2 #game.game:has(.answers) .answers{margin:0 auto!important;gap:10px!important}
+.gawain-2 #game.game:has(.answers) .answer{min-height:56px!important;padding:9px 14px!important;font-size:1rem!important}
+@media(max-width:650px){
+  .gawain-2 #game.game:has(.answers){height:calc(100dvh - 12px)!important;padding:14px 12px 10px!important}
+  .gawain-2 #game.game:has(.answers) .brand h1{font-size:clamp(1.45rem,6.5vw,2.1rem)!important}
+  .gawain-2 #game.game:has(.answers) .pairs .word{height:140px!important}
+  .gawain-2 #game.game:has(.answers) .pairs .word img{height:100px!important}
+  .gawain-2 #game.game:has(.answers) .answer{min-height:50px!important;font-size:.8rem!important}
+}
+</style>
+<style>
+/* Authoritative final shell for Part 2. */
+.gawain-2 #game.game:has(.answers){
+  width:min(1250px,calc(100vw - 32px))!important;
+  height:calc(100dvh - 48px)!important;
+  max-height:none!important;
+  min-height:0!important;
+  overflow:visible!important;
+}
+@media(max-width:650px){
+  .gawain-2 #game.game:has(.answers){width:calc(100vw - 24px)!important;height:calc(100dvh - 28px)!important}
+}
+</style>
+<style>
+/* Authoritative Part 2 layout override: match the established Part 1 geometry. */
+.gawain-2 #game.game:has(.answers){
+  width:min(1100px,calc(100vw - 80px))!important;
+  max-width:1100px!important;
+  height:calc(100dvh - 110px)!important;
+  max-height:calc(100dvh - 110px)!important;
+  min-height:0!important;
+  margin-top:31px!important;
+  padding:clamp(24px,3.3vh,42px) clamp(20px,6vw,80px) 20px!important;
+  overflow:hidden!important;
+}
+.gawain-2 #game.game:has(.answers) .header{margin:0 auto 12px!important}
+.gawain-2 #game.game:has(.answers) .brand h1{font-size:clamp(2rem,4vw,3.7rem)!important;line-height:1.08!important}
+.gawain-2 #game.game:has(.answers) .brand .eyebrow{margin:0 auto 12px!important;padding:10px 30px!important;font-size:clamp(.85rem,1.4vw,1.05rem)!important}
+.gawain-2 #game.game:has(.answers) .instruction{margin:18px auto 14px!important;padding:12px 18px!important;font-size:1rem!important;line-height:1.35!important}
+.gawain-2 #game.game:has(.answers) .pairs{width:min(900px,100%)!important;gap:18px!important;margin:auto!important}
+.gawain-2 #game.game:has(.answers) .pairs .word{height:clamp(190px,30vh,270px)!important;padding:12px!important;border-radius:22px!important}
+.gawain-2 #game.game:has(.answers) .pairs .word img{height:clamp(80px,15vh,125px)!important;max-width:80%!important}
+.gawain-2 #game.game:has(.answers) .answers{width:min(760px,100%)!important;margin:18px auto 0!important;gap:14px!important}
+.gawain-2 #game.game:has(.answers) .answer{min-height:68px!important;padding:13px 22px!important;font-size:clamp(1rem,1.8vw,1.25rem)!important}
+@media(max-width:650px){
+  .gawain-2 #game.game:has(.answers){width:calc(100vw - 32px)!important;max-width:none!important;height:calc(100dvh - 150px)!important;max-height:calc(100dvh - 150px)!important;margin-top:23px!important;padding:22px 14px 16px!important}
+  .gawain-2 #game.game:has(.answers) .brand h1{font-size:clamp(1.8rem,8vw,2.7rem)!important}
+  .gawain-2 #game.game:has(.answers) .pairs .word{height:170px!important}
+  .gawain-2 #game.game:has(.answers) .pairs .word img{height:100px!important}
+  .gawain-2 #game.game:has(.answers) .answers{gap:10px!important}
+  .gawain-2 #game.game:has(.answers) .answer{min-height:64px!important;padding:12px 8px!important;font-size:1rem!important}
+}
+</style>
+<style>
+.feedback-text-hidden{color:transparent!important;text-shadow:none!important}
+.feedback-text-hidden::before,.feedback-text-hidden::after{content:none!important;display:none!important}
+.gawain-2 #game #status:not(.feedback-text-hidden){visibility:hidden!important}
+.gawain-2 #game #read{width:88%!important;justify-self:center}
+.gawain-2 #game .lesson3-g2-actions>#read{flex:1 1 0!important;max-width:none!important;transform:scaleX(.78)!important}
+</style>
+<script>
+(function(){var root=document.getElementById('game');if(!root)return;var feedback=/^(?:Magaling!(?: Susunod na larawan\.)?|Hindi ito ang tamang sagot\. Subukan natin muli\.|Hindi pa ito tama\. Subukan muli\.|Hindi nakuha ang iyong boses\. Subukan muli\.)$/;function sync(){root.querySelectorAll('#status').forEach(function(el){el.classList.toggle('feedback-text-hidden',feedback.test(el.textContent.trim()));});}new MutationObserver(sync).observe(root,{childList:true,subtree:true,characterData:true});sync();}());
+</script>

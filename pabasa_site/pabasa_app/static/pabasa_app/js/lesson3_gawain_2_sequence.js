@@ -37,6 +37,12 @@
     const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
     const csrf = () => document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || '';
     const setNarrationLock = locked => game.querySelectorAll('button').forEach(button => { button.disabled = locked; button.classList.toggle('narration-disabled', locked); });
+    const setPakingganLock = locked => {
+      const button = game.querySelector('#listen');
+      if (!button) return;
+      button.disabled = locked;
+      button.classList.toggle('narration-disabled', locked);
+    };
 
     function stopAudio() {
       if (audio) audio.pause();
@@ -116,7 +122,7 @@
       const words = [pair.a, pair.b];
       const inactive = !answerPhase && pairIntroPending;
       const instructionText = answerPhase ? phase2Instruction : narrationText.intro;
-      game.innerHTML = `<header class="header"><div class="brand"><h1>Salitang Magkatugma</h1><p>Lesson 3 · Gawain 2</p></div><div class="progress">Pares ${pairIndex + 1} / ${pairs.length}<div class="segments">${pairs.map((_, index) => `<i class="${index < pairIndex ? 'done ' : ''}${index === pairIndex ? 'active' : ''}"></i>`).join('')}</div></div></header><div class="instruction">${instructionText}</div><div class="pairs">${words.map((word, index) => `<div class="word ${!inactive && !answerPhase && index === wordIndex ? 'active' : ''}"><img src="${imageBase}${word.toLowerCase()}.png" alt="${word}"><strong>${word}</strong></div>`).join('')}</div><div id="status" class="status">${message || (answerPhase ? '' : `Sabihin ang pangalan ng larawan.`)}</div>${answerPhase ? '<div class="answers"><button class="answer" data-v="yes" disabled>✓<small>MAGKATUGMA</small></button><button class="answer" data-v="no" disabled>✕<small>HINDI MAGKATUGMA</small></button></div>' : '<button id="read" class="read" disabled>🎙 Sabihin ngayon</button><button id="listen" class="listen" hidden>🔊 Pakinggan</button>'}`;
+      game.innerHTML = `<header class="header"><div class="brand"><h1>Salitang Magkatugma</h1><p>Lesson 3 · Gawain 2</p></div><div class="progress">Pares ${pairIndex + 1} / ${pairs.length}<div class="segments">${pairs.map((_, index) => `<i class="${index < pairIndex ? 'done ' : ''}${index === pairIndex ? 'active' : ''}"></i>`).join('')}</div></div></header><div class="instruction">${instructionText}</div><div class="pairs">${words.map((word, index) => `<div class="word ${!inactive && !answerPhase && index === wordIndex ? 'active' : ''}"><img src="${imageBase}${word.toLowerCase()}.png" alt="${word}"><strong>${word}</strong></div>`).join('')}</div><div id="status" class="status">${message || (answerPhase ? '' : `Sabihin ang pangalan ng larawan.`)}</div>${answerPhase ? '<div class="answers"><button class="answer" data-v="yes" disabled>✓<small>MAGKATUGMA</small></button><button class="answer" data-v="no" disabled>✕<small>HINDI MAGKATUGMA</small></button></div>' : '<button id="read" class="read" data-basahin-button disabled>Basahin</button><button id="listen" class="listen" hidden>🔊 Pakinggan</button>'}`;
       if (answerPhase) {
         game.querySelectorAll('.answer').forEach(button => { if (button.firstChild && button.firstChild.nodeType === Node.TEXT_NODE) button.firstChild.remove(); });
         const buttons = [...document.querySelectorAll('.answer')];
@@ -128,7 +134,7 @@
         });
       }
       else {
-        document.getElementById('read').onclick = record;
+        window.BasahinButton?.bindActivity(document.getElementById('read'), record);
         document.getElementById('listen').onclick = async () => { if (cueBusy) return; cueBusy = true; setNarrationLock(true); listenAttempts[wordIndex] += 1; try { await speakWord(words[wordIndex]); } finally { cueBusy = false; setNarrationLock(false); } if (listenAttempts[wordIndex] >= 3) document.getElementById('listen').hidden = true; };
         setTimeout(() => activateAndCue(), 0);
       }
@@ -140,15 +146,16 @@
       const word = pairs[pairIndex][wordIndex ? 'b' : 'a'];
       const read = document.getElementById('read');
       const status = document.getElementById('status');
-      recording = true; read.disabled = true; read.classList.add('is-recording'); read.textContent = '🎙️ Nakikinig…';
+      recording = true;
+      setPakingganLock(true);
+      read.classList.add('is-recording');
+      window.BasahinButton?.setState(read, 'calibrating');
+      window.BasahinButton?.setSpeech(read, false);
       let stream;
       try {
-        stream = await navigator.mediaDevices.getUserMedia({audio: true});
-        const chunks = [], recorder = new MediaRecorder(stream);
-        recorder.ondataavailable = event => event.data.size && chunks.push(event.data);
-        const done = new Promise(resolve => recorder.onstop = () => resolve(new Blob(chunks, {type: recorder.mimeType || 'audio/webm'})));
-        recorder.start(); setTimeout(() => recorder.state === 'recording' && recorder.stop(), 3500);
-        const form = new FormData(); form.append('audio', await done, 'rhyme.webm'); form.append('target_text', word); form.append('language', 'Filipino'); form.append('mode', 'reading');
+        stream = await window.Basahin.openMicrophone({audio: true});
+        const blob = await window.Basahin.capture({button: read, stream});
+        const form = new FormData(); form.append('audio', blob, 'rhyme.webm'); form.append('target_text', word); form.append('language', 'Filipino'); form.append('mode', 'reading');
         const result = await (await fetch(config.transcribeUrl, {method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrf()}, body: form})).json();
         const normalizedTranscript = normalize(result.transcript);
         const actualCorrect = Boolean(result.success && result.complete === true);
@@ -180,11 +187,26 @@
           try { await speakPrescribed('incorrectReading'); }
           catch (error) { console.error('Lesson 3 Gawain 2 incorrect-reading narration failed', error); }
           finally { setNarrationLock(false); }
-          read.disabled = false; read.textContent = '🎙 Sabihin ngayon';
+          read.disabled = false;
+          window.BasahinButton?.setState(read, 'idle');
+          setPakingganLock(false);
           if (readAttempts[wordIndex] >= 3) document.getElementById('listen').hidden = false;
         }
-      } catch (error) { if (currentGeneration === generation) { status.textContent = 'Hindi nakuha ang iyong boses. Subukan muli.'; read.disabled = false; read.textContent = '🎙 Sabihin ngayon'; } }
-      finally { stream?.getTracks().forEach(track => track.stop()); read?.classList.remove('is-recording'); recording = false; }
+      } catch (error) {
+        if (currentGeneration === generation) {
+          status.textContent = 'Hindi nakuha ang iyong boses. Subukan muli.';
+          read.disabled = false;
+          window.BasahinButton?.setState(read, 'idle');
+          setPakingganLock(false);
+        }
+      }
+      finally {
+        stream?.getTracks().forEach(track => track.stop());
+        read?.classList.remove('is-recording');
+        recording = false;
+        setPakingganLock(false);
+        if (read?.isConnected && read.disabled === false) window.BasahinButton?.setState(read, 'idle');
+      }
     }
 
     new MutationObserver(() => {

@@ -21,6 +21,7 @@ from django.urls import reverse
 from django.templatetags.static import static
 from django.db import DatabaseError, IntegrityError, transaction, OperationalError, connection
 from django.db.models import Count, F, Prefetch, Q
+from django.db.models.functions import Lower
 from django.utils.text import slugify
 from functools import wraps
 from urllib.parse import quote, urlencode, urlparse
@@ -64,7 +65,7 @@ from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_
 from django.db import transaction
 import re
 import traceback
-from .models import User, School, Section, Enrollment, AccountStatusHistory, Assessment, AssessmentRequest, Material, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride, ClassCrlaFinalization, StudentActivityProgress, StudentActivityRecordingSubmission
+from .models import User, School, Section, Enrollment, AccountStatusHistory, Assessment, AssessmentRequest, Material, MaterialStudentAssignment, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride, ClassCrlaFinalization, StudentActivityProgress, StudentActivityRecordingSubmission, PrescribedActivityAccessSettings
 from .system_clock import invalidate_override_cache, now as system_now, real_now, today as system_today
 from .models import PracticeDebugSettings
 from .section_configuration import ensure_salawag_grade_two_sections
@@ -157,7 +158,54 @@ LEGACY_SESSION_PROGRESS_ACTIVITIES = (
 LEGACY_SESSION_PROGRESS_ALIASES = {
     'session-2-lesson-4-gawain-2': 'lesson-4-gawain-2',
 }
-from .handwriting_validation import is_recognizable_ii, normalize_strokes
+
+
+def _prescribed_activity_order():
+    legacy_keys = [item['activity_key'] for item in LEGACY_SESSION_PROGRESS_ACTIVITIES]
+    legacy_keys.insert(legacy_keys.index('lesson-4-gawain-1') + 1, 'session-2-lesson-4-gawain-2')
+    def natural_parts(value):
+        parts = re.findall(r'\d+|[A-Za-z]+', str(value or ''))
+        return tuple((0, int(part)) if part.isdigit() else (1, part.lower()) for part in parts) or ((0, 999),)
+    catalog_keys = [activity['activity_key'] for activity in sorted(
+        active_prescribed_activities(),
+        key=lambda item: (int(item.get('session_number') or 999), natural_parts(item.get('lesson_number')), natural_parts(item.get('gawain_number'))),
+    )]
+    return list(dict.fromkeys([*legacy_keys, *catalog_keys]))
+
+
+def _prescribed_access_settings():
+    return PrescribedActivityAccessSettings.objects.get_or_create(pk=1)[0]
+
+
+def _unlocked_prescribed_activity_keys(student):
+    ordered_keys = _prescribed_activity_order()
+    if _prescribed_access_settings().unlock_all_activities:
+        return set(ordered_keys)
+    if not student:
+        return set()
+    completed = set(StudentActivityProgress.objects.filter(student=student, activity_completed=True).values_list('activity_key', flat=True))
+    unlocked = set()
+    for index, key in enumerate(ordered_keys):
+        if index == 0 or ordered_keys[index - 1] in completed:
+            unlocked.add(key)
+        else:
+            break
+    return unlocked
+
+
+def _student_can_open_prescribed_activity(student, activity_key):
+    return activity_key in _unlocked_prescribed_activity_keys(student)
+
+
+def _enforce_prescribed_activity_sequence(request, activity_key):
+    """Keep legacy prescribed routes subject to the same sequence as catalog routes."""
+    if request.session.get('user_role') != 'student':
+        return None
+    student = _active_prescribed_student(request)
+    if not student or not _student_can_open_prescribed_activity(student, activity_key):
+        return redirect('assessment')
+    return None
+from .handwriting_validation import is_recognizable_a, is_recognizable_f, is_recognizable_h, is_recognizable_i, is_recognizable_ii, is_recognizable_l, is_recognizable_m, is_recognizable_s, is_recognizable_t, is_recognizable_letter_pair, is_recognizable_n, is_recognizable_p, is_recognizable_trace, is_scribble_like, normalize_strokes
 from .reader_classification import classify_student_account
 from .scoring import (
     ADAPTED_READING_LEVEL_DISCLAIMER,
@@ -190,6 +238,7 @@ from .utils.crla_results import (
     official_crla_result_queryset,
 )
 from .reading_progress_reports import build_student_reading_progress_report
+from .aral_activity_catalog import resolve_activity
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 
@@ -2357,6 +2406,70 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
 
     user_ids = [sdata['id'] for sdata in student_map.values()]
     users = User.objects.filter(id__in=user_ids).in_bulk()
+
+    # Build the summary-card metrics from the same active material and result
+    # records used by the teacher progress views.  Assignment scope is applied
+    # per student so selected-student materials do not inflate other students'
+    # totals.
+    scoped_materials = list(Material.objects.filter(
+        is_active=True,
+    ).filter(
+        Q(section__in=sections) | Q(assigned_sections__in=sections) | Q(courses__sections__in=sections)
+    ).exclude(status__iexact='archived').distinct()) if sections else []
+    material_by_id = {material.id: material for material in scoped_materials}
+    assignment_ids = {
+        material.id: set(material.student_assignments.values_list('student_id', flat=True))
+        for material in scoped_materials
+        if str(getattr(material, 'publication_scope', 'whole_class') or 'whole_class').strip().lower() == 'selected_students'
+    }
+    summary_metrics = {
+        sid: {'assigned': 0, 'completed': 0, 'last_activity': None}
+        for sid in user_ids
+    }
+    for student_id in user_ids:
+        metric = summary_metrics[student_id]
+        eligible_material_ids = [
+            material_id for material_id in material_by_id
+            if material_id not in assignment_ids or student_id in assignment_ids[material_id]
+        ]
+        metric['assigned'] = len(eligible_material_ids)
+
+    completed_results = Assessment.objects.filter(
+        material_id__in=material_by_id,
+        student_id__in=user_ids,
+        is_active=True,
+    ).order_by('-updated_at', '-completed_at', '-id')
+    seen_completed = set()
+    for result in completed_results:
+        if str(getattr(result, 'attempt_status', '') or '').strip().lower() != 'completed':
+            continue
+        student_id = result.student_id
+        material_id = result.material_id
+        eligible_ids = assignment_ids.get(material_id)
+        if eligible_ids is not None and student_id not in eligible_ids:
+            continue
+        pair = (student_id, material_id)
+        activity_time = result.completed_at or result.updated_at or result.created_at
+        if pair not in seen_completed:
+            summary_metrics[student_id]['completed'] += 1
+            seen_completed.add(pair)
+        current_last = summary_metrics[student_id]['last_activity']
+        if activity_time and (current_last is None or activity_time > current_last):
+            summary_metrics[student_id]['last_activity'] = activity_time
+
+    for progress in StudentActivityProgress.objects.filter(student_id__in=user_ids).only('student_id', 'updated_at'):
+        current_last = summary_metrics[progress.student_id]['last_activity']
+        if progress.updated_at and (current_last is None or progress.updated_at > current_last):
+            summary_metrics[progress.student_id]['last_activity'] = progress.updated_at
+
+    for submission in StoryReadingProgress.objects.filter(
+        student_id__in=user_ids, material_id__in=material_by_id,
+    ).only('student_id', 'updated_at', 'completed_at'):
+        activity_time = submission.completed_at or submission.updated_at
+        current_last = summary_metrics[submission.student_id]['last_activity']
+        if activity_time and (current_last is None or activity_time > current_last):
+            summary_metrics[submission.student_id]['last_activity'] = activity_time
+
     official_crla_results = _latest_completed_official_crla_results(
         user_ids, section=section, crla_term=crla_term, crla_phase=crla_phase,
     )
@@ -2663,6 +2776,11 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
             'last_active_at': last_active.isoformat() if last_active else None,
             'improvement_30d': round(improvement, 1),
             'crla_result': crla_result,
+            'assigned_activities': summary_metrics[user.id]['assigned'],
+            'total_assigned_activities': summary_metrics[user.id]['assigned'],
+            'completed_activities': summary_metrics[user.id]['completed'],
+            'activities_completed': summary_metrics[user.id]['completed'],
+            'last_activity_at': summary_metrics[user.id]['last_activity'].isoformat() if summary_metrics[user.id]['last_activity'] else None,
         })
 
         level_counts[reading_level if official_result else 'Pending'] += 1
@@ -11246,6 +11364,12 @@ def admin_settings(request):
             _set_profile_dict(user, 'notification_settings', notification_settings)
             context['settings_success'] = 'Push notification preferences saved.'
 
+        elif action == 'set_prescribed_activity_access':
+            access = _prescribed_access_settings()
+            access.unlock_all_activities = request.POST.get('unlock_all_activities') == 'on'
+            access.save(update_fields=['unlock_all_activities', 'updated_at'])
+            context['settings_success'] = 'All prescribed activities are unlocked.' if access.unlock_all_activities else 'Sequential prescribed activity access is enabled.'
+
         elif action == 'save_system_time_debug':
             debug_enabled = request.POST.get('system_time_debug_enabled') == 'on'
             override, _ = SystemTimeOverride.objects.get_or_create(pk=1)
@@ -11293,6 +11417,7 @@ def admin_settings(request):
 
     system_time = timezone.localtime(system_now())
     system_time_override = SystemTimeOverride.objects.filter(pk=1).first()
+    context['prescribed_unlock_all_enabled'] = _prescribed_access_settings().unlock_all_activities
     context['notification_settings'] = notification_settings
     context['system_time_iso'] = system_time.isoformat()
     context['system_time_zone'] = timezone.get_current_timezone_name()
@@ -12093,6 +12218,8 @@ def assessment(request):
             }
             for row in progress_rows if row.activity_key in prescribed_keys
         }
+        unlocked_activity_keys = _unlocked_prescribed_activity_keys(user)
+        context['unlocked_prescribed_activity_keys'] = sorted(unlocked_activity_keys)
         def prescribed_card_image_path(activity):
             """Card artwork is optional for non-image prescribed activities."""
             if activity.get('card_image_path'):
@@ -12122,6 +12249,7 @@ def assessment(request):
                 'total_items': activity.get('total_items', len(activity.get('items', []))),
                 'image_url': static(image_path) if (image_path := (prescribed_card_image_path(activity) or _prescribed_activity_thumbnail_path(activity))) else '',
                 'route_url': reverse(activity['route_name']) if activity.get('route_name') else reverse('prescribed_activity_page', kwargs={'activity_key': activity['activity_key']}),
+                'is_locked': activity['activity_key'] not in unlocked_activity_keys,
             }
             for activity in active_prescribed_activities()
         ]
@@ -13495,6 +13623,10 @@ def prescribed_activity_page(request, activity_key):
     activity = prescribed_activity(activity_key)
     if not activity:
         return redirect('assessment')
+    if request.GET.get('preview') != '1' and request.session.get('user_role') == 'student':
+        student = _active_prescribed_student(request)
+        if not student or not _student_can_open_prescribed_activity(student, activity_key):
+            return redirect('assessment')
     if activity.get('interaction') == 'prescribed_workbook':
         from .prescribed_workbook import (get_activity, initial_state, initial_l22_g2_state, initial_l22_g6_state,
                                           initial_l22_g4_state,
@@ -13727,6 +13859,121 @@ def prescribed_activity_page(request, activity_key):
             local_audio = {
                 'instruction': static(audio_root + audio_files['instruction']),
                 'words': {text: static(audio_root + filename) for text, filename in audio_files['words'].items()},
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+                'completion': {text: static(audio_root + filename) for text, filename in audio_files['completion'].items()},
+                'mapped_states': mapped_states,
+            }
+            return render(request, 'pabasa_app/prescribed_workbook_page.html', {
+                'workbook_payload': {
+                    'activity': get_activity(activity_key), 'state': state, 'preview': preview,
+                    'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+                    'read_aloud_url': reverse('reading_read_aloud_api'), 'back_url': reverse('assessment'),
+                    'next_url': next_url, 'local_audio': local_audio,
+                },
+            })
+        if activity_key == 'aral-l24-g6-z-word-search':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_24/BAHAGI_2/GAWAIN_6/'
+            audio_files = {
+                'instruction': 'Panuto Hanapin at bilugan sa loob ng Big Box ang sumusunod na mga salita._TTS.mp3',
+                'words': {
+                    'zipper': 'Tama! Nahanap mo ang zipper._TTS.mp3',
+                    'zoo': 'Tama! Nahanap mo ang zoo._TTS.mp3',
+                    'zebra': 'Tama! Nahanap mo ang zebra._TTS.mp3',
+                    'zigzag': 'Tama! Nahanap mo ang zigzag._TTS.mp3',
+                    'Perez': 'Tama! Nahanap mo ang Perez._TTS.mp3',
+                    'Rizal': 'Tama! Nahanap mo ang Rizal._TTS.mp3',
+                    'Zamora': 'Tama! Nahanap mo ang Zamora._TTS.mp3',
+                    'Zam': 'Tama! Nahanap mo ang Zam._TTS.mp3',
+                    'Zoren': 'Tama! Nahanap mo ang Zoren._TTS.mp3',
+                    'Zeny': 'Tama! Nahanap mo ang Zeny._TTS.mp3',
+                },
+                'feedback': {
+                    'Nahanap mo na ang salitang ito.': 'Nahanap mo na ang salitang ito._TTS.mp3',
+                    'Subukan muli.': 'Subukan Muli._TTS.mp3',
+                },
+                'completion': {
+                    'Magaling! Nahanap mo ang lahat ng salita!': 'Magaling! Nahanap mo ang lahat ng salita!_TTS.mp3',
+                },
+            }
+            mapped_states = [get_activity(activity_key).get('instruction', '')]
+            mapped_states += list(audio_files['words'])
+            mapped_states += list(audio_files['feedback'])
+            mapped_states += list(audio_files['completion'])
+            local_audio = {
+                'instruction': static(audio_root + audio_files['instruction']),
+                'words': {text: static(audio_root + filename) for text, filename in audio_files['words'].items()},
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+                'completion': {text: static(audio_root + filename) for text, filename in audio_files['completion'].items()},
+                'mapped_states': mapped_states,
+            }
+            return render(request, 'pabasa_app/prescribed_workbook_page.html', {
+                'workbook_payload': {
+                    'activity': get_activity(activity_key), 'state': state, 'preview': preview,
+                    'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+                    'read_aloud_url': reverse('reading_read_aloud_api'), 'back_url': reverse('assessment'),
+                    'next_url': next_url, 'local_audio': local_audio,
+                },
+            })
+        if activity_key == 'aral-l24-g7-z-word-reading':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_24/BAHAGI_2/GAWAIN_7/'
+            audio_files = {
+                'instruction': 'Basahin ang mga salita sa ibaba na may hiram na letrang Zz._TTS.mp3',
+                'words': {
+                    'zigzag': 'zigzag_TTS.mp3', 'Zandra': 'Zandra_TTS.mp3', 'Zamora': 'Zamora_TTS.mp3',
+                    'Zandro': 'Zandro_TTS.mp3', 'Lazaro': 'Lazaro_TTS.mp3', 'Perez': 'Perez_TTS.mp3',
+                    'Rizal': 'Rizal_TTS.mp3', 'Dizon': 'Dizon_TTS.mp3', 'Gomez': 'Gomez_TTS.mp3',
+                    'Zarate': 'Zarate_TTS.mp3', 'Zaragosa': 'Zaragosa_TTS.mp3', 'Zapote': 'Zapote_TTS.mp3',
+                    'Zonrox': 'Zonrox_TTS.mp3', 'Lopez': 'Lopez_TTS.mp3', 'Luzon': 'Luzon_TTS.mp3',
+                    'Zeny': 'Zeny_TTS.mp3', 'Zoren': 'Zoren_TTS.mp3', 'Legazpi': 'Legazpi_TTS.mp3',
+                    'Zabala': 'Zabala_TTS.mp3', 'Zambales': 'Zambales_TTS.mp3', 'Gonzales': 'Gonzales_TTS.mp3',
+                    'Mendoza': 'Mendoza_TTS.mp3', 'Hernandez': 'Hernandez_TTS.mp3',
+                },
+                'feedback': {
+                    'Hindi available ang audio.': 'Hindi available ang audio._TTS.mp3',
+                    'Hindi ko malinaw na narinig. Subukan muli.': 'Hindi ko malinaw na narinig. Subukan muli._TTS.mp3',
+                    'Hindi magamit ang mikropono. Subukan muli.': 'Hindi magamit ang mikropono. Subukan muli._TTS.mp3',
+                    'Hindi pinayagan ang mikropono.': 'Hindi pinayagan ang mikropono._TTS.mp3',
+                    'Sinusuri ang iyong pagbasa...': 'Sinusuri ang iyong pagbasa..._TTS.mp3',
+                    'Subukan muli.': 'Subukan Muli._TTS.mp3',
+                    'Tama!': 'Tama!_TTS.mp3',
+                },
+                'completion': {
+                    'Magaling! Natapos mo ang Gawain 7.': 'Magaling! Natapos mo ang Gawain 7._TTS.mp3',
+                },
+            }
+            mapped_states = [get_activity(activity_key).get('instruction', '')]
+            mapped_states += list(audio_files['words'])
+            mapped_states += list(audio_files['feedback'])
+            mapped_states += list(audio_files['completion'])
+            local_audio = {
+                'instruction': static(audio_root + audio_files['instruction']),
+                'words': {text: static(audio_root + filename) for text, filename in audio_files['words'].items()},
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+                'completion': {text: static(audio_root + filename) for text, filename in audio_files['completion'].items()},
+                'mapped_states': mapped_states,
+            }
+            return render(request, 'pabasa_app/prescribed_workbook_page.html', {
+                'workbook_payload': {
+                    'activity': get_activity(activity_key), 'state': state, 'preview': preview,
+                    'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+                    'read_aloud_url': reverse('reading_read_aloud_api'), 'back_url': reverse('assessment'),
+                    'next_url': next_url, 'local_audio': local_audio,
+                },
+            })
+        if activity_key == 'aral-l24-g5-z-syllabication':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_24/BAHAGI_2/GAWAIN_5/'
+            audio_files = {
+                'feedback': {
+                    'Isulat muna ang sagot.': 'Isulat muna ang sagot._TTS.mp3',
+                    'Mahusay!': 'Mahusay!_TTS.mp3',
+                    'Subukan muli.': 'Subukan muli._TTS].mp3',
+                },
+                'completion': {
+                    'Magaling! Natapos mo ang Gawain 5!': 'Magaling! Natapos mo ang Gawain 5!_TTS.mp3',
+                },
+            }
+            mapped_states = list(audio_files['feedback']) + list(audio_files['completion'])
+            local_audio = {
                 'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
                 'completion': {text: static(audio_root + filename) for text, filename in audio_files['completion'].items()},
                 'mapped_states': mapped_states,
@@ -14296,6 +14543,52 @@ def prescribed_activity_page(request, activity_key):
                     'local_audio': local_audio,
                 },
             })
+        if activity_key == 'aral-s9-a1-family-drawing':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_9/ACTIVITY_01/'
+            audio_files = {
+                'instruction': 'Draw a picture of your family. Under your drawing, write the sentence “This is my family.”_TTS.mp3',
+                'completion': 'Good job! Activity 1 is complete!_TTS.mp3',
+            }
+            local_audio = {
+                'instruction': static(audio_root + audio_files['instruction']),
+                'feedback': {},
+                'completion': {'Good job! Activity 1 is complete!': static(audio_root + audio_files['completion'])},
+                'mapped_states': [get_activity(activity_key)['instruction'], 'Good job! Activity 1 is complete!'],
+            }
+            return render(request, 'pabasa_app/prescribed_workbook_page.html', {
+                'workbook_payload': {
+                    'activity': get_activity(activity_key), 'state': state, 'preview': preview,
+                    'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+                    'read_aloud_url': reverse('reading_read_aloud_api'), 'next_url': next_url,
+                    'local_audio': local_audio,
+                },
+            })
+        if activity_key == 'aral-s9-a2-helping-drawing':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_9/ACTIVITY_02/'
+            audio_files = {
+                'instruction': 'Draw and color a situation at home where you helped someone. Under your drawing, write the courteous word you used “Please”  “Sorry”  “Thank you”  “You’re welcome.”_TSS.mp3',
+                'feedback': {
+                    'Could not save your work. Try again.': 'Could not save your work. Try again._TTS.mp3',
+                    'Please enter an answer.': 'Please enter an answer._TTS.mp3',
+                    'Write the kind word first.': 'Write the kind word first._TTS.mp3',
+                    "Use Please, Sorry, Thank you, or You're welcome.": "Use Please, Sorry, Thank you, or You're welcome._TTS.mp3",
+                },
+                'completion': 'Good job! Activity 2 is complete!_TTS.mp3',
+            }
+            local_audio = {
+                'instruction': static(audio_root + audio_files['instruction']),
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+                'completion': {'Good job! Activity 2 is complete!': static(audio_root + audio_files['completion'])},
+                'mapped_states': [get_activity(activity_key)['instruction'], *audio_files['feedback'], 'Good job! Activity 2 is complete!'],
+            }
+            return render(request, 'pabasa_app/prescribed_workbook_page.html', {
+                'workbook_payload': {
+                    'activity': get_activity(activity_key), 'state': state, 'preview': preview,
+                    'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+                    'read_aloud_url': reverse('reading_read_aloud_api'), 'back_url': reverse('assessment'),
+                    'next_url': next_url, 'local_audio': local_audio,
+                },
+            })
         return render(request, 'pabasa_app/prescribed_workbook_page.html', {
             'workbook_payload': {
                 'activity': get_activity(activity_key), 'state': state, 'preview': preview,
@@ -14527,6 +14820,8 @@ def prescribed_activity_page(request, activity_key):
             'completion_url': reverse('lesson29_trace_say_complete'),
             'read_aloud_url': reverse('reading_read_aloud_api'),
             'transcribe_url': reverse('reading_transcribe_api'),
+            'recording_url': reverse('lesson29_trace_say_recording'),
+            'submission_url': reverse('lesson29_trace_say_submit'),
             'progress': {'completed_items': progress.completed_items if progress else 0,
                          'total_items': len(activity['items']),
                          'activity_completed': progress.activity_completed if progress else False,
@@ -15189,7 +15484,7 @@ def prescribed_activity_page(request, activity_key):
             'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
             'title': activity['title'], 'instruction': activity['instruction'],
             'items': [{**item, 'image_url': static(item['image_path']), 'audio_url': static(
-                f"pabasa_app/prescribed/audio/SESSION_5/LESSON_14/GAWAIN_1/{item['audio_filename']}"
+                f"pabasa_app/prescribed/audio/SESSION_5/14_GAWAIN_1/{item['audio_filename']}"
             )} for item in activity['items']],
             'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
             'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
@@ -15424,11 +15719,25 @@ def lesson29_trace_say_progress(request):
         traces = traces[:total * 3]
         action = data.get('action')
         if action == 'read_sound':
-            if phase != 'sound' or index >= total or int(data.get('item_index', -1)) != index:
+            if phase not in {'sound', 'recorded'} or index >= total or int(data.get('item_index', -1)) != index:
                 raise ValueError('Read the current letter sound first.')
             # This activity follows Lesson 13 Gawain 1: recording the prompted sound
             # completes the oral turn; it is intentionally not speech-to-text scored.
             phase = 'trace'
+        elif action == 'recorded':
+            if phase != 'sound' or index >= total or int(data.get('item_index', -1)) != index:
+                raise ValueError('Record the current letter sound first.')
+            phase = 'recorded'
+        elif action == 'retry_sound':
+            if phase != 'recorded' or index >= total or int(data.get('item_index', -1)) != index:
+                raise ValueError('There is no recording to retry.')
+            phase = 'sound'
+        elif action == 'previous_item':
+            if index <= 0:
+                raise ValueError('This is already the first letter.')
+            index -= 1
+            phase = 'sound'
+            traces = traces[:index * 3]
         elif action == 'save_trace':
             if phase != 'trace' or index >= total or int(data.get('item_index', -1)) != index:
                 raise ValueError('Say the letter sound before tracing.')
@@ -15451,7 +15760,32 @@ def lesson29_trace_say_progress(request):
                         points.append({'x': x, 'y': y})
                 if len(points) >= 2:
                     sanitized.append(points)
-            if not sanitized:
+            target_letter = str(activity['items'][index].get('letter', '')).lower()
+            if is_scribble_like(sanitized):
+                valid_trace = False
+            elif target_letter == 'pp':
+                valid_trace = is_recognizable_p(sanitized)
+            elif target_letter == 'ff':
+                valid_trace = is_recognizable_f(sanitized)
+            elif target_letter == 'hh':
+                valid_trace = is_recognizable_h(sanitized)
+            elif target_letter == 'nn':
+                valid_trace = is_recognizable_n(sanitized)
+            elif target_letter == 'ii':
+                valid_trace = is_recognizable_i(sanitized)
+            elif target_letter == 'll':
+                valid_trace = is_recognizable_l(sanitized)
+            elif target_letter == 'mm':
+                valid_trace = is_recognizable_m(sanitized)
+            elif target_letter == 'tt':
+                valid_trace = is_recognizable_t(sanitized)
+            elif target_letter == 'aa':
+                valid_trace = is_recognizable_a(sanitized)
+            elif target_letter == 'ss':
+                valid_trace = is_recognizable_s(sanitized)
+            else:
+                valid_trace = is_recognizable_letter_pair(sanitized, target_letter)
+            if not sanitized or not valid_trace:
                 raise ValueError('Write the letter before continuing.')
             repetition = len(traces) % 3
             if len(traces) // 3 != index:
@@ -15496,10 +15830,95 @@ def lesson29_trace_say_complete(request):
     traces = state.get('traces') if isinstance(state.get('traces'), list) else []
     if not existing or int(state.get('current_item', 0) or 0) < total or len(traces) < total * 3:
         return JsonResponse({'success': False, 'error': 'Complete each letter and all three traces first.'}, status=400)
-    existing.activity_completed = True
+    # A finished attempt awaits the teacher's verdict; only a teacher may
+    # unlock the next activity, consistent with Lesson 1 Gawain 1.
+    existing.activity_completed = False
     existing.current_index = existing.completed_items = existing.correct_items = existing.total_items = total
-    existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
-    return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
+    state['submitted'] = True
+    state['awaiting_teacher_verdict'] = True
+    existing.state = state
+    existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'state', 'updated_at'])
+    return JsonResponse({'success': True, 'result': {'items_completed': total, 'awaiting_teacher_verdict': True}})
+
+
+@login_required(role='student')
+@csrf_protect
+@require_http_methods(['POST'])
+def lesson29_trace_say_recording(request):
+    """Store one replaceable English letter-sound recording per Activity 3 item."""
+    activity_key = 'lesson-29-gawain-3'
+    student = _active_prescribed_student(request)
+    audio = request.FILES.get('audio')
+    try:
+        item_index = int(request.POST.get('item_index'))
+        duration = max(0, int(request.POST.get('duration_seconds') or 0))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'A valid recording item is required.'}, status=400)
+    activity = prescribed_activity(activity_key)
+    if not student or not audio or not activity or not 0 <= item_index < len(activity.get('items') or []):
+        return JsonResponse({'success': False, 'error': 'A valid recording is required.'}, status=400)
+    with transaction.atomic():
+        submission = StudentActivityRecordingSubmission.objects.select_for_update().filter(student=student, activity_key=activity_key, item_index=item_index).first()
+        old_name = submission.audio_file.name if submission and submission.audio_file else ''
+        if submission:
+            submission.audio_file = audio; submission.duration_seconds = duration or None; submission.status = 'submitted'; submission.checked_by = None; submission.checked_at = None
+            submission.save(update_fields=['audio_file', 'duration_seconds', 'status', 'checked_by', 'checked_at', 'updated_at'])
+        else:
+            submission = StudentActivityRecordingSubmission.objects.create(student=student, activity_key=activity_key, item_index=item_index, audio_file=audio, duration_seconds=duration or None)
+        if old_name and old_name != submission.audio_file.name:
+            try: submission.audio_file.storage.delete(old_name)
+            except Exception: logger.warning('Unable to remove replaced Lesson 29 Activity 3 recording', exc_info=True)
+    return JsonResponse({'success': True, 'recording_id': submission.id, 'item_index': item_index})
+
+
+@login_required(role='student')
+@csrf_protect
+@require_http_methods(['POST'])
+def lesson29_trace_say_submit(request):
+    activity_key = 'lesson-29-gawain-3'
+    student = _active_prescribed_student(request)
+    activity = prescribed_activity(activity_key)
+    total = len(activity.get('items') or []) if activity else 0
+    if not student or not total:
+        return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if StudentActivityRecordingSubmission.objects.filter(student=student, activity_key=activity_key, status='submitted').count() < total:
+        return JsonResponse({'success': False, 'error': 'Record every letter sound before submitting.'}, status=400)
+    return lesson29_trace_say_complete(request)
+
+
+@login_required(role='teacher')
+@csrf_protect
+@require_http_methods(['POST'])
+def teacher_lesson29_trace_say_review_action(request):
+    """Teacher verdict for the complete Activity 3 attempt, including recordings and traces."""
+    try: payload = json.loads(request.body or '{}')
+    except json.JSONDecodeError: payload = {}
+    student_id = str(payload.get('student_id') or '').strip()
+    action = str(payload.get('action') or '').strip().lower()
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    # Enrollment data may serialize IDs as integers while the browser sends
+    # them as strings. Normalize both sides before validating the request.
+    allowed = {
+        str(entry.get('student_id')).strip()
+        for section in Section.objects.filter(teacher=teacher, is_active=True)
+        for entry in section.get_enrolled_students(active_only=True)
+        if entry.get('student_id') is not None
+    } if teacher else set()
+    if student_id not in allowed or action not in {'retry', 'checked'}:
+        return JsonResponse({'success': False, 'error': 'Student or review action is invalid.'}, status=400)
+    progress = StudentActivityProgress.objects.filter(student_id=student_id, activity_key='lesson-29-gawain-3').first()
+    if not progress:
+        return JsonResponse({'success': False, 'error': 'Activity attempt not found.'}, status=404)
+    if action == 'retry':
+        StudentActivityRecordingSubmission.objects.filter(student_id=student_id, activity_key='lesson-29-gawain-3').update(status='retry', checked_by=None, checked_at=None)
+        progress.activity_completed = False; progress.current_index = progress.completed_items = progress.correct_items = 0
+        progress.state = {'current_item': 0, 'phase': 'sound', 'traces': [], 'retry_requested': True}
+    else:
+        StudentActivityRecordingSubmission.objects.filter(student_id=student_id, activity_key='lesson-29-gawain-3').update(status='checked', checked_by=teacher, checked_at=system_now())
+        progress.activity_completed = True; progress.current_index = progress.completed_items = progress.correct_items = progress.total_items
+        progress.state = {**(progress.state if isinstance(progress.state, dict) else {}), 'submitted': True, 'checked': True}
+    progress.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'state', 'updated_at'])
+    return JsonResponse({'success': True, 'status': 'checked' if action == 'checked' else 'retry'})
 
 
 @login_required(role='student')
@@ -15512,6 +15931,8 @@ def prescribed_activity_progress(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if not _student_can_open_prescribed_activity(student, activity_key):
+        return JsonResponse({'success': False, 'error': 'Complete the previous activity first.'}, status=403)
     if activity_key == 'lesson-15-gawain-3':
         try:
             data = json.loads(request.body or '{}')
@@ -15836,9 +16257,25 @@ def prescribed_activity_progress(request, activity_key):
             existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             total = len(activity['items'])
+            if is_reset:
+                recordings = list(StudentActivityRecordingSubmission.objects.filter(
+                    student=student, activity_key=activity_key, item_index__isnull=False, substep__in=(0, 1),
+                ))
+                with transaction.atomic():
+                    for recording in recordings:
+                        if recording.audio_file:
+                            try:
+                                recording.audio_file.storage.delete(recording.audio_file.name)
+                            except Exception:
+                                logger.warning('Unable to remove reset Session 4 Gawain 2 recording: %s', recording.audio_file.name, exc_info=True)
+                    StudentActivityRecordingSubmission.objects.filter(
+                        student=student, activity_key=activity_key, item_index__isnull=False, substep__in=(0, 1),
+                    ).delete()
             item_index = 0 if is_reset else (max(0, min(total - 1, int(incoming.get('current_index', old.get('current_index', 0))))) if total else 0)
             substep = 0 if is_reset else max(0, min(2, int(incoming.get('current_substep', old.get('current_substep', 0)))))
             completed_items = 0 if is_reset else max(0, min(total, int(incoming.get('completed_items', old.get('completed_items', 0)))))
+            if not is_reset and substep < 2:
+                completed_items = max(0, min(total, int(old.get('completed_items', existing.completed_items if existing else 0))))
             if existing and existing.activity_completed and not is_reset:
                 return JsonResponse({'success': True, 'progress': {'current_index': existing.current_index, 'completed_items': existing.completed_items, 'correct_items': existing.correct_items, 'total_items': existing.total_items, 'activity_completed': True, 'state': old}})
             state = dict(old)
@@ -15856,6 +16293,41 @@ def prescribed_activity_progress(request, activity_key):
             existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             total = len(activity['items'])
+            if is_reset:
+                # Restarting this activity must clear only its itemized student
+                # recordings. Ordinary page loads never enter this branch.
+                recordings = list(StudentActivityRecordingSubmission.objects.filter(
+                    student=student, activity_key=activity_key, item_index__isnull=False,
+                ))
+                with transaction.atomic():
+                    for recording in recordings:
+                        if recording.audio_file:
+                            try:
+                                recording.audio_file.storage.delete(recording.audio_file.name)
+                            except Exception:
+                                logger.warning(
+                                    'Unable to remove reset Session 4 Gawain 1 recording: %s',
+                                    recording.audio_file.name,
+                                    exc_info=True,
+                                )
+                    StudentActivityRecordingSubmission.objects.filter(
+                        student=student, activity_key=activity_key, item_index__isnull=False,
+                    ).delete()
+                    state = dict(incoming)
+                    state.update({'current_index': 0, 'completed_items': 0,
+                                  'correct_items': 0, 'phase': 'initial',
+                                  'recorded_items': [],
+                                  'state_version': int(old.get('state_version') or 0) + 1})
+                    progress, _ = StudentActivityProgress.objects.update_or_create(
+                        student=student, activity_key=activity_key,
+                        defaults={'current_index': 0, 'completed_items': 0,
+                                  'correct_items': 0, 'total_items': total,
+                                  'activity_completed': False, 'state': state})
+                return JsonResponse({'success': True, 'progress': {
+                    'current_index': progress.current_index, 'completed_items': progress.completed_items,
+                    'correct_items': progress.correct_items, 'total_items': progress.total_items,
+                    'activity_completed': False, 'state': state,
+                }})
             current_index = max(0, min(total - 1, int(incoming.get('current_index', old.get('current_index', 0))))) if total else 0
             completed_items = max(0, min(total, int(incoming.get('completed_items', old.get('completed_items', 0)))))
             correct_items = max(0, min(completed_items, int(incoming.get('correct_items', old.get('correct_items', 0)))))
@@ -17385,6 +17857,15 @@ def prescribed_activity_progress(request, activity_key):
         data = json.loads(request.body or '{}'); state = data.get('state') if isinstance(data.get('state'), dict) else {}
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first(); old = existing.state if existing and isinstance(existing.state, dict) else {}
         if data.get('reset') is True:
+            recordings = list(StudentActivityRecordingSubmission.objects.filter(student=student, activity_key=activity_key, item_index__isnull=False))
+            with transaction.atomic():
+                for recording in recordings:
+                    if recording.audio_file:
+                        try:
+                            recording.audio_file.storage.delete(recording.audio_file.name)
+                        except Exception:
+                            logger.warning('Unable to remove reset Lesson 13 Gawain 1 recording: %s', recording.audio_file.name, exc_info=True)
+                StudentActivityRecordingSubmission.objects.filter(student=student, activity_key=activity_key, item_index__isnull=False).delete()
             saved = {'activity_key': activity_key, 'phase': 'initial', 'current_item': 0,
                      'reading_attempts': 0, 'aloud_attempts': 0, 'oral_satisfied': False,
                      'state_version': 0}
@@ -17404,7 +17885,9 @@ def prescribed_activity_progress(request, activity_key):
             completed = bounded_l13(data.get('completed_items', old_completed), old_completed)
             incoming_index = bounded_l13(state.get('current_item', data.get('current_index', old_index)), old_index)
             completed = max(completed, old_completed)
-            current_index = max(incoming_index, old_index, completed)
+            # current_index identifies the active item; completed is tracked separately.
+            # A recording on item 0 must not advance the resume cursor to item 1.
+            current_index = incoming_index
             saved = {'activity_key': activity_key,
                      'phase': state.get('phase', old.get('phase', 'initial')),
                      'current_item': current_index,
@@ -18202,6 +18685,8 @@ def prescribed_activity_complete(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    if not _student_can_open_prescribed_activity(student, activity_key):
+        return JsonResponse({'success': False, 'error': 'Complete the previous activity first.'}, status=403)
     if activity_key == 'lesson-13-gawain-2':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         total = len(activity['items'])
@@ -19441,8 +19926,16 @@ def clap_count_syllables_page(request):
 @xframe_options_sameorigin
 def salitang_magkatugma_page(request):
     """Student-facing Lesson 2 rhyme activity (client-side activity data for now)."""
+    access_response = _enforce_prescribed_activity_sequence(request, 'lesson-2-gawain-1')
+    if access_response:
+        return access_response
     context = _dashboard_context(request)
     progress = StudentActivityProgress.objects.filter(student_id=request.session.get('user_id'), activity_key='lesson-2-gawain-1').first()
+    if progress and (progress.activity_completed or progress.current_index >= progress.total_items):
+        if not progress.activity_completed:
+            progress.activity_completed = True
+            progress.save(update_fields=['activity_completed', 'updated_at'])
+        return redirect('assessment')
     context['lesson_2_progress'] = json.dumps({'current_index': progress.current_index, 'completed_items': progress.completed_items, 'correct_items': progress.correct_items, 'total_items': progress.total_items, 'activity_completed': progress.activity_completed} if progress else None)
     context['lesson_2_progress_url'] = reverse('lesson_3_activity_progress')
     response = render(request, 'pabasa_app/salitang_magkatugma_page.html', context)
@@ -19455,9 +19948,17 @@ def salitang_magkatugma_page(request):
 @xframe_options_sameorigin
 def lesson_1_gawain_1_page(request):
     """Grade 2 Filipino alphabet sing-along (not a scored assessment)."""
+    access_response = _enforce_prescribed_activity_sequence(request, 'lesson-1-gawain-1')
+    if access_response:
+        return access_response
     progress = StudentActivityProgress.objects.filter(
         student_id=request.session.get('user_id'), activity_key='lesson-1-gawain-1'
     ).first()
+    if progress and (progress.activity_completed or progress.current_index >= progress.total_items):
+        if not progress.activity_completed:
+            progress.activity_completed = True
+            progress.save(update_fields=['activity_completed', 'updated_at'])
+        return redirect('assessment')
     submission = StudentActivityRecordingSubmission.objects.filter(
         student_id=request.session.get('user_id'), activity_key='lesson-1-gawain-1'
     ).first()
@@ -19520,6 +20021,143 @@ def lesson_1_gawain_1_submit(request):
     return JsonResponse({'success': True, 'submission_id': submission.id})
 
 
+@login_required(role='student')
+@csrf_protect
+@require_http_methods(['POST'])
+def session_4_gawain_1_recording(request):
+    student = User.objects.filter(pk=request.session.get('user_id'), role='student', is_archived=False).first()
+    audio = request.FILES.get('audio')
+    if not student or not audio:
+        return JsonResponse({'success': False, 'error': 'A recording is required.'}, status=400)
+    try:
+        item_index = int(request.POST.get('item_index'))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'A valid item is required.'}, status=400)
+    activity = prescribed_activity('session-4-gawain-1')
+    if not activity or item_index < 0 or item_index >= len(activity.get('items') or []):
+        return JsonResponse({'success': False, 'error': 'Invalid activity item.'}, status=400)
+    try:
+        duration = max(0, int(request.POST.get('duration_seconds') or 0))
+    except (TypeError, ValueError):
+        duration = None
+    activity_key = 'session-4-gawain-1'
+    with transaction.atomic():
+        submission = StudentActivityRecordingSubmission.objects.select_for_update().filter(
+            student=student, activity_key=activity_key, item_index=item_index,
+        ).first()
+        old_name = submission.audio_file.name if submission and submission.audio_file else ''
+        if submission:
+            submission.audio_file = audio
+            submission.duration_seconds = duration or None
+            submission.status = 'submitted'
+            submission.checked_by = None
+            submission.checked_at = None
+            submission.save(update_fields=['audio_file', 'duration_seconds', 'status', 'checked_by', 'checked_at', 'updated_at'])
+        else:
+            submission = StudentActivityRecordingSubmission.objects.create(
+                student=student, activity_key=activity_key, item_index=item_index,
+                audio_file=audio, duration_seconds=duration or None,
+            )
+        if old_name and old_name != submission.audio_file.name:
+            try:
+                submission.audio_file.storage.delete(old_name)
+            except Exception:
+                logger.warning('Unable to remove replaced Session 4 Gawain 1 recording: %s', old_name, exc_info=True)
+    return JsonResponse({'success': True, 'recording_id': submission.id, 'item_index': item_index})
+
+
+@login_required(role='student')
+@csrf_protect
+@require_http_methods(['GET', 'POST'])
+def lesson_13_gawain_1_recording(request):
+    student = User.objects.filter(pk=request.session.get('user_id'), role='student', is_archived=False).first()
+    activity_key = 'lesson-13-gawain-1'
+    if not student:
+        return JsonResponse({'success': False, 'error': 'Student not found.'}, status=403)
+    if request.method == 'GET':
+        rows = StudentActivityRecordingSubmission.objects.filter(student=student, activity_key=activity_key, item_index__isnull=False).values('id', 'item_index', 'duration_seconds', 'status')
+        return JsonResponse({'success': True, 'recordings': list(rows)})
+    audio = request.FILES.get('audio')
+    if not audio:
+        return JsonResponse({'success': False, 'error': 'A recording is required.'}, status=400)
+    try:
+        item_index = int(request.POST.get('item_index'))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'A valid item is required.'}, status=400)
+    activity = prescribed_activity(activity_key)
+    if not activity or item_index < 0 or item_index >= len(activity.get('items') or []):
+        return JsonResponse({'success': False, 'error': 'Invalid activity item.'}, status=400)
+    try:
+        duration = max(0, int(request.POST.get('duration_seconds') or 0))
+    except (TypeError, ValueError):
+        duration = None
+    with transaction.atomic():
+        submission = StudentActivityRecordingSubmission.objects.select_for_update().filter(student=student, activity_key=activity_key, item_index=item_index).first()
+        old_name = submission.audio_file.name if submission and submission.audio_file else ''
+        if submission:
+            submission.audio_file = audio
+            submission.duration_seconds = duration or None
+            submission.status = 'submitted'
+            submission.checked_by = None
+            submission.checked_at = None
+            submission.save(update_fields=['audio_file', 'duration_seconds', 'status', 'checked_by', 'checked_at', 'updated_at'])
+        else:
+            submission = StudentActivityRecordingSubmission.objects.create(student=student, activity_key=activity_key, item_index=item_index, audio_file=audio, duration_seconds=duration or None)
+        new_name = submission.audio_file.name if submission.audio_file else ''
+        if old_name and old_name != new_name:
+            try:
+                submission.audio_file.storage.delete(old_name)
+            except Exception:
+                logger.warning('Unable to remove replaced Lesson 13 Gawain 1 recording: %s', old_name, exc_info=True)
+    return JsonResponse({'success': True, 'recording_id': submission.id, 'item_index': item_index})
+
+
+@login_required(role='student')
+@csrf_protect
+@require_http_methods(['POST'])
+def session_4_gawain_2_recording(request):
+    student = User.objects.filter(pk=request.session.get('user_id'), role='student', is_archived=False).first()
+    audio = request.FILES.get('audio')
+    if not student or not audio:
+        return JsonResponse({'success': False, 'error': 'A recording is required.'}, status=400)
+    try:
+        item_index = int(request.POST.get('item_index'))
+        substep = int(request.POST.get('substep'))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'A valid item and stage are required.'}, status=400)
+    activity = prescribed_activity('session-4-gawain-2')
+    if not activity or item_index < 0 or item_index >= len(activity.get('items') or []) or substep not in (0, 1):
+        return JsonResponse({'success': False, 'error': 'Invalid individual-letter stage.'}, status=400)
+    try:
+        duration = max(0, int(request.POST.get('duration_seconds') or 0))
+    except (TypeError, ValueError):
+        duration = None
+    activity_key = 'session-4-gawain-2'
+    with transaction.atomic():
+        submission = StudentActivityRecordingSubmission.objects.select_for_update().filter(
+            student=student, activity_key=activity_key, item_index=item_index, substep=substep,
+        ).first()
+        old_name = submission.audio_file.name if submission and submission.audio_file else ''
+        if submission:
+            submission.audio_file = audio
+            submission.duration_seconds = duration or None
+            submission.status = 'submitted'
+            submission.checked_by = None
+            submission.checked_at = None
+            submission.save(update_fields=['audio_file', 'duration_seconds', 'status', 'checked_by', 'checked_at', 'updated_at'])
+        else:
+            submission = StudentActivityRecordingSubmission.objects.create(
+                student=student, activity_key=activity_key, item_index=item_index, substep=substep,
+                audio_file=audio, duration_seconds=duration or None,
+            )
+        if old_name and old_name != submission.audio_file.name:
+            try:
+                submission.audio_file.storage.delete(old_name)
+            except Exception:
+                logger.warning('Unable to remove replaced Session 4 Gawain 2 recording: %s', old_name, exc_info=True)
+    return JsonResponse({'success': True, 'recording_id': submission.id, 'item_index': item_index, 'substep': substep})
+
+
 @login_required(role='teacher')
 @require_http_methods(['GET'])
 def teacher_lesson_1_gawain_1_recordings(request):
@@ -19535,6 +20173,52 @@ def teacher_lesson_1_gawain_1_recordings(request):
          'can_check': row.status == 'submitted', 'can_retry': row.status == 'submitted'}
         for row in rows
     ]})
+
+
+@login_required(role='teacher')
+@require_http_methods(['GET'])
+def teacher_lesson29_trace_say_recordings(request):
+    """Expose Lesson 29 Activity 3 submissions to the teacher progress view."""
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    student_ids = {
+        str(entry.get('student_id')).strip()
+        for section in Section.objects.filter(teacher=teacher, is_active=True)
+        for entry in section.get_enrolled_students(active_only=True)
+        if entry.get('student_id') is not None
+    } if teacher else set()
+    rows = StudentActivityRecordingSubmission.objects.filter(
+        activity_key='lesson-29-gawain-3', student_id__in=student_ids,
+    ).select_related('student').order_by('-submitted_at')
+    return JsonResponse({'success': True, 'submissions': [
+        {'id': row.id, 'student_id': row.student_id,
+         'student_name': f'{row.student.first_name} {row.student.last_name}'.strip() or row.student.custom_id,
+         'submitted_at': row.submitted_at.isoformat(), 'status': row.status, 'item_index': row.item_index,
+         'letter': (prescribed_activity('lesson-29-gawain-3').get('items') or [{}])[row.item_index].get('letter', '') if 0 <= row.item_index < len(prescribed_activity('lesson-29-gawain-3').get('items') or []) else '',
+         'recording_url': reverse('teacher_lesson29_trace_say_audio', args=[row.id]),
+         'recording_available': bool(row.audio_file and row.audio_file.name),
+         'duration_seconds': row.duration_seconds,
+         'can_check': row.status == 'submitted', 'can_retry': row.status == 'submitted',
+         'activity_type': 'lesson_29_trace_say'}
+        for row in rows
+    ]})
+
+
+@login_required(role='teacher')
+@require_http_methods(['GET'])
+def teacher_lesson29_trace_say_audio(request, submission_id):
+    submission = StudentActivityRecordingSubmission.objects.filter(pk=submission_id, activity_key='lesson-29-gawain-3').first()
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    allowed = {
+        str(entry.get('student_id')).strip()
+        for section in Section.objects.filter(teacher=teacher, is_active=True)
+        for entry in section.get_enrolled_students(active_only=True)
+        if entry.get('student_id') is not None
+    } if teacher else set()
+    if not submission or str(submission.student_id).strip() not in allowed or not submission.audio_file:
+        return HttpResponseForbidden('Recording unavailable.')
+    response = FileResponse(submission.audio_file.open('rb'), content_type=mimetypes.guess_type(submission.audio_file.name)[0] or 'audio/webm')
+    response['Content-Disposition'] = 'inline'
+    return response
 
 
 @login_required(role='teacher')
@@ -19584,6 +20268,9 @@ def teacher_lesson_1_gawain_1_review_action(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def lesson_3_gawain_1_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'lesson-3-gawain-1')
+    if access_response:
+        return access_response
     context = _dashboard_context(request)
     progress = StudentActivityProgress.objects.filter(student_id=request.session.get('user_id'), activity_key='lesson-3-gawain-1').first()
     context['lesson_3_progress'] = json.dumps({'current_index': progress.current_index, 'completed_items': progress.completed_items, 'correct_items': progress.correct_items, 'total_items': progress.total_items, 'activity_completed': progress.activity_completed} if progress else None)
@@ -19594,6 +20281,9 @@ def lesson_3_gawain_1_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def lesson_3_gawain_2_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'lesson-3-gawain-2')
+    if access_response:
+        return access_response
     pairs = [
         {'a': 'LOLA', 'b': 'BOLA', 'yes': True}, {'a': 'WALIS', 'b': 'TAMA', 'yes': False},
         {'a': 'DAHON', 'b': 'KAHON', 'yes': True}, {'a': 'SIGAW', 'b': 'LUGAW', 'yes': True},
@@ -19612,6 +20302,9 @@ def lesson_3_gawain_2_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def lesson_4_gawain_1_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'lesson-4-gawain-1')
+    if access_response:
+        return access_response
     progress = StudentActivityProgress.objects.filter(student_id=request.session.get('user_id'), activity_key='lesson-4-gawain-1').first()
     state = progress.state if progress and isinstance(progress.state, dict) else {}
     try:
@@ -19631,6 +20324,9 @@ def lesson_4_gawain_1_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def lesson_5_gawain_1_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'lesson-5-gawain-1')
+    if access_response:
+        return access_response
     progress = StudentActivityProgress.objects.filter(student_id=request.session.get('user_id'), activity_key='lesson-5-gawain-1').first()
     state = progress.state if progress and isinstance(progress.state, dict) else {}
     words = [('Apa', True), ('Aso', True), ('Mesa', False), ('Sabon', False), ('Medalya', False), ('Anim', True), ('Araw', True), ('Pamaypay', False), ('Avocado', True)]
@@ -19643,6 +20339,9 @@ def lesson_5_gawain_1_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def lesson_6_gawain_1_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'lesson-6-gawain-1')
+    if access_response:
+        return access_response
     progress = StudentActivityProgress.objects.filter(student_id=request.session.get('user_id'), activity_key='lesson-6-gawain-1').first()
     state = progress.state if progress and isinstance(progress.state, dict) else {}
     items = [
@@ -19657,6 +20356,9 @@ def lesson_6_gawain_1_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def lesson_7_gawain_1_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'lesson-7-gawain-1')
+    if access_response:
+        return access_response
     progress = StudentActivityProgress.objects.filter(student_id=request.session.get('user_id'), activity_key='lesson-7-gawain-1').first()
     state = progress.state if progress and isinstance(progress.state, dict) else {}
     names = ['ilaw','itlog','ilong','ipis','ilang-ilang','isa','aso','saging']
@@ -19670,6 +20372,9 @@ def lesson_7_gawain_1_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def session_4_gawain_1_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'session-4-gawain-1')
+    if access_response:
+        return access_response
     # TEMPORARY TEST FLAG: remove/disable after resume-modal verification.
     TEST_RESUME_MODAL = True
     context = _dashboard_context(request)
@@ -19714,6 +20419,9 @@ def session_4_gawain_1_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def session_4_gawain_2_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'session-4-gawain-2')
+    if access_response:
+        return access_response
     context = _dashboard_context(request)
     activity = prescribed_activity('session-4-gawain-2')
     saved_index = 0
@@ -19722,6 +20430,10 @@ def session_4_gawain_2_page(request):
     if progress and progress.activity_completed:
         return redirect('assessment')
     state = progress.state if progress and isinstance(progress.state, dict) else {}
+    recording_stages = list(StudentActivityRecordingSubmission.objects.filter(
+        student=_active_prescribed_student(request), activity_key='session-4-gawain-2',
+        item_index__isnull=False, substep__in=(0, 1),
+    ).values_list('item_index', 'substep'))
     if progress:
         try:
             saved_index = max(0, min(len(activity['items']) - 1, int(progress.current_index)))
@@ -19747,6 +20459,7 @@ def session_4_gawain_2_page(request):
         )),
         'test_resume_modal': False,
         'progress': {'current_index': saved_index, 'current_substep': saved_substep, 'completed_items': progress.completed_items if progress else 0, 'correct_items': progress.correct_items if progress else 0, 'total_items': activity['total_items'], 'activity_completed': progress.activity_completed if progress else False, 'state': {**state, 'current_index': saved_index, 'current_substep': saved_substep}},
+        'recordings': [{'item_index': item_index, 'substep': stage} for item_index, stage in recording_stages],
     }
     return render(request, 'pabasa_app/session_4_gawain_2_page.html', context)
 
@@ -19754,6 +20467,9 @@ def session_4_gawain_2_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def session_4_gawain_3_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'session-4-gawain-3')
+    if access_response:
+        return access_response
     context = _dashboard_context(request)
     activity = prescribed_activity('session-4-gawain-3')
     activity_key = 'session-4-gawain-3'
@@ -19801,6 +20517,9 @@ def session_4_gawain_3_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def session_4_gawain_4_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'session-4-gawain-4')
+    if access_response:
+        return access_response
     context = _dashboard_context(request)
     activity_key = 'session-4-gawain-4'
     progress = StudentActivityProgress.objects.filter(student=_active_prescribed_student(request), activity_key=activity_key).first()
@@ -19841,6 +20560,9 @@ def session_4_gawain_4_page(request):
 @login_required(role='student')
 @xframe_options_sameorigin
 def session_4_gawain_5_page(request):
+    access_response = _enforce_prescribed_activity_sequence(request, 'session-4-gawain-5')
+    if access_response:
+        return access_response
     context = _dashboard_context(request)
     activity_key = 'session-4-gawain-5'
     activity = prescribed_activity(activity_key)
@@ -21815,7 +22537,17 @@ def reading_transcribe_api(request):
                 target_text, analysis_transcript, sentence_word_results, language_code, debug=sentence_debug,
             )
         else:
-            analysis = analyze_reading(target_text, current_syllable_index, analysis_transcript, language_code, strict_rhyme=request.POST.get('crla_rhymes') == '1')
+            pronunciation_aliases = ({'lili': {'lili', 'lily'}, 'lily': {'lili', 'lily'}}
+                                      if request.POST.get('prescribed_activity_key') == 'lesson-13-gawain-3'
+                                      and language_code.lower() == 'fil-ph' else None)
+            analysis = analyze_reading(
+                target_text,
+                current_syllable_index,
+                analysis_transcript,
+                language_code,
+                strict_rhyme=request.POST.get('crla_rhymes') == '1',
+                pronunciation_aliases=pronunciation_aliases,
+            )
         if l22_c_pronunciation:
             l22_match = l22_c_pronunciation_match(
                 request.POST.get('l22_c_syllable'),
@@ -28081,6 +28813,8 @@ def _section_course_payload(section):
             'selected_set_id': content_json.get('activity_id') or '',
             'selected_set_name': content_json.get('activity_name') or '',
             'student_access': bool(material.student_access),
+            'publication_scope': material.publication_scope or 'whole_class',
+            'selected_student_ids': list(material.student_assignments.values_list('student_id', flat=True)),
             'assessment_kind': _assessment_kind_value(material),
         }
         materials.append(material_payload)
@@ -29121,7 +29855,12 @@ def export_material_results(request):
     if not student_ids:
         return HttpResponse("No students are enrolled for this material.", status=404)
 
-    students = list(User.objects.filter(id__in=student_ids, role='student').order_by('first_name', 'last_name', 'custom_id'))
+    students = list(User.objects.filter(id__in=student_ids, role='student').order_by(
+        Lower('last_name'),
+        Lower('first_name'),
+        Lower('custom_id'),
+        'id',
+    ))
     student_map = {student.id: student for student in students}
     results_by_student = {
         assessment.student_id: assessment for assessment in Assessment.objects.filter(
@@ -29145,9 +29884,12 @@ def export_material_results(request):
 
     ws['A1'] = 'PABASA — Student Activity Results'
     ws['A1'].font = Font(bold=True, size=14)
-    ws.merge_cells('A1:J1')
+    ws.merge_cells('A1:K1')
     ws['A2'] = f'Activity: {material.title}'
-    ws.merge_cells('A2:J2')
+    ws.merge_cells('A2:K2')
+
+    _, activity_definition = resolve_activity(material.content_json or {})
+    competency_display = ', '.join(activity_definition['competencies']) if activity_definition else ''
 
     headers = [
         'Student Name',
@@ -29156,6 +29898,7 @@ def export_material_results(request):
         'Section',
         'Activity Title',
         'Activity Type',
+        'Competency',
         'Score',
         'Percentage',
         'Status',
@@ -29200,6 +29943,7 @@ def export_material_results(request):
             getattr(student, 'section', '') or '',
             material.title,
             _material_activity_type_label(material),
+            competency_display,
             score_display,
             percent_display,
             status_display,
@@ -29457,12 +30201,27 @@ def get_teacher_material_attempts_api(request):
                 'activity_type': 'story_reading',
             }})
 
-        if _is_story_response_material(material):
+        if _is_story_response_material(material) or _is_retell_story_material(material):
             submissions = StoryResponseSubmission.objects.filter(material=material).select_related('student', 'story_material').order_by('submitted_at')
             enriched = []
+            submission_activity_type = 'retell_story' if _is_retell_story_material(material) else 'story_response'
             for submission in submissions:
                 row = _story_response_review_payload(submission)
-                row.update({'status': 'completed', 'completed_at': submission.submitted_at.isoformat(), 'score': submission.grade})
+                row.update({
+                    'status': 'completed',
+                    'completed_at': submission.submitted_at.isoformat(),
+                    'score': submission.grade,
+                    'activity_type': submission_activity_type,
+                    'retell_grade': submission.grade,
+                    'story_response_submission_id': submission.id,
+                    'recording_available': bool(submission.audio_file),
+                    'recording_duration_seconds': submission.duration_seconds,
+                })
+                if submission.audio_file:
+                    row['recording_url'] = reverse(
+                        'teacher_retell_recording' if submission_activity_type == 'retell_story' else 'teacher_story_response_audio',
+                        args=[submission.id],
+                    )
                 enriched.append(row)
             return JsonResponse({'success': True, 'assessment': {'id': f'material-{material.id}', 'code': material.code, 'title': material.title, 'materials': [], 'attempts': enriched, 'is_story_response': True, 'review_responses': True}})
 
@@ -29501,6 +30260,7 @@ def get_teacher_material_attempts_api(request):
             if activity_type in {'retell_story', 'story_response'}:
                 submission = retell_submissions.get(a.student_id)
                 att['retell_grade'] = submission.grade if submission else None
+                att['grade_locked'] = bool(submission and submission.grade is not None)
                 att['story_response_submission_id'] = submission.id if submission else None
                 att['recording_available'] = bool(submission and submission.audio_file)
                 recording_view = 'teacher_retell_recording' if activity_type == 'retell_story' else 'teacher_story_response_audio'
@@ -30436,6 +31196,35 @@ def get_teacher_overview(request):
 
 
 @require_http_methods(["GET"])
+@login_required(role='teacher')
+def get_material_section_students(request):
+    """Return the active roster for a teacher-owned section."""
+    try:
+        section_id = int(request.GET.get('section_id'))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'A valid section_id is required.'}, status=400)
+    teacher = User.objects.filter(id=request.session.get('user_id'), role='teacher').first()
+    section = Section.objects.filter(pk=section_id, teacher=teacher, is_active=True).first() if teacher else None
+    if not section:
+        return JsonResponse({'success': False, 'error': 'Section access denied.'}, status=403)
+    enrollments = Enrollment.objects.filter(
+        section=section, status='active', is_active=True,
+        student__role='student', student__is_archived=False,
+    ).select_related('student').order_by('student__last_name', 'student__first_name', 'student_id')
+    return JsonResponse({
+        'success': True,
+        'students': [
+            {
+                'id': enrollment.student_id,
+                'name': f'{enrollment.student.first_name} {enrollment.student.last_name}'.strip() or enrollment.student.username,
+                'custom_id': enrollment.student.custom_id,
+            }
+            for enrollment in enrollments
+        ],
+    })
+
+
+@require_http_methods(["GET"])
 @login_required()
 def get_class_materials(request):
     """
@@ -30542,6 +31331,11 @@ def get_class_materials(request):
         is_requesting_student = bool(request_user and request_user.role == 'student')
         # Archived records should not appear in class/course readings, even for the owning teacher.
         materials_qs = materials_qs.filter(is_active=True).exclude(status__iexact='archived')
+        if request_user.role == 'student':
+            materials_qs = materials_qs.filter(
+                Q(publication_scope='whole_class')
+                | Q(publication_scope='selected_students', student_assignments__student=request_user)
+            ).distinct()
         assessments_qs = assessments_qs.filter(is_active=True).exclude(status__iexact='archived')
         practices_qs = practices_qs.filter(is_active=True).exclude(status__iexact='archived')
 
@@ -31977,6 +32771,54 @@ def _find_existing_shared_material(title, content, item_type, language='', sourc
     return None
 
 
+def _material_publication_scope(data, existing='whole_class'):
+    value = data.get('publication_scope', existing)
+    value = str(value or 'whole_class').strip().lower()
+    return value if value in {'whole_class', 'selected_students'} else None
+
+
+def _selected_student_ids(data):
+    raw = data.get('selected_student_ids', [])
+    if raw is None:
+        return []
+    if not isinstance(raw, list):
+        raise ValueError('selected_student_ids must be a list.')
+    ids = []
+    for value in raw:
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError):
+            raise ValueError('selected_student_ids contains an invalid student ID.')
+        if parsed <= 0 or parsed in ids:
+            raise ValueError('selected_student_ids contains an invalid or duplicate student ID.')
+        ids.append(parsed)
+    return ids
+
+
+def _validate_material_students(section, student_ids):
+    if not section:
+        raise ValueError('A section is required for selected students.')
+    eligible = set(Enrollment.objects.filter(
+        section=section, status='active', is_active=True,
+        student__role='student', student__is_archived=False,
+    ).values_list('student_id', flat=True))
+    invalid = sorted(set(student_ids) - eligible)
+    if invalid:
+        raise ValueError('Every selected student must be actively enrolled in the assigned section.')
+    return student_ids
+
+
+def _set_material_student_assignments(material, publication_scope, student_ids):
+    if publication_scope == 'whole_class':
+        MaterialStudentAssignment.objects.filter(material=material).delete()
+    else:
+        MaterialStudentAssignment.objects.filter(material=material).exclude(student_id__in=student_ids).delete()
+        MaterialStudentAssignment.objects.bulk_create(
+            [MaterialStudentAssignment(material=material, student_id=student_id) for student_id in student_ids],
+            ignore_conflicts=True,
+        )
+
+
 def _material_response_payload(material, tokens=None, section=None, is_shared_material=None, shared_owner_teacher_name=None):
     item_count = len(tokens) if tokens is not None else 1
     if tokens is None and isinstance(material.content_json, dict) and isinstance(material.content_json.get('items'), list):
@@ -32037,6 +32879,8 @@ def _material_response_payload(material, tokens=None, section=None, is_shared_ma
         'selected_set_name': str(content_json.get('activity_name') or '').strip() if isinstance(content_json, dict) else '',
         'randomize_order': bool(content_json.get('randomize_order')),
         'student_access': bool(getattr(material, 'student_access', False)),
+        'publication_scope': getattr(material, 'publication_scope', 'whole_class'),
+        'selected_student_ids': list(material.student_assignments.values_list('student_id', flat=True)),
         'assessment_kind': _assessment_kind_value(material),
     }
     return payload
@@ -32337,6 +33181,13 @@ def add_reading_material(request):
         randomize_order_raw = data.get('randomize_order')
         randomize_order = str(randomize_order_raw).strip().lower() in ('1', 'true', 'yes', 'on')
         student_access = str(data.get('student_access', False)).strip().lower() in ('1', 'true', 'yes', 'on')
+        publication_scope = _material_publication_scope(data)
+        try:
+            selected_student_ids = _selected_student_ids(data)
+        except ValueError as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+        if publication_scope is None:
+            return JsonResponse({'success': False, 'error': 'Invalid publication_scope.'}, status=400)
         template_payload = None
         content = (data.get('content') or '').strip()
         if source_type == 'template':
@@ -32494,6 +33345,14 @@ def add_reading_material(request):
                 return JsonResponse({'success': False, 'error': 'Class not found or does not belong to you.'}, status=404)
         else:
             return JsonResponse({'success': False, 'error': 'section_id is required.'}, status=400)
+        if assessment_kind == 'crla':
+            publication_scope = 'whole_class'
+            selected_student_ids = []
+        elif publication_scope == 'selected_students':
+            try:
+                _validate_material_students(section, selected_student_ids)
+            except ValueError as exc:
+                return JsonResponse({'success': False, 'error': str(exc)}, status=400)
         submitted_language = str(
             data.get('language')
             or (template_payload.get('language') if isinstance(template_payload, dict) else '')
@@ -32629,10 +33488,12 @@ def add_reading_material(request):
                 assigned_week=assigned_week,
                 assigned_weeks=assigned_weeks if assigned_weeks else ([assigned_week] if assigned_week else []),
                 student_access=student_access,
+                publication_scope=publication_scope,
                 is_active=(status in ['published', 'scheduled'])
             )
             if section is not None:
                 m.assigned_sections.add(section)
+            _set_material_student_assignments(m, publication_scope, selected_student_ids)
 
             created_ids = [m.id]
             material_payload = _material_response_payload(m, tokens=tokens, section=section)
@@ -32696,6 +33557,25 @@ def teacher_update_material(request):
             if Material.objects.filter(id=material_id).exists():
                 return JsonResponse({'success': False, 'error': 'Material access denied'}, status=403)
             return JsonResponse({'success': False, 'error': 'Material not found'}, status=404)
+
+        publication_scope = _material_publication_scope(data, getattr(material, 'publication_scope', 'whole_class'))
+        if publication_scope is None:
+            return JsonResponse({'success': False, 'error': 'Invalid publication_scope.'}, status=400)
+        try:
+            selected_student_ids = _selected_student_ids(data) if 'selected_student_ids' in data else list(material.student_assignments.values_list('student_id', flat=True))
+        except ValueError as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+        target_section = material.section
+        if data.get('section_id'):
+            _, requested_section_id = _parse_prefixed_id(data.get('section_id'))
+            target_section = Section.objects.filter(pk=requested_section_id, teacher=teacher_user, is_active=True).first() if requested_section_id else None
+            if not target_section:
+                return JsonResponse({'success': False, 'error': 'Class not found or does not belong to you.'}, status=400)
+        if publication_scope == 'selected_students':
+            try:
+                _validate_material_students(target_section, selected_student_ids)
+            except ValueError as exc:
+                return JsonResponse({'success': False, 'error': str(exc)}, status=400)
 
         material.title = data.get('title', material.title).strip()
         content = data.get('content', material.content_text).strip()
@@ -32884,7 +33764,13 @@ def teacher_update_material(request):
             # Non-fatal; proceed to save material regardless
             logger.exception('Failed to synchronize Assessment linkage for material %s', getattr(material, 'id', None))
 
-        material.save()
+        with transaction.atomic():
+            if target_section and target_section.id != material.section_id:
+                material.section = target_section
+                material.assigned_sections.set([target_section])
+            material.publication_scope = publication_scope
+            material.save()
+            _set_material_student_assignments(material, publication_scope, selected_student_ids)
         # Return updated overview so clients can sync UI immediately
         try:
             teacher_user = User.objects.filter(id=user_id).first()
@@ -35380,8 +36266,8 @@ def teacher_story_response_grade(request):
         is_retell_story = _is_retell_story_material(submission.material)
         if not teacher or not _teacher_can_access_material(teacher, submission.material):
             return JsonResponse({'success': False, 'error': 'Access denied.'}, status=403)
-        if submission.grade is not None and not is_retell_story:
-            return JsonResponse({'success': False, 'error': 'This Story Response score is already locked.'}, status=409)
+        if submission.grade is not None:
+            return JsonResponse({'success': False, 'error': 'This manual score is already locked.'}, status=409)
         raw_grade = payload.get('grade')
         if is_retell_story and raw_grade in (None, ''):
             grade = None
@@ -35446,6 +36332,8 @@ def teacher_retell_recordings(request):
             'submitted_at': submission.submitted_at.isoformat(),
             'recording_url': reverse('teacher_retell_recording', args=[submission.id]) if available else None,
             'recording_available': available,
+            'grade': submission.grade,
+            'grade_locked': submission.grade is not None,
         })
     return JsonResponse({'success': True, 'activity': {'id': material.id, 'title': material.title}, 'submissions': rows})
 

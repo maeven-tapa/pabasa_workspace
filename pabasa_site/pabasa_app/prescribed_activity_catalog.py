@@ -476,8 +476,8 @@ PRESCRIBED_ACTIVITIES = {
     },
     'lesson-13-gawain-3': {
         'activity_key': 'lesson-13-gawain-3', 'session_number': 5, 'lesson_number': 13,
-        'gawain_number': 3, 'title': 'I-decode o basahin ang mga pangungusap',
-        'instruction': 'I-decode o basahin ang mga pangungusap na nasa ibaba. Lagyan ng tsek (✓) kung tama ang pagkaka-decode o basa ng mga pangungusap.',
+        'gawain_number': 3, 'title': 'Ano ang basa sa pangungusap na ito?',
+        'instruction': 'Ano ang basa sa pangungusap na ito?',
         'competencies': ['Phonics', 'Phonological Awareness', 'Fluency'], 'interaction': 'teacher_sentence_decode_preview',
         'items': [
             {'sentence': 'Si Lili ay may laso.'}, {'sentence': 'Ang laso ay Lila.'},
@@ -500,11 +500,11 @@ PRESCRIBED_ACTIVITIES = {
         'competencies': ['Phonics', 'Phonological Awareness', 'Vocabulary'],
         'interaction': 'teacher_initial_sound_check',
         'items': [
-            {'prompt': '___ iyog', 'word': 'niyog', 'answer': 'N', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/LESSON_14/GAWAIN_1/niyog.png', 'audio_filename': 'niyog_s5-l14-g1.mp3'},
-            {'prompt': '___ ota', 'word': 'nota', 'answer': 'N', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/LESSON_14/GAWAIN_1/nota.jpg', 'audio_filename': 'nota_s5-l14-g1.mp3'},
-            {'prompt': '___ abo', 'word': 'tabo', 'answer': 'T', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/LESSON_14/GAWAIN_1/tabo.jpg', 'audio_filename': 'tabo_s5-l14-g1.mp3'},
-            {'prompt': '___ asa', 'word': 'tasa', 'answer': 'T', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/LESSON_14/GAWAIN_1/tasa.jpg', 'audio_filename': 'tasa_s5-l14-g1.mp3'},
-            {'prompt': '___ ars', 'word': 'nars', 'answer': 'N', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/LESSON_14/GAWAIN_1/nars.jpg', 'audio_filename': 'nars_s5-l14-g1.mp3'},
+            {'prompt': '___ iyog', 'word': 'niyog', 'answer': 'N', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/14_GAWAIN_1/niyog.png', 'audio_filename': 'niyog.mp3'},
+            {'prompt': '___ ota', 'word': 'nota', 'answer': 'N', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/14_GAWAIN_1/nota.jpg', 'audio_filename': 'nota.mp3'},
+            {'prompt': '___ abo', 'word': 'tabo', 'answer': 'T', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/14_GAWAIN_1/tabo.jpg', 'audio_filename': 'tabo.mp3'},
+            {'prompt': '___ asa', 'word': 'tasa', 'answer': 'T', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/14_GAWAIN_1/tasa.jpg', 'audio_filename': 'tasa.mp3'},
+            {'prompt': '___ ars', 'word': 'nars', 'answer': 'N', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/14_GAWAIN_1/nars.jpg', 'audio_filename': 'nars.mp3'},
         ],
     },
     'lesson-14-gawain-2': {

@@ -113,6 +113,6 @@
   })();
   </script>
 {% include 'pabasa_app/session8_11_prescribed_controls.html' with prefix='prescribed-s7-l20-21-g1' help_text='Basahin ang salita, pagkatapos bilugan ang pantig na may klaster. Maaari kang mag-pause o magbukas ng Audio Settings anumang oras.' %}
-<script>(()=>{const prefix='prescribed-s7-l20-21-g1',q=s=>document.getElementById(`${prefix}-debug-${s}`),history=[];addEventListener(`${prefix}-debug`,event=>{const d=event.detail||{};Object.entries(d).forEach(([key,value])=>{const field=q(key);if(field&&value!==undefined)field.textContent=String(value)});if(d.message){history.push(d.message);while(history.length>6)history.shift();const raw=q('raw');if(raw)raw.textContent=history.join('\n')}})})();</script>
+<script>(()=>{const prefix='prescribed-s7-l20-21-g1',q=s=>document.getElementById(`${prefix}-debug-${s}`),history=[];addEventListener(`${prefix}-debug`,event=>{const d=event.detail||{};Object.entries(d).forEach(([key,value])=>{const field=q(key==='raw'?'output':key);if(field&&value!==undefined)field.textContent=String(value)});if(d.message){history.push(d.message);while(history.length>6)history.shift();const raw=q('output');if(raw)raw.textContent=history.join('\n')}})})();</script>
 </body>
 </html>
