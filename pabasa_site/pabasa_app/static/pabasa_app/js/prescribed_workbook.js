@@ -24,7 +24,7 @@
   const l23G1 = a.activity_key === 'aral-l23-g1-n-syllable-builder';
   const l23G3 = a.activity_key === 'aral-l23-g3-j-word-reading';
   const qG6 = qBuilder;
-  const localAudio = (l23G1 || l23G3 || qReading || jSyllables || qG6 || l24Builder || g6Search || g7Reading || pictureReading || l24G3WordReading || l24G4Builder || g5Syllables || s9Family || s9Helping) ? (data.local_audio || {}) : {};
+  const localAudio = (l22G1 || l23G1 || l23G3 || qReading || jSyllables || qG6 || l24Builder || g6Search || g7Reading || pictureReading || l24G3WordReading || l24G4Builder || g5Syllables || s9Family || s9Helping) ? (data.local_audio || {}) : {};
   const G1_MAPPED_TEXT = new Set([
     'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salita mula rito.',
     'Ni', 'La', 'ña', 'Cas', 'Bi', 'da', 'El', 'ño', 'ñan', 'Cen', 'ta', 'ñe',
@@ -186,8 +186,8 @@
     if(!text || (busy&&!allowBusy) || activeStream)return;
     stopReadAloud();
     const run=audioRun, controller=new AbortController();audioController=controller;
-    const localUrl=(l23G1 || l23G3 || qReading || jSyllables || qG6 || l24Builder || g6Search || g7Reading || pictureReading || l24G3WordReading || l24G4Builder || g5Syllables || s9Family || s9Helping) ? localAudioUrl(text) : null;
-    const mapped = (l23G1 && G1_MAPPED_TEXT.has(text)) || (l23G3 && G3_MAPPED_TEXT.has(text)) || (qReading && G7_MAPPED_TEXT.has(text)) || (jSyllables && G4_MAPPED_TEXT.has(text)) || (qG6 && G6_MAPPED_TEXT.has(text)) || (l24Builder && L24_G1_MAPPED_TEXT.has(text)) || (g6Search && L24_G6_WORD_SEARCH_MAPPED_TEXT.has(text)) || (g7Reading && L24_G7_WORD_READING_MAPPED_TEXT.has(text)) || (pictureReading && L24_G2_PICTURE_MAPPED_TEXT.has(text)) || (l24G3WordReading && L24_G3_WORD_MAPPED_TEXT.has(text)) || (l24G4Builder && L24_G4_BUILDER_MAPPED_TEXT.has(text)) || (g5Syllables && L24_G5_SYLLABLE_MAPPED_TEXT.has(text)) || (s9Family && S9_A1_MAPPED_TEXT.has(text)) || (s9Helping && S9_A2_MAPPED_TEXT.has(text));
+    const localUrl=(l22G1 || l23G1 || l23G3 || qReading || jSyllables || qG6 || l24Builder || g6Search || g7Reading || pictureReading || l24G3WordReading || l24G4Builder || g5Syllables || s9Family || s9Helping) ? localAudioUrl(text) : null;
+    const mapped = (l22G1 && text===instructionText && Boolean(localUrl)) || (l23G1 && G1_MAPPED_TEXT.has(text)) || (l23G3 && G3_MAPPED_TEXT.has(text)) || (qReading && G7_MAPPED_TEXT.has(text)) || (jSyllables && G4_MAPPED_TEXT.has(text)) || (qG6 && G6_MAPPED_TEXT.has(text)) || (l24Builder && L24_G1_MAPPED_TEXT.has(text)) || (g6Search && L24_G6_WORD_SEARCH_MAPPED_TEXT.has(text)) || (g7Reading && L24_G7_WORD_READING_MAPPED_TEXT.has(text)) || (pictureReading && L24_G2_PICTURE_MAPPED_TEXT.has(text)) || (l24G3WordReading && L24_G3_WORD_MAPPED_TEXT.has(text)) || (l24G4Builder && L24_G4_BUILDER_MAPPED_TEXT.has(text)) || (g5Syllables && L24_G5_SYLLABLE_MAPPED_TEXT.has(text)) || (s9Family && S9_A1_MAPPED_TEXT.has(text)) || (s9Helping && S9_A2_MAPPED_TEXT.has(text));
     if(mapped){
       if(!localUrl){if(audioController===controller)audioController=null;throw Error((jSyllables||l24Builder)&&text===instructionText?'Hindi available ang panuto.':'Hindi available ang audio.');}
       try{
@@ -228,11 +228,10 @@
     if(!l22G1||preview||state.completed||!modal)return;
     const start=document.getElementById('wb-l22-g1-start-button'),later=document.getElementById('wb-l22-g1-later-button');
     document.body.classList.add('lesson-start-open');
-    instructionSpoken=true;
-    playPrescribedAudio(instructionText,true).catch(error=>{if(error?.name!=='AbortError')console.error('Lesson 22 instruction audio failed',error);});
     start?.addEventListener('click',()=>{
       if(start.disabled)return;
       start.disabled=true;if(later)later.disabled=true;stopReadAloud();activityStarted=true;modal.remove();document.body.classList.remove('lesson-start-open');render();
+      if(!instructionSpoken){instructionSpoken=true;playPrescribedAudio(instructionText,true).catch(error=>{if(error?.name!=='AbortError')console.error('Lesson 22 instruction audio failed',error);});}
     });
     later?.addEventListener('click',()=>{
       if(later.disabled)return;

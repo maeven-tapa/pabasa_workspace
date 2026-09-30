@@ -13739,6 +13739,13 @@ def prescribed_activity_page(request, activity_key):
              'aral-l24-g6-z-word-search': 'aral-l24-g7-z-word-reading',
          }.get(activity_key, '')
         next_url = reverse('prescribed_activity_page', kwargs={'activity_key': next_key}) if next_key in PRESCRIBED_ACTIVITIES else ''
+        if activity_key == 'aral-l22-g1-c-syllable-builder':
+            audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_22/GAWAIN_1/'
+            local_audio = {
+                'instruction': static(audio_root + 'Basahin_ang_mga_pantig_mula_sa_Bid_box_TTS.mp3'),
+            }
+        else:
+            local_audio = {}
         if activity_key == 'aral-l24-g3-x-repeat':
             audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_24/BAHAGI_1/GAWAIN_3/'
             audio_files = {
@@ -14595,6 +14602,7 @@ def prescribed_activity_page(request, activity_key):
                 'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
                 'read_aloud_url': reverse('reading_read_aloud_api'),
                 'next_url': next_url,
+                'local_audio': local_audio,
             },
         })
     student = _active_prescribed_student(request)
