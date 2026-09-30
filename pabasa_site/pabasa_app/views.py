@@ -22776,7 +22776,7 @@ _LOCAL_PRESCRIBED_AUDIO_ALIASES = {
         'Subukan muli._TTS.mp3',
     ('aral-l22-g1-c-syllable-builder', 'tama'):
         'Tama!_TTS.mp3',
-    ('aral-l22-g3-c-word-search', 'hanapinatkulayangpaboritongkulayangsumusunodnasalitasaibaba'):
+    ('aral-l22-g3-c-word-search', 'hanapinatkulayanngpaboritongkulayangsumusunodnasalitasaibaba'):
         'Hanapin at kulayan ng paboritong kulay ang sumusunod na salita sa ibaba_TTS.mp3',
     ('aral-l22-g3-c-word-search', 'subukanmuli'):
         'Subukan muli._TTS.mp3',

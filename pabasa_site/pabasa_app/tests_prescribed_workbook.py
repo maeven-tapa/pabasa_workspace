@@ -646,6 +646,19 @@ class PrescribedWorkbookFlowTests(TestCase):
         self.assertNotIn('speechSynthesis', source)
         self.assertIn('font-size:clamp(1rem,2.2vw,1.35rem)', template)
 
+    def test_lesson22_gawain3_instruction_audio_mapping_returns_local_mp3(self):
+        self.session_student(self.student)
+        response = self.client.post(reverse('reading_read_aloud_api'), {
+            'target_text': 'Hanapin at kulayan ng paboritong kulay ang sumusunod na salita sa ibaba.',
+            'language': 'Filipino',
+            'mode': 'reading',
+            'prescribed_activity_key': 'aral-l22-g3-c-word-search',
+        })
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertTrue(response.json()['local_audio'])
+        self.assertEqual(response.json()['mime_type'], 'audio/mpeg')
+        self.assertGreater(len(response.json()['audio_content']), 0)
+
     def test_lesson22_syllable_attempt_sends_whole_word_context_to_english_stt(self):
         key = 'aral-l22-g1-c-syllable-builder'
         progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
