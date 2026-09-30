@@ -106,6 +106,8 @@ urlpatterns = [
     path('api/lesson-13-gawain-1/recording/', views.lesson_13_gawain_1_recording, name='lesson_13_gawain_1_recording'),
     path('api/session-4-gawain-2/recording/', views.session_4_gawain_2_recording, name='session_4_gawain_2_recording'),
     path('api/teacher/lesson-1-gawain-1/recordings/', views.teacher_lesson_1_gawain_1_recordings, name='teacher_lesson_1_gawain_1_recordings'),
+    path('api/teacher/lesson-29-trace-say/recordings/', views.teacher_lesson29_trace_say_recordings, name='teacher_lesson29_trace_say_recordings'),
+    path('api/teacher/lesson-29-trace-say/audio/<int:submission_id>/', views.teacher_lesson29_trace_say_audio, name='teacher_lesson29_trace_say_audio'),
     path('api/teacher/lesson-1-gawain-1/audio/<int:submission_id>/', views.teacher_lesson_1_gawain_1_audio, name='teacher_lesson_1_gawain_1_audio'),
     path('api/teacher/lesson-1-gawain-1/review-action/', views.teacher_lesson_1_gawain_1_review_action, name='teacher_lesson_1_gawain_1_review_action'),
     path('dashboard/assessment/activity/lesson-3-gawain-1/', views.lesson_3_gawain_1_page, name='lesson_3_gawain_1_page'),
@@ -145,6 +147,9 @@ urlpatterns = [
         views.lesson29_trace_say_progress,
         name='lesson29_trace_say_progress',
     ),
+    path('api/dashboard/assessment/activity/prescribed/lesson-29-trace-say/recording/', views.lesson29_trace_say_recording, name='lesson29_trace_say_recording'),
+    path('api/dashboard/assessment/activity/prescribed/lesson-29-trace-say/submit/', views.lesson29_trace_say_submit, name='lesson29_trace_say_submit'),
+    path('api/teacher/lesson-29-trace-say/review-action/', views.teacher_lesson29_trace_say_review_action, name='teacher_lesson29_trace_say_review_action'),
     path(
         'api/dashboard/assessment/activity/prescribed/<slug:activity_key>/progress/',
         views.prescribed_activity_progress,

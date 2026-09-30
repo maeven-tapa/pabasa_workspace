@@ -53,7 +53,7 @@ body.lesson-4-responsive{margin:0!important;min-height:100dvh!important;backgrou
 <script type="text/plain" data-lesson4-g1-bootstrap>
 document.addEventListener('DOMContentLoaded',()=>{
 	const payload=JSON.parse(document.getElementById('lesson-four-data')?.textContent||'{}'),button=document.getElementById('start'),heading=document.querySelector('#app .overview h2'),paragraph=document.querySelector('#app .overview p');
-	if(!button||!heading||!paragraph||Number(payload.progress?.current_index||0)>0||payload.progress?.activity_completed)return;
+	if(!button||!heading||!paragraph||payload.progress?.activity_completed)return;
 	button.disabled=true;
 	const speak=async text=>{
 		const form=new FormData();form.append('target_text',text);form.append('language','Filipino');form.append('mode','reading');
@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 .lesson-4-responsive .lesson4-audio-actions{display:flex!important;align-items:stretch!important;justify-content:center!important;gap:10px!important;width:100%!important}
 .lesson-4-responsive .lesson4-audio-actions .listen{flex:1 1 0!important;width:auto!important;min-width:0!important;margin:0!important}
 .lesson-4-responsive .lesson4-audio-actions .listen{min-height:52px!important;border:2px solid #94d9d6!important;border-radius:999px!important;background:#fffffff0!important;color:#187b7a!important;padding:12px 18px!important;font-family:inherit!important;font-size:1.05rem!important;font-weight:900!important;box-shadow:0 5px 0 #b7d6dc!important;cursor:pointer!important}
-.lesson-4-responsive .lesson4-audio-actions button:disabled{opacity:.48!important;filter:grayscale(.7)!important;cursor:not-allowed!important;pointer-events:none!important;box-shadow:0 3px 0 #87979b!important}
+.lesson-4-responsive .lesson4-audio-actions .listen:disabled,.lesson-4-responsive .lesson4-audio-actions button[data-basahin-button]:disabled:is([data-basahin-state='idle'],[data-basahin-state='model']){opacity:.48!important;filter:grayscale(.7)!important;cursor:not-allowed!important;pointer-events:none!important;box-shadow:0 3px 0 #87979b!important}
 .lesson-4-responsive .choice:disabled{opacity:.48!important;filter:grayscale(.7)!important;cursor:not-allowed!important;pointer-events:none!important;box-shadow:0 3px 0 #87979b!important}
 .lesson-4-responsive #app[data-lesson4-retry="1"] .focused>.wheel{animation:none!important;opacity:0!important;visibility:hidden!important}
 .lesson-4-responsive #app[data-lesson4-retry="1"] .focused>.focus-picture{animation:none!important;opacity:1!important;visibility:visible!important;transform:none!important}
