@@ -500,11 +500,11 @@ PRESCRIBED_ACTIVITIES = {
         'competencies': ['Phonics', 'Phonological Awareness', 'Vocabulary'],
         'interaction': 'teacher_initial_sound_check',
         'items': [
-            {'prompt': '___ iyog', 'word': 'niyog', 'answer': 'N', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/LESSON_14/GAWAIN_1/niyog.png', 'audio_filename': 'niyog_s5-l14-g1.mp3'},
-            {'prompt': '___ ota', 'word': 'nota', 'answer': 'N', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/LESSON_14/GAWAIN_1/nota.jpg', 'audio_filename': 'nota_s5-l14-g1.mp3'},
-            {'prompt': '___ abo', 'word': 'tabo', 'answer': 'T', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/LESSON_14/GAWAIN_1/tabo.jpg', 'audio_filename': 'tabo_s5-l14-g1.mp3'},
-            {'prompt': '___ asa', 'word': 'tasa', 'answer': 'T', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/LESSON_14/GAWAIN_1/tasa.jpg', 'audio_filename': 'tasa_s5-l14-g1.mp3'},
-            {'prompt': '___ ars', 'word': 'nars', 'answer': 'N', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/LESSON_14/GAWAIN_1/nars.jpg', 'audio_filename': 'nars_s5-l14-g1.mp3'},
+            {'prompt': '___ iyog', 'word': 'niyog', 'answer': 'N', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/14_GAWAIN_1/niyog.png', 'audio_filename': 'niyog.mp3'},
+            {'prompt': '___ ota', 'word': 'nota', 'answer': 'N', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/14_GAWAIN_1/nota.jpg', 'audio_filename': 'nota.mp3'},
+            {'prompt': '___ abo', 'word': 'tabo', 'answer': 'T', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/14_GAWAIN_1/tabo.jpg', 'audio_filename': 'tabo.mp3'},
+            {'prompt': '___ asa', 'word': 'tasa', 'answer': 'T', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/14_GAWAIN_1/tasa.jpg', 'audio_filename': 'tasa.mp3'},
+            {'prompt': '___ ars', 'word': 'nars', 'answer': 'N', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/14_GAWAIN_1/nars.jpg', 'audio_filename': 'nars.mp3'},
         ],
     },
     'lesson-14-gawain-2': {

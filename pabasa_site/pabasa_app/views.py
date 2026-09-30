@@ -15482,7 +15482,7 @@ def prescribed_activity_page(request, activity_key):
             'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
             'title': activity['title'], 'instruction': activity['instruction'],
             'items': [{**item, 'image_url': static(item['image_path']), 'audio_url': static(
-                f"pabasa_app/prescribed/audio/SESSION_5/LESSON_14/GAWAIN_1/{item['audio_filename']}"
+                f"pabasa_app/prescribed/audio/SESSION_5/14_GAWAIN_1/{item['audio_filename']}"
             )} for item in activity['items']],
             'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
             'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
