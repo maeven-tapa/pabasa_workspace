@@ -510,7 +510,7 @@ PRESCRIBED_ACTIVITIES = {
     'lesson-14-gawain-2': {
         'activity_key': 'lesson-14-gawain-2', 'session_number': 5, 'lesson_number': 14,
         'gawain_number': 2, 'title': 'Pagtutugma ng mga Salita',
-        'instruction': 'Itugma ang mga salita sa Hanay A sa tamang sagot sa Hanay B.',
+        'instruction': 'Itugma ang mga salita sa Hanay A sa tamang pantig sa Hanay B.',
         'competencies': ['Phonics', 'Phonological Awareness', 'Vocabulary'],
         'interaction': 'teacher_word_match_preview', 'total_items': 6,
         'items': [

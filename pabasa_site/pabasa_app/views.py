@@ -15443,10 +15443,10 @@ def prescribed_activity_page(request, activity_key):
         image_paths = {
             'a1': 'pabasa_app/images/salitang_magkatugma/lesson_3/mata.png',
             'a2': 'pabasa_app/images/picture_word/custom/Bone-Buto.png',
-            'a3': 'pabasa_app/prescribed/audio/SESSION_5/LESSON_14/GAWAIN_2/tala.jpg',
-            'a4': 'pabasa_app/prescribed/audio/SESSION_5/LESSON_14/GAWAIN_2/nipa.jpg',
-            'a5': 'pabasa_app/prescribed/audio/SESSION_5/LESSON_14/GAWAIN_2/tubo.jpg',
-            'a6': 'pabasa_app/prescribed/audio/SESSION_5/LESSON_14/GAWAIN_1/nota.jpg',
+            'a3': 'pabasa_app/prescribed/audio/SESSION_5/14_GAWAIN_2/tala.jpg',
+            'a4': 'pabasa_app/prescribed/audio/SESSION_5/14_GAWAIN_2/nipa.jpg',
+            'a5': 'pabasa_app/prescribed/audio/SESSION_5/14_GAWAIN_2/tubo.jpg',
+            'a6': 'pabasa_app/prescribed/audio/SESSION_5/14_GAWAIN_2/nota.jpg',
         }
         context['lesson14_gawain2_data'] = {
             'activity_key': activity_key, 'session_key': 'session-5',
