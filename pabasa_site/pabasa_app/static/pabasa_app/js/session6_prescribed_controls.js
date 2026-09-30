@@ -4,6 +4,54 @@
   if (!root || !window.PrescribedControls) return;
   const prefix = root.dataset.prefix;
   if (!prefix || window.__session6ControlsInitialized?.[prefix]) return;
+
+  // All Session 6 activity renderers use independent Audio instances. Keep
+  // their playback serialized at the page boundary so a delayed narration or
+  // word response cannot play over a newer instruction/feedback clip.
+  if (!window.__session6AudioPlaybackGuard) {
+    const NativeAudio = window.Audio;
+    let activeAudio = null;
+    let activeReadAloudController = null;
+    const clear = player => {
+      if (activeAudio === player) activeAudio = null;
+    };
+    const Session6Audio = function (...args) {
+      activeAudio?.pause();
+      const player = new NativeAudio(...args);
+      activeAudio = player;
+      player.addEventListener('ended', () => clear(player), {once: true});
+      player.addEventListener('error', () => clear(player), {once: true});
+      return player;
+    };
+    Session6Audio.prototype = NativeAudio.prototype;
+    window.Audio = Session6Audio;
+    window.__session6AudioPlaybackGuard = {
+      cancel() {
+        activeReadAloudController?.abort();
+        activeReadAloudController = null;
+        activeAudio?.pause();
+        activeAudio = null;
+      },
+    };
+    const NativeFetch = window.fetch?.bind(window);
+    if (NativeFetch && !window.__session6ReadAloudGuard) {
+      const guardedFetch = (input, init = {}) => {
+        const target = String(input?.url || input || '');
+        if (!target.includes('/api/reading/read-aloud/')) return NativeFetch(input, init);
+        activeReadAloudController?.abort();
+        const controller = new AbortController();
+        activeReadAloudController = controller;
+        return NativeFetch(input, {...init, signal: controller.signal}).finally(() => {
+          if (activeReadAloudController === controller) activeReadAloudController = null;
+        });
+      };
+      guardedFetch.__session6ReadAloudGuard = true;
+      window.fetch = guardedFetch;
+      window.__session6ReadAloudGuard = true;
+    }
+    window.addEventListener('session6-prescribed-cancel', () => window.__session6AudioPlaybackGuard.cancel());
+    window.addEventListener('pagehide', () => window.__session6AudioPlaybackGuard.cancel(), {once: true});
+  }
   const q = suffix => document.getElementById(`${prefix}${suffix}`);
   let isMuted = false, paused = false, generation = 0, testing = false;
   let testStream = null, testContext = null, testSource = null, testAnalyser = null, testFrame = 0;

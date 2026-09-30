@@ -121,6 +121,7 @@ window.PrescribedSession6Gawain9Audio = (() => {
     let lastStep = '';
     let lastFeedback = '';
     let queue = Promise.resolve();
+    let queueGeneration = 0;
     let firstOralStep = isGawain7;
 
     const showError = (message) => {
@@ -181,16 +182,24 @@ window.PrescribedSession6Gawain9Audio = (() => {
     };
 
     const enqueue = (message, delay = 0) => {
+      const generation = queueGeneration;
       queue = queue.then(async () => {
+        if (generation !== queueGeneration) return;
         if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+        if (generation !== queueGeneration) return;
         await play(message);
       }).catch((error) => showError(error.message || 'Hindi available ang Filipino audio.'));
     };
 
     const enqueueFiles = (filenames, delay = 0, root = gawain8Root) => {
+      const generation = queueGeneration;
       queue = queue.then(async () => {
+        if (generation !== queueGeneration) return;
         if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
-        for (const filename of filenames) await playFile(filename, root);
+        for (const filename of filenames) {
+          if (generation !== queueGeneration) return;
+          await playFile(filename, root);
+        }
       }).catch((error) => showError(error.message || 'Hindi available ang Filipino audio.'));
     };
 
@@ -293,6 +302,23 @@ window.PrescribedSession6Gawain9Audio = (() => {
       // Avoid overlapping Gawain 7's existing feedback audio with its next prompt.
       enqueue(step.message, delay);
     };
+
+    const cancelQueuedAudio = () => {
+      queueGeneration += 1;
+      audio?.pause();
+      audio = null;
+      queue = Promise.resolve();
+      lastStep = '';
+      lastFeedback = '';
+      firstOralStep = isGawain7;
+    };
+
+    addEventListener('session6-prescribed-cancel', cancelQueuedAudio);
+    addEventListener('session6-prescribed-resume', () => {
+      lastStep = '';
+      lastFeedback = '';
+      inspect();
+    });
 
     new MutationObserver(inspect).observe(app, {
       childList: true, subtree: true, characterData: true,
