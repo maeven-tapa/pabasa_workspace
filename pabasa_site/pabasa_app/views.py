@@ -13627,6 +13627,20 @@ def prescribed_activity_page(request, activity_key):
         student = _active_prescribed_student(request)
         if not student or not _student_can_open_prescribed_activity(student, activity_key):
             return redirect('assessment')
+        if activity_key == 'lesson9-gawain3':
+            progress = StudentActivityProgress.objects.filter(
+                student=student, activity_key=activity_key,
+            ).first()
+            total = len(activity.get('items') or [])
+            saved_state = progress.state if progress and isinstance(progress.state, dict) else {}
+            saved_current_item = int(saved_state.get('current_item', 0) or 0) if progress else 0
+            if progress and (progress.activity_completed or (total > 0 and saved_current_item >= total)):
+                if not progress.activity_completed:
+                    progress.activity_completed = True
+                    progress.current_index = progress.completed_items = progress.correct_items = total
+                    progress.total_items = total
+                    progress.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
+                return redirect('assessment')
     if activity.get('interaction') == 'prescribed_workbook':
         from .prescribed_workbook import (get_activity, initial_state, initial_l22_g2_state, initial_l22_g6_state,
                                           initial_l22_g4_state,
@@ -15956,6 +15970,29 @@ def prescribed_activity_progress(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
     if not _student_can_open_prescribed_activity(student, activity_key):
         return JsonResponse({'success': False, 'error': 'Complete the previous activity first.'}, status=403)
+    if activity_key == 'lesson9-gawain3':
+        try:
+            data = json.loads(request.body or '{}')
+            incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
+            total = len(activity.get('items') or [])
+            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            old_state = existing.state if existing and isinstance(existing.state, dict) else {}
+            current_item = max(0, min(total, int(incoming.get('current_item', old_state.get('current_item', existing.current_index if existing else 0)))))
+            completed = current_item >= total and total > 0
+            state = {**old_state, **incoming, 'current_item': current_item}
+            progress, _ = StudentActivityProgress.objects.update_or_create(
+                student=student, activity_key=activity_key,
+                defaults={'current_index': current_item, 'completed_items': total if completed else current_item,
+                          'correct_items': total if completed else 0, 'total_items': total,
+                          'activity_completed': completed, 'state': state},
+            )
+            return JsonResponse({'success': True, 'progress': {
+                'current_index': progress.current_index, 'completed_items': progress.completed_items,
+                'correct_items': progress.correct_items, 'total_items': progress.total_items,
+                'activity_completed': progress.activity_completed, 'state': progress.state,
+            }})
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity_key == 'lesson-15-gawain-3':
         try:
             data = json.loads(request.body or '{}')

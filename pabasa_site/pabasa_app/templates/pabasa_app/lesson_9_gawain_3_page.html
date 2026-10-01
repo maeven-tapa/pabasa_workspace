@@ -9,7 +9,8 @@
     @font-face{font-family:Fredoka;src:url("{% static 'pabasa_app/font/fredoka-one.one-regular.ttf' %}") format('truetype');font-display:swap}
     @font-face{font-family:bootstrap-icons;src:url("{% static 'pabasa_app/vendor/bootstrap-icons/fonts/bootstrap-icons.woff2' %}") format('woff2');font-display:block}
     *{box-sizing:border-box}
-    .page{--ink:#183e63;--teal:#299e9a;--dark:#187b7a;--gold:#e7af45;min-height:100vh;padding:16px clamp(16px,4vw,42px) 22px;color:var(--ink);font-family:Fredoka,Nunito,"Segoe UI",sans-serif;background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover no-repeat}
+    html,body{height:100%;overflow:hidden}
+    .page{--ink:#183e63;--teal:#299e9a;--dark:#187b7a;--gold:#e7af45;height:100vh;min-height:0;overflow:hidden;padding:16px clamp(16px,4vw,42px) 22px;color:var(--ink);font-family:Fredoka,Nunito,"Segoe UI",sans-serif;background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover no-repeat}
     .shell{width:min(980px,100%);min-height:calc(100vh - 38px);margin:auto;position:relative}
     .back{position:absolute;top:0;left:0;z-index:3;display:inline-flex;align-items:center;justify-content:center;gap:13px;width:280px;min-height:64px;border-radius:999px;background:#fff;color:var(--ink);font-size:1.2rem;text-align:center;text-decoration:none;box-shadow:0 8px 17px #145ca744}
     .back i,.action i{font-family:bootstrap-icons;font-style:normal;line-height:1}.back i{font-size:2rem}
@@ -34,7 +35,9 @@
   (()=>{const d=JSON.parse(document.getElementById('lesson9-g3-data').textContent),app=document.getElementById('app'),csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'',items=d.items||[],total=items.length;let state=Object.assign({current_item:0,attempts:0},d.progress?.state||{}),busy=false,requestId=0;state.current_item=Math.max(0,Math.min(total,Number(state.current_item)||0));const save=async()=>{await fetch(d.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({state})})};const readAloud=async text=>{const f=new FormData();f.append('target_text',text);f.append('language','Filipino');f.append('mode','reading');f.append('prescribed_activity_key',d.activity_key);const r=await fetch('/api/reading/read-aloud/',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:f}),x=await r.json();if(!r.ok||!x.success||!x.audio_content)throw Error(x.error||'Audio unavailable');const raw=atob(x.audio_content),a=new Audio(URL.createObjectURL(new Blob([Uint8Array.from(raw,c=>c.charCodeAt(0))],{type:x.mime_type||'audio/mpeg'})));await a.play();await new Promise((resolve,reject)=>{a.onended=resolve;a.onerror=reject})};function render(){if(d.progress?.activity_completed||state.current_item>=total){app.innerHTML='<div class="done">✓<h1>Magaling!</h1><p>Natapos mo ang GAWAIN 3: Letrang Ii, Oo, Ee.</p></div>';return}const item=items[state.current_item];app.innerHTML='<div class="task"><p class="eyebrow">SESSION 3 · LESSON 9 · GAWAIN 3</p><h1 class="title">GAWAIN 3: Letrang Ii, Oo, Ee</h1><p class="instruction">Basahin ang salitang nakapaloob sa puting kahon.</p><div class="item">'+item.word+'</div><p class="status" id="status">Aytem '+(state.current_item+1)+' / '+total+' · Basahin nang malakas.</p><button class="action" id="read" type="button" data-basahin-button><i class="bi-mic" aria-hidden="true"></i><span>'+window.BasahinButton.LABEL+'</span></button></div>';window.Basahin.bindActivity(document.getElementById('read'),()=>record(item))}async function record(item){
  if(busy)return;
  const button=document.getElementById('read'),status=document.getElementById('status'),id=++requestId;
- busy=true;button.disabled=true;
+  busy=true;button.disabled=true;
+  const listen=document.getElementById('listen');
+  if(listen){listen.dataset.activityBusy='true';listen.disabled=true;listen.setAttribute('aria-disabled','true');}
  try{
   const result=await window.Basahin.read({target_text:item.word,language:'Filipino',mode:'word'},{button,url:'{% url "reading_transcribe_api" %}'});
   if(id!==requestId)return;
@@ -47,11 +50,18 @@
    try{await readAloud('Pakinggan nang Mabuti ang salita.')}catch(error){console.error('Lesson 9 feedback failed',error)}
   }
  }catch(error){if(id===requestId)status.textContent=error.message||'Hindi nakuha ang iyong boses.';}
- finally{busy=false;if(id===requestId){button.disabled=false;window.BasahinButton.setState(button,'idle')}}
+ finally{busy=false;if(id===requestId){button.disabled=false;window.BasahinButton.setState(button,'idle');if(listen){listen.dataset.activityBusy='false';listen.disabled=false;listen.setAttribute('aria-disabled','false')}}}
 }__runWhenLessonStarted(()=>render())})();
   </script>
 {% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l9g3' help_text='Basahin nang malinaw ang bawat salita at pangungusap.' %}</body>
 </html>
+<style>
+  html body .card:has(.done) .done h1,
+  html body .card:has(.done) .done p,
+  html body .card:has(.done) .done a{font-size:revert!important}
+  html body .card:has(.done) .done h1:after,
+  html body .card:has(.done) .done p:after{content:none!important}
+</style>
 <style>
   #app .reading-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
   #app .reading-actions .action{min-width:min(260px,38vw);min-height:62px}
@@ -63,9 +73,30 @@
   document.addEventListener('DOMContentLoaded',()=>{
     const app=document.getElementById('app');
     if(!app)return;
+    const fixCompletion=()=>{
+      const done=app.querySelector('.done');
+      if(!done||done.dataset.completionFixed==='true')return;
+      done.dataset.completionFixed='true';
+      done.innerHTML='<h1>Tapos na ang gawain! 🎉</h1><p>Mahusay! Nakumpleto mo na ang aktibidad.</p><a class="return" href="{% url "assessment" %}">BALIK SA AKING ARALIN</a>';
+    };
+    fixCompletion();
+    new MutationObserver(fixCompletion).observe(app,{childList:true,subtree:true});
+  });
+</script>
+<style>
+  .card:has(.done) .done h1,
+  .card:has(.done) .done p,
+  .card:has(.done) .done a{font-size:revert!important}
+  .card:has(.done) .done h1:after,
+  .card:has(.done) .done p:after{content:none!important}
+</style>
+<script>
+  document.addEventListener('DOMContentLoaded',()=>{
+    const app=document.getElementById('app');
+    if(!app)return;
     const narrationUrl='{% url "reading_read_aloud_api" %}';
     const csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
-    let instructionNarrated=false,manualListening=false;
+    let narratedInstruction=null,manualListening=false;
     const wordAudioFiles={mi:'mi.mp3',si:'si.mp3',is:'is.mp3',mo:'mo.mp3',me:'me.mp3',se:'se.mp3',miso:'miso.mp3',mais:'mais.mp3',amo:'amo.mp3',siso:'siso.mp3','Si Ami':'si_ami.mp3','Si Mimi':'si_mimi.mp3','Ang aso':'ang_aso.mp3','Ang aso ay isasama.':'ang_aso_ay_isasama.mp3','Si Mimi ay sasama sa ama.':'si_mimi_ay_sasama_sa_ama.mp3'},wordAudioBase='/static/pabasa_app/prescribed/audio/SESSION%203/LESSON%209/GAWAIN%203/';
     const audioFor=async text=>{
       const response=await fetch(narrationUrl,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',mode:'reading',prescribed_activity_key:'lesson-9-gawain-3'})});
@@ -96,23 +127,16 @@
         finally{manualListening=false;listen.disabled=false}
       };
     };
-    const observer=new MutationObserver(()=>{const instruction=app.querySelector('.instruction');if(instruction&&instruction.textContent!=='Basahin ang salitang nakapaloob sa puting kahon.')instruction.textContent='Basahin ang salitang nakapaloob sa puting kahon.';addListen()});
+    const observer=new MutationObserver(()=>{const instruction=app.querySelector('.instruction');if(instruction&&instruction.textContent!=='Basahin ang salitang nakapaloob sa puting kahon.')instruction.textContent='Basahin ang salitang nakapaloob sa puting kahon.';addListen();narrateInstruction()});
     observer.observe(app,{childList:true,subtree:true});
     const NativeAudio=window.Audio;
     window.Audio=function(...args){
-      const audio=new NativeAudio(...args),status=app.querySelector('#status'),listen=app.querySelector('#listen');
-      if(!manualListening&&status?.textContent.trim()==='Pakinggan nang Mabuti ang salita.'&&listen){
-        listen.classList.add('feedback-listening');
-        const clear=()=>listen.classList.remove('feedback-listening');
-        audio.addEventListener('ended',clear,{once:true});audio.addEventListener('error',clear,{once:true});
-      }
-      return audio;
+      return new NativeAudio(...args);
     };
     window.Audio.prototype=NativeAudio.prototype;
     addListen();
-    const instruction=app.querySelector('.instruction')?.textContent?.trim();
-    const narrateInstruction=()=>{if(instructionNarrated||!window.__lessonStartReady)return;instructionNarrated=true;audioFor('Basahin ang salitang nakapaloob sa puting kahon.').catch(error=>console.error('Lesson 9 Gawain 3 instruction narration failed',error))};
-    if(instruction){if(window.__lessonStartReady)narrateInstruction();else window.addEventListener('lesson-start-ready',narrateInstruction,{once:true})}
+    const narrateInstruction=()=>{const instruction=app.querySelector('.instruction');if(!instruction||narratedInstruction===instruction||!window.__lessonStartReady)return;narratedInstruction=instruction;audioFor('Basahin ang salitang nakapaloob sa puting kahon.').catch(error=>console.error('Lesson 9 Gawain 3 instruction narration failed',error))};
+    if(window.__lessonStartReady)narrateInstruction();else window.addEventListener('lesson-start-ready',narrateInstruction,{once:true});
   });
 </script>
 <style>
@@ -122,14 +146,32 @@
   document.addEventListener('DOMContentLoaded',()=>{
     const app=document.getElementById('app');
     if(!app)return;
-    const controls=()=>app.querySelectorAll('#read,#listen');
-    const setBusy=value=>controls().forEach(button=>{button.disabled=value||button.dataset.activityBusy==='true';button.setAttribute('aria-disabled',String(value))});
-    let active=0;
+    const controls=()=>({read:app.querySelector('#read'),listen:app.querySelector('#listen')});
+    const setNarrationBusy=value=>{
+      const {read,listen}=controls();
+      [read,listen].forEach(button=>{
+        if(!button)return;
+        button.disabled=value||button.dataset.activityBusy==='true';
+        button.setAttribute('aria-disabled',String(Boolean(value||button.dataset.activityBusy==='true')));
+      });
+    };
+    let activeNarrations=0;
     const NativeAudio=window.Audio;
     window.Audio=function(...args){
-      const audio=new NativeAudio(...args),finish=()=>{if(!active)return;active=Math.max(0,active-1);if(!active)setBusy(false)};
-      active+=1;setBusy(true);audio.addEventListener('ended',finish,{once:true});audio.addEventListener('error',finish,{once:true});
-      const play=audio.play.bind(audio);audio.play=(...playArgs)=>play(...playArgs).catch(error=>{finish();throw error});
+      const audio=new NativeAudio(...args);
+      let finished=false;
+      const finish=()=>{
+        if(finished)return;
+        finished=true;
+        activeNarrations=Math.max(0,activeNarrations-1);
+        if(!activeNarrations)setNarrationBusy(false);
+      };
+      activeNarrations+=1;
+      setNarrationBusy(true);
+      audio.addEventListener('ended',finish,{once:true});
+      audio.addEventListener('error',finish,{once:true});
+      const play=audio.play.bind(audio);
+      audio.play=(...playArgs)=>play(...playArgs).catch(error=>{finish();throw error});
       return audio;
     };
     window.Audio.prototype=NativeAudio.prototype;
