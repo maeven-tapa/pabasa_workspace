@@ -17979,6 +17979,26 @@ def prescribed_activity_progress(request, activity_key):
     if activity_key == 'lesson7-gawain2c':
         try:
             data = json.loads(request.body or '{}')
+            if data.get('reset') is True:
+                progress, _ = StudentActivityProgress.objects.update_or_create(
+                    student=student,
+                    activity_key=activity_key,
+                    defaults={
+                        'current_index': 0,
+                        'completed_items': 0,
+                        'correct_items': 0,
+                        'total_items': 3,
+                        'activity_completed': False,
+                        'state': {'validated_rows': {}},
+                    },
+                )
+                return JsonResponse({'success': True, 'progress': {
+                    'current_index': progress.current_index,
+                    'completed_items': progress.completed_items,
+                    'total_items': progress.total_items,
+                    'activity_completed': progress.activity_completed,
+                    'state': progress.state,
+                }})
             row_index = int(data.get('row_index'))
             strokes = data.get('strokes')
         except (TypeError, ValueError, json.JSONDecodeError):

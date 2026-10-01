@@ -27,9 +27,10 @@
   {{ handwriting_activity_data|json_script:"handwriting-data" }}{% include 'pabasa_app/session3_lesson_start_bootstrap.html' %}
   <script>
     window.__prescribedNarrationAudio = {
-      'magsanay magsulat ng letrang ay isulat nang tatlong beses ang letrang ay': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2C/magsanay_magsulat_ng_letrang_ay_isulat_nang_tatlong_beses_ang_letrang_ay.mp3' %}",
+      'magsanay magsulat ng letrang i isulat nang isang beses ang letrang i sa bawat hanay': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2C/magsanay_magsulat_ng_letrang_ay_isulat_nang_tatlong_beses_ang_letrang_ay (2).mp3' %}",
       'subukan ulit isulat nang malinaw ang letrang ay': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2C/subukan_ulit_isulat_nang_malinaw_ang_letrang_ay.mp3' %}",
-      'magaling': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2C/magaling.mp3' %}"
+      'magaling': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4B/OTHERS/magaling.mp3' %}",
+      'sumulat ulit': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4/sumulat_ulit (2).mp3' %}"
     };
   </script>
   <script src="{% static 'pabasa_app/js/prescribed_narration_resolver.js' %}?v=20260924-8"></script>
@@ -37,8 +38,8 @@
   (() => {
     const data = JSON.parse(document.getElementById('handwriting-data').textContent || '{}');
     const app = document.getElementById('app');
-    const instructionText = 'Magsanay magsulat ng Letrang Ii. Isulat nang tatlong beses ang Letrang Ii.';
-    const narrationText = 'Magsanay magsulat ng letrang ay. Isulat nang tatlong beses ang letrang ay.';
+    const instructionText = 'Magsanay magsulat ng letrang I. Isulat nang isang beses ang letrang I sa bawat Hanay.';
+    const narrationText = 'Magsanay magsulat ng letrang I. Isulat nang isang beses ang letrang I sa bawat Hanay.';
     const normalHint = 'Isulat ang Ii sa bawat hanay.';
     const retryMessage = 'Subukan ulit! Isulat nang malinaw ang letrang Ii.';
     const csrf = () => document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || '';
@@ -95,7 +96,20 @@
         const response = await fetch(data.progress_url, {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({row_index:index,strokes})});
         const result = await response.json().catch(() => null);
         if (!response.ok || !result?.success) {await retry(); return}
-        if (index < 2) {index += 1; render(); return}
+        if (index < 2) {
+          index += 1;
+          render();
+          busy = true;
+          setControlsDisabled(true);
+          try {
+            await speak('Magaling!');
+            await speak('Sumulat ulit!');
+          } finally {
+            busy = false;
+            setControlsDisabled(false);
+          }
+          return;
+        }
         const completion = await fetch(data.completion_url, {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'});
         if (!completion.ok || !(await completion.json().catch(() => null))?.success) {await retry(); return}
         index = 3; render(); speak('Magaling!');
