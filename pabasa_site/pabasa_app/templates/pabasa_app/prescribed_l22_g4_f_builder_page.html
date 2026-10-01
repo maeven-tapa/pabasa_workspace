@@ -6,13 +6,23 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Lesson 22 · Gawain 4 | PABASA</title>
 <link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_l22_g4_f_builder.css' %}">
-<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_l22_g4_f_builder_refinement.css' %}?v=20260925-center-2">
+<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_l22_g4_f_builder_refinement.css' %}?v=20261001-active-label-1">
+<link rel="stylesheet" href="{% static 'pabasa_app/css/lesson_start_modal.css' %}">
 </head>
 <body class="l22g4-page">
 {% csrf_token %}
 <main id="l22g4-app"></main>
+{% if not workbook_payload.preview %}<div class="lesson-start-backdrop" id="wb-l22-g4-start" role="dialog" aria-modal="true" aria-labelledby="wb-l22-g4-start-title">
+<article class="lesson-start-modal">
+<p class="lesson-start-label">SESSION 8 · LESSON 22 · GAWAIN 4</p>
+<h2 class="lesson-start-title" id="wb-l22-g4-start-title">{{ workbook_payload.activity.title }}</h2>
+<p class="wb-l22-g4-start-instruction">{{ workbook_payload.activity.instruction }}</p>
+<div class="lesson-start-actions"><button type="button" id="wb-l22-g4-start-button">SIMULAN</button><button type="button" id="wb-l22-g4-later-button">MAMAYA NA LANG</button></div>
+</article>
+</div>{% endif %}
 {{ workbook_payload|json_script:'workbook-payload' }}
 {% include 'pabasa_app/session8_11_prescribed_controls.html' with prefix='prescribed-session-target' help_text='Piliin ang mga pantig upang mabuo ang salita. Basahin ito kapag hiniling.' %}
-<script src="{% static 'pabasa_app/js/prescribed_l22_g4_f_builder.js' %}"></script>
+<script src="{% static 'pabasa_app/js/lesson_start_modal.js' %}?v=20261001-g4"></script>
+<script src="{% static 'pabasa_app/js/prescribed_l22_g4_f_builder.js' %}?v=20261001-startup"></script>
 </body>
 </html>

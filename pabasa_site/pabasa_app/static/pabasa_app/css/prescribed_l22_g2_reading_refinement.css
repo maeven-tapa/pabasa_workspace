@@ -26,3 +26,10 @@
 .l22g6-page .layout{min-height:0}
 @media(max-width:760px) and (min-height:650px){.l22g6-page .layout{grid-template-rows:minmax(0,1fr) minmax(0,.9fr)}}
 @media(max-width:520px){.l22g6-page .back:after{font-size:1rem}.l22g6-page .back{width:230px;min-height:58px}}
+
+/* Keep the existing .word.current state as the sole source of truth while
+   making the active reading target explicit to the learner. */
+.l22g2-page .word.current{position:relative;isolation:isolate;box-sizing:border-box;padding:clamp(18px,2.2vw,22px) 8px 5px;background:transparent;border-color:transparent;box-shadow:none;color:var(--l22-ref-ink)}
+.l22g2-page .word.current::before{content:'BASAHIN ITO';position:absolute;top:2px;left:50%;z-index:2;transform:translateX(-50%);padding:3px 8px;border-radius:999px;background:#f6c93e;color:#5b3b00;font-size:clamp(.42rem,.9vw,.68rem);font-weight:900;letter-spacing:.035em;line-height:1;white-space:nowrap;box-shadow:0 2px 5px rgba(183,123,27,.24);pointer-events:none}
+.l22g2-page .word.current::after{content:'';position:absolute;inset:clamp(18px,2.2vw,22px) 0 0;z-index:-1;border:2px solid #e7b83e;border-radius:14px;background:linear-gradient(180deg,#fff8d9 0%,#fff1bd 100%);box-shadow:0 2px 6px rgba(180,135,20,.12),inset 0 0 0 2px rgba(240,199,90,.35);pointer-events:none}
+@media(max-height:560px){.l22g2-page .word.current{padding-top:15px}.l22g2-page .word.current::before{top:2px;padding:2px 5px;font-size:.38rem}.l22g2-page .word.current::after{inset:15px 0 0}}

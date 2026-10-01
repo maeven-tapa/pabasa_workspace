@@ -37,6 +37,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   let narratedStatus = null;
   let feedbackNarrating = false;
+  let statusNarrating = false;
+  let choicesLockedForNarration = false;
   let transitionToken = 0;
   let feedbackToken = 0;
   const controls = () => [app.querySelector('#read'), app.querySelector('#aloud'), ...app.querySelectorAll('.choice')].filter(Boolean);
@@ -89,9 +91,7 @@ document.addEventListener('DOMContentLoaded', function () {
     status.dataset.feedbackNarrating = feedbackKey;
     feedbackNarrating = true;
     setFeedbackDisabled(true);
-    const unlockFallback = window.setTimeout(() => setFeedbackDisabled(false), 6000);
     narrateFeedback(text).finally(() => {
-      window.clearTimeout(unlockFallback);
       if (status.isConnected && status.dataset.feedbackNarrating === feedbackKey) {
         status.dataset.feedbackNarrated = feedbackKey;
         delete status.dataset.feedbackNarrating;
@@ -102,6 +102,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       setFeedbackDisabled(false);
       feedbackNarrating = false;
+      if (!statusNarrating) lockControls(false);
       sync();
     });
   };
@@ -203,10 +204,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   window.addEventListener('basahin:state', event => {
     const read = app.querySelector('#read');
-    const listen = app.querySelector('#aloud');
-    const active = ['calibrating', 'waiting', 'listening', 'processing'].includes(event.detail?.state);
     if (read) read.disabled = false;
-    if (listen) listen.disabled = active;
   });
 
   const narrateStatus = () => {
@@ -224,6 +222,7 @@ document.addEventListener('DOMContentLoaded', function () {
     narratedStatus = status;
     syncReadControls();
     lockControls(true);
+    statusNarrating = true;
 
     fetch('/api/reading/read-aloud/', {
       method: 'POST',
@@ -251,13 +250,23 @@ document.addEventListener('DOMContentLoaded', function () {
         audio.play().catch(resolve);
       }))
       .catch(error => console.error('Lesson 7 Gawain 1 status narration failed', error))
-      .finally(() => lockControls(false));
+      .finally(() => {
+        statusNarrating = false;
+        if (!feedbackNarrating) lockControls(false);
+      });
   };
 
   const sync = () => {
     if (!window.__lessonStartReady) return;
     syncReadControls();
     startItemTransition();
+    const choices = app.querySelector('.choices');
+    if (!choices) {
+      choicesLockedForNarration = false;
+    } else if (!choicesLockedForNarration) {
+      choicesLockedForNarration = true;
+      lockControls(true);
+    }
     const status = app.querySelector('#status');
     if (status) {
       if (app.querySelector('.choices') && status.textContent.trim() === 'Nagsisimula ba sa tunog /i/?') {
@@ -276,6 +285,7 @@ document.addEventListener('DOMContentLoaded', function () {
         showFeedback(status, 'Subukan muli!', '');
       } else if (window.__lesson7RecognitionFeedback === 'correct' && statusText !== 'Magaling!') {
         window.__lesson7RecognitionFeedback = null;
+        lockControls(true);
         showFeedback(status, 'Magaling!');
       }
     }

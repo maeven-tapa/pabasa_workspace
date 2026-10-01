@@ -79,6 +79,7 @@ document.addEventListener('DOMContentLoaded',function(){
     const intro=app.querySelector('.lesson7-overview'),button=app.querySelector('#lesson7Start');
     if(!intro||!button||intro.dataset.narrationBound)return;
     intro.dataset.narrationBound='1';
+    if(!intro.querySelector('.lesson7-intro-eyebrow')){const eyebrow=document.createElement('p');eyebrow.className='eyebrow lesson7-intro-eyebrow';eyebrow.textContent='SESSION 3 · LESSON 7 · GAWAIN 1';intro.prepend(eyebrow)}
     const first='Tingnan ang mga larawan sa bilog',second='Isa-isa nating pangalanan ang mga ito.',start='Magsimula na tayo!';
     const heading=intro.querySelector('h2'),description=intro.querySelector('p');
     if(heading)heading.textContent=first;
@@ -109,3 +110,34 @@ new MutationObserver(()=>{if(window.__lessonStartReady)setup()}).observe(app,{ch
 <style>.done,.done-card,.complete{display:grid;place-items:center;width:min(100%,540px);margin:auto;padding:42px 38px;border-radius:32px;background:#fff;color:#183e63;text-align:center;box-shadow:0 14px 30px #1e5b7a25;overflow:visible}.done h1,.done p,.done a,.done-card h1,.done-card p,.done-card a,.complete h1,.complete p,.complete a{font-size:0}.done h1:after,.done-card h1:after,.complete h1:after{content:'Tapos na ang gawain! 🎉';font-size:2rem}.done p:after,.done-card p:after,.complete p:after{content:'Mahusay! Nakumpleto mo na ang aktibidad.';font-size:1.15rem}.done a,.done-card a,.complete a{display:inline-flex;padding:14px 24px;border-radius:999px;background:#299e9a;color:#fff;text-decoration:none;box-shadow:0 7px #187b7a}.done a:after,.done-card a:after,.complete a:after{content:'BALIK SA AKING ARALIN';font-size:1.15rem}.done .button,.complete .done{font-size:0}.done .button:after,.complete .done:after{content:'BALIK SA AKING ARALIN';font-size:1.15rem}</style>
 <script src="{% static 'pabasa_app/js/session3_visual_feedback_suppression.js' %}" data-feedback-messages='["Magaling!","Subukan muli!"]'></script>
 <script>setInterval(function(){if(typeof pakingganUnlocked!=='undefined')pakingganUnlocked=true;var a=document.getElementById('aloud');if(typeof phase!=='undefined'&&phase==='read'&&a)a.hidden=false},50)</script>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  const labelForModal=()=>{const button=document.getElementById('aloud');if(button&&document.body.classList.contains('lesson-start-open'))button.textContent='Pakinggan'};
+  labelForModal();
+  window.addEventListener('lesson-start-ready',function(){const button=document.getElementById('aloud');if(button)button.textContent='READ ALOUD'},{once:true});
+});
+</script>
+<script>
+window.record=async function(){
+  if(busy)return;
+  const read=document.getElementById('read'),listen=document.getElementById('aloud'),item=items[index];
+  if(!read||!listen||!item)return;
+  busy=true;
+  listen.disabled=true;
+  try{
+    const result=await window.Basahin.read({target_text:item.word,language:'Filipino',mode:'reading',prescribed_activity_key:'lesson7-gawain1'},{button:read});
+    if(result.success&&result.complete===true){phase='classify';render();return}
+    tries++;
+    if(tries>=3){pakingganUnlocked=true;listen.hidden=false;tries=0}
+    read.disabled=false;
+    read.textContent=window.BasahinButton.LABEL;
+  }catch(error){
+    document.getElementById('status').textContent=error.message||'Hindi nakuha ang iyong boses. Subukan muli.';
+    read.disabled=false;
+    read.textContent=window.BasahinButton.LABEL;
+  }finally{
+    busy=false;
+    listen.disabled=false;
+  }
+};
+</script>

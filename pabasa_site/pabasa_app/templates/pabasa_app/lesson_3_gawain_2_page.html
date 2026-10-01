@@ -759,6 +759,26 @@ body.gawain-2:has(#game .complete)::before {
 .gawain-2 #game .lesson3-g2-actions>#read{flex:1 1 0!important;max-width:330px!important}
 </style>
 <style>
+/* Keep the active picture card visually consistent with Lesson 2 Gawain 1. */
+@keyframes lesson3Gawain2ActivePulse {
+  0%, 100% { outline: 3px solid #ffe36b99; outline-offset: 3px; }
+  50% { outline: 10px solid #ffe36bcc; outline-offset: 7px; }
+}
+.gawain-2 .pairs .word.active {
+  background: #ffe9a7 !important;
+  border: 5px solid #ffc928 !important;
+  box-shadow: 0 0 0 7px #ffe36b, 0 0 30px #ffc928cc, 0 12px 26px #e09a2255 !important;
+  transform: translateY(-3px) scale(1.025) !important;
+  transition: transform .16s, box-shadow .16s, border-color .16s !important;
+  animation: lesson3Gawain2ActivePulse 1.5s ease-in-out infinite !important;
+}
+/* Override the more-specific listening-state card rule so the gold edge keeps
+   the same visual weight as Lesson 2 Gawain 1. */
+.gawain-2 #game.game:has(#listen) .pairs .word.active {
+  border: 5px solid #ffc928 !important;
+}
+</style>
+<style>
 /* Match Lesson 2 Gawain 1's established BASAHIN ITO marker. */
 .gawain-2 .pairs .word.active::before {
   content: 'BASAHIN ITO' !important;

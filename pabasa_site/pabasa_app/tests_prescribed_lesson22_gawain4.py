@@ -70,9 +70,25 @@ class PrescribedLesson22Gawain4Tests(TestCase):
         self.assertIn("uiPhase='processing'", script)
         self.assertIn('Pinoproseso ang iyong pagbasa', script)
         self.assertIn('spinner', script)
-        self.assertIn('await tts(feedback)', script)
+        self.assertIn('await announce(feedback)', script)
         self.assertIn("if(busy||speechBusy||uiPhase==='listening'||uiPhase==='processing')return", script)
         self.assertIn('stopStream()', script)
+
+    def test_startup_modal_and_replay_share_the_canonical_instruction_path(self):
+        script = (Path(__file__).resolve().parent / 'static/pabasa_app/js/prescribed_l22_g4_f_builder.js').read_text(encoding='utf-8')
+        template = (Path(__file__).resolve().parent / 'templates/pabasa_app/prescribed_l22_g4_f_builder_page.html').read_text(encoding='utf-8')
+        self.assertIn("function playInstruction(){return playAudio(instruction)}", script)
+        self.assertIn("document.getElementById('instruction').onclick=playInstruction", script)
+        self.assertIn("const startLesson=window.PabasaLessonStart||", script)
+        self.assertIn("startLesson({modalId:'wb-l22-g4-start'", script)
+        self.assertIn("playInstruction()", script)
+        self.assertNotIn('setTimeout(()=>playInstruction', script)
+        self.assertIn('id="wb-l22-g4-start"', template)
+        self.assertIn('id="wb-l22-g4-start-button"', template)
+        self.assertIn('id="wb-l22-g4-later-button"', template)
+        self.assertIn("lesson_start_modal.css", template)
+        self.assertIn("lesson_start_modal.js", template)
+        self.assertIn('SESSION 8 · LESSON 22 · GAWAIN 4', template)
 
     def test_page_uses_specialized_template_and_canonical_next_route(self):
         token = uuid.uuid4().hex

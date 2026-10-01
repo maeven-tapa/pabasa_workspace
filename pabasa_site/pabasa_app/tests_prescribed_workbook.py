@@ -195,6 +195,8 @@ class WorkbookStateTests(SimpleTestCase):
         self.assertNotIn('speakWithGoogle(text)', source.split('async function playFeedback', 1)[1].split('async function playCompletion', 1)[0])
     def test_lesson22_c_pronunciation_accepts_scoped_hard_and_soft_c_spellings(self):
         self.assertTrue(l22_c_pronunciation_match('cac', 'cactus', 'kak', 'hard'))
+        self.assertTrue(l22_c_pronunciation_match('cac', 'cactus', 'cock', 'hard'))
+        self.assertTrue(l22_c_pronunciation_match('cac', 'cactus', 'Cock', 'hard'))
         self.assertTrue(l22_c_pronunciation_match('com', 'computer', 'kom', 'hard'))
         self.assertTrue(l22_c_pronunciation_match('Ce', 'Celeste', 'se', 'soft'))
         self.assertFalse(l22_c_pronunciation_match('Ce', 'Celeste', 'ke', 'soft'))
@@ -223,6 +225,10 @@ class WorkbookStateTests(SimpleTestCase):
         self.assertFalse(l22_c_pronunciation_match('cac', 'cactus', 'unrelated word', 'hard'))
         self.assertFalse(l22_c_pronunciation_match('ca', 'Cagayan', 'cactus', 'hard'))
         self.assertTrue(l22_c_pronunciation_match('Ce', 'Celeste', '  se!  ', 'soft'))
+
+    def test_lesson22_cock_alias_does_not_leak_to_other_pantig(self):
+        self.assertFalse(l22_c_pronunciation_match('ce', 'Cebu', 'cock', 'soft'))
+        self.assertFalse(l22_c_pronunciation_match('tus', 'cactus', 'cock', 'hard'))
 
     def test_lesson22_gawain1_duplicate_ca_entries_advance_by_index(self):
         activity = get_activity('aral-l22-g1-c-syllable-builder')
@@ -640,6 +646,19 @@ class PrescribedWorkbookFlowTests(TestCase):
         self.assertNotIn('speechSynthesis', source)
         self.assertIn('font-size:clamp(1rem,2.2vw,1.35rem)', template)
 
+    def test_lesson22_gawain3_instruction_audio_mapping_returns_local_mp3(self):
+        self.session_student(self.student)
+        response = self.client.post(reverse('reading_read_aloud_api'), {
+            'target_text': 'Hanapin at kulayan ng paboritong kulay ang sumusunod na salita sa ibaba.',
+            'language': 'Filipino',
+            'mode': 'reading',
+            'prescribed_activity_key': 'aral-l22-g3-c-word-search',
+        })
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertTrue(response.json()['local_audio'])
+        self.assertEqual(response.json()['mime_type'], 'audio/mpeg')
+        self.assertGreater(len(response.json()['audio_content']), 0)
+
     def test_lesson22_syllable_attempt_sends_whole_word_context_to_english_stt(self):
         key = 'aral-l22-g1-c-syllable-builder'
         progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
@@ -661,6 +680,26 @@ class PrescribedWorkbookFlowTests(TestCase):
             })
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(response.json()['state']['index'], 1)
+
+    def test_lesson22_cock_alias_uses_normal_progression_path(self):
+        key = 'aral-l22-g1-c-syllable-builder'
+        progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
+        state = initial_state()
+        self.client.post(progress_url, json.dumps({'action': 'reading_started', 'revision': state['revision']}), content_type='application/json')
+
+        def cock_reading_response(request):
+            self.assertEqual(request.POST['l22_c_syllable'], 'cac')
+            self.assertEqual(request.POST['l22_c_sound'], 'hard')
+            return JsonResponse({'success': True, 'transcript': 'cock', 'raw_transcript': 'cock', 'complete': False})
+
+        with patch('pabasa_app.views.reading_transcribe_api', side_effect=cock_reading_response):
+            response = self.client.post(progress_url, {
+                'action': 'reading_syllable_attempt', 'revision': 1,
+                'audio': SimpleUploadedFile('reading.webm', b'audio', content_type='audio/webm'),
+            })
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()['state']['index'], 1)
+        self.assertEqual(response.json()['state']['last_transcript'], 'cock')
 
     @patch('pabasa_app.views.synthesize_read_aloud_audio', return_value='encoded-audio')
     def test_lesson_22_read_aloud_uses_prescribed_filipino_voice(self, synthesize):

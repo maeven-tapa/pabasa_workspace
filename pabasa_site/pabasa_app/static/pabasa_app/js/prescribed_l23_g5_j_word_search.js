@@ -22,5 +22,13 @@
   function move(e){if(phase!=='SELECTING'||!active||e.pointerId!==active.id)return;const cell=document.elementFromPoint(e.clientX,e.clientY)?.closest('.cell');if(!cell)return;active.path=pathBetween(active.start,[+cell.dataset.row,+cell.dataset.col]);paint(active.path);e.preventDefault();}
   function cancel(){if(phase==='SELECTING'){active=null;paint([]);phase='READY';}}
   async function finish(e){if(phase!=='SELECTING'||!active||e.pointerId!==active.id)return;const gesture=active;active=null;paint([]);phase='VALIDATING';const cell=document.elementFromPoint(e.clientX,e.clientY)?.closest('.cell');const path=cell?pathBetween(gesture.start,[+cell.dataset.row,+cell.dataset.col]):gesture.path;if(path.length<2){phase='READY';return;}busy=true;try{const word=words.find(w=>JSON.stringify(paths[w])===JSON.stringify(path))||'';const result=await send({action:'select_word',word,path,color:'#b6e6c3'});render();const message=result.state.last_feedback||'';feedback(message);if(result.state.completed){await complete();await speakLocal(localAudio.completion);}else if(result.state.found_words?.[word]){await speakLocal(localSuccess[word]);}else{await speakLocal(localFeedback[message]);}}catch(error){const message=error.message||'Hindi na-save ang gawain.';feedback(message);await speakLocal(localFeedback[message]);}finally{busy=false;phase=state.completed?'DONE':'READY';}}
-  render();if(!data.preview&&!state.completed&&!autoNarrated){autoNarrated=true;setTimeout(playInstruction,0);}window.addEventListener('pagehide',()=>audio?.pause());
+  function initializeLesson23Entry(){
+    const modal=document.getElementById('wb-l23-g5-start');
+    if(data.preview||state.completed||!modal)return;
+    const start=document.getElementById('wb-l23-g5-start-button'),later=document.getElementById('wb-l23-g5-later-button');
+    document.body.classList.add('lesson-start-open');
+    if(start)start.onclick=()=>{if(start.disabled)return;start.disabled=true;if(later)later.disabled=true;audio?.pause();audio=null;modal.remove();document.body.classList.remove('lesson-start-open');if(!autoNarrated){autoNarrated=true;render();playInstruction();}};
+    if(later)later.onclick=()=>{if(later.disabled)return;later.disabled=true;if(start)start.disabled=true;audio?.pause();window.location.href=data.back_url||'/dashboard/assessment/';};
+  }
+  render();initializeLesson23Entry();window.addEventListener('pagehide',()=>audio?.pause());
 })();
