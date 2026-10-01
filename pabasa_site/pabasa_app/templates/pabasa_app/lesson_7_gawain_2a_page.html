@@ -42,3 +42,15 @@ document.getElementById('submit').onclick=async()=>{if(busy)return;busy=true;let
 </style>
 <style>.done h1,.done .done-message{visibility:visible!important}</style>
 <script src="{% static 'pabasa_app/js/session3_visual_feedback_suppression.js' %}" data-feedback-messages='["Subukan Muli","Magaling"]'></script>
+</html><script>
+document.addEventListener('DOMContentLoaded', function () {
+  const reading = document.querySelector('#app .reading');
+  const read = reading?.querySelector('#read');
+  if (!reading || !read || reading.querySelector('#listen')) return;
+  const listen = document.createElement('button');
+  listen.type = 'button';
+  listen.id = 'listen';
+  listen.textContent = 'Pakinggan';
+  read.insertAdjacentElement('afterend', listen);
+});
+</script>

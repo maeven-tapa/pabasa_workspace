@@ -51,3 +51,37 @@ body .card .done-message{grid-area:message!important;align-self:start!important;
 body .lesson7-g2a-reading-actions #read.recording,body .lesson7-g2a-reading-actions #read.is-listening{background:#d8903d!important;box-shadow:0 0 0 8px #f6c54a66,0 0 30px #f6c54acc,0 6px 0 #187b7a!important;animation:lesson7G2aListenPulse 1.6s ease-in-out infinite!important;opacity:1!important;filter:none!important;transform-origin:center}
 @keyframes lesson7G2aListenPulse{0%,100%{scale:1}50%{scale:1.035}}
 @media(prefers-reduced-motion:reduce){body .lesson7-g2a-reading-actions #read.recording,body .lesson7-g2a-reading-actions #read.is-listening{animation:none!important}}
+/* Keep the paired reading controls compact and visually consistent. */
+body .lesson7-g2a-reading-actions {
+  width: min(100%, 620px) !important;
+}
+body .lesson7-g2a-reading-actions button {
+  border-radius: 999px !important;
+}
+body #app .reading #read,
+body #app .reading #listen {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: min(280px, 42vw) !important;
+  min-width: 0 !important;
+  min-height: 54px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #299e9a !important;
+  color: #fff !important;
+  font: 400 clamp(1.1rem, 1.8vw, 1.45rem)/1.25 BasahinFredoka, Fredoka, Nunito, "Segoe UI", sans-serif !important;
+  box-shadow: 0 6px 0 #187b7a, 0 12px 18px #145c7a24 !important;
+}
+body #app .reading > #listen {
+  margin-left: 12px !important;
+}
+@media(max-width:500px) {
+  body #app .reading #read,
+  body #app .reading #listen {
+    width: calc(50% - 6px) !important;
+  }
+  body #app .reading > #listen {
+    margin-left: 0 !important;
+  }
+}
