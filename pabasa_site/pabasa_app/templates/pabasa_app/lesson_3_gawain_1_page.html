@@ -2014,7 +2014,7 @@ body.lesson-3-responsive:has(#game .complete) .lesson-start-backdrop{display:non
 .lesson-3-responsive #game #status::before{content:none!important;display:none!important}
 </style>
 <script>
-(function(){var root=document.getElementById('game');if(!root)return;var feedback=/^(?:Magaling!(?: Susunod na larawan\.)?|Hindi ito ang tamang sagot\. Subukan natin muli\.|Hindi pa ito tama\. Subukan muli\.(?: \(\d+\/3\))?|Subukan muli\.(?: \(\d+\/3\))?|Hindi nakuha ang iyong boses\. Subukan muli\.|Tapos na ang gawain!.*|Mahusay! Nakumpleto mo na ang aktibidad\.)$/;function sync(){root.querySelectorAll('#status,.complete h1,.complete h2,.complete p').forEach(function(el){el.classList.toggle('feedback-text-hidden',feedback.test(el.textContent.trim()));});}new MutationObserver(sync).observe(root,{childList:true,subtree:true,characterData:true});sync();}());
+(function(){var root=document.getElementById('game');if(!root)return;var feedback=/^(?:Magaling!(?: Susunod na larawan\.)?|Hindi ito ang tamang sagot\. Subukan natin muli\.|Hindi pa ito tama\. Subukan muli\.(?: \(\d+\/3\))?|Subukan muli\.(?: \(\d+\/3\))?|Hindi nakuha ang iyong boses\. Subukan muli\.)$/;function sync(){root.querySelectorAll('#status').forEach(function(el){el.classList.toggle('feedback-text-hidden',feedback.test(el.textContent.trim()));});}new MutationObserver(sync).observe(root,{childList:true,subtree:true,characterData:true});sync();}());
 </script>
 <script>
 (function(){
