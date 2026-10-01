@@ -13,7 +13,6 @@
   let stream = null;
   let requestId = 0;
   let audioRun = 0;
-  let instructionAutoPlayed = false;
   let dialog = state.completed ? 'completion' : '';
   let completionAudioStarted = false;
   const COMPLETION_MESSAGE = 'Magaling! Natapos mo ang Gawain 3!';
@@ -179,17 +178,9 @@
   }
   async function playInstruction() {
     if (busy) return;
-    busy = true; render('Nilo-load ang audio…');
-    try { await speak('Nilo-load ang audio…'); await speak(activity.instruction || ''); render(); }
+    busy = true; render();
+    try { await speak(activity.instruction || ''); render(); }
     catch (error) { await playMappedFeedback('Hindi ma-play ang audio.'); render(error.message || 'Hindi ma-play ang audio.', 'bad'); }
-    finally { busy = false; render(); }
-  }
-  async function playInitialInstruction() {
-    if (instructionAutoPlayed || data.preview || busy || state.completed) return;
-    instructionAutoPlayed = true;
-    busy = true; render('Nilo-load ang audio…');
-    try { await speak('Nilo-load ang audio…'); await speak(activity.instruction || ''); }
-    catch (_) { /* Keep the activity usable when autoplay is blocked. */ }
     finally { busy = false; render(); }
   }
   async function listen() {
@@ -302,8 +293,8 @@
       render(error.message || feedback, 'bad');
     } finally { busy = false; render(); }
   }
+  document.addEventListener('pabasa:l24-started', () => { playInstruction(); }, {once: true});
   window.addEventListener('pagehide', () => { requestId += 1; stream?.getTracks().forEach(track => track.stop()); stopAudio(); });
   render();
   if (state.completed) void announceCompletion();
-  void playInitialInstruction();
 })();

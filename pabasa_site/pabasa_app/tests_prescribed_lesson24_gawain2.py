@@ -56,10 +56,12 @@ class Lesson24Gawain2WorkbookTests(SimpleTestCase):
         self.assertEqual(initial_l22_g2_state()['completed_words'], [])
         self.assertEqual(initial_l24_g2_state()['completed_words'], [])
 
-    def test_intro_uses_payload_instruction_and_does_not_auto_narrate_twice(self):
-        intro = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_l24_g2_intro.js').read_text(encoding='utf-8')
-        reading = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_l22_g2_reading.js').read_text(encoding='utf-8')
-        self.assertIn('activity.instruction', intro)
-        self.assertIn("a.activity_key!=='aral-l24-g2-v-word-reading'", reading)
-        self.assertIn('canonicalInstruction=instructionText', reading)
-        self.assertIn('${esc(canonicalInstruction)}', reading)
+    def test_startup_waits_for_simulan_and_uses_the_canonical_instruction_path(self):
+        startup = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_l24_startup.js').read_text(encoding='utf-8')
+        reading = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_l24_g2_reading.js').read_text(encoding='utf-8')
+        template = (Path(__file__).parent / 'templates/pabasa_app/prescribed_l24_g2_reading_page.html').read_text(encoding='utf-8')
+        self.assertIn("data-l24-start-button", startup)
+        self.assertIn("pabasa:l24-started", startup)
+        self.assertIn("pabasa:l24-started", reading)
+        self.assertIn('async function playInstruction()', reading)
+        self.assertNotIn('prescribed_l24_g2_intro.js', template)

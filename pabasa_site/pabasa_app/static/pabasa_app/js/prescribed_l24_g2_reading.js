@@ -74,6 +74,7 @@
   async function listen() { if (busy) return; busy = true; render(); try { await playAudio(word()); await request({action:'read_aloud'}); render('Pakinggan ang tamang pagbigkas, pagkatapos ay subukan mong basahin.'); } catch (error) { const message = error.message || 'Hindi available ang audio.'; render(message, 'bad'); await playFeedback(message).catch(() => {}); } finally { busy = false; } }
   async function retry() { if (busy) return; busy = true; try { await request({action:'retry_reading'}); render('Handa ka na?'); } catch (error) { const message = error.message || 'Hindi pa kailangan ang pag-ulit.'; render(message, 'bad'); await playFeedback(message).catch(() => {}); } finally { busy = false; } }
   async function restart() { if (busy || !window.confirm('Sigurado ka bang gusto mong magsimula muli? Mawawala ang kasalukuyang progreso sa Gawain 2.')) return; busy = true; try { await request({action:'restart'}); render(); } catch (error) { render(error.message || 'Hindi na-reset ang gawain.', 'bad'); } finally { busy = false; } }
+  document.addEventListener('pabasa:l24-started', () => { playInstruction(); }, {once: true});
   window.addEventListener('pagehide', () => {stream?.getTracks().forEach(track => track.stop()); if (audio) audio.pause();});
   render();
 })();

@@ -106,9 +106,10 @@ class Lesson24Bahagi1Gawain3WorkbookTests(SimpleTestCase):
         template = (Path(__file__).parent / 'templates/pabasa_app/prescribed_workbook_page.html').read_text(encoding='utf-8')
         dedicated_template = (Path(__file__).parent / 'templates/pabasa_app/prescribed_l24_g3_repeat_page.html').read_text(encoding='utf-8')
         for expected in ('Pakinggan', 'Ulitin', 'model_listened', 'prescribed_activity_key', 'reading', 'session_key',
-                         'mappedAudio', 'playInitialInstruction', 'void playInitialInstruction()', 'COMPLETION_MESSAGE',
+                         'mappedAudio', 'pabasa:l24-started', 'playInstruction', 'COMPLETION_MESSAGE',
                          'confirmRestart', 'reset-confirm', 'reset-cancel'):
             self.assertIn(expected, js)
+        self.assertNotIn('playInitialInstruction', js)
         self.assertNotIn('speechSynthesis', js)
         self.assertNotIn('SpeechSynthesisUtterance', js)
         self.assertNotIn('window.confirm', js)

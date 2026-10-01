@@ -25,6 +25,7 @@
   const l23G3 = a.activity_key === 'aral-l23-g3-j-word-reading';
   const qG6 = qBuilder;
   const lesson23Activity = l23G1 || l23G3 || jSyllables || qG6 || qReading;
+  const lesson24Activity = l24Builder || l24G4Builder || l24G3WordReading || g5Syllables || g6Search || g7Reading || pictureReading;
   const localAudio = (l22G1 || l23G1 || l23G3 || qReading || jSyllables || qG6 || l24Builder || g6Search || g7Reading || pictureReading || l24G3WordReading || l24G4Builder || g5Syllables || s9Family || s9Helping) ? (data.local_audio || {}) : {};
   const G1_MAPPED_TEXT = new Set([
     'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salita mula rito.',
@@ -161,7 +162,7 @@
   const session9Activity = s9Family || s9Helping;
   const session9SaveError = 'Could not save your work. Try again.';
   const session9AudioError = 'Audio is not available. Try again.';
-  let activityStarted = (!session9Activity && !l22G1 && !lesson23Activity) || preview || Boolean(state.completed), instructionPlayback = false;
+  let activityStarted = (!session9Activity && !l22G1 && !lesson23Activity && !lesson24Activity) || preview || Boolean(state.completed), instructionPlayback = false;
   const content = document.getElementById('wb-content'), action = document.getElementById('wb-action');
   const status = document.getElementById('wb-status');
   const fil = a.language === 'Filipino';
@@ -421,10 +422,10 @@
     return `<div class="wb-instruction-banner"><span>${esc(instructionText)}</span><button type="button" id="wb-instruction-replay" aria-label="Pakinggan muli ang panuto">Pakinggan Muli</button></div>`;
   }
   function speakInstruction(){
-    if(preview||instructionSpoken||(lesson23Activity&&!activityStarted))return;
+    if(preview||instructionSpoken||((lesson23Activity||lesson24Activity)&&!activityStarted))return;
     instructionSpoken=true;
     const play=()=>playPrescribedAudio(instructionText).catch(e=>{console.error('Workbook instruction audio failed',e);if((l23G3&&G3_MAPPED_TEXT.has(e.message))||(qReading&&G7_MAPPED_TEXT.has(e.message))||(jSyllables&&G4_MAPPED_TEXT.has(e.message))||(l24G3WordReading&&L24_G3_WORD_MAPPED_TEXT.has(e.message))){if(e.message!==instructionText)playPrescribedAudio(e.message,true).catch(()=>{});}});
-    if(lesson23Activity)play();else setTimeout(play,0);
+    if(lesson23Activity||lesson24Activity)play();else setTimeout(play,0);
   }
   function renderJReading(){
     const current=Number(state.index||0), done=new Set(state.completed_words||[]);
@@ -764,6 +765,12 @@
   }
   window.addEventListener('beforeunload',e=>{activeRecorder?.stop();activeStream?.getTracks().forEach(t=>t.stop());stopReadAloud();if(!specializedBuilder&&busy){e.preventDefault();e.returnValue='';}});
   window.addEventListener('pagehide',stopReadAloud);
+  if(lesson24Activity&&!preview&&!state.completed){
+    document.addEventListener('pabasa:l24-started',()=>{
+      activityStarted=true;instructionSpoken=true;render();
+      playPrescribedAudio(instructionText,true).catch(error=>{if(error?.name!=='AbortError')console.error('Lesson 24 instruction audio failed',error);});
+    },{once:true});
+  }
   initializeLesson23Entry();
   render();
   initializeL22Entry();
