@@ -7861,6 +7861,74 @@ document.addEventListener('DOMContentLoaded',()=>{
     border-radius: 18px;
     padding: 1rem;
 }
+.template-step-state {
+    display: none;
+}
+.template-step-locked {
+    background: #eef0f2;
+    opacity: .48 !important;
+    position: relative;
+}
+.template-step-locked::after {
+    display: none;
+}
+.template-step-locked .template-section-heading h6::after {
+    color: #64748b;
+    content: '\1F512';
+    display: inline-block;
+    font-size: .72em;
+    margin-left: .45rem;
+    vertical-align: .08em;
+}
+.template-language-locked {
+    background: #eef0f2;
+    border-radius: 14px;
+    opacity: .48;
+    position: relative;
+}
+.template-language-locked::after {
+    display: none;
+}
+.template-language-locked > .form-label::after {
+    color: #64748b;
+    content: '\1F512';
+    display: inline-block;
+    font-size: .78em;
+    margin-left: .4rem;
+    vertical-align: .08em;
+}
+.reading-step-locked {
+    opacity: .48;
+    position: relative;
+}
+.reading-step-locked .form-label::after,
+.reading-step-locked > label::after {
+    color: #64748b;
+    content: '\1F512';
+    display: inline-block;
+    font-size: .78em;
+    margin-left: .4rem;
+    vertical-align: .08em;
+}
+.five-w-row-locked {
+    background: #f1f3f5;
+    border-radius: .75rem;
+    filter: grayscale(.35);
+    opacity: .55;
+    padding: .35rem;
+}
+.five-w-row-locked input,
+.five-w-row-locked button,
+.five-w-answer-locked .five-w-answer,
+.five-w-answer-locked .five-w-answer-add {
+    background-color: #dfe3e7 !important;
+    color: #7b8791 !important;
+    cursor: not-allowed !important;
+    opacity: .72;
+}
+.five-w-answer-locked .five-w-answer-wrap {
+    opacity: .62;
+}
 .template-segmented-control {
     display: inline-flex;
     gap: 0.5rem;
@@ -16864,11 +16932,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function getSelectedTemplateLanguage() {
             const checked = Array.from(document.querySelectorAll('input[name="templateLanguage"]')).find(input => input.checked);
-            return checked?.value === 'English' ? 'English' : 'Filipino';
+            return checked?.value === 'English' ? 'English' : checked?.value === 'Filipino' ? 'Filipino' : '';
         }
 
         function setSelectedTemplateLanguage(language, { render = true } = {}) {
-            selectedTemplateLanguage = String(language || '').trim() === 'English' ? 'English' : 'Filipino';
+            const normalized = String(language || '').trim();
+            selectedTemplateLanguage = normalized === 'English' ? 'English' : normalized === 'Filipino' ? 'Filipino' : '';
             Array.from(document.querySelectorAll('input[name="templateLanguage"]')).forEach(input => {
                 input.checked = input.value === selectedTemplateLanguage;
             });
@@ -17426,7 +17495,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const language = normalizeSentenceReadingLanguage(Array.from(document.querySelectorAll('input[name="templateLanguage"]')).find(input => input.checked)?.value || 'Tagalog');
             const sets = getSentenceReadingSets(language);
             const current = activeTemplateActivity.sentenceReading || {};
-            const selectedSet = sets.find(set => set.key === current.setKey) || sets[0] || null;
+            const selectedSet = current.setKey ? (sets.find(set => set.key === current.setKey) || null) : null;
             const fullIndices = selectedSet ? selectedSet.items.map((_, index) => index) : [];
             const currentSelection = Array.isArray(current.selectedIndices)
                 ? current.selectedIndices.filter(index => Number.isInteger(index) && selectedSet && index >= 0 && index < selectedSet.items.length)
@@ -17491,11 +17560,30 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             activeTemplateActivity.content = selected ? { storyId: String(selected.id), storyTitle: selected.title, sourceMaterialId: selected.id, storyText: selected.text, questions: activeTemplateActivity.items || [] } : {};
         }
 
+        function updateFiveWQuestionProgression() {
+            const rows = Array.from(templateDynamicFields?.querySelectorAll('[data-five-w-row]') || []);
+            rows.forEach((row, index) => {
+                const previous = index ? rows[index - 1] : null;
+                const previousQuestion = previous?.querySelector('.five-w-question')?.value.trim() || '';
+                const previousAnswers = previous?.querySelectorAll('.five-w-answer-chips [data-five-w-remove-answer]')?.length || 0;
+                const locked = Boolean(previous && (!previousQuestion || !previousAnswers));
+                const question = row.querySelector('.five-w-question');
+                const answerControls = row.querySelectorAll('.five-w-answer, .five-w-answer-add');
+                if (question) question.disabled = locked;
+                answerControls.forEach(control => {
+                    control.disabled = locked || !question?.value.trim();
+                });
+                row.classList.toggle('five-w-row-locked', locked);
+                row.classList.toggle('five-w-answer-locked', locked || !question?.value.trim());
+            });
+            updateFirst15CreateStepLock();
+        }
+
         function renderFiveWEditor() {
             const stories = getPublishedStoryMaterials();
             syncFiveWSelection();
             const selected = stories.find(story => String(story.id) === String(activeTemplateActivity?.fiveW?.storyId));
-            const fiveWIndicators = ['WHO', 'WHAT', 'WHEN', 'WHERE', 'WHY'].map((label, index) => `<div class="five-w-row" style="display:grid;grid-template-columns:minmax(5rem,.7fr) minmax(0,1.5fr) minmax(0,1.5fr);gap:.75rem;align-items:start;margin-bottom:1rem"><div class="five-w-indicator" style="padding-top:2.25rem;font-weight:700">${index + 1} ${label}</div><div class="five-w-question-wrap"><label>Question</label><input class="form-control five-w-question" data-five-w-index="${index}" placeholder="Type the ${label} question" aria-label="${label} question"></div><div class="five-w-answer-wrap"><label>Answer</label><div class="input-group"><input class="form-control five-w-answer" data-five-w-index="${index}" placeholder="Type an acceptable answer" aria-label="${label} answer"><button type="button" class="btn five-w-answer-add" data-five-w-index="${index}" aria-label="Add ${label} answer">+</button></div><div class="five-w-answer-chips" data-five-w-index="${index}"></div></div></div>`).join('');
+            const fiveWIndicators = ['WHO', 'WHAT', 'WHEN', 'WHERE', 'WHY'].map((label, index) => `<div class="five-w-row" data-five-w-row="${index}" style="display:grid;grid-template-columns:minmax(5rem,.7fr) minmax(0,1.5fr) minmax(0,1.5fr);gap:.75rem;align-items:start;margin-bottom:1rem"><div class="five-w-indicator" style="padding-top:2.25rem;font-weight:700">${index + 1} ${label}</div><div class="five-w-question-wrap"><label>Question</label><input class="form-control five-w-question" data-five-w-index="${index}" placeholder="Type the ${label} question" aria-label="${label} question"></div><div class="five-w-answer-wrap"><label>Answer</label><div class="input-group"><input class="form-control five-w-answer" data-five-w-index="${index}" placeholder="Type an acceptable answer" aria-label="${label} answer"><button type="button" class="btn five-w-answer-add" data-five-w-index="${index}" aria-label="Add ${label} answer">+</button></div><div class="five-w-answer-chips" data-five-w-index="${index}"></div></div></div>`).join('');
             templateDynamicFields.innerHTML = `<div class="row g-3"><div class="col-12"><label class="form-label" for="fiveWStory">Published story <span class="text-danger">*</span></label><select id="fiveWStory" class="form-select"><option value="">Choose a published story</option>${stories.map(story => `<option value="${escapeAttr(story.id)}" ${selected && String(selected.id) === String(story.id) ? 'selected' : ''}>${escapeHtml(story.title)}</option>`).join('')}</select>${stories.length ? '<div class="form-text">Only published stories for this class are available.</div>' : '<div class="alert alert-warning mt-2 mb-0">No published stories are available for this class yet.</div>'}</div><div class="col-12">${fiveWIndicators}</div></div>`;
             const storyField = templateDynamicFields.querySelector('#fiveWStory')?.closest('.col-12');
             const informationGrid = document.querySelector('.template-information-grid');
@@ -17523,17 +17611,21 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     renderTemplatePreview();
                 };
                 question?.addEventListener('input', syncItem);
-                const addAnswer = () => { const value = answer?.value.trim() || ''; if (!value || answers.some(existing => existing.toLowerCase() === value.toLowerCase())) return; answers.push(value); if (answer) answer.value = ''; renderAnswers(); syncItem(); };
+                const addAnswer = () => { const value = answer?.value.trim() || ''; if (!value || answers.some(existing => existing.toLowerCase() === value.toLowerCase())) return; answers.push(value); if (answer) answer.value = ''; renderAnswers(); syncItem(); updateFiveWQuestionProgression(); };
                 templateDynamicFields.querySelector(`.five-w-answer-add[data-five-w-index="${index}"]`)?.addEventListener('click', addAnswer);
                 answer?.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); addAnswer(); } });
-                chips?.addEventListener('click', event => { const button = event.target.closest('[data-five-w-remove-answer]'); if (!button) return; answers.splice(Number(button.dataset.fiveWRemoveAnswer.split(':')[1]), 1); renderAnswers(); syncItem(); });
+                chips?.addEventListener('click', event => { const button = event.target.closest('[data-five-w-remove-answer]'); if (!button) return; answers.splice(Number(button.dataset.fiveWRemoveAnswer.split(':')[1]), 1); renderAnswers(); syncItem(); updateFiveWQuestionProgression(); });
+                question?.addEventListener('input', updateFiveWQuestionProgression);
+                answer?.addEventListener('input', updateFiveWQuestionProgression);
                 renderAnswers();
             });
+            updateFiveWQuestionProgression();
             document.getElementById('fiveWStory')?.addEventListener('change', event => {
                 activeTemplateActivity.fiveW = { storyId: event.target.value };
                 activeTemplateActivity.items = [];
                 syncFiveWSelection();
                 renderTemplatePreview();
+                updateFirst15CreateStepLock();
             });
             document.getElementById('templateAddItemBtn')?.addEventListener('click', addOrUpdateTemplateItem);
         }
@@ -17552,7 +17644,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const language = Array.from(document.querySelectorAll('input[name="templateLanguage"]')).find(input => input.checked)?.value || 'English';
             const stories = getStoryReadingStories(language);
             const current = activeTemplateActivity.storyReading || {};
-            const selectedStory = stories.find(story => story.key === current.storyKey) || stories[0] || null;
+            const selectedStory = current.storyKey ? (stories.find(story => story.key === current.storyKey) || null) : null;
             activeTemplateActivity.storyReading = {
                 language,
                 storyKey: selectedStory?.key || ''
@@ -18424,6 +18516,165 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return Array.from(templateWeeksGrid?.querySelectorAll('input[type="checkbox"]:checked') || []).map(input => input.value);
         }
 
+        function updateFirst15CreateStepLock() {
+            const title = String(templateActivityTitle?.value || templateActivityTitleSelect?.value || '').trim();
+            const language = getSelectedTemplateLanguage();
+            const first15 = activeTemplateActivity
+                && !window.__templateEditStateRestored
+                && TEMPLATE_META.slice(0, 15).some(([, cardTitle]) => cardTitle === activeTemplateActivity.templateTitle);
+            const configuration = document.getElementById('templateConfigurationSection');
+            const schedule = templateWeeksGrid?.closest('.template-builder-section');
+            const access = document.getElementById('materialPublicationSettings');
+            const languageField = document.getElementById('templateLanguageField');
+            if (!first15) {
+                [configuration, schedule, access].forEach(section => {
+                    if (!section) return;
+                    section.hidden = false;
+                    section.inert = false;
+                    section.removeAttribute('aria-disabled');
+                    section.classList.remove('template-step-locked');
+                    section.style.opacity = '';
+                });
+                languageField?.querySelectorAll('input, select, button').forEach(control => {
+                    control.disabled = false;
+                });
+                languageField?.classList.remove('template-language-locked');
+                languageField?.removeAttribute('aria-disabled');
+                return;
+            }
+            const activity = activeTemplateActivity;
+            const config = activity.templateTitle;
+            const rawSetComplete = (() => {
+                if (isLetterSoundMatchingTemplate(config)) return Boolean(activity.letterSoundMatching?.readingSetId);
+                if (isLetterSoundCorrespondenceTemplate(config)) return Boolean(activity.letterSoundCorrespondence?.readingSetId);
+                if (isWordDecodingTemplate(config)) return Boolean(activity.wordDecoding?.readingSetId);
+                if (isPictureWordMatchingTemplate(config)) return Boolean(activity.pictureWordMatching?.setKey) || Boolean(activity.pictureWordMatchingCustom?.items?.length);
+                if (isSyllableBlendingTemplate(config)) return Boolean(activity.activityFormat && activity.selectedActivityId);
+                if (isStoryReadingTemplate(config)) return Boolean(activity.storyReading?.storyKey);
+                if (config === 'Retell the Story') return Boolean(activity.content?.source_story_reading_material_id);
+                if (isSentenceReadingTemplate(config)) return Boolean(activity.sentenceReading?.setKey);
+                if (isSoundDetectiveTemplate(config)) return Boolean(activity.soundDetective?.soundSet && activity.soundDetective?.selectedWordIds?.length);
+                if (isClapCountTemplate(config)) return Boolean(activity.clapCount?.wordSet && activity.clapCount?.selectedWordIds?.length);
+                if (config === 'Phrase Reading Practice') return Boolean(activity.items?.length);
+                if (config === "5W's Story Questions") {
+                    const questions = Array.isArray(activity.items) ? activity.items : [];
+                    const allFiveQuestionsComplete = questions.length >= 5 && questions.slice(0, 5).every(item => {
+                        const question = String(item?.question || '').trim();
+                        const answers = Array.isArray(item?.answers)
+                            ? item.answers.filter(answer => String(answer || '').trim())
+                            : String(item?.answer || '').split(/\s*\/\s*/).filter(answer => answer.trim());
+                        return Boolean(question && answers.length);
+                    });
+                    return Boolean(activity.fiveW?.storyId && allFiveQuestionsComplete);
+                }
+                if (config === 'Story Response') return Boolean(activity.storyResponse?.storyId && activity.storyResponse?.prompt);
+                return Array.from(templateDynamicFields?.querySelectorAll('select') || []).every(select => select.value);
+            })();
+            const setComplete = config === "5W's Story Questions" || config === 'Retell the Story'
+                ? rawSetComplete
+                : rawSetComplete && activity.__teacherSelectedConfiguration;
+            const configurationChoiceComplete = (() => {
+                if (isSoundDetectiveTemplate(config)) return Boolean(activity.soundDetective?.soundSet) && activity.__teacherSelectedConfiguration;
+                if (isClapCountTemplate(config)) return Boolean(activity.clapCount?.wordSet) && activity.__teacherSelectedConfiguration;
+                if (isSyllableBlendingTemplate(config)) return Boolean(activity.activityFormat) && activity.__teacherSelectedConfiguration;
+                // Picture-Word Matching uses mode radios plus set buttons rather
+                // than one first <select>; keep both prescribed/custom set paths
+                // available while Schedule remains gated by the chosen set/items.
+                if (isPictureWordMatchingTemplate(config)) return true;
+                if (config === 'Phrase Reading Practice') return true;
+                if (isSentenceReadingTemplate(config)) return true;
+                if (isStoryReadingTemplate(config)) return true;
+                if (config === "5W's Story Questions") return Boolean(activity.fiveW?.storyId);
+                if (config === 'Story Response') return Boolean(activity.storyResponse?.storyId);
+                return setComplete;
+            })();
+            const scheduleComplete = getTemplateWeeks().length > 0;
+            // 5W Questions has no separate title input. Language is its first
+            // actionable information field; Story + Questions remain required
+            // configuration before Schedule can unlock.
+            const fiveWStorySelected = config === "5W's Story Questions" && Boolean(activity.fiveW?.storyId);
+            const retellStorySelected = config === 'Retell the Story' && Boolean(activity.content?.source_story_reading_material_id);
+            const informationLocked = config === "5W's Story Questions"
+                ? !fiveWStorySelected || !language
+                : config === 'Retell the Story'
+                ? !retellStorySelected
+                : !title || !language;
+            const scheduleLocked = !setComplete;
+            const accessLocked = !scheduleComplete;
+            const languageLocked = config === "5W's Story Questions"
+                ? !fiveWStorySelected
+                : !title;
+            languageField?.querySelectorAll('input, select, button').forEach(control => {
+                control.disabled = languageLocked;
+            });
+            languageField?.classList.toggle('template-language-locked', languageLocked);
+            languageField?.setAttribute('aria-disabled', String(languageLocked));
+            // Configuration is also progressive: expose only its first teacher-choice
+            // control (the Set/format selector) until that choice is made.
+            const configurationControls = Array.from(templateDynamicFields?.querySelectorAll('input, select, textarea, button') || [])
+                .filter(control => !control.closest('#templateLanguageField'))
+                .filter(control => !(config === "5W's Story Questions" && control.matches('.five-w-question, .five-w-answer, .five-w-answer-add')));
+            const firstConfigurationChoice = configurationControls.find(control => control.matches('select'))
+                || configurationControls.find(control =>
+                    control.matches('input[type="radio"], input[type="checkbox"], [data-picture-word-set-select], [data-phrase-set-select]')
+                );
+            configurationControls.forEach(control => {
+                if (!configurationChoiceComplete && firstConfigurationChoice && control !== firstConfigurationChoice) {
+                    control.disabled = true;
+                } else if (configurationChoiceComplete) {
+                    control.disabled = false;
+                }
+            });
+            if (config === 'Phrase Reading Practice') {
+                templateDynamicFields?.querySelectorAll('[data-phrase-select-all], [data-phrase-item-index]')
+                    .forEach(control => { control.disabled = true; });
+            }
+            if (isSentenceReadingTemplate(config)) {
+                templateDynamicFields?.querySelectorAll('[data-sentence-select-all], [data-sentence-item-index]')
+                    .forEach(control => { control.disabled = true; });
+            }
+            [[configuration, informationLocked], [schedule, scheduleLocked], [access, accessLocked]].forEach(([section, locked]) => {
+                if (!section) return;
+                section.inert = locked;
+                section.hidden = false;
+                section.setAttribute('aria-disabled', String(locked));
+                section.classList.toggle('template-step-locked', locked);
+                section.style.opacity = locked ? '.62' : '';
+                let state = section.querySelector(':scope > .template-step-state');
+                if (!state) {
+                    state = document.createElement('span');
+                    state.className = 'template-step-state';
+                    section.querySelector('.template-section-heading')?.appendChild(state);
+                }
+                const message = section === configuration
+                    ? (informationLocked ? 'LOCKED · Complete title and language first' : (setComplete ? 'READY · Configuration complete' : 'READY · Choose a Set to continue'))
+                    : section === schedule
+                    ? (scheduleLocked ? 'LOCKED · Complete Activity Configuration first' : (accessLocked ? 'READY · Choose learning weeks' : 'READY · Schedule complete'))
+                    : (accessLocked ? 'LOCKED · Complete Learning Schedule first' : 'READY · You can assign this activity');
+                state.textContent = message;
+                state.classList.toggle('is-locked', locked);
+                state.classList.toggle('is-ready', !locked);
+            });
+            if (!templateDynamicFields.dataset.progressionObserver) {
+                templateDynamicFields.dataset.progressionObserver = 'true';
+                new MutationObserver(() => updateFirst15CreateStepLock()).observe(templateDynamicFields, {childList: true, subtree: true});
+                templateDynamicFields.addEventListener('input', updateFirst15CreateStepLock);
+                templateDynamicFields.addEventListener('change', event => {
+                    if (event.target.closest('select, input[type="radio"], input[type="checkbox"], [data-picture-word-set-select], [data-phrase-set-select]')) {
+                        activeTemplateActivity.__teacherSelectedConfiguration = true;
+                    }
+                    updateFirst15CreateStepLock();
+                });
+                templateDynamicFields.addEventListener('click', event => {
+                    if (event.target.closest('[data-picture-word-set-select], [data-picture-word-custom-toggle], [data-phrase-set-select], [data-sentence-set-select], [data-story-select]')) {
+                        activeTemplateActivity.__teacherSelectedConfiguration = true;
+                        window.setTimeout(updateFirst15CreateStepLock, 0);
+                    }
+                });
+                templateWeeksGrid?.addEventListener('change', updateFirst15CreateStepLock);
+            }
+        }
+
         function getTemplateContentSelectionSummary() {
             if (!activeTemplateActivity) return { title: '', meta: '', body: [], emptyMessage: 'Select content to see a preview.' };
 
@@ -18627,6 +18878,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     : def.hint;
             }
             document.querySelector('.template-title-field')?.classList.toggle('d-none', title === "5W's Story Questions");
+            const isFirst15NewActivity = !window.__templateEditStateRestored
+                && TEMPLATE_META.slice(0, 15).some(([, cardTitle]) => cardTitle === title);
+            if (isFirst15NewActivity
+                && !getSelectedTemplateLanguage()
+                && title !== "5W's Story Questions"
+                && title !== 'Retell the Story') {
+                templateDynamicFields.innerHTML = '<div class="alert alert-info mb-0">Select a language above to configure this activity.</div>';
+                return;
+            }
             if (title === "5W's Story Questions") { if (templateActivityTitle) templateActivityTitle.value = ''; renderFiveWEditor(); return; }
             if (isStoryResponseTemplate(title)) { renderStoryResponseEditor(); return; }
             if (retell) { renderRetellStorySelector(); return; }
@@ -18658,17 +18918,19 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 return;
             }
             if (isSyllableBlendingTemplate(title)) {
-                const currentFormat = activeTemplateActivity?.activityFormat || values.activity_format || 'syllable_combination';
+                const currentFormat = activeTemplateActivity?.activityFormat || values.activity_format || '';
                 if (activeTemplateActivity) activeTemplateActivity.activityFormat = currentFormat;
                 const language = activeTemplateActivity?.language === 'English' ? 'English' : 'Filipino';
                 const activities = SYLLABLE_BLENDING_CATALOG?.[language]?.[currentFormat] || [];
                 const formatLabel = currentFormat === 'big_box' ? 'Big Box — Word Building' : 'Syllable Combination';
+                const formatNotChosen = !currentFormat;
                 templateDynamicFields.innerHTML = `
                     <div class="row g-3">
                         <div class="col-12" id="syllableLanguageFieldSlot"></div>
                         <div class="col-12">
                             <label class="form-label fw-bold" for="syllableActivityFormat">Activity Format <span class="text-danger">*</span></label>
                             <select id="syllableActivityFormat" class="form-select">
+                                <option value="" ${!currentFormat ? 'selected' : ''}>Choose an activity format</option>
                                 <option value="syllable_combination" ${currentFormat === 'syllable_combination' ? 'selected' : ''}>Syllable Combination</option>
                                 <option value="big_box" ${currentFormat === 'big_box' ? 'selected' : ''}>Big Box — Word Building</option>
                             </select>
@@ -18677,11 +18939,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         <div class="col-12">
                             <div class="syllable-prebuilt-section">
                                 <div class="syllable-prebuilt-header">
-                                    <div><h6 class="syllable-prebuilt-heading">Prebuilt Activities</h6><div class="syllable-prebuilt-meta">${escapeHtml(language)} · ${escapeHtml(formatLabel)}</div></div>
-                                    <span class="syllable-prebuilt-count">${activities.length} choice${activities.length === 1 ? '' : 's'}</span>
+                                    <div><h6 class="syllable-prebuilt-heading">Prebuilt Activities</h6><div class="syllable-prebuilt-meta">${formatNotChosen ? 'Choose an activity format to view available activities' : `${escapeHtml(language)} · ${escapeHtml(formatLabel)}`}</div></div>
+                                    <span class="syllable-prebuilt-count">${formatNotChosen ? '' : `${activities.length} choice${activities.length === 1 ? '' : 's'}`}</span>
                                 </div>
                                 <div class="row g-3" id="syllablePrebuiltGrid">
-                                    ${activities.length ? activities.map(activity => {
+                                    ${formatNotChosen ? '<div class="col-12"><div class="alert alert-info mb-0" role="status">Choose an activity format above to load the prebuilt activities.</div></div>' : activities.length ? activities.map(activity => {
                                         const selected = activeTemplateActivity.selectedActivityId === activity.activity_id;
                                         const preview = currentFormat === 'big_box'
                                             ? `<div class="syllable-prebuilt-sample-label">Big Box</div><div>${activity.syllable_pool.map(escapeHtml).join(' · ')}</div><div>${activity.items.map(item => escapeHtml(item.answer)).join(', ')}</div>`
@@ -19550,9 +19812,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         async function showTemplateBuilder(templateTitle) {
             const def = getTemplateDefinition(templateTitle);
             window.__templateEditStateRestored = false;
-            const templateLanguage = isStoryResponseTemplate(templateTitle) ? 'English' : 'Filipino';
+            const isFirst15SupplementaryTemplate = TEMPLATE_META.slice(0, 15).some(([, cardTitle]) => cardTitle === templateTitle);
+            const templateLanguage = isFirst15SupplementaryTemplate ? '' : (isStoryResponseTemplate(templateTitle) ? 'English' : 'Filipino');
             setSelectedTemplateLanguage(templateLanguage, { render: false });
-            if (!templateSupportsLanguage(templateTitle, templateLanguage)) return;
+            if (!templateSupportsLanguage(templateTitle, templateLanguage || 'Filipino')) return;
             activeTemplateActivity = {
                 templateTitle,
                 lesson: def.lesson,
@@ -19625,8 +19888,30 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 syncAralReadingSet();
                 activeTemplateActivity.title = templateTitle;
             }
+            if (isFirst15SupplementaryTemplate) {
+                activeTemplateActivity.language = '';
+                activeTemplateActivity.__teacherSelectedConfiguration = false;
+                activeTemplateActivity.activityFormat = '';
+                activeTemplateActivity.selectedActivityId = null;
+                activeTemplateActivity.letterSoundMatching = { readingSetId: '', language: '' };
+                activeTemplateActivity.letterSoundCorrespondence = { readingSetId: '', language: '' };
+                activeTemplateActivity.wordDecoding = { readingSetId: '', language: '' };
+                activeTemplateActivity.pictureWordMatching = { setKey: '', language: '', mode: 'prescribed' };
+                activeTemplateActivity.pictureWordMatchingCustom = { items: [], searchQuery: '' };
+                if (activeTemplateActivity.storyReading) activeTemplateActivity.storyReading.storyKey = '';
+                if (activeTemplateActivity.sentenceReading) activeTemplateActivity.sentenceReading.setKey = '';
+                selectedTemplateLanguage = '';
+                Array.from(document.querySelectorAll('input[name="templateLanguage"]')).forEach(input => { input.checked = false; });
+                if (templateLanguageHidden) templateLanguageHidden.value = '';
+            }
             activeTemplateItemEditIndex = null;
             applyTemplateLanguageSelection(templateLanguage, templateTitle);
+            if (isFirst15SupplementaryTemplate) {
+                activeTemplateActivity.language = '';
+                selectedTemplateLanguage = '';
+                Array.from(document.querySelectorAll('input[name="templateLanguage"]')).forEach(input => { input.checked = false; });
+                if (templateLanguageHidden) templateLanguageHidden.value = '';
+            }
             window.__addMaterialDefaultMode = 'supplementary';
             setTemplateBuilderActive(true);
             if (activeTemplateActivity?.mode !== 'edit') {
@@ -19640,6 +19925,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     templateActivityTitle.value = isSoundDetectiveTemplate(templateTitle) ? 'Sound Detective' : (isStoryResponseTemplate(templateTitle) ? 'Story Response' : '');
                 }
                 if (isAralReadingSetTemplate(templateTitle)) templateActivityTitle.value = templateTitle;
+                const isFirst15SupplementaryTemplate = TEMPLATE_META.slice(0, 15).some(([, cardTitle]) => cardTitle === templateTitle);
+                if (!window.__templateEditStateRestored && isFirst15SupplementaryTemplate) {
+                    templateActivityTitle.value = '';
+                }
                 templateActivityTitle.closest('.template-title-field')?.classList.toggle('d-none', templateTitle === "5W's Story Questions");
             }
             // The course modal starts its class-material request in parallel.
@@ -19657,6 +19946,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             renderTemplateDynamicFields(templateTitle);
             renderTemplateWeeks();
             renderTemplatePreview();
+            updateFirst15CreateStepLock();
             templateActivityInitialSnapshot = getTemplateActivityDraftSnapshot();
             window.requestAnimationFrame(() => {
                 templateBuilderPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -19752,6 +20042,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         function beginPersonalMaterialWorkspace() {
             setAddMaterialMode('supplementary');
             personalWorkspaceActive = true;
+            window.__templateEditStateRestored = false;
+            if (!window.__templateEditStateRestored) {
+                if (materialTitleInput) materialTitleInput.value = '';
+                if (materialLanguageSelect) materialLanguageSelect.value = '';
+                if (document.getElementById('assignedWeek')) document.getElementById('assignedWeek').value = '';
+            }
             placePublicationSettings(false);
             setNodeVisibility(publicationSettingsPanel, true);
             setNodeVisibility(templateLandingPanel, false);
@@ -19763,7 +20059,45 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 cancelMaterialSetupBtn.removeAttribute('aria-disabled');
             }
             personalMaterialInitialSnapshot = getPersonalMaterialDraftSnapshot();
+            updateReadingPracticeProgression();
         }
+
+        function updateReadingPracticeProgression() {
+            if (!personalWorkspaceActive || window.__templateEditStateRestored) return;
+            const titleComplete = Boolean(materialTitleInput?.value.trim());
+            const itemsComplete = currentItemsList.length > 0;
+            const languageComplete = Boolean(materialLanguageSelect?.value);
+            const statusComplete = languageComplete && Boolean(publicationStatusSelect?.value);
+            const weekSelect = document.getElementById('assignedWeek');
+            const weekComplete = Boolean(weekSelect?.value);
+            const contentSection = personalMaterialSections?.[0];
+            const settingsSection = personalMaterialSections?.[1];
+            const itemControls = Array.from(contentSection?.querySelectorAll('input, textarea, button') || [])
+                .filter(control => control !== materialTitleInput);
+            const languageField = materialLanguageSelect?.closest('.teacher-field');
+            const statusField = publicationStatusSelect?.closest('.teacher-field');
+            const weekField = weekSelect?.closest('.teacher-field');
+            const accessControls = Array.from(publicationSettingsPanel?.querySelectorAll('input, select, textarea, button') || []);
+            const setLocked = (field, locked) => field?.classList.toggle('reading-step-locked', locked);
+
+            itemControls.forEach(control => { control.disabled = !titleComplete; });
+            languageField?.querySelectorAll('input, select, textarea, button').forEach(control => { control.disabled = !itemsComplete; });
+            statusField?.querySelectorAll('input, select, textarea, button').forEach(control => { control.disabled = !languageComplete; });
+            weekField?.querySelectorAll('input, select, textarea, button').forEach(control => { control.disabled = !statusComplete; });
+            accessControls.forEach(control => { control.disabled = !weekComplete; });
+
+            setLocked(languageField, !itemsComplete);
+            setLocked(statusField, !languageComplete);
+            setLocked(weekField, !statusComplete);
+            if (publicationSettingsPanel) publicationSettingsPanel.classList.toggle('reading-step-locked', !weekComplete);
+        }
+
+        [materialTitleInput, itemInput, materialLanguageSelect, publicationStatusSelect, document.getElementById('assignedWeek')]
+            .forEach(control => control?.addEventListener('input', updateReadingPracticeProgression));
+        [materialLanguageSelect, publicationStatusSelect, document.getElementById('assignedWeek')]
+            .forEach(control => control?.addEventListener('change', updateReadingPracticeProgression));
+        addItemBtn?.addEventListener('click', () => window.setTimeout(updateReadingPracticeProgression, 0));
+        uploadMaterialBtn?.addEventListener('click', () => window.setTimeout(updateReadingPracticeProgression, 0));
 
         function returnToParentCourseMaterials() {
             // Preserve the course attachment target; only the unsaved material
@@ -21478,7 +21812,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     deleteTemplateItem(parseInt(deleteBtn.dataset.index, 10));
                 }
             });
-            templateActivityTitle?.addEventListener('input', renderTemplatePreview);
+            templateActivityTitle?.addEventListener('input', () => { renderTemplatePreview(); updateFirst15CreateStepLock(); });
+            templateActivityTitleSelect?.addEventListener('change', updateFirst15CreateStepLock);
             Array.from(document.querySelectorAll('input[name="templateLanguage"]')).forEach(input => {
                 input.addEventListener('change', () => {
                     if (!input.checked) return;
@@ -21489,6 +21824,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     }
                     activeTemplateActivity.language = selectedTemplateLanguage;
                     if (templateLanguageHidden) templateLanguageHidden.value = selectedTemplateLanguage;
+                    updateFirst15CreateStepLock();
                     if (isAralReadingSetTemplate(activeTemplateActivity?.templateTitle)) {
                         activeTemplateActivity.aralReadingSetId = '';
                         syncAralReadingSet();
@@ -21500,6 +21836,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     } else if (activeTemplateActivity?.templateTitle === 'Story Reading') {
                         renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
                     } else if (activeTemplateActivity?.templateTitle === 'Sentence Reading Practice') {
+                        renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
+                    } else if (activeTemplateActivity?.templateTitle === "5W's Story Questions") {
                         renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
                     } else if (activeTemplateActivity?.templateTitle === 'Picture-Word Matching') {
                         renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
