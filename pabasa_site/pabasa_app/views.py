@@ -13984,6 +13984,7 @@ def prescribed_activity_page(request, activity_key):
         if activity_key == 'aral-l24-g5-z-syllabication':
             audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_24/BAHAGI_2/GAWAIN_5/'
             audio_files = {
+                'instruction': 'Pantigin ang sumusunod na salitang may letrang Zz. Ginawa ang unang bilang para sa iyo._TTS.mp3',
                 'feedback': {
                     'Isulat muna ang sagot.': 'Isulat muna ang sagot._TTS.mp3',
                     'Mahusay!': 'Mahusay!_TTS.mp3',
@@ -13993,8 +13994,9 @@ def prescribed_activity_page(request, activity_key):
                     'Magaling! Natapos mo ang Gawain 5!': 'Magaling! Natapos mo ang Gawain 5!_TTS.mp3',
                 },
             }
-            mapped_states = list(audio_files['feedback']) + list(audio_files['completion'])
+            mapped_states = [get_activity(activity_key)['instruction']] + list(audio_files['feedback']) + list(audio_files['completion'])
             local_audio = {
+                'instruction': static(audio_root + audio_files['instruction']),
                 'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
                 'completion': {text: static(audio_root + filename) for text, filename in audio_files['completion'].items()},
                 'mapped_states': mapped_states,

@@ -112,6 +112,7 @@
     'Tama!', 'Magaling! Natapos mo ang Gawain 4.',
   ]);
   const L24_G5_SYLLABLE_MAPPED_TEXT = new Set([
+    'Pantigin ang sumusunod na salitang may letrang Zz. Ginawa ang unang bilang para sa iyo.',
     'Isulat muna ang sagot.', 'Mahusay!', 'Subukan muli.', 'Magaling! Natapos mo ang Gawain 5!',
   ]);
   const S9_A1_MAPPED_TEXT = new Set([
