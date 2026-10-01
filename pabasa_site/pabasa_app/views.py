@@ -14658,11 +14658,17 @@ def prescribed_activity_page(request, activity_key):
         context['handwriting_activity_data'] = {
             'activity_key': activity_key, 'title': activity['title'], 'instruction': activity['instruction'],
             'narration_audio': {
+                'Sumulat ulit!': static(
+                    'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4/sumulat_ulit (2).mp3'
+                ),
+                'Magaling!': static(
+                    'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 3/OTHERS/magaling.mp3'
+                ),
                 'Magsanay magsulat ng letrang o. Isulat nang tatlong beses ang letrang o.': static(
-                    'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4/magsanay_magsulat_ng_letrang_o_isulat_nang_tatlong_beses_ang_letrang_o.mp3'
+                    'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4/magsanay_magsulat_ng_letrang_o_isulat_nang_tatlong_beses_ang_letrang_o (2).mp3'
                 ),
                 'Subukan ulit! Isulat nang malinaw ang letrang Oo.': static(
-                    'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4/subukan_ulit_isulat_nang_malinaw_ang_letrang_oo.mp3'
+                    'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4/subukan_ulit_isulat_nang_malinaw_ang_letrang_oo (3).mp3'
                 ),
             },
             'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
@@ -17996,10 +18002,18 @@ def prescribed_activity_progress(request, activity_key):
             data = json.loads(request.body or '{}')
             index = max(0, min(3, int(data.get('current_index') or 0)))
             state = data.get('state') if isinstance(data.get('state'), dict) else {}
+            is_reset = data.get('reset') is True
         except (TypeError, ValueError, json.JSONDecodeError):
             return JsonResponse({'success': False, 'error': 'Invalid handwriting progress.'}, status=400)
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
-        if existing and (existing.activity_completed or existing.current_index > index):
+        if is_reset:
+            progress, _ = StudentActivityProgress.objects.update_or_create(
+                student=student, activity_key=activity_key,
+                defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
+                          'total_items': 3, 'activity_completed': False,
+                          'state': {'activity_key': activity_key, 'completed_areas': 0}},
+            )
+        elif existing and (existing.activity_completed or existing.current_index > index):
             progress = existing
         else:
             progress, _ = StudentActivityProgress.objects.update_or_create(

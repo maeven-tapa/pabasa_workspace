@@ -27,15 +27,17 @@
   (() => {
     const data=JSON.parse(document.getElementById('handwriting-data').textContent||'{}');
     const app=document.getElementById('app');
-    const instructionText='Magsanay magsulat ng Letrang Oo. Isulat nang tatlong beses ang Letrang Oo.';
+    const instructionText='Magsanay magsulat ng letrang O. Isulat nang isang beses ang letrang Oo sa bawat Hanay.';
     const narrationText='Magsanay magsulat ng letrang o. Isulat nang tatlong beses ang letrang o.';
     const normalHint='Isulat ang Oo sa bawat hanay.';
     const retryMessage='Subukan ulit! Isulat nang malinaw ang letrang Oo.';
     const retryNarration='Subukan ulit! Isulat nang malinaw ang letrang Oo.';
+    const transitionNarration='Sumulat ulit!';
     const prerecordedNarration=data.narration_audio||{};
     const csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
     let index=Math.max(0,Math.min(3,Number(data.progress?.current_index)||0));
     let busy=false;
+    let narrationBusy=false;
     let instructionPlayedFor=-1;
     const rows=[[],[],[]];
 
@@ -43,7 +45,7 @@
     const controls=()=>[app.querySelector('#clear'),app.querySelector('#next')].filter(Boolean);
     const setControlsDisabled=disabled=>controls().forEach(button=>{button.disabled=disabled});
     const setHint=text=>{const hint=app.querySelector('#hint');if(hint)hint.textContent=text};
-    const narrateInstruction=async()=>{if(index>=3||instructionPlayedFor===index)return;instructionPlayedFor=index;busy=true;setControlsDisabled(true);await speak(narrationText);busy=false;setControlsDisabled(false)};
+    const narrateInstruction=async()=>{if(index>=3||instructionPlayedFor===index)return;instructionPlayedFor=index;narrationBusy=true;setControlsDisabled(true);try{await speak(narrationText)}finally{narrationBusy=false;if(!busy)setControlsDisabled(false)}};
     const retry=async()=>{setHint(retryMessage);busy=true;setControlsDisabled(true);await speak(retryNarration);busy=false;setControlsDisabled(false)};
     const point=(event,canvas)=>{const rect=canvas.getBoundingClientRect();return{x:(event.clientX-rect.left)/rect.width,y:(event.clientY-rect.top)/rect.height}};
 
@@ -68,7 +70,7 @@
     };
 
 
-    const bindCanvas=canvas=>{const rect=canvas.getBoundingClientRect(),ratio=devicePixelRatio||1;canvas.width=Math.max(1,Math.round(rect.width*ratio));canvas.height=Math.max(1,Math.round(rect.height*ratio));const context=canvas.getContext('2d');context.setTransform(ratio,0,0,ratio,0,0);context.strokeStyle='#286b93';context.lineWidth=5;context.lineCap='round';context.lineJoin='round';let active=null;const append=event=>{if(!active)return;const pointValue=point(event,canvas),last=active.points[active.points.length-1];if(!last||pointValue.x!==last.x||pointValue.y!==last.y){active.points.push(pointValue);context.lineTo(pointValue.x*rect.width,pointValue.y*rect.height);context.stroke()}};canvas.addEventListener('pointerdown',event=>{if(busy)return;event.preventDefault();const pointValue=point(event,canvas);active={pointerId:event.pointerId,points:[pointValue]};rows[index].push(active.points);context.beginPath();context.moveTo(pointValue.x*rect.width,pointValue.y*rect.height);canvas.setPointerCapture?.(event.pointerId)});canvas.addEventListener('pointermove',event=>{if(active?.pointerId===event.pointerId)(event.getCoalescedEvents?.()||[event]).forEach(append)});const finish=event=>{if(active?.pointerId!==event.pointerId)return;append(event);canvas.releasePointerCapture?.(event.pointerId);active=null};canvas.addEventListener('pointerup',finish);canvas.addEventListener('pointercancel',finish)};
+    const bindCanvas=canvas=>{const rect=canvas.getBoundingClientRect(),ratio=devicePixelRatio||1;canvas.width=Math.max(1,Math.round(rect.width*ratio));canvas.height=Math.max(1,Math.round(rect.height*ratio));const context=canvas.getContext('2d');context.setTransform(ratio,0,0,ratio,0,0);context.strokeStyle='#286b93';context.lineWidth=5;context.lineCap='round';context.lineJoin='round';let active=null;const append=event=>{if(!active)return;const pointValue=point(event,canvas),last=active.points[active.points.length-1];if(!last||pointValue.x!==last.x||pointValue.y!==last.y){active.points.push(pointValue);context.lineTo(pointValue.x*rect.width,pointValue.y*rect.height);context.stroke()}};canvas.addEventListener('pointerdown',event=>{if(busy||narrationBusy)return;event.preventDefault();const pointValue=point(event,canvas);active={pointerId:event.pointerId,points:[pointValue]};rows[index].push(active.points);context.beginPath();context.moveTo(pointValue.x*rect.width,pointValue.y*rect.height);canvas.setPointerCapture?.(event.pointerId)});canvas.addEventListener('pointermove',event=>{if(active?.pointerId===event.pointerId)(event.getCoalescedEvents?.()||[event]).forEach(append)});const finish=event=>{if(active?.pointerId!==event.pointerId)return;append(event);canvas.releasePointerCapture?.(event.pointerId);active=null};canvas.addEventListener('pointerup',finish);canvas.addEventListener('pointercancel',finish)};
 
     async function submitCurrent(){
       if(busy)return;
@@ -78,16 +80,28 @@
       try{
         const response=await fetch(data.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({current_index:index+1,completed_items:index+1,state:{activity_key:data.activity_key,completed_areas:index+1}})});
         if(!response.ok){await retry();return}
-        if(index<2){index+=1;render();return}
+        if(index<2){
+          index+=1;
+          render(false);
+          narrationBusy=true;
+          setControlsDisabled(true);
+          try{
+            await speak('Magaling!');
+            await speak(transitionNarration);
+          }finally{
+            narrationBusy=false;
+          }
+          return;
+        }
         const completion=await fetch(data.completion_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'});
         const result=await completion.json().catch(()=>null);
         if(!completion.ok||!result?.success){await retry();return}
         index=3;render();
       }catch(error){await retry()}
-      finally{busy=false;if(index<3)setControlsDisabled(false)}
+      finally{busy=false;if(index<3&&!narrationBusy)setControlsDisabled(false)}
     }
 
-    function render(){
+    function render(playInstruction=true){
       if(index>=3){app.innerHTML='<div class="done"><h1>Tapos na ang gawain! 🎉</h1><p>Mahusay! Nakumpleto mo na ang aktibidad.</p><a class="button" href="{% url "assessment" %}">BALIK SA AKING ARALIN</a></div>';app.inert=false;return}
       const row='<div class="row"><span class="model"><b>O</b><i>o</i></span><canvas aria-label="Hanay '+(index+1)+'"></canvas></div>';
       app.innerHTML='<p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 4</p><h1>GAWAIN 4: Letrang Oo</h1><p class="instruction">'+instructionText+'</p><p class="progress">Hanay '+(index+1)+' ng 3</p><div class="sheet">'+row+'</div><p class="hint" id="hint">'+normalHint+'</p><div class="actions"><button class="button clear" id="clear" type="button">Burahin</button><button class="button" id="next" type="button">'+(index===2?'Tapusin':'Susunod')+'</button></div>';
@@ -95,7 +109,7 @@
       bindCanvas(canvas);
       app.querySelector('#clear').onclick=()=>{if(busy)return;rows[index]=[];canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);setHint()};
       app.querySelector('#next').onclick=submitCurrent;
-      if(window.__lessonStartReady)narrateInstruction();
+      if(window.__lessonStartReady&&playInstruction)narrateInstruction();
     }
     document.addEventListener('DOMContentLoaded', () => {
       render();
