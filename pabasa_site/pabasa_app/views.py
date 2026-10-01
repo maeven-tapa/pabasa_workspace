@@ -18067,7 +18067,32 @@ def prescribed_activity_progress(request, activity_key):
         progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': total, 'completed_items': total, 'correct_items': 0, 'total_items': len(activity['cells']), 'activity_completed': False, 'state': {'placements': placements, 'state_version': int(state.get('state_version') or 0)}})
         return JsonResponse({'success': True, 'progress': {'state': progress.state, 'completed_items': total, 'total_items': len(activity['cells']), 'activity_completed': False}})
     if activity_key == 'lesson7-gawain4b':
-        data=json.loads(request.body or '{}'); state=data.get('state') if isinstance(data.get('state'),dict) else {}; old=StudentActivityProgress.objects.filter(student=student,activity_key=activity_key).first(); old_state=old.state if old and isinstance(old.state,dict) else {}; answers=state.get('answers',old_state.get('answers',[None]*6)); answers=(list(answers)+[None]*6)[:6]; reading=sorted(set(int(x) for x in state.get('completed_reading_items',old_state.get('completed_reading_items',[])) if str(x).isdigit() and 0<=int(x)<6)); payload={'phase': 'written' if len(reading)==6 else 'oral', 'current_reading_item': len(reading), 'completed_reading_items': reading, 'answers': answers, 'state_version': int(state.get('state_version') or 0)}; n=sum(x is not None for x in answers); progress,_=StudentActivityProgress.objects.update_or_create(student=student,activity_key=activity_key,defaults={'current_index':n,'completed_items':n,'correct_items':0,'total_items':6,'activity_completed':False,'state':payload}); return JsonResponse({'success':True,'progress':{'state':payload,'completed_items':n,'activity_completed':False}})
+        data = json.loads(request.body or '{}')
+        if data.get('reset') is True:
+            progress, _ = StudentActivityProgress.objects.update_or_create(
+                student=student,
+                activity_key=activity_key,
+                defaults={
+                    'current_index': 0,
+                    'completed_items': 0,
+                    'correct_items': 0,
+                    'total_items': 6,
+                    'activity_completed': False,
+                    'state': {
+                        'phase': 'oral',
+                        'current_reading_item': 0,
+                        'completed_reading_items': [],
+                        'answers': [None] * 6,
+                        'state_version': 0,
+                    },
+                },
+            )
+            return JsonResponse({'success': True, 'progress': {
+                'state': progress.state,
+                'completed_items': progress.completed_items,
+                'activity_completed': progress.activity_completed,
+            }})
+        state=data.get('state') if isinstance(data.get('state'),dict) else {}; old=StudentActivityProgress.objects.filter(student=student,activity_key=activity_key).first(); old_state=old.state if old and isinstance(old.state,dict) else {}; answers=state.get('answers',old_state.get('answers',[None]*6)); answers=(list(answers)+[None]*6)[:6]; reading=sorted(set(int(x) for x in state.get('completed_reading_items',old_state.get('completed_reading_items',[])) if str(x).isdigit() and 0<=int(x)<6)); payload={'phase': 'written' if len(reading)==6 else 'oral', 'current_reading_item': len(reading), 'completed_reading_items': reading, 'answers': answers, 'state_version': int(state.get('state_version') or 0)}; n=sum(x is not None for x in answers); progress,_=StudentActivityProgress.objects.update_or_create(student=student,activity_key=activity_key,defaults={'current_index':n,'completed_items':n,'correct_items':0,'total_items':6,'activity_completed':False,'state':payload}); return JsonResponse({'success':True,'progress':{'state':payload,'completed_items':n,'activity_completed':False}})
     if activity_key == 'lesson7-gawain2a':
         try:
             data = json.loads(request.body or '{}'); state = data.get('state') if isinstance(data.get('state'), dict) else {}

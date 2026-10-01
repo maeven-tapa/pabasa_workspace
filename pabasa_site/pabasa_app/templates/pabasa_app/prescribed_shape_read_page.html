@@ -14,6 +14,7 @@
     .card{height:calc(100dvh - 70px);max-width:980px;margin:8px auto;background:#fffdf7;border-radius:24px;padding:12px;box-sizing:border-box;text-align:center;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center}
     h1{font-size:clamp(1.5rem,4vw,2.4rem)}
     .instruction,.status,.progress{font-weight:900}
+    .eyebrow{margin:0 auto 10px;padding:8px 20px;border-radius:999px;background:#277f82;color:#fff;font-size:.9rem;font-weight:900;letter-spacing:.04em}
     .sound-i{color:#d26a2e;font-weight:1000}
     .sound-o{color:#287fbd;font-weight:1000}
     .reading img,.item img{width:min(280px,55vw);height:min(235px,30vh);object-fit:contain;border:3px solid #dce8ed;border-radius:18px;background:#fff}
@@ -72,10 +73,26 @@
       const setupPart2Narration=()=>{const submit=document.getElementById('submit');if(!submit)return;const originalSubmit=submit.onclick;submit.onclick=async()=>{if(submit.disabled)return;setPart2ControlsDisabled(true);await originalSubmit();const status=document.getElementById('status');if(status?.textContent===PART2_WRONG){setPart2ControlsDisabled(true);await requestPart2Audio(PART2_WRONG);setPart2ControlsDisabled(false)}else{setPart2ControlsDisabled(false)}};if(window.__lessonStartReady&&!part2IntroPlayed){part2IntroPlayed=true;setPart2ControlsDisabled(true);requestPart2Audio(PART2_INSTRUCTION_AUDIO).then(()=>setPart2ControlsDisabled(false))}};
       async function save(){await fetch(d.progress_url,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({state})})}
       function formatPart2Instruction(){const instruction=app.querySelector('.instruction');if(instruction)instruction.innerHTML=instruction.innerHTML.replace('. I-type ang ','.<br>I-type ang ')}
+      function written(){
+        const items=d.items||[];
+        app.innerHTML='<p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 4B</p><h1>GAWAIN 4B: Letrang Oo</h1><p class="instruction">'+PART2_INSTRUCTION+'</p><div class="items">'+items.map((item,index)=>'<label class="item"><img src="'+item.image_url+'" alt="Larawan '+(index+1)+'"><input maxlength="1" aria-label="Sagot sa larawan '+(index+1)+'" value="'+(state.answers?.[index]||'')+'"></label>').join('')+'</div><p id="status" class="status">Isulat ang i o o sa bawat larawan.</p><button class="button" id="submit" type="button">Isumite</button>';
+        app.querySelectorAll('.item input').forEach((input,index)=>{input.addEventListener('input',()=>{input.value=input.value.slice(-1).toLowerCase();state.answers[index]=input.value})});
+        app.querySelector('#submit').onclick=async()=>{
+          const answers=[...app.querySelectorAll('.item input')].map(input=>input.value.trim().toLowerCase());
+          state.answers=answers;
+          await save();
+          if(!answers.every((answer,index)=>answer===String(items[index].answer||'').toLowerCase())){document.getElementById('status').textContent=PART2_WRONG;return}
+          const completion=await fetch(d.completion_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'});
+          const result=await completion.json().catch(()=>null);
+          if(!completion.ok||!result?.success){document.getElementById('status').textContent=PART2_WRONG;return}
+          d.progress.activity_completed=true;
+          render();
+        };
+      }
       function render(){if(d.progress?.activity_completed){app.innerHTML='<div class="done"><h1>Tapos na ang gawain! 🎉</h1><p>Mahusay! Nakumpleto mo na ang aktibidad.</p><a href="{% url "assessment" %}">BALIK SA AKING ARALIN</a></div>';app.inert=false;return}if(state.phase!=='written'){oral();return}written();formatPart2Instruction();setupPart2Narration()}
       function oral(){
         const i=state.current_reading_item,x=d.items[i];
-        app.innerHTML='<h1>GAWAIN 4B: Letrang Oo</h1><p class="instruction">Tingnan ang larawang nasa kahon. Ano ito?</p><div class="reading"><img src="'+x.image_url+'" alt="Larawan"></div><p class="progress">Larawan '+(i+1)+' / 6</p><p id="status" class="status">Sabihin ang salita.</p><div class="reading-actions"><button class="button" id="read" type="button">Basahin</button><button class="button" id="listen" type="button">Pakinggan</button></div>';
+        app.innerHTML='<p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 4B</p><h1>GAWAIN 4B: Letrang Oo</h1><p class="instruction">Tingnan ang larawang nasa kahon. Ano ito?</p><div class="reading"><img src="'+x.image_url+'" alt="Larawan"></div><p class="progress">Larawan '+(i+1)+' / 6</p><p id="status" class="status">Sabihin ang salita.</p><div class="reading-actions"><button class="button" id="read" type="button">Basahin</button><button class="button" id="listen" type="button">Pakinggan</button></div>';
         const read=document.getElementById('read'),listenButton=document.getElementById('listen');
         const requestAudio=text=>fetch('/api/reading/read-aloud/',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',mode:'reading',prescribed_activity_key:'lesson7-gawain4b'})}).then(response=>response.ok?response.json():null).then(result=>new Promise(resolve=>{if(!result?.success||!result.audio_content){resolve();return}const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);audio.onended=resolve;audio.onerror=resolve;audio.play().catch(resolve)}));
         const narrate=async text=>{audioBusy=true;read.disabled=true;listenButton.disabled=true;document.getElementById('status').textContent=text;await requestAudio(text);audioBusy=false;read.disabled=false;listenButton.disabled=false};
