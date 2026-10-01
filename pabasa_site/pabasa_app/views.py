@@ -14048,6 +14048,7 @@ def prescribed_activity_page(request, activity_key):
             audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_24/BAHAGI_1/GAWAIN_2/'
             audio_files = {
                 'words': {
+                    'Vina': 'Vina_TTS.mp3', 'Vilma': 'Vilma_TTS.mp3', 'Victor': 'Victor_TTS.mp3',
                     'Valdez': 'Valdez_TTS.mp3', 'Valle': 'Valle_TTS.mp3', 'van': 'van_TTS.mp3',
                     'vanilla': 'vanilla_TTS.mp3', 'Victoria': 'Victoria_TTS.mp3', 'vila': 'vila_TTS.mp3',
                     'vinta': 'vinta_TTS.mp3', 'violin': 'violin_TTS.mp3', 'visa': 'visa_TTS.mp3',
@@ -14070,6 +14071,7 @@ def prescribed_activity_page(request, activity_key):
                 'completion': {'Magaling! Natapos mo ang Gawain 2.': 'Magaling! Natapos mo ang Gawain 2._TTS.mp3'},
             }
             local_audio = {
+                'instruction': static(audio_root + 'Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Vv._TTS.mp3'),
                 'words': {text: static(audio_root + filename) for text, filename in audio_files['words'].items()},
                 'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
                 'completion': {text: static(audio_root + filename) for text, filename in audio_files['completion'].items()},

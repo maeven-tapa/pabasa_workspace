@@ -6,14 +6,6 @@
   const items = activity.items || [], rows = activity.rows || [], headers = activity.column_headers || [];
   let state = {...(data.state || {})}, busy = false, audio = null, stream = null, requestId = 0;
   const localAudio = data.local_audio || {};
-  const L24_G2_MAPPED_TEXT = new Set([
-    'Valdez', 'Valle', 'van', 'vanilla', 'Victoria', 'vila', 'vinta', 'violin', 'visa', 'Visayas', 'volleybal',
-    'Hindi available ang audio.', 'Hindi available ang mikropono.', 'Hindi ko malinaw na narinig. Subukan muli.',
-    'Hindi ma-play ang audio.', 'Hindi na-save ang iyong gawain.', 'Hindi nakuha ang boses. Subukan muli.',
-    'Hindi pa kailangan ang pag-ulit.', 'Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.',
-    'Pakinggan muna ang tamang pagbigkas o pindutin ang Subukan Muli.', 'Subukan muli.', 'Subukan Muli.', 'Tama!',
-    'Magaling! Natapos mo ang Gawain 2.',
-  ]);
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const csrf = () => (document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] || '';
   const current = () => Number(state.sequence_index ?? state.index ?? 0);
@@ -50,29 +42,51 @@
     if (!response.ok || !result.success) throw Error(result.error || 'Hindi na-save ang iyong gawain.');
     state = result.state || result.progress?.state || state; return result;
   }
-  const localAudioUrl = text => (localAudio.words || {})[text] || (localAudio.feedback || {})[text] || (localAudio.completion || {})[text] || null;
+  const localAudioUrl = text => text === (activity.instruction || '')
+    ? localAudio.instruction || null
+    : (localAudio.words || {})[text] || (localAudio.feedback || {})[text] || (localAudio.completion || {})[text] || null;
   async function playLocalAudio(url) {
     if (!url) throw Error('Hindi available ang audio.');
     audio = new Audio(url);
     try { await audio.play(); await new Promise((resolve, reject) => {audio.onended = resolve; audio.onerror = () => reject(Error('Hindi ma-play ang audio.'));}); }
     finally { if (audio) {audio.pause(); audio = null;} }
   }
-  async function playAudio(text) {
-    if (L24_G2_MAPPED_TEXT.has(text)) return playLocalAudio(localAudioUrl(text));
-    const form = new FormData(); form.append('target_text', text); form.append('language', 'Filipino'); form.append('mode', 'reading'); form.append('prescribed_activity_key', activity.activity_key);
-    const response = await fetch(data.read_aloud_url, {method:'POST', credentials:'same-origin', headers:{'X-CSRFToken':csrf()}, body:form});
-    const result = await response.json(); if (!response.ok || !result.audio_content) throw Error('Hindi available ang audio.');
-    audio = new Audio(`data:${result.mime_type || 'audio/mpeg'};base64,${result.audio_content}`); await audio.play(); await new Promise(resolve => {audio.onended = resolve; audio.onerror = resolve;}); audio = null;
+  async function speakWithGoogle(text) {
+    if (!text) return;
+    try {
+      const form = new FormData(); form.append('target_text', text); form.append('language', 'Filipino'); form.append('mode', 'reading'); form.append('prescribed_activity_key', activity.activity_key);
+      const response = await fetch(data.read_aloud_url, {method:'POST', credentials:'same-origin', headers:{'X-CSRFToken':csrf()}, body:form});
+      const result = await response.json(); if (!response.ok || !result.audio_content) throw Error('Hindi available ang audio.');
+      audio = new Audio(`data:${result.mime_type || 'audio/mpeg'};base64,${result.audio_content}`);
+      try { await audio.play(); await new Promise((resolve, reject) => {audio.onended = resolve; audio.onerror = () => reject(Error('Hindi ma-play ang audio.'));}); }
+      finally { if (audio) {audio.pause(); audio = null;} }
+    } catch (_) {
+      await speakWithBrowserTts(text);
+    }
   }
-  async function playFeedback(text) { if (L24_G2_MAPPED_TEXT.has(text)) return playLocalAudio(localAudioUrl(text)); }
+  async function speakWithBrowserTts(text) {
+    if (!text || !window.speechSynthesis || !window.SpeechSynthesisUtterance) throw Error('Hindi available ang audio.');
+    window.speechSynthesis.cancel();
+    await new Promise((resolve, reject) => {
+      const utterance = new SpeechSynthesisUtterance(text); utterance.lang = 'fil-PH'; utterance.rate = 0.9;
+      utterance.onend = resolve; utterance.onerror = () => reject(Error('Hindi ma-play ang audio.'));
+      window.speechSynthesis.speak(utterance);
+    });
+  }
+  async function playAudio(text) {
+    const url = localAudioUrl(text);
+    if (url) return playLocalAudio(url);
+    return speakWithGoogle(text);
+  }
+  async function playFeedback(text) { if (text) return playAudio(text); }
   async function playCompletion() { return playFeedback('Magaling! Natapos mo ang Gawain 2.'); }
   async function playInstruction() { if (busy || audio) return; busy = true; render(); try { await playAudio(activity.instruction || ''); } catch (_) {} finally { audio = null; busy = false; render(); } }
   async function record() {
     if (busy) return; busy = true; const mine = ++requestId; render();
     try { await request({action:'reading_started'}); if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) throw Error('Hindi available ang mikropono.'); stream = await window.Basahin.openMicrophone({audio:true}); const blob = await window.Basahin.capture({button:document.getElementById('read'), stream}); stream.getTracks().forEach(track => track.stop()); stream = null; if (mine !== requestId) return; const form = new FormData(); form.append('audio', blob, 'lesson24-gawain2-reading.webm'); form.append('action', 'reading_attempt'); form.append('revision', String(state.revision || 0)); form.append('item_index', String(current())); const result = await request({}, form); const feedback = result.state?.last_feedback || ''; render(feedback); if (result.state?.completed) await playCompletion(); else await playFeedback(feedback); } catch (error) { stream?.getTracks().forEach(track => track.stop()); stream = null; const message = error.message || 'Hindi nakuha ang iyong boses. Subukan muli.'; render(message, 'bad'); await playFeedback(message).catch(() => {}); } finally { busy = false; }
   }
-  async function listen() { if (busy) return; busy = true; render(); try { await playAudio(word()); await request({action:'read_aloud'}); render('Pakinggan ang tamang pagbigkas, pagkatapos ay subukan mong basahin.'); } catch (error) { const message = error.message || 'Hindi available ang audio.'; render(message, 'bad'); await playFeedback(message).catch(() => {}); } finally { busy = false; } }
-  async function retry() { if (busy) return; busy = true; try { await request({action:'retry_reading'}); render('Handa ka na?'); } catch (error) { const message = error.message || 'Hindi pa kailangan ang pag-ulit.'; render(message, 'bad'); await playFeedback(message).catch(() => {}); } finally { busy = false; } }
+  async function listen() { if (busy) return; busy = true; render(); try { await playAudio(word()); await request({action:'read_aloud'}); const message = 'Pakinggan ang tamang pagbigkas, pagkatapos ay subukan mong basahin.'; render(message); await playFeedback(message); } catch (error) { const message = error.message || 'Hindi available ang audio.'; render(message, 'bad'); await playFeedback(message).catch(() => {}); } finally { busy = false; } }
+  async function retry() { if (busy) return; busy = true; try { await request({action:'retry_reading'}); const message = 'Handa ka na?'; render(message); await playFeedback(message); } catch (error) { const message = error.message || 'Hindi pa kailangan ang pag-ulit.'; render(message, 'bad'); await playFeedback(message).catch(() => {}); } finally { busy = false; } }
   async function restart() { if (busy || !window.confirm('Sigurado ka bang gusto mong magsimula muli? Mawawala ang kasalukuyang progreso sa Gawain 2.')) return; busy = true; try { await request({action:'restart'}); render(); } catch (error) { render(error.message || 'Hindi na-reset ang gawain.', 'bad'); } finally { busy = false; } }
   document.addEventListener('pabasa:l24-started', () => { playInstruction(); }, {once: true});
   window.addEventListener('pagehide', () => {stream?.getTracks().forEach(track => track.stop()); if (audio) audio.pause();});

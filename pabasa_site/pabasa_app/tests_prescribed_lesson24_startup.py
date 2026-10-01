@@ -65,6 +65,7 @@ class Lesson24StartupTests(SimpleTestCase):
         audio = Path(__file__).parent / 'static/pabasa_app/prescribed/audio/SESSION_8/LESSON_24'
         mapped = {
             'BAHAGI_1/GAWAIN_1/Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salita._TTS.mp3',
+            'BAHAGI_1/GAWAIN_2/Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Vv._TTS.mp3',
             'BAHAGI_1/GAWAIN_3/Pakinggang mabuti ang mga salitang bibigkasin ng guro pagkatapos ay ulitin ito._TTS.mp3',
             'BAHAGI_2/GAWAIN_2/Kilalanin ang bawat larawan at subuking basahin ito kasabay ng guro._TTS.mp3',
             'BAHAGI_2/GAWAIN_3/Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Xx._TTS.mp3',
@@ -74,5 +75,4 @@ class Lesson24StartupTests(SimpleTestCase):
         }
         for relative in mapped:
             self.assertTrue((audio / relative).is_file(), relative)
-        self.assertFalse((audio / 'BAHAGI_1/GAWAIN_2/Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Vv._TTS.mp3').exists())
         self.assertFalse((audio / 'BAHAGI_2/GAWAIN_5/Pantigin ang sumusunod na salitang may letrang Zz. Ginawa ang unang bilang para sa iyo._TTS.mp3').exists())
