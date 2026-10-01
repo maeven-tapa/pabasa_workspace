@@ -37,7 +37,7 @@
     const progress = config.progress;
     if (progress.activity_completed === true) return {config, progress, state: 'completed'};
     const state = progress.state && typeof progress.state === 'object' ? progress.state : {};
-    const freshPhases = new Set(['', 'initial', 'say', 'oral', 'read', 'preview', 'ready']);
+    const freshPhases = new Set(['', 'initial', 'say', 'oral', 'oral_syllables', 'read', 'preview', 'ready']);
     const hasStateProgress = Object.entries(state).some(([key, value]) => {
       if (key === 'phase') return !freshPhases.has(String(value || '').toLowerCase());
       if (Array.isArray(value)) return value.some(item => item !== null && item !== undefined && item !== '');

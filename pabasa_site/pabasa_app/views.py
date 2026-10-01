@@ -17300,6 +17300,36 @@ def prescribed_activity_progress(request, activity_key):
     if activity_key == 'lesson9-gawain1':
         try:
             data = json.loads(request.body or '{}')
+            if data.get('reset') is True:
+                payload = {
+                    'activity_key': activity_key,
+                    'session_key': 'session-3',
+                    'current_item': 0,
+                    'phase': 'oral_syllables',
+                    'phase1_completed': False,
+                    'selected_syllables': [],
+                    'phase2_completed': False,
+                    'phase3_completed': False,
+                    'completed_items': [],
+                    'state_version': 0,
+                }
+                progress, _ = StudentActivityProgress.objects.update_or_create(
+                    student=student,
+                    activity_key=activity_key,
+                    defaults={
+                        'current_index': 0,
+                        'completed_items': 0,
+                        'correct_items': 0,
+                        'total_items': len(activity['items']),
+                        'activity_completed': False,
+                        'state': payload,
+                    },
+                )
+                return JsonResponse({'success': True, 'progress': {
+                    'state': payload,
+                    'completed_items': 0,
+                    'activity_completed': False,
+                }})
             incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
             existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
