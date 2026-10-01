@@ -14835,7 +14835,49 @@ def prescribed_activity_progress(request, activity_key):
                 'completed_items': completed, 'correct_items': completed, 'total_items': total, 'activity_completed': False}})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
-    if activity_key in ('lesson-14-gawain-2', 'lesson-15-gawain-2-angkop-na-pantig'):
+    if activity_key == 'lesson-15-gawain-2-angkop-na-pantig':
+        try:
+            data = json.loads(request.body or '{}')
+            incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
+            query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            existing = query.first()
+            old = existing.state if existing and isinstance(existing.state, dict) else {}
+            if data.get('reset'):
+                query.delete()
+                return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
+            if existing and existing.activity_completed:
+                return JsonResponse({'success': True, 'progress': {'state': old, 'completed_items': existing.completed_items, 'activity_completed': True}})
+            version = int(incoming.get('state_version') or 0)
+            if version < int(old.get('state_version') or 0):
+                return JsonResponse({'success': True, 'progress': {'state': old, 'completed_items': existing.completed_items if existing else 0, 'activity_completed': False}})
+            raw_part = incoming.get('part', old.get('part', 1))
+            part = 2 if str(raw_part) == '2' or raw_part == 2 else 1
+            raw_connections = incoming.get('connections') if isinstance(incoming.get('connections'), dict) else {}
+            valid_a = {str(item['id']): item for item in activity['items']}
+            valid_b = {str(choice['id']) for choice in activity['choices']}
+            connections = {
+                str(a_id): str(b_id)
+                for a_id, b_id in raw_connections.items()
+                if str(a_id) in valid_a
+                and str(b_id) in valid_b
+                and str(valid_a[str(a_id)].get('expected_b_id')) == str(b_id)
+            }
+            state = dict(incoming)
+            state['part'] = part
+            state['connections'] = connections
+            state['state_version'] = max(version, int(old.get('state_version') or 0) + 1)
+            completed = min(len(activity['items']), len(connections))
+            progress, _ = StudentActivityProgress.objects.update_or_create(
+                student=student, activity_key=activity_key,
+                defaults={'current_index': completed, 'completed_items': completed,
+                          'correct_items': completed, 'total_items': len(activity['items']),
+                          'activity_completed': False, 'state': state})
+            return JsonResponse({'success': True, 'progress': {'state': state,
+                'completed_items': completed, 'correct_items': completed,
+                'total_items': len(activity['items']), 'activity_completed': False}})
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    if activity_key == 'lesson-14-gawain-2':
         try:
             data = json.loads(request.body or '{}')
             incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
@@ -14857,6 +14899,9 @@ def prescribed_activity_progress(request, activity_key):
                 raise ValueError('Invalid matching connection.')
             connections = {str(a_id): str(b_id) for a_id, b_id in connections.items()}
             state = dict(incoming)
+            if activity_key == 'lesson-15-gawain-2-angkop-na-pantig':
+                raw_part = incoming.get('part', old.get('part', 1))
+                state['part'] = 2 if str(raw_part) == '2' or raw_part == 2 else 1
             state['connections'] = connections
             state['connected_count'] = len(connections)
             state['state_version'] = max(version, int(old.get('state_version') or 0) + 1)
@@ -16542,7 +16587,49 @@ def prescribed_activity_complete(request, activity_key):
         state = dict(state, answer_records=records, completed=True, state_version=1_000_000_000)
         StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': len(activity['items']), 'completed_items': len(activity['items']), 'correct_items': correct, 'total_items': len(activity['items']), 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'items_completed': len(records), 'correct_items': correct, 'records': records}})
-    if activity_key in ('lesson-14-gawain-2', 'lesson-15-gawain-2-angkop-na-pantig'):
+    if activity_key == 'lesson-15-gawain-2-angkop-na-pantig':
+        try:
+            data = json.loads(request.body or '{}')
+            incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
+            query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            existing = query.first()
+            old = existing.state if existing and isinstance(existing.state, dict) else {}
+            if data.get('reset'):
+                query.delete()
+                return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
+            if existing and existing.activity_completed:
+                return JsonResponse({'success': True, 'progress': {'state': old, 'completed_items': existing.completed_items, 'activity_completed': True}})
+            version = int(incoming.get('state_version') or 0)
+            if version < int(old.get('state_version') or 0):
+                return JsonResponse({'success': True, 'progress': {'state': old, 'completed_items': existing.completed_items if existing else 0, 'activity_completed': False}})
+            raw_part = incoming.get('part', old.get('part', 1))
+            part = 2 if str(raw_part) == '2' or raw_part == 2 else 1
+            raw_connections = incoming.get('connections') if isinstance(incoming.get('connections'), dict) else {}
+            valid_a = {str(item['id']): item for item in activity['items']}
+            valid_b = {str(choice['id']) for choice in activity['choices']}
+            connections = {
+                str(a_id): str(b_id)
+                for a_id, b_id in raw_connections.items()
+                if str(a_id) in valid_a
+                and str(b_id) in valid_b
+                and str(valid_a[str(a_id)].get('expected_b_id')) == str(b_id)
+            }
+            state = dict(incoming)
+            state['part'] = part
+            state['connections'] = connections
+            state['state_version'] = max(version, int(old.get('state_version') or 0) + 1)
+            completed = min(len(activity['items']), len(connections))
+            progress, _ = StudentActivityProgress.objects.update_or_create(
+                student=student, activity_key=activity_key,
+                defaults={'current_index': completed, 'completed_items': completed,
+                          'correct_items': completed, 'total_items': len(activity['items']),
+                          'activity_completed': False, 'state': state})
+            return JsonResponse({'success': True, 'progress': {'state': state,
+                'completed_items': completed, 'correct_items': completed,
+                'total_items': len(activity['items']), 'activity_completed': False}})
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    if activity_key == 'lesson-14-gawain-2':
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         connections = state.get('connections') if isinstance(state.get('connections'), dict) else {}

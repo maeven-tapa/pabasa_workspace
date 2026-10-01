@@ -15463,18 +15463,27 @@ def prescribed_activity_page(request, activity_key):
         return render(request, 'pabasa_app/lesson_14_gawain_2_page.html', context)
     if activity_key == 'lesson-15-gawain-2-angkop-na-pantig':
         context = _dashboard_context(request)
-        image_paths = {
-            'yo-yo': 'pabasa_app/images/alpabetong_pilipino/yoyo.png',
-            'masaya': 'pabasa_app/images/picture_word/custom/Happy-Masaya.png',
-            'yungib': 'pabasa_app/images/picture_word/custom/Cave-Kuweba.png',
-            'oyayi': 'pabasa_app/images/picture_word/custom/Baby-Sanggol.png',
-            'yelo': 'pabasa_app/images/picture_word/custom/Ice-Yelo.png',
-        }
         context['lesson15_gawain2_data'] = {
             'activity_key': activity_key, 'session_key': 'session-5',
             'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
             'title': activity['title'], 'instruction': activity['instruction'],
-            'items': [{**item, 'image_url': static(image_paths.get(item['id'], ''))} for item in activity['items']],
+            'items': activity['items'],
+            'part1_items': [
+                {**item, 'image_url': static({
+                    'yo-yo': 'pabasa_app/prescribed/audio/SESSION_5/15_GAWAIN_2/yoyo.jpg',
+                    'masaya': 'pabasa_app/prescribed/audio/SESSION_5/15_GAWAIN_2/masaya.jpg',
+                    'yungib': 'pabasa_app/prescribed/audio/SESSION_5/15_GAWAIN_2/yungib.jpg',
+                    'oyayi': 'pabasa_app/prescribed/audio/SESSION_5/15_GAWAIN_2/oyayi.png',
+                    'yelo': 'pabasa_app/prescribed/audio/SESSION_5/15_GAWAIN_2/yelo.png',
+                }.get(item['id'], ''))} for item in activity.get('part1_items', [])
+            ],
+            'part1_audio': {
+                'yo-yo': static('pabasa_app/prescribed/audio/SESSION_5/15_GAWAIN_2/yo_yo.mp3'),
+                'masaya': static('pabasa_app/prescribed/audio/SESSION_5/15_GAWAIN_2/masaya.mp3'),
+                'yungib': static('pabasa_app/prescribed/audio/SESSION_5/15_GAWAIN_2/yungib.mp3'),
+                'oyayi': static('pabasa_app/prescribed/audio/SESSION_5/15_GAWAIN_2/oyayi.mp3'),
+                'yelo': static('pabasa_app/prescribed/audio/SESSION_5/15_GAWAIN_2/yelo.mp3'),
+            },
             'choices': activity['choices'],
             'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
             'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
@@ -16688,7 +16697,16 @@ def prescribed_activity_progress(request, activity_key):
                 return JsonResponse({'success': True, 'progress': {'state': old, 'completed_items': existing.completed_items, 'activity_completed': True}})
             version = int(incoming.get('state_version') or 0)
             if version < int(old.get('state_version') or 0):
-                return JsonResponse({'success': True, 'progress': {'state': old, 'completed_items': existing.completed_items if existing else 0, 'activity_completed': False}})
+                return JsonResponse({
+                    'success': False,
+                    'accepted': False,
+                    'reason': 'stale_state_version',
+                    'progress': {
+                        'state': old,
+                        'completed_items': existing.completed_items if existing else 0,
+                        'activity_completed': False,
+                    },
+                }, status=409)
             connections = incoming.get('connections') if isinstance(incoming.get('connections'), dict) else {}
             valid_a = {str(item['id']) for item in activity['items']}
             valid_b = {str(choice['id']) for choice in activity['choices']}
@@ -16696,6 +16714,9 @@ def prescribed_activity_progress(request, activity_key):
                 raise ValueError('Invalid matching connection.')
             connections = {str(a_id): str(b_id) for a_id, b_id in connections.items()}
             state = dict(incoming)
+            if activity_key == 'lesson-15-gawain-2-angkop-na-pantig':
+                raw_part = incoming.get('part', old.get('part', 1))
+                state['part'] = 2 if str(raw_part) == '2' or raw_part == 2 else 1
             state['connections'] = connections
             state['connected_count'] = len(connections)
             state['state_version'] = max(version, int(old.get('state_version') or 0) + 1)
@@ -22434,6 +22455,12 @@ def reading_transcribe_api(request):
     phrase_hints = [] if language_code.lower() == 'fil-ph' else list(dict.fromkeys(
         phrase_hints_for(language, mode) + target_phrase_hints(target_text, language_code)
     ))
+    if (
+        request.POST.get('prescribed_activity_key') == 'lesson-15-gawain-2-angkop-na-pantig'
+        and language_code.lower() == 'fil-ph'
+        and ReadingMatcher.normalize_word(target_text) == 'yelo'
+    ):
+        phrase_hints = ['yelo']
     api_key = getattr(settings, 'GOOGLE_STT_API_KEY', '').strip()
     project_id = getattr(settings, 'GOOGLE_CLOUD_PROJECT_ID', '').strip()
     stt_model = getattr(settings, 'GOOGLE_STT_MODEL', 'chirp_3').strip()

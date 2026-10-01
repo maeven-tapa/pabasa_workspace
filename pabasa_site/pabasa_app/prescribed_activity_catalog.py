@@ -541,6 +541,13 @@ PRESCRIBED_ACTIVITIES = {
             {'id': 'oyayi', 'incomplete': 'oya__', 'answer': 'yi', 'word': 'oyayi', 'expected_b_id': 'b3'},
             {'id': 'yelo', 'incomplete': '__lo', 'answer': 'ye', 'word': 'yelo', 'expected_b_id': 'b2'},
         ],
+        'part1_items': [
+            {'id': 'yo-yo', 'word': 'yo-yo'},
+            {'id': 'masaya', 'word': 'masaya'},
+            {'id': 'yungib', 'word': 'yungib'},
+            {'id': 'oyayi', 'word': 'oyayi'},
+            {'id': 'yelo', 'word': 'yelo'},
+        ],
         'choices': [
             {'id': 'b1', 'text': 'ya'}, {'id': 'b2', 'text': 'ye'},
             {'id': 'b3', 'text': 'yi'}, {'id': 'b4', 'text': 'yo'},
